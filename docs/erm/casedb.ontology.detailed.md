@@ -14,12 +14,6 @@ erDiagram
     Concept }o--|| ConceptSet : "concept_set_id"
 
     %% Entity definitions
-    Etiology {
-        UUID id PK
-        UUID disease_id FK
-        UUID etiological_agent_id FK
-    }
-
     EtiologicalAgent {
         UUID id PK
         string name
@@ -30,6 +24,12 @@ erDiagram
         UUID id PK
         string name
         string icd_code
+    }
+
+    Etiology {
+        UUID id PK
+        UUID disease_id FK
+        UUID etiological_agent_id FK
     }
 
     ConceptRelation {

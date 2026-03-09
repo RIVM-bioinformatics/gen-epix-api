@@ -55,9 +55,9 @@ class BaseAbacService(CommonAbacService):
         command.CaseTypeCrudCommand,
         command.CaseTypeSetMemberCrudCommand,
         command.CaseTypeSetCrudCommand,
-        command.CaseTypeColCrudCommand,
-        command.CaseTypeColSetCrudCommand,
-        command.CaseTypeColSetMemberCrudCommand,
+        command.ColCrudCommand,
+        command.ColSetCrudCommand,
+        command.ColSetMemberCrudCommand,
         command.CaseCrudCommand,
         command.CreateFileForReadSetCommand,
         command.CreateFileForSeqCommand,
@@ -70,11 +70,13 @@ class BaseAbacService(CommonAbacService):
         command.CaseDataCollectionLinkCrudCommand,
         command.CaseSetDataCollectionLinkCrudCommand,
         command.DataCollectionCrudCommand,
+        command.RefColCrudCommand,
+        command.RefDimCrudCommand,
         command.RetrievePhylogeneticTreeByCasesCommand,
         command.RetrieveSimilarCasesCommand,
         command.RetrieveGeneticSequenceFastaByCaseCommand,
         command.RetrieveCaseStatsCommand,
-        command.CaseTypeDimCrudCommand,
+        command.DimCrudCommand,
     }
 
     @abc.abstractmethod
@@ -82,7 +84,5 @@ class BaseAbacService(CommonAbacService):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_readable_reference_data(
-        self, cmd: command.Command
-    ) -> model.ReadableReferenceData:
+    def get_ref_data_access(self, cmd: command.Command) -> model.RefDataAccess:
         raise NotImplementedError

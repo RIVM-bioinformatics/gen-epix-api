@@ -109,56 +109,60 @@ class GeneticDistanceProtocol(Base, RowMetadataMixin):
     )
 
 
-class Dim(Base, RowMetadataMixin):
+class RefDim(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
 
-    __tablename__, __table_args__ = create_table_args(model.Dim)
+    __tablename__, __table_args__ = create_table_args(model.RefDim)
 
-    dim_type: Mapped[enum.DimType] = create_mapped_column(DOMAIN, model.Dim, "dim_type")
-    code: Mapped[str] = create_mapped_column(DOMAIN, model.Dim, "code")
-    label: Mapped[str] = create_mapped_column(DOMAIN, model.Dim, "label")
-    rank: Mapped[int | None] = create_mapped_column(DOMAIN, model.Dim, "rank")
+    dim_type: Mapped[enum.DimType] = create_mapped_column(
+        DOMAIN, model.RefDim, "dim_type"
+    )
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.RefDim, "code")
+    label: Mapped[str] = create_mapped_column(DOMAIN, model.RefDim, "label")
+    rank: Mapped[int | None] = create_mapped_column(DOMAIN, model.RefDim, "rank")
     col_code_prefix: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.Dim, "col_code_prefix"
+        DOMAIN, model.RefDim, "col_code_prefix"
     )
     description: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.Dim, "description"
+        DOMAIN, model.RefDim, "description"
     )
-    props: Mapped[dict[str, Any]] = create_mapped_column(DOMAIN, model.Dim, "props")
+    props: Mapped[dict[str, Any]] = create_mapped_column(DOMAIN, model.RefDim, "props")
 
 
-class Col(Base, RowMetadataMixin):
+class RefCol(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
 
-    __tablename__, __table_args__ = create_table_args(model.Col)
+    __tablename__, __table_args__ = create_table_args(model.RefCol)
 
-    dim_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Col, "dim_id")
+    ref_dim_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.RefCol, "ref_dim_id")
     code_suffix: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.Col, "code_suffix"
+        DOMAIN, model.RefCol, "code_suffix"
     )
-    code: Mapped[str] = create_mapped_column(DOMAIN, model.Col, "code")
-    rank: Mapped[int | None] = create_mapped_column(DOMAIN, model.Col, "rank")
-    label: Mapped[str | None] = create_mapped_column(DOMAIN, model.Col, "label")
-    col_type: Mapped[enum.ColType] = create_mapped_column(DOMAIN, model.Col, "col_type")
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.RefCol, "code")
+    rank: Mapped[int | None] = create_mapped_column(DOMAIN, model.RefCol, "rank")
+    label: Mapped[str | None] = create_mapped_column(DOMAIN, model.RefCol, "label")
+    col_type: Mapped[enum.ColType] = create_mapped_column(
+        DOMAIN, model.RefCol, "col_type"
+    )
     concept_set_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Col, "concept_set_id"
+        DOMAIN, model.RefCol, "concept_set_id"
     )
     region_set_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Col, "region_set_id"
+        DOMAIN, model.RefCol, "region_set_id"
     )
     genetic_distance_protocol_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Col, "genetic_distance_protocol_id"
+        DOMAIN, model.RefCol, "genetic_distance_protocol_id"
     )
     description: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.Col, "description"
+        DOMAIN, model.RefCol, "description"
     )
-    props: Mapped[dict[str, Any]] = create_mapped_column(DOMAIN, model.Col, "props")
+    props: Mapped[dict[str, Any]] = create_mapped_column(DOMAIN, model.RefCol, "props")
 
-    dim: Mapped[Dim] = relationship(Dim, foreign_keys=[dim_id])
+    ref_dim: Mapped[RefDim] = relationship(RefDim, foreign_keys=[ref_dim_id])
 
 
 class CaseType(Base, RowMetadataMixin):
@@ -253,118 +257,103 @@ class CaseTypeSetMember(Base, RowMetadataMixin):
     case_type: Mapped[CaseType] = relationship(CaseType, foreign_keys=[case_type_id])
 
 
-class CaseTypeCol(Base, RowMetadataMixin):
+class Dim(Base, RowMetadataMixin):
+    __tablename__, __table_args__ = create_table_args(model.Dim)
+
+    case_type_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Dim, "case_type_id")
+    ref_dim_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Dim, "ref_dim_id")
+    occurrence: Mapped[int] = create_mapped_column(DOMAIN, model.Dim, "occurrence")
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.Dim, "code")
+    label: Mapped[str | None] = create_mapped_column(DOMAIN, model.Dim, "label")
+    description: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Dim, "description"
+    )
+    rank: Mapped[int] = create_mapped_column(DOMAIN, model.Dim, "rank")
+    is_case_date_dim: Mapped[bool] = create_mapped_column(
+        DOMAIN, model.Dim, "is_case_date_dim"
+    )
+
+    ref_dim: Mapped[RefDim] = relationship(RefDim, foreign_keys=[ref_dim_id])
+
+
+class Col(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
 
-    __tablename__, __table_args__ = create_table_args(model.CaseTypeCol)
+    __tablename__, __table_args__ = create_table_args(model.Col)
 
-    case_type_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.CaseTypeCol, "case_type_id"
-    )
-    case_type_dim_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.CaseTypeCol, "case_type_dim_id"
-    )
-    col_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.CaseTypeCol, "col_id")
-    code: Mapped[str] = create_mapped_column(DOMAIN, model.CaseTypeCol, "code")
+    case_type_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Col, "case_type_id")
+    dim_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Col, "dim_id")
+    ref_col_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Col, "ref_col_id")
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.Col, "code")
     description: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeCol, "description"
+        DOMAIN, model.Col, "description"
     )
-    rank: Mapped[int | None] = create_mapped_column(DOMAIN, model.CaseTypeCol, "rank")
-    label: Mapped[str | None] = create_mapped_column(DOMAIN, model.CaseTypeCol, "label")
+    rank: Mapped[int | None] = create_mapped_column(DOMAIN, model.Col, "rank")
+    label: Mapped[str | None] = create_mapped_column(DOMAIN, model.Col, "label")
     min_value: Mapped[float | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeCol, "min_value"
+        DOMAIN, model.Col, "min_value"
     )
     max_value: Mapped[float | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeCol, "max_value"
+        DOMAIN, model.Col, "max_value"
     )
     min_datetime: Mapped[datetime | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeCol, "min_datetime"
+        DOMAIN, model.Col, "min_datetime"
     )
     max_datetime: Mapped[datetime | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeCol, "max_datetime"
+        DOMAIN, model.Col, "max_datetime"
     )
     min_length: Mapped[int | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeCol, "min_length"
+        DOMAIN, model.Col, "min_length"
     )
     max_length: Mapped[int | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeCol, "max_length"
+        DOMAIN, model.Col, "max_length"
     )
-    pattern: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeCol, "pattern"
-    )
+    pattern: Mapped[str | None] = create_mapped_column(DOMAIN, model.Col, "pattern")
     ncbi_taxid: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeCol, "ncbi_taxid"
+        DOMAIN, model.Col, "ncbi_taxid"
     )
-    genetic_sequence_case_type_col_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeCol, "genetic_sequence_case_type_col_id"
+    genetic_sequence_col_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Col, "genetic_sequence_col_id"
     )
     tree_algorithm_codes: Mapped[list[enum.TreeAlgorithmType] | None] = (
-        create_mapped_column(DOMAIN, model.CaseTypeCol, "tree_algorithm_codes")
+        create_mapped_column(DOMAIN, model.Col, "tree_algorithm_codes")
     )
-    props: Mapped[dict[str, Any]] = create_mapped_column(
-        DOMAIN, model.CaseTypeCol, "props"
-    )
+    props: Mapped[dict[str, Any]] = create_mapped_column(DOMAIN, model.Col, "props")
 
     case_type: Mapped[CaseType] = relationship(CaseType, foreign_keys=[case_type_id])
+    ref_col: Mapped[RefCol] = relationship(RefCol, foreign_keys=[ref_col_id])
+    dim: Mapped[Dim] = relationship(Dim, foreign_keys=[dim_id])
+
+
+class ColSet(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.ColSet)
+
+    name: Mapped[str] = create_mapped_column(DOMAIN, model.ColSet, "name")
+    description: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.ColSet, "description"
+    )
+
+
+class ColSetMember(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.ColSetMember)
+
+    col_set_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.ColSetMember, "col_set_id"
+    )
+    col_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.ColSetMember, "col_id")
+
+    col_set: Mapped[ColSet] = relationship(ColSet, foreign_keys=[col_set_id])
     col: Mapped[Col] = relationship(Col, foreign_keys=[col_id])
-
-
-class CaseTypeColSet(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.CaseTypeColSet)
-
-    name: Mapped[str] = create_mapped_column(DOMAIN, model.CaseTypeColSet, "name")
-    description: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeColSet, "description"
-    )
-
-
-class CaseTypeColSetMember(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.CaseTypeColSetMember)
-
-    case_type_col_set_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.CaseTypeColSetMember, "case_type_col_set_id"
-    )
-    case_type_col_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.CaseTypeColSetMember, "case_type_col_id"
-    )
-
-    case_type_col_set: Mapped[CaseTypeColSet] = relationship(
-        CaseTypeColSet, foreign_keys=[case_type_col_set_id]
-    )
-    case_type_col: Mapped[CaseTypeCol] = relationship(
-        CaseTypeCol, foreign_keys=[case_type_col_id]
-    )
-
-
-class CaseTypeDim(Base, RowMetadataMixin):
-    __tablename__, __table_args__ = create_table_args(model.CaseTypeDim)
-
-    case_type_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.CaseTypeDim, "case_type_id"
-    )
-    dim_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.CaseTypeDim, "dim_id")
-    occurrence: Mapped[int] = create_mapped_column(
-        DOMAIN, model.CaseTypeDim, "occurrence"
-    )
-    code: Mapped[str] = create_mapped_column(DOMAIN, model.CaseTypeDim, "code")
-    label: Mapped[str | None] = create_mapped_column(DOMAIN, model.CaseTypeDim, "label")
-    description: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeDim, "description"
-    )
-    rank: Mapped[int] = create_mapped_column(DOMAIN, model.CaseTypeDim, "rank")
-    is_case_date_dim: Mapped[bool] = create_mapped_column(
-        DOMAIN, model.CaseTypeDim, "is_case_date_dim"
-    )
 
 
 class Case(Base, RowMetadataMixin):

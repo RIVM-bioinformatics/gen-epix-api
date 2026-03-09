@@ -9,13 +9,14 @@ from test.casedb.integration.case_upload.base import (
     VERBOSE,
 )
 from test.commondb.util import retrieve_db_data_from_file
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import pandas as pd
 import pytest
 
 from gen_epix.casedb.domain import command, enum, model
+from gen_epix.commondb.domain import enum as commondb_enum
 from gen_epix.commondb.domain import exc
 from gen_epix.commondb.domain import model as commondb_model
 from gen_epix.commondb.domain.enum import AppType
@@ -69,17 +70,17 @@ class CaseUploadSetup:
         model.DataCollection: "DataCollection",
         model.IdentifierIssuer: "IdentifierIssuer",
         model.CaseTypeSetCategory: "CaseTypeSetCategory",
-        model.Dim: "Dim",
-        model.Col: "Col",
+        model.RefDim: "RefDim",
+        model.RefCol: "RefCol",
         model.Disease: "Disease",
         model.EtiologicalAgent: "EtiologicalAgent",
         model.CaseType: "CaseType",
         model.CaseTypeSet: "CaseTypeSet",
         model.CaseTypeSetMember: "CaseTypeSetMember",
-        model.CaseTypeDim: "CaseTypeDim",
-        model.CaseTypeCol: "CaseTypeCol",
-        model.CaseTypeColSet: "CaseTypeColSet",
-        model.CaseTypeColSetMember: "CaseTypeColSetMember",
+        model.Dim: "Dim",
+        model.Col: "Col",
+        model.ColSet: "ColSet",
+        model.ColSetMember: "ColSetMember",
         model.OrganizationAdminPolicy: "OrganizationAdminPolicy",
         model.OrganizationAccessCasePolicy: "OrganizationAccessCasePolicy",
         model.UserAccessCasePolicy: "UserAccessCasePolicy",
@@ -191,7 +192,7 @@ class CaseUploadSetup:
     "TC-11-09-01",
 )
 class TestCaseUpload(CaseUploadSetup):
-    FILE_CASE_TYPE_COL_VALUE = "(FILE)"
+    FILE_COL_VALUE = "(FILE)"
 
     def _encode_pairing_function(self, x: int, y: int) -> int:
         """Only for y values < 100, otherwise switch to Cantor's pairing function"""
@@ -227,23 +228,23 @@ class TestCaseUpload(CaseUploadSetup):
         )
         uq_users = {str(x.id): x for x in uq_users_list}
 
-        # Get read set and seq case type columns
-        cols: list[model.Col] = env.app.handle(
+        # Get read set and seq columns
+        ref_cols: list[model.RefCol] = env.app.handle(  # type: ignore[assignment]
+            command.RefColCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        ref_col_map: dict[UUID, model.RefCol] = {x.id: x for x in ref_cols}
+        cols: list[model.Col] = env.app.handle(  # type: ignore[assignment]
             command.ColCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ALL,
             )
         )
-        col_map: dict[UUID, model.Col] = {x.id: x for x in cols}
-        case_type_cols: list[model.CaseTypeCol] = env.app.handle(  # type: ignore[assignment]
-            command.CaseTypeColCrudCommand(
-                user=root_user,
-                operation=CrudOperation.READ_ALL,
-            )
-        )
-        sample_id_case_type_col_ids: set[UUID] = {x.id for x in case_type_cols if col_map[x.col_id].col_type == enum.ColType.ID_SAMPLE}  # type: ignore[assignment]
-        read_set_case_type_col_ids: set[UUID] = {x.id for x in case_type_cols if col_map[x.col_id].col_type == enum.ColType.GENETIC_READS}  # type: ignore[assignment]
-        seq_case_type_col_ids: set[UUID] = {x.id for x in case_type_cols if col_map[x.col_id].col_type == enum.ColType.GENETIC_SEQUENCE}  # type: ignore[assignment]
+        sample_id_col_ids: set[UUID] = {x.id for x in cols if ref_col_map[x.ref_col_id].col_type == enum.ColType.ID_SAMPLE}  # type: ignore[assignment]
+        read_set_col_ids: set[UUID] = {x.id for x in cols if ref_col_map[x.ref_col_id].col_type == enum.ColType.GENETIC_READS}  # type: ignore[assignment]
+        seq_col_ids: set[UUID] = {x.id for x in cols if ref_col_map[x.ref_col_id].col_type == enum.ColType.GENETIC_SEQUENCE}  # type: ignore[assignment]
 
         # Create and execute each command
         for row in rows:
@@ -302,9 +303,9 @@ class TestCaseUpload(CaseUploadSetup):
                             self._create_case(  # type: ignore[list-item]
                                 row,
                                 for_upload=True,
-                                sample_id_case_type_col_ids=sample_id_case_type_col_ids,
-                                read_set_case_type_col_ids=read_set_case_type_col_ids,
-                                seq_case_type_col_ids=seq_case_type_col_ids,
+                                sample_id_col_ids=sample_id_col_ids,
+                                read_set_col_ids=read_set_col_ids,
+                                seq_col_ids=seq_col_ids,
                             )
                         ]  # type: ignore[arg-type]
                     ),
@@ -355,11 +356,11 @@ class TestCaseUpload(CaseUploadSetup):
         validated_case_content: dict[UUID, dict[UUID, str | None]] = {}
         for row in df.to_dict(orient="records"):
             case_id = UUID(row["case_id"])
-            case_type_col_id = UUID(row["case_type_col_id"])
+            col_id = UUID(row["col_id"])
             case_content.setdefault(case_id, {})
-            case_content[case_id][case_type_col_id] = row["value"]
+            case_content[case_id][col_id] = row["value"]
             validated_case_content.setdefault(case_id, {})
-            validated_case_content[case_id][case_type_col_id] = row["validated_value"]
+            validated_case_content[case_id][col_id] = row["validated_value"]
 
         # Convert case data to cases and new_cases
         df = env.props["command._case_data"]
@@ -385,7 +386,10 @@ class TestCaseUpload(CaseUploadSetup):
                 id=case_id,
                 case_type_id=case_type_id,
                 created_in_data_collection_id=created_in_data_collection_id,
-                content=validated_case_content.get(case_id, {}),
+                content={
+                    str(x): str(y) if y is not None else None
+                    for x, y in validated_case_content.get(case_id, {}).items()
+                },
             )
             all_validated_cases.setdefault(case_id, validated_case)
             all_validated_cases_for_upload.setdefault(
@@ -417,7 +421,7 @@ class TestCaseUpload(CaseUploadSetup):
             env._set_obj(user)
         env._set_obj(root_user, update=True)
 
-        # Get policies and case type col ids
+        # Get Policies and Col IDs
         organization_access_case_policies: dict[
             tuple[UUID, UUID], model.OrganizationAccessCasePolicy
         ] = {
@@ -430,14 +434,17 @@ class TestCaseUpload(CaseUploadSetup):
             (x.user_id, x.data_collection_id): x  # type: ignore[attr-defined,misc]
             for x in env.read_all(root_user, model.UserAccessCasePolicy)
         }
-        case_type_col_ids: dict[UUID, set[UUID]] = map_paired_elements(  # type: ignore[assignment]
+        col_ids: dict[UUID, set[UUID]] = map_paired_elements(  # type: ignore[assignment]
             [
-                (x.case_type_col_set_id, x.case_type_col_id)  # type: ignore[attr-defined]
-                for x in env.read_all(root_user, model.CaseTypeColSetMember)
+                (x.col_set_id, x.col_id)  # type: ignore[attr-defined]
+                for x in cast(
+                    list[model.ColSetMember],
+                    env.read_all(root_user, model.ColSetMember),
+                )
             ],
             as_set=True,
         )
-        all_case_type_col_ids = set.union(set(), *case_type_col_ids.values())
+        all_col_ids = set.union(set(), *col_ids.values())
 
         # Create and execute each command
         command_idx_to_test = None
@@ -459,22 +466,22 @@ class TestCaseUpload(CaseUploadSetup):
             user = uq_users[row["user.id"]]
             assert user.id is not None
 
-            # Get writable case type col ids
+            # Get writable Col IDs
             if user.roles.intersection(env.role_set_map[enum.RoleSet.GE_APP_ADMIN]):
-                write_case_type_col_ids = all_case_type_col_ids
+                write_col_ids = all_col_ids
             else:
                 org_policy: model.OrganizationAccessCasePolicy | None = (
                     organization_access_case_policies.get(
                         (user.organization_id, created_in_data_collection_id)
                     )
                 )
-                write_case_type_col_ids = set()
+                write_col_ids = set()
                 if (
                     org_policy
                     and org_policy.is_active
                     and org_policy.is_private
                     and org_policy.add_case
-                    and org_policy.write_case_type_col_set_id is not None
+                    and org_policy.write_col_set_id is not None
                 ):
                     user_policy: model.UserAccessCasePolicy | None = (
                         user_access_case_policies.get(
@@ -485,13 +492,11 @@ class TestCaseUpload(CaseUploadSetup):
                         user_policy
                         and user_policy.is_active
                         and user_policy.add_case
-                        and user_policy.write_case_type_col_set_id
+                        and user_policy.write_col_set_id
                     ):
-                        write_case_type_col_ids = case_type_col_ids[
-                            org_policy.write_case_type_col_set_id
-                        ].intersection(
-                            case_type_col_ids[user_policy.write_case_type_col_set_id]
-                        )
+                        write_col_ids = col_ids[
+                            org_policy.write_col_set_id
+                        ].intersection(col_ids[user_policy.write_col_set_id])
 
             if env.verbose:
                 print(f"Command {index}, user={user.name}): executing")
@@ -504,11 +509,11 @@ class TestCaseUpload(CaseUploadSetup):
                 all_validated_cases_for_upload[x].model_copy() for x in case_ids
             ]
             for expected_validated_case in expected_validated_cases:
-                # Keep only writable case type cols in expected validated case
+                # Keep only writable Col IDs in expected validated case
                 expected_validated_case.case.content = {
                     x: y
                     for x, y in expected_validated_case.case.content.items()
-                    if x in write_case_type_col_ids
+                    if x in write_col_ids
                 }
 
             # Create command
@@ -539,19 +544,17 @@ class TestCaseUpload(CaseUploadSetup):
                     print(f"\t{msg}")
                 raise AssertionError(msg)
             if upload_result is not None:
-                # Collect derived/conflict case_type_col_ids from validation report
+                # Collect derived/conflict Col IDs from validation report
                 # Both DERIVED and CONFLICT are acceptable differences since they represent
                 # values that were correctly transformed or overwritten
                 acceptable_difference_col_ids: set[UUID] = set()
                 for case_result in upload_result.cases:
                     for data_issue in case_result.data_issues:
                         if data_issue.data_issue_type in (
-                            enum.DataIssueType.DERIVED,
-                            enum.DataIssueType.CONFLICT,
+                            commondb_enum.DataIssueType.DERIVED,
+                            commondb_enum.DataIssueType.CONFLICT,
                         ):
-                            acceptable_difference_col_ids.add(
-                                data_issue.case_type_col_id
-                            )
+                            acceptable_difference_col_ids.add(data_issue.col_id)
                 if env.verbose and acceptable_difference_col_ids:
                     print(
                         f"\t  Found acceptable difference columns: {acceptable_difference_col_ids}"
@@ -615,54 +618,54 @@ class TestCaseUpload(CaseUploadSetup):
         self,
         row: dict[str, Any],
         for_upload: bool = False,
-        sample_id_case_type_col_ids: set[UUID] | None = None,
-        read_set_case_type_col_ids: set[UUID] | None = None,
-        seq_case_type_col_ids: set[UUID] | None = None,
+        sample_id_col_ids: set[UUID] | None = None,
+        read_set_col_ids: set[UUID] | None = None,
+        seq_col_ids: set[UUID] | None = None,
     ) -> model.Case | model.CaseForUpload:
-        sample_id_case_type_col_ids = sample_id_case_type_col_ids or set()
-        read_set_case_type_col_ids = read_set_case_type_col_ids or set()
-        seq_case_type_col_ids = seq_case_type_col_ids or set()
+        sample_id_col_ids = sample_id_col_ids or set()
+        read_set_col_ids = read_set_col_ids or set()
+        seq_col_ids = seq_col_ids or set()
         case_content: dict[UUID, str | None] = {}
-        found_read_set_case_type_col_ids: list[UUID] = []
+        found_read_set_col_ids: list[UUID] = []
         read_sets: list[model.ReadSetForUpload] = []
-        found_seq_case_type_col_ids: list[UUID] = []
+        found_seq_col_ids: list[UUID] = []
         seqs: list[model.SeqForUpload] = []
         i = 0
         while True:
             i += 1
-            # Get case type col and value
-            case_type_col_id_key = f"case.content.case_type_col_id{i}"
-            if case_type_col_id_key not in row:
+            # Get Col ID and value
+            col_id_key = f"case.content.col_id{i}"
+            if col_id_key not in row:
                 break
-            case_type_col_value_key = f"case.content.case_type_col_value{i}"
-            case_type_col_id_str = row[case_type_col_id_key]
-            if case_type_col_id_str is None:
+            col_value_key = f"case.content.col_value{i}"
+            col_id_str = row[col_id_key]
+            if col_id_str is None:
                 continue
-            case_type_col_id = UUID(case_type_col_id_str)
-            value = row[case_type_col_value_key]
+            col_id = UUID(col_id_str)
+            value = row[col_value_key]
             # Handle to be created read sets and seqs
-            if case_type_col_id in read_set_case_type_col_ids:
-                if value == self.FILE_CASE_TYPE_COL_VALUE:
-                    found_read_set_case_type_col_ids.append(case_type_col_id)
+            if col_id in read_set_col_ids:
+                if value == self.FILE_COL_VALUE:
+                    found_read_set_col_ids.append(col_id)
                     value = None
-            elif case_type_col_id in seq_case_type_col_ids:
-                if value == self.FILE_CASE_TYPE_COL_VALUE:
+            elif col_id in seq_col_ids:
+                if value == self.FILE_COL_VALUE:
                     seqs.append(
                         model.SeqForUpload(
-                            case_type_col_id=case_type_col_id,
+                            col_id=col_id,
                         )
                     )
                     value = None
             # Set case content
             if value is not None:
-                case_content[case_type_col_id] = value
+                case_content[col_id] = value
         # Add read sets and seqs if applicable
         external_identifier: commondb_model.ExternalIdentifierForUpload | None = None
-        if found_read_set_case_type_col_ids or found_seq_case_type_col_ids:
+        if found_read_set_col_ids or found_seq_col_ids:
             # Get external identifier if applicable
             identifier_issuer_id = UUID(row["seqdb.identifier_issuer_id"])
-            sample_id_case_type_col_id = UUID(row["seqdb.sample_id_case_type_col_id"])
-            sample_id = case_content.get(sample_id_case_type_col_id)
+            sample_id_col_id = UUID(row["seqdb.sample_id_col_id"])
+            sample_id = case_content.get(sample_id_col_id)
             external_identifier = (
                 commondb_model.ExternalIdentifierForUpload(
                     identifier_issuer_id=identifier_issuer_id, external_id=sample_id
@@ -674,18 +677,18 @@ class TestCaseUpload(CaseUploadSetup):
             sequencing_protocol_id = None if value is None else UUID(value)
             value = row["seqdb.assembly_protocol_id"]
             assembly_protocol_id = None if value is None else UUID(value)
-            for case_type_col_id in found_read_set_case_type_col_ids:
+            for col_id in found_read_set_col_ids:
                 read_sets.append(
                     model.ReadSetForUpload(
-                        case_type_col_id=case_type_col_id,
+                        col_id=col_id,
                         external_sample_id=external_identifier,
                         sequencing_protocol_id=sequencing_protocol_id,
                     )
                 )
-            for case_type_col_id in found_seq_case_type_col_ids:
+            for col_id in found_seq_col_ids:
                 seqs.append(
                     model.SeqForUpload(
-                        case_type_col_id=case_type_col_id,
+                        col_id=col_id,
                         external_sample_id=external_identifier,
                         assembly_protocol_id=assembly_protocol_id,
                     )
@@ -708,4 +711,6 @@ class TestCaseUpload(CaseUploadSetup):
                 read_sets=read_sets,
                 seqs=seqs,
             )
+        return case
+        return case
         return case

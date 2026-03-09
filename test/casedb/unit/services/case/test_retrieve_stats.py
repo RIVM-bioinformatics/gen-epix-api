@@ -44,7 +44,7 @@ class BaseRetrieveStatsTestCase(TestCase):
         self.uow.__exit__ = Mock(return_value=None)
         self.repository.uow.return_value = self.uow
 
-        # Default mock for repository.crud that returns case type IDs
+        # Default mock for repository.crud that returns CaseType IDs
         self.repository.crud = Mock(
             return_value=[self.case_type_id1, self.case_type_id2]
         )
@@ -95,20 +95,20 @@ class BaseRetrieveStatsTestCase(TestCase):
         return case_model.CompleteCaseType(
             id=case_type_id,
             user_id=self.user.id,
-            name="Test Case Type",
+            name="Test CaseType",
             description="Test Description",
             etiologies={},
             etiological_agents={},
+            ref_dims={},
+            ref_cols={},
             dims={},
             cols={},
-            case_type_dims={},
-            case_type_cols={},
             genetic_distance_protocols={},
             tree_algorithms={},
             case_type_access_abacs=case_type_access_abacs or {},
             case_type_share_abacs={},
             case_date_col_type_map=case_date_col_type_map or {},
-            case_date_case_type_dim_id=None,  # Add this required field
+            case_date_dim_id=None,  # Add this required field
             create_max_n_cases=1000,
             read_max_n_cases=1000,
             read_max_tree_size=1000,
@@ -189,10 +189,10 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
         )
         case_type_ids: list[UUID] = [self.case_type_id1, self.case_type_id2]
 
-        # Mock repository.crud to return case type IDs
+        # Mock repository.crud to return CaseType IDs
         self.repository.crud = Mock(return_value=case_type_ids)
 
-        # Mock complete case types
+        # Mock complete CaseTypes
         complete_case_type_1 = self.create_complete_case_type(
             case_type_id=self.case_type_id1
         )
@@ -267,7 +267,7 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
     def test_no_case_type_ids_restricted_access_uses_abac_ids(self) -> None:
         readable_ids = {self.case_type_id1, self.case_type_id2}
 
-        # Mock complete case types
+        # Mock complete CaseTypes
         complete_case_type_1 = self.create_complete_case_type(
             case_type_id=self.case_type_id1
         )
@@ -326,7 +326,7 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
             return_value=abac,
         ):
             cmd = self.case_stats_cmd(case_type_ids=requested_ids)
-            with self.assertRaisesRegex(Exception, "READ_CASE right for case types"):
+            with self.assertRaisesRegex(Exception, "READ_CASE right for CaseTypes"):
                 case_service_retrieve_case_stats(self.service, cmd)
 
         self.repository.crud.assert_not_called()
@@ -337,7 +337,7 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
             is_full_access=False, readable_case_type_ids=requested_ids
         )
 
-        # Mock complete case type
+        # Mock complete CaseType
         complete_case_type_1 = self.create_complete_case_type(
             case_type_id=self.case_type_id1
         )
@@ -413,10 +413,10 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
 
         self.repository.read_fields = Mock(side_effect=mock_read_fields)
 
-        # Mock repository.crud to return case type IDs when needed
+        # Mock repository.crud to return CaseType IDs when needed
         self.repository.crud = Mock(return_value=[self.case_type_id1])
 
-        # Mock complete case type
+        # Mock complete CaseType
         complete_case_type_1 = self.create_complete_case_type(
             case_type_id=self.case_type_id1
         )
@@ -480,7 +480,7 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
         # Mock ABAC to allow access
         abac = self.mock_abac(is_full_access=True, readable_case_type_ids=set())
 
-        # Mock repository.crud to return empty list for case types
+        # Mock repository.crud to return empty list for CaseTypes
         self.repository.crud = Mock(return_value=[])
         cmd = self.case_stats_cmd(case_type_ids=None, case_set_ids=None)
 
@@ -513,10 +513,10 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
 
         self.repository.read_fields = Mock(side_effect=mock_read_fields)
 
-        # Mock repository.crud to return case type IDs when needed
+        # Mock repository.crud to return CaseType IDs when needed
         self.repository.crud = Mock(return_value=[self.case_type_id1])
 
-        # Mock complete case type
+        # Mock complete CaseType
         complete_case_type_1 = self.create_complete_case_type(
             case_type_id=self.case_type_id1
         )

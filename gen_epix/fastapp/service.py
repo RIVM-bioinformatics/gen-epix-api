@@ -201,7 +201,7 @@ class BaseService(abc.ABC):
         for listener in self._crud_listeners.get((type(cmd), EventTiming.BEFORE), []):
             cmd, _ = listener(self, cmd, None)
         # Set object ids for CREATE operations
-        if cmd.operation in CrudOperationSet.CREATE.value:
+        if cmd.is_create():
             id_present = cmd.props.get("id_present", "raise")
             if cmd.objs is None:
                 raise exc.InvalidArgumentsError(
@@ -216,7 +216,7 @@ class BaseService(abc.ABC):
         # Prepare for cascaded read if necessary: determine which links
         # are handled by this service and which by other services
         cascade_read = cmd.props.get("cascade_read", False)
-        if cascade_read or cmd.operation in CrudOperationSet.WRITE.value:
+        if cascade_read or cmd.is_write():
             same_service_links, other_service_links = self._get_model_links(cmd)
         else:
             same_service_links = {}
@@ -224,7 +224,7 @@ class BaseService(abc.ABC):
         # Start unit of work
         with self.repository.uow() as uow:
             # Verify write operation object links are valid
-            if cmd.operation in CrudOperationSet.WRITE.value:
+            if cmd.is_write():
                 if cmd.objs is None:
                     raise exc.InvalidArgumentsError(
                         f"No object provided for operation {cmd.operation}"
@@ -239,11 +239,7 @@ class BaseService(abc.ABC):
             retval = self.crud_repository(uow, cmd, links=same_service_links)
 
             # Cascade read objects handled by other services
-            if (
-                cascade_read
-                and len(other_service_links)
-                and cmd.operation in CrudOperationSet.READ.value
-            ):
+            if cascade_read and len(other_service_links) and cmd.is_read():
                 if issubclass(type(retval), Model):
                     objs = [retval]  # type: ignore
                 else:
@@ -327,14 +323,11 @@ class BaseService(abc.ABC):
         # operations (read operations are verified later to avoid unnecessary reads)
         if access_filter:
             objs = None
-            if cmd.operation in CrudOperationSet.WRITE.value:
+            if cmd.is_write():
                 # Operations with one or more objs as input -> check if they match the
                 # access filter
                 objs = cmd.get_objs()
-            elif (
-                cmd.operation in CrudOperationSet.DELETE.value
-                or cmd.operation in CrudOperationSet.EXISTS.value
-            ):
+            elif cmd.is_delete() or cmd.is_exists():
                 # Delete/exists one or some (delete all is not possible since there is
                 # an access filter) -> check if the ids match the access filter
                 assert cmd.user is not None

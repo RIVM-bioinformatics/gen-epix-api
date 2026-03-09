@@ -19,7 +19,7 @@ from gen_epix.seqdb.domain import enum as seqdb_enum
 
 class CaseTypeSetCaseTypeUpdateAssociationCommand(UpdateAssociationCommand):
     """
-    Replace the case types in a case-type set with the provided list of members,
+    Replace the CaseTypes in a CaseTypeSet with the provided list of members,
     keeping the set in sync for downstream access policies and presets.
     """
 
@@ -32,19 +32,19 @@ class CaseTypeSetCaseTypeUpdateAssociationCommand(UpdateAssociationCommand):
     association_objs: list[model.CaseTypeSetMember]
 
 
-class CaseTypeColSetCaseTypeColUpdateAssociationCommand(UpdateAssociationCommand):
+class ColSetColUpdateAssociationCommand(UpdateAssociationCommand):
     """
-    Replace the columns in a case-type column set with the provided members so
+    Replace the columns in a ColSet with the provided members so
     read/write scopes and UI column groupings stay aligned.
     """
 
-    ASSOCIATION_CLASS: ClassVar = model.CaseTypeColSetMember
-    LINK_FIELD_NAME1: ClassVar = "case_type_col_set_id"
-    LINK_FIELD_NAME2: ClassVar = "case_type_col_id"
+    ASSOCIATION_CLASS: ClassVar = model.ColSetMember
+    LINK_FIELD_NAME1: ClassVar = "col_set_id"
+    LINK_FIELD_NAME2: ClassVar = "col_id"
 
     obj_id1: UUID | None = None
     obj_id2: UUID | None = None
-    association_objs: list[model.CaseTypeColSetMember]
+    association_objs: list[model.ColSetMember]
 
 
 class CreateCaseSetCommand(Command):
@@ -58,7 +58,7 @@ class CreateCaseSetCommand(Command):
         description="The data collections to associate with the case set, other than the created_in_data_collection. The latter will be removed from the set if present.",
     )
     case_ids: set[UUID] | None = Field(
-        description="The cases to associate with the case set upon creation, if any. These cases must have the same case type as the case set.",
+        description="The cases to associate with the case set upon creation, if any. These cases must have the same CaseType as the case set.",
         default=None,
     )
 
@@ -84,7 +84,7 @@ class UploadCasesCommand(Command, UploadBatchCommandMixin):
     BATCH_UPLOAD_RESULT_CLASS: ClassVar = model.CaseBatchUploadResult
 
     case_type_id: UUID = Field(
-        description="The case type ID that all the cases must belong to. All cases in the case set must have this case type ID."
+        description="The CaseType ID that all the cases must belong to. All cases in the case set must have this CaseType ID."
     )
     created_in_data_collection_id: UUID = Field(
         description="The created in data collection ID that all the cases must belong to. All cases in the case set must have this created in data collection ID."
@@ -98,7 +98,7 @@ class UploadCasesCommand(Command, UploadBatchCommandMixin):
         cases_for_upload = self.case_batch.cases
         cases = [x.case for x in cases_for_upload if x.case is not None]
         if any(x.case_type_id != self.case_type_id for x in cases):
-            raise ValueError("All cases must belong to the given case type ID.")
+            raise ValueError("All cases must belong to the given CaseType ID.")
         if any(
             x.created_in_data_collection_id != self.created_in_data_collection_id
             for x in cases
@@ -111,18 +111,18 @@ class UploadCasesCommand(Command, UploadBatchCommandMixin):
 
 class RetrieveCaseStatsCommand(Command):
     """
-    Retrieve statistics for a set of case types. Each of the parameters, when
+    Retrieve statistics for a set of CaseTypes. Each of the parameters, when
     provided, will further filter the cases that are considered for the
     statistics.
     """
 
     case_type_ids: set[UUID] | None = Field(
         default=None,
-        description="The case type ids to retrieve stats for, if not all.",
+        description="The CaseType IDs to retrieve stats for, if not all.",
     )
     case_set_ids: list[UUID] | None = Field(
         default=None,
-        description="The case set ids to retrieve stats for, if not all. UNIQUE",
+        description="The case set IDs to retrieve stats for, if not all. UNIQUE",
     )
     datetime_range_filter: TypedDatetimeRangeFilter | None = Field(
         default=None,
@@ -132,10 +132,10 @@ class RetrieveCaseStatsCommand(Command):
 
 class RetrieveCompleteCaseTypeCommand(Command):
     """
-    Retrieve a complete case type.
+    Retrieve a complete CaseType.
     """
 
-    case_type_id: UUID = Field(description="The ID of the case type to retrieve.")
+    case_type_id: UUID = Field(description="The ID of the CaseType to retrieve.")
 
 
 class RetrieveCasesByQueryCommand(Command):
@@ -151,9 +151,9 @@ class RetrieveCasesByIdCommand(Command):
     Retrieve cases by their IDs.
     """
 
-    case_type_id: UUID = Field(description="The case type id to retrieve cases for.")
+    case_type_id: UUID = Field(description="The CaseType ID to retrieve cases for.")
     case_ids: list[UUID] = Field(
-        description="The case ids to retrieve cases for. All cases must belong to the given case type. UNIQUE"
+        description="The case IDs to retrieve cases for. All cases must belong to the given CaseType. UNIQUE"
     )
 
     @field_validator("case_ids", mode="after")
@@ -169,10 +169,10 @@ class RetrieveCaseRightsCommand(Command):
     """
 
     case_type_id: UUID = Field(
-        description="The case type id to retrieve case access for."
+        description="The CaseType ID to retrieve case access for."
     )
     case_ids: list[UUID] = Field(
-        description="The case ids to retrieve access for. UNIQUE"
+        description="The Case IDs to retrieve access for. UNIQUE"
     )
 
     @field_validator("case_ids", mode="after")
@@ -188,13 +188,13 @@ class RetrieveCaseSetRightsCommand(Command):
     """
 
     case_set_ids: list[UUID] = Field(
-        description="The case set ids to retrieve access for. UNIQUE"
+        description="The CaseSet IDs to retrieve access for. UNIQUE"
     )
 
     @field_validator("case_set_ids", mode="after")
     def _validate_case_set_ids(cls, value: list[UUID]) -> list[UUID]:
         if len(set(value)) < len(value):
-            raise ValueError("Duplicate case set ids")
+            raise ValueError("Duplicate CaseSet IDs")
         return value
 
 
@@ -218,17 +218,17 @@ class RetrievePhylogeneticTreeBySequencesCommand(Command):
 class RetrievePhylogeneticTreeByCasesCommand(Command):
     """
     Retrieve a phylogenetic tree based on a set of case IDs, a tree algorithm, and
-    a genetic distance case type column.
+    a genetic distance Col.
     """
 
     case_type_id: UUID = Field(
-        description="The case type ID that all the cases must belong to."
+        description="The CaseType ID that all the cases must belong to."
     )
     tree_algorithm: enum.TreeAlgorithmType = Field(
         description="The algorithm to use for constructing the phylogenetic tree."
     )
-    genetic_distance_case_type_col_id: UUID = Field(
-        description="The ID of the genetic distance case type column to use."
+    genetic_distance_col_id: UUID = Field(
+        description="The ID of the genetic distance Col to use."
     )
     case_ids: list[UUID] = Field(
         description="The IDs of the cases to calculate the phylogenetic tree for."
@@ -238,11 +238,11 @@ class RetrievePhylogeneticTreeByCasesCommand(Command):
 class RetrieveSimilarCasesCommand(Command):
     """
     Retrieve cases that are (genetically) similar to a given list of case_ids,
-    based on the genetic distance values in a specified genetic distance case type column and a maximum distance threshold.
+    based on the genetic distance values in a specified genetic distance Col and a maximum distance threshold.
     """
 
     case_type_id: UUID = Field(
-        description="The case type ID that all the cases must belong to."
+        description="The CaseType ID that all the cases must belong to."
     )
 
     max_distance: float = Field(
@@ -252,22 +252,22 @@ class RetrieveSimilarCasesCommand(Command):
     case_ids: list[UUID] = Field(
         description="The IDs of cases to get the similar cases for.",
     )
-    genetic_distance_case_type_col_id: UUID = Field(
-        description="The case type column ID to use for determining the genetic distance between cases."
+    genetic_distance_col_id: UUID = Field(
+        description="The Col ID to use for determining the genetic distance between cases."
     )
 
 
 class RetrieveGeneticSequenceFastaByCaseCommand(Command):
     """
     Retrieve a set of genetic sequences in FASTA format based on a set of case IDs and a genetic
-    sequence case type column. An iterator is returned that yields the FASTA lines.
+    sequence Col. An iterator is returned that yields the FASTA lines.
     """
 
     case_type_id: UUID = Field(
-        description="The case type ID that all the cases must belong to."
+        description="The CaseType ID that all the cases must belong to."
     )
-    genetic_sequence_case_type_col_id: UUID = Field(
-        description="The ID of the genetic sequence case type column to use."
+    genetic_sequence_col_id: UUID = Field(
+        description="The ID of the genetic sequence Col to use."
     )
     case_ids: list[UUID] = Field(
         description="The IDs of the cases to retrieve genetic sequences for."
@@ -285,9 +285,7 @@ class CreateFileForReadSetCommand(Command):
         description="Whether the file is a forward read file.", default=True
     )
     case_id: UUID = Field(description="The ID of the case the read set belongs to.")
-    case_type_col_id: UUID = Field(
-        description="The ID of the read set case type column."
-    )
+    col_id: UUID = Field(description="The ID of the read set Col.")
     file_content: bytes = Field(description="The content of the file to create.")
     file_format: seqdb_enum.ReadsFileFormat = Field(
         default=seqdb_enum.ReadsFileFormat.FASTQ,
@@ -307,9 +305,7 @@ class CreateFileForSeqCommand(Command):
     """
 
     case_id: UUID = Field(description="The ID of the case the sequence belongs to.")
-    case_type_col_id: UUID = Field(
-        description="The ID of the genetic sequence case type column."
-    )
+    col_id: UUID = Field(description="The ID of the genetic sequence Col.")
     file_content: bytes = Field(description="The content of the file to create.")
     file_format: seqdb_enum.SeqFileFormat = Field(
         default=seqdb_enum.SeqFileFormat.FASTA,
@@ -343,7 +339,7 @@ class RetrieveAssemblyProtocolsCommand(Command):
 
 
 class CaseCrudCommand(CrudCommand):
-    """Manage cases (list/get/create/update/delete) with typed content tied to a case type, subject, and data collection."""
+    """Manage cases (list/get/create/update/delete) with typed content tied to a CaseType, subject, and data collection."""
 
     MODEL_CLASS: ClassVar = model.Case
 
@@ -384,34 +380,34 @@ class CaseSetStatusCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.CaseSetStatus
 
 
-class CaseTypeColCrudCommand(CrudCommand):
+class ColCrudCommand(CrudCommand):
     """Manage case-type columns: datatype, vocab/region bindings, and genetic-distance settings."""
 
-    MODEL_CLASS: ClassVar = model.CaseTypeCol
+    MODEL_CLASS: ClassVar = model.Col
 
 
-class CaseTypeColSetCrudCommand(CrudCommand):
+class ColSetCrudCommand(CrudCommand):
     """Manage column sets used for read/write scopes and default column groupings."""
 
-    MODEL_CLASS: ClassVar = model.CaseTypeColSet
+    MODEL_CLASS: ClassVar = model.ColSet
 
 
-class CaseTypeColSetMemberCrudCommand(CrudCommand):
+class ColSetMemberCrudCommand(CrudCommand):
     """Manage which columns belong to a column set used in policies or UI presets."""
 
-    MODEL_CLASS: ClassVar = model.CaseTypeColSetMember
+    MODEL_CLASS: ClassVar = model.ColSetMember
 
 
 class CaseTypeCrudCommand(CrudCommand):
-    """Manage case types—the structural and default definitions cases must follow."""
+    """Manage CaseTypes—the structural and default definitions cases must follow."""
 
     MODEL_CLASS: ClassVar = model.CaseType
 
 
-class CaseTypeDimCrudCommand(CrudCommand):
+class DimCrudCommand(CrudCommand):
     """Manage dimensions that group case-type columns (e.g., demographics, sample, sequencing)."""
 
-    MODEL_CLASS: ClassVar = model.CaseTypeDim
+    MODEL_CLASS: ClassVar = model.Dim
 
 
 class CaseTypeSetCategoryCrudCommand(CrudCommand):
@@ -421,27 +417,27 @@ class CaseTypeSetCategoryCrudCommand(CrudCommand):
 
 
 class CaseTypeSetCrudCommand(CrudCommand):
-    """Manage sets of related case types reused in access policies and presets."""
+    """Manage sets of related CaseTypes reused in access policies and presets."""
 
     MODEL_CLASS: ClassVar = model.CaseTypeSet
 
 
 class CaseTypeSetMemberCrudCommand(CrudCommand):
-    """Manage which case types belong to a case-type set."""
+    """Manage which CaseTypes belong to a case-type set."""
 
     MODEL_CLASS: ClassVar = model.CaseTypeSetMember
 
 
-class ColCrudCommand(CrudCommand):
+class RefColCrudCommand(CrudCommand):
     """Manage reusable column definitions (code/label/type) referenced by case-type columns and vocabularies."""
 
-    MODEL_CLASS: ClassVar = model.Col
+    MODEL_CLASS: ClassVar = model.RefCol
 
 
-class DimCrudCommand(CrudCommand):
-    """Manage column dimensions, including code prefixes and ordering, reused across case types."""
+class RefDimCrudCommand(CrudCommand):
+    """Manage column dimensions, including code prefixes and ordering, reused across CaseTypes."""
 
-    MODEL_CLASS: ClassVar = model.Dim
+    MODEL_CLASS: ClassVar = model.RefDim
 
 
 class GeneticDistanceProtocolCrudCommand(CrudCommand):

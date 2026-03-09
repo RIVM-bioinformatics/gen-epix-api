@@ -5,7 +5,7 @@ import pytest
 
 from gen_epix.casedb.domain import model
 
-VERBOSE = True  # Set to True to enable detailed print statements during setup for debugging purposes;
+VERBOSE = False  # Set to True to enable detailed print statements during setup for debugging purposes;
 
 
 @pytest.fixture(scope="module")

@@ -5,17 +5,16 @@ The tests follow the structure, naming, mocking strategy, typing,
 and layout conventions of the reference test file in commondb.
 """
 
-from unittest import TestCase
+from test.casedb.unit.services.case.base import BaseCrudTestCase
 from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
 
 import pytest
 
 from gen_epix.casedb.services.case import crud_common
-from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.commondb.domain.enum import RoleSet as CommonRoleSet
 from gen_epix.fastapp import CrudOperation
-from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
+from gen_epix.fastapp.enum import CrudOperationSet
 from gen_epix.filter import CompositeFilter, EqualsStringFilter, Filter, LogicalOperator
 
 
@@ -36,6 +35,12 @@ class DummyCmd:
         self.user.id = user_id
         self.access_filter = access_filter
         self._obj_ids = obj_ids
+        self.is_create = Mock(return_value=operation in CrudOperationSet.CREATE.value)
+        self.is_read = Mock(
+            return_value=operation in CrudOperationSet.READ_OR_EXISTS.value
+        )
+        self.is_update = Mock(return_value=operation in CrudOperationSet.UPDATE.value)
+        self.is_delete = Mock(return_value=operation in CrudOperationSet.DELETE.value)
 
     def get_obj_ids(self, as_set: bool = False) -> set[UUID] | None:
         return self._obj_ids if as_set else (self._obj_ids or set())
@@ -52,31 +57,8 @@ class DummyLink:
         self.link_field_name = link_field_name
 
 
-def create_service_mock() -> Mock:
-    """Create a BaseCaseService mock with repository and helpers."""
-    service: Mock = Mock(spec=BaseCaseService)
-    service.repository = Mock()
-    service.repository.crud = Mock(return_value=[])
-    service._compose_id_filter = Mock(
-        side_effect=lambda key_and_ids: EqualsStringFilter(
-            key=key_and_ids[0][0], value=""
-        )
-    )
-    service.CASCADE_DELETE_MODEL_CLASSES = {}
-    service.crud = Mock(return_value=["ok"])  # type: ignore[assignment]
-    return service
-
-
-def create_uow_mock() -> Mock:
-    """Create a BaseUnitOfWork mock with context manager support."""
-    uow: Mock = Mock(spec=BaseUnitOfWork)
-    uow.__enter__ = Mock(return_value=uow)
-    uow.__exit__ = Mock(return_value=None)
-    return uow
-
-
 @pytest.mark.scenario_ids("TC-SEC-29-02")
-class TestGetCaseAbacFromCommand(TestCase):
+class TestGetCaseAbacFromCommand(BaseCrudTestCase):
     """Tests for get_case_abac_from_command."""
 
     def test_returns_policy_value(self) -> None:
@@ -114,11 +96,11 @@ class TestGetCaseAbacFromCommand(TestCase):
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")
-class TestRoleChecks(TestCase):
+class TestRoleChecks(BaseCrudTestCase):
     """Tests for role-based checks."""
 
     def setUp(self) -> None:
-        self.service = create_service_mock()
+        super().setUp()
         # Provide role_set_map with string values to match user roles for intersection logic
         self.service.role_set_map = {
             CommonRoleSet.GE_REFDATA_ADMIN: {
@@ -129,7 +111,7 @@ class TestRoleChecks(TestCase):
             CommonRoleSet.GE_APP_ADMIN: {"ROOT", "COMMONDB_APP_ADMIN"},
         }
 
-    def test_is_metadata_admin_or_above_true(self) -> None:
+    def test_is_refdata_admin_or_above_true(self) -> None:
         # 1. Input
         user: Mock = Mock()
         user.roles = {"COMMONDB_REFDATA_ADMIN"}
@@ -137,12 +119,12 @@ class TestRoleChecks(TestCase):
         # 2. Mocks: already set in setUp
 
         # 3. Execute
-        retval: bool = crud_common.is_metadata_admin_or_above(self.service, user)
+        retval: bool = crud_common.is_refdata_admin_or_above(self.service, user)
 
         # 4. Verify
         self.assertTrue(retval)
 
-    def test_is_metadata_admin_or_above_false(self) -> None:
+    def test_is_refdata_admin_or_above_false(self) -> None:
         # 1. Input
         user: Mock = Mock()
         user.roles = {"COMMONDB_ORG_USER"}
@@ -150,7 +132,7 @@ class TestRoleChecks(TestCase):
         # 2. Mocks: already set in setUp
 
         # 3. Execute
-        retval: bool = crud_common.is_metadata_admin_or_above(self.service, user)
+        retval: bool = crud_common.is_refdata_admin_or_above(self.service, user)
 
         # 4. Verify
         self.assertFalse(retval)
@@ -181,7 +163,7 @@ class TestRoleChecks(TestCase):
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")
-class TestCommandCategoryChecks(TestCase):
+class TestCommandCategoryChecks(BaseCrudTestCase):
     """Tests for command type categorization helpers."""
 
     class NoAbacCmd:
@@ -225,7 +207,7 @@ class TestCommandCategoryChecks(TestCase):
 
         # 2. Mocks
         with patch(
-            "gen_epix.casedb.services.case.crud_common.DomainBaseCaseService.ABAC_METADATA_COMMAND_CLASSES",
+            "gen_epix.casedb.services.case.crud_common.DomainBaseCaseService.ABAC_REFDATA_COMMAND_CLASSES",
             new={TestCommandCategoryChecks.MetaCmd},
         ):
             # 3. Execute + Verify
@@ -252,12 +234,17 @@ class TestCommandCategoryChecks(TestCase):
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")
-class TestCrudWithAccessFilter(TestCase):
+class TestCrudWithAccessFilter(BaseCrudTestCase):
     """Tests for crud_with_access_filter including cascade delete behavior."""
 
     def setUp(self) -> None:
-        self.service = create_service_mock()
-        self.uow = create_uow_mock()
+        super().setUp()
+        self.service._compose_id_filter = Mock(
+            side_effect=lambda key_and_ids: EqualsStringFilter(
+                key=key_and_ids[0][0], value=""
+            )
+        )
+        self.service.CASCADE_DELETE_MODEL_CLASSES = {}
         self.user_id = uuid4()
 
     def test_sets_composite_filter_and_restores_original(self) -> None:

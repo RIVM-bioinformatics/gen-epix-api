@@ -186,20 +186,20 @@ def test_casedb_seqdb_connection(
         casedb_app_composer.cfg, casedb_app
     )
 
-    # Get all cols, case_type_cols and cases
-    cols: dict[UUID, model.Col] = {
+    # Get all RefCols, Cols and Cases
+    ref_cols: dict[UUID, model.RefCol] = {
         x.id: x
         for x in casedb_app.handle(
-            command.ColCrudCommand(
+            command.RefColCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ALL,
             )
         )
     }
-    case_type_cols: dict[UUID, model.CaseTypeCol] = {
+    cols: dict[UUID, model.Col] = {
         x.id: x
         for x in casedb_app.handle(
-            command.CaseTypeColCrudCommand(
+            command.ColCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ALL,
             )
@@ -215,32 +215,32 @@ def test_casedb_seqdb_connection(
     # Test phylogenetic tree retrieval (which calls SeqDB)
     is_phylogenetic_tree_retrieved = False
     is_similar_cases_retrieved = False
-    genetic_distance_case_type_col_ids: list[UUID] = [
+    genetic_distance_col_ids: list[UUID] = [
         x.id  # type: ignore[misc]
-        for x in case_type_cols.values()
-        if cols[x.col_id].col_type == enum.ColType.GENETIC_DISTANCE
+        for x in cols.values()
+        if ref_cols[x.ref_col_id].col_type == enum.ColType.GENETIC_DISTANCE
     ]
-    for case_type_col_id in genetic_distance_case_type_col_ids:
-        case_type_col = case_type_cols[case_type_col_id]
-        assert case_type_col.genetic_sequence_case_type_col_id is not None
-        case_type_col = case_type_cols[case_type_col_id]
-        genetic_sequence_case_type_col_id: UUID = (
-            case_type_col.genetic_sequence_case_type_col_id  # type: ignore[assignment]
+    for col_id in genetic_distance_col_ids:
+        col = cols[col_id]
+        assert col.genetic_sequence_col_id is not None
+        col = cols[col_id]
+        genetic_sequence_col_id: UUID = (
+            col.genetic_sequence_col_id  # type: ignore[assignment]
         )
         case_ids: list[UUID] = [
-            x.id for x in cases if x.content.get(genetic_sequence_case_type_col_id)
+            x.id for x in cases if x.content.get(genetic_sequence_col_id)
         ]
         if len(case_ids) < 2:
             continue
         if len(case_ids) > 5:
             case_ids = case_ids[0:5]
-        if case_type_col.tree_algorithm_codes and case_type_col.id:
-            for tree_algorithm_code in case_type_col.tree_algorithm_codes:
+        if col.tree_algorithm_codes and col.id:
+            for tree_algorithm_code in col.tree_algorithm_codes:
                 phylogenetic_tree = casedb_app.handle(
                     command.RetrievePhylogeneticTreeByCasesCommand(
                         user=root_user,
-                        case_type_id=case_type_col.case_type_id,
-                        genetic_distance_case_type_col_id=case_type_col.id,
+                        case_type_id=col.case_type_id,
+                        genetic_distance_col_id=col.id,
                         tree_algorithm=tree_algorithm_code,
                         case_ids=case_ids,
                     )
@@ -249,8 +249,8 @@ def test_casedb_seqdb_connection(
                 similar_case_ids: list[UUID] = casedb_app.handle(
                     command.RetrieveSimilarCasesCommand(
                         user=root_user,
-                        case_type_id=case_type_col.case_type_id,
-                        genetic_distance_case_type_col_id=case_type_col.id,
+                        case_type_id=col.case_type_id,
+                        genetic_distance_col_id=col.id,
                         case_ids=case_ids[0:5],
                         max_distance=5,
                     )
@@ -266,18 +266,18 @@ def test_casedb_seqdb_connection(
     assert len(similar_case_ids) > 0
     assert any(isinstance(case_id, UUID) for case_id in similar_case_ids)
 
-    genetic_sequence_case_type_cols = [
+    genetic_sequence_cols = [
         x
-        for x in case_type_cols.values()
-        if cols[x.col_id].col_type == enum.ColType.GENETIC_SEQUENCE
+        for x in cols.values()
+        if ref_cols[x.ref_col_id].col_type == enum.ColType.GENETIC_SEQUENCE
     ]
     has_seq_case_ids: list[UUID] = []
-    for genetic_sequence_case_type_col in genetic_sequence_case_type_cols:
-        assert genetic_sequence_case_type_col.id is not None
+    for genetic_sequence_col in genetic_sequence_cols:
+        assert genetic_sequence_col.id is not None
         has_seq_case_ids: list[UUID] = [
-            UUID(x.content[genetic_sequence_case_type_col.id])
+            UUID(x.content[genetic_sequence_col.id])
             for x in cases
-            if x.content.get(genetic_sequence_case_type_col.id)
+            if x.content.get(genetic_sequence_col.id)
         ]
         if has_seq_case_ids:
             break

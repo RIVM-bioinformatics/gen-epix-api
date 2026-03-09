@@ -26,6 +26,21 @@ class BaseAuthServiceTestCase(TestCase):
         self.app.logger = self.logger
         self.app.user_manager = self.user_manager
         self.app.log_item_class = MagicMock()
+        self.app.cfg = {
+            "service": {
+                "auth": {
+                    "props": {
+                        "root": {
+                            "user": {
+                                # Keep disabled by default in tests unless a test explicitly enables it.
+                                "token_time_to_live": None
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        self.user_manager.is_root_user.return_value = False
 
         # Users
         self.user: MagicMock = MagicMock(spec=model.User)
@@ -484,6 +499,45 @@ class TestGetExistingUserFromClaims(BaseAuthServiceTestCase):
         # Execute/Verify
         with self.assertRaises(exc.UnauthorizedAuthError):
             self.run_async(self.service.get_existing_user_from_claims(claims))
+
+
+class TestRootUserTokenTimeToLive(BaseAuthServiceTestCase):
+    """Test root token TTL enforcement helper."""
+
+    def test_root_token_within_15_minutes_is_allowed(self) -> None:
+        """Root token younger than configured TTL should pass."""
+        # Create input
+        now = 2_000_000
+        claims: Claims = self.create_claims(uuid4(), {"iat": now - 300})
+        # Set up mocks
+        self.app.cfg["service"]["auth"]["props"]["root"]["user"][
+            "token_time_to_live"
+        ] = 900
+        self.user_manager.is_root_user.return_value = True
+        # Execute/Verify
+        with patch(
+            "gen_epix.fastapp.services.auth.service.time.time", return_value=now
+        ):
+            self.service._test_root_user_for_token_time_to_live(claims, self.root_user)
+
+    def test_root_token_older_than_15_minutes_is_rejected(self) -> None:
+        """Root token older than configured TTL should raise UnauthorizedAuthError."""
+        # Create input
+        now = 2_000_000
+        claims: Claims = self.create_claims(uuid4(), {"iat": now - 901})
+        # Set up mocks
+        self.app.cfg["service"]["auth"]["props"]["root"]["user"][
+            "token_time_to_live"
+        ] = 900
+        self.user_manager.is_root_user.return_value = True
+        # Execute/Verify
+        with patch(
+            "gen_epix.fastapp.services.auth.service.time.time", return_value=now
+        ):
+            with self.assertRaises(exc.UnauthorizedAuthError):
+                self.service._test_root_user_for_token_time_to_live(
+                    claims, self.root_user
+                )
 
 
 # __init__ _validate_idp_cfgs behavior via constructor
