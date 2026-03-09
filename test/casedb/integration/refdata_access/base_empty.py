@@ -8,6 +8,6 @@ TEST_TYPE = TestType.CASEDB_INTEGRATION_REFDATA_ACCESS
 SKIP_ENDPOINTS = True  # False (i.e. using endpoints) does not work with SA_SQLITE due to multi-threading issue
 SKIP_RAISE = False
 SKIP_CREATE_DATA = False
-VERBOSE = False
+VERBOSE = True
 DEV_REPOSITORY_CONFIG = DevRepositoryConfig.DICT_EMPTY
 # DEV_REPOSITORY_CONFIG = DevRepositoryConfig.SA_SQLITE_DEMO

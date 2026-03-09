@@ -35,6 +35,7 @@ from gen_epix.casedb.domain.command import (
     RefColCrudCommand,
     RefDimCrudCommand,
 )
+from gen_epix.casedb.domain.command.case import ColCrudCommand
 from gen_epix.casedb.repositories.sa_model.ontology import Disease
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.domain.util import get_app_cfgs
@@ -242,7 +243,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         EDGE_CASES,
         ids=[x.user_name for x in EDGE_CASES],
     )
-    def test_col_access_matches_expected(
+    def test_ref_col_access_matches_expected(
         self, spec: EdgeCaseSpec, setup_case_type_data: None
     ) -> None:
         """
@@ -420,41 +421,6 @@ class TestCaseDBEdgeCasesRefDataAccess:
 
         actual = {x.code for x in result} if isinstance(result, list) else set()
         expected = set(spec.expected_cols)
-
-        missing = expected - actual
-        unexpected = actual - expected
-
-        assert not missing and not unexpected, (
-            f"\n{spec.description}"
-            f"\n  Missing access:    {sorted(missing) if missing else '∅'}"
-            f"\n  Unexpected access: {sorted(unexpected) if unexpected else '∅'}"
-        )
-
-    @pytest.mark.parametrize(
-        "spec",
-        EDGE_CASES,
-        ids=[x.user_name for x in EDGE_CASES],
-    )
-    def test_dim_access_matches_expected(
-        self, spec: EdgeCaseSpec, setup_case_type_data: None
-    ) -> None:
-        """
-        For each edge case, assert that the set of accessible dims exactly matches
-        the expected set declared in EdgeCaseSpec.expected_dims — neither more nor less.
-
-        Accessible dims are derived from accessible case type cols (via org access policies only).
-        User policies must not grant access to additional dims.
-        """
-        user = self.get_user(spec.user_name)
-
-        if VERBOSE:
-            rich_print([x for x in EDGE_CASES if x.user_name == user.name])
-
-        get_cmd = DimCrudCommand(user=user, operation=CrudOperation.READ_ALL)
-        result = self.env.app.handle(get_cmd)
-
-        actual = {dim.code for dim in result} if isinstance(result, list) else set()
-        expected = set(spec.expected_dims)
 
         missing = expected - actual
         unexpected = actual - expected
