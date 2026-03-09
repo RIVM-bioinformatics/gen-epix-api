@@ -145,3 +145,7 @@ class TestCaseDBModelProcessMetadata:
             assert (
                 ct.modified_by is None
             ), f"{ct.name}: modified_by should be masked for org user"
+
+    # Additional tests could include write tests to verify that SetModelProcessMetadataPolicy is setting the fields correctly 
+    # on create/update operations, but this would require more setup to create objects and check their metadata after creation/modification. 
+    # The current tests focus on the masking behaviour for reads, which is the main purpose of MaskModelProcessMetadataPolicy.

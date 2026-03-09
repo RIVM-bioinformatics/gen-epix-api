@@ -124,24 +124,32 @@ def create_field_metadata(
     dict[type[Model], Callable[[Any, Any], dict[str, Any]]],
 ]:
     model_classes: frozenset[type[Model]] = domain.models  # type: ignore[assignment]
-    service_metadata_fields: dict[type[Model], list[str]] = {
-        model_class: ["modified_by"] for model_class in model_classes
-    }
-    db_metadata_fields: dict[type[Model], list[str]] = {
-        model_class: [
-            "created_at",
-            "modified_at",
-        ]
-        for model_class in model_classes
-    }
+
+    # TODO 2953: check if this is correct
+
+    # service_metadata_fields: dict[type[Model], list[str]] = {
+    #     model_class: ["modified_by"] for model_class in model_classes
+    # }
+    service_metadata_fields: dict[type[Model], list[str]] = {}
+    db_metadata_fields: dict[type[Model], list[str]] = {}
+    # db_metadata_fields: dict[type[Model], list[str]] = {
+    #     model_class: [
+    #         "created_at",
+    #         "modified_at",
+    #     ]
+    #     for model_class in model_classes
+    # }
     generate_service_metadata: dict[
         type[Model], Callable[[Any, Any], dict[str, Any]]
-    ] = {
-        model_class: lambda x, y: {
-            "modified_by": y,
-        }
-        for model_class in model_classes
-    }
+    ] = {}
+    # generate_service_metadata: dict[
+    #     type[Model], Callable[[Any, Any], dict[str, Any]]
+    # ] = {
+    #     model_class: lambda x, y: {
+    #         "modified_by": y,
+    #     }
+    #     for model_class in model_classes
+    # }
     return service_metadata_fields, db_metadata_fields, generate_service_metadata
 
 

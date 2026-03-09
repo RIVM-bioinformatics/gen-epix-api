@@ -8,7 +8,9 @@ from sqlalchemy_utils.types.uuid import UUIDType
 from gen_epix.fastapp.repositories.sa import ServerUtcCurrentTime
 
 
-# Note: Why not use the same base model as in commondb?
+# TODO: 2953 - consider removing
+# This is a duplicate of the same mixin in gen_epix.commondb.domain.model.base,
+#  but we want to avoid importing from the domain layer into the repository layer, so we duplicate it here.
 @declarative_mixin
 class NoIdRowMetadataMixin:
     """
