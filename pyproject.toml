@@ -37,7 +37,7 @@ dependencies = [
     "dynaconf==3.2.12",
     "PyYAML==6.0.3",
     "scipy==1.17.1",
-    "numpy==2.4.2",
+    "numpy==2.4.3",
     "biopython==1.86",
     "cachetools==7.0.3",
     "slowapi==0.1.9",
