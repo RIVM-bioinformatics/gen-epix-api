@@ -1,32 +1,26 @@
 # omopdb / OMOP — Detailed ERD
 
-Auto-generated.  Service type **OMOP** — 48 entities.
+Auto-generated.  Service type **OMOP** — 63 entities.
 
 ```mermaid
 erDiagram
     %% omopdb / OMOP (detailed)
 
     %% Relationships
-    FactRelationship }o--|| Concept : "domain_concept_id_1"
-    FactRelationship }o--|| Concept : "domain_concept_id_2"
-    FactRelationship }o--|| Concept : "relationship_concept_id"
-    ConditionEra }o--|| Person : "person_id"
-    ConditionEra }o--|| Concept : "condition_concept_id"
-    EpisodeEvent }o--|| Episode : "episode_id"
-    EpisodeEvent }o--|| Concept : "episode_event_field_concept_id"
-    Note }o--|| Person : "person_id"
-    Note }o--|| Concept : "note_type_concept_id"
-    Note }o--|| Concept : "note_class_concept_id"
-    Note }o--|| Concept : "encoding_concept_id"
-    Note }o--|| Concept : "language_concept_id"
-    Note }o--|| Provider : "provider_id"
-    Note }o--|| VisitOccurrence : "visit_occurrence_id"
-    Note }o--|| VisitDetail : "visit_detail_id"
-    Note }o--|| Concept : "note_event_field_concept_id"
-    MeasurementRelation }o--|| Person : "person_id"
-    MeasurementRelation }o--|| Measurement : "from_measurement_id"
-    MeasurementRelation }o--|| Measurement : "to_measurement_id"
-    MeasurementRelation }o--|| Concept : "measurement_relation_concept_id"
+    Cost }o--|| Domain : "cost_domain_id"
+    Cost }o--|| Concept : "cost_type_concept_id"
+    Cost }o--|| Concept : "currency_concept_id"
+    Cost }o--|| Concept : "revenue_code_concept_id"
+    Cost }o--|| Concept : "drg_concept_id"
+    ConceptSynonym }o--|| Concept : "concept_id"
+    ConceptSynonym }o--|| Concept : "language_concept_id"
+    ObservationPeriodIdentifier }o--|| ObservationPeriod : "internal_id"
+    MeasurementRelationIdentifier }o--|| MeasurementRelation : "internal_id"
+    DrugStrength }o--|| Concept : "drug_concept_id"
+    DrugStrength }o--|| Concept : "ingredient_concept_id"
+    DrugStrength }o--|| Concept : "amount_unit_concept_id"
+    DrugStrength }o--|| Concept : "numerator_unit_concept_id"
+    DrugStrength }o--|| Concept : "denominator_unit_concept_id"
     PayerPlanPeriod }o--|| Person : "person_id"
     PayerPlanPeriod }o--|| Concept : "payer_concept_id"
     PayerPlanPeriod }o--|| Concept : "payer_source_concept_id"
@@ -36,11 +30,56 @@ erDiagram
     PayerPlanPeriod }o--|| Concept : "sponsor_source_concept_id"
     PayerPlanPeriod }o--|| Concept : "stop_reason_concept_id"
     PayerPlanPeriod }o--|| Concept : "stop_reason_source_concept_id"
-    Episode }o--|| Person : "person_id"
-    Episode }o--|| Concept : "episode_concept_id"
-    Episode }o--|| Concept : "episode_object_concept_id"
-    Episode }o--|| Concept : "episode_type_concept_id"
-    Episode }o--|| Concept : "episode_source_concept_id"
+    ObservationIdentifier }o--|| Observation : "internal_id"
+    Death }o--|| Person : "person_id"
+    Death }o--|| Concept : "death_type_concept_id"
+    Death }o--|| Concept : "cause_concept_id"
+    Death }o--|| Concept : "cause_source_concept_id"
+    DrugExposureIdentifier }o--|| DrugExposure : "internal_id"
+    FactRelationship }o--|| Concept : "domain_concept_id_1"
+    FactRelationship }o--|| Concept : "domain_concept_id_2"
+    FactRelationship }o--|| Concept : "relationship_concept_id"
+    ConditionOccurrenceIdentifier }o--|| ConditionOccurrence : "internal_id"
+    Note }o--|| Person : "person_id"
+    Note }o--|| Concept : "note_type_concept_id"
+    Note }o--|| Concept : "note_class_concept_id"
+    Note }o--|| Concept : "encoding_concept_id"
+    Note }o--|| Concept : "language_concept_id"
+    Note }o--|| Provider : "provider_id"
+    Note }o--|| VisitOccurrence : "visit_occurrence_id"
+    Note }o--|| VisitDetail : "visit_detail_id"
+    Note }o--|| Concept : "note_event_field_concept_id"
+    Measurement }o--|| Person : "person_id"
+    Measurement }o--|| Concept : "measurement_concept_id"
+    Measurement }o--|| Concept : "measurement_type_concept_id"
+    Measurement }o--|| Concept : "operator_concept_id"
+    Measurement }o--|| Concept : "value_as_concept_id"
+    Measurement }o--|| Concept : "unit_concept_id"
+    Measurement }o--|| Provider : "provider_id"
+    Measurement }o--|| VisitOccurrence : "visit_occurrence_id"
+    Measurement }o--|| VisitDetail : "visit_detail_id"
+    Measurement }o--|| Concept : "measurement_source_concept_id"
+    Measurement }o--|| Concept : "unit_source_concept_id"
+    Measurement }o--|| Concept : "meas_event_field_concept_id"
+    Provider }o--|| Concept : "specialty_concept_id"
+    Provider }o--|| CareSite : "care_site_id"
+    Provider }o--|| Concept : "gender_concept_id"
+    Provider }o--|| Concept : "specialty_source_concept_id"
+    Provider }o--|| Concept : "gender_source_concept_id"
+    DrugExposure }o--|| Person : "person_id"
+    DrugExposure }o--|| Concept : "drug_concept_id"
+    DrugExposure }o--|| Concept : "drug_type_concept_id"
+    DrugExposure }o--|| Concept : "route_concept_id"
+    DrugExposure }o--|| Provider : "provider_id"
+    DrugExposure }o--|| VisitOccurrence : "visit_occurrence_id"
+    DrugExposure }o--|| VisitDetail : "visit_detail_id"
+    DrugExposure }o--|| Concept : "drug_source_concept_id"
+    SourceToConceptMap }o--|| Concept : "source_concept_id"
+    SourceToConceptMap }o--|| Concept : "target_concept_id"
+    SourceToConceptMap }o--|| Vocabulary : "target_vocabulary_id"
+    SpecimenIdentifier }o--|| Specimen : "internal_id"
+    ObservationPeriod }o--|| Person : "person_id"
+    ObservationPeriod }o--|| Concept : "period_type_concept_id"
     VisitOccurrence }o--|| Person : "person_id"
     VisitOccurrence }o--|| Concept : "visit_concept_id"
     VisitOccurrence }o--|| Concept : "visit_type_concept_id"
@@ -49,37 +88,22 @@ erDiagram
     VisitOccurrence }o--|| Concept : "visit_source_concept_id"
     VisitOccurrence }o--|| Concept : "admitted_from_concept_id"
     VisitOccurrence }o--|| Concept : "discharged_to_concept_id"
-    Concept }o--|| Domain : "domain_id"
-    Concept }o--|| Vocabulary : "vocabulary_id"
-    Concept }o--|| ConceptClass : "concept_class_id"
-    CareSite }o--|| Concept : "place_of_service_concept_id"
-    CareSite }o--|| Location : "location_id"
-    DrugStrength }o--|| Concept : "drug_concept_id"
-    DrugStrength }o--|| Concept : "ingredient_concept_id"
-    DrugStrength }o--|| Concept : "amount_unit_concept_id"
-    DrugStrength }o--|| Concept : "numerator_unit_concept_id"
-    DrugStrength }o--|| Concept : "denominator_unit_concept_id"
-    ConditionOccurrence }o--|| Person : "person_id"
-    ConditionOccurrence }o--|| Concept : "condition_concept_id"
-    ConditionOccurrence }o--|| Concept : "condition_type_concept_id"
-    ConditionOccurrence }o--|| Concept : "condition_status_concept_id"
-    ConditionOccurrence }o--|| Provider : "provider_id"
-    ConditionOccurrence }o--|| VisitOccurrence : "visit_occurrence_id"
-    ConditionOccurrence }o--|| VisitDetail : "visit_detail_id"
-    ConditionOccurrence }o--|| Concept : "condition_source_concept_id"
-    ConceptSynonym }o--|| Concept : "concept_id"
-    ConceptSynonym }o--|| Concept : "language_concept_id"
-    ConceptRelationship }o--|| Concept : "concept_id_1"
-    ConceptRelationship }o--|| Concept : "concept_id_2"
-    ConceptRelationship }o--|| Relationship : "relationship_id"
-    Relationship }o--|| Concept : "relationship_concept_id"
-    Cost }o--|| Domain : "cost_domain_id"
-    Cost }o--|| Concept : "cost_type_concept_id"
-    Cost }o--|| Concept : "currency_concept_id"
-    Cost }o--|| Concept : "revenue_code_concept_id"
-    Cost }o--|| Concept : "drg_concept_id"
-    ConceptAncestor }o--|| Concept : "ancestor_concept_id"
-    ConceptAncestor }o--|| Concept : "descendant_concept_id"
+    MeasurementIdentifier }o--|| Measurement : "internal_id"
+    Episode }o--|| Person : "person_id"
+    Episode }o--|| Concept : "episode_concept_id"
+    Episode }o--|| Concept : "episode_object_concept_id"
+    Episode }o--|| Concept : "episode_type_concept_id"
+    Episode }o--|| Concept : "episode_source_concept_id"
+    ProcedureOccurrenceIdentifier }o--|| ProcedureOccurrence : "internal_id"
+    DeviceExposure }o--|| Person : "person_id"
+    DeviceExposure }o--|| Concept : "device_concept_id"
+    DeviceExposure }o--|| Concept : "device_type_concept_id"
+    DeviceExposure }o--|| Provider : "provider_id"
+    DeviceExposure }o--|| VisitOccurrence : "visit_occurrence_id"
+    DeviceExposure }o--|| VisitDetail : "visit_detail_id"
+    DeviceExposure }o--|| Concept : "device_source_concept_id"
+    DeviceExposure }o--|| Concept : "unit_concept_id"
+    DeviceExposure }o--|| Concept : "unit_source_concept_id"
     ObservationForUpload }o--|| Person : "person_id"
     ObservationForUpload }o--|| Concept : "observation_concept_id"
     ObservationForUpload }o--|| Concept : "observation_type_concept_id"
@@ -91,34 +115,34 @@ erDiagram
     ObservationForUpload }o--|| VisitDetail : "visit_detail_id"
     ObservationForUpload }o--|| Concept : "observation_source_concept_id"
     ObservationForUpload }o--|| Concept : "obs_event_field_concept_id"
-    DoseEra }o--|| Person : "person_id"
-    DoseEra }o--|| Concept : "drug_concept_id"
-    DoseEra }o--|| Concept : "unit_concept_id"
-    MeasurementRelationForUpload }o--|| Person : "person_id"
-    MeasurementRelationForUpload }o--|| Measurement : "from_measurement_id"
-    MeasurementRelationForUpload }o--|| Measurement : "to_measurement_id"
-    MeasurementRelationForUpload }o--|| Concept : "measurement_relation_concept_id"
+    Relationship }o--|| Concept : "relationship_concept_id"
+    ConditionEra }o--|| Person : "person_id"
+    ConditionEra }o--|| Concept : "condition_concept_id"
+    VisitOccurrenceIdentifier }o--|| VisitOccurrence : "internal_id"
+    DrugEra }o--|| Person : "person_id"
+    DrugEra }o--|| Concept : "drug_concept_id"
+    ConceptAncestor }o--|| Concept : "ancestor_concept_id"
+    ConceptAncestor }o--|| Concept : "descendant_concept_id"
+    NoteNlpIdentifier }o--|| NoteNlp : "internal_id"
+    Metadata }o--|| Concept : "metadata_concept_id"
+    Metadata }o--|| Concept : "metadata_type_concept_id"
+    Metadata }o--|| Concept : "value_as_concept_id"
+    DeathIdentifier }o--|| Death : "internal_id"
+    NoteIdentifier }o--|| Note : "internal_id"
+    PersonIdentifier }o--|| Person : "internal_id"
+    EpisodeEvent }o--|| Episode : "episode_id"
+    EpisodeEvent }o--|| Concept : "episode_event_field_concept_id"
+    Concept }o--|| Domain : "domain_id"
+    Concept }o--|| Vocabulary : "vocabulary_id"
+    Concept }o--|| ConceptClass : "concept_class_id"
+    MeasurementRelation }o--|| Person : "person_id"
+    MeasurementRelation }o--|| Measurement : "from_measurement_id"
+    MeasurementRelation }o--|| Measurement : "to_measurement_id"
+    MeasurementRelation }o--|| Concept : "measurement_relation_concept_id"
+    VisitDetailIdentifier }o--|| VisitDetail : "internal_id"
     NoteNlp }o--|| Concept : "section_concept_id"
     NoteNlp }o--|| Concept : "note_nlp_concept_id"
     NoteNlp }o--|| Concept : "note_nlp_source_concept_id"
-    DrugEra }o--|| Person : "person_id"
-    DrugEra }o--|| Concept : "drug_concept_id"
-    Death }o--|| Person : "person_id"
-    Death }o--|| Concept : "death_type_concept_id"
-    Death }o--|| Concept : "cause_concept_id"
-    Death }o--|| Concept : "cause_source_concept_id"
-    MeasurementForUpload }o--|| Person : "person_id"
-    MeasurementForUpload }o--|| Concept : "measurement_concept_id"
-    MeasurementForUpload }o--|| Concept : "measurement_type_concept_id"
-    MeasurementForUpload }o--|| Concept : "operator_concept_id"
-    MeasurementForUpload }o--|| Concept : "value_as_concept_id"
-    MeasurementForUpload }o--|| Concept : "unit_concept_id"
-    MeasurementForUpload }o--|| Provider : "provider_id"
-    MeasurementForUpload }o--|| VisitOccurrence : "visit_occurrence_id"
-    MeasurementForUpload }o--|| VisitDetail : "visit_detail_id"
-    MeasurementForUpload }o--|| Concept : "measurement_source_concept_id"
-    MeasurementForUpload }o--|| Concept : "unit_source_concept_id"
-    MeasurementForUpload }o--|| Concept : "meas_event_field_concept_id"
     Specimen }o--|| Person : "person_id"
     Specimen }o--|| Concept : "specimen_concept_id"
     Specimen }o--|| Concept : "specimen_type_concept_id"
@@ -126,15 +150,9 @@ erDiagram
     Specimen }o--|| Concept : "anatomic_site_concept_id"
     Specimen }o--|| Concept : "disease_status_concept_id"
     Specimen }o--|| Concept : "derived_from_specimen_concept_id"
-    DeviceExposure }o--|| Person : "person_id"
-    DeviceExposure }o--|| Concept : "device_concept_id"
-    DeviceExposure }o--|| Concept : "device_type_concept_id"
-    DeviceExposure }o--|| Provider : "provider_id"
-    DeviceExposure }o--|| VisitOccurrence : "visit_occurrence_id"
-    DeviceExposure }o--|| VisitDetail : "visit_detail_id"
-    DeviceExposure }o--|| Concept : "device_source_concept_id"
-    DeviceExposure }o--|| Concept : "unit_concept_id"
-    DeviceExposure }o--|| Concept : "unit_source_concept_id"
+    DoseEra }o--|| Person : "person_id"
+    DoseEra }o--|| Concept : "drug_concept_id"
+    DoseEra }o--|| Concept : "unit_concept_id"
     Person }o--|| Concept : "gender_concept_id"
     Person }o--|| Concept : "race_concept_id"
     Person }o--|| Concept : "ethnicity_concept_id"
@@ -145,6 +163,14 @@ erDiagram
     Person }o--|| Concept : "race_source_concept_id"
     Person }o--|| Concept : "ethnicity_source_concept_id"
     Person }o--|| Concept : "person_type_concept_id"
+    ConditionOccurrence }o--|| Person : "person_id"
+    ConditionOccurrence }o--|| Concept : "condition_concept_id"
+    ConditionOccurrence }o--|| Concept : "condition_type_concept_id"
+    ConditionOccurrence }o--|| Concept : "condition_status_concept_id"
+    ConditionOccurrence }o--|| Provider : "provider_id"
+    ConditionOccurrence }o--|| VisitOccurrence : "visit_occurrence_id"
+    ConditionOccurrence }o--|| VisitDetail : "visit_detail_id"
+    ConditionOccurrence }o--|| Concept : "condition_source_concept_id"
     ProcedureOccurrence }o--|| Person : "person_id"
     ProcedureOccurrence }o--|| Concept : "procedure_concept_id"
     ProcedureOccurrence }o--|| Concept : "procedure_type_concept_id"
@@ -162,8 +188,6 @@ erDiagram
     VisitDetail }o--|| Concept : "admitted_from_concept_id"
     VisitDetail }o--|| Concept : "discharged_to_concept_id"
     VisitDetail }o--|| VisitOccurrence : "visit_occurrence_id"
-    ObservationPeriod }o--|| Person : "person_id"
-    ObservationPeriod }o--|| Concept : "period_type_concept_id"
     SpecimenForUpload }o--|| Person : "person_id"
     SpecimenForUpload }o--|| Concept : "specimen_concept_id"
     SpecimenForUpload }o--|| Concept : "specimen_type_concept_id"
@@ -171,37 +195,9 @@ erDiagram
     SpecimenForUpload }o--|| Concept : "anatomic_site_concept_id"
     SpecimenForUpload }o--|| Concept : "disease_status_concept_id"
     SpecimenForUpload }o--|| Concept : "derived_from_specimen_concept_id"
-    SourceToConceptMap }o--|| Concept : "source_concept_id"
-    SourceToConceptMap }o--|| Concept : "target_concept_id"
-    SourceToConceptMap }o--|| Vocabulary : "target_vocabulary_id"
-    Measurement }o--|| Person : "person_id"
-    Measurement }o--|| Concept : "measurement_concept_id"
-    Measurement }o--|| Concept : "measurement_type_concept_id"
-    Measurement }o--|| Concept : "operator_concept_id"
-    Measurement }o--|| Concept : "value_as_concept_id"
-    Measurement }o--|| Concept : "unit_concept_id"
-    Measurement }o--|| Provider : "provider_id"
-    Measurement }o--|| VisitOccurrence : "visit_occurrence_id"
-    Measurement }o--|| VisitDetail : "visit_detail_id"
-    Measurement }o--|| Concept : "measurement_source_concept_id"
-    Measurement }o--|| Concept : "unit_source_concept_id"
-    Measurement }o--|| Concept : "meas_event_field_concept_id"
-    DrugExposure }o--|| Person : "person_id"
-    DrugExposure }o--|| Concept : "drug_concept_id"
-    DrugExposure }o--|| Concept : "drug_type_concept_id"
-    DrugExposure }o--|| Concept : "route_concept_id"
-    DrugExposure }o--|| Provider : "provider_id"
-    DrugExposure }o--|| VisitOccurrence : "visit_occurrence_id"
-    DrugExposure }o--|| VisitDetail : "visit_detail_id"
-    DrugExposure }o--|| Concept : "drug_source_concept_id"
-    Provider }o--|| Concept : "specialty_concept_id"
-    Provider }o--|| CareSite : "care_site_id"
-    Provider }o--|| Concept : "gender_concept_id"
-    Provider }o--|| Concept : "specialty_source_concept_id"
-    Provider }o--|| Concept : "gender_source_concept_id"
-    Metadata }o--|| Concept : "metadata_concept_id"
-    Metadata }o--|| Concept : "metadata_type_concept_id"
-    Metadata }o--|| Concept : "value_as_concept_id"
+    CareSite }o--|| Concept : "place_of_service_concept_id"
+    CareSite }o--|| Location : "location_id"
+    DeviceExposureIdentifier }o--|| DeviceExposure : "internal_id"
     Observation }o--|| Person : "person_id"
     Observation }o--|| Concept : "observation_concept_id"
     Observation }o--|| Concept : "observation_type_concept_id"
@@ -213,236 +209,27 @@ erDiagram
     Observation }o--|| VisitDetail : "visit_detail_id"
     Observation }o--|| Concept : "observation_source_concept_id"
     Observation }o--|| Concept : "obs_event_field_concept_id"
+    MeasurementRelationForUpload }o--|| Person : "person_id"
+    MeasurementRelationForUpload }o--|| Measurement : "from_measurement_id"
+    MeasurementRelationForUpload }o--|| Measurement : "to_measurement_id"
+    MeasurementRelationForUpload }o--|| Concept : "measurement_relation_concept_id"
+    ConceptRelationship }o--|| Concept : "concept_id_1"
+    ConceptRelationship }o--|| Concept : "concept_id_2"
+    ConceptRelationship }o--|| Relationship : "relationship_id"
+    MeasurementForUpload }o--|| Person : "person_id"
+    MeasurementForUpload }o--|| Concept : "measurement_concept_id"
+    MeasurementForUpload }o--|| Concept : "measurement_type_concept_id"
+    MeasurementForUpload }o--|| Concept : "operator_concept_id"
+    MeasurementForUpload }o--|| Concept : "value_as_concept_id"
+    MeasurementForUpload }o--|| Concept : "unit_concept_id"
+    MeasurementForUpload }o--|| Provider : "provider_id"
+    MeasurementForUpload }o--|| VisitOccurrence : "visit_occurrence_id"
+    MeasurementForUpload }o--|| VisitDetail : "visit_detail_id"
+    MeasurementForUpload }o--|| Concept : "measurement_source_concept_id"
+    MeasurementForUpload }o--|| Concept : "unit_source_concept_id"
+    MeasurementForUpload }o--|| Concept : "meas_event_field_concept_id"
 
     %% Entity definitions
-    FactRelationship {
-        UUID domain_concept_id_1 FK
-        int fact_id_1
-        UUID domain_concept_id_2 FK
-        int fact_id_2
-        UUID relationship_concept_id FK
-        UUID fact_relationship_id PK
-    }
-
-    ConditionEra {
-        UUID provenance_id
-        string source_traceback
-        UUID condition_era_id PK
-        UUID person_id FK
-        UUID condition_concept_id FK
-        date condition_era_start_date
-        date condition_era_end_date
-        int condition_occurrence_count
-    }
-
-    EpisodeEvent {
-        UUID provenance_id
-        string source_traceback
-        UUID episode_id FK
-        UUID event_id
-        UUID episode_event_field_concept_id FK
-        UUID episode_event_id PK
-    }
-
-    Note {
-        UUID provenance_id
-        string source_traceback
-        UUID note_id PK
-        UUID person_id FK
-        date note_date
-        timestamp note_datetime
-        UUID note_type_concept_id FK
-        UUID note_class_concept_id FK
-        string note_title
-        string note_text
-        UUID encoding_concept_id FK
-        UUID language_concept_id FK
-        UUID provider_id FK
-        UUID visit_occurrence_id FK
-        UUID visit_detail_id FK
-        string note_source_value
-        UUID note_event_id
-        UUID note_event_field_concept_id FK
-    }
-
-    MeasurementRelation {
-        UUID measurement_relation_id PK
-        UUID person_id FK
-        UUID from_measurement_id FK
-        UUID to_measurement_id FK
-        UUID measurement_relation_concept_id FK
-    }
-
-    PayerPlanPeriod {
-        UUID provenance_id
-        string source_traceback
-        UUID payer_plan_period_id PK
-        UUID person_id FK
-        date payer_plan_period_start_date
-        date payer_plan_period_end_date
-        UUID payer_concept_id FK
-        string payer_source_value
-        UUID payer_source_concept_id FK
-        UUID plan_concept_id FK
-        string plan_source_value
-        UUID plan_source_concept_id FK
-        UUID sponsor_concept_id FK
-        string sponsor_source_value
-        UUID sponsor_source_concept_id FK
-        string family_source_value
-        UUID stop_reason_concept_id FK
-        string stop_reason_source_value
-        UUID stop_reason_source_concept_id FK
-    }
-
-    CohortDefinition {
-        UUID cohort_definition_id PK
-        string cohort_definition_name
-        string cohort_definition_description
-        UUID definition_type_concept_id
-        string cohort_definition_syntax
-        UUID subject_concept_id
-        date cohort_initiation_date
-    }
-
-    Episode {
-        UUID provenance_id
-        string source_traceback
-        UUID episode_id PK
-        UUID person_id FK
-        UUID episode_concept_id FK
-        date episode_start_date
-        timestamp episode_start_datetime
-        date episode_end_date
-        timestamp episode_end_datetime
-        UUID episode_parent_id
-        int episode_number
-        UUID episode_object_concept_id FK
-        UUID episode_type_concept_id FK
-        string episode_source_value
-        UUID episode_source_concept_id FK
-    }
-
-    VisitOccurrence {
-        UUID provenance_id
-        string source_traceback
-        UUID visit_occurrence_id PK
-        UUID person_id FK
-        UUID visit_concept_id FK
-        date visit_start_date
-        timestamp visit_start_datetime
-        date visit_end_date
-        timestamp visit_end_datetime
-        UUID visit_type_concept_id FK
-        UUID provider_id FK
-        UUID care_site_id FK
-        string visit_source_value
-        UUID visit_source_concept_id FK
-        UUID admitted_from_concept_id FK
-        string admitted_from_source_value
-        UUID discharged_to_concept_id FK
-        string discharged_to_source_value
-        UUID preceding_visit_occurrence_id
-    }
-
-    Concept {
-        UUID concept_id PK
-        int concept_int_id
-        string concept_name
-        UUID domain_id FK
-        UUID vocabulary_id FK
-        UUID concept_class_id FK
-        string standard_concept
-        string concept_code
-        date valid_start_date
-        date valid_end_date
-        string invalid_reason
-    }
-
-    CareSite {
-        UUID care_site_id PK
-        string care_site_name
-        UUID place_of_service_concept_id FK
-        UUID location_id FK
-        string care_site_source_value
-        string place_of_service_source_value
-        UUID site_id
-    }
-
-    DrugStrength {
-        UUID drug_strength_id PK
-        UUID drug_concept_id FK
-        UUID ingredient_concept_id FK
-        float amount_value
-        UUID amount_unit_concept_id FK
-        float numerator_value
-        UUID numerator_unit_concept_id FK
-        float denominator_value
-        UUID denominator_unit_concept_id FK
-        int box_size
-        date valid_start_date
-        date valid_end_date
-        string invalid_reason
-    }
-
-    ConditionOccurrence {
-        UUID provenance_id
-        string source_traceback
-        UUID condition_occurrence_id PK
-        UUID person_id FK
-        UUID condition_concept_id FK
-        date condition_start_date
-        timestamp condition_start_datetime
-        date condition_end_date
-        timestamp condition_end_datetime
-        UUID condition_type_concept_id FK
-        UUID condition_status_concept_id FK
-        string stop_reason
-        UUID provider_id FK
-        UUID visit_occurrence_id FK
-        UUID visit_detail_id FK
-        string condition_source_value
-        UUID condition_source_concept_id FK
-        string condition_status_source_value
-        string condition_start_iso_interval
-        string condition_end_iso_interval
-    }
-
-    ConceptSynonym {
-        UUID concept_synonym_id PK
-        UUID concept_id FK
-        string concept_synonym_name
-        UUID language_concept_id FK
-    }
-
-    ConceptRelationship {
-        UUID concept_relationship_id PK
-        UUID concept_id_1 FK
-        UUID concept_id_2 FK
-        UUID relationship_id FK
-        date valid_start_date
-        date valid_end_date
-        string invalid_reason
-    }
-
-    PersonBatchForUpload {
-        UUID id PK
-        timestamp created_at
-        list[PersonForUpload] persons
-        any has_measurements
-        any has_observations
-        any has_specimens
-    }
-
-    Relationship {
-        UUID relationship_id PK
-        string relationship_name
-        string is_hierarchical
-        string defines_ancestry
-        UUID reverse_relationship_id
-        UUID relationship_concept_id FK
-    }
-
     Cost {
         UUID provenance_id
         string source_traceback
@@ -470,137 +257,79 @@ erDiagram
         string drg_source_value
     }
 
-    ConceptAncestor {
-        UUID concept_ancestor_id PK
-        UUID ancestor_concept_id FK
-        UUID descendant_concept_id FK
-        int min_levels_of_separation
-        int max_levels_of_separation
+    ConceptSynonym {
+        UUID concept_synonym_id PK
+        UUID concept_id FK
+        string concept_synonym_name
+        UUID language_concept_id FK
     }
 
-    ObservationForUpload {
-        UUID provenance_id
-        string source_traceback
-        UUID observation_id PK
-        UUID person_id FK
-        UUID observation_concept_id FK
-        date observation_date
-        timestamp observation_datetime
-        UUID observation_type_concept_id FK
-        float value_as_number
-        string value_as_string
-        UUID value_as_concept_id FK
-        UUID qualifier_concept_id FK
-        UUID unit_concept_id FK
-        UUID provider_id FK
-        UUID visit_occurrence_id FK
-        UUID visit_detail_id FK
-        string observation_source_value
-        UUID observation_source_concept_id FK
-        string unit_source_value
-        string qualifier_source_value
-        string value_source_value
-        UUID observation_event_id
-        UUID obs_event_field_concept_id FK
-        string observation_iso_interval
-        string value_as_iso_interval
+    ObservationPeriodIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
     }
 
-    ConceptClass {
-        UUID concept_class_id PK
-        string concept_class_str_id
-        string concept_class_name
-        UUID concept_class_concept_id
+    MeasurementRelationIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
     }
 
-    DoseEra {
-        UUID provenance_id
-        string source_traceback
-        UUID dose_era_id PK
-        UUID person_id FK
-        UUID drug_concept_id FK
-        UUID unit_concept_id FK
-        float dose_value
-        date dose_era_start_date
-        date dose_era_end_date
-    }
-
-    MeasurementRelationForUpload {
-        UUID measurement_relation_id PK
-        UUID person_id FK
-        UUID from_measurement_id FK
-        UUID to_measurement_id FK
-        UUID measurement_relation_concept_id FK
-    }
-
-    Vocabulary {
-        UUID vocabulary_id PK
-        string vocabulary_str_id
-        string vocabulary_name
-        string vocabulary_reference
-        string vocabulary_version
-        UUID vocabulary_concept_id
-    }
-
-    CdmSource {
-        string cdm_source_name
-        string cdm_source_abbreviation
-        string cdm_holder
-        string source_description
-        string source_documentation_reference
-        string cdm_etl_reference
-        date source_release_date
-        date cdm_release_date
-        string cdm_version
-        UUID cdm_version_concept_id
-        string vocabulary_version
-        UUID cdm_source_id PK
-    }
-
-    NoteNlp {
-        UUID provenance_id
-        string source_traceback
-        UUID note_nlp_id PK
-        UUID note_id
-        UUID section_concept_id FK
-        string snippet
-        string lexical_variant
-        UUID note_nlp_concept_id FK
-        UUID note_nlp_source_concept_id FK
-        string nlp_system
-        date nlp_date
-        timestamp nlp_datetime
-        string term_exists
-        string term_temporal
-        string term_modifiers
-        string offset
-    }
-
-    DrugEra {
-        UUID provenance_id
-        string source_traceback
-        UUID drug_era_id PK
-        UUID person_id FK
-        UUID drug_concept_id FK
-        date drug_era_start_date
-        date drug_era_end_date
-        int drug_exposure_count
-        int gap_days
-        string drug_era_start_iso_interval
-        string drug_era_end_iso_interval
-    }
-
-    PersonUploadResult {
-        UUID id
+    PersonBatchUploadResult {
+        UUID id PK
         enum status
         bool is_new
         list[UploadLogItem] logs
-        list[UploadResult] external_identifiers
-        list[PersonDataIssue] data_issues
-        list[UploadResult] measurements
-        list[UploadResult] observations
-        list[UploadResult] specimens
-        list[UploadResult] measurement_relations
+        UUID batch_id
+        list[PersonUploadResult] persons
+    }
+
+    DrugStrength {
+        UUID drug_strength_id PK
+        UUID drug_concept_id FK
+        UUID ingredient_concept_id FK
+        float amount_value
+        UUID amount_unit_concept_id FK
+        float numerator_value
+        UUID numerator_unit_concept_id FK
+        float denominator_value
+        UUID denominator_unit_concept_id FK
+        int box_size
+        date valid_start_date
+        date valid_end_date
+        string invalid_reason
+    }
+
+    PayerPlanPeriod {
+        UUID provenance_id
+        string source_traceback
+        UUID payer_plan_period_id PK
+        UUID person_id FK
+        date payer_plan_period_start_date
+        date payer_plan_period_end_date
+        UUID payer_concept_id FK
+        string payer_source_value
+        UUID payer_source_concept_id FK
+        UUID plan_concept_id FK
+        string plan_source_value
+        UUID plan_source_concept_id FK
+        UUID sponsor_concept_id FK
+        string sponsor_source_value
+        UUID sponsor_source_concept_id FK
+        string family_source_value
+        UUID stop_reason_concept_id FK
+        string stop_reason_source_value
+        UUID stop_reason_source_concept_id FK
+    }
+
+    ObservationIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
     }
 
     Death {
@@ -616,7 +345,66 @@ erDiagram
         UUID cause_source_concept_id FK
     }
 
-    MeasurementForUpload {
+    ConceptClass {
+        UUID concept_class_id PK
+        string concept_class_str_id
+        string concept_class_name
+        UUID concept_class_concept_id
+    }
+
+    DrugExposureIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
+    FactRelationship {
+        UUID domain_concept_id_1 FK
+        int fact_id_1
+        UUID domain_concept_id_2 FK
+        int fact_id_2
+        UUID relationship_concept_id FK
+        UUID fact_relationship_id PK
+    }
+
+    Cohort {
+        UUID cohort_definition_id
+        UUID subject_id
+        date cohort_start_date
+        date cohort_end_date
+        UUID cohort_id PK
+    }
+
+    ConditionOccurrenceIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
+    Note {
+        UUID provenance_id
+        string source_traceback
+        UUID note_id PK
+        UUID person_id FK
+        date note_date
+        timestamp note_datetime
+        UUID note_type_concept_id FK
+        UUID note_class_concept_id FK
+        string note_title
+        string note_text
+        UUID encoding_concept_id FK
+        UUID language_concept_id FK
+        UUID provider_id FK
+        UUID visit_occurrence_id FK
+        UUID visit_detail_id FK
+        string note_source_value
+        UUID note_event_id
+        UUID note_event_field_concept_id FK
+    }
+
+    Measurement {
         UUID provenance_id
         string source_traceback
         UUID measurement_id PK
@@ -646,35 +434,165 @@ erDiagram
         UUID derived_from_specimen_id
     }
 
-    Specimen {
-        UUID provenance_id
-        string source_traceback
-        UUID specimen_id PK
-        UUID person_id FK
-        UUID specimen_concept_id FK
-        UUID specimen_type_concept_id FK
-        date specimen_date
-        timestamp specimen_datetime
-        float quantity
-        UUID unit_concept_id FK
-        UUID anatomic_site_concept_id FK
-        UUID disease_status_concept_id FK
-        string specimen_source_id
-        string specimen_source_value
-        string unit_source_value
-        string anatomic_site_source_value
-        string disease_status_source_value
-        string specimen_iso_interval
-        UUID derived_from_specimen_id
-        UUID derived_from_specimen_concept_id FK
+    Provider {
+        UUID provider_id PK
+        string provider_name
+        string npi
+        string dea
+        UUID specialty_concept_id FK
+        UUID care_site_id FK
+        int year_of_birth
+        UUID gender_concept_id FK
+        string provider_source_value
+        string specialty_source_value
+        UUID specialty_source_concept_id FK
+        string gender_source_value
+        UUID gender_source_concept_id FK
     }
 
-    Cohort {
-        UUID cohort_definition_id
-        UUID subject_id
-        date cohort_start_date
-        date cohort_end_date
-        UUID cohort_id PK
+    DrugExposure {
+        UUID provenance_id
+        string source_traceback
+        UUID drug_exposure_id PK
+        UUID person_id FK
+        UUID drug_concept_id FK
+        date drug_exposure_start_date
+        timestamp drug_exposure_start_datetime
+        date drug_exposure_end_date
+        timestamp drug_exposure_end_datetime
+        date verbatim_end_date
+        UUID drug_type_concept_id FK
+        string stop_reason
+        int refills
+        float quantity
+        int days_supply
+        string sig
+        UUID route_concept_id FK
+        string lot_number
+        UUID provider_id FK
+        UUID visit_occurrence_id FK
+        UUID visit_detail_id FK
+        string drug_source_value
+        UUID drug_source_concept_id FK
+        string route_source_value
+        string dose_unit_source_value
+        string drug_exposure_start_iso_interval
+        string drug_exposure_end_iso_interval
+    }
+
+    SourceToConceptMap {
+        UUID source_to_concept_map_id PK
+        string source_code
+        UUID source_concept_id FK
+        UUID source_vocabulary_id
+        string source_code_description
+        UUID target_concept_id FK
+        UUID target_vocabulary_id FK
+        date valid_start_date
+        date valid_end_date
+        string invalid_reason
+    }
+
+    SpecimenIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
+    ObservationPeriod {
+        UUID provenance_id
+        string source_traceback
+        UUID observation_period_id PK
+        UUID person_id FK
+        date observation_period_start_date
+        date observation_period_end_date
+        UUID period_type_concept_id FK
+        string observation_period_start_iso_interval
+        string observation_period_end_iso_interval
+    }
+
+    PersonUploadResult {
+        UUID id
+        enum status
+        bool is_new
+        list[UploadLogItem] logs
+        list[UploadResult] identifiers
+        list[PersonDataIssue] data_issues
+        list[UploadResult] measurements
+        list[UploadResult] observations
+        list[UploadResult] specimens
+        list[UploadResult] measurement_relations
+    }
+
+    VisitOccurrence {
+        UUID provenance_id
+        string source_traceback
+        UUID visit_occurrence_id PK
+        UUID person_id FK
+        UUID visit_concept_id FK
+        date visit_start_date
+        timestamp visit_start_datetime
+        date visit_end_date
+        timestamp visit_end_datetime
+        UUID visit_type_concept_id FK
+        UUID provider_id FK
+        UUID care_site_id FK
+        string visit_source_value
+        UUID visit_source_concept_id FK
+        UUID admitted_from_concept_id FK
+        string admitted_from_source_value
+        UUID discharged_to_concept_id FK
+        string discharged_to_source_value
+        UUID preceding_visit_occurrence_id
+    }
+
+    MeasurementIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
+    Episode {
+        UUID provenance_id
+        string source_traceback
+        UUID episode_id PK
+        UUID person_id FK
+        UUID episode_concept_id FK
+        date episode_start_date
+        timestamp episode_start_datetime
+        date episode_end_date
+        timestamp episode_end_datetime
+        UUID episode_parent_id
+        int episode_number
+        UUID episode_object_concept_id FK
+        UUID episode_type_concept_id FK
+        string episode_source_value
+        UUID episode_source_concept_id FK
+    }
+
+    PersonBatchForUpload {
+        UUID id PK
+        timestamp created_at
+        list[PersonForUpload] persons
+        any has_measurements
+        any has_observations
+        any has_specimens
+    }
+
+    Domain {
+        UUID domain_id PK
+        string domain_str_id
+        string domain_name
+        UUID domain_concept_id
+    }
+
+    ProcedureOccurrenceIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
     }
 
     DeviceExposure {
@@ -703,6 +621,260 @@ erDiagram
         string device_exposure_end_iso_interval
     }
 
+    ObservationForUpload {
+        list[IdentifierForUpload] identifiers
+        UUID provenance_id
+        string source_traceback
+        UUID observation_id PK
+        UUID person_id FK
+        UUID observation_concept_id FK
+        date observation_date
+        timestamp observation_datetime
+        UUID observation_type_concept_id FK
+        float value_as_number
+        string value_as_string
+        UUID value_as_concept_id FK
+        UUID qualifier_concept_id FK
+        UUID unit_concept_id FK
+        UUID provider_id FK
+        UUID visit_occurrence_id FK
+        UUID visit_detail_id FK
+        string observation_source_value
+        UUID observation_source_concept_id FK
+        string unit_source_value
+        string qualifier_source_value
+        string value_source_value
+        UUID observation_event_id
+        UUID obs_event_field_concept_id FK
+        string observation_iso_interval
+        string value_as_iso_interval
+    }
+
+    Relationship {
+        UUID relationship_id PK
+        string relationship_name
+        string is_hierarchical
+        string defines_ancestry
+        UUID reverse_relationship_id
+        UUID relationship_concept_id FK
+    }
+
+    ConditionEra {
+        UUID provenance_id
+        string source_traceback
+        UUID condition_era_id PK
+        UUID person_id FK
+        UUID condition_concept_id FK
+        date condition_era_start_date
+        date condition_era_end_date
+        int condition_occurrence_count
+    }
+
+    PersonForUpload {
+        list[IdentifierForUpload] identifiers
+        UUID id PK
+        Person person
+        list[MeasurementForUpload] measurements
+        list[ObservationForUpload] observations
+        list[SpecimenForUpload] specimens
+        list[MeasurementRelationForUpload] measurement_relations
+    }
+
+    Vocabulary {
+        UUID vocabulary_id PK
+        string vocabulary_str_id
+        string vocabulary_name
+        string vocabulary_reference
+        string vocabulary_version
+        UUID vocabulary_concept_id
+    }
+
+    VisitOccurrenceIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
+    DrugEra {
+        UUID provenance_id
+        string source_traceback
+        UUID drug_era_id PK
+        UUID person_id FK
+        UUID drug_concept_id FK
+        date drug_era_start_date
+        date drug_era_end_date
+        int drug_exposure_count
+        int gap_days
+        string drug_era_start_iso_interval
+        string drug_era_end_iso_interval
+    }
+
+    CdmSource {
+        string cdm_source_name
+        string cdm_source_abbreviation
+        string cdm_holder
+        string source_description
+        string source_documentation_reference
+        string cdm_etl_reference
+        date source_release_date
+        date cdm_release_date
+        string cdm_version
+        UUID cdm_version_concept_id
+        string vocabulary_version
+        UUID cdm_source_id PK
+    }
+
+    ConceptAncestor {
+        UUID concept_ancestor_id PK
+        UUID ancestor_concept_id FK
+        UUID descendant_concept_id FK
+        int min_levels_of_separation
+        int max_levels_of_separation
+    }
+
+    NoteNlpIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
+    Metadata {
+        UUID metadata_id PK
+        UUID metadata_concept_id FK
+        UUID metadata_type_concept_id FK
+        string name
+        string value_as_string
+        UUID value_as_concept_id FK
+        float value_as_number
+        date metadata_date
+        timestamp metadata_datetime
+    }
+
+    DeathIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
+    NoteIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
+    PersonIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
+    EpisodeEvent {
+        UUID provenance_id
+        string source_traceback
+        UUID episode_id FK
+        UUID event_id
+        UUID episode_event_field_concept_id FK
+        UUID episode_event_id PK
+    }
+
+    Concept {
+        UUID concept_id PK
+        int concept_int_id
+        string concept_name
+        UUID domain_id FK
+        UUID vocabulary_id FK
+        UUID concept_class_id FK
+        string standard_concept
+        string concept_code
+        date valid_start_date
+        date valid_end_date
+        string invalid_reason
+    }
+
+    MeasurementRelation {
+        UUID measurement_relation_id PK
+        UUID person_id FK
+        UUID from_measurement_id FK
+        UUID to_measurement_id FK
+        UUID measurement_relation_concept_id FK
+    }
+
+    VisitDetailIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
+    NoteNlp {
+        UUID provenance_id
+        string source_traceback
+        UUID note_nlp_id PK
+        UUID note_id
+        UUID section_concept_id FK
+        string snippet
+        string lexical_variant
+        UUID note_nlp_concept_id FK
+        UUID note_nlp_source_concept_id FK
+        string nlp_system
+        date nlp_date
+        timestamp nlp_datetime
+        string term_exists
+        string term_temporal
+        string term_modifiers
+        string offset
+    }
+
+    CohortDefinition {
+        UUID cohort_definition_id PK
+        string cohort_definition_name
+        string cohort_definition_description
+        UUID definition_type_concept_id
+        string cohort_definition_syntax
+        UUID subject_concept_id
+        date cohort_initiation_date
+    }
+
+    Specimen {
+        UUID provenance_id
+        string source_traceback
+        UUID specimen_id PK
+        UUID person_id FK
+        UUID specimen_concept_id FK
+        UUID specimen_type_concept_id FK
+        date specimen_date
+        timestamp specimen_datetime
+        float quantity
+        UUID unit_concept_id FK
+        UUID anatomic_site_concept_id FK
+        UUID disease_status_concept_id FK
+        string specimen_source_id
+        string specimen_source_value
+        string unit_source_value
+        string anatomic_site_source_value
+        string disease_status_source_value
+        string specimen_iso_interval
+        UUID derived_from_specimen_id
+        UUID derived_from_specimen_concept_id FK
+    }
+
+    DoseEra {
+        UUID provenance_id
+        string source_traceback
+        UUID dose_era_id PK
+        UUID person_id FK
+        UUID drug_concept_id FK
+        UUID unit_concept_id FK
+        float dose_value
+        date dose_era_start_date
+        date dose_era_end_date
+    }
+
     Person {
         UUID provenance_id
         string source_traceback
@@ -727,19 +899,27 @@ erDiagram
         UUID person_type_concept_id FK
     }
 
-    Location {
-        UUID location_id PK
-        string address_1
-        string address_2
-        string city
-        string state
-        string zip
-        string county
-        string location_source_value
-        UUID country_concept_id
-        string country_source_value
-        float latitude
-        float longitude
+    ConditionOccurrence {
+        UUID provenance_id
+        string source_traceback
+        UUID condition_occurrence_id PK
+        UUID person_id FK
+        UUID condition_concept_id FK
+        date condition_start_date
+        timestamp condition_start_datetime
+        date condition_end_date
+        timestamp condition_end_datetime
+        UUID condition_type_concept_id FK
+        UUID condition_status_concept_id FK
+        string stop_reason
+        UUID provider_id FK
+        UUID visit_occurrence_id FK
+        UUID visit_detail_id FK
+        string condition_source_value
+        UUID condition_source_concept_id FK
+        string condition_status_source_value
+        string condition_start_iso_interval
+        string condition_end_iso_interval
     }
 
     ProcedureOccurrence {
@@ -788,20 +968,23 @@ erDiagram
         UUID visit_occurrence_id FK
     }
 
-    ObservationPeriod {
-        UUID provenance_id
-        string source_traceback
-        UUID observation_period_id PK
-        UUID person_id FK
-        date observation_period_start_date
-        date observation_period_end_date
-        UUID period_type_concept_id FK
-        string observation_period_start_iso_interval
-        string observation_period_end_iso_interval
+    Location {
+        UUID location_id PK
+        string address_1
+        string address_2
+        string city
+        string state
+        string zip
+        string county
+        string location_source_value
+        UUID country_concept_id
+        string country_source_value
+        float latitude
+        float longitude
     }
 
     SpecimenForUpload {
-        list[ExternalIdentifierForUpload] external_identifiers
+        list[IdentifierForUpload] identifiers
         UUID provenance_id
         string source_traceback
         UUID specimen_id PK
@@ -824,131 +1007,21 @@ erDiagram
         UUID derived_from_specimen_concept_id FK
     }
 
-    SourceToConceptMap {
-        UUID source_to_concept_map_id PK
-        string source_code
-        UUID source_concept_id FK
-        UUID source_vocabulary_id
-        string source_code_description
-        UUID target_concept_id FK
-        UUID target_vocabulary_id FK
-        date valid_start_date
-        date valid_end_date
-        string invalid_reason
+    CareSite {
+        UUID care_site_id PK
+        string care_site_name
+        UUID place_of_service_concept_id FK
+        UUID location_id FK
+        string care_site_source_value
+        string place_of_service_source_value
+        UUID site_id
     }
 
-    PersonBatchUploadResult {
+    DeviceExposureIdentifier {
         UUID id PK
-        enum status
-        bool is_new
-        list[UploadLogItem] logs
-        UUID batch_id
-        list[PersonUploadResult] persons
-    }
-
-    Measurement {
-        UUID provenance_id
-        string source_traceback
-        UUID measurement_id PK
-        UUID person_id FK
-        UUID measurement_concept_id FK
-        date measurement_date
-        timestamp measurement_datetime
-        string measurement_time
-        UUID measurement_type_concept_id FK
-        UUID operator_concept_id FK
-        float value_as_number
-        UUID value_as_concept_id FK
-        UUID unit_concept_id FK
-        float range_low
-        float range_high
-        UUID provider_id FK
-        UUID visit_occurrence_id FK
-        UUID visit_detail_id FK
-        string measurement_source_value
-        UUID measurement_source_concept_id FK
-        string unit_source_value
-        UUID unit_source_concept_id FK
-        string value_source_value
-        UUID measurement_event_id
-        UUID meas_event_field_concept_id FK
-        string measurement_iso_interval
-        UUID derived_from_specimen_id
-    }
-
-    DrugExposure {
-        UUID provenance_id
-        string source_traceback
-        UUID drug_exposure_id PK
-        UUID person_id FK
-        UUID drug_concept_id FK
-        date drug_exposure_start_date
-        timestamp drug_exposure_start_datetime
-        date drug_exposure_end_date
-        timestamp drug_exposure_end_datetime
-        date verbatim_end_date
-        UUID drug_type_concept_id FK
-        string stop_reason
-        int refills
-        float quantity
-        int days_supply
-        string sig
-        UUID route_concept_id FK
-        string lot_number
-        UUID provider_id FK
-        UUID visit_occurrence_id FK
-        UUID visit_detail_id FK
-        string drug_source_value
-        UUID drug_source_concept_id FK
-        string route_source_value
-        string dose_unit_source_value
-        string drug_exposure_start_iso_interval
-        string drug_exposure_end_iso_interval
-    }
-
-    PersonForUpload {
-        list[ExternalIdentifierForUpload] external_identifiers
-        UUID id PK
-        Person person
-        list[MeasurementForUpload] measurements
-        list[ObservationForUpload] observations
-        list[SpecimenForUpload] specimens
-        list[MeasurementRelationForUpload] measurement_relations
-    }
-
-    Provider {
-        UUID provider_id PK
-        string provider_name
-        string npi
-        string dea
-        UUID specialty_concept_id FK
-        UUID care_site_id FK
-        int year_of_birth
-        UUID gender_concept_id FK
-        string provider_source_value
-        string specialty_source_value
-        UUID specialty_source_concept_id FK
-        string gender_source_value
-        UUID gender_source_concept_id FK
-    }
-
-    Metadata {
-        UUID metadata_id PK
-        UUID metadata_concept_id FK
-        UUID metadata_type_concept_id FK
-        string name
-        string value_as_string
-        UUID value_as_concept_id FK
-        float value_as_number
-        date metadata_date
-        timestamp metadata_datetime
-    }
-
-    Domain {
-        UUID domain_id PK
-        string domain_str_id
-        string domain_name
-        UUID domain_concept_id
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
     }
 
     Observation {
@@ -977,6 +1050,56 @@ erDiagram
         UUID obs_event_field_concept_id FK
         string observation_iso_interval
         string value_as_iso_interval
+    }
+
+    MeasurementRelationForUpload {
+        list[IdentifierForUpload] identifiers
+        UUID measurement_relation_id PK
+        UUID person_id FK
+        UUID from_measurement_id FK
+        UUID to_measurement_id FK
+        UUID measurement_relation_concept_id FK
+    }
+
+    ConceptRelationship {
+        UUID concept_relationship_id PK
+        UUID concept_id_1 FK
+        UUID concept_id_2 FK
+        UUID relationship_id FK
+        date valid_start_date
+        date valid_end_date
+        string invalid_reason
+    }
+
+    MeasurementForUpload {
+        list[IdentifierForUpload] identifiers
+        UUID provenance_id
+        string source_traceback
+        UUID measurement_id PK
+        UUID person_id FK
+        UUID measurement_concept_id FK
+        date measurement_date
+        timestamp measurement_datetime
+        string measurement_time
+        UUID measurement_type_concept_id FK
+        UUID operator_concept_id FK
+        float value_as_number
+        UUID value_as_concept_id FK
+        UUID unit_concept_id FK
+        float range_low
+        float range_high
+        UUID provider_id FK
+        UUID visit_occurrence_id FK
+        UUID visit_detail_id FK
+        string measurement_source_value
+        UUID measurement_source_concept_id FK
+        string unit_source_value
+        UUID unit_source_concept_id FK
+        string value_source_value
+        UUID measurement_event_id
+        UUID meas_event_field_concept_id FK
+        string measurement_iso_interval
+        UUID derived_from_specimen_id
     }
 
 ```

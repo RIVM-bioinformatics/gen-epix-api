@@ -1497,7 +1497,7 @@ class Test8ParameterizedBatchSizes(BaseUploadTestCase):
 
 # Test Scenario 9: Identifiers for Child2 objects
 @pytest.mark.scenario_ids("TC-SEC-30-03")
-class Test9Child2ExternalIdentifiers(BaseUploadTestCase):
+class Test9Child2Identifiers(BaseUploadTestCase):
     """Test scenarios related to Identifiers for Child2 objects."""
 
     def test_9_1_no_identifiers_provided(self) -> None:
@@ -1591,7 +1591,7 @@ class Test9Child2ExternalIdentifiers(BaseUploadTestCase):
         # Set up mocks
         created_parent_id = self.random_ids[1]
         existing_child = Child2(
-            id=existing_child2_id,
+            child2_id=existing_child2_id,
             parent_id=created_parent_id,
             ref2_id=None,
             a="test_a",
@@ -1727,7 +1727,7 @@ class Test9Child2ExternalIdentifiers(BaseUploadTestCase):
         created_parent_id = self.random_ids[0]
         created_identifier2_id = self.random_ids[1]
         existing_child = Child2(
-            id=self.child2_id,
+            child2_id=self.child2_id,
             parent_id=created_parent_id,
             ref2_id=None,
             a="test_a",
@@ -1982,8 +1982,8 @@ class TestCombinedScenarios(BaseUploadTestCase):
         # Identifier: resolve issuer, no existing externals, then create
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],  # Resolve IdentifierIssuer by code
-            [],  # No existing ExternalIdentifiers
-            [identifier_id],  # Created ExternalIdentifier ID
+            [],  # No existing Identifiers
+            [identifier_id],  # Created Identifier ID
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
@@ -2110,7 +2110,7 @@ class TestCombinedScenarios(BaseUploadTestCase):
         # Resolve identifier issuer and check for existing Identifiers
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],  # Resolve IdentifierIssuer by code
-            [],  # No existing ExternalIdentifiers for Child2
+            [],  # No existing Identifiers for Child2
             [created_child2_ext_id],  # Created child2 Identifier ID
         ]
 

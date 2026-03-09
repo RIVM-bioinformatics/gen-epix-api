@@ -283,10 +283,6 @@ class IdentifierMixin(RowMetadataMixin):
         DOMAIN, model.BaseIdentifier, "external_id"
     )
 
-    internal_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.BaseIdentifier, "internal_id"
-    )
-
 
 class Organization(Base, OrganizationMixin):
     """
@@ -384,11 +380,3 @@ class OrganizationIdentifierIssuerLink(Base, OrganizationIdentifierIssuerLinkMix
     __tablename__, __table_args__ = create_table_args(
         model.OrganizationIdentifierIssuerLink
     )
-
-
-class Identifier(Base, IdentifierMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.BaseIdentifier)

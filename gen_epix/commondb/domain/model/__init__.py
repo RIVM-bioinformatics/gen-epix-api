@@ -82,7 +82,6 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[
         DataCollectionSetMember,
         IdentifierIssuer,
         OrganizationIdentifierIssuerLink,
-        BaseIdentifier,
         Site,
         Contact,
         UserNameEmail,

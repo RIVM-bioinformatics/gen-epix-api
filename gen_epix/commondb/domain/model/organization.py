@@ -2,7 +2,7 @@ import datetime
 import hashlib
 import json
 from enum import Enum
-from typing import ClassVar, Self
+from typing import Any, ClassVar, Self
 from uuid import UUID
 
 from pydantic import (
@@ -421,24 +421,24 @@ class BaseIdentifier(Model):
     """
     Base class for an identifier generated outside of the system by a particular
     identifier issuer for a particular entity, together with the system's own
-    identifier.
+    identifier. The combination of (identifier_issuer_id, external_id) must be unique.
     """
 
-    ENTITY: ClassVar = Entity(
-        id_field_name="id",
-        persistable=True,
-        keys=create_keys(
-            {
-                1: ("identifier_issuer_id", "external_id"),
-                2: ("identifier_issuer_id", "external_id", "internal_id"),
-            }
-        ),
-        links=create_links(
-            {
-                1: ("identifier_issuer_id", IdentifierIssuer, "identifier_issuer"),
-            }
-        ),
-    )
+    ENTITY: ClassVar = Entity(persistable=False, id_field_name="id")
+    # ENTITY: ClassVar = Entity(
+    #     id_field_name="id",
+    #     persistable=True,
+    #     keys=create_keys(
+    #         {
+    #             1: ("identifier_issuer_id", "external_id"),
+    #         }
+    #     ),
+    #     links=create_links(
+    #         {
+    #             1: ("identifier_issuer_id", IdentifierIssuer, "identifier_issuer"),
+    #         }
+    #     ),
+    # )
 
     # The model class associated with this base identifier, to be defined in subclasses
     MODEL_CLASS: ClassVar[type[fastapp.Model]] = None  # type: ignore[assignment]
@@ -454,7 +454,7 @@ class BaseIdentifier(Model):
         default=None, description="The identifier issuer corresponding to the ID"
     )
     external_id: str = Field(
-        description="The identifier issued by the identifier issuer, converted to string if necessary",
+        description="The identifier issued by the identifier issuer, converted to string if necessary. The identifier will be stripped of leading and trailing whitespace.",
         max_length=255,
     )
     internal_id: UUID = Field(description="The internal identifier.")
@@ -477,6 +477,44 @@ class BaseIdentifier(Model):
         elif seq_id != computed_id:
             raise ValueError("Provided id does not match computed id")
         return self
+
+    @field_validator("external_id", mode="after")
+    def _strip_external_id(cls, value: str) -> str:
+        return value.strip()
+
+    @classmethod
+    def create_entity(
+        cls,
+        model_class: type[fastapp.Model],
+        relationship_field_name: str | None = None,
+        snake_case_plural_name: str | None = None,
+        table_name: str | None = None,
+        persistable: bool = True,
+        **kwargs: Any,
+    ) -> Entity:
+        """
+        Create an Entity for a derived Identifier model class, based on the
+        associated model class and the fields of the base identifier.
+        """
+        entity = Entity(
+            snake_case_plural_name=snake_case_plural_name,
+            table_name=table_name,
+            persistable=persistable,
+            id_field_name="id",
+            keys=create_keys(
+                {
+                    1: ("identifier_issuer_id", "external_id"),
+                }
+            ),
+            links=create_links(
+                {
+                    1: ("identifier_issuer_id", IdentifierIssuer, "identifier_issuer"),
+                    2: ("internal_id", model_class, relationship_field_name),
+                }
+            ),
+            **kwargs,
+        )
+        return entity
 
 
 class IdentifierForUpload(BaseModel, frozen=True):

@@ -3,8 +3,7 @@ from uuid import UUID
 
 from pydantic import Field, computed_field, field_serializer, model_validator
 
-from gen_epix.casedb.domain.model.case.case_data import Case
-from gen_epix.commondb.domain.enum import IdentifierType
+from gen_epix.casedb.domain.model.case.case_data import Case, CaseIdentifier
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model
@@ -13,6 +12,7 @@ from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
     DataIssue,
+    IdentifiersMixin,
     ParentForUpload,
     ParentUploadResult,
     UploadResult,
@@ -129,16 +129,15 @@ class SeqForUpload(Model):
         return str(value) if value is not None else None
 
 
-class CaseForUpload(ParentForUpload):
+class CaseForUpload(ParentForUpload, IdentifiersMixin):
     """
     A case intended for upload, together with any relevant associated data.
     """
 
-    ENTITY: ClassVar = ParentForUpload.ENTITY.clone()
+    ENTITY: ClassVar = ParentForUpload.model_entity().clone()
     NAME: ClassVar = "CaseForUpload"
 
-    # TODO:3015
-    IDENTIFIERS_CLASS: ClassVar = IdentifierType.CASE
+    IDENTIFIER_CLASS: ClassVar = CaseIdentifier
     PARENT_CLASS: ClassVar = Case
     PARENT_FIELD_NAME: ClassVar = "case"
     CHILDREN_FIELD_NAME_MAP: ClassVar = {
@@ -224,7 +223,7 @@ class CaseUploadResult(ParentUploadResult):
     as the resulting cases are included as well.
     """
 
-    ENTITY: ClassVar = ParentUploadResult.ENTITY.clone()
+    ENTITY: ClassVar = ParentUploadResult.model_entity().clone()
     NAME: ClassVar = "CaseUploadResult"
 
     PARENT_FOR_UPLOAD_CLASS: ClassVar = CaseForUpload
@@ -257,7 +256,9 @@ class CaseBatchForUpload(BaseBatchForUpload):
     A number of unique cases intended for upload.
     """
 
-    ENTITY: ClassVar = BaseBatchForUpload.ENTITY.clone(update={"persistable": False})
+    ENTITY: ClassVar = BaseBatchForUpload.model_entity().clone(
+        update={"persistable": False}
+    )
     NAME: ClassVar = "CaseBatchForUpload"
 
     PARENT_FOR_UPLOAD_CLASS: ClassVar = CaseForUpload
@@ -283,7 +284,9 @@ class CaseBatchUploadResult(BaseBatchUploadResult):
     The result of uploading a batch of cases.
     """
 
-    ENTITY: ClassVar = BaseBatchForUpload.ENTITY.clone(update={"persistable": False})
+    ENTITY: ClassVar = BaseBatchForUpload.model_entity().clone(
+        update={"persistable": False}
+    )
     NAME: ClassVar = "CaseBatchUploadResult"
 
     BATCH_FOR_UPLOAD_CLASS: ClassVar = CaseBatchForUpload

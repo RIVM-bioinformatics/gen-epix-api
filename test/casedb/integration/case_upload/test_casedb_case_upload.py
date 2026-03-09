@@ -660,13 +660,13 @@ class TestCaseUpload(CaseUploadSetup):
             if value is not None:
                 case_content[col_id] = value
         # Add read sets and seqs if applicable
-        external_identifier: commondb_model.IdentifierForUpload | None = None
+        identifier_for_upload: commondb_model.IdentifierForUpload | None = None
         if found_read_set_col_ids or found_seq_col_ids:
             # Get external identifier if applicable
             identifier_issuer_id = UUID(row["seqdb.identifier_issuer_id"])
             sample_id_col_id = UUID(row["seqdb.sample_id_col_id"])
             sample_id = case_content.get(sample_id_col_id)
-            external_identifier = (
+            identifier_for_upload = (
                 commondb_model.IdentifierForUpload(
                     identifier_issuer_id=identifier_issuer_id, external_id=sample_id
                 )
@@ -681,7 +681,7 @@ class TestCaseUpload(CaseUploadSetup):
                 read_sets.append(
                     model.ReadSetForUpload(
                         col_id=col_id,
-                        other_sample_identifier=external_identifier,
+                        other_sample_identifier=identifier_for_upload,
                         sequencing_protocol_id=sequencing_protocol_id,
                     )
                 )
@@ -689,7 +689,7 @@ class TestCaseUpload(CaseUploadSetup):
                 seqs.append(
                     model.SeqForUpload(
                         col_id=col_id,
-                        external_sample_id=external_identifier,
+                        external_sample_id=identifier_for_upload,
                         assembly_protocol_id=assembly_protocol_id,
                     )
                 )
@@ -705,7 +705,7 @@ class TestCaseUpload(CaseUploadSetup):
             return model.CaseForUpload(
                 id=case.id,
                 identifiers=(
-                    None if external_identifier is None else [external_identifier]
+                    None if identifier_for_upload is None else [identifier_for_upload]
                 ),
                 case=case,
                 read_sets=read_sets,

@@ -28,6 +28,7 @@ from gen_epix.casedb.domain.model.case import (
 )
 from gen_epix.casedb.domain.model.case import CaseDataIssue as CaseDataIssue
 from gen_epix.casedb.domain.model.case import CaseForUpload as CaseForUpload
+from gen_epix.casedb.domain.model.case import CaseIdentifier as CaseIdentifier
 from gen_epix.casedb.domain.model.case import CaseQuery as CaseQuery
 from gen_epix.casedb.domain.model.case import CaseQueryResult as CaseQueryResult
 from gen_epix.casedb.domain.model.case import CaseRights as CaseRights
@@ -63,7 +64,6 @@ from gen_epix.casedb.domain.model.case import TreeAlgorithmClass as TreeAlgorith
 from gen_epix.casedb.domain.model.case.complete_case_type import (
     CompleteCaseType as CompleteCaseType,
 )
-from gen_epix.casedb.domain.model.case.upload import CaseDataIssue as CaseDataIssue
 from gen_epix.casedb.domain.model.geo import Region as Region
 from gen_epix.casedb.domain.model.geo import RegionRelation as RegionRelation
 from gen_epix.casedb.domain.model.geo import RegionSet as RegionSet
@@ -167,6 +167,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             ColSetMember,
             CompleteCaseType,
             Case,
+            CaseIdentifier,
             CaseSetCategory,
             CaseSetStatus,
             CaseSet,

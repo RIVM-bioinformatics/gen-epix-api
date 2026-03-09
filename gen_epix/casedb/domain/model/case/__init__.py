@@ -2,6 +2,7 @@ from gen_epix.casedb.domain.model.case.case_data import Case as Case
 from gen_epix.casedb.domain.model.case.case_data import (
     CaseDataCollectionLink as CaseDataCollectionLink,
 )
+from gen_epix.casedb.domain.model.case.case_data import CaseIdentifier as CaseIdentifier
 from gen_epix.casedb.domain.model.case.case_data import CaseSet as CaseSet
 from gen_epix.casedb.domain.model.case.case_data import (
     CaseSetDataCollectionLink as CaseSetDataCollectionLink,

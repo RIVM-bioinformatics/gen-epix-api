@@ -24,9 +24,6 @@ from gen_epix.commondb.domain.command import (
     GetIdentityProvidersCommand as GetIdentityProvidersCommand,
 )
 from gen_epix.commondb.domain.command import (
-    IdentifierCrudCommand as IdentifierCrudCommand,
-)
-from gen_epix.commondb.domain.command import (
     IdentifierIssuerCrudCommand as IdentifierIssuerCrudCommand,
 )
 from gen_epix.commondb.domain.command import InviteUserCommand as InviteUserCommand
@@ -112,16 +109,28 @@ from gen_epix.omopdb.domain.command.omop import (
 from gen_epix.omopdb.domain.command.omop import (
     ConditionOccurrenceCrudCommand as ConditionOccurrenceCrudCommand,
 )
+from gen_epix.omopdb.domain.command.omop import (
+    ConditionOccurrenceIdentifierCrudCommand as ConditionOccurrenceIdentifierCrudCommand,
+)
 from gen_epix.omopdb.domain.command.omop import CostCrudCommand as CostCrudCommand
 from gen_epix.omopdb.domain.command.omop import DeathCrudCommand as DeathCrudCommand
 from gen_epix.omopdb.domain.command.omop import (
+    DeathIdentifierCrudCommand as DeathIdentifierCrudCommand,
+)
+from gen_epix.omopdb.domain.command.omop import (
     DeviceExposureCrudCommand as DeviceExposureCrudCommand,
+)
+from gen_epix.omopdb.domain.command.omop import (
+    DeviceExposureIdentifierCrudCommand as DeviceExposureIdentifierCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import DomainCrudCommand as DomainCrudCommand
 from gen_epix.omopdb.domain.command.omop import DoseEraCrudCommand as DoseEraCrudCommand
 from gen_epix.omopdb.domain.command.omop import DrugEraCrudCommand as DrugEraCrudCommand
 from gen_epix.omopdb.domain.command.omop import (
     DrugExposureCrudCommand as DrugExposureCrudCommand,
+)
+from gen_epix.omopdb.domain.command.omop import (
+    DrugExposureIdentifierCrudCommand as DrugExposureIdentifierCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
     DrugStrengthCrudCommand as DrugStrengthCrudCommand,
@@ -140,25 +149,49 @@ from gen_epix.omopdb.domain.command.omop import (
     MeasurementCrudCommand as MeasurementCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
+    MeasurementIdentifierCrudCommand as MeasurementIdentifierCrudCommand,
+)
+from gen_epix.omopdb.domain.command.omop import (
     MeasurementRelationCrudCommand as MeasurementRelationCrudCommand,
+)
+from gen_epix.omopdb.domain.command.omop import (
+    MeasurementRelationIdentifierCrudCommand as MeasurementRelationIdentifierCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
     MetadataCrudCommand as MetadataCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import NoteCrudCommand as NoteCrudCommand
+from gen_epix.omopdb.domain.command.omop import (
+    NoteIdentifierCrudCommand as NoteIdentifierCrudCommand,
+)
 from gen_epix.omopdb.domain.command.omop import NoteNlpCrudCommand as NoteNlpCrudCommand
+from gen_epix.omopdb.domain.command.omop import (
+    NoteNlpIdentifierCrudCommand as NoteNlpIdentifierCrudCommand,
+)
 from gen_epix.omopdb.domain.command.omop import (
     ObservationCrudCommand as ObservationCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
+    ObservationIdentifierCrudCommand as ObservationIdentifierCrudCommand,
+)
+from gen_epix.omopdb.domain.command.omop import (
     ObservationPeriodCrudCommand as ObservationPeriodCrudCommand,
+)
+from gen_epix.omopdb.domain.command.omop import (
+    ObservationPeriodIdentifierCrudCommand as ObservationPeriodIdentifierCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
     PayerPlanPeriodCrudCommand as PayerPlanPeriodCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import PersonCrudCommand as PersonCrudCommand
 from gen_epix.omopdb.domain.command.omop import (
+    PersonIdentifierCrudCommand as PersonIdentifierCrudCommand,
+)
+from gen_epix.omopdb.domain.command.omop import (
     ProcedureOccurrenceCrudCommand as ProcedureOccurrenceCrudCommand,
+)
+from gen_epix.omopdb.domain.command.omop import (
+    ProcedureOccurrenceIdentifierCrudCommand as ProcedureOccurrenceIdentifierCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
     ProviderCrudCommand as ProviderCrudCommand,
@@ -173,13 +206,22 @@ from gen_epix.omopdb.domain.command.omop import (
     SpecimenCrudCommand as SpecimenCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
+    SpecimenIdentifierCrudCommand as SpecimenIdentifierCrudCommand,
+)
+from gen_epix.omopdb.domain.command.omop import (
     UploadPersonsCommand as UploadPersonsCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
     VisitDetailCrudCommand as VisitDetailCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
+    VisitDetailIdentifierCrudCommand as VisitDetailIdentifierCrudCommand,
+)
+from gen_epix.omopdb.domain.command.omop import (
     VisitOccurrenceCrudCommand as VisitOccurrenceCrudCommand,
+)
+from gen_epix.omopdb.domain.command.omop import (
+    VisitOccurrenceIdentifierCrudCommand as VisitOccurrenceIdentifierCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import VocabularyCrudCommand
 from gen_epix.omopdb.domain.command.omop import (
@@ -204,35 +246,50 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         ConceptSynonymCrudCommand,
         ConditionEraCrudCommand,
         ConditionOccurrenceCrudCommand,
+        ConditionOccurrenceIdentifierCrudCommand,
         CostCrudCommand,
         DeathCrudCommand,
+        DeathIdentifierCrudCommand,
         DeviceExposureCrudCommand,
+        DeviceExposureIdentifierCrudCommand,
         DomainCrudCommand,
         DoseEraCrudCommand,
         DrugEraCrudCommand,
         DrugExposureCrudCommand,
+        DrugExposureIdentifierCrudCommand,
         DrugStrengthCrudCommand,
         EpisodeCrudCommand,
         EpisodeEventCrudCommand,
         FactRelationshipCrudCommand,
         LocationCrudCommand,
         MeasurementCrudCommand,
+        MeasurementIdentifierCrudCommand,
         MeasurementRelationCrudCommand,
+        MeasurementRelationIdentifierCrudCommand,
         MetadataCrudCommand,
         NoteCrudCommand,
+        NoteIdentifierCrudCommand,
         NoteNlpCrudCommand,
+        NoteNlpIdentifierCrudCommand,
         ObservationCrudCommand,
+        ObservationIdentifierCrudCommand,
         ObservationPeriodCrudCommand,
+        ObservationPeriodIdentifierCrudCommand,
         PayerPlanPeriodCrudCommand,
         PersonCrudCommand,
+        PersonIdentifierCrudCommand,
         ProcedureOccurrenceCrudCommand,
+        ProcedureOccurrenceIdentifierCrudCommand,
         ProviderCrudCommand,
         RelationshipCrudCommand,
         SourceToConceptMapCrudCommand,
         SpecimenCrudCommand,
+        SpecimenIdentifierCrudCommand,
         UploadPersonsCommand,
         VisitDetailCrudCommand,
+        VisitDetailIdentifierCrudCommand,
         VisitOccurrenceCrudCommand,
+        VisitOccurrenceIdentifierCrudCommand,
         VocabularyCrudCommand,
     },
     # Common commands

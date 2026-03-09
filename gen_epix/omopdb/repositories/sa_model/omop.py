@@ -2,12 +2,13 @@ from datetime import date, datetime
 from uuid import UUID
 
 import sqlalchemy.orm as orm
-from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import Mapped, relationship
 
 from gen_epix.commondb.repositories.sa_model import (
     create_mapped_column,
     create_table_args,
 )
+from gen_epix.commondb.repositories.sa_model.organization import IdentifierMixin
 from gen_epix.omopdb.domain import DOMAIN, enum, model
 from gen_epix.omopdb.repositories.sa_model.base import (
     DataLineageMixin,
@@ -563,6 +564,19 @@ class Person(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
 
 
+class PersonIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.PersonIdentifier)
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.PersonIdentifier, "internal_id"
+    )
+    person: Mapped[Person] = relationship(Person, foreign_keys=[internal_id])
+
+
 class ObservationPeriod(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
@@ -590,6 +604,21 @@ class ObservationPeriod(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
     observation_period_end_iso_interval: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.ObservationPeriod, "observation_period_end_iso_interval"
+    )
+
+
+class ObservationPeriodIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.ObservationPeriodIdentifier)
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.ObservationPeriodIdentifier, "internal_id"
+    )
+    observation_period: Mapped[ObservationPeriod] = relationship(
+        ObservationPeriod, foreign_keys=[internal_id]
     )
 
 
@@ -650,6 +679,21 @@ class VisitOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
     preceding_visit_occurrence_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.VisitOccurrence, "preceding_visit_occurrence_id"
+    )
+
+
+class VisitOccurrenceIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.VisitOccurrenceIdentifier)
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.VisitOccurrenceIdentifier, "internal_id"
+    )
+    visit_occurrence: Mapped[VisitOccurrence] = relationship(
+        VisitOccurrence, foreign_keys=[internal_id]
     )
 
 
@@ -719,6 +763,21 @@ class VisitDetail(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
 
 
+class VisitDetailIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.VisitDetailIdentifier)
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.VisitDetailIdentifier, "internal_id"
+    )
+    visit_detail: Mapped[VisitDetail] = relationship(
+        VisitDetail, foreign_keys=[internal_id]
+    )
+
+
 class ConditionOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
@@ -782,6 +841,23 @@ class ConditionOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
 
 
+class ConditionOccurrenceIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(
+        model.ConditionOccurrenceIdentifier
+    )
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.ConditionOccurrenceIdentifier, "internal_id"
+    )
+    condition_occurrence: Mapped[ConditionOccurrence] = relationship(
+        ConditionOccurrence, foreign_keys=[internal_id]
+    )
+
+
 class ProcedureOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
@@ -839,6 +915,23 @@ class ProcedureOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
     procedure_iso_interval: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.ProcedureOccurrence, "procedure_iso_interval"
+    )
+
+
+class ProcedureOccurrenceIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(
+        model.ProcedureOccurrenceIdentifier
+    )
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.ProcedureOccurrenceIdentifier, "internal_id"
+    )
+    procedure_occurrence: Mapped[ProcedureOccurrence] = relationship(
+        ProcedureOccurrence, foreign_keys=[internal_id]
     )
 
 
@@ -924,6 +1017,21 @@ class DrugExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
 
 
+class DrugExposureIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.DrugExposureIdentifier)
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.DrugExposureIdentifier, "internal_id"
+    )
+    drug_exposure: Mapped[DrugExposure] = relationship(
+        DrugExposure, foreign_keys=[internal_id]
+    )
+
+
 class DeviceExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
@@ -993,6 +1101,21 @@ class DeviceExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
     device_exposure_end_iso_interval: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.DeviceExposure, "device_exposure_end_iso_interval"
+    )
+
+
+class DeviceExposureIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.DeviceExposureIdentifier)
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.DeviceExposureIdentifier, "internal_id"
+    )
+    device_exposure: Mapped[DeviceExposure] = relationship(
+        DeviceExposure, foreign_keys=[internal_id]
     )
 
 
@@ -1080,6 +1203,21 @@ class Measurement(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
 
 
+class MeasurementIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.MeasurementIdentifier)
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.MeasurementIdentifier, "internal_id"
+    )
+    measurement: Mapped[Measurement] = relationship(
+        Measurement, foreign_keys=[internal_id]
+    )
+
+
 class Observation(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
@@ -1158,6 +1296,21 @@ class Observation(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
 
 
+class ObservationIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.ObservationIdentifier)
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.ObservationIdentifier, "internal_id"
+    )
+    observation: Mapped[Observation] = relationship(
+        Observation, foreign_keys=[internal_id]
+    )
+
+
 class Specimen(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
@@ -1219,6 +1372,19 @@ class Specimen(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
 
 
+class SpecimenIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.SpecimenIdentifier)
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SpecimenIdentifier, "internal_id"
+    )
+    specimen: Mapped[Specimen] = relationship(Specimen, foreign_keys=[internal_id])
+
+
 class Note(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
@@ -1268,6 +1434,19 @@ class Note(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
 
 
+class NoteIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.NoteIdentifier)
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.NoteIdentifier, "internal_id"
+    )
+    note: Mapped[Note] = relationship(Note, foreign_keys=[internal_id])
+
+
 class NoteNlp(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
@@ -1309,6 +1488,19 @@ class NoteNlp(Base, DataLineageMixin, NoIdRowMetadataMixin):
     term_modifiers: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.NoteNlp, "term_modifiers"
     )
+
+
+class NoteNlpIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.NoteNlpIdentifier)
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.NoteNlpIdentifier, "internal_id"
+    )
+    note_nlp: Mapped[NoteNlp] = relationship(NoteNlp, foreign_keys=[internal_id])
 
 
 class FactRelationship(Base, NoIdRowMetadataMixin):
@@ -1365,6 +1557,19 @@ class Death(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
 
 
+class DeathIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.DeathIdentifier)
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.DeathIdentifier, "internal_id"
+    )
+    death: Mapped[Death] = relationship(Death, foreign_keys=[internal_id])
+
+
 class MeasurementRelation(Base, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
@@ -1386,6 +1591,23 @@ class MeasurementRelation(Base, NoIdRowMetadataMixin):
     )
     measurement_relation_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.MeasurementRelation, "measurement_relation_concept_id"
+    )
+
+
+class MeasurementRelationIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(
+        model.MeasurementRelationIdentifier
+    )
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.MeasurementRelationIdentifier, "internal_id"
+    )
+    measurement_relation: Mapped[MeasurementRelation] = relationship(
+        MeasurementRelation, foreign_keys=[internal_id]
     )
 
 

@@ -3,7 +3,6 @@ from uuid import UUID
 
 from pydantic import Field, computed_field
 
-from gen_epix.commondb.domain.enum import IdentifierType
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
@@ -14,26 +13,21 @@ from gen_epix.commondb.domain.model.upload import (
     ParentUploadResult,
     UploadResult,
 )
-from gen_epix.omopdb.domain.model.omop.clinical_data import (
-    Measurement,
-    MeasurementRelation,
-    Observation,
-    Person,
-    Specimen,
-)
+from gen_epix.omopdb.domain.model.omop import clinical_data as model
 from gen_epix.util import copy_model_field
 
 
-class MeasurementForUpload(Measurement, IdentifiersMixin):
+class MeasurementForUpload(model.Measurement, IdentifiersMixin):
     """
     An measurement record intended for upload. Equal to a Measurement, with
     additional variables.
     """
 
-    ENTITY: ClassVar = Measurement.ENTITY.clone(update={"persistable": False})
+    ENTITY: ClassVar = model.Measurement.model_entity().clone(
+        update={"persistable": False}
+    )
     NAME: ClassVar = "MeasurementForUpload"
-    # TODO:3015
-    IDENTIFIERS_CLASS: ClassVar = IdentifierType.SAMPLE
+    IDENTIFIER_CLASS: ClassVar = model.MeasurementIdentifier
 
     person_id: UUID = Field(
         default=NULL_ID,
@@ -45,16 +39,17 @@ class MeasurementForUpload(Measurement, IdentifiersMixin):
     )
 
 
-class ObservationForUpload(Observation, IdentifiersMixin):
+class ObservationForUpload(model.Observation, IdentifiersMixin):
     """
     An observation record intended for upload. Equal to an Observation, with
     additional variables.
     """
 
-    ENTITY: ClassVar = Observation.ENTITY.clone(update={"persistable": False})
+    ENTITY: ClassVar = model.Observation.model_entity().clone(
+        update={"persistable": False}
+    )
     NAME: ClassVar = "ObservationForUpload"
-    # TODO:3015
-    IDENTIFIERS_CLASS: ClassVar = IdentifierType.SAMPLE
+    IDENTIFIER_CLASS: ClassVar = model.ObservationIdentifier
 
     person_id: UUID = Field(
         default=NULL_ID,
@@ -66,16 +61,17 @@ class ObservationForUpload(Observation, IdentifiersMixin):
     )
 
 
-class SpecimenForUpload(Specimen, IdentifiersMixin):
+class SpecimenForUpload(model.Specimen, IdentifiersMixin):
     """
     A specimen record intended for upload. Equal to a Specimen, with
     additional variables.
     """
 
-    ENTITY: ClassVar = Specimen.ENTITY.clone(update={"persistable": False})
+    ENTITY: ClassVar = model.Specimen.model_entity().clone(
+        update={"persistable": False}
+    )
     NAME: ClassVar = "SpecimenForUpload"
-    # TODO:3015
-    IDENTIFIERS_CLASS: ClassVar = IdentifierType.SAMPLE
+    IDENTIFIER_CLASS: ClassVar = model.SpecimenIdentifier
 
     person_id: UUID = Field(
         default=NULL_ID,
@@ -87,16 +83,17 @@ class SpecimenForUpload(Specimen, IdentifiersMixin):
     )
 
 
-class MeasurementRelationForUpload(MeasurementRelation, IdentifiersMixin):
+class MeasurementRelationForUpload(model.MeasurementRelation, IdentifiersMixin):
     """
     A measurement relation record intended for upload. Equal to a MeasurementRelation, with
     additional variables.
     """
 
-    ENTITY: ClassVar = MeasurementRelation.ENTITY.clone(update={"persistable": False})
+    ENTITY: ClassVar = model.MeasurementRelation.model_entity().clone(
+        update={"persistable": False}
+    )
     NAME: ClassVar = "MeasurementRelationForUpload"
-    # TODO:3015
-    IDENTIFIERS_CLASS: ClassVar = IdentifierType.SAMPLE
+    IDENTIFIER_CLASS: ClassVar = model.MeasurementRelationIdentifier
 
     measurement_relation_id: UUID = Field(
         default=NULL_ID,
@@ -109,30 +106,31 @@ class PersonForUpload(ParentForUpload):
     A person, together with any relevant associated data, intended for upload.
     """
 
-    ENTITY: ClassVar = ParentForUpload.ENTITY.clone(update={"persistable": False})
+    ENTITY: ClassVar = ParentForUpload.model_entity().clone(
+        update={"persistable": False}
+    )
     NAME: ClassVar = "PersonForUpload"
-    # TODO:3015
-    IDENTIFIERS_CLASS: ClassVar = IdentifierType.PERSON
-    PARENT_CLASS: ClassVar = Person
+    IDENTIFIER_CLASS: ClassVar = model.PersonIdentifier
+    PARENT_CLASS: ClassVar = model.Person
     PARENT_FIELD_NAME: ClassVar = "person"
     CHILDREN_FIELD_NAME_MAP: ClassVar = {
-        Measurement: "measurements",
-        Observation: "observations",
-        Specimen: "specimens",
-        MeasurementRelation: "measurement_relations",
+        model.Measurement: "measurements",
+        model.Observation: "observations",
+        model.Specimen: "specimens",
+        model.MeasurementRelation: "measurement_relations",
     }
     CHILD_FOR_UPLOAD_CLASS_MAP: ClassVar = {
-        Measurement: MeasurementForUpload,
-        Observation: ObservationForUpload,
-        Specimen: SpecimenForUpload,
-        MeasurementRelation: MeasurementRelationForUpload,
+        model.Measurement: MeasurementForUpload,
+        model.Observation: ObservationForUpload,
+        model.Specimen: SpecimenForUpload,
+        model.MeasurementRelation: MeasurementRelationForUpload,
     }
     CHILD_PARENT_ID_FIELD_NAME_MAP: ClassVar = {
         x: "person_id" for x in CHILD_FOR_UPLOAD_CLASS_MAP.keys()
     }
 
     # Parent
-    person: Person | None = Field(
+    person: model.Person | None = Field(
         default=None,
         description="The person model itself, if to be created or updated as a whole.",
     )
@@ -166,7 +164,7 @@ class PersonUploadResult(ParentUploadResult):
     The result of uploading a single person.
     """
 
-    ENTITY: ClassVar = ParentUploadResult.ENTITY.clone()
+    ENTITY: ClassVar = ParentUploadResult.model_entity().clone()
     NAME: ClassVar = "PersonUploadResult"
 
     PARENT_FOR_UPLOAD_CLASS: ClassVar = PersonForUpload
@@ -199,7 +197,7 @@ class PersonBatchForUpload(BaseBatchForUpload):
     for the storage of these data.
     """
 
-    ENTITY: ClassVar = BaseBatchForUpload.ENTITY.clone()
+    ENTITY: ClassVar = BaseBatchForUpload.model_entity().clone()
     NAME: ClassVar = "PersonBatchForUpload"
 
     PARENT_FOR_UPLOAD_CLASS: ClassVar = PersonForUpload  # type: ignore[assignment]
@@ -235,7 +233,7 @@ class PersonBatchUploadResult(BaseBatchUploadResult):
     The result of uploading a batch of persons.
     """
 
-    ENTITY: ClassVar = BaseBatchForUpload.ENTITY.clone()
+    ENTITY: ClassVar = BaseBatchForUpload.model_entity().clone()
     NAME: ClassVar = "PersonBatchUploadResult"
 
     BATCH_FOR_UPLOAD_CLASS: ClassVar = PersonBatchForUpload  # type: ignore[assignment]

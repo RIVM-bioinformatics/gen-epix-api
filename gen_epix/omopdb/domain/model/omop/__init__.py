@@ -5,32 +5,77 @@ from gen_epix.omopdb.domain.model.omop.base import DataLineageMixin as DataLinea
 from gen_epix.omopdb.domain.model.omop.clinical_data import (
     ConditionOccurrence as ConditionOccurrence,
 )
+from gen_epix.omopdb.domain.model.omop.clinical_data import (
+    ConditionOccurrenceIdentifier as ConditionOccurrenceIdentifier,
+)
 from gen_epix.omopdb.domain.model.omop.clinical_data import Death as Death
+from gen_epix.omopdb.domain.model.omop.clinical_data import (
+    DeathIdentifier as DeathIdentifier,
+)
 from gen_epix.omopdb.domain.model.omop.clinical_data import (
     DeviceExposure as DeviceExposure,
 )
+from gen_epix.omopdb.domain.model.omop.clinical_data import (
+    DeviceExposureIdentifier as DeviceExposureIdentifier,
+)
 from gen_epix.omopdb.domain.model.omop.clinical_data import DrugExposure as DrugExposure
+from gen_epix.omopdb.domain.model.omop.clinical_data import (
+    DrugExposureIdentifier as DrugExposureIdentifier,
+)
 from gen_epix.omopdb.domain.model.omop.clinical_data import (
     FactRelationship as FactRelationship,
 )
 from gen_epix.omopdb.domain.model.omop.clinical_data import Measurement as Measurement
 from gen_epix.omopdb.domain.model.omop.clinical_data import (
+    MeasurementIdentifier as MeasurementIdentifier,
+)
+from gen_epix.omopdb.domain.model.omop.clinical_data import (
     MeasurementRelation as MeasurementRelation,
 )
+from gen_epix.omopdb.domain.model.omop.clinical_data import (
+    MeasurementRelationIdentifier as MeasurementRelationIdentifier,
+)
 from gen_epix.omopdb.domain.model.omop.clinical_data import Note as Note
+from gen_epix.omopdb.domain.model.omop.clinical_data import (
+    NoteIdentifier as NoteIdentifier,
+)
 from gen_epix.omopdb.domain.model.omop.clinical_data import NoteNlp as NoteNlp
+from gen_epix.omopdb.domain.model.omop.clinical_data import (
+    NoteNlpIdentifier as NoteNlpIdentifier,
+)
 from gen_epix.omopdb.domain.model.omop.clinical_data import Observation as Observation
+from gen_epix.omopdb.domain.model.omop.clinical_data import (
+    ObservationIdentifier as ObservationIdentifier,
+)
 from gen_epix.omopdb.domain.model.omop.clinical_data import (
     ObservationPeriod as ObservationPeriod,
 )
+from gen_epix.omopdb.domain.model.omop.clinical_data import (
+    ObservationPeriodIdentifier as ObservationPeriodIdentifier,
+)
 from gen_epix.omopdb.domain.model.omop.clinical_data import Person as Person
+from gen_epix.omopdb.domain.model.omop.clinical_data import (
+    PersonIdentifier as PersonIdentifier,
+)
 from gen_epix.omopdb.domain.model.omop.clinical_data import (
     ProcedureOccurrence as ProcedureOccurrence,
 )
+from gen_epix.omopdb.domain.model.omop.clinical_data import (
+    ProcedureOccurrenceIdentifier as ProcedureOccurrenceIdentifier,
+)
 from gen_epix.omopdb.domain.model.omop.clinical_data import Specimen as Specimen
+from gen_epix.omopdb.domain.model.omop.clinical_data import (
+    SpecimenIdentifier as SpecimenIdentifier,
+)
 from gen_epix.omopdb.domain.model.omop.clinical_data import VisitDetail as VisitDetail
 from gen_epix.omopdb.domain.model.omop.clinical_data import (
+    VisitDetailIdentifier as VisitDetailIdentifier,
+)
+from gen_epix.omopdb.domain.model.omop.clinical_data import (
     VisitOccurrence as VisitOccurrence,
+)
+from gen_epix.omopdb.domain.model.omop.clinical_data import (
+    VisitOccurrenceIdentifier as VisitOccurrenceIdentifier,
 )
 
 # Results domain imports

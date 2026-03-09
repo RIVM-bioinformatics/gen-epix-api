@@ -16,6 +16,7 @@ from gen_epix.casedb.domain.model.case.ref_data import (
 )
 from gen_epix.casedb.domain.model.subject import Subject
 from gen_epix.commondb.domain.model import DataCollection, Model
+from gen_epix.commondb.domain.model.organization import BaseIdentifier
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
 
@@ -73,6 +74,21 @@ class Case(Model):
         self, value: dict[UUID, str | None]
     ) -> dict[str, str | None]:
         return {str(x): y for x, y in value.items() if y is not None}
+
+
+class CaseIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        Case,
+        relationship_field_name="case",
+        snake_case_plural_name="case_identifiers",
+        table_name="case_identifier",
+    )
+    NAME: ClassVar = "CaseIdentifier"
+    MODEL_CLASS: ClassVar = Case
+
+    case: Case | None = Field(
+        default=None, description="The case associated with this identifier."
+    )
 
 
 class CaseDataCollectionLink(Model):
