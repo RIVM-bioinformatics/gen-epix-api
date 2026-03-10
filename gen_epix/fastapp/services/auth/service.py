@@ -663,10 +663,10 @@ class AuthService(BaseAuthService):
                 return self._auto_create_new_user(
                     claims, issuer, sub, user_manager, user_key
                 )
-            else:
-                raise exc.UnauthorizedAuthError(
-                    "User does not exist and auto-creation is disabled"
-                )
+
+            raise exc.UnauthorizedAuthError(
+                "User does not exist and auto-creation is disabled"
+            )
 
     def _auto_create_new_user(
         self,

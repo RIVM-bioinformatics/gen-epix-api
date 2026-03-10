@@ -233,7 +233,6 @@ class UserManager(BaseUserManager):
                 raise exc.UnauthorizedAuthError("Created by user is not active")
 
             # Verify if create_by_user made an invitation for this user that is valid
-            timestamp = datetime.datetime.now(datetime.timezone.utc)
             user_invitations: list[model.UserInvitation] = (
                 self._organization_service.repository.crud(  # type: ignore[assignment]
                     uow,
@@ -245,15 +244,22 @@ class UserManager(BaseUserManager):
                 )
             )
 
+            def convert_to_utc(x: datetime) -> datetime:
+                if x.tzinfo is None:
+                    return x.replace(tzinfo=datetime.timezone.utc)
+                return x.astimezone(datetime.timezone.utc)
+
+            timestamp = datetime.datetime.now(datetime.timezone.utc)
+
             # At least one invitation exists matching the criteria
             user_invitations = [
                 x
                 for x in user_invitations
                 if x.invited_by_user_id == created_by_user_id
                 and x.token == token
-                and (x.key is None or x.key == user.email)
+                and (x.key is None or x.key == user.get_key())
                 and x.organization_id == user.organization_id
-                and x.expires_at > timestamp
+                and convert_to_utc(x.expires_at) > timestamp
             ]
             if not user_invitations:
                 raise exc.UnauthorizedAuthError("Invitation does not exist")
