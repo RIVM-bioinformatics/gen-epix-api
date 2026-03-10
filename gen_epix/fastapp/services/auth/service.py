@@ -576,7 +576,10 @@ class AuthService(BaseAuthService):
             # Not a root user, no need to verify
             return
         token_iat: int = claims.claims.get("iat", 0)
-        if int(time.time()) - token_iat <= self._root_token_time_to_live:
+        if (
+            token_iat == 0
+            or int(time.time()) - token_iat <= self._root_token_time_to_live
+        ):
             # Token is not too old, allow authentication
             return
         # Token is too old, log and reject authentication
