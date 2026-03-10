@@ -30,6 +30,7 @@ _PINNED_LOCAL_LOGGER_SUFFIXES = {
     "api",
     "external",
 }
+_LOG_LEVEL_DIAGNOSTIC_CODE = "8d4f29a1"
 
 
 def _is_descendant_logger(logger_name: str, parent_logger_name: str) -> bool:
@@ -173,7 +174,7 @@ class AppCfg(BaseAppCfg):
 
         # Configure and set loggers
         self._init_configure_loggers()
-        self.set_log_level()
+        self.set_log_level(emit_diagnostic=False)
         if self._setup_logger_level is not None:
             self.setup_logger.setLevel(self._setup_logger_level)
         if self._log_setup:
@@ -349,28 +350,113 @@ class AppCfg(BaseAppCfg):
             with open(new_path, "wb") as dst_handle:
                 dst_handle.write(src_handle.read())
 
-    def set_log_level(self, log_level: str | int | None = None) -> None:
-        """Set log level for all loggers."""
-        # Parse log level
+    def _resolve_log_level(
+        self, log_level: str | int | None
+    ) -> tuple[str | int | None, str, str, str | None, str | int | None]:
+        """Resolve log level and report where it came from."""
         log_level_envvar = f"{self._envvar_prefix}{self._log_level_envvar}"
-        if log_level is None:
-            if log_level_envvar in os.environ:
-                # Get log level from environment variable, before settings
-                log_level = os.environ[log_level_envvar]
-            elif hasattr(self, "_cfg"):
-                # Get log level from settings, if available
-                log_level = self._cfg["log"]["level"]
-        if log_level is None:
+        env_value = os.environ.get(log_level_envvar)
+        settings_value: str | int | None = None
+        if hasattr(self, "_cfg"):
+            try:
+                settings_value = self._cfg["log"]["level"]
+            except (KeyError, TypeError):
+                settings_value = None
+
+        source = "arg" if log_level is not None else "none"
+        resolved_level = log_level
+        if resolved_level is None and env_value is not None:
+            resolved_level = env_value
+            source = "env"
+        elif resolved_level is None and settings_value is not None:
+            resolved_level = settings_value
+            source = "settings"
+
+        if isinstance(resolved_level, str):
+            resolved_level = resolved_level.upper()
+
+        return resolved_level, source, log_level_envvar, env_value, settings_value
+
+    def _set_known_handlers_to_notset(self) -> None:
+        """Normalise shared handlers; level filtering is controlled by loggers."""
+        seen_handler_ids: set[int] = set()
+        logger_names = set(self._logging_config_yaml.get("loggers", {}).keys())
+        for logger_attr in (
+            "_setup_logger",
+            "_api_logger",
+            "_app_logger",
+            "_service_logger",
+        ):
+            logger_obj = getattr(self, logger_attr, None)
+            logger_name = getattr(logger_obj, "name", None)
+            if isinstance(logger_name, str):
+                logger_names.add(logger_name)
+
+        for logger_name in logger_names:
+            for handler in logging.getLogger(logger_name).handlers:
+                handler_id = id(handler)
+                if handler_id in seen_handler_ids:
+                    continue
+                handler.setLevel(logging.NOTSET)
+                seen_handler_ids.add(handler_id)
+
+        for handler in logging.getLogger().handlers:
+            handler_id = id(handler)
+            if handler_id in seen_handler_ids:
+                continue
+            handler.setLevel(logging.NOTSET)
+            seen_handler_ids.add(handler_id)
+
+    def _emit_log_level_diagnostic(
+        self,
+        resolved_level: str | int | None,
+        source: str,
+        env_var_name: str,
+        env_var_value: str | None,
+        settings_value: str | int | None,
+    ) -> None:
+        if not self._log_setup:
+            return
+        self.setup_logger.info(
+            App.create_static_log_message(
+                _LOG_LEVEL_DIAGNOSTIC_CODE,
+                "APPLIED_LOG_LEVEL",
+                resolved_level=resolved_level,
+                source=source,
+                env_var_name=env_var_name,
+                env_var_value=env_var_value,
+                settings_value=settings_value,
+            )
+        )
+
+    def set_log_level(
+        self, log_level: str | int | None = None, emit_diagnostic: bool = True
+    ) -> None:
+        """Set log level for all loggers."""
+        (
+            resolved_level,
+            source,
+            env_var_name,
+            env_var_value,
+            settings_value,
+        ) = self._resolve_log_level(log_level)
+        if resolved_level is None:
+            if emit_diagnostic:
+                self._emit_log_level_diagnostic(
+                    resolved_level,
+                    source,
+                    env_var_name,
+                    env_var_value,
+                    settings_value,
+                )
             # No log level available
             return
-        if isinstance(log_level, str):
-            log_level = log_level.upper()
+
         # Set new log level for all in settings as well
         if hasattr(self, "_cfg"):
-            self._cfg["log"]["level"] = log_level
-        for handler in self._setup_logger.handlers:
-            handler.setLevel(log_level)
-        self._setup_logger.setLevel(log_level)
+            self._cfg["log"]["level"] = resolved_level
+        self._set_known_handlers_to_notset()
+        self._setup_logger.setLevel(resolved_level)
         pinned_logger_names = set(_PINNED_THIRD_PARTY_LOGGERS)
         pinned_logger_names.update(
             AppCfg._prefix_logger(self._logger_prefix, suffix)
@@ -382,14 +468,12 @@ class AppCfg(BaseAppCfg):
                 self.setup_logger.debug(
                     App.create_static_log_message(
                         "6ba9367c",
-                        f"Updated logger {logger_name} with level {log_level}",
+                        f"Updated logger {logger_name} with level {resolved_level}",
                     )
                 )
-            effective_level = log_level
+            effective_level = resolved_level
             if logger_name in pinned_logger_names:
-                effective_level = logger_cfg.get("level", log_level)
-            for handler in curr_logger.handlers:
-                handler.setLevel(effective_level)
+                effective_level = logger_cfg.get("level", resolved_level)
             curr_logger.setLevel(effective_level)
 
         # Keep runtime child loggers of pinned third-party namespaces pinned as well.
@@ -401,7 +485,16 @@ class AppCfg(BaseAppCfg):
                 pinned_level = (
                     self._logging_config_yaml["loggers"]
                     .get(pinned_logger_name, {})
-                    .get("level", log_level)
+                    .get("level", resolved_level)
                 )
                 logging.getLogger(runtime_logger_name).setLevel(pinned_level)
                 break
+
+        if emit_diagnostic:
+            self._emit_log_level_diagnostic(
+                resolved_level,
+                source,
+                env_var_name,
+                env_var_value,
+                settings_value,
+            )
