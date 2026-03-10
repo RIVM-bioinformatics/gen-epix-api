@@ -37,7 +37,7 @@ def case_service_retrieve_phylogenetic_tree(
             raise exc.InvalidArgumentsError(
                 f"Col {dist_col_id} does not belong to CaseType {case_type_id}"
             )
-        dist_col: model.RefCol = repository.crud(  # type: ignore[assignment]
+        dist_ref_col: model.RefCol = repository.crud(  # type: ignore[assignment]
             uow,
             user.id,
             model.RefCol,
@@ -45,9 +45,9 @@ def case_service_retrieve_phylogenetic_tree(
             dist_col.ref_col_id,
             CrudOperation.READ_ONE,
         )
-        if dist_col.col_type != enum.ColType.GENETIC_DISTANCE:
+        if dist_ref_col.col_type != enum.ColType.GENETIC_DISTANCE:
             raise exc.InvalidArgumentsError(
-                f"Col {dist_col_id} is not of type {enum.ColType.GENETIC_DISTANCE.value}"
+                f"Col {dist_col} is not of type {enum.ColType.GENETIC_DISTANCE.value}"
             )
 
         # @ABAC
@@ -64,7 +64,7 @@ def case_service_retrieve_phylogenetic_tree(
                 user.id,
                 model.GeneticDistanceProtocol,
                 None,
-                dist_col.genetic_distance_protocol_id,
+                dist_ref_col.genetic_distance_protocol_id,
                 CrudOperation.READ_ONE,
             )
         )
