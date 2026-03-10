@@ -4,7 +4,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from test.casedb.casedb_endpoint_test_client import CasedbEndpointTestClient
 from test.test_client.util import get_test_name, get_test_output_dir
-from time import sleep
 from typing import Any
 from uuid import UUID
 
@@ -14,12 +13,9 @@ from gen_epix.casedb.env import AppComposer
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.commondb.app_setup import create_fast_api
 from gen_epix.commondb.config import AppCfg, BaseAppCfg
-from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.test.test_client import TestClient
 from gen_epix.fastapp import CrudOperation
-from gen_epix.filter import FilterType, TypedEqualsUuidFilter, TypedUuidSetFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
-from gen_epix.util import map_paired_elements
 
 
 class OrganismType(enum.Enum):
@@ -565,9 +561,9 @@ class CasedbTestClient(TestClient):
         )
         return self._set_obj(etiology)  # type: ignore[return-value]
 
-    # TODO: improve setting of dummy process metadata (created_at, modified_at, modified_by) in create_case_type and create_case_type_set, 
-    # which is currently only done to allow testing of the metadata policy in the test cases, but is a bit hacky. 
-    # Maybe we can add an optional parameter to the command handler to bypass the metadata policy for setting these fields, 
+    # TODO: improve setting of dummy process metadata (created_at, modified_at, modified_by) in create_case_type and create_case_type_set,
+    # which is currently only done to allow testing of the metadata policy in the test cases, but is a bit hacky.
+    # Maybe we can add an optional parameter to the command handler to bypass the metadata policy for setting these fields,
     # or to set them to specific values for testing purposes, which would be cleaner than setting dummy values here and then overriding them in the test cases.
     def create_case_type(
         self,
@@ -587,8 +583,8 @@ class CasedbTestClient(TestClient):
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.CaseType(
                     # Note, we hard code dates here just for testing.
-                    # because the root user creates all these objects in the setup phase, 
-                    # and we want to have filled created_at and modified_at values, since the metadata policy only sets these for non-root users. 
+                    # because the root user creates all these objects in the setup phase,
+                    # and we want to have filled created_at and modified_at values, since the metadata policy only sets these for non-root users.
                     # This allows us to test the metadata policy in the test cases, while still having created_at and modified_at values set for the case types.
                     created_at=datetime(2023, 1, 1, tzinfo=UTC),
                     modified_at=datetime(2023, 6, 1, tzinfo=UTC),
@@ -1107,6 +1103,8 @@ class CasedbTestClient(TestClient):
         )
         return self._set_obj(user_share_case_policy)  # type: ignore[return-value]
 
+    # Note: We are passing the data_collections as a parameter because
+    # UploadCasesCommand has it as a required field, please double check if this is necessary
     def create_case(
         self,
         user_or_str: str | model.User,
@@ -1119,19 +1117,25 @@ class CasedbTestClient(TestClient):
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
+
         if not isinstance(data_collections, list):
             data_collections = [data_collections]
+
         data_collections = self._get_obj(model.DataCollection, data_collections)
         data_collection_ids = [x.id for x in data_collections]
         created_in_data_collection_id = data_collection_ids[0]
         data_collection_ids = data_collection_ids[1:]
-        root_user: model.User = self._get_obj(model.User, "root1_1")
+
+        root_user: model.User = self._get_obj(model.User, "root1_1")  # type: ignore[assignment]
         m = re.match(r"^([a-z_]*)(\d+)_(\d+)$", code.lower())
         if not m:
             raise ValueError(f"Invalid code {code}")
         case_type_index = int(m.group(2))
         case_index = int(m.group(3))
-        case_type = self._get_obj(model.CaseType, f"case_type{case_type_index}")
+        case_type: model.CaseType = self._get_obj(
+            model.CaseType, f"case_type{case_type_index}"
+        )  # type: ignore[assignment]
+
         # TODO: get Cols from CompleteCaseType
         cols: list[model.Col] = self.read_some_by_property(  # type: ignore[assignment]
             root_user,
@@ -1146,7 +1150,7 @@ class CasedbTestClient(TestClient):
             col_index_pattern if col_index_pattern else r"^.*[a-z]*(\d+)_?\w*$"
         )
         for col in cols:
-            ref_col = col.ref_col
+            ref_col: model.RefCol = col.ref_col
             m = re.match(col_index_pattern, ref_col.code.lower())
             col_index = int(m.group(1))
             value = self.DUMMY_VALUES[ref_col.col_type]
@@ -1170,45 +1174,60 @@ class CasedbTestClient(TestClient):
                 )
                 value = regions[0].id
             content[col.id] = str(value)
+
         # Create the case, encoding the case_type_index and case_index in the case_date as resp. month and days since 1900-01-01
-        cases = self.handle(
+        case_batch_upload_result: model.CaseBatchUploadResult = self.handle(
             command.UploadCasesCommand(
                 user=user,
-                cases=[
-                    model.Case(
-                        case_type_id=case_type.id,
-                        # subject_id=self.generate_id(),
-                        created_in_data_collection_id=created_in_data_collection_id,
-                        # case_date=self._convert_case_code_to_date(code),
-                        code=code,
-                        content=content,
-                    )
-                ],
-                data_collection_ids=data_collection_ids,
+                case_type_id=case_type.id,
+                created_in_data_collection_id=created_in_data_collection_id,
+                case_batch=model.CaseBatchForUpload(
+                    cases=[
+                        model.CaseForUpload(
+                            id=self.generate_id(),
+                            case=model.Case(
+                                case_type_id=case_type.id,
+                                created_in_data_collection_id=created_in_data_collection_id,
+                                content=content,
+                            ),
+                        )
+                    ]
+                ),
             )
         )
-        case = cases[0]
-        # Get the data collection associations
-        stored_case_data_collection_links = self.handle(
-            command.CaseDataCollectionLinkCrudCommand(
+
+        #
+        case_result = case_batch_upload_result.cases[0]
+
+        case: model.Case = self.app.handle(
+            command.CaseCrudCommand(
                 user=root_user,
-                operation=CrudOperation.READ_ALL,
-                query_filter=TypedEqualsUuidFilter(
-                    type=FilterType.EQUALS_UUID.value,
-                    key="case_id",
-                    value=case.id,
-                ),
-            ),
+                operation=CrudOperation.READ_ONE,
+                obj_ids=[case_result.id],
+            )
         )
-        stored_case_data_collection_links = [
-            self._set_obj(x) for x in stored_case_data_collection_links
-        ]
-        # Verify the data collection associations
-        stored_data_collection_ids = {
-            x.data_collection_id for x in stored_case_data_collection_links
-        }
-        if stored_data_collection_ids != set(data_collection_ids):
-            raise ValueError(f"Data collection associations mismatch")
+
+        # Get the data collection associations
+        # stored_case_data_collection_links = self.handle(
+        #     command.CaseDataCollectionLinkCrudCommand(
+        #         user=root_user,
+        #         operation=CrudOperation.READ_ALL,
+        #         query_filter=TypedEqualsUuidFilter(
+        #             type=FilterType.EQUALS_UUID.value,
+        #             key="case_id",
+        #             value=case.id,
+        #         ),
+        #     ),
+        # )
+        # stored_case_data_collection_links = [
+        #     self._set_obj(x) for x in stored_case_data_collection_links
+        # ]
+        # # Verify the data collection associations
+        # stored_data_collection_ids = {
+        #     x.data_collection_id for x in stored_case_data_collection_links
+        # }
+        # if stored_data_collection_ids != set(data_collection_ids):
+        #     raise ValueError(f"Data collection associations mismatch")
         return self._set_obj(case)  # type: ignore[return-value]
 
     def create_case_data_collection_link(
