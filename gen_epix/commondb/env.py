@@ -123,9 +123,9 @@ class AppComposer(BaseAppComposer):
                 host=cfg["app"]["host"], ssl_cert_file=cfg["app"].get("ssl_cert_file")
             )
 
-            # Initialise repositories and services
+            # Initialise services and where necessary repositories
             for service_type in self._sorted_service_types:
-                self._initialize_repository(
+                self._init_service(
                     cfg,
                     setup_logger,
                     service_logger,
@@ -155,9 +155,9 @@ class AppComposer(BaseAppComposer):
                 organization_service,
                 rbac_service,
                 root_cfg=app.cfg["service"]["auth"]["props"]["root"],
-                automatic_new_user_cfg=app.cfg["service"]["auth"]["props"][
-                    "automatic_new_user"
-                ],  # set to None if no automatic new user
+                auto_created_user_cfg=app.cfg["service"]["auth"]["props"].get(
+                    "auto_created_user"
+                ),
             )
 
             # Get current user and new user dependencies for injecting authentication in endpoints
@@ -242,7 +242,7 @@ class AppComposer(BaseAppComposer):
             organization_service,
         )
 
-    def _initialize_repository(
+    def _init_service(
         self,
         cfg: Dynaconf,
         setup_logger: logging.Logger,

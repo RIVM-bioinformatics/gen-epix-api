@@ -203,7 +203,7 @@ class UserInvitationMixin(RowMetadataMixin):
     created under a different declarative base.
     """
 
-    key: Mapped[str] = create_mapped_column(DOMAIN, model.UserInvitation, "key")
+    key: Mapped[str | None] = create_mapped_column(DOMAIN, model.UserInvitation, "key")
     email: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.UserInvitation, "email"
     )
@@ -267,34 +267,20 @@ class OrganizationIdentifierIssuerLinkMixin(RowMetadataMixin):
 
 
 @declarative_mixin
-class ExternalIdentifierMixin(RowMetadataMixin):
+class IdentifierMixin(RowMetadataMixin):
     """
     SQLAlchemy model mixin for derived domain models whose SQLAlchemy models are
     created under a different declarative base.
     """
 
-    identifier_type: Mapped[enum.IdentifierType] = create_mapped_column(
-        DOMAIN, model.ExternalIdentifier, "identifier_type"
-    )
-
     @declared_attr
     def identifier_issuer_id(cls) -> Mapped[UUID]:
         return create_mapped_column(
-            DOMAIN, model.ExternalIdentifier, "identifier_issuer_id"
-        )
-
-    @declared_attr
-    def identifier_issuer(cls) -> Mapped[model.IdentifierIssuer]:
-        return create_mapped_column(
-            DOMAIN, model.ExternalIdentifier, "identifier_issuer"
+            DOMAIN, model.BaseIdentifier, "identifier_issuer_id"
         )
 
     external_id: Mapped[str] = create_mapped_column(
-        DOMAIN, model.ExternalIdentifier, "external_id"
-    )
-
-    internal_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.ExternalIdentifier, "internal_id"
+        DOMAIN, model.BaseIdentifier, "external_id"
     )
 
 
@@ -394,11 +380,3 @@ class OrganizationIdentifierIssuerLink(Base, OrganizationIdentifierIssuerLinkMix
     __tablename__, __table_args__ = create_table_args(
         model.OrganizationIdentifierIssuerLink
     )
-
-
-class ExternalIdentifier(Base, ExternalIdentifierMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.ExternalIdentifier)

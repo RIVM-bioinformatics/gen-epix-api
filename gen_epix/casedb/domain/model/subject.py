@@ -33,8 +33,8 @@ class Subject(Model):
     data_collection: DataCollection | None = Field(
         default=None, description="The data collection"
     )
-    external_identifiers: dict[IdentifierIssuer, str] | None = Field(
-        default=None, description="A dictionary of external identifiers for the subject"
+    identifiers: dict[IdentifierIssuer, str] | None = Field(
+        default=None, description="A dictionary of identifiers for the subject"
     )
     content: dict[str, Any] = Field(
         description="A dictionary containing the content of the subject"

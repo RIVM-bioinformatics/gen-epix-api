@@ -28,6 +28,7 @@ from gen_epix.casedb.domain.model.case import (
 )
 from gen_epix.casedb.domain.model.case import CaseDataIssue as CaseDataIssue
 from gen_epix.casedb.domain.model.case import CaseForUpload as CaseForUpload
+from gen_epix.casedb.domain.model.case import CaseIdentifier as CaseIdentifier
 from gen_epix.casedb.domain.model.case import CaseQuery as CaseQuery
 from gen_epix.casedb.domain.model.case import CaseQueryResult as CaseQueryResult
 from gen_epix.casedb.domain.model.case import CaseRights as CaseRights
@@ -42,32 +43,27 @@ from gen_epix.casedb.domain.model.case import CaseSetRights as CaseSetRights
 from gen_epix.casedb.domain.model.case import CaseSetStatus as CaseSetStatus
 from gen_epix.casedb.domain.model.case import CaseStats as CaseStats
 from gen_epix.casedb.domain.model.case import CaseType as CaseType
-from gen_epix.casedb.domain.model.case import CaseTypeCol as CaseTypeCol
-from gen_epix.casedb.domain.model.case import CaseTypeColSet as CaseTypeColSet
-from gen_epix.casedb.domain.model.case import (
-    CaseTypeColSetMember as CaseTypeColSetMember,
-)
-from gen_epix.casedb.domain.model.case import CaseTypeDim as CaseTypeDim
 from gen_epix.casedb.domain.model.case import CaseTypeSet as CaseTypeSet
 from gen_epix.casedb.domain.model.case import CaseTypeSetCategory as CaseTypeSetCategory
 from gen_epix.casedb.domain.model.case import CaseTypeSetMember as CaseTypeSetMember
 from gen_epix.casedb.domain.model.case import CaseUploadResult as CaseUploadResult
 from gen_epix.casedb.domain.model.case import Col as Col
+from gen_epix.casedb.domain.model.case import ColSet as ColSet
+from gen_epix.casedb.domain.model.case import ColSetMember as ColSetMember
 from gen_epix.casedb.domain.model.case import Dim as Dim
 from gen_epix.casedb.domain.model.case import (
     GeneticDistanceProtocol as GeneticDistanceProtocol,
 )
-from gen_epix.casedb.domain.model.case import (
-    ReadableReferenceData as ReadableReferenceData,
-)
 from gen_epix.casedb.domain.model.case import ReadSetForUpload as ReadSetForUpload
+from gen_epix.casedb.domain.model.case import RefCol as RefCol
+from gen_epix.casedb.domain.model.case import RefDataAccess as RefDataAccess
+from gen_epix.casedb.domain.model.case import RefDim as RefDim
 from gen_epix.casedb.domain.model.case import SeqForUpload as SeqForUpload
 from gen_epix.casedb.domain.model.case import TreeAlgorithm as TreeAlgorithm
 from gen_epix.casedb.domain.model.case import TreeAlgorithmClass as TreeAlgorithmClass
 from gen_epix.casedb.domain.model.case.complete_case_type import (
     CompleteCaseType as CompleteCaseType,
 )
-from gen_epix.casedb.domain.model.case.upload import CaseDataIssue as CaseDataIssue
 from gen_epix.casedb.domain.model.geo import Region as Region
 from gen_epix.casedb.domain.model.geo import RegionRelation as RegionRelation
 from gen_epix.casedb.domain.model.geo import RegionSet as RegionSet
@@ -85,13 +81,13 @@ from gen_epix.commondb.domain import enum as common_enum
 from gen_epix.commondb.domain.model import (
     SORTED_MODELS_BY_SERVICE_TYPE as _COMMON_SORTED_MODELS_BY_SERVICE_TYPE,
 )
+from gen_epix.commondb.domain.model import BaseIdentifier as BaseIdentifier
 from gen_epix.commondb.domain.model import Contact as Contact
 from gen_epix.commondb.domain.model import DataCollection as DataCollection
 from gen_epix.commondb.domain.model import DataCollectionSet as DataCollectionSet
 from gen_epix.commondb.domain.model import (
     DataCollectionSetMember as DataCollectionSetMember,
 )
-from gen_epix.commondb.domain.model import ExternalIdentifier as ExternalIdentifier
 from gen_epix.commondb.domain.model import IdentifierIssuer as IdentifierIssuer
 from gen_epix.commondb.domain.model import Model as Model
 from gen_epix.commondb.domain.model import Organization as Organization
@@ -159,25 +155,26 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             TreeAlgorithmClass,
             TreeAlgorithm,
             GeneticDistanceProtocol,
-            Dim,
-            Col,
+            RefDim,
+            RefCol,
             CaseTypeSetCategory,
             CaseType,
             CaseTypeSet,
             CaseTypeSetMember,
-            CaseTypeDim,
-            CaseTypeCol,
-            CaseTypeColSet,
-            CaseTypeColSetMember,
+            Dim,
+            Col,
+            ColSet,
+            ColSetMember,
             CompleteCaseType,
             Case,
+            CaseIdentifier,
             CaseSetCategory,
             CaseSetStatus,
             CaseSet,
             CaseSetMember,
             CaseDataCollectionLink,
             CaseSetDataCollectionLink,
-            ReadableReferenceData,
+            RefDataAccess,
             ReadSetForUpload,
             SeqForUpload,
             CaseForUpload,

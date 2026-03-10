@@ -23,23 +23,24 @@ class BaseCaseService(BaseService):
         command.TreeAlgorithmClassCrudCommand,
         command.TreeAlgorithmCrudCommand,
         command.GeneticDistanceProtocolCrudCommand,
-        command.DimCrudCommand,
-        command.ColCrudCommand,
         command.CaseTypeSetCategoryCrudCommand,
         command.CaseSetCategoryCrudCommand,
         command.CaseSetStatusCrudCommand,
+        command.RefDimCrudCommand,
+        command.RefColCrudCommand,
     }
-    ABAC_METADATA_COMMAND_CLASSES: set[type[command.Command]] = {
+    ABAC_REFDATA_COMMAND_CLASSES: set[type[command.Command]] = {
         command.CaseTypeCrudCommand,
         command.CaseTypeSetMemberCrudCommand,
         command.CaseTypeSetCrudCommand,
-        command.CaseTypeColCrudCommand,
-        command.CaseTypeColSetMemberCrudCommand,
-        command.CaseTypeColSetCrudCommand,
-        command.CaseTypeDimCrudCommand,
+        command.ColCrudCommand,
+        command.ColSetMemberCrudCommand,
+        command.ColSetCrudCommand,
+        command.DimCrudCommand,
     }
     ABAC_DATA_COMMAND_CLASSES: set[type[command.Command]] = {
         command.CaseCrudCommand,
+        command.CaseIdentifierCrudCommand,
         command.CaseSetCrudCommand,
         command.CaseSetMemberCrudCommand,
         command.CaseDataCollectionLinkCrudCommand,
@@ -51,8 +52,8 @@ class BaseCaseService(BaseService):
     ] = {
         model.CaseTypeSet: (model.CaseTypeSetMember,),
         model.CaseType: (model.CaseTypeSetMember,),
-        model.CaseTypeColSet: (model.CaseTypeColSetMember,),
-        model.CaseTypeCol: (model.CaseTypeColSetMember,),
+        model.ColSet: (model.ColSetMember,),
+        model.Col: (model.ColSetMember,),
         model.CaseSet: (
             model.CaseSetDataCollectionLink,
             model.CaseSetMember,
@@ -129,6 +130,7 @@ class BaseCaseService(BaseService):
     def register_handlers(self) -> None:
         f = self.app.register_handler
         f(command.CaseCrudCommand, self.crud_case)
+        f(command.CaseIdentifierCrudCommand, self.crud_case_identifier)
         f(
             command.CaseDataCollectionLinkCrudCommand,
             self.crud_case_data_collection_link,
@@ -141,20 +143,20 @@ class BaseCaseService(BaseService):
         )
         f(command.CaseSetMemberCrudCommand, self.crud_case_set_member)
         f(command.CaseSetStatusCrudCommand, self.crud_case_set_status)
-        f(command.CaseTypeColCrudCommand, self.crud_case_type_col)
-        f(command.CaseTypeColSetCrudCommand, self.crud_case_type_col_set)
-        f(command.CaseTypeColSetMemberCrudCommand, self.crud_case_type_col_set_member)
         f(command.CaseTypeCrudCommand, self.crud_case_type)
         f(command.CaseTypeSetCategoryCrudCommand, self.crud_case_type_set_category)
         f(command.CaseTypeSetCrudCommand, self.crud_case_type_set)
         f(command.CaseTypeSetMemberCrudCommand, self.crud_case_type_set_member)
-        f(command.CaseTypeDimCrudCommand, self.crud_case_type_dim)
         f(command.ColCrudCommand, self.crud_col)
+        f(command.ColSetCrudCommand, self.crud_col_set)
+        f(command.ColSetMemberCrudCommand, self.crud_col_set_member)
         f(command.DimCrudCommand, self.crud_dim)
         f(
             command.GeneticDistanceProtocolCrudCommand,
             self.crud_genetic_distance_protocol,
         )
+        f(command.RefColCrudCommand, self.crud_ref_col)
+        f(command.RefDimCrudCommand, self.crud_ref_dim)
         f(command.TreeAlgorithmClassCrudCommand, self.crud_tree_algorithm_class)
         f(command.TreeAlgorithmCrudCommand, self.crud_tree_algorithm)
         f(command.UploadCasesCommand, self.upload_cases)
@@ -190,6 +192,21 @@ class BaseCaseService(BaseService):
         self, cmd: command.CaseCrudCommand
     ) -> list[model.Case] | model.Case | list[UUID] | UUID | list[bool] | bool | None:
         """Handle CRUD operations for Case entities."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_case_identifier(
+        self, cmd: command.CaseIdentifierCrudCommand
+    ) -> (
+        list[model.CaseIdentifier]
+        | model.CaseIdentifier
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseIdentifier entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -283,48 +300,34 @@ class BaseCaseService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def crud_case_type_col(
-        self, cmd: command.CaseTypeColCrudCommand
-    ) -> (
-        list[model.CaseTypeCol]
-        | model.CaseTypeCol
-        | list[UUID]
-        | UUID
-        | list[bool]
-        | bool
-        | None
-    ):
-        """Handle CRUD operations for CaseTypeCol entities."""
+    def crud_col(
+        self, cmd: command.ColCrudCommand
+    ) -> list[model.Col] | model.Col | list[UUID] | UUID | list[bool] | bool | None:
+        """Handle CRUD operations for Col entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def crud_case_type_col_set(
-        self, cmd: command.CaseTypeColSetCrudCommand
+    def crud_col_set(
+        self, cmd: command.ColSetCrudCommand
     ) -> (
-        list[model.CaseTypeColSet]
-        | model.CaseTypeColSet
-        | list[UUID]
-        | UUID
-        | list[bool]
-        | bool
-        | None
+        list[model.ColSet] | model.ColSet | list[UUID] | UUID | list[bool] | bool | None
     ):
-        """Handle CRUD operations for CaseTypeColSet entities."""
+        """Handle CRUD operations for ColSet entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def crud_case_type_col_set_member(
-        self, cmd: command.CaseTypeColSetMemberCrudCommand
+    def crud_col_set_member(
+        self, cmd: command.ColSetMemberCrudCommand
     ) -> (
-        list[model.CaseTypeColSetMember]
-        | model.CaseTypeColSetMember
+        list[model.ColSetMember]
+        | model.ColSetMember
         | list[UUID]
         | UUID
         | list[bool]
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseTypeColSetMember entities."""
+        """Handle CRUD operations for ColSetMember entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -388,32 +391,28 @@ class BaseCaseService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def crud_case_type_dim(
-        self, cmd: command.CaseTypeDimCrudCommand
-    ) -> (
-        list[model.CaseTypeDim]
-        | model.CaseTypeDim
-        | list[UUID]
-        | UUID
-        | list[bool]
-        | bool
-        | None
-    ):
-        """Handle CRUD operations for CaseTypeDim entities."""
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def crud_col(
-        self, cmd: command.ColCrudCommand
-    ) -> list[model.Col] | model.Col | list[UUID] | UUID | list[bool] | bool | None:
-        """Handle CRUD operations for Col entities."""
-        raise NotImplementedError()
-
-    @abc.abstractmethod
     def crud_dim(
         self, cmd: command.DimCrudCommand
     ) -> list[model.Dim] | model.Dim | list[UUID] | UUID | list[bool] | bool | None:
         """Handle CRUD operations for Dim entities."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_ref_col(
+        self, cmd: command.RefColCrudCommand
+    ) -> (
+        list[model.RefCol] | model.RefCol | list[UUID] | UUID | list[bool] | bool | None
+    ):
+        """Handle CRUD operations for RefCol entities."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_ref_dim(
+        self, cmd: command.RefDimCrudCommand
+    ) -> (
+        list[model.RefDim] | model.RefDim | list[UUID] | UUID | list[bool] | bool | None
+    ):
+        """Handle CRUD operations for RefDim entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod

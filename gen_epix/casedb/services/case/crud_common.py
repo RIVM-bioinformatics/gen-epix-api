@@ -11,7 +11,7 @@ from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.domain.service import BaseCaseService as DomainBaseCaseService
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.commondb.domain.enum import RoleSet as CommonRoleSet
-from gen_epix.fastapp import BaseUnitOfWork, CrudOperation, CrudOperationSet
+from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.filter import CompositeFilter, Filter, LogicalOperator
 
@@ -21,7 +21,7 @@ def get_case_abac_from_command(cmd: command.CrudCommand) -> model.CaseAbac | Non
     return BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
 
 
-def is_metadata_admin_or_above(service: BaseCaseService, user: model.User) -> bool:
+def is_refdata_admin_or_above(service: BaseCaseService, user: model.User) -> bool:
     """Check if user has metadata admin or above privileges."""
     return bool(
         user.roles.intersection(service.role_set_map[CommonRoleSet.GE_REFDATA_ADMIN])
@@ -45,7 +45,7 @@ def is_no_abac_command(cmd: command.CrudCommand) -> bool:
 def is_metadata_command(cmd: command.CrudCommand) -> bool:
     """Check if command is a metadata command."""
     return any(
-        isinstance(cmd, x) for x in DomainBaseCaseService.ABAC_METADATA_COMMAND_CLASSES
+        isinstance(cmd, x) for x in DomainBaseCaseService.ABAC_REFDATA_COMMAND_CLASSES
     )
 
 
@@ -88,7 +88,7 @@ def _crud_cascade_delete(
     In case of a delete operation, cascade delete all instances of any
     linked_model_classes that are linked to the instances in cmd.
     """
-    if cmd.operation not in CrudOperationSet.DELETE.value:
+    if not cmd.is_delete():
         return
 
     # Find linked model classes for cascade delete
@@ -154,29 +154,14 @@ def _cascade_delete_linked_models(
             )
 
 
-def _get_linked_model_classes(
-    self: BaseCaseService, model_class: type[model.Model]
-) -> tuple[type[model.Model], ...]:
-    link_model_classes = self.CASCADE_DELETE_MODEL_CLASSES.get(model_class)
-    if link_model_classes is None:
-        is_found = False
-        for (
-            model_base_class,
-            link_model_classes,
-        ) in self.CASCADE_DELETE_MODEL_CLASSES.items():
-            if issubclass(model_class, model_base_class):
-                # Add subclass to dict for next time
-                is_found = True
-                self.CASCADE_DELETE_MODEL_CLASSES[model_class] = link_model_classes
-        if not is_found:
-            # Add to dict for next time
-            self.CASCADE_DELETE_MODEL_CLASSES[model_class] = ()
-
-    assert link_model_classes is not None
-    return link_model_classes
-
-
-def get_readable_reference_data_from_command(
+def get_ref_data_access_from_command(
     cmd: command.CrudCommand,
-) -> model.ReadableReferenceData | None:
-    return BaseCaseAbacPolicy.get_readable_reference_data_from_command(cmd)
+) -> model.RefDataAccess | None:
+    return BaseCaseAbacPolicy.get_ref_data_access_from_command(cmd)
+
+
+def _verify_is_read_operation(cmd: command.CrudCommand) -> None:
+    if not cmd.is_read():
+        # Only read operations are allowed for metadata commands for these
+        # users
+        raise AssertionError(f"Not a read operation: {cmd.operation.value}")

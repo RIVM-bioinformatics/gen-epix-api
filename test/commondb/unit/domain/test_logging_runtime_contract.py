@@ -47,7 +47,8 @@ def _load_class(path: str) -> object:
 
 
 def _emit_access_payload_via_dictconfig(yaml_path: Path) -> dict:
-    script = textwrap.dedent("""
+    script = textwrap.dedent(
+        """
         import json
         import logging
         import logging.config
@@ -87,7 +88,8 @@ def _emit_access_payload_via_dictconfig(yaml_path: Path) -> dict:
             "1.1",
             204,
         )
-        """)
+        """
+    )
 
     proc = subprocess.run(
         [sys.executable, "-c", script, str(yaml_path)],
@@ -107,7 +109,8 @@ def _emit_access_payload_via_dictconfig(yaml_path: Path) -> dict:
 
 
 def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[dict]:
-    script = textwrap.dedent("""\
+    script = textwrap.dedent(
+        """\
         import logging
         import logging.config
         import sys
@@ -151,7 +154,8 @@ def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[dict]:
         logger.debug(
             '{"code":"e94cad9b","msg":"STARTED_COMMAND","command":{"class":"DemoCommand","object":{"id":"cmd-obj-123"},"parent_command_id":null,"stack_trace":"DemoCommand"}}'
         )
-        """)
+        """
+    )
 
     proc = subprocess.run(
         [sys.executable, "-c", script, str(yaml_path)],
@@ -171,6 +175,58 @@ def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[dict]:
 
     assert payloads, f"No JSON log lines emitted for {yaml_path.name}"
     return payloads
+
+
+def _emit_log_level_resolution_payloads(enable_env_override: bool) -> list[dict]:
+    script = textwrap.dedent(
+        """\
+        import json
+        import logging
+        import os
+        import sys
+
+        from gen_epix.commondb.config import AppCfg
+        from gen_epix.commondb.domain.enum import AppType, DevIdpConfig, DevRepositoryConfig
+        from gen_epix.commondb.domain.util import set_env_variables
+        from gen_epix.omopdb.domain import enum
+
+        use_env_override = bool(int(sys.argv[1]))
+        set_env_variables(AppType.OMOPDB, DevIdpConfig.IDPS, DevRepositoryConfig.DICT_DEMO)
+        if use_env_override:
+            os.environ["OMOPDB_LOG_LEVEL"] = "WARNING"
+        else:
+            os.environ.pop("OMOPDB_LOG_LEVEL", None)
+
+        app_cfg = AppCfg("OMOPDB", enum.ServiceType, enum.RepositoryType, log_setup=True)
+        app_cfg.setup_logger.info("PROBE_SETUP_INFO")
+        uvicorn_error_logger = logging.getLogger("uvicorn.error")
+        uvicorn_error_logger.info("PROBE_UVICORN_INFO")
+        uvicorn_error_logger.warning("PROBE_UVICORN_WARNING")
+        """
+    )
+
+    proc = subprocess.run(
+        [sys.executable, "-c", script, "1" if enable_env_override else "0"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, f"Subprocess failed: {proc.stderr}"
+
+    payloads: list[dict] = []
+    for line in proc.stdout.splitlines():
+        line = line.strip()
+        if line.startswith("{") and line.endswith("}"):
+            payloads.append(json.loads(line))
+    assert payloads, "No JSON payloads emitted by log-level resolution probe"
+    return payloads
+
+
+def _has_message(payloads: list[dict], logger_name: str, message: str) -> bool:
+    return any(
+        payload.get("logger") == logger_name and payload.get("message") == message
+        for payload in payloads
+    )
 
 
 @pytest.mark.parametrize(
@@ -264,3 +320,48 @@ def test_runtime_app_lifecycle_logs_have_message_and_operational_aliases(
     assert command_debug is not None
     assert command_debug["message"] == "STARTED_COMMAND"
     assert command_debug["command_id"] == "cmd-obj-123"
+
+
+def test_runtime_log_level_resolution_diagnostic_and_env_override_behavior() -> None:
+    without_env_override = _emit_log_level_resolution_payloads(False)
+    with_env_override = _emit_log_level_resolution_payloads(True)
+
+    settings_diagnostic = next(
+        (
+            payload
+            for payload in without_env_override
+            if payload.get("msg") == "APPLIED_LOG_LEVEL"
+        ),
+        None,
+    )
+    env_diagnostic = next(
+        (
+            payload
+            for payload in with_env_override
+            if payload.get("msg") == "APPLIED_LOG_LEVEL"
+        ),
+        None,
+    )
+
+    assert settings_diagnostic is not None
+    assert settings_diagnostic["resolved_level"] == "INFO"
+    assert settings_diagnostic["source"] == "settings"
+    assert settings_diagnostic["env_var_name"] == "OMOPDB_LOG_LEVEL"
+    assert settings_diagnostic["env_var_value"] is None
+    assert settings_diagnostic["settings_value"] == "INFO"
+
+    assert env_diagnostic is not None
+    assert env_diagnostic["resolved_level"] == "WARNING"
+    assert env_diagnostic["source"] == "env"
+    assert env_diagnostic["env_var_name"] == "OMOPDB_LOG_LEVEL"
+    assert env_diagnostic["env_var_value"] == "WARNING"
+    assert env_diagnostic["settings_value"] == "INFO"
+
+    # setup logger remains visible at INFO after handler normalization
+    assert _has_message(without_env_override, "omopdb.setup", "PROBE_SETUP_INFO")
+    assert _has_message(with_env_override, "omopdb.setup", "PROBE_SETUP_INFO")
+
+    # Environment override applies to non-pinned namespaces.
+    assert _has_message(without_env_override, "uvicorn.error", "PROBE_UVICORN_INFO")
+    assert not _has_message(with_env_override, "uvicorn.error", "PROBE_UVICORN_INFO")
+    assert _has_message(with_env_override, "uvicorn.error", "PROBE_UVICORN_WARNING")

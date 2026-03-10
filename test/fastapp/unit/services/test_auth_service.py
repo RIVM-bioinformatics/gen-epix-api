@@ -26,6 +26,21 @@ class BaseAuthServiceTestCase(TestCase):
         self.app.logger = self.logger
         self.app.user_manager = self.user_manager
         self.app.log_item_class = MagicMock()
+        self.app.cfg = {
+            "service": {
+                "auth": {
+                    "props": {
+                        "root": {
+                            "user": {
+                                # Keep disabled by default in tests unless a test explicitly enables it.
+                                "token_time_to_live": None
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        self.user_manager.is_root_user.return_value = False
 
         # Users
         self.user: MagicMock = MagicMock(spec=model.User)
@@ -344,13 +359,13 @@ class TestGetNewUserFromClaims(BaseAuthServiceTestCase):
         # Set up mocks
         self.service._idp_client_by_id[idp_client.id] = idp_client
         idp_client.get_claims_from_userinfo.return_value = {"email": "user@example.com"}
-        self.user_manager.get_user_instance_from_claims.return_value = self.user
+        self.user_manager.construct_user_instance_from_claims.return_value = self.user
         # Execute
         new_user = self.run_async(self.service.get_new_user_from_claims(claims))
         # Verify
         self.assertIs(new_user, self.user)
         idp_client.get_claims_from_userinfo.assert_called_once_with(self.claims_token)
-        self.user_manager.get_user_instance_from_claims.assert_called_once()
+        self.user_manager.construct_user_instance_from_claims.assert_called_once()
 
     def test_get_new_user_from_claims_user_manager_none_raises(self) -> None:
         """User manager unable to create -> UnauthorizedAuthError."""
@@ -362,7 +377,7 @@ class TestGetNewUserFromClaims(BaseAuthServiceTestCase):
         idp_client.get_claims_from_userinfo.return_value = (
             {}
         )  # ensure dict for update()
-        self.user_manager.get_user_instance_from_claims.return_value = None
+        self.user_manager.construct_user_instance_from_claims.return_value = None
         # Execute/Verify
         with self.assertRaises(exc.UnauthorizedAuthError):
             self.run_async(self.service.get_new_user_from_claims(claims))
@@ -405,6 +420,7 @@ class TestGetExistingUserFromClaims(BaseAuthServiceTestCase):
         self.user_manager.retrieve_user_by_key.return_value = self.user
         self.user_manager.get_user_name_from_claims.return_value = "New Name"
         self.user_manager.update_user_name.return_value = self.updated_user
+
         # Execute
         retval = self.run_async(self.service.get_existing_user_from_claims(claims))
         # Verify
@@ -466,8 +482,9 @@ class TestGetExistingUserFromClaims(BaseAuthServiceTestCase):
         self.user_manager.get_user_key_from_claims.return_value = "key"
         self.user_manager.retrieve_user_by_key.side_effect = exc.NoResultsError()
         self.user_manager.is_root_user_claims.return_value = False
-        self.user_manager.create_user_from_claims.return_value = self.created_user
+        self.user_manager.auto_create_new_user.return_value = self.created_user
         # Execute
+        self.service._auto_create_new_users = True
         retval = self.run_async(self.service.get_existing_user_from_claims(claims))
         # Verify
         self.assertIs(retval, self.created_user)
@@ -484,6 +501,47 @@ class TestGetExistingUserFromClaims(BaseAuthServiceTestCase):
         # Execute/Verify
         with self.assertRaises(exc.UnauthorizedAuthError):
             self.run_async(self.service.get_existing_user_from_claims(claims))
+
+
+class TestRootUserTokenTimeToLive(BaseAuthServiceTestCase):
+    """Test root token TTL enforcement helper."""
+
+    def test_root_token_within_15_minutes_is_allowed(self) -> None:
+        """Root token younger than configured TTL should pass."""
+        # Create input
+        now = 2_000_000
+        claims: Claims = self.create_claims(uuid4(), {"iat": now - 300})
+        # Set up mocks
+        self.app.cfg["service"]["auth"]["props"]["root"]["user"][
+            "token_time_to_live"
+        ] = 900
+        self.user_manager.is_root_user.return_value = True
+        # Execute/Verify
+        with patch(
+            "gen_epix.fastapp.services.auth.service.time.time", return_value=now
+        ):
+            self.service._verify_root_user_for_token_time_to_live(
+                claims, self.root_user
+            )
+
+    def test_root_token_older_than_15_minutes_is_rejected(self) -> None:
+        """Root token older than configured TTL should raise UnauthorizedAuthError."""
+        # Create input
+        now = 2_000_000
+        claims: Claims = self.create_claims(uuid4(), {"iat": now - 901})
+        # Set up mocks
+        self.app.cfg["service"]["auth"]["props"]["root"]["user"][
+            "token_time_to_live"
+        ] = 900
+        self.user_manager.is_root_user.return_value = True
+        # Execute/Verify
+        with patch(
+            "gen_epix.fastapp.services.auth.service.time.time", return_value=now
+        ):
+            with self.assertRaises(exc.UnauthorizedAuthError):
+                self.service._verify_root_user_for_token_time_to_live(
+                    claims, self.root_user
+                )
 
 
 # __init__ _validate_idp_cfgs behavior via constructor

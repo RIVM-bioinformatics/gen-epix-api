@@ -12,10 +12,9 @@ from gen_epix.casedb.services.case.case_validator import CaseValidator
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
 from gen_epix.commondb.domain.enum import UploadStatus
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
+from gen_epix.commondb.domain.model.organization import IdentifierForUpload
 from gen_epix.commondb.domain.model.upload import BaseBatchUploadResult
 from gen_epix.commondb.services.upload import BatchUploader
-from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.service import BaseService
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.filter.uuid_set import UuidSetFilter
@@ -35,13 +34,13 @@ class CaseBatchUploader(BatchUploader):
     def verify_user_rights(self, cmd: UploadBatchCommandMixin) -> None:
         """
         Implements user rights verification for uploading cases. Only ABAC rights are
-        verified: the user must have write access to all case type columns contained in
+        verified: the user must have write access to all Cols contained in
         the uploaded cases for the created in data collection.
         """
         # Verify command type
         if not isinstance(cmd, command.UploadCasesCommand):
             raise exc.InvalidArgumentsError("Invalid command type")
-        # Determine case type columns with write access
+        # Determine Cols with write access
         complete_case_type = self._get_complete_case_type(cmd)
         case_type_access_abac = complete_case_type.case_type_access_abacs.get(
             cmd.created_in_data_collection_id
@@ -50,14 +49,14 @@ class CaseBatchUploader(BatchUploader):
             raise exc.UnauthorizedAuthError(
                 f"User {None if cmd.user is None else cmd.user.id} is not allowed to access cases in the given data collection"
             )
-        write_case_type_col_ids = case_type_access_abac.write_case_type_col_ids
-        if not write_case_type_col_ids:
+        write_col_ids = case_type_access_abac.write_col_ids
+        if not write_col_ids:
             raise exc.UnauthorizedAuthError(
-                f"User {None if cmd.user is None else cmd.user.id} is not allowed to write any case type columns for cases in the given data collection"
+                f"User {None if cmd.user is None else cmd.user.id} is not allowed to write any Cols for cases in the given data collection"
             )
 
         # Determine if uploaded cases only contain writable columns
-        unauthorized_case_type_cols = set()
+        unauthorized_cols = set()
         for case_for_upload in cmd.case_batch.cases:
             case = case_for_upload.case
             if case is None:
@@ -66,25 +65,19 @@ class CaseBatchUploader(BatchUploader):
             if not content:
                 continue
             # Determine unauthorized columns in case content
-            unauthorized_case_type_cols.update(
-                set(content.keys()) - write_case_type_col_ids
-            )
+            unauthorized_cols.update(set(content.keys()) - write_col_ids)
             # Determine unauthorized columns in read sets
-            unauthorized_case_type_cols.update(
-                set(x.case_type_col_id for x in case_for_upload.read_sets or [])
-                - write_case_type_col_ids
+            unauthorized_cols.update(
+                set(x.col_id for x in case_for_upload.read_sets or []) - write_col_ids
             )
             # Determine unauthorized columns in seqs
-            unauthorized_case_type_cols.update(
-                set(x.case_type_col_id for x in case_for_upload.seqs or [])
-                - write_case_type_col_ids
+            unauthorized_cols.update(
+                set(x.col_id for x in case_for_upload.seqs or []) - write_col_ids
             )
-        if unauthorized_case_type_cols:
-            unauthorized_case_type_cols_str = ", ".join(
-                str(x) for x in sorted(unauthorized_case_type_cols)
-            )
+        if unauthorized_cols:
+            unauthorized_cols_str = ", ".join(str(x) for x in sorted(unauthorized_cols))
             raise exc.UnauthorizedAuthError(
-                f"User {None if cmd.user is None else cmd.user.id} is not allowed to write case type columns {unauthorized_case_type_cols_str} contained in the batch case , for the given data collection"
+                f"User {None if cmd.user is None else cmd.user.id} is not allowed to write columns {unauthorized_cols_str} contained in the batch case, for the given data collection"
             )
 
     def verify_batch(
@@ -185,14 +178,14 @@ class CaseBatchUploader(BatchUploader):
                     continue
                 BatchUploader.update_sub_field_dict(existing_content, case.content)
                 case.content = existing_content
-            # Validate cases again, this time with a complete case type that includes
+            # Validate cases again, this time with a complete CaseType that includes
             # all columns, i.e. with no ABAC applied
             complete_case_type = self._get_complete_case_type(cmd, ignore_abac=True)
             case_validator = self._get_case_validator(
                 complete_case_type, cmd.user.id if cmd.user and cmd.user.id else NULL_ID
             )
             case_validator.validate_and_transform(cmd, batch_result)
-            # TODO: scrub any calculated case dates that are based on case type columns
+            # TODO: scrub any calculated case dates that are based on Cols
             # that are not writable by the user
 
         # Use the general parent method for upserting the cases
@@ -209,6 +202,7 @@ class CaseBatchUploader(BatchUploader):
             # Only upload samples if case upload succeeded
             curr_success = self.upload_samples(cmd, batch_result, False)
             if curr_success:
+                # The upload of samples may have updated the case content with IDs of created read sets and seqs, so the cases in the database need to be updated with the new content.
                 for case, case_only in zip(
                     cmd.case_batch.cases, cases_only_cmd.case_batch.cases
                 ):
@@ -216,14 +210,6 @@ class CaseBatchUploader(BatchUploader):
                     assert case_only.case is not None
                     case_only.case.content = case.case.content
                 success &= super().upsert_batch(cases_only_cmd, batch_result, uow)
-
-        if not curr_success:
-            # Sample upload failed but cases were already created: the rest of the
-            # upload will be rolled back as well, with the exception of any new external
-            # identifiers since these are not within the scope of the transaction.
-            # An attempt is made to delete these again, which may fail silently if
-            # they were already deleted.
-            success &= self.delete_new_external_identifiers(cmd, batch_result)
         success &= curr_success
 
         return success
@@ -262,7 +248,7 @@ class CaseBatchUploader(BatchUploader):
         )
         success = seqdb_retval.get_status_count()[UploadStatus.FAILED] == 0
 
-        # Map verification results back to cases and child ids back to cases
+        # Map verification results back to cases and child IDs back to cases
         for sample_index, sample_result in enumerate(seqdb_retval.samples):
             # Map read sets and seqs back to cases
             for i, seqdb_result in enumerate(sample_result.read_sets or []):
@@ -277,9 +263,7 @@ class CaseBatchUploader(BatchUploader):
                 result.status = seqdb_result.status
                 result.add_logs(seqdb_result.logs)
                 assert case.read_sets is not None
-                case_content[case.read_sets[child_index].case_type_col_id] = str(
-                    seqdb_result.id
-                )
+                case_content[case.read_sets[child_index].col_id] = str(seqdb_result.id)
             # Map seqs back to cases
             for i, seqdb_result in enumerate(sample_result.seqs or []):
                 case_index, child_index = sample_case_index_map[
@@ -293,9 +277,7 @@ class CaseBatchUploader(BatchUploader):
                 result.status = seqdb_result.status
                 result.add_logs(seqdb_result.logs)
                 assert case.seqs is not None
-                case_content[case.seqs[child_index].case_type_col_id] = str(
-                    seqdb_result.id
-                )
+                case_content[case.seqs[child_index].col_id] = str(seqdb_result.id)
 
         return success
 
@@ -331,57 +313,14 @@ class CaseBatchUploader(BatchUploader):
             success = False
         return success
 
-    def delete_new_external_identifiers(
-        self, cmd: command.UploadCasesCommand, batch_result: model.CaseBatchUploadResult
-    ) -> bool:
-        success = True
-        external_identifier_ids: list[UUID] = [
-            y.id  # type: ignore[misc]
-            for x in batch_result.cases
-            for y in x.external_identifiers or []
-            if y.status == UploadStatus.CREATED
-        ]
-        if not external_identifier_ids:
-            return success
-        existing_new_external_identifier_ids: list[UUID] = self.service.app.handle(
-            command.ExternalIdentifierCrudCommand(
-                user=cmd.user,
-                operation=CrudOperation.READ_ALL,
-                query_filter=UuidSetFilter(
-                    key="id", members=frozenset(external_identifier_ids)
-                ),
-                props={"return_id": True},
-            )
-        )
-        try:
-            self.service.app.handle(
-                command.ExternalIdentifierCrudCommand(
-                    user=cmd.user,
-                    operation=CrudOperation.DELETE_SOME,
-                    obj_ids=existing_new_external_identifier_ids,
-                    props={"return_id": True},
-                )
-            )
-            batch_result.add_info(
-                "f0g1h2i3",
-                "Case upload failed due to associated sample upload errors, new external identifiers successfully deleted again.",
-            )
-        except:
-            success = False
-            batch_result.add_error(
-                "f1g2h3i4",
-                "Case upload failed due to associated sample upload errors, new external identifiers could not be deleted.",
-            )
-        return success
-
     def _get_complete_case_type(
         self, cmd: command.UploadCasesCommand, ignore_abac: bool = False
     ) -> model.CompleteCaseType:
-        """Get complete case type"""
+        """Get complete CaseType"""
         case_type_id = cmd.case_type_id
         user: model.User | None
         if ignore_abac:
-            # Get complete case type without ABAC restrictions
+            # Get complete CaseType without ABAC restrictions
             user = None
         else:
             user = cmd.user
@@ -398,7 +337,7 @@ class CaseBatchUploader(BatchUploader):
     def _get_case_validator(
         self, complete_case_type: model.CompleteCaseType, user_id: UUID
     ) -> CaseValidator:
-        """Get case validator for the given complete case type"""
+        """Get case validator for the given complete CaseType"""
         return CaseValidator(self.service, complete_case_type, user_id)
 
     def _get_upload_samples_command(
@@ -412,7 +351,7 @@ class CaseBatchUploader(BatchUploader):
         """
         Extracts any samples to be created in seqdb from the cases to be uploaded and
         create an UploadSamplesCommand. The batch_id of the latter command is set to
-        the first 16 bytes of sha256 hash of the id of the UploadCasesCommand, so that
+        the first 16 bytes of sha256 hash of the ID of the UploadCasesCommand, so that
         the link can be made between the two batches.
         """
         if not isinstance(cmd, command.UploadCasesCommand):
@@ -423,7 +362,7 @@ class CaseBatchUploader(BatchUploader):
         # Initialise some
         samples_for_upload: list[seqdb_model.SampleForUpload] = []
         sample_id_to_index_map: dict[UUID, int] = {}
-        sample_external_id_to_index_map: dict[ExternalIdentifierForUpload, int] = {}
+        sample_external_id_to_index_map: dict[IdentifierForUpload, int] = {}
         sample_case_index_map: dict[int, int] = {}
         child_index_map: dict[
             type[model.Model], dict[tuple[int, int], tuple[int, int]]
@@ -433,7 +372,7 @@ class CaseBatchUploader(BatchUploader):
         def _get_or_create_sample_for_upload(
             case_index: int,
             sample_id: UUID | None,
-            external_sample_id: ExternalIdentifierForUpload | None,
+            external_sample_id: IdentifierForUpload | None,
         ) -> int:
             has_id = sample_id is not None and sample_id != NULL_ID
             has_external_id = external_sample_id is not None
@@ -454,7 +393,7 @@ class CaseBatchUploader(BatchUploader):
                     id=sample_id,
                     created_in_data_collection_id=cmd.created_in_data_collection_id,
                 ),
-                external_identifiers=[external_sample_id] if has_external_id else [],
+                identifiers=[external_sample_id] if has_external_id else [],
                 read_sets=[],
                 seqs=[],
             )
@@ -477,7 +416,7 @@ class CaseBatchUploader(BatchUploader):
                 sample_index = _get_or_create_sample_for_upload(
                     case_index,
                     read_set_for_upload.sample_id,
-                    read_set_for_upload.external_sample_id,
+                    read_set_for_upload.other_sample_identifier,
                 )
                 sample_for_upload = samples_for_upload[sample_index]
                 # Add read set

@@ -48,7 +48,7 @@ BELOW_APP_ADMIN_USERS = [
     "guest1_1",
 ]
 
-BELOW_APP_ADMIN_METADATA_USERS = [
+BELOW_APP_ADMIN_REFDATA_USERS = [
     "refdata_admin1_1",
 ]
 

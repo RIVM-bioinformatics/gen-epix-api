@@ -14,7 +14,7 @@ def case_service_retrieve_phylogenetic_tree(
     self: BaseCaseService, cmd: command.RetrievePhylogeneticTreeByCasesCommand
 ) -> model.PhylogeneticTree:
     case_type_id = cmd.case_type_id
-    dist_case_type_col_id = cmd.genetic_distance_case_type_col_id
+    dist_col_id = cmd.genetic_distance_col_id
     tree_algorithm_code = cmd.tree_algorithm
     case_ids = cmd.case_ids
     user: model.User
@@ -25,34 +25,34 @@ def case_service_retrieve_phylogenetic_tree(
 
     with repository.uow() as uow:
         # Get distance column data
-        dist_case_type_col: model.CaseTypeCol = repository.crud(  # type: ignore[assignment]
-            uow,
-            user.id,
-            model.CaseTypeCol,
-            None,
-            dist_case_type_col_id,
-            CrudOperation.READ_ONE,
-        )
-        if dist_case_type_col.case_type_id != case_type_id:
-            raise exc.InvalidArgumentsError(
-                f"Case type column {dist_case_type_col_id} does not belong to case type {case_type_id}"
-            )
         dist_col: model.Col = repository.crud(  # type: ignore[assignment]
             uow,
             user.id,
             model.Col,
             None,
-            dist_case_type_col.col_id,
+            dist_col_id,
             CrudOperation.READ_ONE,
         )
-        if dist_col.col_type != enum.ColType.GENETIC_DISTANCE:
+        if dist_col.case_type_id != case_type_id:
             raise exc.InvalidArgumentsError(
-                f"Case type column {dist_case_type_col_id} is not of type {enum.ColType.GENETIC_DISTANCE.value}"
+                f"Col {dist_col_id} does not belong to CaseType {case_type_id}"
+            )
+        dist_ref_col: model.RefCol = repository.crud(  # type: ignore[assignment]
+            uow,
+            user.id,
+            model.RefCol,
+            None,
+            dist_col.ref_col_id,
+            CrudOperation.READ_ONE,
+        )
+        if dist_ref_col.col_type != enum.ColType.GENETIC_DISTANCE:
+            raise exc.InvalidArgumentsError(
+                f"Col {dist_col} is not of type {enum.ColType.GENETIC_DISTANCE.value}"
             )
 
         # @ABAC
-        assert dist_case_type_col.tree_algorithm_codes is not None
-        if tree_algorithm_code not in dist_case_type_col.tree_algorithm_codes:
+        assert dist_col.tree_algorithm_codes is not None
+        if tree_algorithm_code not in dist_col.tree_algorithm_codes:
             raise exc.UnauthorizedAuthError(
                 f"User {user.id} has no read access to tree algorithm {tree_algorithm_code}"
             )
@@ -64,7 +64,7 @@ def case_service_retrieve_phylogenetic_tree(
                 user.id,
                 model.GeneticDistanceProtocol,
                 None,
-                dist_col.genetic_distance_protocol_id,
+                dist_ref_col.genetic_distance_protocol_id,
                 CrudOperation.READ_ONE,
             )
         )
@@ -96,10 +96,10 @@ def case_service_retrieve_phylogenetic_tree(
             filter_content=True,
         )
 
-        # Get profile_ids from dist_case_type_col
+        # Get profile_ids from dist_col
         case_profile_map = {}
         for case in cases:
-            profile_id = case.content.get(dist_case_type_col_id)
+            profile_id = case.content.get(dist_col_id)
             if profile_id:
                 case_profile_map[case.id] = UUID(profile_id)
 
@@ -139,13 +139,13 @@ def case_service_retrieve_genetic_sequence_fasta_by_case(
     -> FastAPI wraps it in a StreamingResponse.
     """
     case_type_id = cmd.case_type_id
-    seq_case_type_col_id = cmd.genetic_sequence_case_type_col_id
+    seq_col_id = cmd.genetic_sequence_col_id
     case_ids = cmd.case_ids
     user, repository = self._get_user_and_repository(cmd)
     assert isinstance(user, model.User) and user.id is not None
 
     if not case_ids:
-        raise exc.InvalidArgumentsError("No case ids given")
+        raise exc.InvalidArgumentsError("No case IDs given")
 
     case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
     assert case_abac is not None
@@ -159,7 +159,7 @@ def case_service_retrieve_genetic_sequence_fasta_by_case(
             case_abac,
             case_type_id,
             case_ids,
-            seq_case_type_col_id,
+            seq_col_id,
         )
         if any(x is None for x in seq_ids_or_none):
             raise exc.NoResultsError("Not all cases have a sequence")
@@ -209,7 +209,7 @@ def _get_seq_ids_from_cases(
     case_abac: model.CaseAbac,
     case_type_id: UUID,
     case_ids: list[UUID],
-    seq_case_type_col_id: UUID,
+    seq_col_id: UUID,
 ) -> list[UUID | None]:
     # @ABAC: Get cases and sequence_ids
     cases = self._retrieve_cases_with_content_right(
@@ -221,5 +221,5 @@ def _get_seq_ids_from_cases(
         case_ids=case_ids,
         filter_content=True,
     )
-    retval = [x.content.get(seq_case_type_col_id) for x in cases]
+    retval = [x.content.get(seq_col_id) for x in cases]
     return [UUID(x) for x in retval if x]

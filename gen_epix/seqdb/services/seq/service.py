@@ -10,7 +10,7 @@ from Bio.Phylo.BaseTree import Clade
 from Bio.Phylo.TreeConstruction import DistanceMatrix, DistanceTreeConstructor
 from scipy.cluster.hierarchy import ClusterNode
 
-from gen_epix.fastapp import BaseUnitOfWork, CrudOperation, CrudOperationSet
+from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.filter import (
     CompositeFilter,
     EqualsUuidFilter,
@@ -53,29 +53,22 @@ class SeqService(BaseSeqService):
                 operator=LogicalOperator.AND,
             )
 
-        # Initialise some
-        is_create = cmd.operation in CrudOperationSet.CREATE.value
-        is_read = cmd.operation in CrudOperationSet.READ_OR_EXISTS.value
-        is_update = cmd.operation in CrudOperationSet.UPDATE.value
-        is_delete = cmd.operation in CrudOperationSet.DELETE.value
-        access_filter = None
-
         # Start unit of work and execute all within this scope
         with self.repository.uow() as uow:
 
             if isinstance(cmd, command.AlleleProfileCrudCommand):
-                if is_create:
+                if cmd.is_create():
                     # Calculate all distances for these allele profiles between themselves and with all stored allele profiles
                     allele_profiles: list[model.AlleleProfile] = cmd.get_objs()
                     self._calculate_allele_profile_distances(uow, allele_profiles)
 
-                elif is_read:
+                elif cmd.is_read():
                     # Nothing to do extra
                     pass
-                elif is_update:
+                elif cmd.is_update():
                     # May only change the representation format, not the profile itself
                     raise NotImplementedError(_get_not_implemented_message(cmd))
-                elif is_delete:
+                elif cmd.is_delete():
                     # Delete all distances for these allele profiles as well
                     raise NotImplementedError(_get_not_implemented_message(cmd))
                 else:

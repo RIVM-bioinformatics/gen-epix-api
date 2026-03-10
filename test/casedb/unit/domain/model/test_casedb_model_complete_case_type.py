@@ -7,110 +7,110 @@ from gen_epix.casedb.domain import enum, model
 
 @pytest.mark.scenario_ids("TC-SEC-29-01")
 class TestModelCompleteCaseType:
-    def test_case_type_dim_col_order(self) -> None:
+    def test_dim_col_order(self) -> None:
         case_type_id = uuid4()
 
-        dims: list[model.Dim] = [
-            model.Dim(
+        ref_dims: list[model.RefDim] = [
+            model.RefDim(
                 id=uuid4(), code="dim1", label="dim1", dim_type=enum.DimType.TEXT
             ),
-            model.Dim(
+            model.RefDim(
                 id=uuid4(), code="dim2", label="dim2", dim_type=enum.DimType.TEXT
             ),
-            model.Dim(
+            model.RefDim(
                 id=uuid4(), code="dim3", label="dim3", dim_type=enum.DimType.TEXT
             ),
         ]
 
-        case_type_dims: list[model.CaseTypeDim] = [
-            model.CaseTypeDim(
+        dims: list[model.Dim] = [
+            model.Dim(
                 id=uuid4(),
-                dim_id=dims[0].id,  # type: ignore[arg-type]
+                ref_dim_id=ref_dims[0].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="D",
                 rank=1,
                 occurrence=2,
             ),
-            model.CaseTypeDim(
+            model.Dim(
                 id=uuid4(),
-                dim_id=dims[0].id,  # type: ignore[arg-type]
+                ref_dim_id=ref_dims[0].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="C",
                 rank=2,
                 occurrence=1,
             ),
-            model.CaseTypeDim(
+            model.Dim(
                 id=uuid4(),
-                dim_id=dims[2].id,  # type: ignore[arg-type]
+                ref_dim_id=ref_dims[2].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="B",
                 rank=2,
                 occurrence=0,
             ),
-            model.CaseTypeDim(
+            model.Dim(
                 id=uuid4(),
-                dim_id=dims[1].id,  # type: ignore[arg-type]
+                ref_dim_id=ref_dims[1].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="A",
                 rank=1,
                 occurrence=0,
             ),
         ]
-        ordered_case_type_dim_ids = [case_type_dims[x].id for x in [3, 2, 1, 0]]
+        ordered_dim_ids = [dims[x].id for x in [3, 2, 1, 0]]
 
-        case_type_cols: list[model.CaseTypeCol] = [
-            model.CaseTypeCol(
+        cols: list[model.Col] = [
+            model.Col(
                 id=uuid4(),
-                col_id=uuid4(),
-                case_type_dim_id=case_type_dims[0].id,  # type: ignore[arg-type]
+                ref_col_id=uuid4(),
+                dim_id=dims[0].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="D.B",
                 rank=2,
             ),
-            model.CaseTypeCol(
+            model.Col(
                 id=uuid4(),
-                col_id=uuid4(),
-                case_type_dim_id=case_type_dims[0].id,  # type: ignore[arg-type]
+                ref_col_id=uuid4(),
+                dim_id=dims[0].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="D.A",
                 rank=1,
             ),
-            model.CaseTypeCol(
+            model.Col(
                 id=uuid4(),
-                col_id=uuid4(),
-                case_type_dim_id=case_type_dims[1].id,  # type: ignore[arg-type]
+                ref_col_id=uuid4(),
+                dim_id=dims[1].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="C.A",
                 rank=1,
             ),
-            model.CaseTypeCol(
+            model.Col(
                 id=uuid4(),
-                col_id=uuid4(),
-                case_type_dim_id=case_type_dims[2].id,  # type: ignore[arg-type]
+                ref_col_id=uuid4(),
+                dim_id=dims[2].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="B.A",
                 rank=1,
             ),
-            model.CaseTypeCol(
+            model.Col(
                 id=uuid4(),
-                col_id=uuid4(),
-                case_type_dim_id=case_type_dims[3].id,  # type: ignore[arg-type]
+                ref_col_id=uuid4(),
+                dim_id=dims[3].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="A.A",
                 rank=1,
             ),
         ]
-        ordered_case_type_col_ids = [case_type_cols[x].id for x in [4, 3, 2, 1, 0]]
+        ordered_col_ids = [cols[x].id for x in [4, 3, 2, 1, 0]]
 
         complete_case_type = model.CompleteCaseType(
             user_id=uuid4(),
             name="test",
             etiologies={},
             etiological_agents={},
-            dims={},
-            cols={},
-            case_type_dims={x.id: x for x in case_type_dims if x.id is not None},
-            case_type_cols={x.id: x for x in case_type_cols if x.id is not None},
+            ref_dims={},
+            ref_cols={},
+            dims={x.id: x for x in dims if x.id is not None},
+            cols={x.id: x for x in cols if x.id is not None},
             genetic_distance_protocols={},
             tree_algorithms={},
             case_type_access_abacs={},
@@ -120,11 +120,9 @@ class TestModelCompleteCaseType:
             read_max_tree_size=1000,
             update_max_n_cases=1000,
             delete_max_n_cases=1000,
-            case_date_case_type_dim_id=None,
-            ordered_case_type_dim_ids=[
-                x.id for x in case_type_dims if x.id is not None
-            ],
+            case_date_dim_id=None,
+            ordered_dim_ids=[x.id for x in dims if x.id is not None],
         )
 
-        assert ordered_case_type_dim_ids == complete_case_type.ordered_case_type_dim_ids
-        assert ordered_case_type_col_ids == complete_case_type.ordered_case_type_col_ids
+        assert ordered_dim_ids == complete_case_type.ordered_dim_ids
+        assert ordered_col_ids == complete_case_type.ordered_col_ids

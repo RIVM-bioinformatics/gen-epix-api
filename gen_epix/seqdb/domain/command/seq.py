@@ -175,6 +175,10 @@ class AlleleProfileCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.AlleleProfile
 
 
+class AlleleProfileIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.AlleleProfileIdentifier
+
+
 class AssemblyProtocolCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.AssemblyProtocol
 
@@ -199,6 +203,10 @@ class KmerProfileCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.KmerProfile
 
 
+class KmerProfileIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.KmerProfileIdentifier
+
+
 class LocusCodeMapCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.LocusCodeMap
 
@@ -215,6 +223,10 @@ class LocusProfileCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.LocusProfile
 
 
+class LocusProfileIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.LocusProfileIdentifier
+
+
 class LocusSetCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.LocusSet
 
@@ -227,6 +239,10 @@ class MlvaProfileCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.MlvaProfile
 
 
+class MlvaProfileIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.MlvaProfileIdentifier
+
+
 class PcrMeasurementCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.PcrMeasurement
 
@@ -237,6 +253,10 @@ class PcrProtocolCrudCommand(CrudCommand):
 
 class ReadSetCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.ReadSet
+
+
+class ReadSetIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.ReadSetIdentifier
 
 
 class RefAlleleCrudCommand(CrudCommand):
@@ -303,6 +323,10 @@ class SeqDistanceProtocolCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.SeqDistanceProtocol
 
 
+class SeqIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.SeqIdentifier
+
+
 class SeqTaxonomyCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.SeqTaxonomy
 
@@ -317,6 +341,10 @@ class SnpDetectionProtocolCrudCommand(CrudCommand):
 
 class SnpProfileCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.SnpProfile
+
+
+class SnpProfileIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.SnpProfileIdentifier
 
 
 class TaxonomyProtocolCrudCommand(CrudCommand):

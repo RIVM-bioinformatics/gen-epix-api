@@ -33,9 +33,9 @@ class BaseSimilarCasesTestCase(TestCase):
 
         # IDs
         self.case_type_id: UUID = uuid4()
-        self.dist_case_type_col_id: UUID = uuid4()
-        self.col_id: UUID = uuid4()
-        self.dim_id: UUID = uuid4()
+        self.dist_col_id: UUID = uuid4()
+        self.ref_col_id: UUID = uuid4()
+        self.ref_dim_id: UUID = uuid4()
         self.protocol_id: UUID = uuid4()
         self.data_collection_id: UUID = uuid4()
 
@@ -79,29 +79,27 @@ class BaseSimilarCasesTestCase(TestCase):
         return command.RetrieveSimilarCasesCommand(
             user=self.user,
             case_type_id=self.case_type_id,
-            genetic_distance_case_type_col_id=self.dist_case_type_col_id,
+            genetic_distance_col_id=self.dist_col_id,
             case_ids=case_ids,
             max_distance=max_distance,
         )
 
-    def create_case_type_col(
-        self, case_type_id: UUID | None = None
-    ) -> model.CaseTypeCol:
-        return model.CaseTypeCol(
+    def create_col(self, case_type_id: UUID | None = None) -> model.Col:
+        return model.Col(
             case_type_id=case_type_id or self.case_type_id,
-            case_type_dim_id=uuid4(),
-            col_id=self.col_id,
+            dim_id=uuid4(),
+            ref_col_id=self.ref_col_id,
             code="Specimen.Genetic.Distance",
             rank=0,
         )
 
-    def create_col(
+    def create_ref_col(
         self,
         col_type: enum.ColType,
         genetic_distance_protocol_id: UUID | None = None,
-    ) -> model.Col:
-        return model.Col(
-            dim_id=self.dim_id,
+    ) -> model.RefCol:
+        return model.RefCol(
+            ref_dim_id=self.ref_dim_id,
             code="Specimen.Genetic.Distance",
             col_type=col_type,
             genetic_distance_protocol_id=genetic_distance_protocol_id,
@@ -126,9 +124,7 @@ class BaseSimilarCasesTestCase(TestCase):
             case_type_id=self.case_type_id,
             created_in_data_collection_id=self.data_collection_id,
             content={
-                self.dist_case_type_col_id: (
-                    None if profile_id is None else str(profile_id)
-                )
+                self.dist_col_id: (None if profile_id is None else str(profile_id))
             },
         )
 
@@ -153,7 +149,7 @@ class TestInputValidation(BaseSimilarCasesTestCase):
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestBranchErrors(BaseSimilarCasesTestCase):
-    def test_case_type_col_mismatch_raises(self) -> None:
+    def test_col_mismatch_raises(self) -> None:
         # 1. Input
         case_id: UUID = uuid4()
         cmd: command.RetrieveSimilarCasesCommand = self.create_command(
@@ -161,24 +157,22 @@ class TestBranchErrors(BaseSimilarCasesTestCase):
         )
 
         # 2. Mocks
-        dist_case_type_col: model.CaseTypeCol = self.create_case_type_col(
-            case_type_id=uuid4()
-        )
-        self.repository.crud.side_effect = [dist_case_type_col]
+        dist_col: model.Col = self.create_col(case_type_id=uuid4())
+        self.repository.crud.side_effect = [dist_col]
 
         # 3. Execute
         with pytest.raises(exc.InvalidArgumentsError) as err:
             case_service_retrieve_similar_cases(self.service, cmd)
 
         # 4. Verify
-        assert "does not belong to case type" in str(err.value)
+        assert "does not belong to CaseType" in str(err.value)
         self.repository.crud.assert_called_once()
         assert self.repository.crud.call_args == call(
             self.uow,
             self.user.id,
-            model.CaseTypeCol,
+            model.Col,
             None,
-            self.dist_case_type_col_id,
+            self.dist_col_id,
             CrudOperation.READ_ONE,
         )
         self.service._retrieve_cases_with_content_right.assert_not_called()  # type: ignore[attr-defined]
@@ -191,12 +185,10 @@ class TestBranchErrors(BaseSimilarCasesTestCase):
         )
 
         # 2. Mocks
-        dist_case_type_col: model.CaseTypeCol = self.create_case_type_col(
-            case_type_id=self.case_type_id
-        )
-        wrong_col: model.Col = self.create_col(col_type=enum.ColType.TEXT)
+        dist_col: model.Col = self.create_col(case_type_id=self.case_type_id)
+        wrong_col: model.RefCol = self.create_ref_col(col_type=enum.ColType.TEXT)
         self.repository.crud.side_effect = [
-            dist_case_type_col,
+            dist_col,
             wrong_col,
         ]
 
@@ -210,17 +202,17 @@ class TestBranchErrors(BaseSimilarCasesTestCase):
             call(
                 self.uow,
                 self.user.id,
-                model.CaseTypeCol,
+                model.Col,
                 None,
-                self.dist_case_type_col_id,
+                self.dist_col_id,
                 CrudOperation.READ_ONE,
             ),
             call(
                 self.uow,
                 self.user.id,
-                model.Col,
+                model.RefCol,
                 None,
-                dist_case_type_col.col_id,
+                dist_col.ref_col_id,
                 CrudOperation.READ_ONE,
             ),
         ]
@@ -243,15 +235,13 @@ class TestHappyPath(BaseSimilarCasesTestCase):
         )
 
         # 2. Mocks
-        dist_case_type_col: model.CaseTypeCol = self.create_case_type_col(
-            case_type_id=self.case_type_id
-        )
-        dist_col: model.Col = self.create_col(
+        dist_col: model.Col = self.create_col(case_type_id=self.case_type_id)
+        dist_ref_col: model.RefCol = self.create_ref_col(
             col_type=enum.ColType.GENETIC_DISTANCE,
             genetic_distance_protocol_id=self.protocol_id,
         )
         protocol: model.GeneticDistanceProtocol = self.create_protocol()
-        self.repository.crud.side_effect = [dist_case_type_col, dist_col, protocol]
+        self.repository.crud.side_effect = [dist_col, dist_ref_col, protocol]
 
         all_cases: list[model.Case] = [
             self.create_case(seed_case_id1, seed_profile_id1),
@@ -276,17 +266,17 @@ class TestHappyPath(BaseSimilarCasesTestCase):
             call(
                 self.uow,
                 self.user.id,
-                model.CaseTypeCol,
+                model.Col,
                 None,
-                self.dist_case_type_col_id,
+                self.dist_col_id,
                 CrudOperation.READ_ONE,
             ),
             call(
                 self.uow,
                 self.user.id,
-                model.Col,
+                model.RefCol,
                 None,
-                dist_case_type_col.col_id,
+                dist_col.ref_col_id,
                 CrudOperation.READ_ONE,
             ),
             call(
@@ -294,7 +284,7 @@ class TestHappyPath(BaseSimilarCasesTestCase):
                 self.user.id,
                 model.GeneticDistanceProtocol,
                 None,
-                dist_col.genetic_distance_protocol_id,
+                dist_ref_col.genetic_distance_protocol_id,
                 CrudOperation.READ_ONE,
             ),
         ]
@@ -319,15 +309,13 @@ class TestHappyPath(BaseSimilarCasesTestCase):
         )
 
         # 2. Mocks
-        dist_case_type_col: model.CaseTypeCol = self.create_case_type_col(
-            case_type_id=self.case_type_id
-        )
-        dist_col: model.Col = self.create_col(
+        dist_col: model.Col = self.create_col(case_type_id=self.case_type_id)
+        dist_ref_col: model.RefCol = self.create_ref_col(
             col_type=enum.ColType.GENETIC_DISTANCE,
             genetic_distance_protocol_id=self.protocol_id,
         )
         protocol: model.GeneticDistanceProtocol = self.create_protocol()
-        self.repository.crud.side_effect = [dist_case_type_col, dist_col, protocol]
+        self.repository.crud.side_effect = [dist_col, dist_ref_col, protocol]
 
         # Seed case does not have a profile ID in content
         all_cases: list[model.Case] = [self.create_case(seed_case_id, None)]

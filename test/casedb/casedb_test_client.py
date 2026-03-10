@@ -44,16 +44,16 @@ class CasedbTestClient(TestClient):
         model.Concept: "code",
         model.ConceptSet: "name",
         model.CaseTypeSetMember: ("case_type_set_id", "case_type_id"),
-        model.CaseTypeColSetMember: ("case_type_col_set_id", "case_type_col_id"),
+        model.ColSetMember: ("col_set_id", "col_id"),
         model.RegionSet: "code",
         model.RegionSetShape: ("region_set_id", "scale"),
         model.Region: ("region_set_id", "code"),
         model.GeneticDistanceProtocol: "name",
-        model.Dim: "code",
+        model.RefDim: "code",
+        model.RefCol: "code",
         model.Col: "code",
-        model.CaseTypeCol: "code",
-        model.CaseTypeDim: "code",
-        model.CaseTypeColSet: "name",
+        model.Dim: "code",
+        model.ColSet: "name",
         model.DataCollection: "name",
         model.Case: "code",
         model.CaseSetCategory: "name",
@@ -396,21 +396,21 @@ class CasedbTestClient(TestClient):
         )
         return self._set_obj(genetic_distance_protocol)  # type: ignore[return-value]
 
-    def create_dim(
+    def create_ref_dim(
         self,
         user_or_str: str | model.User,
         code: str,
         dim_type: enum.DimType,
         rank: int = 1,
-    ) -> model.Dim:
+    ) -> model.RefDim:
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
-        dim = self.handle(
-            command.DimCrudCommand(
+        ref_dim = self.handle(
+            command.RefDimCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=model.Dim(
+                objs=model.RefDim(
                     code=code,
                     label=code,
                     dim_type=dim_type,
@@ -418,9 +418,9 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(dim)  # type: ignore[return-value]
+        return self._set_obj(ref_dim)  # type: ignore[return-value]
 
-    def create_col(
+    def create_ref_col(
         self,
         user_or_str: str | model.User,
         code: str,
@@ -428,21 +428,21 @@ class CasedbTestClient(TestClient):
         concept_set: str | model.ConceptSet | None = None,
         region_set: str | model.RegionSet | None = None,
         genetic_distance_protocol: str | model.GeneticDistanceProtocol | None = None,
-        set_dummy_dim: bool = False,
+        set_dummy_ref_dim: bool = False,
         set_dummy_concept_set: bool = False,
         set_dummy_region_set: bool = False,
         set_dummy_genetic_distance_protocol: bool = False,
-    ) -> model.Col:
+    ) -> model.RefCol:
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         m = re.match(r"^(.*?)(\d+)_(\d+)_?(.*)$", code.lower())
         if not m:
             raise ValueError(f"Invalid code {code}")
-        dim = "dim" + m.group(2)
+        ref_dim = "ref_dim" + m.group(2)
         rank = int(m.group(3))
-        dim_id: UUID = (
-            self.generate_id() if set_dummy_dim else self._get_obj(model.Dim, dim).id  # type: ignore[union-attr]
+        ref_dim_id: UUID = (
+            self.generate_id() if set_dummy_ref_dim else self._get_obj(model.RefDim, ref_dim).id  # type: ignore[union-attr]
         )
         concept_set_id: UUID | None = (
             self.generate_id()
@@ -474,14 +474,14 @@ class CasedbTestClient(TestClient):
                 ).id  # type: ignore[union-attr]
             )
         )
-        col = self.handle(
-            command.ColCrudCommand(
+        ref_col = self.handle(
+            command.RefColCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=model.Col(
+                objs=model.RefCol(
                     code=code,
                     label=code,
-                    dim_id=dim_id,
+                    ref_dim_id=ref_dim_id,
                     col_type=col_type,
                     rank=rank,
                     concept_set_id=concept_set_id,
@@ -490,7 +490,7 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(col)  # type: ignore[return-value]
+        return self._set_obj(ref_col)  # type: ignore[return-value]
 
     def create_disease(
         self, user_or_str: str | model.User, disease_name: str
@@ -714,24 +714,24 @@ class CasedbTestClient(TestClient):
                 self._set_obj(case_type_set_member)
         return self._set_obj(case_type_set)  # type: ignore[return-value]
 
-    def create_case_type_dim(
+    def create_dim(
         self,
         user_or_str: str | model.User,
         code: str,
         rank: int = 0,
         is_case_date_dim: bool = False,
         set_dummy_case_type: bool = False,
-        set_dummy_dim: bool = False,
-    ) -> model.CaseTypeDim:
+        set_dummy_ref_dim: bool = False,
+    ) -> model.Dim:
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         m = re.match(r"^(.*?)(\d+)_(\d+)_(\d+)$", code.lower())
-        # (case_type)(dim)(occurrence)
+        # (case_type)(ref_dim)(occurrence)
         if not m:
             raise ValueError(f"Invalid code {code}")
         case_type_str = "case_type" + m.group(2)
-        dim_str = "dim" + m.group(3)
+        ref_dim_str = "ref_dim" + m.group(3)
         occurrence = int(m.group(4))
         case_type_id: UUID = (
             self.generate_id()
@@ -740,18 +740,18 @@ class CasedbTestClient(TestClient):
                 model.CaseType, case_type_str
             ).id  # type: ignore[assignment]
         )
-        dim_id = (
+        ref_dim_id = (
             self.generate_id()
-            if set_dummy_dim
-            else self._get_obj(model.Dim, dim_str).id
+            if set_dummy_ref_dim
+            else self._get_obj(model.RefDim, ref_dim_str).id
         )
-        case_type_dim = self.handle(
-            command.CaseTypeDimCrudCommand(
+        dim: model.Dim = self.handle(
+            command.DimCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=model.CaseTypeDim(
+                objs=model.Dim(
                     case_type_id=case_type_id,
-                    dim_id=dim_id,
+                    ref_dim_id=ref_dim_id,
                     occurrence=occurrence,
                     code=code,
                     rank=rank,
@@ -760,18 +760,18 @@ class CasedbTestClient(TestClient):
             )
         )
 
-        return self._set_obj(case_type_dim)  # type: ignore[return-value]
+        return self._set_obj(dim)  # type: ignore[return-value]
 
-    def create_case_type_col(
+    def create_col(
         self,
         user_or_str: str | model.User,
         code: str,
-        genetic_sequence_case_type_col_id: UUID | None = None,
+        genetic_sequence_col_id: UUID | None = None,
         tree_algorithm_codes: set[enum.TreeAlgorithmType] | None = None,
         set_dummy_case_type: bool = False,
-        set_dummy_case_type_dim: bool = False,
-        set_dummy_col: bool = False,
-    ) -> model.CaseTypeCol:
+        set_dummy_dim: bool = False,
+        set_dummy_ref_col: bool = False,
+    ) -> model.Col:
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
@@ -779,114 +779,106 @@ class CasedbTestClient(TestClient):
         if not m:
             raise ValueError(f"Invalid code {code}")
         case_type_str = "case_type" + m.group(2)
-        case_type_dim_str = (
-            "case_type_dim" + m.group(2) + "_" + m.group(3) + "_" + m.group(4)
-        )
-        col_str = "col" + m.group(3) + "_" + m.group(5)
+        dim_str = "dim" + m.group(2) + "_" + m.group(3) + "_" + m.group(4)
+        ref_col_str = "ref_col" + m.group(3) + "_" + m.group(5)
         if set_dummy_case_type:
             case_type_id = self.generate_id()
         else:
             case_type = self._get_obj(model.CaseType, case_type_str)
             case_type_id = case_type.id
-        if set_dummy_case_type_dim:
-            case_type_dim_id = self.generate_id()
+        if set_dummy_dim:
+            dim_id = self.generate_id()
         else:
-            case_type_dim = self._get_obj(model.CaseTypeDim, case_type_dim_str)
-            case_type_dim_id = case_type_dim.id
-        if set_dummy_col:
-            col_id = self.generate_id()
+            dim = self._get_obj(model.Dim, dim_str)
+            dim_id = dim.id
+        if set_dummy_ref_col:
+            ref_col_id = self.generate_id()
         else:
-            col = self._get_obj(model.Col, col_str)
-            col_id = col.id
-        case_type_col = self.handle(
-            command.CaseTypeColCrudCommand(
+            ref_col = self._get_obj(model.RefCol, ref_col_str)
+            ref_col_id = ref_col.id
+        col: model.Col = self.handle(
+            command.ColCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=model.CaseTypeCol(
+                objs=model.Col(
                     case_type_id=case_type_id,
-                    case_type_dim_id=case_type_dim_id,
-                    col_id=col_id,
+                    dim_id=dim_id,
+                    ref_col_id=ref_col_id,
                     code=code,
                     rank=0,
-                    genetic_sequence_case_type_col_id=genetic_sequence_case_type_col_id,
+                    genetic_sequence_col_id=genetic_sequence_col_id,
                     tree_algorithm_codes=tree_algorithm_codes,
                 ),
             )
         )
-        return self._set_obj(case_type_col)  # type: ignore[return-value]
+        return self._set_obj(col)  # type: ignore[return-value]
 
-    def create_case_type_col_set(
+    def create_col_set(
         self,
         user_or_str: str | model.User,
-        case_type_col_set: str | model.CaseTypeColSet,
-        case_type_cols: set[str | model.CaseTypeCol],
-        set_dummy_case_type_cols: bool = False,
-    ) -> model.CaseTypeColSet:
+        col_set: str | model.ColSet,
+        cols: set[str | model.Col],
+        set_dummy_cols: bool = False,
+    ) -> model.ColSet:
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
-        case_type_col_set = self.handle(
-            command.CaseTypeColSetCrudCommand(
+        col_set = self.handle(
+            command.ColSetCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=model.CaseTypeColSet(
-                    name=case_type_col_set,
-                    description=case_type_col_set,
+                objs=model.ColSet(
+                    name=col_set,
+                    description=col_set,
                 ),
             )
         )
-        if set_dummy_case_type_cols:
-            case_type_col_ids = [self.generate_id() for _ in case_type_cols]
+        if set_dummy_cols:
+            col_ids = [self.generate_id() for _ in cols]
         else:
-            case_type_col_ids = [
-                self._get_obj(model.CaseTypeCol, x).id for x in case_type_cols
-            ]
-        if case_type_col_ids:
+            col_ids = [self._get_obj(model.Col, x).id for x in cols]
+        if col_ids:
             # Create members only if there are some, since this has different ABAC rights
-            case_type_col_set_members = self.handle(
-                command.CaseTypeColSetMemberCrudCommand(
+            col_set_members: list[model.ColSetMember] = self.handle(  # type: ignore[assignment]
+                command.ColSetMemberCrudCommand(
                     user=user,
                     operation=CrudOperation.CREATE_SOME,
                     objs=[  # type: ignore[assignment]
-                        model.CaseTypeColSetMember(
-                            case_type_col_set_id=case_type_col_set.id,
-                            case_type_col_id=x,
+                        model.ColSetMember(
+                            col_set_id=col_set.id,
+                            col_id=x,
                         )
-                        for x in case_type_col_ids
+                        for x in col_ids
                     ],
                 )
             )
-            for case_type_col_set_member in case_type_col_set_members:
-                self._set_obj(case_type_col_set_member)
-        return self._set_obj(case_type_col_set)  # type: ignore[return-value]
+            for col_set_member in col_set_members:
+                self._set_obj(col_set_member)
+        return self._set_obj(col_set)  # type: ignore[return-value]
 
-    def create_case_type_col_set_member(
+    def create_col_set_member(
         self,
         user_or_str: str | model.User,
-        case_type_col_set: str | model.CaseTypeColSet,
-        case_type_col: str | model.CaseTypeCol,
-    ) -> model.CaseTypeColSetMember:
+        col_set: str | model.ColSet,
+        col: str | model.Col,
+    ) -> model.ColSetMember:
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
-        case_type_col_set: model.CaseTypeColSet = self._get_obj(
-            model.CaseTypeColSet, case_type_col_set
-        )
-        case_type_col: model.CaseTypeCol = self._get_obj(
-            model.CaseTypeCol, case_type_col
-        )
+        col_set: model.ColSet = self._get_obj(model.ColSet, col_set)
+        col: model.Col = self._get_obj(model.Col, col)
 
-        case_type_col_set_member = self.handle(
-            command.CaseTypeColSetMemberCrudCommand(
+        col_set_member = self.handle(
+            command.ColSetMemberCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=model.CaseTypeColSetMember(
-                    case_type_col_set_id=case_type_col_set.id,
-                    case_type_col_id=case_type_col.id,
+                objs=model.ColSetMember(
+                    col_set_id=col_set.id,
+                    col_id=col.id,
                 ),
             )
         )
-        return self._set_obj(case_type_col_set_member)  # type: ignore[return-value]
+        return self._set_obj(col_set_member)  # type: ignore[return-value]
 
     def create_organization_access_case_policy(
         self,
@@ -897,8 +889,8 @@ class CasedbTestClient(TestClient):
         is_private: bool = False,
         add_case: bool = True,
         remove_case: bool = True,
-        read_case_type_col_set: str | model.CaseTypeColSet | None = None,
-        write_case_type_col_set: str | model.CaseTypeColSet | None = None,
+        read_col_set: str | model.ColSet | None = None,
+        write_col_set: str | model.ColSet | None = None,
         add_case_set: bool = True,
         remove_case_set: bool = True,
         read_case_set: bool = True,
@@ -932,15 +924,11 @@ class CasedbTestClient(TestClient):
         case_type_set: model.CaseTypeSet = self._get_obj(
             model.CaseTypeSet, case_type_set
         )  # type: ignore[assignment]
-        read_case_type_col_set_id = (
-            self._get_obj(model.CaseTypeColSet, read_case_type_col_set).id
-            if read_case_type_col_set
-            else None
+        read_col_set_id = (
+            self._get_obj(model.ColSet, read_col_set).id if read_col_set else None
         )
-        write_case_type_col_set_id = (
-            self._get_obj(model.CaseTypeColSet, write_case_type_col_set).id
-            if write_case_type_col_set
-            else None
+        write_col_set_id = (
+            self._get_obj(model.ColSet, write_col_set).id if write_col_set else None
         )
         organization_access_case_policy = self.app.handle(
             command.OrganizationAccessCasePolicyCrudCommand(
@@ -955,8 +943,8 @@ class CasedbTestClient(TestClient):
                     add_case=add_case,
                     remove_case=remove_case,
                     add_case_set=add_case_set,
-                    read_case_type_col_set_id=read_case_type_col_set_id,
-                    write_case_type_col_set_id=write_case_type_col_set_id,
+                    read_col_set_id=read_col_set_id,
+                    write_col_set_id=write_col_set_id,
                     remove_case_set=remove_case_set,
                     read_case_set=read_case_set,
                     write_case_set=write_case_set,
@@ -964,7 +952,7 @@ class CasedbTestClient(TestClient):
             )
         )
         # print(
-        #     f"Created organization_case_policy: {organization.name}, {data_collection.name}, {case_type_col_set.name} ({organization_case_policy.organization_id}, {organization_case_policy.data_collection_id}, {organization_case_policy.case_type_col_set_id})"
+        #     f"Created organization_case_policy: {organization.name}, {data_collection.name}, {col_set.name} ({organization_case_policy.organization_id}, {organization_case_policy.data_collection_id}, {organization_case_policy.col_set_id})"
         # )
         return self._set_obj(
             organization_access_case_policy
@@ -979,8 +967,8 @@ class CasedbTestClient(TestClient):
         is_active: bool = True,
         add_case: bool = True,
         remove_case: bool = True,
-        read_case_type_col_set: str | model.CaseTypeColSet | None = None,
-        write_case_type_col_set: str | model.CaseTypeColSet | None = None,
+        read_col_set: str | model.ColSet | None = None,
+        write_col_set: str | model.ColSet | None = None,
         add_case_set: bool = True,
         remove_case_set: bool = True,
         read_case_set: bool = True,
@@ -992,15 +980,11 @@ class CasedbTestClient(TestClient):
         tgt_user: model.User = self._get_obj(model.User, tgt_user_or_str)
         data_collection = self._get_obj(model.DataCollection, data_collection_or_str)
         case_type_set = self._get_obj(model.CaseTypeSet, case_type_set_or_str)
-        read_case_type_col_set_id = (
-            self._get_obj(model.CaseTypeColSet, read_case_type_col_set).id
-            if read_case_type_col_set
-            else None
+        read_col_set_id = (
+            self._get_obj(model.ColSet, read_col_set).id if read_col_set else None
         )
-        write_case_type_col_set_id = (
-            self._get_obj(model.CaseTypeColSet, write_case_type_col_set).id
-            if write_case_type_col_set
-            else None
+        write_col_set_id = (
+            self._get_obj(model.ColSet, write_col_set).id if write_col_set else None
         )
         user_access_case_policy = self.handle(
             command.UserAccessCasePolicyCrudCommand(
@@ -1013,8 +997,8 @@ class CasedbTestClient(TestClient):
                     is_active=is_active,
                     add_case=add_case,
                     remove_case=remove_case,
-                    read_case_type_col_set_id=read_case_type_col_set_id,
-                    write_case_type_col_set_id=write_case_type_col_set_id,
+                    read_col_set_id=read_col_set_id,
+                    write_col_set_id=write_col_set_id,
                     add_case_set=add_case_set,
                     remove_case_set=remove_case_set,
                     read_case_set=read_case_set,
@@ -1137,27 +1121,27 @@ class CasedbTestClient(TestClient):
         case_type_index = int(m.group(2))
         case_index = int(m.group(3))
         case_type = self._get_obj(model.CaseType, f"case_type{case_type_index}")
-        # TODO: get case_type_cols from complete_case_type
-        case_type_cols = self.read_some_by_property(
+        # TODO: get Cols from CompleteCaseType
+        cols: list[model.Col] = self.read_some_by_property(  # type: ignore[assignment]
             root_user,
-            model.CaseTypeCol,
+            model.Col,
             "case_type_id",
             case_type.id,
             cascade=True,
         )
-        # Fill in a value for all case_type_cols
+        # Fill in a value for all Cols
         content = {}
         col_index_pattern = (
             col_index_pattern if col_index_pattern else r"^.*[a-z]*(\d+)_?\w*$"
         )
-        for case_type_col in case_type_cols:
-            col = case_type_col.col
-            m = re.match(col_index_pattern, col.code.lower())
+        for col in cols:
+            ref_col = col.ref_col
+            m = re.match(col_index_pattern, ref_col.code.lower())
             col_index = int(m.group(1))
-            value = self.DUMMY_VALUES[col.col_type]
-            if col.col_type == enum.ColType.TEXT:
+            value = self.DUMMY_VALUES[ref_col.col_type]
+            if ref_col.col_type == enum.ColType.TEXT:
                 value = f"{case_index}_{col_index}"
-            elif col.col_type in {
+            elif ref_col.col_type in {
                 enum.ColType.NOMINAL,
                 enum.ColType.ORDINAL,
                 enum.ColType.INTERVAL,
@@ -1166,15 +1150,15 @@ class CasedbTestClient(TestClient):
                     root_user,
                     model.ConceptRelation,
                     "concept_set_id",
-                    col.concept_set_id,
+                    ref_col.concept_set_id,
                 )
                 value = concept_set_members[0].concept_id
-            elif col.col_type == enum.ColType.GEO_REGION:
+            elif ref_col.col_type == enum.ColType.GEO_REGION:
                 regions = self.read_some_by_property(
-                    root_user, model.Region, "region_set_id", col.region_set_id
+                    root_user, model.Region, "region_set_id", ref_col.region_set_id
                 )
                 value = regions[0].id
-            content[case_type_col.id] = str(value)
+            content[col.id] = str(value)
         # Create the case, encoding the case_type_index and case_index in the case_date as resp. month and days since 1900-01-01
         cases = self.handle(
             command.UploadCasesCommand(
@@ -1294,7 +1278,7 @@ class CasedbTestClient(TestClient):
         data_collection_ids = [x.id for x in data_collections]
         created_in_data_collection_id = data_collection_ids[0]
         data_collection_ids = data_collection_ids[1:]
-        # Get the case type
+        # Get the CaseType
         m = re.match(r"^([a-z_]*)(\d+)_(\d+)$", code.lower())
         if not m:
             raise ValueError(f"Invalid code {code}")
@@ -1449,8 +1433,8 @@ class CasedbTestClient(TestClient):
             if x.is_active
             and x.organization_id == user.organization_id
             and (
-                x.read_case_type_col_set_id
-                or x.write_case_type_col_set_id
+                x.read_col_set_id
+                or x.write_col_set_id
                 or x.read_case_set
                 or x.write_case_set
             )
@@ -1478,8 +1462,8 @@ class CasedbTestClient(TestClient):
             if x.is_active
             and x.user_id == user.id
             and (
-                x.read_case_type_col_set_id
-                or x.write_case_type_col_set_id
+                x.read_col_set_id
+                or x.write_col_set_id
                 or x.read_case_set
                 or x.write_case_set
             )
@@ -1535,7 +1519,7 @@ class CasedbTestClient(TestClient):
         root_user: model.User = self._get_obj(
             model.User, "root1_1"
         )  # type: ignore[assignment]
-        # Admin users have access to all case types
+        # Admin users have access to all CaseTypes
         if (
             self.role_map[CommonRole.ROOT] in user.roles
             or self.role_map[CommonRole.APP_ADMIN] in user.roles
@@ -1548,7 +1532,7 @@ class CasedbTestClient(TestClient):
                 )
             )
             return {x.id for x in case_types}  # type: ignore
-        # Other users have access only to case types in case type sets assigned via policies
+        # Other users have access only to CaseTypes in CaseTypeSets assigned via policies
         case_type_set_ids = (
             {
                 x.case_type_set_id
@@ -1576,7 +1560,7 @@ class CasedbTestClient(TestClient):
             if x.case_type_set_id in case_type_set_ids
         }
 
-    def read_case_type_cols_with_any_right(
+    def read_cols_with_any_right(
         self,
         user_or_str: str | model.User,
     ) -> set[UUID]:
@@ -1586,38 +1570,34 @@ class CasedbTestClient(TestClient):
         root_user: model.User = self._get_obj(
             model.User, "root1_1"
         )  # type: ignore[assignment]
-        # Admin users have access to all case type cols
+        # Admin users have access to all Cols
         if (
             self.role_map[CommonRole.ROOT] in user.roles
             or self.role_map[CommonRole.APP_ADMIN] in user.roles
             or self.role_map[CommonRole.REFDATA_ADMIN] in user.roles
         ):
-            case_type_cols: list[model.CaseTypeCol] = self.app.handle(
-                command.CaseTypeColCrudCommand(
+            cols: list[model.Col] = self.app.handle(
+                command.ColCrudCommand(
                     user=root_user,
                     operation=CrudOperation.READ_ALL,
                 )
             )
-            return {x.id for x in case_type_cols}  # type: ignore
-        # Other users have access only to case type cols in case type sets assigned via policies
+            return {x.id for x in cols}  # type: ignore
+        # Other users have access only to Cols in CaseTypeSets assigned via policies
         access_case_policies = self.read_user_access_case_policies_with_any_right(user)
-        case_type_col_set_ids = set()
+        col_set_ids = set()
         for policy in access_case_policies:
-            if policy.read_case_type_col_set_id:
-                case_type_col_set_ids.add(policy.read_case_type_col_set_id)
-            if policy.write_case_type_col_set_id:
-                case_type_col_set_ids.add(policy.write_case_type_col_set_id)
-        case_type_col_set_members: list[model.CaseTypeColSetMember] = self.app.handle(
-            command.CaseTypeColSetMemberCrudCommand(
+            if policy.read_col_set_id:
+                col_set_ids.add(policy.read_col_set_id)
+            if policy.write_col_set_id:
+                col_set_ids.add(policy.write_col_set_id)
+        col_set_members: list[model.ColSetMember] = self.app.handle(
+            command.ColSetMemberCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ALL,
             )
         )
-        return {
-            x.case_type_col_id
-            for x in case_type_col_set_members
-            if x.case_type_col_set_id in case_type_col_set_ids
-        }
+        return {x.col_id for x in col_set_members if x.col_set_id in col_set_ids}
 
     def update_association_case_data_collection(
         self,
@@ -1705,21 +1685,21 @@ class CasedbTestClient(TestClient):
             self._set_obj(x)
         return resulting_case_data_collection_links
 
-    def update_case_type_col_set_member(
+    def update_col_set_member(
         self,
         user_in: str | model.User,
-        case_type_col_set_member: model.CaseTypeColSetMember,
-    ) -> model.CaseTypeColSetMember:
+        col_set_member: model.ColSetMember,
+    ) -> model.ColSetMember:
         user = self._get_obj(model.User, user_in)
-        updated_case_type_col_set_member = self.handle(
-            command.CaseTypeColSetMemberCrudCommand(
+        updated_col_set_member = self.handle(
+            command.ColSetMemberCrudCommand(
                 user=user,
                 operation=CrudOperation.UPDATE_ONE,
-                objs=case_type_col_set_member,
+                objs=col_set_member,
             ),
         )
         return self._set_obj(
-            updated_case_type_col_set_member, update=True
+            updated_col_set_member, update=True
         )  # type: ignore[return-value]
 
     def temp_update_user_own_organization(
@@ -1862,7 +1842,7 @@ class CasedbTestClient(TestClient):
             missing_case_types = expected_case_types - actual_case_types
             extra_case_types = actual_case_types - expected_case_types
             if missing_case_types or extra_case_types:
-                msg = f"User {user.name} case types mismatch. Missing: {missing_case_types}. Extra: {extra_case_types}."
+                msg = f"User {user.name} CaseTypes mismatch. Missing: {missing_case_types}. Extra: {extra_case_types}."
                 if self.verbose:
                     print(msg)
                 raise ValueError(msg)
@@ -1939,9 +1919,9 @@ class CasedbTestClient(TestClient):
             )
             print(f"{x.name}: {case_types_str} ({x.id})")
 
-    def print_case_type_cols(self) -> None:
-        case_type_cols: list[model.CaseTypeCol] = self.read_all(
-            "root1_1", model.CaseTypeCol
+    def print_cols(self) -> None:
+        cols: list[model.Col] = self.read_all(
+            "root1_1", model.Col
         )  # type: ignore[assignment]
         case_types: list[model.CaseType] = self.read_all(
             "root1_1", model.CaseType
@@ -1949,102 +1929,99 @@ class CasedbTestClient(TestClient):
         case_type_map: dict[UUID, model.CaseType] = {
             x.id: x for x in case_types
         }  # type: ignore[assignment]
+        ref_cols: list[model.RefCol] = self.read_all(
+            "root1_1", model.RefCol
+        )  # type: ignore[assignment]
+        ref_col_map: dict[UUID, model.RefCol] = {
+            x.id: x for x in ref_cols
+        }  # type: ignore[assignment]
+        print("\nCols:")
+        for x in sorted(
+            cols, key=lambda x: (case_type_map[x.case_type_id].name, x.code)
+        ):
+            case_type = case_type_map[x.case_type_id]
+            ref_col = ref_col_map[x.ref_col_id]
+            print(f"{x.code}: {case_type.name}, {ref_col.col_type.value} ({x.id})")
+
+    def print_col_sets(self) -> None:
         cols: list[model.Col] = self.read_all(
             "root1_1", model.Col
         )  # type: ignore[assignment]
-        col_map: dict[UUID, model.Col] = {
+        col_map: dict[UUID, model.Col] = {  # type: ignore[assignment]
             x.id: x for x in cols
-        }  # type: ignore[assignment]
-        print("\nCaseTypeCols:")
-        for x in sorted(
-            case_type_cols, key=lambda x: (case_type_map[x.case_type_id].name, x.code)
-        ):
-            case_type = case_type_map[x.case_type_id]
-            col = col_map[x.col_id]
-            print(f"{x.code}: {case_type.name}, {col.col_type.value} ({x.id})")
-
-    def print_case_type_col_sets(self) -> None:
-        case_type_cols: list[model.CaseTypeCol] = self.read_all(
-            "root1_1", model.CaseTypeCol
-        )  # type: ignore[assignment]
-        case_type_col_map: dict[UUID, model.CaseTypeCol] = {  # type: ignore[assignment]
-            x.id: x for x in case_type_cols
         }
-        case_type_col_sets: list[model.CaseTypeColSet] = self.read_all(
-            "root1_1", model.CaseTypeColSet
+        col_sets: list[model.ColSet] = self.read_all(
+            "root1_1", model.ColSet
         )  # type: ignore[assignment]
-        case_type_col_set_members: list[model.CaseTypeColSetMember] = (
-            self.read_all(  # type: ignore[assignment]
-                "root1_1", model.CaseTypeColSetMember
-            )
-        )
-        case_type_col_set_member_map: dict[UUID, set[UUID]] = (
+        col_set_members: list[model.ColSetMember] = self.read_all(
+            "root1_1", model.ColSetMember
+        )  # type: ignore[assignment]
+        col_set_member_map: dict[UUID, set[UUID]] = (
             map_paired_elements(  # type: ignore[assignment]
-                (
-                    (x.case_type_col_set_id, x.case_type_col_id)
-                    for x in case_type_col_set_members
-                ),
+                ((x.col_set_id, x.col_id) for x in col_set_members),
                 as_set=True,
             )
         )
-        print("\nCaseTypeColSets:")
-        for x in sorted(case_type_col_sets, key=lambda x: x.name):
-            case_type_col_ids_str = ", ".join(
+        print("\nColSets:")
+        for x in sorted(col_sets, key=lambda x: x.name):
+            col_ids_str = ", ".join(
                 [
-                    str(case_type_col_map[y].id)
+                    str(col_map[y].id)
                     for y in sorted(
-                        case_type_col_set_member_map.get(x.id, set()),
-                        key=lambda z: case_type_col_map[z].code,
+                        col_set_member_map.get(x.id, set()),
+                        key=lambda z: col_map[z].code,
                     )
                 ]
             )
-            case_type_cols_str = ", ".join(
+            cols_str = ", ".join(
                 [
-                    case_type_col_map[y].code
+                    col_map[y].code
                     for y in sorted(
-                        case_type_col_set_member_map.get(x.id, set()),
-                        key=lambda z: case_type_col_map[z].code,
+                        col_set_member_map.get(x.id, set()),
+                        key=lambda z: col_map[z].code,
                     )
                 ]
             )
-            print(f"{x.name}: {case_type_cols_str}\n({x.id}: {case_type_col_ids_str})")
+            print(f"{x.name}: {cols_str}\n({x.id}: {col_ids_str})")
 
     def print_organization_access_case_policies(self) -> None:
-        organization_access_case_policies = self.read_all(
-            "root1_1", model.OrganizationAccessCasePolicy, cascade=True
+        organization_access_case_policies: list[model.OrganizationAccessCasePolicy] = (
+            self.read_all("root1_1", model.OrganizationAccessCasePolicy, cascade=True)
         )
-        organizations = {x.id: x for x in self.read_all("root1_1", model.Organization)}
-        data_collections = {
-            x.id: x for x in self.read_all("root1_1", model.DataCollection)
-        }
-        case_type_sets = {x.id: x for x in self.read_all("root1_1", model.CaseTypeSet)}
-        case_type_col_sets = {
-            x.id: x for x in self.read_all("root1_1", model.CaseTypeColSet)
-        }
+        organizations: list[model.Organization] = self.read_all(
+            "root1_1", model.Organization
+        )
+        organization_map = {x.id: x for x in organizations}
+        data_collections: list[model.DataCollection] = self.read_all(
+            "root1_1", model.DataCollection
+        )
+        data_collection_map = {x.id: x for x in data_collections}
+        case_type_sets: list[model.CaseTypeSet] = self.read_all(
+            "root1_1", model.CaseTypeSet
+        )
+        case_type_set_map = {x.id: x for x in case_type_sets}
+        col_sets: list[model.ColSet] = self.read_all("root1_1", model.ColSet)
+        col_set_map = {x.id: x for x in col_sets}
         print("\nOrganizationAccessCasePolicies:")
         for x in sorted(
             organization_access_case_policies,
             key=lambda x: (
-                organizations[x.organization_id].name,
-                data_collections[x.data_collection_id].name,
+                organization_map[x.organization_id].name,
+                data_collection_map[x.data_collection_id].name,
             ),
         ):
-            read_case_type_col_set_name = (
-                case_type_col_sets[x.read_case_type_col_set_id].name
-                if x.read_case_type_col_set_id
-                else None
+            read_col_set_name = (
+                col_set_map[x.read_col_set_id].name if x.read_col_set_id else None
             )
-            write_case_type_col_set_name = (
-                case_type_col_sets[x.write_case_type_col_set_id].name
-                if x.write_case_type_col_set_id
-                else None
+            write_col_set_name = (
+                col_set_map[x.write_col_set_id].name if x.write_col_set_id else None
             )
             print(
-                f"{organizations[x.organization_id].name}/{data_collections[x.data_collection_id].name}: case_type_set={case_type_sets[x.case_type_set_id].name}, is_private={x.is_private}, add/remove_case={x.add_case}/{x.remove_case}, read/write_case_type_col_set={read_case_type_col_set_name}/{write_case_type_col_set_name}, add/remove_case_set={x.add_case_set}/{x.remove_case_set}, read/write_case_set={x.read_case_set}/{x.write_case_set}, is_active={x.is_active} ({x.id})"
+                f"{organization_map[x.organization_id].name}/{data_collection_map[x.data_collection_id].name}: case_type_set={case_type_set_map[x.case_type_set_id].name}, is_private={x.is_private}, add/remove_case={x.add_case}/{x.remove_case}, read/write_col_set={read_col_set_name}/{write_col_set_name}, add/remove_case_set={x.add_case_set}/{x.remove_case_set}, read/write_case_set={x.read_case_set}/{x.write_case_set}, is_active={x.is_active} ({x.id})"
             )
 
     def print_user_access_case_policies(self) -> None:
-        user_access_case_policies = self.read_all(
+        user_access_case_policies: list[model.UserAccessCasePolicy] = self.read_all(
             "root1_1", model.UserAccessCasePolicy, cascade=True
         )
         for user_access_case_policy in user_access_case_policies:
@@ -2052,66 +2029,80 @@ class CasedbTestClient(TestClient):
             user_access_case_policy.user = self._get_obj(
                 model.User, user_access_case_policy.user.id
             )
-        data_collections = {
-            x.id: x for x in self.read_all("root1_1", model.DataCollection)
-        }
-        case_type_sets = {x.id: x for x in self.read_all("root1_1", model.CaseTypeSet)}
-        case_type_col_sets = {
-            x.id: x for x in self.read_all("root1_1", model.CaseTypeColSet)
-        }
+        data_collections: list[model.DataCollection] = self.read_all(
+            "root1_1", model.DataCollection
+        )
+        data_collection_map = {x.id: x for x in data_collections}
+        case_type_sets: list[model.CaseTypeSet] = self.read_all(
+            "root1_1", model.CaseTypeSet
+        )
+        case_type_set_map = {x.id: x for x in case_type_sets}
+        col_sets: list[model.ColSet] = self.read_all("root1_1", model.ColSet)
+        col_set_map = {x.id: x for x in col_sets}
         print("\nUserAccessCasePolicies:")
         for x in sorted(
             user_access_case_policies,
             key=lambda x: (
                 x.user.name,
-                data_collections[x.data_collection_id].name,
+                data_collection_map[x.data_collection_id].name,
             ),
         ):
-            read_case_type_col_set_name = (
-                case_type_col_sets[x.read_case_type_col_set_id].name
-                if x.read_case_type_col_set_id
-                else None
+            read_col_set_name = (
+                col_set_map[x.read_col_set_id].name if x.read_col_set_id else None
             )
-            write_case_type_col_set_name = (
-                case_type_col_sets[x.write_case_type_col_set_id].name
-                if x.write_case_type_col_set_id
-                else None
+            write_col_set_name = (
+                col_set_map[x.write_col_set_id].name if x.write_col_set_id else None
             )
             print(
-                f"{x.user.name}/{data_collections[x.data_collection_id].name}: case_type_set={case_type_sets[x.case_type_set_id].name}, add/remove_case={x.add_case}/{x.remove_case}, read/write_case_type_col_set={read_case_type_col_set_name}/{write_case_type_col_set_name}, add/remove_case_set={x.add_case_set}/{x.remove_case_set}, read/write_case_set={x.read_case_set}/{x.write_case_set}, is_active={x.is_active} ({x.id})"
+                f"{x.user.name}/{data_collection_map[x.data_collection_id].name}: case_type_set={case_type_set_map[x.case_type_set_id].name}, add/remove_case={x.add_case}/{x.remove_case}, read/write_col_set={read_col_set_name}/{write_col_set_name}, add/remove_case_set={x.add_case_set}/{x.remove_case_set}, read/write_case_set={x.read_case_set}/{x.write_case_set}, is_active={x.is_active} ({x.id})"
             )
 
     def print_organization_share_case_policies(self) -> None:
-        organization_share_case_policies = self.read_all(
-            "root1_1", model.OrganizationShareCasePolicy
+        organization_share_case_policies: list[model.OrganizationShareCasePolicy] = (
+            self.read_all("root1_1", model.OrganizationShareCasePolicy)
         )
-        organizations = {x.id: x for x in self.read_all("root1_1", model.Organization)}
-        data_collections = {
-            x.id: x for x in self.read_all("root1_1", model.DataCollection)
-        }
-        case_type_sets = {x.id: x for x in self.read_all("root1_1", model.CaseTypeSet)}
+        organizations: list[model.Organization] = self.read_all(
+            "root1_1", model.Organization
+        )
+        organization_map = {x.id: x for x in organizations}
+        data_collections: list[model.DataCollection] = self.read_all(
+            "root1_1", model.DataCollection
+        )
+        data_collection_map = {x.id: x for x in data_collections}
+        case_type_sets: list[model.CaseTypeSet] = self.read_all(
+            "root1_1", model.CaseTypeSet
+        )
+        case_type_set_map = {x.id: x for x in case_type_sets}
         print("\nOrganizationShareCasePolicies:")
         for x in sorted(
             organization_share_case_policies,
             key=lambda x: (
-                organizations[x.organization_id].name,
-                data_collections[x.data_collection_id].name,
-                data_collections[x.from_data_collection_id].name,
+                organization_map[x.organization_id].name,
+                data_collection_map[x.data_collection_id].name,
+                data_collection_map[x.from_data_collection_id].name,
             ),
         ):
             print(
-                f"{organizations[x.organization_id].name}/{data_collections[x.data_collection_id].name}<-{data_collections[x.from_data_collection_id].name}: case_type_set={case_type_sets[x.case_type_set_id].name}, add/remove_case={x.add_case}/{x.remove_case}, add/remove_case_set={x.add_case_set}/{x.remove_case_set}, is_active={x.is_active} ({x.id})"
+                f"{organization_map[x.organization_id].name}/{data_collection_map[x.data_collection_id].name}<-{data_collection_map[x.from_data_collection_id].name}: case_type_set={case_type_set_map[x.case_type_set_id].name}, add/remove_case={x.add_case}/{x.remove_case}, add/remove_case_set={x.add_case_set}/{x.remove_case_set}, is_active={x.is_active} ({x.id})"
             )
 
     def print_user_share_case_policies(self) -> None:
-        user_share_case_policies = self.read_all("root1_1", model.UserShareCasePolicy)
+        user_share_case_policies: list[model.UserShareCasePolicy] = self.read_all(
+            "root1_1", model.UserShareCasePolicy
+        )
         for user_share_case_policy in user_share_case_policies:
             # Get user with name filled in
             user_share_case_policy.user = self._get_obj(
                 model.User, user_share_case_policy.user_id
             )
-        case_type_sets = {x.id: x for x in self.read_all("root1_1", model.CaseTypeSet)}
-        data_collections = {
+        case_type_sets: list[model.CaseTypeSet] = self.read_all(
+            "root1_1", model.CaseTypeSet
+        )
+        case_type_set_map = {x.id: x for x in case_type_sets}
+        data_collections: list[model.DataCollection] = self.read_all(
+            "root1_1", model.DataCollection
+        )
+        data_collection_map = {
             x.id: x for x in self.read_all("root1_1", model.DataCollection)
         }
         print("\nUserShareCasePolicies:")
@@ -2119,26 +2110,32 @@ class CasedbTestClient(TestClient):
             user_share_case_policies,
             key=lambda x: (
                 x.user.name,
-                data_collections[x.data_collection_id].name,
-                data_collections[x.from_data_collection_id].name,
+                data_collection_map[x.data_collection_id].name,
+                data_collection_map[x.from_data_collection_id].name,
             ),
         ):
             print(
-                f"{x.user.name}/{data_collections[x.data_collection_id].name}<-{data_collections[x.from_data_collection_id].name}: case_type_set={case_type_sets[x.case_type_set_id].name}, , add/remove_case={x.add_case}/{x.remove_case}, add/remove_case_set={x.add_case_set}/{x.remove_case_set}, is_active={x.is_active} ({x.id})"
+                f"{x.user.name}/{data_collection_map[x.data_collection_id].name}<-{data_collection_map[x.from_data_collection_id].name}: case_type_set={case_type_set_map[x.case_type_set_id].name}, , add/remove_case={x.add_case}/{x.remove_case}, add/remove_case_set={x.add_case_set}/{x.remove_case_set}, is_active={x.is_active} ({x.id})"
             )
 
     def print_cases(self, case_codes: list[str] | None = None) -> None:
         user: model.User = self._get_obj(model.User, "root1_1")
-        cases = self.read_all(user, model.Case)
+        cases: list[model.Case] = self.read_all(user, model.Case)
         if case_codes:
             cases = [
                 x
                 for x in cases
                 if TestClient._convert_case_date_to_code(x.case_date) in case_codes
             ]
-        case_data_collection_links = self.read_all(user, model.CaseDataCollectionLink)
-        data_collections = {x.id: x for x in self.read_all(user, model.DataCollection)}
-        case_type_cols = {x.id: x for x in self.read_all(user, model.CaseTypeCol)}
+        case_data_collection_links: list[model.CaseDataCollectionLink] = self.read_all(
+            user, model.CaseDataCollectionLink
+        )
+        data_collections: list[model.DataCollection] = self.read_all(
+            user, model.DataCollection
+        )
+        data_collection_map = {x.id: x for x in data_collections}
+        cols: list[model.Col] = self.read_all(user, model.Col)
+        col_map = {x.id: x for x in cols}
         case_date_collections = map_paired_elements(
             ((x.case_id, x.data_collection_id) for x in case_data_collection_links),
             as_set=True,
@@ -2147,14 +2144,12 @@ class CasedbTestClient(TestClient):
         for x in sorted(cases, key=lambda x: x.case_date):
             curr_data_collections = sorted(
                 [
-                    data_collections[x].name
+                    data_collection_map[x].name
                     for x in case_date_collections.get(x.id, set())
                 ]
             )
             curr_data_collections = ", ".join(curr_data_collections)
-            curr_content = sorted(
-                [(case_type_cols[x].code, y) for x, y in x.content.items()]
-            )
+            curr_content = sorted([(col_map[x].code, y) for x, y in x.content.items()])
             curr_content = ", ".join([f"{x[0]}={x[1]}" for x in curr_content])
             print(
                 f"{TestClient._convert_case_date_to_code(x.case_date)}: {curr_content}; {curr_data_collections} ({x.id})"

@@ -46,7 +46,7 @@ class RoleSet(Enum):
     ROOT = frozenset({Role.ROOT})
     APPLICATION = frozenset({Role.APP_ADMIN})
     ORGANIZATION = frozenset({Role.APP_ADMIN, Role.ORG_ADMIN})
-    METADATA = frozenset({Role.REFDATA_ADMIN})
+    REFDATA = frozenset({Role.REFDATA_ADMIN})
     OPERATIONAL = frozenset({Role.ORG_USER, Role.GUEST})
 
 
@@ -67,9 +67,10 @@ class IdentifierType(IntEnum):
     GENETIC_SEQUENCE = 6
 
 
-class OnExistsUploadAction(Enum):
+class UploadAction(Enum):
     ERROR = "ERROR"
     UPDATE = "UPDATE"
+    CREATE = "CREATE"
     SKIP = "SKIP"
 
 

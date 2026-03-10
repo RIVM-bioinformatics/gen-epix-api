@@ -427,6 +427,13 @@ class Run:
             ]
         )
 
+    def test_commondb_integration_sql_injection(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS + ["test/commondb/integration/sql_injection"]
+        )
+
     def test_casedb_unit(self) -> None:
         import pytest
 
@@ -467,13 +474,13 @@ class Run:
             ]
         )
 
-    def test_casedb_unit_case_type_col_order(self) -> None:
+    def test_casedb_unit_col_order(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/casedb/unit/case_type_col_order",
+                "test/casedb/unit/col_order",
             ]
         )
 
@@ -605,13 +612,13 @@ class Run:
             ]
         )
 
-    def test_seqdb_unit_sample_upload(self) -> None:
+    def test_seqdb_unit_upload(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/seqdb/unit/sample_upload",
+                "test/seqdb/unit/upload",
             ]
         )
 

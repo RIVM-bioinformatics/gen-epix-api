@@ -14,7 +14,9 @@ class MockUser(BaseModel):
     name: str
 
 
-MOCK_USER = MockUser(id="u1", key="info@org.nl", email="info@org.nl", name="John")
+MOCK_USER = MockUser(
+    id="id1", key="user1@org1.org", email="user1@org1.org", name="user1"
+)
 
 
 class UserManager(BaseUserManager):
@@ -24,7 +26,7 @@ class UserManager(BaseUserManager):
         self.users: dict[Hashable, User] = {}
         self.root_users: dict[Hashable, User] = {}
 
-    def get_user_instance_from_claims(self, claims: dict[str, Any]) -> User:
+    def construct_user_instance_from_claims(self, claims: dict[str, Any]) -> User:
         return self.user_class(**claims)
 
     def is_root_user_claims(self, claims: dict[str, Any]) -> bool:
@@ -34,12 +36,12 @@ class UserManager(BaseUserManager):
         return user.id in self.root_users
 
     def create_root_user_from_claims(self, claims: dict[str, Any]) -> User:
-        user = self.create_user_from_claims(claims)
+        user = self.auto_create_new_user(claims)
         assert user.id is not None
         self.root_users[user.id] = user
         return user
 
-    def create_user_from_claims(
+    def auto_create_new_user(
         self, claims: dict[str, Any], user_id: Hashable = None
     ) -> User | None:
         if not user_id:
@@ -86,4 +88,4 @@ class UserManager(BaseUserManager):
         return updated_user
 
     def get_user_name_from_claims(self, claims: dict[str, Any]) -> str | None:
-        raise NotImplementedError()
+        return claims.get("name")

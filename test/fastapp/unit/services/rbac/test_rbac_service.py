@@ -103,7 +103,7 @@ class RBACTestClient(ServiceTestClient):
             if role == Role.ROOT:
                 user = self.user_manager.create_root_user_from_claims(claims)
             else:
-                user = self.user_manager.create_user_from_claims(claims)
+                user = self.user_manager.auto_create_new_user(claims)
             self.users_by_role[role].append(user)
         # Create some objs
         self.create_all_fixture_model_instances(self.users_by_role[Role.ROOT][0].id)

@@ -28,7 +28,7 @@ class PersonBatchUploader(BatchUploader):
     def verify_user_rights(self, cmd: UploadBatchCommandMixin) -> None:
         """
         Implements user rights verification for uploading cases. Only ABAC rights are
-        verified: the user must have write access to all case type columns contained in
+        verified: the user must have write access to all Cols contained in
         the uploaded cases for the created in data collection.
         """
         # Verify command type

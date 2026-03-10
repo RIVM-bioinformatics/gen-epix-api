@@ -10,6 +10,7 @@ from pydantic import Field, field_serializer, model_validator
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model
+from gen_epix.commondb.domain.model.organization import BaseIdentifier
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
@@ -75,6 +76,21 @@ class LocusProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
     @field_serializer("locus_profile_hash")
     def _serialize_locus_profile_hash(self, value: UUID) -> str:
         return str(value)
+
+
+class LocusProfileIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        LocusProfile,
+        relationship_field_name="locus_profile",
+        snake_case_plural_name="locus_profile_identifiers",
+        table_name="locus_profile_identifier",
+    )
+    NAME: ClassVar = "LocusProfileIdentifier"
+    MODEL_CLASS: ClassVar = LocusProfile
+
+    locus_profile: LocusProfile | None = Field(
+        default=None, description="The locus profile associated with this identifier."
+    )
 
 
 class AlleleProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
@@ -233,6 +249,21 @@ class AlleleProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
         return UUID(sha256.digest()[:16].hex())
 
 
+class AlleleProfileIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        AlleleProfile,
+        relationship_field_name="allele_profile",
+        snake_case_plural_name="allele_profile_identifiers",
+        table_name="allele_profile_identifier",
+    )
+    NAME: ClassVar = "AlleleProfileIdentifier"
+    MODEL_CLASS: ClassVar = AlleleProfile
+
+    allele_profile: AlleleProfile | None = Field(
+        default=None, description="The allele profile associated with this identifier."
+    )
+
+
 class SnpDetectionProtocol(Model, ProtocolMixin):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="snp_detection_protocols",
@@ -334,6 +365,21 @@ class SnpProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
             raise NotImplementedError(
                 "Unable to parse aligned nucleotide sequence for this SNP profile format"
             )
+
+
+class SnpProfileIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        SnpProfile,
+        relationship_field_name="snp_profile",
+        snake_case_plural_name="snp_profile_identifiers",
+        table_name="snp_profile_identifier",
+    )
+    NAME: ClassVar = "SnpProfileIdentifier"
+    MODEL_CLASS: ClassVar = SnpProfile
+
+    snp_profile: SnpProfile | None = Field(
+        default=None, description="The SNP profile associated with this identifier."
+    )
 
 
 class MlvaDetectionProtocol(Model, ProtocolMixin):
@@ -475,6 +521,21 @@ class MlvaProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
         return UUID(sha256.digest()[:16].hex())
 
 
+class MlvaProfileIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        MlvaProfile,
+        relationship_field_name="mlva_profile",
+        snake_case_plural_name="mlva_profile_identifiers",
+        table_name="mlva_profile_identifier",
+    )
+    NAME: ClassVar = "MlvaProfileIdentifier"
+    MODEL_CLASS: ClassVar = MlvaProfile
+
+    mlva_profile: MlvaProfile | None = Field(
+        default=None, description="The MLVA profile associated with this identifier."
+    )
+
+
 class KmerDetectionProtocol(Model, ProtocolMixin):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="kmer_detection_protocols",
@@ -576,3 +637,18 @@ class KmerProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
             sha256.update(kmer.encode("ascii"))
             sha256.update(bytearray(struct.pack(">d", freq)))
         return UUID(sha256.digest()[:16].hex())
+
+
+class KmerProfileIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        KmerProfile,
+        relationship_field_name="kmer_profile",
+        snake_case_plural_name="kmer_profile_identifiers",
+        table_name="kmer_profile_identifier",
+    )
+    NAME: ClassVar = "KmerProfileIdentifier"
+    MODEL_CLASS: ClassVar = KmerProfile
+
+    kmer_profile: KmerProfile | None = Field(
+        default=None, description="The k-mer profile associated with this identifier."
+    )
