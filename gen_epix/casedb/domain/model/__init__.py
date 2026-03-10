@@ -54,9 +54,6 @@ from gen_epix.casedb.domain.model.case import Dim as Dim
 from gen_epix.casedb.domain.model.case import (
     GeneticDistanceProtocol as GeneticDistanceProtocol,
 )
-from gen_epix.casedb.domain.model.case import (
-    ReadableReferenceData as ReadableReferenceData,
-)
 from gen_epix.casedb.domain.model.case import ReadSetForUpload as ReadSetForUpload
 from gen_epix.casedb.domain.model.case import RefCol as RefCol
 from gen_epix.casedb.domain.model.case import RefDataAccess as RefDataAccess
