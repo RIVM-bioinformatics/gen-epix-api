@@ -176,13 +176,14 @@ class CaseDictRepository(DictRepository, BaseCaseRepository):
             case_id = row[1]
             if case_id in seen_case_ids:
                 # Already processed this case_id for all but n_own_cases
-                if seen_case_ids[case_id] is not None:
-                    seen_case_ids[case_id] = row[3]
+                seen_case_id_value = seen_case_ids[case_id]
+                if seen_case_id_value is not None:
+                    seen_case_ids[case_id] = seen_case_id_value or row[3]
                 else:
                     # Case not to be counted due to datetime filter
                     pass
                 continue
-            seen_case_ids[case_id] = row[3]
+            seen_case_ids[case_id] = seen_case_ids.get(case_id) or row[3]
             # Get adjusted case_date based on col_type_index
             col_type_index = row[2]
             if has_abac:
