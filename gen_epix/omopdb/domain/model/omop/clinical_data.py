@@ -1567,9 +1567,8 @@ class PersonIdentifier(BaseIdentifier):
     NAME: ClassVar = "PersonIdentifier"
     MODEL_CLASS: ClassVar = Person
 
-    person: Person|None = Field(
-        default=None,
-        description="The person that this identifier is associated with."
+    person: Person | None = Field(
+        default=None, description="The person that this identifier is associated with."
     )
 
 
@@ -1585,7 +1584,7 @@ class ObservationPeriodIdentifier(BaseIdentifier):
 
     observation_period: ObservationPeriod | None = Field(
         default=None,
-        description="The observation period that this identifier is associated with."
+        description="The observation period that this identifier is associated with.",
     )
 
 
@@ -1601,7 +1600,7 @@ class VisitOccurrenceIdentifier(BaseIdentifier):
 
     visit_occurrence: VisitOccurrence | None = Field(
         default=None,
-        description="The visit occurrence that this identifier is associated with."
+        description="The visit occurrence that this identifier is associated with.",
     )
 
 
@@ -1617,7 +1616,7 @@ class VisitDetailIdentifier(BaseIdentifier):
 
     visit_detail: VisitDetail | None = Field(
         default=None,
-        description="The visit detail that this identifier is associated with."
+        description="The visit detail that this identifier is associated with.",
     )
 
 
@@ -1633,7 +1632,7 @@ class ConditionOccurrenceIdentifier(BaseIdentifier):
 
     condition_occurrence: ConditionOccurrence | None = Field(
         default=None,
-        description="The condition occurrence that this identifier is associated with."
+        description="The condition occurrence that this identifier is associated with.",
     )
 
 
@@ -1649,7 +1648,7 @@ class ProcedureOccurrenceIdentifier(BaseIdentifier):
 
     procedure_occurrence: ProcedureOccurrence | None = Field(
         default=None,
-        description="The procedure occurrence that this identifier is associated with."
+        description="The procedure occurrence that this identifier is associated with.",
     )
 
 
@@ -1665,7 +1664,7 @@ class DrugExposureIdentifier(BaseIdentifier):
 
     drug_exposure: DrugExposure | None = Field(
         default=None,
-        description="The drug exposure that this identifier is associated with."
+        description="The drug exposure that this identifier is associated with.",
     )
 
 
@@ -1681,7 +1680,7 @@ class DeviceExposureIdentifier(BaseIdentifier):
 
     device_exposure: DeviceExposure | None = Field(
         default=None,
-        description="The device exposure that this identifier is associated with."
+        description="The device exposure that this identifier is associated with.",
     )
 
 
@@ -1697,7 +1696,7 @@ class MeasurementIdentifier(BaseIdentifier):
 
     measurement: Measurement | None = Field(
         default=None,
-        description="The measurement that this identifier is associated with."
+        description="The measurement that this identifier is associated with.",
     )
 
 
@@ -1713,7 +1712,7 @@ class ObservationIdentifier(BaseIdentifier):
 
     observation: Observation | None = Field(
         default=None,
-        description="The observation that this identifier is associated with."
+        description="The observation that this identifier is associated with.",
     )
 
 
@@ -1729,7 +1728,7 @@ class SpecimenIdentifier(BaseIdentifier):
 
     specimen: Specimen | None = Field(
         default=None,
-        description="The specimen that this identifier is associated with."
+        description="The specimen that this identifier is associated with.",
     )
 
 
@@ -1744,8 +1743,7 @@ class NoteIdentifier(BaseIdentifier):
     MODEL_CLASS: ClassVar = Note
 
     note: Note | None = Field(
-        default=None,
-        description="The note that this identifier is associated with."
+        default=None, description="The note that this identifier is associated with."
     )
 
 
@@ -1761,7 +1759,7 @@ class NoteNlpIdentifier(BaseIdentifier):
 
     note_nlp: NoteNlp | None = Field(
         default=None,
-        description="The note NLP that this identifier is associated with."
+        description="The note NLP that this identifier is associated with.",
     )
 
 
@@ -1777,7 +1775,7 @@ class MeasurementRelationIdentifier(BaseIdentifier):
 
     measurement_relation: MeasurementRelation | None = Field(
         default=None,
-        description="The measurement relation that this identifier is associated with."
+        description="The measurement relation that this identifier is associated with.",
     )
 
 
@@ -1792,6 +1790,5 @@ class DeathIdentifier(BaseIdentifier):
     MODEL_CLASS: ClassVar = Death
 
     death: Death | None = Field(
-        default=None,
-        description="The death that this identifier is associated with."
+        default=None, description="The death that this identifier is associated with."
     )
