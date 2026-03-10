@@ -289,10 +289,6 @@ class AppComposer(BaseAppComposer):
             setup_logger=setup_logger if self._log_setup else None,
             name=service_type.value,
             ssl_context=ssl_context,
-            # convert this dynaconf value to an int in case it's a quoted int (string)
-            root_token_time_to_live=int(service_props.pop("root_token_time_to_live")),
-            # convert this dynaconf value to a boolean in case it's a quoted boolean (string)
-            auto_create_new_users=bool(service_props.pop("auto_create_new_users")),
             **service_props,
         )
         # Add to overview of services
