@@ -16,6 +16,7 @@ from gen_epix.commondb.repositories.sa_model import (
     create_mapped_column,
     create_table_args,
 )
+from gen_epix.commondb.repositories.sa_model.organization import IdentifierMixin
 from gen_epix.seqdb.domain import enum as seqdb_enum
 
 Base: type = orm.declarative_base(name=enum.ServiceType.CASE.value)
@@ -380,6 +381,19 @@ class Case(Base, RowMetadataMixin):
 
     case_type: Mapped[CaseType] = relationship(CaseType, foreign_keys=[case_type_id])
     code: Mapped[str | None] = create_mapped_column(DOMAIN, model.Case, "code")
+
+
+class CaseIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.CaseIdentifier)
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.CaseIdentifier, "internal_id"
+    )
+    case: Mapped[Case] = relationship(Case, foreign_keys=[internal_id])
 
 
 class CaseDataCollectionLink(Base, RowMetadataMixin):

@@ -551,7 +551,26 @@ class Entity(BaseModel):
         props = self.model_dump(exclude_unset=True, exclude_defaults=True)
         if update:
             props.update(update)
-        return Entity(**props)
+        entity = Entity(**props)
+        entity._model_class = None
+        entity._db_model_class = self._db_model_class
+        entity._crud_command_class = self._crud_command_class
+        entity._create_api_model_class = self._create_api_model_class
+        entity._read_api_model_class = self._read_api_model_class
+        entity._fields = self._fields if self._fields is None else self._fields.copy()
+        entity._links_by_field_name = (
+            self._links_by_field_name
+            if self._links_by_field_name is None
+            else self._links_by_field_name.copy()
+        )
+        entity._get_link_id_by_model_class = (
+            self._get_link_id_by_model_class
+            if self._get_link_id_by_model_class is None
+            else self._get_link_id_by_model_class.copy()
+        )
+        entity._keys_generator = self._keys_generator
+        entity._has_model = self._has_model
+        return entity
 
     def _verify_and_parse_model_links(self, model_class: type[BaseModel]) -> Self:
         """
