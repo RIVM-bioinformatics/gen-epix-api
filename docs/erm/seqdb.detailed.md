@@ -1,6 +1,6 @@
 # seqdb — Detailed Entity-Relationship Diagram
 
-Auto-generated from domain model definitions.  Contains **62** persistable entities with their field definitions.
+Auto-generated from domain model definitions.  Contains **68** persistable entities with their field definitions.
 
 ```mermaid
 erDiagram
@@ -13,7 +13,6 @@ erDiagram
     DataCollectionSetMember }o--|| DataCollection : "data_collection_id"
     OrganizationIdentifierIssuerLink }o--|| Organization : "organization_id"
     OrganizationIdentifierIssuerLink }o--|| IdentifierIssuer : "identifier_issuer_id"
-    ExternalIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
     Site }o--|| Organization : "organization_id"
     Contact }o--|| Site : "site_id"
     User }o--|| Organization : "organization_id"
@@ -35,37 +34,51 @@ erDiagram
     Sample }o--|| DataCollection : "created_in_data_collection_id"
     SampleDataCollectionLink }o--|| Sample : "sample_id"
     SampleDataCollectionLink }o--|| DataCollection : "data_collection_id"
-    SampleIdentifier }o--|| Sample : "sample_id"
     SampleIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    SampleIdentifier }o--|| Sample : "internal_id"
     ReadSet }o--|| Sample : "sample_id"
     ReadSet }o--|| SequencingProtocol : "sequencing_protocol_id"
     ReadSet }o--|| File : "fwd_file_id"
     ReadSet }o--|| File : "rev_file_id"
+    ReadSetIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    ReadSetIdentifier }o--|| ReadSet : "internal_id"
     Seq }o--|| Sample : "sample_id"
     Seq }o--|| File : "file_id"
     Seq }o--|| ReadSet : "read_set_id"
     Seq }o--|| ReadSet : "read_set2_id"
     Seq }o--|| AssemblyProtocol : "assembly_protocol_id"
+    SeqIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    SeqIdentifier }o--|| Seq : "internal_id"
     Allele }o--|| Locus : "locus_id"
     LocusProfile }o--|| Sample : "sample_id"
     LocusProfile }o--|| Seq : "seq_id"
     LocusProfile }o--|| LocusSet : "locus_set_id"
     LocusProfile }o--|| LocusDetectionProtocol : "locus_detection_protocol_id"
+    LocusProfileIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    LocusProfileIdentifier }o--|| LocusProfile : "internal_id"
     AlleleProfile }o--|| Sample : "sample_id"
     AlleleProfile }o--|| Seq : "seq_id"
     AlleleProfile }o--|| LocusSet : "locus_set_id"
     AlleleProfile }o--|| LocusDetectionProtocol : "locus_detection_protocol_id"
+    AlleleProfileIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    AlleleProfileIdentifier }o--|| AlleleProfile : "internal_id"
     KmerProfile }o--|| Sample : "sample_id"
     KmerProfile }o--|| Seq : "seq_id"
     KmerProfile }o--|| KmerDetectionProtocol : "kmer_detection_protocol_id"
+    KmerProfileIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    KmerProfileIdentifier }o--|| KmerProfile : "internal_id"
     MlvaProfile }o--|| Sample : "sample_id"
     MlvaProfile }o--|| Seq : "seq_id"
     MlvaProfile }o--|| LocusSet : "locus_set_id"
     MlvaProfile }o--|| MlvaDetectionProtocol : "mlva_detection_protocol_id"
+    MlvaProfileIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    MlvaProfileIdentifier }o--|| MlvaProfile : "internal_id"
     SnpProfile }o--|| Sample : "sample_id"
     SnpProfile }o--|| Seq : "seq_id"
     SnpProfile }o--|| RefSeq : "ref_seq_id"
     SnpProfile }o--|| SnpDetectionProtocol : "snp_detection_protocol_id"
+    SnpProfileIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    SnpProfileIdentifier }o--|| SnpProfile : "internal_id"
     AstMeasurement }o--|| Sample : "sample_id"
     AstMeasurement }o--|| AstProtocol : "ast_protocol_id"
     AstPrediction }o--|| Sample : "sample_id"
@@ -148,14 +161,6 @@ erDiagram
         UUID id PK
         UUID organization_id FK
         UUID identifier_issuer_id FK
-    }
-
-    ExternalIdentifier {
-        UUID id PK
-        enum identifier_type
-        UUID identifier_issuer_id FK
-        string external_id
-        UUID internal_id
     }
 
     Site {
@@ -461,9 +466,9 @@ erDiagram
 
     SampleIdentifier {
         UUID id PK
-        UUID sample_id FK
         UUID identifier_issuer_id FK
-        string identifier
+        string external_id
+        UUID internal_id FK
     }
 
     ReadSet {
@@ -483,6 +488,13 @@ erDiagram
         UUID rev_reads_hash
         string sequencing_run_code
         any is_available
+    }
+
+    ReadSetIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
     }
 
     Seq {
@@ -510,6 +522,13 @@ erDiagram
         any n50
     }
 
+    SeqIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
     Allele {
         UUID id PK
         string seq
@@ -532,6 +551,13 @@ erDiagram
         UUID locus_profile_hash
     }
 
+    LocusProfileIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
     AlleleProfile {
         float qc_score
         enum qc_result
@@ -546,6 +572,13 @@ erDiagram
         UUID allele_profile_hash
     }
 
+    AlleleProfileIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
     KmerProfile {
         float qc_score
         enum qc_result
@@ -556,6 +589,13 @@ erDiagram
         string kmer_profile
         enum kmer_profile_format
         UUID kmer_profile_hash
+    }
+
+    KmerProfileIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
     }
 
     MlvaProfile {
@@ -571,6 +611,13 @@ erDiagram
         UUID mlva_profile_hash
     }
 
+    MlvaProfileIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
     SnpProfile {
         float qc_score
         enum qc_result
@@ -582,6 +629,13 @@ erDiagram
         string snp_profile
         enum snp_profile_format
         UUID snp_profile_hash
+    }
+
+    SnpProfileIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
     }
 
     AstMeasurement {

@@ -73,6 +73,10 @@ class ConditionOccurrenceCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.ConditionOccurrence
 
 
+class ConditionOccurrenceIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.ConditionOccurrenceIdentifier
+
+
 class CostCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Cost
 
@@ -81,8 +85,16 @@ class DeviceExposureCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.DeviceExposure
 
 
+class DeviceExposureIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.DeviceExposureIdentifier
+
+
 class DeathCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Death
+
+
+class DeathIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.DeathIdentifier
 
 
 class DomainCrudCommand(CrudCommand):
@@ -99,6 +111,10 @@ class DrugEraCrudCommand(CrudCommand):
 
 class DrugExposureCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.DrugExposure
+
+
+class DrugExposureIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.DrugExposureIdentifier
 
 
 class DrugStrengthCrudCommand(CrudCommand):
@@ -125,8 +141,16 @@ class MeasurementCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Measurement
 
 
+class MeasurementIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.MeasurementIdentifier
+
+
 class MeasurementRelationCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.MeasurementRelation
+
+
+class MeasurementRelationIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.MeasurementRelationIdentifier
 
 
 class MetadataCrudCommand(CrudCommand):
@@ -137,16 +161,32 @@ class NoteCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Note
 
 
+class NoteIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.NoteIdentifier
+
+
 class NoteNlpCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.NoteNlp
+
+
+class NoteNlpIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.NoteNlpIdentifier
 
 
 class ObservationCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Observation
 
 
+class ObservationIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.ObservationIdentifier
+
+
 class ObservationPeriodCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.ObservationPeriod
+
+
+class ObservationPeriodIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.ObservationPeriodIdentifier
 
 
 class PayerPlanPeriodCrudCommand(CrudCommand):
@@ -157,8 +197,16 @@ class PersonCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Person
 
 
+class PersonIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.PersonIdentifier
+
+
 class ProcedureOccurrenceCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.ProcedureOccurrence
+
+
+class ProcedureOccurrenceIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.ProcedureOccurrenceIdentifier
 
 
 class ProviderCrudCommand(CrudCommand):
@@ -177,12 +225,24 @@ class SpecimenCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Specimen
 
 
+class SpecimenIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.SpecimenIdentifier
+
+
 class VisitDetailCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.VisitDetail
 
 
+class VisitDetailIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.VisitDetailIdentifier
+
+
 class VisitOccurrenceCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.VisitOccurrence
+
+
+class VisitOccurrenceIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.VisitOccurrenceIdentifier
 
 
 class VocabularyCrudCommand(CrudCommand):

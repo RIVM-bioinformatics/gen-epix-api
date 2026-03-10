@@ -1,6 +1,6 @@
 # omopdb — Detailed Entity-Relationship Diagram
 
-Auto-generated from domain model definitions.  Contains **55** persistable entities with their field definitions.
+Auto-generated from domain model definitions.  Contains **69** persistable entities with their field definitions.
 
 ```mermaid
 erDiagram
@@ -13,7 +13,6 @@ erDiagram
     DataCollectionSetMember }o--|| DataCollection : "data_collection_id"
     OrganizationIdentifierIssuerLink }o--|| Organization : "organization_id"
     OrganizationIdentifierIssuerLink }o--|| IdentifierIssuer : "identifier_issuer_id"
-    ExternalIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
     Site }o--|| Organization : "organization_id"
     Contact }o--|| Site : "site_id"
     User }o--|| Organization : "organization_id"
@@ -60,8 +59,12 @@ erDiagram
     Person }o--|| Concept : "race_source_concept_id"
     Person }o--|| Concept : "ethnicity_source_concept_id"
     Person }o--|| Concept : "person_type_concept_id"
+    PersonIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    PersonIdentifier }o--|| Person : "internal_id"
     ObservationPeriod }o--|| Person : "person_id"
     ObservationPeriod }o--|| Concept : "period_type_concept_id"
+    ObservationPeriodIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    ObservationPeriodIdentifier }o--|| ObservationPeriod : "internal_id"
     VisitOccurrence }o--|| Person : "person_id"
     VisitOccurrence }o--|| Concept : "visit_concept_id"
     VisitOccurrence }o--|| Concept : "visit_type_concept_id"
@@ -70,6 +73,8 @@ erDiagram
     VisitOccurrence }o--|| Concept : "visit_source_concept_id"
     VisitOccurrence }o--|| Concept : "admitted_from_concept_id"
     VisitOccurrence }o--|| Concept : "discharged_to_concept_id"
+    VisitOccurrenceIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    VisitOccurrenceIdentifier }o--|| VisitOccurrence : "internal_id"
     VisitDetail }o--|| Person : "person_id"
     VisitDetail }o--|| Concept : "visit_detail_concept_id"
     VisitDetail }o--|| Concept : "visit_detail_type_concept_id"
@@ -79,6 +84,8 @@ erDiagram
     VisitDetail }o--|| Concept : "admitted_from_concept_id"
     VisitDetail }o--|| Concept : "discharged_to_concept_id"
     VisitDetail }o--|| VisitOccurrence : "visit_occurrence_id"
+    VisitDetailIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    VisitDetailIdentifier }o--|| VisitDetail : "internal_id"
     ConditionOccurrence }o--|| Person : "person_id"
     ConditionOccurrence }o--|| Concept : "condition_concept_id"
     ConditionOccurrence }o--|| Concept : "condition_type_concept_id"
@@ -87,6 +94,8 @@ erDiagram
     ConditionOccurrence }o--|| VisitOccurrence : "visit_occurrence_id"
     ConditionOccurrence }o--|| VisitDetail : "visit_detail_id"
     ConditionOccurrence }o--|| Concept : "condition_source_concept_id"
+    ConditionOccurrenceIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    ConditionOccurrenceIdentifier }o--|| ConditionOccurrence : "internal_id"
     ProcedureOccurrence }o--|| Person : "person_id"
     ProcedureOccurrence }o--|| Concept : "procedure_concept_id"
     ProcedureOccurrence }o--|| Concept : "procedure_type_concept_id"
@@ -95,6 +104,8 @@ erDiagram
     ProcedureOccurrence }o--|| VisitOccurrence : "visit_occurrence_id"
     ProcedureOccurrence }o--|| VisitDetail : "visit_detail_id"
     ProcedureOccurrence }o--|| Concept : "procedure_source_concept_id"
+    ProcedureOccurrenceIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    ProcedureOccurrenceIdentifier }o--|| ProcedureOccurrence : "internal_id"
     DrugExposure }o--|| Person : "person_id"
     DrugExposure }o--|| Concept : "drug_concept_id"
     DrugExposure }o--|| Concept : "drug_type_concept_id"
@@ -103,6 +114,8 @@ erDiagram
     DrugExposure }o--|| VisitOccurrence : "visit_occurrence_id"
     DrugExposure }o--|| VisitDetail : "visit_detail_id"
     DrugExposure }o--|| Concept : "drug_source_concept_id"
+    DrugExposureIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    DrugExposureIdentifier }o--|| DrugExposure : "internal_id"
     DeviceExposure }o--|| Person : "person_id"
     DeviceExposure }o--|| Concept : "device_concept_id"
     DeviceExposure }o--|| Concept : "device_type_concept_id"
@@ -112,6 +125,8 @@ erDiagram
     DeviceExposure }o--|| Concept : "device_source_concept_id"
     DeviceExposure }o--|| Concept : "unit_concept_id"
     DeviceExposure }o--|| Concept : "unit_source_concept_id"
+    DeviceExposureIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    DeviceExposureIdentifier }o--|| DeviceExposure : "internal_id"
     Measurement }o--|| Person : "person_id"
     Measurement }o--|| Concept : "measurement_concept_id"
     Measurement }o--|| Concept : "measurement_type_concept_id"
@@ -124,6 +139,8 @@ erDiagram
     Measurement }o--|| Concept : "measurement_source_concept_id"
     Measurement }o--|| Concept : "unit_source_concept_id"
     Measurement }o--|| Concept : "meas_event_field_concept_id"
+    MeasurementIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    MeasurementIdentifier }o--|| Measurement : "internal_id"
     Observation }o--|| Person : "person_id"
     Observation }o--|| Concept : "observation_concept_id"
     Observation }o--|| Concept : "observation_type_concept_id"
@@ -135,6 +152,8 @@ erDiagram
     Observation }o--|| VisitDetail : "visit_detail_id"
     Observation }o--|| Concept : "observation_source_concept_id"
     Observation }o--|| Concept : "obs_event_field_concept_id"
+    ObservationIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    ObservationIdentifier }o--|| Observation : "internal_id"
     Specimen }o--|| Person : "person_id"
     Specimen }o--|| Concept : "specimen_concept_id"
     Specimen }o--|| Concept : "specimen_type_concept_id"
@@ -142,6 +161,8 @@ erDiagram
     Specimen }o--|| Concept : "anatomic_site_concept_id"
     Specimen }o--|| Concept : "disease_status_concept_id"
     Specimen }o--|| Concept : "derived_from_specimen_concept_id"
+    SpecimenIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    SpecimenIdentifier }o--|| Specimen : "internal_id"
     Note }o--|| Person : "person_id"
     Note }o--|| Concept : "note_type_concept_id"
     Note }o--|| Concept : "note_class_concept_id"
@@ -151,9 +172,13 @@ erDiagram
     Note }o--|| VisitOccurrence : "visit_occurrence_id"
     Note }o--|| VisitDetail : "visit_detail_id"
     Note }o--|| Concept : "note_event_field_concept_id"
+    NoteIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    NoteIdentifier }o--|| Note : "internal_id"
     NoteNlp }o--|| Concept : "section_concept_id"
     NoteNlp }o--|| Concept : "note_nlp_concept_id"
     NoteNlp }o--|| Concept : "note_nlp_source_concept_id"
+    NoteNlpIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    NoteNlpIdentifier }o--|| NoteNlp : "internal_id"
     FactRelationship }o--|| Concept : "domain_concept_id_1"
     FactRelationship }o--|| Concept : "domain_concept_id_2"
     FactRelationship }o--|| Concept : "relationship_concept_id"
@@ -161,10 +186,14 @@ erDiagram
     Death }o--|| Concept : "death_type_concept_id"
     Death }o--|| Concept : "cause_concept_id"
     Death }o--|| Concept : "cause_source_concept_id"
+    DeathIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    DeathIdentifier }o--|| Death : "internal_id"
     MeasurementRelation }o--|| Person : "person_id"
     MeasurementRelation }o--|| Measurement : "from_measurement_id"
     MeasurementRelation }o--|| Measurement : "to_measurement_id"
     MeasurementRelation }o--|| Concept : "measurement_relation_concept_id"
+    MeasurementRelationIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    MeasurementRelationIdentifier }o--|| MeasurementRelation : "internal_id"
     PayerPlanPeriod }o--|| Person : "person_id"
     PayerPlanPeriod }o--|| Concept : "payer_concept_id"
     PayerPlanPeriod }o--|| Concept : "payer_source_concept_id"
@@ -253,14 +282,6 @@ erDiagram
         UUID id PK
         UUID organization_id FK
         UUID identifier_issuer_id FK
-    }
-
-    ExternalIdentifier {
-        UUID id PK
-        enum identifier_type
-        UUID identifier_issuer_id FK
-        string external_id
-        UUID internal_id
     }
 
     Site {
@@ -498,6 +519,13 @@ erDiagram
         UUID person_type_concept_id FK
     }
 
+    PersonIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
     ObservationPeriod {
         UUID provenance_id
         string source_traceback
@@ -508,6 +536,13 @@ erDiagram
         UUID period_type_concept_id FK
         string observation_period_start_iso_interval
         string observation_period_end_iso_interval
+    }
+
+    ObservationPeriodIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
     }
 
     VisitOccurrence {
@@ -530,6 +565,13 @@ erDiagram
         UUID discharged_to_concept_id FK
         string discharged_to_source_value
         UUID preceding_visit_occurrence_id
+    }
+
+    VisitOccurrenceIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
     }
 
     VisitDetail {
@@ -556,6 +598,13 @@ erDiagram
         UUID visit_occurrence_id FK
     }
 
+    VisitDetailIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
     ConditionOccurrence {
         UUID provenance_id
         string source_traceback
@@ -579,6 +628,13 @@ erDiagram
         string condition_end_iso_interval
     }
 
+    ConditionOccurrenceIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
     ProcedureOccurrence {
         UUID provenance_id
         string source_traceback
@@ -599,6 +655,13 @@ erDiagram
         UUID procedure_source_concept_id FK
         string modifier_source_value
         string procedure_iso_interval
+    }
+
+    ProcedureOccurrenceIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
     }
 
     DrugExposure {
@@ -631,6 +694,13 @@ erDiagram
         string drug_exposure_end_iso_interval
     }
 
+    DrugExposureIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
     DeviceExposure {
         UUID provenance_id
         string source_traceback
@@ -655,6 +725,13 @@ erDiagram
         UUID unit_source_concept_id FK
         string device_exposure_start_iso_interval
         string device_exposure_end_iso_interval
+    }
+
+    DeviceExposureIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
     }
 
     Measurement {
@@ -687,6 +764,13 @@ erDiagram
         UUID derived_from_specimen_id
     }
 
+    MeasurementIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
     Observation {
         UUID provenance_id
         string source_traceback
@@ -715,6 +799,13 @@ erDiagram
         string value_as_iso_interval
     }
 
+    ObservationIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
     Specimen {
         UUID provenance_id
         string source_traceback
@@ -738,6 +829,13 @@ erDiagram
         UUID derived_from_specimen_concept_id FK
     }
 
+    SpecimenIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
     Note {
         UUID provenance_id
         string source_traceback
@@ -759,6 +857,13 @@ erDiagram
         UUID note_event_field_concept_id FK
     }
 
+    NoteIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
     NoteNlp {
         UUID provenance_id
         string source_traceback
@@ -776,6 +881,13 @@ erDiagram
         string term_temporal
         string term_modifiers
         string offset
+    }
+
+    NoteNlpIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
     }
 
     FactRelationship {
@@ -800,12 +912,26 @@ erDiagram
         UUID cause_source_concept_id FK
     }
 
+    DeathIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
     MeasurementRelation {
         UUID measurement_relation_id PK
         UUID person_id FK
         UUID from_measurement_id FK
         UUID to_measurement_id FK
         UUID measurement_relation_concept_id FK
+    }
+
+    MeasurementRelationIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
     }
 
     PayerPlanPeriod {

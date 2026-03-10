@@ -4,6 +4,7 @@ from uuid import UUID
 
 from pydantic import Field, field_validator
 
+from gen_epix.commondb.domain.model import BaseIdentifier
 from gen_epix.fastapp import Model
 from gen_epix.fastapp.domain import Entity, create_links
 from gen_epix.fastapp.domain.util import create_keys
@@ -1554,3 +1555,243 @@ class Death(Model, DataLineageMixin):
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
         return validate_int_for_uuid_field(value)
+
+
+class PersonIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        Person,
+        relationship_field_name="person",
+        snake_case_plural_name="person_identifiers",
+        table_name="person_identifier",
+    )
+    NAME: ClassVar = "PersonIdentifier"
+    MODEL_CLASS: ClassVar = Person
+
+    person: Person|None = Field(
+        default=None,
+        description="The person that this identifier is associated with."
+    )
+
+
+class ObservationPeriodIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        ObservationPeriod,
+        relationship_field_name="observation_period",
+        snake_case_plural_name="observation_period_identifiers",
+        table_name="observation_period_identifier",
+    )
+    NAME: ClassVar = "ObservationPeriodIdentifier"
+    MODEL_CLASS: ClassVar = ObservationPeriod
+
+    observation_period: ObservationPeriod | None = Field(
+        default=None,
+        description="The observation period that this identifier is associated with."
+    )
+
+
+class VisitOccurrenceIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        VisitOccurrence,
+        relationship_field_name="visit_occurrence",
+        snake_case_plural_name="visit_occurrence_identifiers",
+        table_name="visit_occurrence_identifier",
+    )
+    NAME: ClassVar = "VisitOccurrenceIdentifier"
+    MODEL_CLASS: ClassVar = VisitOccurrence
+
+    visit_occurrence: VisitOccurrence | None = Field(
+        default=None,
+        description="The visit occurrence that this identifier is associated with."
+    )
+
+
+class VisitDetailIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        VisitDetail,
+        relationship_field_name="visit_detail",
+        snake_case_plural_name="visit_detail_identifiers",
+        table_name="visit_detail_identifier",
+    )
+    NAME: ClassVar = "VisitDetailIdentifier"
+    MODEL_CLASS: ClassVar = VisitDetail
+
+    visit_detail: VisitDetail | None = Field(
+        default=None,
+        description="The visit detail that this identifier is associated with."
+    )
+
+
+class ConditionOccurrenceIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        ConditionOccurrence,
+        relationship_field_name="condition_occurrence",
+        snake_case_plural_name="condition_occurrence_identifiers",
+        table_name="condition_occurrence_identifier",
+    )
+    NAME: ClassVar = "ConditionOccurrenceIdentifier"
+    MODEL_CLASS: ClassVar = ConditionOccurrence
+
+    condition_occurrence: ConditionOccurrence | None = Field(
+        default=None,
+        description="The condition occurrence that this identifier is associated with."
+    )
+
+
+class ProcedureOccurrenceIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        ProcedureOccurrence,
+        relationship_field_name="procedure_occurrence",
+        snake_case_plural_name="procedure_occurrence_identifiers",
+        table_name="procedure_occurrence_identifier",
+    )
+    NAME: ClassVar = "ProcedureOccurrenceIdentifier"
+    MODEL_CLASS: ClassVar = ProcedureOccurrence
+
+    procedure_occurrence: ProcedureOccurrence | None = Field(
+        default=None,
+        description="The procedure occurrence that this identifier is associated with."
+    )
+
+
+class DrugExposureIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        DrugExposure,
+        relationship_field_name="drug_exposure",
+        snake_case_plural_name="drug_exposure_identifiers",
+        table_name="drug_exposure_identifier",
+    )
+    NAME: ClassVar = "DrugExposureIdentifier"
+    MODEL_CLASS: ClassVar = DrugExposure
+
+    drug_exposure: DrugExposure | None = Field(
+        default=None,
+        description="The drug exposure that this identifier is associated with."
+    )
+
+
+class DeviceExposureIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        DeviceExposure,
+        relationship_field_name="device_exposure",
+        snake_case_plural_name="device_exposure_identifiers",
+        table_name="device_exposure_identifier",
+    )
+    NAME: ClassVar = "DeviceExposureIdentifier"
+    MODEL_CLASS: ClassVar = DeviceExposure
+
+    device_exposure: DeviceExposure | None = Field(
+        default=None,
+        description="The device exposure that this identifier is associated with."
+    )
+
+
+class MeasurementIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        Measurement,
+        relationship_field_name="measurement",
+        snake_case_plural_name="measurement_identifiers",
+        table_name="measurement_identifier",
+    )
+    NAME: ClassVar = "MeasurementIdentifier"
+    MODEL_CLASS: ClassVar = Measurement
+
+    measurement: Measurement | None = Field(
+        default=None,
+        description="The measurement that this identifier is associated with."
+    )
+
+
+class ObservationIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        Observation,
+        relationship_field_name="observation",
+        snake_case_plural_name="observation_identifiers",
+        table_name="observation_identifier",
+    )
+    NAME: ClassVar = "ObservationIdentifier"
+    MODEL_CLASS: ClassVar = Observation
+
+    observation: Observation | None = Field(
+        default=None,
+        description="The observation that this identifier is associated with."
+    )
+
+
+class SpecimenIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        Specimen,
+        relationship_field_name="specimen",
+        snake_case_plural_name="specimen_identifiers",
+        table_name="specimen_identifier",
+    )
+    NAME: ClassVar = "SpecimenIdentifier"
+    MODEL_CLASS: ClassVar = Specimen
+
+    specimen: Specimen | None = Field(
+        default=None,
+        description="The specimen that this identifier is associated with."
+    )
+
+
+class NoteIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        Note,
+        relationship_field_name="note",
+        snake_case_plural_name="note_identifiers",
+        table_name="note_identifier",
+    )
+    NAME: ClassVar = "NoteIdentifier"
+    MODEL_CLASS: ClassVar = Note
+
+    note: Note | None = Field(
+        default=None,
+        description="The note that this identifier is associated with."
+    )
+
+
+class NoteNlpIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        NoteNlp,
+        relationship_field_name="note_nlp",
+        snake_case_plural_name="note_nlp_identifiers",
+        table_name="note_nlp_identifier",
+    )
+    NAME: ClassVar = "NoteNlpIdentifier"
+    MODEL_CLASS: ClassVar = NoteNlp
+
+    note_nlp: NoteNlp | None = Field(
+        default=None,
+        description="The note NLP that this identifier is associated with."
+    )
+
+
+class MeasurementRelationIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        MeasurementRelation,
+        relationship_field_name="measurement_relation",
+        snake_case_plural_name="measurement_relation_identifiers",
+        table_name="measurement_relation_identifier",
+    )
+    NAME: ClassVar = "MeasurementRelationIdentifier"
+    MODEL_CLASS: ClassVar = MeasurementRelation
+
+    measurement_relation: MeasurementRelation | None = Field(
+        default=None,
+        description="The measurement relation that this identifier is associated with."
+    )
+
+
+class DeathIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        Death,
+        relationship_field_name="death",
+        snake_case_plural_name="death_identifiers",
+        table_name="death_identifier",
+    )
+    NAME: ClassVar = "DeathIdentifier"
+    MODEL_CLASS: ClassVar = Death
+
+    death: Death | None = Field(
+        default=None,
+        description="The death that this identifier is associated with."
+    )

@@ -62,7 +62,7 @@ class SampleBatchUploader(BatchUploader):
         """
         success = True
 
-        success &= self.verify_parents_external_identifiers(cmd, batch_result, uow)
+        success &= self.verify_parents_identifiers(cmd, batch_result, uow)
         success &= self.verify_parents(cmd, batch_result, uow)
         # Verify existence and consistency of child models as needed
         success &= _verify_sample_children(self, cmd, batch_result, uow)
@@ -92,7 +92,7 @@ class SampleBatchUploader(BatchUploader):
         success &= self.update_children(cmd, batch_result, uow)
         success &= _update_profile_distances(self, cmd, batch_result, uow)
         # Create external identifiers
-        success &= self.create_external_identifiers(cmd, batch_result, uow)
+        success &= self.create_identifiers(cmd, batch_result, uow)
 
         return success
 

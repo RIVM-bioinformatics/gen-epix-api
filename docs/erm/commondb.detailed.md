@@ -1,6 +1,6 @@
 # commondb — Detailed Entity-Relationship Diagram
 
-Auto-generated from domain model definitions.  Contains **15** persistable entities with their field definitions.
+Auto-generated from domain model definitions.  Contains **14** persistable entities with their field definitions.
 
 ```mermaid
 erDiagram
@@ -13,7 +13,6 @@ erDiagram
     DataCollectionSetMember }o--|| DataCollection : "data_collection_id"
     OrganizationIdentifierIssuerLink }o--|| Organization : "organization_id"
     OrganizationIdentifierIssuerLink }o--|| IdentifierIssuer : "identifier_issuer_id"
-    ExternalIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
     Site }o--|| Organization : "organization_id"
     Contact }o--|| Site : "site_id"
     User }o--|| Organization : "organization_id"
@@ -81,14 +80,6 @@ erDiagram
         UUID id PK
         UUID organization_id FK
         UUID identifier_issuer_id FK
-    }
-
-    ExternalIdentifier {
-        UUID id PK
-        enum identifier_type
-        UUID identifier_issuer_id FK
-        string external_id
-        UUID internal_id
     }
 
     Site {

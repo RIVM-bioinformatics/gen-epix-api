@@ -193,10 +193,6 @@ class ContactCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Contact
 
 
-class ExternalIdentifierCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.ExternalIdentifier
-
-
 class IdentifierIssuerCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.IdentifierIssuer
 
