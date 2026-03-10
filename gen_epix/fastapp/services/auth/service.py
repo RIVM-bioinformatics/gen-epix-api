@@ -2,6 +2,7 @@ import logging
 import ssl
 import threading
 import time
+from collections.abc import Callable
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -26,10 +27,19 @@ from gen_epix.fastapp.user_manager import BaseUserManager
 class AuthService(BaseAuthService):
 
     DEFAULT_IS_PUBLIC_IDP = False  # Security: IDPs are not public by default
+    DEFAULT_ROOT_TOKEN_TIME_TO_LIVE = (
+        15 * 60
+    )  # 15 minutes, to mitigate risk of leaked root tokens being used by attackers
+
+    _MAX_N_IDP_CLIENTS = 5  # Maximum currently supported number of IDP clients, can be increased if needed but requires code changes
 
     def __init__(
         self,
         app: App,
+        auto_create_new_users: bool = False,
+        root_token_time_to_live: (
+            int | None
+        ) = None,  # None will set the default, negative value or zero will disable root token expiration
         logger: logging.Logger | None = None,
         setup_logger: logging.Logger | None = None,
         idps_cfg: list[dict[str, str | list]] | None = None,
@@ -56,6 +66,13 @@ class AuthService(BaseAuthService):
         self._init_idp_clients(app, idps_cfg, ssl_context)
 
         # Initialize no authentication user
+        self._auto_create_new_users = auto_create_new_users
+        if root_token_time_to_live is not None and root_token_time_to_live <= 0:
+            self._root_token_time_to_live = None
+        else:
+            self._root_token_time_to_live = (
+                root_token_time_to_live or self.DEFAULT_ROOT_TOKEN_TIME_TO_LIVE
+            )
         self._no_auth_user: model.User
         self._no_auth_idp_client: IdpClient = MockIDPClient(logger=logger)
 
@@ -77,8 +94,9 @@ class AuthService(BaseAuthService):
                         idp_client_id=idp_client.id,
                     )
                     user = await self.get_existing_user_from_claims(claims)
-
-                    self._test_root_user_for_token_time_to_live(claims, user)
+                    # If root token time to live is configured, verify that the token is not too old if the user is a root user, to mitigate risk of leaked root tokens being used by attackers
+                    if self._root_token_time_to_live is not None:
+                        self._verify_root_user_for_token_time_to_live(claims, user)
                     return user
                 except exc.UnauthorizedAuthError:
                     continue
@@ -96,7 +114,7 @@ class AuthService(BaseAuthService):
         # Init get_current_user function definition and environment
         # TODO: generate get_current_user and get_new_user functions
         # dynamically based on number of authentication services
-        n_security_bases = len(self._idp_clients)
+        n_idp_clients = len(self._idp_clients)
         if self._logger:
             self._logger.info(
                 self.create_log_message(
@@ -105,7 +123,17 @@ class AuthService(BaseAuthService):
                 )
             )
 
-        idp_client_list = self._idp_clients + ([None] * (5 - len(self._idp_clients)))
+        if n_idp_clients > self._MAX_N_IDP_CLIENTS:
+            msg = (
+                f"Number of configured IDP clients ({n_idp_clients}) exceeds "
+                f"maximum supported number ({self._MAX_N_IDP_CLIENTS})"
+            )
+            if self._logger:
+                self._logger.error(self.create_log_message("d6f4ede7", msg))
+            raise exc.InitializationServiceError(msg)
+        idp_client_list = self._idp_clients + (
+            [None] * (self._MAX_N_IDP_CLIENTS - n_idp_clients)
+        )
 
         async def get_current_user1(
             request: Request,
@@ -114,7 +142,7 @@ class AuthService(BaseAuthService):
         ) -> model.User:
             if claims_0:
                 return await self.get_existing_user_from_claims(claims_0)
-            self._warn(request)
+            self._warn_too_many_idps(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_new_user1(
@@ -124,7 +152,7 @@ class AuthService(BaseAuthService):
         ) -> model.User:
             if claims_0:
                 return await self.get_new_user_from_claims(claims_0)
-            self._warn(request)
+            self._warn_too_many_idps(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_idp_user1(
@@ -134,7 +162,7 @@ class AuthService(BaseAuthService):
         ) -> IDPUser:
             if claims_0:
                 return await self.get_idp_user_from_claims(claims_0)
-            self._warn(request)
+            self._warn_too_many_idps(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_current_user2(
@@ -147,7 +175,7 @@ class AuthService(BaseAuthService):
                 return await self.get_existing_user_from_claims(claims_0)
             if claims_1:
                 return await self.get_existing_user_from_claims(claims_1)
-            self._warn(request)
+            self._warn_too_many_idps(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_new_user2(
@@ -160,7 +188,7 @@ class AuthService(BaseAuthService):
                 return await self.get_new_user_from_claims(claims_0)
             if claims_1:
                 return await self.get_new_user_from_claims(claims_1)
-            self._warn(request)
+            self._warn_too_many_idps(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_idp_user2(
@@ -173,7 +201,7 @@ class AuthService(BaseAuthService):
                 return await self.get_idp_user_from_claims(claims_0)
             if claims_1:
                 return await self.get_idp_user_from_claims(claims_1)
-            self._warn(request)
+            self._warn_too_many_idps(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_current_user3(
@@ -189,7 +217,7 @@ class AuthService(BaseAuthService):
                 return await self.get_existing_user_from_claims(claims_1)
             if claims_2:
                 return await self.get_existing_user_from_claims(claims_2)
-            self._warn(request)
+            self._warn_too_many_idps(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_new_user3(
@@ -205,7 +233,7 @@ class AuthService(BaseAuthService):
                 return await self.get_new_user_from_claims(claims_1)
             if claims_2:
                 return await self.get_new_user_from_claims(claims_2)
-            self._warn(request)
+            self._warn_too_many_idps(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_idp_user3(
@@ -221,7 +249,7 @@ class AuthService(BaseAuthService):
                 return await self.get_idp_user_from_claims(claims_1)
             if claims_2:
                 return await self.get_idp_user_from_claims(claims_2)
-            self._warn(request)
+            self._warn_too_many_idps(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_current_user4(
@@ -240,7 +268,7 @@ class AuthService(BaseAuthService):
                 return await self.get_existing_user_from_claims(claims_2)
             if claims_3:
                 return await self.get_existing_user_from_claims(claims_3)
-            self._warn(request)
+            self._warn_too_many_idps(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_new_user4(
@@ -259,7 +287,7 @@ class AuthService(BaseAuthService):
                 return await self.get_new_user_from_claims(claims_2)
             if claims_3:
                 return await self.get_new_user_from_claims(claims_3)
-            self._warn(request)
+            self._warn_too_many_idps(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_idp_user4(
@@ -278,7 +306,7 @@ class AuthService(BaseAuthService):
                 return await self.get_idp_user_from_claims(claims_2)
             if claims_3:
                 return await self.get_idp_user_from_claims(claims_3)
-            self._warn(request)
+            self._warn_too_many_idps(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_current_user5(
@@ -300,7 +328,7 @@ class AuthService(BaseAuthService):
                 return await self.get_existing_user_from_claims(claims_3)
             if claims_4:
                 return await self.get_existing_user_from_claims(claims_4)
-            self._warn(request)
+            self._warn_too_many_idps(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_new_user5(
@@ -322,7 +350,7 @@ class AuthService(BaseAuthService):
                 return await self.get_new_user_from_claims(claims_3)
             if claims_4:
                 return await self.get_new_user_from_claims(claims_4)
-            self._warn(request)
+            self._warn_too_many_idps(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_idp_user5(
@@ -344,7 +372,7 @@ class AuthService(BaseAuthService):
                 return await self.get_idp_user_from_claims(claims_3)
             if claims_4:
                 return await self.get_idp_user_from_claims(claims_4)
-            self._warn(request)
+            self._warn_too_many_idps(request)
             raise exc.UnauthorizedAuthError()
 
         get_idp_user_functions = [
@@ -370,8 +398,8 @@ class AuthService(BaseAuthService):
         ]
 
         # Create CurrentUser/NewUser, injecting get_current_user/get_new_user
-        return self._create_or_inject_current_or_new_user(
-            n_security_bases,
+        return self._create_user_dependencies_from_callables(
+            n_idp_clients,
             get_idp_user_functions,
             get_current_user_functions,
             get_new_user_functions,
@@ -426,7 +454,7 @@ class AuthService(BaseAuthService):
 
         return registered_user_dependency, new_user_dependency, idp_user_dependency
 
-    def _warn(self, request: Request) -> None:
+    def _warn_too_many_idps(self, request: Request) -> None:
         if self._logger:
             self._logger.warning(
                 self.create_log_message(
@@ -436,17 +464,17 @@ class AuthService(BaseAuthService):
                 )
             )
 
-    def _create_or_inject_current_or_new_user(
+    def _create_user_dependencies_from_callables(
         self,
-        n_security_bases: int,
-        get_idp_user_functions: list[Any],
-        get_current_user_functions: list[Any],
-        get_new_user_functions: list[Any],
+        n_idp_clients: int,
+        get_idp_user_functions: list[Callable],
+        get_current_user_functions: list[Callable],
+        get_new_user_functions: list[Callable],
     ) -> tuple[model.User, model.User, IDPUser]:
-        if n_security_bases > len(get_current_user_functions):
+        if n_idp_clients > len(get_current_user_functions):
             msg = (
                 f"More than {len(get_current_user_functions)} "
-                "({n_security_bases}) not implemented"
+                f"({n_idp_clients}) not implemented"
             )
             if self._logger:
                 self._logger.error(self.create_log_message("d6f4ede7", msg))
@@ -454,21 +482,21 @@ class AuthService(BaseAuthService):
         registered_user_dependency: model.User = Annotated[  # type: ignore
             model.User,
             Security(
-                get_current_user_functions[n_security_bases - 1],  # type: ignore
+                get_current_user_functions[n_idp_clients - 1],
                 scopes=["openid", "profile"],
             ),
         ]
         new_user_dependency: model.User = Annotated[  # type: ignore
             model.User,
             Security(
-                get_new_user_functions[n_security_bases - 1],  # type: ignore
+                get_new_user_functions[n_idp_clients - 1],
                 scopes=["openid", "profile"],
             ),
         ]
         idp_user_dependency: IDPUser = Annotated[  # type: ignore
             IDPUser,
             Security(
-                get_idp_user_functions[n_security_bases - 1],  # type: ignore
+                get_idp_user_functions[n_idp_clients - 1],
                 scopes=["openid", "profile"],
             ),
         ]
@@ -517,7 +545,7 @@ class AuthService(BaseAuthService):
         user_manager = self.app.user_manager
         if user_manager:
             # Use user manager to create user
-            new_user = user_manager.get_user_instance_from_claims(claims.claims)
+            new_user = user_manager.construct_user_instance_from_claims(claims.claims)
             if new_user is None:
                 if self._logger:
                     self._logger.warning(
@@ -533,28 +561,36 @@ class AuthService(BaseAuthService):
             new_user = model.User(**claims.claims)  # type: ignore
         return new_user
 
-    def _test_root_user_for_token_time_to_live(
+    def _verify_root_user_for_token_time_to_live(
         self, claims: Claims, user: model.User
     ) -> None:
-        user_manager = self.app.user_manager
-        root_user_cfg = self.app.cfg["service"]["auth"]["props"]["root"]["user"]
-        token_time_to_live = root_user_cfg.get("token_time_to_live", None)
-        if user_manager.is_root_user(user) and token_time_to_live:
-            # get token expiration and only allow if token lifetime is less than configured value,
-            # to mitigate risk of leaked root tokens being used by attackers
-            token_iat: int = claims.claims.get("iat", 0)
-            if token_iat and int(time.time()) - token_iat > token_time_to_live:
-                if self._logger:
-                    self._logger.warning(
-                        self.create_log_message(
-                            "548f1e15",
-                            "Root token with long lifetime used, rejecting authentication",
-                            token_iat=token_iat,
-                        )
-                    )
-                raise exc.UnauthorizedAuthError(
-                    f"Root tokens must have a lifetime of less than {token_time_to_live} seconds"
+        """
+        Verify that if the user is a root user, the token is not too old based on the
+        configured root token time to live, to mitigate risk of leaked root tokens
+        being used by attackers.
+        """
+        if not self._root_token_time_to_live:
+            # No root token time to live configured, no need to verify
+            return
+        if not self.app.user_manager.is_root_user(user):
+            # Not a root user, no need to verify
+            return
+        token_iat: int = claims.claims.get("iat", 0)
+        if int(time.time()) - token_iat <= self._root_token_time_to_live:
+            # Token is not too old, allow authentication
+            return
+        # Token is too old, log and reject authentication
+        if self._logger:
+            self._logger.warning(
+                self.create_log_message(
+                    "548f1e15",
+                    "Root token lifetime longer than root token max time to live, rejecting authentication",
+                    token_iat=token_iat,
                 )
+            )
+        raise exc.UnauthorizedAuthError(
+            f"Root tokens must have a lifetime of less than {self._root_token_time_to_live} seconds"
+        )
 
     async def get_existing_user_from_claims(
         self, claims: Claims, request_userinfo: bool = True
@@ -588,7 +624,7 @@ class AuthService(BaseAuthService):
                             exception=exception,
                         )
                     )
-            self._test_root_user_for_token_time_to_live(claims, user)
+            self._verify_root_user_for_token_time_to_live(claims, user)
 
             return user
 
@@ -619,12 +655,17 @@ class AuthService(BaseAuthService):
                     )
                 return user_manager.create_root_user_from_claims(claims.claims)
 
-            # Automatically create the user if configured
-            return self._create_user_from_claims(
-                claims, issuer, sub, user_manager, user_key
-            )
+            # Auto-create the user if configured
+            if self._auto_create_new_users:
+                return self._auto_create_new_user(
+                    claims, issuer, sub, user_manager, user_key
+                )
+            else:
+                raise exc.UnauthorizedAuthError(
+                    "User does not exist and auto-creation is disabled"
+                )
 
-    def _create_user_from_claims(
+    def _auto_create_new_user(
         self,
         claims: Claims,
         issuer: str,
@@ -633,15 +674,16 @@ class AuthService(BaseAuthService):
         user_key: str,
     ) -> model.User:
         try:
-            user_or_none = user_manager.create_user_from_claims(claims.claims)
-            if not user_or_none:
-                raise exc.UnauthorizedAuthError()
-            user = user_or_none
+            user = user_manager.auto_create_new_user(claims.claims)
+            if user is None:
+                raise exc.UnauthorizedAuthError(
+                    "Failed to auto-create user from claims"
+                )
             if self._logger:
                 self._logger.info(
                     self.create_log_message(
                         "fe8bfbd0",
-                        "Automatically created user",
+                        "Auto-created user",
                         issuer=issuer,
                         sub=sub,
                         user_key=user_key,
@@ -653,14 +695,14 @@ class AuthService(BaseAuthService):
                 self._logger.error(
                     self.create_log_message(
                         "08e3c18b",
-                        "Could not automatically create user",
+                        "Could not auto-create user",
                         issuer=issuer,
                         sub=sub,
                         user_key=user_key,
                         exception=exception,
                     )
                 )
-            raise exc.UnauthorizedAuthError()
+            raise exc.UnauthorizedAuthError("Failed to auto-create user from claims")
 
     def _generate_user_key_from_claims(
         self,

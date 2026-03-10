@@ -162,34 +162,6 @@ class BaseRbacService(BaseService):
                 permissions,
             )
 
-    def _validate_and_register_role(
-        self,
-        root_role: Hashable | None,
-        on_missing_root_permissions: str,
-        kwargs: Any,
-        all_permissions: set[Permission],
-        role: Hashable,
-        permissions: set[Permission],
-    ) -> None:
-        if root_role and role == root_role:
-            missing_permissions = all_permissions - permissions
-            if missing_permissions:
-                if on_missing_root_permissions == "raise":
-                    missing_permissions_str = ", ".join(
-                        [str(x) for x in missing_permissions]
-                    )
-                    raise exc.InitializationServiceError(
-                        f"Root role {root_role} is missing permissions: {missing_permissions_str}"
-                    )
-                elif on_missing_root_permissions == "add":
-                    # Add all missing permissions
-                    permissions = all_permissions
-                else:
-                    raise NotImplementedError(
-                        f"Unknown on_missing_root_permissions strategy: {on_missing_root_permissions}"
-                    )
-        self.register_role(role, permissions, **kwargs)
-
     def unregister_role(self, role: Hashable) -> None:
         """
         Unregister a role. In case of dynamic roles, i.e. that can be changed at
@@ -239,6 +211,12 @@ class BaseRbacService(BaseService):
         """
         permissions = self.app.domain.permissions - self._permissions_without_rbac
         return {self.app.domain.get_command_for_permission(x) for x in permissions}
+
+    def get_roles(self) -> set[Hashable]:
+        """
+        Get all registered roles.
+        """
+        return set(self._permissions_by_role.keys())
 
     def get_sub_roles(self, role: Hashable) -> set[Hashable]:
         """
@@ -373,6 +351,34 @@ class BaseRbacService(BaseService):
         # Register the RBAC policy for all command classes that are subject to RBAC
         for command_class in self.get_command_classes_with_rbac():
             self.app.register_policy(command_class, rbac_policy, EventTiming.BEFORE)
+
+    def _validate_and_register_role(
+        self,
+        root_role: Hashable | None,
+        on_missing_root_permissions: str,
+        kwargs: Any,
+        all_permissions: set[Permission],
+        role: Hashable,
+        permissions: set[Permission],
+    ) -> None:
+        if root_role and role == root_role:
+            missing_permissions = all_permissions - permissions
+            if missing_permissions:
+                if on_missing_root_permissions == "raise":
+                    missing_permissions_str = ", ".join(
+                        [str(x) for x in missing_permissions]
+                    )
+                    raise exc.InitializationServiceError(
+                        f"Root role {root_role} is missing permissions: {missing_permissions_str}"
+                    )
+                elif on_missing_root_permissions == "add":
+                    # Add all missing permissions
+                    permissions = all_permissions
+                else:
+                    raise NotImplementedError(
+                        f"Unknown on_missing_root_permissions strategy: {on_missing_root_permissions}"
+                    )
+        self.register_role(role, permissions, **kwargs)
 
     @staticmethod
     def expand_hierarchical_role_permissions(

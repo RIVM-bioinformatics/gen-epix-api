@@ -1,6 +1,6 @@
 from test.fastapp.enum import ServiceType
 from test.fastapp.unit.auth.mock_jwk_and_token import MockJWKAndToken
-from test.fastapp.user_manager import UserManager
+from test.fastapp.user_manager import MOCK_USER, UserManager
 
 import jwt
 from fastapi import FastAPI
@@ -25,6 +25,7 @@ class AuthTestClient:
     def __init__(self) -> None:
         # Generate fast_api and test client
         user_manager = UserManager()
+        user_manager.users = {"user1@org1.org": MOCK_USER}
         app = App(user_manager=user_manager, logger=None)
         idps_cfg: list[dict[str, str | list]] = [
             {

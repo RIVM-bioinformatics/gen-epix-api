@@ -373,10 +373,11 @@ class AppCfg(BaseAppCfg):
         self._setup_logger.setLevel(log_level)
         pinned_logger_names = set(_PINNED_THIRD_PARTY_LOGGERS)
         pinned_logger_names.update(
-            AppCfg._prefix_logger(self._logger_prefix, suffix)
-            for suffix in _PINNED_LOCAL_LOGGER_SUFFIXES
+            AppCfg._prefix_logger(self._logger_prefix, x)
+            for x in _PINNED_LOCAL_LOGGER_SUFFIXES
         )
         for logger_name, logger_cfg in self._logging_config_yaml["loggers"].items():
+            assert isinstance(logger_cfg, dict)
             curr_logger = logging.getLogger(logger_name)
             if self._log_setup:
                 self.setup_logger.debug(

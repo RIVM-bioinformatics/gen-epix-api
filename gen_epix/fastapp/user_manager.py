@@ -17,17 +17,22 @@ class BaseUserManager(abc.ABC):
     a JWT token.
     """
 
+    STANDARD_EMAIL_CLAIM = "email"
+
     def get_user_key_from_claims(self, claims: dict[str, Any]) -> str | None:
         """
         Get the user key, which uniquely identifies the user across systems, from the
-        claims. The email claim is used here as the default user key, override this
-        method if another key should be used.
+        claims. The email claim is used here as the default user key, with the value
+        set to lowercase to allow case-insensitive matching. Empty string as email is
+        set to None. Override this method if another key should be used.
         """
-        email: str = claims.get("email").lower() if "email" in claims else None
-        return email.lower() if email else None
+        email_claim: str | None = claims.get(self.STANDARD_EMAIL_CLAIM)
+        if email_claim:
+            return email_claim.lower()
+        return None
 
     @abc.abstractmethod
-    def get_user_instance_from_claims(
+    def construct_user_instance_from_claims(
         self, claims: dict[str, Any]
     ) -> model.User | None:
         raise NotImplementedError
@@ -45,7 +50,7 @@ class BaseUserManager(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def create_user_from_claims(self, claims: dict[str, Any]) -> model.User | None:
+    def auto_create_new_user(self, claims: dict[str, Any]) -> model.User | None:
         raise NotImplementedError
 
     @abc.abstractmethod

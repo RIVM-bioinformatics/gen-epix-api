@@ -359,13 +359,13 @@ class TestGetNewUserFromClaims(BaseAuthServiceTestCase):
         # Set up mocks
         self.service._idp_client_by_id[idp_client.id] = idp_client
         idp_client.get_claims_from_userinfo.return_value = {"email": "user@example.com"}
-        self.user_manager.get_user_instance_from_claims.return_value = self.user
+        self.user_manager.construct_user_instance_from_claims.return_value = self.user
         # Execute
         new_user = self.run_async(self.service.get_new_user_from_claims(claims))
         # Verify
         self.assertIs(new_user, self.user)
         idp_client.get_claims_from_userinfo.assert_called_once_with(self.claims_token)
-        self.user_manager.get_user_instance_from_claims.assert_called_once()
+        self.user_manager.construct_user_instance_from_claims.assert_called_once()
 
     def test_get_new_user_from_claims_user_manager_none_raises(self) -> None:
         """User manager unable to create -> UnauthorizedAuthError."""
@@ -377,7 +377,7 @@ class TestGetNewUserFromClaims(BaseAuthServiceTestCase):
         idp_client.get_claims_from_userinfo.return_value = (
             {}
         )  # ensure dict for update()
-        self.user_manager.get_user_instance_from_claims.return_value = None
+        self.user_manager.construct_user_instance_from_claims.return_value = None
         # Execute/Verify
         with self.assertRaises(exc.UnauthorizedAuthError):
             self.run_async(self.service.get_new_user_from_claims(claims))
@@ -518,7 +518,9 @@ class TestRootUserTokenTimeToLive(BaseAuthServiceTestCase):
         with patch(
             "gen_epix.fastapp.services.auth.service.time.time", return_value=now
         ):
-            self.service._test_root_user_for_token_time_to_live(claims, self.root_user)
+            self.service._verify_root_user_for_token_time_to_live(
+                claims, self.root_user
+            )
 
     def test_root_token_older_than_15_minutes_is_rejected(self) -> None:
         """Root token older than configured TTL should raise UnauthorizedAuthError."""
@@ -535,7 +537,7 @@ class TestRootUserTokenTimeToLive(BaseAuthServiceTestCase):
             "gen_epix.fastapp.services.auth.service.time.time", return_value=now
         ):
             with self.assertRaises(exc.UnauthorizedAuthError):
-                self.service._test_root_user_for_token_time_to_live(
+                self.service._verify_root_user_for_token_time_to_live(
                     claims, self.root_user
                 )
 
