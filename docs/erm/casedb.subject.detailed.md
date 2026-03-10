@@ -20,7 +20,7 @@ erDiagram
     Subject {
         UUID id PK
         UUID data_collection_id FK
-        dict[IdentifierIssuer, string] external_identifiers
+        dict[IdentifierIssuer, string] identifiers
         dict[string, Any] content
     }
 

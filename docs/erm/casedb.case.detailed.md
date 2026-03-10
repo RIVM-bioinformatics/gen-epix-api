@@ -1,55 +1,67 @@
 # casedb / CASE — Detailed ERD
 
-Auto-generated.  Service type **CASE** — 34 entities.
+Auto-generated.  Service type **CASE** — 35 entities.
 
 ```mermaid
 erDiagram
     %% casedb / CASE (detailed)
 
     %% Relationships
+    CaseSetMember }o--|| CaseSet : "case_set_id"
+    CaseSetMember }o--|| Case : "case_id"
+    CaseDataCollectionLink }o--|| Case : "case_id"
+    CaseTypeSetMember }o--|| CaseTypeSet : "case_type_set_id"
+    CaseTypeSetMember }o--|| CaseType : "case_type_id"
+    CaseTypeSet }o--|| CaseTypeSetCategory : "case_type_set_category_id"
+    Case }o--|| CaseType : "case_type_id"
     CaseSet }o--|| CaseType : "case_type_id"
     CaseSet }o--|| CaseSetCategory : "case_set_category_id"
     CaseSet }o--|| CaseSetStatus : "case_set_status_id"
-    TreeAlgorithm }o--|| TreeAlgorithmClass : "tree_algorithm_class_id"
-    ColSetMember }o--|| ColSet : "col_set_id"
-    ColSetMember }o--|| Col : "col_id"
-    Dim }o--|| CaseType : "case_type_id"
-    Dim }o--|| RefDim : "ref_dim_id"
-    CaseTypeSet }o--|| CaseTypeSetCategory : "case_type_set_category_id"
-    CaseDataCollectionLink }o--|| Case : "case_id"
-    Case }o--|| CaseType : "case_type_id"
-    CaseSetDataCollectionLink }o--|| CaseSet : "case_set_id"
-    CaseTypeSetMember }o--|| CaseTypeSet : "case_type_set_id"
-    CaseTypeSetMember }o--|| CaseType : "case_type_id"
-    RefCol }o--|| RefDim : "ref_dim_id"
-    RefCol }o--|| GeneticDistanceProtocol : "genetic_distance_protocol_id"
+    CaseIdentifier }o--|| Case : "internal_id"
     Col }o--|| CaseType : "case_type_id"
     Col }o--|| Dim : "dim_id"
     Col }o--|| RefCol : "ref_col_id"
-    CaseSetMember }o--|| CaseSet : "case_set_id"
-    CaseSetMember }o--|| Case : "case_id"
+    ColSetMember }o--|| ColSet : "col_set_id"
+    ColSetMember }o--|| Col : "col_id"
+    CaseSetDataCollectionLink }o--|| CaseSet : "case_set_id"
+    TreeAlgorithm }o--|| TreeAlgorithmClass : "tree_algorithm_class_id"
+    Dim }o--|| CaseType : "case_type_id"
+    Dim }o--|| RefDim : "ref_dim_id"
+    RefCol }o--|| RefDim : "ref_dim_id"
+    RefCol }o--|| GeneticDistanceProtocol : "genetic_distance_protocol_id"
 
     %% Entity definitions
-    CaseSet {
+    CaseSetMember {
         UUID id PK
-        UUID case_type_id FK
-        UUID created_in_data_collection_id FK
-        string name
-        string description
-        timestamp created_at
-        UUID case_set_category_id FK
-        UUID case_set_status_id FK
+        UUID case_set_id FK
+        UUID case_id FK
+        enum classification
     }
 
-    TreeAlgorithm {
+    CaseDataCollectionLink {
         UUID id PK
-        UUID tree_algorithm_class_id FK
-        UUID seqdb_tree_algorithm_id
-        enum code
+        UUID case_id FK
+        UUID data_collection_id FK
+    }
+
+    CaseTypeSetMember {
+        UUID id PK
+        UUID case_type_set_id FK
+        UUID case_type_id FK
+    }
+
+    CaseTypeSet {
+        UUID id PK
         string name
         string description
-        bool is_ultrametric
-        int rank
+        UUID case_type_set_category_id FK
+        float rank
+    }
+
+    ColSet {
+        UUID id PK
+        string name
+        string description
     }
 
     CaseStats {
@@ -61,169 +73,14 @@ erDiagram
         timestamp last_case_date
     }
 
-    CaseRights {
-        UUID id
-        UUID created_in_data_collection_id
-        UUID case_type_id
-        set[UUID] data_collection_ids
-        bool is_full_access
-        set[UUID] add_data_collection_ids
-        set[UUID] remove_data_collection_ids
-        bool can_delete
-        set[UUID] shared_in_data_collection_ids
-        UUID case_id
-        set[UUID] read_col_ids
-        set[UUID] write_col_ids
-    }
-
-    RefDataAccess {
-        UUID id
-        UUID user_id
-        bool is_full_access
-        set[UUID] case_type_set_ids
-        set[UUID] case_type_ids
-        set[UUID] col_set_ids
-        set[UUID] col_ids
-        set[UUID] dim_ids
-        set[UUID] ref_dim_ids
-        set[UUID] ref_col_ids
-    }
-
-    GeneticDistanceProtocol {
-        UUID id PK
-        UUID seqdb_seq_distance_protocol_id
-        enum seqdb_seq_distance_protocol_type
-        string name
-        string description
-        float seqdb_max_stored_distance
-        bool seqdb_is_integer_distance
-        float min_scale_unit
-    }
-
-    ColSetMember {
-        UUID id PK
-        UUID col_set_id FK
-        UUID col_id FK
-    }
-
-    ReadSetForUpload {
-        UUID id PK
-        UUID case_id
-        UUID col_id
-        UUID sample_id
-        ExternalIdentifierForUpload external_sample_id
-        UUID sequencing_protocol_id
-        string sequencing_protocol_code
-    }
-
-    Dim {
-        UUID id PK
-        UUID case_type_id FK
-        UUID ref_dim_id FK
-        int occurrence
-        string code
-        string label
-        string description
-        int rank
-        bool is_case_date_dim
-    }
-
     SeqForUpload {
         UUID id PK
         UUID case_id
         UUID col_id
         UUID sample_id
-        ExternalIdentifierForUpload external_sample_id
+        IdentifierForUpload other_sample_identifier
         UUID assembly_protocol_id
         string assembly_protocol_code
-    }
-
-    CaseType {
-        UUID id PK
-        string name
-        string description
-        UUID disease_id FK
-        UUID etiological_agent_id FK
-        int create_max_n_cases
-        int read_max_n_cases
-        int read_max_tree_size
-        int update_max_n_cases
-        int delete_max_n_cases
-    }
-
-    CaseUploadResult {
-        UUID id
-        enum status
-        bool is_new
-        list[UploadLogItem] logs
-        list[UploadResult] external_identifiers
-        list[CaseDataIssue] data_issues
-        dict[UUID, string] validated_content
-        list[UploadResult] read_sets
-        list[UploadResult] seqs
-    }
-
-    TreeAlgorithmClass {
-        UUID id PK
-        string code
-        string name
-        bool is_seq_based
-        bool is_dist_based
-        int rank
-    }
-
-    CaseBatchForUpload {
-        UUID id PK
-        timestamp created_at
-        list[CaseForUpload] cases
-        any has_read_sets
-        any has_seqs
-    }
-
-    CaseTypeSet {
-        UUID id PK
-        string name
-        string description
-        UUID case_type_set_category_id FK
-        float rank
-    }
-
-    CaseSetRights {
-        UUID id
-        UUID created_in_data_collection_id
-        UUID case_type_id
-        set[UUID] data_collection_ids
-        bool is_full_access
-        set[UUID] add_data_collection_ids
-        set[UUID] remove_data_collection_ids
-        bool can_delete
-        set[UUID] shared_in_data_collection_ids
-        UUID case_set_id
-        bool read_case_set
-        bool write_case_set
-    }
-
-    CaseTypeSetCategory {
-        UUID id PK
-        string name
-        string description
-        int rank
-        enum purpose
-    }
-
-    CaseQuery {
-        UUID id
-        string label
-        UUID case_type_id
-        set[UUID] case_set_ids
-        TypedDatetimeRangeFilter datetime_range_filter
-        TypedCompositeFilter filter
-    }
-
-    CaseDataCollectionLink {
-        UUID id PK
-        UUID case_id FK
-        UUID data_collection_id FK
     }
 
     Case {
@@ -237,71 +94,35 @@ erDiagram
         dict[UUID, string] content
     }
 
-    CaseSetDataCollectionLink {
-        UUID id PK
-        UUID case_set_id FK
-        UUID data_collection_id FK
-    }
-
-    CaseTypeSetMember {
-        UUID id PK
-        UUID case_type_set_id FK
-        UUID case_type_id FK
-    }
-
-    CaseSetStatus {
-        UUID id PK
-        string name
-        string description
-    }
-
-    ColSet {
-        UUID id PK
-        string name
-        string description
-    }
-
-    CaseBatchUploadResult {
-        UUID id PK
+    CaseUploadResult {
+        UUID id
         enum status
         bool is_new
         list[UploadLogItem] logs
-        UUID batch_id
-        list[CaseUploadResult] cases
+        list[UploadResult] identifiers
+        list[CaseDataIssue] data_issues
+        dict[UUID, string] validated_content
+        list[UploadResult] read_sets
+        list[UploadResult] seqs
     }
 
-    RefCol {
+    CaseSetCategory {
         UUID id PK
-        UUID ref_dim_id FK
-        string code_suffix
-        string code
-        int rank
-        string label
-        enum col_type
-        UUID concept_set_id FK
-        UUID region_set_id FK
-        UUID genetic_distance_protocol_id FK
+        string name
         string description
-        dict[string, Any] props
     }
 
-    RefDim {
-        UUID id PK
-        enum dim_type
-        string code
-        string label
-        int rank
-        string col_code_prefix
-        string description
-        dict[string, Any] props
-    }
-
-    CaseForUpload {
-        list[ExternalIdentifierForUpload] external_identifiers
-        UUID id PK
-        Case case
-        list[ReadSetForUpload] read_sets
-        list[SeqForUpload] seqs
+    RefDataAccess {
+        UUID id
+        UUID user_id
+        bool is_full_access
+        set[UUID] case_type_set_ids
+        set[UUID] case_type_ids
+        set[UUID] col_set_ids
+        set[UUID] col_ids
+        set[UUID] dim_ids
+        set[UUID] ref_dim_ids
+        set[UUID] ref_col_ids
     }
 
     CompleteCaseType {
@@ -335,17 +156,100 @@ erDiagram
         dict[enum, UUID] case_date_col_type_map
     }
 
-    CaseSetCategory {
-        UUID id PK
-        string name
-        string description
-    }
-
     CaseQueryResult {
         UUID id
         CaseQuery case_query
         list[UUID] case_ids
         bool is_max_results_exceeded
+    }
+
+    CaseTypeSetCategory {
+        UUID id PK
+        string name
+        string description
+        int rank
+        enum purpose
+    }
+
+    CaseType {
+        UUID id PK
+        string name
+        string description
+        UUID disease_id FK
+        UUID etiological_agent_id FK
+        int create_max_n_cases
+        int read_max_n_cases
+        int read_max_tree_size
+        int update_max_n_cases
+        int delete_max_n_cases
+    }
+
+    CaseBatchUploadResult {
+        UUID id PK
+        enum status
+        bool is_new
+        list[UploadLogItem] logs
+        UUID batch_id
+        list[CaseUploadResult] cases
+    }
+
+    RefDim {
+        UUID id PK
+        enum dim_type
+        string code
+        string label
+        int rank
+        string col_code_prefix
+        string description
+        dict[string, Any] props
+    }
+
+    CaseSetRights {
+        UUID id
+        UUID created_in_data_collection_id
+        UUID case_type_id
+        set[UUID] data_collection_ids
+        bool is_full_access
+        set[UUID] add_data_collection_ids
+        set[UUID] remove_data_collection_ids
+        bool can_delete
+        set[UUID] shared_in_data_collection_ids
+        UUID case_set_id
+        bool read_case_set
+        bool write_case_set
+    }
+
+    TreeAlgorithmClass {
+        UUID id PK
+        string code
+        string name
+        bool is_seq_based
+        bool is_dist_based
+        int rank
+    }
+
+    CaseSetQuery {
+        UUID id
+        string label
+        TypedCompositeFilter filter
+    }
+
+    CaseSet {
+        UUID id PK
+        UUID case_type_id FK
+        UUID created_in_data_collection_id FK
+        string name
+        string description
+        timestamp created_at
+        UUID case_set_category_id FK
+        UUID case_set_status_id FK
+    }
+
+    CaseIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
     }
 
     Col {
@@ -370,17 +274,121 @@ erDiagram
         dict[string, Any] props
     }
 
-    CaseSetQuery {
+    ColSetMember {
+        UUID id PK
+        UUID col_set_id FK
+        UUID col_id FK
+    }
+
+    CaseSetStatus {
+        UUID id PK
+        string name
+        string description
+    }
+
+    CaseBatchForUpload {
+        UUID id PK
+        timestamp created_at
+        list[CaseForUpload] cases
+        any has_read_sets
+        any has_seqs
+    }
+
+    CaseQuery {
         UUID id
         string label
+        UUID case_type_id
+        set[UUID] case_set_ids
+        TypedDatetimeRangeFilter datetime_range_filter
         TypedCompositeFilter filter
     }
 
-    CaseSetMember {
+    CaseSetDataCollectionLink {
         UUID id PK
         UUID case_set_id FK
-        UUID case_id FK
-        enum classification
+        UUID data_collection_id FK
+    }
+
+    CaseRights {
+        UUID id
+        UUID created_in_data_collection_id
+        UUID case_type_id
+        set[UUID] data_collection_ids
+        bool is_full_access
+        set[UUID] add_data_collection_ids
+        set[UUID] remove_data_collection_ids
+        bool can_delete
+        set[UUID] shared_in_data_collection_ids
+        UUID case_id
+        set[UUID] read_col_ids
+        set[UUID] write_col_ids
+    }
+
+    CaseForUpload {
+        list[IdentifierForUpload] identifiers
+        UUID id PK
+        Case case
+        list[ReadSetForUpload] read_sets
+        list[SeqForUpload] seqs
+    }
+
+    GeneticDistanceProtocol {
+        UUID id PK
+        UUID seqdb_seq_distance_protocol_id
+        enum seqdb_seq_distance_protocol_type
+        string name
+        string description
+        float seqdb_max_stored_distance
+        bool seqdb_is_integer_distance
+        float min_scale_unit
+    }
+
+    ReadSetForUpload {
+        UUID id PK
+        UUID case_id
+        UUID col_id
+        UUID sample_id
+        IdentifierForUpload other_sample_identifier
+        UUID sequencing_protocol_id
+        string sequencing_protocol_code
+    }
+
+    TreeAlgorithm {
+        UUID id PK
+        UUID tree_algorithm_class_id FK
+        UUID seqdb_tree_algorithm_id
+        enum code
+        string name
+        string description
+        bool is_ultrametric
+        int rank
+    }
+
+    Dim {
+        UUID id PK
+        UUID case_type_id FK
+        UUID ref_dim_id FK
+        int occurrence
+        string code
+        string label
+        string description
+        int rank
+        bool is_case_date_dim
+    }
+
+    RefCol {
+        UUID id PK
+        UUID ref_dim_id FK
+        string code_suffix
+        string code
+        int rank
+        string label
+        enum col_type
+        UUID concept_set_id FK
+        UUID region_set_id FK
+        UUID genetic_distance_protocol_id FK
+        string description
+        dict[string, Any] props
     }
 
 ```

@@ -18,6 +18,9 @@ from gen_epix.casedb.domain.command.case import (
     CaseDataCollectionLinkCrudCommand as CaseDataCollectionLinkCrudCommand,
 )
 from gen_epix.casedb.domain.command.case import (
+    CaseIdentifierCrudCommand as CaseIdentifierCrudCommand,
+)
+from gen_epix.casedb.domain.command.case import (
     CaseSetCategoryCrudCommand as CaseSetCategoryCrudCommand,
 )
 from gen_epix.casedb.domain.command.case import CaseSetCrudCommand as CaseSetCrudCommand
@@ -177,9 +180,6 @@ from gen_epix.commondb.domain.command import (
     DataCollectionSetMemberCrudCommand as DataCollectionSetMemberCrudCommand,
 )
 from gen_epix.commondb.domain.command import (
-    ExternalIdentifierCrudCommand as ExternalIdentifierCrudCommand,
-)
-from gen_epix.commondb.domain.command import (
     GetIdentityProvidersCommand as GetIdentityProvidersCommand,
 )
 from gen_epix.commondb.domain.command import (
@@ -253,6 +253,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
     ),
     enum.ServiceType.CASE: {
         CaseCrudCommand,
+        CaseIdentifierCrudCommand,
         CaseDataCollectionLinkCrudCommand,
         CaseSetCategoryCrudCommand,
         CaseSetCrudCommand,
@@ -329,5 +330,9 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.ORGANIZATION]
     ),
 }
+
+COMMON_COMMAND_MAP: dict[type[fastapp.Command], type[fastapp.Command]] = {}
+
+COMMON_COMMAND_MAP: dict[type[fastapp.Command], type[fastapp.Command]] = {}
 
 COMMON_COMMAND_MAP: dict[type[fastapp.Command], type[fastapp.Command]] = {}

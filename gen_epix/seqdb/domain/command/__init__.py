@@ -21,9 +21,6 @@ from gen_epix.commondb.domain.command import (
     DataCollectionSetMemberCrudCommand as DataCollectionSetMemberCrudCommand,
 )
 from gen_epix.commondb.domain.command import (
-    ExternalIdentifierCrudCommand as ExternalIdentifierCrudCommand,
-)
-from gen_epix.commondb.domain.command import (
     GetIdentityProvidersCommand as GetIdentityProvidersCommand,
 )
 from gen_epix.commondb.domain.command import (
@@ -96,6 +93,9 @@ from gen_epix.seqdb.domain.command.seq import (
     AlleleProfileCrudCommand as AlleleProfileCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
+    AlleleProfileIdentifierCrudCommand as AlleleProfileIdentifierCrudCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
     AssemblyProtocolCrudCommand as AssemblyProtocolCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
@@ -123,6 +123,9 @@ from gen_epix.seqdb.domain.command.seq import (
     KmerProfileCrudCommand as KmerProfileCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
+    KmerProfileIdentifierCrudCommand as KmerProfileIdentifierCrudCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
     LocusCodeMapCrudCommand as LocusCodeMapCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import LocusCrudCommand as LocusCrudCommand
@@ -132,6 +135,9 @@ from gen_epix.seqdb.domain.command.seq import (
 from gen_epix.seqdb.domain.command.seq import (
     LocusProfileCrudCommand as LocusProfileCrudCommand,
 )
+from gen_epix.seqdb.domain.command.seq import (
+    LocusProfileIdentifierCrudCommand as LocusProfileIdentifierCrudCommand,
+)
 from gen_epix.seqdb.domain.command.seq import LocusSetCrudCommand as LocusSetCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
     MlvaDetectionProtocolCrudCommand as MlvaDetectionProtocolCrudCommand,
@@ -140,12 +146,18 @@ from gen_epix.seqdb.domain.command.seq import (
     MlvaProfileCrudCommand as MlvaProfileCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
+    MlvaProfileIdentifierCrudCommand as MlvaProfileIdentifierCrudCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
     PcrMeasurementCrudCommand as PcrMeasurementCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
     PcrProtocolCrudCommand as PcrProtocolCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import ReadSetCrudCommand as ReadSetCrudCommand
+from gen_epix.seqdb.domain.command.seq import (
+    ReadSetIdentifierCrudCommand as ReadSetIdentifierCrudCommand,
+)
 from gen_epix.seqdb.domain.command.seq import (
     RefAlleleCrudCommand as RefAlleleCrudCommand,
 )
@@ -202,6 +214,9 @@ from gen_epix.seqdb.domain.command.seq import (
     SeqDistanceProtocolCrudCommand as SeqDistanceProtocolCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
+    SeqIdentifierCrudCommand as SeqIdentifierCrudCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
     SeqTaxonomyCrudCommand as SeqTaxonomyCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
@@ -212,6 +227,9 @@ from gen_epix.seqdb.domain.command.seq import (
 )
 from gen_epix.seqdb.domain.command.seq import (
     SnpProfileCrudCommand as SnpProfileCrudCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
+    SnpProfileIdentifierCrudCommand as SnpProfileIdentifierCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import TaxonCrudCommand as TaxonCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
@@ -242,6 +260,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         AlleleAlignmentCrudCommand,
         AlleleCrudCommand,
         AlleleProfileCrudCommand,
+        AlleleProfileIdentifierCrudCommand,
         AssemblyProtocolCrudCommand,
         AstMeasurementCrudCommand,
         AstPredictionCrudCommand,
@@ -250,18 +269,22 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         GeneratePhylogeneticTreeCommand,
         KmerDetectionProtocolCrudCommand,
         KmerProfileCrudCommand,
+        KmerProfileIdentifierCrudCommand,
         SequencingProtocolCrudCommand,
         LocusCodeMapCrudCommand,
         LocusCrudCommand,
         LocusDetectionProtocolCrudCommand,
         LocusProfileCrudCommand,
+        LocusProfileIdentifierCrudCommand,
         LocusSetCrudCommand,
         MlvaDetectionProtocolCrudCommand,
         MlvaProfileCrudCommand,
+        MlvaProfileIdentifierCrudCommand,
         PcrMeasurementCrudCommand,
         PcrProtocolCrudCommand,
         UploadSamplesCommand,
         ReadSetCrudCommand,
+        ReadSetIdentifierCrudCommand,
         RefAlleleCrudCommand,
         RefSeqCrudCommand,
         RefSnpCrudCommand,
@@ -283,9 +306,11 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         SeqCrudCommand,
         SeqDistanceCrudCommand,
         SeqDistanceProtocolCrudCommand,
+        SeqIdentifierCrudCommand,
         SeqTaxonomyCrudCommand,
         SnpDetectionProtocolCrudCommand,
         SnpProfileCrudCommand,
+        SnpProfileIdentifierCrudCommand,
         TaxonCrudCommand,
         TaxonomyProtocolCrudCommand,
         TaxonSetCrudCommand,

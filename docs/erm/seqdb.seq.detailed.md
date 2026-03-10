@@ -1,133 +1,208 @@
 # seqdb / SEQ — Detailed ERD
 
-Auto-generated.  Service type **SEQ** — 62 entities.
+Auto-generated.  Service type **SEQ** — 69 entities.
 
 ```mermaid
 erDiagram
     %% seqdb / SEQ (detailed)
 
     %% Relationships
-    SeqClassification }o--|| Sample : "sample_id"
-    SeqClassification }o--|| Seq : "seq_id"
-    SeqClassification }o--|| SeqClassificationProtocol : "seq_classification_protocol_id"
-    SeqClassification }o--|| SeqCategory : "primary_category_id"
-    RefSnpSetMember }o--|| RefSnpSet : "ref_snp_set_id"
-    RefSnpSetMember }o--|| RefSnp : "ref_snp_id"
-    SeqDistanceProtocol }o--|| LocusSet : "locus_set_id"
-    SeqDistanceProtocol }o--|| RefSeq : "ref_seq_id"
-    SampleDataCollectionLink }o--|| Sample : "sample_id"
-    AstMeasurement }o--|| Sample : "sample_id"
-    AstMeasurement }o--|| AstProtocol : "ast_protocol_id"
-    MlvaProfile }o--|| Sample : "sample_id"
-    MlvaProfile }o--|| Seq : "seq_id"
-    MlvaProfile }o--|| LocusSet : "locus_set_id"
-    MlvaProfile }o--|| MlvaDetectionProtocol : "mlva_detection_protocol_id"
-    KmerProfile }o--|| Sample : "sample_id"
-    KmerProfile }o--|| Seq : "seq_id"
-    KmerProfile }o--|| KmerDetectionProtocol : "kmer_detection_protocol_id"
-    SeqTaxonomy }o--|| Sample : "sample_id"
-    SeqTaxonomy }o--|| Seq : "seq_id"
-    SeqTaxonomy }o--|| TaxonomyProtocol : "taxonomy_protocol_id"
-    SeqTaxonomy }o--|| Taxon : "primary_taxon_id"
-    TreeAlgorithm }o--|| TreeAlgorithmClass : "tree_algorithm_class_id"
-    ReadSetForUpload }o--|| Sample : "sample_id"
-    ReadSetForUpload }o--|| SequencingProtocol : "sequencing_protocol_id"
-    AlleleProfileForUpload }o--|| Sample : "sample_id"
-    AlleleProfileForUpload }o--|| Seq : "seq_id"
-    AlleleProfileForUpload }o--|| LocusSet : "locus_set_id"
-    AlleleProfileForUpload }o--|| LocusDetectionProtocol : "locus_detection_protocol_id"
-    AlleleAlignment }o--|| Allele : "ref_allele_id"
-    AlleleAlignment }o--|| Allele : "allele_id"
-    AlleleAlignment }o--|| AlignmentProtocol : "alignment_protocol_id"
-    KmerProfileForUpload }o--|| Sample : "sample_id"
-    KmerProfileForUpload }o--|| Seq : "seq_id"
-    KmerProfileForUpload }o--|| KmerDetectionProtocol : "kmer_detection_protocol_id"
-    MlvaProfileForUpload }o--|| Sample : "sample_id"
-    MlvaProfileForUpload }o--|| Seq : "seq_id"
-    MlvaProfileForUpload }o--|| LocusSet : "locus_set_id"
-    MlvaProfileForUpload }o--|| MlvaDetectionProtocol : "mlva_detection_protocol_id"
-    SeqForUpload }o--|| Sample : "sample_id"
-    SeqForUpload }o--|| ReadSet : "read_set_id"
-    SeqForUpload }o--|| ReadSet : "read_set2_id"
-    SeqForUpload }o--|| AssemblyProtocol : "assembly_protocol_id"
-    AlleleForUpload }o--|| Locus : "locus_id"
-    ReadSet }o--|| Sample : "sample_id"
-    ReadSet }o--|| SequencingProtocol : "sequencing_protocol_id"
-    SampleIdentifier }o--|| Sample : "sample_id"
-    RefSeq }o--|| Taxon : "taxon_id"
-    LocusProfile }o--|| Sample : "sample_id"
-    LocusProfile }o--|| Seq : "seq_id"
-    LocusProfile }o--|| LocusSet : "locus_set_id"
-    LocusProfile }o--|| LocusDetectionProtocol : "locus_detection_protocol_id"
-    RefAllele }o--|| Locus : "locus_id"
-    SeqDistance }o--|| Sample : "sample_id"
-    SeqDistance }o--|| SeqDistanceProtocol : "seq_distance_protocol_id"
-    RefSnp }o--|| RefSeq : "ref_seq_id"
     AlleleProfile }o--|| Sample : "sample_id"
     AlleleProfile }o--|| Seq : "seq_id"
     AlleleProfile }o--|| LocusSet : "locus_set_id"
     AlleleProfile }o--|| LocusDetectionProtocol : "locus_detection_protocol_id"
-    PcrMeasurement }o--|| Sample : "sample_id"
-    PcrMeasurement }o--|| PcrProtocol : "pcr_protocol_id"
-    SnpProfile }o--|| Sample : "sample_id"
-    SnpProfile }o--|| Seq : "seq_id"
-    SnpProfile }o--|| RefSeq : "ref_seq_id"
-    SnpProfile }o--|| SnpDetectionProtocol : "snp_detection_protocol_id"
-    SeqCategory }o--|| SeqCategorySet : "seq_category_set_id"
-    SeqAlignment }o--|| Seq : "seq_id"
-    SeqAlignment }o--|| AlignmentProtocol : "alignment_protocol_id"
     SnpProfileForUpload }o--|| Sample : "sample_id"
     SnpProfileForUpload }o--|| Seq : "seq_id"
     SnpProfileForUpload }o--|| RefSeq : "ref_seq_id"
     SnpProfileForUpload }o--|| SnpDetectionProtocol : "snp_detection_protocol_id"
+    RefSnp }o--|| RefSeq : "ref_seq_id"
+    AstMeasurement }o--|| Sample : "sample_id"
+    AstMeasurement }o--|| AstProtocol : "ast_protocol_id"
+    TreeAlgorithm }o--|| TreeAlgorithmClass : "tree_algorithm_class_id"
+    RefSeq }o--|| Taxon : "taxon_id"
+    MlvaProfile }o--|| Sample : "sample_id"
+    MlvaProfile }o--|| Seq : "seq_id"
+    MlvaProfile }o--|| LocusSet : "locus_set_id"
+    MlvaProfile }o--|| MlvaDetectionProtocol : "mlva_detection_protocol_id"
+    LocusProfileIdentifier }o--|| LocusProfile : "internal_id"
+    ReadSet }o--|| Sample : "sample_id"
+    ReadSet }o--|| SequencingProtocol : "sequencing_protocol_id"
+    KmerProfileIdentifier }o--|| KmerProfile : "internal_id"
+    SeqTaxonomy }o--|| Sample : "sample_id"
+    SeqTaxonomy }o--|| Seq : "seq_id"
+    SeqTaxonomy }o--|| TaxonomyProtocol : "taxonomy_protocol_id"
+    SeqTaxonomy }o--|| Taxon : "primary_taxon_id"
+    SeqDistanceProtocol }o--|| LocusSet : "locus_set_id"
+    SeqDistanceProtocol }o--|| RefSeq : "ref_seq_id"
+    SnpProfile }o--|| Sample : "sample_id"
+    SnpProfile }o--|| Seq : "seq_id"
+    SnpProfile }o--|| RefSeq : "ref_seq_id"
+    SnpProfile }o--|| SnpDetectionProtocol : "snp_detection_protocol_id"
+    AlleleForUpload }o--|| Locus : "locus_id"
+    SeqAlignment }o--|| Seq : "seq_id"
+    SeqAlignment }o--|| AlignmentProtocol : "alignment_protocol_id"
+    SampleDataCollectionLink }o--|| Sample : "sample_id"
+    RefSnpSetMember }o--|| RefSnpSet : "ref_snp_set_id"
+    RefSnpSetMember }o--|| RefSnp : "ref_snp_id"
+    AlleleProfileForUpload }o--|| Sample : "sample_id"
+    AlleleProfileForUpload }o--|| Seq : "seq_id"
+    AlleleProfileForUpload }o--|| LocusSet : "locus_set_id"
+    AlleleProfileForUpload }o--|| LocusDetectionProtocol : "locus_detection_protocol_id"
+    KmerProfile }o--|| Sample : "sample_id"
+    KmerProfile }o--|| Seq : "seq_id"
+    KmerProfile }o--|| KmerDetectionProtocol : "kmer_detection_protocol_id"
+    SeqIdentifier }o--|| Seq : "internal_id"
+    AlleleProfileIdentifier }o--|| AlleleProfile : "internal_id"
+    ReadSetIdentifier }o--|| ReadSet : "internal_id"
+    SeqCategory }o--|| SeqCategorySet : "seq_category_set_id"
+    ReadSetForUpload }o--|| Sample : "sample_id"
+    ReadSetForUpload }o--|| SequencingProtocol : "sequencing_protocol_id"
     Seq }o--|| Sample : "sample_id"
     Seq }o--|| ReadSet : "read_set_id"
     Seq }o--|| ReadSet : "read_set2_id"
     Seq }o--|| AssemblyProtocol : "assembly_protocol_id"
+    MlvaProfileForUpload }o--|| Sample : "sample_id"
+    MlvaProfileForUpload }o--|| Seq : "seq_id"
+    MlvaProfileForUpload }o--|| LocusSet : "locus_set_id"
+    MlvaProfileForUpload }o--|| MlvaDetectionProtocol : "mlva_detection_protocol_id"
     TaxonSetMember }o--|| TaxonSet : "taxon_set_id"
     TaxonSetMember }o--|| Taxon : "taxon_id"
-    Allele }o--|| Locus : "locus_id"
     AstPrediction }o--|| Sample : "sample_id"
     AstPrediction }o--|| Seq : "seq_id"
     AstPrediction }o--|| AstProtocol : "ast_protocol_id"
+    MlvaProfileIdentifier }o--|| MlvaProfile : "internal_id"
+    SeqClassification }o--|| Sample : "sample_id"
+    SeqClassification }o--|| Seq : "seq_id"
+    SeqClassification }o--|| SeqClassificationProtocol : "seq_classification_protocol_id"
+    SeqClassification }o--|| SeqCategory : "primary_category_id"
+    RefAllele }o--|| Locus : "locus_id"
+    SeqForUpload }o--|| Sample : "sample_id"
+    SeqForUpload }o--|| ReadSet : "read_set_id"
+    SeqForUpload }o--|| ReadSet : "read_set2_id"
+    SeqForUpload }o--|| AssemblyProtocol : "assembly_protocol_id"
+    AlleleAlignment }o--|| Allele : "ref_allele_id"
+    AlleleAlignment }o--|| Allele : "allele_id"
+    AlleleAlignment }o--|| AlignmentProtocol : "alignment_protocol_id"
+    Allele }o--|| Locus : "locus_id"
+    KmerProfileForUpload }o--|| Sample : "sample_id"
+    KmerProfileForUpload }o--|| Seq : "seq_id"
+    KmerProfileForUpload }o--|| KmerDetectionProtocol : "kmer_detection_protocol_id"
+    PcrMeasurement }o--|| Sample : "sample_id"
+    PcrMeasurement }o--|| PcrProtocol : "pcr_protocol_id"
+    SnpProfileIdentifier }o--|| SnpProfile : "internal_id"
+    LocusProfile }o--|| Sample : "sample_id"
+    LocusProfile }o--|| Seq : "seq_id"
+    LocusProfile }o--|| LocusSet : "locus_set_id"
+    LocusProfile }o--|| LocusDetectionProtocol : "locus_detection_protocol_id"
+    SampleIdentifier }o--|| Sample : "internal_id"
+    SeqDistance }o--|| Sample : "sample_id"
+    SeqDistance }o--|| SeqDistanceProtocol : "seq_distance_protocol_id"
 
     %% Entity definitions
-    SeqClassification {
-        UUID sample_id FK
-        UUID id PK
-        UUID seq_id FK
-        UUID seq_classification_protocol_id FK
-        UUID primary_category_id FK
-        string classification
-        enum classification_format
-        UUID classification_hash
+    CalculateSeqDistancesResult {
+        UUID id
+        enum status
+        bool is_new
+        list[UploadLogItem] logs
+        UUID seq_distance_profile_id
     }
 
-    RefSnpSetMember {
-        UUID id PK
-        UUID ref_snp_set_id FK
-        UUID ref_snp_id FK
-        int index
-    }
-
-    SeqDistanceProtocol {
+    LocusDetectionProtocol {
         string code
         string name
         string version
         string description
         dict[string, string] props
         UUID id PK
-        enum seq_distance_protocol_type
-        UUID locus_set_id FK
-        UUID ref_seq_id FK
-        bool is_integer_distance
-        float max_stored_distance
     }
 
-    SampleDataCollectionLink {
-        UUID id PK
+    AlleleProfile {
+        float qc_score
+        enum qc_result
+        UUID seq_id FK
         UUID sample_id FK
-        UUID data_collection_id FK
+        UUID id PK
+        UUID locus_set_id FK
+        UUID locus_detection_protocol_id FK
+        int n_loci
+        string allele_profile
+        enum allele_profile_format
+        UUID allele_profile_hash
+    }
+
+    SnpProfileForUpload {
+        list[IdentifierForUpload] identifiers
+        float qc_score
+        enum qc_result
+        UUID seq_id FK
+        UUID sample_id FK
+        UUID id PK
+        UUID ref_seq_id FK
+        UUID snp_detection_protocol_id FK
+        string snp_profile
+        enum snp_profile_format
+        UUID snp_profile_hash
+        string ref_seq_code
+        string snp_detection_protocol_code
+        string aligned_nucleotide_seq
+    }
+
+    ContigAlignment {
+        string aln
+        enum aln_format
+        UUID aln_hash
+        UUID id
+        UUID ref_seq_id
+    }
+
+    Taxon {
+        UUID id PK
+        string code
+        string name
+        enum rank
+        int ncbi_taxid
+        string ictv_ictv_id
+        int snomed_sctid
+        list[int] ncbi_ancestor_taxids
+        list[UUID] ancestor_taxon_ids
+    }
+
+    RefSnp {
+        UUID id PK
+        string code
+        UUID ref_seq_id FK
+        int position
+        string nucleotide
+    }
+
+    AssemblyProtocol {
+        string code
+        string name
+        string version
+        string description
+        dict[string, string] props
+        UUID id PK
+        bool has_manual_curation
+    }
+
+    SampleUploadResult {
+        UUID id
+        enum status
+        bool is_new
+        list[UploadLogItem] logs
+        list[UploadResult] identifiers
+        list[SampleDataIssue] data_issues
+        list[UploadResult] read_sets
+        list[UploadResult] seqs
+        list[UploadResult] seq_taxonomies
+        list[UploadResult] seq_classifications
+        list[UploadResult] locus_profiles
+        list[UploadResult] allele_profiles
+        list[UploadResult] snp_profiles
+        list[UploadResult] mlva_profiles
+        list[UploadResult] kmer_profiles
+        list[UploadResult] pcr_measurements
+        list[UploadResult] ast_measurements
     }
 
     AstMeasurement {
@@ -139,12 +214,26 @@ erDiagram
         int index
     }
 
-    LocusSet {
+    TreeAlgorithm {
         UUID id PK
+        enum code
+        string name
+        string description
+        UUID tree_algorithm_class_id FK
+        bool is_ultrametric
+        int rank
+    }
+
+    RefSeq {
+        UUID id PK
+        string seq
+        enum seq_format
+        int length
         string code
         string name
-        list[UUID] locus_ids
-        any n_loci
+        string description
+        UUID taxon_id FK
+        string genbank_accession_code
     }
 
     MlvaProfile {
@@ -160,190 +249,11 @@ erDiagram
         UUID mlva_profile_hash
     }
 
-    KmerProfile {
-        float qc_score
-        enum qc_result
-        UUID seq_id FK
-        UUID sample_id FK
+    LocusProfileIdentifier {
         UUID id PK
-        UUID kmer_detection_protocol_id FK
-        string kmer_profile
-        enum kmer_profile_format
-        UUID kmer_profile_hash
-    }
-
-    SeqTaxonomy {
-        UUID sample_id FK
-        UUID id PK
-        UUID seq_id FK
-        UUID taxonomy_protocol_id FK
-        UUID primary_taxon_id FK
-        string taxonomy
-        enum taxonomy_format
-        UUID taxonomy_hash
-    }
-
-    TreeAlgorithm {
-        UUID id PK
-        enum code
-        string name
-        string description
-        UUID tree_algorithm_class_id FK
-        bool is_ultrametric
-        int rank
-    }
-
-    PcrProtocol {
-        string code
-        string name
-        string version
-        string description
-        dict[string, string] props
-        UUID id PK
-        list[string] target_names
-    }
-
-    ReadSetForUpload {
-        float qc_score
-        enum qc_result
-        string code
-        UUID sample_id FK
-        UUID id PK
-        UUID sequencing_protocol_id FK
-        string fwd_uri
-        string rev_uri
-        UUID fwd_file_id FK
-        UUID rev_file_id FK
-        enum file_format
-        enum file_compression
-        UUID fwd_reads_hash
-        UUID rev_reads_hash
-        string sequencing_run_code
-        string sequencing_protocol_code
-        any is_available
-    }
-
-    ContigAlignment {
-        string aln
-        enum aln_format
-        UUID aln_hash
-        UUID id
-        UUID ref_seq_id
-    }
-
-    AlleleProfileForUpload {
-        float qc_score
-        enum qc_result
-        UUID seq_id FK
-        UUID sample_id FK
-        UUID id PK
-        UUID locus_set_id FK
-        UUID locus_detection_protocol_id FK
-        int n_loci
-        string allele_profile
-        enum allele_profile_format
-        UUID allele_profile_hash
-        string locus_detection_protocol_code
-        string locus_set_code
-        UUID locus_code_map_id
-        string locus_code_map_code
-        list[UUID] allele_ids
-        dict[string, UUID] locus_allele_id_map
-    }
-
-    AlleleAlignment {
-        float qc_score
-        enum qc_result
-        string aln
-        enum aln_format
-        UUID aln_hash
-        UUID id PK
-        UUID ref_allele_id FK
-        UUID allele_id FK
-        UUID alignment_protocol_id FK
-    }
-
-    KmerProfileForUpload {
-        float qc_score
-        enum qc_result
-        UUID seq_id FK
-        UUID sample_id FK
-        UUID id PK
-        UUID kmer_detection_protocol_id FK
-        string kmer_profile
-        enum kmer_profile_format
-        UUID kmer_profile_hash
-        string kmer_detection_protocol_code
-        dict[string, float] kmer_frequency_map
-    }
-
-    RefSnpSet {
-        UUID id PK
-        string code
-        string name
-    }
-
-    MlvaProfileForUpload {
-        float qc_score
-        enum qc_result
-        UUID seq_id FK
-        UUID sample_id FK
-        UUID id PK
-        UUID mlva_detection_protocol_id FK
-        UUID locus_set_id FK
-        string mlva_profile
-        enum mlva_profile_format
-        UUID mlva_profile_hash
-        string mlva_detection_protocol_code
-        string locus_set_code
-        UUID locus_code_map_id
-        string locus_code_map_code
-        list[int] repeat_numbers
-        dict[string, int] locus_repeat_number_map
-    }
-
-    AlignmentProtocol {
-        string code
-        string name
-        string version
-        string description
-        dict[string, string] props
-        UUID id PK
-        bool is_multiple
-    }
-
-    SeqForUpload {
-        float qc_score
-        enum qc_result
-        string code
-        UUID sample_id FK
-        UUID id PK
-        string uri
-        UUID file_id FK
-        enum file_format
-        enum file_compression
-        UUID file_hash
-        UUID read_set_id FK
-        UUID read_set2_id FK
-        UUID assembly_protocol_id FK
-        list[Contig] contigs
-        string assembly_protocol_code
-        any is_available
-        any seq_hash
-        any n_contigs
-        any length
-        any max_contig_length
-        any min_contig_length
-        any median_contig_length
-        any n50
-    }
-
-    AlleleForUpload {
-        UUID id PK
-        string seq
-        enum seq_format
-        int length
-        UUID locus_id FK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
     }
 
     ReadSet {
@@ -365,159 +275,22 @@ erDiagram
         any is_available
     }
 
-    MlvaDetectionProtocol {
-        string code
-        string name
-        string version
-        string description
-        dict[string, string] props
+    KmerProfileIdentifier {
         UUID id PK
-    }
-
-    SampleIdentifier {
-        UUID id PK
-        UUID sample_id FK
         UUID identifier_issuer_id FK
-        string identifier
+        string external_id
+        UUID internal_id FK
     }
 
-    LocusDetectionProtocol {
-        string code
-        string name
-        string version
-        string description
-        dict[string, string] props
+    SeqTaxonomy {
+        UUID sample_id FK
         UUID id PK
-    }
-
-    RefSeq {
-        UUID id PK
-        string seq
-        enum seq_format
-        int length
-        string code
-        string name
-        string description
-        UUID taxon_id FK
-        string genbank_accession_code
-    }
-
-    SeqCategorySet {
-        UUID id PK
-        string code
-        string name
-    }
-
-    SequencingProtocol {
-        string code
-        string name
-        string version
-        string description
-        dict[string, string] props
-        UUID id PK
-    }
-
-    SampleBatchUploadResult {
-        UUID id PK
-        enum status
-        bool is_new
-        list[UploadLogItem] logs
-        UUID batch_id
-        list[SampleUploadResult] samples
-        list[CalculateSeqDistancesResult] seq_distances
-    }
-
-    LocusProfile {
-        float qc_score
-        enum qc_result
         UUID seq_id FK
-        UUID sample_id FK
-        UUID id PK
-        UUID locus_set_id FK
-        UUID locus_detection_protocol_id FK
-        int n_loci
-        string locus_profile
-        enum locus_profile_format
-        UUID locus_profile_hash
-    }
-
-    RefAllele {
-        UUID id PK
-        string seq
-        enum seq_format
-        int length
-        UUID locus_id FK
-        int index
-    }
-
-    SeqDistance {
-        UUID sample_id FK
-        UUID id PK
-        UUID seq_distance_protocol_id FK
-        UUID profile_id
-        enum distance_format
-        string distances
-    }
-
-    RefSnp {
-        UUID id PK
-        string code
-        UUID ref_seq_id FK
-        int position
-        string nucleotide
-    }
-
-    SeqClassificationProtocol {
-        string code
-        string name
-        string version
-        string description
-        dict[string, string] props
-        UUID id PK
-        bool is_taxonomic
-    }
-
-    TaxonSet {
-        UUID id PK
-        string code
-        string name
-    }
-
-    AlleleProfile {
-        float qc_score
-        enum qc_result
-        UUID seq_id FK
-        UUID sample_id FK
-        UUID id PK
-        UUID locus_set_id FK
-        UUID locus_detection_protocol_id FK
-        int n_loci
-        string allele_profile
-        enum allele_profile_format
-        UUID allele_profile_hash
-    }
-
-    LocusCodeMap {
-        UUID id PK
-        string code
-        dict[string, UUID] code_map
-    }
-
-    CalculateSeqDistancesResult {
-        UUID id
-        enum status
-        bool is_new
-        list[UploadLogItem] logs
-        UUID seq_distance_profile_id
-    }
-
-    PcrMeasurement {
-        UUID id PK
-        UUID sample_id FK
-        UUID pcr_protocol_id FK
-        string pcr_result
-        enum pcr_result_format
-        int index
+        UUID taxonomy_protocol_id FK
+        UUID primary_taxon_id FK
+        string taxonomy
+        enum taxonomy_format
+        UUID taxonomy_hash
     }
 
     Locus {
@@ -527,6 +300,20 @@ erDiagram
         string description
         enum locus_type
         string gene_product_code
+    }
+
+    SeqDistanceProtocol {
+        string code
+        string name
+        string version
+        string description
+        dict[string, string] props
+        UUID id PK
+        enum seq_distance_protocol_type
+        UUID locus_set_id FK
+        UUID ref_seq_id FK
+        bool is_integer_distance
+        float max_stored_distance
     }
 
     SnpProfile {
@@ -542,11 +329,105 @@ erDiagram
         UUID snp_profile_hash
     }
 
-    BaseSeq {
-        UUID id
+    AlleleForUpload {
+        UUID id PK
         string seq
         enum seq_format
         int length
+        UUID locus_id FK
+    }
+
+    SeqAlignment {
+        UUID id PK
+        UUID seq_id FK
+        UUID alignment_protocol_id FK
+        list[ContigAlignment] contig_alignments
+    }
+
+    SampleDataCollectionLink {
+        UUID id PK
+        UUID sample_id FK
+        UUID data_collection_id FK
+    }
+
+    SequencingProtocol {
+        string code
+        string name
+        string version
+        string description
+        dict[string, string] props
+        UUID id PK
+    }
+
+    RefSnpSetMember {
+        UUID id PK
+        UUID ref_snp_set_id FK
+        UUID ref_snp_id FK
+        int index
+    }
+
+    AlleleProfileForUpload {
+        list[IdentifierForUpload] identifiers
+        float qc_score
+        enum qc_result
+        UUID seq_id FK
+        UUID sample_id FK
+        UUID id PK
+        UUID locus_set_id FK
+        UUID locus_detection_protocol_id FK
+        int n_loci
+        string allele_profile
+        enum allele_profile_format
+        UUID allele_profile_hash
+        string locus_detection_protocol_code
+        string locus_set_code
+        UUID locus_code_map_id
+        string locus_code_map_code
+        list[UUID] allele_ids
+        dict[string, UUID] locus_allele_id_map
+    }
+
+    SeqClassificationProtocol {
+        string code
+        string name
+        string version
+        string description
+        dict[string, string] props
+        UUID id PK
+        bool is_taxonomic
+    }
+
+    KmerProfile {
+        float qc_score
+        enum qc_result
+        UUID seq_id FK
+        UUID sample_id FK
+        UUID id PK
+        UUID kmer_detection_protocol_id FK
+        string kmer_profile
+        enum kmer_profile_format
+        UUID kmer_profile_hash
+    }
+
+    SeqIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
+    AlleleProfileIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
+    ReadSetIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
     }
 
     SeqCategory {
@@ -556,8 +437,42 @@ erDiagram
         UUID seq_category_set_id FK
     }
 
+    TreeAlgorithmClass {
+        UUID id PK
+        string code
+        string name
+        bool is_seq_based
+        bool is_dist_based
+        int rank
+    }
+
+    LocusCodeMap {
+        UUID id PK
+        string code
+        dict[string, UUID] code_map
+    }
+
+    SampleBatchUploadResult {
+        UUID id PK
+        enum status
+        bool is_new
+        list[UploadLogItem] logs
+        UUID batch_id
+        list[SampleUploadResult] samples
+        list[CalculateSeqDistancesResult] seq_distances
+    }
+
+    KmerDetectionProtocol {
+        string code
+        string name
+        string version
+        string description
+        dict[string, string] props
+        UUID id PK
+    }
+
     SampleForUpload {
-        list[ExternalIdentifierForUpload] external_identifiers
+        list[IdentifierForUpload] identifiers
         UUID id PK
         Sample sample
         list[ReadSetForUpload] read_sets
@@ -573,81 +488,71 @@ erDiagram
         list[AstMeasurement] ast_measurements
     }
 
-    MultipleAlignment {
-        UUID id
-        UUID alignment_protocol_id
-        list[UUID] seq_ids
-        int n_seqs
-        list[int] n_contigs
-        list[list[string]] contig_seqs
-        int n_alignments
-        list[int] n_columns
-        list[list[int]] start_columns
-        list[list[int]] contig_ordinals
-        list[list[int]] contig_start_positions
-        list[list[bool]] contig_directions
-        list[list[int]] lengths
-    }
-
-    PhylogeneticTree {
-        UUID id
-        enum tree_algorithm
-        UUID seq_distance_protocol_id
-        SeqDistanceProtocol seq_distance_protocol
-        list[string] leaf_names
-        list[UUID] profile_ids
-        string newick_repr
-    }
-
-    SeqAlignment {
-        UUID id PK
-        UUID seq_id FK
-        UUID alignment_protocol_id FK
-        list[ContigAlignment] contig_alignments
-    }
-
-    TreeAlgorithmClass {
-        UUID id PK
+    AstProtocol {
         string code
         string name
-        bool is_seq_based
-        bool is_dist_based
-        int rank
+        string version
+        string description
+        dict[string, string] props
+        UUID id PK
+        bool is_predicted
+        list[string] antimicrobial_names
     }
 
-    SnpProfileForUpload {
+    BaseSeq {
+        UUID id
+        string seq
+        enum seq_format
+        int length
+    }
+
+    ReadSetForUpload {
+        list[IdentifierForUpload] identifiers
         float qc_score
         enum qc_result
-        UUID seq_id FK
+        string code
         UUID sample_id FK
         UUID id PK
-        UUID ref_seq_id FK
-        UUID snp_detection_protocol_id FK
-        string snp_profile
-        enum snp_profile_format
-        UUID snp_profile_hash
-        string ref_seq_code
-        string snp_detection_protocol_code
-        string aligned_nucleotide_seq
+        UUID sequencing_protocol_id FK
+        string fwd_uri
+        string rev_uri
+        UUID fwd_file_id FK
+        UUID rev_file_id FK
+        enum file_format
+        enum file_compression
+        UUID fwd_reads_hash
+        UUID rev_reads_hash
+        string sequencing_run_code
+        string sequencing_protocol_code
+        any is_available
     }
 
-    AssemblyProtocol {
+    AlignmentProtocol {
         string code
         string name
         string version
         string description
         dict[string, string] props
         UUID id PK
-        bool has_manual_curation
+        bool is_multiple
     }
 
-    KmerDetectionProtocol {
+    PcrProtocol {
         string code
         string name
         string version
         string description
         dict[string, string] props
         UUID id PK
+        list[string] target_names
+    }
+
+    LocusSet {
+        UUID id PK
+        string code
+        string name
+        list[UUID] locus_ids
+        any n_loci
     }
 
     Seq {
@@ -675,6 +580,202 @@ erDiagram
         any n50
     }
 
+    MlvaProfileForUpload {
+        list[IdentifierForUpload] identifiers
+        float qc_score
+        enum qc_result
+        UUID seq_id FK
+        UUID sample_id FK
+        UUID id PK
+        UUID mlva_detection_protocol_id FK
+        UUID locus_set_id FK
+        string mlva_profile
+        enum mlva_profile_format
+        UUID mlva_profile_hash
+        string mlva_detection_protocol_code
+        string locus_set_code
+        UUID locus_code_map_id
+        string locus_code_map_code
+        list[int] repeat_numbers
+        dict[string, int] locus_repeat_number_map
+    }
+
+    MultipleAlignment {
+        UUID id
+        UUID alignment_protocol_id
+        list[UUID] seq_ids
+        int n_seqs
+        list[int] n_contigs
+        list[list[string]] contig_seqs
+        int n_alignments
+        list[int] n_columns
+        list[list[int]] start_columns
+        list[list[int]] contig_ordinals
+        list[list[int]] contig_start_positions
+        list[list[bool]] contig_directions
+        list[list[int]] lengths
+    }
+
+    SnpDetectionProtocol {
+        string code
+        string name
+        string version
+        string description
+        dict[string, string] props
+        UUID id PK
+    }
+
+    TaxonSetMember {
+        UUID id PK
+        UUID taxon_set_id FK
+        UUID taxon_id FK
+    }
+
+    MlvaDetectionProtocol {
+        string code
+        string name
+        string version
+        string description
+        dict[string, string] props
+        UUID id PK
+    }
+
+    AstPrediction {
+        UUID sample_id FK
+        UUID id PK
+        UUID seq_id FK
+        UUID ast_protocol_id FK
+        string ast_result
+        enum ast_result_format
+    }
+
+    Sample {
+        string code
+        UUID id PK
+        UUID created_in_data_collection_id FK
+        dict[string, string | int | float] props
+    }
+
+    MlvaProfileIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
+    SeqClassification {
+        UUID sample_id FK
+        UUID id PK
+        UUID seq_id FK
+        UUID seq_classification_protocol_id FK
+        UUID primary_category_id FK
+        string classification
+        enum classification_format
+        UUID classification_hash
+    }
+
+    TaxonomyProtocol {
+        string code
+        string name
+        string version
+        string description
+        dict[string, string] props
+        UUID id PK
+    }
+
+    PhylogeneticTree {
+        UUID id
+        enum tree_algorithm
+        UUID seq_distance_protocol_id
+        SeqDistanceProtocol seq_distance_protocol
+        list[string] leaf_names
+        list[UUID] profile_ids
+        string newick_repr
+    }
+
+    RefAllele {
+        UUID id PK
+        string seq
+        enum seq_format
+        int length
+        UUID locus_id FK
+        int index
+    }
+
+    SeqForUpload {
+        list[IdentifierForUpload] identifiers
+        float qc_score
+        enum qc_result
+        string code
+        UUID sample_id FK
+        UUID id PK
+        string uri
+        UUID file_id FK
+        enum file_format
+        enum file_compression
+        UUID file_hash
+        UUID read_set_id FK
+        UUID read_set2_id FK
+        UUID assembly_protocol_id FK
+        list[Contig] contigs
+        string assembly_protocol_code
+        any is_available
+        any seq_hash
+        any n_contigs
+        any length
+        any max_contig_length
+        any min_contig_length
+        any median_contig_length
+        any n50
+    }
+
+    AlleleAlignment {
+        float qc_score
+        enum qc_result
+        string aln
+        enum aln_format
+        UUID aln_hash
+        UUID id PK
+        UUID ref_allele_id FK
+        UUID allele_id FK
+        UUID alignment_protocol_id FK
+    }
+
+    TaxonSet {
+        UUID id PK
+        string code
+        string name
+    }
+
+    Allele {
+        UUID id PK
+        string seq
+        enum seq_format
+        int length
+        UUID locus_id FK
+    }
+
+    KmerProfileForUpload {
+        list[IdentifierForUpload] identifiers
+        float qc_score
+        enum qc_result
+        UUID seq_id FK
+        UUID sample_id FK
+        UUID id PK
+        UUID kmer_detection_protocol_id FK
+        string kmer_profile
+        enum kmer_profile_format
+        UUID kmer_profile_hash
+        string kmer_detection_protocol_code
+        dict[string, float] kmer_frequency_map
+    }
+
+    SeqCategorySet {
+        UUID id PK
+        string code
+        string name
+    }
+
     SampleBatchForUpload {
         UUID id PK
         timestamp created_at
@@ -693,95 +794,56 @@ erDiagram
         any has_ast_measurements
     }
 
-    TaxonSetMember {
+    PcrMeasurement {
         UUID id PK
-        UUID taxon_set_id FK
-        UUID taxon_id FK
+        UUID sample_id FK
+        UUID pcr_protocol_id FK
+        string pcr_result
+        enum pcr_result_format
+        int index
     }
 
-    SampleUploadResult {
-        UUID id
-        enum status
-        bool is_new
-        list[UploadLogItem] logs
-        list[UploadResult] external_identifiers
-        list[SampleDataIssue] data_issues
-        list[UploadResult] read_sets
-        list[UploadResult] seqs
-        list[UploadResult] seq_taxonomies
-        list[UploadResult] seq_classifications
-        list[UploadResult] locus_profiles
-        list[UploadResult] allele_profiles
-        list[UploadResult] snp_profiles
-        list[UploadResult] mlva_profiles
-        list[UploadResult] kmer_profiles
-        list[UploadResult] pcr_measurements
-        list[UploadResult] ast_measurements
-    }
-
-    Allele {
+    SnpProfileIdentifier {
         UUID id PK
-        string seq
-        enum seq_format
-        int length
-        UUID locus_id FK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
     }
 
-    SnpDetectionProtocol {
-        string code
-        string name
-        string version
-        string description
-        dict[string, string] props
-        UUID id PK
-    }
-
-    AstProtocol {
-        string code
-        string name
-        string version
-        string description
-        dict[string, string] props
-        UUID id PK
-        bool is_predicted
-        list[string] antimicrobial_names
-    }
-
-    TaxonomyProtocol {
-        string code
-        string name
-        string version
-        string description
-        dict[string, string] props
-        UUID id PK
-    }
-
-    Taxon {
+    RefSnpSet {
         UUID id PK
         string code
         string name
-        enum rank
-        int ncbi_taxid
-        string ictv_ictv_id
-        int snomed_sctid
-        list[int] ncbi_ancestor_taxids
-        list[UUID] ancestor_taxon_ids
     }
 
-    AstPrediction {
+    LocusProfile {
+        float qc_score
+        enum qc_result
+        UUID seq_id FK
         UUID sample_id FK
         UUID id PK
-        UUID seq_id FK
-        UUID ast_protocol_id FK
-        string ast_result
-        enum ast_result_format
+        UUID locus_set_id FK
+        UUID locus_detection_protocol_id FK
+        int n_loci
+        string locus_profile
+        enum locus_profile_format
+        UUID locus_profile_hash
     }
 
-    Sample {
-        string code
+    SampleIdentifier {
         UUID id PK
-        UUID created_in_data_collection_id FK
-        dict[string, string | int | float] props
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
+    SeqDistance {
+        UUID sample_id FK
+        UUID id PK
+        UUID seq_distance_protocol_id FK
+        UUID profile_id
+        enum distance_format
+        string distances
     }
 
 ```

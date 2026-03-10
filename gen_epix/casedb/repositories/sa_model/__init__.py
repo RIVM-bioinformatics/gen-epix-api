@@ -16,6 +16,7 @@ from gen_epix.casedb.repositories.sa_model.case import Case as Case
 from gen_epix.casedb.repositories.sa_model.case import (
     CaseDataCollectionLink as CaseDataCollectionLink,
 )
+from gen_epix.casedb.repositories.sa_model.case import CaseIdentifier as CaseIdentifier
 from gen_epix.casedb.repositories.sa_model.case import CaseSet as CaseSet
 from gen_epix.casedb.repositories.sa_model.case import (
     CaseSetCategory as CaseSetCategory,
@@ -72,9 +73,6 @@ from gen_epix.commondb.repositories.sa_model import (
 from gen_epix.commondb.repositories.sa_model import (
     DataCollectionSetMember as DataCollectionSetMember,
 )
-from gen_epix.commondb.repositories.sa_model import (
-    ExternalIdentifier as ExternalIdentifier,
-)
 from gen_epix.commondb.repositories.sa_model import IdentifierIssuer as IdentifierIssuer
 from gen_epix.commondb.repositories.sa_model import Organization as Organization
 from gen_epix.commondb.repositories.sa_model import (
@@ -111,7 +109,6 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.DataCollectionSet: DataCollectionSet,
         model.DataCollectionSetMember: DataCollectionSetMember,
         model.IdentifierIssuer: IdentifierIssuer,
-        model.ExternalIdentifier: ExternalIdentifier,
         model.Organization: Organization,
         model.OrganizationSet: OrganizationSet,
         model.OrganizationSetMember: OrganizationSetMember,
@@ -143,6 +140,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
     },
     enum.ServiceType.CASE: {
         model.Case: Case,
+        model.CaseIdentifier: CaseIdentifier,
         model.CaseDataCollectionLink: CaseDataCollectionLink,
         model.CaseSet: CaseSet,
         model.CaseSetCategory: CaseSetCategory,
