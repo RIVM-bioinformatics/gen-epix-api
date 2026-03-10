@@ -1,12 +1,16 @@
 import datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
-from gen_epix.commondb.domain import command, exc, model
-from gen_epix.commondb.domain.service.organization import BaseOrganizationService
-from gen_epix.commondb.domain.service.rbac import BaseRbacService
-from gen_epix.fastapp import BaseUnitOfWork, BaseUserManager, CrudOperation, Permission
+from gen_epix.commondb.domain import exc, model
+from gen_epix.commondb.domain.literal import NULL_ID
+from gen_epix.commondb.domain.service import (
+    BaseOrganizationService,
+    BaseRbacService,
+    BaseUserManager,
+)
+from gen_epix.fastapp import BaseUnitOfWork, CrudOperation, Permission
 from gen_epix.fastapp.services.auth import get_email_from_claims
 from gen_epix.fastapp.services.auth.util import get_name_from_claims
 
@@ -26,57 +30,29 @@ class UserManager(BaseUserManager):
         organization_service: BaseOrganizationService,
         rbac_service: BaseRbacService,
         root_cfg: dict[str, dict[str, str]],
-        automatic_new_user_cfg: dict[str, dict[str, str]] | None = None,
+        auto_created_user_cfg: dict[str, str] | None = None,
         key_claim: str | None = None,
         name_claims: list[str | list[str]] | None = None,
     ):
-        # Assign input properties
-        self._organization_service = organization_service
-        self._rbac_service = rbac_service
-        self._key_claim = key_claim or self.DEFAULT_KEY_CLAIM
-        self._name_claims = name_claims or self.DEFAULT_NAME_CLAIMS
 
         # Derive some properties
         app_impl: AppImplDetails = organization_service.app.impl
-        self._user_class: type[model.User] = app_impl.get_mapped_class(model.User)
-        self._user_invitation_class: type[model.UserInvitation] = (
-            app_impl.get_mapped_class(model.UserInvitation)
+        user_class: type[model.User] = app_impl.get_mapped_class(model.User)
+        user_invitation_class: type[model.UserInvitation] = app_impl.get_mapped_class(
+            model.UserInvitation
         )
 
-        # Generate root organization and user objects
-        self._root_organization = model.Organization(
-            **root_cfg["organization"]  # type: ignore[arg-type]
+        # Initialize through parent constructor
+        super().__init__(
+            organization_service,
+            rbac_service,
+            user_class=user_class,
+            user_invitation_class=user_invitation_class,
+            root_cfg=root_cfg,
+            auto_created_user_cfg=auto_created_user_cfg,
+            key_claim=key_claim,
+            name_claims=name_claims,
         )
-        if self._root_organization.id is None:
-            raise exc.InitializationServiceError(
-                "Root organization ID is not set in the configuration"
-            )
-        self._root_user = self._user_class(
-            is_active=True,
-            organization_id=self._root_organization.id,
-            roles={self._rbac_service.root_role},
-            **root_cfg["user"],  # type: ignore[arg-type]
-        )
-
-        # Get automatic new user data
-        self._automatic_new_user: dict[str, Any] | None = None
-        if automatic_new_user_cfg:
-            self._automatic_new_user = {}
-            self._automatic_new_user["organization"] = dict(
-                automatic_new_user_cfg["organization"]
-            )
-            self._automatic_new_user["roles"] = set(automatic_new_user_cfg["roles"])
-            if "id" not in self._automatic_new_user["organization"]:
-                raise exc.InitializationServiceError(
-                    "Automatic new user organization ID is not set in the configuration"
-                )
-            # fmt:off
-            self._automatic_new_user["organization"]["id"] = (  # pyright:ignore[reportArgumentType]
-                UUID(  
-                    self._automatic_new_user["organization"]["id"]
-                )
-            )
-            # fmt:on
 
     def generate_id(self) -> UUID:
         return self._organization_service.generate_id()  # type: ignore[return-value]
@@ -87,21 +63,17 @@ class UserManager(BaseUserManager):
     def get_user_name_from_claims(self, claims: dict[str, Any]) -> str | None:
         return get_name_from_claims(claims, self._name_claims)
 
-    def get_user_instance_from_claims(
+    def construct_user_instance_from_claims(
         self, claims: dict[str, Any]
     ) -> model.User | None:
-        if self._automatic_new_user is None:
-            return None
-        roles = (
-            self._automatic_new_user["roles"]
-            if self._automatic_new_user
-            else {self._rbac_service.guest_role}
-        )
-        organization_id = (
-            self._automatic_new_user["organization"]["id"]
-            if self._automatic_new_user
-            else self._root_organization.id
-        )
+        if self._auto_created_user_cfg is None:
+            # No auto-created user config provided, set dummy roles and organization ID for the created user since they are mandatory, and which should be overridden by the calling function
+            roles = {self._rbac_service.guest_role}
+            organization_id = NULL_ID
+        else:
+            # Auto-created user config provided, get roles and organization ID from the config
+            roles = self._auto_created_user_cfg["roles"]
+            organization_id = self._auto_created_user_cfg["organization_id"]
         key = claims.get(self._key_claim)
         if not key:
             raise exc.CredentialsAuthError("Key not found in claims")
@@ -159,9 +131,7 @@ class UserManager(BaseUserManager):
                 )
             # Create and store root user
             root_user = self._root_user.model_copy()
-            root_user.id = (
-                self._organization_service.generate_id()
-            )  # type: ignore[assignment]
+            root_user.id = cast(UUID, self._organization_service.generate_id())
             root_user.email = get_email_from_claims(claims)
             root_user.name = self.get_user_name_from_claims(claims)
             user: model.User = (
@@ -177,11 +147,11 @@ class UserManager(BaseUserManager):
 
         return user
 
-    def create_user_from_claims(self, claims: dict[str, Any]) -> model.User | None:
-        if self._automatic_new_user is None:
+    def auto_create_new_user(self, claims: dict[str, Any]) -> model.User | None:
+        if self._auto_created_user_cfg is None:
             return None
         assert self._organization_service.repository
-        organization_id = self._automatic_new_user["organization"]["id"]
+        organization_id = self._auto_created_user_cfg["organization_id"]
         with self._organization_service.repository.uow() as uow:
             # Verify if organization exists
             is_existing_organization = self._organization_service.repository.crud(
@@ -194,7 +164,7 @@ class UserManager(BaseUserManager):
             )
             if not is_existing_organization:
                 raise exc.InitializationServiceError(
-                    "Automatic new user organization does not exist"
+                    "Auto-created new user organization does not exist"
                 )
 
             # Verify if user exists and add if not
@@ -208,12 +178,12 @@ class UserManager(BaseUserManager):
                 raise exc.ServiceException(
                     f"User with key {claims.get(self._key_claim)} already exists"
                 )
-            claims_user = self.get_user_instance_from_claims(claims)
+            claims_user = self.construct_user_instance_from_claims(claims)
             if not claims_user:
                 raise exc.ServiceException(
-                    f"Unable to create user with key {claims.get(self._key_claim)} from claims"
+                    f"Unable to auto-create user with key {claims.get(self._key_claim)} from claims"
                 )
-            claims_user.id = self.generate_id()
+            claims_user.id = cast(UUID, self.generate_id())
             user: model.User = (
                 self._organization_service.repository.crud(  # type: ignore[assignment]
                     uow,
@@ -225,17 +195,18 @@ class UserManager(BaseUserManager):
                 )
             )
 
-            # Add user case policies by calling switching organization method
-            try:
-                user = self._organization_service.app.handle(
-                    command.UpdateUserOwnOrganizationCommand(
-                        user=user,
-                        organization_id=user.organization_id,
-                        is_new_user=True,
-                    ),
-                )
-            except Exception as exception:
-                raise exc.UnauthorizedAuthError("Unable to add user case policies")
+            # TODO: this should be removed, does not belong in commondb since specific for casedb, and the case policies in question should not be added to the user at this stage
+            # # Add user case policies by calling switching organization method
+            # try:
+            #     user = self._organization_service.app.handle(
+            #         command.UpdateUserOwnOrganizationCommand(
+            #             user=user,
+            #             organization_id=user.organization_id,
+            #             is_new_user=True,
+            #         ),
+            #     )
+            # except Exception as exception:
+            #     raise exc.UnauthorizedAuthError("Unable to add user case policies")
 
         return user
 
@@ -262,7 +233,6 @@ class UserManager(BaseUserManager):
                 raise exc.UnauthorizedAuthError("Created by user is not active")
 
             # Verify if create_by_user made an invitation for this user that is valid
-            timestamp = datetime.datetime.now(datetime.timezone.utc)
             user_invitations: list[model.UserInvitation] = (
                 self._organization_service.repository.crud(  # type: ignore[assignment]
                     uow,
@@ -274,15 +244,22 @@ class UserManager(BaseUserManager):
                 )
             )
 
+            def convert_to_utc(x: datetime) -> datetime:
+                if x.tzinfo is None:
+                    return x.replace(tzinfo=datetime.timezone.utc)
+                return x.astimezone(datetime.timezone.utc)
+
+            timestamp = datetime.datetime.now(datetime.timezone.utc)
+
             # At least one invitation exists matching the criteria
             user_invitations = [
                 x
                 for x in user_invitations
                 if x.invited_by_user_id == created_by_user_id
                 and x.token == token
-                and (x.key is None or x.key == user.email)
+                and (x.key is None or x.key == user.get_key())
                 and x.organization_id == user.organization_id
-                and x.expires_at > timestamp
+                and convert_to_utc(x.expires_at) > timestamp
             ]
             if not user_invitations:
                 raise exc.UnauthorizedAuthError("Invitation does not exist")
