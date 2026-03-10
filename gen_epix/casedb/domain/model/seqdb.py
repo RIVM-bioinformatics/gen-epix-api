@@ -6,7 +6,7 @@ from uuid import UUID
 from pydantic import Field
 
 from gen_epix.casedb.domain import enum
-from gen_epix.casedb.domain.model.case.reference_data import (
+from gen_epix.casedb.domain.model.case.ref_data import (
     GeneticDistanceProtocol,
     TreeAlgorithm,
 )

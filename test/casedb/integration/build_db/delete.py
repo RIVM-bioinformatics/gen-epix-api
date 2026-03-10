@@ -2,7 +2,7 @@ from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.build_db.base import (
     APP_ADMIN_OR_ABOVE_USERS,
     BELOW_APP_ADMIN_DATA_USERS,
-    BELOW_APP_ADMIN_METADATA_USERS,
+    BELOW_APP_ADMIN_REFDATA_USERS,
     BELOW_APP_ADMIN_USERS,
     BELOW_ORG_ADMIN_USERS,
     BELOW_ROOT_USERS,
@@ -85,7 +85,7 @@ class TestDelete:
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_delete_case_type_raise(self, env: Env) -> None:
         env.create_case_type(ROOT, "case_type99", "disease1", "etiological_agent1")
-        for user in BELOW_APP_ADMIN_METADATA_USERS + BELOW_APP_ADMIN_DATA_USERS:
+        for user in BELOW_APP_ADMIN_REFDATA_USERS + BELOW_APP_ADMIN_DATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.delete_object(user, model.CaseType, "case_type99")
         env.delete_object(ROOT, model.CaseType, "case_type99")
@@ -117,66 +117,58 @@ class TestDelete:
         env.delete_object(ROOT, model.CaseTypeSetMember, case_type_set_member)
         env.delete_object(ROOT, model.CaseType, "case_type99")
 
-    def test_delete_case_type_col(self, env: Env) -> None:
-        env.create_col(ROOT, "col1_99")
+    def test_delete_col(self, env: Env) -> None:
+        env.create_ref_col(ROOT, "ref_col1_99")
         for user in APP_ADMIN_OR_ABOVE_USERS:
-            case_type_col = env.create_case_type_col(user, "case_type_col1_1_1_99")
-            env.delete_object(ROOT, model.CaseTypeCol, case_type_col, verify=True)
-        env.delete_object(ROOT, model.Col, "col1_99")
+            col = env.create_col(user, "col1_1_1_99")
+            env.delete_object(ROOT, model.Col, col, verify=True)
+        env.delete_object(ROOT, model.RefCol, "ref_col1_99")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
-    def test_delete_case_type_col_raise(self, env: Env) -> None:
+    def test_delete_col_raise(self, env: Env) -> None:
         for user in BELOW_APP_ADMIN_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.delete_object(user, model.CaseTypeCol, "case_type_col1_1_1_1")
+                env.delete_object(user, model.Col, "col1_1_1_1")
 
-    def test_delete_case_type_col_set(self, env: Env) -> None:
+    def test_delete_col_set(self, env: Env) -> None:
         for user in APP_ADMIN_OR_ABOVE_USERS:
-            case_type_col_set = env.create_case_type_col_set(
-                user, "case_type_col_set99", {"case_type_col1_1_1_1"}
-            )
-            env.delete_object(
-                ROOT, model.CaseTypeColSet, case_type_col_set, verify=True
-            )
+            col_set = env.create_col_set(user, "col_set99", {"col1_1_1_1"})
+            env.delete_object(ROOT, model.ColSet, col_set, verify=True)
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
-    def test_delete_case_type_col_set_raise(self, env: Env) -> None:
+    def test_delete_col_set_raise(self, env: Env) -> None:
         for user in BELOW_APP_ADMIN_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.delete_object(user, model.CaseTypeColSet, "case_type_col_set1")
+                env.delete_object(user, model.ColSet, "col_set1")
 
-    def test_delete_case_type_col_set_member(self, env: Env) -> None:
-        env.create_col(ROOT, "col1_99")
-        env.create_case_type_col(ROOT, "case_type_col1_1_1_99")
+    def test_delete_col_set_member(self, env: Env) -> None:
+        env.create_ref_col(ROOT, "ref_col1_99")
+        env.create_col(ROOT, "col1_1_1_99")
         for user in APP_ADMIN_OR_ABOVE_USERS:
-            case_type_col_set_member = env.create_case_type_col_set_member(
+            col_set_member = env.create_col_set_member(
                 ROOT,
-                "case_type_col_set1",
-                "case_type_col1_1_1_99",
+                "col_set1",
+                "col1_1_1_99",
             )
-            env.delete_object(
-                user, model.CaseTypeColSetMember, case_type_col_set_member, verify=True
-            )
-        env.delete_object(ROOT, model.CaseTypeCol, "case_type_col1_1_1_99")
-        env.delete_object(ROOT, model.Col, "col1_99")
+            env.delete_object(user, model.ColSetMember, col_set_member, verify=True)
+        env.delete_object(ROOT, model.Col, "col1_1_1_99")
+        env.delete_object(ROOT, model.RefCol, "ref_col1_99")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
-    def test_delete_case_type_col_set_member_raise(self, env: Env) -> None:
-        env.create_col(ROOT, "col1_99")
-        env.create_case_type_col(ROOT, "case_type_col1_1_1_99")
-        case_type_col_set_member = env.create_case_type_col_set_member(
+    def test_delete_col_set_member_raise(self, env: Env) -> None:
+        env.create_ref_col(ROOT, "ref_col1_99")
+        env.create_col(ROOT, "col1_1_1_99")
+        col_set_member = env.create_col_set_member(
             ROOT,
-            "case_type_col_set1",
-            "case_type_col1_1_1_99",
+            "col_set1",
+            "col1_1_1_99",
         )
         for user in BELOW_APP_ADMIN_DATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.delete_object(
-                    user, model.CaseTypeColSetMember, case_type_col_set_member
-                )
-        env.delete_object(ROOT, model.CaseTypeColSetMember, case_type_col_set_member)
-        env.delete_object(ROOT, model.CaseTypeCol, "case_type_col1_1_1_99")
-        env.delete_object(ROOT, model.Col, "col1_99")
+                env.delete_object(user, model.ColSetMember, col_set_member)
+        env.delete_object(ROOT, model.ColSetMember, col_set_member)
+        env.delete_object(ROOT, model.Col, "col1_1_1_99")
+        env.delete_object(ROOT, model.RefCol, "ref_col1_99")
 
     def test_delete_case_set(self, env: Env) -> None:
         env.create_case_type(ROOT, "case_type99", "disease1", "etiological_agent1")
@@ -199,7 +191,7 @@ class TestDelete:
             {"case_type99"},
             "case_type_set_category1",
         )
-        for user in BELOW_APP_ADMIN_METADATA_USERS + BELOW_APP_ADMIN_DATA_USERS:
+        for user in BELOW_APP_ADMIN_REFDATA_USERS + BELOW_APP_ADMIN_DATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.delete_object(user, model.CaseTypeSet, case_type_set)
         env.delete_object(ROOT, model.CaseTypeSet, case_type_set)
@@ -239,9 +231,9 @@ class TestDelete:
         with pytest.raises(exc.LinkConstraintViolationError):
             env.delete_object(ROOT, model.RegionSet, "region_set1")
         with pytest.raises(exc.LinkConstraintViolationError):
-            env.delete_object(ROOT, model.Dim, "dim1")
+            env.delete_object(ROOT, model.RefDim, "ref_dim1")
         with pytest.raises(exc.LinkConstraintViolationError):
-            env.delete_object(ROOT, model.Col, "col1_1")
+            env.delete_object(ROOT, model.RefCol, "ref_col1_1")
         with pytest.raises(exc.LinkConstraintViolationError):
             env.delete_object(ROOT, model.Disease, "disease1")
         with pytest.raises(exc.LinkConstraintViolationError):
@@ -255,11 +247,11 @@ class TestDelete:
         # with pytest.raises(exc.LinkConstraintViolationError):
         #     env.delete_object(ROOT, model.CaseTypeSet, "case_type_set1")
         with pytest.raises(exc.LinkConstraintViolationError):
-            env.delete_object(ROOT, model.CaseTypeDim, "case_type_dim1_1_1")
+            env.delete_object(ROOT, model.Dim, "dim1_1_1")
         # with pytest.raises(exc.LinkConstraintViolationError):
-        #     env.delete_object(ROOT, model.CaseTypeCol, "case_type_col1_1_1_1")
+        #     env.delete_object(ROOT, model.Col, "col1_1_1_1")
         # with pytest.raises(exc.LinkConstraintViolationError):
-        #     env.delete_object(ROOT, model.CaseTypeColSet, "case_type_col_set1")
+        #     env.delete_object(ROOT, model.ColSet, "col_set1")
         # with pytest.raises(exc.LinkConstraintViolationError):
         #     env.delete_object(ROOT, model.CaseSetCategory, "case_set_category1")
         # with pytest.raises(exc.LinkConstraintViolationError):

@@ -14,7 +14,8 @@ from gen_epix.casedb.services.case.crud_common import (
     get_case_abac_from_command,
     is_app_admin_or_above,
 )
-from gen_epix.fastapp import CrudOperation, CrudOperationSet
+from gen_epix.fastapp import CrudOperation
+from gen_epix.fastapp.enum import CrudOperationSet
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 
@@ -25,9 +26,8 @@ def case_service_crud_case_set(
 
     # Start unit of work
     with self.repository.uow() as uow:
-        assert cmd.user is not None
         _crud_cascade_delete(self, uow, cmd)
-        if is_app_admin_or_above(self, cmd.user):
+        if cmd.user is None or is_app_admin_or_above(self, cmd.user):
             return _crud_case_set_without_abac(self, uow, cmd)
         return _crud_case_set_with_abac(self, uow, cmd)
 
@@ -57,19 +57,14 @@ def _crud_case_set_with_abac(
         return self.crud(cmd)  # type: ignore[return-value]
 
     # Initialise some
-    is_create = cmd.operation in CrudOperationSet.CREATE.value
-    is_read = cmd.operation in CrudOperationSet.READ_OR_EXISTS.value
-    is_update = cmd.operation in CrudOperationSet.UPDATE.value
-    is_delete = cmd.operation in CrudOperationSet.DELETE.value
-    is_delete_all = cmd.operation == CrudOperation.DELETE_ALL
     assert cmd.user is not None and cmd.user.id is not None
 
-    # Determine valid case types and data collections
+    # Determine valid CaseTypes and data collections
     case_set_ids: list[UUID] = cmd.get_obj_ids()  # type: ignore[assignment]
-    if is_create:
+    if cmd.is_create():
         # Implemented through separate create case set command
         raise AssertionError("Unexpected operation")
-    elif is_read:
+    elif cmd.is_read():
         # At least one data collection with read access is required
         retval = self._retrieve_case_sets_with_content_right(
             uow,
@@ -79,8 +74,8 @@ def _crud_case_set_with_abac(
             case_set_ids=case_set_ids,
             filter=cmd.query_filter,
         )
-        return retval[0] if cmd.operation == CrudOperation.READ_ONE else retval
-    elif is_update:
+        return retval[0] if cmd.operation in CrudOperationSet.ANY_ONE.value else retval
+    elif cmd.is_update():
         # At least one data collection with write access is required
         self._retrieve_case_sets_with_content_right(
             uow,
@@ -90,10 +85,10 @@ def _crud_case_set_with_abac(
             case_set_ids=case_set_ids,
         )
         return self.crud(cmd)  # type: ignore[return-value]
-    elif is_delete:
+    elif cmd.is_delete():
         # All linked data collections have remove right
         _validate_case_set_deletion(
-            self, uow, cmd, case_abac, is_delete_all, case_set_ids
+            self, uow, cmd, case_abac, cmd.is_delete_all(), case_set_ids
         )
         # Delete with cascade
         return self.crud(cmd)  # type: ignore[return-value]

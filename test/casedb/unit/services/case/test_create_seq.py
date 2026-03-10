@@ -75,20 +75,20 @@ class TestCasedbCaseCreateSeq:
         """Create a mock CaseAbac for testing."""
         case_abac = Mock(spec=model.CaseAbac)
         case_abac.is_full_access = True
-        case_abac.get_data_collections_with_access_right_for_case_type_col = Mock()
+        case_abac.get_data_collections_with_access_right_for_col = Mock()
         return case_abac
 
     @pytest.fixture
     def sample_case_read_sets(self) -> list[Mock]:
         """Create sample CaseReadSet objects for testing."""
         case_id = uuid4()
-        case_type_col_id = uuid4()
+        col_id = uuid4()
         read_set = Mock(spec=model.ReadSetForUpload)
         read_set.id = uuid4()
 
         case_read_set = Mock(spec=model.ReadSetForUpload)
         case_read_set.case_id = case_id
-        case_read_set.case_type_col_id = case_type_col_id
+        case_read_set.col_id = col_id
         case_read_set.read_set = read_set
 
         return [case_read_set]
@@ -97,13 +97,13 @@ class TestCasedbCaseCreateSeq:
     def sample_case_seqs(self) -> list[Mock]:
         """Create sample CaseSeq objects for testing."""
         case_id = uuid4()
-        case_type_col_id = uuid4()
+        col_id = uuid4()
         seq = Mock(spec=model.SeqForUpload)
         seq.id = uuid4()
 
         case_seq = Mock(spec=model.SeqForUpload)
         case_seq.case_id = case_id
-        case_seq.case_type_col_id = case_type_col_id
+        case_seq.col_id = col_id
         case_seq.seq = seq
 
         return [case_seq]
@@ -119,7 +119,7 @@ class TestCasedbCaseCreateSeq:
             cmd = Mock(spec=command.CreateFileForReadSetCommand)
             cmd.user = mock_user
             cmd.case_id = uuid4()
-            cmd.case_type_col_id = uuid4()
+            cmd.col_id = uuid4()
             cmd.file_content = b"test content"
             cmd.is_fwd = True
             cmd.file_format = seqdb_enum.ReadsFileFormat.FASTQ
@@ -132,7 +132,7 @@ class TestCasedbCaseCreateSeq:
 
             # Setup mocks
             mock_case = Mock(spec=model.Case)
-            mock_case.content = {cmd.case_type_col_id: str(uuid4())}
+            mock_case.content = {cmd.col_id: str(uuid4())}
 
             mock_read_set = Mock(spec=model.ReadSetForUpload)
             mock_read_set.fwd_file_id = None
@@ -184,7 +184,7 @@ class TestCasedbCaseCreateSeq:
             cmd = Mock(spec=command.CreateFileForReadSetCommand)
             cmd.user = mock_user
             cmd.case_id = uuid4()
-            cmd.case_type_col_id = uuid4()
+            cmd.col_id = uuid4()
             cmd.file_content = gzip.compress(b"test content")
             cmd.is_fwd = True
             cmd.file_format = seqdb_enum.ReadsFileFormat.FASTQ
@@ -197,7 +197,7 @@ class TestCasedbCaseCreateSeq:
 
             # Setup mocks
             mock_case = Mock(spec=model.Case)
-            mock_case.content = {cmd.case_type_col_id: str(uuid4())}
+            mock_case.content = {cmd.col_id: str(uuid4())}
 
             mock_read_set = Mock(spec=model.ReadSetForUpload)
             mock_read_set.fwd_file_id = None
@@ -249,7 +249,7 @@ class TestCasedbCaseCreateSeq:
             cmd = Mock(spec=command.CreateFileForSeqCommand)
             cmd.user = mock_user
             cmd.case_id = uuid4()
-            cmd.case_type_col_id = uuid4()
+            cmd.col_id = uuid4()
             cmd.file_content = b"test content"
             cmd.file_format = seqdb_enum.SeqFileFormat.FASTA
             cmd.file_compression = seqdb_enum.FileCompression.NONE
@@ -261,7 +261,7 @@ class TestCasedbCaseCreateSeq:
 
             # Setup mocks
             mock_case = Mock(spec=model.Case)
-            mock_case.content = {cmd.case_type_col_id: str(uuid4())}
+            mock_case.content = {cmd.col_id: str(uuid4())}
 
             mock_seq = Mock(spec=model.SeqForUpload)
             mock_seq.file_id = None
@@ -312,7 +312,7 @@ class TestCasedbCaseCreateSeq:
             cmd = Mock(spec=command.CreateFileForSeqCommand)
             cmd.user = mock_user
             cmd.case_id = uuid4()
-            cmd.case_type_col_id = uuid4()
+            cmd.col_id = uuid4()
             cmd.file_content = gzip.compress(b"test content")
             cmd.file_format = seqdb_enum.SeqFileFormat.FASTA
             cmd.file_compression = seqdb_enum.FileCompression.GZIP
@@ -324,7 +324,7 @@ class TestCasedbCaseCreateSeq:
 
             # Setup mocks
             mock_case = Mock(spec=model.Case)
-            mock_case.content = {cmd.case_type_col_id: str(uuid4())}
+            mock_case.content = {cmd.col_id: str(uuid4())}
 
             mock_seq = Mock(spec=model.SeqForUpload)
             mock_seq.file_id = None
@@ -374,13 +374,13 @@ class TestCasedbCaseCreateSeq:
             cmd = Mock(spec=command.CreateFileForReadSetCommand)
             cmd.user = mock_user
             cmd.case_id = uuid4()
-            cmd.case_type_col_id = uuid4()
+            cmd.col_id = uuid4()
             cmd.file_format = seqdb_enum.ReadsFileFormat.FASTQ
             cmd.file_compression = seqdb_enum.FileCompression.NONE
             cmd._policies = []
 
             mock_case = Mock(spec=model.Case)
-            mock_case.content = {}  # Missing the required case_type_col_id
+            mock_case.content = {}  # Missing the required col_id
 
             with patch(
                 "gen_epix.casedb.services.case.create_seq.BaseCaseAbacPolicy.get_case_abac_from_command"
@@ -392,7 +392,7 @@ class TestCasedbCaseCreateSeq:
 
                     with pytest.raises(
                         exc.InvalidArgumentsError,
-                        match="No ReadSet linked to case for the given case type column",
+                        match="No ReadSet linked to case for the given Col",
                     ):
                         case_service_create_file_for_read_set_or_seq(mock_service, cmd)
 
@@ -403,14 +403,14 @@ class TestCasedbCaseCreateSeq:
             cmd = Mock(spec=command.CreateFileForReadSetCommand)
             cmd.user = mock_user
             cmd.case_id = uuid4()
-            cmd.case_type_col_id = uuid4()
+            cmd.col_id = uuid4()
             cmd.is_fwd = True
             cmd.file_format = seqdb_enum.ReadsFileFormat.FASTQ
             cmd.file_compression = seqdb_enum.FileCompression.NONE
             cmd._policies = []
 
             mock_case = Mock(spec=model.Case)
-            mock_case.content = {cmd.case_type_col_id: str(uuid4())}
+            mock_case.content = {cmd.col_id: str(uuid4())}
 
             mock_read_set = Mock(spec=model.ReadSetForUpload)
             mock_read_set.fwd_file_id = uuid4()  # Already has file
@@ -437,13 +437,13 @@ class TestCasedbCaseCreateSeq:
             cmd = Mock(spec=command.CreateFileForSeqCommand)
             cmd.user = mock_user
             cmd.case_id = uuid4()
-            cmd.case_type_col_id = uuid4()
+            cmd.col_id = uuid4()
             cmd.file_format = seqdb_enum.SeqFileFormat.FASTA
             cmd.file_compression = seqdb_enum.FileCompression.NONE
             cmd._policies = []
 
             mock_case = Mock(spec=model.Case)
-            mock_case.content = {cmd.case_type_col_id: str(uuid4())}
+            mock_case.content = {cmd.col_id: str(uuid4())}
 
             mock_seq = Mock(spec=model.SeqForUpload)
             mock_seq.file_id = uuid4()  # Already has file
@@ -478,30 +478,30 @@ class TestCasedbCaseCreateSeq:
             return Mock(spec=BaseUnitOfWork)
 
         @pytest.fixture
-        def sample_case_type_cols(self) -> tuple[list[Mock], UUID]:
-            """Create sample CaseTypeCol objects for testing."""
-            col_id = uuid4()
-            case_type_col = Mock(spec=model.CaseTypeCol)
-            case_type_col.id = uuid4()
-            case_type_col.col_id = col_id
-            case_type_col.case_type_id = uuid4()
-            return [case_type_col], col_id
-
-        @pytest.fixture
-        def sample_cols_genetic_reads(self) -> list[Mock]:
-            """Create sample Col objects with GENETIC_READS type for testing."""
+        def sample_cols(self) -> tuple[list[Mock], UUID]:
+            """Create sample Col objects for testing."""
+            ref_col_id = uuid4()
             col = Mock(spec=model.Col)
             col.id = uuid4()
-            col.col_type = enum.ColType.GENETIC_READS
-            return [col]
+            col.ref_col_id = ref_col_id
+            col.case_type_id = uuid4()
+            return [col], ref_col_id
 
         @pytest.fixture
-        def sample_cols_genetic_sequence(self) -> list[Mock]:
-            """Create sample Col objects with GENETIC_SEQUENCE type for testing."""
-            col = Mock(spec=model.Col)
-            col.id = uuid4()
-            col.col_type = enum.ColType.GENETIC_SEQUENCE
-            return [col]
+        def sample_genetic_reads_cols(self) -> list[Mock]:
+            """Create sample RefCol objects with GENETIC_READS type for testing."""
+            ref_col = Mock(spec=model.RefCol)
+            ref_col.id = uuid4()
+            ref_col.col_type = enum.ColType.GENETIC_READS
+            return [ref_col]
+
+        @pytest.fixture
+        def sample_genetic_sequence_cols(self) -> list[Mock]:
+            """Create sample RefCol objects with GENETIC_SEQUENCE type for testing."""
+            ref_col = Mock(spec=model.RefCol)
+            ref_col.id = uuid4()
+            ref_col.col_type = enum.ColType.GENETIC_SEQUENCE
+            return [ref_col]
 
         @pytest.fixture
         def sample_cases(self) -> list[Mock]:
@@ -517,24 +517,24 @@ class TestCasedbCaseCreateSeq:
             mock_service: Mock,
             mock_case_abac: Mock,
             mock_uow: Mock,
-            sample_case_type_cols: tuple[list[Mock], UUID],
-            sample_cols_genetic_reads: list[Mock],
+            sample_cols: tuple[list[Mock], UUID],
+            sample_genetic_reads_cols: list[Mock],
             sample_cases: list[Mock],
         ) -> None:
             """Test successful retrieval of cases for ReadSets creation."""
             cmd = Mock(spec=command.CreateFileForReadSetCommand)
-            case_type_cols, col_id = sample_case_type_cols
-            case_type_cols[0].col_id = col_id
-            sample_cols_genetic_reads[0].id = col_id
-            sample_cases[0].case_type_id = case_type_cols[0].case_type_id
+            cols, ref_col_id = sample_cols
+            cols[0].ref_col_id = ref_col_id
+            sample_genetic_reads_cols[0].id = ref_col_id
+            sample_cases[0].case_type_id = cols[0].case_type_id
 
             # Configure repository.crud to return appropriate objects
             def crud_side_effect(*args: Any, **kwargs: Any) -> Any:
                 model_class = args[2]
-                if model_class == model.CaseTypeCol:
-                    return case_type_cols
-                elif model_class == model.Col:
-                    return sample_cols_genetic_reads
+                if model_class == model.Col:
+                    return cols
+                elif model_class == model.RefCol:
+                    return sample_genetic_reads_cols
                 elif model_class == model.Case:
                     return sample_cases
                 return []
@@ -548,7 +548,7 @@ class TestCasedbCaseCreateSeq:
                 mock_uow,
                 uuid4(),
                 [sample_cases[0].id],
-                [case_type_cols[0].id],
+                [cols[0].id],
             )
 
             assert result == sample_cases
@@ -558,24 +558,24 @@ class TestCasedbCaseCreateSeq:
             mock_service: Mock,
             mock_case_abac: Mock,
             mock_uow: Mock,
-            sample_case_type_cols: tuple[list[Mock], UUID],
-            sample_cols_genetic_sequence: list[Mock],
+            sample_cols: tuple[list[Mock], UUID],
+            sample_genetic_sequence_cols: list[Mock],
             sample_cases: list[Mock],
         ) -> None:
             """Test successful retrieval of cases for Seqs creation."""
             cmd = Mock(spec=command.CreateFileForSeqCommand)
-            case_type_cols, col_id = sample_case_type_cols
-            case_type_cols[0].col_id = col_id
-            sample_cols_genetic_sequence[0].id = col_id
-            sample_cases[0].case_type_id = case_type_cols[0].case_type_id
+            cols, ref_col_id = sample_cols
+            cols[0].ref_col_id = ref_col_id
+            sample_genetic_sequence_cols[0].id = ref_col_id
+            sample_cases[0].case_type_id = cols[0].case_type_id
 
             # Configure repository.crud to return appropriate objects
             def crud_side_effect(*args: Any, **kwargs: Any) -> Any:
                 model_class = args[2]
-                if model_class == model.CaseTypeCol:
-                    return case_type_cols
-                elif model_class == model.Col:
-                    return sample_cols_genetic_sequence
+                if model_class == model.Col:
+                    return cols
+                elif model_class == model.RefCol:
+                    return sample_genetic_sequence_cols
                 elif model_class == model.Case:
                     return sample_cases
                 return []
@@ -589,7 +589,7 @@ class TestCasedbCaseCreateSeq:
                 mock_uow,
                 uuid4(),
                 [sample_cases[0].id],
-                [case_type_cols[0].id],
+                [cols[0].id],
             )
 
             assert result == sample_cases
@@ -600,20 +600,20 @@ class TestCasedbCaseCreateSeq:
             """Test that invalid column type for ReadSets raises InvalidArgumentsError."""
             cmd = Mock(spec=command.CreateFileForReadSetCommand)
 
-            case_type_col = Mock(spec=model.CaseTypeCol)
-            case_type_col.id = uuid4()
-            case_type_col.col_id = uuid4()
-
             col = Mock(spec=model.Col)
-            col.id = case_type_col.col_id
-            col.col_type = enum.ColType.TEXT  # Wrong type for ReadSets
+            col.id = uuid4()
+            col.ref_col_id = uuid4()
+
+            ref_col = Mock(spec=model.RefCol)
+            ref_col.id = col.ref_col_id
+            ref_col.col_type = enum.ColType.TEXT  # Wrong type for ReadSets
 
             def crud_side_effect(*args: Any, **kwargs: Any) -> Any:
                 model_class = args[2]
-                if model_class == model.CaseTypeCol:
-                    return [case_type_col]
-                elif model_class == model.Col:
+                if model_class == model.Col:
                     return [col]
+                elif model_class == model.RefCol:
+                    return [ref_col]
                 return []
 
             mock_service.repository.crud.side_effect = crud_side_effect
@@ -629,41 +629,41 @@ class TestCasedbCaseCreateSeq:
                     mock_uow,
                     uuid4(),
                     [uuid4()],
-                    [case_type_col.id],
+                    [col.id],
                 )
 
         def test_mismatched_case_type_raises_error(
             self, mock_service: Mock, mock_case_abac: Mock, mock_uow: Mock
         ) -> None:
-            """Test that mismatched case types raise InvalidArgumentsError."""
+            """Test that mismatched CaseTypes raise InvalidArgumentsError."""
             cmd = Mock(spec=command.CreateFileForReadSetCommand)
 
-            case_type_col = Mock(spec=model.CaseTypeCol)
-            case_type_col.id = uuid4()
-            case_type_col.col_id = uuid4()
-            case_type_col.case_type_id = uuid4()  # Different from case
-
             col = Mock(spec=model.Col)
-            col.id = case_type_col.col_id
-            col.col_type = enum.ColType.GENETIC_READS
+            col.id = uuid4()
+            col.ref_col_id = uuid4()
+            col.case_type_id = uuid4()  # Different from Case
+
+            ref_col = Mock(spec=model.RefCol)
+            ref_col.id = col.ref_col_id
+            ref_col.col_type = enum.ColType.GENETIC_READS
 
             case = Mock(spec=model.Case)
             case.id = uuid4()
-            case.case_type_id = uuid4()  # Different from case_type_col
+            case.case_type_id = uuid4()  # Different from Col
 
             def crud_side_effect(*args: Any, **kwargs: Any) -> Any:
                 model_class = args[2]
-                if model_class == model.CaseTypeCol:
-                    return [case_type_col]
-                elif model_class == model.Col:
+                if model_class == model.Col:
                     return [col]
+                elif model_class == model.RefCol:
+                    return [ref_col]
                 elif model_class == model.Case:
                     return [case]
                 return []
 
             mock_service.repository.crud.side_effect = crud_side_effect
 
-            with pytest.raises(exc.InvalidArgumentsError, match="different case type"):
+            with pytest.raises(exc.InvalidArgumentsError, match="different CaseType"):
                 _get_cases_for_create_file_for_read_sets_or_seqs(
                     mock_service,
                     cmd,
@@ -671,7 +671,7 @@ class TestCasedbCaseCreateSeq:
                     mock_uow,
                     uuid4(),
                     [case.id],
-                    [case_type_col.id],
+                    [col.id],
                 )
 
         def test_abac_authorization_failure(
@@ -683,30 +683,30 @@ class TestCasedbCaseCreateSeq:
             # Setup non-full access ABAC
             case_abac = Mock(spec=model.CaseAbac)
             case_abac.is_full_access = False
-            case_abac.get_data_collections_with_access_right_for_case_type_col.return_value = (
+            case_abac.get_data_collections_with_access_right_for_col.return_value = (
                 set()
             )
 
-            case_type_col = Mock(spec=model.CaseTypeCol)
-            case_type_col.id = uuid4()
-            case_type_col.col_id = uuid4()
-            case_type_col.case_type_id = uuid4()
-
             col = Mock(spec=model.Col)
-            col.id = case_type_col.col_id
-            col.col_type = enum.ColType.GENETIC_READS
+            col.id = uuid4()
+            col.ref_col_id = uuid4()
+            col.case_type_id = uuid4()
+
+            ref_col = Mock(spec=model.RefCol)
+            ref_col.id = col.ref_col_id
+            ref_col.col_type = enum.ColType.GENETIC_READS
 
             case = Mock(spec=model.Case)
             case.id = uuid4()
-            case.case_type_id = case_type_col.case_type_id
+            case.case_type_id = col.case_type_id
             case.created_in_data_collection_id = uuid4()
 
             def crud_side_effect(*args: Any, **kwargs: Any) -> Any:
                 model_class = args[2]
-                if model_class == model.CaseTypeCol:
-                    return [case_type_col]
-                elif model_class == model.Col:
+                if model_class == model.Col:
                     return [col]
+                elif model_class == model.RefCol:
+                    return [ref_col]
                 elif model_class == model.Case:
                     return [case]
                 return []
@@ -724,7 +724,7 @@ class TestCasedbCaseCreateSeq:
                     mock_uow,
                     uuid4(),
                     [case.id],
-                    [case_type_col.id],
+                    [col.id],
                 )
 
         def test_invalid_command_type_raises_error(

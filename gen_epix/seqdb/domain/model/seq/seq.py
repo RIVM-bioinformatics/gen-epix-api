@@ -15,6 +15,7 @@ from pydantic import (
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model
+from gen_epix.commondb.domain.model.organization import BaseIdentifier
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
@@ -353,6 +354,21 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
     def _serialize_contigs(self, value: list[Contig]) -> str:
         """"""
         return json.dumps([contig.model_dump() for contig in value])
+
+
+class SeqIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        Seq,
+        relationship_field_name="seq",
+        snake_case_plural_name="seq_identifiers",
+        table_name="seq_identifier",
+    )
+    NAME: ClassVar = "SeqIdentifier"
+    MODEL_CLASS: ClassVar = Seq
+
+    seq: Seq | None = Field(
+        default=None, description="The sequence associated with this identifier."
+    )
 
 
 class RefSnp(Model):

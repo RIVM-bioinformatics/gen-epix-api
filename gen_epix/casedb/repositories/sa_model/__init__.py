@@ -16,6 +16,7 @@ from gen_epix.casedb.repositories.sa_model.case import Case as Case
 from gen_epix.casedb.repositories.sa_model.case import (
     CaseDataCollectionLink as CaseDataCollectionLink,
 )
+from gen_epix.casedb.repositories.sa_model.case import CaseIdentifier as CaseIdentifier
 from gen_epix.casedb.repositories.sa_model.case import CaseSet as CaseSet
 from gen_epix.casedb.repositories.sa_model.case import (
     CaseSetCategory as CaseSetCategory,
@@ -26,12 +27,6 @@ from gen_epix.casedb.repositories.sa_model.case import (
 from gen_epix.casedb.repositories.sa_model.case import CaseSetMember as CaseSetMember
 from gen_epix.casedb.repositories.sa_model.case import CaseSetStatus as CaseSetStatus
 from gen_epix.casedb.repositories.sa_model.case import CaseType as CaseType
-from gen_epix.casedb.repositories.sa_model.case import CaseTypeCol as CaseTypeCol
-from gen_epix.casedb.repositories.sa_model.case import CaseTypeColSet as CaseTypeColSet
-from gen_epix.casedb.repositories.sa_model.case import (
-    CaseTypeColSetMember as CaseTypeColSetMember,
-)
-from gen_epix.casedb.repositories.sa_model.case import CaseTypeDim as CaseTypeDim
 from gen_epix.casedb.repositories.sa_model.case import CaseTypeSet as CaseTypeSet
 from gen_epix.casedb.repositories.sa_model.case import (
     CaseTypeSetCategory as CaseTypeSetCategory,
@@ -40,10 +35,14 @@ from gen_epix.casedb.repositories.sa_model.case import (
     CaseTypeSetMember as CaseTypeSetMember,
 )
 from gen_epix.casedb.repositories.sa_model.case import Col as Col
+from gen_epix.casedb.repositories.sa_model.case import ColSet as ColSet
+from gen_epix.casedb.repositories.sa_model.case import ColSetMember as ColSetMember
 from gen_epix.casedb.repositories.sa_model.case import Dim as Dim
 from gen_epix.casedb.repositories.sa_model.case import (
     GeneticDistanceProtocol as GeneticDistanceProtocol,
 )
+from gen_epix.casedb.repositories.sa_model.case import RefCol as RefCol
+from gen_epix.casedb.repositories.sa_model.case import RefDim as RefDim
 from gen_epix.casedb.repositories.sa_model.case import TreeAlgorithm as TreeAlgorithm
 from gen_epix.casedb.repositories.sa_model.case import (
     TreeAlgorithmClass as TreeAlgorithmClass,
@@ -73,9 +72,6 @@ from gen_epix.commondb.repositories.sa_model import (
 )
 from gen_epix.commondb.repositories.sa_model import (
     DataCollectionSetMember as DataCollectionSetMember,
-)
-from gen_epix.commondb.repositories.sa_model import (
-    ExternalIdentifier as ExternalIdentifier,
 )
 from gen_epix.commondb.repositories.sa_model import IdentifierIssuer as IdentifierIssuer
 from gen_epix.commondb.repositories.sa_model import Organization as Organization
@@ -113,7 +109,6 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.DataCollectionSet: DataCollectionSet,
         model.DataCollectionSetMember: DataCollectionSetMember,
         model.IdentifierIssuer: IdentifierIssuer,
-        model.ExternalIdentifier: ExternalIdentifier,
         model.Organization: Organization,
         model.OrganizationSet: OrganizationSet,
         model.OrganizationSetMember: OrganizationSetMember,
@@ -145,6 +140,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
     },
     enum.ServiceType.CASE: {
         model.Case: Case,
+        model.CaseIdentifier: CaseIdentifier,
         model.CaseDataCollectionLink: CaseDataCollectionLink,
         model.CaseSet: CaseSet,
         model.CaseSetCategory: CaseSetCategory,
@@ -152,15 +148,15 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.CaseSetMember: CaseSetMember,
         model.CaseSetStatus: CaseSetStatus,
         model.CaseType: CaseType,
-        model.CaseTypeCol: CaseTypeCol,
-        model.CaseTypeColSet: CaseTypeColSet,
-        model.CaseTypeColSetMember: CaseTypeColSetMember,
-        model.CaseTypeDim: CaseTypeDim,
+        model.Col: Col,
+        model.ColSet: ColSet,
+        model.ColSetMember: ColSetMember,
+        model.Dim: Dim,
         model.CaseTypeSet: CaseTypeSet,
         model.CaseTypeSetCategory: CaseTypeSetCategory,
         model.CaseTypeSetMember: CaseTypeSetMember,
-        model.Col: Col,
-        model.Dim: Dim,
+        model.RefCol: RefCol,
+        model.RefDim: RefDim,
         model.GeneticDistanceProtocol: GeneticDistanceProtocol,
         model.TreeAlgorithm: TreeAlgorithm,
         model.TreeAlgorithmClass: TreeAlgorithmClass,

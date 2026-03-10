@@ -10,9 +10,7 @@ the OMOP person domain:
 
 1 Existence of parent (Person) objects in the repository
 1.1 ID not provided or NULL_ID: person does not exist and needs to be created
-1.2 ID provided and is_new_id=True
-1.2.1 Object with this ID does not exist: succeeds (create with that ID)
-1.2.2 Object with this ID exists: error
+1.2 ID provided by batch creator (new_id): object does not (yet) exist in the repository — create with that ID
 2 Provision of child objects
 2.1 Person without any child objects (no measurements, observations, specimens,
     measurement relations)
@@ -30,30 +28,43 @@ the OMOP person domain:
 4.2 Actual person_id matching the parent
 4.2.1 Mismatch: error
 4.2.2 Match: succeeds
-5 External identifiers for persons
-5.1 No external identifiers: succeeds
-5.2 Existing external identifier resolves person ID
-5.3 New external identifier created on upload
-6 Upload command on_exists value
-6.1 ERROR: error if any existing person
-6.2 SKIP: skip existing person
-6.3 UPDATE: update existing person
-7 Parametrized batch sizes
-7.1 Single person
-7.2 Multiple persons
-8 External identifiers for Specimen objects (use IdentifierType=SAMPLE for testing purposes)
-8.1 No external identifiers: succeeds
-8.2 One external identifier provided
-8.2.1 Existing external identifier i.e. (identifier_issuer, external_id) combination exists already
-8.2.1.1 Specimen ID None or NULL_ID: set specimen ID in upload result
-8.2.1.2 Specimen ID provided
-8.2.1.2.1 Same as existing external identifiers' specimen ID: no issue
-8.2.1.2.2 Different from existing external identifiers' specimen ID: error
-8.2.2 New external identifier i.e. (identifier_issuer, external_id) combination does not exist yet for this specimen: create new external identifier once specimen ID is known
-8.3 Identifier issuer invalid
-8.3.1 Identifier issuer ID (any except NULL_ID) provided and not found: error
-8.3.2 Identifier issuer code provided and not found: error
-8.3.3 Both identifier issuer ID (any except NULL_ID) and code provided and do not match: error
+5 Field mutability for parent (Person) objects
+5.1 Field that is always mutable
+5.1.1 Single value field (person_source_value): field is set to new value
+5.2 Field that is mutable if empty
+5.2.1 Stored value is empty: field is set to new value
+5.2.2 Stored value is not empty, new value is empty: no issue
+5.2.3 Stored value is not empty, new value is not empty: error
+6 External identifiers for persons
+6.1 No Identifiers: succeeds
+6.2 Existing Identifier resolves person ID
+6.3 New Identifier created on upload
+7 Upload command on_exists and on_new values
+7.1 on_exists=ERROR: error if any existing person
+7.2 on_exists=SKIP: skip existing person
+7.3 on_exists=UPDATE: update existing person
+7.4 on_new=CREATE: create any new person with provided ID (default)
+7.5 on_new=SKIP: skip any new person, do not create
+7.6 on_new=ERROR: error if any new person
+8 Parameterized batch sizes
+8.1 Single person
+8.2 Multiple persons
+9 External identifiers for Specimen objects (use IdentifierType=SAMPLE for testing purposes)
+9.1 No Identifiers: succeeds
+9.2 One Identifier provided
+9.2.1 Existing Identifier i.e. (identifier_issuer, external_id) combination exists already
+9.2.1.1 Specimen ID None or NULL_ID: set specimen ID in upload result
+9.2.1.2 Specimen ID provided
+9.2.1.2.1 Same as existing Identifiers' specimen ID: no issue
+9.2.1.2.2 Different from existing Identifiers' specimen ID: error
+9.2.2 New Identifier i.e. (identifier_issuer, external_id) combination does not exist yet for this specimen: create new Identifier once specimen ID is known
+9.2.3 Multiple Identifiers provided
+9.2.3.1 Some existing Identifiers: must all point to the same specimen ID AND same restrictions as 9.2 per Identifier
+9.2.3.2 All new Identifiers: create new Identifiers once specimen ID is known
+9.3 Identifier issuer invalid
+9.3.1 Identifier issuer ID (any except NULL_ID) provided and not found: error
+9.3.2 Identifier issuer code provided and not found: error
+9.3.3 Both identifier issuer ID (any except NULL_ID) and code provided and do not match: error
 """
 
 from datetime import date, datetime, timezone
@@ -64,16 +75,14 @@ from uuid import UUID, uuid4
 import pytest
 
 from gen_epix.commondb.domain.enum import (
-    IdentifierType,
-    OnExistsUploadAction,
     Role,
+    UploadAction,
     UploadStatus,
     UploadStatusSet,
 )
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import (
-    ExternalIdentifier,
-    ExternalIdentifierForUpload,
+    IdentifierForUpload,
     IdentifierIssuer,
     User,
 )
@@ -90,8 +99,10 @@ from gen_epix.omopdb.domain.model import (
     PersonBatchForUpload,
     PersonBatchUploadResult,
     PersonForUpload,
+    PersonIdentifier,
     Specimen,
     SpecimenForUpload,
+    SpecimenIdentifier,
 )
 from gen_epix.omopdb.services.omop.base import BaseOmopService
 from gen_epix.omopdb.services.omop.upload import PersonBatchUploader
@@ -201,9 +212,8 @@ class BasePersonUploadTestCase(TestCase):
     def create_person_for_upload(
         self,
         person_id: UUID | None = None,
-        is_new_id: bool = False,
         person: Person | None | object = "_DEFAULT",
-        external_identifiers: list[ExternalIdentifierForUpload] | None = None,
+        identifiers: list[IdentifierForUpload] | None = None,
         measurements: list[MeasurementForUpload] | None = None,
         observations: list[ObservationForUpload] | None = None,
         specimens: list[SpecimenForUpload] | None = None,
@@ -214,9 +224,8 @@ class BasePersonUploadTestCase(TestCase):
             person = self.create_person(person_id=person_id or None)
         return PersonForUpload(
             id=person_id or NULL_ID,
-            is_new_id=is_new_id,  # type: ignore[call-arg]
             person=person,  # type: ignore[arg-type]
-            external_identifiers=external_identifiers,
+            identifiers=identifiers,
             measurements=measurements,
             observations=observations,
             specimens=specimens,
@@ -263,7 +272,6 @@ class BasePersonUploadTestCase(TestCase):
     def create_measurement_for_upload(
         self,
         measurement_id: UUID = NULL_ID,
-        is_new_id: bool = False,
         person_id: UUID = NULL_ID,
         measurement_concept_int_id: int = 3004249,
         measurement_type_concept_int_id: int = 32817,
@@ -276,7 +284,6 @@ class BasePersonUploadTestCase(TestCase):
         """
         return MeasurementForUpload(
             measurement_id=measurement_id,
-            is_new_id=is_new_id,  # type: ignore[call-arg]
             person_id=person_id,
             measurement_concept_id=uuid4(),
             measurement_concept_int_id=measurement_concept_int_id,
@@ -293,7 +300,6 @@ class BasePersonUploadTestCase(TestCase):
     def create_observation_for_upload(
         self,
         observation_id: UUID = NULL_ID,
-        is_new_id: bool = False,
         person_id: UUID = NULL_ID,
         observation_concept_int_id: int = 4083587,
         observation_type_concept_int_id: int = 32817,
@@ -307,7 +313,6 @@ class BasePersonUploadTestCase(TestCase):
         """
         return ObservationForUpload(  # type: ignore[call-arg]
             observation_id=observation_id,
-            is_new_id=is_new_id,
             person_id=person_id,
             observation_concept_id=uuid4(),
             observation_concept_int_id=observation_concept_int_id,
@@ -327,12 +332,11 @@ class BasePersonUploadTestCase(TestCase):
     def create_specimen_for_upload(
         self,
         specimen_id: UUID = NULL_ID,
-        is_new_id: bool = False,
         person_id: UUID = NULL_ID,
         specimen_concept_int_id: int = 4001225,
         specimen_type_concept_int_id: int = 32817,
         specimen_date: date | None = None,
-        external_identifiers: list[ExternalIdentifierForUpload] | None = None,
+        identifiers: list[IdentifierForUpload] | None = None,
     ) -> SpecimenForUpload:
         """Create a test SpecimenForUpload with integer concept IDs.
 
@@ -341,7 +345,6 @@ class BasePersonUploadTestCase(TestCase):
         """
         return SpecimenForUpload(
             specimen_id=specimen_id,
-            is_new_id=is_new_id,  # type: ignore[call-arg]
             person_id=person_id,
             specimen_concept_id=uuid4(),
             specimen_concept_int_id=specimen_concept_int_id,
@@ -352,13 +355,12 @@ class BasePersonUploadTestCase(TestCase):
             anatomic_site_concept_int_id=0,
             disease_status_concept_int_id=0,
             derived_from_specimen_concept_int_id=0,
-            external_identifiers=external_identifiers,  # type: ignore[call-arg]
+            identifiers=identifiers,  # type: ignore[call-arg]
         )
 
     def create_measurement_relation_for_upload(
         self,
         measurement_relation_id: UUID = NULL_ID,
-        is_new_id: bool = False,
         person_id: UUID = NULL_ID,
         from_measurement_id: UUID = NULL_ID,
         to_measurement_id: UUID = NULL_ID,
@@ -367,7 +369,6 @@ class BasePersonUploadTestCase(TestCase):
         """Create a test MeasurementRelationForUpload."""
         return MeasurementRelationForUpload(
             measurement_relation_id=measurement_relation_id,
-            is_new_id=is_new_id,  # type: ignore[call-arg]
             person_id=person_id,
             from_measurement_id=from_measurement_id,
             to_measurement_id=to_measurement_id,
@@ -379,7 +380,8 @@ class BasePersonUploadTestCase(TestCase):
     def create_command_for_persons(
         self,
         persons: list[PersonForUpload] | PersonForUpload,
-        on_exists: OnExistsUploadAction = OnExistsUploadAction.UPDATE,
+        on_exists: UploadAction = UploadAction.UPDATE,
+        on_new: UploadAction = UploadAction.CREATE,
         validate_command: bool = True,
     ) -> UploadPersonsCommand:
         """Create a test UploadPersonsCommand."""
@@ -395,56 +397,51 @@ class BasePersonUploadTestCase(TestCase):
             user=self.user,
             person_batch=person_batch,
             on_exists=on_exists,  # type: ignore[call-arg]
+            on_new=on_new,  # type: ignore[call-arg]
         )
         return cmd
 
-    def create_external_identifier_for_upload(
+    def create_identifier_for_upload(
         self,
         identifier_issuer_id: UUID | None = None,
         identifier_issuer_code: str = "test_issuer",
         external_id: str = "test_external_id",
-    ) -> ExternalIdentifierForUpload:
-        """Create a test external identifier for upload."""
-        return ExternalIdentifierForUpload(
+    ) -> IdentifierForUpload:
+        """Create a test Identifier for upload."""
+        return IdentifierForUpload(
             identifier_issuer_id=identifier_issuer_id or NULL_ID,
             identifier_issuer_code=identifier_issuer_code,
             external_id=external_id,
         )
 
-    def get_external_identifier_from_for_upload(
+    def get_person_identifier_from_for_upload(
         self,
-        external_identifier_for_upload: ExternalIdentifierForUpload,
+        identifier_for_upload: IdentifierForUpload,
         internal_id: UUID,
-        id: UUID | None = None,
         identifier_issuer_id: UUID | None = None,
         external_id: str | None = None,
-    ) -> ExternalIdentifier:
-        """Get an ExternalIdentifier from an ExternalIdentifierForUpload, with optional overrides."""
-        return ExternalIdentifier(
-            id=id or uuid4(),
+    ) -> PersonIdentifier:
+        """Get an Identifier from an IdentifierForUpload, with optional overrides."""
+        return PersonIdentifier(
             identifier_issuer_id=identifier_issuer_id
-            or external_identifier_for_upload.identifier_issuer_id,  # type: ignore[arg-type]
-            external_id=external_id or external_identifier_for_upload.external_id,
+            or identifier_for_upload.identifier_issuer_id,  # type: ignore[arg-type]
+            external_id=external_id or identifier_for_upload.external_id,
             internal_id=internal_id,
-            identifier_type=IdentifierType.PERSON,
         )
 
-    def get_specimen_external_identifier_from_for_upload(
+    def get_specimen_identifier_from_for_upload(
         self,
-        external_identifier_for_upload: ExternalIdentifierForUpload,
+        identifier_for_upload: IdentifierForUpload,
         internal_id: UUID,
-        id: UUID | None = None,
         identifier_issuer_id: UUID | None = None,
         external_id: str | None = None,
-    ) -> ExternalIdentifier:
-        """Get the ExternalIdentifier model for Specimen, corresponding to an ExternalIdentifierForUpload model, with optional overrides."""
-        return ExternalIdentifier(
-            id=id or uuid4(),
+    ) -> SpecimenIdentifier:
+        """Get the Identifier model for Specimen, corresponding to an IdentifierForUpload model, with optional overrides."""
+        return SpecimenIdentifier(
             identifier_issuer_id=identifier_issuer_id
-            or external_identifier_for_upload.identifier_issuer_id,  # type: ignore[arg-type]
-            external_id=external_id or external_identifier_for_upload.external_id,
+            or identifier_for_upload.identifier_issuer_id,  # type: ignore[arg-type]
+            external_id=external_id or identifier_for_upload.external_id,
             internal_id=internal_id,
-            identifier_type=IdentifierType.SAMPLE,
         )
 
     # -- Upload helper -------------------------------------------------------
@@ -452,7 +449,8 @@ class BasePersonUploadTestCase(TestCase):
     def upload_batch(
         self,
         cmd: UploadPersonsCommand | list[PersonForUpload] | PersonForUpload,
-        on_exists: OnExistsUploadAction = OnExistsUploadAction.UPDATE,
+        on_exists: UploadAction = UploadAction.UPDATE,
+        on_new: UploadAction = UploadAction.CREATE,
         validate_command: bool = True,
     ) -> PersonBatchUploadResult:
         """Upload a batch of persons and return the upload result."""
@@ -460,7 +458,10 @@ class BasePersonUploadTestCase(TestCase):
             pass
         else:
             cmd = self.create_command_for_persons(
-                cmd, on_exists, validate_command=validate_command
+                cmd,
+                on_exists=on_exists,
+                on_new=on_new,
+                validate_command=validate_command,
             )
         batch_result = self.batch_uploader.upload_batch(cmd)
         return batch_result  # type: ignore[return-value]
@@ -534,11 +535,9 @@ class Test1PersonExistence(BasePersonUploadTestCase):
         self.assertStatusCount(batch_result, n_created=1)
         self.assertEqual(batch_result.persons[0].id, created_person_id)
 
-    def test_1_2_1_person_id_provided_new_id_not_exists_succeeds(self) -> None:
-        """Test 1.2.1: Person with is_new_id=True and ID does not exist - should succeed."""
-        person_for_upload = self.create_person_for_upload(
-            person_id=self.person_id, is_new_id=True
-        )
+    def test_1_2_person_id_provided_as_new_id_succeeds(self) -> None:
+        """Test 1.2: ID provided by batch creator (new_id); person does not exist yet - should be created with that ID."""
+        person_for_upload = self.create_person_for_upload(person_id=self.person_id)
         self.service.repository.crud.side_effect = [
             [False],  # Person does not exist
             [person_for_upload.id],  # Create persons returned IDs
@@ -547,18 +546,6 @@ class Test1PersonExistence(BasePersonUploadTestCase):
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=1)
         self.assertEqual(batch_result.persons[0].id, person_for_upload.id)
-
-    def test_1_2_2_person_id_provided_new_id_exists_fails(self) -> None:
-        """Test 1.2.2: Person with is_new_id=True and ID exists - should fail."""
-        person_for_upload = self.create_person_for_upload(
-            person_id=self.person_id, is_new_id=True
-        )
-        self.service.repository.crud.side_effect = [
-            [True],  # Person already exists
-        ]
-        batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1)
 
 
 # ---------------------------------------------------------------------------
@@ -732,9 +719,7 @@ class Test4PersonLinks(BasePersonUploadTestCase):
         """Test 4.2.1: Child person_id does not match parent - should fail."""
         measurement = self.create_measurement_for_upload(person_id=self.person_id)
         person_for_upload = self.create_person_for_upload(
-            person_id=self.person_id,
-            is_new_id=True,
-            measurements=[measurement],
+            person_id=self.person_id, measurements=[measurement]
         )
         # Override ID to be different from child's person_id
         person_for_upload.id = self.random_ids[1]
@@ -766,17 +751,62 @@ class Test4PersonLinks(BasePersonUploadTestCase):
 
 
 # ---------------------------------------------------------------------------
-# Test Scenario 5: External identifiers for persons
+# Test Scenario 5: Field mutability for Person objects
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
-class Test5ExternalIdentifiers(BasePersonUploadTestCase):
-    """Test scenarios related to external identifiers for persons."""
+class Test5FieldMutability(BasePersonUploadTestCase):
+    """Test scenarios related to field mutability for existing Person objects."""
 
-    def test_5_1_no_external_ids_provided(self) -> None:
-        """Test 5.1: No external identifiers provided - should succeed."""
-        person_for_upload = self.create_person_for_upload(external_identifiers=None)
+    def test_5_1_1_always_mutable_single_value_field(self) -> None:
+        """Test 5.1.1: Always mutable single value field (person_source_value) - should be updated."""
+        existing_value = "old_src_person"
+        new_value = "new_src_person"
+        person_for_upload = self.create_person_for_upload(
+            person_id=self.person_id,
+            person=self.create_person(
+                person_id=self.person_id, person_source_value=new_value
+            ),
+        )
+        existing_person = self.create_person(
+            person_id=self.person_id, person_source_value=existing_value
+        )
+        self.service.repository.crud.side_effect = [
+            [True],  # EXISTS_SOME: person exists
+            [existing_person],  # READ_SOME: existing person
+            [self.person_id],  # UPDATE_SOME: update returns ID
+        ]
+        batch_result = self.upload_batch(person_for_upload)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_updated=1)
+        self.assertEqual(existing_person.person_source_value, new_value)
+
+    def test_5_2_1_mutable_if_empty_stored_empty_updated(self) -> None:
+        """Test 5.2.1: Mutable if empty field - stored value is empty, should succeed."""
+        pass  # Implementation would depend on the actual update logic
+
+    def test_5_2_2_mutable_if_empty_stored_not_empty_new_empty(self) -> None:
+        """Test 5.2.2: Mutable if empty field - stored not empty, new empty, should succeed."""
+        pass
+
+    def test_5_2_3_mutable_if_empty_stored_not_empty_new_not_empty_fails(self) -> None:
+        """Test 5.2.3: Mutable if empty field - stored not empty, new not empty, should fail."""
+        pass
+
+
+# ---------------------------------------------------------------------------
+# Test Scenario 6: External identifiers for persons
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.scenario_ids("TC-SEC-30-03")
+class Test6Identifiers(BasePersonUploadTestCase):
+    """Test scenarios related to Identifiers for persons."""
+
+    def test_6_1_no_identifiers_provided(self) -> None:
+        """Test 6.1: No Identifiers provided - should succeed."""
+        person_for_upload = self.create_person_for_upload(identifiers=None)
         created_person_id = self.random_ids[0]
         self.service.repository.crud.side_effect = [
             [created_person_id],  # Create persons returned IDs
@@ -785,29 +815,29 @@ class Test5ExternalIdentifiers(BasePersonUploadTestCase):
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=1)
 
-    def test_5_2_existing_external_id_resolves_person(self) -> None:
-        """Test 5.2: Existing external identifier resolves person ID."""
-        external_identifier = self.create_external_identifier_for_upload(
+    def test_6_2_existing_identifier_resolves_person(self) -> None:
+        """Test 6.2: Existing Identifier resolves person ID."""
+        identifier = self.create_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id,
         )
         existing_person_id = self.random_ids[0]
-        existing_external_identifier = self.get_external_identifier_from_for_upload(
-            external_identifier, internal_id=existing_person_id
+        existing_identifier = self.get_person_identifier_from_for_upload(
+            identifier, internal_id=existing_person_id
         )
         # Create upload person whose person_id matches the existing person so
         # that update_objects finds identical content and skips the update.
         person = self.create_person(person_id=existing_person_id)
-        person.person_id = None  # Will be resolved from the external identifier
+        person.person_id = None  # Will be resolved from the Identifier
         person_for_upload = self.create_person_for_upload(
             person=person,
-            external_identifiers=[external_identifier],
+            identifiers=[identifier],
         )
         existing_person = self.get_person_from_for_upload(
             person_for_upload, person_id=existing_person_id
         )
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],  # Identifier issuers
-            [existing_external_identifier],  # Existing external identifiers
+            [existing_identifier],  # Existing Identifiers
         ]
         self.service.repository.crud.side_effect = [
             [True],  # Person exists
@@ -818,25 +848,24 @@ class Test5ExternalIdentifiers(BasePersonUploadTestCase):
         self.assertStatusCount(batch_result, n_skipped=2)
         self.assertEqual(batch_result.persons[0].id, existing_person_id)
 
-    def test_5_3_new_external_id_created_on_upload(self) -> None:
-        """Test 5.3: New external identifier created on upload."""
-        external_identifier_for_upload = self.create_external_identifier_for_upload(
+    def test_6_3_new_identifier_created_on_upload(self) -> None:
+        """Test 6.3: New Identifier created on upload."""
+        identifier_for_upload = self.create_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id,
         )
-        created_external_identifier_id = self.random_ids[0]
         created_person_id = self.random_ids[1]
         person_for_upload = self.create_person_for_upload(
-            external_identifiers=[external_identifier_for_upload],
+            identifiers=[identifier_for_upload],
         )
-        external_identifier = self.get_external_identifier_from_for_upload(
-            external_identifier_for_upload,
-            id=created_external_identifier_id,
+        identifier = self.get_person_identifier_from_for_upload(
+            identifier_for_upload,
             internal_id=created_person_id,
         )
+        created_identifier_id = identifier.id
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],  # Identifier issuers
-            [],  # No existing external identifiers
-            [created_external_identifier_id],  # Created external identifier ID
+            [],  # No existing Identifiers
+            [created_identifier_id],  # Created Identifier ID
         ]
         self.service.repository.crud.side_effect = [
             [created_person_id],  # Create persons returned IDs
@@ -846,46 +875,44 @@ class Test5ExternalIdentifiers(BasePersonUploadTestCase):
         self.assertStatusCount(batch_result, n_created=2)
         self.assertEqual(batch_result.persons[0].id, created_person_id)
         self.assertEqual(
-            batch_result.persons[0].external_identifiers[0].id,  # type: ignore[index]
-            created_external_identifier_id,
+            batch_result.persons[0].identifiers[0].id,  # type: ignore[index]
+            created_identifier_id,
         )
 
 
 # ---------------------------------------------------------------------------
-# Test Scenario 6: Upload command on_exists value
+# Test Scenario 7: Upload command on_exists value
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
-class Test6OnExistsActions(BasePersonUploadTestCase):
-    """Test scenarios related to the on_exists command parameter."""
+class Test7OnExistsAndOnNewActions(BasePersonUploadTestCase):
+    """Test scenarios related to the on_exists and on_new command parameters."""
 
-    def test_6_1_on_exists_error_with_existing_person_fails(self) -> None:
-        """Test 6.1: on_exists=ERROR with existing person - should fail."""
+    def test_7_1_on_exists_error_with_existing_person_fails(self) -> None:
+        """Test 7.1: on_exists=ERROR with existing person - should fail."""
         person_for_upload = self.create_person_for_upload(person_id=self.person_id)
         self.service.repository.crud.side_effect = [
             [True],  # EXISTS_SOME: person exists
         ]
         batch_result = self.upload_batch(
-            person_for_upload, on_exists=OnExistsUploadAction.ERROR
+            person_for_upload, on_exists=UploadAction.ERROR
         )
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1)
 
-    def test_6_2_on_exists_skip_with_existing_person_skips(self) -> None:
-        """Test 6.2: on_exists=SKIP with existing person - should skip."""
+    def test_7_2_on_exists_skip_with_existing_person_skips(self) -> None:
+        """Test 7.2: on_exists=SKIP with existing person - should skip."""
         person_for_upload = self.create_person_for_upload(person_id=self.person_id)
         self.service.repository.crud.side_effect = [
             [True],  # EXISTS_SOME: person exists
         ]
-        batch_result = self.upload_batch(
-            person_for_upload, on_exists=OnExistsUploadAction.SKIP
-        )
+        batch_result = self.upload_batch(person_for_upload, on_exists=UploadAction.SKIP)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_skipped=1)
 
-    def test_6_3_on_exists_update_with_existing_person_updates(self) -> None:
-        """Test 6.3: on_exists=UPDATE with existing person - should update."""
+    def test_7_3_on_exists_update_with_existing_person_updates(self) -> None:
+        """Test 7.3: on_exists=UPDATE with existing person - should update."""
         person_for_upload = self.create_person_for_upload(
             person_id=self.person_id,
             person=self.create_person(
@@ -901,23 +928,54 @@ class Test6OnExistsActions(BasePersonUploadTestCase):
             [self.person_id],  # UPDATE_SOME: update returns ID
         ]
         batch_result = self.upload_batch(
-            person_for_upload, on_exists=OnExistsUploadAction.UPDATE
+            person_for_upload, on_exists=UploadAction.UPDATE
         )
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_updated=1)
 
+    def test_7_4_on_new_create_with_new_id_creates(self) -> None:
+        """Test 7.4: on_new=CREATE with new person having provided ID - should create."""
+        person_for_upload = self.create_person_for_upload(person_id=self.person_id)
+        self.service.repository.crud.side_effect = [
+            [False],  # EXISTS_SOME: person does not exist
+            [self.person_id],  # CREATE_SOME: create returns provided ID
+        ]
+        batch_result = self.upload_batch(person_for_upload, on_new=UploadAction.CREATE)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=1)
+
+    def test_7_5_on_new_skip_with_new_id_skips(self) -> None:
+        """Test 7.5: on_new=SKIP with new person having provided ID - should skip."""
+        person_for_upload = self.create_person_for_upload(person_id=self.person_id)
+        self.service.repository.crud.side_effect = [
+            [False],  # EXISTS_SOME: person does not exist
+        ]
+        batch_result = self.upload_batch(person_for_upload, on_new=UploadAction.SKIP)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_skipped=1)
+
+    def test_7_6_on_new_error_with_new_id_fails(self) -> None:
+        """Test 7.6: on_new=ERROR with new person having provided ID - should fail."""
+        person_for_upload = self.create_person_for_upload(person_id=self.person_id)
+        self.service.repository.crud.side_effect = [
+            [False],  # EXISTS_SOME: person does not exist
+        ]
+        batch_result = self.upload_batch(person_for_upload, on_new=UploadAction.ERROR)
+        self.assertBatchFailed(batch_result)
+        self.assertStatusCount(batch_result, n_failed=1)
+
 
 # ---------------------------------------------------------------------------
-# Test Scenario 7: Parametrized batch sizes
+# Test Scenario 8: Parametrized batch sizes
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
-class Test7ParametrizedBatchSizes(BasePersonUploadTestCase):
+class Test8ParametrizedBatchSizes(BasePersonUploadTestCase):
     """Test upload with varying batch sizes."""
 
-    def test_7_batch_of_n_new_persons(self) -> None:
-        """Test 7: Upload batch of n new persons."""
+    def test_8_batch_of_n_new_persons(self) -> None:
+        """Test 8: Upload batch of n new persons."""
         for n_persons in [1, 3, 5]:
             with self.subTest(n_persons=n_persons):
                 self.setUp()  # Reset mocks for each subtest
@@ -934,8 +992,8 @@ class Test7ParametrizedBatchSizes(BasePersonUploadTestCase):
                 for i, created_id in enumerate(created_ids):
                     self.assertEqual(batch_result.persons[i].id, created_id)
 
-    def test_7_person_with_n_measurements(self) -> None:
-        """Test 7: Upload person with varying number of measurements."""
+    def test_8_person_with_n_measurements(self) -> None:
+        """Test 8: Upload person with varying number of measurements."""
         for n_children in [0, 1, 3]:
             with self.subTest(n_children=n_children):
                 self.setUp()  # Reset mocks for each subtest
@@ -966,11 +1024,11 @@ class Test7ParametrizedBatchSizes(BasePersonUploadTestCase):
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
-class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
-    """Test scenarios related to external identifiers for Specimen objects."""
+class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
+    """Test scenarios related to Identifiers for Specimen objects."""
 
-    def test_8_1_no_external_ids_provided(self) -> None:
-        """Test 8.1: Specimen without external identifiers - should succeed."""
+    def test_8_1_no_identifiers_provided(self) -> None:
+        """Test 8.1: Specimen without Identifiers - should succeed."""
         specimen = self.create_specimen_for_upload()
         person_for_upload = self.create_person_for_upload(
             person_id=self.person_id, person=None, specimens=[specimen]
@@ -985,22 +1043,19 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=1, n_skipped=1)
 
-    def test_8_2_1_1_existing_external_id_null_specimen_sets_id(self) -> None:
-        """Test 8.2.1.1: Existing external identifier with NULL specimen ID - should set specimen ID."""
-        external_identifier = self.create_external_identifier_for_upload(
+    def test_8_2_1_1_existing_identifier_null_specimen_sets_id(self) -> None:
+        """Test 8.2.1.1: Existing Identifier with NULL specimen ID - should set specimen ID."""
+        identifier = self.create_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id,
         )
-        existing_external_identifier_id = self.random_ids[0]
         existing_specimen_id = self.random_ids[1]
-        existing_external_identifier = (
-            self.get_specimen_external_identifier_from_for_upload(
-                external_identifier,
-                internal_id=existing_specimen_id,
-                id=existing_external_identifier_id,
-            )
+        existing_identifier = self.get_specimen_identifier_from_for_upload(
+            identifier,
+            internal_id=existing_specimen_id,
         )
+        existing_identifier_id = existing_identifier.id
         existing_specimen = self.create_specimen_for_upload(
-            specimen_id=NULL_ID, external_identifiers=[external_identifier]
+            specimen_id=NULL_ID, identifiers=[identifier]
         )
         existing_person_id = self.person_id
         person_for_upload = self.create_person_for_upload(
@@ -1008,7 +1063,7 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
         )
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],
-            [existing_external_identifier],
+            [existing_identifier],
         ]
         self.service.repository.crud.side_effect = [
             [True],  # Person exists
@@ -1024,22 +1079,19 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
             batch_result.persons[0].specimens[0].id, existing_specimen_id  # type: ignore[index]
         )
 
-    def test_8_2_1_2_1_existing_external_id_same_specimen_succeeds(self) -> None:
-        """Test 8.2.1.2.1: Existing external identifier with same specimen ID - should succeed."""
-        external_identifier = self.create_external_identifier_for_upload(
+    def test_8_2_1_2_1_existing_identifier_same_specimen_succeeds(self) -> None:
+        """Test 8.2.1.2.1: Existing Identifier with same specimen ID - should succeed."""
+        identifier = self.create_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id,
         )
-        existing_external_identifier_id = self.random_ids[0]
         existing_specimen_id = self.random_ids[1]
-        existing_external_identifier = (
-            self.get_specimen_external_identifier_from_for_upload(
-                external_identifier,
-                internal_id=existing_specimen_id,
-                id=existing_external_identifier_id,
-            )
+        existing_identifier = self.get_specimen_identifier_from_for_upload(
+            identifier,
+            internal_id=existing_specimen_id,
         )
+        existing_identifier_id = existing_identifier.id
         existing_specimen = self.create_specimen_for_upload(
-            specimen_id=existing_specimen_id, external_identifiers=[external_identifier]
+            specimen_id=existing_specimen_id, identifiers=[identifier]
         )
         existing_person_id = self.person_id
         person_for_upload = self.create_person_for_upload(
@@ -1047,7 +1099,7 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
         )
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],
-            [existing_external_identifier],
+            [existing_identifier],
         ]
         self.service.repository.crud.side_effect = [
             [True],  # Person exists
@@ -1063,23 +1115,20 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
             batch_result.persons[0].specimens[0].id, existing_specimen_id  # type: ignore[index]
         )
 
-    def test_8_2_1_2_2_existing_external_id_different_specimen_fails(self) -> None:
-        """Test 8.2.1.2.2: Existing external identifier with different specimen ID - should fail."""
-        external_identifier = self.create_external_identifier_for_upload(
+    def test_8_2_1_2_2_existing_identifier_different_specimen_fails(self) -> None:
+        """Test 8.2.1.2.2: Existing Identifier with different specimen ID - should fail."""
+        identifier = self.create_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id,
         )
-        existing_external_identifier_id = self.random_ids[0]
         existing_specimen_id = self.random_ids[1]
         non_existing_specimen_id = self.random_ids[2]
-        existing_external_identifier = (
-            self.get_specimen_external_identifier_from_for_upload(
-                external_identifier,
-                internal_id=non_existing_specimen_id,
-                id=existing_external_identifier_id,
-            )
+        existing_identifier = self.get_specimen_identifier_from_for_upload(
+            identifier,
+            internal_id=non_existing_specimen_id,
         )
+        existing_identifier_id = existing_identifier.id
         existing_specimen = self.create_specimen_for_upload(
-            specimen_id=existing_specimen_id, external_identifiers=[external_identifier]
+            specimen_id=existing_specimen_id, identifiers=[identifier]
         )
         existing_person_id = self.person_id
         person_for_upload = self.create_person_for_upload(
@@ -1087,7 +1136,7 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
         )
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],
-            [existing_external_identifier],
+            [existing_identifier],
         ]
         self.service.repository.crud.side_effect = [
             [True],  # Person exists
@@ -1103,22 +1152,19 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
             batch_result.persons[0].specimens[0].id, existing_specimen_id  # type: ignore[index]
         )
 
-    def test_8_2_2_new_external_id_new_specimen(self) -> None:
-        """Test 8.2.2: New external identifier for new specimen - should succeed."""
-        external_identifier = self.create_external_identifier_for_upload(
+    def test_8_2_2_new_identifier_new_specimen(self) -> None:
+        """Test 8.2.2: New Identifier for new specimen - should succeed."""
+        identifier = self.create_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id,
         )
-        created_external_identifier_id = self.random_ids[0]
         created_specimen_id = self.random_ids[1]
-        created_external_identifier = (
-            self.get_specimen_external_identifier_from_for_upload(
-                external_identifier,
-                internal_id=created_specimen_id,
-                id=created_external_identifier_id,
-            )
+        created_identifier = self.get_specimen_identifier_from_for_upload(
+            identifier,
+            internal_id=created_specimen_id,
         )
+        created_identifier_id = created_identifier.id
         created_specimen = self.create_specimen_for_upload(
-            specimen_id=NULL_ID, external_identifiers=[external_identifier]
+            specimen_id=NULL_ID, identifiers=[identifier]
         )
         existing_person_id = self.person_id
         person_for_upload = self.create_person_for_upload(
@@ -1126,8 +1172,8 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
         )
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],
-            [],  # Existing external identifiers
-            [created_external_identifier_id],  # Created external identifier IDs
+            [],  # Existing Identifiers
+            [created_identifier_id],  # Created Identifier IDs
         ]
         self.service.repository.crud.side_effect = [
             # [True],  # Person exists
@@ -1135,7 +1181,7 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
         ]
         self.service.generate_id.side_effect = [
             created_specimen_id,
-            created_external_identifier_id,
+            created_identifier_id,
         ]
         self.service.repository.read_fields.side_effect = [
             [(created_specimen_id, existing_person_id)],
@@ -1147,39 +1193,33 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
             batch_result.persons[0].specimens[0].id, created_specimen_id  # type: ignore[index]
         )
         self.assertEqual(
-            batch_result.persons[0].specimens[0].external_identifiers[0].id, created_external_identifier_id  # type: ignore[index]
+            batch_result.persons[0].specimens[0].identifiers[0].id, created_identifier_id  # type: ignore[index]
         )
 
-    def test_8_2_3_1_multiple_external_ids_some_existing_same_specimen(self) -> None:
-        """Test 8.2.3.1: Multiple external IDs, some existing for same specimen - should succeed."""
-        external_identifier1 = self.create_external_identifier_for_upload(
+    def test_8_2_3_1_multiple_identifiers_some_existing_same_specimen(self) -> None:
+        """Test 8.2.3.1: Multiple Identifiers, some existing for same specimen - should succeed."""
+        identifier1 = self.create_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id,
         )
-        external_identifier2 = self.create_external_identifier_for_upload(
+        identifier2 = self.create_identifier_for_upload(
             external_id="ext_id_2",
             identifier_issuer_id=self.identifier_issuer_id2,
             identifier_issuer_code=self.identifier_issuer_code2,
         )
-        existing_external_identifier_id = self.random_ids[0]
         existing_specimen_id = self.random_ids[1]
-        existing_external_identifier = (
-            self.get_specimen_external_identifier_from_for_upload(
-                external_identifier1,
-                internal_id=existing_specimen_id,
-                id=existing_external_identifier_id,
-            )
+        existing_identifier = self.get_specimen_identifier_from_for_upload(
+            identifier1,
+            internal_id=existing_specimen_id,
         )
-        created_external_identifier_id = self.random_ids[1]
-        created_external_identifier = (
-            self.get_specimen_external_identifier_from_for_upload(
-                external_identifier2,
-                self.specimen_id,
-                id=created_external_identifier_id,
-            )
+        existing_identifier_id = existing_identifier.id
+        created_identifier = self.get_specimen_identifier_from_for_upload(
+            identifier2,
+            self.specimen_id,
         )
+        created_identifier_id = created_identifier.id
         existing_specimen = self.create_specimen_for_upload(
             specimen_id=existing_specimen_id,
-            external_identifiers=[external_identifier1, external_identifier2],
+            identifiers=[identifier1, identifier2],
         )
         existing_person_id = self.person_id
         person_for_upload = self.create_person_for_upload(
@@ -1187,8 +1227,8 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
         )
         self.service.app.handle.side_effect = [
             [self.identifier_issuer, self.identifier_issuer2],
-            [existing_external_identifier],  # Existing external identifiers
-            [created_external_identifier_id],  # Created external identifier IDs
+            [existing_identifier],  # Existing Identifiers
+            [created_identifier_id],  # Created Identifier IDs
         ]
         self.service.repository.crud.side_effect = [
             [True],  # Person exists
@@ -1204,42 +1244,36 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
             batch_result.persons[0].specimens[0].id, existing_specimen_id  # type: ignore[index]
         )
         self.assertEqual(
-            batch_result.persons[0].specimens[0].external_identifiers[1].id, created_external_identifier_id  # type: ignore[index]
+            batch_result.persons[0].specimens[0].identifiers[1].id, created_identifier_id  # type: ignore[index]
         )
 
-    def test_8_2_3_1_multiple_external_ids_some_existing_different_specimen(
+    def test_8_2_3_1_multiple_identifiers_some_existing_different_specimen(
         self,
     ) -> None:
-        """Test 8.2.3.1: Multiple external IDs, some existing for different specimen - should fail."""
-        external_identifier1 = self.create_external_identifier_for_upload(
+        """Test 8.2.3.1: Multiple Identifiers, some existing for different specimen - should fail."""
+        identifier1 = self.create_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id,
         )
-        external_identifier2 = self.create_external_identifier_for_upload(
+        identifier2 = self.create_identifier_for_upload(
             external_id="ext_id_2",
             identifier_issuer_id=self.identifier_issuer_id2,
             identifier_issuer_code=self.identifier_issuer_code2,
         )
-        existing_external_identifier_id = self.random_ids[0]
         non_existing_specimen_id = self.random_ids[2]
         existing_specimen_id = self.random_ids[1]
-        existing_external_identifier = (
-            self.get_specimen_external_identifier_from_for_upload(
-                external_identifier1,
-                internal_id=non_existing_specimen_id,
-                id=existing_external_identifier_id,
-            )
+        existing_identifier = self.get_specimen_identifier_from_for_upload(
+            identifier1,
+            internal_id=non_existing_specimen_id,
         )
-        created_external_identifier_id = self.random_ids[1]
-        created_external_identifier = (
-            self.get_specimen_external_identifier_from_for_upload(
-                external_identifier2,
-                self.specimen_id,
-                id=created_external_identifier_id,
-            )
+        existing_identifier_id = existing_identifier.id
+        created_identifier = self.get_specimen_identifier_from_for_upload(
+            identifier2,
+            self.specimen_id,
         )
+        created_identifier_id = created_identifier.id
         existing_specimen = self.create_specimen_for_upload(
             specimen_id=existing_specimen_id,
-            external_identifiers=[external_identifier1, external_identifier2],
+            identifiers=[identifier1, identifier2],
         )
         existing_person_id = self.person_id
         person_for_upload = self.create_person_for_upload(
@@ -1247,8 +1281,8 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
         )
         self.service.app.handle.side_effect = [
             [self.identifier_issuer, self.identifier_issuer2],
-            [existing_external_identifier],  # Existing external identifiers
-            [created_external_identifier_id],  # Created external identifier IDs
+            [existing_identifier],  # Existing Identifiers
+            [created_identifier_id],  # Created Identifier IDs
         ]
         self.service.repository.crud.side_effect = [
             [True],  # Person exists
@@ -1264,58 +1298,56 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
             batch_result.persons[0].specimens[0].id, existing_specimen_id  # type: ignore[index]
         )
         self.assertEqual(
-            batch_result.persons[0].specimens[0].external_identifiers[1].id, None  # type: ignore[index]
+            batch_result.persons[0].specimens[0].identifiers[1].id, None  # type: ignore[index]
         )
 
-    def test_8_2_3_2_multiple_external_ids_all_new_same_issuer(self) -> None:
-        """Test 8.2.3.2: Multiple external IDs all new but same issuer - should fail."""
-        external_identifier1 = self.create_external_identifier_for_upload(
+    def test_8_2_3_2_multiple_identifiers_all_new_same_issuer(self) -> None:
+        """Test 8.2.3.2: Multiple Identifiers all new but same issuer - should fail."""
+        identifier1 = self.create_identifier_for_upload(
             external_id="new_ext_id_1", identifier_issuer_id=self.identifier_issuer_id
         )
-        external_identifier2 = self.create_external_identifier_for_upload(
+        identifier2 = self.create_identifier_for_upload(
             external_id="new_ext_id_2", identifier_issuer_id=self.identifier_issuer_id
         )
         with pytest.raises(ValueError):
-            self.create_specimen_for_upload(
-                external_identifiers=[external_identifier1, external_identifier2]
-            )
+            self.create_specimen_for_upload(identifiers=[identifier1, identifier2])
 
-    def test_8_2_3_2_multiple_external_ids_all_new_different_issuer(self) -> None:
-        """Test 8.2.3.2: Multiple external IDs all new and different issuer - should succeed."""
-        external_identifier1 = self.create_external_identifier_for_upload(
+    def test_8_2_3_2_multiple_identifiers_all_new_different_issuer(self) -> None:
+        """Test 8.2.3.2: Multiple Identifiers all new and different issuer - should succeed."""
+        identifier1 = self.create_identifier_for_upload(
             external_id="new_ext_id_1", identifier_issuer_id=self.identifier_issuer_id
         )
-        external_identifier2 = self.create_external_identifier_for_upload(
+        identifier2 = self.create_identifier_for_upload(
             external_id="new_ext_id_2",
             identifier_issuer_id=self.identifier_issuer_id2,
             identifier_issuer_code=self.identifier_issuer_code2,
         )
         specimen = self.create_specimen_for_upload(
-            external_identifiers=[external_identifier1, external_identifier2]
+            identifiers=[identifier1, identifier2]
         )
         person_for_upload = self.create_person_for_upload(specimens=[specimen])
         created_person_id = self.random_ids[0]
         created_specimen_id = self.random_ids[1]
-        created_external_identifier1_id = self.random_ids[2]
-        created_external_identifier2_id = self.random_ids[3]
+        created_identifier1_id = self.random_ids[2]
+        created_identifier2_id = self.random_ids[3]
         self.service.generate_id.side_effect = [
             created_person_id,
             created_specimen_id,
-            created_external_identifier1_id,
-            created_external_identifier2_id,
+            created_identifier1_id,
+            created_identifier2_id,
         ]
         self.service.repository.crud.side_effect = [
             [created_person_id],
             [created_specimen_id],
-            [created_external_identifier1_id, created_external_identifier2_id],
+            [created_identifier1_id, created_identifier2_id],
         ]
         self.service.app.handle.side_effect = [
             [self.identifier_issuer, self.identifier_issuer2],
-            [],  # Existing external identifiers
+            [],  # Existing Identifiers
             [
-                created_external_identifier1_id,
-                created_external_identifier2_id,
-            ],  # Created external identifier IDs
+                created_identifier1_id,
+                created_identifier2_id,
+            ],  # Created Identifier IDs
         ]
         batch_result = self.upload_batch(person_for_upload)
         self.assertBatchProcessed(batch_result)
@@ -1323,12 +1355,10 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
 
     def test_8_3_1_identifier_issuer_id_not_found(self) -> None:
         """Test 8.3.1: Identifier issuer ID (any except NULL_ID) provided and not found - should fail."""
-        external_identifier = self.create_external_identifier_for_upload(
+        identifier = self.create_identifier_for_upload(
             identifier_issuer_id=self.random_ids[0]
         )
-        specimen = self.create_specimen_for_upload(
-            external_identifiers=[external_identifier]
-        )
+        specimen = self.create_specimen_for_upload(identifiers=[identifier])
         person_for_upload = self.create_person_for_upload(specimens=[specimen])
         created_person_id = self.random_ids[1]
         self.service.generate_id.side_effect = [
@@ -1344,12 +1374,10 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
 
     def test_8_3_2_identifier_issuer_code_not_found(self) -> None:
         """Test 8.3.2: Identifier issuer code provided and not found - should fail."""
-        external_identifier = self.create_external_identifier_for_upload(
+        identifier = self.create_identifier_for_upload(
             identifier_issuer_id=NULL_ID, identifier_issuer_code="nonexistent_code"
         )
-        specimen = self.create_specimen_for_upload(
-            external_identifiers=[external_identifier]
-        )
+        specimen = self.create_specimen_for_upload(identifiers=[identifier])
         person_for_upload = self.create_person_for_upload(specimens=[specimen])
         created_person_id = self.random_ids[0]
         self.service.generate_id.side_effect = [
@@ -1365,13 +1393,11 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
 
     def test_8_3_3_identifier_issuer_id_and_code_mismatch(self) -> None:
         """Test 8.3.3: Both identifier issuer ID and code provided but do not match - should fail."""
-        external_identifier = self.create_external_identifier_for_upload(
+        identifier = self.create_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id,
             identifier_issuer_code=self.identifier_issuer_code2,
         )
-        specimen = self.create_specimen_for_upload(
-            external_identifiers=[external_identifier]
-        )
+        specimen = self.create_specimen_for_upload(identifiers=[identifier])
         person_for_upload = self.create_person_for_upload(specimens=[specimen])
         created_person_id = self.random_ids[0]
         self.service.generate_id.side_effect = [
@@ -1396,9 +1422,9 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
 class TestCombinedScenarios(BasePersonUploadTestCase):
     """Test combinations of different scenarios."""
 
-    def test_person_with_all_children_and_external_ids(self) -> None:
-        """Test person with all child types and external identifiers."""
-        external_identifier = self.create_external_identifier_for_upload(
+    def test_person_with_all_children_and_identifiers(self) -> None:
+        """Test person with all child types and Identifiers."""
+        identifier = self.create_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id,
         )
         measurement = self.create_measurement_for_upload()
@@ -1406,7 +1432,7 @@ class TestCombinedScenarios(BasePersonUploadTestCase):
         specimen = self.create_specimen_for_upload()
         measurement_relation = self.create_measurement_relation_for_upload()
         person_for_upload = self.create_person_for_upload(
-            external_identifiers=[external_identifier],
+            identifiers=[identifier],
             measurements=[measurement],
             observations=[observation],
             specimens=[specimen],
@@ -1417,16 +1443,15 @@ class TestCombinedScenarios(BasePersonUploadTestCase):
         created_observation_id = self.random_ids[2]
         created_specimen_id = self.random_ids[3]
         created_measurement_relation_id = self.random_ids[4]
-        created_external_identifier = self.get_external_identifier_from_for_upload(
-            external_identifier,
+        created_identifier = self.get_person_identifier_from_for_upload(
+            identifier,
             internal_id=created_person_id,
-            id=self.random_ids[5],
             identifier_issuer_id=self.identifier_issuer_id,
         )
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],  # Resolve IdentifierIssuer
-            [],  # No existing ExternalIdentifiers
-            [created_external_identifier],  # Created ExternalIdentifier
+            [],  # No existing Identifiers
+            [created_identifier],  # Created Identifier
         ]
         self.service.repository.crud.side_effect = [
             [created_person_id],  # Create person

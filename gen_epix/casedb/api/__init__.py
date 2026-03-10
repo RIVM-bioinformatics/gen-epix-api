@@ -1,8 +1,5 @@
 # pylint: disable=useless-import-alias
 from gen_epix.casedb.api.case import (
-    ColValidationRulesResponseBody as ColValidationRulesResponseBody,
-)
-from gen_epix.casedb.api.case import (
     CreateCaseSetRequestBody as CreateCaseSetRequestBody,
 )
 from gen_epix.casedb.api.case import (
@@ -10,6 +7,9 @@ from gen_epix.casedb.api.case import (
 )
 from gen_epix.casedb.api.case import (
     CreateFileForSeqRequestBody as CreateFileForSeqRequestBody,
+)
+from gen_epix.casedb.api.case import (
+    RefColValidationRulesResponseBody as RefColValidationRulesResponseBody,
 )
 from gen_epix.casedb.api.case import (
     RetrieveCasesByIdsRequestBody as RetrieveCasesByIdsRequestBody,
@@ -24,10 +24,10 @@ from gen_epix.casedb.api.case import (
     RetrievePhylogeneticTreeRequestBody as RetrievePhylogeneticTreeRequestBody,
 )
 from gen_epix.casedb.api.case import (
-    UpdateCaseTypeColSetCaseTypeColsRequestBody as UpdateCaseTypeColSetCaseTypeColsRequestBody,
+    UpdateCaseTypeSetCaseTypesRequestBody as UpdateCaseTypeSetCaseTypesRequestBody,
 )
 from gen_epix.casedb.api.case import (
-    UpdateCaseTypeSetCaseTypesRequestBody as UpdateCaseTypeSetCaseTypesRequestBody,
+    UpdateColSetColsRequestBody as UpdateColSetColsRequestBody,
 )
 from gen_epix.casedb.api.ontology import (
     UpdateDiseaseEtiologicalAgentRequestBody as UpdateDiseaseEtiologicalAgentRequestBody,

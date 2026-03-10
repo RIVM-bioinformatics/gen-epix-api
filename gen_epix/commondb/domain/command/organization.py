@@ -73,7 +73,7 @@ class InviteUserCommand(Command):
 
     __doc__ = str(__doc__).format(user_invitation=model.UserInvitation.__name__)
 
-    key: str = copy_model_field(model.UserInvitation, "key")
+    key: str | None = copy_model_field(model.UserInvitation, "key")
     email: str | None = copy_model_field(model.UserInvitation, "email")
     name: str | None = copy_model_field(model.UserInvitation, "name")
     roles: set[str] = copy_model_field(model.UserInvitation, "roles")
@@ -82,7 +82,7 @@ class InviteUserCommand(Command):
 
 class RegisterInvitedUserCommand(Command):
     """
-    Registers (creates) the user of the command. The key and token must match
+    Registers (creates) the user of the command. The token must match
     that of an existing {user_invitation}. The newly registered user is assigned
     the organization and roles from the invitation. The invitation is deleted.
     """
@@ -191,10 +191,6 @@ class SiteCrudCommand(CrudCommand):
 
 class ContactCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Contact
-
-
-class ExternalIdentifierCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.ExternalIdentifier
 
 
 class IdentifierIssuerCrudCommand(CrudCommand):

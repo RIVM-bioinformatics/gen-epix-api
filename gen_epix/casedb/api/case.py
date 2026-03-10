@@ -22,20 +22,20 @@ from gen_epix.util import copy_model_field
 
 class UpdateCaseTypeSetCaseTypesRequestBody(PydanticBaseModel):
     case_type_set_members: list[model.CaseTypeSetMember] = Field(
-        description="The members of the case type set."
+        description="The members of the CaseTypeSet."
     )
 
 
-class UpdateCaseTypeColSetCaseTypeColsRequestBody(PydanticBaseModel):
-    case_type_col_set_members: list[model.CaseTypeColSetMember] = Field(
-        description="The members of the case type col set."
+class UpdateColSetColsRequestBody(PydanticBaseModel):
+    col_set_members: list[model.ColSetMember] = Field(
+        description="The members of the ColSet."
     )
 
 
 class CreateCaseSetRequestBody(PydanticBaseModel):
     case_set: model.CaseSet
     data_collection_ids: set[UUID] = Field(
-        default=set(),
+        default_factory=set,
         description="The data collections in which the case set will be put initially",
     )
     case_ids: set[UUID] | None = Field(
@@ -65,9 +65,9 @@ class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
     case_type_id: UUID = copy_model_field(
         command.RetrievePhylogeneticTreeByCasesCommand, "case_type_id"
     )
-    genetic_distance_case_type_col_id: UUID = copy_model_field(
+    genetic_distance_col_id: UUID = copy_model_field(
         command.RetrievePhylogeneticTreeByCasesCommand,
-        "genetic_distance_case_type_col_id",
+        "genetic_distance_col_id",
     )
     tree_algorithm_code: enum.TreeAlgorithmType = copy_model_field(
         command.RetrievePhylogeneticTreeByCasesCommand, "tree_algorithm"
@@ -87,15 +87,15 @@ class RetrieveSimilarCasesRequestBody(PydanticBaseModel):
     case_ids: list[UUID] = copy_model_field(
         command.RetrieveSimilarCasesCommand, "case_ids"
     )
-    genetic_distance_case_type_col_id: UUID = copy_model_field(
-        command.RetrieveSimilarCasesCommand, "genetic_distance_case_type_col_id"
+    genetic_distance_col_id: UUID = copy_model_field(
+        command.RetrieveSimilarCasesCommand, "genetic_distance_col_id"
     )
 
 
 class RetrieveCaseTypeStatsRequestBody(PydanticBaseModel):
     case_type_ids: set[UUID] | None = Field(
         default=None,
-        description="The case type ids to retrieve stats for, if not all.",
+        description="The CaseType IDs to retrieve stats for, if not all.",
     )
     datetime_range_filter: TypedDatetimeRangeFilter | None = Field(
         default=None,
@@ -105,7 +105,7 @@ class RetrieveCaseTypeStatsRequestBody(PydanticBaseModel):
 
 class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
     case_set_ids: set[UUID] = Field(
-        description="The case set ids to retrieve stats for, if not all.",
+        description="The case set IDs to retrieve stats for, if not all.",
     )
 
 
@@ -136,14 +136,14 @@ class CreateFileForSeqRequestBody(PydanticBaseModel):
     )
 
 
-class ColValidationRulesResponseBody(PydanticBaseModel):
+class RefColValidationRulesResponseBody(PydanticBaseModel):
     """
-    The additional validation rules that a Col instance must comply with.
+    The additional validation rules that a RefCol instance must comply with.
     """
 
     valid_col_types_by_dim_type: dict[enum.DimType, set[enum.ColType]] = Field(
         default={enum.DimType[x.name]: set(x.value) for x in enum.DimColTypeSet},
-        description="The Col.col_type values that are allowed depending on the Col.dim.dim_type.",
+        description="The RefCol.col_type values that are allowed depending on the RefCol.ref_dim.dim_type.",
     )
 
     @field_serializer("valid_col_types_by_dim_type")
@@ -192,27 +192,27 @@ def create_case_endpoints(
         )
 
     @router.put(
-        "/case_type_col_sets/{case_type_col_set_id}/case_type_cols",
-        operation_id="case_type_col_sets__put__case_type_cols",
-        name="Update association between CaseTypeColSet and CaseTypeCol",
-        description=command.CaseTypeColSetCaseTypeColUpdateAssociationCommand.__doc__,
+        "/col_sets/{col_set_id}/cols",
+        operation_id="col_sets__put__cols",
+        name="Update association between ColSet and Col",
+        description=command.ColSetColUpdateAssociationCommand.__doc__,
     )
-    async def case_type_col_sets__put__case_type_cols(
+    async def col_sets__put__cols(
         user: registered_user_dependency,  # type: ignore
-        case_type_col_set_id: UUID,
-        request_body: UpdateCaseTypeColSetCaseTypeColsRequestBody,
-    ) -> list[model.CaseTypeColSetMember]:
+        col_set_id: UUID,
+        request_body: UpdateColSetColsRequestBody,
+    ) -> list[model.ColSetMember]:
         return cast(
-            list[model.CaseTypeColSetMember],
+            list[model.ColSetMember],
             handle_command(
                 app=app,
                 user=user,
                 exception_code="ab010768",
                 input_handle_exception=handle_exception,
-                input_command=command.CaseTypeColSetCaseTypeColUpdateAssociationCommand(
+                input_command=command.ColSetColUpdateAssociationCommand(
                     user=user,
-                    obj_id1=case_type_col_set_id,
-                    association_objs=request_body.case_type_col_set_members,
+                    obj_id1=col_set_id,
+                    association_objs=request_body.col_set_members,
                     props={"return_id": False},
                 ),
             ),
@@ -221,7 +221,7 @@ def create_case_endpoints(
     @router.get(
         "/complete_case_types",
         operation_id="complete_case_types__get_one",
-        name="Retrieve complete case type",
+        name="Retrieve complete CaseType",
         description=command.RetrieveCompleteCaseTypeCommand.__doc__,
     )
     async def complete_case_types__get_one(
@@ -292,7 +292,7 @@ def create_case_endpoints(
     @router.post(
         "/retrieve/case_type_stats",
         operation_id="retrieve__case_type_stats",
-        name="Retrieve case type statistics",
+        name="Retrieve CaseType statistics",
         description=command.RetrieveCaseStatsCommand.__doc__,
     )
     async def retrieve__case_type_stats(
@@ -459,7 +459,7 @@ def create_case_endpoints(
                 input_command=command.RetrievePhylogeneticTreeByCasesCommand(
                     user=user,
                     case_type_id=request_body.case_type_id,
-                    genetic_distance_case_type_col_id=request_body.genetic_distance_case_type_col_id,
+                    genetic_distance_col_id=request_body.genetic_distance_col_id,
                     tree_algorithm=request_body.tree_algorithm_code,
                     case_ids=request_body.case_ids,
                 ),
@@ -487,7 +487,7 @@ def create_case_endpoints(
                     case_type_id=request_body.case_type_id,
                     max_distance=request_body.max_distance,
                     case_ids=request_body.case_ids,
-                    genetic_distance_case_type_col_id=request_body.genetic_distance_case_type_col_id,
+                    genetic_distance_col_id=request_body.genetic_distance_col_id,
                 ),
             ),
         )
@@ -501,7 +501,7 @@ def create_case_endpoints(
     async def retrieve__genetic_sequence_fasta(
         token: Annotated[str, Form()],
         case_type_id: Annotated[UUID, Form()],
-        genetic_sequence_case_type_col_id: Annotated[UUID, Form()],
+        genetic_sequence_col_id: Annotated[UUID, Form()],
         case_ids: Annotated[list[UUID], Form()],
         file_name: Annotated[str, Form()],
     ) -> StreamingResponse:
@@ -516,9 +516,7 @@ def create_case_endpoints(
                 command.RetrieveGeneticSequenceFastaByCaseCommand(
                     user=user,
                     case_type_id=case_type_id,
-                    genetic_sequence_case_type_col_id=(
-                        genetic_sequence_case_type_col_id
-                    ),
+                    genetic_sequence_col_id=(genetic_sequence_col_id),
                     case_ids=case_ids,
                 )
             )
@@ -536,7 +534,7 @@ def create_case_endpoints(
         )
 
     @router.post(
-        "/create_file_for_read_set/{case_id}/{case_type_col_id}",
+        "/create_file_for_read_set/{case_id}/{col_id}",
         operation_id="create_file_for_read_set",
         name="Create file for reads set",
         description=command.CreateFileForReadSetCommand.__doc__,
@@ -544,7 +542,7 @@ def create_case_endpoints(
     async def create_file_for_read_set(
         user: registered_user_dependency,  # type: ignore
         case_id: UUID,
-        case_type_col_id: UUID,
+        col_id: UUID,
         request_body: CreateFileForReadSetRequestBody,
     ) -> UUID:
         return cast(
@@ -558,14 +556,14 @@ def create_case_endpoints(
                     user=user,
                     file_content=base64.b64decode(request_body.file_content),
                     case_id=case_id,
-                    case_type_col_id=case_type_col_id,
+                    col_id=col_id,
                     is_fwd=request_body.is_fwd,
                 ),
             ),
         )
 
     @router.post(
-        "/create_file_for_seq/{case_id}/{case_type_col_id}",
+        "/create_file_for_seq/{case_id}/{col_id}",
         operation_id="create_file_for_seq",
         name="Create file for sequence",
         description=command.CreateFileForSeqCommand.__doc__,
@@ -573,7 +571,7 @@ def create_case_endpoints(
     async def create_file_for_seq(
         user: registered_user_dependency,  # type: ignore
         case_id: UUID,
-        case_type_col_id: UUID,
+        col_id: UUID,
         request_body: CreateFileForSeqRequestBody,
     ) -> UUID:
         return cast(
@@ -587,7 +585,7 @@ def create_case_endpoints(
                     user=user,
                     file_content=base64.b64decode(request_body.file_content),
                     case_id=case_id,
-                    case_type_col_id=case_type_col_id,
+                    col_id=col_id,
                 ),
             ),
         )
@@ -637,16 +635,16 @@ def create_case_endpoints(
         )
 
     @router.get(
-        "/" + model.Col.ENTITY.snake_case_plural_name + "/validation_rules",
-        operation_id=model.Col.ENTITY.snake_case_plural_name + "__validation_rules",
-        name="Col validation rules",
-        description=ColValidationRulesResponseBody.__doc__,
+        "/" + model.RefCol.ENTITY.snake_case_plural_name + "/validation_rules",
+        operation_id=model.RefCol.ENTITY.snake_case_plural_name + "__validation_rules",
+        name="RefCol validation rules",
+        description=RefColValidationRulesResponseBody.__doc__,
     )
-    async def get__col__validation_rules(
+    async def get__ref_col__validation_rules(
         user: registered_user_dependency,  # type: ignore
-    ) -> ColValidationRulesResponseBody:
+    ) -> RefColValidationRulesResponseBody:
         try:
-            retval = ColValidationRulesResponseBody()
+            retval = RefColValidationRulesResponseBody()
         except Exception as exception:
             handle_exception("f2a4b8c6", user, exception)
         return retval

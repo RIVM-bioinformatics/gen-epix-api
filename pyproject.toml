@@ -37,9 +37,9 @@ dependencies = [
     "dynaconf==3.2.12",
     "PyYAML==6.0.3",
     "scipy==1.17.1",
-    "numpy==2.4.2",
+    "numpy==2.4.3",
     "biopython==1.86",
-    "cachetools==7.0.2",
+    "cachetools==7.0.5",
     "slowapi==0.1.9",
     "python-dateutil==2.9.0.post0",
     "types-python-dateutil==2.9.*",
@@ -59,3 +59,11 @@ exclude = ["tests", "tests.*", "docs", "docs.*", "data", "data.*", "cert", "cert
 [tool.pytest-gremlins]
 paths = ["gen_epix"]
 
+[tool.black]
+line-length = 88
+target-version = ['py313']
+
+[tool.isort]
+profile = "black"
+float_to_top = true
+line_length = 88

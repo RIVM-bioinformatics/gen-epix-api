@@ -1,7 +1,7 @@
 # pylint: disable=too-few-public-methods
-from __future__ import (
+from __future__ import (  # Resolves pylint not recognizing Mapped as subscriptable
     annotations,
-)  # Resolves pylint not recognizing Mapped as subscriptable
+)
 
 from typing import Any
 from uuid import UUID
@@ -29,8 +29,8 @@ class Subject(Base, RowMetadataMixin):
     data_collection_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.Subject, "data_collection_id"
     )
-    external_identifiers: Mapped[dict[UUID, str] | None] = create_mapped_column(
-        DOMAIN, model.Subject, "external_identifiers"
+    identifiers: Mapped[dict[UUID, str] | None] = create_mapped_column(
+        DOMAIN, model.Subject, "identifiers"
     )
     content: Mapped[dict[str, Any]] = create_mapped_column(
         DOMAIN, model.Subject, "content"
