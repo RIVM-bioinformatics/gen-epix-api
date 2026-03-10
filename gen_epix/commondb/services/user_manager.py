@@ -262,10 +262,7 @@ class UserManager(BaseUserManager):
                 raise exc.UnauthorizedAuthError("Created by user is not active")
 
             # Verify if create_by_user made an invitation for this user that is valid
-            # SQLite returns offset-naive datetimes; strip tzinfo so comparison doesn't fail
-            timestamp = datetime.datetime.now(datetime.timezone.utc).replace(
-                tzinfo=None
-            )
+            timestamp = datetime.datetime.now(datetime.timezone.utc)
             user_invitations: list[model.UserInvitation] = (
                 self._organization_service.repository.crud(  # type: ignore[assignment]
                     uow,
@@ -276,6 +273,9 @@ class UserManager(BaseUserManager):
                     CrudOperation.READ_ALL,
                 )
             )
+            # SQLite returns offset-naive datetimes; normalize timestamp to match expires_at
+            if user_invitations and user_invitations[0].expires_at.tzinfo is None:
+                timestamp = timestamp.replace(tzinfo=None)
 
             # At least one invitation exists matching the criteria
             user_invitations = [

@@ -208,8 +208,10 @@ class OrganizationService(BaseOrganizationService):
                 None,
                 CrudOperation.READ_ALL,
             )
-            # SQLite returns offset-naive datetimes; strip tzinfo so comparison doesn't fail
-            now = self.generate_timestamp().replace(tzinfo=None)
+            now = self.generate_timestamp()
+            # SQLite returns offset-naive datetimes; normalize now to match expires_at
+            if user_invitations and user_invitations[0].expires_at.tzinfo is None:
+                now = now.replace(tzinfo=None)
 
             # Keep invitations that are not expired and either have no key
             # (open invites) or have a key matching the registering user.
