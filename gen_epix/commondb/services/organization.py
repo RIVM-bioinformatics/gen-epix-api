@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from cachetools import TTLCache, cached
@@ -158,7 +158,7 @@ class OrganizationService(BaseOrganizationService):
                 organization_id=organization_id,
                 invited_by_user_id=user.id,
                 token=self.generate_user_invitation_token(),
-                expires_at=self.generate_timestamp()
+                expires_at=datetime.now(timezone.utc)
                 + timedelta(
                     seconds=self.props.get(
                         "user_invitation_time_to_live",
@@ -208,13 +208,18 @@ class OrganizationService(BaseOrganizationService):
                 None,
                 CrudOperation.READ_ALL,
             )
-            now = self.generate_timestamp()
+            now = datetime.now(timezone.utc)
 
             # Keep invitations that are not expired and either have no key
             # (open invites) or have a key matching the registering user.
             filtered_user_invitations: list[model.UserInvitation] = []
             for x in user_invitations:
-                if x.expires_at > now:
+                # convert x.expires_at to aware datetime if it is naive
+                expires_at = x.expires_at
+                if x.expires_at.tzinfo is None:
+                    expires_at = x.expires_at.replace(tzinfo=timezone.utc)
+
+                if expires_at > now:
                     if x.key is not None:
                         if x.key == new_user.key:
                             filtered_user_invitations.append(x)
