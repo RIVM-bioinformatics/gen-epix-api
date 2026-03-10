@@ -17,7 +17,7 @@ The test reads case types through the app layer (not directly from the db) to en
 
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.refdata_access.base_empty import (
+from test.casedb.integration.refdata_access.base_metadata import (
     DEV_REPOSITORY_CONFIG,
     SKIP_ENDPOINTS,
     TEST_TYPE,
