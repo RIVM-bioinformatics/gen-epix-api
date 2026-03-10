@@ -1,7 +1,7 @@
-from typing import Any, ClassVar, Self
+from typing import Any, ClassVar
 from uuid import UUID
 
-from pydantic import Field, computed_field, model_validator
+from pydantic import Field, computed_field
 
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import (
@@ -226,23 +226,6 @@ class PersonBatchForUpload(BaseBatchForUpload):
     def has_specimens(self) -> bool:
         """Indicates whether there are any specimens in the person set."""
         return any(len(x.specimens or []) > 0 for x in self.persons)
-
-    @model_validator(mode="after")
-    def _validate_model(self) -> Self:
-        # Verify that persons contain no duplicate person_ids
-        person_ids = [x.id for x in self.persons if x.id is not None]
-        if len(person_ids) != len(set(person_ids)):
-            raise ValueError("Persons must not contain duplicate person IDs.")
-        # Verify that persons contains no duplicate external_identifiers
-        all_external_identifiers = []
-        for person in self.persons:
-            if person.external_identifiers is not None:
-                all_external_identifiers.extend(person.external_identifiers)
-        if len(all_external_identifiers) != len(set(all_external_identifiers)):
-            raise ValueError("Persons must not contain duplicate external_identifiers.")
-        return self
-
-    # to have some summary on created batch
 
     def total_persons(self) -> int:
         """Total number of persons in the batch."""
