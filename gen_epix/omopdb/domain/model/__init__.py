@@ -240,7 +240,12 @@ SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
 COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
 
 # Additional field properties for models that have already been stored (persisted)
-STORED_MODEL_FIELD_PROPS: dict[type[fastapp.Model], dict[str, ModelFieldProps]] = {}
+STORED_MODEL_FIELD_PROPS: dict[type[fastapp.Model], dict[str, ModelFieldProps]] = {
+    Person: {
+        field_name: ModelFieldProps(is_mutable_always=True)
+        for field_name in Person.model_fields
+    },
+}
 complete_stored_model_field_props(
     STORED_MODEL_FIELD_PROPS, SORTED_MODELS_BY_SERVICE_TYPE
 )

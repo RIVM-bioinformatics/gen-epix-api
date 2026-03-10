@@ -49,6 +49,12 @@ from gen_epix.omopdb.domain.model import (
     PersonBatchUploadResult,
     PersonForUpload,
 )
+from gen_epix.util import int_to_uuid
+
+_GENDER_CONCEPT_ID = int_to_uuid(8507)
+_RACE_CONCEPT_ID = int_to_uuid(8527)
+_ETHNICITY_CONCEPT_ID = int_to_uuid(38003563)
+_PERSON_TYPE_CONCEPT_ID = int_to_uuid(1)
 
 OMOPDB_APP_CFGS = get_app_cfgs(
     AppType.OMOPDB,
@@ -70,14 +76,13 @@ def get_test_client() -> Env:
 
 
 def _make_person() -> Person:
-    """Create a minimal valid Person. Concept IDs may be arbitrary UUIDs since
-    reference data validation (verify_refdata) is a no-op in the base uploader."""
+    """Create a minimal valid Person using real OMOP concept IDs."""
     return Person(
         year_of_birth=1990,
-        gender_concept_id=uuid4(),
-        race_concept_id=uuid4(),
-        ethnicity_concept_id=uuid4(),
-        person_type_concept_id=uuid4(),
+        gender_concept_id=_GENDER_CONCEPT_ID,
+        race_concept_id=_RACE_CONCEPT_ID,
+        ethnicity_concept_id=_ETHNICITY_CONCEPT_ID,
+        person_type_concept_id=_PERSON_TYPE_CONCEPT_ID,
     )
 
 
@@ -89,6 +94,24 @@ class TestPersonBatchUploadHappyPath:
     key="root1_1@org1.org"). No additional setup is required because
     reference data validation is not enforced in the base upload pipeline.
     """
+
+    def test_upload_empty_batch_returns_skipped(self, env: Env) -> None:
+        """
+        An empty batch (persons=[]) should return HTTP 200 with status=SKIPPED.
+        No error is raised; the empty result is a valid no-op.
+        """
+        root_user = env.retrieve_user_by_key("root1_1@org1.org")
+
+        result: PersonBatchUploadResult = env.handle(
+            command.UploadPersonsCommand(
+                user=root_user,
+                person_batch=PersonBatchForUpload(persons=[]),
+            )
+        )
+
+        assert isinstance(result, PersonBatchUploadResult)
+        assert result.persons == []
+        assert result.status == UploadStatus.SKIPPED
 
     def test_upload_single_person_returns_created(self, env: Env) -> None:
         """
@@ -161,9 +184,12 @@ class TestPersonBatchUploadHappyPath:
         created_id = first_result.persons[0].id
         assert created_id is not None
 
-        # Second upload – same ID, explicitly allow update
+        # Second upload – same ID, explicitly allow update.
+        # Change year_of_birth to ensure content differs from the first upload.
+        # The Person object must carry person_id so that update_objects can locate it.
         updated_person = _make_person()
-        updated_person.person_source_value = "updated_src"
+        updated_person.year_of_birth = 1991
+        updated_person.person_id = created_id
         second_result: PersonBatchUploadResult = env.handle(
             command.UploadPersonsCommand(
                 user=root_user,

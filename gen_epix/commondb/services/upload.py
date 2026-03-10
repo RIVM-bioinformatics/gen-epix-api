@@ -448,8 +448,20 @@ class BatchUploader:
                 parent_result.status = UploadStatus.SKIPPED
                 continue
             if self.is_null(parent_id):
-                # Parent given but ID not given while Identifiers already verified, will need to be created
+                # Parent given but no ID: always a new entity.
                 parent_result.is_new = True
+                if cmd.on_new == UploadAction.ERROR:
+                    success = False
+                    parent_result.add_error(
+                        "b2d4f6a8",
+                        f"{self.parent_class.NAME} has no ID and on_new={cmd.on_new.value}.",
+                    )
+                elif cmd.on_new == UploadAction.SKIP:
+                    parent_result.status = UploadStatus.SKIPPED
+                    parent_result.add_info(
+                        "c3e5g7b9",
+                        f"{self.parent_class.NAME} has no ID and on_new={cmd.on_new.value}.",
+                    )
                 continue
             parent_ids[i] = parent_id
             has_parent_ids = True
@@ -772,6 +784,7 @@ class BatchUploader:
         if not to_update_parent_result_tuples:
             # Nothing to do
             return success
+
         to_update_parent_result_pairs = [
             (x[1], x[2]) for x in to_update_parent_result_tuples
         ]
@@ -1140,7 +1153,10 @@ class BatchUploader:
             identifiers_for_upload,
             identifier_results,
         ) in identifier_tuples:
-            assert internal_id is not None
+            if internal_id is None:
+                # Parent was skipped or failed and was never assigned a real ID;
+                # no identifiers can be created for it.
+                continue
             for identifier_for_upload, identifier_result in zip(
                 identifiers_for_upload or [],
                 identifier_results or [],
@@ -1546,7 +1562,7 @@ class BatchUploader:
                         is_updated = True
                         setattr(existing_obj, field_name, new_value)
             # Determine whether to update, i.e. if any values are indeed different, or otherwise skip
-            if not is_updated:
+            if not is_updated and obj_result.status != UploadStatus.FAILED:
                 obj_result.status = UploadStatus.SKIPPED
                 obj_result.add_info("f7a8b2d4", "Content is identical")
             else:
