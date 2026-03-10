@@ -18,7 +18,7 @@ filters:
 handlers:
   console:
     class: logging.StreamHandler
-    # keep a fixed level; cfg.py set_log_level() will raise/lower levels at runtime anyway
+    # startup normalises handler level to NOTSET; cfg.py set_log_level() controls filtering via logger levels
     level: INFO
     formatter: json
     stream: ext://sys.stdout
