@@ -420,6 +420,7 @@ class TestGetExistingUserFromClaims(BaseAuthServiceTestCase):
         self.user_manager.retrieve_user_by_key.return_value = self.user
         self.user_manager.get_user_name_from_claims.return_value = "New Name"
         self.user_manager.update_user_name.return_value = self.updated_user
+
         # Execute
         retval = self.run_async(self.service.get_existing_user_from_claims(claims))
         # Verify
@@ -481,8 +482,9 @@ class TestGetExistingUserFromClaims(BaseAuthServiceTestCase):
         self.user_manager.get_user_key_from_claims.return_value = "key"
         self.user_manager.retrieve_user_by_key.side_effect = exc.NoResultsError()
         self.user_manager.is_root_user_claims.return_value = False
-        self.user_manager.create_user_from_claims.return_value = self.created_user
+        self.user_manager.auto_create_new_user.return_value = self.created_user
         # Execute
+        self.service._auto_create_new_users = True
         retval = self.run_async(self.service.get_existing_user_from_claims(claims))
         # Verify
         self.assertIs(retval, self.created_user)
