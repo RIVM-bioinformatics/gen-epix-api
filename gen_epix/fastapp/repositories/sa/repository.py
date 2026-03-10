@@ -1239,8 +1239,19 @@ class SARepository(BaseRepository):
                 sa.exc.SAWarning,
             )
 
-            # Create engine, creating the sqlite file(s) if needed
-            engine = sa.create_engine("sqlite:///:memory:", echo=echo)
+            # SQLite does not support schemas. Connect directly to the sqlite file
+            # and use schema_translate_map to strip any schema prefixes that may be
+            # baked into the SQLAlchemy model __table_args__ (e.g. {"schema": "system"}).
+            real_schema_names = {s for s in schema_names if s is not None}
+            schema_translate_map: dict[str | None, str | None] = {
+                s: None for s in real_schema_names
+            }
+
+            engine = sa.create_engine(
+                f"sqlite:///{sqlite_file.as_posix()}",
+                echo=echo,
+                execution_options={"schema_translate_map": schema_translate_map},
+            )
 
             # Make sure foreign key constraints are enforced,
             # which is not the default for sqlite
@@ -1250,19 +1261,8 @@ class SARepository(BaseRepository):
             ) -> None:
                 cursor = dbapi_connection.cursor()
                 cursor.execute("PRAGMA foreign_keys=ON")
-
                 cursor.close()
 
-            # Add each schema as a separate database, as sqlite does not support schemas
-            with engine.connect() as conn:
-                if len(schema_names) > 1:
-                    raise NotImplementedError(
-                        "Multiple schemas: " + ", ".join(schema_names)
-                    )
-                for schema_name in schema_names:
-                    conn.execute(
-                        sa.text(f"attach database '{sqlite_file}' as '{schema_name}';")
-                    )
         else:
             engine = EngineFactory.create_engine(connection_string, echo)
 

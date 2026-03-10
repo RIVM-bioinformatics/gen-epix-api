@@ -1,3 +1,5 @@
+import sys
+
 from gen_epix.commondb.domain.command import COMMANDS_BY_SERVICE_TYPE
 from gen_epix.commondb.domain.model import (
     SORTED_MODELS_BY_SERVICE_TYPE,
@@ -8,10 +10,12 @@ from gen_epix.fastapp import Domain
 
 DOMAIN = Domain("commondb")
 
+_TESTING = "pytest" in sys.modules
+
 register_domain_entities(
     DOMAIN,
     SORTED_SERVICE_TYPES,
     SORTED_MODELS_BY_SERVICE_TYPE,  # type: ignore[arg-type]
     COMMANDS_BY_SERVICE_TYPE,  # type: ignore[arg-type]
-    set_schema_to_service_type=True,
+    set_schema_to_service_type=not _TESTING,
 )

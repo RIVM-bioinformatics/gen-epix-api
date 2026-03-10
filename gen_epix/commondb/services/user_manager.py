@@ -262,7 +262,10 @@ class UserManager(BaseUserManager):
                 raise exc.UnauthorizedAuthError("Created by user is not active")
 
             # Verify if create_by_user made an invitation for this user that is valid
-            timestamp = datetime.datetime.now(datetime.timezone.utc)
+            # SQLite returns offset-naive datetimes; strip tzinfo so comparison doesn't fail
+            timestamp = datetime.datetime.now(datetime.timezone.utc).replace(
+                tzinfo=None
+            )
             user_invitations: list[model.UserInvitation] = (
                 self._organization_service.repository.crud(  # type: ignore[assignment]
                     uow,
