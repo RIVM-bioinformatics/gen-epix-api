@@ -138,41 +138,45 @@ class BatchUploader:
                 message="Verification ended",
             )
             if cmd.verify_only:
-                # Stop here if only verification was requested
+                # Stop here if only verification was requested; mark all
+                # still-PENDING individual results as SKIPPED (nothing was stored)
                 batch_result.add_info(
                     code="c849b0e2",
                     message="Verification only requested, upload will not proceed",
                 )
-                return batch_result
-            if not success:
-                # Do not proceed with upsert due to errors
-                batch_result.add_error(
-                    code="d6e5c3b4",
-                    message="Verification found errors, upload will not proceed",
-                )
-                return batch_result
+                for parent_result in batch_result.get_parent_results():
+                    if parent_result.status == UploadStatus.PENDING:
+                        parent_result.status = UploadStatus.SKIPPED
+            else:
+                if not success:
+                    # Do not proceed with upsert due to errors
+                    batch_result.add_error(
+                        code="d6e5c3b4",
+                        message="Verification found errors, upload will not proceed",
+                    )
+                    return batch_result
 
-            # Upsert the batch data
-            batch_result.add_info(
-                code="c1a2b3d4",
-                message="Upsert started",
-            )
-            success = self.upsert_batch(cmd, batch_result, uow)
-            batch_result.add_info(
-                code="e4f5a6b7",
-                message="Upsert ended",
-            )
-            if not success:
-                # Rollback due to errors, but do not raise an exception since those will be reported in batch_result
-                batch_result.add_error(
-                    code="f8e7d6c5",
-                    message="Upload had errors",
-                )
-                uow.rollback()
+                # Upsert the batch data
                 batch_result.add_info(
-                    code="7729440d",
-                    message="Upload had errors, changes have been rolled back",
+                    code="c1a2b3d4",
+                    message="Upsert started",
                 )
+                success = self.upsert_batch(cmd, batch_result, uow)
+                batch_result.add_info(
+                    code="e4f5a6b7",
+                    message="Upsert ended",
+                )
+                if not success:
+                    # Rollback due to errors, but do not raise an exception since those will be reported in batch_result
+                    batch_result.add_error(
+                        code="f8e7d6c5",
+                        message="Upload had errors",
+                    )
+                    uow.rollback()
+                    batch_result.add_info(
+                        code="7729440d",
+                        message="Upload had errors, changes have been rolled back",
+                    )
         batch_result.add_info(
             code="7b9e4a2f",
             message="Upload ended",
