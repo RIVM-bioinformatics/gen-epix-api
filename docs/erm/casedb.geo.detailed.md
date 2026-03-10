@@ -13,6 +13,14 @@ erDiagram
     RegionSetShape }o--|| RegionSet : "region_set_id"
 
     %% Entity definitions
+    RegionSet {
+        UUID id PK
+        string code
+        string name
+        bool region_code_as_label
+        float resolution
+    }
+
     RegionRelation {
         UUID id PK
         UUID from_region_id FK
@@ -36,14 +44,6 @@ erDiagram
         UUID region_set_id FK
         float scale
         string geo_json
-    }
-
-    RegionSet {
-        UUID id PK
-        string code
-        string name
-        bool region_code_as_label
-        float resolution
     }
 
 ```

@@ -9,9 +9,9 @@ erDiagram
     %% Relationships
     ConceptRelation }o--|| Concept : "from_concept_id"
     ConceptRelation }o--|| Concept : "to_concept_id"
+    Concept }o--|| ConceptSet : "concept_set_id"
     Etiology }o--|| Disease : "disease_id"
     Etiology }o--|| EtiologicalAgent : "etiological_agent_id"
-    Concept }o--|| ConceptSet : "concept_set_id"
 
     %% Entity definitions
     Disease {
@@ -25,18 +25,6 @@ erDiagram
         UUID from_concept_id FK
         UUID to_concept_id FK
         enum relation
-    }
-
-    EtiologicalAgent {
-        UUID id PK
-        string name
-        string type
-    }
-
-    Etiology {
-        UUID id PK
-        UUID disease_id FK
-        UUID etiological_agent_id FK
     }
 
     ConceptSet {
@@ -58,6 +46,18 @@ erDiagram
         string description
         int rank
         dict[string, Any] props
+    }
+
+    EtiologicalAgent {
+        UUID id PK
+        string name
+        string type
+    }
+
+    Etiology {
+        UUID id PK
+        UUID disease_id FK
+        UUID etiological_agent_id FK
     }
 
 ```

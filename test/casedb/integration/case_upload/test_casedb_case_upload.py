@@ -712,5 +712,3 @@ class TestCaseUpload(CaseUploadSetup):
                 seqs=seqs,
             )
         return case
-        return case
-        return case
