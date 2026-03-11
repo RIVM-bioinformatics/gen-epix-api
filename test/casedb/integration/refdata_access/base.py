@@ -9,5 +9,6 @@ SKIP_ENDPOINTS = False  # False (i.e. using endpoints) does not work with SA_SQL
 SKIP_RAISE = False
 SKIP_CREATE_DATA = False
 VERBOSE = False
+# Note: switch here
 DEV_REPOSITORY_CONFIG = DevRepositoryConfig.DICT_DEMO
 # DEV_REPOSITORY_CONFIG = DevRepositoryConfig.SA_SQLITE_DEMO

@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from test.casedb.casedb_endpoint_test_client import CasedbEndpointTestClient
 from test.test_client.util import get_test_name, get_test_output_dir
+from time import sleep
 from typing import Any
 from uuid import UUID
 
@@ -13,9 +14,12 @@ from gen_epix.casedb.env import AppComposer
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.commondb.app_setup import create_fast_api
 from gen_epix.commondb.config import AppCfg, BaseAppCfg
+from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.test.test_client import TestClient
 from gen_epix.fastapp import CrudOperation
+from gen_epix.filter import FilterType, TypedEqualsUuidFilter, TypedUuidSetFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
+from gen_epix.util import map_paired_elements
 
 
 class OrganismType(enum.Enum):
@@ -2256,4 +2260,5 @@ class CasedbTestClient(TestClient):
     def _convert_case_date_to_code(case_date: datetime) -> str:
         case_type_index = int(case_date.month)  # Get case_type_index from month
         case_index = int(case_date.year - 1900)  # Get case_index from year offset
+        return f"case{case_type_index}_{case_index}"
         return f"case{case_type_index}_{case_index}"

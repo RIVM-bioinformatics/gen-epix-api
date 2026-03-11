@@ -273,10 +273,6 @@ class UserManager(BaseUserManager):
                     CrudOperation.READ_ALL,
                 )
             )
-            # SQLite returns offset-naive datetimes; normalize timestamp to match expires_at
-            if user_invitations and user_invitations[0].expires_at.tzinfo is None:
-                timestamp = timestamp.replace(tzinfo=None)
-
             # At least one invitation exists matching the criteria
             user_invitations = [
                 x
