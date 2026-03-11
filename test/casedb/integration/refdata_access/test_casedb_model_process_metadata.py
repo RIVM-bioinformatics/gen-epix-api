@@ -16,6 +16,7 @@ The test reads case types through the app layer (not directly from the db) to en
 """
 
 import logging
+from datetime import UTC, datetime
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.refdata_access.base_metadata import (
     DEV_REPOSITORY_CONFIG,
@@ -77,6 +78,51 @@ class TestCaseDBModelProcessMetadata:
 
     def get_user(self, user_name: str) -> model.User:
         return self.env._get_obj(model.User, user_name)  # type: ignore[return-value]
+
+    def test_create_case_type_with_root_user_should_set_metadata_fields(
+        self, setup_case_type_data: None
+    ) -> None:
+        """
+        Assert that when a case type is created by the root user, the metadata fields
+        (created_at, modified_at, modified_by) are set by SetModelProcessMetadataPolicy.
+        """
+        root_user = self.env.get_root_user()
+
+        # The default values for created_at, modified_at, and modified_by
+        # are set in the create_case_type method in the test client to fixed values
+        # (2023-01-01 for created_at, 2023-06-01 for modified_at, and the creating user's id for modified_by)
+        # to ensure that they are populated with predictable values during test setup.
+        #  This allows us to verify that when the root user creates a case type, these fields are set to the expected values, confirming that SetModelProcessMetadataPolicy is correctly setting these fields for root users.
+
+        created_at = datetime(2025, 1, 1, tzinfo=UTC)
+        modified_at = datetime(2025, 6, 1, tzinfo=UTC)
+        # modified_by = root_user.id
+
+        # Override modified_by to be a different user to verify that the value set by the test client
+        # is not being overridden by the policy,
+        # since root user should bypass the policy and keep the values provided in the command.
+        modified_by = self.get_user("org_user1_1").id
+
+        result = self.env.create_case_type(
+            root_user,
+            "test casetype for metadata creation",
+            "disease_1",
+            "etiological_agent_1",
+            created_at=created_at,
+            modified_at=modified_at,
+            modified_by=modified_by,
+        )
+
+        assert isinstance(result, model.CaseType)
+        assert (
+            result.created_at == created_at
+        ), "created_at should not be overriden when created by root user"
+        assert (
+            result.modified_at == modified_at
+        ), "modified_at should not be overriden when created by root user"
+        assert (
+            result.modified_by == modified_by
+        ), "modified_by should not be overriden when created by root user"
 
     def test_case_type_contains_metadata_for_super_users(
         self, setup_case_type_data: None
@@ -146,6 +192,6 @@ class TestCaseDBModelProcessMetadata:
                 ct.modified_by is None
             ), f"{ct.name}: modified_by should be masked for org user"
 
-    # Additional tests could include write tests to verify that SetModelProcessMetadataPolicy is setting the fields correctly 
-    # on create/update operations, but this would require more setup to create objects and check their metadata after creation/modification. 
+    # Additional tests could include write tests to verify that SetModelProcessMetadataPolicy is setting the fields correctly
+    # on create/update operations, but this would require more setup to create objects and check their metadata after creation/modification.
     # The current tests focus on the masking behaviour for reads, which is the main purpose of MaskModelProcessMetadataPolicy.

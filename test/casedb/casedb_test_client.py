@@ -1,3 +1,5 @@
+# Prevent removing unused imports, which are needed
+# ruff: noqa: F401
 import logging
 import re
 from datetime import UTC, datetime
@@ -565,7 +567,7 @@ class CasedbTestClient(TestClient):
         )
         return self._set_obj(etiology)  # type: ignore[return-value]
 
-    # TODO: improve setting of dummy process metadata (created_at, modified_at, modified_by) in create_case_type and create_case_type_set,
+    # Note: improve setting of dummy process metadata (created_at, modified_at, modified_by) in create_case_type and create_case_type_set,
     # which is currently only done to allow testing of the metadata policy in the test cases, but is a bit hacky.
     # Maybe we can add an optional parameter to the command handler to bypass the metadata policy for setting these fields,
     # or to set them to specific values for testing purposes, which would be cleaner than setting dummy values here and then overriding them in the test cases.
@@ -577,6 +579,9 @@ class CasedbTestClient(TestClient):
         etiological_agent: str | model.EtiologicalAgent | None,
         set_dummy_disease: bool = False,
         set_dummy_etiological_agent: bool = False,
+        created_at: datetime | None = None,
+        modified_at: datetime | None = None,
+        modified_by: UUID | None = None,
     ) -> model.CaseType:
         user: model.User = self._get_obj(
             model.User, user_or_str
@@ -590,9 +595,13 @@ class CasedbTestClient(TestClient):
                     # because the root user creates all these objects in the setup phase,
                     # and we want to have filled created_at and modified_at values, since the metadata policy only sets these for non-root users.
                     # This allows us to test the metadata policy in the test cases, while still having created_at and modified_at values set for the case types.
-                    created_at=datetime(2023, 1, 1, tzinfo=UTC),
-                    modified_at=datetime(2023, 6, 1, tzinfo=UTC),
-                    modified_by=user.id,
+                    created_at=(
+                        created_at if created_at else datetime(2023, 1, 1, tzinfo=UTC)
+                    ),
+                    modified_at=(
+                        modified_at if modified_at else datetime(2023, 6, 1, tzinfo=UTC)
+                    ),
+                    modified_by=(modified_by if modified_by else user.id),
                     name=case_type_or_str,
                     disease_id=(
                         self.generate_id()
