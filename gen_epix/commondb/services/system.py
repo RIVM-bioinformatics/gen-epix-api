@@ -52,6 +52,11 @@ class SystemService(BaseSystemService):
             )
         return outages
 
+    def retrieve_feature_flags(
+        self, cmd: command.RetrieveFeatureFlagsCommand
+    ) -> dict[str, bool]:
+        return self.app.feature_flags
+
     def retrieve_licenses(
         self, cmd: command.RetrieveLicensesCommand
     ) -> list[model.PackageMetadata]:

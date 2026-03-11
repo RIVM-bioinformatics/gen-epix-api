@@ -32,6 +32,7 @@ The trailing `app = FAST_API` alias exists only for backwards compatibility with
 `AppCfg` is the first thing constructed. Its `__init__` runs three phases in order:
 
 ### 2a. Logger Initialisation (`_init_configure_loggers`)
+
 1. Reads the path to a YAML logging-config file from the environment variable `COMMONDB_LOG_CONFIG_FILE`.
 2. Feeds that YAML to `logging.config.dictConfig`, which creates all handlers and loggers in one call.
 3. Stores four named loggers that the rest of the stack uses:
@@ -41,15 +42,18 @@ The trailing `app = FAST_API` alias exists only for backwards compatibility with
    - `service` — service-layer events (business logic, repository calls).
 
 ### 2b. Settings Loading (`_init_load_settings`)
+
 1. Constructs a `SettingsManager` with the env-var prefix `COMMONDB_`.
 2. `SettingsManager.load_settings()` reads the list of TOML settings files from the env var `COMMONDB_SETTINGS_FILES`, then initialises a `Dynaconf` object. Dynaconf merges the files in order, so later files override earlier ones. Runtime env vars (e.g. `COMMONDB__LOG__LEVEL`) override everything via the `__` separator convention.
 
    The settings files that ship with COMMONDB are:
    - `settings.toml` — base config (host, port, HTTP headers, service class names, default factories).
+   - `feature_flags.toml` — feature flag configuration.
    - `settings.repository.dict.toml` or `settings.repository.sa.toml` — swaps in the Dict or SQLAlchemy repository classes for each service type.
    - Secret/overlay files (prefixed `.example.secrets.*`) — connection strings, file paths, IdP tokens. These are never checked in; they are supplied per environment.
 
 ### 2c. Settings Validation (`_init_validate_settings`)
+
 Dynaconf returns plain strings for class references and factory names. This phase resolves them into actual Python objects:
 
 1. **Factory resolution** — The strings `"DATETIME_NOW"` and `"ULID"` in `service.defaults.props` are replaced by the corresponding callables from `TimestampFactory` and `IdFactory` (both simple `Enum` classes wrapping `datetime.now(UTC)` and `ulid.new().uuid`).
@@ -66,6 +70,7 @@ Dynaconf returns plain strings for class references and factory names. This phas
 `AppComposer` is the Composition Root. It owns the single call that builds the entire runtime object graph. The class accepts optional overrides for almost every injectable (service classes, policy classes, model/command class maps) so that downstream apps (CASEDB, SEQDB, OMOPDB) can reuse the same wiring logic while substituting their own domain classes.
 
 ### 3a. Role Derivation
+
 Before any services exist, the `RoleGenerator` (from `domain/policy/permission.py`) is consulted for three static maps:
 
 | Map | Purpose |
@@ -77,6 +82,7 @@ Before any services exist, the `RoleGenerator` (from `domain/policy/permission.p
 These maps are handed into `AppImplDetails`, the shared state bag that all subsequent steps read from.
 
 ### 3b. `AppImplDetails` — The State Bag
+
 A Pydantic `BaseModel` that holds every piece of state produced during composition. It does *not* contain any logic; it is purely a validated container. Key fields:
 
 - `sorted_service_types` — the order in which services are initialised (matters because some services depend on others).
@@ -85,6 +91,7 @@ A Pydantic `BaseModel` that holds every piece of state produced during compositi
 - Three user-dependency slots — see §3e.
 
 ### 3c. Repository + Service Loop
+
 `compose_application()` iterates over `sorted_service_types` and, for each one, calls `_initialize_repository()`. That method:
 
 1. Reads `service.<type>` and `repository.<type>` from the already-validated `Dynaconf` config.
@@ -103,6 +110,7 @@ Services that ship with COMMONDB:
 | SYSTEM | `SystemService` | Yes — persists `Outage` records. |
 
 ### 3d. Post-Loop Wiring
+
 After every service exists, three cross-cutting concerns are completed:
 
 1. **Role registration** — `RbacService.register_roles()` receives the `role_permissions_map` and the root-role string. It pre-computes the transitive permission closure that every subsequent permission check uses.
@@ -110,6 +118,7 @@ After every service exists, three cross-cutting concerns are completed:
 3. **Policy registration** — `SystemService`, `RbacService`, and `AbacService` each call `register_policies()`. This attaches the authorization guards (RBAC permission checks, ABAC org-admin checks, system-outage blocks) to the `App`'s command-dispatch table.
 
 ### 3e. User Dependencies (FastAPI DI)
+
 `AuthService.create_user_dependencies()` returns three FastAPI `Depends` callables:
 
 | Dependency | When it resolves |
@@ -131,9 +140,11 @@ How it works internally: the method generates one set of `get_current_user` / `g
 Takes the fully-composed `App` and produces a `FastAPI` instance. The steps are:
 
 ### 4a. Lifespan
+
 An `asynccontextmanager` that logs `STARTED_APP` on startup and `STOPPING_APP` on shutdown. This is the standard FastAPI lifespan hook; no background tasks or resource cleanup happen here for COMMONDB.
 
 ### 4b. Middleware Stack (production only, skipped in debug mode)
+
 Middleware is added in the order FastAPI processes them (last-added runs first on the way *in*, first-added runs first on the way *out*):
 
 | Middleware | Purpose |
@@ -144,6 +155,7 @@ Middleware is added in the order FastAPI processes them (last-added runs first o
 | `HandleAuthExceptionMiddleware` | Catches authentication exceptions that escape the route handler and turns them into proper HTTP 401/403 responses with logging. |
 
 ### 4c. Routers
+
 `create_routers()` (`api/router.py`) builds one `APIRouter` per logical group:
 
 | Tag | Factory function | ServiceType it serves |
@@ -154,6 +166,7 @@ Middleware is added in the order FastAPI processes them (last-added runs first o
 | `system` | `create_system_endpoints` | SYSTEM |
 
 Each factory receives the `App` and the `handle_exception` callable. Inside, it registers individual route functions that:
+
 1. Declare the appropriate user dependency (`registered_user`, `new_user`, etc.) as a FastAPI parameter.
 2. Construct a *command object* from the request body.
 3. Call `handle_command(app, user, error_code, command, handle_exception)`.
@@ -162,10 +175,13 @@ Each factory receives the `App` and the `handle_exception` callable. Inside, it 
 All routers are mounted under the `/v1` prefix (from `api.route.v1` in config).
 
 ### 4d. Root Redirect
+
 A single `GET /` route that redirects to `api.default_route` (defaults to `/openapi.json`, i.e. the raw schema JSON).
 
 ### 4e. Custom OpenAPI Schema
+
 `create_custom_openapi_function()` replaces the default `FastAPI.openapi` method. It:
+
 - Injects the `SCHEMA_KWARGS` metadata (title, contact, license, etc.).
 - Optionally applies a `fix_schema` pass that cleans up generated JSON Schema.
 - Wires in the `auth_service` so that the OpenAPI document correctly describes the OAuth2 / OIDC security schemes.
