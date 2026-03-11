@@ -6,6 +6,7 @@ import importlib
 import logging
 import logging.config as logging_config
 import os
+from collections.abc import Hashable
 from enum import Enum
 from locale import getpreferredencoding
 from pathlib import Path
@@ -15,7 +16,7 @@ from dynaconf import Dynaconf
 
 from gen_epix.commondb.config.factory import IdFactory, TimestampFactory
 from gen_epix.commondb.config.settings_manager import SettingsManager
-from gen_epix.fastapp import App
+from gen_epix.fastapp import App, exc
 
 _PINNED_THIRD_PARTY_LOGGERS = {
     "sqlalchemy.engine",
@@ -52,6 +53,7 @@ class BaseAppCfg(abc.ABC):
         self._api_logger: logging.Logger
         self._app_logger: logging.Logger
         self._service_logger: logging.Logger
+        self._feature_flags: dict[Hashable, bool]
 
     @property
     def name(self) -> str:
@@ -94,6 +96,10 @@ class BaseAppCfg(abc.ABC):
     @property
     def service_logger(self) -> logging.Logger:
         return self._service_logger
+
+    @property
+    def feature_flags(self) -> dict[Hashable, bool]:
+        return self._feature_flags
 
     @abc.abstractmethod
     def copy_repository_files(
@@ -138,6 +144,7 @@ class AppCfg(BaseAppCfg):
         envvar_prefix: str | None = None,
         log_config_file_envvar: str = "LOG_CONFIG_FILE",
         log_level_envvar: str = "LOG_LEVEL",
+        feature_flags: dict[Hashable, bool] | None = None,
     ):
         """Initialize application configuration.
 
@@ -153,6 +160,7 @@ class AppCfg(BaseAppCfg):
             logging_config_file_envvar: Environment variable for logging config file
             idps_config_file_envvar: Environment variable for identity provider config
             logging_level_from_secret_envvar: Environment variable to control log level from secrets
+            feature_flags: Optional dictionary of feature flags
         """
         # Parse input
         if isinstance(app_name_or_enum, Enum):
@@ -171,6 +179,7 @@ class AppCfg(BaseAppCfg):
         self._log_setup = log_setup
         self._log_level_envvar = log_level_envvar
         self._setup_logger_level = setup_logger_level
+        self._feature_flags = feature_flags or {}
 
         # Configure and set loggers
         self._init_configure_loggers()
@@ -185,6 +194,7 @@ class AppCfg(BaseAppCfg):
         # Load settings
         self._init_load_settings()
         self.set_log_level()
+        self._init_feature_flags()
         if self._log_setup:
             self.setup_logger.info(
                 App.create_static_log_message(
@@ -232,6 +242,26 @@ class AppCfg(BaseAppCfg):
 
         settings_manager = SettingsManager(prefix=self._envvar_prefix)
         self._cfg = settings_manager.load_settings()
+
+    def _init_feature_flags(self) -> None:
+        """Load and validate feature flags from settings."""
+        try:
+            feature_flags = self._cfg["feature_flags"]
+        except (KeyError, TypeError, AttributeError):
+            return
+
+        if not isinstance(feature_flags, dict):
+            return
+
+        converted_feature_flags: dict[str, bool] = {}
+        for key, value in feature_flags.items():
+            if isinstance(value, str) and len(value) != 1:
+                raise exc.InitializationServiceError(
+                    f"Invalid value for feature flag '{key}', expected boolean or string of length 1"
+                )
+            converted_feature_flags[key] = bool(int(value))
+
+        self._feature_flags = converted_feature_flags
 
     def _init_validate_settings(self) -> None:
         """Validate settings and apply defaults to all services and repositories."""

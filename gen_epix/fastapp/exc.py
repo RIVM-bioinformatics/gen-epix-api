@@ -130,6 +130,15 @@ class RepositoryServiceError(ServiceException):
 class AuthException(ServiceException):
     pass
 
+class FeatureDisabledError(ServiceException):
+    def __init__(
+        self, message: str | None = None, http_props: dict[str, Any] | None = None
+    ):
+        super().__init__(message, http_props)
+        if http_props is None:
+            http_props = {}
+        self._init_message(message, "System unavailable: Feature is disabled")
+        self._init_http_props(http_props, 503)
 
 class CredentialsAuthError(AuthException):
     def __init__(

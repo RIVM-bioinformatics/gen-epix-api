@@ -55,7 +55,7 @@ class AbacService(BaseAbacService):
         user_id = cmd.user.id
         return self._get_case_abac_cached(user_id)
 
-    def temp_update_user_own_organization(
+    def update_user_own_organization(
         self,
         cmd: command.UpdateUserOwnOrganizationCommand,
     ) -> model.User:
@@ -76,6 +76,9 @@ class AbacService(BaseAbacService):
           the previous organization. Analogous for OrganizationShareCasePolicy and
           UserShareCasePolicy.
         """
+        if not self.app.get_feature_flag("update_own_organization"):
+            raise exc.FeatureDisabledError("Updating own organization is disabled")
+
         is_new_user = cmd.is_new_user
         tgt_organization_id = cmd.organization_id
         assert cmd.user is not None
@@ -86,7 +89,7 @@ class AbacService(BaseAbacService):
         if user.organization_id == tgt_organization_id and not is_new_user:
             return user
 
-        with self.repository.uow() as uow:
+        with self.repository.uow():
             # Get all current user access and share case policies
             user_access_case_policies: list[model.UserAccessCasePolicy] = (
                 self.app.handle(

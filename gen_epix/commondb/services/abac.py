@@ -205,7 +205,7 @@ class AbacService(BaseAbacService):
             for x in users
         ]
 
-    def temp_update_user_own_organization(
+    def update_user_own_organization(
         self,
         cmd: command.UpdateUserOwnOrganizationCommand,
     ) -> model.User:
@@ -215,6 +215,9 @@ class AbacService(BaseAbacService):
         - Delete any OrganizationAdminPolicy for the user and their previous
           organization
         """
+        if not self.app.get_feature_flag("update_own_organization"):
+            raise exc.FeatureDisabledError("Updating own organization is disabled")
+
         is_new_user = cmd.is_new_user
         tgt_organization_id = cmd.organization_id
         assert cmd.user is not None

@@ -25,6 +25,8 @@ class HealthStatus(Enum):
 class HealthReponseBody(PydanticBaseModel):
     status: HealthStatus
 
+class FeatureFlagsResponseBody(PydanticBaseModel):
+    feature_flags: dict[str, bool]
 
 class LogItem(PydanticBaseModel):
     level: LogLevel
@@ -71,6 +73,24 @@ def create_system_endpoints(
         return HealthReponseBody(
             status=HealthStatus.HEALTHY,
         )
+
+    @router.get(
+        "/retrieve/feature-flags",
+        operation_id="retrieve__feature_flags",
+        name="Feature Flags",
+        description=command.RetrieveFeatureFlagsCommand.__doc__,
+    )
+    async def feature_flags() -> FeatureFlagsResponseBody:
+        """
+        Returns the feature flags of the service.
+        """
+        try:
+            cmd = command.RetrieveFeatureFlagsCommand(user=None)
+            retval: dict[str, bool] = app.handle(cmd)
+        except Exception as exception:
+            handle_exception("6ba2c4ca", None, exception)
+        return FeatureFlagsResponseBody(feature_flags=retval)
+
 
     # Licenses endpoint
     @router.post(

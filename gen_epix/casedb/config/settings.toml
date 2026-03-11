@@ -103,3 +103,7 @@ class_name = "SubjectService"
 [repository]
 [repository.defaults]
 [repository.defaults.props]
+
+[feature_flags]
+auto_create_new_users = true
+update_own_organization = true
