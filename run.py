@@ -839,7 +839,7 @@ class Run:
         )
         linter = Linter()
         linter.run_pylint(file=file, filter_on_codes=filter_on_codes)
-        file2.write_text(file.read_text())
+        file2.write_text(file.read_text(encoding="utf-8"), encoding="utf-8")
         for line in linter.parse_pylint_for_issue_lines(
             file, filter_on_codes=filter_on_codes
         ):
@@ -866,7 +866,7 @@ class Run:
         file2 = Path(__file__).parent / "test" / "output" / f"linter.{now_str}.mypy.txt"
         linter = Linter()
         linter.run_mypy(file=file, filter_on_codes=filter_on_codes)
-        file2.write_text(file.read_text())
+        file2.write_text(file.read_text(encoding="utf-8"), encoding="utf-8")
         for line in linter.parse_mypy_for_issue_lines(
             file, filter_on_codes=filter_on_codes
         ):
