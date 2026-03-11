@@ -388,7 +388,23 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         return True
 
     def _decode_jwt_unverified(self, jwt_token: str) -> dict[str, Any]:
-        return jwt.decode(jwt_token, options={"verify_signature": False})  # type: ignore[no-any-return]
+        try:
+            return jwt.decode(  # type: ignore[no-any-return]
+                jwt_token, options={"verify_signature": False}
+            )
+        except jwt.PyJWTError as exception:
+            if self.logger:
+                self.logger.warning(
+                    self._log_item_class(
+                        code="db0e5f77",
+                        msg="Unable to decode JWT without signature verification",
+                        scheme_name=self.scheme_name,
+                        exception=exception,
+                    ).dumps()
+                )
+            raise exc.CredentialsAuthError(
+                http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+            ) from exception
 
     def retrieve_jwt_with_client_credentials_flow(
         self,

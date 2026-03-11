@@ -59,6 +59,9 @@ class ServerManager:
         ssl_certfile: str | None = None,
         ssl_keyfile: str | None = None,
         oauth_discovery_url: str = "",
+        app_import_path: str = "",
+        process_env_overrides: dict[str, str] | None = None,
+        health_path: str = "",
     ) -> None:
         if (ssl_certfile is None) != (ssl_keyfile is None):
             raise ValueError(
@@ -79,15 +82,20 @@ class ServerManager:
         self.process: subprocess.Popen[str] | None = None
         self.base_url = f"{self.protocol}://localhost:{self.port}"
         self.oauth_discovery_url = oauth_discovery_url
+        self.app_import_path = app_import_path
+        self.process_env_overrides = process_env_overrides or {}
+        self.health_path = health_path
 
         if self.service in ServerTypeSet.NON_AUTH.value:
-            if app is None:
-                raise ValueError("app must be provided for non-OAuth servers")
+            if app is None and not app_import_path:
+                raise ValueError(
+                    "app or app_import_path must be provided for non-OAuth servers"
+                )
 
-    @staticmethod
-    def _create_process_kwargs() -> dict[str, Any]:
+    def _create_process_kwargs(self) -> dict[str, Any]:
         env = os.environ.copy()
         env["PYTHONPATH"] = os.getcwd()
+        env.update(self.process_env_overrides)
 
         popen_kwargs: dict[str, Any] = {
             "cwd": os.getcwd(),
@@ -122,37 +130,42 @@ class ServerManager:
             )
             log_thread.start()
 
-    def start_oauth_server(self) -> bool:
+    def _build_uvicorn_command(self, app_import_path: str) -> list[str]:
+        cmd = [
+            sys.executable,
+            "-m",
+            "uvicorn",
+            app_import_path,
+            "--host",
+            self.host,
+            "--port",
+            str(self.port),
+            "--log-level",
+            logging.getLevelName(self.LOGGER.level).lower(),
+            "--no-access-log",
+        ]
+        if self.ssl_keyfile:
+            cmd.extend(["--ssl-keyfile", self.ssl_keyfile])
+        if self.ssl_certfile:
+            cmd.extend(["--ssl-certfile", self.ssl_certfile])
+        return cmd
+
+    def _start_process_server(self, cmd: list[str]) -> bool:
         if self.process:
             self.stop()
 
+        popen_kwargs = self._create_process_kwargs()
+        try:
+            self.process = subprocess.Popen(cmd, **popen_kwargs)
+            self._start_log_monitor()
+            return self._wait_for_server()
+        except Exception as e:
+            self.LOGGER.error("Failed to start %s process server: %s", self.service, e)
+            return False
+
+    def start_oauth_server(self) -> bool:
         if self.service == ServerType.OAUTH:
-            cmd: list[str] = [
-                sys.executable,
-                "-m",
-                "uvicorn",
-                "test.test_client.oauth.server:app",
-                "--host",
-                "localhost",
-                "--port",
-                str(self.port),
-                "--log-level",
-                logging.getLevelName(self.LOGGER.level).lower(),
-            ]
-            if self.ssl_keyfile:
-                cmd.extend(
-                    [
-                        "--ssl-keyfile",
-                        self.ssl_keyfile,
-                    ]
-                )
-            if self.ssl_certfile:
-                cmd.extend(
-                    [
-                        "--ssl-certfile",
-                        self.ssl_certfile,
-                    ]
-                )
+            cmd = self._build_uvicorn_command("test.test_client.oauth.server:app")
         elif self.service == ServerType.OAUTH_RECEIVER:
             if self.oauth_discovery_url == "":
                 raise ValueError(
@@ -169,15 +182,14 @@ class ServerManager:
         else:
             raise ValueError("Invalid service type for OAuth server")
 
-        popen_kwargs = self._create_process_kwargs()
+        return self._start_process_server(cmd)
 
-        try:
-            self.process = subprocess.Popen(cmd, **popen_kwargs)
-            self._start_log_monitor()
-            return self._wait_for_server()
-        except Exception as e:
-            self.LOGGER.error(f"Failed to start OAuth server: {e}")
-            return False
+    def start_process_uvicorn_server(self) -> bool:
+        if not self.app_import_path:
+            raise ValueError("app_import_path must be provided for subprocess startup")
+        return self._start_process_server(
+            self._build_uvicorn_command(self.app_import_path)
+        )
 
     def add_client(
         self,
@@ -285,12 +297,16 @@ class ServerManager:
     def start(self) -> bool:
         if self.service in ServerTypeSet.AUTH.value:
             return self.start_oauth_server()
+        if self.app_import_path:
+            return self.start_process_uvicorn_server()
         else:
             return self.start_uvicorn_server()
 
     def _wait_for_server(self, timeout: int = 10) -> bool:
         start_time = time.time()
-        if self.service in ServerTypeSet.AUTH.value:
+        if self.health_path:
+            health_url = self.health_path
+        elif self.service in ServerTypeSet.AUTH.value:
             health_url = "/health"
         else:
             health_url = "/v1/health"
@@ -318,7 +334,7 @@ class ServerManager:
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=5)
 
-    def stop_oauth_server(self) -> None:
+    def stop_process_server(self) -> None:
         if not self.process:
             return
 
@@ -372,8 +388,8 @@ class ServerManager:
         self.LOGGER.info(f"{self.service.value} stopped")
 
     def stop(self) -> None:
-        if self.service in ServerTypeSet.AUTH.value:
-            self.stop_oauth_server()
+        if self.process:
+            self.stop_process_server()
         else:
             self.stop_uvicorn_server()
 
