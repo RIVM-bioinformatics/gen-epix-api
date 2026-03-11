@@ -494,7 +494,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         self, setup_case_type_data: None
     ) -> None:
         """
-        Assert that all created case type set categories are accessible to any user,
+        Assert that all created CaseTypeSet categories are accessible to any user,
         since category access is not filtered by access policies in this setup.
         """
         spec = EDGE_CASES[
@@ -515,6 +515,6 @@ class TestCaseDBEdgeCasesRefDataAccess:
 
         assert actual == expected, (
             f"\n{spec.description}"
-            f"\n  Expected access to all case type set categories: {sorted(expected)}"
+            f"\n  Expected access to all CaseTypeSet categories: {sorted(expected)}"
             f"\n  Actual access: {sorted(actual) if actual else '\u2205'}"
         )

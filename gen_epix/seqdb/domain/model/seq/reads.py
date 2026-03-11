@@ -5,6 +5,7 @@ from pydantic import Field, computed_field, field_validator, model_validator
 
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model
+from gen_epix.commondb.domain.model.organization import BaseIdentifier
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.file import File
@@ -156,3 +157,18 @@ class ReadSet(Model, HasSampleMixin, CodeMixin, QualityMixin):
         ):
             raise ValueError("Cannot have both uri and file_id")
         return self
+
+
+class ReadSetIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        ReadSet,
+        relationship_field_name="read_set",
+        snake_case_plural_name="read_set_identifiers",
+        table_name="read_set_identifier",
+    )
+    NAME: ClassVar = "ReadSetIdentifier"
+    MODEL_CLASS: ClassVar = ReadSet
+
+    read_set: ReadSet | None = Field(
+        default=None, description="The read set associated with this identifier."
+    )

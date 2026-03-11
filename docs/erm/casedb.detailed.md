@@ -13,7 +13,6 @@ erDiagram
     DataCollectionSetMember }o--|| DataCollection : "data_collection_id"
     OrganizationIdentifierIssuerLink }o--|| Organization : "organization_id"
     OrganizationIdentifierIssuerLink }o--|| IdentifierIssuer : "identifier_issuer_id"
-    ExternalIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
     Site }o--|| Organization : "organization_id"
     Contact }o--|| Site : "site_id"
     User }o--|| Organization : "organization_id"
@@ -51,6 +50,8 @@ erDiagram
     Case }o--|| CaseType : "case_type_id"
     Case }o--|| Subject : "subject_id"
     Case }o--|| DataCollection : "created_in_data_collection_id"
+    CaseIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    CaseIdentifier }o--|| Case : "internal_id"
     CaseSet }o--|| CaseType : "case_type_id"
     CaseSet }o--|| DataCollection : "created_in_data_collection_id"
     CaseSet }o--|| CaseSetCategory : "case_set_category_id"
@@ -141,14 +142,6 @@ erDiagram
         UUID id PK
         UUID organization_id FK
         UUID identifier_issuer_id FK
-    }
-
-    ExternalIdentifier {
-        UUID id PK
-        enum identifier_type
-        UUID identifier_issuer_id FK
-        string external_id
-        UUID internal_id
     }
 
     Site {
@@ -269,7 +262,7 @@ erDiagram
     Subject {
         UUID id PK
         UUID data_collection_id FK
-        dict[IdentifierIssuer, string] external_identifiers
+        dict[IdentifierIssuer, string] identifiers
         dict[string, Any] content
     }
 
@@ -427,6 +420,13 @@ erDiagram
         int count
         timestamp case_date
         dict[UUID, string] content
+    }
+
+    CaseIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
     }
 
     CaseSetCategory {

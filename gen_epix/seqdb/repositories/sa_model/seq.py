@@ -3,13 +3,14 @@
 from uuid import UUID
 
 import sqlalchemy.orm as orm
-from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import Mapped, relationship
 
 from gen_epix.commondb.repositories.sa_model import (
     RowMetadataMixin,
     create_mapped_column,
     create_table_args,
 )
+from gen_epix.commondb.repositories.sa_model.organization import IdentifierMixin
 from gen_epix.seqdb.domain import DOMAIN, enum, model
 from gen_epix.seqdb.repositories.sa_model.base import (
     AlignmentMixin,
@@ -80,6 +81,21 @@ class AlleleProfile(Base, RowMetadataMixin, QualityMixin):
     )
     allele_profile_hash: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.AlleleProfile, "allele_profile_hash"
+    )
+
+
+class AlleleProfileIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.AlleleProfileIdentifier)
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.AlleleProfileIdentifier, "internal_id"
+    )
+    allele_profile: Mapped[AlleleProfile] = relationship(
+        AlleleProfile, foreign_keys=[internal_id]
     )
 
 
@@ -203,6 +219,21 @@ class KmerProfile(Base, RowMetadataMixin, QualityMixin):
     )
 
 
+class KmerProfileIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.KmerProfileIdentifier)
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.KmerProfileIdentifier, "internal_id"
+    )
+    kmer_profile: Mapped[KmerProfile] = relationship(
+        KmerProfile, foreign_keys=[internal_id]
+    )
+
+
 class Locus(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
@@ -273,6 +304,21 @@ class LocusProfile(Base, RowMetadataMixin, QualityMixin):
     )
 
 
+class LocusProfileIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.LocusProfileIdentifier)
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.LocusProfileIdentifier, "internal_id"
+    )
+    locus_profile: Mapped[LocusProfile] = relationship(
+        LocusProfile, foreign_keys=[internal_id]
+    )
+
+
 class LocusSet(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
@@ -323,6 +369,21 @@ class MlvaProfile(Base, RowMetadataMixin, QualityMixin):
     )
     mlva_profile_hash: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.MlvaProfile, "mlva_profile_hash"
+    )
+
+
+class MlvaProfileIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.MlvaProfileIdentifier)
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.MlvaProfileIdentifier, "internal_id"
+    )
+    mlva_profile: Mapped[MlvaProfile] = relationship(
+        MlvaProfile, foreign_keys=[internal_id]
     )
 
 
@@ -397,6 +458,19 @@ class ReadSet(Base, RowMetadataMixin, CodeMixin, QualityMixin):
     is_available: Mapped[bool] = create_mapped_column(
         DOMAIN, model.ReadSet, "is_available"
     )
+
+
+class ReadSetIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.ReadSetIdentifier)
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.ReadSetIdentifier, "internal_id"
+    )
+    read_set: Mapped[ReadSet] = relationship(ReadSet, foreign_keys=[internal_id])
 
 
 class RefAllele(Base, RowMetadataMixin, SeqMixin):
@@ -494,22 +568,17 @@ class SampleDataCollectionLink(Base, RowMetadataMixin):
     )
 
 
-class SampleIdentifier(Base, RowMetadataMixin):
+class SampleIdentifier(Base, IdentifierMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.SampleIdentifier)
 
-    sample_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SampleIdentifier, "sample_id"
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SampleIdentifier, "internal_id"
     )
-    identifier_issuer_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SampleIdentifier, "identifier_issuer_id"
-    )
-    identifier: Mapped[str] = create_mapped_column(
-        DOMAIN, model.SampleIdentifier, "identifier"
-    )
+    sample: Mapped[Sample] = relationship(Sample, foreign_keys=[internal_id])
 
 
 class Seq(Base, RowMetadataMixin, CodeMixin, QualityMixin):
@@ -551,6 +620,19 @@ class Seq(Base, RowMetadataMixin, CodeMixin, QualityMixin):
         DOMAIN, model.Seq, "median_contig_length"
     )
     n50: Mapped[int] = create_mapped_column(DOMAIN, model.Seq, "n50")
+
+
+class SeqIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.SeqIdentifier)
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SeqIdentifier, "internal_id"
+    )
+    seq: Mapped[Seq] = relationship(Seq, foreign_keys=[internal_id])
 
 
 class SeqAlignment(Base, RowMetadataMixin):
@@ -759,6 +841,21 @@ class SnpProfile(Base, RowMetadataMixin, QualityMixin):
     )
     snp_profile_hash: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SnpProfile, "snp_profile_hash"
+    )
+
+
+class SnpProfileIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.SnpProfileIdentifier)
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SnpProfileIdentifier, "internal_id"
+    )
+    snp_profile: Mapped[SnpProfile] = relationship(
+        SnpProfile, foreign_keys=[internal_id]
     )
 
 

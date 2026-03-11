@@ -40,6 +40,7 @@ class BaseCaseService(BaseService):
     }
     ABAC_DATA_COMMAND_CLASSES: set[type[command.Command]] = {
         command.CaseCrudCommand,
+        command.CaseIdentifierCrudCommand,
         command.CaseSetCrudCommand,
         command.CaseSetMemberCrudCommand,
         command.CaseDataCollectionLinkCrudCommand,
@@ -129,6 +130,7 @@ class BaseCaseService(BaseService):
     def register_handlers(self) -> None:
         f = self.app.register_handler
         f(command.CaseCrudCommand, self.crud_case)
+        f(command.CaseIdentifierCrudCommand, self.crud_case_identifier)
         f(
             command.CaseDataCollectionLinkCrudCommand,
             self.crud_case_data_collection_link,
@@ -190,6 +192,21 @@ class BaseCaseService(BaseService):
         self, cmd: command.CaseCrudCommand
     ) -> list[model.Case] | model.Case | list[UUID] | UUID | list[bool] | bool | None:
         """Handle CRUD operations for Case entities."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_case_identifier(
+        self, cmd: command.CaseIdentifierCrudCommand
+    ) -> (
+        list[model.CaseIdentifier]
+        | model.CaseIdentifier
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseIdentifier entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod

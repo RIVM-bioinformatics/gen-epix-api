@@ -19,6 +19,9 @@ from gen_epix.casedb.services.case.crud_case import case_service_crud_case
 from gen_epix.casedb.services.case.crud_case_data_collection_link import (
     case_service_crud_case_data_collection_link,
 )
+from gen_epix.casedb.services.case.crud_case_identifier import (
+    case_service_crud_case_identifier,
+)
 from gen_epix.casedb.services.case.crud_case_set import case_service_crud_case_set
 from gen_epix.casedb.services.case.crud_case_set_category import (
     case_service_crud_case_set_category,
@@ -885,6 +888,20 @@ class CaseService(BaseCaseService):
     ):
         """Handle CRUD operations for CaseDataCollectionLink entities."""
         return case_service_crud_case_data_collection_link(self, cmd)
+
+    def crud_case_identifier(
+        self: BaseCaseService, cmd: command.CaseIdentifierCrudCommand
+    ) -> (
+        list[model.CaseIdentifier]
+        | model.CaseIdentifier
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseIdentifier entities."""
+        return case_service_crud_case_identifier(self, cmd)
 
     def crud_case_set_category(
         self, cmd: command.CaseSetCategoryCrudCommand

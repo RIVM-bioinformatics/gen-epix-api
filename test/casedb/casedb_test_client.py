@@ -1175,6 +1175,7 @@ class CasedbTestClient(TestClient):
             elif ref_col.col_type == enum.ColType.GEO_REGION:
                 regions = self.read_some_by_property(
                     root_user, model.Region, "region_set_id", ref_col.region_set_id
+                    root_user, model.Region, "region_set_id", ref_col.region_set_id
                 )
                 value = regions[0].id
             content[col.id] = str(value)

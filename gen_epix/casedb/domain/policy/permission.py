@@ -28,6 +28,10 @@ class RoleGenerator(CommonRoleGenerator):
                 command.CaseCrudCommand,
                 PermissionTypeSet.C,
             ),  # Other users can only use dedicated command
+            (
+                command.CaseIdentifierCrudCommand,
+                PermissionTypeSet.C,
+            ),  # Other users can only use dedicated command
             (command.CaseTypeCrudCommand, PermissionTypeSet.D),
             (command.CaseSetCategoryCrudCommand, PermissionTypeSet.CU),
             (command.CaseSetStatusCrudCommand, PermissionTypeSet.CU),

@@ -40,7 +40,7 @@ class BasePolicyTestCase(TestCase):
             pass
 
         class DummyUserManager(FastBaseUserManager):
-            def get_user_instance_from_claims(self, claims: dict[str, Any]) -> model.User | None:  # type: ignore[override]
+            def construct_user_instance_from_claims(self, claims: dict[str, Any]) -> model.User | None:  # type: ignore[override]
                 return None
 
             def create_root_user_from_claims(self, claims: dict[str, Any]) -> model.User:  # type: ignore[override]
@@ -59,7 +59,7 @@ class BasePolicyTestCase(TestCase):
             def is_root_user(self, user: model.User) -> bool:  # type: ignore[override]
                 return False
 
-            def create_user_from_claims(self, claims: dict[str, Any]) -> model.User | None:  # type: ignore[override]
+            def auto_create_new_user(self, claims: dict[str, Any]) -> model.User | None:  # type: ignore[override]
                 return None
 
             def create_new_user_from_token(self, user: model.User, token: str, **kwargs: Any) -> model.User:  # type: ignore[override]

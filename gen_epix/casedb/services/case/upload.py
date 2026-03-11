@@ -12,10 +12,9 @@ from gen_epix.casedb.services.case.case_validator import CaseValidator
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
 from gen_epix.commondb.domain.enum import UploadStatus
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
+from gen_epix.commondb.domain.model.organization import IdentifierForUpload
 from gen_epix.commondb.domain.model.upload import BaseBatchUploadResult
 from gen_epix.commondb.services.upload import BatchUploader
-from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.service import BaseService
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.filter.uuid_set import UuidSetFilter
@@ -203,6 +202,7 @@ class CaseBatchUploader(BatchUploader):
             # Only upload samples if case upload succeeded
             curr_success = self.upload_samples(cmd, batch_result, False)
             if curr_success:
+                # The upload of samples may have updated the case content with IDs of created read sets and seqs, so the cases in the database need to be updated with the new content.
                 for case, case_only in zip(
                     cmd.case_batch.cases, cases_only_cmd.case_batch.cases
                 ):
@@ -210,14 +210,6 @@ class CaseBatchUploader(BatchUploader):
                     assert case_only.case is not None
                     case_only.case.content = case.case.content
                 success &= super().upsert_batch(cases_only_cmd, batch_result, uow)
-
-        if not curr_success:
-            # Sample upload failed but cases were already created: the rest of the
-            # upload will be rolled back as well, with the exception of any new external
-            # identifiers since these are not within the scope of the transaction.
-            # An attempt is made to delete these again, which may fail silently if
-            # they were already deleted.
-            success &= self.delete_new_external_identifiers(cmd, batch_result)
         success &= curr_success
 
         return success
@@ -321,49 +313,6 @@ class CaseBatchUploader(BatchUploader):
             success = False
         return success
 
-    def delete_new_external_identifiers(
-        self, cmd: command.UploadCasesCommand, batch_result: model.CaseBatchUploadResult
-    ) -> bool:
-        success = True
-        external_identifier_ids: list[UUID] = [
-            y.id  # type: ignore[misc]
-            for x in batch_result.cases
-            for y in x.external_identifiers or []
-            if y.status == UploadStatus.CREATED
-        ]
-        if not external_identifier_ids:
-            return success
-        existing_new_external_identifier_ids: list[UUID] = self.service.app.handle(
-            command.ExternalIdentifierCrudCommand(
-                user=cmd.user,
-                operation=CrudOperation.READ_ALL,
-                query_filter=UuidSetFilter(
-                    key="id", members=frozenset(external_identifier_ids)
-                ),
-                props={"return_id": True},
-            )
-        )
-        try:
-            self.service.app.handle(
-                command.ExternalIdentifierCrudCommand(
-                    user=cmd.user,
-                    operation=CrudOperation.DELETE_SOME,
-                    obj_ids=existing_new_external_identifier_ids,
-                    props={"return_id": True},
-                )
-            )
-            batch_result.add_info(
-                "f0g1h2i3",
-                "Case upload failed due to associated sample upload errors, new external identifiers successfully deleted again.",
-            )
-        except:
-            success = False
-            batch_result.add_error(
-                "f1g2h3i4",
-                "Case upload failed due to associated sample upload errors, new external identifiers could not be deleted.",
-            )
-        return success
-
     def _get_complete_case_type(
         self, cmd: command.UploadCasesCommand, ignore_abac: bool = False
     ) -> model.CompleteCaseType:
@@ -413,7 +362,7 @@ class CaseBatchUploader(BatchUploader):
         # Initialise some
         samples_for_upload: list[seqdb_model.SampleForUpload] = []
         sample_id_to_index_map: dict[UUID, int] = {}
-        sample_external_id_to_index_map: dict[ExternalIdentifierForUpload, int] = {}
+        sample_external_id_to_index_map: dict[IdentifierForUpload, int] = {}
         sample_case_index_map: dict[int, int] = {}
         child_index_map: dict[
             type[model.Model], dict[tuple[int, int], tuple[int, int]]
@@ -423,7 +372,7 @@ class CaseBatchUploader(BatchUploader):
         def _get_or_create_sample_for_upload(
             case_index: int,
             sample_id: UUID | None,
-            external_sample_id: ExternalIdentifierForUpload | None,
+            external_sample_id: IdentifierForUpload | None,
         ) -> int:
             has_id = sample_id is not None and sample_id != NULL_ID
             has_external_id = external_sample_id is not None
@@ -444,7 +393,7 @@ class CaseBatchUploader(BatchUploader):
                     id=sample_id,
                     created_in_data_collection_id=cmd.created_in_data_collection_id,
                 ),
-                external_identifiers=[external_sample_id] if has_external_id else [],
+                identifiers=[external_sample_id] if has_external_id else [],
                 read_sets=[],
                 seqs=[],
             )
@@ -467,7 +416,7 @@ class CaseBatchUploader(BatchUploader):
                 sample_index = _get_or_create_sample_for_upload(
                     case_index,
                     read_set_for_upload.sample_id,
-                    read_set_for_upload.external_sample_id,
+                    read_set_for_upload.other_sample_identifier,
                 )
                 sample_for_upload = samples_for_upload[sample_index]
                 # Add read set

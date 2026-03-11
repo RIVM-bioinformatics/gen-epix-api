@@ -31,9 +31,6 @@ from gen_epix.commondb.domain.command.organization import (
     DataCollectionSetMemberCrudCommand as DataCollectionSetMemberCrudCommand,
 )
 from gen_epix.commondb.domain.command.organization import (
-    ExternalIdentifierCrudCommand as ExternalIdentifierCrudCommand,
-)
-from gen_epix.commondb.domain.command.organization import (
     IdentifierIssuerCrudCommand as IdentifierIssuerCrudCommand,
 )
 from gen_epix.commondb.domain.command.organization import (
@@ -116,7 +113,6 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[type[fastapp.Command]
             DataCollectionSetCrudCommand,
             DataCollectionSetDataCollectionUpdateAssociationCommand,
             DataCollectionSetMemberCrudCommand,
-            ExternalIdentifierCrudCommand,
             IdentifierIssuerCrudCommand,
             InviteUserCommand,
             OrganizationCrudCommand,

@@ -344,6 +344,12 @@ class CaseCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Case
 
 
+class CaseIdentifierCrudCommand(CrudCommand):
+    """Manage case identifiers that link cases to external systems or provide alternate lookup keys."""
+
+    MODEL_CLASS: ClassVar = model.CaseIdentifier
+
+
 class CaseDataCollectionLinkCrudCommand(CrudCommand):
     """Manage links that associate cases with additional data collections to widen or restrict sharing beyond their origin."""
 

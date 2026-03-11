@@ -4,7 +4,7 @@ This file defines architectural constraints and security invariants.
 
 The canonical golden prompt (evidence + output format) lives in:
 
-.github/ai/prompts/base_prompt.md
+.github/prompts/base_prompt.md
 
 Both must be applied together.
 

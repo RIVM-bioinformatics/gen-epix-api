@@ -28,11 +28,53 @@ from gen_epix.filter.base import Filter
 
 
 class Model(PydanticBaseModel):
-    NAME: ClassVar[str | None] = None
-    ENTITY: ClassVar[Entity | None] = None
+    """
+    Base class for all models in an application. Models are used to represent the
+    state of the application and are typically persisted in a database. Models can also
+    be used to represent the state of the application in memory, e.g. for caching or
+    for passing data between services. Models can be immutable or mutable, depending on
+    the use case.
+
+    Each model must have an associated Entity, which defines the metadata for the
+    model. See the Entity class for more details. The Entity must be set in the
+    subclass of Model. Analogously, a unique name for the model can be set in the
+    subclass, which can be used for identification and logging purposes.
+
+    The model_entity and model_name class methods can be used to retrieve the Entity
+    and name of the model, respectively. These methods have the same "model_" prefix as
+    generic Pydantic models to avoid name conflicts with other.
+    """
+
+    NAME: ClassVar[str] = None  # type: ignore[assignment]
+    ENTITY: ClassVar[Entity] = None  # type: ignore[assignment]
+
+    @classmethod
+    def model_entity(cls) -> Entity:
+        """Get the Entity associated with this model."""
+        if cls.ENTITY is None:
+            raise exc.InitializationServiceError(
+                f"Entity not set for model {cls.__name__}"
+            )
+        return cls.ENTITY
+
+    @classmethod
+    def model_name(cls) -> str:
+        """Get the name of the model."""
+        if cls.NAME is None:
+            raise exc.InitializationServiceError(
+                f"Name not set for model {cls.__name__}"
+            )
+        return cls.NAME
 
 
 class User(PydanticBaseModel):
+    """
+    A user of the application. This can represent an actual user, or a service
+    account, or any other type of principal that can be authenticated and authorized to
+    perform actions in the application. The key of the user is used to identify the
+    user across systems, e.g. as a claim a in security token.
+    """
+
     id: Hashable | None = Field(
         default_factory=uuid.uuid4,
         description="The ID of the user. This can be the key of the user (see get_key method), or a separate ID.",
@@ -88,6 +130,7 @@ class Permission(PydanticBaseModel, frozen=True):
         return self.command_name, permission_type_map[self.permission_type]
 
     def __eq__(self, permission: object) -> bool:
+        """"""
         # TODO: Investigate why two objs of this class with the same values are
         # not equal without overriding __eq__
         if not isinstance(permission, Permission):
@@ -98,14 +141,22 @@ class Permission(PydanticBaseModel, frozen=True):
         )
 
     def __repr__(self) -> str:
+        """"""
         return f"({self.command_name},{self.permission_type.value})"
 
     @field_serializer("permission_type", mode="plain")
     def _serialize_permission_type(self, value: PermissionType) -> str:
+        """"""
         return value.value
 
 
 class Policy(abc.ABC):
+    """
+    A policy defines logic for a command to be executed before, during or after the
+    execution of the command. It can be used to implement e.g. authorization and other
+    cross-cutting concerns.
+    """
+
     def get_is_denied_exception(self) -> type[Exception]:
         return exc.UnauthorizedAuthError
 
@@ -127,6 +178,12 @@ class Policy(abc.ABC):
 
 
 class Command(PydanticBaseModel):
+    """
+    A command represents an action to be performed in the application. The logic for
+    executing commands is typically implemented by services in the application, which
+    register the relevant handler function or method with the app.
+    """
+
     PERMISSION_TYPE_SET: ClassVar[PermissionTypeSet] = PermissionTypeSet.E
     NAME: ClassVar[str | None] = None
 
@@ -144,6 +201,15 @@ class Command(PydanticBaseModel):
 
 
 class CrudCommand(Command):
+    """
+    A command base class for performing a CRUD operation on a model. The command
+    includes the CRUD operation to perform, the identifier(s) of the object(s) to
+    operate on and/or the object(s) to operate on, and optional filters for read or
+    delete all operations and for access control. The command also includes
+    validation logic to ensure that the combination of operation, identifiers,
+    objects and filters is valid.
+    """
+
     PERMISSION_TYPE_SET: ClassVar[PermissionTypeSet] = PermissionTypeSet.CRUD
     MODEL_CLASS: ClassVar[type[Model]] = Model
 
@@ -325,6 +391,15 @@ class CrudCommand(Command):
 
 
 class UpdateAssociationCommand(Command):
+    """
+    A command base class for updating a many-to-many association between two entities.
+    The command includes the identifiers of the two objects to associate, or the
+    association objects themselves, and validation logic to ensure that the combination
+    of identifiers and association objects is valid. The command also includes an
+    optional props field for additional properties to pass to the command and which can
+    be used by custom implementations.
+    """
+
     ASSOCIATION_CLASS: ClassVar[type[Model]] = Model
     LINK_FIELD_NAME1: ClassVar[str] = ""
     LINK_FIELD_NAME2: ClassVar[str] = ""
@@ -376,6 +451,11 @@ class UpdateAssociationCommand(Command):
 
 
 class Role(PydanticBaseModel):
+    """
+    A role represents a set of permissions that can be assigned to users e.g. for
+    implementing role-based access control (RBAC).
+    """
+
     name: str
     permissions: set[Permission]
 
