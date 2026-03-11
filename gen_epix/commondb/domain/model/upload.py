@@ -22,6 +22,10 @@ from gen_epix.fastapp import Model
 from gen_epix.fastapp.domain import Entity
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import LogLevel, LogLevelSet
+from gen_epix.fastapp.result import ResultLogItem, ResultLogMixin
+
+# Backward-compatible alias: UploadLogItem is now ResultLogItem.
+UploadLogItem = ResultLogItem
 
 
 class IdentifiersMixin:
@@ -87,27 +91,6 @@ class IdentifiersMixin:
         return identifiers
 
 
-class UploadLogItem(BaseModel):
-    """
-    Represents a log item for an upload result, containing a timestamp, code, message
-    and severity.
-    """
-
-    timestamp: datetime.datetime = Field(
-        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc),
-        description="The UTC timestamp when the log item was created.",
-    )
-    code: str = Field(
-        description="A code categorizing the log item.",
-    )
-    message: str = Field(
-        description="The log message describing the event or information.",
-    )
-    severity: LogLevel = Field(
-        description="The severity level of the log item.",
-    )
-
-
 class DataIssue(PydanticBaseModel):
     original_value: str | None = Field(description="The original value")
     updated_value: str | None = Field(
@@ -120,7 +103,7 @@ class DataIssue(PydanticBaseModel):
     message: str | None = Field(description="The details of the data issue")
 
 
-class UploadResult(Model):
+class UploadResult(ResultLogMixin, Model):
     """
     Represents the result of an upload operation for a particular object, including
     upload status and logs.
@@ -162,36 +145,8 @@ class UploadResult(Model):
             raise ValueError("Failed results must include error information")
         return self
 
-    def add_error(
-        self,
-        code: str,
-        message: str,
-    ) -> None:
-        """Add an error log item. Sets the upload status to FAILED."""
-        self.logs.append(
-            UploadLogItem(code=code, message=message, severity=LogLevel.ERROR)
-        )
+    def _set_error_status(self) -> None:
         self.status = UploadStatus.FAILED
-
-    def add_warning(
-        self,
-        code: str,
-        message: str,
-    ) -> None:
-        """Add a warning log item."""
-        self.logs.append(
-            UploadLogItem(code=code, message=message, severity=LogLevel.WARN)
-        )
-
-    def add_info(
-        self,
-        code: str,
-        message: str,
-    ) -> None:
-        """Add an info log item."""
-        self.logs.append(
-            UploadLogItem(code=code, message=message, severity=LogLevel.INFO)
-        )
 
     def add_logs(self, upload_log_items: list[UploadLogItem] | UploadLogItem) -> None:
         """
@@ -206,22 +161,6 @@ class UploadResult(Model):
             self.logs.append(upload_log_items)
             if upload_log_items.severity == LogLevel.ERROR:
                 self.status = UploadStatus.FAILED
-
-    def has_errors(self) -> bool:
-        """Check if there are any error log items."""
-        return any(log.severity == LogLevel.ERROR for log in self.logs)
-
-    def has_warnings(self) -> bool:
-        """Check if there are any warning log items."""
-        return any(log.severity == LogLevel.WARN for log in self.logs)
-
-    def has_infos(self) -> bool:
-        """Check if there are any info log items."""
-        return any(log.severity == LogLevel.INFO for log in self.logs)
-
-    def has_log_code(self, code: str) -> bool:
-        """Check if any log item has the specified code."""
-        return any(log.code == code for log in self.logs)
 
     def get_identifier_upload_results(self) -> list["UploadResult"] | None:
         """
