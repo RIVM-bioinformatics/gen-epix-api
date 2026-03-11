@@ -13,6 +13,8 @@ class RetrieveOutagesCommand(Command):
 class RetrieveLicensesCommand(Command):
     pass
 
+class RetrieveFeatureFlagsCommand(Command):
+    pass
 
 # CRUD commands
 

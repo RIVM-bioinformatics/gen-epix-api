@@ -52,7 +52,7 @@ class BaseAbacService(BaseService):
         )
         f(
             command.UpdateUserOwnOrganizationCommand,
-            self.temp_update_user_own_organization,
+            self.update_user_own_organization,
         )
 
     @abc.abstractmethod
@@ -68,7 +68,7 @@ class BaseAbacService(BaseService):
     ) -> set[uuid.UUID]:
         raise NotImplementedError
 
-    def temp_update_user_own_organization(
+    def update_user_own_organization(
         self,
         cmd: command.UpdateUserOwnOrganizationCommand,
     ) -> model.User:

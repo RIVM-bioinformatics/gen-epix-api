@@ -66,5 +66,6 @@ If a proposed change violates these, explicitly explain why.
 - Avoid code duplication by creating reusable helper methods inside the test module and reusing fixtures where possible.
 - Avoid hard coding module paths in tests as strings for e.g. the patch function.
 
-**Task:**
-[PASTE TASK HERE]
+---
+
+**Note:** This prompt is referenced by `.github/copilot-instructions.md`. Both must be applied together for full repo context.

@@ -65,16 +65,13 @@ class AuthService(BaseAuthService):
         self._pending_idp_clients_lock = threading.Lock()
         self._init_idp_clients(app, idps_cfg, ssl_context)
 
-        # Initialize no authentication user
-        # convert, because can be boolean as a string
-        if isinstance(auto_create_new_users, str) and len(auto_create_new_users) != 1:
-            raise exc.InitializationServiceError(
-                "Invalid value for auto_create_new_users, expected boolean or string of length 1"
-            )
-
-        self._auto_create_new_users = bool(int(auto_create_new_users))
+        self._auto_create_new_users = self.app.get_feature_flag("auto_create_new_users")
         # convert, because can be quoted int
-        root_token_time_to_live_int = int(root_token_time_to_live) if root_token_time_to_live is not None else None
+        root_token_time_to_live_int = (
+            int(root_token_time_to_live)
+            if root_token_time_to_live is not None
+            else None
+        )
         if root_token_time_to_live_int is not None and root_token_time_to_live_int <= 0:
             self._root_token_time_to_live = None
         else:
