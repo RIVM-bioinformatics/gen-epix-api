@@ -277,7 +277,7 @@ class SeqService(BaseSeqService):
         raise NotImplementedError()
 
     def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
-        wrap = cmd.wrap or 0
+        wrap = cmd.wrap or cmd.model_fields["wrap"].default
         self.repository: BaseSeqRepository
         with self.repository.uow() as uow:
             for seq_id, contigs in self.repository.retrieve_seq_fasta(uow, cmd.seq_ids):
