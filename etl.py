@@ -66,6 +66,15 @@ LOAD_DATA: bool = len(sys.argv) < 5 or sys.argv[4].lower() not in (
 )
 CONNECTION_TIMEOUT: float = 1
 
+
+def _format_settings_files(value: str | None) -> str:
+    if not value:
+        return "  (not set)"
+    paths = [path.strip() for path in value.split(",") if path.strip()]
+    if not paths:
+        return "  (empty)"
+    return "\n".join(f"  - {path}" for path in paths)
+
 importlib.import_module(f"{MODULE_ROOT}.repositories.sa_model")
 enum = importlib.import_module(f"{MODULE_ROOT}.domain.enum")
 domain = importlib.import_module(f"{MODULE_ROOT}.domain").DOMAIN
@@ -83,6 +92,9 @@ original_settings_files_environ = os.environ.get(ENVVAR_PREFIX + "SETTINGS_FILES
 original_log_config_file_environ = os.environ.get(ENVVAR_PREFIX + "LOG_CONFIG_FILE")
 
 print(f" ===== ETL STARTED FOR {APP_TYPE.value} =====")
+print(" Original SETTINGS_FILES:")
+print(_format_settings_files(original_settings_files_environ))
+
 
 for service_type in enum.ServiceType:
     print(f" STARTING ETL FOR {APP_TYPE.value} - {service_type.value} =====")
