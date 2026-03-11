@@ -1,0 +1,13 @@
+[[service.auth.props.idps_cfg]]
+name = "contract-casedb"
+label = "CONTRACT_CASEDB"
+protocol = "OIDC"
+discovery_url = "http://127.0.0.1:9002/.well-known/openid-configuration"
+client_id = "CONTRACT_CASEDB_HTTP"
+client_secret = "CONTRACT_CASEDB_HTTP_SECRET"
+scope = "openid profile"
+audience = "CASEDB"
+public = true
+
+[service.auth.props.idps_cfg.claim_map]
+__key__ = "sub"

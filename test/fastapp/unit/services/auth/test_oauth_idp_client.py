@@ -462,6 +462,18 @@ class TestClaimsFromJwt(BaseOauthIdpClientTestCase):
                 asyncio.run(client.get_claims_from_jwt("token"))
             assert get_key.called is True
 
+    def test_get_claims_from_jwt_unverified_decode_pyjwt_error_raises_credentials(
+        self,
+    ) -> None:
+        client: OauthIdpClient = self.create_client()
+
+        with patch(
+            "gen_epix.fastapp.services.auth.oauth_idp_client.jwt.decode",
+            side_effect=jwt.PyJWTError("invalid"),
+        ):
+            with pytest.raises(exc.CredentialsAuthError):
+                asyncio.run(client.get_claims_from_jwt("token"))
+
     def test_get_claims_from_jwt_decode_runtime_error_raises_credentials(
         self,
     ) -> None:

@@ -1,0 +1,573 @@
+{
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "LocusSet-Input": {
+        "properties": {
+          "code": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "locus_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "name": {
+            "maxLength": 255,
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "locus_ids"
+        ],
+        "type": "object"
+      },
+      "PhylogeneticTree": {
+        "properties": {
+          "id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "leaf_names": {
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "newick_repr": {
+            "type": "string"
+          },
+          "profile_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "seq_distance_protocol": {
+            "$ref": "#/components/schemas/SeqDistanceProtocol",
+            "nullable": true
+          },
+          "seq_distance_protocol_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "tree_algorithm": {
+            "$ref": "#/components/schemas/gen_epix__seqdb__domain__enum__TreeAlgorithm"
+          }
+        },
+        "required": [
+          "tree_algorithm",
+          "seq_distance_protocol_id",
+          "newick_repr"
+        ],
+        "type": "object"
+      },
+      "RefSeq": {
+        "properties": {
+          "code": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "genbank_accession_code": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "length": {
+            "default": 0,
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "seq": {
+            "type": "string"
+          },
+          "seq_format": {
+            "$ref": "#/components/schemas/SeqFormat",
+            "default": "STR_DNA"
+          },
+          "taxon": {
+            "$ref": "#/components/schemas/Taxon",
+            "nullable": true
+          },
+          "taxon_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seq",
+          "code",
+          "name",
+          "taxon_id"
+        ],
+        "type": "object"
+      },
+      "RetrievePhylogeneticTreeRequestBody": {
+        "properties": {
+          "leaf_codes": {
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "profile_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "seq_distance_protocol_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "tree_algorithm": {
+            "$ref": "#/components/schemas/gen_epix__seqdb__domain__enum__TreeAlgorithm"
+          }
+        },
+        "required": [
+          "seq_distance_protocol_id",
+          "tree_algorithm",
+          "profile_ids"
+        ],
+        "type": "object"
+      },
+      "RetrieveSeqFastaRequestBody": {
+        "properties": {
+          "file_name": {
+            "type": "string"
+          },
+          "seq_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "seq_ids",
+          "file_name"
+        ],
+        "type": "object"
+      },
+      "RetrieveSimilarProfilesRequestBody": {
+        "properties": {
+          "max_distance": {
+            "type": "number"
+          },
+          "profile_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "seq_distance_protocol_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seq_distance_protocol_id",
+          "profile_ids",
+          "max_distance"
+        ],
+        "type": "object"
+      },
+      "SeqDistanceProtocol": {
+        "properties": {
+          "code": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "is_integer_distance": {
+            "type": "boolean"
+          },
+          "locus_set": {
+            "$ref": "#/components/schemas/LocusSet-Input",
+            "nullable": true
+          },
+          "locus_set_id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "max_stored_distance": {
+            "type": "number"
+          },
+          "name": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "props": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "ref_seq": {
+            "$ref": "#/components/schemas/RefSeq",
+            "nullable": true
+          },
+          "ref_seq_id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "seq_distance_protocol_type": {
+            "$ref": "#/components/schemas/SeqDistanceProtocolType"
+          },
+          "version": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "seq_distance_protocol_type",
+          "is_integer_distance",
+          "max_stored_distance"
+        ],
+        "type": "object"
+      },
+      "SeqDistanceProtocolType": {
+        "enum": [
+          "ALLELE_HAMMING",
+          "SNP_HAMMING",
+          "MLVA_HAMMING",
+          "MLVA_EUCLIDEAN",
+          "KMER_EUCLIDEAN"
+        ],
+        "type": "string"
+      },
+      "SeqFormat": {
+        "enum": [
+          "HASH_ONLY",
+          "STR_DNA",
+          "STR_DNA_INCL_GAP"
+        ],
+        "type": "string"
+      },
+      "Taxon": {
+        "properties": {
+          "ancestor_taxon_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "code": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "ictv_ictv_id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "ncbi_ancestor_taxids": {
+            "items": {
+              "type": "integer"
+            },
+            "nullable": true
+          },
+          "ncbi_taxid": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "rank": {
+            "$ref": "#/components/schemas/TaxonRank"
+          },
+          "snomed_sctid": {
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "rank",
+          "ancestor_taxon_ids"
+        ],
+        "type": "object"
+      },
+      "TaxonRank": {
+        "enum": [
+          "NO_RANK",
+          "ACELLULAR_ROOT",
+          "REALM",
+          "DOMAIN",
+          "SUPERKINGDOM",
+          "KINGDOM",
+          "SUBKINGDOM",
+          "PHYLUM",
+          "SUBPHYLUM",
+          "SUPERCLASS",
+          "CLASS",
+          "SUBCLASS",
+          "INFRACLASS",
+          "ORDER",
+          "SUBORDER",
+          "FAMILY",
+          "SUBFAMILY",
+          "GENUS",
+          "SUBGENUS",
+          "SPECIES_GROUP",
+          "SPECIES_SUBGROUP",
+          "SPECIES",
+          "SEROGROUP",
+          "SEROTYPE",
+          "BIOTYPE",
+          "VARIETAS",
+          "FORMA_SPECIALIS",
+          "SUBSPECIES",
+          "GENOTYPE",
+          "STRAIN",
+          "CLADE",
+          "TRIBE",
+          "ISOLATE"
+        ],
+        "type": "string"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "type": "object"
+          },
+          "input": {},
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array"
+          },
+          "msg": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "type": "object"
+      },
+      "gen_epix__seqdb__domain__enum__TreeAlgorithm": {
+        "enum": [
+          "SLINK",
+          "CLINK",
+          "UPGMA",
+          "WPGMA",
+          "UPGMC",
+          "WPGMC",
+          "VERSATILE",
+          "MISSQ",
+          "MNSSQ",
+          "MIVAR",
+          "MNVAR",
+          "MINI_MAX",
+          "HAUSDORFF",
+          "MIN_SUM_MEDOID",
+          "MIN_SUM_INCREASE_MEDOID",
+          "MEDOID",
+          "MIN_ENERGY",
+          "FITCH_MARGOLIASH",
+          "MAX_PARSIMONY",
+          "ML",
+          "BAYESIAN_INFERENCE",
+          "MIN_SPANNING",
+          "NJ"
+        ],
+        "type": "string"
+      }
+    }
+  },
+  "paths": {
+    "/v1/retrieve/phylogenetic_tree": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetrievePhylogeneticTreeRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhylogeneticTree"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "http://127.0.0.1:9002": [
+              "openid",
+              "profile"
+            ]
+          }
+        ],
+        "tags": [
+          "seq"
+        ]
+      }
+    },
+    "/v1/retrieve/seq_fasta": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetrieveSeqFastaRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "http://127.0.0.1:9002": [
+              "openid",
+              "profile"
+            ]
+          }
+        ],
+        "tags": [
+          "seq"
+        ]
+      }
+    },
+    "/v1/retrieve/similar_profiles": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetrieveSimilarProfilesRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "http://127.0.0.1:9002": [
+              "openid",
+              "profile"
+            ]
+          }
+        ],
+        "tags": [
+          "seq"
+        ]
+      }
+    }
+  }
+}

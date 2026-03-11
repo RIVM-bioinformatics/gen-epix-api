@@ -117,6 +117,7 @@ class App:
         id: str | None = None,
         name: str | None = None,
         timestamp_factory: Callable[[], datetime] = datetime.now,
+        feature_flags: dict[Hashable, bool] | None = None,
         **kwargs: Any,
     ):
         # Set input members
@@ -131,6 +132,7 @@ class App:
         self._logger = logger
         self._log_item_class = log_item_class
         self._timestamp_factory = timestamp_factory
+        self._feature_flags = feature_flags or {}
 
         # Initialize other members
         self._created_at = self.generate_timestamp()
@@ -187,6 +189,10 @@ class App:
     def logger(self) -> logging.Logger | None:
         return self._logger
 
+    @property
+    def feature_flags(self) -> dict[Hashable, bool]:
+        return self._feature_flags
+
     @logger.setter
     def logger(self, logger: logging.Logger | None) -> None:
         self._logger = logger
@@ -212,6 +218,12 @@ class App:
 
     def generate_timestamp(self) -> datetime:
         return self._timestamp_factory()
+
+    def set_feature_flag(self, key: Hashable, value: bool) -> None:
+        self._feature_flags[key] = value
+
+    def get_feature_flag(self, key: Hashable, default: bool = False) -> bool:
+        return self._feature_flags.get(key, default)
 
     def register_command(
         self,

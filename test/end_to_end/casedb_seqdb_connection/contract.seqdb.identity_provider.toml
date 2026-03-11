@@ -1,0 +1,13 @@
+[[service.auth.props.idps_cfg]]
+name = "contract-seqdb"
+label = "CONTRACT_SEQDB"
+protocol = "OIDC"
+discovery_url = "http://127.0.0.1:9002/.well-known/openid-configuration"
+client_id = "root@dummy.org"
+client_secret = "ROOT_DUMMY_ORG_SECRET"
+scope = "openid profile"
+audience = "SEQDB"
+public = true
+
+[service.auth.props.idps_cfg.claim_map]
+__key__ = "sub"
