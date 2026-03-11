@@ -77,6 +77,15 @@ def _patch_logging_get_logger(monkeypatch, logger_map: dict[str, _DummyLogger]) 
     monkeypatch.setattr(logging, "getLogger", _get_logger)
 
 
+def _patch_runtime_logger_dict(monkeypatch, names: list[str] | None = None) -> None:
+    logger_names = names or []
+    monkeypatch.setattr(
+        logging.root.manager,
+        "loggerDict",
+        {name: object() for name in logger_names},
+    )
+
+
 def _extract_diagnostic_payload(logger: _DummyLogger) -> dict:
     for level, msg in reversed(logger.messages):
         if level != "INFO":
@@ -130,6 +139,7 @@ def test_set_log_level_diagnostic_precedence_arg_over_env_and_settings(
 ) -> None:
     app_cfg, logger_map, _ = _build_test_fixture(shared_handler=False, log_setup=True)
     _patch_logging_get_logger(monkeypatch, logger_map)
+    _patch_runtime_logger_dict(monkeypatch)
     monkeypatch.setenv("CASEDB_LOG_LEVEL", "WARNING")
 
     app_cfg.set_log_level("ERROR")
@@ -148,6 +158,7 @@ def test_set_log_level_diagnostic_precedence_env_over_settings(
 ) -> None:
     app_cfg, logger_map, _ = _build_test_fixture(shared_handler=False, log_setup=True)
     _patch_logging_get_logger(monkeypatch, logger_map)
+    _patch_runtime_logger_dict(monkeypatch)
     monkeypatch.setenv("CASEDB_LOG_LEVEL", "WARNING")
 
     app_cfg.set_log_level()
@@ -166,6 +177,7 @@ def test_set_log_level_diagnostic_precedence_settings_when_env_absent(
 ) -> None:
     app_cfg, logger_map, _ = _build_test_fixture(shared_handler=False, log_setup=True)
     _patch_logging_get_logger(monkeypatch, logger_map)
+    _patch_runtime_logger_dict(monkeypatch)
     monkeypatch.delenv("CASEDB_LOG_LEVEL", raising=False)
 
     app_cfg.set_log_level()

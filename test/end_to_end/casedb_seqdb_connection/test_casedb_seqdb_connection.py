@@ -3,18 +3,14 @@
 import logging
 from collections.abc import Generator
 from pathlib import Path
-from test.end_to_end.casedb_seqdb_connection.envvar import set_envvar
-from test.test_client.enum import ServerType
-from test.test_client.server_manager import ServerManager
 from uuid import UUID
 
 import pytest
 import yaml
 
 import gen_epix.commondb.test.util as test_util
-from gen_epix.casedb.domain import command
+from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain import enum as enum
-from gen_epix.casedb.domain import model
 from gen_epix.casedb.env import AppComposer as CasedbAppComposer
 from gen_epix.commondb.app_setup import create_fast_api
 from gen_epix.commondb.config.cfg import AppCfg
@@ -23,6 +19,9 @@ from gen_epix.fastapp import CrudOperation
 from gen_epix.seqdb.api.router import create_routers as seqdb_create_routers
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.env import AppComposer as SeqdbAppComposer
+from test.end_to_end.casedb_seqdb_connection.envvar import set_envvar
+from test.test_client.enum import ServerType
+from test.test_client.server_manager import ServerManager
 
 SSL_CERTFILE = Path("cert/cert.pem").absolute().as_posix()
 SSL_KEYFILE = Path("cert/key.pem").absolute().as_posix()
@@ -288,7 +287,7 @@ def test_casedb_seqdb_connection(
             command.RetrieveGeneticSequenceFastaByIdCommand(
                 user=root_user,
                 seq_ids=has_seq_case_ids,
-                wrap=False,
+                wrap=50,
             )
         )
 
