@@ -60,17 +60,17 @@ For any task:
 
 We keep the canonical “golden prompt” here:
 
-- `.github/prompts/basic-evidence-based.prompt.md`
+- `.github/prompts/base_prompt.md`
 
-**Team rule:** Don’t copy/paste and fork the golden prompt into random docs. If we want to improve it, update the prompt file so everyone benefits.
+**Team rule:** Don't copy/paste and fork the golden prompt into random docs. If we want to improve it, update the prompt file so everyone benefits.
 
 ### How to use it in Copilot Chat (recommended pattern)
 
 1) Attach the golden prompt file:
-- Add `#.github/prompts/basic-evidence-based.prompt.md`
+- Add `#.github/prompts/base_prompt.md`
 
 2) Attach the docs entrypoint (and the relevant deep dive):
-- Always attach `#0_System-Documentation-Index.md`
+- Always attach `#docs/00-Index.md`
 - Then attach the most relevant deep dive(s) for the task
 
 3) Attach the code you’ll touch:
@@ -81,17 +81,17 @@ We keep the canonical “golden prompt” here:
 ### Task “wrappers” that work well (copy/paste)
 
 #### A) Implement a change (safe default)
-> Use the golden prompt in `#.github/prompts/basic-evidence-based.prompt.md`.  
-> Consult `#0_System-Documentation-Index.md` first (check doc creation dates), then the relevant deep dive(s).  
+> Use the golden prompt in `#.github/prompts/base_prompt.md`.  
+> Consult `#docs/00-Index.md` first (check doc creation dates), then the relevant deep dive(s).  
 > Task: [PASTE TASK HERE]
 
 #### B) Quick orientation (where does this live?)
-> @workspace Use the golden prompt in `#.github/prompts/basic-evidence-based.prompt.md`.  
-> Start from `#0_System-Documentation-Index.md`.  
+> @workspace Use the golden prompt in `#.github/prompts/base_prompt.md`.  
+> Start from `#docs/00-Index.md`.  
 > Question: Where is [X] implemented? Give me the owning service/module, the top 3–5 files/symbols, and the expected flow.
 
 #### C) Docs vs code mismatch check
-> Use the golden prompt in `#.github/prompts/basic-evidence-based.prompt.md`.  
+> Use the golden prompt in `#.github/prompts/base_prompt.md`.  
 > Compare `#[DOC_NAME.md]` (note creation date) against the current implementation.  
 > Output: mismatches, evidence (paths/symbols), and suggested doc updates (sections to change).
 
@@ -142,7 +142,7 @@ Add:
 
 ### 1) “It answered without reading the right docs”
 Fix:
-- Attach `#0_System-Documentation-Index.md` + the relevant deep dive doc explicitly.
+- Attach `#docs/00-Index.md` + the relevant deep dive doc explicitly.
 
 ### 2) “It made up config keys / endpoints / ports”
 Fix:
