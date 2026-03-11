@@ -103,4 +103,3 @@ class_name = "SubjectService"
 [repository]
 [repository.defaults]
 [repository.defaults.props]
-

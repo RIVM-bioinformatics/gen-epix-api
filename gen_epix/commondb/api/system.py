@@ -88,7 +88,7 @@ def create_system_endpoints(
             cmd = command.RetrieveFeatureFlagsCommand(user=None)
             retval: dict[str, bool] = app.handle(cmd)
         except Exception as exception:
-            handle_exception("6ba2c4ca", None, exception)
+            handle_exception("f8e8c5e6", None, exception)
         return FeatureFlagsResponseBody(feature_flags=retval)
 
 
