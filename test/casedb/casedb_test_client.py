@@ -111,6 +111,12 @@ class CasedbTestClient(TestClient):
         enum.ColType.OTHER: None,
     }
 
+    def get_fixed_created_at(self) -> datetime:
+        return datetime(2023, 1, 1, tzinfo=UTC)
+
+    def get_fixed_modified_at(self) -> datetime:
+        return datetime(2023, 6, 1, tzinfo=UTC)
+
     @classmethod
     def get_test_client(
         cls,
@@ -596,10 +602,10 @@ class CasedbTestClient(TestClient):
                     # and we want to have filled created_at and modified_at values, since the metadata policy only sets these for non-root users.
                     # This allows us to test the metadata policy in the test cases, while still having created_at and modified_at values set for the case types.
                     created_at=(
-                        created_at if created_at else datetime(2023, 1, 1, tzinfo=UTC)
+                        created_at if created_at else self.get_fixed_created_at()
                     ),
                     modified_at=(
-                        modified_at if modified_at else datetime(2023, 6, 1, tzinfo=UTC)
+                        modified_at if modified_at else self.get_fixed_modified_at()
                     ),
                     modified_by=(modified_by if modified_by else user.id),
                     name=case_type_or_str,
@@ -1126,6 +1132,9 @@ class CasedbTestClient(TestClient):
             str | model.DataCollection | list[str] | list[model.DataCollection]
         ),
         col_index_pattern: str | None = None,
+        created_at: datetime | None = None,
+        modified_at: datetime | None = None,
+        modified_by: UUID | None = None,
     ) -> model.Case:
         user: model.User = self._get_obj(
             model.User, user_or_str
@@ -1139,7 +1148,8 @@ class CasedbTestClient(TestClient):
         created_in_data_collection_id = data_collection_ids[0]
         data_collection_ids = data_collection_ids[1:]
 
-        root_user: model.User = self._get_obj(model.User, "root1_1")  # type: ignore[assignment]
+        root_user: model.User = self.get_root_user()
+
         m = re.match(r"^([a-z_]*)(\d+)_(\d+)$", code.lower())
         if not m:
             raise ValueError(f"Invalid code {code}")
@@ -1202,6 +1212,9 @@ class CasedbTestClient(TestClient):
                                 case_type_id=case_type.id,
                                 created_in_data_collection_id=created_in_data_collection_id,
                                 content=content,
+                                created_at=(created_at if created_at else self.get_fixed_created_at()),
+                                modified_at=(modified_at if modified_at else self.get_fixed_modified_at()),
+                                modified_by=(modified_by if modified_by else root_user.id),
                             ),
                         )
                     ]
@@ -1216,7 +1229,7 @@ class CasedbTestClient(TestClient):
             command.CaseCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ONE,
-                obj_ids=[case_result.id],
+                obj_ids=case_result.id,
             )
         )
 
