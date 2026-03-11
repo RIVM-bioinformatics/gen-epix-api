@@ -19,6 +19,8 @@ from test.end_to_end.casedb_seqdb_connection.envvar import get_contract_env_over
 from test.test_client.enum import ServerType
 from test.test_client.server_manager import ServerManager
 
+CONTRACT_OAUTH_PORT = 9002
+
 
 def _auth_headers(access_token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {access_token}"}
@@ -26,7 +28,11 @@ def _auth_headers(access_token: str) -> dict[str, str]:
 
 @pytest.fixture(scope="session")
 def oauth_server() -> Generator[ServerManager, None, None]:
-    with ServerManager(service=ServerType.OAUTH, port=9000) as server:
+    with ServerManager(
+        service=ServerType.OAUTH,
+        host="127.0.0.1",
+        port=CONTRACT_OAUTH_PORT,
+    ) as server:
         if not server.start():
             pytest.fail("Failed to start OAuth server")
         register_contract_clients(server)
@@ -67,14 +73,14 @@ def casedb_server(
 def casedb_root_token(
     oauth_server: ServerManager, casedb_server: ServerManager
 ) -> str:
-    return get_auth_code_access_token("http://127.0.0.1:9000")
+    return get_auth_code_access_token(oauth_server.base_url)
 
 
 @pytest.fixture(scope="session")
 def seqdb_machine_token(
     oauth_server: ServerManager, seqdb_server: ServerManager
 ) -> str:
-    return get_client_credentials_access_token("http://127.0.0.1:9000")
+    return get_client_credentials_access_token(oauth_server.base_url)
 
 
 @pytest.fixture(scope="session")
@@ -199,21 +205,15 @@ def test_seqdb_contract_validation_errors(
         _assert_fastapi_validation_error(response.json())
 
 
-@pytest.mark.parametrize(
-    ("service_name", "base_url"),
-    [
-        ("casedb", "http://localhost:8000"),
-        ("seqdb", "http://localhost:8001"),
-    ],
-)
+@pytest.mark.parametrize("service_name", ["casedb", "seqdb"])
 def test_openapi_contract_snapshots(
     casedb_server: ServerManager,
     seqdb_server: ServerManager,
     service_name: str,
-    base_url: str,
 ) -> None:
     assert service_name in {"casedb", "seqdb"}
-    with httpx.Client(base_url=base_url, timeout=20.0) as client:
+    server = casedb_server if service_name == "casedb" else seqdb_server
+    with httpx.Client(base_url=server.base_url, timeout=20.0) as client:
         response = client.get("/openapi.json")
         response.raise_for_status()
         openapi_doc = response.json()

@@ -80,7 +80,7 @@ class ServerManager:
 
         # oauth specific fields
         self.process: subprocess.Popen[str] | None = None
-        self.base_url = f"{self.protocol}://localhost:{self.port}"
+        self.base_url = f"{self.protocol}://{self.host}:{self.port}"
         self.oauth_discovery_url = oauth_discovery_url
         self.app_import_path = app_import_path
         self.process_env_overrides = process_env_overrides or {}
