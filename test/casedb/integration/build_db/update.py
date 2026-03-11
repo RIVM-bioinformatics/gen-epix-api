@@ -325,7 +325,7 @@ class TestUpdate:
         )
         env.delete_object(ROOT, model.DataCollection, "data_collection99")
 
-    def test_update_temp_update_user_own_organization(self, env: Env) -> None:
+    def test_update_update_user_own_organization(self, env: Env) -> None:
         if env.verbose:
             print("\nTEMP User own organization update:")
         for role in sorted(env.role_set_map[CommonRoleSet.ALL]):
@@ -334,12 +334,12 @@ class TestUpdate:
             user_str = f"{env.rev_role_map[role].name.lower()}1_1"
             if env.verbose:
                 print(f"User: {user_str} -> org2")
-            user = env.temp_update_user_own_organization(
+            user = env.update_user_own_organization(
                 user_str, organization_or_str="org2"
             )
             if env.verbose:
                 print(f"User: {user_str} -> org1")
-            user = env.temp_update_user_own_organization(
+            user = env.update_user_own_organization(
                 user, organization_or_str="org1"
             )
             if not SKIP_RAISE:
@@ -352,7 +352,7 @@ class TestUpdate:
                         exc.InvalidLinkIdsError,
                     )
                 ):
-                    env.temp_update_user_own_organization(
+                    env.update_user_own_organization(
                         user, set_dummy_organization=True
                     )
 

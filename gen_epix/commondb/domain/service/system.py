@@ -19,6 +19,7 @@ class BaseSystemService(BaseService):
         self.register_default_crud_handlers()
         f(command.RetrieveOutagesCommand, self.retrieve_outages)
         f(command.RetrieveLicensesCommand, self.retrieve_licenses)
+        f(command.RetrieveFeatureFlagsCommand, self.retrieve_feature_flags)
 
     @abc.abstractmethod
     def register_policies(self) -> None:
@@ -34,4 +35,10 @@ class BaseSystemService(BaseService):
     def retrieve_licenses(
         self, cmd: command.RetrieveLicensesCommand
     ) -> list[model.PackageMetadata]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def retrieve_feature_flags(
+        self, cmd: command.RetrieveFeatureFlagsCommand
+    ) -> dict[str, bool]:
         raise NotImplementedError
