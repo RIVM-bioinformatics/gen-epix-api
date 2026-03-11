@@ -122,7 +122,9 @@ def create_organization_endpoints(
             retval: user_invitation_class = app.handle(  # type: ignore[valid-type] # Dynamic type annotation
                 invite_user_command_class(
                     user=user,
-                    key=user_invitation.key if user_invitation.key is not None else None,
+                    key=(
+                        user_invitation.key if user_invitation.key is not None else None
+                    ),
                     roles=user_invitation.roles,
                     organization_id=user_invitation.organization_id,
                 )
