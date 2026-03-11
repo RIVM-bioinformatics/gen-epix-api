@@ -90,6 +90,3 @@ class_name = "FileService"
 [repository]
 [repository.defaults]
 [repository.defaults.props]
-
-[feature_flags]
-auto_create_new_users = true
