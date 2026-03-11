@@ -82,7 +82,7 @@ def create_system_endpoints(
     )
     async def feature_flags() -> FeatureFlagsResponseBody:
         """
-        Returns the feature flags of the service.
+        Returns the feature flags of the application.
         """
         try:
             cmd = command.RetrieveFeatureFlagsCommand(user=None)
