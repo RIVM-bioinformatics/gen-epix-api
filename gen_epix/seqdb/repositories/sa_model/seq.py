@@ -24,6 +24,7 @@ Base: type = orm.declarative_base(name=enum.ServiceType.SEQ.value)
 
 
 # TODO: add SA relationship calls
+
 class Protocol(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.

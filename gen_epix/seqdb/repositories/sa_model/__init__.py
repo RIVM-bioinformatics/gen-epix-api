@@ -125,6 +125,7 @@ from gen_epix.seqdb.repositories.sa_model.seq import TreeAlgorithm as TreeAlgori
 from gen_epix.seqdb.repositories.sa_model.seq import (
     TreeAlgorithmClass as TreeAlgorithmClass,
 )
+from gen_epix.seqdb.repositories.sa_model.seq import Protocol as Protocol
 
 SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]] = {
     enum.ServiceType.ABAC: {
@@ -172,6 +173,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.MlvaProfileIdentifier: MlvaProfileIdentifier,
         model.PcrMeasurement: PcrMeasurement,
         model.PcrProtocol: PcrProtocol,
+        model.Protocol: Protocol,
         model.ReadSet: ReadSet,
         model.ReadSetIdentifier: ReadSetIdentifier,
         model.RefAllele: RefAllele,

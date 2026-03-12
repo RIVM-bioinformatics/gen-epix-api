@@ -24,6 +24,7 @@ from gen_epix.seqdb.domain.service import BaseSeqService
 from gen_epix.seqdb.services.seq.calculate_seq_distance import (
     seq_service_calculate_seq_distances_for_new_profiles,
 )
+from gen_epix.seqdb.services.seq.crud_protocol import seq_service_crud_protocol
 from gen_epix.seqdb.services.seq.upload import seq_service_upload_samples
 
 
@@ -532,4 +533,4 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
-        seq_service_crud_protocol(self, cmd)
+        return seq_service_crud_protocol(self, cmd)
