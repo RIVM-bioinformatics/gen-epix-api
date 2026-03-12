@@ -6,10 +6,6 @@ backed by an in-memory repository mock, so no database process is required.
 import asyncio
 import datetime
 from contextlib import contextmanager
-from datetime import timedelta, timezone
-from math import floor
-from test.fastapp.enum import ServiceType
-from test.fastapp.unit.auth.mock_jwk_and_token import MockJWKAndToken
 from typing import Any, Generator
 from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
@@ -30,6 +26,8 @@ from gen_epix.fastapp.middleware import HandleAuthExceptionMiddleware
 from gen_epix.fastapp.services.auth import AuthService, OauthIdpClient
 from gen_epix.fastapp.services.auth.model import Claims
 from gen_epix.fastapp.services.auth.util import get_name_from_claims
+from test.fastapp.enum import ServiceType
+from test.fastapp.unit.auth.mock_jwk_and_token import MockJWKAndToken
 
 # ---------------------------------------------------------------------------
 # Module-level constants
@@ -388,7 +386,11 @@ class AuthEnv:
         )
 
         # Build AuthService
-        self.app = App(user_manager=self.user_manager, logger=None)
+        self.app = App(
+            user_manager=self.user_manager,
+            logger=None,
+            feature_flags={"auto_create_new_users": auto_create_new_users},
+        )
         idps_cfg = make_idps_cfg(self.mock_jwk_token)
         self.auth_service = AuthService(
             self.app,

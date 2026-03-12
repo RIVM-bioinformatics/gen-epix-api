@@ -498,6 +498,7 @@ class TestGetExistingUserFromClaims(BaseAuthServiceTestCase):
         self.user_manager.retrieve_user_by_key.side_effect = exc.NoResultsError()
         self.user_manager.is_root_user_claims.return_value = False
         self.user_manager.create_user_from_claims.return_value = None
+        self.service._auto_create_new_users = False
         # Execute/Verify
         with self.assertRaises(exc.UnauthorizedAuthError):
             self.run_async(self.service.get_existing_user_from_claims(claims))
