@@ -180,6 +180,7 @@ class Run:
             "test/omopdb/unit",
             "test/omopdb/integration",
             "test/general/docs",
+            "test/general/test_run_command_contract.py",
             "test/end_to_end",
             # Not normally included, uncomment if needed
             # "test/casedb/performance",
@@ -190,7 +191,9 @@ class Run:
             # "test/general/code",
         ]
 
-        subprocess.run(
+        # Do not use check=True here: CI still wants coverage artifacts even when tests fail,
+        # so we capture pytest's return code and decide the final exit status ourselves.
+        pytest_proc = subprocess.run(
             [
                 sys.executable,
                 "-m",
@@ -203,8 +206,8 @@ class Run:
             + pytest_args,
             check=False,
         )
-        # Generate HTML report
-        subprocess.run(
+        coverage_failure_returncode: int | None = None
+        coverage_commands = [
             [
                 sys.executable,
                 "-m",
@@ -213,13 +216,30 @@ class Run:
                 "-d",
                 "test/output/coverage.html",
             ],
-            check=True,
-        )
-        # Generate XML report
-        subprocess.run(
-            [sys.executable, "-m", "coverage", "xml", "-o", "test/output/coverage.xml"],
-            check=True,
-        )
+            [
+                sys.executable,
+                "-m",
+                "coverage",
+                "xml",
+                "-o",
+                "test/output/coverage.xml",
+            ],
+        ]
+        # Always attempt both report commands so CI can upload whatever coverage artifacts were
+        # produced, but remember the first coverage failure in case pytest itself succeeded.
+        for command in coverage_commands:
+            try:
+                subprocess.run(command, check=True)
+            except subprocess.CalledProcessError as exc:
+                if coverage_failure_returncode is None:
+                    coverage_failure_returncode = exc.returncode
+
+        # If tests failed, report that exact pytest exit code to avoid false-green CI runs.
+        # Coverage failures matter only when the test run itself passed.
+        if pytest_proc.returncode != 0:
+            raise SystemExit(pytest_proc.returncode)
+        if coverage_failure_returncode is not None:
+            raise SystemExit(coverage_failure_returncode)
 
     def test_all_incl_performance(self) -> None:
         import pytest
