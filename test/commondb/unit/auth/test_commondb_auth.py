@@ -6,10 +6,6 @@ backed by an in-memory repository mock, so no database process is required.
 import asyncio
 import datetime
 from contextlib import contextmanager
-from datetime import timedelta, timezone
-from math import floor
-from test.fastapp.enum import ServiceType
-from test.fastapp.unit.auth.mock_jwk_and_token import MockJWKAndToken
 from typing import Any, Generator
 from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
@@ -30,6 +26,8 @@ from gen_epix.fastapp.middleware import HandleAuthExceptionMiddleware
 from gen_epix.fastapp.services.auth import AuthService, OauthIdpClient
 from gen_epix.fastapp.services.auth.model import Claims
 from gen_epix.fastapp.services.auth.util import get_name_from_claims
+from test.fastapp.enum import ServiceType
+from test.fastapp.unit.auth.mock_jwk_and_token import MockJWKAndToken
 
 # ---------------------------------------------------------------------------
 # Module-level constants
@@ -42,7 +40,7 @@ _AUTO_CREATE_ORG_ID: UUID = UUID("00000000-0000-0000-0000-000000000002")
 _MOCK_USER_ID: UUID = UUID("00000000-0000-0000-0000-000000000010")
 _CREATOR_USER_ID: UUID = UUID("00000000-0000-0000-0000-000000000011")
 
-_ROOT_ROLE: str = commondb_enum.Role.ROOT.value   # "COMMONDB_ROOT"
+_ROOT_ROLE: str = commondb_enum.Role.ROOT.value  # "COMMONDB_ROOT"
 _GUEST_ROLE: str = commondb_enum.Role.GUEST.value  # "COMMONDB_GUEST"
 _ALL_ROLES: set[str] = {r.value for r in commondb_enum.Role}
 
@@ -253,9 +251,7 @@ class InMemoryOrganizationRepository:
                 self._users_by_key[entity.key] = entity
             return entity
 
-        raise NotImplementedError(
-            f"Operation {operation} not implemented in mock"
-        )
+        raise NotImplementedError(f"Operation {operation} not implemented in mock")
 
     def is_existing_user_by_key(self, uow: Any, key: str | None) -> bool:
         return key is not None and key in self._users_by_key
@@ -390,7 +386,11 @@ class AuthEnv:
         )
 
         # Build AuthService
-        self.app = App(user_manager=self.user_manager, logger=None)
+        self.app = App(
+            user_manager=self.user_manager,
+            logger=None,
+            feature_flags={"auto_create_new_users": auto_create_new_users},
+        )
         idps_cfg = make_idps_cfg(self.mock_jwk_token)
         self.auth_service = AuthService(
             self.app,
