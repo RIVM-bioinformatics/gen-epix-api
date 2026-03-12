@@ -158,6 +158,8 @@ class RetrieveSimilarProfilesCommand(Command):
 
 # CRUD commands
 
+class ProtocolCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.Protocol
 
 class AlignmentProtocolCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.AlignmentProtocol

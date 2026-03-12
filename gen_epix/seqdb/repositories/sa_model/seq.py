@@ -22,7 +22,47 @@ from gen_epix.seqdb.repositories.sa_model.base import (
 
 Base: type = orm.declarative_base(name=enum.ServiceType.SEQ.value)
 
+
 # TODO: add SA relationship calls
+class Protocol(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.Protocol)
+
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.Protocol, "code")
+    name: Mapped[str | None] = create_mapped_column(DOMAIN, model.Protocol, "name")
+    description: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "description"
+    )
+    protocol_type: Mapped[enum.ProtocolType] = create_mapped_column(
+        DOMAIN, model.Protocol, "protocol_type"
+    )
+    git_repository_uri: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "git_repository_uri"
+    )
+    git_commit_hash: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "git_commit_hash"
+    )
+    git_commit_tag: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "git_commit_tag"
+    )
+    ref_seq_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "ref_seq_id"
+    )
+    ref_seq: Mapped[model.RefSeq | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "ref_seq"
+    )
+    locus_set_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "locus_set_id"
+    )
+    locus_set: Mapped[model.LocusSet | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "locus_set"
+    )
+    props: Mapped[dict[str, str | int | float | bool | list]] = create_mapped_column(
+        DOMAIN, model.Protocol, "props"
+    )
 
 
 class Allele(Base, RowMetadataMixin, SeqMixin):

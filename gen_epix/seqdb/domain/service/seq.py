@@ -38,6 +38,10 @@ class BaseSeqService(BaseService):
             command.CalculateSeqDistancesForNewProfilesCommand,
             self.calculate_seq_distances_for_new_profiles,
         )
+        f(
+            command.ProtocolCrudCommand,
+            self.crud_protocol,
+        )
 
     @abc.abstractmethod
     def retrieve_phylogenetic_tree(
@@ -82,4 +86,19 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.CalculateSeqDistancesForNewProfilesCommand,
     ) -> list[model.CalculateSeqDistancesResult]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_protocol(
+        self,
+        cmd: command.ProtocolCrudCommand,
+    ) -> (
+        model.Protocol
+        | list[model.Protocol]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
         raise NotImplementedError()

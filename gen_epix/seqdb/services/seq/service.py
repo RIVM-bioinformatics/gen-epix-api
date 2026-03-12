@@ -519,3 +519,17 @@ class SeqService(BaseSeqService):
         cmd: command.CalculateSeqDistancesForNewProfilesCommand,
     ) -> list[model.CalculateSeqDistancesResult]:
         return seq_service_calculate_seq_distances_for_new_profiles(self, cmd)
+
+    def crud_protocol(
+        self,
+        cmd: command.ProtocolCrudCommand,
+    ) -> (
+        model.Protocol
+        | list[model.Protocol]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        seq_service_crud_protocol(self, cmd)

@@ -132,3 +132,4 @@ from gen_epix.seqdb.domain.model.seq.upload import SeqForUpload as SeqForUpload
 from gen_epix.seqdb.domain.model.seq.upload import (
     SnpProfileForUpload as SnpProfileForUpload,
 )
+from gen_epix.seqdb.domain.model.seq.protocol import Protocol as Protocol

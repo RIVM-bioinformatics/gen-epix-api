@@ -94,6 +94,7 @@ from gen_epix.seqdb.domain.model.seq import MultipleAlignment as MultipleAlignme
 from gen_epix.seqdb.domain.model.seq import PcrMeasurement as PcrMeasurement
 from gen_epix.seqdb.domain.model.seq import PcrProtocol as PcrProtocol
 from gen_epix.seqdb.domain.model.seq import PhylogeneticTree as PhylogeneticTree
+from gen_epix.seqdb.domain.model.seq import Protocol as Protocol
 from gen_epix.seqdb.domain.model.seq import ProtocolMixin as ProtocolMixin
 from gen_epix.seqdb.domain.model.seq import QualityMixin as QualityMixin
 from gen_epix.seqdb.domain.model.seq import ReadSet as ReadSet
@@ -163,7 +164,6 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             _COMMON_SORTED_MODELS_BY_SERVICE_TYPE[common_enum.ServiceType.ABAC]
         )
         + [],
-        enum.ServiceType.FILE: [File],
         enum.ServiceType.SEQ: [
             Taxon,
             TaxonSet,
@@ -185,6 +185,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             LocusDetectionProtocol,
             MlvaDetectionProtocol,
             PcrProtocol,
+            Protocol,
             SeqClassificationProtocol,
             SeqDistanceProtocol,
             SnpDetectionProtocol,

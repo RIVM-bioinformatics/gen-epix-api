@@ -303,6 +303,48 @@ class AstResultFormat(Enum):
     AST_RESULT_FORMAT1 = "AST_RESULT_FORMAT1"
 
 
+class ProtocolType(Enum):
+    ALIGNMENT = "ALIGNMENT"
+    ASSEMBLY = "ASSEMBLY"
+    AST = "AST"
+    KMER_DETECTION = "KMER_DETECTION"
+    SEQUENCING = "SEQUENCING"
+    LOCUS_DETECTION = "LOCUS_DETECTION"
+    MLVA_DETECTION = "MLVA_DETECTION"
+    PCR = "PCR"
+    SEQ_CLASSIFICATION = "SEQ_CLASSIFICATION"
+    SEQ_DISTANCE = "SEQ_DISTANCE"
+    SNP_DETECTION = "SNP_DETECTION"
+    TAXONOMY = "TAXONOMY"
+
+
+class ProtocolTypeSet(Enum):
+    PROFILE_PROTOCOLS = frozenset(
+        {
+            ProtocolType.ALIGNMENT,
+            ProtocolType.AST,
+            ProtocolType.KMER_DETECTION,
+            ProtocolType.LOCUS_DETECTION,
+            ProtocolType.MLVA_DETECTION,
+            ProtocolType.PCR,
+            ProtocolType.SEQ_CLASSIFICATION,
+            ProtocolType.SNP_DETECTION,
+        }
+    )
+    SEQUENCING_PROTOCOLS = frozenset({ProtocolType.SEQUENCING})
+    SEQ_DISTANCE_PROTOCOLS = frozenset({ProtocolType.SEQ_DISTANCE})
+    TAXONOMY_PROTOCOLS = frozenset({ProtocolType.TAXONOMY})
+    DETECTION_PROTOCOLS = frozenset(
+        {
+            ProtocolType.KMER_DETECTION,
+            ProtocolType.LOCUS_DETECTION,
+            ProtocolType.MLVA_DETECTION,
+            ProtocolType.PCR,
+            ProtocolType.SNP_DETECTION,
+        }
+    )
+
+
 class SeqDistanceProtocolType(Enum):
     ALLELE_HAMMING = "ALLELE_HAMMING"
     SNP_HAMMING = "SNP_HAMMING"
