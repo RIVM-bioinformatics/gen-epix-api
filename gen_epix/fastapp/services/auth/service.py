@@ -67,7 +67,11 @@ class AuthService(BaseAuthService):
 
         self._auto_create_new_users = self.app.get_feature_flag("auto_create_new_users")
         # convert, because can be quoted int
-        root_token_time_to_live_int = int(root_token_time_to_live) if root_token_time_to_live is not None else None
+        root_token_time_to_live_int = (
+            int(root_token_time_to_live)
+            if root_token_time_to_live is not None
+            else None
+        )
         if root_token_time_to_live_int is not None and root_token_time_to_live_int <= 0:
             self._root_token_time_to_live = None
         else:

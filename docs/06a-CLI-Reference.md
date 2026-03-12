@@ -92,7 +92,7 @@ Per-app commands follow the pattern `test_{app}_{scope}` and optionally `test_{a
 |------------|-------------|
 | `other_general_run_linters` | Run all linters and write output to `test/output/`. |
 | `other_general_run_pylint` | Run pylint alone, with optional error-code filtering. |
-| `other_general_run_mypy` | Run mypy alone, with optional error-code filtering. |
+| `other_general_run_mypy` | Run mypy alone using repository `mypy.ini` settings. |
 | `other_general_analyse_pylint_code_impact` | Analyse relative impact of pylint codes across the codebase. |
 | `other_general_generate_uuids` | Generate a grid of UUIDs (benchmarking utility). |
 | `other_general_generate_erm_diagrams` | Generate entity-relationship diagrams into `docs/assets/erm/`. |
