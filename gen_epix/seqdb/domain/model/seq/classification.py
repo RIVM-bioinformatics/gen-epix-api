@@ -7,23 +7,10 @@ from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
-from gen_epix.seqdb.domain.model.seq.base import ProtocolMixin
-from gen_epix.seqdb.domain.model.seq.pheno import AstProtocol
+from gen_epix.seqdb.domain.model.seq.protocol import Protocol
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 from gen_epix.seqdb.domain.model.seq.seq import Seq
 from gen_epix.seqdb.domain.model.seq.taxon import Taxon
-
-
-class SeqClassificationProtocol(Model, ProtocolMixin):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="seq_classification_protocols",
-        table_name="seq_classification_protocol",
-        persistable=True,
-        keys=create_keys({1: "code", 2: ("name", "version")}),
-    )
-    is_taxonomic: bool = Field(
-        description="Whether the category is based on phylogeny or not"
-    )
 
 
 class SeqCategorySet(Model):
@@ -66,15 +53,15 @@ class SeqClassification(Model, HasSampleMixin):
         snake_case_plural_name="seq_classifications",
         table_name="seq_classification",
         persistable=True,
-        keys=create_keys({1: ("seq_id", "seq_classification_protocol_id")}),
+        keys=create_keys({1: ("seq_id", "protocol_id")}),
         links=create_links(
             {
                 1: ("sample_id", Sample, "sample"),
                 2: ("seq_id", Seq, "seq"),
                 3: (
-                    "seq_classification_protocol_id",
-                    SeqClassificationProtocol,
-                    "seq_classification_protocol",
+                    "protocol_id",
+                    Protocol,
+                    "protocol",
                 ),
                 4: ("primary_category_id", SeqCategory, "primary_category"),
             }
@@ -84,12 +71,8 @@ class SeqClassification(Model, HasSampleMixin):
         description="The unique identifier for the sequence that the result was derived from, if available. FOREIGN KEY"
     )
     seq: Seq | None = Field(default=None, description="The sequence.")
-    seq_classification_protocol_id: UUID = Field(
-        description="The ID of the sequence classification protocol. FOREIGN KEY"
-    )
-    seq_classification_protocol: SeqClassificationProtocol = Field(
-        description="The sequence classification protocol."
-    )
+    protocol_id: UUID = Field(description="The ID of the protocol. FOREIGN KEY")
+    protocol: Protocol = Field(description="The protocol.")
     primary_category_id: UUID | None = Field(
         description="The ID of the category. FOREIGN KEY"
     )
@@ -109,12 +92,12 @@ class AstPrediction(Model, HasSampleMixin):
         snake_case_plural_name="ast_predictions",
         table_name="ast_prediction",
         persistable=True,
-        keys=create_keys({1: ("seq_id", "ast_protocol_id")}),
+        keys=create_keys({1: ("seq_id", "protocol_id")}),
         links=create_links(
             {
                 1: ("sample_id", Sample, "sample"),
                 2: ("seq_id", Seq, "seq"),
-                3: ("ast_protocol_id", AstProtocol, "ast_protocol"),
+                3: ("protocol_id", Protocol, "protocol"),
             }
         ),
     )
@@ -122,25 +105,14 @@ class AstPrediction(Model, HasSampleMixin):
         description="The unique identifier for the sequence that the result was derived from, if available. FOREIGN KEY"
     )
     seq: Seq | None = Field(default=None, description="The sequence.")
-    ast_protocol_id: UUID = Field(
-        description="The unique identifier for the AST protocol. FOREIGN KEY"
+    protocol_id: UUID = Field(
+        description="The unique identifier for the protocol. FOREIGN KEY"
     )
-    ast_protocol: AstProtocol | None = Field(
-        default=None, description="The AST protocol."
-    )
+    protocol: Protocol | None = Field(default=None, description="The protocol.")
     ast_result: str = Field(description="The result of the AST prediction.")
     ast_result_format: enum.AstResultFormat = Field(
         default=enum.AstResultFormat.AST_RESULT_FORMAT1,
         description="The representation format of the AST result.",
-    )
-
-
-class TaxonomyProtocol(Model, ProtocolMixin):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="taxonomy_protocols",
-        table_name="taxonomy_protocol",
-        persistable=True,
-        keys=create_keys({1: "code", 2: ("name", "version")}),
     )
 
 
@@ -149,12 +121,12 @@ class SeqTaxonomy(Model, HasSampleMixin):
         snake_case_plural_name="seq_taxonomies",
         table_name="seq_taxonomy",
         persistable=True,
-        keys=create_keys({1: "seq_id", 2: "taxonomy_protocol_id"}),
+        keys=create_keys({1: "seq_id", 2: "protocol_id"}),
         links=create_links(
             {
                 1: ("sample_id", Sample, "sample"),
                 2: ("seq_id", Seq, "seq"),
-                3: ("taxonomy_protocol_id", TaxonomyProtocol, "taxonomy_protocol"),
+                3: ("protocol_id", Protocol, "protocol"),
                 4: ("primary_taxon_id", Taxon, "primary_taxon"),
             }
         ),
@@ -163,12 +135,10 @@ class SeqTaxonomy(Model, HasSampleMixin):
         description="The unique identifier for the sequence that the result was derived from, if available. FOREIGN KEY"
     )
     seq: Seq | None = Field(default=None, description="The sequence.")
-    taxonomy_protocol_id: UUID = Field(
-        description="The unique identifier for the taxonomy protocol. FOREIGN KEY"
+    protocol_id: UUID = Field(
+        description="The unique identifier for the protocol. FOREIGN KEY"
     )
-    taxonomy_protocol: TaxonomyProtocol | None = Field(
-        default=None, description="The taxonomy protocol."
-    )
+    protocol: Protocol | None = Field(default=None, description="The protocol.")
     primary_taxon_id: UUID = Field(
         description="The unique identifier for the primary taxon. FOREIGN KEY"
     )

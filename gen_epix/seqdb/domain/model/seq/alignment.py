@@ -7,23 +7,12 @@ from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain.model.seq.base import (
     AlignmentMixin,
-    ProtocolMixin,
     QualityMixin,
 )
+
 from gen_epix.seqdb.domain.model.seq.locus import Allele
+from gen_epix.seqdb.domain.model.seq.protocol import Protocol
 from gen_epix.seqdb.domain.model.seq.seq import Seq
-
-
-class AlignmentProtocol(Model, ProtocolMixin):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="alignment_protocols",
-        table_name="alignment_protocol",
-        persistable=True,
-        keys=create_keys({1: "code", 2: ("name", "version")}),
-    )
-    is_multiple: bool = Field(
-        description="Whether the alignment protocol can be used for more than two sequences"
-    )
 
 
 class AlleleAlignment(Model, AlignmentMixin, QualityMixin):
@@ -31,15 +20,15 @@ class AlleleAlignment(Model, AlignmentMixin, QualityMixin):
         snake_case_plural_name="allele_alignments",
         table_name="allele_alignment",
         persistable=True,
-        keys=create_keys({1: ("ref_allele_id", "allele_id", "alignment_protocol_id")}),
+        keys=create_keys({1: ("ref_allele_id", "allele_id", "protocol_id")}),
         links=create_links(
             {
                 1: ("ref_allele_id", Allele, "ref_allele"),
                 2: ("allele_id", Allele, "allele"),
                 3: (
-                    "alignment_protocol_id",
-                    AlignmentProtocol,
-                    "alignment_protocol",
+                    "protocol_id",
+                    Protocol,
+                    "protocol",
                 ),
             }
         ),
@@ -52,12 +41,10 @@ class AlleleAlignment(Model, AlignmentMixin, QualityMixin):
         description="The unique identifier for the allele. FOREIGN KEY"
     )
     allele: Allele | None = Field(default=None, description="The allele.")
-    alignment_protocol_id: UUID = Field(
-        description="The unique identifier for the sequence alignment protocol. FOREIGN KEY"
+    protocol_id: UUID = Field(
+        description="The unique identifier for the protocol. FOREIGN KEY"
     )
-    alignment_protocol: AlignmentProtocol | None = Field(
-        default=None, description="The sequence alignment protocol."
-    )
+    protocol: Protocol | None = Field(default=None, description="The protocol.")
 
 
 class ContigAlignment(Model, AlignmentMixin):
@@ -80,9 +67,9 @@ class SeqAlignment(Model):
             {
                 1: ("seq_id", Seq, "seq"),
                 2: (
-                    "alignment_protocol_id",
-                    AlignmentProtocol,
-                    "alignment_protocol",
+                    "protocol_id",
+                    Protocol,
+                    "protocol",
                 ),
             }
         ),
@@ -91,12 +78,10 @@ class SeqAlignment(Model):
         description="The unique identifier for the sequence that the result was derived from, if available. FOREIGN KEY"
     )
     seq: Seq = Field(description="The sequence.")
-    alignment_protocol_id: UUID = Field(
-        description="The unique identifier for the sequence alignment protocol. FOREIGN KEY"
+    protocol_id: UUID = Field(
+        description="The unique identifier for the protocol. FOREIGN KEY"
     )
-    alignment_protocol: AlignmentProtocol | None = Field(
-        default=None, description="The sequence alignment protocol."
-    )
+    protocol: Protocol | None = Field(default=None, description="The protocol.")
     contig_alignments: list[ContigAlignment] = Field(
         description="The contig alignments."
     )
@@ -107,9 +92,7 @@ class MultipleAlignment(Model):
         snake_case_plural_name="multiple_alignments",
         persistable=False,
     )
-    alignment_protocol_id: UUID = Field(
-        description="The ID of the alignment protocol. FOREIGN KEY"
-    )
+    protocol_id: UUID = Field(description="The ID of the protocol. FOREIGN KEY")
     seq_ids: list[UUID] = Field(
         description="The list of sequence IDs included in the multiple alignment."
     )

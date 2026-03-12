@@ -26,6 +26,7 @@ from gen_epix.seqdb.domain.model.seq.base import (
     ProtocolMixin,
     QualityMixin,
 )
+from gen_epix.seqdb.domain.model.seq.protocol import Protocol
 from gen_epix.seqdb.domain.model.seq.reads import ReadSet
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 from gen_epix.seqdb.domain.model.seq.taxon import Taxon
@@ -69,28 +70,6 @@ class RefSeq(BaseSeq):
         description="The GenBank accession code of the reference sequence",
         max_length=255,
     )
-
-
-class AssemblyProtocol(Model, ProtocolMixin):
-    """
-    A protocol used for assembling sequencing reads into a sequence.
-
-    An assembly protocol is immutable: once created, it cannot be deleted and it
-    should not be semantically updated. As such, assembly protocol IDs can safely be
-    referenced in other models and outside of the application.
-    """
-
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="assembly_protocols",
-        table_name="assembly_protocol",
-        persistable=True,
-        keys=create_keys({1: "code", 2: ("name", "version")}),
-    )
-    has_manual_curation: bool = Field(
-        default=False,
-        description="Whether the assembly has a, potentially optional, manual curation step.",
-    )
-
 
 class Contig(BaseSeq, QualityMixin):
     """
@@ -152,7 +131,7 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
                 2: ("file_id", File, "file"),
                 3: ("read_set_id", ReadSet, "read_set"),
                 4: ("read_set2_id", ReadSet, "read_set2"),
-                5: ("assembly_protocol_id", AssemblyProtocol, "assembly_protocol"),
+                5: ("protocol_id", Protocol, "protocol"),
             }
         ),
     )
@@ -186,12 +165,12 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
         description="The unique identifier for a potential second read set used to generate the assembly. FOREIGN KEY",
     )
     read_set2: ReadSet | None = Field(default=None, description="The second read set.")
-    assembly_protocol_id: UUID | None = Field(
+    protocol_id: UUID | None = Field(
         default=None,
-        description="The unique identifier for the assembly protocol used to generate the sequence from reads, if available. FOREIGN KEY",
+        description="The unique identifier for the protocol used to generate the sequence from reads, if available. FOREIGN KEY",
     )
-    assembly_protocol: AssemblyProtocol | None = Field(
-        default=None, description="The assembly protocol."
+    protocol: Protocol | None = Field(
+        default=None, description="The protocol."
     )
     contigs: list[Contig] = Field(
         default_factory=list,

@@ -15,19 +15,11 @@ from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.literal import MLVA_NO_LOCUS_REPEAT_NUMBER
-from gen_epix.seqdb.domain.model.seq.base import ProtocolMixin, QualityMixin
+from gen_epix.seqdb.domain.model.seq.base import QualityMixin
 from gen_epix.seqdb.domain.model.seq.locus import LocusSet
+from gen_epix.seqdb.domain.model.seq.protocol import Protocol
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 from gen_epix.seqdb.domain.model.seq.seq import HasSeqMixin, RefSeq, Seq
-
-
-class LocusDetectionProtocol(Model, ProtocolMixin):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="locus_detection_protocols",
-        table_name="locus_detection_protocol",
-        persistable=True,
-        keys=create_keys({1: "code", 2: ("name", "version")}),
-    )
 
 
 class LocusProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
@@ -35,18 +27,16 @@ class LocusProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
         snake_case_plural_name="locus_profiles",
         table_name="locus_profile",
         persistable=True,
-        keys=create_keys(
-            {1: ("seq_id", "locus_set_id", "locus_detection_protocol_id")}
-        ),
+        keys=create_keys({1: ("seq_id", "locus_set_id", "protocol_id")}),
         links=create_links(
             {
                 1: ("sample_id", Sample, "sample"),
                 2: ("seq_id", Seq, "seq"),
                 3: ("locus_set_id", LocusSet, "locus_set"),
                 4: (
-                    "locus_detection_protocol_id",
-                    LocusDetectionProtocol,
-                    "locus_detection_protocol",
+                    "protocol_id",
+                    Protocol,
+                    "protocol",
                 ),
             }
         ),
@@ -55,10 +45,10 @@ class LocusProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
         description="The unique identifier for the locus set. FOREIGN KEY"
     )
     locus_set: LocusSet | None = Field(default=None, description="The locus set.")
-    locus_detection_protocol_id: UUID = Field(
+    protocol_id: UUID = Field(
         description="The unique identifier for the locus detection protocol. FOREIGN KEY"
     )
-    locus_detection_protocol: LocusDetectionProtocol | None = Field(
+    protocol: Protocol | None = Field(
         default=None, description="The locus detection protocol."
     )
     n_loci: int = Field(description="The number of loci detected.")
@@ -95,8 +85,8 @@ class LocusProfileIdentifier(BaseIdentifier):
 
 class AlleleProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
     """
-    An allele profile derived from a sequence for a given locus set and locus
-    detection protocol. The class includes validation logic to ensure consistency
+    An allele profile derived from a sequence for a given locus set and protocol.
+    The class includes validation logic to ensure consistency
     between the profile, its format, number of detected loci, and derived profile hash.
     """
 
@@ -104,18 +94,16 @@ class AlleleProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
         snake_case_plural_name="allele_profiles",
         table_name="allele_profile",
         persistable=True,
-        keys=create_keys(
-            {1: ("sample_id", "seq_id", "locus_set_id", "locus_detection_protocol_id")}
-        ),
+        keys=create_keys({1: ("sample_id", "seq_id", "locus_set_id", "protocol_id")}),
         links=create_links(
             {
                 1: ("sample_id", Sample, "sample"),
                 2: ("seq_id", Seq, "seq"),
                 3: ("locus_set_id", LocusSet, "locus_set"),
                 4: (
-                    "locus_detection_protocol_id",
-                    LocusDetectionProtocol,
-                    "locus_detection_protocol",
+                    "protocol_id",
+                    Protocol,
+                    "protocol",
                 ),
             }
         ),
@@ -124,12 +112,10 @@ class AlleleProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
         description="The unique identifier for the locus set. FOREIGN KEY"
     )
     locus_set: LocusSet | None = Field(default=None, description="The locus set.")
-    locus_detection_protocol_id: UUID = Field(
-        description="The unique identifier for the locus detection protocol. FOREIGN KEY"
+    protocol_id: UUID = Field(
+        description="The unique identifier for the protocol. FOREIGN KEY"
     )
-    locus_detection_protocol: LocusDetectionProtocol | None = Field(
-        default=None, description="The locus detection protocol."
-    )
+    protocol: Protocol | None = Field(default=None, description="The protocol.")
     n_loci: int = Field(
         default=0,
         description="The number of detected loci. Derived from the profile if possible and if the value is set to zero. If set to zero and it is not possible to derive the value, an error is raised.",
@@ -264,15 +250,6 @@ class AlleleProfileIdentifier(BaseIdentifier):
     )
 
 
-class SnpDetectionProtocol(Model, ProtocolMixin):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="snp_detection_protocols",
-        table_name="snp_detection_protocol",
-        persistable=True,
-        keys=create_keys({1: "code", 2: ("name", "version")}),
-    )
-
-
 class SnpProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="snp_profiles",
@@ -284,7 +261,7 @@ class SnpProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
                     "sample_id",
                     "seq_id",
                     "ref_seq_id",
-                    "snp_detection_protocol_id",
+                    "protocol_id",
                 )
             }
         ),
@@ -294,9 +271,9 @@ class SnpProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
                 2: ("seq_id", Seq, "seq"),
                 3: ("ref_seq_id", RefSeq, "ref_seq"),
                 4: (
-                    "snp_detection_protocol_id",
-                    SnpDetectionProtocol,
-                    "snp_detection_protocol",
+                    "protocol_id",
+                    Protocol,
+                    "protocol",
                 ),
             }
         ),
@@ -305,12 +282,10 @@ class SnpProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
         description="The unique identifier for the reference sequence. FOREIGN KEY"
     )
     ref_seq: RefSeq | None = Field(default=None, description="The reference sequence.")
-    snp_detection_protocol_id: UUID = Field(
-        description="The unique identifier for the SNP detection protocol. FOREIGN KEY"
+    protocol_id: UUID = Field(
+        description="The unique identifier for the protocol. FOREIGN KEY"
     )
-    snp_detection_protocol: SnpDetectionProtocol | None = Field(
-        default=None, description="The SNP detection protocol."
-    )
+    protocol: Protocol | None = Field(default=None, description="The protocol.")
     snp_profile: str = Field(description="The SNPs detected in the sequence.")
     snp_profile_format: enum.SnpProfileFormat = Field(
         default=enum.SnpProfileFormat.REF_ALN_SEQ,
@@ -382,15 +357,6 @@ class SnpProfileIdentifier(BaseIdentifier):
     )
 
 
-class MlvaDetectionProtocol(Model, ProtocolMixin):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="mlva_detection_protocols",
-        table_name="mlva_detection_protocol",
-        persistable=True,
-        keys=create_keys({1: "code", 2: ("name", "version")}),
-    )
-
-
 class MlvaProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="mlva_profiles",
@@ -401,7 +367,7 @@ class MlvaProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
                 1: (
                     "sample_id",
                     "seq_id",
-                    "mlva_detection_protocol_id",
+                    "protocol_id",
                 )
             }
         ),
@@ -411,19 +377,17 @@ class MlvaProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
                 2: ("seq_id", Seq, "seq"),
                 3: ("locus_set_id", LocusSet, "locus_set"),
                 4: (
-                    "mlva_detection_protocol_id",
-                    MlvaDetectionProtocol,
-                    "mlva_detection_protocol",
+                    "protocol_id",
+                    Protocol,
+                    "protocol",
                 ),
             }
         ),
     )
-    mlva_detection_protocol_id: UUID = Field(
-        description="The unique identifier for the MLVA detection protocol. FOREIGN KEY"
+    protocol_id: UUID = Field(
+        description="The unique identifier for the protocol. FOREIGN KEY"
     )
-    mlva_detection_protocol: MlvaDetectionProtocol | None = Field(
-        default=None, description="The MLVA detection protocol."
-    )
+    protocol: Protocol | None = Field(default=None, description="The protocol.")
     locus_set_id: UUID = Field(
         description="The unique identifier for the locus set. FOREIGN KEY"
     )
@@ -536,15 +500,6 @@ class MlvaProfileIdentifier(BaseIdentifier):
     )
 
 
-class KmerDetectionProtocol(Model, ProtocolMixin):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="kmer_detection_protocols",
-        table_name="kmer_detection_protocol",
-        persistable=True,
-        keys=create_keys({1: "code", 2: ("name", "version")}),
-    )
-
-
 class KmerProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="kmer_profiles",
@@ -555,7 +510,7 @@ class KmerProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
                 1: (
                     "sample_id",
                     "seq_id",
-                    "kmer_detection_protocol_id",
+                    "protocol_id",
                 )
             }
         ),
@@ -564,19 +519,17 @@ class KmerProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
                 1: ("sample_id", Sample, "sample"),
                 2: ("seq_id", Seq, "seq"),
                 3: (
-                    "kmer_detection_protocol_id",
-                    KmerDetectionProtocol,
-                    "kmer_detection_protocol",
+                    "protocol_id",
+                    Protocol,
+                    "protocol",
                 ),
             }
         ),
     )
-    kmer_detection_protocol_id: UUID = Field(
-        description="The unique identifier for the k-mer detection protocol. FOREIGN KEY"
+    protocol_id: UUID = Field(
+        description="The unique identifier for the protocol. FOREIGN KEY"
     )
-    kmer_detection_protocol: KmerDetectionProtocol | None = Field(
-        default=None, description="The k-mer detection protocol."
-    )
+    protocol: Protocol | None = Field(default=None, description="The protocol.")
     kmer_profile: str = Field(
         description="The k-mers detected in the sequence and their frequency."
     )

@@ -63,20 +63,20 @@ class ReadSetForUpload(ReadSet, IdentifiersMixin, ValidateRefDataIdCodeMixin):
 
     IDENTIFIER_CLASS: ClassVar = ReadSetIdentifier
     REFDATA_FIELD_ID_CODE_PAIRS: ClassVar = [
-        ("sequencing_protocol_id", "sequencing_protocol_code"),
+        ("protocol_id", "protocol_code"),
     ]
 
     sample_id: UUID = Field(
         default=NULL_ID,
         description="The UUID of the sample that the read set is associated with. If not available, the null ID is put.",
     )
-    sequencing_protocol_id: UUID = Field(
+    protocol_id: UUID = Field(
         default=NULL_ID,
-        description="The UUID of the sequencing protocol, if available. If not available, the null ID is put. Must be present if sequencing_protocol_code is not present. The use of sequencing_protocol_id is preferred over sequencing_protocol_code since the latter may change.",
+        description="The UUID of the protocol, if available. If not available, the null ID is put. Must be present if protocol_code is not present. The use of protocol_id is preferred over protocol_code since the latter may change.",
     )
-    sequencing_protocol_code: str | None = Field(
+    protocol_code: str | None = Field(
         default=None,
-        description="The code of the sequencing protocol. Must be present if sequencing_protocol_id is not present. The use of sequencing_protocol_code is meant for situations where the sequencing_protocol_id is not known, but the code is and/or improves human interpretation.",
+        description="The code of the protocol. Must be present if protocol_id is not present. The use of protocol_code is meant for situations where the protocol_id is not known, but the code is and/or improves human interpretation.",
         max_length=255,
     )
 
@@ -90,20 +90,20 @@ class SeqForUpload(Seq, IdentifiersMixin, ValidateRefDataIdCodeMixin):
     NAME: ClassVar = "SeqForUpload"
     IDENTIFIER_CLASS: ClassVar = SeqIdentifier
     REFDATA_FIELD_ID_CODE_PAIRS: ClassVar = [
-        ("assembly_protocol_id", "assembly_protocol_code"),
+        ("protocol_id", "protocol_code"),
     ]
 
     sample_id: UUID = Field(
         default=NULL_ID,
         description="The UUID of the sample that the sequence is associated with. If not available, the null ID is put.",
     )
-    assembly_protocol_id: UUID = Field(
+    protocol_id: UUID = Field(
         default=NULL_ID,
-        description="The UUID of the assembly protocol, if available. If not available, the null ID is put. Must be present if assembly_protocol_code is not present. The use of assembly_protocol_id is preferred over assembly_protocol_code since the latter may change.",
+        description="The UUID of the protocol, if available. If not available, the null ID is put. Must be present if protocol_code is not present. The use of protocol_id is preferred over protocol_code since the latter may change.",
     )
-    assembly_protocol_code: str | None = Field(
+    protocol_code: str | None = Field(
         default=None,
-        description="The code of the assembly protocol. Must be present if assembly_protocol_id is not present. The use of assembly_protocol_code is meant for situations where the assembly_protocol_id is not known, but the code is and/or improves human interpretation.",
+        description="The code of the protocol. Must be present if protocol_id is not present. The use of protocol_code is meant for situations where the protocol_id is not known, but the code is and/or improves human interpretation.",
         max_length=255,
     )
 
@@ -121,7 +121,7 @@ class SnpProfileForUpload(SnpProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
 
     IDENTIFIER_CLASS: ClassVar = SnpProfileIdentifier
     REFDATA_FIELD_ID_CODE_PAIRS: ClassVar = [
-        ("snp_detection_protocol_id", "snp_detection_protocol_code"),
+        ("protocol_id", "protocol_code"),
         ("ref_seq_id", "ref_seq_code"),
     ]
 
@@ -142,13 +142,13 @@ class SnpProfileForUpload(SnpProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
         description="The code of the reference sequence. Must be present if ref_seq_id is not present. The use of ref_seq_code is meant for situations where the ref_seq_id is not known, but the code is and/or improves human interpretation.",
         max_length=255,
     )
-    snp_detection_protocol_id: UUID = Field(
+    protocol_id: UUID = Field(
         default=NULL_ID,
-        description="The UUID of the SNP detection protocol, if available. If not available, the null ID is put. Must be present if snp_detection_protocol_code is not present. The use of snp_detection_protocol_id is preferred over snp_detection_protocol_code since the latter may change.",
+        description="The UUID of the protocol, if available. If not available, the null ID is put. Must be present if protocol_code is not present. The use of protocol_id is preferred over protocol_code since the latter may change.",
     )
-    snp_detection_protocol_code: str | None = Field(
+    protocol_code: str | None = Field(
         default=None,
-        description="The code of the SNP detection protocol. Must be present if snp_detection_protocol_id is not present. The use of snp_detection_protocol_code is meant for situations where the snp_detection_protocol_id is not known, but the code is and/or improves human interpretation.",
+        description="The code of the protocol. Must be present if protocol_id is not present. The use of protocol_code is meant for situations where the protocol_id is not known, but the code is and/or improves human interpretation.",
         max_length=255,
     )
     snp_profile: str = Field(
@@ -214,7 +214,7 @@ class AlleleProfileForUpload(
 
     IDENTIFIER_CLASS: ClassVar = AlleleProfileIdentifier
     REFDATA_FIELD_ID_CODE_PAIRS: ClassVar = [
-        ("locus_detection_protocol_id", "locus_detection_protocol_code"),
+        ("protocol_id", "protocol_code"),
         ("locus_set_id", "locus_set_code"),
         ("locus_code_map_id", "locus_code_map_code"),
     ]
@@ -227,13 +227,13 @@ class AlleleProfileForUpload(
         default=None,
         description="The UUID of the sequence that the allele profile was derived from, if available.",
     )
-    locus_detection_protocol_id: UUID = Field(
+    protocol_id: UUID = Field(
         default=NULL_ID,
-        description="The UUID of the locus detection protocol, if available. If not available, the null ID is put. Must be present if locus_detection_protocol_code is not present. The use of locus_detection_protocol_id is preferred over locus_detection_protocol_code since the latter may change.",
+        description="The UUID of the protocol, if available. If not available, the null ID is put. Must be present if protocol_code is not present. The use of protocol_id is preferred over protocol_code since the latter may change.",
     )
-    locus_detection_protocol_code: str | None = Field(
+    protocol_code: str | None = Field(
         default=None,
-        description="The code of the locus detection protocol. Must be present if locus_detection_protocol_id is not present. The use of locus_detection_protocol_code is meant for situations where the locus_detection_protocol_id is not known, but the code is and/or improves human interpretation.",
+        description="The code of the protocol. Must be present if protocol_id is not present. The use of protocol_code is meant for situations where the protocol_id is not known, but the code is and/or improves human interpretation.",
         max_length=255,
     )
     locus_set_id: UUID = Field(
@@ -330,11 +330,11 @@ class AlleleProfileForUpload(
 
         # Upload-specific validation
         if (
-            not self.locus_detection_protocol_code
-            and self.locus_detection_protocol_id == NULL_ID
+            not self.protocol_code
+            and self.protocol_id == NULL_ID
         ):
             raise ValueError(
-                "Either locus_detection_protocol_code or locus_detection_protocol_id must be provided."
+                "Either protocol_code or protocol_id must be provided."
             )
         if self.locus_set_code is None and self.locus_set_id == NULL_ID:
             raise ValueError("Either locus_set_code or locus_set_id must be provided.")
@@ -362,7 +362,7 @@ class MlvaProfileForUpload(MlvaProfile, IdentifiersMixin, ValidateRefDataIdCodeM
 
     IDENTIFIER_CLASS: ClassVar = MlvaProfileIdentifier
     REFDATA_FIELD_ID_CODE_PAIRS: ClassVar = [
-        ("locus_detection_protocol_id", "locus_detection_protocol_code"),
+        ("protocol_id", "protocol_code"),
         ("locus_set_id", "locus_set_code"),
         ("locus_code_map_id", "locus_code_map_code"),
     ]
@@ -375,13 +375,13 @@ class MlvaProfileForUpload(MlvaProfile, IdentifiersMixin, ValidateRefDataIdCodeM
         default=None,
         description="The UUID of the sequence that the allele profile was derived from, if available.",
     )
-    mlva_detection_protocol_id: UUID = Field(
+    protocol_id: UUID = Field(
         default=NULL_ID,
-        description="The UUID of the MLVA detection protocol, if available. If not available, the null ID is put. Must be present if mlva_detection_protocol_code is not present. The use of mlva_detection_protocol_id is preferred over mlva_detection_protocol_code since the latter may change.",
+        description="The UUID of the protocol, if available. If not available, the null ID is put. Must be present if protocol_code is not present. The use of protocol_id is preferred over protocol_code since the latter may change.",
     )
-    mlva_detection_protocol_code: str | None = Field(
+    protocol_code: str | None = Field(
         default=None,
-        description="The code of the MLVA detection protocol. Must be present if mlva_detection_protocol_id is not present. The use of mlva_detection_protocol_code is meant for situations where the mlva_detection_protocol_id is not known, but the code is and/or improves human interpretation.",
+        description="The code of the protocol. Must be present if protocol_id is not present. The use of protocol_code is meant for situations where the protocol_id is not known, but the code is and/or improves human interpretation.",
         max_length=255,
     )
     locus_set_id: UUID = Field(

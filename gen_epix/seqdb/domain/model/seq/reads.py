@@ -11,25 +11,14 @@ from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.file import File
 from gen_epix.seqdb.domain.model.seq.base import CodeMixin, ProtocolMixin, QualityMixin
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
+from gen_epix.seqdb.domain.model.seq.protocol import Protocol
 
-
-class SequencingProtocol(Model, ProtocolMixin):
-    """
-    The protocol used for sequencing a sample.
-    """
-
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="sequencing_protocols",
-        table_name="sequencing_protocol",
-        persistable=True,
-        keys=create_keys({1: "code", 2: ("name", "version")}),
-    )
 
 
 class ReadSet(Model, HasSampleMixin, CodeMixin, QualityMixin):
     """
     A set of sequencing reads, either single-end or paired-end, that is the result
-    of sequencing a sample using a sequencing protocol. The reads data itself are
+    of sequencing a sample using a protocol. The reads data itself are
     not included in this model, but are referenced via either URIs or file links.
 
     The actual reads data need not be referenced on creation of this instance, to allow
@@ -46,20 +35,20 @@ class ReadSet(Model, HasSampleMixin, CodeMixin, QualityMixin):
             {
                 1: ("sample_id", Sample, "sample"),
                 2: (
-                    "sequencing_protocol_id",
-                    SequencingProtocol,
-                    "sequencing_protocol",
+                    "protocol_id",
+                    Protocol,
+                    "protocol",
                 ),
                 3: ("fwd_file_id", File, "fwd_file"),
                 4: ("rev_file_id", File, "rev_file"),
             }
         ),
     )
-    sequencing_protocol_id: UUID = Field(
-        description="The unique identifier for the sequencing protocol. FOREIGN KEY"
+    protocol_id: UUID = Field(
+        description="The unique identifier for the protocol. FOREIGN KEY"
     )
-    sequencing_protocol: SequencingProtocol | None = Field(
-        default=None, description="The sequencing protocol."
+    protocol: Protocol | None = Field(
+        default=None, description="The protocol."
     )
     fwd_uri: str | None = Field(
         default=None,
