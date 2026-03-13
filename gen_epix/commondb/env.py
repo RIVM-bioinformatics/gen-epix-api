@@ -17,10 +17,10 @@ from gen_epix.commondb.domain.model import SORTED_SERVICE_TYPES
 from gen_epix.commondb.domain.policy.permission import RoleGenerator
 from gen_epix.commondb.services import AuthService, RbacService
 from gen_epix.commondb.services.abac import AbacService
-from gen_epix.commondb.util import register_set_model_metadata_policy
 from gen_epix.commondb.services.organization import OrganizationService
 from gen_epix.commondb.services.system import SystemService
 from gen_epix.commondb.services.user_manager import UserManager
+from gen_epix.commondb.util import register_set_model_metadata_policy
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.service import BaseService
@@ -176,7 +176,13 @@ class AppComposer(BaseAppComposer):
             system_service.register_policies()
             rbac_service.register_policies()
             abac_service.register_policies()
-            privileged_roles = app_impl.role_set_map[enum.RoleSet.GE_APP_ADMIN]
+
+            # Note: the privileged roles for the SetModelProcessMetadataPolicy are
+            # those that should be able to bypass automatic setting of created/modified metadata,
+            # privileged_roles = app_impl.role_set_map[enum.RoleSet.GE_APP_ADMIN]
+            # Only ROOT can bypass
+            privileged_roles = app_impl.role_set_map[enum.RoleSet.ROOT]
+
             register_set_model_metadata_policy(app, privileged_roles)
             self._register_extra_policies(app, privileged_roles)
 
