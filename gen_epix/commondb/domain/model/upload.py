@@ -22,7 +22,7 @@ from gen_epix.fastapp import Model
 from gen_epix.fastapp.domain import Entity
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import LogLevel, LogLevelSet
-from gen_epix.fastapp.result import ResultLogItem, ResultLogMixin
+from gen_epix.fastapp.result import BaseResult, ResultLogItem
 
 # Backward-compatible alias: UploadLogItem is now ResultLogItem.
 UploadLogItem = ResultLogItem
@@ -103,7 +103,7 @@ class DataIssue(PydanticBaseModel):
     message: str | None = Field(description="The details of the data issue")
 
 
-class UploadResult(ResultLogMixin, Model):
+class UploadResult(BaseResult, Model):
     """
     Represents the result of an upload operation for a particular object, including
     upload status and logs.
@@ -126,10 +126,6 @@ class UploadResult(ResultLogMixin, Model):
     is_new: bool = Field(
         default=False,
         description="Indicates whether the object did not exist before start of the upload. False in case upload failed before this could be determined.",
-    )
-    logs: list[UploadLogItem] = Field(
-        default_factory=list,
-        description="A list of log items capturing messages and events that occurred during the upload operation.",
     )
 
     @model_validator(mode="after")

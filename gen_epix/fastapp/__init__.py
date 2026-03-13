@@ -23,7 +23,7 @@ from gen_epix.fastapp.enum import SortOrder as SortOrder
 from gen_epix.fastapp.enum import ResultStatus as ResultStatus
 from gen_epix.fastapp.log import LogItem as LogItem
 from gen_epix.fastapp.result import ResultLogItem as ResultLogItem
-from gen_epix.fastapp.result import ResultLogMixin as ResultLogMixin
+from gen_epix.fastapp.result import BaseResult as BaseResult
 from gen_epix.fastapp.model import Command as Command
 from gen_epix.fastapp.model import CrudCommand as CrudCommand
 from gen_epix.fastapp.model import Model as Model

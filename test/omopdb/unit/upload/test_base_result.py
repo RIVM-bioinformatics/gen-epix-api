@@ -1,5 +1,5 @@
 """
-Unit tests for ResultLogMixin and ResultLogItem.
+Unit tests for BaseResult and ResultLogItem.
 
 Verifies that:
 - add_error / add_warning / add_info append the correct log items.
@@ -14,20 +14,18 @@ from unittest import TestCase
 from gen_epix.commondb.domain.enum import UploadStatus
 from gen_epix.commondb.domain.model.upload import UploadLogItem, UploadResult
 from gen_epix.fastapp.enum import LogLevel, ResultStatus
-from gen_epix.fastapp.result import ResultLogItem, ResultLogMixin
+from gen_epix.fastapp.result import BaseResult, ResultLogItem
 
 
 # ---------------------------------------------------------------------------
-# Minimal concrete class for testing the mixin in isolation
+# Minimal concrete class for testing BaseResult in isolation
 # ---------------------------------------------------------------------------
 
 
-class _ConcreteResult(ResultLogMixin):
-    """Plain Python class that uses ResultLogMixin without Pydantic or dataclasses."""
+class _ConcreteResult(BaseResult):
+    """Minimal Pydantic model used to test BaseResult in isolation."""
 
-    def __init__(self) -> None:
-        self.logs: list[ResultLogItem] = []
-        self.status: ResultStatus = ResultStatus.INITIALIZED
+    status: ResultStatus = ResultStatus.INITIALIZED
 
     def _set_error_status(self) -> None:
         self.status = ResultStatus.ERROR
@@ -52,11 +50,11 @@ class TestResultLogItem(TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Tests for ResultLogMixin via _ConcreteResult
+# Tests for BaseResult via _ConcreteResult
 # ---------------------------------------------------------------------------
 
 
-class TestResultLogMixin(TestCase):
+class TestBaseResult(TestCase):
     def setUp(self) -> None:
         self.result = _ConcreteResult()
 
@@ -171,7 +169,7 @@ def _make_pending_upload_result() -> UploadResult:
     )
 
 
-class TestUploadResultLogMixin(TestCase):
+class TestUploadResult(TestCase):
     def setUp(self) -> None:
         self.result = _make_pending_upload_result()
 
