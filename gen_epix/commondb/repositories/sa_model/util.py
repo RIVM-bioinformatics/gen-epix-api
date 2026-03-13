@@ -154,6 +154,12 @@ def create_field_metadata(
     model_classes: frozenset[type[Model]] = domain.models  # type: ignore[assignment]
 
     # TODO 2953: check if this is correct
+    # There was a constant DB_METADATA_FIELDS dict in the original code,
+    # but after the rename of metadata fields to match domain model field names,
+    # it no longer serves a purpose since the same fields are now present on both the domain model and the SA model
+    # and are handled by create_mapped_column.
+    # If there are any fields that should be treated as metadata fields (e.g. excluded from certain operations or automatically generated)
+    # but do not follow the standard created_at/modified_at/modified_by pattern, we can add them to service_metadata_fields and/or db_metadata_fields as needed.
 
     # service_metadata_fields: dict[type[Model], list[str]] = {
     #     model_class: ["modified_by"] for model_class in model_classes
