@@ -124,7 +124,7 @@ class TestCaseDBModelProcessMetadata:
             result.modified_by == modified_by
         ), "modified_by should not be overriden when created by root user"
 
-    def test_case_type_contains_metadata_for_super_users(
+    def test_read_all_case_type_contains_metadata_for_super_users(
         self, setup_case_type_data: None
     ) -> None:
         """
@@ -153,7 +153,7 @@ class TestCaseDBModelProcessMetadata:
 
     # Note: This should be different for other domains like seqdb and omopdb
     # where everybody can see the process metadata
-    def test_case_type_should_not_contain_metadata_for_org_users(
+    def test_read_all_case_type_should_not_contain_metadata_for_org_users(
         self, setup_case_type_data: None
     ) -> None:
         """
