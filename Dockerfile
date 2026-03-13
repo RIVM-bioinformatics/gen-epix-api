@@ -1,7 +1,6 @@
 # syntax=docker/dockerfile:1@sha256:b6afd42430b15f2d2a4c5a02b919e98a525b785b1aaff16747d2f623364e39b6
 
 ARG PYTHON_VERSION=3.14.1
-ARG OPENSSL_PKG_VERSION=3.5.4-1~deb13u2
 FROM python:${PYTHON_VERSION}-slim AS base
 
 # Prevents Python from writing pyc files.
@@ -18,12 +17,14 @@ WORKDIR /app
 
 # See https://learn.microsoft.com/en-us/sql/linux/sql-server-linux-setup-tools?tabs=ubuntu-install&view=sql-server-ver16#ubuntu
 # Install ODBC driver
-RUN apt-get update && apt-get install -y --only-upgrade openssl=${OPENSSL_PKG_VERSION} libssl3=${OPENSSL_PKG_VERSION} \
+RUN apt-get update && apt-get install -y \
+    openssl \
+    libssl3t64 \
     && apt-get install -y \
     curl \
     gnupg \
     && curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /usr/share/keyrings/microsoft-prod.gpg && \
-    curl https://packages.microsoft.com/config/debian/12/prod.list | tee /etc/apt/sources.list.d/mssql-release.list && \
+    curl https://packages.microsoft.com/config/debian/13/prod.list | tee /etc/apt/sources.list.d/mssql-release.list && \
     apt-get update && ACCEPT_EULA=Y apt-get install -y \
     msodbcsql18 \
     unixodbc \
