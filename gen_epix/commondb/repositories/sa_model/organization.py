@@ -21,9 +21,10 @@ class OrganizationMixin(RowMetadataMixin):
     created under a different declarative base.
     """
 
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.Organization, "code")
     name: Mapped[str] = create_mapped_column(DOMAIN, model.Organization, "name")
-    legal_entity_code: Mapped[str] = create_mapped_column(
-        DOMAIN, model.Organization, "legal_entity_code"
+    description: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Organization, "description"
     )
 
 

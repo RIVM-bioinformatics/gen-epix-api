@@ -189,9 +189,7 @@ class TestClient:
             command.OrganizationCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=model.Organization(
-                    name=organization_name, legal_entity_code=organization_name
-                ),
+                objs=model.Organization(name=organization_name, code=organization_name),
             )
         )
         retval: model.Organization = self._set_obj(organization)  # type: ignore[assignment]

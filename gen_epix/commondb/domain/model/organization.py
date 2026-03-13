@@ -29,13 +29,18 @@ class Organization(Model):
         snake_case_plural_name="organizations",
         table_name="organization",
         persistable=True,
-        keys=create_keys({1: "name", 2: "legal_entity_code"}),
+        keys=create_keys({1: "code", 2: "name"}),
+    )
+    code: str = Field(
+        description="The code of the organization, UNIQUE", max_length=255
     )
     name: str = Field(
         description="The name of the organization, UNIQUE", max_length=255
     )
-    legal_entity_code: str = Field(
-        description="The legal entity code of the organization, UNIQUE", max_length=255
+    description: str | None = Field(
+        default=None,
+        description="The description of the organization.",
+        max_length=1000,
     )
 
 
