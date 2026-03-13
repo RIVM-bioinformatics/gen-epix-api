@@ -7,6 +7,7 @@ def set_envvar() -> None:
     path = Path(__file__).parent
     casedb_settings_files: list[Path] = [
         path / "casedb.settings.toml",
+        path / "casedb.feature_flags.toml",
         path / "casedb.settings.repository.toml",
         path / "casedb.secrets.service.toml",
         path / "casedb.secrets.repository.toml",
@@ -14,6 +15,7 @@ def set_envvar() -> None:
     ]
     seqdb_settings_files: list[Path] = [
         path / "seqdb.settings.toml",
+        path / "seqdb.feature_flags.toml",
         path / "seqdb.settings.repository.toml",
         path / "seqdb.secrets.service.toml",
         path / "seqdb.secrets.repository.toml",
@@ -21,6 +23,7 @@ def set_envvar() -> None:
     ]
     omop_settings_files: list[Path] = [
         path / "omop.settings.toml",
+        path / "omop.feature_flags.toml",
         path / "omop.settings.repository.toml",
         path / "omop.secrets.service.toml",
         path / "omop.secrets.repository.toml",
