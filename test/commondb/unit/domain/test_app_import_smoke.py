@@ -32,8 +32,7 @@ def _run_app_import_smoke(
     app_name: str,
     extra_settings_files: list[Path] | None = None,
 ) -> dict:
-    script = textwrap.dedent(
-        """\
+    script = textwrap.dedent("""\
         import importlib
         import json
         import sys
@@ -73,8 +72,7 @@ def _run_app_import_smoke(
             "service_idp_client_count": len(auth_service.idp_clients),
         }
         print(json.dumps(payload))
-        """
-    )
+        """)
 
     args = [sys.executable, "-c", script, app_name]
     if extra_settings_files:
@@ -123,13 +121,11 @@ def override_tmp_dir() -> Iterator[Path]:
 def _write_string_auth_override_file(override_tmp_dir: Path, app_name: str) -> Path:
     override_path = override_tmp_dir / f"{app_name.lower()}.toml"
     override_path.write_text(
-        textwrap.dedent(
-            """\
+        textwrap.dedent("""\
             [service.auth.props]
             auto_create_new_users = "0"
             root_token_time_to_live = "900"
-            """
-        ),
+            """),
         encoding="utf-8",
     )
     return override_path

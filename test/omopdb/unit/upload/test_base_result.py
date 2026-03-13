@@ -16,7 +16,6 @@ from gen_epix.commondb.domain.model.upload import UploadLogItem, UploadResult
 from gen_epix.fastapp.enum import LogLevel, ResultStatus
 from gen_epix.fastapp.result import BaseResult, ResultLogItem
 
-
 # ---------------------------------------------------------------------------
 # Minimal concrete class for testing BaseResult in isolation
 # ---------------------------------------------------------------------------
@@ -38,7 +37,9 @@ class _ConcreteResult(BaseResult):
 
 class TestResultLogItem(TestCase):
     def test_has_required_fields(self) -> None:
-        item = ResultLogItem(code="E001", message="Something broke", severity=LogLevel.ERROR)
+        item = ResultLogItem(
+            code="E001", message="Something broke", severity=LogLevel.ERROR
+        )
         self.assertEqual(item.code, "E001")
         self.assertEqual(item.message, "Something broke")
         self.assertEqual(item.severity, LogLevel.ERROR)

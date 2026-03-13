@@ -58,7 +58,9 @@ class BaseResult(BaseModel):
 
     def add_error(self, code: str, message: str) -> None:
         """Append an ERROR-severity log item and update the status."""
-        self.logs.append(ResultLogItem(code=code, message=message, severity=LogLevel.ERROR))
+        self.logs.append(
+            ResultLogItem(code=code, message=message, severity=LogLevel.ERROR)
+        )
         self._set_error_status()
 
     def _set_error_status(self) -> None:
@@ -66,11 +68,15 @@ class BaseResult(BaseModel):
 
     def add_warning(self, code: str, message: str) -> None:
         """Append a WARN-severity log item."""
-        self.logs.append(ResultLogItem(code=code, message=message, severity=LogLevel.WARN))
+        self.logs.append(
+            ResultLogItem(code=code, message=message, severity=LogLevel.WARN)
+        )
 
     def add_info(self, code: str, message: str) -> None:
         """Append an INFO-severity log item."""
-        self.logs.append(ResultLogItem(code=code, message=message, severity=LogLevel.INFO))
+        self.logs.append(
+            ResultLogItem(code=code, message=message, severity=LogLevel.INFO)
+        )
 
     def has_errors(self) -> bool:
         """Return True if any log item has ERROR severity."""

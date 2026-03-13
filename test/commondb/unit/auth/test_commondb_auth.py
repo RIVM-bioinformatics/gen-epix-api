@@ -6,6 +6,8 @@ backed by an in-memory repository mock, so no database process is required.
 import asyncio
 import datetime
 from contextlib import contextmanager
+from test.fastapp.enum import ServiceType
+from test.fastapp.unit.auth.mock_jwk_and_token import MockJWKAndToken
 from typing import Any, Generator
 from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
@@ -26,8 +28,6 @@ from gen_epix.fastapp.middleware import HandleAuthExceptionMiddleware
 from gen_epix.fastapp.services.auth import AuthService, OauthIdpClient
 from gen_epix.fastapp.services.auth.model import Claims
 from gen_epix.fastapp.services.auth.util import get_name_from_claims
-from test.fastapp.enum import ServiceType
-from test.fastapp.unit.auth.mock_jwk_and_token import MockJWKAndToken
 
 # ---------------------------------------------------------------------------
 # Module-level constants

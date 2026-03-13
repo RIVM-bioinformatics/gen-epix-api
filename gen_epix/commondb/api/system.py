@@ -25,8 +25,10 @@ class HealthStatus(Enum):
 class HealthReponseBody(PydanticBaseModel):
     status: HealthStatus
 
+
 class FeatureFlagsResponseBody(PydanticBaseModel):
     feature_flags: dict[str, bool]
+
 
 class LogItem(PydanticBaseModel):
     level: LogLevel
@@ -90,7 +92,6 @@ def create_system_endpoints(
         except Exception as exception:
             handle_exception("f8e8c5e6", None, exception)
         return FeatureFlagsResponseBody(feature_flags=retval)
-
 
     # Licenses endpoint
     @router.post(
