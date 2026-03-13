@@ -219,12 +219,11 @@ class OrganizationService(BaseOrganizationService):
                 if x.expires_at.tzinfo is None:
                     expires_at = x.expires_at.replace(tzinfo=timezone.utc)
 
-                if expires_at > now:
-                    if x.key is not None:
-                        if x.key == new_user.key:
-                            filtered_user_invitations.append(x)
-                    else:
-                        filtered_user_invitations.append(x)
+                # expired invitations are not valid
+                # and invitations with a key that does not match the registering user are not valid,
+                # but invitations without a key are valid for any registering user
+                if expires_at > now and (not x.key or x.key == new_user.key):
+                    filtered_user_invitations.append(x)
 
             if not filtered_user_invitations:
                 raise exc.UnauthorizedAuthError(
