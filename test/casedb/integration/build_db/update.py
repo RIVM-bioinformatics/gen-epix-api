@@ -12,6 +12,7 @@ from test.casedb.integration.build_db.base import (
     SKIP_CREATE_DATA,
     SKIP_RAISE,
 )
+from test.commondb.integration.build_db.base import DEFAULT_CREATED_AT
 from uuid import UUID
 
 import pydantic
@@ -221,7 +222,10 @@ class TestUpdate:
         env.create_data_collection(ROOT, "data_collection99")
         for i, user in enumerate(APP_ADMIN_OR_ABOVE_USERS):
             env.update_object(
-                user, model.DataCollection, "data_collection99", {"description": str(i)}
+                user,
+                model.DataCollection,
+                "data_collection99",
+                {"description": str(i), "created_at": DEFAULT_CREATED_AT},
             )
         env.delete_object(ROOT, model.DataCollection, "data_collection99")
 

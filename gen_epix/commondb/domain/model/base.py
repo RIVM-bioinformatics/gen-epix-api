@@ -21,18 +21,16 @@ class ModelNoId(fastapp.Model):
         description="The ID of the user who last modified the object.",
     )
 
-    def set_modified(self, user_id: UUID, override: bool = False) -> None:
-        if self.modified_at is None or override:
-            now = datetime.now(UTC)
-            self.modified_at = now
-            self.modified_by = user_id
+    def set_modified(self, user_id: UUID) -> None:
+        now = datetime.now(UTC)
+        self.modified_at = now
+        self.modified_by = user_id
 
-    def set_created(self, user_id: UUID, override: bool = False) -> None:
-        if self.created_at is None or override:
-            now = datetime.now(UTC)
-            self.modified_at = now
-            self.modified_by = user_id
-            self.created_at = now
+    def set_created(self, user_id: UUID) -> None:
+        now = datetime.now(UTC)
+        self.modified_at = now
+        self.modified_by = user_id
+        self.created_at = now
 
 
 class Model(ModelNoId):

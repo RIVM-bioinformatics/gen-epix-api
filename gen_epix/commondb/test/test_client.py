@@ -141,6 +141,59 @@ class TestClient:
         # Store remainder of kwargs
         self.props = kwargs
 
+    def _get_obj(
+        self,
+        model_class: type[model.Model],
+        obj: (
+            str
+            | UUID
+            | model.Model
+            | list[str | UUID | model.Model]
+            | tuple[UUID, UUID]
+        ),
+        copy: bool = False,
+        on_missing: str = "raise",
+    ) -> model.Model | list[model.Model]:
+        if isinstance(obj, list):
+            return [self._get_obj(model_class, x) for x in obj]
+        if model_class not in self.db:
+            self.db[model_class] = {}
+        table = self.db[model_class]
+        key = self._get_obj_key(table, model_class, obj, on_missing)
+        if model_class == model.Case:
+            if not isinstance(key, datetime.datetime):
+                key = self._convert_case_code_to_date(key)
+        if model_class == model.CaseDataCollectionLink:
+            dc_id = key[0]
+            case_id = key[1]
+
+            case_data_collection_links = self.read_all(
+                "root1_1", model.CaseDataCollectionLink, cascade=True
+            )
+            good_case_data_collection_links_list = []
+            for y in case_data_collection_links:
+                if y.case_id == case_id and y.data_collection_id == dc_id:
+                    good_case_data_collection_links_list.append(y)
+
+            if not good_case_data_collection_links_list:
+                return None
+
+            assert (
+                len(good_case_data_collection_links_list) == 1
+            ), "currently designed for one at a time"
+            if copy:
+                return table[key].model_copy()
+            return table[key]
+
+        if key not in table:
+            if on_missing == "raise":
+                raise ValueError(f"{model_class.__name__} {obj} not found")
+            elif on_missing == "return_none":
+                return None
+            else:
+                raise NotImplementedError()
+        return table[key] if not copy else table[key].model_copy()
+
     def handle(
         self,
         cmd: Command,
@@ -280,6 +333,9 @@ class TestClient:
         self,
         user_or_str: str | model.User,
         name: str,
+        created_at: datetime.datetime | None = None,
+        modified_at: datetime.datetime | None = None,
+        modified_by: UUID | None = None,
     ) -> model.DataCollection:
         user: model.User = self._get_obj(
             self.user_class, user_or_str
@@ -290,6 +346,9 @@ class TestClient:
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.DataCollection(
                     name=name,
+                    created_at=created_at,
+                    modified_at=modified_at,
+                    modified_by=modified_by,
                 ),
             )
         )
@@ -467,8 +526,13 @@ class TestClient:
             )
         )
         updated_tgt_user.name = tgt_user.name
+        is_privileged = bool(user.roles & self.role_set_map[enum.RoleSet.ROOT])
         TestClient._verify_updated_obj(
-            tgt_user, updated_tgt_user, user.id, verify_modified=has_updates
+            tgt_user,
+            updated_tgt_user,
+            user.id,
+            verify_modified=has_updates,
+            is_privileged=is_privileged,
         )
         return self._set_obj(updated_tgt_user, update=True)  # type: ignore[return-value]
 
@@ -681,7 +745,10 @@ class TestClient:
             )
         )
         assert user.id
-        TestClient._verify_updated_obj(obj, updated_obj, user.id)
+        is_privileged = bool(user.roles & self.role_set_map[enum.RoleSet.ROOT])
+        TestClient._verify_updated_obj(
+            obj, updated_obj, user.id, is_privileged=is_privileged
+        )
         return self._set_obj(updated_obj, update=True)
 
     def delete_object(
@@ -1089,23 +1156,29 @@ class TestClient:
     def _verify_updated_obj(
         in_obj: model.Model, out_obj: model.Model, user_id: UUID, **kwargs: Any
     ) -> None:
-        # TODO: verifying modified_by and modified_at is no longer possible here as the
-        # persistence metadata no longer exists in the object. This should instead
-        # be tested through unit tests on the repository in question.
-        # verify_modified = kwargs.get("verify_modified", True)
-        # if verify_modified and out_obj._modified_by != user_id:
-        #     raise ValueError(f"_modified_by not updated: {out_obj._modified_by}")
-        # if verify_modified and out_obj._modified_at <= in_obj._modified_at:
-        #     raise ValueError(f"modified_at not updated: {out_obj._modified_at}")
-        # if (
-        #     out_obj.model_copy(
-        #         update={
-        #             "_modified_by": in_obj._modified_by,
-        #             "_modified_at": in_obj._modified_at,
-        #         }
-        #     )
-        #     != in_obj
-        # ):
-        #     raise ValueError(f"Object not updated: {in_obj}, {out_obj}")
-        if out_obj != in_obj:
+        is_privileged: bool = kwargs.get("is_privileged", False)
+        verify_modified: bool = kwargs.get("verify_modified", True)
+
+        if in_obj.created_at and out_obj.created_at != in_obj.created_at:
+            raise ValueError(f"created_at should not be updated: {out_obj.created_at}")
+        if not out_obj.created_at:
+            raise ValueError(f"created_at should be set: {out_obj.created_at}")
+        if verify_modified and not is_privileged:
+            if in_obj.modified_at and out_obj.modified_at < in_obj.modified_at:
+                raise ValueError(
+                    f"modified_at should be larger : {out_obj.modified_at}"
+                )
+            if out_obj.modified_by != user_id:
+                raise ValueError(
+                    f"modified_by should be updated: {out_obj.modified_by}"
+                )
+
+        out_obj_dict = out_obj.model_dump(
+            exclude={"created_at", "modified_at", "modified_by"}
+        )
+        in_obj_dict = in_obj.model_dump(
+            exclude={"created_at", "modified_at", "modified_by"}
+        )
+
+        if out_obj_dict != in_obj_dict:
             raise ValueError(f"Object not updated: {in_obj}, {out_obj}")

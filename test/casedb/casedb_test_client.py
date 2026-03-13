@@ -23,6 +23,13 @@ from gen_epix.filter import FilterType, TypedEqualsUuidFilter, TypedUuidSetFilte
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.util import map_paired_elements
 
+# TODO 2953: Still defaults in the test client
+# because of many existing tests relying on that (for CaseType)
+# but we should move towards explicitly setting these in the test setup
+#  and then remove these defaults from the test client.
+DEFAULT_CREATED_AT = datetime(2023, 1, 1, tzinfo=UTC)
+DEFAULT_MODIFIED_AT = datetime(2023, 6, 1, tzinfo=UTC)
+
 
 class OrganismType(enum.Enum):
     ORGANISM = "ORGANISM"
@@ -601,12 +608,8 @@ class CasedbTestClient(TestClient):
                     # because the root user creates all these objects in the setup phase,
                     # and we want to have filled created_at and modified_at values, since the metadata policy only sets these for non-root users.
                     # This allows us to test the metadata policy in the test cases, while still having created_at and modified_at values set for the case types.
-                    created_at=(
-                        created_at if created_at else self.get_fixed_created_at()
-                    ),
-                    modified_at=(
-                        modified_at if modified_at else self.get_fixed_modified_at()
-                    ),
+                    created_at=(created_at if created_at else DEFAULT_CREATED_AT),
+                    modified_at=(modified_at if modified_at else DEFAULT_MODIFIED_AT),
                     modified_by=(modified_by if modified_by else user.id),
                     name=case_type_or_str,
                     disease_id=(
@@ -1212,9 +1215,9 @@ class CasedbTestClient(TestClient):
                                 case_type_id=case_type.id,
                                 created_in_data_collection_id=created_in_data_collection_id,
                                 content=content,
-                                created_at=(created_at if created_at else self.get_fixed_created_at()),
-                                modified_at=(modified_at if modified_at else self.get_fixed_modified_at()),
-                                modified_by=(modified_by if modified_by else root_user.id),
+                                created_at=created_at,
+                                modified_at=modified_at,
+                                modified_by=modified_by,
                             ),
                         )
                     ]
@@ -2211,58 +2214,7 @@ class CasedbTestClient(TestClient):
                 f"{TestClient._convert_case_date_to_code(x.case_date)}: {curr_content}; {curr_data_collections} ({x.id})"
             )
 
-    def _get_obj(
-        self,
-        model_class: type[model.Model],
-        obj: (
-            str
-            | UUID
-            | model.Model
-            | list[str | UUID | model.Model]
-            | tuple[UUID, UUID]
-        ),
-        copy: bool = False,
-        on_missing: str = "raise",
-    ) -> model.Model | list[model.Model]:
-        if isinstance(obj, list):
-            return [self._get_obj(model_class, x) for x in obj]
-        if model_class not in self.db:
-            self.db[model_class] = {}
-        table = self.db[model_class]
-        key = self._get_obj_key(table, model_class, obj, on_missing)
-        if model_class == model.Case:
-            if not isinstance(key, datetime.datetime):
-                key = self._convert_case_code_to_date(key)
-        if model_class == model.CaseDataCollectionLink:
-            dc_id = key[0]
-            case_id = key[1]
-
-            case_data_collection_links = self.read_all(
-                "root1_1", model.CaseDataCollectionLink, cascade=True
-            )
-            good_case_data_collection_links_list = []
-            for y in case_data_collection_links:
-                if y.case_id == case_id and y.data_collection_id == dc_id:
-                    good_case_data_collection_links_list.append(y)
-
-            if not good_case_data_collection_links_list:
-                return None
-
-            assert (
-                len(good_case_data_collection_links_list) == 1
-            ), "currently designed for one at a time"
-            if copy:
-                return table[key].model_copy()
-            return table[key]
-
-        if key not in table:
-            if on_missing == "raise":
-                raise ValueError(f"{model_class.__name__} {obj} not found")
-            elif on_missing == "return_none":
-                return None
-            else:
-                raise NotImplementedError()
-        return table[key] if not copy else table[key].model_copy()
+    # TODO 2953: we moved _get_obj to the parent class. Is that OK?
 
     @staticmethod
     def _convert_case_code_to_date(code: str) -> datetime:

@@ -1,3 +1,4 @@
+import datetime
 from test.test_client.enum import TestType
 
 # Variables for debugging purposes
@@ -103,3 +104,6 @@ USER_NAME_ROOTS = {
     "org_user",
     "guest",
 }
+
+DEFAULT_CREATED_AT = datetime.datetime(2023, 1, 1, tzinfo=datetime.timezone.utc)
+DEFAULT_MODIFIED_AT = datetime.datetime(2023, 6, 1, tzinfo=datetime.timezone.utc)

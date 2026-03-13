@@ -3,10 +3,11 @@ Unit tests for SetModelProcessMetadataPolicy and MaskModelProcessMetadataPolicy.
 
 SetModelProcessMetadataPolicy (BEFORE):
 - Calls set_created on ModelNoId objects for CREATE/UPSERT operations.
-- Calls set_modified on ModelNoId objects for UPDATE operations.
+- Calls set_modified on ModelNoId objects for UPDATE operations; also backfills
+  created_at if it is None (handles objects whose creation bypassed BEFORE policies).
 - Skips non-ModelNoId objects.
 - Skips READ/DELETE operations.
-- Skips when user is None or has a privileged role.
+- Skips when user is None or has a privileged role (ROOT only).
 - Always returns True.
 
 MaskModelProcessMetadataPolicy (AFTER):
@@ -23,7 +24,7 @@ TODO: the masking should only be done on objects from casedb, not omopdb and seq
 
 """
 
-from datetime import datetime
+from test.commondb.unit.conftest import DEFAULT_CREATED_AT, DEFAULT_MODIFIED_AT
 from unittest import TestCase
 from uuid import uuid4
 
@@ -39,7 +40,11 @@ from gen_epix.commondb.policies.model_metadata_policy import (
 )
 from gen_epix.fastapp.enum import CrudOperation
 
-_PRIVILEGED_ROLES: frozenset[str] = frozenset({Role.APP_ADMIN.value, Role.ROOT.value})
+# _PRIVILEGED_ROLES: frozenset[str] = frozenset({Role.APP_ADMIN.value, Role.ROOT.value})
+_PRIVILEGED_ROLES_READ: frozenset[str] = frozenset(
+    {Role.APP_ADMIN.value, Role.ROOT.value}
+)
+_PRIVILEGED_ROLES_CREATE_UPDATE: frozenset[str] = frozenset({Role.ROOT.value})
 
 
 def _make_user(roles: set[str]) -> User:
@@ -72,7 +77,7 @@ def _make_cmd(
 class TestSetModelProcessMetadataPolicy(TestCase):
 
     def setUp(self) -> None:
-        self.policy = SetModelProcessMetadataPolicy(_PRIVILEGED_ROLES)
+        self.policy = SetModelProcessMetadataPolicy(_PRIVILEGED_ROLES_CREATE_UPDATE)
         self.regular_user = _make_user({Role.ORG_USER.value})
         self.admin_user = _make_user({Role.APP_ADMIN.value})
 
@@ -126,7 +131,16 @@ class TestSetModelProcessMetadataPolicy(TestCase):
 
         assert obj.modified_at is not None
         assert obj.modified_by == self.regular_user.id
-        assert obj.created_at is None  # set_modified does not touch created_at
+        # created_at was None → backfilled to match modified_at
+        assert obj.created_at == obj.modified_at
+
+    def test_update_one_preserves_existing_created_at(self) -> None:
+        obj = ModelNoId(created_at=DEFAULT_CREATED_AT)
+        cmd = _make_cmd(self.regular_user, CrudOperation.UPDATE_ONE, obj)
+        self.policy.is_allowed(cmd)
+
+        # created_at was already set → must not be overwritten
+        assert obj.created_at == DEFAULT_CREATED_AT
 
     def test_update_some_calls_set_modified_on_each(self) -> None:
         objs = [ModelNoId(), ModelNoId()]
@@ -156,14 +170,27 @@ class TestSetModelProcessMetadataPolicy(TestCase):
 
     # --- Privileged users bypass ---
 
-    def test_app_admin_bypasses_set_created(self) -> None:
+    def test_app_admin_does_not_bypasses_set_created(self) -> None:
         obj = ModelNoId()
+
+        obj.created_at = DEFAULT_CREATED_AT
         cmd = _make_cmd(self.admin_user, CrudOperation.CREATE_ONE, obj)
         self.policy.is_allowed(cmd)
 
-        assert obj.created_at is None  # not set
+        assert obj.created_at != DEFAULT_CREATED_AT  # not overwritten
 
     # --- No user bypasses ---
+
+    """
+    The if not cmd.user guard in SetModelProcessMetadataPolicy and MaskModelProcessMetadataPolicy 
+    is a safety check: if there's no user, there's no user.id to set as modified_by, 
+    and no roles to check — so the policy skips rather than crashing.
+    Whether this is a realistic scenario for the current codebase is a valid question. 
+    If commands always have a user by the time they reach the policies, 
+    the guard is defensive dead code. 
+    The test exists because the guard exists, but if you remove the guard, the test goes away too. 
+    What does your system actually do — are there commands dispatched without a user?
+    """
 
     def test_none_user_bypasses_mutation(self) -> None:
         obj = ModelNoId()
@@ -181,26 +208,28 @@ class TestSetModelProcessMetadataPolicy(TestCase):
         result = self.policy.is_allowed(cmd)
         assert result is True
 
-    # --- Already-set fields are preserved (set_created is a no-op) ---
+    # --- Pre-set fields are overwritten for non-privileged users ---
 
-    def test_set_created_not_called_again_when_already_set(self) -> None:
+    def test_pre_set_metadata_is_overwritten_for_regular_user(self) -> None:
         from datetime import UTC
 
-        fixed_ts = datetime(2020, 1, 1, tzinfo=UTC)
-        obj = ModelNoId(created_at=fixed_ts, modified_at=fixed_ts, modified_by=uuid4())
-        original_modified_by = obj.modified_by
+        fixed_ts = DEFAULT_CREATED_AT
+        original_modified_by = uuid4()
+        obj = ModelNoId(
+            created_at=fixed_ts, modified_at=fixed_ts, modified_by=original_modified_by
+        )
         cmd = _make_cmd(self.regular_user, CrudOperation.CREATE_ONE, obj)
         self.policy.is_allowed(cmd)
 
-        assert obj.created_at == fixed_ts
-        assert obj.modified_by == original_modified_by  # unchanged
+        assert obj.created_at != fixed_ts  # overwritten with current time
+        assert obj.modified_by == self.regular_user.id  # overwritten with actual user
 
 
 @pytest.mark.scenario_ids("TC-SEC-META-02")
 class TestMaskModelProcessMetadataPolicy(TestCase):
 
     def setUp(self) -> None:
-        self.policy = MaskModelProcessMetadataPolicy(_PRIVILEGED_ROLES)
+        self.policy = MaskModelProcessMetadataPolicy(_PRIVILEGED_ROLES_READ)
         self.regular_user = _make_user({Role.ORG_USER.value})
         self.admin_user = _make_user({Role.APP_ADMIN.value})
         self.root_user = _make_user({Role.ROOT.value})
@@ -209,8 +238,8 @@ class TestMaskModelProcessMetadataPolicy(TestCase):
         from datetime import UTC
 
         return ModelNoId(
-            created_at=datetime(2020, 1, 1, tzinfo=UTC),
-            modified_at=datetime(2020, 6, 1, tzinfo=UTC),
+            created_at=DEFAULT_CREATED_AT,
+            modified_at=DEFAULT_MODIFIED_AT,
             modified_by=uuid4(),
         )
 
