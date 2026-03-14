@@ -15,7 +15,6 @@ class ServiceType(Enum):
     GEO = "GEO"
     ONTOLOGY = "ONTOLOGY"
     SEQDB = "SEQDB"
-    SUBJECT = "SUBJECT"
     CASE = "CASE"
 
 

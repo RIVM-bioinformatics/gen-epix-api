@@ -339,7 +339,7 @@ class RetrieveAssemblyProtocolsCommand(Command):
 
 
 class CaseCrudCommand(CrudCommand):
-    """Manage cases (list/get/create/update/delete) with typed content tied to a CaseType, subject, and data collection."""
+    """Manage cases (list/get/create/update/delete) with typed content tied to a CaseType and data collection."""
 
     MODEL_CLASS: ClassVar = model.Case
 

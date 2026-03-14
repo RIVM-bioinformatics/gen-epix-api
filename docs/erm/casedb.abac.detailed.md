@@ -7,7 +7,7 @@ erDiagram
     %% casedb / ABAC (detailed)
 
     %% Entity definitions
-    OrganizationAccessCasePolicy {
+    UserAccessCasePolicy {
         UUID id PK
         UUID data_collection_id FK
         UUID case_type_set_id FK
@@ -16,8 +16,7 @@ erDiagram
         bool remove_case
         bool add_case_set
         bool remove_case_set
-        UUID organization_id FK
-        bool is_private
+        UUID user_id FK
         UUID read_col_set_id FK
         UUID write_col_set_id FK
         bool read_case_set
@@ -50,7 +49,7 @@ erDiagram
         UUID from_data_collection_id FK
     }
 
-    UserAccessCasePolicy {
+    OrganizationAccessCasePolicy {
         UUID id PK
         UUID data_collection_id FK
         UUID case_type_set_id FK
@@ -59,7 +58,8 @@ erDiagram
         bool remove_case
         bool add_case_set
         bool remove_case_set
-        UUID user_id FK
+        UUID organization_id FK
+        bool is_private
         UUID read_col_set_id FK
         UUID write_col_set_id FK
         bool read_case_set

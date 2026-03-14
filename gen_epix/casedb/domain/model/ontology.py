@@ -2,10 +2,11 @@
 # This module defines base classes, methods are added later
 
 
+import json
 from typing import Any, ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_serializer, field_validator, model_validator
 
 from gen_epix.casedb.domain import enum
 from gen_epix.commondb.domain.model.base import Model
@@ -96,9 +97,22 @@ class Concept(Model):
         default=None,
         description="The rank of the concept within the set. Must be provided for ordinal sets, for other sets it is optional and can be used for sorting.",
     )
-    props: dict[str, Any] = Field(
-        default_factory=dict, description="Additional properties of the concept."
+    props: dict[str, Any] | None = Field(
+        default=None, description="Additional properties of the concept."
     )
+
+    @field_validator("props", mode="before")
+    def _validate_props(cls, value: dict[str, Any]) -> dict[str, Any]:
+        if isinstance(value, str):
+            # Assume json
+            return json.loads(value)
+        return value
+
+    @field_serializer("props", mode="plain")
+    def _serialize_props(self, value: dict[str, Any] | None) -> str | None:
+        if value is None:
+            return None
+        return json.dumps(value)
 
 
 class ConceptRelation(Model):

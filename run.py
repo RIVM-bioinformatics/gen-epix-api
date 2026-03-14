@@ -49,7 +49,6 @@ class Run:
                 "geo",
                 "ontology",
                 "organization",
-                "subject",
                 "case",
                 "abac",
                 "system",

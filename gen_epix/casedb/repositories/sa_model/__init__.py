@@ -61,10 +61,6 @@ from gen_epix.casedb.repositories.sa_model.ontology import (
     EtiologicalAgent as EtiologicalAgent,
 )
 from gen_epix.casedb.repositories.sa_model.ontology import Etiology as Etiology
-from gen_epix.casedb.repositories.sa_model.subject import Subject as Subject
-from gen_epix.casedb.repositories.sa_model.subject import (
-    SubjectIdentifier as SubjectIdentifier,
-)
 from gen_epix.commondb.repositories.sa_model import Contact as Contact
 from gen_epix.commondb.repositories.sa_model import DataCollection as DataCollection
 from gen_epix.commondb.repositories.sa_model import (
@@ -133,10 +129,6 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.Disease: Disease,
         model.EtiologicalAgent: EtiologicalAgent,
         model.Etiology: Etiology,
-    },
-    enum.ServiceType.SUBJECT: {
-        model.Subject: Subject,
-        model.SubjectIdentifier: SubjectIdentifier,
     },
     enum.ServiceType.CASE: {
         model.Case: Case,

@@ -116,8 +116,9 @@ erDiagram
 
     Organization {
         UUID id PK
+        string code
         string name
-        string legal_entity_code
+        string description
     }
 
     OrganizationSet {
