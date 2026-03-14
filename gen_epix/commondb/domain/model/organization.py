@@ -484,6 +484,7 @@ class BaseIdentifier(Model):
         return self
 
     @field_validator("external_id", mode="after")
+    @classmethod
     def _strip_external_id(cls, value: str) -> str:
         return value.strip()
 

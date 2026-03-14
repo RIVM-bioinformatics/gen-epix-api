@@ -54,6 +54,13 @@ class ConceptSet(Model):
         max_length=1000,
     )
 
+    @field_validator("type", mode="before")
+    @classmethod
+    def _validate_type(cls, value: Any) -> enum.ConceptSetType:
+        if isinstance(value, str):
+            return enum.ConceptSetType(value)
+        return value
+
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
         if self.type == enum.ConceptSetType.REGULAR_LANGUAGE:
@@ -72,6 +79,10 @@ class ConceptSet(Model):
                 "Only one of schema_definition or schema_uri can be set"
             )
         return self
+
+    @field_serializer("type", mode="plain")
+    def _serialize_type(self, value: enum.ConceptSetType) -> str:
+        return value.value
 
 
 class Concept(Model):
@@ -102,6 +113,7 @@ class Concept(Model):
     )
 
     @field_validator("props", mode="before")
+    @classmethod
     def _validate_props(cls, value: dict[str, Any]) -> dict[str, Any]:
         if isinstance(value, str):
             # Assume json
@@ -141,6 +153,19 @@ class ConceptRelation(Model):
     relation: enum.ConceptRelationType = Field(
         description="The relation between the two concepts."
     )
+
+    @field_validator("relation")
+    @classmethod
+    def _validate_relation(
+        cls, value: enum.ConceptRelationType | str
+    ) -> enum.ConceptRelationType:
+        if isinstance(value, str):
+            value = enum.ConceptRelationType(value)
+        return value
+
+    @field_serializer("relation", mode="plain")
+    def _serialize_relation(self, value: enum.ConceptRelationType) -> str:
+        return value.value
 
 
 class Disease(Model):
