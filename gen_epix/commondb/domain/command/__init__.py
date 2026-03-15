@@ -144,6 +144,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[type[fastapp.Command]
     enum.ServiceType.SYSTEM: frozenset(
         {
             OutageCrudCommand,
+            RetrieveFeatureFlagsCommand,
             RetrieveOutagesCommand,
             RetrieveLicensesCommand,
         }

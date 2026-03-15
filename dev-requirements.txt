@@ -1,7 +1,7 @@
 # code quality and testing extensions
 # typing_extensions==4.8.0 # do we need this?
 pandas==3.0.1
-polars==1.38.1
+polars==1.39.0
 xlsxwriter==3.2.9
 pytest
 pytest-gremlins

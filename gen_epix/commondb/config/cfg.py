@@ -6,7 +6,6 @@ import importlib
 import logging
 import logging.config as logging_config
 import os
-from collections.abc import Hashable
 from enum import Enum
 from locale import getpreferredencoding
 from pathlib import Path
@@ -16,15 +15,15 @@ from dynaconf import Dynaconf
 
 from gen_epix.commondb.config.factory import IdFactory, TimestampFactory
 from gen_epix.commondb.config.settings_manager import SettingsManager
-from gen_epix.fastapp import App, exc
+from gen_epix.fastapp import App
 
-_PINNED_THIRD_PARTY_LOGGERS = {
+_THIRD_PARTY_LOGGER_NAMES = {
     "sqlalchemy.engine",
     "sqlalchemy.pool",
     "httpx",
     "asyncio",
 }
-_PINNED_LOCAL_LOGGER_SUFFIXES = {
+_OWN_LOGGER_SUFFIXES = {
     "setup",
     "service",
     "app",
@@ -53,7 +52,6 @@ class BaseAppCfg(abc.ABC):
         self._api_logger: logging.Logger
         self._app_logger: logging.Logger
         self._service_logger: logging.Logger
-        self._feature_flags: dict[Hashable, bool]
 
     @property
     def name(self) -> str:
@@ -96,10 +94,6 @@ class BaseAppCfg(abc.ABC):
     @property
     def service_logger(self) -> logging.Logger:
         return self._service_logger
-
-    @property
-    def feature_flags(self) -> dict[Hashable, bool]:
-        return self._feature_flags
 
     @abc.abstractmethod
     def copy_repository_files(
@@ -144,7 +138,6 @@ class AppCfg(BaseAppCfg):
         envvar_prefix: str | None = None,
         log_config_file_envvar: str = "LOG_CONFIG_FILE",
         log_level_envvar: str = "LOG_LEVEL",
-        feature_flags: dict[Hashable, bool] | None = None,
     ):
         """Initialize application configuration.
 
@@ -160,7 +153,6 @@ class AppCfg(BaseAppCfg):
             logging_config_file_envvar: Environment variable for logging config file
             idps_config_file_envvar: Environment variable for identity provider config
             logging_level_from_secret_envvar: Environment variable to control log level from secrets
-            feature_flags: Optional dictionary of feature flags
         """
         # Parse input
         if isinstance(app_name_or_enum, Enum):
@@ -179,7 +171,6 @@ class AppCfg(BaseAppCfg):
         self._log_setup = log_setup
         self._log_level_envvar = log_level_envvar
         self._setup_logger_level = setup_logger_level
-        self._feature_flags = feature_flags or {}
 
         # Configure and set loggers
         self._init_configure_loggers()
@@ -194,7 +185,6 @@ class AppCfg(BaseAppCfg):
         # Load settings
         self._init_load_settings()
         self.set_log_level()
-        self._init_feature_flags()
         if self._log_setup:
             self.setup_logger.info(
                 App.create_static_log_message(
@@ -242,26 +232,6 @@ class AppCfg(BaseAppCfg):
 
         settings_manager = SettingsManager(prefix=self._envvar_prefix)
         self._cfg = settings_manager.load_settings()
-
-    def _init_feature_flags(self) -> None:
-        """Load and validate feature flags from settings."""
-        try:
-            feature_flags = self._cfg["feature_flags"]
-        except (KeyError, TypeError, AttributeError):
-            return
-
-        if not isinstance(feature_flags, dict):
-            return
-
-        converted_feature_flags: dict[str, bool] = {}
-        for key, value in feature_flags.items():
-            if isinstance(value, str) and len(value) != 1:
-                raise exc.InitializationServiceError(
-                    f"Invalid value for feature flag '{key}', expected boolean or string of length 1"
-                )
-            converted_feature_flags[key] = bool(int(value))
-
-        self._feature_flags = converted_feature_flags
 
     def _init_validate_settings(self) -> None:
         """Validate settings and apply defaults to all services and repositories."""
@@ -487,10 +457,9 @@ class AppCfg(BaseAppCfg):
             self._cfg["log"]["level"] = resolved_level
         self._set_known_handlers_to_notset()
         self._setup_logger.setLevel(resolved_level)
-        pinned_logger_names = set(_PINNED_THIRD_PARTY_LOGGERS)
-        pinned_logger_names.update(
-            AppCfg._prefix_logger(self._logger_prefix, x)
-            for x in _PINNED_LOCAL_LOGGER_SUFFIXES
+        logger_names = set(_THIRD_PARTY_LOGGER_NAMES)
+        logger_names.update(
+            AppCfg._prefix_logger(self._logger_prefix, x) for x in _OWN_LOGGER_SUFFIXES
         )
         for logger_name, logger_cfg in self._logging_config_yaml["loggers"].items():
             assert isinstance(logger_cfg, dict)
@@ -502,15 +471,16 @@ class AppCfg(BaseAppCfg):
                         f"Updated logger {logger_name} with level {resolved_level}",
                     )
                 )
+            # If the logger is in the config, use its level if specified, otherwise use the resolved level. If the logger is not in the config, use the resolved level.
             effective_level = resolved_level
-            if logger_name in pinned_logger_names:
+            if logger_name in logger_names:
                 effective_level = logger_cfg.get("level", resolved_level)
             curr_logger.setLevel(effective_level)
 
         # Keep runtime child loggers of pinned third-party namespaces pinned as well.
         runtime_logger_names = sorted(logging.root.manager.loggerDict.keys())
         for runtime_logger_name in runtime_logger_names:
-            for pinned_logger_name in _PINNED_THIRD_PARTY_LOGGERS:
+            for pinned_logger_name in _THIRD_PARTY_LOGGER_NAMES:
                 if not _is_descendant_logger(runtime_logger_name, pinned_logger_name):
                     continue
                 pinned_level = (

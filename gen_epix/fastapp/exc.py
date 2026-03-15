@@ -131,7 +131,7 @@ class AuthException(ServiceException):
     pass
 
 
-class FeatureDisabledError(ServiceException):
+class FeatureDisabledServiceError(ServiceException):
     def __init__(
         self, message: str | None = None, http_props: dict[str, Any] | None = None
     ):

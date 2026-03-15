@@ -76,6 +76,7 @@ class InviteUserCommand(Command):
     key: str | None = copy_model_field(model.UserInvitation, "key")
     email: str | None = copy_model_field(model.UserInvitation, "email")
     name: str | None = copy_model_field(model.UserInvitation, "name")
+    description: str | None = copy_model_field(model.UserInvitation, "description")
     roles: set[str] = copy_model_field(model.UserInvitation, "roles")
     organization_id: UUID = copy_model_field(model.UserInvitation, "organization_id")
 

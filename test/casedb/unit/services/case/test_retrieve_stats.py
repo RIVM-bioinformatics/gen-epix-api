@@ -78,7 +78,6 @@ class BaseRetrieveStatsTestCase(TestCase):
             id=case_id or uuid4(),
             code=None,
             case_type_id=case_type_id,
-            subject_id=None,
             created_in_data_collection_id=created_in_data_collection_id,
             count=count,
             case_date=case_date or datetime.now(timezone.utc),

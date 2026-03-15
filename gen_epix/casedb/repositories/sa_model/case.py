@@ -367,9 +367,6 @@ class Case(Base, RowMetadataMixin):
     case_type_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.Case, "case_type_id"
     )
-    subject_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Case, "subject_id"
-    )
     created_in_data_collection_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Case, "created_in_data_collection_id"
     )

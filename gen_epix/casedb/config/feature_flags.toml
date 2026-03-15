@@ -1,3 +1,2 @@
 [feature_flags]
-auto_create_new_users = true
-update_own_organization = true
+update_own_organization = false
