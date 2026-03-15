@@ -214,6 +214,22 @@ def test_sensitive_auth_fields_are_redacted_in_plain_message() -> None:
     assert "jwt=[REDACTED]" in payload["message"]
 
 
+def test_sensitive_bearer_authorization_is_fully_redacted_in_plain_message() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(
+        msg="auth header authorization=Bearer abc.def.ghi token=tok-123"
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    serialized = json.dumps(payload)
+    assert "abc.def.ghi" not in serialized
+    assert "tok-123" not in serialized
+    assert payload["message"] == (
+        "auth header authorization=[REDACTED] token=[REDACTED]"
+    )
+
+
 def test_sensitive_value_is_redacted_in_string_extras() -> None:
     formatter = JsonFormatter()
     record = _make_record(
