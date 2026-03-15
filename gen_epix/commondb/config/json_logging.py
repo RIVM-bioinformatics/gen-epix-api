@@ -26,6 +26,12 @@ Fix index:
      `msg` or falling back to `event.<code>` when `msg` is null.
   9. Operational aliases `app_id` and `command_id` are projected to top level
      from nested payload fields for reliable query ergonomics in ContainerLogV2.
+ 10. Structured service payloads are preserved under `service_meta` so the
+     configured top-level `service` label remains dashboard-stable.
+ 11. Auth-sensitive payloads such as `jwt`, `token`, `authorization`, and
+     `claims` are redacted in both merged JSON payloads and extras.
+ 12. Actor aliases `user_id` and `organization_id` are promoted from nested
+     command payloads when present.
 """
 
 import json
@@ -45,6 +51,13 @@ _DEFAULT_SENSITIVE_KEYS = (
     "client_pwd",
     "secret",
     "api_key",
+    "jwt",
+    "token",
+    "access_token",
+    "refresh_token",
+    "id_token",
+    "authorization",
+    "claims",
 )
 _DEFAULT_REDACTED_VALUE = "[REDACTED]"
 
@@ -314,6 +327,48 @@ class JsonFormatter(logging.Formatter):
         return str(command_id)
 
     @staticmethod
+    def _get_user_id(payload: dict[str, Any]) -> str | None:
+        command = payload.get("command")
+        if not isinstance(command, dict):
+            return None
+
+        user_id = command.get("user_id")
+        if user_id is not None:
+            return str(user_id)
+
+        command_object = command.get("object")
+        if not isinstance(command_object, dict):
+            return None
+
+        user = command_object.get("user")
+        if not isinstance(user, dict):
+            return None
+
+        user_id = user.get("id")
+        if user_id is None:
+            return None
+        return str(user_id)
+
+    @staticmethod
+    def _get_organization_id(payload: dict[str, Any]) -> str | None:
+        command = payload.get("command")
+        if not isinstance(command, dict):
+            return None
+
+        command_object = command.get("object")
+        if not isinstance(command_object, dict):
+            return None
+
+        user = command_object.get("user")
+        if not isinstance(user, dict):
+            return None
+
+        organization_id = user.get("organization_id")
+        if organization_id is None:
+            return None
+        return str(organization_id)
+
+    @staticmethod
     def _is_non_empty_string(value: Any) -> bool:
         return isinstance(value, str) and value.strip() != ""
 
@@ -339,6 +394,16 @@ class JsonFormatter(logging.Formatter):
             if command_id is not None:
                 payload["command_id"] = command_id
 
+        if "user_id" not in payload:
+            user_id = self._get_user_id(payload)
+            if user_id is not None:
+                payload["user_id"] = user_id
+
+        if "organization_id" not in payload:
+            organization_id = self._get_organization_id(payload)
+            if organization_id is not None:
+                payload["organization_id"] = organization_id
+
     def format(self, record: logging.LogRecord) -> str:
         base: dict[str, Any] = {
             "ts": _utc_iso(record.created),
@@ -363,6 +428,9 @@ class JsonFormatter(logging.Formatter):
             msg_obj = _safe_json_loads(message)
             if isinstance(msg_obj, dict):
                 msg_obj = self._redact_nested(msg_obj)
+                structured_service = None
+                if isinstance(msg_obj.get("service"), dict):
+                    structured_service = msg_obj.pop("service")
                 base.update(msg_obj)
                 # Fix 2 – re-enforce envelope fields so a merged payload can
                 # never silently override ts / level / logger.
@@ -373,6 +441,15 @@ class JsonFormatter(logging.Formatter):
                     base["service"] = self.service
                 if self.environment is not None:
                     base["environment"] = self.environment
+                if isinstance(structured_service, dict):
+                    existing_service_meta = base.get("service_meta")
+                    if isinstance(existing_service_meta, dict):
+                        base["service_meta"] = {
+                            **structured_service,
+                            **existing_service_meta,
+                        }
+                    else:
+                        base["service_meta"] = structured_service
                 # Fix 5 – normalise `content` → `message` when `message` is
                 # absent (eliminates the content/message split seen in monitoring query engines).
                 if "content" in base and "message" not in base:
