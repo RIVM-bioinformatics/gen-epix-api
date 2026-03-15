@@ -1,6 +1,6 @@
 # casedb — Simplified Entity-Relationship Diagram
 
-Auto-generated from domain model definitions.  Contains **51** persistable entities — relationships only, no field details.
+Auto-generated from domain model definitions.  Contains **49** persistable entities — relationships only, no field details.
 
 ```mermaid
 erDiagram
@@ -27,9 +27,6 @@ erDiagram
     RegionRelation }o--|| Region : "from_region_id"
     RegionRelation }o--|| Region : "to_region_id"
     RegionSetShape }o--|| RegionSet : "region_set_id"
-    Subject }o--|| DataCollection : "data_collection_id"
-    SubjectIdentifier }o--|| Subject : "subject_id"
-    SubjectIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
     TreeAlgorithm }o--|| TreeAlgorithmClass : "tree_algorithm_class_id"
     RefCol }o--|| RefDim : "ref_dim_id"
     RefCol }o--|| ConceptSet : "concept_set_id"
@@ -48,7 +45,6 @@ erDiagram
     ColSetMember }o--|| ColSet : "col_set_id"
     ColSetMember }o--|| Col : "col_id"
     Case }o--|| CaseType : "case_type_id"
-    Case }o--|| Subject : "subject_id"
     Case }o--|| DataCollection : "created_in_data_collection_id"
     CaseIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
     CaseIdentifier }o--|| Case : "internal_id"

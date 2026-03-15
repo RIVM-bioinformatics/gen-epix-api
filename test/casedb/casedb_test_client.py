@@ -1166,7 +1166,6 @@ class CasedbTestClient(TestClient):
                 cases=[
                     model.Case(
                         case_type_id=case_type.id,
-                        # subject_id=self.generate_id(),
                         created_in_data_collection_id=created_in_data_collection_id,
                         # case_date=self._convert_case_code_to_date(code),
                         code=code,
@@ -1702,7 +1701,7 @@ class CasedbTestClient(TestClient):
             updated_col_set_member, update=True
         )  # type: ignore[return-value]
 
-    def temp_update_user_own_organization(
+    def update_user_own_organization(
         self,
         user_or_str: str | model.User,
         organization_or_str: str | None = None,

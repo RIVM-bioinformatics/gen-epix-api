@@ -117,6 +117,7 @@ class App:
         id: str | None = None,
         name: str | None = None,
         timestamp_factory: Callable[[], datetime] = datetime.now,
+        feature_flags: dict[Hashable, bool] | None = None,
         **kwargs: Any,
     ):
         # Set input members
@@ -131,6 +132,7 @@ class App:
         self._logger = logger
         self._log_item_class = log_item_class
         self._timestamp_factory = timestamp_factory
+        self._feature_flags = feature_flags or {}
 
         # Initialize other members
         self._created_at = self.generate_timestamp()
@@ -207,11 +209,24 @@ class App:
     def log_item_class(self) -> type[BaseLogItem]:
         return self._log_item_class
 
+    @property
+    def feature_flags(self) -> dict[Hashable, bool]:
+        """Return a copy of the feature flags dict to prevent external mutation."""
+        return dict(self._feature_flags)
+
     def generate_id(self) -> Hashable:
         return self._id_factory()
 
     def generate_timestamp(self) -> datetime:
         return self._timestamp_factory()
+
+    def set_feature_flag(self, key: Hashable, value: bool) -> None:
+        if not isinstance(value, bool):
+            raise ValueError("Feature flag value must be a boolean")
+        self._feature_flags[key] = value
+
+    def get_feature_flag(self, key: Hashable, default: bool = False) -> bool:
+        return self._feature_flags.get(key, default)
 
     def register_command(
         self,

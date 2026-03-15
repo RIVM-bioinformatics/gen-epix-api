@@ -3,7 +3,6 @@ host = "0.0.0.0"
 port = 8010
 debug = false
 
-
 [api]
 default_route = "/openapi.json"
 gzip_response_minimum_size = 1024
@@ -51,12 +50,14 @@ enabled = true
 max_list_items = 10
 sample_items = 3
 
+[feature_flags]
+update_own_organization = false
 
 [service]
 
 [service.defaults]
 props.timestamp_factory = "DATETIME_NOW"
-props.id_factory = "ULID"
+props.id_factory = "UUID4"
 
 [service.abac]
 module = "gen_epix.commondb.services"
@@ -83,3 +84,4 @@ class_name = "SystemService"
 [repository]
 [repository.defaults]
 [repository.defaults.props]
+

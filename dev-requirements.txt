@@ -1,7 +1,7 @@
 # code quality and testing extensions
 # typing_extensions==4.8.0 # do we need this?
 pandas==3.0.1
-polars==1.38.1
+polars==1.39.0
 xlsxwriter==3.2.9
 pytest
 pytest-gremlins
@@ -22,6 +22,9 @@ coverage==7.13.4
 pandas-stubs==3.0.*
 openpyxl==3.1.*
 types-cachetools==6.2.*
+types-PyYAML==6.0.*
+types-setuptools==82.0.*
+types-python-dateutil==2.9.*
 
 # TODO: remove if run.py no longer uses it
 uvicorn==0.41.0

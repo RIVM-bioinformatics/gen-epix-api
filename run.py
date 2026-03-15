@@ -49,7 +49,6 @@ class Run:
                 "geo",
                 "ontology",
                 "organization",
-                "subject",
                 "case",
                 "abac",
                 "system",
@@ -384,6 +383,26 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/commondb/unit/auth/",
+            ]
+        )
+
+    def test_commondb_unit_config(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/commondb/unit/config/",
+            ]
+        )
+
+    def test_commondb_unit_logging(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/commondb/unit/logging/",
             ]
         )
 
@@ -839,7 +858,7 @@ class Run:
         )
         linter = Linter()
         linter.run_pylint(file=file, filter_on_codes=filter_on_codes)
-        file2.write_text(file.read_text())
+        file2.write_text(file.read_text(encoding="utf-8"), encoding="utf-8")
         for line in linter.parse_pylint_for_issue_lines(
             file, filter_on_codes=filter_on_codes
         ):
@@ -866,7 +885,7 @@ class Run:
         file2 = Path(__file__).parent / "test" / "output" / f"linter.{now_str}.mypy.txt"
         linter = Linter()
         linter.run_mypy(file=file, filter_on_codes=filter_on_codes)
-        file2.write_text(file.read_text())
+        file2.write_text(file.read_text(encoding="utf-8"), encoding="utf-8")
         for line in linter.parse_mypy_for_issue_lines(
             file, filter_on_codes=filter_on_codes
         ):

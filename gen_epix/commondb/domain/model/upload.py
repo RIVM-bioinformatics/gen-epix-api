@@ -43,6 +43,7 @@ class IdentifiersMixin:
     )
 
     @field_validator("identifiers", mode="after")
+    @classmethod
     def _validate_identifiers(
         cls, identifiers: list[IdentifierForUpload] | None
     ) -> list[IdentifierForUpload] | None:
@@ -308,6 +309,7 @@ class ParentForUpload(Model, IdentifiersMixin):
     )
 
     @field_validator("id", mode="before")
+    @classmethod
     def _validate_id_field(cls, id: UUID | None) -> UUID | None:
         """Validate the id field, converting NULL_ID to None."""
         if id == NULL_ID:

@@ -22,10 +22,11 @@ Missing settings files fail fast (`FileNotFoundError`). This makes misconfigurat
 | Category | Description |
 |----------|-------------|
 | `settings.toml` | Base config: host, port, HTTP headers, service class names, default factories |
+| `feature_flags.toml` | Feature flag configuration |
 | `settings.repository.dict.toml` / `settings.repository.sa.toml` | Swaps in Dict or SQLAlchemy repository classes per service type |
 | `.example.secrets.*` files | Connection strings, file paths, IdP tokens — never checked in; supplied per environment |
 
-(Source: `gen_epix/casedb/config/settings.toml#L1-L4`; Source: `gen_epix/casedb/config/settings.repository.dict.toml#L1-L27`)
+(Source: `gen_epix/casedb/config/settings.toml#L1-L4`; Source: `gen_epix/casedb/config/settings.repository.dict.toml#L1-L27`; Source: `gen_epix/casedb/config/feature_flags.toml#L1-L3`)
 
 ---
 
@@ -72,6 +73,7 @@ Local bootstrap is controlled by `run.py`, which orchestrates:
 3. Start uvicorn with reload enabled and optional TLS (if `cert/key.pem` and `cert/cert.pem` exist). (Source: `run.py#L82-L107`)
 
 Configuration load is then staged within the app:
+
 - `AppCfg` → logging config → settings loading → settings validation.
 - `AppComposer` → repositories + services + user dependencies + policies.
 - `create_fast_api` → middleware + routers under `/v1` + root redirect.
@@ -100,6 +102,7 @@ Local app host/port defaults are hard-coded in `Run.APP_URI` unless code/config 
 ## 6. Middleware Posture
 
 In non-debug mode, the API shell applies:
+
 - Rate limiting (10 req/s per bearer token, falling back to IP)
 - Gzip compression (≥ 1000 bytes at compression level 5)
 - Response header hardening (CSP, HSTS, X-Frame-Options, etc.)
@@ -150,6 +153,7 @@ COMMONDB__LOG__COMMAND_OBJECT_SUMMARIZATION__MAX_LIST_ITEMS=20
 ```
 
 The most operationally useful logs mark phase transitions or control points:
+
 - IDP initialization/retry (trust anchors available vs degraded)
 - User-verification warnings (auth dependency failures)
 - `NOT_AUTHORIZED` events (command policy denials)
@@ -188,6 +192,7 @@ Prepares environment context and transfers demo data from dict repositories into
 - `gen_epix/commondb/app_setup.py#L75-L126`
 - `gen_epix/commondb/domain/enum.py#L82-L113`
 - `gen_epix/casedb/config/settings.toml#L1-L4`
+- `gen_epix/casedb/config/feature_flags.toml#L1-L3`
 - `gen_epix/casedb/config/settings.repository.dict.toml#L1-L27`
 - `config/identity_providers.toml#L1-L34`
 - `config/mock_identity_provider.toml#L1-L16`

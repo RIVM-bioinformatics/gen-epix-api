@@ -17,13 +17,13 @@ from gen_epix.commondb.config.factory import IdFactory, TimestampFactory
 from gen_epix.commondb.config.settings_manager import SettingsManager
 from gen_epix.fastapp import App
 
-_PINNED_THIRD_PARTY_LOGGERS = {
+_THIRD_PARTY_LOGGER_NAMES = {
     "sqlalchemy.engine",
     "sqlalchemy.pool",
     "httpx",
     "asyncio",
 }
-_PINNED_LOCAL_LOGGER_SUFFIXES = {
+_OWN_LOGGER_SUFFIXES = {
     "setup",
     "service",
     "app",
@@ -457,10 +457,9 @@ class AppCfg(BaseAppCfg):
             self._cfg["log"]["level"] = resolved_level
         self._set_known_handlers_to_notset()
         self._setup_logger.setLevel(resolved_level)
-        pinned_logger_names = set(_PINNED_THIRD_PARTY_LOGGERS)
-        pinned_logger_names.update(
-            AppCfg._prefix_logger(self._logger_prefix, x)
-            for x in _PINNED_LOCAL_LOGGER_SUFFIXES
+        logger_names = set(_THIRD_PARTY_LOGGER_NAMES)
+        logger_names.update(
+            AppCfg._prefix_logger(self._logger_prefix, x) for x in _OWN_LOGGER_SUFFIXES
         )
         for logger_name, logger_cfg in self._logging_config_yaml["loggers"].items():
             assert isinstance(logger_cfg, dict)
@@ -472,15 +471,16 @@ class AppCfg(BaseAppCfg):
                         f"Updated logger {logger_name} with level {resolved_level}",
                     )
                 )
+            # If the logger is in the config, use its level if specified, otherwise use the resolved level. If the logger is not in the config, use the resolved level.
             effective_level = resolved_level
-            if logger_name in pinned_logger_names:
+            if logger_name in logger_names:
                 effective_level = logger_cfg.get("level", resolved_level)
             curr_logger.setLevel(effective_level)
 
         # Keep runtime child loggers of pinned third-party namespaces pinned as well.
         runtime_logger_names = sorted(logging.root.manager.loggerDict.keys())
         for runtime_logger_name in runtime_logger_names:
-            for pinned_logger_name in _PINNED_THIRD_PARTY_LOGGERS:
+            for pinned_logger_name in _THIRD_PARTY_LOGGER_NAMES:
                 if not _is_descendant_logger(runtime_logger_name, pinned_logger_name):
                     continue
                 pinned_level = (

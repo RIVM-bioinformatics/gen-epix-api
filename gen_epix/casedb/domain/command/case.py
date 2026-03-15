@@ -157,6 +157,7 @@ class RetrieveCasesByIdCommand(Command):
     )
 
     @field_validator("case_ids", mode="after")
+    @classmethod
     def _validate_case_ids(cls, value: list[UUID]) -> list[UUID]:
         if len(set(value)) < len(value):
             raise ValueError("Duplicate case ids")
@@ -176,6 +177,7 @@ class RetrieveCaseRightsCommand(Command):
     )
 
     @field_validator("case_ids", mode="after")
+    @classmethod
     def _validate_case_ids(cls, value: list[UUID]) -> list[UUID]:
         if len(set(value)) < len(value):
             raise ValueError("Duplicate case ids")
@@ -192,6 +194,7 @@ class RetrieveCaseSetRightsCommand(Command):
     )
 
     @field_validator("case_set_ids", mode="after")
+    @classmethod
     def _validate_case_set_ids(cls, value: list[UUID]) -> list[UUID]:
         if len(set(value)) < len(value):
             raise ValueError("Duplicate CaseSet IDs")
@@ -339,7 +342,7 @@ class RetrieveAssemblyProtocolsCommand(Command):
 
 
 class CaseCrudCommand(CrudCommand):
-    """Manage cases (list/get/create/update/delete) with typed content tied to a CaseType, subject, and data collection."""
+    """Manage cases (list/get/create/update/delete) with typed content tied to a CaseType and data collection."""
 
     MODEL_CLASS: ClassVar = model.Case
 

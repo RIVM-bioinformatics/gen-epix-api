@@ -24,10 +24,11 @@ Per app (`casedb`, `seqdb`, `omopdb`, `commondb`) there are two logging YAML var
 
 - `config/logging.yaml`: production/default baseline (root and app loggers at `INFO`).
 - `config/logging.debug.yaml`: debug variant with multiple `DEBUG` levels.
+- `config/feature_flags.yaml`: feature flag configuration.
 
 The default runtime bootstrap points to `logging.yaml`, not `logging.debug.yaml`.
 
-(Source: `gen_epix/casedb/config/logging.yaml#L1-L78`; Source: `gen_epix/seqdb/config/logging.yaml#L1-L78`; Source: `gen_epix/omopdb/config/logging.yaml#L1-L78`; Source: `gen_epix/commondb/config/logging.yaml#L1-L78`; Source: `gen_epix/commondb/domain/util.py#L118-L119`)
+(Source: `gen_epix/casedb/config/logging.yaml#L1-L78`; Source: `gen_epix/seqdb/config/logging.yaml#L1-L78`; Source: `gen_epix/omopdb/config/logging.yaml#L1-L78`; Source: `gen_epix/commondb/config/logging.yaml#L1-L78`; Source: `gen_epix/commondb/domain/util.py#L118-L119`; Source: `gen_epix/casedb/config/feature_flags.yaml#L1-L3`; Source: `gen_epix/seqdb/config/feature_flags.yaml#L1-L3`; Source: `gen_epix/omopdb/config/feature_flags.yaml#L1-L3`; Source: `gen_epix/commondb/config/feature_flags.yaml#L1-L3`)
 
 In each app `settings.toml`, the baseline setting is:
 
@@ -255,5 +256,9 @@ When observed log levels do not match expectation, verify in this order:
 - `gen_epix/seqdb/config/settings.toml#L46-L52`
 - `gen_epix/omopdb/config/settings.toml#L46-L52`
 - `gen_epix/commondb/config/settings.toml#L46-L52`
+- `gen_epix/casedb/config/feature_flags.toml#L1-L3`
+- `gen_epix/seqdb/config/feature_flags.toml#L1-L3`
+- `gen_epix/omopdb/config/feature_flags.toml#L1-L3`
+- `gen_epix/commondb/config/feature_flags.toml#L1-L3`
 - `test/commondb/unit/domain/test_logging_yaml.py#L1-L113`
 - `test/commondb/unit/domain/test_cfg_log_level.py#L22-L79`

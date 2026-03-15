@@ -117,7 +117,6 @@ class BaseRetrieveCaseTestCase(TestCase):
             id=case_id,
             code=None,
             case_type_id=self.case_type_id,
-            subject_id=None,
             created_in_data_collection_id=self.data_collection_id,
             count=None,
             case_date=case_date or datetime.now(timezone.utc),

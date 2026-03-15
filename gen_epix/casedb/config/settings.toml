@@ -95,10 +95,6 @@ class_name = "OntologyService"
 module = "gen_epix.casedb.services"
 class_name = "SeqdbService"
 
-[service.subject]
-module = "gen_epix.casedb.services"
-class_name = "SubjectService"
-
 
 [repository]
 [repository.defaults]
