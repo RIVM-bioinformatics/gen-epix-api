@@ -179,7 +179,6 @@ class Run:
             "test/omopdb/unit",
             "test/omopdb/integration",
             "test/general/docs",
-            "test/general/test_run_command_contract.py",
             "test/end_to_end",
             # Not normally included, uncomment if needed
             # "test/casedb/performance",
@@ -188,6 +187,7 @@ class Run:
             # "test/commondb/performance",
             # "test/fastapp/performance",
             # "test/general/code",
+            # "test/general/test_runner/test_run_command_contract.py",
         ]
 
         # Do not use check=True here: CI still wants coverage artifacts even when tests fail,
@@ -788,6 +788,16 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/general/code",
+            ]
+        )
+
+    def test_general_test_runner(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/general/test_runner",
             ]
         )
 

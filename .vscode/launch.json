@@ -978,6 +978,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.general.test_runner",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_general_test_runner"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.test_client.authorization_code_flow",
             "type": "debugpy",
             "request": "launch",
