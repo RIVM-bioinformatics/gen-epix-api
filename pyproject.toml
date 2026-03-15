@@ -64,7 +64,6 @@ line-length = 88
 target-version = ['py313']
 
 [tool.isort]
-skip_gitignore = true
 profile = "black"
 float_to_top = true
 line_length = 88
