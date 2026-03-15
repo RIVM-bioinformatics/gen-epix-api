@@ -49,7 +49,6 @@ class Run:
                 "geo",
                 "ontology",
                 "organization",
-                "subject",
                 "case",
                 "abac",
                 "system",
@@ -404,6 +403,26 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/commondb/unit/auth/",
+            ]
+        )
+
+    def test_commondb_unit_config(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/commondb/unit/config/",
+            ]
+        )
+
+    def test_commondb_unit_logging(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/commondb/unit/logging/",
             ]
         )
 

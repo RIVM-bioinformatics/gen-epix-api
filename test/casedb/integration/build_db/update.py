@@ -339,9 +339,7 @@ class TestUpdate:
             )
             if env.verbose:
                 print(f"User: {user_str} -> org1")
-            user = env.update_user_own_organization(
-                user, organization_or_str="org1"
-            )
+            user = env.update_user_own_organization(user, organization_or_str="org1")
             if not SKIP_RAISE:
                 if env.verbose:
                     print(f"User: {user_str} -> dummy")
@@ -352,9 +350,7 @@ class TestUpdate:
                         exc.InvalidLinkIdsError,
                     )
                 ):
-                    env.update_user_own_organization(
-                        user, set_dummy_organization=True
-                    )
+                    env.update_user_own_organization(user, set_dummy_organization=True)
 
     def test_update_dim(self, env: Env) -> None:
         env.create_ref_dim(ROOT, "dim99", enum.DimType.TEXT)

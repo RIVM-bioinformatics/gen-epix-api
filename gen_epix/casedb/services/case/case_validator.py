@@ -117,7 +117,7 @@ class CaseValidator:
         self.region_contained_in: dict[UUID, UUID] = {}
         # dict[region_id, region_object] - for looking up region details
         self.regions: dict[UUID, model.Region] = {}
-        # dict[lower(str(organization_id)|name|legal_entity_code), concept_id]
+        # dict[lower(str(organization_id)|name|code), concept_id]
         self.organization_value_map: dict[str, str] = {}
 
         self._init_metadata()
@@ -876,11 +876,7 @@ class CaseValidator:
         # Fill in organization value map
         self.organization_value_map = (
             {str(x.id).lower(): str(x.id) for x in organizations}
-            | {
-                x.legal_entity_code.lower(): str(x.id)
-                for x in organizations
-                if x.legal_entity_code
-            }
+            | {x.code.lower(): str(x.id) for x in organizations if x.code}
             | {x.name.lower(): str(x.id) for x in organizations if x.name}
         )
 

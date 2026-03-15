@@ -23,6 +23,7 @@ class PcrProtocol(Model, ProtocolMixin):
     )
 
     @field_validator("target_names", mode="before")
+    @classmethod
     def _validate_target_names(cls, value: list[str] | str) -> list[str]:
         if isinstance(value, str):
             return json.loads(value)
@@ -44,6 +45,7 @@ class AstProtocol(Model, ProtocolMixin):
     )
 
     @field_validator("antimicrobial_names", mode="before")
+    @classmethod
     def _validate_antimicrobial_names(cls, value: list[str] | str) -> list[str]:
         if isinstance(value, str):
             return json.loads(value)

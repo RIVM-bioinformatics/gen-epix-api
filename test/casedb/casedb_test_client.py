@@ -1166,7 +1166,6 @@ class CasedbTestClient(TestClient):
                 cases=[
                     model.Case(
                         case_type_id=case_type.id,
-                        # subject_id=self.generate_id(),
                         created_in_data_collection_id=created_in_data_collection_id,
                         # case_date=self._convert_case_code_to_date(code),
                         code=code,

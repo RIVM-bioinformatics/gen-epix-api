@@ -216,7 +216,9 @@ class AbacService(BaseAbacService):
           organization
         """
         if not self.app.get_feature_flag("update_own_organization"):
-            raise exc.FeatureDisabledError("Updating own organization is disabled")
+            raise exc.FeatureDisabledServiceError(
+                "Updating own organization is disabled"
+            )
 
         is_new_user = cmd.is_new_user
         tgt_organization_id = cmd.organization_id

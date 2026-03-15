@@ -73,8 +73,10 @@ def set_env_variables(
     settings_files: list[Path] = []
     # General settings
     settings_files.append(cfg_path / "settings.toml")
-    # Feature flags
-    settings_files.append(cfg_path / "feature_flags.toml")
+    # TODO: determine whether a separate file is necessary for feature flags or whether they can just be included in settings.toml, and if the latter, remove this and the corresponding env variable
+    # Feature flags (optional, as they can also be included in settings.toml, but can be useful to have them in a separate file for easier access and modification during development and testing)
+    file = cfg_path / "feature_flags.toml"
+    settings_files.append(file) if file.is_file() else None
     # Service secrets
     settings_files.append(cfg_path / ".example.secrets.service.toml")
     # Identity provider settings
