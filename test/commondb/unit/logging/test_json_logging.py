@@ -285,6 +285,21 @@ def test_sensitive_auth_keys_are_redacted_in_merged_json_and_extras() -> None:
     assert payload["props"]["payload"]["id_token"] == "[REDACTED]"
 
 
+def test_nested_claims_are_redacted_in_merged_json_payload() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(
+        msg='{"auth":{"claims":{"sub":"user-1","roles":["admin"]}},"event":"ok"}'
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    serialized = json.dumps(payload)
+    assert "user-1" not in serialized
+    assert "admin" not in serialized
+    assert payload["auth"]["claims"] == "[REDACTED]"
+    assert payload["event"] == "ok"
+
+
 def test_sensitive_keys_are_redacted_in_nested_extras() -> None:
     formatter = JsonFormatter()
     record = _make_record(

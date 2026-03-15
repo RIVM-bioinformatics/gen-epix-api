@@ -334,6 +334,9 @@ class JsonFormatter(logging.Formatter):
         if not isinstance(command, dict):
             return None
 
+        # Prefer the explicit command-level actor field when present; some log
+        # payloads only carry user context inside command.object.user, so keep
+        # that as a backwards-compatible fallback for queryable top-level aliases.
         user_id = command.get("user_id")
         if user_id is not None:
             return str(user_id)
