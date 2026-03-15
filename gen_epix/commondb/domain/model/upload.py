@@ -3,17 +3,13 @@ import uuid
 from typing import Callable, ClassVar, Self
 from uuid import UUID
 
-from pydantic import BaseModel
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, field_serializer, field_validator, model_validator
 
 from gen_epix.commondb.domain import enum
-from gen_epix.commondb.domain.enum import (
-    DataIssueTypeSet,
-    UploadStatus,
-    UploadStatusSet,
-)
+from gen_epix.commondb.domain.enum import DataIssueTypeSet, EtlStatus, UploadStatusSet
 from gen_epix.commondb.domain.literal import NULL_ID
+from gen_epix.commondb.domain.model.base import BaseEtlResult, EtlLogItem
 from gen_epix.commondb.domain.model.organization import (
     BaseIdentifier,
     IdentifierForUpload,
@@ -22,10 +18,9 @@ from gen_epix.fastapp import Model
 from gen_epix.fastapp.domain import Entity
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import LogLevel, LogLevelSet
-from gen_epix.fastapp.result import BaseResult, ResultLogItem
 
 # Backward-compatible alias: UploadLogItem is now ResultLogItem.
-UploadLogItem = ResultLogItem
+UploadLogItem = EtlLogItem
 
 
 class IdentifiersMixin:
@@ -104,7 +99,7 @@ class DataIssue(PydanticBaseModel):
     message: str | None = Field(description="The details of the data issue")
 
 
-class UploadResult(BaseResult, Model):
+class UploadResult(BaseEtlResult, Model):
     """
     Represents the result of an upload operation for a particular object, including
     upload status and logs.
@@ -120,8 +115,8 @@ class UploadResult(BaseResult, Model):
         default=None,
         description="The unique identifier for the specific object instance that this result pertains to, if applicable. E.g. the object that was created or updated as part of the upload.",
     )
-    status: UploadStatus = Field(
-        default=UploadStatus.PENDING,
+    status: EtlStatus = Field(
+        default=EtlStatus.PENDING,
         description="The status of the upload operation. If not successful, error information must be provided in the logs.",
     )
     is_new: bool = Field(
@@ -142,8 +137,8 @@ class UploadResult(BaseResult, Model):
             raise ValueError("Failed results must include error information")
         return self
 
-    def _set_error_status(self) -> None:
-        self.status = UploadStatus.FAILED
+    def set_error_status(self) -> None:
+        self.status = EtlStatus.FAILED
 
     def add_logs(self, upload_log_items: list[UploadLogItem] | UploadLogItem) -> None:
         """
@@ -153,11 +148,11 @@ class UploadResult(BaseResult, Model):
         if isinstance(upload_log_items, list):
             self.logs.extend(upload_log_items)
             if any(log.severity == LogLevel.ERROR for log in upload_log_items):
-                self.status = UploadStatus.FAILED
+                self.status = EtlStatus.FAILED
         else:
             self.logs.append(upload_log_items)
             if upload_log_items.severity == LogLevel.ERROR:
-                self.status = UploadStatus.FAILED
+                self.status = EtlStatus.FAILED
 
     def get_identifier_upload_results(self) -> list["UploadResult"] | None:
         """
@@ -370,12 +365,12 @@ class ParentUploadResult(UploadResultWithIdentifiers):
         description="The data issues found for the original content and potential corresponding updates made to it.",
     )
 
-    def get_status_count(self, include_self: bool = True) -> dict[UploadStatus, int]:
+    def get_status_count(self, include_self: bool = True) -> dict[EtlStatus, int]:
         """
         Count the number of occurrences of each UploadStatus in this result (if
         include_self) and that of its child results.
         """
-        retval: dict[UploadStatus, int] = {x: 0 for x in UploadStatus}
+        retval: dict[EtlStatus, int] = {x: 0 for x in EtlStatus}
         if include_self:
             retval[self.status] += 1
         for field_name in self.get_child_results_field_names():
@@ -609,12 +604,12 @@ class BaseBatchUploadResult(UploadResult):
         )
         return parent_results
 
-    def get_status_count(self, include_self: bool = True) -> dict[UploadStatus, int]:
+    def get_status_count(self, include_self: bool = True) -> dict[EtlStatus, int]:
         """
         Count the number of occurrences of each UploadStatus in this result (if
         include_self) and that of its child results.
         """
-        retval: dict[UploadStatus, int] = {x: 0 for x in UploadStatus}
+        retval: dict[EtlStatus, int] = {x: 0 for x in EtlStatus}
         if include_self:
             retval[self.status] += 1
         for parent_result in self.get_parent_results():

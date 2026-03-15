@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.commondb.domain.enum import Role, UploadStatus
+from gen_epix.commondb.domain.enum import EtlStatus, Role
 from gen_epix.commondb.domain.model.organization import User
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
@@ -432,8 +432,8 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
 
         self.assertEqual(len(results), 2)
         self.assertEqual(results[1].seq_distance_profile_id, self.new_profile_id)
-        self.assertEqual(results[0].status, UploadStatus.UPDATED)
-        self.assertEqual(results[1].status, UploadStatus.CREATED)
+        self.assertEqual(results[0].status, EtlStatus.UPDATED)
+        self.assertEqual(results[1].status, EtlStatus.CREATED)
 
         self.assertEqual(len(recorder.updated), 1)
         updated_distances: dict[str, float] = json.loads(recorder.updated[0].distances)
@@ -515,7 +515,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
 
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].seq_distance_profile_id, self.new_profile_id)
-        self.assertEqual(results[0].status, UploadStatus.CREATED)
+        self.assertEqual(results[0].status, EtlStatus.CREATED)
 
         self.assertEqual(len(recorder.updated), 0)
         self.assertEqual(len(recorder.created), 1)
@@ -575,8 +575,8 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         )
 
         self.assertEqual(len(results), 2)
-        self.assertEqual(results[0].status, UploadStatus.UPDATED)
-        self.assertEqual(results[1].status, UploadStatus.CREATED)
+        self.assertEqual(results[0].status, EtlStatus.UPDATED)
+        self.assertEqual(results[1].status, EtlStatus.CREATED)
 
         self.assertEqual(len(recorder.updated), 1)
         updated_map: dict[str, float] = json.loads(recorder.updated[0].distances)
@@ -916,9 +916,7 @@ class TestCalculateSeqDistancesBatchInvariant(BaseCalculateSeqDistanceTestCase):
         # Correct number of results
         self.assertEqual(len(results), 5)
         result_ids = {
-            x.seq_distance_profile_id
-            for x in results
-            if x.status == UploadStatus.CREATED
+            x.seq_distance_profile_id for x in results if x.status == EtlStatus.CREATED
         }
         self.assertEqual(result_ids, {n1_id, n2_id, n3_id})
 

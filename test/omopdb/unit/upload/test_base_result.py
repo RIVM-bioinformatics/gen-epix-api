@@ -11,23 +11,23 @@ Verifies that:
 
 from unittest import TestCase
 
-from gen_epix.commondb.domain.enum import UploadStatus
+from gen_epix.commondb.domain.enum import EtlStatus
+from gen_epix.commondb.domain.model.base import BaseEtlResult, EtlLogItem
 from gen_epix.commondb.domain.model.upload import UploadLogItem, UploadResult
-from gen_epix.fastapp.enum import LogLevel, ResultStatus
-from gen_epix.fastapp.result import BaseResult, ResultLogItem
+from gen_epix.fastapp.enum import LogLevel
 
 # ---------------------------------------------------------------------------
 # Minimal concrete class for testing BaseResult in isolation
 # ---------------------------------------------------------------------------
 
 
-class _ConcreteResult(BaseResult):
+class _ConcreteResult(BaseEtlResult):
     """Minimal Pydantic model used to test BaseResult in isolation."""
 
-    status: ResultStatus = ResultStatus.INITIALIZED
+    status: EtlStatus = EtlStatus.INITIALIZED
 
-    def _set_error_status(self) -> None:
-        self.status = ResultStatus.ERROR
+    def set_error_status(self) -> None:
+        self.status = EtlStatus.ERROR
 
 
 # ---------------------------------------------------------------------------
@@ -37,7 +37,7 @@ class _ConcreteResult(BaseResult):
 
 class TestResultLogItem(TestCase):
     def test_has_required_fields(self) -> None:
-        item = ResultLogItem(
+        item = EtlLogItem(
             code="E001", message="Something broke", severity=LogLevel.ERROR
         )
         self.assertEqual(item.code, "E001")
@@ -47,7 +47,7 @@ class TestResultLogItem(TestCase):
 
     def test_upload_log_item_is_result_log_item(self) -> None:
         """UploadLogItem must be the same class as ResultLogItem (alias)."""
-        self.assertIs(UploadLogItem, ResultLogItem)
+        self.assertIs(UploadLogItem, EtlLogItem)
 
 
 # ---------------------------------------------------------------------------
@@ -70,7 +70,7 @@ class TestBaseResult(TestCase):
 
     def test_add_error_calls_set_error_status(self) -> None:
         self.result.add_error("E001", "an error")
-        self.assertEqual(self.result.status, ResultStatus.ERROR)
+        self.assertEqual(self.result.status, EtlStatus.ERROR)
 
     # -- add_warning ----------------------------------------------------------
 
@@ -81,7 +81,7 @@ class TestBaseResult(TestCase):
 
     def test_add_warning_does_not_change_status(self) -> None:
         self.result.add_warning("W001", "a warning")
-        self.assertEqual(self.result.status, ResultStatus.INITIALIZED)
+        self.assertEqual(self.result.status, EtlStatus.INITIALIZED)
 
     # -- add_info -------------------------------------------------------------
 
@@ -92,7 +92,7 @@ class TestBaseResult(TestCase):
 
     def test_add_info_does_not_change_status(self) -> None:
         self.result.add_info("I001", "some info")
-        self.assertEqual(self.result.status, ResultStatus.INITIALIZED)
+        self.assertEqual(self.result.status, EtlStatus.INITIALIZED)
 
     # -- has_errors / has_warnings / has_infos --------------------------------
 
@@ -164,7 +164,7 @@ def _make_pending_upload_result() -> UploadResult:
     """Construct an UploadResult in PENDING state (no logs required)."""
     return UploadResult.model_construct(
         id=None,
-        status=UploadStatus.PENDING,
+        status=EtlStatus.PENDING,
         is_new=False,
         logs=[],
     )
@@ -176,45 +176,45 @@ class TestUploadResult(TestCase):
 
     def test_add_error_sets_upload_status_failed(self) -> None:
         self.result.add_error("E001", "upload broke")
-        self.assertEqual(self.result.status, UploadStatus.FAILED)
+        self.assertEqual(self.result.status, EtlStatus.FAILED)
         self.assertTrue(self.result.has_errors())
 
     def test_add_warning_does_not_change_status(self) -> None:
         self.result.add_warning("W001", "soft warning")
-        self.assertEqual(self.result.status, UploadStatus.PENDING)
+        self.assertEqual(self.result.status, EtlStatus.PENDING)
         self.assertTrue(self.result.has_warnings())
 
     def test_add_info_does_not_change_status(self) -> None:
         self.result.add_info("I001", "fyi")
-        self.assertEqual(self.result.status, UploadStatus.PENDING)
+        self.assertEqual(self.result.status, EtlStatus.PENDING)
         self.assertTrue(self.result.has_infos())
 
     def test_add_logs_list_with_error_sets_failed(self) -> None:
         items = [
-            ResultLogItem(code="W001", message="warn", severity=LogLevel.WARN),
-            ResultLogItem(code="E001", message="err", severity=LogLevel.ERROR),
+            EtlLogItem(code="W001", message="warn", severity=LogLevel.WARN),
+            EtlLogItem(code="E001", message="err", severity=LogLevel.ERROR),
         ]
         self.result.add_logs(items)
-        self.assertEqual(self.result.status, UploadStatus.FAILED)
+        self.assertEqual(self.result.status, EtlStatus.FAILED)
         self.assertEqual(len(self.result.logs), 2)
 
     def test_add_logs_list_without_error_keeps_status(self) -> None:
         items = [
-            ResultLogItem(code="I001", message="info", severity=LogLevel.INFO),
-            ResultLogItem(code="W001", message="warn", severity=LogLevel.WARN),
+            EtlLogItem(code="I001", message="info", severity=LogLevel.INFO),
+            EtlLogItem(code="W001", message="warn", severity=LogLevel.WARN),
         ]
         self.result.add_logs(items)
-        self.assertEqual(self.result.status, UploadStatus.PENDING)
+        self.assertEqual(self.result.status, EtlStatus.PENDING)
 
     def test_add_logs_single_error_item_sets_failed(self) -> None:
-        item = ResultLogItem(code="E001", message="err", severity=LogLevel.ERROR)
+        item = EtlLogItem(code="E001", message="err", severity=LogLevel.ERROR)
         self.result.add_logs(item)
-        self.assertEqual(self.result.status, UploadStatus.FAILED)
+        self.assertEqual(self.result.status, EtlStatus.FAILED)
 
     def test_add_logs_single_non_error_item_keeps_status(self) -> None:
-        item = ResultLogItem(code="W001", message="warn", severity=LogLevel.WARN)
+        item = EtlLogItem(code="W001", message="warn", severity=LogLevel.WARN)
         self.result.add_logs(item)
-        self.assertEqual(self.result.status, UploadStatus.PENDING)
+        self.assertEqual(self.result.status, EtlStatus.PENDING)
 
     def test_has_log_code_works_on_upload_result(self) -> None:
         self.result.add_warning("SPECIFIC_CODE", "msg")

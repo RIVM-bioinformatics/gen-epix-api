@@ -19,7 +19,6 @@ from gen_epix.fastapp.enum import LogLevel as LogLevel
 from gen_epix.fastapp.enum import OAuthFlow as OAuthFlow
 from gen_epix.fastapp.enum import PermissionType as PermissionType
 from gen_epix.fastapp.enum import PermissionTypeSet as PermissionTypeSet
-from gen_epix.fastapp.enum import ResultStatus as ResultStatus
 from gen_epix.fastapp.enum import SortOrder as SortOrder
 from gen_epix.fastapp.log import LogItem as LogItem
 from gen_epix.fastapp.model import Command as Command
@@ -35,8 +34,6 @@ from gen_epix.fastapp.pdp import PolicyDecisionPoint as PolicyDecisionPoint
 from gen_epix.fastapp.remote_app import RemoteApp as RemoteApp
 from gen_epix.fastapp.repository import BaseRepository as BaseRepository
 from gen_epix.fastapp.repository import BaseUnitOfWork as BaseUnitOfWork
-from gen_epix.fastapp.result import BaseResult as BaseResult
-from gen_epix.fastapp.result import ResultLogItem as ResultLogItem
 from gen_epix.fastapp.service import BaseService as BaseService
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork as BaseUnitOfWork
 from gen_epix.fastapp.user_manager import BaseUserManager as BaseUserManager

@@ -395,11 +395,3 @@ class FileExtension(Enum):
     PKL = ".pkl"
     JSON = ".json"
     ZIP = ".zip"
-
-
-class ResultStatus(Enum):
-    INITIALIZED = "initialized"
-    SUCCESS = "success"
-    FAILURE = "failure"  # unhandled exception terminated the run
-    ERROR = "error"  # all transforms / batches produced errors
-    MIXED = "mixed"  # some transforms / batches succeeded, others failed
