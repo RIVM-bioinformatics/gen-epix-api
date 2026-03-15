@@ -13,6 +13,10 @@
             "source.organizeImports.isort": "always",
         }
     },
+    "isort.args": [
+        "--profile",
+        "black"
+    ],
     "files.exclude": {
         "**/.git": false
     },

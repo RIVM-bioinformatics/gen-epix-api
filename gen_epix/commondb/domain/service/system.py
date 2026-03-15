@@ -1,4 +1,5 @@
 import abc
+from collections.abc import Hashable
 
 from gen_epix.commondb.domain import command, model
 from gen_epix.commondb.domain.enum import ServiceType
@@ -40,5 +41,5 @@ class BaseSystemService(BaseService):
     @abc.abstractmethod
     def retrieve_feature_flags(
         self, cmd: command.RetrieveFeatureFlagsCommand
-    ) -> dict[str, bool]:
+    ) -> dict[Hashable, bool]:
         raise NotImplementedError

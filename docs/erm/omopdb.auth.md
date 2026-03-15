@@ -6,10 +6,10 @@ Auto-generated.  Service type **AUTH** — 2 entities, relationships only.
 erDiagram
     %% omopdb / AUTH (simplified)
 
-    IdentityProvider {
+    IDPUser {
     }
 
-    IDPUser {
+    IdentityProvider {
     }
 
 ```

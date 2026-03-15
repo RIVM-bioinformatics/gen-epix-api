@@ -6,6 +6,8 @@ backed by an in-memory repository mock, so no database process is required.
 import asyncio
 import datetime
 from contextlib import contextmanager
+from test.fastapp.enum import ServiceType
+from test.fastapp.unit.auth.mock_jwk_and_token import MockJWKAndToken
 from typing import Any, Generator
 from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
@@ -26,8 +28,6 @@ from gen_epix.fastapp.middleware import HandleAuthExceptionMiddleware
 from gen_epix.fastapp.services.auth import AuthService, OauthIdpClient
 from gen_epix.fastapp.services.auth.model import Claims
 from gen_epix.fastapp.services.auth.util import get_name_from_claims
-from test.fastapp.enum import ServiceType
-from test.fastapp.unit.auth.mock_jwk_and_token import MockJWKAndToken
 
 # ---------------------------------------------------------------------------
 # Module-level constants
@@ -87,13 +87,13 @@ def make_cdb_user(
 def make_cdb_organization(
     org_id: UUID | None = None,
     name: str = "Test Org",
-    legal_entity_code: str = "TEST",
+    code: str = "TEST",
 ) -> commondb_model.Organization:
     """Return a fresh commondb Organization."""
     return commondb_model.Organization(
         id=org_id or uuid4(),
         name=name,
-        legal_entity_code=legal_entity_code,
+        code=code,
     )
 
 
@@ -136,7 +136,7 @@ def make_root_cfg(root_key: str = _DEFAULT_USER_EMAIL) -> dict[str, dict[str, An
         "organization": {
             "id": _ROOT_ORG_ID,
             "name": "Root Organization",
-            "legal_entity_code": "ROOT",
+            "code": "ROOT_ORGANIZATION",
         },
         "user": {
             "key": root_key,
@@ -389,7 +389,6 @@ class AuthEnv:
         self.app = App(
             user_manager=self.user_manager,
             logger=None,
-            feature_flags={"auto_create_new_users": auto_create_new_users},
         )
         idps_cfg = make_idps_cfg(self.mock_jwk_token)
         self.auth_service = AuthService(

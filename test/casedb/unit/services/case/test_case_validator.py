@@ -547,11 +547,7 @@ class BaseCaseValidatorTestCase(TestCase):
         return regions, region_set_regions_map, region_contained_in  # type: ignore[return-value]
 
     def _organizations(self) -> list[Organization]:
-        return [
-            Organization(
-                id=self.org_id, name=self.org_name, legal_entity_code=self.org_code
-            )
-        ]
+        return [Organization(id=self.org_id, name=self.org_name, code=self.org_code)]
 
     def _create_validator(self) -> CaseValidator:
         complete_case_type = self._build_complete_case_type()

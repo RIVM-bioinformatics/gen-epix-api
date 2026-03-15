@@ -14,7 +14,6 @@ from gen_epix.casedb.domain.model.case.ref_data import (
     CaseSetStatus,
     CaseType,
 )
-from gen_epix.casedb.domain.model.subject import Subject
 from gen_epix.commondb.domain.model import DataCollection, Model
 from gen_epix.commondb.domain.model.organization import BaseIdentifier
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
@@ -32,8 +31,7 @@ class Case(Model):
         links=create_links(
             {
                 1: ("case_type_id", CaseType, "case_type"),
-                2: ("subject_id", Subject, "subject"),
-                3: (
+                2: (
                     "created_in_data_collection_id",
                     DataCollection,
                     "created_in_data_collection",
@@ -46,10 +44,6 @@ class Case(Model):
     )
     case_type_id: UUID = Field(description="The ID of the CaseType. FOREIGN KEY")
     case_type: CaseType | None = Field(default=None, description="The CaseType")
-    subject_id: UUID | None = Field(
-        default=None, description="The ID of the subject. FOREIGN KEY"
-    )
-    subject: Subject | None = Field(default=None, description="The subject")
     created_in_data_collection_id: UUID = Field(
         description="The ID of the data collection where the case was created. FOREIGN KEY",
     )
