@@ -1701,7 +1701,7 @@ class CasedbTestClient(TestClient):
             updated_col_set_member, update=True
         )  # type: ignore[return-value]
 
-    def temp_update_user_own_organization(
+    def update_user_own_organization(
         self,
         user_or_str: str | model.User,
         organization_or_str: str | None = None,

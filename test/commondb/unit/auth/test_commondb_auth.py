@@ -40,7 +40,7 @@ _AUTO_CREATE_ORG_ID: UUID = UUID("00000000-0000-0000-0000-000000000002")
 _MOCK_USER_ID: UUID = UUID("00000000-0000-0000-0000-000000000010")
 _CREATOR_USER_ID: UUID = UUID("00000000-0000-0000-0000-000000000011")
 
-_ROOT_ROLE: str = commondb_enum.Role.ROOT.value   # "COMMONDB_ROOT"
+_ROOT_ROLE: str = commondb_enum.Role.ROOT.value  # "COMMONDB_ROOT"
 _GUEST_ROLE: str = commondb_enum.Role.GUEST.value  # "COMMONDB_GUEST"
 _ALL_ROLES: set[str] = {r.value for r in commondb_enum.Role}
 
@@ -251,9 +251,7 @@ class InMemoryOrganizationRepository:
                 self._users_by_key[entity.key] = entity
             return entity
 
-        raise NotImplementedError(
-            f"Operation {operation} not implemented in mock"
-        )
+        raise NotImplementedError(f"Operation {operation} not implemented in mock")
 
     def is_existing_user_by_key(self, uow: Any, key: str | None) -> bool:
         return key is not None and key in self._users_by_key
@@ -388,7 +386,11 @@ class AuthEnv:
         )
 
         # Build AuthService
-        self.app = App(user_manager=self.user_manager, logger=None)
+        self.app = App(
+            user_manager=self.user_manager,
+            logger=None,
+            feature_flags={"auto_create_new_users": auto_create_new_users},
+        )
         idps_cfg = make_idps_cfg(self.mock_jwk_token)
         self.auth_service = AuthService(
             self.app,

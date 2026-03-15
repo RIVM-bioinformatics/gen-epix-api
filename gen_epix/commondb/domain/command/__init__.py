@@ -91,6 +91,9 @@ from gen_epix.commondb.domain.command.system import (
     OutageCrudCommand as OutageCrudCommand,
 )
 from gen_epix.commondb.domain.command.system import (
+    RetrieveFeatureFlagsCommand as RetrieveFeatureFlagsCommand,
+)
+from gen_epix.commondb.domain.command.system import (
     RetrieveLicensesCommand as RetrieveLicensesCommand,
 )
 from gen_epix.commondb.domain.command.system import (

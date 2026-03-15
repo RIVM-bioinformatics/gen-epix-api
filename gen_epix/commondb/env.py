@@ -118,6 +118,7 @@ class AppComposer(BaseAppComposer):
                 impl=app_impl,
                 logger=app_logger if self._log_setup else None,
                 id_factory=cfg["service"]["defaults"]["props"]["id_factory"],
+                feature_flags=self._app_cfg.feature_flags,
             )
             ssl_context = create_ssl_context(
                 host=cfg["app"]["host"], ssl_cert_file=cfg["app"].get("ssl_cert_file")

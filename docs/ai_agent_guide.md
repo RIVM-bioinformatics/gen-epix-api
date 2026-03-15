@@ -16,7 +16,7 @@ Use docs to find the right places and constraints quickly, but if docs conflict 
 ## 2) How to give Copilot Chat the right context (VS Code)
 
 Copilot Chat is strongest when you deliberately attach the *right* context rather than hoping it “reads the whole repo.”
-The canonical prompt lives in .github/prompts/basic-evidence-based.prompt.md; this guide shows how to apply it.
+
 
 ### A) Start broad when needed
 Use **workspace context** for questions like:
@@ -29,33 +29,30 @@ In Copilot Chat, prefix your prompt with:
 
 ### B) Attach the relevant docs and files
 When you need Copilot to follow our documented design, add explicit references:
-- Type `#` in chat and select a **file / folder / symbol** (e.g., `#0_System-Documentation-Index.md`)
+- Type `#` in chat and select a **file / folder / symbol**
 - Or **drag & drop** files/folders from the Explorer into the chat input
-- Use `#selection` when you’ve highlighted code
-- Use `#editor` when the current open file matters
+- Use `#selection` when you've highlighted code
 
-**Minimum best practice for non-trivial tasks:** attach the doc(s) + the primary code file(s) you’re touching.
+**Minimum best practice:** Attach `#.github/copilot-instructions.md`, then the relevant code files you're touching.
 
-### C) Always attach “the map” first
-For any architectural or cross-cutting change:
-- Attach `#0_System-Documentation-Index.md` first
-- Then attach the relevant deep dive doc(s)
-- Then attach the code files you expect to edit
+### C) Attach minimal context
+For any task:
+- Attach `#.github/copilot-instructions.md` (repo architectural rules)
+- Attach `#docs/00-Index.md` if you need to find architecture docs
+- Attach the 1–3 code files you're changing
+- Do NOT attach launch.json, changelogs, or large reference files
 
 ---
 
-## 3) Which doc to use (quick map)
+## 3) Core instruction files
 
-**Always start here**
-- `0_System-Documentation-Index.md` (the map of the system and links to deep dives)
+**Must know**
+- `.github/copilot-instructions.md` = architectural rules and security constraints
+- `docs/00-Index.md` = documentation map and overview
 
-**Common tasks → recommended deep dive**
-- Architecture / boundaries / responsibilities → `Architecture-Principles.md`, `High-Level-Architecture-Deep-Dive.md`
-- AuthN/AuthZ / policies / roles → `Authorization-Authentication-Deep-Dive.md`
-- API contracts / endpoints / request flow → `API-Endpoints-Deep-Dive.md`
-- Contributing / PR flow / local dev conventions → `Contribution-Workflow.md`, `Local-Development-Deep-Dive.md`
-- Release / deploy behavior → `Deployment-Release-Process-Deep-Dive.md`
-- Adding extensions / plugins / new modules → `Extending-the-System.md`
+**For specific topics, check docs/**
+- See `docs/00-Index.md` for available docs on architecture, security, API design, etc.
+- Each doc starts with a creation date; prefer newer docs when they disagree.
 
 ---
 
@@ -63,17 +60,17 @@ For any architectural or cross-cutting change:
 
 We keep the canonical “golden prompt” here:
 
-- `.github/prompts/basic-evidence-based.prompt.md`
+- `.github/prompts/base_prompt.md`
 
-**Team rule:** Don’t copy/paste and fork the golden prompt into random docs. If we want to improve it, update the prompt file so everyone benefits.
+**Team rule:** Don't copy/paste and fork the golden prompt into random docs. If we want to improve it, update the prompt file so everyone benefits.
 
 ### How to use it in Copilot Chat (recommended pattern)
 
 1) Attach the golden prompt file:
-- Add `#.github/prompts/basic-evidence-based.prompt.md`
+- Add `#.github/prompts/base_prompt.md`
 
 2) Attach the docs entrypoint (and the relevant deep dive):
-- Always attach `#0_System-Documentation-Index.md`
+- Always attach `#docs/00-Index.md`
 - Then attach the most relevant deep dive(s) for the task
 
 3) Attach the code you’ll touch:
@@ -84,42 +81,38 @@ We keep the canonical “golden prompt” here:
 ### Task “wrappers” that work well (copy/paste)
 
 #### A) Implement a change (safe default)
-> Use the golden prompt in `#.github/prompts/basic-evidence-based.prompt.md`.  
-> Consult `#0_System-Documentation-Index.md` first (check doc creation dates), then the relevant deep dive(s).  
+> Use the golden prompt in `#.github/prompts/base_prompt.md`.  
+> Consult `#docs/00-Index.md` first (check doc creation dates), then the relevant deep dive(s).  
 > Task: [PASTE TASK HERE]
 
 #### B) Quick orientation (where does this live?)
-> @workspace Use the golden prompt in `#.github/prompts/basic-evidence-based.prompt.md`.  
-> Start from `#0_System-Documentation-Index.md`.  
+> @workspace Use the golden prompt in `#.github/prompts/base_prompt.md`.  
+> Start from `#docs/00-Index.md`.  
 > Question: Where is [X] implemented? Give me the owning service/module, the top 3–5 files/symbols, and the expected flow.
 
 #### C) Docs vs code mismatch check
-> Use the golden prompt in `#.github/prompts/basic-evidence-based.prompt.md`.  
+> Use the golden prompt in `#.github/prompts/base_prompt.md`.  
 > Compare `#[DOC_NAME.md]` (note creation date) against the current implementation.  
 > Output: mismatches, evidence (paths/symbols), and suggested doc updates (sections to change).
 
 
 ---
 
-## 5) “Good” request patterns (examples)
+## 5) Common tasks
 
-### Example 1 — Add a new endpoint safely
-> @workspace Consult `#0_System-Documentation-Index.md` and `#API-Endpoints-Deep-Dive.md`.  
+### Task: Add an endpoint
+> Attach `#.github/copilot-instructions.md` + the router file.  
 > I need to add an endpoint for ____.  
-> Show me the minimal changes: router, command, policy, and tests.  
-> Include file paths + symbols and propose a small diff.
+> Show the minimal changes: router, command, policy, and tests.
 
-### Example 2 — Update authorization behavior
-> Consult `#Authorization-Authentication-Deep-Dive.md` (check its creation date) and the current auth/policy code.  
+### Task: Change auth behavior
+> Attach `#.github/copilot-instructions.md` + the policy/auth code.  
 > Change: ____.  
-> Please list what policies are affected, where checks happen in the command flow, and propose minimal code changes + tests.
+> List affected policies, where checks occur, and state IDPS/MOCK/NONE implications.
 
-### Example 3 — “Where does this live?”
+### Task: Find something in the codebase
 > @workspace Where is ____ implemented?  
-> Start from `#0_System-Documentation-Index.md` and give me:
-> - the owning service/domain
-> - the main files/symbols
-> - the flow from API → command → service → repository
+> Give me: the owning module, top 3–5 files/symbols, and the flow.
 
 ---
 
@@ -149,7 +142,7 @@ Add:
 
 ### 1) “It answered without reading the right docs”
 Fix:
-- Attach `#0_System-Documentation-Index.md` + the relevant deep dive doc explicitly.
+- Attach `#docs/00-Index.md` + the relevant deep dive doc explicitly.
 
 ### 2) “It made up config keys / endpoints / ports”
 Fix:
@@ -181,28 +174,21 @@ Fix:
 
 ---
 
-## 9) Where this guide fits
+## 9) File organization
 
-- **`/.github/copilot-instructions.md`** = rules for Copilot (repo-level “agent behavior”)
-- **`AI_AGENT_GUIDE.md` (this file)** = how humans should prompt Copilot effectively + reusable prompts + examples
-
-Keep these separate so:
-- Copilot gets short, strict constraints
-- the team gets practical “how to use it” guidance
+- **`.github/copilot-instructions.md`** = architectural rules and constraints
+- **`.github/prompts/base_prompt.md`** = response format and evidence requirements (referenced by copilot-instructions.md)
+- **`docs/ai_agent_guide.md` (this file)** = practical "how to prompt" guidance for humans
+- **`AGENTS.md`** = subagent roster and how to invoke them
 
 ---
 
-## 10) Troubleshooting Copilot Chat
+## 10) Quick troubleshooting
 
-**Copilot says “I can’t see that file” / misses important context**
-- Make sure you explicitly attach it using #<file> (or drag & drop the file/folder into chat).
-- If it’s relevant code, open it in an editor tab and use #editor or highlight and use #selection.
+**Missing context** → Attach the file explicitly with `#file.md` or drag & drop.
 
-**Copilot answers without evidence**
-- Reply: “Stop and cite evidence: file paths + symbols + line ranges. If you can’t find them, add a ‘Suspected Stale Documentation’ section.”
+**No evidence cited** → Reply: "Cite file paths + symbols + line ranges. If not found, add 'Suspected Stale Documentation' section."
 
-**Copilot suggests a pattern that doesn’t match this repo (e.g., bypassing commands/policies)**
-- Reply: “Use the repo patterns (Command/App mediator + policies). Show precedents in code.”
+**Wrong pattern suggested** → Reply: "Show the pattern in current code with precedent."
 
-**Copilot invents endpoints/config**
-- Reply: “Search the workspace for the endpoint/config key; if not found, list under ‘Suspected Stale Documentation’ and propose verified alternatives only.”
+**Made-up endpoints/config** → Reply: "Search workspace. If not found, list as Suspected Stale Documentation."

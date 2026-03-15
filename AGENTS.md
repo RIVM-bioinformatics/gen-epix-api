@@ -40,10 +40,14 @@ User
       └── Code-Review    (post-implementation review)
 ```
 
-## Conventions
+## Key Conventions
 
-- **TDD is mandatory** for all implementation phases (Sisyphus, Frontend-Engineer).
-- **Atlas pauses for user approval** after presenting a plan and after each phase commit.
-- **Prometheus works autonomously** through research, only pausing when the plan is complete.
-- **Explorer is read-only** — it never edits files or runs commands.
-- **Code-Review never implements fixes** — it only reports findings.
+- **TDD is mandatory** for implementation (Sisyphus, Frontend-Engineer).
+- **Atlas** pauses for user approval after planning and each phase commit.
+- **Prometheus** works autonomously until plan is complete.
+- **Explorer** is read-only (no edits or commands).
+- **Code-Review** reviews only (no fixes).
+
+## Note for Users
+
+For normal coding tasks in Copilot Chat, attach `.github/copilot-instructions.md` and your code files. You do not normally need to read or invoke agent files directly unless you are explicitly using the agent system (e.g., `@Atlas implement the plan`).

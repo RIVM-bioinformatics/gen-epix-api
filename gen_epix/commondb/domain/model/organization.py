@@ -352,6 +352,13 @@ class UserInvitation(Model):
         default=None, description="The organization that the new user will belong to"
     )
 
+    @field_validator("key", mode="before")
+    @classmethod
+    def _validate_key(cls, value: str | None) -> str | None:
+        if value == "":
+            return None
+        return value
+
     @field_validator("roles", mode="before")
     @classmethod
     def _validate_roles(cls, value: set[str] | list[str] | str) -> set[str]:

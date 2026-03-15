@@ -1,4 +1,6 @@
 import logging
+from test.commondb.test_client.util import get_test_client as commondb_get_test_client
+from test.test_client.enum import TestType
 
 import pytest
 from sqlalchemy import select
@@ -10,8 +12,6 @@ from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.commondb.repositories.sa_model.organization import User
 from gen_epix.commondb.test.test_client import TestClient as Env
 from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork
-from test.commondb.test_client.util import get_test_client as commondb_get_test_client
-from test.test_client.enum import TestType
 
 TEST_TYPE = TestType.COMMONDB_INTEGRATION_SQL_INJECTION
 SKIP_ENDPOINTS = False

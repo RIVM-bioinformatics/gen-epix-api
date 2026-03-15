@@ -153,7 +153,9 @@ for service_type in enum.ServiceType:
         )
     )
     if LOAD_DATA:
-        user_id = sa_sql_app_cfg.cfg["service"]["auth"]["props"]["root"]["user"].get("id", NULL_ID)
+        user_id = sa_sql_app_cfg.cfg["service"]["auth"]["props"]["root"]["user"].get(
+            "id", NULL_ID
+        )
         create_demo_data_from_repository(
             user_id, entities, dict_repository, sa_sql_repository, MODULE_ROOT
         )

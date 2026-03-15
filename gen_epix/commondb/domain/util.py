@@ -73,6 +73,8 @@ def set_env_variables(
     settings_files: list[Path] = []
     # General settings
     settings_files.append(cfg_path / "settings.toml")
+    # Feature flags
+    settings_files.append(cfg_path / "feature_flags.toml")
     # Service secrets
     settings_files.append(cfg_path / ".example.secrets.service.toml")
     # Identity provider settings
