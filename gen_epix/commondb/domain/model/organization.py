@@ -84,6 +84,11 @@ class User(fastapp.User, Model):
     name: str | None = Field(
         default=None, description="The full name of the user", max_length=255
     )
+    description: str | None = Field(
+        default=None,
+        description="The description of the user.",
+        max_length=1000,
+    )
     is_active: bool = Field(
         default=True,
         description="Whether the user is active or not. An inactive user cannot perform any actions that require authorization.",
@@ -330,6 +335,7 @@ class UserInvitation(Model):
     )
     email: str | None = copy_model_field(User, "email")
     name: str | None = copy_model_field(User, "name")
+    description: str | None = copy_model_field(User, "description")
     token: str = Field(description="The token of the invitation", max_length=255)
     expires_at: datetime.datetime = Field(
         description="The expiry date of the invitation"

@@ -199,6 +199,7 @@ class TestClient:
         self,
         user_or_str: str | model.User,
         user_name: str,
+        description: str | None = None,
         set_dummy_organization: bool = False,
         set_dummy_token: bool = False,
         set_key: bool = True,
@@ -225,6 +226,7 @@ class TestClient:
                 user=user,
                 key=f"{user_name}@{organization_name}.org" if set_key else None,
                 email=f"{user_name}@{organization_name}.org",
+                description=description,
                 roles={role},
                 organization_id=organization_id,
             )
@@ -239,6 +241,7 @@ class TestClient:
                     name=user_name,
                     organization_id=organization_id,
                     roles={role},
+                    description=description,
                 ),
                 token=user_invitation.token,
             )
