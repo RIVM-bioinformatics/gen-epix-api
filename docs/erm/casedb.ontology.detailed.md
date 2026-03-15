@@ -14,6 +14,18 @@ erDiagram
     ConceptRelation }o--|| Concept : "to_concept_id"
 
     %% Entity definitions
+    Disease {
+        UUID id PK
+        string name
+        string icd_code
+    }
+
+    EtiologicalAgent {
+        UUID id PK
+        string name
+        string type
+    }
+
     Concept {
         UUID id PK
         UUID concept_set_id FK
@@ -30,6 +42,13 @@ erDiagram
         UUID etiological_agent_id FK
     }
 
+    ConceptRelation {
+        UUID id PK
+        UUID from_concept_id FK
+        UUID to_concept_id FK
+        enum relation
+    }
+
     ConceptSet {
         UUID id PK
         string code
@@ -39,25 +58,6 @@ erDiagram
         string schema_definition
         string schema_uri
         string description
-    }
-
-    Disease {
-        UUID id PK
-        string name
-        string icd_code
-    }
-
-    EtiologicalAgent {
-        UUID id PK
-        string name
-        string type
-    }
-
-    ConceptRelation {
-        UUID id PK
-        UUID from_concept_id FK
-        UUID to_concept_id FK
-        enum relation
     }
 
 ```

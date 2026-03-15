@@ -2,7 +2,7 @@ import logging
 import traceback
 
 # pylint: disable=unused-import-alias
-from collections.abc import Callable, Hashable, Iterable
+from collections.abc import Callable, Iterable
 from enum import Enum
 from typing import Any
 
@@ -121,7 +121,7 @@ class AppComposer(BaseAppComposer):
                 impl=app_impl,
                 logger=app_logger if self._log_setup else None,
                 id_factory=cfg["service"]["defaults"]["props"]["id_factory"],
-                feature_flags=self._get_feature_flags(),
+                feature_flags=cfg.get("feature_flags", {}),
             )
             ssl_context = create_ssl_context(
                 host=cfg["app"]["host"], ssl_cert_file=cfg["app"].get("ssl_cert_file")
@@ -298,19 +298,6 @@ class AppComposer(BaseAppComposer):
         # Add to overview of services
         app_impl.services[service_type] = curr_service
 
-    def _get_feature_flags(self) -> dict[Hashable, bool]:
-        """Load and validate feature flags from settings."""
-        src_feature_flags: dict = self._app_cfg.cfg.get("feature_flags", {})
-        feature_flags: dict[Hashable, bool] = {}
-        for key, value in src_feature_flags.items():
-            is_bool, bool_value = AppComposer.convert_to_bool(value)
-            if not is_bool:
-                raise exc.InitializationServiceError(
-                    f"Invalid value for feature flag '{key}', expected boolean or string of length 1"
-                )
-            feature_flags[key] = bool_value
-        return feature_flags
-
     def _setup_application_logging(self, setup_logger: logging.Logger) -> None:
         setup_logger.debug(
             App.create_static_log_message("e8665136", "Starting composing application")
@@ -325,6 +312,7 @@ class AppComposer(BaseAppComposer):
         """Parse configuration values to test presence of expected values and convert any values as necessary, such as feature flags."""
         # TODO: expand with a framework for parsing and validating config values, potentially using Pydantic classes to define expected config structure and types, and to perform parsing and validation.
         cfg_content_types = [
+            ("feature_flags", None, bool),  # All feature flags
             ("service", "auth", "props", "auto_create_new_users", bool),
             ("service", "auth", "props", "root_token_time_to_live", int),
         ]
@@ -334,37 +322,47 @@ class AppComposer(BaseAppComposer):
             # Traverse config path to get value
             cfg_section = cfg
             path_exists = True
-            for key in cfg_path[:-2]:
-                if key not in cfg_section:
+            for ancestor_key in cfg_path[:-2]:
+                if ancestor_key not in cfg_section:
                     path_exists = False
                     break
-                cfg_section = cfg_section[key]
+                cfg_section = cfg_section[ancestor_key]
             if not path_exists:
                 # Config path does not exist
                 continue
             # Check if value is of the correct type, and if not attempt to convert
-            cfg_value = cfg_section.get(cfg_path[-2])
-            content_type = cfg_path[-1]
-            if isinstance(cfg_value, content_type):
-                continue
-            if cfg_value is None:
-                # Skip None as the value may be optional
-                continue
-            if content_type is bool:
-                is_bool, converted_value = AppComposer.convert_to_bool(cfg_value)
-                if not is_bool:
-                    raise exc.InitializationServiceError(
-                        f"Invalid value for config {'.'.join(cfg_path)}, expected boolean or string representing a boolean"
-                    )
-            elif content_type is int:
-                converted_value = int(cfg_value)
+            if cfg_path[-2] is None:
+                # Special case: all leaf keys should have this content type
+                leaf_dict = cfg_section
             else:
-                raise exc.InitializationServiceError(
-                    f"Unsupported content type {content_type} for config parsing"
+                # Single leaf key with content type
+                leaf_dict = {cfg_path[-2]: cfg_section[cfg_path[-2]]}
+            for leaf_key, leaf_value in leaf_dict.items():
+                is_valid, converted_value = AppComposer._verify_type(
+                    leaf_value, cfg_path[-1]
                 )
-            # Update config with converted value
-            if converted_value != cfg_value:
-                cfg_section[cfg_path[-2]] = converted_value
+                if not is_valid:
+                    raise exc.InitializationServiceError(
+                        f"Invalid value for config {'.'.join((str(x) for x in cfg_path + (leaf_key,)))}: expected type {cfg_path[-1].__name__}"
+                    )
+                if converted_value != leaf_value:
+                    cfg_section[leaf_key] = converted_value
+
+    def _verify_type(value: Any, content_type: type) -> Any:
+        if isinstance(value, content_type):
+            return True, value
+        if value is None:
+            # Skip None as the value may be optional
+            return True, value
+        if content_type is bool:
+            is_bool, converted_value = AppComposer.convert_to_bool(value)
+            return is_bool, converted_value
+        elif content_type is int:
+            converted_value = int(value)
+            return True, converted_value
+        raise exc.InitializationServiceError(
+            f"Unsupported content type {content_type} for config parsing"
+        )
 
     @staticmethod
     def _get_enum_from_list(enums: Iterable[Enum], name: str) -> Enum:

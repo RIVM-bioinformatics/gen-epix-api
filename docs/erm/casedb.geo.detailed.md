@@ -7,12 +7,23 @@ erDiagram
     %% casedb / GEO (detailed)
 
     %% Relationships
+    Region }o--|| RegionSet : "region_set_id"
     RegionSetShape }o--|| RegionSet : "region_set_id"
     RegionRelation }o--|| Region : "from_region_id"
     RegionRelation }o--|| Region : "to_region_id"
-    Region }o--|| RegionSet : "region_set_id"
 
     %% Entity definitions
+    Region {
+        UUID id PK
+        UUID region_set_id FK
+        string code
+        string name
+        float centroid_lat
+        float centroid_lon
+        float center_lat
+        float center_lon
+    }
+
     RegionSet {
         UUID id PK
         string code
@@ -33,17 +44,6 @@ erDiagram
         UUID from_region_id FK
         UUID to_region_id FK
         enum relation
-    }
-
-    Region {
-        UUID id PK
-        UUID region_set_id FK
-        string code
-        string name
-        float centroid_lat
-        float centroid_lon
-        float center_lat
-        float center_lon
     }
 
 ```

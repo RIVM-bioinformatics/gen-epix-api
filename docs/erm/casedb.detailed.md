@@ -160,6 +160,7 @@ erDiagram
         string key
         string email
         string name
+        string description
         bool is_active
         set[string] roles
         UUID organization_id FK
@@ -170,6 +171,7 @@ erDiagram
         string key
         string email
         string name
+        string description
         string token
         timestamp expires_at
         set[string] roles
