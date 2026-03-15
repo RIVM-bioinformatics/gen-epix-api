@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from cachetools import TTLCache, cached
@@ -8,7 +8,6 @@ from gen_epix.commondb.domain import command, model
 from gen_epix.commondb.domain.service.organization import BaseOrganizationService
 from gen_epix.fastapp import Command, CrudOperation, exc
 from gen_epix.fastapp.app import App
-from gen_epix.fastapp.enum import CrudOperationSet
 from gen_epix.fastapp.model import CrudCommand
 
 
@@ -46,7 +45,7 @@ class OrganizationService(BaseOrganizationService):
             issubclass(
                 type(cmd), (command.UserCrudCommand, command.OrganizationCrudCommand)
             )
-            and cmd.operation in CrudOperationSet.DELETE.value
+            and cmd.is_delete()
             and cmd.user
             and self.app.user_manager.is_root_user(cmd.user)
         ):
@@ -54,7 +53,7 @@ class OrganizationService(BaseOrganizationService):
             is_delete_user = issubclass(type(cmd), command.UserCrudCommand)
             id_ = user.id if is_delete_user else user.organization_id
             raise_error = False
-            if cmd.operation == CrudOperation.DELETE_ALL:
+            if cmd.is_delete_all():
                 raise_error = True
             elif cmd.operation == CrudOperation.DELETE_ONE:
                 raise_error = id_ == cmd.obj_ids
@@ -90,24 +89,26 @@ class OrganizationService(BaseOrganizationService):
         if user.id is None:
             raise exc.UnauthorizedAuthError("User has no ID")
         key = cmd.key
+        description = cmd.description
         initial_roles = cmd.roles
         organization_id = cmd.organization_id
 
         with self.repository.uow() as uow:
-            # Verify if user already exists
-            is_existing_user = self.app.user_manager.is_existing_user_by_key(
-                cmd.key, uow
-            )
 
-            if is_existing_user:
-                if self._logger:
-                    self._logger.info(
-                        self.create_log_message(
-                            "acba1a0e",
-                            f"User {key} already exists",
+            # Verify if user already exists (only applicable when key is provided)
+            if key is not None:
+                is_existing_user = self.app.user_manager.is_existing_user_by_key(
+                    key, uow
+                )
+                if is_existing_user:
+                    if self._logger:
+                        self._logger.info(
+                            self.create_log_message(
+                                "acba1a0e",
+                                f"User {key} already exists",
+                            )
                         )
-                    )
-                raise exc.UserAlreadyExistsAuthError("User already exists")
+                    raise exc.UserAlreadyExistsAuthError("User already exists")
 
             is_existing_organization = self.repository.crud(
                 uow,
@@ -127,36 +128,39 @@ class OrganizationService(BaseOrganizationService):
                     )
                 raise exc.InvalidIdsError("Organization does not exist")
 
-            # Verify if invitation(s) already exists for this key, and delete those
+            # Verify if invitation(s) already exist for this key, and delete those.
+            # Only applicable when key is provided; keyless invitations are not deduplicated.
             # TODO: Must be done within the same session to be safe,
             # so requires specific repository method
-            user_invitations: list[model.UserInvitation] = self.repository.crud(
-                uow,
-                user.id,
-                self.user_invitation_class,
-                None,
-                None,
-                CrudOperation.READ_ALL,
-            )  # type: ignore
-            user_invitations = [x for x in user_invitations if x.key == key]
-            if user_invitations:
-                self.repository.crud(
+            if key is not None:
+                user_invitations: list[model.UserInvitation] = self.repository.crud(
                     uow,
                     user.id,
                     self.user_invitation_class,
                     None,
-                    [x.id for x in user_invitations],
-                    CrudOperation.DELETE_SOME,
-                )
+                    None,
+                    CrudOperation.READ_ALL,
+                )  # type: ignore
+                user_invitations = [x for x in user_invitations if x.key == key]
+                if user_invitations:
+                    self.repository.crud(
+                        uow,
+                        user.id,
+                        self.user_invitation_class,
+                        None,
+                        [x.id for x in user_invitations],
+                        CrudOperation.DELETE_SOME,
+                    )
             # Create user invitation
             user_invitation = self.user_invitation_class(
                 id=self.generate_id(),  # type: ignore[arg-type]
                 key=key,
+                description=description,
                 roles=initial_roles,
                 organization_id=organization_id,
                 invited_by_user_id=user.id,
                 token=self.generate_user_invitation_token(),
-                expires_at=self.generate_timestamp()
+                expires_at=datetime.now(timezone.utc)
                 + timedelta(
                     seconds=self.props.get(
                         "user_invitation_time_to_live",
@@ -206,18 +210,30 @@ class OrganizationService(BaseOrganizationService):
                 None,
                 CrudOperation.READ_ALL,
             )
-            now = self.generate_timestamp()
-            user_invitations = [
-                x
-                for x in user_invitations
-                if x.key == new_user.key and x.expires_at > now
-            ]
-            if not user_invitations:
+            now = datetime.now(timezone.utc)
+
+            # Keep invitations that are not expired and either have no key
+            # (open invites) or have a key matching the registering user.
+            filtered_user_invitations: list[model.UserInvitation] = []
+            for x in user_invitations:
+                # convert x.expires_at to aware datetime if it is naive
+                expires_at = x.expires_at
+                if x.expires_at.tzinfo is None:
+                    expires_at = x.expires_at.replace(tzinfo=timezone.utc)
+
+                if expires_at > now:
+                    if x.key is not None:
+                        if x.key == new_user.key:
+                            filtered_user_invitations.append(x)
+                    else:
+                        filtered_user_invitations.append(x)
+
+            if not filtered_user_invitations:
                 raise exc.UnauthorizedAuthError(
-                    f"No valid invitations found for user {new_user.key}",
+                    f"No valid invitations found for user {new_user.id}",
                 )
             user_invitations_with_token = [
-                x for x in user_invitations if x.token == cmd.token
+                x for x in filtered_user_invitations if x.token == cmd.token
             ]
             if not user_invitations_with_token:
                 raise exc.UnauthorizedAuthError(
@@ -227,6 +243,8 @@ class OrganizationService(BaseOrganizationService):
             user_invitation = sorted(
                 user_invitations_with_token, key=lambda x: x.expires_at
             )[-1]
+            # Set description of the user from the invitation
+            new_user.description = user_invitation.description
             # Set roles of the user
             new_user.roles = user_invitation.roles
             # Set ID and organization ID of the user
@@ -235,6 +253,7 @@ class OrganizationService(BaseOrganizationService):
             user_in_db: model.User = self.app.user_manager.create_new_user_from_token(  # type: ignore[assignment]
                 new_user,
                 user_invitation.token,
+                description=user_invitation.description,
                 created_by_user_id=user_invitation.invited_by_user_id,
                 roles=user_invitation.roles,
             )
@@ -303,7 +322,7 @@ class OrganizationService(BaseOrganizationService):
             )
 
         # Invalidate cache for the user
-        self.retrieve_user_by_key.cache_clear()  # type: ignore[attr-defined]
+        self.retrieve_user_by_key.cache_clear()
         return updated_tgt_user
 
     def retrieve_organization_contacts(

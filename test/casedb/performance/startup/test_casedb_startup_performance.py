@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 import pyinstrument
+import pytest
 
 from gen_epix.commondb.test.util import parse_stats
 

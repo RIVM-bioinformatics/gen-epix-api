@@ -1,5 +1,4 @@
 import logging
-from test.test_client.app_test_client import ServiceTestClient as Env
 from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
 from uuid import UUID
 
@@ -7,6 +6,7 @@ import pytest
 
 import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import command, enum, model
+from gen_epix.commondb.test.test_client import TestClient as Env
 from gen_epix.fastapp import CrudOperation
 from gen_epix.filter import (
     FilterType,
@@ -95,9 +95,7 @@ class TestManual:
         phylogenetic_tree = env.app.handle(
             command.RetrievePhylogeneticTreeByCasesCommand(
                 user=user,
-                genetic_distance_case_type_col_id=UUID(
-                    "0191c0e1-041b-f639-4e7f-59cd1fbf0b11"
-                ),
+                genetic_distance_col_id=UUID("0191c0e1-041b-f639-4e7f-59cd1fbf0b11"),
                 case_ids=[
                     UUID(x)
                     for x in [

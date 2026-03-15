@@ -64,9 +64,13 @@ class UploadBatchCommandMixin:
         default=False,
         description="If true, the upload is only verified but not actually performed.",
     )
-    on_exists: enum.OnExistsUploadAction = Field(
-        default=enum.OnExistsUploadAction.ERROR,
+    on_exists: enum.UploadAction = Field(
+        default=enum.UploadAction.ERROR,
         description="Action to take if one of the entities in the batch already exists upon upload.",
+    )
+    on_new: enum.UploadAction = Field(
+        default=enum.UploadAction.CREATE,
+        description="Action to take if one of the entities in the batch is new upon upload.",
     )
 
     def get_batch_for_upload(self) -> model.BaseBatchForUpload:
@@ -75,3 +79,8 @@ class UploadBatchCommandMixin:
             self, self.BATCH_FOR_UPLOAD_FIELD_NAME
         )
         return batch_for_upload
+
+    def get_n_parents(self) -> int:
+        """Get the number of parents in the batch for upload."""
+        batch_for_upload = self.get_batch_for_upload()
+        return batch_for_upload.get_n_parents()

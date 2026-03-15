@@ -189,9 +189,7 @@ class TestClient:
             command.OrganizationCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=model.Organization(
-                    name=organization_name, legal_entity_code=organization_name
-                ),
+                objs=model.Organization(name=organization_name, code=organization_name),
             )
         )
         retval: model.Organization = self._set_obj(organization)  # type: ignore[assignment]
@@ -201,8 +199,10 @@ class TestClient:
         self,
         user_or_str: str | model.User,
         user_name: str,
+        description: str | None = None,
         set_dummy_organization: bool = False,
         set_dummy_token: bool = False,
+        set_key: bool = True,
     ) -> model.User:
         root_user: model.User = self.get_root_user()
         user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
@@ -224,8 +224,9 @@ class TestClient:
         user_invitation: model.UserInvitation = self.handle(
             self.invite_user_command_class(
                 user=user,
-                key=f"{user_name}@{organization_name}.org",
+                key=f"{user_name}@{organization_name}.org" if set_key else None,
                 email=f"{user_name}@{organization_name}.org",
+                description=description,
                 roles={role},
                 organization_id=organization_id,
             )
@@ -240,6 +241,7 @@ class TestClient:
                     name=user_name,
                     organization_id=organization_id,
                     roles={role},
+                    description=description,
                 ),
                 token=user_invitation.token,
             )
@@ -268,7 +270,9 @@ class TestClient:
                 obj_ids=None,
             )
         )
-        if any(x.key == tgt_user.key for x in remaining_invitations):
+        if tgt_user.key is not None and any(
+            x.key == tgt_user.key for x in remaining_invitations
+        ):
             raise ValueError(f"Some user invitations remaining for key {tgt_user.key}")
         retval: model.User = self._set_obj(tgt_user)  # type: ignore[assignment]
         return retval

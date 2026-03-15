@@ -25,3 +25,23 @@ class BaseCaseAbacPolicy(Policy):
             case_abac = policy.get_content(cmd)
 
         return case_abac
+
+    @staticmethod
+    def get_ref_data_access_from_command(
+        cmd: command.Command,
+    ) -> model.RefDataAccess | None:
+        ref_data_access: model.RefDataAccess | None = None
+        for policy in cmd._policies:
+            if not issubclass(type(policy), BaseCaseAbacPolicy):
+                continue
+            if ref_data_access is not None:
+                raise exc.InitializationServiceError(
+                    "Multiple policies registered to retrieve RefDataAccess"
+                )
+            assert isinstance(policy, BaseCaseAbacPolicy)
+            ref_data_access = policy.get_ref_data_access(cmd)
+
+        return ref_data_access
+
+    def get_ref_data_access(self, cmd: command.Command) -> model.RefDataAccess:
+        return self.abac_service.get_ref_data_access(cmd)

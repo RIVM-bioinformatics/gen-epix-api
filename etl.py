@@ -37,6 +37,7 @@ from gen_epix.commondb.domain.enum import (
     DevIdpConfig,
     DevRepositoryConfig,
 )
+from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.util import (
     create_demo_data_from_repository,
     set_env_variables,
@@ -44,14 +45,25 @@ from gen_epix.commondb.domain.util import (
 from gen_epix.fastapp.repositories.dict.repository import DictRepository
 from gen_epix.fastapp.repositories.sa.repository import SARepository
 
-if len(sys.argv) != 4:
-    print("Usage: etl.py ENVVAR_PREFIX MODULE_ROOT APP_TYPE")
+if len(sys.argv) not in (4, 5):
+    print("Usage: etl.py ENVVAR_PREFIX MODULE_ROOT APP_TYPE [LOAD_DATA]")
     print("Example: etl.py CASEDB_ gen_epix.casedb CASEDB")
+    print(
+        "For loading data, set LOAD_DATA to True (default) or False to skip loading demo data"
+    )
+    print("Example: etl.py CASEDB_ gen_epix.casedb CASEDB false")
     sys.exit(1)
 
 ENVVAR_PREFIX = str(sys.argv[1])  # "CASEDB_"
 MODULE_ROOT = str(sys.argv[2])  # "gen_epix.casedb"
 APP_TYPE = AppType[sys.argv[3]]  # AppType.CASEDB
+LOAD_DATA: bool = len(sys.argv) < 5 or sys.argv[4].lower() not in (
+    "empty",
+    "false",
+    "0",
+    "no",
+    "off",
+)
 CONNECTION_TIMEOUT: float = 1
 
 importlib.import_module(f"{MODULE_ROOT}.repositories.sa_model")
@@ -87,17 +99,16 @@ for service_type in enum.ServiceType:
     entities = domain.get_dag_sorted_entities(
         service_type=service_type, persistable=True
     )
-    # Create dict repository, which is assumed to always be available
-    dict_repository_class: type[DictRepository] = dict_repository_cfg["class"]
-    demo_dict_file = Path(dict_repository_cfg["props"]["file"]).resolve()
-    empty_dict_file = Path(str(demo_dict_file).replace(".full.", ".empty.")).resolve()
-    zip_file: str = str(demo_dict_file).replace(".pkl.gz", ".zip")
-    start_time = datetime.datetime.now(datetime.timezone.utc)
-    dict_repository: DictRepository = (
-        dict_repository_class.create_repository(  # type: ignore[assignment]
-            entities=entities, file=zip_file
+    # Create dict repository with demo data if load is requested
+    if LOAD_DATA:
+        dict_repository_class: type[DictRepository] = dict_repository_cfg["class"]
+        demo_dict_file = Path(dict_repository_cfg["props"]["file"]).resolve()
+        zip_file: str = str(demo_dict_file).replace(".pkl.gz", ".zip")
+        dict_repository: DictRepository = (
+            dict_repository_class.create_repository(  # type: ignore[assignment]
+                entities=entities, file=zip_file
+            )
         )
-    )
 
     os.environ[ENVVAR_PREFIX + "SETTINGS_FILES"] = original_settings_files_environ
     os.environ[ENVVAR_PREFIX + "LOG_CONFIG_FILE"] = original_log_config_file_environ
@@ -141,10 +152,13 @@ for service_type in enum.ServiceType:
             name=service_type.value,
         )
     )
-    user_id = sa_sql_app_cfg.cfg["service"]["auth"]["props"]["root"]["user"]["id"]
-    create_demo_data_from_repository(
-        user_id, entities, dict_repository, sa_sql_repository, MODULE_ROOT
-    )
+    if LOAD_DATA:
+        user_id = sa_sql_app_cfg.cfg["service"]["auth"]["props"]["root"]["user"].get(
+            "id", NULL_ID
+        )
+        create_demo_data_from_repository(
+            user_id, entities, dict_repository, sa_sql_repository, MODULE_ROOT
+        )
     end_time = datetime.datetime.now(datetime.timezone.utc)
     print(
         f"App {APP_TYPE.value}, service {service_type.value}: sa_sql repository loaded in {end_time - start_time}s"

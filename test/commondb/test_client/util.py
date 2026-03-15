@@ -35,9 +35,9 @@ def get_test_client(
         is_new_test_dir = True
         # Find existing test dir for same test type and use that if found,
         # so all results come in the same dir
-        for stored_key, stored_env in TEST_CLIENTS.items():
-            stored_test_type, _, _ = stored_key  # type: ignore[misc]
-            if stored_test_type == test_type:  # type: ignore[has-type]
+        for stored_name, stored_env in TEST_CLIENTS.items():
+            stored_test_type = str(stored_name).split("__", maxsplit=1)[0]
+            if stored_test_type == test_type:
                 test_name = stored_env.test_name
                 test_dir = stored_env.test_dir
                 is_new_test_dir = False

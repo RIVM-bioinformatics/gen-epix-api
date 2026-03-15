@@ -144,7 +144,7 @@ def case_service_read_association_with_valid_ids(
                 raise AssertionError("Unexpected case")
         else:
             raise AssertionError("Unexpected case")
-    # Return objs or ids for remaining cases
+    # Return objs or IDs for remaining cases
     if return_type == "objects":
         return objs
     if return_type == "ids1":

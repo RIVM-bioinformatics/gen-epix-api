@@ -14,7 +14,6 @@ from gen_epix.casedb.services.case.crud_common import (
     get_case_abac_from_command,
     is_app_admin_or_above,
 )
-from gen_epix.fastapp import CrudOperation, CrudOperationSet
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 
@@ -32,9 +31,8 @@ def case_service_crud_case_set_data_collection_link(
     """Handle CRUD operations for CaseSetDataCollectionLink entities."""
 
     with self.repository.uow() as uow:
-        assert cmd.user is not None
         _crud_cascade_delete(self, uow, cmd)
-        if is_app_admin_or_above(self, cmd.user):
+        if cmd.user is None or is_app_admin_or_above(self, cmd.user):
             return _crud_case_set_data_collection_link_without_abac(self, uow, cmd)
         return _crud_case_set_data_collection_link_with_abac(self, uow, cmd)
 
@@ -76,14 +74,13 @@ def _crud_case_set_data_collection_link_with_abac(
     if case_abac is None:
         return self.crud(cmd)  # type: ignore[return-value]
 
-    # Initialize some
-    is_read_all = cmd.operation == CrudOperation.READ_ALL
-    is_delete_all = cmd.operation == CrudOperation.DELETE_ALL
-    is_update = cmd.operation in CrudOperationSet.UPDATE.value
-
     # Read all without filter and delete all not allowed due to potential large
     # number of case set data collection links
-    if (is_read_all and not cmd.query_filter) or is_delete_all or is_update:
+    if (
+        (cmd.is_read_all() and not cmd.query_filter)
+        or cmd.is_delete_all()
+        or cmd.is_update()
+    ):
         raise exc.UnauthorizedAuthError(
             f"Operation {cmd.operation.value} not allowed for case set data collection links for this user"
         )

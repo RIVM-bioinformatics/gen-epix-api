@@ -238,7 +238,7 @@ class V2LogParser(LogParser):
         return V2UserJourney(records)
 
     @staticmethod
-    def _get_path(record, path):
+    def _get_path(record: dict, path: list[str]) -> Any:
         value = record.get(path[0])
         if len(path) == 1:
             return value
@@ -271,7 +271,7 @@ class V2LogParser(LogParser):
 
     @staticmethod
     def _direct_lines_parser(
-        handle, content_filter: Filter | None
+        handle: Iterable[str], content_filter: Filter | None
     ) -> tuple[list[dict], list[str]]:
         line_filter = RegexFilter(pattern=V2LogParser.LOG_LINE_PATTERN)
         error_lines = []
@@ -305,7 +305,7 @@ class V2LogParser(LogParser):
         records = []
         error_lines = []
 
-        def to_merged_record(src_records: Iterable[dict]):
+        def to_merged_record(src_records: Iterable[dict]) -> Iterable[dict]:
             for src_record in src_records:
                 try:
                     content_src_record = src_record.pop(AzureColumn.CONTENT)
@@ -401,9 +401,9 @@ class LogParser2:
             return mostly_flat
 
         final_df_list = []
-        for col in df_with_lists.columns:
+        for col_name in df_with_lists.columns:
             column_df_list = [
-                self._flatten_json(list_item) for list_item in df_with_lists[col]
+                self._flatten_json(list_item) for list_item in df_with_lists[col_name]
             ]
             final_df_list.extend(column_df_list)
 

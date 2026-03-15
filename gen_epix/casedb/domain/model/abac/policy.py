@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import Field
 
-from gen_epix.casedb.domain.model.case import CaseTypeColSet, CaseTypeSet
+from gen_epix.casedb.domain.model.case import CaseTypeSet, ColSet
 from gen_epix.commondb.domain import model as common_model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
@@ -16,10 +16,10 @@ class BaseCasePolicy(common_model.Model):
         default=None, description="The data collection"
     )
     case_type_set_id: UUID = Field(
-        description="The ID of the case type set. FOREIGN KEY",
+        description="The ID of the CaseTypeSet. FOREIGN KEY",
     )
     case_type_set: CaseTypeSet | None = Field(
-        default=None, description="The case type set"
+        default=None, description="The CaseTypeSet"
     )
     is_active: bool = Field(description="Whether the right is active")
     add_case: bool = Field(
@@ -42,9 +42,9 @@ class OrganizationAccessCasePolicy(BaseCasePolicy):
     If an organization does not have a policy to a data collection, it has no
     access rights to that data collection.
 
-    The access rights are limited to the case types in the case type set. If a
-    case type is not in the case type set, the organization has no access
-    rights to that data collection for that case type.
+    The access rights are limited to the CaseTypes in the CaseTypeSet. If a
+    CaseType is not in the CaseTypeSet, the organization has no access
+    rights to that data collection for that CaseType.
     """
 
     ENTITY: ClassVar = Entity(
@@ -69,14 +69,14 @@ class OrganizationAccessCasePolicy(BaseCasePolicy):
                 ),
                 3: ("case_type_set_id", CaseTypeSet, "case_type_set"),
                 4: (
-                    "read_case_type_col_set_id",
-                    CaseTypeColSet,
-                    "read_case_type_col_set",
+                    "read_col_set_id",
+                    ColSet,
+                    "read_col_set",
                 ),
                 5: (
-                    "write_case_type_col_set_id",
-                    CaseTypeColSet,
-                    "write_case_type_col_set",
+                    "write_col_set_id",
+                    ColSet,
+                    "write_col_set",
                 ),
             }
         ),
@@ -86,27 +86,27 @@ class OrganizationAccessCasePolicy(BaseCasePolicy):
         default=None, description="The organization"
     )
     is_private: bool = Field(
-        description="Whether the data collection is private, limited to the case types in the case type set. When true, add/remove case and add/remove case set are considered (i) as the right to create/delete a case or case set in this data collection (setting case.created_in_data_collection to this data collection) and (ii) as the right to share the case or case set further in other data collections. Deleting a case or case set is only allowed when it can or has been removed from all other data collections as well."
+        description="Whether the data collection is private, limited to the CaseTypes in the CaseTypeSet. When true, add/remove case and add/remove case set are considered (i) as the right to create/delete a case or case set in this data collection (setting case.created_in_data_collection to this data collection) and (ii) as the right to share the case or case set further in other data collections. Deleting a case or case set is only allowed when it can or has been removed from all other data collections as well."
     )
-    read_case_type_col_set_id: UUID | None = Field(
+    read_col_set_id: UUID | None = Field(
         default=None,
-        description="The ID of the case type column set for which values can be read, limited to the case types in the case type set. If empty, there are no read rights. FOREIGN KEY",
+        description="The ID of the column set for which values can be read, limited to the CaseTypes in the CaseTypeSet. If empty, there are no read rights. FOREIGN KEY",
     )
-    read_case_type_col_set: CaseTypeColSet | None = Field(
-        default=None, description="The case type column set with read access"
+    read_col_set: ColSet | None = Field(
+        default=None, description="The column set with read access"
     )
-    write_case_type_col_set_id: UUID | None = Field(
+    write_col_set_id: UUID | None = Field(
         default=None,
-        description="The ID of the case type column set for which values can be updated, limited to the case types in the case type set.  If empty, there are no write rights. FOREIGN KEY",
+        description="The ID of the column set for which values can be updated, limited to the CaseTypes in the CaseTypeSet.  If empty, there are no write rights. FOREIGN KEY",
     )
-    write_case_type_col_set: CaseTypeColSet | None = Field(
-        default=None, description="The case type column set with write access"
+    write_col_set: ColSet | None = Field(
+        default=None, description="The column set with write access"
     )
     read_case_set: bool = Field(
-        description="Whether case set be read, limited to the case types in the case type set"
+        description="Whether case set be read, limited to the CaseTypes in the CaseTypeSet"
     )
     write_case_set: bool = Field(
-        description="Whether case set be updated, limited to the case types in the case type set"
+        description="Whether case set be updated, limited to the CaseTypes in the CaseTypeSet"
     )
 
 
@@ -142,39 +142,39 @@ class UserAccessCasePolicy(BaseCasePolicy):
                 ),
                 3: ("case_type_set_id", CaseTypeSet, "case_type_set"),
                 4: (
-                    "read_case_type_col_set_id",
-                    CaseTypeColSet,
-                    "read_case_type_col_set",
+                    "read_col_set_id",
+                    ColSet,
+                    "read_col_set",
                 ),
                 5: (
-                    "write_case_type_col_set_id",
-                    CaseTypeColSet,
-                    "write_case_type_col_set",
+                    "write_col_set_id",
+                    ColSet,
+                    "write_col_set",
                 ),
             }
         ),
     )
     user_id: UUID = Field(description="The ID of the user. FOREIGN KEY")
     user: common_model.User | None = Field(default=None, description="The user")
-    read_case_type_col_set_id: UUID | None = Field(
+    read_col_set_id: UUID | None = Field(
         default=None,
-        description="The ID of the case type column set for which values can be read, limited to the case types in the case type set.  If empty, there are no read rights. FOREIGN KEY",
+        description="The ID of the column set for which values can be read, limited to the CaseTypes in the CaseTypeSet.  If empty, there are no read rights. FOREIGN KEY",
     )
-    read_case_type_col_set: CaseTypeColSet | None = Field(
-        default=None, description="The case type column set with read access"
+    read_col_set: ColSet | None = Field(
+        default=None, description="The column set with read access"
     )
-    write_case_type_col_set_id: UUID | None = Field(
+    write_col_set_id: UUID | None = Field(
         default=None,
-        description="The ID of the case type column set for which values can be updated, limited to the case types in the case type set.  If empty, there are no write rights. FOREIGN KEY",
+        description="The ID of the column set for which values can be updated, limited to the CaseTypes in the CaseTypeSet.  If empty, there are no write rights. FOREIGN KEY",
     )
-    write_case_type_col_set: CaseTypeColSet | None = Field(
-        default=None, description="The case type column set with write access"
+    write_col_set: ColSet | None = Field(
+        default=None, description="The column set with write access"
     )
     read_case_set: bool = Field(
-        description="Whether case set be read, limited to the case types in the case type set"
+        description="Whether case set be read, limited to the CaseTypes in the CaseTypeSet"
     )
     write_case_set: bool = Field(
-        description="Whether case set be updated, limited to the case types in the case type set"
+        description="Whether case set be updated, limited to the CaseTypes in the CaseTypeSet"
     )
 
 
@@ -184,9 +184,9 @@ class OrganizationShareCasePolicy(BaseCasePolicy):
     particular data collection, if the case or case set is already in a
     particular other data collection.
 
-    The share rights are limited to the case types in the case type set. If a
-    case type is not in the case type set, the organization has no share rights
-    to that data collection for that case type.
+    The share rights are limited to the CaseTypes in the CaseTypeSet. If a
+    CaseType is not in the CaseTypeSet, the organization has no share rights
+    to that data collection for that CaseType.
     """
 
     ENTITY: ClassVar = Entity(
@@ -224,11 +224,11 @@ class OrganizationShareCasePolicy(BaseCasePolicy):
         default=None, description="The organization"
     )
     from_data_collection_id: UUID = Field(
-        description="The ID of the data collection from which the case type set is shared. FOREIGN KEY"
+        description="The ID of the data collection from which the CaseTypeSet is shared. FOREIGN KEY"
     )
     from_data_collection: common_model.DataCollection | None = Field(
         default=None,
-        description="The data collection from which the case type set is shared",
+        description="The data collection from which the CaseTypeSet is shared",
     )
 
 
@@ -275,9 +275,9 @@ class UserShareCasePolicy(BaseCasePolicy):
     user_id: UUID = Field(description="The ID of the user. FOREIGN KEY")
     user: common_model.User | None = Field(default=None, description="The user")
     from_data_collection_id: UUID = Field(
-        description="The ID of the data collection from which the case type set is shared. FOREIGN KEY"
+        description="The ID of the data collection from which the CaseTypeSet is shared. FOREIGN KEY"
     )
     from_data_collection: common_model.DataCollection | None = Field(
         default=None,
-        description="The data collection from which the case type set is shared",
+        description="The data collection from which the CaseTypeSet is shared",
     )

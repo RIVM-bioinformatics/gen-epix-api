@@ -1,7 +1,8 @@
 import datetime
+import hashlib
 import json
 from enum import Enum
-from typing import ClassVar, Self
+from typing import Any, ClassVar, Self
 from uuid import UUID
 
 from pydantic import (
@@ -28,13 +29,18 @@ class Organization(Model):
         snake_case_plural_name="organizations",
         table_name="organization",
         persistable=True,
-        keys=create_keys({1: "name", 2: "legal_entity_code"}),
+        keys=create_keys({1: "code", 2: "name"}),
+    )
+    code: str = Field(
+        description="The code of the organization, UNIQUE", max_length=255
     )
     name: str = Field(
         description="The name of the organization, UNIQUE", max_length=255
     )
-    legal_entity_code: str = Field(
-        description="The legal entity code of the organization, UNIQUE", max_length=255
+    description: str | None = Field(
+        default=None,
+        description="The description of the organization.",
+        max_length=1000,
     )
 
 
@@ -67,14 +73,21 @@ class User(fastapp.User, Model):
     id: UUID | None = Field(
         default=None, description="The ID of the user"
     )  # pyright: ignore[reportIncompatibleVariableOverride]
-    key: str = Field(
-        description="The key of the user, lowercase, UNIQUE", max_length=320
+    key: str | None = Field(
+        default=None,
+        description="The key of the user, lowercase, UNIQUE",
+        max_length=320,
     )
     email: str | None = Field(
         default=None, description="The email of the user", max_length=320
     )
     name: str | None = Field(
         default=None, description="The full name of the user", max_length=255
+    )
+    description: str | None = Field(
+        default=None,
+        description="The description of the user.",
+        max_length=1000,
     )
     is_active: bool = Field(
         default=True,
@@ -92,7 +105,9 @@ class User(fastapp.User, Model):
 
     @field_validator("key", mode="before")
     @classmethod
-    def _validate_key(cls, value: str) -> str:
+    def _validate_key(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
         return value.lower()
 
     def get_key(self) -> str:
@@ -313,9 +328,14 @@ class UserInvitation(Model):
         ),
     )
     ROLE_ENUM: ClassVar[type[Enum]] = enum.Role
-    key: str = copy_model_field(User, "key")
+    key: str | None = Field(
+        default=None,
+        description="The key of the user, lowercase, UNIQUE",
+        max_length=320,
+    )
     email: str | None = copy_model_field(User, "email")
     name: str | None = copy_model_field(User, "name")
+    description: str | None = copy_model_field(User, "description")
     token: str = Field(description="The token of the invitation", max_length=255)
     expires_at: datetime.datetime = Field(
         description="The expiry date of the invitation"
@@ -337,6 +357,13 @@ class UserInvitation(Model):
     organization: Organization | None = Field(
         default=None, description="The organization that the new user will belong to"
     )
+
+    @field_validator("key", mode="before")
+    @classmethod
+    def _validate_key(cls, value: str | None) -> str | None:
+        if value == "":
+            return None
+        return value
 
     @field_validator("roles", mode="before")
     @classmethod
@@ -408,45 +435,108 @@ class OrganizationIdentifierIssuerLink(Model):
     )
 
 
-class ExternalIdentifier(Model):
+class BaseIdentifier(Model):
     """
-    An externally generated identifier of a particular type and its corresponding
-    internal identifier. The externally generated identifier consists of the
-    combination (identifier issuer, identifier)
+    Base class for an identifier generated outside of the system by a particular
+    identifier issuer for a particular entity, together with the system's own
+    identifier. The combination of (identifier_issuer_id, external_id) must be unique.
     """
 
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="external_identifiers",
-        table_name="external_identifier",
-        persistable=True,
-        keys=create_keys(
-            {
-                1: ("identifier_type", "identifier_issuer_id", "external_id"),
-                2: ("identifier_type", "internal_id"),
-            }
-        ),
-        links=create_links(
-            {
-                1: ("identifier_issuer_id", IdentifierIssuer, "identifier_issuer"),
-            }
-        ),
-    )
-    identifier_type: enum.IdentifierType = Field(
-        description="The type of external identifier"
+    ENTITY: ClassVar = Entity(persistable=False, id_field_name="id")
+    # ENTITY: ClassVar = Entity(
+    #     id_field_name="id",
+    #     persistable=True,
+    #     keys=create_keys(
+    #         {
+    #             1: ("identifier_issuer_id", "external_id"),
+    #         }
+    #     ),
+    #     links=create_links(
+    #         {
+    #             1: ("identifier_issuer_id", IdentifierIssuer, "identifier_issuer"),
+    #         }
+    #     ),
+    # )
+
+    # The model class associated with this base identifier, to be defined in subclasses
+    MODEL_CLASS: ClassVar[type[fastapp.Model]] = None  # type: ignore[assignment]
+
+    id: UUID | None = Field(
+        default=None,
+        description="The ID of the identifier. Computed as the UUID of the first 16 bytes of the SHA-256 hash of the concatenated identifier_issuer_id bytes and the external_id encoded as UTF-8. PRIMARY KEY",
     )
     identifier_issuer_id: UUID = Field(
-        description="The UUID of the identifier issuer that issued the external identifier",
+        description="The UUID of the identifier issuer that issued the identifier",
     )
     identifier_issuer: IdentifierIssuer | None = Field(
         default=None, description="The identifier issuer corresponding to the ID"
     )
-    external_id: str = Field(description="The external identifier", max_length=255)
-    internal_id: UUID = Field(
-        description="The internal identifier. This identifier is not guaranteed to still exist, so operations using it should check this first."
+    external_id: str = Field(
+        description="The identifier issued by the identifier issuer, converted to string if necessary. The identifier will be stripped of leading and trailing whitespace.",
+        max_length=255,
     )
+    internal_id: UUID = Field(description="The internal identifier.")
+
+    @model_validator(mode="after")
+    def _validate_model(self) -> Self:
+        """
+        Derive the id, if not provided, or otherwise verify that it is
+        correctly derived if possible.
+        """
+        seq_id = self.id
+        computed_id = UUID(
+            hashlib.sha256(
+                self.identifier_issuer_id.bytes + self.external_id.encode("utf-8")
+            ).hexdigest()[:32]
+        )
+        # Set or verify seq_hash
+        if seq_id is None:
+            self.id = computed_id
+        elif seq_id != computed_id:
+            raise ValueError("Provided id does not match computed id")
+        return self
+
+    @field_validator("external_id", mode="after")
+    @classmethod
+    def _strip_external_id(cls, value: str) -> str:
+        return value.strip()
+
+    @classmethod
+    def create_entity(
+        cls,
+        model_class: type[fastapp.Model],
+        relationship_field_name: str | None = None,
+        snake_case_plural_name: str | None = None,
+        table_name: str | None = None,
+        persistable: bool = True,
+        **kwargs: Any,
+    ) -> Entity:
+        """
+        Create an Entity for a derived Identifier model class, based on the
+        associated model class and the fields of the base identifier.
+        """
+        entity = Entity(
+            snake_case_plural_name=snake_case_plural_name,
+            table_name=table_name,
+            persistable=persistable,
+            id_field_name="id",
+            keys=create_keys(
+                {
+                    1: ("identifier_issuer_id", "external_id"),
+                }
+            ),
+            links=create_links(
+                {
+                    1: ("identifier_issuer_id", IdentifierIssuer, "identifier_issuer"),
+                    2: ("internal_id", model_class, relationship_field_name),
+                }
+            ),
+            **kwargs,
+        )
+        return entity
 
 
-class ExternalIdentifierForUpload(BaseModel, frozen=True):
+class IdentifierForUpload(BaseModel, frozen=True):
     """
     An external identifier, defined as the combination of
     (identifier issuer, identifier), intended for an upload operation.
@@ -480,7 +570,7 @@ class ExternalIdentifierForUpload(BaseModel, frozen=True):
         Check equality based on identifier_issuer_id, identifier_issuer_code, and identifier.
         Only when all three match, the objects are considered equal.
         """
-        if not isinstance(other, ExternalIdentifierForUpload):
+        if not isinstance(other, IdentifierForUpload):
             return False
         return (
             self.identifier_issuer_id == other.identifier_issuer_id

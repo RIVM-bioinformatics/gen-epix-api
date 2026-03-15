@@ -3,13 +3,12 @@ from uuid import UUID
 
 from pydantic import Field, computed_field, model_validator
 
-from gen_epix.commondb.domain.enum import IdentifierType
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
     DataIssue,
-    IsNewIdMixin,
+    IdentifiersMixin,
     ParentForUpload,
     ParentUploadResult,
     UploadResult,
@@ -23,24 +22,49 @@ from gen_epix.seqdb.domain.model.seq.locus import Allele
 from gen_epix.seqdb.domain.model.seq.pheno import AstMeasurement, PcrMeasurement
 from gen_epix.seqdb.domain.model.seq.profile import (
     AlleleProfile,
+    AlleleProfileIdentifier,
     KmerProfile,
+    KmerProfileIdentifier,
     LocusProfile,
     MlvaProfile,
+    MlvaProfileIdentifier,
     SnpProfile,
+    SnpProfileIdentifier,
 )
-from gen_epix.seqdb.domain.model.seq.reads import ReadSet
-from gen_epix.seqdb.domain.model.seq.sample import Sample
-from gen_epix.seqdb.domain.model.seq.seq import Seq
+from gen_epix.seqdb.domain.model.seq.reads import ReadSet, ReadSetIdentifier
+from gen_epix.seqdb.domain.model.seq.sample import Sample, SampleIdentifier
+from gen_epix.seqdb.domain.model.seq.seq import Seq, SeqIdentifier
 from gen_epix.util import copy_model_field
 
 
-class ReadSetForUpload(ReadSet, IsNewIdMixin):
+class ValidateRefDataIdCodeMixin:
+    REFDATA_FIELD_ID_CODE_PAIRS: ClassVar[list[tuple[str, str]]] = []
+
+    @model_validator(mode="after")
+    def _validate_refdata(self) -> Self:
+        """Validate that either refdata code or refdata id is provided."""
+        for refdata_id_field, refdata_code_field in self.REFDATA_FIELD_ID_CODE_PAIRS:
+            refdata_code = getattr(self, refdata_code_field)
+            refdata_id = getattr(self, refdata_id_field)
+            if not refdata_code and refdata_id == NULL_ID:
+                raise ValueError(
+                    f"Either {refdata_code_field} or {refdata_id_field} must be provided."
+                )
+        return self
+
+
+class ReadSetForUpload(ReadSet, IdentifiersMixin, ValidateRefDataIdCodeMixin):
     """
     A read set intended for upload.
     """
 
-    ENTITY: ClassVar = ReadSet.ENTITY.model_copy(update={"persistable": False})
+    ENTITY: ClassVar = ReadSet.model_entity().clone(update={"persistable": False})
     NAME: ClassVar = "ReadSetForUpload"
+
+    IDENTIFIER_CLASS: ClassVar = ReadSetIdentifier
+    REFDATA_FIELD_ID_CODE_PAIRS: ClassVar = [
+        ("sequencing_protocol_id", "sequencing_protocol_code"),
+    ]
 
     sample_id: UUID = Field(
         default=NULL_ID,
@@ -56,23 +80,18 @@ class ReadSetForUpload(ReadSet, IsNewIdMixin):
         max_length=255,
     )
 
-    @model_validator(mode="after")
-    def _validate_sequencing_protocol(self) -> Self:
-        """Validate sequencing protocol."""
-        if not self.sequencing_protocol_code and self.sequencing_protocol_id == NULL_ID:
-            raise ValueError(
-                "Either sequencing_protocol_code or sequencing_protocol_id must be provided."
-            )
-        return self
 
-
-class SeqForUpload(Seq, IsNewIdMixin):
+class SeqForUpload(Seq, IdentifiersMixin, ValidateRefDataIdCodeMixin):
     """
     A sequence intended for upload.
     """
 
-    ENTITY: ClassVar = Seq.ENTITY.model_copy(update={"persistable": False})
+    ENTITY: ClassVar = Seq.model_entity().clone(update={"persistable": False})
     NAME: ClassVar = "SeqForUpload"
+    IDENTIFIER_CLASS: ClassVar = SeqIdentifier
+    REFDATA_FIELD_ID_CODE_PAIRS: ClassVar = [
+        ("assembly_protocol_id", "assembly_protocol_code"),
+    ]
 
     sample_id: UUID = Field(
         default=NULL_ID,
@@ -88,26 +107,23 @@ class SeqForUpload(Seq, IsNewIdMixin):
         max_length=255,
     )
 
-    @model_validator(mode="after")
-    def _validate_assembly_protocol(self) -> Self:
-        """Validate assembly protocol."""
-        if not self.assembly_protocol_code and self.assembly_protocol_id == NULL_ID:
-            raise ValueError(
-                "Either assembly_protocol_code or assembly_protocol_id must be provided."
-            )
-        return self
 
-
-class SnpProfileForUpload(SnpProfile):
+class SnpProfileForUpload(SnpProfile, IdentifiersMixin, ValidateRefDataIdCodeMixin):
     """
     A SNP profile record intended for upload. Equal to a SnpProfile, with
     additional variables.
     """
 
-    ENTITY: ClassVar[Entity] = SnpProfile.ENTITY.model_copy(
+    ENTITY: ClassVar[Entity] = SnpProfile.model_entity().clone(
         update={"persistable": False}
     )
     NAME: ClassVar = "SnpProfileForUpload"
+
+    IDENTIFIER_CLASS: ClassVar = SnpProfileIdentifier
+    REFDATA_FIELD_ID_CODE_PAIRS: ClassVar = [
+        ("snp_detection_protocol_id", "snp_detection_protocol_code"),
+        ("ref_seq_id", "ref_seq_code"),
+    ]
 
     sample_id: UUID = Field(
         default=NULL_ID,
@@ -165,17 +181,6 @@ class SnpProfileForUpload(SnpProfile):
             super()._validate_model()
         elif self.aligned_nucleotide_seq is not None:
             pass
-
-        # Upload-specific validation
-        if (
-            not self.snp_detection_protocol_code
-            and self.snp_detection_protocol_id == NULL_ID
-        ):
-            raise ValueError(
-                "Either snp_detection_protocol_code or snp_detection_protocol_id must be provided."
-            )
-        if self.ref_seq_code is None and self.ref_seq_id == NULL_ID:
-            raise ValueError("Either ref_seq_code or ref_seq_id must be provided.")
         return self
 
 
@@ -185,7 +190,7 @@ class AlleleForUpload(Allele):
     additional variables.
     """
 
-    ENTITY: ClassVar = Allele.ENTITY.model_copy(update={"persistable": False})
+    ENTITY: ClassVar = Allele.model_entity().clone(update={"persistable": False})
     NAME: ClassVar = "AlleleForUpload"
 
     locus_id: UUID = Field(
@@ -194,16 +199,25 @@ class AlleleForUpload(Allele):
     )
 
 
-class AlleleProfileForUpload(AlleleProfile):
+class AlleleProfileForUpload(
+    AlleleProfile, IdentifiersMixin, ValidateRefDataIdCodeMixin
+):
     """
     An allele profile record intended for upload. Equal to an AlleleProfile, with
     additional variables.
     """
 
-    ENTITY: ClassVar[Entity] = AlleleProfile.ENTITY.model_copy(
+    ENTITY: ClassVar[Entity] = AlleleProfile.model_entity().clone(
         update={"persistable": False}
     )
     NAME: ClassVar = "AlleleProfileForUpload"
+
+    IDENTIFIER_CLASS: ClassVar = AlleleProfileIdentifier
+    REFDATA_FIELD_ID_CODE_PAIRS: ClassVar = [
+        ("locus_detection_protocol_id", "locus_detection_protocol_code"),
+        ("locus_set_id", "locus_set_code"),
+        ("locus_code_map_id", "locus_code_map_code"),
+    ]
 
     sample_id: UUID = Field(
         default=NULL_ID,
@@ -335,16 +349,23 @@ class AlleleProfileForUpload(AlleleProfile):
         return self
 
 
-class MlvaProfileForUpload(MlvaProfile):
+class MlvaProfileForUpload(MlvaProfile, IdentifiersMixin, ValidateRefDataIdCodeMixin):
     """
     An MLVA profile record intended for upload. Equal to an MlvaProfile, with
     additional variables.
     """
 
-    ENTITY: ClassVar[Entity] = MlvaProfile.ENTITY.model_copy(
+    ENTITY: ClassVar[Entity] = MlvaProfile.model_entity().clone(
         update={"persistable": False}
     )
     NAME: ClassVar = "MlvaProfileForUpload"
+
+    IDENTIFIER_CLASS: ClassVar = MlvaProfileIdentifier
+    REFDATA_FIELD_ID_CODE_PAIRS: ClassVar = [
+        ("locus_detection_protocol_id", "locus_detection_protocol_code"),
+        ("locus_set_id", "locus_set_code"),
+        ("locus_code_map_id", "locus_code_map_code"),
+    ]
 
     sample_id: UUID = Field(
         default=NULL_ID,
@@ -456,7 +477,90 @@ class MlvaProfileForUpload(MlvaProfile):
         return self
 
 
-# TODO: add KmerProfileForUpload and update SampleForUpload accordingly
+class KmerProfileForUpload(KmerProfile, IdentifiersMixin, ValidateRefDataIdCodeMixin):
+    """
+    A k-mer profile record intended for upload. Equal to a KmerProfile, with
+    additional variables.
+    """
+
+    ENTITY: ClassVar[Entity] = KmerProfile.model_entity().clone(
+        update={"persistable": False}
+    )
+    NAME: ClassVar = "KmerProfileForUpload"
+
+    IDENTIFIER_CLASS: ClassVar = KmerProfileIdentifier
+    REFDATA_FIELD_ID_CODE_PAIRS: ClassVar = [
+        ("kmer_detection_protocol_id", "kmer_detection_protocol_code"),
+    ]
+
+    sample_id: UUID = Field(
+        default=NULL_ID,
+        description="The UUID of the sample that the k-mer profile is associated with. If not available, the null ID is put.",
+    )
+    seq_id: UUID | None = Field(
+        default=None,
+        description="The UUID of the sequence that the k-mer profile was derived from, if available.",
+    )
+    kmer_detection_protocol_id: UUID = Field(
+        default=NULL_ID,
+        description="The UUID of the k-mer detection protocol, if available. If not available, the null ID is put. Must be present if kmer_detection_protocol_code is not present. The use of kmer_detection_protocol_id is preferred over kmer_detection_protocol_code since the latter may change.",
+    )
+    kmer_detection_protocol_code: str | None = Field(
+        default=None,
+        description="The code of the k-mer detection protocol. Must be present if kmer_detection_protocol_id is not present. The use of kmer_detection_protocol_code is meant for situations where the kmer_detection_protocol_id is not known, but the code is and/or improves human interpretation.",
+        max_length=255,
+    )
+    kmer_profile: str = Field(
+        default="",
+        description="String representation of the k-mer profile, with the format depending on kmer_profile_format. Must be present if kmer_frequency_map is not provided: these 2 properties are different representations of the same data that can be chosen between.",
+    )
+    kmer_frequency_map: dict[str, float] | None = Field(
+        default=None,
+        description="A mapping from locus codes to repeat numbers for all detected loci, in any order and if available. Undetected loci must have None as repeat number or may be omitted. Must be present if kmer_profile is not provided: these 2 properties are different representations of the same data that can be chosen between.",
+    )
+
+    @model_validator(mode="after")
+    def _validate_model(self) -> Self:
+        """
+        Override parent validation for upload format to handle kmer_frequency_map.
+        """
+        n_representations = sum(
+            [
+                self.kmer_profile != "",
+                self.kmer_frequency_map is not None,
+            ]
+        )
+        if n_representations != 1:
+            raise ValueError(
+                "Exactly one of kmer_profile or kmer_frequency_map must be provided."
+            )
+
+        if self.kmer_profile != "":
+            # Use parent validation for kmer_profile string format
+            super()._validate_model()
+        elif self.kmer_frequency_map is not None:
+            # Set or verify kmer_profile_hash
+            computed_profile_hash = KmerProfile.get_kmer_profile_hash(
+                self.kmer_frequency_map
+            )  # Will raise ValueError if invalid
+            if self.kmer_profile_hash == NULL_ID:
+                self.kmer_profile_hash = computed_profile_hash
+            elif self.kmer_profile_hash != computed_profile_hash:
+                raise ValueError(
+                    "Provided k-mer profile hash does not match computed hash"
+                )
+
+        # Upload-specific validation
+        if (
+            not self.kmer_detection_protocol_code
+            and self.kmer_detection_protocol_id == NULL_ID
+        ):
+            raise ValueError(
+                "Either kmer_detection_protocol_code or kmer_detection_protocol_id must be provided."
+            )
+        return self
+
+
 # TODO: add PcrMeasurementForUpload and update SampleForUpload accordingly
 # TODO: add AstMeasurementForUpload and update SampleForUpload accordingly
 # TODO: add SeqTaxonomyForUpload and update SampleForUpload accordingly
@@ -469,10 +573,10 @@ class SampleForUpload(ParentForUpload):
     A sample intended for upload, together with any relevant associated data.
     """
 
-    ENTITY: ClassVar = ParentForUpload.ENTITY.model_copy()
+    ENTITY: ClassVar = ParentForUpload.model_entity().clone()
     NAME = "SampleForUpload"
 
-    EXTERNAL_IDENTIFIER_TYPE: ClassVar = IdentifierType.SAMPLE
+    IDENTIFIER_CLASS: ClassVar = SampleIdentifier
     PARENT_CLASS: ClassVar = Sample
     PARENT_FIELD_NAME: ClassVar = "sample"
     CHILD_FOR_UPLOAD_CLASS_MAP: ClassVar = {
@@ -484,7 +588,7 @@ class SampleForUpload(ParentForUpload):
         AlleleProfile: AlleleProfileForUpload,
         SnpProfile: SnpProfileForUpload,
         MlvaProfile: MlvaProfileForUpload,
-        KmerProfile: KmerProfile,
+        KmerProfile: KmerProfileForUpload,
         PcrMeasurement: PcrMeasurement,
         AstMeasurement: AstMeasurement,
     }
@@ -544,7 +648,7 @@ class SampleForUpload(ParentForUpload):
         default=None,
         description="The MLVA profiles associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
-    kmer_profiles: list[KmerProfile] | None = Field(
+    kmer_profiles: list[KmerProfileForUpload] | None = Field(
         default=None,
         description="The k-mer profiles associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
@@ -568,7 +672,7 @@ class SampleUploadResult(ParentUploadResult):
     the associated data match those in SampleForUpload to facilitate processing.
     """
 
-    ENTITY: ClassVar = ParentUploadResult.ENTITY.model_copy()
+    ENTITY: ClassVar = ParentUploadResult.model_entity().clone()
     NAME: ClassVar = "SampleUploadResult"
 
     PARENT_FOR_UPLOAD_CLASS: ClassVar = SampleForUpload  # type: ignore[assignment]
@@ -629,7 +733,7 @@ class SampleBatchForUpload(BaseBatchForUpload):
     for the storage of these data.
     """
 
-    ENTITY: ClassVar = SampleForUpload.ENTITY.model_copy()
+    ENTITY: ClassVar = SampleForUpload.model_entity().clone()
     NAME: ClassVar = "SampleBatchForUpload"
 
     PARENT_FOR_UPLOAD_CLASS: ClassVar = SampleForUpload
@@ -712,20 +816,20 @@ class SampleBatchForUpload(BaseBatchForUpload):
         """Indicates whether there are any AST measurements in the sample set."""
         return any(len(x.ast_measurements or []) > 0 for x in self.samples)
 
-    @model_validator(mode="after")
-    def _validate_model(self) -> Self:
-        # Verify that samples contain no duplicate sample_ids
-        sample_ids = [x.id for x in self.samples if x.id is not None]
-        if len(sample_ids) != len(set(sample_ids)):
-            raise ValueError("Samples must not contain duplicate sample IDs.")
-        # Verify that samples contains no duplicate external_identifiers
-        all_external_identifiers = []
-        for sample in self.samples:
-            if sample.external_identifiers is not None:
-                all_external_identifiers.extend(sample.external_identifiers)
-        if len(all_external_identifiers) != len(set(all_external_identifiers)):
-            raise ValueError("Samples must not contain duplicate external_identifiers.")
-        return self
+
+class CalculateSeqDistancesResult(UploadResult):
+    """
+    Represents the result of calculating distances between existing profiles and new profiles or
+    between new profiles themselves, as part of the upload process.
+    The seq_distance_profile_id refers to the sequence distance profile (i.e., AlleleProfile or MlvaProfile).
+    """
+
+    ENTITY: ClassVar = Entity(persistable=False)
+    NAME: ClassVar = "CalculateSeqDistancesResult"
+
+    seq_distance_profile_id: UUID = Field(
+        description="The UUID of the sequence distance profile that contains the calculated distances.",
+    )
 
 
 class SampleBatchUploadResult(BaseBatchUploadResult):
@@ -733,7 +837,7 @@ class SampleBatchUploadResult(BaseBatchUploadResult):
     The result of uploading a batch of cases.
     """
 
-    ENTITY: ClassVar = SampleBatchForUpload.ENTITY.model_copy()
+    ENTITY: ClassVar = SampleBatchForUpload.model_entity().clone()
     NAME: ClassVar = "SampleBatchUploadResult"
 
     BATCH_FOR_UPLOAD_CLASS: ClassVar = SampleBatchForUpload  # type: ignore[assignment]
@@ -741,4 +845,8 @@ class SampleBatchUploadResult(BaseBatchUploadResult):
 
     samples: list[SampleUploadResult] = Field(
         description="The results of uploading the individual samples, in the same order as provided."
+    )
+    seq_distances: list[CalculateSeqDistancesResult] | None = Field(
+        default=None,
+        description="The results of calculating distances between sequences, if this was performed as part of the upload.",
     )

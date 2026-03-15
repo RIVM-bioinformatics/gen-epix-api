@@ -42,11 +42,11 @@ class BaseAbacTestCase(TestCase):
         self.case_type_id = UUID("11111111-1111-1111-1111-111111111111")
         self.data_collection_id = UUID("22222222-2222-2222-2222-222222222222")
         self.case_type_set_id = UUID("33333333-3333-3333-3333-333333333333")
-        self.read_case_type_col_set_id = UUID("44444444-4444-4444-4444-444444444444")
-        self.write_case_type_col_set_id = UUID("55555555-5555-5555-5555-555555555555")
-        self.case_type_col_id_1 = UUID("66666666-6666-6666-6666-666666666661")
-        self.case_type_col_id_2 = UUID("66666666-6666-6666-6666-666666666662")
-        self.case_type_col_id_3 = UUID("66666666-6666-6666-6666-666666666663")
+        self.read_col_set_id = UUID("44444444-4444-4444-4444-444444444444")
+        self.write_col_set_id = UUID("55555555-5555-5555-5555-555555555555")
+        self.col_id_1 = UUID("66666666-6666-6666-6666-666666666661")
+        self.col_id_2 = UUID("66666666-6666-6666-6666-666666666662")
+        self.col_id_3 = UUID("66666666-6666-6666-6666-666666666663")
         self.from_data_collection_id = UUID("77777777-7777-7777-7777-777777777777")
 
         self.app = self._create_app_mock()
@@ -111,13 +111,13 @@ class BaseAbacTestCase(TestCase):
     def create_update_user_cmd(
         self, user: Any, tgt_org_id: UUID, is_new_user: bool
     ) -> Any:
-        """Create a command-like object for temp_update_user_own_organization."""
+        """Create a command-like object for update_user_own_organization."""
         return SimpleNamespace(
             user=user, organization_id=tgt_org_id, is_new_user=is_new_user
         )
 
     class UserModelStub:
-        """User model stub supporting model_copy used by temp_update_user_own_organization."""
+        """User model stub supporting model_copy used by update_user_own_organization."""
 
         def __init__(self, id_: UUID, org_id: UUID, roles: set[str]) -> None:
             self.id = id_
@@ -137,8 +137,8 @@ class BaseAbacTestCase(TestCase):
             *,
             case_type_set_id: UUID,
             data_collection_id: UUID,
-            read_case_type_col_set_id: UUID | None,
-            write_case_type_col_set_id: UUID | None,
+            read_col_set_id: UUID | None,
+            write_col_set_id: UUID | None,
             add_case: bool,
             remove_case: bool,
             add_case_set: bool,
@@ -151,8 +151,8 @@ class BaseAbacTestCase(TestCase):
         ) -> None:
             self.case_type_set_id = case_type_set_id
             self.data_collection_id = data_collection_id
-            self.read_case_type_col_set_id = read_case_type_col_set_id
-            self.write_case_type_col_set_id = write_case_type_col_set_id
+            self.read_col_set_id = read_col_set_id
+            self.write_col_set_id = write_col_set_id
             self.add_case = add_case
             self.remove_case = remove_case
             self.add_case_set = add_case_set
@@ -167,8 +167,8 @@ class BaseAbacTestCase(TestCase):
             return {
                 "case_type_set_id": self.case_type_set_id,
                 "data_collection_id": self.data_collection_id,
-                "read_case_type_col_set_id": self.read_case_type_col_set_id,
-                "write_case_type_col_set_id": self.write_case_type_col_set_id,
+                "read_col_set_id": self.read_col_set_id,
+                "write_col_set_id": self.write_col_set_id,
                 "add_case": self.add_case,
                 "remove_case": self.remove_case,
                 "add_case_set": self.add_case_set,
@@ -270,9 +270,9 @@ class TestGetCaseAbac(BaseAbacTestCase):
             [],  # user share
         ]
         self.service.app.handle.side_effect = [  # type: ignore[attr-defined]
-            [],  # CaseTypeColCrudCommand
+            [],  # ColCrudCommand
             [],  # CaseTypeSetMemberCrudCommand
-            [],  # CaseTypeColSetMemberCrudCommand
+            [],  # ColSetMemberCrudCommand
         ]
 
         abac = self.service.get_case_abac(cmd)
@@ -284,7 +284,7 @@ class TestGetCaseAbac(BaseAbacTestCase):
         self.assertEqual(self.service.app.handle.call_count, 3)  # type: ignore[attr-defined]
 
     def test_get_case_abac_with_policies_builds_intersection(self) -> None:
-        """Intersection across org/user policies and col sets is computed correctly."""
+        """Intersection across org/user policies and ColSets is computed correctly."""
 
         cmd = self.create_cmd_with_user(self.user_id)
 
@@ -294,8 +294,8 @@ class TestGetCaseAbac(BaseAbacTestCase):
         org_access = SimpleNamespace(
             case_type_set_id=self.case_type_set_id,
             data_collection_id=self.data_collection_id,
-            read_case_type_col_set_id=self.read_case_type_col_set_id,
-            write_case_type_col_set_id=self.write_case_type_col_set_id,
+            read_col_set_id=self.read_col_set_id,
+            write_col_set_id=self.write_col_set_id,
             add_case=True,
             remove_case=True,
             add_case_set=False,
@@ -307,8 +307,8 @@ class TestGetCaseAbac(BaseAbacTestCase):
         user_access = SimpleNamespace(
             case_type_set_id=self.case_type_set_id,
             data_collection_id=self.data_collection_id,
-            read_case_type_col_set_id=self.read_case_type_col_set_id,
-            write_case_type_col_set_id=self.write_case_type_col_set_id,
+            read_col_set_id=self.read_col_set_id,
+            write_col_set_id=self.write_col_set_id,
             add_case=True,
             remove_case=False,
             add_case_set=True,
@@ -344,19 +344,13 @@ class TestGetCaseAbac(BaseAbacTestCase):
             [user_share],  # UserShareCasePolicy READ_ALL
         ]
 
-        # app.handle calls: CaseTypeColCrud, CaseTypeSetMemberCrud, CaseTypeColSetMemberCrud
+        # app.handle calls: ColCrud, CaseTypeSetMemberCrud, ColSetMemberCrud
         self.service.app.handle.side_effect = [  # type: ignore[attr-defined]
-            # CaseTypeColCrudCommand -> produces mapping case_type_id -> {col ids}
+            # ColCrudCommand -> produces mapping case_type_id -> {Col ids}
             [
-                SimpleNamespace(
-                    id=self.case_type_col_id_1, case_type_id=self.case_type_id
-                ),
-                SimpleNamespace(
-                    id=self.case_type_col_id_2, case_type_id=self.case_type_id
-                ),
-                SimpleNamespace(
-                    id=self.case_type_col_id_3, case_type_id=self.case_type_id
-                ),
+                SimpleNamespace(id=self.col_id_1, case_type_id=self.case_type_id),
+                SimpleNamespace(id=self.col_id_2, case_type_id=self.case_type_id),
+                SimpleNamespace(id=self.col_id_3, case_type_id=self.case_type_id),
             ],
             # CaseTypeSetMemberCrudCommand -> map case_type_set_id -> {case_type_id}
             [
@@ -365,23 +359,23 @@ class TestGetCaseAbac(BaseAbacTestCase):
                     case_type_id=self.case_type_id,
                 ),
             ],
-            # CaseTypeColSetMemberCrudCommand -> memberships for read/write sets
+            # ColSetMemberCrudCommand -> memberships for read/write ColSets
             [
                 SimpleNamespace(
-                    case_type_col_set_id=self.read_case_type_col_set_id,
-                    case_type_col_id=self.case_type_col_id_1,
+                    col_set_id=self.read_col_set_id,
+                    col_id=self.col_id_1,
                 ),
                 SimpleNamespace(
-                    case_type_col_set_id=self.read_case_type_col_set_id,
-                    case_type_col_id=self.case_type_col_id_2,
+                    col_set_id=self.read_col_set_id,
+                    col_id=self.col_id_2,
                 ),
                 SimpleNamespace(
-                    case_type_col_set_id=self.write_case_type_col_set_id,
-                    case_type_col_id=self.case_type_col_id_2,
+                    col_set_id=self.write_col_set_id,
+                    col_id=self.col_id_2,
                 ),
                 SimpleNamespace(
-                    case_type_col_set_id=self.write_case_type_col_set_id,
-                    case_type_col_id=self.case_type_col_id_3,
+                    col_set_id=self.write_col_set_id,
+                    col_id=self.col_id_3,
                 ),
             ],
         ]
@@ -395,14 +389,14 @@ class TestGetCaseAbac(BaseAbacTestCase):
         access = access_for_ct[self.data_collection_id]
         self.assertTrue(access.add_case)
         self.assertFalse(access.remove_case)  # AND of True and False -> False
-        # read/write col ids are intersection across col map and set members AND across org/user dicts
+        # read/write Col ids are intersection across Col map and set members AND across org/user dicts
         self.assertSetEqual(
-            access.read_case_type_col_ids,
-            {self.case_type_col_id_1, self.case_type_col_id_2},
+            access.read_col_ids,
+            {self.col_id_1, self.col_id_2},
         )
         self.assertSetEqual(
-            access.write_case_type_col_ids,
-            {self.case_type_col_id_2, self.case_type_col_id_3},
+            access.write_col_ids,
+            {self.col_id_2, self.col_id_3},
         )
         self.assertTrue(access.read_case_set)
         self.assertFalse(access.write_case_set)
@@ -421,7 +415,7 @@ class TestGetCaseAbac(BaseAbacTestCase):
 
 @pytest.mark.scenario_ids("TC-SEC-29-02", "TC-RBAC-05-02")
 class TestTempUpdateUserOrganization(BaseAbacTestCase):
-    """Test temp_update_user_own_organization behavior."""
+    """Test update_user_own_organization behavior."""
 
     def test_no_change_same_org_returns_early(self) -> None:
         """When target org is same and not new user, returns early without side effects."""
@@ -431,7 +425,7 @@ class TestTempUpdateUserOrganization(BaseAbacTestCase):
         self.service._get_user_by_id_cached = SimpleNamespace(cache_clear=Mock())  # type: ignore[assignment]
         self.service._get_case_abac_cached = SimpleNamespace(cache_clear=Mock())  # type: ignore[assignment]
 
-        retval = self.service.temp_update_user_own_organization(cmd)
+        retval = self.service.update_user_own_organization(cmd)
 
         self.assertIs(retval, user)
         self.repository.uow.assert_not_called()
@@ -453,8 +447,8 @@ class TestTempUpdateUserOrganization(BaseAbacTestCase):
             self.OrgPolicyDumpStub(
                 case_type_set_id=self.case_type_set_id,
                 data_collection_id=self.data_collection_id,
-                read_case_type_col_set_id=self.read_case_type_col_set_id,
-                write_case_type_col_set_id=self.write_case_type_col_set_id,
+                read_col_set_id=self.read_col_set_id,
+                write_col_set_id=self.write_col_set_id,
                 add_case=True,
                 remove_case=False,
                 add_case_set=True,
@@ -468,8 +462,8 @@ class TestTempUpdateUserOrganization(BaseAbacTestCase):
             self.OrgPolicyDumpStub(
                 case_type_set_id=self.case_type_set_id,
                 data_collection_id=self.data_collection_id,
-                read_case_type_col_set_id=None,
-                write_case_type_col_set_id=None,
+                read_col_set_id=None,
+                write_col_set_id=None,
                 add_case=True,
                 remove_case=False,
                 add_case_set=False,
@@ -503,7 +497,7 @@ class TestTempUpdateUserOrganization(BaseAbacTestCase):
         self.service._get_user_by_id_cached = SimpleNamespace(cache_clear=Mock())  # type: ignore[assignment]
         self.service._get_case_abac_cached = SimpleNamespace(cache_clear=Mock())  # type: ignore[assignment]
 
-        updated_user = self.service.temp_update_user_own_organization(cmd)
+        updated_user = self.service.update_user_own_organization(cmd)
 
         self.assertEqual(updated_user.organization_id, self.new_org_id)
         self.assertEqual(self.service.app.handle.call_count, 9)  # type: ignore[attr-defined]

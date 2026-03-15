@@ -7,9 +7,6 @@ from gen_epix.casedb.domain.service.ontology import (
     BaseOntologyService as BaseOntologyService,
 )
 from gen_epix.casedb.domain.service.seqdb import BaseSeqdbService as BaseSeqdbService
-from gen_epix.casedb.domain.service.subject import (
-    BaseSubjectService as BaseSubjectService,
-)
 from gen_epix.commondb.domain.service import (
     BaseOrganizationService as BaseOrganizationService,
 )

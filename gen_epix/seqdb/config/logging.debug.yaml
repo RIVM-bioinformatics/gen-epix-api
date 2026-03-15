@@ -1,18 +1,23 @@
 version: 1
 disable_existing_loggers: false
 formatters:
-  simple:
-    format: '{"ts":"%(asctime)s","logger":"%(name)s","level":"%(levelname)s","content":%(message)s}'
+  json:
+    "()": gen_epix.commondb.config.json_logging.JsonFormatter
+    service: "seqdb"
+    merge_message_json: true
+    extras_key: "props"
+    redacted_value: "[REDACTED]"
+    sensitive_keys: ["client_secret", "password", "client_pwd", "secret", "api_key"]
 handlers:
   console:
     class: logging.StreamHandler
     level: DEBUG
-    formatter: simple
+    formatter: json
     stream: ext://sys.stdout
   file:
     class: logging.handlers.TimedRotatingFileHandler
     level: DEBUG
-    formatter: simple
+    formatter: json
     filename: ./test/output/log.debug.txt
     when: 'midnight'
     backupCount: 1

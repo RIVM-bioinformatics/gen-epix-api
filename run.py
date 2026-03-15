@@ -49,7 +49,6 @@ class Run:
                 "geo",
                 "ontology",
                 "organization",
-                "subject",
                 "case",
                 "abac",
                 "system",
@@ -387,6 +386,26 @@ class Run:
             ]
         )
 
+    def test_commondb_unit_config(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/commondb/unit/config/",
+            ]
+        )
+
+    def test_commondb_unit_logging(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/commondb/unit/logging/",
+            ]
+        )
+
     def test_commondb_unit_upload(self) -> None:
         import pytest
 
@@ -425,6 +444,13 @@ class Run:
             + [
                 "test/commondb/integration/build_db",
             ]
+        )
+
+    def test_commondb_integration_sql_injection(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS + ["test/commondb/integration/sql_injection"]
         )
 
     def test_casedb_unit(self) -> None:
@@ -467,13 +493,13 @@ class Run:
             ]
         )
 
-    def test_casedb_unit_case_type_col_order(self) -> None:
+    def test_casedb_unit_col_order(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/casedb/unit/case_type_col_order",
+                "test/casedb/unit/col_order",
             ]
         )
 
@@ -605,13 +631,13 @@ class Run:
             ]
         )
 
-    def test_seqdb_unit_sample_upload(self) -> None:
+    def test_seqdb_unit_upload(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/seqdb/unit/sample_upload",
+                "test/seqdb/unit/upload",
             ]
         )
 
@@ -655,13 +681,23 @@ class Run:
             ]
         )
 
-    def test_seqdb_performance(self) -> None:
+    def test_seqdb_performance_calculate_seq_distances(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/seqdb/performance",
+                "test/seqdb/performance/calculate_seq_distances",
+            ]
+        )
+
+    def test_seqdb_performance_retrieve_similar_profiles(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/seqdb/performance/retrieve_similar_profiles",
             ]
         )
 
@@ -822,7 +858,7 @@ class Run:
         )
         linter = Linter()
         linter.run_pylint(file=file, filter_on_codes=filter_on_codes)
-        file2.write_text(file.read_text())
+        file2.write_text(file.read_text(encoding="utf-8"), encoding="utf-8")
         for line in linter.parse_pylint_for_issue_lines(
             file, filter_on_codes=filter_on_codes
         ):
@@ -849,7 +885,7 @@ class Run:
         file2 = Path(__file__).parent / "test" / "output" / f"linter.{now_str}.mypy.txt"
         linter = Linter()
         linter.run_mypy(file=file, filter_on_codes=filter_on_codes)
-        file2.write_text(file.read_text())
+        file2.write_text(file.read_text(encoding="utf-8"), encoding="utf-8")
         for line in linter.parse_mypy_for_issue_lines(
             file, filter_on_codes=filter_on_codes
         ):
@@ -883,10 +919,12 @@ class Run:
         user_journey.to_pickle(out_user_journey_file)
 
     def other_general_generate_erm_diagrams(self) -> None:
-        from docs.erm import generate_erm_diagrams
+        from docs.erm.erm_graphviz import GraphvizErmGenerator
+        from docs.erm.erm_mermaid import MermaidErmGenerator
 
-        out_dir = Path(__file__).parent / "docs" / "assets" / "erm"
-        generate_erm_diagrams(out_dir)
+        out_dir = Path(__file__).parent / "docs" / "erm"
+        GraphvizErmGenerator().generate_erm_diagrams(out_dir)
+        MermaidErmGenerator().generate_erm_diagrams(out_dir)
 
     def other_oauth_server_start(self) -> None:
 

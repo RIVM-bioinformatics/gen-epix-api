@@ -2,9 +2,9 @@
 
 This file defines architectural constraints and security invariants.
 
-The canonical operational prompt (evidence + output format) lives in:
+The canonical golden prompt (evidence + output format) lives in:
 
-.github/prompts/basic-evidence-based.prompt.md
+.github/prompts/base_prompt.md
 
 Both must be applied together.
 
@@ -63,9 +63,11 @@ Exceptions (must justify): - tests - ETL/CLI - bootstrapping/migrations
 ### 1.2 Strict Layering
 
     api/         → transport only
-    services/    → orchestration
-    domain/      → business rules + commands + policies
-    repositories/→ persistence
+    domain/      → domain objects, commands, permissions and base
+                   classes for services, policies, repositories
+    policies/    → implementations of policies (auth, validation, etc.)
+    services/    → implementations of services
+    repositories/→ implementations of repositories (persistence)
 
 API must stay thin. Policies execute in command lifecycle (BEFORE /
 DURING / AFTER).
@@ -109,7 +111,7 @@ Never weaken security implicitly.
 
 ------------------------------------------------------------------------
 
-## 3) Multi-Repository Guarantee
+## 3) Multi-Repository Guarantee (repository pattern)
 
 All behavior must work in:
 
@@ -135,9 +137,9 @@ When modifying routers:
 
 ------------------------------------------------------------------------
 
-## 5) Service Domains
+## 5) Application Domains
 
-Four service domains:
+Four application domains:
 
 -   casedb
 
@@ -149,7 +151,8 @@ Four service domains:
 
 -   commondb provides shared models + cross-cutting services.
 
--   Cross-service communication occurs via HTTP, not direct imports.
+-   Cross-application communication occurs via HTTP in production, not direct
+    imports.
 
 Before adding new HTTP patterns: - Search for existing client
 abstractions - Reuse precedent - Cite file paths + symbols - Label truly
@@ -188,5 +191,4 @@ Do not assume ports --- verify in config.
 
 -   Repository mappers must be registered before SQL use.
 -   Commands require user context.
--   UUIDs auto-generated --- do not set manually.
 -   casedb may depend on seqdb running.

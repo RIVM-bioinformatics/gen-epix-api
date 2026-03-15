@@ -3,7 +3,10 @@ from gen_epix.commondb.services import BatchUploader
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import command, enum, exc, model
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
-from gen_epix.seqdb.services.seq.upload_upsert_batch import _create_sample_refdata
+from gen_epix.seqdb.services.seq.upload_upsert_batch import (
+    _create_sample_refdata,
+    _update_profile_distances,
+)
 from gen_epix.seqdb.services.seq.upload_verify_batch import (
     _verify_sample_children,
     _verify_sample_refdata,
@@ -59,7 +62,7 @@ class SampleBatchUploader(BatchUploader):
         """
         success = True
 
-        success &= self.verify_parents_external_identifiers(cmd, batch_result, uow)
+        success &= self.verify_parents_identifiers(cmd, batch_result, uow)
         success &= self.verify_parents(cmd, batch_result, uow)
         # Verify existence and consistency of child models as needed
         success &= _verify_sample_children(self, cmd, batch_result, uow)
@@ -87,8 +90,9 @@ class SampleBatchUploader(BatchUploader):
         # Upsert child models
         success &= self.create_children(cmd, batch_result, uow)
         success &= self.update_children(cmd, batch_result, uow)
+        success &= _update_profile_distances(self, cmd, batch_result, uow)
         # Create external identifiers
-        success &= self.create_external_identifiers(cmd, batch_result, uow)
+        success &= self.create_identifiers(cmd, batch_result, uow)
 
         return success
 

@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import json
+import struct
 from typing import Any, ClassVar, Self
 from uuid import UUID
 
@@ -9,6 +10,7 @@ from pydantic import Field, field_serializer, model_validator
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model
+from gen_epix.commondb.domain.model.organization import BaseIdentifier
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
@@ -74,6 +76,21 @@ class LocusProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
     @field_serializer("locus_profile_hash")
     def _serialize_locus_profile_hash(self, value: UUID) -> str:
         return str(value)
+
+
+class LocusProfileIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        LocusProfile,
+        relationship_field_name="locus_profile",
+        snake_case_plural_name="locus_profile_identifiers",
+        table_name="locus_profile_identifier",
+    )
+    NAME: ClassVar = "LocusProfileIdentifier"
+    MODEL_CLASS: ClassVar = LocusProfile
+
+    locus_profile: LocusProfile | None = Field(
+        default=None, description="The locus profile associated with this identifier."
+    )
 
 
 class AlleleProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
@@ -232,6 +249,21 @@ class AlleleProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
         return UUID(sha256.digest()[:16].hex())
 
 
+class AlleleProfileIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        AlleleProfile,
+        relationship_field_name="allele_profile",
+        snake_case_plural_name="allele_profile_identifiers",
+        table_name="allele_profile_identifier",
+    )
+    NAME: ClassVar = "AlleleProfileIdentifier"
+    MODEL_CLASS: ClassVar = AlleleProfile
+
+    allele_profile: AlleleProfile | None = Field(
+        default=None, description="The allele profile associated with this identifier."
+    )
+
+
 class SnpDetectionProtocol(Model, ProtocolMixin):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="snp_detection_protocols",
@@ -321,6 +353,33 @@ class SnpProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
     @field_serializer("snp_profile_format", mode="plain")
     def _serialize_snp_profile_format(self, value: enum.SnpProfileFormat) -> str:
         return value.value
+
+    def get_aligned_nucleotide_seq(self, **kwargs: Any) -> str:
+        """
+        Parse and return the aligned nucleotide sequence from the SNP profile based on
+        its format.
+        """
+        if self.snp_profile_format == enum.SnpProfileFormat.REF_ALN_SEQ:
+            return self.snp_profile
+        else:
+            raise NotImplementedError(
+                "Unable to parse aligned nucleotide sequence for this SNP profile format"
+            )
+
+
+class SnpProfileIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        SnpProfile,
+        relationship_field_name="snp_profile",
+        snake_case_plural_name="snp_profile_identifiers",
+        table_name="snp_profile_identifier",
+    )
+    NAME: ClassVar = "SnpProfileIdentifier"
+    MODEL_CLASS: ClassVar = SnpProfile
+
+    snp_profile: SnpProfile | None = Field(
+        default=None, description="The SNP profile associated with this identifier."
+    )
 
 
 class MlvaDetectionProtocol(Model, ProtocolMixin):
@@ -423,6 +482,17 @@ class MlvaProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
             return value.value
         return value
 
+    def get_repeat_numbers(self, **kwargs: Any) -> list[int]:
+        """
+        Parse and return the repeat numbers from the MLVA profile based on its format.
+        """
+        if self.mlva_profile_format == enum.MlvaProfileFormat.SORTED_REPEAT_NUMBERS:
+            return json.loads(self.mlva_profile)
+        else:
+            raise NotImplementedError(
+                "Unable to parse repeat numbers for this MLVA profile format"
+            )
+
     @staticmethod
     def get_sorted_repeat_numbers_profile(repeat_numbers: list[int | None]) -> str:
         """
@@ -449,6 +519,21 @@ class MlvaProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
                     )
                 )
         return UUID(sha256.digest()[:16].hex())
+
+
+class MlvaProfileIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        MlvaProfile,
+        relationship_field_name="mlva_profile",
+        snake_case_plural_name="mlva_profile_identifiers",
+        table_name="mlva_profile_identifier",
+    )
+    NAME: ClassVar = "MlvaProfileIdentifier"
+    MODEL_CLASS: ClassVar = MlvaProfile
+
+    mlva_profile: MlvaProfile | None = Field(
+        default=None, description="The MLVA profile associated with this identifier."
+    )
 
 
 class KmerDetectionProtocol(Model, ProtocolMixin):
@@ -496,13 +581,74 @@ class KmerProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
         description="The k-mers detected in the sequence and their frequency."
     )
     kmer_profile_format: enum.KmerProfileFormat = Field(
-        default=enum.KmerProfileFormat.KMER_PROFILE_FORMAT1,
+        default=enum.KmerProfileFormat.KMER_FREQUENCY_MAP,
         description="The representation format of the k-mers.",
     )
     kmer_profile_hash: UUID = Field(
-        description="The first 128 bits of the SHA256 hash of the ASCII sorted k-mers followed by their correspondingsorted frequencies as double precision floats.",
+        description="The first 128 bits of the SHA256 hash of the ASCII sorted k-mers followed by their corresponding sorted frequencies as double precision floats.",
     )
 
     @field_serializer("kmer_profile_hash")
     def _serialize_kmer_profile_hash(self, value: UUID) -> str:
         return str(value)
+
+    @model_validator(mode="after")
+    def _validate_model(self) -> Self:
+        """
+        Validate the k-mer profile and derive the k-mer profile hash if not provided.
+        """
+        profile_hash = self.kmer_profile_hash
+
+        # Parse k-mer profile and derive hash depending on kmer_profile_format
+        if self.kmer_profile_format == enum.KmerProfileFormat.KMER_FREQUENCY_MAP:
+            # Parse the k-mer profile from json object
+            kmer_frequency_map: dict[str, float] = json.loads(self.kmer_profile)
+            # Compute hash
+            computed_profile_hash = KmerProfile.get_kmer_profile_hash(
+                kmer_frequency_map
+            )
+        else:
+            if profile_hash == NULL_ID:
+                raise ValueError(
+                    "Unable to calculate k-mer profile hash for this format"
+                )
+            # Unable to compute profile hash but provided -> assume correct
+            computed_profile_hash = profile_hash
+        self.kmer_profile_hash = computed_profile_hash
+        return self
+
+    def get_kmer_frequency_map(self, **kwargs: Any) -> dict[str, float]:
+        """
+        Parse and return the k-mer frequency map from the k-mer profile based on its format.
+        """
+        if self.kmer_profile_format == enum.KmerProfileFormat.KMER_FREQUENCY_MAP:
+            retval: dict[str, float] = json.loads(self.kmer_profile)
+            return retval
+        else:
+            raise NotImplementedError(
+                "Unable to parse k-mer frequency map for this k-mer profile format"
+            )
+
+    @staticmethod
+    def get_kmer_profile_hash(kmer_frequency_map: dict[str, float]) -> UUID:
+        sha256 = hashlib.sha256()
+        for kmer in sorted(kmer_frequency_map.keys()):
+            freq = kmer_frequency_map[kmer]
+            sha256.update(kmer.encode("ascii"))
+            sha256.update(bytearray(struct.pack(">d", freq)))
+        return UUID(sha256.digest()[:16].hex())
+
+
+class KmerProfileIdentifier(BaseIdentifier):
+    ENTITY: ClassVar = BaseIdentifier.create_entity(
+        KmerProfile,
+        relationship_field_name="kmer_profile",
+        snake_case_plural_name="kmer_profile_identifiers",
+        table_name="kmer_profile_identifier",
+    )
+    NAME: ClassVar = "KmerProfileIdentifier"
+    MODEL_CLASS: ClassVar = KmerProfile
+
+    kmer_profile: KmerProfile | None = Field(
+        default=None, description="The k-mer profile associated with this identifier."
+    )

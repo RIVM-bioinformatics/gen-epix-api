@@ -1,6 +1,6 @@
 from test.seqdb.integration.build_db.base import (
     BELOW_APP_ADMIN_DATA_USERS,
-    BELOW_APP_ADMIN_METADATA_USERS,
+    BELOW_APP_ADMIN_REFDATA_USERS,
     BELOW_APP_ADMIN_USERS,
     DATA_USERS,
     REFDATA_ADMIN_OR_ABOVE_USERS,
@@ -347,7 +347,7 @@ class TestCreate:
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_create_sample_raise(self, env: Env) -> None:
         # Check that below data users cannot create Sample
-        for exec_user in BELOW_APP_ADMIN_METADATA_USERS:
+        for exec_user in BELOW_APP_ADMIN_REFDATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_sample(
                     exec_user,
@@ -384,7 +384,7 @@ class TestCreate:
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_create_file_raise(self, env: Env) -> None:
-        for exec_user in BELOW_APP_ADMIN_METADATA_USERS:
+        for exec_user in BELOW_APP_ADMIN_REFDATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_file(
                     exec_user,
@@ -455,7 +455,7 @@ class TestCreate:
             "sample_or_str": "sample1",
             "sequencing_protocol_or_str": "sequencing_protocol1",
         }
-        for exec_user in BELOW_APP_ADMIN_METADATA_USERS:
+        for exec_user in BELOW_APP_ADMIN_REFDATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_read_set(exec_user, **kwargs)
 
@@ -495,7 +495,7 @@ class TestCreate:
             )
 
     def test_create_seq_raise(self, env: Env) -> None:
-        for exec_user in BELOW_APP_ADMIN_METADATA_USERS:
+        for exec_user in BELOW_APP_ADMIN_REFDATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_seq(
                     exec_user,

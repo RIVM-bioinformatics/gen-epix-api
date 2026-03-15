@@ -79,55 +79,43 @@ class TestContent:
             command.RetrieveOwnPermissionsCommand(user=root_user)
         )
 
+        # Get all users and permissions
+        users: list[model.User] = app.handle(
+            command.UserCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        permissions = app.domain.permissions
+
+        # Get org admin, org admin policies and corresponding org users
+        org_admin_policies = app.handle(
+            command.OrganizationAdminPolicyCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        org_admin_user: model.User = [
+            x for x in users if x.id == org_admin_policies[0].user_id
+        ][0]
+        org_admin_permissions: set[Permission] = app.handle(
+            command.RetrieveOwnPermissionsCommand(user=org_admin_user)
+        )
+
         # # --------------------------------------------------------------------------------------
 
         # # Code for performance profiling of a code chunk
         # import pyinstrument
-
-        # users = app.handle(
-        #     command.UserCrudCommand(
-        #         user=root_user,
-        #         operation=CrudOperation.READ_ALL,
-        #     )
-        # )
-        # org_admin_policies = app.handle(
-        #     command.OrganizationAdminPolicyCrudCommand(
-        #         user=root_user,
-        #         operation=CrudOperation.READ_ALL,
-        #     )
-        # )
-        # org_admin_user: model.User = [
-        #     x for x in users if x.id == org_admin_policies[0].user_id
-        # ][0]
-        # user_access_case_policies: list[model.UserAccessCasePolicy] = app.handle(
-        #     command.UserAccessCasePolicyCrudCommand(
-        #         user=org_admin_user,
-        #         operation=CrudOperation.READ_ALL,
-        #     )
-        # )
-        # org_user: model.User = [
-        #     x
-        #     for x in users
-        #     if x.id in {y.user_id for y in user_access_case_policies}
-        #     and app_impl.role_map[CommonRole.ORG_USER] in x.roles
-        #     and len(x.roles) == 1
-        # ][0]
 
         # profiler = pyinstrument.Profiler(async_mode="enabled")
         # profiler.start()
 
         # t0 = datetime.datetime.now()
 
-        # case_stats = app.handle(command.RetrieveCaseStatsCommand(user=org_user))
-        # case_sets: list[model.CaseSet] = app.handle(
-        #     command.CaseSetCrudCommand(
-        #         user=org_user,
-        #         operation=CrudOperation.READ_ALL,
+        # organizations = app.handle(
+        #     command.OrganizationCrudCommand(
+        #         user=root_user, operation=CrudOperation.READ_ALL
         #     )
-        # )
-        # case_set_ids: list[UUID] = [x.id for x in case_sets]  # type:ignore[assignment]
-        # case_set_stats = app.handle(
-        #     command.RetrieveCaseStatsCommand(user=org_user, case_set_ids=case_set_ids)
         # )
 
         # t1 = datetime.datetime.now()
@@ -146,15 +134,6 @@ class TestContent:
 
         # # --------------------------------------------------------------------------------------
 
-        # Get all users and permissions
-        users = app.handle(
-            command.UserCrudCommand(
-                user=root_user,
-                operation=CrudOperation.READ_ALL,
-            )
-        )
-        permissions = app.domain.permissions
-
         # Get organization level policies
         org_access_case_policies = app.handle(
             command.OrganizationAccessCasePolicyCrudCommand(
@@ -169,20 +148,6 @@ class TestContent:
             )
         )
 
-        # Get org admin user
-        org_admin_policies = app.handle(
-            command.OrganizationAdminPolicyCrudCommand(
-                user=root_user,
-                operation=CrudOperation.READ_ALL,
-            )
-        )
-        org_admin_user: model.User = [
-            x for x in users if x.id == org_admin_policies[0].user_id
-        ][0]
-        org_admin_permissions: set[Permission] = app.handle(
-            command.RetrieveOwnPermissionsCommand(user=org_admin_user)
-        )
-
         # Get org user
         user_access_case_policies: list[model.UserAccessCasePolicy] = app.handle(
             command.UserAccessCasePolicyCrudCommand(
@@ -190,13 +155,14 @@ class TestContent:
                 operation=CrudOperation.READ_ALL,
             )
         )
-        org_user: model.User = [
+        org_users: list[model.User] = [
             x
             for x in users
             if x.id in {y.user_id for y in user_access_case_policies}
             and app_impl.role_map[CommonRole.ORG_USER] in x.roles
             and len(x.roles) == 1
-        ][0]
+        ]
+        org_user = org_users[0]
         org_user_permissions: set[Permission] = app.handle(
             command.RetrieveOwnPermissionsCommand(user=org_user)
         )
@@ -263,16 +229,16 @@ class TestContent:
             for concept_set in concept_sets
         }
 
-        # Get case type and and case set stats
+        # Get CaseType and and case set stats
         case_stats = app.handle(command.RetrieveCaseStatsCommand(user=org_user))
         case_set_stats = app.handle(command.RetrieveCaseStatsCommand(user=org_user))
 
-        # Go over all case types with data
+        # Go over all CaseTypes with data
         found_some_similar_cases = False
         has_cases_case_type_ids = {x.case_type_id for x in case_stats if x.n_cases > 0}
         for case_type in case_types:
             if VERBOSE:
-                print(f"Checking case type {case_type.name}")
+                print(f"Checking CaseType {case_type.name}")
             assert case_type.id is not None
             if case_type.id not in has_cases_case_type_ids:
                 continue
@@ -283,24 +249,24 @@ class TestContent:
                 )
             )
             assert complete_case_type.id is not None
-            if len(complete_case_type.case_type_cols) <= 1:
+            if len(complete_case_type.cols) <= 1:
                 continue
 
             # Retrieve cases based on a filter
-            # print(f"Retrieving cases for case type {complete_case_type.name}")
+            # print(f"Retrieving cases for CaseType {complete_case_type.name}")
             filters: list = []
-            for case_type_col in complete_case_type.case_type_cols.values():
-                col = complete_case_type.cols[case_type_col.col_id]
-                if col.concept_set_id:
+            for col in complete_case_type.cols.values():
+                ref_col = complete_case_type.ref_cols[col.ref_col_id]
+                if ref_col.concept_set_id:
                     # Create a filter for a portion of the terms in the concept set
                     filters.append(
                         TypedStringSetFilter(
                             type="STRING_SET",
-                            key=str(case_type_col.id),
+                            key=str(col.id),
                             members={  # type: ignore[arg-type]
                                 str(x)
                                 for i, x in enumerate(
-                                    concept_ids_by_set[col.concept_set_id]
+                                    concept_ids_by_set[ref_col.concept_set_id]
                                 )
                                 if i // 4 == 0  # Keep only a portion of the terms
                             },
@@ -338,27 +304,25 @@ class TestContent:
 
             # Retrieve phylogenetic tree
             found_similar_cases = False
-            dist_case_type_cols = [
-                case_type_col
-                for case_type_col in complete_case_type.case_type_cols.values()
-                if complete_case_type.cols[case_type_col.col_id].col_type
+            dist_cols = [
+                col
+                for col in complete_case_type.cols.values()
+                if complete_case_type.ref_cols[col.ref_col_id].col_type
                 == enum.ColType.GENETIC_DISTANCE
             ]
-            for dist_case_type_col in dist_case_type_cols:
-                assert dist_case_type_col is not None
-                assert dist_case_type_col.id is not None
-                for tree_algorithm_code in (
-                    dist_case_type_col.tree_algorithm_codes or []
-                ):
+            for dist_col in dist_cols:
+                assert dist_col is not None
+                assert dist_col.id is not None
+                for tree_algorithm_code in dist_col.tree_algorithm_codes or []:
                     if VERBOSE:
                         print(
-                            f"\tRetrieving phylogenetic tree for {dist_case_type_col.code} using tree algorithm {tree_algorithm_code}"
+                            f"\tRetrieving phylogenetic tree for {dist_col.code} using tree algorithm {tree_algorithm_code}"
                         )
                     phylogenetic_tree: model.PhylogeneticTree = app.handle(
                         command.RetrievePhylogeneticTreeByCasesCommand(
                             user=org_user,
                             case_type_id=complete_case_type.id,
-                            genetic_distance_case_type_col_id=dist_case_type_col.id,
+                            genetic_distance_col_id=dist_col.id,
                             tree_algorithm=tree_algorithm_code,
                             case_ids=case_ids,
                         )
@@ -372,7 +336,7 @@ class TestContent:
                         command.RetrieveSimilarCasesCommand(
                             user=org_user,
                             case_type_id=complete_case_type.id,
-                            genetic_distance_case_type_col_id=dist_case_type_col.id,
+                            genetic_distance_col_id=dist_col.id,
                             case_ids=case_ids[0:5],
                             max_distance=20,
                         )
@@ -382,23 +346,21 @@ class TestContent:
 
             if found_similar_cases:
                 found_some_similar_cases = True
-                assert len(dist_case_type_cols) >= 1
+                assert len(dist_cols) >= 1
                 # assert that any item in similar_case_ids is a UUID
                 for similar_case_id in similar_case_ids:
                     assert isinstance(similar_case_id, UUID)
 
             # Retrieve genetic sequence
-            genetic_sequence_case_type_cols = [
-                case_type_col
-                for case_type_col in complete_case_type.case_type_cols.values()
-                if complete_case_type.cols[case_type_col.col_id].col_type
+            genetic_sequence_cols = [
+                x
+                for x in complete_case_type.cols.values()
+                if complete_case_type.ref_cols[x.ref_col_id].col_type
                 == enum.ColType.GENETIC_SEQUENCE
             ]
-            for genetic_sequence_case_type_col in genetic_sequence_case_type_cols:
+            for genetic_sequence_col in genetic_sequence_cols:
                 has_seq_case_ids = [
-                    x.id
-                    for x in cases
-                    if x.content.get(genetic_sequence_case_type_col.id)
+                    x.id for x in cases if x.content.get(genetic_sequence_col.id)
                 ]
                 if not has_seq_case_ids:
                     continue
@@ -411,7 +373,7 @@ class TestContent:
                         user=org_user,
                         case_type_id=complete_case_type.id,
                         case_ids=has_seq_case_ids[0:1],
-                        genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,  # type: ignore[arg-type]
+                        genetic_sequence_col_id=genetic_sequence_col.id,  # type: ignore[arg-type]
                     )
                 )
                 if not fasta_iterator:
@@ -447,7 +409,7 @@ class TestContent:
 
         if not found_some_similar_cases:
             raise ValueError(
-                "Did not find similar cases for any case type, cannot validate RetrieveSimilarCasesCommand"
+                "Did not find similar cases for any CaseType, cannot validate RetrieveSimilarCasesCommand"
             )
 
         # Go over all case sets

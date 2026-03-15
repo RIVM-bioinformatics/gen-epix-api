@@ -3,7 +3,6 @@ from test.casedb.integration.build_db.base import (
     DATA_USERS,
     GUEST_USERS,
     NO_DATA_USERS,
-    NON_GUEST_USERS,
     ROOT,
     SKIP_RAISE,
 )
@@ -250,109 +249,6 @@ class TestRead:
             for exec_user in NO_DATA_USERS:
                 with pytest.raises(exc.UnauthorizedAuthError):
                     env.read_all(exec_user, policy_class)
-
-    def test_read_case_type(self, env: Env) -> None:
-        for user in NON_GUEST_USERS:
-            expected_case_type_ids: set[UUID] = env.read_case_types_with_any_right(user)
-            env.verify_read_all(user, model.CaseType, expected_case_type_ids)
-
-    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
-    def test_read_case_type_raise(self, env: Env) -> None:
-        for user in GUEST_USERS:
-            with pytest.raises(exc.UnauthorizedAuthError):
-                env.read_all(user, model.CaseType)
-
-    def test_read_case_type_set_member(self, env: Env) -> None:
-        all_case_type_set_members: list[model.CaseTypeSetMember] = env.read_all(
-            ROOT, model.CaseTypeSetMember
-        )  # type: ignore[assignment]
-        for user in NON_GUEST_USERS:
-            expected_case_type_ids: set[UUID] = env.read_case_types_with_any_right(user)
-            expected_case_type_set_member_ids: set[UUID] = {  # type: ignore[assignment]
-                x.id
-                for x in all_case_type_set_members
-                if x.case_type_id in expected_case_type_ids
-            }
-            env.verify_read_all(
-                user, model.CaseTypeSetMember, expected_case_type_set_member_ids
-            )
-
-    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
-    def test_read_case_type_set_member_raise(self, env: Env) -> None:
-        for user in GUEST_USERS:
-            with pytest.raises(exc.UnauthorizedAuthError):
-                env.read_all(user, model.CaseTypeSetMember)
-
-    def test_read_case_type_col(self, env: Env) -> None:
-        for user in NON_GUEST_USERS:
-            expected_case_type_col_ids = env.read_case_type_cols_with_any_right(user)
-            env.verify_read_all(user, model.CaseTypeCol, expected_case_type_col_ids)
-
-    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
-    def test_read_case_type_col_raise(self, env: Env) -> None:
-        for user in GUEST_USERS:
-            with pytest.raises(exc.UnauthorizedAuthError):
-                env.read_all(user, model.CaseTypeCol)
-
-    def test_read_case_type_col_set(self, env: Env) -> None:
-        all_case_type_col_sets: list[model.CaseTypeColSet] = env.read_all(
-            ROOT, model.CaseTypeColSet
-        )  # type: ignore[assignment]
-        all_case_type_col_set_members: list[model.CaseTypeColSetMember] = env.read_all(
-            ROOT, model.CaseTypeColSetMember
-        )  # type: ignore[assignment]
-        empty_case_type_col_set_ids: set[UUID] = {  # type: ignore[assignment]
-            x.id
-            for x in all_case_type_col_sets
-            if not any(
-                y.case_type_col_set_id == x.id for y in all_case_type_col_set_members
-            )
-        }
-        for user in NON_GUEST_USERS:
-            expected_case_type_col_ids = env.read_case_type_cols_with_any_right(user)
-            expected_case_type_col_set_ids = empty_case_type_col_set_ids | {
-                x.case_type_col_set_id
-                for x in all_case_type_col_set_members
-                if x.case_type_col_id in expected_case_type_col_ids
-            }
-            env.verify_read_all(
-                user,
-                model.CaseTypeColSet,
-                expected_case_type_col_set_ids,
-            )
-
-    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
-    def test_read_case_type_col_set_raise(self, env: Env) -> None:
-        for user in GUEST_USERS:
-            with pytest.raises(exc.UnauthorizedAuthError):
-                env.read_all(user, model.CaseTypeColSet)
-
-    def test_read_case_type_col_set_member(self, env: Env) -> None:
-        all_case_type_col_set_members: list[model.CaseTypeColSetMember] = env.read_all(
-            ROOT, model.CaseTypeColSetMember
-        )  # type: ignore[assignment]
-        for user in NON_GUEST_USERS:
-            expected_case_type_col_ids: set[UUID] = (
-                env.read_case_type_cols_with_any_right(user)
-            )
-            expected_case_type_col_set_member_ids: set[UUID] = (
-                {  # type: ignore[assignment]
-                    x.id
-                    for x in all_case_type_col_set_members
-                    if x.case_type_col_id in expected_case_type_col_ids
-                }
-            )
-            env.verify_read_all(
-                user,
-                model.CaseTypeColSetMember,
-                expected_case_type_col_set_member_ids,
-            )
-
-    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
-    def test_read_case_type_col_set_member_raise(self, env: Env) -> None:
-        for user in GUEST_USERS:
-            with pytest.raises(exc.UnauthorizedAuthError):
-                env.read_all(user, model.CaseTypeColSetMember)
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_read_case_set(self, env: Env) -> None:

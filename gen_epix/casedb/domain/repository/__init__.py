@@ -6,9 +6,6 @@ from gen_epix.casedb.domain.repository.geo import BaseGeoRepository as BaseGeoRe
 from gen_epix.casedb.domain.repository.ontology import (
     BaseOntologyRepository as BaseOntologyRepository,
 )
-from gen_epix.casedb.domain.repository.subject import (
-    BaseSubjectRepository as BaseSubjectRepository,
-)
 from gen_epix.commondb.domain.repository import BaseAbacRepository as BaseAbacRepository
 from gen_epix.commondb.domain.repository import (
     BaseOrganizationRepository as BaseOrganizationRepository,

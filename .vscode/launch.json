@@ -593,12 +593,12 @@
             "justMyCode": true,
         },
         {
-            "name": "test.seqdb.unit.sample_upload",
+            "name": "test.seqdb.unit.upload",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_seqdb_unit_sample_upload"
+                "test_seqdb_unit_upload"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -637,12 +637,23 @@
             "justMyCode": true,
         },
         {
-            "name": "test.seqdb.performance",
+            "name": "test.seqdb.performance.calculate_seq_distances",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_seqdb_performance"
+                "test_seqdb_performance_calculate_seq_distances"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.seqdb.performance.retrieve_similar_profiles",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_seqdb_performance_retrieve_similar_profiles"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -725,6 +736,28 @@
             "justMyCode": true,
         },
         {
+            "name": "test.commondb.unit.config",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_commondb_unit_config"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.commondb.unit.logging",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_commondb_unit_logging"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.commondb.unit.upload",
             "type": "debugpy",
             "request": "launch",
@@ -767,6 +800,17 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
+        },
+        {
+            "name": "test.commondb.integration.sql_injection",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_commondb_integration_sql_injection"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
         },
         {
             "name": "test.filter.unit",
@@ -822,7 +866,7 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
-        }
+        },
         {
             "name": "test.fastapp.unit.services",
             "type": "debugpy",

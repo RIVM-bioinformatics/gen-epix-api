@@ -69,9 +69,10 @@ class UpdateUserPolicy(BaseUpdateUserPolicy):
         tgt_user: model.User
         early_exit = False
         if isinstance(cmd, command.InviteUserCommand):
-            if user.key == cmd.key:
-                # User cannot invite themselves
-                early_exit = True
+            if user.key is not None:
+                if user.key == cmd.key:
+                    # User cannot invite themselves
+                    early_exit = True
             tgt_user = self.user_class(**cmd.model_dump())
             tgt_roles_union = set(tgt_user.roles)
             is_organization_update = False

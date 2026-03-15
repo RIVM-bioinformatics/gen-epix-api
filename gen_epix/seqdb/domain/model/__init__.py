@@ -5,16 +5,14 @@ from gen_epix.commondb.domain import model as common_model
 from gen_epix.commondb.domain.model import (
     SORTED_MODELS_BY_SERVICE_TYPE as _COMMON_SORTED_MODELS_BY_SERVICE_TYPE,
 )
+from gen_epix.commondb.domain.model import BaseIdentifier as BaseIdentifier
 from gen_epix.commondb.domain.model import Contact as Contact
 from gen_epix.commondb.domain.model import DataCollection as DataCollection
 from gen_epix.commondb.domain.model import DataCollectionSet as DataCollectionSet
 from gen_epix.commondb.domain.model import (
     DataCollectionSetMember as DataCollectionSetMember,
 )
-from gen_epix.commondb.domain.model import ExternalIdentifier as ExternalIdentifier
-from gen_epix.commondb.domain.model import (
-    ExternalIdentifierForUpload as ExternalIdentifierForUpload,
-)
+from gen_epix.commondb.domain.model import IdentifierForUpload as IdentifierForUpload
 from gen_epix.commondb.domain.model import IdentifierIssuer as IdentifierIssuer
 from gen_epix.commondb.domain.model import Model as Model
 from gen_epix.commondb.domain.model import Organization as Organization
@@ -52,11 +50,17 @@ from gen_epix.seqdb.domain.model.seq import AlleleProfile as AlleleProfile
 from gen_epix.seqdb.domain.model.seq import (
     AlleleProfileForUpload as AlleleProfileForUpload,
 )
+from gen_epix.seqdb.domain.model.seq import (
+    AlleleProfileIdentifier as AlleleProfileIdentifier,
+)
 from gen_epix.seqdb.domain.model.seq import AssemblyProtocol as AssemblyProtocol
 from gen_epix.seqdb.domain.model.seq import AstMeasurement as AstMeasurement
 from gen_epix.seqdb.domain.model.seq import AstPrediction as AstPrediction
 from gen_epix.seqdb.domain.model.seq import AstProtocol as AstProtocol
 from gen_epix.seqdb.domain.model.seq import BaseSeq as BaseSeq
+from gen_epix.seqdb.domain.model.seq import (
+    CalculateSeqDistancesResult as CalculateSeqDistancesResult,
+)
 from gen_epix.seqdb.domain.model.seq import CodeMixin as CodeMixin
 from gen_epix.seqdb.domain.model.seq import Contig as Contig
 from gen_epix.seqdb.domain.model.seq import ContigAlignment as ContigAlignment
@@ -64,18 +68,28 @@ from gen_epix.seqdb.domain.model.seq import (
     KmerDetectionProtocol as KmerDetectionProtocol,
 )
 from gen_epix.seqdb.domain.model.seq import KmerProfile as KmerProfile
+from gen_epix.seqdb.domain.model.seq import KmerProfileForUpload as KmerProfileForUpload
+from gen_epix.seqdb.domain.model.seq import (
+    KmerProfileIdentifier as KmerProfileIdentifier,
+)
 from gen_epix.seqdb.domain.model.seq import Locus as Locus
 from gen_epix.seqdb.domain.model.seq import LocusCodeMap as LocusCodeMap
 from gen_epix.seqdb.domain.model.seq import (
     LocusDetectionProtocol as LocusDetectionProtocol,
 )
 from gen_epix.seqdb.domain.model.seq import LocusProfile as LocusProfile
+from gen_epix.seqdb.domain.model.seq import (
+    LocusProfileIdentifier as LocusProfileIdentifier,
+)
 from gen_epix.seqdb.domain.model.seq import LocusSet as LocusSet
 from gen_epix.seqdb.domain.model.seq import (
     MlvaDetectionProtocol as MlvaDetectionProtocol,
 )
 from gen_epix.seqdb.domain.model.seq import MlvaProfile as MlvaProfile
 from gen_epix.seqdb.domain.model.seq import MlvaProfileForUpload as MlvaProfileForUpload
+from gen_epix.seqdb.domain.model.seq import (
+    MlvaProfileIdentifier as MlvaProfileIdentifier,
+)
 from gen_epix.seqdb.domain.model.seq import MultipleAlignment as MultipleAlignment
 from gen_epix.seqdb.domain.model.seq import PcrMeasurement as PcrMeasurement
 from gen_epix.seqdb.domain.model.seq import PcrProtocol as PcrProtocol
@@ -84,6 +98,7 @@ from gen_epix.seqdb.domain.model.seq import ProtocolMixin as ProtocolMixin
 from gen_epix.seqdb.domain.model.seq import QualityMixin as QualityMixin
 from gen_epix.seqdb.domain.model.seq import ReadSet as ReadSet
 from gen_epix.seqdb.domain.model.seq import ReadSetForUpload as ReadSetForUpload
+from gen_epix.seqdb.domain.model.seq import ReadSetIdentifier as ReadSetIdentifier
 from gen_epix.seqdb.domain.model.seq import RefAllele as RefAllele
 from gen_epix.seqdb.domain.model.seq import RefSeq as RefSeq
 from gen_epix.seqdb.domain.model.seq import RefSnp as RefSnp
@@ -112,11 +127,13 @@ from gen_epix.seqdb.domain.model.seq import (
 from gen_epix.seqdb.domain.model.seq import SeqDistance as SeqDistance
 from gen_epix.seqdb.domain.model.seq import SeqDistanceProtocol as SeqDistanceProtocol
 from gen_epix.seqdb.domain.model.seq import SeqForUpload as SeqForUpload
+from gen_epix.seqdb.domain.model.seq import SeqIdentifier as SeqIdentifier
 from gen_epix.seqdb.domain.model.seq import SeqTaxonomy as SeqTaxonomy
 from gen_epix.seqdb.domain.model.seq import SequencingProtocol as SequencingProtocol
 from gen_epix.seqdb.domain.model.seq import SnpDetectionProtocol as SnpDetectionProtocol
 from gen_epix.seqdb.domain.model.seq import SnpProfile as SnpProfile
 from gen_epix.seqdb.domain.model.seq import SnpProfileForUpload as SnpProfileForUpload
+from gen_epix.seqdb.domain.model.seq import SnpProfileIdentifier as SnpProfileIdentifier
 from gen_epix.seqdb.domain.model.seq import Taxon as Taxon
 from gen_epix.seqdb.domain.model.seq import TaxonomyProtocol as TaxonomyProtocol
 from gen_epix.seqdb.domain.model.seq import TaxonSet as TaxonSet
@@ -180,13 +197,20 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             SampleDataCollectionLink,
             SampleIdentifier,
             ReadSet,
+            ReadSetIdentifier,
             Seq,
+            SeqIdentifier,
             Allele,
             LocusProfile,
+            LocusProfileIdentifier,
             AlleleProfile,
+            AlleleProfileIdentifier,
             KmerProfile,
+            KmerProfileIdentifier,
             MlvaProfile,
+            MlvaProfileIdentifier,
             SnpProfile,
+            SnpProfileIdentifier,
             AstMeasurement,
             AstPrediction,
             PcrMeasurement,
@@ -204,9 +228,11 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             AlleleProfileForUpload,
             SnpProfileForUpload,
             MlvaProfileForUpload,
+            KmerProfileForUpload,
             SampleForUpload,
             SampleBatchForUpload,
             SampleUploadResult,
+            CalculateSeqDistancesResult,
             SampleBatchUploadResult,
         ],
         enum.ServiceType.FILE: [File],

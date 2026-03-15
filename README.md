@@ -10,7 +10,59 @@ Gen-EpiX is a platform for visualizing and analyzing genomic epidemiology data. 
 
 The platform is currently at the beta release stage and as such not yet usable for production. We are currently working to get the platform released, for use in the Netherlands as the official national platform for laboratory-based surveillance of infectious diseases. Feel free to contact us <a href="mailto:ivo.van.walle@rivm.nl">here</a> if you are interested.
 
-This repository contains the code for the backend and is one of several that together comprise the platform. See https://github.com/RIVM-bioinformatics/gen-epix for an overview of the repositories.
+A guide for contributors can be found [here](docs/contributors/README.md)
+
+This repository contains the code for the backend and is one of several that together comprise the platform. See <https://github.com/RIVM-bioinformatics/gen-epix> for an overview of the repositories.
+
+## Architecture and Project Structure
+
+Gen-EpiX is a multi-service backend. Each service runs as its own FastAPI app with a dedicated database and a consistent hexagonal layout (api/domain/services/repositories/policies/config). Core entrypoints are in `run.py` (service startup, ETL, tests) and `etl.py` (data loading). Shared functionality lives under `gen_epix/fastapp`, `gen_epix/filter`, and `gen_epix/transform`.
+
+Services:
+
+| Service | Port | Layer | Description |
+|---------|------|-------|-------------|
+| `CASEDB` | 8000 | Gold | Case management and epidemiological analysis. Handles case search, filtering, signal detection, and visualization. |
+| `SEQDB` | 8001 | Silver | Genetic sequence data and phylogenetic tree computation. Enables genetic similarity searches linked to cases. |
+| `OMOPDB` | 8002 | Silver | Normalized patient/subject data compliant with OMOP Common Data Model. |
+
+Supporting modules:
+
+- `COMMONDB` (port 8010): Shared resources (users, organizations, authentication). Handles fine-grained access control (ABAC/RBAC).
+- `FASTAPP`: Shared FastAPI utilities and common functionality across all services.
+
+Shared API surface across services: each service mounts the COMMONDB routers (auth, rbac, organization, system) via `create_fast_api` → `create_routers` → `fast_api.include_router(...)`, so `/api/v1/organization/*` and related endpoints are available on CASEDB, SEQDB, and OMOPDB.
+
+Project tree (trimmed to the main structure):
+
+```
+.
+├── gen_epix
+│   ├── commondb/                  # shared users, orgs, and cross-service resources
+│   │   ├── api/                   # FastAPI endpoints and HTTP models
+│   │   ├── domain/                # business models, commands, and policies
+│   │   ├── services/              # application orchestration and CRUD flows
+│   │   ├── repositories/          # data access (SQLAlchemy or in-memory)
+│   │   ├── policies/              # ABAC and RBAC policy logic
+│   │   ├── config/                # service settings and Dynaconf config
+│   │   └── app.py                 # FastAPI app object
+│   ├── casedb/, omopdb/, seqdb/   # other service modules with the same layout
+│   │   ├── api/
+│   │   ├── domain/
+│   │   ├── services/
+│   │   ├── repositories/
+│   │   ├── policies/
+│   │   ├── config/
+│   │   └── app.py
+│   ├── fastapp/                   # shared FastAPI utilities and base wiring
+│   ├── filter/                    # shared filtering utilities
+│   └── transform/                 # shared transformation utilities
+├── config/                        # global Dynaconf and identity provider configuration
+├── docs/                          # documentation and assets
+├── test/                          # unit, integration, and end-to-end tests
+├── run.py                         # CLI entrypoint for API, ETL, and tests
+└── etl.py                         # ETL entry script
+```
 
 ## Key Features
 
@@ -24,14 +76,15 @@ This repository contains the code for the backend and is one of several that tog
 
 ## Deliberately not in scope
 
-- **Disease-specific knowledge**: Every organization has their own variables that are important for analysis, as well as their own bioinformatics to process genetic sequence data. We therefore avoided any disease-specific code both for the generation of these data and for the analysis variables that can be defined. Only the results are stored. 
-- **Collaboration-specific knowledge**: Every collaboration or country (e.g. for public health surveillance of diseases) has their own specifics in terms of access rights and any relevant geographic regions. We therefore avoided any country-specific code, both for the type of organizations that have access, and for any geographic data. 
+- **Disease-specific knowledge**: Every organization has their own variables that are important for analysis, as well as their own bioinformatics to process genetic sequence data. We therefore avoided any disease-specific code both for the generation of these data and for the analysis variables that can be defined. Only the results are stored.
+- **Collaboration-specific knowledge**: Every collaboration or country (e.g. for public health surveillance of diseases) has their own specifics in terms of access rights and any relevant geographic regions. We therefore avoided any country-specific code, both for the type of organizations that have access, and for any geographic data.
 
 ---
 
-# Installation 
+# Installation
 
 1. Install ODBC development headers:
+
    ```console
    # Linux
    sudo apt-get update
@@ -39,28 +92,31 @@ This repository contains the code for the backend and is one of several that tog
    ```
 
 2. Create and activate a conda environment:
+
    ```console
    conda create --name gen-epix python=3.14
    conda activate gen-epix
    ```
 
 3. Install dependencies*:
+
    ```console
    pip install -r requirements.txt
    pip install --no-binary :all: pyodbc==5.2.*
    ```
+
    **Some hardware architectures (especially Apple M1/M2/M3 chips) require pyodbc to be compiled from source for compatibility***
 
-
 4. For development, add testing tools:
+
    ```console
    pip install -r dev-requirements.txt
    ```
 
-
 **SSL Certificate Setup**
 
 1. Install mkcert:
+
    ```console
    # Linux
    sudo apt install mkcert
@@ -70,12 +126,14 @@ This repository contains the code for the backend and is one of several that tog
    ```
 
 2. Generate certificates:
+
    ```console
    mkcert -install
    mkcert -key-file key.pem -cert-file cert.pem localhost 127.0.0.1
    ```
 
 3. Copy the generated files:
+
    ```console
    cp key.pem cert.pem /path/to/project/cert/
    ```
@@ -88,18 +146,28 @@ This repository contains the code for the backend and is one of several that tog
 
 ### Starting the API
 
-1. Activate the conda environment:
+#### 1. Activate the conda environment
+
 ```console
 conda activate gen-epix
 ```
-2. Run the application:
+
+#### 2. Run the tests
+
 ```console
-python run.py [service] [app_type] [env_name] [idp_config]
+python run.py test_all
 ```
-- `service`: The service to run (api, etl) 
-- `app_type`: Specific configuration for an app type (casedb, seqdb, omopbd)
-- `env_name`: Name of the environment.
-- `idp_config`: Which authentication setting to use (idps, mock_idps, debug)
+
+#### 3. Run the application
+
+```console
+python run.py <command> <service> <idp_config> <repository_config>
+```
+
+- `command`: Entry point to run (e.g., `api`).
+- `service`: `CASEDB`, `SEQDB`, `OMOPDB`, or `COMMONDB`.
+- `idp_config`: `IDPS` or `MOCK`.
+- `repository_config`: `DICT_DEMO`, `SA_SQLITE_DEMO`, or `SA_SQL`.
 
 ---
 
@@ -107,11 +175,32 @@ python run.py [service] [app_type] [env_name] [idp_config]
 
 ```console
 conda activate gen-epix
-python run.py api casedb local idps
+python run.py api casedb none dict_demo
 ```
+
+See other examples in [.vscode/launch.json](.vscode/launch.json)
+
+See other examples in [.vscode/launch.json](.vscode/launch.json)
 
 | ![Example documentation screenshot](https://github.com/RIVM-bioinformatics/gen-epix-api/blob/main/docs/assets/example_docs.png?raw=true) |
 |:--:|
+
+### Implementation Details
+
+Go here for a more in depth exploration of specific parts of the application, see the following:
+[run.py](docs/run.md) is the single CLI entry point for the entire project.
+[fastapp](docs/fastapp.md) is the reusable framework that every Gen-EpiX app is built on.
+[app creation](docs/app_creation.md) traces every component that participates in building the COMMONDB FastAPI application.
+
+The domain models are explained in depth here:
+[casedb](docs/casedb/case_models_erd.md)
+[commondb](docs/commondb/common_models_erd.md)
+[omopdb](docs/omopdb/omop_models_erd.md)
+[omopdb mixin](docs/omopdb/base_mixin_erd.md)
+[seqdb](docs/seqdb/seq_models_erd.md)
+[seqdb mixin](docs/seqdb/base_mixins_erd.md)
+[seqdb file model](docs/seqdb/file_model_erd.md)
+[seqdb attributes](docs/seqdb/seq_models_erd_attributes.md)
 
 ---
 
@@ -120,21 +209,25 @@ python run.py api casedb local idps
 Gen-EpiX relies on several Python packages to provide its functionality:
 
 **Core Dependencies**
-* [`fastapi`](https://fastapi.tiangolo.com) - Modern, high-performance web framework
-* [`sqlalchemy`](https://www.sqlalchemy.org) - SQL toolkit and Object-Relational Mapping (ORM) library
-* [`pydantic`](https://docs.pydantic.dev) - Data validation and settings management
-* [`biopython`](https://biopython.org) - Tools for computational molecular biology
+
+- [`fastapi`](https://fastapi.tiangolo.com) - Modern, high-performance web framework
+- [`sqlalchemy`](https://www.sqlalchemy.org) - SQL toolkit and Object-Relational Mapping (ORM) library
+- [`pydantic`](https://docs.pydantic.dev) - Data validation and settings management
+- [`biopython`](https://biopython.org) - Tools for computational molecular biology
 
 **Database Connectors**
-* [`pyodbc`](https://github.com/mkleehammer/pyodbc) - ODBC database adapter
+
+- [`pyodbc`](https://github.com/mkleehammer/pyodbc) - ODBC database adapter
 
 **Development Tools**
-* [`pytest`](https://docs.pytest.org) - Testing framework
-* [`black`](https://black.readthedocs.io) - Code formatter
-* [`pylint`](https://pylint.org) - Static code analyzer
-* [`mypy`](https://mypy.readthedocs.io) - Static type checker
+
+- [`pytest`](https://docs.pytest.org) - Testing framework
+- [`black`](https://black.readthedocs.io) - Code formatter
+- [`pylint`](https://pylint.org) - Static code analyzer
+- [`mypy`](https://mypy.readthedocs.io) - Static type checker
 
 For a complete list of dependencies, refer to:
+
 - [requirements.txt](requirements.txt) - Production dependencies
 - [dev-requirements.txt](dev-requirements.txt) - Development dependencies
 

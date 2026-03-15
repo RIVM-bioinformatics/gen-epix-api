@@ -19,4 +19,6 @@ class RetrieveOrganizationsUnderAdminCommand(Command):
 
 
 class OrganizationAdminPolicyCrudCommand(CrudCommand):
+    """Manage policies that define which organizations an administrator can manage across the platform."""
+
     MODEL_CLASS: ClassVar = model.OrganizationAdminPolicy

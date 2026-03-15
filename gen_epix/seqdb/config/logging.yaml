@@ -3,20 +3,22 @@ disable_existing_loggers: false
 
 formatters:
   json:
-    "()": gen_epix.commondb.domain.json_logging.JsonFormatter
+    "()": gen_epix.commondb.config.json_logging.JsonFormatter
     # optional: set explicit service/env; if omitted it reads SERVICE_NAME / ENVIRONMENT env vars
     service: "seqdb"
     merge_message_json: true
     extras_key: "props"
+    redacted_value: "[REDACTED]"
+    sensitive_keys: ["client_secret", "password", "client_pwd", "secret", "api_key"]
 
 filters:
   uvicorn_access_structured:
-    (): gen_epix.commondb.domain.json_logging.UvicornAccessLogFilter
+    (): gen_epix.commondb.config.json_logging.UvicornAccessLogFilter
 
 handlers:
   console:
     class: logging.StreamHandler
-    # keep a fixed level; cfg.py set_log_level() will raise/lower levels at runtime anyway
+    # startup normalises handler level to NOTSET; cfg.py set_log_level() controls filtering via logger levels
     level: INFO
     formatter: json
     stream: ext://sys.stdout

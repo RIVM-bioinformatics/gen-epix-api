@@ -42,6 +42,34 @@ class UploadSamplesCommand(Command, UploadBatchCommandMixin):
     )
 
 
+class CalculateSeqDistancesForNewProfilesCommand(Command):
+    """
+    Calculate sequence distances between the given new profiles and all existing
+    profiles based on the given sequence distance protocol, and store the calculated
+    distances in the database. This command is intended to be used after new profiles
+    have been added to the database, in order to calculate and store the distances
+    between the new profiles and all existing profiles for later retrieval (e.g. for
+    similarity search).
+    """
+
+    allele_profiles: list[model.AlleleProfile] | None = Field(
+        default=None,
+        description="List of new allele profiles to calculate distances for.",
+    )
+    snp_profiles: list[model.SnpProfile] | None = Field(
+        default=None,
+        description="List of new SNP profiles to calculate distances for.",
+    )
+    mlva_profiles: list[model.MlvaProfile] | None = Field(
+        default=None,
+        description="List of new MLVA profiles to calculate distances for.",
+    )
+    kmer_profiles: list[model.KmerProfile] | None = Field(
+        default=None,
+        description="List of new k-mer profiles to calculate distances for.",
+    )
+
+
 class GenerateMultipleAlignmentCommand(Command):
     pass
 
@@ -147,6 +175,10 @@ class AlleleProfileCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.AlleleProfile
 
 
+class AlleleProfileIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.AlleleProfileIdentifier
+
+
 class AssemblyProtocolCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.AssemblyProtocol
 
@@ -171,6 +203,10 @@ class KmerProfileCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.KmerProfile
 
 
+class KmerProfileIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.KmerProfileIdentifier
+
+
 class LocusCodeMapCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.LocusCodeMap
 
@@ -187,6 +223,10 @@ class LocusProfileCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.LocusProfile
 
 
+class LocusProfileIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.LocusProfileIdentifier
+
+
 class LocusSetCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.LocusSet
 
@@ -199,6 +239,10 @@ class MlvaProfileCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.MlvaProfile
 
 
+class MlvaProfileIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.MlvaProfileIdentifier
+
+
 class PcrMeasurementCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.PcrMeasurement
 
@@ -209,6 +253,10 @@ class PcrProtocolCrudCommand(CrudCommand):
 
 class ReadSetCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.ReadSet
+
+
+class ReadSetIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.ReadSetIdentifier
 
 
 class RefAlleleCrudCommand(CrudCommand):
@@ -275,6 +323,10 @@ class SeqDistanceProtocolCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.SeqDistanceProtocol
 
 
+class SeqIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.SeqIdentifier
+
+
 class SeqTaxonomyCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.SeqTaxonomy
 
@@ -289,6 +341,10 @@ class SnpDetectionProtocolCrudCommand(CrudCommand):
 
 class SnpProfileCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.SnpProfile
+
+
+class SnpProfileIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.SnpProfileIdentifier
 
 
 class TaxonomyProtocolCrudCommand(CrudCommand):

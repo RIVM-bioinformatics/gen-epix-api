@@ -3,18 +3,14 @@
 import logging
 from collections.abc import Generator
 from pathlib import Path
-from test.end_to_end.casedb_seqdb_connection.envvar import set_envvar
-from test.test_client.enum import ServerType
-from test.test_client.server_manager import ServerManager
 from uuid import UUID
 
 import pytest
 import yaml
 
 import gen_epix.commondb.test.util as test_util
-from gen_epix.casedb.domain import command
+from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain import enum as enum
-from gen_epix.casedb.domain import model
 from gen_epix.casedb.env import AppComposer as CasedbAppComposer
 from gen_epix.commondb.app_setup import create_fast_api
 from gen_epix.commondb.config.cfg import AppCfg
@@ -23,6 +19,9 @@ from gen_epix.fastapp import CrudOperation
 from gen_epix.seqdb.api.router import create_routers as seqdb_create_routers
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.env import AppComposer as SeqdbAppComposer
+from test.end_to_end.casedb_seqdb_connection.envvar import set_envvar
+from test.test_client.enum import ServerType
+from test.test_client.server_manager import ServerManager
 
 SSL_CERTFILE = Path("cert/cert.pem").absolute().as_posix()
 SSL_KEYFILE = Path("cert/key.pem").absolute().as_posix()
@@ -49,8 +48,10 @@ def test_logging_config_contract_includes_uvicorn_json_loggers() -> None:
     assert handlers["console"]["formatter"] == "json"
     assert (
         formatters["json"]["()"]
-        == "gen_epix.commondb.domain.json_logging.JsonFormatter"
+        == "gen_epix.commondb.config.json_logging.JsonFormatter"
     )
+    assert formatters["json"]["redacted_value"] == "[REDACTED]"
+    assert "client_secret" in formatters["json"]["sensitive_keys"]
 
     # The uvicorn.access logger must declare the structured access-log filter
     # so HTTP fields (method/path/status) land as proper JSON keys in Monitoring Platform.
@@ -58,7 +59,7 @@ def test_logging_config_contract_includes_uvicorn_json_loggers() -> None:
     assert "uvicorn_access_structured" in filters
     assert (
         filters["uvicorn_access_structured"]["()"]
-        == "gen_epix.commondb.domain.json_logging.UvicornAccessLogFilter"
+        == "gen_epix.commondb.config.json_logging.UvicornAccessLogFilter"
     )
     assert loggers["uvicorn.access"].get("filters") == ["uvicorn_access_structured"]
 
@@ -111,7 +112,7 @@ def seqdb_server(
         app_id=seqdb_app_composer.app.generate_id(),
         setup_logger=seqdb_app_cfg.setup_logger,
         api_logger=seqdb_app_cfg.api_logger,
-        debug=False,
+        debug=True,
     )
 
     with ServerManager(
@@ -184,20 +185,20 @@ def test_casedb_seqdb_connection(
         casedb_app_composer.cfg, casedb_app
     )
 
-    # Get all cols, case_type_cols and cases
-    cols: dict[UUID, model.Col] = {
+    # Get all RefCols, Cols and Cases
+    ref_cols: dict[UUID, model.RefCol] = {
         x.id: x
         for x in casedb_app.handle(
-            command.ColCrudCommand(
+            command.RefColCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ALL,
             )
         )
     }
-    case_type_cols: dict[UUID, model.CaseTypeCol] = {
+    cols: dict[UUID, model.Col] = {
         x.id: x
         for x in casedb_app.handle(
-            command.CaseTypeColCrudCommand(
+            command.ColCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ALL,
             )
@@ -213,32 +214,32 @@ def test_casedb_seqdb_connection(
     # Test phylogenetic tree retrieval (which calls SeqDB)
     is_phylogenetic_tree_retrieved = False
     is_similar_cases_retrieved = False
-    genetic_distance_case_type_col_ids: list[UUID] = [
+    genetic_distance_col_ids: list[UUID] = [
         x.id  # type: ignore[misc]
-        for x in case_type_cols.values()
-        if cols[x.col_id].col_type == enum.ColType.GENETIC_DISTANCE
+        for x in cols.values()
+        if ref_cols[x.ref_col_id].col_type == enum.ColType.GENETIC_DISTANCE
     ]
-    for case_type_col_id in genetic_distance_case_type_col_ids:
-        case_type_col = case_type_cols[case_type_col_id]
-        assert case_type_col.genetic_sequence_case_type_col_id is not None
-        case_type_col = case_type_cols[case_type_col_id]
-        genetic_sequence_case_type_col_id: UUID = (
-            case_type_col.genetic_sequence_case_type_col_id  # type: ignore[assignment]
+    for col_id in genetic_distance_col_ids:
+        col = cols[col_id]
+        assert col.genetic_sequence_col_id is not None
+        col = cols[col_id]
+        genetic_sequence_col_id: UUID = (
+            col.genetic_sequence_col_id  # type: ignore[assignment]
         )
         case_ids: list[UUID] = [
-            x.id for x in cases if x.content.get(genetic_sequence_case_type_col_id)  # type: ignore[assignment]
+            x.id for x in cases if x.content.get(genetic_sequence_col_id)
         ]
         if len(case_ids) < 2:
             continue
         if len(case_ids) > 5:
             case_ids = case_ids[0:5]
-        if case_type_col.tree_algorithm_codes and case_type_col.id:
-            for tree_algorithm_code in case_type_col.tree_algorithm_codes:
+        if col.tree_algorithm_codes and col.id:
+            for tree_algorithm_code in col.tree_algorithm_codes:
                 phylogenetic_tree = casedb_app.handle(
                     command.RetrievePhylogeneticTreeByCasesCommand(
                         user=root_user,
-                        case_type_id=case_type_col.case_type_id,
-                        genetic_distance_case_type_col_id=case_type_col.id,
+                        case_type_id=col.case_type_id,
+                        genetic_distance_col_id=col.id,
                         tree_algorithm=tree_algorithm_code,
                         case_ids=case_ids,
                     )
@@ -247,13 +248,14 @@ def test_casedb_seqdb_connection(
                 similar_case_ids: list[UUID] = casedb_app.handle(
                     command.RetrieveSimilarCasesCommand(
                         user=root_user,
-                        case_type_id=case_type_col.case_type_id,
-                        genetic_distance_case_type_col_id=case_type_col.id,
+                        case_type_id=col.case_type_id,
+                        genetic_distance_col_id=col.id,
                         case_ids=case_ids[0:5],
                         max_distance=5,
                     )
                 )
-                is_similar_cases_retrieved = True
+                if len(similar_case_ids) > 0:
+                    is_similar_cases_retrieved = True
                 break
         if is_phylogenetic_tree_retrieved and is_similar_cases_retrieved:
             break
@@ -261,19 +263,20 @@ def test_casedb_seqdb_connection(
     assert isinstance(phylogenetic_tree, model.PhylogeneticTree)
     assert isinstance(similar_case_ids, list)
     assert len(similar_case_ids) > 0
+    assert any(isinstance(case_id, UUID) for case_id in similar_case_ids)
 
-    genetic_sequence_case_type_cols = [
+    genetic_sequence_cols = [
         x
-        for x in case_type_cols.values()
-        if cols[x.col_id].col_type == enum.ColType.GENETIC_SEQUENCE
+        for x in cols.values()
+        if ref_cols[x.ref_col_id].col_type == enum.ColType.GENETIC_SEQUENCE
     ]
     has_seq_case_ids: list[UUID] = []
-    for genetic_sequence_case_type_col in genetic_sequence_case_type_cols:
-        assert genetic_sequence_case_type_col.id is not None
-        has_seq_case_ids: list[UUID] = [  # type: ignore[assignment]
-            UUID(x.content[genetic_sequence_case_type_col.id])
+    for genetic_sequence_col in genetic_sequence_cols:
+        assert genetic_sequence_col.id is not None
+        has_seq_case_ids: list[UUID] = [
+            UUID(x.content[genetic_sequence_col.id])
             for x in cases
-            if x.content.get(genetic_sequence_case_type_col.id)
+            if x.content.get(genetic_sequence_col.id)
         ]
         if has_seq_case_ids:
             break
@@ -284,7 +287,7 @@ def test_casedb_seqdb_connection(
             command.RetrieveGeneticSequenceFastaByIdCommand(
                 user=root_user,
                 seq_ids=has_seq_case_ids,
-                wrap=False,
+                wrap=50,
             )
         )
 
