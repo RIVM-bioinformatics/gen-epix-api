@@ -389,7 +389,6 @@ class AuthEnv:
         self.app = App(
             user_manager=self.user_manager,
             logger=None,
-            feature_flags={"auto_create_new_users": auto_create_new_users},
         )
         idps_cfg = make_idps_cfg(self.mock_jwk_token)
         self.auth_service = AuthService(

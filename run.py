@@ -386,6 +386,26 @@ class Run:
             ]
         )
 
+    def test_commondb_unit_config(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/commondb/unit/config/",
+            ]
+        )
+
+    def test_commondb_unit_logging(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/commondb/unit/logging/",
+            ]
+        )
+
     def test_commondb_unit_upload(self) -> None:
         import pytest
 

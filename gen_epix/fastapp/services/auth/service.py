@@ -60,26 +60,31 @@ class AuthService(BaseAuthService):
         self._idp_client_by_name: dict[str, IdpClient] = {}
         self._idp_clients: list[IdpClient] = []
         self._exposed_idp_clients: list[IdpClient] = []
-
+        self._no_auth_user: model.User
+        self._no_auth_idp_client: IdpClient = MockIDPClient(logger=logger)
         self._pending_idp_client_cfgs: list[dict[str, str | list]] = []
         self._pending_idp_clients_lock = threading.Lock()
         self._init_idp_clients(app, idps_cfg, ssl_context)
 
-        self._auto_create_new_users = self.app.get_feature_flag("auto_create_new_users")
-        # convert, because can be quoted int
-        root_token_time_to_live_int = (
-            int(root_token_time_to_live)
-            if root_token_time_to_live is not None
-            else None
-        )
-        if root_token_time_to_live_int is not None and root_token_time_to_live_int <= 0:
+        # Parse and set auto_create_new_users, and expose as feature flag
+        self._auto_create_new_users = auto_create_new_users
+        self.app.set_feature_flag("auto_create_new_users", auto_create_new_users)
+
+        # Parse and set root_token_time_to_live
+        if root_token_time_to_live is not None and root_token_time_to_live <= 0:
+            # Root token expiration disabled, log this decision because it has security implications
             self._root_token_time_to_live = None
+            if self._logger:
+                self._logger.warning(
+                    self.create_log_message(
+                        "d1cbb7e8",
+                        "Root token expiration disabled by configuration, ensure this is an intentional decision due to security implications",
+                    )
+                )
         else:
             self._root_token_time_to_live = (
-                root_token_time_to_live_int or self.DEFAULT_ROOT_TOKEN_TIME_TO_LIVE
+                root_token_time_to_live or self.DEFAULT_ROOT_TOKEN_TIME_TO_LIVE
             )
-        self._no_auth_user: model.User
-        self._no_auth_idp_client: IdpClient = MockIDPClient(logger=logger)
 
     @property
     def idp_clients(self) -> list[IdpClient]:
