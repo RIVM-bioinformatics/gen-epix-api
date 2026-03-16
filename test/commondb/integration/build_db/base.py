@@ -5,12 +5,12 @@ from gen_epix.commondb.domain import enum
 
 TEST_TYPE = TestType.COMMONDB_INTEGRATION_BUILD_DB
 
-SKIP_ENDPOINTS = True  # False (i.e. using endpoints) does not work with SA_SQLITE due to multi-threading issue
+SKIP_ENDPOINTS = False  # False (i.e. using endpoints) does not work with SA_SQLITE due to multi-threading issue
 SKIP_RAISE = False
 SKIP_CREATE_DATA = False
 VERBOSE = False
-# DEV_REPOSITORY_CONFIG = enum.DevRepositoryConfig.DICT_EMPTY
-DEV_REPOSITORY_CONFIG = enum.DevRepositoryConfig.SA_SQLITE_EMPTY
+DEV_REPOSITORY_CONFIG = enum.DevRepositoryConfig.DICT_EMPTY
+# DEV_REPOSITORY_CONFIG = enum.DevRepositoryConfig.SA_SQLITE_EMPTY
 
 ALL_USERS = [
     "root1_1",

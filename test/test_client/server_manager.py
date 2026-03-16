@@ -6,12 +6,11 @@ import subprocess
 import sys
 import threading
 import time
+from test.test_client.enum import ServerType, ServerTypeSet
 from typing import Any
 
 import httpx
 import uvicorn
-
-from test.test_client.enum import ServerType, ServerTypeSet
 
 
 class ServerManager:

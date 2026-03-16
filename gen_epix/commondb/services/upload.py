@@ -138,12 +138,24 @@ class BatchUploader:
                 message="Verification ended",
             )
             if cmd.verify_only:
-                # Stop here if only verification was requested
+                # Stop here if only verification was requested; mark all
+                # still-PENDING individual results as SKIPPED (nothing was stored)
                 batch_result.add_info(
                     code="c849b0e2",
                     message="Verification only requested, upload will not proceed",
                 )
+                for parent_result in batch_result.get_parent_results():
+                    parent_result.convert_status(
+                        UploadStatus.PENDING, UploadStatus.SKIPPED
+                    )
+
+                batch_result.add_info(
+                    code="ff9e4a2f",
+                    message="Upload ended",
+                )
+                batch_result.resolve_status()
                 return batch_result
+
             if not success:
                 # Do not proceed with upsert due to errors
                 batch_result.add_error(
@@ -179,18 +191,7 @@ class BatchUploader:
         )
 
         # Assign final status
-        if batch_result.status == UploadStatus.PENDING:
-            status_count = batch_result.get_status_count(include_self=False)
-            n_results = sum(status_count.values())
-            if status_count[UploadStatus.SKIPPED] == n_results:
-                batch_result.status = UploadStatus.SKIPPED
-            elif status_count[UploadStatus.CREATED] == n_results:
-                batch_result.status = UploadStatus.CREATED
-            elif status_count[UploadStatus.UPDATED] == n_results:
-                batch_result.status = UploadStatus.UPDATED
-            else:
-                # Mixed results, use status processed
-                batch_result.status = UploadStatus.PROCESSED
+        batch_result.resolve_status()
 
         return batch_result
 
@@ -448,8 +449,20 @@ class BatchUploader:
                 parent_result.status = UploadStatus.SKIPPED
                 continue
             if self.is_null(parent_id):
-                # Parent given but ID not given while Identifiers already verified, will need to be created
+                # Parent given but no ID: always a new entity.
                 parent_result.is_new = True
+                if cmd.on_new == UploadAction.ERROR:
+                    success = False
+                    parent_result.add_error(
+                        "b2d4f6a8",
+                        f"{self.parent_class.NAME} has no ID and on_new={cmd.on_new.value}.",
+                    )
+                elif cmd.on_new == UploadAction.SKIP:
+                    parent_result.status = UploadStatus.SKIPPED
+                    parent_result.add_info(
+                        "c3e5g7b9",
+                        f"{self.parent_class.NAME} has no ID and on_new={cmd.on_new.value}.",
+                    )
                 continue
             parent_ids[i] = parent_id
             has_parent_ids = True
@@ -772,6 +785,7 @@ class BatchUploader:
         if not to_update_parent_result_tuples:
             # Nothing to do
             return success
+
         to_update_parent_result_pairs = [
             (x[1], x[2]) for x in to_update_parent_result_tuples
         ]
@@ -1140,7 +1154,10 @@ class BatchUploader:
             identifiers_for_upload,
             identifier_results,
         ) in identifier_tuples:
-            assert internal_id is not None
+            if internal_id is None:
+                # Parent was skipped or failed and was never assigned a real ID;
+                # no identifiers can be created for it.
+                continue
             for identifier_for_upload, identifier_result in zip(
                 identifiers_for_upload or [],
                 identifier_results or [],
@@ -1518,6 +1535,8 @@ class BatchUploader:
             # Only check props for updates, other fields are not updatable
             is_updated = False
             for field_name, field_props in stored_model_field_props.items():
+                if field_name == obj_id_field_name:
+                    continue  # ID field is the lookup key; never part of updates
                 existing_value = getattr(existing_obj, field_name)
                 # Field if the field, with its existing value, is (still) mutable
                 if not field_props.is_mutable_value(existing_value):
@@ -1546,7 +1565,7 @@ class BatchUploader:
                         is_updated = True
                         setattr(existing_obj, field_name, new_value)
             # Determine whether to update, i.e. if any values are indeed different, or otherwise skip
-            if not is_updated:
+            if not is_updated and obj_result.status != UploadStatus.FAILED:
                 obj_result.status = UploadStatus.SKIPPED
                 obj_result.add_info("f7a8b2d4", "Content is identical")
             else:

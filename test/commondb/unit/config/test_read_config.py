@@ -87,13 +87,11 @@ def override_tmp_dir() -> Iterator[Path]:
 def _write_string_auth_override_file(override_tmp_dir: Path, app_name: str) -> Path:
     override_path = override_tmp_dir / f"{app_name.lower()}.toml"
     override_path.write_text(
-        textwrap.dedent(
-            """\
+        textwrap.dedent("""\
             [service.auth.props]
             auto_create_new_users = "0"
             root_token_time_to_live = "900"
-            """
-        ),
+            """),
         encoding="utf-8",
     )
     return override_path
