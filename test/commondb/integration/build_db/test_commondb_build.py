@@ -68,7 +68,9 @@ _PARAMS = [
     scope="module",
     name="env",
     params=_PARAMS,
-    ids=[p.id for p in _PARAMS],
+    ids=[
+        p.id for p in _PARAMS
+    ],  # Note id is a calculated property based on the parameter values, e.g. "skip_endpoints__SA_SQLITE_EMPTY"
 )
 def get_test_client(request) -> Env:
     params: BuildDbParams = request.param

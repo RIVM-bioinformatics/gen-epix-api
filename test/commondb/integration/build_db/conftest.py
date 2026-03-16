@@ -3,6 +3,7 @@ import pytest
 
 def pytest_collection_modifyitems(items):
     """Rewrite class-level dependency 'depends' markers to include parametrize IDs.
+    (The solution is generic, but the motivation is specific to this test suite, so the explanation is specific to the test_commondb_build.py structure.)
 
     PROBLEM
     -------
