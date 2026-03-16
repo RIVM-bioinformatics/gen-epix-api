@@ -5,7 +5,7 @@ Verifies that:
 - add_error / add_warning / add_info append the correct log items.
 - add_error calls _set_error_status on the concrete class.
 - has_errors / has_warnings / has_infos / has_log_code query correctly.
-- UploadResult._set_error_status sets UploadStatus.FAILED.
+- UploadResult._set_error_status sets EtlStatus.FAILED.
 - UploadResult.add_logs sets FAILED when any item is an error.
 """
 
