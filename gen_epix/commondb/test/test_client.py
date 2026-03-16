@@ -1164,7 +1164,14 @@ class TestClient:
         if not out_obj.created_at:
             raise ValueError(f"created_at should be set: {out_obj.created_at}")
         if verify_modified and not is_privileged:
-            if in_obj.modified_at and out_obj.modified_at < in_obj.modified_at:
+
+            # TODO 2952: Where does the native datetime come from?
+            # Why is it not timezone aware? Should we enforce timezone aware datetimes everywhere?
+            in_modified_at = in_obj.modified_at
+            if in_modified_at and in_modified_at.tzinfo is None:
+                in_modified_at = in_modified_at.replace(tzinfo=datetime.UTC)
+
+            if in_modified_at and out_obj.modified_at < in_modified_at:
                 raise ValueError(
                     f"modified_at should be larger : {out_obj.modified_at}"
                 )
