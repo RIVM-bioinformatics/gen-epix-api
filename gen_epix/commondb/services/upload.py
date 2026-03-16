@@ -145,8 +145,8 @@ class BatchUploader:
                     message="Verification only requested, upload will not proceed",
                 )
                 for parent_result in batch_result.get_parent_results():
-                    if parent_result.status == UploadStatus.PENDING:
-                        parent_result.status = UploadStatus.SKIPPED
+                    parent_result.convert_status(UploadStatus.PENDING, UploadStatus.SKIPPED)
+
             else:
                 if not success:
                     # Do not proceed with upsert due to errors

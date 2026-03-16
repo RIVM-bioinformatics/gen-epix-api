@@ -500,6 +500,24 @@ class ParentUploadResult(UploadResultWithIdentifiers):
                 f"Data has info: {info_codes_str}",
             )
 
+    def convert_status(self, from_status: UploadStatus, to_status: UploadStatus) -> None:
+        """
+        Convert all occurrences of from_status to to_status in this result and all
+        its child and identifier results.
+        """
+        if self.status == from_status:
+            self.status = to_status
+        for field_name in self.get_child_results_field_names():
+            for child_result in getattr(self, field_name) or []:
+                if child_result.status == from_status:
+                    child_result.status = to_status
+                for identifier_result in child_result.get_identifier_upload_results() or []:
+                    if identifier_result.status == from_status:
+                        identifier_result.status = to_status
+        for identifier_result in self.identifiers or []:
+            if identifier_result.status == from_status:
+                identifier_result.status = to_status
+
     @classmethod
     def get_child_results_field_names(cls) -> list[str]:
         """
