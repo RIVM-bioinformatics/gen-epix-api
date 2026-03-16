@@ -18,10 +18,13 @@ WORKDIR /app
 # See https://learn.microsoft.com/en-us/sql/linux/sql-server-linux-setup-tools?tabs=ubuntu-install&view=sql-server-ver16#ubuntu
 # Install ODBC driver
 RUN apt-get update && apt-get install -y \
+    openssl \
+    libssl3t64 \
+    && apt-get install -y \
     curl \
     gnupg \
     && curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /usr/share/keyrings/microsoft-prod.gpg && \
-    curl https://packages.microsoft.com/config/debian/12/prod.list | tee /etc/apt/sources.list.d/mssql-release.list && \
+    curl https://packages.microsoft.com/config/debian/13/prod.list | tee /etc/apt/sources.list.d/mssql-release.list && \
     apt-get update && ACCEPT_EULA=Y apt-get install -y \
     msodbcsql18 \
     unixodbc \
