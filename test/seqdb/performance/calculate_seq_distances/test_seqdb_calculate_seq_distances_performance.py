@@ -20,10 +20,9 @@ from time import perf_counter
 from typing import Any
 from uuid import UUID
 
-import pyinstrument
 import pytest
 
-from gen_epix.commondb.domain.enum import AppType, UploadStatus
+from gen_epix.commondb.domain.enum import AppType, EtlStatus
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.repositories.seq_dict import SeqDictRepository
@@ -164,8 +163,8 @@ class TestSampleBatchUploader:
             start = perf_counter()
             result: model.SampleBatchUploadResult = env.app.handle(cmd)
             durations.append(perf_counter() - start)
-            assert result.get_status_count()[UploadStatus.FAILED] == 0
-            assert result.get_status_count()[UploadStatus.PENDING] == 0
+            assert result.get_status_count()[EtlStatus.FAILED] == 0
+            assert result.get_status_count()[EtlStatus.PENDING] == 0
         total = sum(durations)
         avg = total / len(durations) if durations else 0.0
 

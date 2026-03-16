@@ -3,7 +3,7 @@ from uuid import UUID
 import gen_epix.omopdb.domain.command as command
 import gen_epix.omopdb.domain.model as model
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
-from gen_epix.commondb.domain.enum import UploadStatus
+from gen_epix.commondb.domain.enum import EtlStatus
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import BaseBatchUploadResult
 from gen_epix.commondb.services.upload import BatchUploader
@@ -108,10 +108,7 @@ class PersonBatchUploader(BatchUploader):
 
         # Update batch status if necessary
         status_count_after = batch_result.get_status_count()
-        if (
-            status_count_after[UploadStatus.FAILED]
-            > status_count_before[UploadStatus.FAILED]
-        ):
+        if status_count_after[EtlStatus.FAILED] > status_count_before[EtlStatus.FAILED]:
             success = False
         return success
 

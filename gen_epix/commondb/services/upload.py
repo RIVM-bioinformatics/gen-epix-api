@@ -3,7 +3,7 @@ from uuid import UUID
 
 from gen_epix import fastapp
 from gen_epix.commondb.domain import command, exc, model
-from gen_epix.commondb.domain.enum import UploadAction, UploadStatus
+from gen_epix.commondb.domain.enum import EtlStatus, UploadAction
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import BaseIdentifier
 from gen_epix.commondb.domain.model.upload import (
@@ -145,9 +145,7 @@ class BatchUploader:
                     message="Verification only requested, upload will not proceed",
                 )
                 for parent_result in batch_result.get_parent_results():
-                    parent_result.convert_status(
-                        UploadStatus.PENDING, UploadStatus.SKIPPED
-                    )
+                    parent_result.convert_status(EtlStatus.PENDING, EtlStatus.SKIPPED)
 
                 batch_result.add_info(
                     code="ff9e4a2f",
@@ -211,14 +209,14 @@ class BatchUploader:
         parent_results: list[model.ParentUploadResult] = []
         for parent_for_upload in self.get_parents_for_upload(cmd):
             # Intialize parent result
-            parent_result = self.parent_result_class(status=UploadStatus.PENDING)
+            parent_result = self.parent_result_class(status=EtlStatus.PENDING)
             # Initialise Identifier results
             identifiers = parent_for_upload.identifiers
             identifier_results = (
                 None
                 if identifiers is None
                 else [
-                    UploadResultWithIdentifiers(status=UploadStatus.PENDING)
+                    UploadResultWithIdentifiers(status=EtlStatus.PENDING)
                     for _ in identifiers
                 ]
             )
@@ -252,13 +250,13 @@ class BatchUploader:
                             None
                             if identifiers is None
                             else [
-                                UploadResult(status=UploadStatus.PENDING)
+                                UploadResult(status=EtlStatus.PENDING)
                                 for _ in identifiers
                             ]
                         )
                         child_results.append(
                             UploadResultWithIdentifiers(
-                                status=UploadStatus.PENDING,
+                                status=EtlStatus.PENDING,
                                 identifiers=identifier_results,
                             )
                         )
@@ -267,7 +265,7 @@ class BatchUploader:
                     child_results = [
                         UploadResult(
                             id=getattr(x, child_id_field_name),
-                            status=UploadStatus.PENDING,
+                            status=EtlStatus.PENDING,
                         )
                         for x in children_for_upload
                     ]
@@ -279,7 +277,7 @@ class BatchUploader:
         kwargs = {self.batch_parents_for_upload_field_name: parent_results}
         batch_result = self.batch_upload_result_class(
             batch_id=cmd.id,
-            status=UploadStatus.PENDING,
+            status=EtlStatus.PENDING,
             **kwargs,  # type: ignore[arg-type]
         )
         return batch_result
@@ -446,7 +444,7 @@ class BatchUploader:
             parent = parent_for_upload.get_parent()
             if parent is None:
                 # Parent not given, set status to SKIPPED
-                parent_result.status = UploadStatus.SKIPPED
+                parent_result.status = EtlStatus.SKIPPED
                 continue
             if self.is_null(parent_id):
                 # Parent given but no ID: always a new entity.
@@ -458,7 +456,7 @@ class BatchUploader:
                         f"{self.parent_class.NAME} has no ID and on_new={cmd.on_new.value}.",
                     )
                 elif cmd.on_new == UploadAction.SKIP:
-                    parent_result.status = UploadStatus.SKIPPED
+                    parent_result.status = EtlStatus.SKIPPED
                     parent_result.add_info(
                         "c3e5g7b9",
                         f"{self.parent_class.NAME} has no ID and on_new={cmd.on_new.value}.",
@@ -486,7 +484,7 @@ class BatchUploader:
                     )
                 elif cmd.on_exists == UploadAction.SKIP:
                     # Existing parent and on_exists=SKIP: do not update
-                    parent_result.status = UploadStatus.SKIPPED
+                    parent_result.status = EtlStatus.SKIPPED
                     parent_result.add_info(
                         "a7c3f42e",
                         f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
@@ -501,7 +499,7 @@ class BatchUploader:
                     )
                 elif cmd.on_new == UploadAction.SKIP:
                     # New parent and on_new=SKIP: do not create
-                    parent_result.status = UploadStatus.SKIPPED
+                    parent_result.status = EtlStatus.SKIPPED
                     parent_result.add_info(
                         "b6d7e8f3",
                         f"{self.parent_class.NAME} does not exist and on_new={cmd.on_new.value}.",
@@ -634,7 +632,7 @@ class BatchUploader:
                         )
                     elif cmd.on_exists == UploadAction.SKIP:
                         # Existing child and on_exists=SKIP: do not update
-                        child_result.status = UploadStatus.SKIPPED
+                        child_result.status = EtlStatus.SKIPPED
                         child_result.add_info(
                             "7a3f2c81",
                             f"{child_for_upload.__class__.NAME} already exists and on_exists={cmd.on_exists.value}",
@@ -649,7 +647,7 @@ class BatchUploader:
                         )
                     elif cmd.on_new == UploadAction.SKIP:
                         # New child and on_new=SKIP: do not create
-                        child_result.status = UploadStatus.SKIPPED
+                        child_result.status = EtlStatus.SKIPPED
                         child_result.add_info(
                             "8b7c6d3f",
                             f"{child_for_upload.__class__.NAME} does not exist and on_new={cmd.on_new.value}",
@@ -703,7 +701,7 @@ class BatchUploader:
             if not parent_result.is_new:
                 # Parent already exists, should not be created
                 continue
-            if parent_result.status != UploadStatus.PENDING:
+            if parent_result.status != EtlStatus.PENDING:
                 # Only PENDING parents can be created
                 continue
             # Parent to be created
@@ -771,7 +769,7 @@ class BatchUploader:
             if parent_result.is_new:
                 # Parent did not exist, should not be updated
                 continue
-            if parent_result.status != UploadStatus.PENDING:
+            if parent_result.status != EtlStatus.PENDING:
                 # Only PENDING parents can be updated
                 continue
             parent = parent_for_upload.get_parent()
@@ -845,7 +843,7 @@ class BatchUploader:
                 if not child_result.is_new:
                     # Child already exists, should not be created
                     continue
-                if child_result.status != UploadStatus.PENDING:
+                if child_result.status != EtlStatus.PENDING:
                     # Only PENDING children can be created
                     continue
                 parent_id = parent_for_upload.id
@@ -910,7 +908,7 @@ class BatchUploader:
                 if child_result.is_new:
                     # Child did not exist, should not be updated
                     continue
-                if child_result.status != UploadStatus.PENDING:
+                if child_result.status != EtlStatus.PENDING:
                     # Only PENDING children can be updated
                     continue
                 parent_id = parent_for_upload.id
@@ -999,7 +997,7 @@ class BatchUploader:
                 obj_for_upload.identifiers or [],
                 obj_result.identifiers or [],
             ):
-                if identifier_result.status != UploadStatus.PENDING:
+                if identifier_result.status != EtlStatus.PENDING:
                     # Not pending (likely skipped or failed), no need to check existence
                     continue
                 assert identifier_for_upload.identifier_issuer_id is not None
@@ -1014,7 +1012,7 @@ class BatchUploader:
                 # Identifier already exists
                 existing_identifier = existing_identifier_map[key]
                 identifier_result.id = existing_identifier.id
-                identifier_result.status = UploadStatus.SKIPPED
+                identifier_result.status = EtlStatus.SKIPPED
                 # Cross-validate with object ID if given
                 if self.is_null(obj_id):
                     # Object does not exist yet, fill in object ID
@@ -1162,7 +1160,7 @@ class BatchUploader:
                 identifiers_for_upload or [],
                 identifier_results or [],
             ):
-                if identifier_result.status != UploadStatus.PENDING:
+                if identifier_result.status != EtlStatus.PENDING:
                     # Not pending (likely skipped or failed), no need to create
                     continue
                 if not identifier_result.is_new:
@@ -1478,7 +1476,7 @@ class BatchUploader:
             created_obj_ids, to_create_obj_result_pairs
         ):
             obj_result.id = created_obj_id
-            obj_result.status = UploadStatus.CREATED
+            obj_result.status = EtlStatus.CREATED
 
         return success
 
@@ -1503,7 +1501,7 @@ class BatchUploader:
             obj_id = getattr(obj, obj_id_field_name)
             if self.is_null(obj_id):
                 success = False
-                obj_result.status = UploadStatus.FAILED
+                obj_result.status = EtlStatus.FAILED
                 obj_result.add_error(
                     "e9c1b3d5",
                     f"Cannot update object without valid ID: {obj}",
@@ -1541,7 +1539,7 @@ class BatchUploader:
                 # Field if the field, with its existing value, is (still) mutable
                 if not field_props.is_mutable_value(existing_value):
                     success = False
-                    obj_result.status = UploadStatus.FAILED
+                    obj_result.status = EtlStatus.FAILED
                     obj_result.add_error(
                         "d3c9f6b1",
                         f"Field {field_name} with existing value {existing_value} may not be updated.",
@@ -1565,8 +1563,8 @@ class BatchUploader:
                         is_updated = True
                         setattr(existing_obj, field_name, new_value)
             # Determine whether to update, i.e. if any values are indeed different, or otherwise skip
-            if not is_updated and obj_result.status != UploadStatus.FAILED:
-                obj_result.status = UploadStatus.SKIPPED
+            if not is_updated and obj_result.status != EtlStatus.FAILED:
+                obj_result.status = EtlStatus.SKIPPED
                 obj_result.add_info("f7a8b2d4", "Content is identical")
             else:
                 to_update_objs.append(obj)
@@ -1591,7 +1589,7 @@ class BatchUploader:
 
         # Assign status to results
         for obj_result in to_update_obj_results:
-            obj_result.status = UploadStatus.UPDATED
+            obj_result.status = EtlStatus.UPDATED
 
         return success
 

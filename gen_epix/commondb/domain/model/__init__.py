@@ -4,6 +4,8 @@ from gen_epix.commondb.domain import enum
 from gen_epix.commondb.domain.model.abac import (
     OrganizationAdminPolicy as OrganizationAdminPolicy,
 )
+from gen_epix.commondb.domain.model.base import BaseEtlResult as BaseEtlResult
+from gen_epix.commondb.domain.model.base import EtlLogItem as EtlLogItem
 from gen_epix.commondb.domain.model.base import Model as Model
 from gen_epix.commondb.domain.model.organization import BaseIdentifier as BaseIdentifier
 from gen_epix.commondb.domain.model.organization import Contact as Contact
