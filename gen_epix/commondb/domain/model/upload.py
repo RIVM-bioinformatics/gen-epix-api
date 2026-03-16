@@ -705,3 +705,21 @@ class BaseBatchUploadResult(UploadResult):
             for status, count in parent_status_count.items():
                 retval[status] += count
         return retval
+
+    def resolve_status(self) -> None:
+        """
+        Set this batch result's status based on the aggregate of its children.
+        Only has effect when status is still PENDING.
+        """
+        if self.status != UploadStatus.PENDING:
+            return
+        status_count = self.get_status_count(include_self=False)
+        n_results = sum(status_count.values())
+        if n_results == 0 or status_count[UploadStatus.SKIPPED] == n_results:
+            self.status = UploadStatus.SKIPPED
+        elif status_count[UploadStatus.CREATED] == n_results:
+            self.status = UploadStatus.CREATED
+        elif status_count[UploadStatus.UPDATED] == n_results:
+            self.status = UploadStatus.UPDATED
+        else:
+            self.status = UploadStatus.PROCESSED

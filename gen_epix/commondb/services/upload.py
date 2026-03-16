@@ -145,56 +145,53 @@ class BatchUploader:
                     message="Verification only requested, upload will not proceed",
                 )
                 for parent_result in batch_result.get_parent_results():
-                    parent_result.convert_status(UploadStatus.PENDING, UploadStatus.SKIPPED)
+                    parent_result.convert_status(
+                        UploadStatus.PENDING, UploadStatus.SKIPPED
+                    )
 
-            else:
-                if not success:
-                    # Do not proceed with upsert due to errors
-                    batch_result.add_error(
-                        code="d6e5c3b4",
-                        message="Verification found errors, upload will not proceed",
-                    )
-                    return batch_result
+                batch_result.add_info(
+                    code="ff9e4a2f",
+                    message="Upload ended",
+                )
+                batch_result.resolve_status()
+                return batch_result
 
-                # Upsert the batch data
-                batch_result.add_info(
-                    code="c1a2b3d4",
-                    message="Upsert started",
+            if not success:
+                # Do not proceed with upsert due to errors
+                batch_result.add_error(
+                    code="d6e5c3b4",
+                    message="Verification found errors, upload will not proceed",
                 )
-                success = self.upsert_batch(cmd, batch_result, uow)
-                batch_result.add_info(
-                    code="e4f5a6b7",
-                    message="Upsert ended",
+                return batch_result
+
+            # Upsert the batch data
+            batch_result.add_info(
+                code="c1a2b3d4",
+                message="Upsert started",
+            )
+            success = self.upsert_batch(cmd, batch_result, uow)
+            batch_result.add_info(
+                code="e4f5a6b7",
+                message="Upsert ended",
+            )
+            if not success:
+                # Rollback due to errors, but do not raise an exception since those will be reported in batch_result
+                batch_result.add_error(
+                    code="f8e7d6c5",
+                    message="Upload had errors",
                 )
-                if not success:
-                    # Rollback due to errors, but do not raise an exception since those will be reported in batch_result
-                    batch_result.add_error(
-                        code="f8e7d6c5",
-                        message="Upload had errors",
-                    )
-                    uow.rollback()
-                    batch_result.add_info(
-                        code="7729440d",
-                        message="Upload had errors, changes have been rolled back",
-                    )
+                uow.rollback()
+                batch_result.add_info(
+                    code="7729440d",
+                    message="Upload had errors, changes have been rolled back",
+                )
         batch_result.add_info(
             code="7b9e4a2f",
             message="Upload ended",
         )
 
         # Assign final status
-        if batch_result.status == UploadStatus.PENDING:
-            status_count = batch_result.get_status_count(include_self=False)
-            n_results = sum(status_count.values())
-            if status_count[UploadStatus.SKIPPED] == n_results:
-                batch_result.status = UploadStatus.SKIPPED
-            elif status_count[UploadStatus.CREATED] == n_results:
-                batch_result.status = UploadStatus.CREATED
-            elif status_count[UploadStatus.UPDATED] == n_results:
-                batch_result.status = UploadStatus.UPDATED
-            else:
-                # Mixed results, use status processed
-                batch_result.status = UploadStatus.PROCESSED
+        batch_result.resolve_status()
 
         return batch_result
 
