@@ -27,4 +27,4 @@ types-setuptools==82.0.*
 types-python-dateutil==2.9.*
 
 # TODO: remove if run.py no longer uses it
-uvicorn==0.41.0
+uvicorn==0.42.0
