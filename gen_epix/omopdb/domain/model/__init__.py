@@ -239,8 +239,12 @@ COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
 # Additional field properties for models that have already been stored (persisted)
 STORED_MODEL_FIELD_PROPS: dict[type[fastapp.Model], dict[str, ModelFieldProps]] = {
     Person: {
+        # All fields except the PK are mutable to allow correction of Person records
+        # after creation. Without this, mandatory fields (year_of_birth, gender_concept_id,
+        # etc.) would be permanently immutable once set, blocking on_exists=UPDATE.
         field_name: ModelFieldProps(is_mutable_always=True)
         for field_name in Person.model_fields
+        if field_name != "person_id"
     },
 }
 complete_stored_model_field_props(

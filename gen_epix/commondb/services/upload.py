@@ -1535,6 +1535,8 @@ class BatchUploader:
             # Only check props for updates, other fields are not updatable
             is_updated = False
             for field_name, field_props in stored_model_field_props.items():
+                if field_name == obj_id_field_name:
+                    continue  # ID field is the lookup key; never part of updates
                 existing_value = getattr(existing_obj, field_name)
                 # Field if the field, with its existing value, is (still) mutable
                 if not field_props.is_mutable_value(existing_value):
