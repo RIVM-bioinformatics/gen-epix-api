@@ -1,7 +1,7 @@
 from typing import Any
 from uuid import UUID
 
-from gen_epix.commondb.domain.enum import UploadStatus
+from gen_epix.commondb.domain.enum import EtlStatus
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import UploadResult
 from gen_epix.commondb.services import BatchUploader
@@ -31,7 +31,7 @@ def _verify_batch_refdata_allele_profiles(
         objs = sample.allele_profiles or []
         obj_results = sample_result.allele_profiles or []
         for j, (obj, obj_result) in enumerate(zip(objs, obj_results)):
-            if obj_result.status != UploadStatus.PENDING:
+            if obj_result.status != EtlStatus.PENDING:
                 continue
             allele_profiles.append(obj)
             allele_profile_results.append(obj_result)
@@ -83,7 +83,7 @@ def _verify_batch_refdata_allele_profiles(
 
     # Convert to allele_profile representation and get unique allele IDs
     for profile, profile_result in zip(allele_profiles, allele_profile_results):
-        if profile_result.status != UploadStatus.PENDING:
+        if profile_result.status != EtlStatus.PENDING:
             continue
         locus_ids = locus_set_map[profile.locus_set_id].locus_ids
         n_loci = len(locus_ids)
@@ -169,7 +169,7 @@ def _verify_batch_refdata_allele_profiles(
     for i, (profile, profile_result) in enumerate(
         zip(allele_profiles, allele_profile_results)
     ):
-        if profile_result.status != UploadStatus.PENDING:
+        if profile_result.status != EtlStatus.PENDING:
             continue
         locus_ids = locus_set_map[profile.locus_set_id].locus_ids
         assert profile.allele_ids is not None

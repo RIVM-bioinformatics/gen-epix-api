@@ -598,7 +598,7 @@ class Col(Model):
     def _serialize_tree_algorithm_codes(
         self, value: list[enum.TreeAlgorithmType] | None
     ) -> list[str] | None:
-        return None if value is None else [x.value for x in value]
+        return None if value is None else sorted(x.value for x in value)
 
 
 class ColSet(Model):
