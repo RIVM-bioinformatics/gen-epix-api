@@ -43,13 +43,13 @@ class AppComposer(BaseAppComposer):
         self,
         app_cfg: AppCfg,
         domain: Domain | None = None,
-        sorted_service_types: tuple[Enum] | None = None,
+        sorted_service_types: tuple[Enum, ...] | None = None,
         role_generator_class: type[RoleGenerator] | None = None,
         rbac_service_class: type[RbacService] | None = None,
         user_manager_class: type[UserManager] | None = None,
-        model_class_map: dict[type[model.Model], type[model.Model]] | None = None,
+        model_class_map: dict[type[fastapp.Model], type[fastapp.Model]] | None = None,
         command_class_map: (
-            dict[type[command.Command], type[command.Command]] | None
+            dict[type[fastapp.Command], type[fastapp.Command]] | None
         ) = None,
         policy_class_map: (
             dict[type[fastapp.Policy], type[fastapp.Policy]] | None
