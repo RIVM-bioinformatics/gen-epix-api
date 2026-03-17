@@ -1,6 +1,6 @@
 from enum import Enum
 from functools import cached_property
-from typing import TypeVar, overload
+from typing import Any, TypeVar, overload
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
@@ -25,7 +25,7 @@ class AppImplDetails(BaseModel):
     sorted_service_types: list[Enum] = Field(
         description="List of service types in DAG sorted order for initialization"
     )
-    services: dict[Enum, fastapp.BaseService] = Field(
+    services: dict[Enum, fastapp.BaseService[Any]] = Field(
         default_factory=dict, description="Dictionary of services keyed by service type"
     )
     repositories: dict[Enum, fastapp.BaseRepository] = Field(

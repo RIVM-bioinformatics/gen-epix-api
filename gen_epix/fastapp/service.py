@@ -4,7 +4,7 @@ import abc
 import datetime
 import logging
 from collections.abc import Callable, Hashable, Iterable
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.app import App
@@ -21,15 +21,17 @@ from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.filter import CompositeFilter, LogicalOperator
 
+R = TypeVar("R", bound=BaseRepository, default=BaseRepository)
 
-class BaseService(abc.ABC):
+
+class BaseService(abc.ABC, Generic[R]):
     SERVICE_TYPE: Hashable = None
 
     def __init__(
         self,
         app: App,
         service_type: Hashable = None,  # TODO: service_type this required
-        repository: BaseRepository | None = None,
+        repository: R | None = None,
         logger: logging.Logger | None = None,
         setup_logger: logging.Logger | None = None,
         id: str | None = None,
@@ -50,7 +52,7 @@ class BaseService(abc.ABC):
         self._service_type = service_type
         self._created_at: datetime.datetime = self._timestamp_factory()
         self._app: App = app
-        self._repository: BaseRepository | None = repository
+        self._repository: R | None = repository
         self._logger: logging.Logger | None = logger
         self._setup_logger: logging.Logger | None = setup_logger
         self._props: dict[str, Any] = props or {}
@@ -105,13 +107,13 @@ class BaseService(abc.ABC):
         self._logger = logger
 
     @property
-    def repository(self) -> BaseRepository:
+    def repository(self) -> R:
         if not self._repository:
             raise exc.ServiceException("Repository not set")
         return self._repository
 
     @repository.setter
-    def repository(self, repository: BaseRepository) -> None:
+    def repository(self, repository: R) -> None:
         self._repository = repository
 
     @property
