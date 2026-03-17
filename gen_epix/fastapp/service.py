@@ -202,7 +202,7 @@ class BaseService(abc.ABC):
             cmd, _ = listener(self, cmd, None)
         # Set object ids for CREATE operations
         if cmd.is_create():
-            id_present = cmd.props.get("id_present", "raise")
+            id_present = cmd.props.get("id_present", "keep")
             if cmd.objs is None:
                 raise exc.InvalidArgumentsError(
                     f"No object provided for operation {cmd.operation}"
