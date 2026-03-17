@@ -591,3 +591,18 @@ concept_class,concept_class_id,Yes,bigint,Altered from OMOP CDM. The primary key
 concept_class,concept_class_str_id,Yes,varchar(20),Renamed from CDM concept_class_id. A unique key for each class.,NA,No,No,NA,NA,NA,NA,NA
 concept,concept_id,Yes,bigint,"Altered from OMOP CDM. The primary key for this table. Equal to the first 16 bytes of the SHA256 hash of the concept_int_id represented as 8 bytes, unsigned, big endian order.",NA,Yes,No,NA,NA,NA,NA,NA
 concept,concept_int_id,Yes,integer,Renamed from CDM concept_id. A unique identifier for each Concept across all domains. Can be None if the Concept is not yet assigned an integer ID.,NA,No,No,NA,NA,NA,NA,NA
+person,provided_by_organization_id,No,integer,Not part of OMOP CDM. The id of the Organization that provided the data for this Person.,NA,No,Yes,ORGANIZATION,ORGANIZATION_ID,NA,NA,NA
+observation_period,provided_by_organization_id,No,integer,Not part of OMOP CDM. The id of the Organization that provided the data for this Observation Period.,NA,No,Yes,ORGANIZATION,ORGANIZATION_ID,NA,NA,NA
+visit_occurrence,provided_by_organization_id,No,integer,Not part of OMOP CDM. The id of the Organization that provided the data for this Visit Occurrence.,NA,No,Yes,ORGANIZATION,ORGANIZATION_ID,NA,NA,NA
+visit_detail,provided_by_organization_id,No,integer,Not part of OMOP CDM. The id of the Organization that provided the data for this Visit Detail.,NA,No,Yes,ORGANIZATION,ORGANIZATION_ID,NA,NA,NA
+condition_occurrence,provided_by_organization_id,No,integer,Not part of OMOP CDM. The id of the Organization that provided the data for this Condition Occurrence.,NA,No,Yes,ORGANIZATION,ORGANIZATION_ID,NA,NA,NA
+procedure_occurrence,provided_by_organization_id,No,integer,Not part of OMOP CDM. The id of the Organization that provided the data for this Procedure Occurrence.,NA,No,Yes,ORGANIZATION,ORGANIZATION_ID,NA,NA,NA
+drug_exposure,provided_by_organization_id,No,integer,Not part of OMOP CDM. The id of the Organization that provided the data for this Drug Exposure.,NA,No,Yes,ORGANIZATION,ORGANIZATION_ID,NA,NA,NA
+device_exposure,provided_by_organization_id,No,integer,Not part of OMOP CDM. The id of the Organization that provided the data for this Device Exposure.,NA,No,Yes,ORGANIZATION,ORGANIZATION_ID,NA,NA,NA
+measurement,provided_by_organization_id,No,integer,Not part of OMOP CDM. The id of the Organization that provided the data for this Measurement.,NA,No,Yes,ORGANIZATION,ORGANIZATION_ID,NA,NA,NA
+observation,provided_by_organization_id,No,integer,Not part of OMOP CDM. The id of the Organization that provided the data for this Observation.,NA,No,Yes,ORGANIZATION,ORGANIZATION_ID,NA,NA,NA
+specimen,provided_by_organization_id,No,integer,Not part of OMOP CDM. The id of the Organization that provided the data for this Specimen.,NA,No,Yes,ORGANIZATION,ORGANIZATION_ID,NA,NA,NA
+note,provided_by_organization_id,No,integer,Not part of OMOP CDM. The id of the Organization that provided the data for this Note.,NA,No,Yes,ORGANIZATION,ORGANIZATION_ID,NA,NA,NA
+death,provided_by_organization_id,No,integer,Not part of OMOP CDM. The id of the Organization that provided the data for this Death.,NA,No,Yes,ORGANIZATION,ORGANIZATION_ID,NA,NA,NA
+payer_plan_period,provided_by_organization_id,No,integer,Not part of OMOP CDM. The id of the Organization that provided the data for this Payer Plan Period.,NA,No,Yes,ORGANIZATION,ORGANIZATION_ID,NA,NA,NA
+cost,provided_by_organization_id,No,integer,Not part of OMOP CDM. The id of the Organization that provided the data for this Cost.,NA,No,Yes,ORGANIZATION,ORGANIZATION_ID,NA,NA,NA

@@ -23,7 +23,7 @@ Failure modes covered here:
   HTTP 422                 – malformed request body (missing required fields)
 
 LSP-2985: the goal is to make the batch return SUCCEEDED. Once that is implemented,
-the happy-path assertions below should be updated to expect UploadStatus.SUCCEEDED.
+the happy-path assertions below should be updated to expect EtlStatus.SUCCEEDED.
 """
 
 import logging
@@ -38,7 +38,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.commondb.domain.enum import AppType, UploadAction, UploadStatus
+from gen_epix.commondb.domain.enum import AppType, EtlStatus, UploadAction
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.omopdb.domain import command, enum
@@ -109,7 +109,7 @@ class TestPersonBatchUploadHappyPath:
 
         assert isinstance(result, PersonBatchUploadResult)
         assert result.persons == []
-        assert result.status == UploadStatus.SKIPPED
+        assert result.status == EtlStatus.SKIPPED
 
     def test_upload_single_person_returns_created(self, env: Env) -> None:
         """
@@ -128,10 +128,10 @@ class TestPersonBatchUploadHappyPath:
         assert isinstance(result, PersonBatchUploadResult)
         assert len(result.persons) == 1
         person_result = result.persons[0]
-        assert person_result.status == UploadStatus.CREATED
+        assert person_result.status == EtlStatus.CREATED
         assert person_result.is_new is True
         assert person_result.id is not None
-        assert result.status == UploadStatus.CREATED
+        assert result.status == EtlStatus.CREATED
 
     def test_upload_multiple_persons_returns_created(self, env: Env) -> None:
         """
@@ -154,10 +154,10 @@ class TestPersonBatchUploadHappyPath:
         assert isinstance(result, PersonBatchUploadResult)
         assert len(result.persons) == 3
         for person_result in result.persons:
-            assert person_result.status == UploadStatus.CREATED
+            assert person_result.status == EtlStatus.CREATED
             assert person_result.is_new is True
             assert person_result.id is not None
-        assert result.status == UploadStatus.CREATED
+        assert result.status == EtlStatus.CREATED
 
     def test_upload_person_twice_with_on_exists_update_returns_updated(
         self, env: Env
@@ -178,7 +178,7 @@ class TestPersonBatchUploadHappyPath:
                 ),
             )
         )
-        assert first_result.status == UploadStatus.CREATED
+        assert first_result.status == EtlStatus.CREATED
         created_id = first_result.persons[0].id
         assert created_id is not None
 
@@ -200,9 +200,9 @@ class TestPersonBatchUploadHappyPath:
 
         assert isinstance(second_result, PersonBatchUploadResult)
         assert len(second_result.persons) == 1
-        assert second_result.persons[0].status == UploadStatus.UPDATED
+        assert second_result.persons[0].status == EtlStatus.UPDATED
         assert second_result.persons[0].is_new is False
-        assert second_result.status == UploadStatus.UPDATED
+        assert second_result.status == EtlStatus.UPDATED
 
     def test_on_exists_skip_returns_skipped(self, env: Env) -> None:
         """
@@ -220,7 +220,7 @@ class TestPersonBatchUploadHappyPath:
                 ),
             )
         )
-        assert first_result.status == UploadStatus.CREATED
+        assert first_result.status == EtlStatus.CREATED
         created_id = first_result.persons[0].id
 
         # Second upload with on_exists=SKIP
@@ -235,8 +235,8 @@ class TestPersonBatchUploadHappyPath:
         )
 
         assert isinstance(second_result, PersonBatchUploadResult)
-        assert second_result.persons[0].status == UploadStatus.SKIPPED
-        assert second_result.status == UploadStatus.SKIPPED
+        assert second_result.persons[0].status == EtlStatus.SKIPPED
+        assert second_result.status == EtlStatus.SKIPPED
 
     def test_on_new_skip_returns_skipped(self, env: Env) -> None:
         """
@@ -256,8 +256,8 @@ class TestPersonBatchUploadHappyPath:
         )
 
         assert isinstance(result, PersonBatchUploadResult)
-        assert result.persons[0].status == UploadStatus.SKIPPED
-        assert result.status == UploadStatus.SKIPPED
+        assert result.persons[0].status == EtlStatus.SKIPPED
+        assert result.status == EtlStatus.SKIPPED
 
     def test_verify_only_does_not_persist(self, env: Env) -> None:
         """
@@ -280,8 +280,8 @@ class TestPersonBatchUploadHappyPath:
 
         # Verification says it would be created, but nothing was stored → SKIPPED
         assert isinstance(result, PersonBatchUploadResult)
-        assert result.persons[0].status == UploadStatus.SKIPPED
-        assert result.status == UploadStatus.SKIPPED
+        assert result.persons[0].status == EtlStatus.SKIPPED
+        assert result.status == EtlStatus.SKIPPED
         assert result.persons[0].is_new is True
 
         # … but a second upload with the same fixed_id finds no existing record,
@@ -296,7 +296,7 @@ class TestPersonBatchUploadHappyPath:
             )
         )
         # on_new=ERROR would fail if the person existed; FAILED here means it was absent.
-        assert second_result.persons[0].status == UploadStatus.FAILED
+        assert second_result.persons[0].status == EtlStatus.FAILED
 
 
 class TestPersonBatchUploadFailureModes:
@@ -323,7 +323,7 @@ class TestPersonBatchUploadFailureModes:
                 ),
             )
         )
-        assert first_result.status == UploadStatus.CREATED
+        assert first_result.status == EtlStatus.CREATED
         created_id = first_result.persons[0].id
 
         # Second upload using the default on_exists=ERROR
@@ -338,8 +338,8 @@ class TestPersonBatchUploadFailureModes:
         )
 
         assert isinstance(second_result, PersonBatchUploadResult)
-        assert second_result.persons[0].status == UploadStatus.FAILED
-        assert second_result.status == UploadStatus.FAILED
+        assert second_result.persons[0].status == EtlStatus.FAILED
+        assert second_result.status == EtlStatus.FAILED
         assert second_result.persons[0].has_errors()
 
     def test_on_new_error_returns_failed(self, env: Env) -> None:
@@ -359,8 +359,8 @@ class TestPersonBatchUploadFailureModes:
         )
 
         assert isinstance(result, PersonBatchUploadResult)
-        assert result.persons[0].status == UploadStatus.FAILED
-        assert result.status == UploadStatus.FAILED
+        assert result.persons[0].status == EtlStatus.FAILED
+        assert result.status == EtlStatus.FAILED
         assert result.persons[0].has_errors()
 
     # TODO: This fails, meaning the call succeeds without the Authorization header
