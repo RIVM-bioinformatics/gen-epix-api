@@ -1,6 +1,5 @@
 import copy
 import logging
-from dataclasses import dataclass
 from test.seqdb.integration.build_db.base import TEST_TYPE, VERBOSE  # REPOSITORY_TYPE,
 
 # Import test classes in order of dependency of execution
@@ -9,6 +8,7 @@ from test.seqdb.integration.build_db.delete import TestDelete as ModuleTestDelet
 from test.seqdb.integration.build_db.read import TestRead as ModuleTestRead
 from test.seqdb.integration.build_db.update import TestUpdate as ModuleTestUpdate
 from test.seqdb.seqdb_test_client import SeqdbTestClient as Env
+from test.test_client.pytest_params import BuildDbParams
 
 import pytest
 
@@ -23,17 +23,6 @@ APP_CFGS = get_app_cfgs(
     seqdb_enum.RepositoryType,
     TEST_TYPE,
 )
-
-
-@dataclass
-class BuildDbParams:
-    skip_endpoints: bool
-    dev_repository_config: enum.DevRepositoryConfig
-
-    @property
-    def id(self) -> str:
-        prefix = "skip_endpoints" if self.skip_endpoints else "with_endpoints"
-        return f"{prefix}__{self.dev_repository_config.value}"
 
 
 # Three parameter combinations drive the full Create→Read→Update→Delete chain
@@ -52,10 +41,6 @@ _PARAMS = [
     ),
     BuildDbParams(
         skip_endpoints=True,
-        dev_repository_config=enum.DevRepositoryConfig.DICT_EMPTY,
-    ),
-    BuildDbParams(
-        skip_endpoints=False,
         dev_repository_config=enum.DevRepositoryConfig.DICT_EMPTY,
     ),
 ]

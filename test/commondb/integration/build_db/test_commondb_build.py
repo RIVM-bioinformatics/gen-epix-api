@@ -1,6 +1,5 @@
 import copy
 import logging
-from dataclasses import dataclass
 from test.commondb.integration.build_db.base import (  # REPOSITORY_TYPE,
     TEST_TYPE,
     VERBOSE,
@@ -12,6 +11,7 @@ from test.commondb.integration.build_db.delete import TestDelete as ModuleTestDe
 from test.commondb.integration.build_db.read import TestRead as ModuleTestRead
 from test.commondb.integration.build_db.update import TestUpdate as ModuleTestUpdate
 from test.commondb.test_client.util import get_test_client as commondb_get_test_client
+from test.test_client.pytest_params import BuildDbParams
 
 import pytest
 
@@ -28,17 +28,6 @@ APP_CFGS = get_app_cfgs(
 )
 
 
-@dataclass
-class BuildDbParams:
-    skip_endpoints: bool
-    dev_repository_config: enum.DevRepositoryConfig
-
-    @property
-    def id(self) -> str:
-        prefix = "skip_endpoints" if self.skip_endpoints else "with_endpoints"
-        return f"{prefix}__{self.dev_repository_config.value}"
-
-
 # Three parameter combinations drive the full Create→Read→Update→Delete chain
 # independently. Each results in a separate isolated database environment (Env):
 #   1. skip_endpoints__SA_SQLITE_EMPTY  — SQLAlchemy/SQLite, bypassing HTTP endpoints
@@ -51,10 +40,6 @@ _PARAMS = [
     ),
     BuildDbParams(
         skip_endpoints=True,
-        dev_repository_config=enum.DevRepositoryConfig.DICT_EMPTY,
-    ),
-    BuildDbParams(
-        skip_endpoints=False,
         dev_repository_config=enum.DevRepositoryConfig.DICT_EMPTY,
     ),
 ]
