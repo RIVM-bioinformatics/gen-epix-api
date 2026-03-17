@@ -1,4 +1,5 @@
 import re
+import threading
 import uuid
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Sequence
@@ -198,7 +199,7 @@ class SARepository(BaseRepository):
         # Initialize remaining properties
         self._mapper_by_model: dict[type[Any], BaseSAMapper] = {}
         self._mapper_by_row: dict[type[Any], BaseSAMapper] = {}
-        self._uow_context_stack: list[BaseUnitOfWork] = []
+        self._uow_context_stack_local = threading.local()
 
         # Register mappers if necessary
         if register_mappers:
@@ -224,15 +225,19 @@ class SARepository(BaseRepository):
         self,
         **kwargs: Any,
     ) -> BaseUnitOfWork:
-        if self._uow_context_stack:
+        context_stack = getattr(self._uow_context_stack_local, "value", None)
+        if context_stack is None:
+            context_stack = []
+            self._uow_context_stack_local.value = context_stack
+        if context_stack:
             # Nested within another context -> reuse the session of that context
             if kwargs:
                 raise exc.RepositoryServiceError(
                     "Cannot pass arguments when creating a nested UnitOfWork"
                 )
             return SAUnitOfWork(
-                self._uow_context_stack[-1].session,
-                context_stack=self._uow_context_stack,
+                context_stack[-1].session,
+                context_stack=context_stack,
             )
         isolation_level: IsolationLevel = kwargs.pop(
             "isolation_level", self._default_isolation_level
@@ -244,7 +249,7 @@ class SARepository(BaseRepository):
                 expire_on_commit=expire_on_commit,
                 **kwargs,
             ),
-            context_stack=self._uow_context_stack,
+            context_stack=context_stack,
         )
 
     def get_session(

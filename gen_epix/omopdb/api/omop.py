@@ -34,7 +34,7 @@ def create_omop_endpoints(
         cmd.user = user
         return cast(
             model.PersonBatchUploadResult,
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="e7f2d91a",

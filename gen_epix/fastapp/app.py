@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 import uuid
 from collections.abc import Callable, Hashable
 from datetime import datetime
@@ -141,7 +142,7 @@ class App:
         self._command_listeners: dict[
             EventTiming, dict[type[Command], list[Callable[[Command, Any], None]]]
         ] = {x: {} for x in EventTiming}
-        self._command_stack: list[Command] = []
+        self._command_stack_local = threading.local()
 
         # Log start
         if self._logger:
@@ -379,9 +380,22 @@ class App:
             f"No handler set for {command_class} or any of its superclasses"
         )
 
+    def _get_command_stack(self) -> list[Command]:
+        command_stack = getattr(self._command_stack_local, "value", None)
+        if command_stack is None:
+            command_stack = []
+            self._command_stack_local.value = command_stack
+        return command_stack
+
+    def _pop_command_stack(self) -> None:
+        command_stack = self._get_command_stack()
+        if command_stack:
+            command_stack.pop()
+
     def handle(self, cmd: Command) -> Any:
-        self._command_stack.append(cmd)
-        is_initial_command = len(self._command_stack) == 1
+        command_stack = self._get_command_stack()
+        command_stack.append(cmd)
+        is_initial_command = len(command_stack) == 1
         if self._logger:
             self._log_command_start(cmd, is_initial_command)
         # Policy Enforcement Point 1: apply policies from PDP, resulting in
@@ -396,7 +410,7 @@ class App:
         retval = self._execute_command(cmd, is_initial_command, handler)
         if self._logger:
             self._log_command_finish(cmd, is_initial_command)
-        self._command_stack.pop()
+        self._pop_command_stack()
         return retval
 
     def _log_command_finish(self, cmd: Command, is_initial_command: bool) -> None:
@@ -445,7 +459,7 @@ class App:
                     ),
                     exc_info=True,
                 )
-            self._command_stack.pop()
+            self._pop_command_stack()
             raise exception
         except exc.DomainException as exception:
             # Other domain exceptions are expected; log without stack trace to reduce noise.
@@ -455,7 +469,7 @@ class App:
                         "e8891b42", "DOMAIN_EXCEPTION", cmd=cmd, exception=exception
                     )
                 )
-            self._command_stack.pop()
+            self._pop_command_stack()
             raise exception
         except Exception as exception:
             # Any other unexpected error: add stack trace
@@ -467,7 +481,7 @@ class App:
                     exc_info=True,
                     stack_info=True,
                 )
-            self._command_stack.pop()
+            self._pop_command_stack()
             raise exception
         return retval
 
@@ -483,7 +497,7 @@ class App:
                     exc_info=True,
                     stack_info=True,
                 )
-            self._command_stack.pop()
+            self._pop_command_stack()
             raise exception
         return handler
 
@@ -498,7 +512,7 @@ class App:
                         "fd923dbf", "NOT_AUTHORIZED", add_debug_info=False, cmd=cmd
                     )
                 )
-            self._command_stack.pop()
+            self._pop_command_stack()
             raise exception
         except Exception as exception:
             # Any other error: add stack trace
@@ -510,7 +524,7 @@ class App:
                     exc_info=True,
                     stack_info=True,
                 )
-            self._command_stack.pop()
+            self._pop_command_stack()
             raise exception
 
     def _log_command_start(self, cmd: Command, is_initial_command: bool) -> None:
@@ -595,7 +609,8 @@ class App:
                 "name": self.name,
             }
             if cmd:
-                is_initial_command = len(self._command_stack) < 2
+                command_stack = self._get_command_stack()
+                is_initial_command = len(command_stack) < 2
                 cmd_object = json.loads(cmd.model_dump_json(exclude_none=True))
                 (
                     summarization_enabled,
@@ -613,12 +628,10 @@ class App:
                     # Optionally summarize large list fields based on config.
                     "object": cmd_object,
                     "parent_command_id": (
-                        None if is_initial_command else f"{self._command_stack[-2].id}"
+                        None if is_initial_command else f"{command_stack[-2].id}"
                     ),
                     "stack_trace": (
-                        "->".join(
-                            [f"{x.__class__.__name__}" for x in self._command_stack]
-                        )
+                        "->".join([f"{x.__class__.__name__}" for x in command_stack])
                     ),
                 }
             if kwargs:

@@ -3,6 +3,7 @@ from typing import Any, NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
@@ -67,14 +68,15 @@ def create_seq_endpoints(
         request_body: RetrievePhylogeneticTreeRequestBody,  # type: ignore
     ) -> model.PhylogeneticTree:
         try:
-            retval: model.PhylogeneticTree = app.handle(
+            retval: model.PhylogeneticTree = await run_in_threadpool(
+                app.handle,
                 command.RetrievePhylogeneticTreeCommand(
                     user=user,
                     seq_distance_protocol_id=request_body.seq_distance_protocol_id,
                     tree_algorithm=request_body.tree_algorithm,
                     profile_ids=request_body.profile_ids,
                     leaf_names=request_body.leaf_codes,
-                )
+                ),
             )
         except Exception as exception:
             handle_exception("dc71bce0", user, exception, request_ids=request_body.profile_ids)  # type: ignore
@@ -91,13 +93,14 @@ def create_seq_endpoints(
         request_body: RetrieveSimilarProfilesRequestBody,  # type: ignore
     ) -> list[UUID]:
         try:
-            retval: list[UUID] = app.handle(
+            retval: list[UUID] = await run_in_threadpool(
+                app.handle,
                 command.RetrieveSimilarProfilesCommand(
                     user=user,
                     seq_distance_protocol_id=request_body.seq_distance_protocol_id,
                     profile_ids=request_body.profile_ids,
                     max_distance=request_body.max_distance,
-                )
+                ),
             )
         except Exception as exception:
             handle_exception("b1c8e5d9", user, exception, request_ids=request_body.profile_ids)  # type: ignore
@@ -113,11 +116,12 @@ def create_seq_endpoints(
         user: registered_user_dependency, request_body: RetrieveSamplesRequestBody  # type: ignore
     ) -> list[model.SampleForUpload]:
         try:
-            retval: list[model.SampleForUpload] = app.handle(
+            retval: list[model.SampleForUpload] = await run_in_threadpool(
+                app.handle,
                 command.RetrieveSamplesCommand(
                     user=user,
                     sample_ids=request_body.sample_ids,
-                )
+                ),
             )
         except Exception as exception:
             handle_exception("ac218f73", user, exception, request_ids=request_body.sample_ids)  # type: ignore
@@ -133,11 +137,12 @@ def create_seq_endpoints(
         user: registered_user_dependency, request_body: RetrieveSeqFastaRequestBody
     ) -> StreamingResponse:
         try:
-            fasta_iterable: Iterable[str] = app.handle(
+            fasta_iterable: Iterable[str] = await run_in_threadpool(
+                app.handle,
                 command.RetrieveSeqFastaCommand(
                     user=user,
                     seq_ids=request_body.seq_ids,
-                )
+                ),
             )
         except Exception as exception:
             handle_exception(
@@ -162,11 +167,12 @@ def create_seq_endpoints(
         user: registered_user_dependency, request_body: UploadSamplesRequestBody  # type: ignore
     ) -> model.SampleBatchUploadResult:
         try:
-            retval: model.SampleBatchUploadResult = app.handle(
+            retval: model.SampleBatchUploadResult = await run_in_threadpool(
+                app.handle,
                 command.UploadSamplesCommand(
                     user=user,
                     **request_body.model_dump(),
-                )
+                ),
             )
         except Exception as exception:
             handle_exception("f1d282b4", user, exception, request_ids=request_body.seq_ids)  # type: ignore

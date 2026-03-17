@@ -4,6 +4,7 @@ from typing import Any, NoReturn, cast
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
 
@@ -120,7 +121,8 @@ def create_organization_endpoints(
         user: registered_user_dependency, user_invitation: UserInvitationRequestBody  # type: ignore[valid-type] # Dynamic type annotation
     ) -> user_invitation_class:  # type: ignore
         try:
-            retval: user_invitation_class = app.handle(  # type: ignore[valid-type] # Dynamic type annotation
+            retval: user_invitation_class = await run_in_threadpool(  # type: ignore[valid-type] # Dynamic type annotation
+                app.handle,
                 invite_user_command_class(
                     user=user,
                     key=(
@@ -129,7 +131,7 @@ def create_organization_endpoints(
                     description=user_invitation.description,
                     roles=user_invitation.roles,
                     organization_id=user_invitation.organization_id,
-                )
+                ),
             )
         except Exception as exception:
             handle_exception("e088de91", None, exception)
@@ -146,7 +148,7 @@ def create_organization_endpoints(
     ) -> model.UserInvitationConstraints:
         return cast(
             model.UserInvitationConstraints,
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="cad2509e",
@@ -165,11 +167,13 @@ def create_organization_endpoints(
         user: new_user_dependency, token: str  # type: ignore[valid-type] # Dynamic type annotation
     ) -> user_class:  # type: ignore[valid-type] # Dynamic type annotation
         try:
-            cmd = command.RegisterInvitedUserCommand(
-                user=user,
-                token=token,
+            retval: user_class = await run_in_threadpool(  # type: ignore[valid-type] # Dynamic type annotation
+                app.handle,
+                command.RegisterInvitedUserCommand(
+                    user=user,
+                    token=token,
+                ),
             )
-            retval: user_class = app.handle(cmd)  # type: ignore[valid-type] # Dynamic type annotation
         except Exception as exception:
             handle_exception("fc1fc53c", None, exception)
         return retval
@@ -187,7 +191,7 @@ def create_organization_endpoints(
     ) -> list[model.OrganizationSetMember]:
         return cast(
             list[model.OrganizationSetMember],
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="c026628e",
@@ -214,7 +218,7 @@ def create_organization_endpoints(
     ) -> list[model.DataCollectionSetMember]:
         return cast(
             list[model.DataCollectionSetMember],
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="cf892de0",
@@ -249,8 +253,10 @@ def create_organization_endpoints(
         user: registered_user_dependency,  # type: ignore
     ) -> set[api_permission_class]:  # pyricht: ignore[reportInvalidTypeForm]
         try:
-            cmd = command.RetrieveOwnPermissionsCommand(user=user)
-            permissions: set[Permission] = app.handle(cmd)
+            permissions: set[Permission] = await run_in_threadpool(
+                app.handle,
+                command.RetrieveOwnPermissionsCommand(user=user),
+            )
             retval = {api_permission_class(**x.model_dump()) for x in permissions}
         except Exception as exception:
             handle_exception("a7f3b8e2", user, exception)
@@ -266,14 +272,16 @@ def create_organization_endpoints(
         user: registered_user_dependency, object_id: UUID, request_body: UpdateUserRequestBody  # type: ignore
     ) -> user_class:
         try:
-            cmd = update_user_command_class(
-                user=user,
-                tgt_user_id=object_id,
-                is_active=request_body.is_active,
-                roles=request_body.roles,
-                organization_id=request_body.organization_id,
+            retval: user_class = await run_in_threadpool(
+                app.handle,
+                update_user_command_class(
+                    user=user,
+                    tgt_user_id=object_id,
+                    is_active=request_body.is_active,
+                    roles=request_body.roles,
+                    organization_id=request_body.organization_id,
+                ),
             )
-            retval: user_class = app.handle(cmd)
         except Exception as exception:
             handle_exception("a594ba2b", None, exception)
         return retval
@@ -288,11 +296,13 @@ def create_organization_endpoints(
         user: registered_user_dependency, data: UpdateUserOwnOrganizationRequestBody  # type: ignore
     ) -> user_class:
         try:
-            cmd = command.UpdateUserOwnOrganizationCommand(
-                user=user,
-                organization_id=data.organization_id,
+            retval: model.User = await run_in_threadpool(
+                app.handle,
+                command.UpdateUserOwnOrganizationCommand(
+                    user=user,
+                    organization_id=data.organization_id,
+                ),
             )
-            retval: model.User = app.handle(cmd)
         except Exception as exception:
             handle_exception("c2382b65", None, exception)
         return retval
@@ -310,7 +320,7 @@ def create_organization_endpoints(
     ) -> list[model.OrganizationIdentifierIssuerLink]:
         return cast(
             list[model.OrganizationIdentifierIssuerLink],
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="a3c7f9d2",
@@ -336,7 +346,7 @@ def create_organization_endpoints(
     ) -> model.OrganizationContacts:
         return cast(
             model.OrganizationContacts,
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="b8172f62",

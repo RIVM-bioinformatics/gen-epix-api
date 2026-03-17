@@ -4,6 +4,7 @@ from typing import Any, NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
 
@@ -45,7 +46,8 @@ def create_file_endpoints(
         request_body: CreateFileRequestBody,  # type: ignore
     ) -> UUID:
         try:
-            retval: UUID = app.handle(
+            retval: UUID = await run_in_threadpool(
+                app.handle,
                 command.CreateFileCommand(
                     user=user,
                     file=model.File(
@@ -53,7 +55,7 @@ def create_file_endpoints(
                     ),
                     format=request_body.format,
                     compression=request_body.compression,
-                )
+                ),
             )
         except Exception as exception:
             handle_exception("a8f9d24e", user, exception, request_ids=request_body.seq_ids)  # type: ignore

@@ -2,6 +2,7 @@ from collections.abc import Callable
 from typing import Any, NoReturn
 
 from fastapi import APIRouter, FastAPI
+from fastapi.concurrency import run_in_threadpool
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, enum, model
@@ -30,7 +31,7 @@ def create_auth_endpoints(
     async def identity_providers__get_all() -> list[model.IdentityProvider]:
         try:
             cmd = command.GetIdentityProvidersCommand(user=None, public=True)
-            retval: list[model.IdentityProvider] = app.handle(cmd)
+            retval: list[model.IdentityProvider] = await run_in_threadpool(app.handle, cmd)
         except Exception as exception:
             handle_exception("3ddf8ebb", None, exception)
         return retval
