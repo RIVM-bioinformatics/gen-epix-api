@@ -161,7 +161,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.KmerDetectionProtocol: KmerDetectionProtocol,
         model.KmerProfile: KmerProfile,
         model.KmerProfileIdentifier: KmerProfileIdentifier,
-        model.SequencingProtocol: SequencingProtocol,
+        model.Protocol: SequencingProtocol,
         model.Locus: Locus,
         model.LocusCodeMap: LocusCodeMap,
         model.LocusDetectionProtocol: LocusDetectionProtocol,

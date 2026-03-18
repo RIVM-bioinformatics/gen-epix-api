@@ -458,11 +458,11 @@ class MlvaProfileForUpload(MlvaProfile, IdentifiersMixin, ValidateRefDataIdCodeM
 
         # Upload-specific validation
         if (
-            not self.mlva_detection_protocol_code
-            and self.mlva_detection_protocol_id == NULL_ID
+            not self.protocol_code
+            and self.protocol_id == NULL_ID
         ):
             raise ValueError(
-                "Either mlva_detection_protocol_code or mlva_detection_protocol_id must be provided."
+                "Either protocol_code or protocol_id must be provided."
             )
         if self.locus_set_code is None and self.locus_set_id == NULL_ID:
             raise ValueError("Either locus_set_code or locus_set_id must be provided.")
@@ -490,7 +490,7 @@ class KmerProfileForUpload(KmerProfile, IdentifiersMixin, ValidateRefDataIdCodeM
 
     IDENTIFIER_CLASS: ClassVar = KmerProfileIdentifier
     REFDATA_FIELD_ID_CODE_PAIRS: ClassVar = [
-        ("kmer_detection_protocol_id", "kmer_detection_protocol_code"),
+        ("protocol_id", "protocol_code"),
     ]
 
     sample_id: UUID = Field(
@@ -501,13 +501,13 @@ class KmerProfileForUpload(KmerProfile, IdentifiersMixin, ValidateRefDataIdCodeM
         default=None,
         description="The UUID of the sequence that the k-mer profile was derived from, if available.",
     )
-    kmer_detection_protocol_id: UUID = Field(
+    protocol_id: UUID = Field(
         default=NULL_ID,
-        description="The UUID of the k-mer detection protocol, if available. If not available, the null ID is put. Must be present if kmer_detection_protocol_code is not present. The use of kmer_detection_protocol_id is preferred over kmer_detection_protocol_code since the latter may change.",
+        description="The UUID of the k-mer detection protocol, if available. If not available, the null ID is put. Must be present if protocol_code is not present. The use of protocol_id is preferred over protocol_code since the latter may change.",
     )
-    kmer_detection_protocol_code: str | None = Field(
+    protocol_code: str | None = Field(
         default=None,
-        description="The code of the k-mer detection protocol. Must be present if kmer_detection_protocol_id is not present. The use of kmer_detection_protocol_code is meant for situations where the kmer_detection_protocol_id is not known, but the code is and/or improves human interpretation.",
+        description="The code of the k-mer detection protocol. Must be present if protocol_id is not present. The use of protocol_code is meant for situations where the protocol_id is not known, but the code is and/or improves human interpretation.",
         max_length=255,
     )
     kmer_profile: str = Field(
@@ -552,11 +552,11 @@ class KmerProfileForUpload(KmerProfile, IdentifiersMixin, ValidateRefDataIdCodeM
 
         # Upload-specific validation
         if (
-            not self.kmer_detection_protocol_code
-            and self.kmer_detection_protocol_id == NULL_ID
+            not self.protocol_code
+            and self.protocol_id == NULL_ID
         ):
             raise ValueError(
-                "Either kmer_detection_protocol_code or kmer_detection_protocol_id must be provided."
+                "Either protocol_code or protocol_id must be provided."
             )
         return self
 

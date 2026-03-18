@@ -249,7 +249,7 @@ class CaseService(BaseCaseService):
     def retrieve_sequencing_protocols(
         self,
         cmd: command.RetrieveSequencingProtocolsCommand,
-    ) -> list[seqdb_model.SequencingProtocol]:
+    ) -> list[seqdb_model.Protocol]:
         return case_service_retrieve_sequencing_protocols(self, cmd)
 
     def retrieve_assembly_protocols(

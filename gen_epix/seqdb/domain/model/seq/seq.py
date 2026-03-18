@@ -23,7 +23,6 @@ from gen_epix.seqdb.domain.model.file import File
 from gen_epix.seqdb.domain.model.seq.base import (
     BaseSeq,
     CodeMixin,
-    ProtocolMixin,
     QualityMixin,
 )
 from gen_epix.seqdb.domain.model.seq.protocol import Protocol
@@ -70,6 +69,7 @@ class RefSeq(BaseSeq):
         description="The GenBank accession code of the reference sequence",
         max_length=255,
     )
+
 
 class Contig(BaseSeq, QualityMixin):
     """
@@ -169,9 +169,7 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
         default=None,
         description="The unique identifier for the protocol used to generate the sequence from reads, if available. FOREIGN KEY",
     )
-    protocol: Protocol | None = Field(
-        default=None, description="The protocol."
-    )
+    protocol: Protocol | None = Field(default=None, description="The protocol.")
     contigs: list[Contig] = Field(
         default_factory=list,
         description="The contigs that make up the sequence. No duplicate contigs are allowed. If zero contigs are provided, the sequence is considered to be not available yet.",

@@ -130,7 +130,7 @@ from gen_epix.seqdb.domain.model.seq import SeqDistanceProtocol as SeqDistancePr
 from gen_epix.seqdb.domain.model.seq import SeqForUpload as SeqForUpload
 from gen_epix.seqdb.domain.model.seq import SeqIdentifier as SeqIdentifier
 from gen_epix.seqdb.domain.model.seq import SeqTaxonomy as SeqTaxonomy
-from gen_epix.seqdb.domain.model.seq import SequencingProtocol as SequencingProtocol
+from gen_epix.seqdb.domain.model.seq import SequencingProtocol as Protocol
 from gen_epix.seqdb.domain.model.seq import SnpDetectionProtocol as SnpDetectionProtocol
 from gen_epix.seqdb.domain.model.seq import SnpProfile as SnpProfile
 from gen_epix.seqdb.domain.model.seq import SnpProfileForUpload as SnpProfileForUpload
@@ -181,7 +181,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             AssemblyProtocol,
             AstProtocol,
             KmerDetectionProtocol,
-            SequencingProtocol,
+            Protocol,
             LocusDetectionProtocol,
             MlvaDetectionProtocol,
             PcrProtocol,

@@ -174,11 +174,11 @@ def case_service_retrieve_genetic_sequence_fasta_by_case(
 def case_service_retrieve_sequencing_protocols(
     self: BaseCaseService,
     cmd: command.RetrieveSequencingProtocolsCommand,
-) -> list[seqdb_model.SequencingProtocol]:
+) -> list[seqdb_model.Protocol]:
     user, repository = self._get_user_and_repository(cmd)
     assert isinstance(user, model.User) and user.id is not None
 
-    sequencing_protocols: list[seqdb_model.SequencingProtocol] = self.app.handle(
+    sequencing_protocols: list[seqdb_model.Protocol] = self.app.handle(
         seqdb_command.SequencingProtocolCrudCommand(
             user=cmd.user,
             operation=CrudOperation.READ_ALL,

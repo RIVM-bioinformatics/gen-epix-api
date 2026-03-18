@@ -544,7 +544,7 @@ class BaseCaseService(BaseService):
     def retrieve_sequencing_protocols(
         self,
         cmd: command.RetrieveSequencingProtocolsCommand,
-    ) -> list[seqdb_model.SequencingProtocol]:
+    ) -> list[seqdb_model.Protocol]:
         raise NotImplementedError()
 
     @abc.abstractmethod

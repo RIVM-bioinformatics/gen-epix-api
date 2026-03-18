@@ -385,7 +385,7 @@ class TestContent:
                 if "\n" not in fasta_str:
                     raise ValueError("FASTA string should contain new lines")
                 # Retrieve SequencingProtocols
-                sequencing_protocols: list[seqdb_model.SequencingProtocol] = app.handle(
+                sequencing_protocols: list[seqdb_model.Protocol] = app.handle(
                     command.RetrieveSequencingProtocolsCommand(
                         user=org_user,
                     )

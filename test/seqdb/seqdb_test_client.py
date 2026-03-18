@@ -115,7 +115,7 @@ class SeqdbTestClient(TestClient):
         model.DataCollection: "name",
         model.PcrProtocol: "name",
         model.AstProtocol: "name",
-        model.SequencingProtocol: "name",
+        model.Protocol: "name",
         model.AssemblyProtocol: "name",
         model.AlignmentProtocol: "name",
         model.TaxonomyProtocol: "name",
@@ -275,9 +275,9 @@ class SeqdbTestClient(TestClient):
         user_or_str: str | model.User,
         code: str,
         name: str | None = None,
-    ) -> model.SequencingProtocol:
+    ) -> model.Protocol:
         return self._create_protocol(
-            model.SequencingProtocol,
+            model.Protocol,
             user_or_str,
             code,
             name,
@@ -501,7 +501,7 @@ class SeqdbTestClient(TestClient):
         self,
         user_or_str: str | model.User,
         sample_or_str: str | model.Sample | None = None,
-        sequencing_protocol_or_str: model.SequencingProtocol | str | None = None,
+        sequencing_protocol_or_str: model.Protocol | str | None = None,
         fwd_uri: str | None = None,
         rev_uri: str | None = None,
         fwd_file_id: UUID | None = None,
@@ -517,7 +517,7 @@ class SeqdbTestClient(TestClient):
         user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         sample_id = self._get_obj_id(model.Sample, sample_or_str, set_dummy_sample)
         sequencing_protocol_id = self._get_obj_id(
-            model.SequencingProtocol,
+            model.Protocol,
             sequencing_protocol_or_str,
             set_dummy_sequencing_protocol,
         )

@@ -25,6 +25,7 @@ Base: type = orm.declarative_base(name=enum.ServiceType.SEQ.value)
 
 # TODO: add SA relationship calls
 
+
 class Protocol(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
@@ -52,14 +53,8 @@ class Protocol(Base, RowMetadataMixin):
     ref_seq_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Protocol, "ref_seq_id"
     )
-    ref_seq: Mapped[model.RefSeq | None] = create_mapped_column(
-        DOMAIN, model.Protocol, "ref_seq"
-    )
     locus_set_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Protocol, "locus_set_id"
-    )
-    locus_set: Mapped[model.LocusSet | None] = create_mapped_column(
-        DOMAIN, model.Protocol, "locus_set"
     )
     props: Mapped[dict[str, str | int | float | bool | list]] = create_mapped_column(
         DOMAIN, model.Protocol, "props"
@@ -844,7 +839,7 @@ class SequencingProtocol(Base, RowMetadataMixin, ProtocolMixin):
     SQLAlchemy model for the corresponding persistable domain model.
     """
 
-    __tablename__, __table_args__ = create_table_args(model.SequencingProtocol)
+    __tablename__, __table_args__ = create_table_args(model.Protocol)
 
 
 class SnpDetectionProtocol(Base, RowMetadataMixin, ProtocolMixin):

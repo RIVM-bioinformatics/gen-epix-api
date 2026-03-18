@@ -35,13 +35,7 @@ class Protocol(Model):
         snake_case_plural_name="protocols",
         table_name="protocol",
         persistable=True,
-        keys=create_keys({1: "code"}),
-        links=create_links(
-            {
-                1: ("ref_seq_id", RefSeq, "ref_seq"),
-                2: ("locus_set_id", LocusSet, "locus_set"),
-            }
-        ),
+        keys=create_keys({1: "code"})
     )
 
     code: str = Field(
@@ -71,17 +65,9 @@ class Protocol(Model):
         default=None,
         description="The UUID of the reference sequence associated with this protocol.",
     )
-    ref_seq: RefSeq | None = Field(
-        default=None,
-        description="The reference sequence associated with this protocol.",
-    )
     locus_set_id: UUID | None = Field(
         default=None,
         description="The UUID of the locus set associated with this protocol.",
-    )
-    locus_set: LocusSet | None = Field(
-        default=None,
-        description="The locus set associated with this protocol.",
     )
     props: dict[str, str | int | float | bool | list] = Field(
         # list is added to allow PcrProtocol.target_names and AstProtocol.antimicrobial_names

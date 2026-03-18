@@ -318,7 +318,7 @@ class SeqService(BaseSeqService):
 
     @staticmethod
     def calculate_pairwise_allele_profile_distances(
-        seq_distance_protocols: Iterable[model.SeqDistanceProtocol],
+        protocols: Iterable[model.Protocol],
         allele_profiles: Iterable[model.AlleleProfile],
     ) -> list[model.SeqDistance]:
         """
@@ -327,7 +327,7 @@ class SeqService(BaseSeqService):
         """
         seq_distances: list[model.SeqDistance] = []
         # Go over each distance protocol
-        for seq_distance_protocol in seq_distance_protocols:
+        for seq_distance_protocol in protocols:
             assert seq_distance_protocol.id is not None
             locus_set_id = seq_distance_protocol.locus_set_id
             if locus_set_id is None:
@@ -336,7 +336,7 @@ class SeqService(BaseSeqService):
                 )
             # Get distance calculation function
             if (
-                seq_distance_protocol.seq_distance_protocol_type
+                seq_distance_protocol.protocol_type
                 == enum.SeqDistanceProtocolType.ALLELE_HAMMING
             ):
                 calculate_distance = SeqService.calculate_hamming_distance
@@ -395,7 +395,7 @@ class SeqService(BaseSeqService):
                 seq_distance = model.SeqDistance(
                     id=seq_distance_id,
                     sample_id=allele_profile.sample_id,
-                    seq_distance_protocol_id=seq_distance_protocol.id,
+                    protocol_id=seq_distance_protocol.id,
                     allele_profile_id=allele_profile.id,
                     distance_format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
                     distances=json.dumps(curr_seq_distances[i]),
