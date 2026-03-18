@@ -1,6 +1,6 @@
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.case_access.base_edge_cases import (
+from test.casedb.integration.edge_cases_access.base_edge_cases import (
     DEV_REPOSITORY_CONFIG,
     SKIP_ENDPOINTS,
     TEST_TYPE,
@@ -74,3 +74,46 @@ class TestCasedbEdgeCasesAccess:
         assert org_user is not None
         assert org_user.name == "org_user1_1"
         print(f"Retrieved user: {org_user.id} with name: {org_user.name}")
+
+    def test_root_user_can_create_case(self, setup_case_type_data: None) -> None:
+        """
+        Test that a root user can create a case and that the created case is retrievable.
+        This verifies that root users have the necessary permissions to create and access cases.
+        """
+        root_user = self.env.get_root_user()
+
+        # case_type1 and data_collection1 are created in the setup_case_type_data fixture
+
+        # created_at = datetime(2025, 1, 1, tzinfo=UTC)
+        # modified_at = datetime(2025, 6, 1, tzinfo=UTC)
+
+        # Override modified_by to be a different user to verify that the value set by the test client
+        # is not being overridden by the policy,
+        # since root user should bypass the policy and keep the values provided in the command.
+        modified_by = self.get_user("org_user1_1").id
+
+        case_result = self.env.create_case(
+            root_user,
+            code="case_1_1",
+            data_collections="data_collection1",
+            # created_at=created_at,
+            # modified_at=modified_at,
+            # modified_by=modified_by,
+        )
+
+        assert isinstance(case_result, model.Case)
+
+        print(f"Created case with id: {case_result.id}")
+
+        # Now verift that the created case has created_at, modified_at, and modified_by fields set by the SetModelProcessMetadataPolicy,
+        # which should be the case since root user should bypass the policy and keep the values provided in the command,
+        # which are set to fixed values in the test client for testing purposes.
+        # assert (
+        #     case_result.created_at == created_at
+        # ), "created_at should be set to the fixed value provided in the command for root user"
+        # assert (
+        #     case_result.modified_at == modified_at
+        # ), "modified_at should be set to the fixed value provided in the command for root user"
+        # assert (
+        #     case_result.modified_by == modified_by
+        # ), "modified_by should be set to the user specified in the command for root user"

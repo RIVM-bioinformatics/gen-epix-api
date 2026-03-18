@@ -571,6 +571,16 @@ class Run:
             ]
         )
 
+    def test_casedb_integration_edge_cases_access(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/casedb/integration/edge_cases_access",
+            ]
+        )
+
     def test_casedb_performance(self) -> None:
         import pytest
 
