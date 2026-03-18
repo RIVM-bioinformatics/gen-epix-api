@@ -309,7 +309,7 @@ class RemoteApp(App):
                 case CrudOperation.UPDATE_SOME:
                     assert isinstance(cmd.objs, list)
                     response = client.put(
-                        f"{base_route}",
+                        base_route + batch_route_suffix,
                         json=[json.loads(x.model_dump_json()) for x in cmd.objs],
                         headers=headers,
                     )

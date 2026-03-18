@@ -1,7 +1,7 @@
 # code quality and testing extensions
 # typing_extensions==4.8.0 # do we need this?
 pandas==3.0.1
-polars==1.39.1
+polars==1.39.2
 xlsxwriter==3.2.9
 pytest
 pytest-gremlins
@@ -15,7 +15,7 @@ pylint==4.0.*
 mypy==1.19.*
 cryptography==46.0.5
 oauthlib==3.3.1
-coverage==7.13.4
+coverage==7.13.5
 
 
 # stubs
