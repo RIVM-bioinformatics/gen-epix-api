@@ -21,31 +21,31 @@ def create_seq_distance_database(
 
     sample_batch_for_upload = get_random_sequences(n_loci, n_seqs)
     locus_set = get_locus_set(n_loci)
-    locus_detection_protocol = get_locus_detection_protocol()
+    protocol = get_locus_detection_protocol()
     data_collection = get_data_collection()
     sample = get_sample(data_collection)
     seqs = get_seqs(sample_batch_for_upload, sample)
     allele_profiles = get_allele_profiles(
-        sample_batch_for_upload, sample, locus_set, locus_detection_protocol, seqs
+        sample_batch_for_upload, sample, locus_set, protocol, seqs
     )
-    seq_distance_protocol = get_seq_distance_protocol(locus_set)
+    protocol = get_seq_distance_protocol(locus_set)
     profile_ids = get_allele_profile_ids(allele_profiles)
     distance_matrix = SeqdbTestClient.calculate_distance_matrix_from_allele_profiles(
         allele_profiles
     )
     seq_distances = get_seq_distances(
-        allele_profiles, sample, seq_distance_protocol, profile_ids, distance_matrix
+        allele_profiles, sample, protocol, profile_ids, distance_matrix
     )
 
     # create a 'dict' repository from the demo models as dict[class/model] = {instance.id: instance}
     db: dict[type, dict[UUID, Any]] = {}
     db[model.LocusSet] = {locus_set.id: locus_set}  # type: ignore[dict-item]
-    db[model.LocusDetectionProtocol] = {
-        locus_detection_protocol.id: locus_detection_protocol  # type: ignore[dict-item]
+    db[model.Protocol] = {
+        protocol.id: protocol  # type: ignore[dict-item]
     }
     db[model.DataCollection] = {data_collection.id: data_collection}  # type: ignore[dict-item]
     db[model.Sample] = {sample.id: sample}  # type: ignore[dict-item]
-    db[model.SeqDistanceProtocol] = {seq_distance_protocol.id: seq_distance_protocol}  # type: ignore[dict-item]
+    db[model.Protocol] = {protocol.id: protocol}  # type: ignore[dict-item]
     db[model.Seq] = {x.id: x for x in seqs}  # type: ignore[misc]
     db[model.AlleleProfile] = {x.id: x for x in allele_profiles}  # type: ignore[misc]
     db[model.SeqDistance] = {x.profile_id: x for x in seq_distances}
@@ -56,7 +56,7 @@ def create_seq_distance_database(
 def get_seq_distances(
     allele_profiles: list[model.AlleleProfile],
     sample: model.Sample,
-    seq_distance_protocol: model.SeqDistanceProtocol,
+    protocol: model.Protocol,
     profile_ids: list[UUID],
     distance_matrix: DistanceMatrix,
 ) -> list[model.SeqDistance]:
@@ -70,7 +70,7 @@ def get_seq_distances(
         seq_distance = model.SeqDistance(  # type: ignore[call-arg]
             id=uuid.uuid4(),
             sample_id=sample.id,
-            seq_distance_protocol_id=seq_distance_protocol.id,  # type: ignore[arg-type]
+            protocol_id=protocol.id,  # type: ignore[arg-type]
             profile_id=profile_ids[i],
             distance_format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
             distances=pd.Series(distances_dict).to_json(),
@@ -89,13 +89,14 @@ def get_allele_profile_ids(allele_profiles: list[model.AlleleProfile]) -> list[U
     return profile_ids
 
 
-def get_seq_distance_protocol(locus_set: model.LocusSet) -> model.SeqDistanceProtocol:
-    seq_distance_protocol = model.SeqDistanceProtocol(  # type: ignore[call-arg]
+def get_seq_distance_protocol(locus_set: model.LocusSet) -> model.Protocol:
+    seq_distance_protocol = model.Protocol(  # type: ignore[call-arg]
         id=uuid.uuid4(),
         code="ALLELE_HAMMING_TEST",
         name="Allele Hamming Test",
         version="1.0",
         is_integer_distance=True,
+        type=enum.ProtocolType.SEQ_DISTANCE,
         seq_distance_protocol_type=enum.SeqDistanceProtocolType.ALLELE_HAMMING,
         locus_set_id=locus_set.id,
         max_stored_distance=1e6,
@@ -124,12 +125,13 @@ def get_sample(data_collection: model.DataCollection) -> model.Sample:
     return sample
 
 
-def get_locus_detection_protocol() -> model.LocusDetectionProtocol:
-    locus_detection_protocol = model.LocusDetectionProtocol(  # type: ignore[call-arg]
+def get_locus_detection_protocol() -> model.Protocol:
+    locus_detection_protocol = model.Protocol(  # type: ignore[call-arg]
         id=uuid.uuid4(),
         code="LDP_TEST",
         name="Locus Detection Protocol Test",
         version="1.0",
+        type=enum.ProtocolType.LOCUS_DETECTION,
     )
 
     return locus_detection_protocol
@@ -151,7 +153,7 @@ def get_allele_profiles(
     sample_batch_for_upload: model.SampleBatchForUpload,
     sample: model.Sample,
     locus_set: model.LocusSet,
-    locus_detection_protocol: model.LocusDetectionProtocol,
+    protocol: model.Protocol,
     seqs: list[model.Seq],
 ) -> list[model.AlleleProfile]:
     allele_profiles: list[model.AlleleProfile] = []
@@ -181,7 +183,7 @@ def get_allele_profiles(
                 sample_id=sample.id,
                 seq_id=seqs[seq_idx].id,
                 locus_set_id=locus_set.id,
-                locus_detection_protocol_id=locus_detection_protocol.id,  # type: ignore[arg-type]
+                protocol_id=protocol.id,  # type: ignore[arg-type]
                 n_loci=n_loci,
                 allele_profile=allele_profile_str,
                 allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,

@@ -67,9 +67,9 @@ def _build_upload_command(
     to create correctly linked objects for upload.
     db_index is used to select which set of objects to use for the command from the db.
     """
-    assembly_protocol_id = list(db[model.AssemblyProtocol].keys())[db_index]
+    protocol_id = list(db[model.Protocol].keys())[db_index]
     locus_set_id = list(db[model.LocusSet].keys())[db_index]
-    locus_detection_protocol_id = list(db[model.LocusDetectionProtocol].keys())[
+    protocol_id = list(db[model.Protocol].keys())[
         db_index
     ]
     locus_code_map_id = list(db[model.LocusCodeMap].keys())[db_index]
@@ -81,9 +81,9 @@ def _build_upload_command(
     sample_batch = env.generate_random_sequences(
         n_seqs=N_SEQS_PER_BATCH,
         settings=effective_settings,
-        protocol_id=assembly_protocol_id,
+        protocol_id=protocol_id,
         locus_set_id=locus_set_id,
-        protocol_id=locus_detection_protocol_id,
+        protocol_id=protocol_id,
         locus_code_map_id=locus_code_map_id,
         locus_ids=locus_ids,
     )
