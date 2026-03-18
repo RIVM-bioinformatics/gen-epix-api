@@ -48,7 +48,7 @@ class CasedbTestClient(TestClient):
         model.RegionSet: "code",
         model.RegionSetShape: ("region_set_id", "scale"),
         model.Region: ("region_set_id", "code"),
-        model.GeneticDistanceProtocol: "name",
+        model.Protocol: "name",
         model.RefDim: "code",
         model.RefCol: "code",
         model.Col: "code",
@@ -372,7 +372,7 @@ class CasedbTestClient(TestClient):
         seqdb_seq_distance_protocol_id: UUID | None = None,
         seqdb_seq_distance_protocol_type: seqdb_enum.SeqDistanceProtocolType = seqdb_enum.SeqDistanceProtocolType.KMER_EUCLIDEAN,
         min_scale_unit: float = 1,
-    ) -> model.GeneticDistanceProtocol:
+    ) -> model.Protocol:
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
@@ -385,10 +385,10 @@ class CasedbTestClient(TestClient):
             command.GeneticDistanceProtocolCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=model.GeneticDistanceProtocol(
+                objs=model.Protocol(
                     name=name,
-                    seqdb_seq_distance_protocol_id=seqdb_seq_distance_protocol_id,
-                    seqdb_seq_distance_protocol_type=seqdb_seq_distance_protocol_type,
+                    seqdb_protocol_id=seqdb_seq_distance_protocol_id,
+                    seqdb_protocol_type=seqdb_seq_distance_protocol_type,
                     min_scale_unit=min_scale_unit,
                     seqdb_is_integer_distance=True,
                 ),
@@ -427,7 +427,7 @@ class CasedbTestClient(TestClient):
         col_type: enum.ColType = enum.ColType.TEXT,
         concept_set: str | model.ConceptSet | None = None,
         region_set: str | model.RegionSet | None = None,
-        genetic_distance_protocol: str | model.GeneticDistanceProtocol | None = None,
+        genetic_distance_protocol: str | model.Protocol | None = None,
         set_dummy_ref_dim: bool = False,
         set_dummy_concept_set: bool = False,
         set_dummy_region_set: bool = False,
@@ -469,7 +469,7 @@ class CasedbTestClient(TestClient):
                 None
                 if not genetic_distance_protocol
                 else self._get_obj(
-                    model.GeneticDistanceProtocol,
+                    model.Protocol,
                     genetic_distance_protocol,
                 ).id  # type: ignore[union-attr]
             )
@@ -486,7 +486,7 @@ class CasedbTestClient(TestClient):
                     rank=rank,
                     concept_set_id=concept_set_id,
                     region_set_id=region_set_id,
-                    genetic_distance_protocol_id=genetic_distance_protocol_id,
+                    protocol_id=genetic_distance_protocol_id,
                 ),
             )
         )

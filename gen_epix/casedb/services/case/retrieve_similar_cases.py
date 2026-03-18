@@ -52,19 +52,17 @@ def case_service_retrieve_similar_cases(
             )
 
         # Get genetic distance protocol
-        genetic_distance_protocol: model.GeneticDistanceProtocol = (
+        genetic_distance_protocol: model.Protocol = (
             self.repository.crud(  # type: ignore[assignment]
                 uow,
                 user.id,
-                model.GeneticDistanceProtocol,
+                model.Protocol,
                 None,
-                dist_ref_col.genetic_distance_protocol_id,
+                dist_ref_col.protocol_id,
                 CrudOperation.READ_ONE,
             )
         )
-        seqdb_seq_distance_protocol_id = (
-            genetic_distance_protocol.seqdb_seq_distance_protocol_id
-        )
+        seqdb_seq_distance_protocol_id = genetic_distance_protocol.seqdb_protocol_id
 
         # @ABAC: Get all cases
         all_cases = self._retrieve_cases_with_content_right(

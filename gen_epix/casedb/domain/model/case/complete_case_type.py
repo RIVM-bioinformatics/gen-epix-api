@@ -12,7 +12,7 @@ from gen_epix.casedb.domain.model.case.ref_data import (
     CaseType,
     Col,
     Dim,
-    GeneticDistanceProtocol,
+    Protocol,
     RefCol,
     RefDim,
     TreeAlgorithm,
@@ -63,7 +63,7 @@ class CompleteCaseType(CaseType):
         default_factory=dict,
         description="The Cols per Dim, ordered by (rank, code). Calculated during model validation.",
     )
-    genetic_distance_protocols: dict[UUID, GeneticDistanceProtocol] = Field(
+    genetic_distance_protocols: dict[UUID, Protocol] = Field(
         description="The genetic distance protocols used by the CaseType"
     )
     tree_algorithms: dict[enum.TreeAlgorithmType, TreeAlgorithm] = Field(

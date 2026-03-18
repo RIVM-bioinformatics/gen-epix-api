@@ -415,8 +415,8 @@ class BaseCaseService(BaseService):
     def crud_genetic_distance_protocol(
         self, cmd: command.GeneticDistanceProtocolCrudCommand
     ) -> (
-        list[model.GeneticDistanceProtocol]
-        | model.GeneticDistanceProtocol
+        list[model.Protocol]
+        | model.Protocol
         | list[UUID]
         | UUID
         | list[bool]

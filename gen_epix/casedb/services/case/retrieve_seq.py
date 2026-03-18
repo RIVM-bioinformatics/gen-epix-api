@@ -58,17 +58,15 @@ def case_service_retrieve_phylogenetic_tree(
             )
 
         # Get protocol
-        protocol: model.GeneticDistanceProtocol = (
-            self.repository.crud(  # type: ignore[assignment]
-                uow,
-                user.id,
-                model.GeneticDistanceProtocol,
-                None,
-                dist_ref_col.genetic_distance_protocol_id,
-                CrudOperation.READ_ONE,
-            )
+        protocol: model.Protocol = self.repository.crud(  # type: ignore[assignment]
+            uow,
+            user.id,
+            model.Protocol,
+            None,
+            dist_ref_col.protocol_id,
+            CrudOperation.READ_ONE,
         )
-        seqdb_seq_distance_protocol_id = protocol.seqdb_seq_distance_protocol_id
+        seqdb_seq_distance_protocol_id = protocol.seqdb_protocol_id
 
         # Special case: zero case_ids
         if not case_ids:

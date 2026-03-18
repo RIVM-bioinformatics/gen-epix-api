@@ -55,6 +55,7 @@ class BaseUploadTestCase(TestCase):
         self.sample_id = UUID("550e8400-e29b-41d4-a716-446655440001")
         self.read_set_id = UUID("550e8400-e29b-41d4-a716-446655440002")
         self.seq_id = UUID("550e8400-e29b-41d4-a716-446655440003")
+        self.protocol_id = UUID("550e8400-e29b-41d4-a716-446655440044")
         self.allele_profile_id = UUID("550e8400-e29b-41d4-a716-446655440004")
         self.sequencing_protocol_id = UUID("550e8400-e29b-41d4-a716-446655440005")
         self.assembly_protocol_id = UUID("550e8400-e29b-41d4-a716-446655440006")
@@ -233,7 +234,7 @@ class BaseUploadTestCase(TestCase):
         return model.ReadSetForUpload(
             id=read_set_id,
             sample_id=sample_id or NULL_ID,
-            sequencing_protocol_id=sequencing_protocol_id
+            protocol_id=sequencing_protocol_id
             or self.sequencing_protocol_id,
             fwd_uri=fwd_uri or "s3://bucket/fwd.fastq.gz",
             rev_uri=rev_uri or "s3://bucket/rev.fastq.gz",
@@ -262,7 +263,7 @@ class BaseUploadTestCase(TestCase):
             sample_id=sample_id or NULL_ID,
             read_set_id=read_set_id,
             read_set2_id=read_set2_id,
-            assembly_protocol_id=assembly_protocol_id or self.assembly_protocol_id,
+            protocol_id=assembly_protocol_id or self.assembly_protocol_id,
             contigs=contigs or [model.Contig(seq="ATCGATCG")],
         )
 
@@ -287,9 +288,9 @@ class BaseUploadTestCase(TestCase):
             id=allele_profile_id,
             sample_id=sample_id or NULL_ID,
             seq_id=seq_id,
-            locus_detection_protocol_id=locus_detection_protocol_id
+            protocol_id=locus_detection_protocol_id
             or self.locus_detection_protocol_id,
-            locus_detection_protocol_code=locus_detection_protocol_code,
+            protocol_code=locus_detection_protocol_code,
             locus_set_id=locus_set_id or self.locus_set_id,
             locus_set_code=locus_set_code,
             locus_code_map_id=locus_code_map_id or self.locus_code_map_id,
@@ -328,7 +329,7 @@ class TestVerifyBatchSeqs(BaseUploadTestCase):
         # Prepare mocks
         self.service.repository.read_fields.side_effect = [
             [
-                (self.assembly_protocol_id, "ASSEMBLY_CODE")
+                (self.protocol_id, "ASSEMBLY_CODE")
             ],  # Existing assembly protocol (id, code) tuples
             [
                 (
@@ -336,10 +337,10 @@ class TestVerifyBatchSeqs(BaseUploadTestCase):
                     seq_hash,
                     self.read_set_id,
                     None,
-                    self.assembly_protocol_id,
+                    self.protocol_id,
                     self.random_ids[0],
                 )
-            ],  # Existing seq (sample_id, seq_hash, read_set_id, read_set2_id, assembly_protocol_id, seq_id) tuples
+            ],  # Existing seq (sample_id, seq_hash, read_set_id, read_set2_id, protocol_id, seq_id) tuples
         ]
 
         # Execute
@@ -369,7 +370,7 @@ class TestVerifyBatchSeqs(BaseUploadTestCase):
         # Prepare mocks
         self.service.repository.read_fields.side_effect = [
             [
-                (self.assembly_protocol_id, "ASSEMBLY_PROTOCOL_CODE")
+                (self.protocol_id, "ASSEMBLY_PROTOCOL_CODE")
             ],  # Existing assembly protocol (id, code) tuples
             [
                 (
@@ -377,10 +378,10 @@ class TestVerifyBatchSeqs(BaseUploadTestCase):
                     seq_hash,
                     self.read_set_id,
                     None,
-                    self.assembly_protocol_id,
+                    self.protocol_id,
                     self.random_ids[0],
                 )
-            ],  # Existing seq (sample_id, seq_hash, read_set_id, read_set2_id, assembly_protocol_id, seq_id) tuples
+            ],  # Existing seq (sample_id, seq_hash, read_set_id, read_set2_id, protocol_id, seq_id) tuples
         ]
 
         # Execute
@@ -413,7 +414,7 @@ class TestVerifyBatchSeqs(BaseUploadTestCase):
                 seq_hash,
                 self.read_set_id,
                 None,
-                self.assembly_protocol_id,
+                self.protocol_id,
                 self.random_ids[0],
             )
         ]
@@ -544,7 +545,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         # Prepare mocks
         self.service.repository.read_fields.side_effect = [
             [
-                (self.locus_detection_protocol_id, "PROTOCOL_CODE")
+                (self.protocol_id, "PROTOCOL_CODE")
             ],  # Existing protocols (id, code) tuples
             [
                 (self.locus_set_id, "LOCUS_SET_CODE")
@@ -554,7 +555,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
                 (
                     self.sample_id,
                     allele_profile_hash,
-                    self.locus_detection_protocol_id,
+                    self.protocol_id,
                     self.locus_set_id,
                     self.seq_id,
                     self.random_ids[0],
@@ -602,13 +603,13 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         # Mock existing protocols, locus sets, and allele profile with different seq
         computed_hash = sample.allele_profiles[0].allele_profile_hash
         self.service.repository.read_fields.side_effect = [
-            [(self.locus_detection_protocol_id, "PROTOCOL_CODE")],  # Protocols
+            [(self.protocol_id, "PROTOCOL_CODE")],  # Protocols
             [(self.locus_set_id, "LOCUS_SET_CODE")],  # Locus sets
             [
                 (
                     self.sample_id,
                     computed_hash,
-                    self.locus_detection_protocol_id,
+                    self.protocol_id,
                     self.locus_set_id,
                     uuid4(),  # Different seq ID
                     existing_profile_id,
@@ -647,13 +648,13 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         profile = sample.allele_profiles[0]
         # Mock existing protocols, locus sets, and allele profile
         self.service.repository.read_fields.side_effect = [
-            [(profile.locus_detection_protocol_id, "PROTOCOL_CODE")],  # Protocols
+            [(profile.protocol_id, "PROTOCOL_CODE")],  # Protocols
             [(profile.locus_set_id, "LOCUS_SET_CODE")],  # Locus sets
             [
                 (
                     self.sample_id,
                     profile.allele_profile_hash,
-                    profile.locus_detection_protocol_id,
+                    profile.protocol_id,
                     profile.locus_set_id,
                     profile.seq_id,  # Use the actual seq_id from the profile
                     uuid4(),
@@ -724,7 +725,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         # Prepare mocks
         # Mock no locus code map found (third call is for locus code maps)
         self.service.repository.read_fields.side_effect = [
-            [(self.locus_detection_protocol_id, "PROTOCOL_CODE")],  # Protocols
+            [(self.protocol_id, "PROTOCOL_CODE")],  # Protocols
             [(self.locus_set_id, "LOCUS_SET_CODE")],  # Locus sets
             [],  # Locus code maps (empty - not found)
             [],  # Allele profiles
@@ -758,7 +759,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         # Mock locus code map with different ID than expected
         self.service.repository.read_fields.side_effect = [
             [
-                (self.locus_detection_protocol_id, "LOCUS_DETECTION_PROTOCOL_CODE")
+                (self.protocol_id, "PROTOCOL_CODE")
             ],  # Protocols
             [(self.locus_set_id, "LOCUS_SET_CODE")],  # Locus sets
             [
@@ -795,7 +796,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         # Prepare mocks
         # Mock locus code map found by code
         self.service.repository.read_fields.side_effect = [
-            [(self.locus_detection_protocol_id, "PROTOCOL_CODE")],  # Protocols
+            [(self.protocol_id, "PROTOCOL_CODE")],  # Protocols
             [(self.locus_set_id, "LOCUS_SET_CODE")],  # Locus sets
             [(self.locus_code_map_id, "TEST_CODE")],  # Locus code maps
             [],  # Allele profiles

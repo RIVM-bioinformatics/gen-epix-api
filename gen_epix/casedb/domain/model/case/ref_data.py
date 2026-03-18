@@ -16,19 +16,17 @@ from gen_epix.seqdb.domain.literal import NCBI_TAXID_PATTERN
 from gen_epix.util import copy_model_field
 
 
-class GeneticDistanceProtocol(Model):
+class Protocol(Model):
 
     ENTITY: ClassVar = Entity(
-        snake_case_plural_name="genetic_distance_protocols",
-        table_name="genetic_distance_protocol",
+        snake_case_plural_name="protocols",
+        table_name="protocol",
         persistable=True,
-        keys=create_keys({1: "seqdb_seq_distance_protocol_id", 2: "name"}),
+        keys=create_keys({1: "seqdb_protocol_id", 2: "name"}),
     )
-    seqdb_seq_distance_protocol_id: UUID = Field(
-        description="The ID of the protocol in seqdb"
-    )
-    seqdb_seq_distance_protocol_type: seqdb_enum.SeqDistanceProtocolType = Field(
-        description="The type of the genetic distance protocol in seqdb"
+    seqdb_protocol_id: UUID = Field(description="The ID of the protocol in seqdb")
+    seqdb_protocol_type: seqdb_enum.ProtocolType = Field(
+        description="The type of the protocol in seqdb"
     )
     name: str = Field(description="The name of the protocol", max_length=255)
     description: str | None = Field(
@@ -43,18 +41,18 @@ class GeneticDistanceProtocol(Model):
     )
     min_scale_unit: float = Field(description="The minimum unit to be shown in a scale")
 
-    @field_validator("seqdb_seq_distance_protocol_type", mode="before")
+    @field_validator("seqdb_protocol_type", mode="before")
     @classmethod
-    def _validate_seqdb_seq_distance_protocol_type(
+    def _validate_seqdb_protocol_type(
         cls, value: Any
-    ) -> seqdb_enum.SeqDistanceProtocolType:
+    ) -> seqdb_enum.ProtocolType:
         if isinstance(value, str):
-            return seqdb_enum.SeqDistanceProtocolType(value)
+            return seqdb_enum.ProtocolType(value)
         return value
 
-    @field_serializer("seqdb_seq_distance_protocol_type", mode="plain")
-    def _serialize_seqdb_seq_distance_protocol_type(
-        self, value: seqdb_enum.SeqDistanceProtocolType
+    @field_serializer("seqdb_protocol_type", mode="plain")
+    def _serialize_seqdb_protocol_type(
+        self, value: seqdb_enum.ProtocolType
     ) -> str:
         return value.value
 
@@ -213,9 +211,9 @@ class RefCol(Model):
                 2: ("concept_set_id", ConceptSet, "concept_set"),
                 3: ("region_set_id", RegionSet, "region_set"),
                 4: (
-                    "genetic_distance_protocol_id",
-                    GeneticDistanceProtocol,
-                    "genetic_distance_protocol",
+                    "protocol_id",
+                    Protocol,
+                    "protocol",
                 ),
             }
         ),
@@ -261,15 +259,15 @@ class RefCol(Model):
         description="The ID of the region set for the column in case of type GEO. FOREIGN KEY",
     )
     region_set: RegionSet | None = Field(default=None, description="The region set.")
-    genetic_distance_protocol_id: UUID | None = Field(
+    protocol_id: UUID | None = Field(
         default=None,
         description=(
-            "The ID of the genetic distance protocol"
+            "The ID of the protocol"
             " that produces the input for the tree algorithm. FOREIGN KEY"
         ),
     )
-    genetic_distance_protocol: GeneticDistanceProtocol | None = Field(
-        default=None, description="The genetic distance protocol"
+    protocol: Protocol | None = Field(
+        default=None, description="The protocol"
     )
     description: str | None = Field(
         default=None, description="Description of the column.", max_length=1000
@@ -305,9 +303,9 @@ class RefCol(Model):
                     f"No region_set_id provided for col_type {self.col_type.value}"
                 )
         if self.col_type in enum.ColTypeSet.HAS_GENETIC_DISTANCE_PROTOCOL.value:
-            if self.genetic_distance_protocol_id is None:
+            if self.protocol_id is None:
                 raise exc.InvalidArgumentsError(
-                    f"No genetic_distance_protocol_id provided for col_type {self.col_type.value}"
+                    f"No protocol_id provided for col_type {self.col_type.value}"
                 )
         return self
 

@@ -79,34 +79,30 @@ class GeneticDistanceProtocol(Base, RowMetadataMixin):
     SQLAlchemy model for the corresponding persistable domain model.
     """
 
-    __tablename__, __table_args__ = create_table_args(model.GeneticDistanceProtocol)
+    __tablename__, __table_args__ = create_table_args(model.Protocol)
 
     seqdb_seq_distance_protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN,
-        model.GeneticDistanceProtocol,
+        model.Protocol,
         "seqdb_seq_distance_protocol_id",
     )
     seqdb_seq_distance_protocol_type: Mapped[seqdb_enum.SeqDistanceProtocolType] = (
-        create_mapped_column(
-            DOMAIN, model.GeneticDistanceProtocol, "seqdb_seq_distance_protocol_type"
-        )
+        create_mapped_column(DOMAIN, model.Protocol, "seqdb_seq_distance_protocol_type")
     )
-    name: Mapped[str] = create_mapped_column(
-        DOMAIN, model.GeneticDistanceProtocol, "name"
-    )
+    name: Mapped[str] = create_mapped_column(DOMAIN, model.Protocol, "name")
     description: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.GeneticDistanceProtocol, "description"
+        DOMAIN, model.Protocol, "description"
     )
     seqdb_max_stored_distance: Mapped[float | None] = create_mapped_column(
         DOMAIN,
-        model.GeneticDistanceProtocol,
+        model.Protocol,
         "seqdb_max_stored_distance",
     )
     seqdb_is_integer_distance: Mapped[bool] = create_mapped_column(
-        DOMAIN, model.GeneticDistanceProtocol, "seqdb_is_integer_distance"
+        DOMAIN, model.Protocol, "seqdb_is_integer_distance"
     )
     min_scale_unit: Mapped[float] = create_mapped_column(
-        DOMAIN, model.GeneticDistanceProtocol, "min_scale_unit"
+        DOMAIN, model.Protocol, "min_scale_unit"
     )
 
 

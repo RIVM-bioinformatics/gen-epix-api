@@ -63,7 +63,7 @@ class CaseUploadSetup:
         model.RegionSet: "RegionSet",
         model.Region: "Region",
         model.RegionRelation: "RegionRelation",
-        model.GeneticDistanceProtocol: "GeneticDistanceProtocol",
+        model.Protocol: "GeneticDistanceProtocol",
         model.Organization: "Organization",
         model.User: "User",
         model.UserInvitation: "UserInvitation",

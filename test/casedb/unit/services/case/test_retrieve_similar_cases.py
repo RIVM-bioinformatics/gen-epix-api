@@ -96,19 +96,19 @@ class BaseSimilarCasesTestCase(TestCase):
     def create_ref_col(
         self,
         col_type: enum.ColType,
-        genetic_distance_protocol_id: UUID | None = None,
+        protocol_id: UUID | None = None,
     ) -> model.RefCol:
         return model.RefCol(
             ref_dim_id=self.ref_dim_id,
             code="Specimen.Genetic.Distance",
             col_type=col_type,
-            genetic_distance_protocol_id=genetic_distance_protocol_id,
+            protocol_id=protocol_id,
         )
 
-    def create_protocol(self) -> model.GeneticDistanceProtocol:
-        return model.GeneticDistanceProtocol(
-            seqdb_seq_distance_protocol_id=self.protocol_id,
-            seqdb_seq_distance_protocol_type=seqdb_enum.SeqDistanceProtocolType.KMER_EUCLIDEAN,
+    def create_protocol(self) -> model.Protocol:
+        return model.Protocol(
+            seqdb_protocol_id=self.protocol_id,
+            seqdb_protocol_type=seqdb_enum.ProtocolType.SEQ_DISTANCE,
             name="KMER_EUCLIDEAN",
             seqdb_is_integer_distance=False,
             min_scale_unit=0.1,
@@ -238,9 +238,9 @@ class TestHappyPath(BaseSimilarCasesTestCase):
         dist_col: model.Col = self.create_col(case_type_id=self.case_type_id)
         dist_ref_col: model.RefCol = self.create_ref_col(
             col_type=enum.ColType.GENETIC_DISTANCE,
-            genetic_distance_protocol_id=self.protocol_id,
+            protocol_id=self.protocol_id,
         )
-        protocol: model.GeneticDistanceProtocol = self.create_protocol()
+        protocol: model.Protocol = self.create_protocol()
         self.repository.crud.side_effect = [dist_col, dist_ref_col, protocol]
 
         all_cases: list[model.Case] = [
@@ -282,9 +282,9 @@ class TestHappyPath(BaseSimilarCasesTestCase):
             call(
                 self.uow,
                 self.user.id,
-                model.GeneticDistanceProtocol,
+                model.Protocol,
                 None,
-                dist_ref_col.genetic_distance_protocol_id,
+                dist_ref_col.protocol_id,
                 CrudOperation.READ_ONE,
             ),
         ]
@@ -295,9 +295,7 @@ class TestHappyPath(BaseSimilarCasesTestCase):
         # Verify cross-service command construction and call
         self.service.app.handle.assert_called_once()  # type: ignore[attr-defined]
         seq_cmd = self.service.app.handle.call_args[0][0]  # type: ignore[attr-defined]
-        assert (
-            seq_cmd.seq_distance_protocol_id == protocol.seqdb_seq_distance_protocol_id
-        )
+        assert seq_cmd.protocol_id == protocol.seqdb_protocol_id
         assert set(seq_cmd.profile_ids) == {seed_profile_id1, seed_profile_id2}
         assert seq_cmd.max_distance == 7.5
 
@@ -312,9 +310,9 @@ class TestHappyPath(BaseSimilarCasesTestCase):
         dist_col: model.Col = self.create_col(case_type_id=self.case_type_id)
         dist_ref_col: model.RefCol = self.create_ref_col(
             col_type=enum.ColType.GENETIC_DISTANCE,
-            genetic_distance_protocol_id=self.protocol_id,
+            protocol_id=self.protocol_id,
         )
-        protocol: model.GeneticDistanceProtocol = self.create_protocol()
+        protocol: model.Protocol = self.create_protocol()
         self.repository.crud.side_effect = [dist_col, dist_ref_col, protocol]
 
         # Seed case does not have a profile ID in content

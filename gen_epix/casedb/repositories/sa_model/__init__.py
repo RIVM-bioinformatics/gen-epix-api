@@ -151,7 +151,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.CaseTypeSetMember: CaseTypeSetMember,
         model.RefCol: RefCol,
         model.RefDim: RefDim,
-        model.GeneticDistanceProtocol: GeneticDistanceProtocol,
+        model.Protocol: GeneticDistanceProtocol,
         model.TreeAlgorithm: TreeAlgorithm,
         model.TreeAlgorithmClass: TreeAlgorithmClass,
     },

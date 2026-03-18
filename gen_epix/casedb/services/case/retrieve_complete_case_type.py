@@ -192,13 +192,7 @@ def case_service_retrieve_complete_case_type(
             command.GeneticDistanceProtocolCrudCommand(
                 user=user,
                 operation=CrudOperation.READ_SOME,
-                obj_ids=list(
-                    {
-                        x.genetic_distance_protocol_id
-                        for x in ref_cols
-                        if x.genetic_distance_protocol_id
-                    }
-                ),
+                obj_ids=list({x.protocol_id for x in ref_cols if x.protocol_id}),
             )
         )
         genetic_distance_protocols = {x.id: x for x in genetic_distance_protocols}

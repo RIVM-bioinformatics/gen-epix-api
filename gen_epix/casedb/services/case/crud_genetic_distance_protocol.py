@@ -13,13 +13,7 @@ from gen_epix.casedb.services.case.base import BaseCaseService
 def case_service_crud_genetic_distance_protocol(
     self: BaseCaseService, cmd: command.GeneticDistanceProtocolCrudCommand
 ) -> (
-    list[model.GeneticDistanceProtocol]
-    | model.GeneticDistanceProtocol
-    | list[UUID]
-    | UUID
-    | list[bool]
-    | bool
-    | None
+    list[model.Protocol] | model.Protocol | list[UUID] | UUID | list[bool] | bool | None
 ):
     """Handle CRUD operations for GeneticDistanceProtocol entities."""
     # GeneticDistanceProtocol entities have no ABAC restrictions - use direct crud
