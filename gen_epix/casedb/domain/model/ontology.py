@@ -2,10 +2,11 @@
 # This module defines base classes, methods are added later
 
 
+import json
 from typing import Any, ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_serializer, field_validator, model_validator
 
 from gen_epix.casedb.domain import enum
 from gen_epix.commondb.domain.model.base import Model
@@ -53,6 +54,13 @@ class ConceptSet(Model):
         max_length=1000,
     )
 
+    @field_validator("type", mode="before")
+    @classmethod
+    def _validate_type(cls, value: Any) -> enum.ConceptSetType:
+        if isinstance(value, str):
+            return enum.ConceptSetType(value)
+        return value
+
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
         if self.type == enum.ConceptSetType.REGULAR_LANGUAGE:
@@ -71,6 +79,10 @@ class ConceptSet(Model):
                 "Only one of schema_definition or schema_uri can be set"
             )
         return self
+
+    @field_serializer("type", mode="plain")
+    def _serialize_type(self, value: enum.ConceptSetType) -> str:
+        return value.value
 
 
 class Concept(Model):
@@ -96,9 +108,23 @@ class Concept(Model):
         default=None,
         description="The rank of the concept within the set. Must be provided for ordinal sets, for other sets it is optional and can be used for sorting.",
     )
-    props: dict[str, Any] = Field(
-        default_factory=dict, description="Additional properties of the concept."
+    props: dict[str, Any] | None = Field(
+        default=None, description="Additional properties of the concept."
     )
+
+    @field_validator("props", mode="before")
+    @classmethod
+    def _validate_props(cls, value: dict[str, Any]) -> dict[str, Any]:
+        if isinstance(value, str):
+            # Assume json
+            return json.loads(value)
+        return value
+
+    @field_serializer("props", mode="plain")
+    def _serialize_props(self, value: dict[str, Any] | None) -> str | None:
+        if value is None:
+            return None
+        return json.dumps(value)
 
 
 class ConceptRelation(Model):
@@ -127,6 +153,19 @@ class ConceptRelation(Model):
     relation: enum.ConceptRelationType = Field(
         description="The relation between the two concepts."
     )
+
+    @field_validator("relation")
+    @classmethod
+    def _validate_relation(
+        cls, value: enum.ConceptRelationType | str
+    ) -> enum.ConceptRelationType:
+        if isinstance(value, str):
+            value = enum.ConceptRelationType(value)
+        return value
+
+    @field_serializer("relation", mode="plain")
+    def _serialize_relation(self, value: enum.ConceptRelationType) -> str:
+        return value.value
 
 
 class Disease(Model):

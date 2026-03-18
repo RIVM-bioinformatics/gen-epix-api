@@ -56,7 +56,7 @@ sample_items = 3
 
 [service.defaults]
 props.timestamp_factory = "DATETIME_NOW"
-props.id_factory = "ULID"
+props.id_factory = "UUID4"
 
 [service.abac]
 module = "gen_epix.seqdb.services"

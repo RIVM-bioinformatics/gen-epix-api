@@ -29,13 +29,18 @@ class Organization(Model):
         snake_case_plural_name="organizations",
         table_name="organization",
         persistable=True,
-        keys=create_keys({1: "name", 2: "legal_entity_code"}),
+        keys=create_keys({1: "code", 2: "name"}),
+    )
+    code: str = Field(
+        description="The code of the organization, UNIQUE", max_length=255
     )
     name: str = Field(
         description="The name of the organization, UNIQUE", max_length=255
     )
-    legal_entity_code: str = Field(
-        description="The legal entity code of the organization, UNIQUE", max_length=255
+    description: str | None = Field(
+        default=None,
+        description="The description of the organization.",
+        max_length=1000,
     )
 
 
@@ -78,6 +83,11 @@ class User(fastapp.User, Model):
     )
     name: str | None = Field(
         default=None, description="The full name of the user", max_length=255
+    )
+    description: str | None = Field(
+        default=None,
+        description="The description of the user.",
+        max_length=1000,
     )
     is_active: bool = Field(
         default=True,
@@ -325,6 +335,7 @@ class UserInvitation(Model):
     )
     email: str | None = copy_model_field(User, "email")
     name: str | None = copy_model_field(User, "name")
+    description: str | None = copy_model_field(User, "description")
     token: str = Field(description="The token of the invitation", max_length=255)
     expires_at: datetime.datetime = Field(
         description="The expiry date of the invitation"
@@ -346,6 +357,13 @@ class UserInvitation(Model):
     organization: Organization | None = Field(
         default=None, description="The organization that the new user will belong to"
     )
+
+    @field_validator("key", mode="before")
+    @classmethod
+    def _validate_key(cls, value: str | None) -> str | None:
+        if value == "":
+            return None
+        return value
 
     @field_validator("roles", mode="before")
     @classmethod
@@ -479,6 +497,7 @@ class BaseIdentifier(Model):
         return self
 
     @field_validator("external_id", mode="after")
+    @classmethod
     def _strip_external_id(cls, value: str) -> str:
         return value.strip()
 

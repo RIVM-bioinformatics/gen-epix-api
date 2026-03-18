@@ -562,6 +562,9 @@ class Person(Base, DataLineageMixin, NoIdRowMetadataMixin):
     person_type_concept_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.Person, "person_type_concept_id"
     )
+    provided_by_organization_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Person, "provided_by_organization_id"
+    )
 
 
 class PersonIdentifier(Base, IdentifierMixin):
@@ -604,6 +607,9 @@ class ObservationPeriod(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
     observation_period_end_iso_interval: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.ObservationPeriod, "observation_period_end_iso_interval"
+    )
+    provided_by_organization_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.ObservationPeriod, "provided_by_organization_id"
     )
 
 
@@ -679,6 +685,9 @@ class VisitOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
     preceding_visit_occurrence_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.VisitOccurrence, "preceding_visit_occurrence_id"
+    )
+    provided_by_organization_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.VisitOccurrence, "provided_by_organization_id"
     )
 
 
@@ -761,6 +770,9 @@ class VisitDetail(Base, DataLineageMixin, NoIdRowMetadataMixin):
     visit_occurrence_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.VisitDetail, "visit_occurrence_id"
     )
+    provided_by_organization_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.VisitDetail, "provided_by_organization_id"
+    )
 
 
 class VisitDetailIdentifier(Base, IdentifierMixin):
@@ -839,6 +851,9 @@ class ConditionOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     condition_end_iso_interval: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.ConditionOccurrence, "condition_end_iso_interval"
     )
+    provided_by_organization_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.ConditionOccurrence, "provided_by_organization_id"
+    )
 
 
 class ConditionOccurrenceIdentifier(Base, IdentifierMixin):
@@ -915,6 +930,9 @@ class ProcedureOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
     procedure_iso_interval: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.ProcedureOccurrence, "procedure_iso_interval"
+    )
+    provided_by_organization_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.ProcedureOccurrence, "provided_by_organization_id"
     )
 
 
@@ -1015,6 +1033,9 @@ class DrugExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
     drug_exposure_end_iso_interval: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.DrugExposure, "drug_exposure_end_iso_interval"
     )
+    provided_by_organization_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.DrugExposure, "provided_by_organization_id"
+    )
 
 
 class DrugExposureIdentifier(Base, IdentifierMixin):
@@ -1101,6 +1122,9 @@ class DeviceExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
     device_exposure_end_iso_interval: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.DeviceExposure, "device_exposure_end_iso_interval"
+    )
+    provided_by_organization_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.DeviceExposure, "provided_by_organization_id"
     )
 
 
@@ -1201,6 +1225,9 @@ class Measurement(Base, DataLineageMixin, NoIdRowMetadataMixin):
     derived_from_specimen_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Measurement, "derived_from_specimen_id"
     )
+    provided_by_organization_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Measurement, "provided_by_organization_id"
+    )
 
 
 class MeasurementIdentifier(Base, IdentifierMixin):
@@ -1294,6 +1321,9 @@ class Observation(Base, DataLineageMixin, NoIdRowMetadataMixin):
     value_as_iso_interval: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Observation, "value_as_iso_interval"
     )
+    provided_by_organization_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Observation, "provided_by_organization_id"
+    )
 
 
 class ObservationIdentifier(Base, IdentifierMixin):
@@ -1370,6 +1400,9 @@ class Specimen(Base, DataLineageMixin, NoIdRowMetadataMixin):
     derived_from_specimen_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Specimen, "derived_from_specimen_concept_id"
     )
+    provided_by_organization_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Specimen, "provided_by_organization_id"
+    )
 
 
 class SpecimenIdentifier(Base, IdentifierMixin):
@@ -1431,6 +1464,9 @@ class Note(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
     note_event_field_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Note, "note_event_field_concept_id"
+    )
+    provided_by_organization_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Note, "provided_by_organization_id"
     )
 
 
@@ -1555,6 +1591,9 @@ class Death(Base, DataLineageMixin, NoIdRowMetadataMixin):
     cause_source_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Death, "cause_source_concept_id"
     )
+    provided_by_organization_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Death, "provided_by_organization_id"
+    )
 
 
 class DeathIdentifier(Base, IdentifierMixin):
@@ -1669,6 +1708,9 @@ class PayerPlanPeriod(Base, DataLineageMixin, NoIdRowMetadataMixin):
     stop_reason_source_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.PayerPlanPeriod, "stop_reason_source_concept_id"
     )
+    provided_by_organization_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.PayerPlanPeriod, "provided_by_organization_id"
+    )
 
 
 class Cost(Base, DataLineageMixin, NoIdRowMetadataMixin):
@@ -1741,6 +1783,9 @@ class Cost(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
     drg_source_value: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Cost, "drg_source_value"
+    )
+    provided_by_organization_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Cost, "provided_by_organization_id"
     )
 
 

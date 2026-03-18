@@ -289,6 +289,7 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
         return value
 
     @field_validator("contigs", mode="before")
+    @classmethod
     def _validate_contigs(cls, value: list[Contig] | str) -> list[Contig]:
         """"""
         if isinstance(value, str):

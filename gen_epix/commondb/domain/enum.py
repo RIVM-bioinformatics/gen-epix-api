@@ -134,32 +134,36 @@ class DevRepositoryConfigSet(Enum):
     )
 
 
-class UploadStatus(Enum):
+class EtlStatus(Enum):
+    INITIALIZED = "INITIALIZED"
     PENDING = "PENDING"  # Yet to be processed
     SKIPPED = "SKIPPED"  # No changes stored
     FAILED = "FAILED"
+    ERROR = "ERROR"  # TODO: should likely be merged with FAILED, or at least clarify the distinction
     CREATED = "CREATED"
     UPDATED = "UPDATED"
+    MIXED = "MIXED"  # TODO: should likely be merged with PROCESSED, or at least clarify the distinction
     PROCESSED = "PROCESSED"  # Skipped, created or updated (not failed)
+    SUCCESS = "SUCCESS"
 
 
 class UploadStatusSet(Enum):
     NOT_FAILED = frozenset(
         {
-            UploadStatus.PENDING,
-            UploadStatus.SKIPPED,
-            UploadStatus.CREATED,
-            UploadStatus.UPDATED,
-            UploadStatus.PROCESSED,
+            EtlStatus.PENDING,
+            EtlStatus.SKIPPED,
+            EtlStatus.CREATED,
+            EtlStatus.UPDATED,
+            EtlStatus.PROCESSED,
         }
     )
-    FAILED = frozenset({UploadStatus.FAILED})
+    FAILED = frozenset({EtlStatus.FAILED})
     PROCESSED = frozenset(
         {
-            UploadStatus.SKIPPED,
-            UploadStatus.CREATED,
-            UploadStatus.UPDATED,
-            UploadStatus.PROCESSED,
+            EtlStatus.SKIPPED,
+            EtlStatus.CREATED,
+            EtlStatus.UPDATED,
+            EtlStatus.PROCESSED,
         }
     )
 

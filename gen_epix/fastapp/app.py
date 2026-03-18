@@ -189,10 +189,6 @@ class App:
     def logger(self) -> logging.Logger | None:
         return self._logger
 
-    @property
-    def feature_flags(self) -> dict[Hashable, bool]:
-        return self._feature_flags
-
     @logger.setter
     def logger(self, logger: logging.Logger | None) -> None:
         self._logger = logger
@@ -213,6 +209,11 @@ class App:
     def log_item_class(self) -> type[BaseLogItem]:
         return self._log_item_class
 
+    @property
+    def feature_flags(self) -> dict[Hashable, bool]:
+        """Return a copy of the feature flags dict to prevent external mutation."""
+        return dict(self._feature_flags)
+
     def generate_id(self) -> Hashable:
         return self._id_factory()
 
@@ -220,6 +221,8 @@ class App:
         return self._timestamp_factory()
 
     def set_feature_flag(self, key: Hashable, value: bool) -> None:
+        if not isinstance(value, bool):
+            raise ValueError("Feature flag value must be a boolean")
         self._feature_flags[key] = value
 
     def get_feature_flag(self, key: Hashable, default: bool = False) -> bool:

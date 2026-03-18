@@ -4,7 +4,7 @@ from uuid import UUID
 
 import numpy as np
 
-from gen_epix.commondb.domain.enum import UploadStatus
+from gen_epix.commondb.domain.enum import EtlStatus
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.domain.service import BaseSeqService
@@ -229,7 +229,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
                     [
                         model.CalculateSeqDistancesResult(
                             id=updated_seq_distance.id,
-                            status=UploadStatus.UPDATED,
+                            status=EtlStatus.UPDATED,
                             seq_distance_profile_id=updated_seq_distance.profile_id,
                         )
                         for updated_seq_distance in modified_existing_seq_distances
@@ -263,7 +263,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
                 results.append(
                     model.CalculateSeqDistancesResult(
                         id=created_new_seq_distance.id,
-                        status=UploadStatus.CREATED,
+                        status=EtlStatus.CREATED,
                         seq_distance_profile_id=created_new_seq_distance.profile_id,  # type : ignore[arg-type]
                     )
                 )

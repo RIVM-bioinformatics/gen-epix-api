@@ -2,7 +2,7 @@ from collections import defaultdict
 from uuid import UUID
 
 from gen_epix import fastapp
-from gen_epix.commondb.domain.enum import UploadStatus
+from gen_epix.commondb.domain.enum import EtlStatus
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.services import BatchUploader
 from gen_epix.filter.uuid_set import UuidSetFilter
@@ -87,7 +87,7 @@ def _verify_children_seqs(
             # Sample does not exist
             continue
         for seq, seq_result in zip(sample.seqs or [], sample_result.seqs or []):
-            if seq_result.status == UploadStatus.SKIPPED:
+            if seq_result.status == EtlStatus.SKIPPED:
                 # Seq is already marked as skipped, no need to verify
                 continue
             existing_seq_data = key_map.get((sample.id, seq.seq_hash))
@@ -112,7 +112,7 @@ def _verify_children_seqs(
                         "a2b3c4d5",
                         f"Seq with same hash ({seq.seq_hash}), read sets and assembly protocol already exists",
                     )
-                    seq_result.status = UploadStatus.SKIPPED
+                    seq_result.status = EtlStatus.SKIPPED
                     break
                 if seq.read_set_id is None and seq.read_set2_id is None:
                     # New seq with same hash but unknown read sets -> error since
@@ -205,7 +205,7 @@ def _verify_children_allele_profiles(
         for allele_profile, allele_profile_result in zip(
             sample.allele_profiles or [], sample_result.allele_profiles or []
         ):
-            if allele_profile_result.status == UploadStatus.SKIPPED:
+            if allele_profile_result.status == EtlStatus.SKIPPED:
                 # Allele profile is already marked as skipped, no need to verify
                 continue
             existing_allele_profile_data = key_map.get(
@@ -238,7 +238,7 @@ def _verify_children_allele_profiles(
                         "c7d8e9f0",
                         f"Allele profile with same hash ({allele_profile.allele_profile_hash}), seq and assembly protocol already exists",
                     )
-                    allele_profile_result.status = UploadStatus.SKIPPED
+                    allele_profile_result.status = EtlStatus.SKIPPED
                     break
                 if allele_profile.seq_id is None:
                     # New allele profile with same hash but unknown read sets -> error since

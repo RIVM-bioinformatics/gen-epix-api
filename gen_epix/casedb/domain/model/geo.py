@@ -5,7 +5,7 @@
 from typing import ClassVar
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, field_serializer, field_validator
 
 from gen_epix.casedb.domain import enum
 from gen_epix.commondb.domain.model.base import Model
@@ -131,3 +131,16 @@ class RegionRelation(Model):
     relation: enum.RegionRelationType = Field(
         description="The type of relation between the regions."
     )
+
+    @field_validator("relation", mode="before")
+    @classmethod
+    def _validate_relation(
+        cls, value: enum.RegionRelationType | str
+    ) -> enum.RegionRelationType:
+        if isinstance(value, str):
+            value = enum.RegionRelationType(value)
+        return value
+
+    @field_serializer("relation", mode="plain")
+    def _serialize_relation(self, value: enum.RegionRelationType) -> str:
+        return value.value
