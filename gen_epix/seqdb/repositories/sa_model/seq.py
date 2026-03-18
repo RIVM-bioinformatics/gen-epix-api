@@ -90,8 +90,8 @@ class AlleleAlignment(Base, RowMetadataMixin, AlignmentMixin, QualityMixin):
     allele_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.AlleleAlignment, "allele_id"
     )
-    alignment_protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.AlleleAlignment, "alignment_protocol_id"
+    protocol_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.AlleleAlignment, "protocol_id"
     )
 
 
@@ -111,8 +111,8 @@ class AlleleProfile(Base, RowMetadataMixin, QualityMixin):
     locus_set_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.AlleleProfile, "locus_set_id"
     )
-    locus_detection_protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.AlleleProfile, "locus_detection_protocol_id"
+    protocol_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.AlleleProfile, "protocol_id"
     )
     n_loci: Mapped[int] = create_mapped_column(DOMAIN, model.AlleleProfile, "n_loci")
     allele_profile: Mapped[str] = create_mapped_column(
@@ -141,29 +141,6 @@ class AlleleProfileIdentifier(Base, IdentifierMixin):
     )
 
 
-class AlignmentProtocol(Base, RowMetadataMixin, ProtocolMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.AlignmentProtocol)
-
-    is_multiple: Mapped[bool] = create_mapped_column(
-        DOMAIN, model.AlignmentProtocol, "is_multiple"
-    )
-
-
-class AssemblyProtocol(Base, RowMetadataMixin, ProtocolMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.AssemblyProtocol)
-
-    has_manual_curation: Mapped[bool] = create_mapped_column(
-        DOMAIN, model.AssemblyProtocol, "has_manual_curation"
-    )
-
 
 class AstMeasurement(Base, RowMetadataMixin):
     """
@@ -175,8 +152,8 @@ class AstMeasurement(Base, RowMetadataMixin):
     sample_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.AstMeasurement, "sample_id"
     )
-    ast_protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.AstMeasurement, "ast_protocol_id"
+    protocol_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.AstMeasurement, "protocol_id"
     )
     ast_result: Mapped[str] = create_mapped_column(
         DOMAIN, model.AstMeasurement, "ast_result"
@@ -200,8 +177,8 @@ class AstPrediction(Base, RowMetadataMixin):
     seq_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.AstPrediction, "seq_id"
     )
-    ast_protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.AstPrediction, "ast_protocol_id"
+    protocol_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.AstPrediction, "protocol_id"
     )
     ast_result: Mapped[str] = create_mapped_column(
         DOMAIN, model.AstPrediction, "ast_result"
@@ -209,29 +186,6 @@ class AstPrediction(Base, RowMetadataMixin):
     ast_result_format: Mapped[str] = create_mapped_column(
         DOMAIN, model.AstPrediction, "ast_result_format"
     )
-
-
-class AstProtocol(Base, RowMetadataMixin, ProtocolMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.AstProtocol)
-
-    antimicrobial_names: Mapped[list[str]] = create_mapped_column(
-        DOMAIN, model.AstProtocol, "antimicrobial_names"
-    )
-    is_predicted: Mapped[bool] = create_mapped_column(
-        DOMAIN, model.AstProtocol, "is_predicted"
-    )
-
-
-class KmerDetectionProtocol(Base, RowMetadataMixin, ProtocolMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.KmerDetectionProtocol)
 
 
 class KmerProfile(Base, RowMetadataMixin, QualityMixin):
@@ -247,8 +201,8 @@ class KmerProfile(Base, RowMetadataMixin, QualityMixin):
     seq_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.KmerProfile, "seq_id"
     )
-    kmer_detection_protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.KmerProfile, "kmer_detection_protocol_id"
+    protocol_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.KmerProfile, "protocol_id"
     )
     kmer_profile: Mapped[str] = create_mapped_column(
         DOMAIN, model.KmerProfile, "kmer_profile"
@@ -307,14 +261,6 @@ class LocusCodeMap(Base, RowMetadataMixin):
     )
 
 
-class LocusDetectionProtocol(Base, RowMetadataMixin, ProtocolMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.LocusDetectionProtocol)
-
-
 class LocusProfile(Base, RowMetadataMixin, QualityMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
@@ -331,8 +277,8 @@ class LocusProfile(Base, RowMetadataMixin, QualityMixin):
     locus_set_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.LocusProfile, "locus_set_id"
     )
-    locus_detection_protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.LocusProfile, "locus_detection_protocol_id"
+    protocol_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.LocusProfile, "protocol_id"
     )
     n_loci: Mapped[int] = create_mapped_column(DOMAIN, model.LocusProfile, "n_loci")
     locus_profile: Mapped[str] = create_mapped_column(
@@ -375,15 +321,6 @@ class LocusSet(Base, RowMetadataMixin):
         DOMAIN, model.LocusSet, "locus_ids"
     )
 
-
-class MlvaDetectionProtocol(Base, RowMetadataMixin, ProtocolMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.MlvaDetectionProtocol)
-
-
 class MlvaProfile(Base, RowMetadataMixin, QualityMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
@@ -397,8 +334,8 @@ class MlvaProfile(Base, RowMetadataMixin, QualityMixin):
     seq_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.MlvaProfile, "seq_id"
     )
-    mlva_detection_protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.MlvaProfile, "mlva_detection_protocol_id"
+    protocol_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.MlvaProfile, "protocol_id"
     )
     locus_set_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.MlvaProfile, "locus_set_id"
@@ -439,8 +376,8 @@ class PcrMeasurement(Base, RowMetadataMixin):
     sample_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.PcrMeasurement, "sample_id"
     )
-    pcr_protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.PcrMeasurement, "pcr_protocol_id"
+    protocol_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.PcrMeasurement, "protocol_id"
     )
     pcr_result: Mapped[str] = create_mapped_column(
         DOMAIN, model.PcrMeasurement, "pcr_result"
@@ -450,17 +387,6 @@ class PcrMeasurement(Base, RowMetadataMixin):
     )
     index: Mapped[int] = create_mapped_column(DOMAIN, model.PcrMeasurement, "index")
 
-
-class PcrProtocol(Base, RowMetadataMixin, ProtocolMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.PcrProtocol)
-
-    target_names: Mapped[list[str]] = create_mapped_column(
-        DOMAIN, model.PcrProtocol, "target_names"
-    )
 
 
 class ReadSet(Base, RowMetadataMixin, CodeMixin, QualityMixin):
@@ -491,8 +417,8 @@ class ReadSet(Base, RowMetadataMixin, CodeMixin, QualityMixin):
     rev_reads_hash: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.ReadSet, "rev_reads_hash"
     )
-    sequencing_protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.ReadSet, "sequencing_protocol_id"
+    protocol_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.ReadSet, "protocol_id"
     )
     sequencing_run_code: Mapped[str] = create_mapped_column(
         DOMAIN, model.ReadSet, "sequencing_run_code"
@@ -642,8 +568,8 @@ class Seq(Base, RowMetadataMixin, CodeMixin, QualityMixin):
     file_hash: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "file_hash")
     read_set_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "read_set_id")
     read_set2_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "read_set2_id")
-    assembly_protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.Seq, "assembly_protocol_id"
+    protocol_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Seq, "protocol_id"
     )
     contigs: Mapped[list[model.Contig]] = create_mapped_column(
         DOMAIN, model.Seq, "contigs"
@@ -687,8 +613,8 @@ class SeqAlignment(Base, RowMetadataMixin):
     seq_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.SeqAlignment, "seq_id"
     )
-    alignment_protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SeqAlignment, "alignment_protocol_id"
+    protocol_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SeqAlignment, "protocol_id"
     )
     contig_alignments: Mapped[list[model.ContigAlignment]] = create_mapped_column(
         DOMAIN, model.SeqAlignment, "contig_alignments"
@@ -733,8 +659,8 @@ class SeqClassification(Base, RowMetadataMixin):
     seq_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.SeqClassification, "seq_id"
     )
-    seq_classification_protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SeqClassification, "seq_classification_protocol_id"
+    protocol_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SeqClassification, "protocol_id"
     )
     primary_category_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqClassification, "primary_category_id"
@@ -750,17 +676,6 @@ class SeqClassification(Base, RowMetadataMixin):
     )
 
 
-class SeqClassificationProtocol(Base, RowMetadataMixin, ProtocolMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.SeqClassificationProtocol)
-
-    is_taxonomic: Mapped[bool] = create_mapped_column(
-        DOMAIN, model.SeqClassificationProtocol, "is_taxonomic"
-    )
-
 
 class SeqDistance(Base, RowMetadataMixin):
     """
@@ -772,8 +687,8 @@ class SeqDistance(Base, RowMetadataMixin):
     sample_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqDistance, "sample_id"
     )
-    seq_distance_protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SeqDistance, "seq_distance_protocol_id"
+    protocol_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SeqDistance, "protocol_id"
     )
     profile_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqDistance, "profile_id"
@@ -783,32 +698,6 @@ class SeqDistance(Base, RowMetadataMixin):
     )
     distances: Mapped[str] = create_mapped_column(
         DOMAIN, model.SeqDistance, "distances"
-    )
-
-
-class SeqDistanceProtocol(Base, RowMetadataMixin, ProtocolMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.SeqDistanceProtocol)
-
-    is_integer_distance: Mapped[bool] = create_mapped_column(
-        DOMAIN, model.SeqDistanceProtocol, "is_integer_distance"
-    )
-    seq_distance_protocol_type: Mapped[enum.SeqDistanceProtocolType] = (
-        create_mapped_column(
-            DOMAIN, model.SeqDistanceProtocol, "seq_distance_protocol_type"
-        )
-    )
-    locus_set_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SeqDistanceProtocol, "locus_set_id"
-    )
-    ref_seq_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SeqDistanceProtocol, "ref_seq_id"
-    )
-    max_stored_distance: Mapped[float] = create_mapped_column(
-        DOMAIN, model.SeqDistanceProtocol, "max_stored_distance"
     )
 
 
@@ -825,8 +714,8 @@ class SeqTaxonomy(Base, RowMetadataMixin):
     seq_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.SeqTaxonomy, "seq_id"
     )
-    taxonomy_protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SeqTaxonomy, "taxonomy_protocol_id"
+    protocol_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SeqTaxonomy, "protocol_id"
     )
     primary_taxon_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqTaxonomy, "primary_taxon_id"
@@ -838,22 +727,6 @@ class SeqTaxonomy(Base, RowMetadataMixin):
     taxonomy_hash: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqTaxonomy, "taxonomy_hash"
     )
-
-
-class SequencingProtocol(Base, RowMetadataMixin, ProtocolMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.Protocol)
-
-
-class SnpDetectionProtocol(Base, RowMetadataMixin, ProtocolMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.SnpDetectionProtocol)
 
 
 class SnpProfile(Base, RowMetadataMixin, QualityMixin):
@@ -872,8 +745,8 @@ class SnpProfile(Base, RowMetadataMixin, QualityMixin):
     ref_seq_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SnpProfile, "ref_seq_id"
     )
-    snp_detection_protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SnpProfile, "snp_detection_protocol_id"
+    protocol_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SnpProfile, "protocol_id"
     )
     snp_profile: Mapped[str] = create_mapped_column(
         DOMAIN, model.SnpProfile, "snp_profile"
@@ -924,14 +797,6 @@ class Taxon(Base, RowMetadataMixin):
     ancestor_taxon_ids: Mapped[list[UUID]] = create_mapped_column(
         DOMAIN, model.Taxon, "ancestor_taxon_ids"
     )
-
-
-class TaxonomyProtocol(Base, RowMetadataMixin, ProtocolMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.TaxonomyProtocol)
 
 
 class TaxonSet(Base, RowMetadataMixin):

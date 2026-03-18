@@ -163,10 +163,6 @@ class ProtocolCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Protocol
 
 
-class AlignmentProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.AlignmentProtocol
-
-
 class AlleleCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Allele
 
@@ -183,24 +179,12 @@ class AlleleProfileIdentifierCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.AlleleProfileIdentifier
 
 
-class AssemblyProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.AssemblyProtocol
-
-
 class AstMeasurementCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.AstMeasurement
 
 
 class AstPredictionCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.AstPrediction
-
-
-class AstProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.AstProtocol
-
-
-class KmerDetectionProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.KmerDetectionProtocol
 
 
 class KmerProfileCrudCommand(CrudCommand):
@@ -219,10 +203,6 @@ class LocusCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Locus
 
 
-class LocusDetectionProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.LocusDetectionProtocol
-
-
 class LocusProfileCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.LocusProfile
 
@@ -235,10 +215,6 @@ class LocusSetCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.LocusSet
 
 
-class MlvaDetectionProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.MlvaDetectionProtocol
-
-
 class MlvaProfileCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.MlvaProfile
 
@@ -249,10 +225,6 @@ class MlvaProfileIdentifierCrudCommand(CrudCommand):
 
 class PcrMeasurementCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.PcrMeasurement
-
-
-class PcrProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.PcrProtocol
 
 
 class ReadSetCrudCommand(CrudCommand):
@@ -299,10 +271,6 @@ class SeqClassificationCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.SeqClassification
 
 
-class SeqClassificationProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.SeqClassificationProtocol
-
-
 class SeqCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Seq
 
@@ -323,10 +291,6 @@ class SeqDistanceCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.SeqDistance
 
 
-class SeqDistanceProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.SeqDistanceProtocol
-
-
 class SeqIdentifierCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.SeqIdentifier
 
@@ -339,20 +303,12 @@ class SequencingProtocolCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Protocol
 
 
-class SnpDetectionProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.SnpDetectionProtocol
-
-
 class SnpProfileCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.SnpProfile
 
 
 class SnpProfileIdentifierCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.SnpProfileIdentifier
-
-
-class TaxonomyProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.TaxonomyProtocol
 
 
 class TaxonCrudCommand(CrudCommand):

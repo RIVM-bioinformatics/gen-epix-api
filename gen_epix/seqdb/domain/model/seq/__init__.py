@@ -1,9 +1,6 @@
 from gen_epix.commondb.domain.model import IdentifierForUpload as IdentifierForUpload
 
 # pylint: disable=useless-import-alias
-from gen_epix.seqdb.domain.model.seq.alignment import (
-    AlignmentProtocol as AlignmentProtocol,
-)
 from gen_epix.seqdb.domain.model.seq.alignment import AlleleAlignment as AlleleAlignment
 from gen_epix.seqdb.domain.model.seq.alignment import ContigAlignment as ContigAlignment
 from gen_epix.seqdb.domain.model.seq.alignment import (
@@ -25,17 +22,8 @@ from gen_epix.seqdb.domain.model.seq.classification import (
 from gen_epix.seqdb.domain.model.seq.classification import (
     SeqClassification as SeqClassification,
 )
-from gen_epix.seqdb.domain.model.seq.classification import (
-    SeqClassificationProtocol as SeqClassificationProtocol,
-)
 from gen_epix.seqdb.domain.model.seq.classification import SeqTaxonomy as SeqTaxonomy
-from gen_epix.seqdb.domain.model.seq.classification import (
-    TaxonomyProtocol as TaxonomyProtocol,
-)
 from gen_epix.seqdb.domain.model.seq.distance import SeqDistance as SeqDistance
-from gen_epix.seqdb.domain.model.seq.distance import (
-    SeqDistanceProtocol as SeqDistanceProtocol,
-)
 from gen_epix.seqdb.domain.model.seq.locus import Allele as Allele
 from gen_epix.seqdb.domain.model.seq.locus import Locus as Locus
 from gen_epix.seqdb.domain.model.seq.locus import LocusCodeMap as LocusCodeMap
@@ -49,29 +37,18 @@ from gen_epix.seqdb.domain.model.seq.profile import AlleleProfile as AlleleProfi
 from gen_epix.seqdb.domain.model.seq.profile import (
     AlleleProfileIdentifier as AlleleProfileIdentifier,
 )
-from gen_epix.seqdb.domain.model.seq.profile import (
-    KmerDetectionProtocol as KmerDetectionProtocol,
-)
+
 from gen_epix.seqdb.domain.model.seq.profile import KmerProfile as KmerProfile
 from gen_epix.seqdb.domain.model.seq.profile import (
     KmerProfileIdentifier as KmerProfileIdentifier,
-)
-from gen_epix.seqdb.domain.model.seq.profile import (
-    LocusDetectionProtocol as LocusDetectionProtocol,
 )
 from gen_epix.seqdb.domain.model.seq.profile import LocusProfile as LocusProfile
 from gen_epix.seqdb.domain.model.seq.profile import (
     LocusProfileIdentifier as LocusProfileIdentifier,
 )
-from gen_epix.seqdb.domain.model.seq.profile import (
-    MlvaDetectionProtocol as MlvaDetectionProtocol,
-)
 from gen_epix.seqdb.domain.model.seq.profile import MlvaProfile as MlvaProfile
 from gen_epix.seqdb.domain.model.seq.profile import (
     MlvaProfileIdentifier as MlvaProfileIdentifier,
-)
-from gen_epix.seqdb.domain.model.seq.profile import (
-    SnpDetectionProtocol as SnpDetectionProtocol,
 )
 from gen_epix.seqdb.domain.model.seq.profile import SnpProfile as SnpProfile
 from gen_epix.seqdb.domain.model.seq.profile import (
@@ -79,15 +56,11 @@ from gen_epix.seqdb.domain.model.seq.profile import (
 )
 from gen_epix.seqdb.domain.model.seq.reads import ReadSet as ReadSet
 from gen_epix.seqdb.domain.model.seq.reads import ReadSetIdentifier as ReadSetIdentifier
-from gen_epix.seqdb.domain.model.seq.reads import (
-    SequencingProtocol as SequencingProtocol,
-)
 from gen_epix.seqdb.domain.model.seq.sample import Sample as Sample
 from gen_epix.seqdb.domain.model.seq.sample import (
     SampleDataCollectionLink as SampleDataCollectionLink,
 )
 from gen_epix.seqdb.domain.model.seq.sample import SampleIdentifier as SampleIdentifier
-from gen_epix.seqdb.domain.model.seq.seq import AssemblyProtocol as AssemblyProtocol
 from gen_epix.seqdb.domain.model.seq.seq import Contig as Contig
 from gen_epix.seqdb.domain.model.seq.seq import RefSeq as RefSeq
 from gen_epix.seqdb.domain.model.seq.seq import RefSnp as RefSnp

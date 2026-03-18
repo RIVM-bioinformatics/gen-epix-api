@@ -32,47 +32,36 @@ from gen_epix.commondb.repositories.sa_model import (
 )
 from gen_epix.seqdb.domain import DOMAIN, enum, model
 from gen_epix.seqdb.repositories.sa_model.file import File as File
-from gen_epix.seqdb.repositories.sa_model.seq import (
-    AlignmentProtocol as AlignmentProtocol,
-)
+
 from gen_epix.seqdb.repositories.sa_model.seq import Allele as Allele
 from gen_epix.seqdb.repositories.sa_model.seq import AlleleAlignment as AlleleAlignment
 from gen_epix.seqdb.repositories.sa_model.seq import AlleleProfile as AlleleProfile
 from gen_epix.seqdb.repositories.sa_model.seq import (
     AlleleProfileIdentifier as AlleleProfileIdentifier,
 )
-from gen_epix.seqdb.repositories.sa_model.seq import (
-    AssemblyProtocol as AssemblyProtocol,
-)
+
 from gen_epix.seqdb.repositories.sa_model.seq import AstMeasurement as AstMeasurement
 from gen_epix.seqdb.repositories.sa_model.seq import AstPrediction as AstPrediction
-from gen_epix.seqdb.repositories.sa_model.seq import AstProtocol as AstProtocol
-from gen_epix.seqdb.repositories.sa_model.seq import (
-    KmerDetectionProtocol as KmerDetectionProtocol,
-)
+
+
 from gen_epix.seqdb.repositories.sa_model.seq import KmerProfile as KmerProfile
 from gen_epix.seqdb.repositories.sa_model.seq import (
     KmerProfileIdentifier as KmerProfileIdentifier,
 )
 from gen_epix.seqdb.repositories.sa_model.seq import Locus as Locus
 from gen_epix.seqdb.repositories.sa_model.seq import LocusCodeMap as LocusCodeMap
-from gen_epix.seqdb.repositories.sa_model.seq import (
-    LocusDetectionProtocol as LocusDetectionProtocol,
-)
+
 from gen_epix.seqdb.repositories.sa_model.seq import LocusProfile as LocusProfile
 from gen_epix.seqdb.repositories.sa_model.seq import (
     LocusProfileIdentifier as LocusProfileIdentifier,
 )
 from gen_epix.seqdb.repositories.sa_model.seq import LocusSet as LocusSet
-from gen_epix.seqdb.repositories.sa_model.seq import (
-    MlvaDetectionProtocol as MlvaDetectionProtocol,
-)
 from gen_epix.seqdb.repositories.sa_model.seq import MlvaProfile as MlvaProfile
 from gen_epix.seqdb.repositories.sa_model.seq import (
     MlvaProfileIdentifier as MlvaProfileIdentifier,
 )
 from gen_epix.seqdb.repositories.sa_model.seq import PcrMeasurement as PcrMeasurement
-from gen_epix.seqdb.repositories.sa_model.seq import PcrProtocol as PcrProtocol
+
 from gen_epix.seqdb.repositories.sa_model.seq import ReadSet as ReadSet
 from gen_epix.seqdb.repositories.sa_model.seq import (
     ReadSetIdentifier as ReadSetIdentifier,
@@ -96,29 +85,18 @@ from gen_epix.seqdb.repositories.sa_model.seq import SeqCategorySet as SeqCatego
 from gen_epix.seqdb.repositories.sa_model.seq import (
     SeqClassification as SeqClassification,
 )
-from gen_epix.seqdb.repositories.sa_model.seq import (
-    SeqClassificationProtocol as SeqClassificationProtocol,
-)
+
 from gen_epix.seqdb.repositories.sa_model.seq import SeqDistance as SeqDistance
-from gen_epix.seqdb.repositories.sa_model.seq import (
-    SeqDistanceProtocol as SeqDistanceProtocol,
-)
+
 from gen_epix.seqdb.repositories.sa_model.seq import SeqIdentifier as SeqIdentifier
 from gen_epix.seqdb.repositories.sa_model.seq import SeqTaxonomy as SeqTaxonomy
-from gen_epix.seqdb.repositories.sa_model.seq import (
-    SequencingProtocol as SequencingProtocol,
-)
-from gen_epix.seqdb.repositories.sa_model.seq import (
-    SnpDetectionProtocol as SnpDetectionProtocol,
-)
+
+
 from gen_epix.seqdb.repositories.sa_model.seq import SnpProfile as SnpProfile
 from gen_epix.seqdb.repositories.sa_model.seq import (
     SnpProfileIdentifier as SnpProfileIdentifier,
 )
 from gen_epix.seqdb.repositories.sa_model.seq import Taxon as Taxon
-from gen_epix.seqdb.repositories.sa_model.seq import (
-    TaxonomyProtocol as TaxonomyProtocol,
-)
 from gen_epix.seqdb.repositories.sa_model.seq import TaxonSet as TaxonSet
 from gen_epix.seqdb.repositories.sa_model.seq import TaxonSetMember as TaxonSetMember
 from gen_epix.seqdb.repositories.sa_model.seq import TreeAlgorithm as TreeAlgorithm
@@ -149,30 +127,22 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.Outage: Outage,
     },
     enum.ServiceType.SEQ: {
-        model.AlignmentProtocol: AlignmentProtocol,
         model.Allele: Allele,
         model.AlleleAlignment: AlleleAlignment,
         model.AlleleProfile: AlleleProfile,
         model.AlleleProfileIdentifier: AlleleProfileIdentifier,
-        model.AssemblyProtocol: AssemblyProtocol,
         model.AstMeasurement: AstMeasurement,
         model.AstPrediction: AstPrediction,
-        model.AstProtocol: AstProtocol,
-        model.KmerDetectionProtocol: KmerDetectionProtocol,
         model.KmerProfile: KmerProfile,
         model.KmerProfileIdentifier: KmerProfileIdentifier,
-        model.Protocol: SequencingProtocol,
         model.Locus: Locus,
         model.LocusCodeMap: LocusCodeMap,
-        model.LocusDetectionProtocol: LocusDetectionProtocol,
         model.LocusProfile: LocusProfile,
         model.LocusProfileIdentifier: LocusProfileIdentifier,
         model.LocusSet: LocusSet,
-        model.MlvaDetectionProtocol: MlvaDetectionProtocol,
         model.MlvaProfile: MlvaProfile,
         model.MlvaProfileIdentifier: MlvaProfileIdentifier,
         model.PcrMeasurement: PcrMeasurement,
-        model.PcrProtocol: PcrProtocol,
         model.Protocol: Protocol,
         model.ReadSet: ReadSet,
         model.ReadSetIdentifier: ReadSetIdentifier,
@@ -190,15 +160,11 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.SeqCategory: SeqCategory,
         model.SeqCategorySet: SeqCategorySet,
         model.SeqClassification: SeqClassification,
-        model.SeqClassificationProtocol: SeqClassificationProtocol,
         model.SeqDistance: SeqDistance,
-        model.SeqDistanceProtocol: SeqDistanceProtocol,
         model.SeqTaxonomy: SeqTaxonomy,
-        model.SnpDetectionProtocol: SnpDetectionProtocol,
         model.SnpProfile: SnpProfile,
         model.SnpProfileIdentifier: SnpProfileIdentifier,
         model.Taxon: Taxon,
-        model.TaxonomyProtocol: TaxonomyProtocol,
         model.TaxonSet: TaxonSet,
         model.TaxonSetMember: TaxonSetMember,
         model.TreeAlgorithm: TreeAlgorithm,

@@ -42,7 +42,6 @@ from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.file import File as File
 from gen_epix.seqdb.domain.model.seq import AlignmentMixin as AlignmentMixin
-from gen_epix.seqdb.domain.model.seq import AlignmentProtocol as AlignmentProtocol
 from gen_epix.seqdb.domain.model.seq import Allele as Allele
 from gen_epix.seqdb.domain.model.seq import AlleleAlignment as AlleleAlignment
 from gen_epix.seqdb.domain.model.seq import AlleleForUpload as AlleleForUpload
@@ -53,7 +52,6 @@ from gen_epix.seqdb.domain.model.seq import (
 from gen_epix.seqdb.domain.model.seq import (
     AlleleProfileIdentifier as AlleleProfileIdentifier,
 )
-from gen_epix.seqdb.domain.model.seq import AssemblyProtocol as AssemblyProtocol
 from gen_epix.seqdb.domain.model.seq import AstMeasurement as AstMeasurement
 from gen_epix.seqdb.domain.model.seq import AstPrediction as AstPrediction
 from gen_epix.seqdb.domain.model.seq import AstProtocol as AstProtocol
@@ -64,9 +62,7 @@ from gen_epix.seqdb.domain.model.seq import (
 from gen_epix.seqdb.domain.model.seq import CodeMixin as CodeMixin
 from gen_epix.seqdb.domain.model.seq import Contig as Contig
 from gen_epix.seqdb.domain.model.seq import ContigAlignment as ContigAlignment
-from gen_epix.seqdb.domain.model.seq import (
-    KmerDetectionProtocol as KmerDetectionProtocol,
-)
+
 from gen_epix.seqdb.domain.model.seq import KmerProfile as KmerProfile
 from gen_epix.seqdb.domain.model.seq import KmerProfileForUpload as KmerProfileForUpload
 from gen_epix.seqdb.domain.model.seq import (
@@ -74,17 +70,13 @@ from gen_epix.seqdb.domain.model.seq import (
 )
 from gen_epix.seqdb.domain.model.seq import Locus as Locus
 from gen_epix.seqdb.domain.model.seq import LocusCodeMap as LocusCodeMap
-from gen_epix.seqdb.domain.model.seq import (
-    LocusDetectionProtocol as LocusDetectionProtocol,
-)
+
 from gen_epix.seqdb.domain.model.seq import LocusProfile as LocusProfile
 from gen_epix.seqdb.domain.model.seq import (
     LocusProfileIdentifier as LocusProfileIdentifier,
 )
 from gen_epix.seqdb.domain.model.seq import LocusSet as LocusSet
-from gen_epix.seqdb.domain.model.seq import (
-    MlvaDetectionProtocol as MlvaDetectionProtocol,
-)
+
 from gen_epix.seqdb.domain.model.seq import MlvaProfile as MlvaProfile
 from gen_epix.seqdb.domain.model.seq import MlvaProfileForUpload as MlvaProfileForUpload
 from gen_epix.seqdb.domain.model.seq import (
@@ -122,21 +114,15 @@ from gen_epix.seqdb.domain.model.seq import SeqAlignment as SeqAlignment
 from gen_epix.seqdb.domain.model.seq import SeqCategory as SeqCategory
 from gen_epix.seqdb.domain.model.seq import SeqCategorySet as SeqCategorySet
 from gen_epix.seqdb.domain.model.seq import SeqClassification as SeqClassification
-from gen_epix.seqdb.domain.model.seq import (
-    SeqClassificationProtocol as SeqClassificationProtocol,
-)
+
 from gen_epix.seqdb.domain.model.seq import SeqDistance as SeqDistance
-from gen_epix.seqdb.domain.model.seq import SeqDistanceProtocol as SeqDistanceProtocol
 from gen_epix.seqdb.domain.model.seq import SeqForUpload as SeqForUpload
 from gen_epix.seqdb.domain.model.seq import SeqIdentifier as SeqIdentifier
 from gen_epix.seqdb.domain.model.seq import SeqTaxonomy as SeqTaxonomy
-from gen_epix.seqdb.domain.model.seq import SequencingProtocol as Protocol
-from gen_epix.seqdb.domain.model.seq import SnpDetectionProtocol as SnpDetectionProtocol
 from gen_epix.seqdb.domain.model.seq import SnpProfile as SnpProfile
 from gen_epix.seqdb.domain.model.seq import SnpProfileForUpload as SnpProfileForUpload
 from gen_epix.seqdb.domain.model.seq import SnpProfileIdentifier as SnpProfileIdentifier
 from gen_epix.seqdb.domain.model.seq import Taxon as Taxon
-from gen_epix.seqdb.domain.model.seq import TaxonomyProtocol as TaxonomyProtocol
 from gen_epix.seqdb.domain.model.seq import TaxonSet as TaxonSet
 from gen_epix.seqdb.domain.model.seq import TaxonSetMember as TaxonSetMember
 from gen_epix.seqdb.domain.model.seq import TreeAlgorithm as TreeAlgorithm
@@ -177,19 +163,10 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             RefSnp,
             RefSnpSet,
             RefSnpSetMember,
-            AlignmentProtocol,
-            AssemblyProtocol,
             AstProtocol,
-            KmerDetectionProtocol,
             Protocol,
-            LocusDetectionProtocol,
-            MlvaDetectionProtocol,
             PcrProtocol,
             Protocol,
-            SeqClassificationProtocol,
-            SeqDistanceProtocol,
-            SnpDetectionProtocol,
-            TaxonomyProtocol,
             TreeAlgorithmClass,
             TreeAlgorithm,
             SeqCategorySet,

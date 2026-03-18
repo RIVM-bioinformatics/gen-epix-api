@@ -83,9 +83,6 @@ from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.command.file import CreateFileCommand as CreateFileCommand
 from gen_epix.seqdb.domain.command.file import FileCrudCommand as FileCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
-    AlignmentProtocolCrudCommand as AlignmentProtocolCrudCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
     AlleleAlignmentCrudCommand as AlleleAlignmentCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import AlleleCrudCommand as AlleleCrudCommand
@@ -94,9 +91,6 @@ from gen_epix.seqdb.domain.command.seq import (
 )
 from gen_epix.seqdb.domain.command.seq import (
     AlleleProfileIdentifierCrudCommand as AlleleProfileIdentifierCrudCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
-    AssemblyProtocolCrudCommand as AssemblyProtocolCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
     AstMeasurementCrudCommand as AstMeasurementCrudCommand,
@@ -117,9 +111,6 @@ from gen_epix.seqdb.domain.command.seq import (
     GeneratePhylogeneticTreeCommand as GeneratePhylogeneticTreeCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
-    KmerDetectionProtocolCrudCommand as KmerDetectionProtocolCrudCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
     KmerProfileCrudCommand as KmerProfileCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
@@ -130,18 +121,12 @@ from gen_epix.seqdb.domain.command.seq import (
 )
 from gen_epix.seqdb.domain.command.seq import LocusCrudCommand as LocusCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
-    LocusDetectionProtocolCrudCommand as LocusDetectionProtocolCrudCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
     LocusProfileCrudCommand as LocusProfileCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
     LocusProfileIdentifierCrudCommand as LocusProfileIdentifierCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import LocusSetCrudCommand as LocusSetCrudCommand
-from gen_epix.seqdb.domain.command.seq import (
-    MlvaDetectionProtocolCrudCommand as MlvaDetectionProtocolCrudCommand,
-)
 from gen_epix.seqdb.domain.command.seq import (
     MlvaProfileCrudCommand as MlvaProfileCrudCommand,
 )
@@ -204,15 +189,9 @@ from gen_epix.seqdb.domain.command.seq import (
 from gen_epix.seqdb.domain.command.seq import (
     SeqClassificationCrudCommand as SeqClassificationCrudCommand,
 )
-from gen_epix.seqdb.domain.command.seq import (
-    SeqClassificationProtocolCrudCommand as SeqClassificationProtocolCrudCommand,
-)
 from gen_epix.seqdb.domain.command.seq import SeqCrudCommand as SeqCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
     SeqDistanceCrudCommand as SeqDistanceCrudCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
-    SeqDistanceProtocolCrudCommand as SeqDistanceProtocolCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
     SeqIdentifierCrudCommand as SeqIdentifierCrudCommand,
@@ -224,18 +203,12 @@ from gen_epix.seqdb.domain.command.seq import (
     SequencingProtocolCrudCommand as SequencingProtocolCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
-    SnpDetectionProtocolCrudCommand as SnpDetectionProtocolCrudCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
     SnpProfileCrudCommand as SnpProfileCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
     SnpProfileIdentifierCrudCommand as SnpProfileIdentifierCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import TaxonCrudCommand as TaxonCrudCommand
-from gen_epix.seqdb.domain.command.seq import (
-    TaxonomyProtocolCrudCommand as TaxonomyProtocolCrudCommand,
-)
 from gen_epix.seqdb.domain.command.seq import TaxonSetCrudCommand as TaxonSetCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
     TaxonSetMemberCrudCommand as TaxonSetMemberCrudCommand,
@@ -257,28 +230,23 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
     )
     | set(),
     enum.ServiceType.SEQ: {
-        AlignmentProtocolCrudCommand,
         AlleleAlignmentCrudCommand,
         AlleleCrudCommand,
         AlleleProfileCrudCommand,
         AlleleProfileIdentifierCrudCommand,
-        AssemblyProtocolCrudCommand,
         AstMeasurementCrudCommand,
         AstPredictionCrudCommand,
         AstProtocolCrudCommand,
         GenerateMultipleAlignmentCommand,
         GeneratePhylogeneticTreeCommand,
-        KmerDetectionProtocolCrudCommand,
         KmerProfileCrudCommand,
         KmerProfileIdentifierCrudCommand,
         SequencingProtocolCrudCommand,
         LocusCodeMapCrudCommand,
         LocusCrudCommand,
-        LocusDetectionProtocolCrudCommand,
         LocusProfileCrudCommand,
         LocusProfileIdentifierCrudCommand,
         LocusSetCrudCommand,
-        MlvaDetectionProtocolCrudCommand,
         MlvaProfileCrudCommand,
         MlvaProfileIdentifierCrudCommand,
         PcrMeasurementCrudCommand,
