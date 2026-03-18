@@ -1,16 +1,15 @@
 from typing import ClassVar, Self
 from urllib.parse import urlparse
 from uuid import UUID
+from datetime import date
 
 from pydantic import Field, field_serializer, model_validator
 
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp import Entity
-from gen_epix.fastapp.domain import Entity, create_keys, create_links
+from gen_epix.fastapp.domain import Entity, create_keys
 from gen_epix.seqdb.domain.enum import ProtocolType, ProtocolTypeSet
-from gen_epix.seqdb.domain.model.seq.locus import LocusSet
-from gen_epix.seqdb.domain.model.seq.seq import RefSeq
 
 
 def is_hexadecimal(s: str) -> bool:
@@ -35,13 +34,12 @@ class Protocol(Model):
         snake_case_plural_name="protocols",
         table_name="protocol",
         persistable=True,
-        keys=create_keys({1: "code"})
+        keys=create_keys({1: "code"}),
     )
 
     code: str = Field(
         description="A unique code for the protocol, used for external reference."
     )
-
     name: str | None = Field(default=None, description="The name of the protocol.")
 
     description: str | None = Field(
@@ -68,6 +66,12 @@ class Protocol(Model):
     locus_set_id: UUID | None = Field(
         default=None,
         description="The UUID of the locus set associated with this protocol.",
+    )
+    valid_start_date: date = Field(
+        description="The date from which this protocol is considered valid"
+    )
+    valid_end_date: date = Field(
+        description="The date until which this protocol is considered valid"
     )
     props: dict[str, str | int | float | bool | list] = Field(
         # list is added to allow PcrProtocol.target_names and AstProtocol.antimicrobial_names

@@ -1,5 +1,5 @@
 # pylint: disable=too-few-public-methods
-
+from datetime import date
 from uuid import UUID
 
 import sqlalchemy.orm as orm
@@ -55,6 +55,12 @@ class Protocol(Base, RowMetadataMixin):
     )
     locus_set_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Protocol, "locus_set_id"
+    )
+    valid_start_date: Mapped[date] = create_mapped_column(
+        DOMAIN, model.Protocol, "valid_start_date"
+    )
+    valid_end_date: Mapped[date] = create_mapped_column(
+        DOMAIN, model.Protocol, "valid_end_date "
     )
     props: Mapped[dict[str, str | int | float | bool | list]] = create_mapped_column(
         DOMAIN, model.Protocol, "props"
