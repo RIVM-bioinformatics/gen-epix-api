@@ -113,18 +113,7 @@ class SeqdbTestClient(TestClient):
         model.UserInvitation: "email",
         model.OrganizationAdminPolicy: ("organization_id", "user_id"),
         model.DataCollection: "name",
-        model.PcrProtocol: "name",
-        model.AstProtocol: "name",
         model.Protocol: "name",
-        model.AssemblyProtocol: "name",
-        model.AlignmentProtocol: "name",
-        model.TaxonomyProtocol: "name",
-        model.SeqClassificationProtocol: "name",
-        model.SeqDistanceProtocol: "name",
-        model.LocusDetectionProtocol: "name",
-        model.SnpDetectionProtocol: "name",
-        model.MlvaDetectionProtocol: "name",
-        model.KmerDetectionProtocol: "name",
         model.Sample: "code",
         model.File: "id",
         model.ReadSet: "id",
@@ -656,16 +645,16 @@ class SeqdbTestClient(TestClient):
     def generate_random_sequences(
         n_seqs: int,
         settings: SeqGenerationSettings,
-        protocol_id: UUID | None = None,
+        assembly_protocol_id: UUID | None = None,
         locus_set_id: UUID | None = None,
-        protocol_id: UUID | None = None,
+        locus_detection_protocol_id: UUID | None = None,
         locus_code_map_id: UUID | None = None,
         locus_ids: list[UUID] | None = None,
     ) -> model.SampleBatchForUpload:
         # set IDs if not provided
-        protocol_id = protocol_id if protocol_id is not None else uuid.uuid4()
+        assembly_protocol_id = assembly_protocol_id if assembly_protocol_id is not None else uuid.uuid4()
         locus_set_id = locus_set_id if locus_set_id is not None else uuid.uuid4()
-        protocol_id = protocol_id if protocol_id is not None else uuid.uuid4()
+        locus_detection_protocol_id = locus_detection_protocol_id if locus_detection_protocol_id is not None else uuid.uuid4()
         locus_code_map_id = (
             locus_code_map_id if locus_code_map_id is not None else uuid.uuid4()
         )
@@ -745,7 +734,7 @@ class SeqdbTestClient(TestClient):
                     allele_ids[locus_idx] = alleles[clean_allele_seq].id  # type: ignore[assignment]
             allele_profile_for_upload = model.AlleleProfileForUpload(
                 locus_set_id=locus_set_id,
-                protocol_id=protocol_id,
+                protocol_id=locus_detection_protocol_id,
                 locus_code_map_id=locus_code_map_id,
                 allele_ids=allele_ids,  # type: ignore[arg-type]
                 allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
@@ -758,7 +747,7 @@ class SeqdbTestClient(TestClient):
                         seq_format=enum.SeqFormat.STR_DNA,
                     )
                 ],
-                protocol_id=protocol_id,
+                protocol_id=assembly_protocol_id,
             )
             samples_for_upload.append(
                 model.SampleForUpload(

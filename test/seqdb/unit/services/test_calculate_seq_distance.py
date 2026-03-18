@@ -41,14 +41,14 @@ def _make_seq_distance_protocol_for_snp(
     protocol_id: UUID,
     ref_seq_id: UUID,
     max_stored_distance: float = 100.0,
-) -> model.SeqDistanceProtocol:
-    return model.SeqDistanceProtocol(  # type: ignore[call-arg]
+) -> model.Protocol:
+    return model.Protocol(  # type: ignore[call-arg]
         id=protocol_id,
         code="SNP_HAMMING_TEST",
         name="SNP Hamming Test",
         version="1.0",
         is_integer_distance=True,
-        seq_distance_protocol_type=enum.SeqDistanceProtocolType.SNP_HAMMING,
+        protocol_type=enum.ProtocolType.SEQ_DISTANCE,
         ref_seq_id=ref_seq_id,
         locus_set_id=None,
         max_stored_distance=max_stored_distance,
@@ -59,16 +59,16 @@ def _make_seq_distance_protocol_for_locus_set(
     *,
     protocol_id: UUID,
     locus_set_id: UUID,
-    protocol_type: enum.SeqDistanceProtocolType,
+    protocol_type: enum.ProtocolType,
     max_stored_distance: float = 100.0,
-) -> model.SeqDistanceProtocol:
-    return model.SeqDistanceProtocol(  # type: ignore[call-arg]
+) -> model.Protocol:
+    return model.Protocol(  # type: ignore[call-arg]
         id=protocol_id,
         code="LOCUS_HAMMING_TEST",
         name="Locus Hamming Test",
         version="1.0",
         is_integer_distance=True,
-        seq_distance_protocol_type=protocol_type,
+        protocol_type=protocol_type,
         locus_set_id=locus_set_id,
         ref_seq_id=None,
         max_stored_distance=max_stored_distance,
@@ -86,7 +86,7 @@ def _make_seq_distance(
     return model.SeqDistance(  # type: ignore[call-arg]
         id=seq_distance_id,
         sample_id=sample_id,
-        seq_distance_protocol_id=protocol_id,
+        protocol_id=protocol_id,
         profile_id=profile_id,
         distance_format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
         distances=json.dumps(distances or {}),
@@ -98,7 +98,7 @@ def _make_snp_profile_for_upload(
     profile_id: UUID,
     sample_id: UUID,
     ref_seq_id: UUID,
-    snp_detection_protocol_id: UUID,
+    protocol_id: UUID,
     snp_profile: str = "AAA",
     aligned_nucleotide_seq: str | None = None,
 ) -> model.SnpProfile:
@@ -112,8 +112,8 @@ def _make_snp_profile_for_upload(
         seq_id=None,
         ref_seq_id=ref_seq_id,
         ref_seq_code="REF",
-        snp_detection_protocol_id=snp_detection_protocol_id,
-        snp_detection_protocol_code="SNP_PROTOCOL",
+        protocol_id=protocol_id,
+        protocol_code="SNP_PROTOCOL",
         snp_profile="" if aligned_nucleotide_seq is not None else snp_profile,
         aligned_nucleotide_seq=aligned_nucleotide_seq,
         snp_profile_format=enum.SnpProfileFormat.REF_ALN_SEQ,
@@ -128,7 +128,7 @@ def _make_allele_profile(
     profile_id: UUID | None,
     sample_id: UUID,
     locus_set_id: UUID,
-    locus_detection_protocol_id: UUID,
+    protocol_id: UUID,
     allele_ids: list[UUID | None],
 ) -> model.AlleleProfile:
     allele_profile: str = model.AlleleProfile.get_sorted_allele_ids_profile(allele_ids)
@@ -139,7 +139,7 @@ def _make_allele_profile(
         sample_id=sample_id,
         seq_id=None,
         locus_set_id=locus_set_id,
-        locus_detection_protocol_id=locus_detection_protocol_id,
+        protocol_id=protocol_id,
         n_loci=n_loci,
         allele_profile=allele_profile,
         allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
@@ -154,7 +154,7 @@ def _make_mlva_profile(
     profile_id: UUID,
     sample_id: UUID,
     locus_set_id: UUID,
-    mlva_detection_protocol_id: UUID,
+    protocol_id: UUID,
     repeat_numbers: list[int | None],
     profile_format: enum.MlvaProfileFormat = enum.MlvaProfileFormat.SORTED_REPEAT_NUMBERS,
 ) -> model.MlvaProfile:
@@ -169,7 +169,7 @@ def _make_mlva_profile(
         id=profile_id,
         sample_id=sample_id,
         seq_id=None,
-        mlva_detection_protocol_id=mlva_detection_protocol_id,
+        protocol_id=protocol_id,
         locus_set_id=locus_set_id,
         mlva_profile=mlva_profile,
         mlva_profile_format=profile_format,
@@ -194,7 +194,7 @@ class _CrudRecorder:
 def _make_crud_side_effect(
     *,
     recorder: _CrudRecorder,
-    protocols: list[model.SeqDistanceProtocol],
+    protocols: list[model.Protocol],
     existing_profiles_by_model: dict[type, list[model.Model]] | None = None,
 ) -> Callable[..., Any]:
     existing_profiles_by_model = existing_profiles_by_model or {}
@@ -209,10 +209,7 @@ def _make_crud_side_effect(
         *_: Any,
         **__: Any,
     ) -> Any:
-        if (
-            model_class is model.SeqDistanceProtocol
-            and operation == CrudOperation.READ_ALL
-        ):
+        if model_class is model.Protocol and operation == CrudOperation.READ_ALL:
             return protocols
         if operation == CrudOperation.READ_SOME:
             assert isinstance(obj_ids, list)
@@ -291,7 +288,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         )
 
         recorder: _CrudRecorder = _CrudRecorder()
-        protocols: list[model.SeqDistanceProtocol] = [
+        protocols: list[model.Protocol] = [
             _make_seq_distance_protocol_for_snp(
                 protocol_id=self.protocol_id,
                 ref_seq_id=self.ref_seq_id,
@@ -319,7 +316,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             id=uuid4(),
             sample_id=self.sample_id,
             seq_id=None,
-            kmer_detection_protocol_id=uuid4(),
+            protocol_id=uuid4(),
             kmer_profile="{}",
             kmer_profile_format=enum.KmerProfileFormat.KMER_FREQUENCY_MAP,
             kmer_profile_hash=uuid4(),
@@ -345,7 +342,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             profile_id=self.new_profile_id,
             sample_id=self.sample_id,
             ref_seq_id=self.other_ref_seq_id,
-            snp_detection_protocol_id=self.snp_detection_protocol_id,
+            protocol_id=self.protocol_id,
             snp_profile="AAAA",
             aligned_nucleotide_seq=None,
         )
@@ -357,7 +354,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         )
 
         recorder: _CrudRecorder = _CrudRecorder()
-        protocols: list[model.SeqDistanceProtocol] = [
+        protocols: list[model.Protocol] = [
             _make_seq_distance_protocol_for_snp(
                 protocol_id=self.protocol_id,
                 ref_seq_id=self.ref_seq_id,
@@ -386,14 +383,14 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             profile_id=self.existing_profile_id,
             sample_id=self.sample_id,
             ref_seq_id=self.ref_seq_id,
-            snp_detection_protocol_id=self.snp_detection_protocol_id,
+            protocol_id=self.protocol_id,
             snp_profile="AACCT",
         )
         new_profile: model.SnpProfile = _make_snp_profile_for_upload(
             profile_id=self.new_profile_id,
             sample_id=self.sample_id2,
             ref_seq_id=self.ref_seq_id,
-            snp_detection_protocol_id=self.snp_detection_protocol_id,
+            protocol_id=self.protocol_id,
             snp_profile="AATTT",
         )
         cmd: command.CalculateSeqDistancesForNewProfilesCommand = (
@@ -403,7 +400,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             )
         )
 
-        protocol: model.SeqDistanceProtocol = _make_seq_distance_protocol_for_snp(
+        protocol: model.Protocol = _make_seq_distance_protocol_for_snp(
             protocol_id=self.protocol_id,
             ref_seq_id=self.ref_seq_id,
             max_stored_distance=100.0,
@@ -441,7 +438,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
 
         self.assertEqual(len(recorder.created), 1)
         created: model.SeqDistance = recorder.created[0]
-        self.assertEqual(created.seq_distance_protocol_id, self.protocol_id)
+        self.assertEqual(created.protocol_id, self.protocol_id)
         self.assertEqual(created.profile_id, self.new_profile_id)
         self.assertEqual(created.sample_id, self.sample_id2)
         created_map: dict[str, float] = json.loads(created.distances)
@@ -468,14 +465,14 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             profile_id=self.existing_profile_id,
             sample_id=self.sample_id,
             locus_set_id=self.locus_set_id,
-            locus_detection_protocol_id=self.locus_detection_protocol_id,
+            protocol_id=self.protocol_id,
             allele_ids=[allele_id1, None, allele_id3],
         )
         new_profile: model.AlleleProfile = _make_allele_profile(
             profile_id=self.new_profile_id,
             sample_id=self.sample_id2,
             locus_set_id=self.locus_set_id,
-            locus_detection_protocol_id=self.locus_detection_protocol_id,
+            protocol_id=self.protocol_id,
             allele_ids=[allele_id2, allele_id2, allele_id3],
         )
         cmd: command.CalculateSeqDistancesForNewProfilesCommand = (
@@ -485,7 +482,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             )
         )
 
-        protocol: model.SeqDistanceProtocol = _make_seq_distance_protocol_for_locus_set(
+        protocol: model.Protocol = _make_seq_distance_protocol_for_locus_set(
             protocol_id=self.protocol_id,
             locus_set_id=self.locus_set_id,
             protocol_type=enum.SeqDistanceProtocolType.ALLELE_HAMMING,
@@ -529,14 +526,14 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             profile_id=self.existing_profile_id,
             sample_id=self.sample_id,
             locus_set_id=self.locus_set_id,
-            mlva_detection_protocol_id=self.mlva_detection_protocol_id,
+            protocol_id=self.protocol_id,
             repeat_numbers=[1, None, 3, 4],
         )
         new_profile: model.MlvaProfile = _make_mlva_profile(
             profile_id=self.new_profile_id,
             sample_id=self.sample_id2,
             locus_set_id=self.locus_set_id,
-            mlva_detection_protocol_id=self.mlva_detection_protocol_id,
+            protocol_id=self.protocol_id,
             repeat_numbers=[2, None, 3, 0],
         )
         cmd: command.CalculateSeqDistancesForNewProfilesCommand = (
@@ -546,10 +543,10 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             )
         )
 
-        protocol: model.SeqDistanceProtocol = _make_seq_distance_protocol_for_locus_set(
+        protocol: model.Protocol = _make_seq_distance_protocol_for_locus_set(
             protocol_id=self.protocol_id,
             locus_set_id=self.locus_set_id,
-            protocol_type=enum.SeqDistanceProtocolType.MLVA_HAMMING,
+            protocol_type=enum.ProtocolType.SEQ_DISTANCE,
             max_stored_distance=100.0,
         )
         existing_seq_distance: model.SeqDistance = _make_seq_distance(
@@ -606,7 +603,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             id=self.existing_profile_id,
             sample_id=self.sample_id,
             seq_id=None,
-            mlva_detection_protocol_id=self.mlva_detection_protocol_id,
+            protocol_id=self.protocol_id,
             locus_set_id=self.locus_set_id,
             mlva_profile=json.dumps([1, 2]),
             mlva_profile_format="UNSUPPORTED",
@@ -618,7 +615,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             profile_id=self.new_profile_id,
             sample_id=self.sample_id2,
             locus_set_id=self.locus_set_id,
-            mlva_detection_protocol_id=self.mlva_detection_protocol_id,
+            protocol_id=self.protocol_id,
             repeat_numbers=[1, 2],
         )
         cmd: command.CalculateSeqDistancesForNewProfilesCommand = (
@@ -628,10 +625,10 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             )
         )
 
-        protocol: model.SeqDistanceProtocol = _make_seq_distance_protocol_for_locus_set(
+        protocol: model.Protocol = _make_seq_distance_protocol_for_locus_set(
             protocol_id=self.protocol_id,
             locus_set_id=self.locus_set_id,
-            protocol_type=enum.SeqDistanceProtocolType.MLVA_HAMMING,
+            protocol_type=enum.ProtocolType.SEQ_DISTANCE,
             max_stored_distance=100.0,
         )
         existing_seq_distance: model.SeqDistance = _make_seq_distance(
@@ -660,14 +657,14 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             profile_id=self.existing_profile_id,
             sample_id=self.sample_id,
             locus_set_id=self.locus_set_id,
-            mlva_detection_protocol_id=self.mlva_detection_protocol_id,
+            protocol_id=self.protocol_id,
             repeat_numbers=[1, 2],
         )
         new_profile: model.MlvaProfile = model.MlvaProfile.model_construct(
             id=self.new_profile_id,
             sample_id=self.sample_id2,
             seq_id=None,
-            mlva_detection_protocol_id=self.mlva_detection_protocol_id,
+            protocol_id=self.protocol_id,
             locus_set_id=self.locus_set_id,
             mlva_profile=json.dumps([1, 2]),
             mlva_profile_format="UNSUPPORTED",
@@ -682,10 +679,10 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             )
         )
 
-        protocol: model.SeqDistanceProtocol = _make_seq_distance_protocol_for_locus_set(
+        protocol: model.Protocol = _make_seq_distance_protocol_for_locus_set(
             protocol_id=self.protocol_id,
             locus_set_id=self.locus_set_id,
-            protocol_type=enum.SeqDistanceProtocolType.MLVA_HAMMING,
+            protocol_type=enum.ProtocolType.SEQ_DISTANCE,
             max_stored_distance=100.0,
         )
         existing_seq_distance: model.SeqDistance = _make_seq_distance(
@@ -714,7 +711,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             profile_id=self.new_profile_id,
             sample_id=self.sample_id2,
             ref_seq_id=self.ref_seq_id,
-            snp_detection_protocol_id=self.snp_detection_protocol_id,
+            protocol_id=self.snp_detection_protocol_id,
             aligned_nucleotide_seq="AAAA",
         )
         cmd: command.CalculateSeqDistancesForNewProfilesCommand = (
@@ -724,7 +721,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             )
         )
 
-        protocol: model.SeqDistanceProtocol = _make_seq_distance_protocol_for_snp(
+        protocol: model.Protocol = _make_seq_distance_protocol_for_snp(
             protocol_id=self.protocol_id,
             ref_seq_id=self.ref_seq_id,
             max_stored_distance=100.0,
@@ -756,14 +753,14 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             profile_id=self.existing_profile_id,
             sample_id=self.sample_id,
             locus_set_id=self.locus_set_id,
-            locus_detection_protocol_id=self.locus_detection_protocol_id,
+            protocol_id=self.protocol_id,
             allele_ids=[uuid4()],
         )
         new_profile: model.AlleleProfile = _make_allele_profile(
             profile_id=None,
             sample_id=self.sample_id2,
             locus_set_id=self.locus_set_id,
-            locus_detection_protocol_id=self.locus_detection_protocol_id,
+            protocol_id=self.protocol_id,
             allele_ids=[uuid4()],
         )
         cmd: command.CalculateSeqDistancesForNewProfilesCommand = (
@@ -773,10 +770,10 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             )
         )
 
-        protocol: model.SeqDistanceProtocol = _make_seq_distance_protocol_for_locus_set(
+        protocol: model.Protocol = _make_seq_distance_protocol_for_locus_set(
             protocol_id=self.protocol_id,
             locus_set_id=self.locus_set_id,
-            protocol_type=enum.SeqDistanceProtocolType.ALLELE_HAMMING,
+            protocol_type=enum.ProtocolType.SEQ_DISTANCE,
             max_stored_distance=100.0,
         )
         existing_seq_distance: model.SeqDistance = _make_seq_distance(
@@ -834,14 +831,14 @@ class TestCalculateSeqDistancesBatchInvariant(BaseCalculateSeqDistanceTestCase):
                 profile_id=e1_id,
                 sample_id=self.sample_id,
                 locus_set_id=self.locus_set_id,
-                locus_detection_protocol_id=self.locus_detection_protocol_id,
+                protocol_id=self.protocol_id,
                 allele_ids=[a1, a2],
             ),
             _make_allele_profile(
                 profile_id=e2_id,
                 sample_id=self.sample_id,
                 locus_set_id=self.locus_set_id,
-                locus_detection_protocol_id=self.locus_detection_protocol_id,
+                protocol_id=self.protocol_id,
                 allele_ids=[a3, a4],
             ),
         ]
@@ -850,21 +847,21 @@ class TestCalculateSeqDistancesBatchInvariant(BaseCalculateSeqDistanceTestCase):
                 profile_id=n1_id,
                 sample_id=self.sample_id2,
                 locus_set_id=self.locus_set_id,
-                locus_detection_protocol_id=self.locus_detection_protocol_id,
+                protocol_id=self.protocol_id,
                 allele_ids=[a1, a3],  # distance to N2 = 1, to N3 = 2
             ),
             _make_allele_profile(
                 profile_id=n2_id,
                 sample_id=self.sample_id2,
                 locus_set_id=self.locus_set_id,
-                locus_detection_protocol_id=self.locus_detection_protocol_id,
+                protocol_id=self.protocol_id,
                 allele_ids=[a2, a3],  # distance to N1 = 1, to N3 = 1
             ),
             _make_allele_profile(
                 profile_id=n3_id,
                 sample_id=self.sample_id2,
                 locus_set_id=self.locus_set_id,
-                locus_detection_protocol_id=self.locus_detection_protocol_id,
+                protocol_id=self.protocol_id,
                 allele_ids=[a2, a4],  # distance to N1 = 2, to N2 = 1
             ),
         ]
@@ -881,7 +878,7 @@ class TestCalculateSeqDistancesBatchInvariant(BaseCalculateSeqDistanceTestCase):
         protocol = _make_seq_distance_protocol_for_locus_set(
             protocol_id=self.protocol_id,
             locus_set_id=self.locus_set_id,
-            protocol_type=enum.SeqDistanceProtocolType.ALLELE_HAMMING,
+            protocol_type=enum.ProtocolType.SEQ_DISTANCE,
             max_stored_distance=100.0,
         )
         existing_seq_distances = [
@@ -968,7 +965,7 @@ class TestCalculateSeqDistancesBatchInvariant(BaseCalculateSeqDistanceTestCase):
         protocol = _make_seq_distance_protocol_for_locus_set(
             protocol_id=self.protocol_id,
             locus_set_id=self.locus_set_id,
-            protocol_type=enum.SeqDistanceProtocolType.ALLELE_HAMMING,
+            protocol_type=enum.ProtocolType.SEQ_DISTANCE,
             max_stored_distance=0.0,
         )
         existing_seq_distances = [
@@ -1018,13 +1015,13 @@ class TestCalculateSeqDistancesBatchInvariant(BaseCalculateSeqDistanceTestCase):
             profile_id=n1_id,
             sample_id=self.sample_id2,
             locus_set_id=locus_set_id,
-            locus_detection_protocol_id=self.locus_detection_protocol_id,
+            protocol_id=self.protocol_id,
             allele_ids=[a1],
         )
         protocol = _make_seq_distance_protocol_for_locus_set(
             protocol_id=self.protocol_id,
             locus_set_id=locus_set_id,
-            protocol_type=enum.SeqDistanceProtocolType.ALLELE_HAMMING,
+            protocol_type=enum.ProtocolType.SEQ_DISTANCE,
             max_stored_distance=100.0,
         )
 

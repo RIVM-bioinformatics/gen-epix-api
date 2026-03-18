@@ -99,9 +99,6 @@ from gen_epix.seqdb.domain.command.seq import (
     AstPredictionCrudCommand as AstPredictionCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
-    AstProtocolCrudCommand as AstProtocolCrudCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
     CalculateSeqDistancesForNewProfilesCommand as CalculateSeqDistancesForNewProfilesCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
@@ -136,9 +133,7 @@ from gen_epix.seqdb.domain.command.seq import (
 from gen_epix.seqdb.domain.command.seq import (
     PcrMeasurementCrudCommand as PcrMeasurementCrudCommand,
 )
-from gen_epix.seqdb.domain.command.seq import (
-    PcrProtocolCrudCommand as PcrProtocolCrudCommand,
-)
+
 from gen_epix.seqdb.domain.command.seq import ProtocolCrudCommand as ProtocolCrudCommand
 from gen_epix.seqdb.domain.command.seq import ReadSetCrudCommand as ReadSetCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
@@ -199,9 +194,7 @@ from gen_epix.seqdb.domain.command.seq import (
 from gen_epix.seqdb.domain.command.seq import (
     SeqTaxonomyCrudCommand as SeqTaxonomyCrudCommand,
 )
-from gen_epix.seqdb.domain.command.seq import (
-    SequencingProtocolCrudCommand as SequencingProtocolCrudCommand,
-)
+
 from gen_epix.seqdb.domain.command.seq import (
     SnpProfileCrudCommand as SnpProfileCrudCommand,
 )
@@ -236,12 +229,10 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         AlleleProfileIdentifierCrudCommand,
         AstMeasurementCrudCommand,
         AstPredictionCrudCommand,
-        AstProtocolCrudCommand,
         GenerateMultipleAlignmentCommand,
         GeneratePhylogeneticTreeCommand,
         KmerProfileCrudCommand,
         KmerProfileIdentifierCrudCommand,
-        SequencingProtocolCrudCommand,
         LocusCodeMapCrudCommand,
         LocusCrudCommand,
         LocusProfileCrudCommand,
@@ -250,7 +241,6 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         MlvaProfileCrudCommand,
         MlvaProfileIdentifierCrudCommand,
         PcrMeasurementCrudCommand,
-        PcrProtocolCrudCommand,
         ProtocolCrudCommand,
         UploadSamplesCommand,
         ReadSetCrudCommand,
@@ -272,17 +262,13 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         SeqCategoryCrudCommand,
         SeqCategorySetCrudCommand,
         SeqClassificationCrudCommand,
-        SeqClassificationProtocolCrudCommand,
         SeqCrudCommand,
         SeqDistanceCrudCommand,
-        SeqDistanceProtocolCrudCommand,
         SeqIdentifierCrudCommand,
         SeqTaxonomyCrudCommand,
-        SnpDetectionProtocolCrudCommand,
         SnpProfileCrudCommand,
         SnpProfileIdentifierCrudCommand,
         TaxonCrudCommand,
-        TaxonomyProtocolCrudCommand,
         TaxonSetCrudCommand,
         TaxonSetMemberCrudCommand,
         TreeAlgorithmClassCrudCommand,

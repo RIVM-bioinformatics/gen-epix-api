@@ -54,7 +54,6 @@ from gen_epix.seqdb.domain.model.seq import (
 )
 from gen_epix.seqdb.domain.model.seq import AstMeasurement as AstMeasurement
 from gen_epix.seqdb.domain.model.seq import AstPrediction as AstPrediction
-from gen_epix.seqdb.domain.model.seq import AstProtocol as AstProtocol
 from gen_epix.seqdb.domain.model.seq import BaseSeq as BaseSeq
 from gen_epix.seqdb.domain.model.seq import (
     CalculateSeqDistancesResult as CalculateSeqDistancesResult,
