@@ -77,16 +77,23 @@ def seq_service_calculate_seq_distances_for_new_profiles(
     user_id = cmd.user.id if cmd.user else None
     results: list[model.CalculateSeqDistancesResult] = []
 
-    # Retrieve all SeqDistanceProtocols
+    # Retrieve all Protocols
     with self.repository.uow() as uow:
-        seq_distance_protocols: list[model.SeqDistanceProtocol] = self.repository.crud(  # type: ignore[assignment]
+        protocols: list[model.Protocol] = self.repository.crud(  # type: ignore[assignment]
             uow,
             user_id,
-            model.SeqDistanceProtocol,
+            model.Protocol,
             None,
             None,
             CrudOperation.READ_ALL,
         )
+
+    # filter protocols by type
+    protocols = [
+        protocol
+        for protocol in protocols
+        if protocol.protocol_type == enum.ProtocolType.SEQ_DISTANCE
+    ]
 
     # Define profile types with their model classes and matching attributes
     profile_data: list[
@@ -117,7 +124,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
         if profile_model_class == model.KmerProfile:
             raise NotImplementedError("K-mer distance calculation not implemented")
 
-        for protocol in seq_distance_protocols:
+        for protocol in protocols:
             # Determine if protocol applies to this profile type
             applicable = False
             if profile_model_class == model.SnpProfile:
@@ -240,7 +247,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
             new_seq_distances: list[model.SeqDistance] = [
                 model.SeqDistance(  # type: ignore[call-arg]
                     id=self.generate_id(),  # type: ignore[arg-type]
-                    seq_distance_protocol_id=protocol.id,  # type: ignore[arg-type]
+                    protocol_id=protocol.id,  # type: ignore[arg-type]
                     profile_id=new_profile.id,  # type: ignore[arg-type]
                     sample_id=new_profile.sample_id,
                     distance_format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
@@ -264,7 +271,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
                     model.CalculateSeqDistancesResult(
                         id=created_new_seq_distance.id,
                         status=EtlStatus.CREATED,
-                        seq_distance_profile_id=created_new_seq_distance.profile_id,  # type : ignore[arg-type]
+                        protocol_id=created_new_seq_distance.protocol_id,  # type : ignore[arg-type]
                     )
                 )
 

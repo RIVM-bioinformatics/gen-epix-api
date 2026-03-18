@@ -1,15 +1,12 @@
-from typing import ClassVar, Self
+from typing import ClassVar
 from uuid import UUID
 
-from pydantic import Field, field_serializer, model_validator
+from pydantic import Field, field_serializer
 
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
-from gen_epix.seqdb.domain.model.seq.base import ProtocolMixin
-from gen_epix.seqdb.domain.model.seq.locus import LocusSet
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
-from gen_epix.seqdb.domain.model.seq.seq import RefSeq
 from gen_epix.seqdb.domain.model.seq.protocol import Protocol
 
 

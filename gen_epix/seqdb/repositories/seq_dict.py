@@ -33,7 +33,7 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
     def retrieve_similar_profiles(
         self,
         uow: BaseUnitOfWork,
-        seq_distance_protocol_id: UUID,
+        protocol_id: UUID,
         profile_ids: list[UUID],
         max_distance: float,
         **kwargs: Any,
@@ -47,7 +47,7 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         ]
         matching_profile_ids: set[UUID] = set()
         for seq_distance in table.values():
-            if seq_distance.seq_distance_protocol_id != seq_distance_protocol_id:
+            if seq_distance.protocol_id != protocol_id:
                 continue
             if seq_distance.profile_id not in profile_id_set:
                 continue
@@ -65,11 +65,11 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
     def iter_seq_distances(
         self,
         uow: BaseUnitOfWork,
-        seq_distance_protocol_id: UUID,
+        protocol_id: UUID,
     ) -> Iterable[model.SeqDistance]:
         table: dict[UUID, model.SeqDistance] = self.db[  # type: ignore[assignment]
             model.SeqDistance
         ]
         for seq_distance in table.values():
-            if seq_distance.seq_distance_protocol_id == seq_distance_protocol_id:
+            if seq_distance.protocol_id == protocol_id:
                 yield seq_distance

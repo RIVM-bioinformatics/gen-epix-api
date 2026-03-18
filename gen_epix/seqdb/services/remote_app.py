@@ -81,7 +81,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         route = self.get_route(cmd)
 
         request_body = RetrievePhylogeneticTreeRequestBody(
-            seq_distance_protocol_id=cmd.seq_distance_protocol_id,
+            protocol_id=cmd.protocol_id,
             tree_algorithm=cmd.tree_algorithm,
             profile_ids=cmd.profile_ids,
             leaf_codes=cmd.leaf_names,
@@ -158,7 +158,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         route = self.get_route(cmd)
 
         request_body = RetrieveSimilarProfilesRequestBody(
-            seq_distance_protocol_id=cmd.seq_distance_protocol_id,
+            protocol_id=cmd.protocol_id,
             profile_ids=cmd.profile_ids,
             max_distance=cmd.max_distance,
         )

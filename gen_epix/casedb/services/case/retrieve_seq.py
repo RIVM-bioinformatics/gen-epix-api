@@ -3,6 +3,7 @@ from uuid import UUID
 
 import gen_epix.seqdb.domain.command as seqdb_command
 import gen_epix.seqdb.domain.model as seqdb_model
+import gen_epix.seqdb.domain.enum as seqdb_enum
 from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
@@ -57,8 +58,8 @@ def case_service_retrieve_phylogenetic_tree(
                 f"User {user.id} has no read access to tree algorithm {tree_algorithm_code}"
             )
 
-        # Get genetic distance protocol
-        genetic_distance_protocol: model.GeneticDistanceProtocol = (
+        # Get protocol
+        protocol: model.GeneticDistanceProtocol = (
             self.repository.crud(  # type: ignore[assignment]
                 uow,
                 user.id,
@@ -68,9 +69,7 @@ def case_service_retrieve_phylogenetic_tree(
                 CrudOperation.READ_ONE,
             )
         )
-        seqdb_seq_distance_protocol_id = (
-            genetic_distance_protocol.seqdb_seq_distance_protocol_id
-        )
+        seqdb_seq_distance_protocol_id = protocol.seqdb_seq_distance_protocol_id
 
         # Special case: zero case_ids
         if not case_ids:
@@ -78,11 +77,11 @@ def case_service_retrieve_phylogenetic_tree(
                 command.RetrievePhylogeneticTreeBySequencesCommand(
                     user=user,
                     tree_algorithm_code=tree_algorithm_code,
-                    seqdb_seq_distance_protocol_id=seqdb_seq_distance_protocol_id,
+                    seqdb_protocol_id=seqdb_seq_distance_protocol_id,
                     profile_ids=[],
                 )
             )
-            retval.genetic_distance_protocol_id = genetic_distance_protocol.id
+            retval.genetic_distance_protocol_id = protocol.id
             return retval
 
         # @ABAC: Get cases
@@ -110,14 +109,14 @@ def case_service_retrieve_phylogenetic_tree(
             command.RetrievePhylogeneticTreeBySequencesCommand(
                 user=cmd.user,
                 tree_algorithm_code=tree_algorithm_code,
-                seqdb_seq_distance_protocol_id=seqdb_seq_distance_protocol_id,
+                seqdb_protocol_id=seqdb_seq_distance_protocol_id,
                 profile_ids=profile_ids,
                 props={
                     "leaf_id_mapper": lambda x: profile_case_map[x],
                 },
             )
         )
-        phylogenetic_tree.genetic_distance_protocol_id = genetic_distance_protocol.id
+        phylogenetic_tree.genetic_distance_protocol_id = protocol.id
 
     return phylogenetic_tree
 
@@ -171,35 +170,20 @@ def case_service_retrieve_genetic_sequence_fasta_by_case(
         return fasta_iterator
 
 
-def case_service_retrieve_sequencing_protocols(
-    self: BaseCaseService,
-    cmd: command.RetrieveSequencingProtocolsCommand,
+def case_service_retrieve_protocols(
+    self: BaseCaseService, cmd: command.RetrieveProtocolsCommand
 ) -> list[seqdb_model.Protocol]:
     user, repository = self._get_user_and_repository(cmd)
     assert isinstance(user, model.User) and user.id is not None
 
-    sequencing_protocols: list[seqdb_model.Protocol] = self.app.handle(
-        seqdb_command.SequencingProtocolCrudCommand(
-            user=cmd.user,
-            operation=CrudOperation.READ_ALL,
+    protocols: list[seqdb_model.Protocol] = self.app.handle(
+        seqdb_command.ProtocolCrudCommand(
+            user=cmd.user, operation=CrudOperation.READ_ALL
         )
     )
-    return sequencing_protocols
-
-
-def case_service_retrieve_assembly_protocols(
-    self: BaseCaseService, cmd: command.RetrieveAssemblyProtocolsCommand
-) -> list[seqdb_model.AssemblyProtocol]:
-    user, repository = self._get_user_and_repository(cmd)
-    assert isinstance(user, model.User) and user.id is not None
-
-    assembly_protocols: list[seqdb_model.AssemblyProtocol] = self.app.handle(
-        seqdb_command.AssemblyProtocolCrudCommand(
-            user=cmd.user,
-            operation=CrudOperation.READ_ALL,
-        )
-    )
-    return assembly_protocols
+    # filter protocols by type ASSEMBLY_PROTOCOL
+    protocols = [x for x in protocols if x.protocol_type == cmd.protocol_type]
+    return protocols
 
 
 def _get_seq_ids_from_cases(

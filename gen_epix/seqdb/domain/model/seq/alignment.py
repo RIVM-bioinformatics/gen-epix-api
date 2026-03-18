@@ -62,7 +62,7 @@ class SeqAlignment(Model):
         snake_case_plural_name="seq_alignments",
         table_name="seq_alignment",
         persistable=True,
-        keys=create_keys({1: ("seq_id", "alignment_protocol_id")}),
+        keys=create_keys({1: ("seq_id", "protocol_id")}),
         links=create_links(
             {
                 1: ("seq_id", Seq, "seq"),

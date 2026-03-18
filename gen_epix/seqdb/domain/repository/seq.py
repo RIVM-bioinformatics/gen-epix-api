@@ -27,7 +27,7 @@ class BaseSeqRepository(BaseRepository):
     def retrieve_similar_profiles(
         self,
         uow: BaseUnitOfWork,
-        seq_distance_protocol_id: UUID,
+        protocol_id: UUID,
         profile_ids: list[UUID],
         max_distance: float,
         **kwargs: Any,
@@ -51,6 +51,6 @@ class BaseSeqRepository(BaseRepository):
     def iter_seq_distances(
         self,
         uow: BaseUnitOfWork,
-        seq_distance_protocol_id: UUID,
+        protocol_id: UUID,
     ) -> Iterable[model.SeqDistance]:
         raise NotImplementedError()

@@ -66,7 +66,7 @@ class SeqdbService(BaseSeqdbService):
             leaf_names = None
         seqdb_cmd = seqdb_command.RetrievePhylogeneticTreeCommand(
             user=self.seqdb_user,
-            seq_distance_protocol_id=cmd.seqdb_seq_distance_protocol_id,
+            protocol_id=cmd.seqdb_protocol_id,
             tree_algorithm=seqdb_enum.TreeAlgorithm[cmd.tree_algorithm_code.value],
             profile_ids=cmd.profile_ids,
             leaf_names=leaf_names,

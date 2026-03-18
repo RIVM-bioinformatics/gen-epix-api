@@ -15,7 +15,6 @@ from gen_epix.seqdb.domain import DOMAIN, enum, model
 from gen_epix.seqdb.repositories.sa_model.base import (
     AlignmentMixin,
     CodeMixin,
-    ProtocolMixin,
     QualityMixin,
     SeqMixin,
 )
@@ -60,7 +59,13 @@ class Protocol(Base, RowMetadataMixin):
         DOMAIN, model.Protocol, "valid_start_date"
     )
     valid_end_date: Mapped[date] = create_mapped_column(
-        DOMAIN, model.Protocol, "valid_end_date "
+        DOMAIN, model.Protocol, "valid_end_date"
+    )
+    is_integer_distance: Mapped[bool] = create_mapped_column(
+        DOMAIN, model.Protocol, "is_integer_distance"
+    )
+    max_stored_distance: Mapped[float] = create_mapped_column(
+        DOMAIN, model.Protocol, "max_stored_distance"
     )
     props: Mapped[dict[str, str | int | float | bool | list]] = create_mapped_column(
         DOMAIN, model.Protocol, "props"
@@ -139,7 +144,6 @@ class AlleleProfileIdentifier(Base, IdentifierMixin):
     allele_profile: Mapped[AlleleProfile] = relationship(
         AlleleProfile, foreign_keys=[internal_id]
     )
-
 
 
 class AstMeasurement(Base, RowMetadataMixin):
@@ -321,6 +325,7 @@ class LocusSet(Base, RowMetadataMixin):
         DOMAIN, model.LocusSet, "locus_ids"
     )
 
+
 class MlvaProfile(Base, RowMetadataMixin, QualityMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
@@ -386,7 +391,6 @@ class PcrMeasurement(Base, RowMetadataMixin):
         DOMAIN, model.PcrMeasurement, "pcr_result_format"
     )
     index: Mapped[int] = create_mapped_column(DOMAIN, model.PcrMeasurement, "index")
-
 
 
 class ReadSet(Base, RowMetadataMixin, CodeMixin, QualityMixin):
@@ -568,9 +572,7 @@ class Seq(Base, RowMetadataMixin, CodeMixin, QualityMixin):
     file_hash: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "file_hash")
     read_set_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "read_set_id")
     read_set2_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "read_set2_id")
-    protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.Seq, "protocol_id"
-    )
+    protocol_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "protocol_id")
     contigs: Mapped[list[model.Contig]] = create_mapped_column(
         DOMAIN, model.Seq, "contigs"
     )
@@ -674,7 +676,6 @@ class SeqClassification(Base, RowMetadataMixin):
     classification_hash: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqClassification, "classification_hash"
     )
-
 
 
 class SeqDistance(Base, RowMetadataMixin):

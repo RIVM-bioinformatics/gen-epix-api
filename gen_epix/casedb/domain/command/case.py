@@ -204,15 +204,13 @@ class RetrieveCaseSetRightsCommand(Command):
 class RetrievePhylogeneticTreeBySequencesCommand(Command):
     """
     Calculate a phylogenetic tree based on a set of sequence IDs, a tree algorithm, and
-    a sequence distance protocol.
+    a protocol.
     """
 
     tree_algorithm_code: enum.TreeAlgorithmType = Field(
         description="The algorithm to use for constructing the phylogenetic tree."
     )
-    seqdb_seq_distance_protocol_id: UUID = Field(
-        description="The ID of the sequence distance protocol to use."
-    )
+    seqdb_protocol_id: UUID = Field(description="The ID of the protocol to use.")
     profile_ids: list[UUID] = Field(
         description="The IDs of the profiles to calculate the phylogenetic tree for."
     )
@@ -320,22 +318,15 @@ class CreateFileForSeqCommand(Command):
     )
 
 
-class RetrieveSequencingProtocolsCommand(Command):
+class RetrieveProtocolsCommand(Command):
     """
-    Retrieve the sequencing protocols registered in seqdb so clients can populate
-    protocol pickers when uploading read sets.
-    """
-
-    pass
-
-
-class RetrieveAssemblyProtocolsCommand(Command):
-    """
-    Retrieve the assembly protocols registered in seqdb for downstream sequence
+    Retrieve the protocols registered in seqdb for downstream sequence
     processing and provenance.
     """
 
-    pass
+    protocol_type: seqdb_enum.ProtocolType = Field(
+        description="The type of protocols to retrieve."
+    )
 
 
 # CRUD

@@ -397,7 +397,7 @@ class TestContent:
                         raise ValueError("Library prep protocol ID should not be empty")
                 # Retrieve AssemblyProtocols
                 assembly_protocols: list[seqdb_model.AssemblyProtocol] = app.handle(
-                    command.RetrieveAssemblyProtocolsCommand(
+                    command.RetrieveProtocolsCommand(
                         user=org_user,
                     )
                 )

@@ -18,14 +18,14 @@ class UploadSamplesRequestBody(command.UploadSamplesCommand):
 
 
 class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
-    seq_distance_protocol_id: UUID
+    protocol_id: UUID
     tree_algorithm: enum.TreeAlgorithm
     profile_ids: list[UUID]
     leaf_codes: list[str] | None = None
 
 
 class RetrieveSimilarProfilesRequestBody(PydanticBaseModel):
-    seq_distance_protocol_id: UUID
+    protocol_id: UUID
     profile_ids: list[UUID]
     max_distance: float
 
@@ -70,7 +70,7 @@ def create_seq_endpoints(
             retval: model.PhylogeneticTree = app.handle(
                 command.RetrievePhylogeneticTreeCommand(
                     user=user,
-                    seq_distance_protocol_id=request_body.seq_distance_protocol_id,
+                    protocol_id=request_body.protocol_id,
                     tree_algorithm=request_body.tree_algorithm,
                     profile_ids=request_body.profile_ids,
                     leaf_names=request_body.leaf_codes,
@@ -94,7 +94,7 @@ def create_seq_endpoints(
             retval: list[UUID] = app.handle(
                 command.RetrieveSimilarProfilesCommand(
                     user=user,
-                    seq_distance_protocol_id=request_body.seq_distance_protocol_id,
+                    protocol_id=request_body.protocol_id,
                     profile_ids=request_body.profile_ids,
                     max_distance=request_body.max_distance,
                 )

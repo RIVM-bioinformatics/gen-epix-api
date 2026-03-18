@@ -10,7 +10,6 @@ from gen_epix.seqdb.domain.model.seq.alignment import SeqAlignment as SeqAlignme
 from gen_epix.seqdb.domain.model.seq.base import AlignmentMixin as AlignmentMixin
 from gen_epix.seqdb.domain.model.seq.base import BaseSeq as BaseSeq
 from gen_epix.seqdb.domain.model.seq.base import CodeMixin as CodeMixin
-from gen_epix.seqdb.domain.model.seq.base import ProtocolMixin as ProtocolMixin
 from gen_epix.seqdb.domain.model.seq.base import QualityMixin as QualityMixin
 from gen_epix.seqdb.domain.model.seq.classification import (
     AstPrediction as AstPrediction,
@@ -30,9 +29,7 @@ from gen_epix.seqdb.domain.model.seq.locus import LocusCodeMap as LocusCodeMap
 from gen_epix.seqdb.domain.model.seq.locus import LocusSet as LocusSet
 from gen_epix.seqdb.domain.model.seq.locus import RefAllele as RefAllele
 from gen_epix.seqdb.domain.model.seq.pheno import AstMeasurement as AstMeasurement
-from gen_epix.seqdb.domain.model.seq.pheno import AstProtocol as AstProtocol
 from gen_epix.seqdb.domain.model.seq.pheno import PcrMeasurement as PcrMeasurement
-from gen_epix.seqdb.domain.model.seq.pheno import PcrProtocol as PcrProtocol
 from gen_epix.seqdb.domain.model.seq.profile import AlleleProfile as AlleleProfile
 from gen_epix.seqdb.domain.model.seq.profile import (
     AlleleProfileIdentifier as AlleleProfileIdentifier,

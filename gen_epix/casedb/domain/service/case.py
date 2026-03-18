@@ -179,12 +179,8 @@ class BaseCaseService(BaseService):
         f(command.CreateFileForReadSetCommand, self.create_file_for_read_set)
         f(command.CreateFileForSeqCommand, self.create_file_for_seq)
         f(
-            command.RetrieveSequencingProtocolsCommand,
-            self.retrieve_sequencing_protocols,
-        )
-        f(
-            command.RetrieveAssemblyProtocolsCommand,
-            self.retrieve_assembly_protocols,
+            command.RetrieveProtocolsCommand,
+            self.retrieve_protocols,
         )
 
     @abc.abstractmethod
@@ -543,13 +539,13 @@ class BaseCaseService(BaseService):
     @abc.abstractmethod
     def retrieve_sequencing_protocols(
         self,
-        cmd: command.RetrieveSequencingProtocolsCommand,
+        cmd: command.RetrieveProtocolsCommand,
     ) -> list[seqdb_model.Protocol]:
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def retrieve_assembly_protocols(
+    def retrieve_protocols(
         self,
-        cmd: command.RetrieveAssemblyProtocolsCommand,
-    ) -> list[seqdb_model.AssemblyProtocol]:
+        cmd: command.RetrieveProtocolsCommand,
+    ) -> list[seqdb_model.Protocol]:
         raise NotImplementedError()

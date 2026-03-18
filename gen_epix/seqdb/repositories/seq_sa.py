@@ -39,7 +39,7 @@ class SeqSARepository(SARepository, BaseSeqRepository):
     def retrieve_similar_profiles(
         self,
         uow: BaseUnitOfWork,
-        seq_distance_protocol_id: UUID,
+        protocol_id: UUID,
         profile_ids: list[UUID],
         max_distance: float,
         **kwargs: Any,
@@ -51,7 +51,7 @@ class SeqSARepository(SARepository, BaseSeqRepository):
             sa_model.SeqDistance.distances,
             sa_model.SeqDistance.distance_format,
         ).where(
-            (sa_model.SeqDistance.seq_distance_protocol_id == seq_distance_protocol_id)
+            (sa_model.SeqDistance.protocol_id == protocol_id)
             & sa_model.SeqDistance.profile_id.in_(profile_ids)
         )
         assert isinstance(uow, SAUnitOfWork)
@@ -69,10 +69,10 @@ class SeqSARepository(SARepository, BaseSeqRepository):
     def iter_seq_distances(
         self,
         uow: BaseUnitOfWork,
-        seq_distance_protocol_id: UUID,
+        protocol_id: UUID,
     ) -> Iterable[model.SeqDistance]:
         stmt = sa.select(sa_model.SeqDistance).where(
-            sa_model.SeqDistance.seq_distance_protocol_id == seq_distance_protocol_id
+            sa_model.SeqDistance.protocol_id == protocol_id
         )
         mapper = self.get_mapper(model.SeqDistance)
         assert isinstance(uow, SAUnitOfWork)

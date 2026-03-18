@@ -150,28 +150,3 @@ class AlignmentMixin:
     aln_hash: UUID = Field(
         description="The first 128 bits of the SHA256 hash of the ASCII lower case aligned reference sequence followed by the aligned contig seq.",
     )
-
-
-class ProtocolMixin:
-    """
-    Mixin class to add protocol related fields to a model.
-    """
-
-    code: str = Field(description="The code of the protocol", max_length=255)
-    name: str = Field(description="The name of the protocol", max_length=255)
-    version: str | None = Field(
-        default=None, description="The version of the protocol", max_length=255
-    )
-    description: str | None = Field(
-        default=None, description="The description of the protocol"
-    )
-    props: dict[str, str] = Field(
-        default_factory=dict, description="The properties of the protocol"
-    )
-
-    @field_validator("props", mode="before")
-    @classmethod
-    def _validate_props(cls, value: str | dict) -> dict:
-        if isinstance(value, str):
-            value = json.loads(value)
-        return value

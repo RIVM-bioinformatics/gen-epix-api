@@ -47,7 +47,7 @@ class TestSeqdbRemoteApp:
         """Create a sample command for testing."""
         return seqdb_command.RetrievePhylogeneticTreeCommand(
             user=mock_user,
-            seq_distance_protocol_id=uuid4(),
+            protocol_id=uuid4(),
             tree_algorithm=seqdb_enum.TreeAlgorithm.UPGMA,
             profile_ids=[uuid4(), uuid4()],
             leaf_names=["seq1", "seq2"],
@@ -121,7 +121,7 @@ class TestSeqdbRemoteApp:
 
         # Verify the HTTP request was made correctly
         expected_request_body = RetrievePhylogeneticTreeRequestBody(
-            seq_distance_protocol_id=sample_command.seq_distance_protocol_id,
+            protocol_id=sample_command.protocol_id,
             tree_algorithm=sample_command.tree_algorithm,
             profile_ids=sample_command.profile_ids,
             leaf_codes=sample_command.leaf_names,
@@ -314,7 +314,7 @@ class TestSeqdbRemoteApp:
 
         # Verify request body construction
         expected_request_body = RetrievePhylogeneticTreeRequestBody(
-            seq_distance_protocol_id=sample_command.seq_distance_protocol_id,
+            protocol_id=sample_command.protocol_id,
             tree_algorithm=sample_command.tree_algorithm,
             profile_ids=sample_command.profile_ids,
             leaf_codes=sample_command.leaf_names,

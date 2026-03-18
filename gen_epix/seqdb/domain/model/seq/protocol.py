@@ -73,6 +73,12 @@ class Protocol(Model):
     valid_end_date: date = Field(
         description="The date until which this protocol is considered valid"
     )
+    is_integer_distance: bool = Field(
+        description="Whether the distances calculated by this protocol are integers"
+    )
+    max_stored_distance: float = Field(
+        description="The maximum distance that is guaranteed to be stored"
+    )
     props: dict[str, str | int | float | bool | list] = Field(
         # list is added to allow PcrProtocol.target_names and AstProtocol.antimicrobial_names
         default_factory=dict,

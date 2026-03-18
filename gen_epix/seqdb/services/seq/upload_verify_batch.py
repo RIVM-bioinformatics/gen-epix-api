@@ -52,12 +52,12 @@ def _verify_children_seqs(
         uow,
         cmd.user,
         "seqs",
-        "assembly_protocol_id",
-        "assembly_protocol_code",
-        model.AssemblyProtocol,
+        "protocol_id",
+        "protocol_code",
+        model.Protocol,
     )
 
-    # Get dict[(sample_id, seq_hash), [(read_set_id, read_set2_id, assembly_protocol_id, id)]
+    # Get dict[(sample_id, seq_hash), [(read_set_id, read_set2_id, protocol_id, id)]
     sample_ids = list({sample.id for sample in samples if sample.id is not None})
     if not sample_ids:
         # No samples with ID, nothing to verify
@@ -71,7 +71,7 @@ def _verify_children_seqs(
             "seq_hash",
             "read_set_id",
             "read_set2_id",
-            "assembly_protocol_id",
+            "protocol_id",
             "id",
         ],
         filter=UuidSetFilter(key="sample_id", members=frozenset(sample_ids)),
@@ -98,11 +98,11 @@ def _verify_children_seqs(
             for (
                 read_set_id,
                 read_set2_id,
-                assembly_protocol_id,
+                protocol_id,
                 seq_id,
             ) in existing_seq_data:
-                if seq.assembly_protocol_id != assembly_protocol_id:
-                    # Different assembly protocol, cannot give rise to an issue
+                if seq.protocol_id != protocol_id:
+                    # Different protocol, cannot give rise to an issue
                     continue
                 if seq.read_set_id == read_set_id and seq.read_set2_id == read_set2_id:
                     # Same read sets -> skip since the seq is identical and there are
@@ -110,7 +110,7 @@ def _verify_children_seqs(
                     seq.id = seq_id
                     seq_result.add_warning(
                         "a2b3c4d5",
-                        f"Seq with same hash ({seq.seq_hash}), read sets and assembly protocol already exists",
+                        f"Seq with same hash ({seq.seq_hash}), read sets and protocol already exists",
                     )
                     seq_result.status = EtlStatus.SKIPPED
                     break
@@ -120,7 +120,7 @@ def _verify_children_seqs(
                     success = False
                     seq_result.add_error(
                         "b9e4f8a1",
-                        f"Seq with same hash ({seq.seq_hash}) and assembly protocol already exists with ID {seq_id}, but new seq has no read sets no read sets are provided for the new seq to compare",
+                        f"Seq with same hash ({seq.seq_hash}) and protocol already exists with ID {seq_id}, but new seq has no read sets no read sets are provided for the new seq to compare",
                     )
                     break
     return success
@@ -151,9 +151,9 @@ def _verify_children_allele_profiles(
         uow,
         cmd.user,
         "allele_profiles",
-        "locus_detection_protocol_id",
-        "locus_detection_protocol_code",
-        model.LocusDetectionProtocol,
+        "protocol_id",
+        "protocol_code",
+        model.Protocol,
     )
 
     # Retrieve and verify locus sets provided by ID and/or code
@@ -178,7 +178,7 @@ def _verify_children_allele_profiles(
         model.LocusCodeMap,
     )
 
-    # Get dict[(sample_id, allele_profile_hash), [(locus_detection_protocol_id, locus_set_id, seq_id,id)]
+    # Get dict[(sample_id, allele_profile_hash), [(protocol_id, locus_set_id, seq_id,id)]
     result_iter = self.service.repository.read_fields(
         uow,
         user_id,
@@ -186,7 +186,7 @@ def _verify_children_allele_profiles(
         [
             "sample_id",
             "allele_profile_hash",
-            "locus_detection_protocol_id",
+            "protocol_id",
             "locus_set_id",
             "seq_id",
             "id",
@@ -216,16 +216,16 @@ def _verify_children_allele_profiles(
                 continue
             # Compare existing allele profiles with this hash
             for (
-                locus_detection_protocol_id,
+                protocol_id,
                 locus_set_id,
                 seq_id,
                 allele_profile_id,
             ) in existing_allele_profile_data:
                 if (
-                    allele_profile.locus_detection_protocol_id
-                    != locus_detection_protocol_id
+                    allele_profile.protocol_id
+                    != protocol_id
                 ):
-                    # Different locus detection protocol, cannot give rise to an issue
+                    # Different protocol, cannot give rise to an issue
                     continue
                 if allele_profile.locus_set_id != locus_set_id:
                     # Different locus set, cannot give rise to an issue
@@ -236,7 +236,7 @@ def _verify_children_allele_profiles(
                     allele_profile.id = allele_profile_id
                     allele_profile_result.add_warning(
                         "c7d8e9f0",
-                        f"Allele profile with same hash ({allele_profile.allele_profile_hash}), seq and assembly protocol already exists",
+                        f"Allele profile with same hash ({allele_profile.allele_profile_hash}), seq and protocol already exists",
                     )
                     allele_profile_result.status = EtlStatus.SKIPPED
                     break
@@ -246,7 +246,7 @@ def _verify_children_allele_profiles(
                     success = False
                     allele_profile_result.add_error(
                         "a8f3e7b2",
-                        f"Allele profile with same hash ({allele_profile.allele_profile_hash}) and assembly protocol already exists with ID {allele_profile_id}, but new allele profile has no seq ID provided for the new allele profile to compare",
+                        f"Allele profile with same hash ({allele_profile.allele_profile_hash}) and protocol already exists with ID {allele_profile_id}, but new allele profile has no seq ID provided for the new allele profile to compare",
                     )
                     break
     return success

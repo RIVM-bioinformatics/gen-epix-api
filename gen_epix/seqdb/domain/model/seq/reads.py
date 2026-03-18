@@ -9,10 +9,9 @@ from gen_epix.commondb.domain.model.organization import BaseIdentifier
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.file import File
-from gen_epix.seqdb.domain.model.seq.base import CodeMixin, ProtocolMixin, QualityMixin
+from gen_epix.seqdb.domain.model.seq.base import CodeMixin, QualityMixin
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 from gen_epix.seqdb.domain.model.seq.protocol import Protocol
-
 
 
 class ReadSet(Model, HasSampleMixin, CodeMixin, QualityMixin):
@@ -47,9 +46,7 @@ class ReadSet(Model, HasSampleMixin, CodeMixin, QualityMixin):
     protocol_id: UUID = Field(
         description="The unique identifier for the protocol. FOREIGN KEY"
     )
-    protocol: Protocol | None = Field(
-        default=None, description="The protocol."
-    )
+    protocol: Protocol | None = Field(default=None, description="The protocol.")
     fwd_uri: str | None = Field(
         default=None,
         description="The URI of the forward read set. In case of single-end reads, this is the only read set.",

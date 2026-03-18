@@ -42,23 +42,6 @@ class SeqMixin:
     length: Mapped[int] = create_mapped_column(DOMAIN, model.BaseSeq, "length")
 
 
-class ProtocolMixin:
-    """
-    SQLAlchemy model mixin for adding a number of standard fields.
-    """
-
-    code: Mapped[str] = get_mixin_mapped_column(model.ProtocolMixin, "code", sa.String)
-    name: Mapped[str] = get_mixin_mapped_column(model.ProtocolMixin, "name", sa.String)
-    version: Mapped[str] = get_mixin_mapped_column(
-        model.ProtocolMixin, "version", sa.String
-    )
-    description: Mapped[str] = get_mixin_mapped_column(
-        model.ProtocolMixin, "description", sa.Text
-    )
-    props: Mapped[dict[str, str]] = get_mixin_mapped_column(
-        model.ProtocolMixin, "props", sa.JSON
-    )
-
 
 class AlignmentMixin:
     """

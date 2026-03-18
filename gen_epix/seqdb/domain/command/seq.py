@@ -84,17 +84,17 @@ class RetrieveMultipleAlignmentCommand(Command):
 
 class RetrievePhylogeneticTreeCommand(Command):
     """
-    Retrieve a phylogenetic tree based on the given sequence distance protocol, tree
+    Retrieve a phylogenetic tree based on the given protocol, tree
     algorithm, and query profile IDs. The returned tree is expected to contain
     the query profiles as well as any additional profiles that are within the maximum
-    distance threshold specified in the sequence distance protocol for at least one
+    distance threshold specified in the protocol for at least one
     of the query profiles. The leaf names in the tree correspond to the profile IDs,
     but can optionally be replaced with custom leaf names provided in the command
     (e.g. for better readability of the tree).
     """
 
-    seq_distance_protocol_id: UUID = Field(
-        description="The ID of the sequence distance protocol to use for generating the distances"
+    protocol_id: UUID = Field(
+        description="The ID of the protocol to use for generating the distances"
     )
     tree_algorithm: enum.TreeAlgorithm = Field(
         description="The tree algorithm to use for generating the phylogenetic tree"
@@ -145,8 +145,8 @@ class RetrieveSimilarProfilesCommand(Command):
     returned profiles do not contain the query profiles.
     """
 
-    seq_distance_protocol_id: UUID = Field(
-        description="ID of the sequence distance protocol to use for similarity search.",
+    protocol_id: UUID = Field(
+        description="ID of the protocol to use for similarity search.",
     )
     profile_ids: list[UUID] = Field(
         description="List of query profile IDs to find similar profiles for.",
@@ -297,10 +297,6 @@ class SeqIdentifierCrudCommand(CrudCommand):
 
 class SeqTaxonomyCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.SeqTaxonomy
-
-
-class SequencingProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.Protocol
 
 
 class SnpProfileCrudCommand(CrudCommand):

@@ -92,19 +92,19 @@ class SeqService(BaseSeqService):
         user_id = cmd.user.id if cmd.user else None
         profile_ids = cmd.profile_ids
         tree_algorithm = cmd.tree_algorithm
-        seq_distance_protocol_id = cmd.seq_distance_protocol_id
+        protocol_id = cmd.protocol_id
         if len(set(profile_ids)) != len(profile_ids):
             raise exc.InvalidArgumentsError("profile_ids must be unique")
         leaf_names = cmd.leaf_names if cmd.leaf_names else [str(x) for x in profile_ids]
 
         # Retrieve genetic distance protocol
         with self.repository.uow() as uow:
-            seq_distance_protocol: model.SeqDistanceProtocol = self.repository.crud(  # type: ignore[assignment]
+            protocol: model.Protocol = self.repository.crud(  # type: ignore[assignment]
                 uow,
                 user_id,
-                model.SeqDistanceProtocol,
+                model.Protocol,
                 None,
-                seq_distance_protocol_id,
+                protocol_id,
                 CrudOperation.READ_ONE,
             )
 
@@ -113,7 +113,7 @@ class SeqService(BaseSeqService):
             return model.PhylogeneticTree(
                 id=self.generate_id(),  # type: ignore[arg-type]
                 tree_algorithm=tree_algorithm,
-                seq_distance_protocol_id=seq_distance_protocol_id,
+                seq_distance_protocol_id=protocol_id,
                 profile_ids=profile_ids,
                 leaf_names=leaf_names,
                 newick_repr=f"({leaf_names[0]});" if profile_ids else "();",
@@ -135,15 +135,15 @@ class SeqService(BaseSeqService):
                                 key="profile_id", members=frozenset(profile_ids)
                             ),
                             EqualsUuidFilter(
-                                key="seq_distance_protocol_id",
-                                value=seq_distance_protocol_id,
+                                key="protocol_id",
+                                value=protocol_id,
                             ),
                         ],
                         operator=LogicalOperator.AND,
                     ),
                 )
                 seq_distance_map = {x.profile_id: x for x in seq_distances}
-            max_stored_distance = seq_distance_protocol.max_stored_distance
+            max_stored_distance = protocol.max_stored_distance
             # Calculate condensed distance matrix
             tree_seq_distances = [
                 seq_distance_map[x] for x in profile_ids if x in seq_distance_map
@@ -197,7 +197,7 @@ class SeqService(BaseSeqService):
                 return model.PhylogeneticTree(
                     id=self.generate_id(),  # type: ignore[arg-type]
                     tree_algorithm=tree_algorithm,
-                    seq_distance_protocol_id=seq_distance_protocol_id,
+                    protocol_id=protocol_id,
                     profile_ids=profile_ids,
                     leaf_names=leaf_names,
                     newick_repr=(
@@ -256,7 +256,7 @@ class SeqService(BaseSeqService):
         phylogenetic_tree = model.PhylogeneticTree(
             id=self.generate_id(),  # type: ignore[arg-type]
             tree_algorithm=tree_algorithm,
-            seq_distance_protocol_id=seq_distance_protocol_id,
+            protocol_id=protocol_id,
             profile_ids=profile_ids,
             leaf_names=leaf_names,
             newick_repr=newick_repr,
@@ -302,14 +302,14 @@ class SeqService(BaseSeqService):
         the locus set of the allele profiles.
         """
         locus_set_ids = {x.locus_set_id for x in allele_profiles}
-        cmd = command.SeqDistanceProtocolCrudCommand(
+        cmd = command.ProtocolCrudCommand(
             user=None,
             operation=CrudOperation.READ_ALL,
             query_filter=UuidSetFilter(key="locus_set_id", members=locus_set_ids),
         )
-        seq_distance_protocols = self.crud_repository(uow, cmd)
+        protocols = self.crud_repository(uow, cmd)
         seq_distances = self.calculate_pairwise_allele_profile_distances(
-            seq_distance_protocols, allele_profiles
+            protocols, allele_profiles
         )
         # TODO: calculate distances with all stored allele profiles
         # TODO: store/update distances
@@ -327,16 +327,16 @@ class SeqService(BaseSeqService):
         """
         seq_distances: list[model.SeqDistance] = []
         # Go over each distance protocol
-        for seq_distance_protocol in protocols:
-            assert seq_distance_protocol.id is not None
-            locus_set_id = seq_distance_protocol.locus_set_id
+        for protocol in protocols:
+            assert protocol.id is not None
+            locus_set_id = protocol.locus_set_id
             if locus_set_id is None:
                 raise exc.InvalidArgumentsError(
-                    "SeqDistanceProtocol must have a locus_set_id"
+                    "Protocol must have a locus_set_id"
                 )
             # Get distance calculation function
             if (
-                seq_distance_protocol.protocol_type
+                protocol.protocol_type
                 == enum.SeqDistanceProtocolType.ALLELE_HAMMING
             ):
                 calculate_distance = SeqService.calculate_hamming_distance
@@ -379,7 +379,7 @@ class SeqService(BaseSeqService):
                         allele_ids2,
                     )
                     # Keep only distances up to the maximum
-                    if distance > seq_distance_protocol.max_stored_distance:
+                    if distance > protocol.max_stored_distance:
                         continue
                     # Add to seq_distances
                     curr_seq_distances[i][seq_id2] = distance
@@ -395,7 +395,7 @@ class SeqService(BaseSeqService):
                 seq_distance = model.SeqDistance(
                     id=seq_distance_id,
                     sample_id=allele_profile.sample_id,
-                    protocol_id=seq_distance_protocol.id,
+                    protocol_id=protocol.id,
                     allele_profile_id=allele_profile.id,
                     distance_format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
                     distances=json.dumps(curr_seq_distances[i]),
@@ -509,7 +509,7 @@ class SeqService(BaseSeqService):
         with self.repository.uow() as uow:
             similar_profile_ids: list[UUID] = self.repository.retrieve_similar_profiles(
                 uow,
-                cmd.seq_distance_protocol_id,
+                cmd.protocol_id,
                 cmd.profile_ids,
                 cmd.max_distance,
             )
