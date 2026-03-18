@@ -81,9 +81,9 @@ def _build_upload_command(
     sample_batch = env.generate_random_sequences(
         n_seqs=N_SEQS_PER_BATCH,
         settings=effective_settings,
-        assembly_protocol_id=assembly_protocol_id,
+        protocol_id=assembly_protocol_id,
         locus_set_id=locus_set_id,
-        locus_detection_protocol_id=locus_detection_protocol_id,
+        protocol_id=locus_detection_protocol_id,
         locus_code_map_id=locus_code_map_id,
         locus_ids=locus_ids,
     )

@@ -491,7 +491,7 @@ class TestCreate:
             env.create_seq(
                 exec_user,
                 sample_or_str=f"sample{i}",
-                assembly_protocol_or_str="assembly_protocol1",
+                protocol_or_str="assembly_protocol1",
             )
 
     def test_create_seq_raise(self, env: Env) -> None:
@@ -500,7 +500,7 @@ class TestCreate:
                 env.create_seq(
                     exec_user,
                     sample_or_str="sample1",
-                    assembly_protocol_or_str="assembly_protocol1",
+                    protocol_or_str="assembly_protocol1",
                 )
 
     def test_create_seq_with_file(self, env: Env) -> None:
@@ -514,7 +514,7 @@ class TestCreate:
             env.create_seq(
                 exec_user,
                 sample_or_str=f"sample{i}",
-                assembly_protocol_or_str="assembly_protocol2",
+                protocol_or_str="assembly_protocol2",
                 file_id=file.id,
                 file_format=enum.FileFormat.FASTA,
                 file_compression=enum.FileCompression.GZIP,
@@ -600,4 +600,4 @@ class TestCreate:
             "sample_or_str": "sample1",
         }
         with pytest.raises(exc.InvalidLinkIdsError):
-            env.create_read_set("root1_1", set_dummy_sequencing_protocol=True, **kwargs)
+            env.create_read_set("root1_1", set_dummy_protocol=True, **kwargs)

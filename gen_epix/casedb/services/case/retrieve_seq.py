@@ -3,7 +3,6 @@ from uuid import UUID
 
 import gen_epix.seqdb.domain.command as seqdb_command
 import gen_epix.seqdb.domain.model as seqdb_model
-import gen_epix.seqdb.domain.enum as seqdb_enum
 from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
@@ -81,7 +80,7 @@ def case_service_retrieve_phylogenetic_tree(
                     profile_ids=[],
                 )
             )
-            retval.genetic_distance_protocol_id = protocol.id
+            retval.protocol_id = protocol.id
             return retval
 
         # @ABAC: Get cases
@@ -116,7 +115,7 @@ def case_service_retrieve_phylogenetic_tree(
                 },
             )
         )
-        phylogenetic_tree.genetic_distance_protocol_id = protocol.id
+        phylogenetic_tree.protocol_id = protocol.id
 
     return phylogenetic_tree
 

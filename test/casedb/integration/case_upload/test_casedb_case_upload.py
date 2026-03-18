@@ -682,7 +682,7 @@ class TestCaseUpload(CaseUploadSetup):
                     model.ReadSetForUpload(
                         col_id=col_id,
                         other_sample_identifier=identifier_for_upload,
-                        sequencing_protocol_id=sequencing_protocol_id,
+                        protocol_id=sequencing_protocol_id,
                     )
                 )
             for col_id in found_seq_col_ids:
@@ -690,7 +690,7 @@ class TestCaseUpload(CaseUploadSetup):
                     model.SeqForUpload(
                         col_id=col_id,
                         external_sample_id=identifier_for_upload,
-                        assembly_protocol_id=assembly_protocol_id,
+                        protocol_id=assembly_protocol_id,
                     )
                 )
         # Create case or case for upload
