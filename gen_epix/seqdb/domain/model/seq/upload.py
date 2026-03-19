@@ -362,7 +362,7 @@ class MlvaProfileForUpload(MlvaProfile, IdentifiersMixin, ValidateRefDataIdCodeM
 
     IDENTIFIER_CLASS: ClassVar = MlvaProfileIdentifier
     REFDATA_FIELD_ID_CODE_PAIRS: ClassVar = [
-        ("locus_detection_protocol_id", "locus_detection_protocol_code"),
+        ("mlva_detection_protocol_id", "mlva_detection_protocol_code"),
         ("locus_set_id", "locus_set_code"),
         ("locus_code_map_id", "locus_code_map_code"),
     ]
