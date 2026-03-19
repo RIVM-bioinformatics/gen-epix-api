@@ -500,7 +500,7 @@ class DictRepository(BaseRepository):
         get_id: Callable[[Model], Hashable],
         df_objs: list[Model | None],
         value_field_names: list[str],
-        links: list[tuple[str, str, dict[Hashable, Model] | None]],
+        links: list[tuple[str, str | None, dict[Hashable, Model] | None]],
     ) -> None:
         for i, obj, df_obj in zip(range(len(df_objs)), objs, df_objs):
             if df_obj:
@@ -525,7 +525,7 @@ class DictRepository(BaseRepository):
         self,
         model_class: type[Model],
         get_id: Callable[[Model], Hashable],
-        links: list[tuple[str, str, dict[Hashable, Model] | None]],
+        links: list[tuple[str, str | None, dict[Hashable, Model] | None]],
         obj: Model,
         df_obj: Model,
     ) -> None:
@@ -534,7 +534,8 @@ class DictRepository(BaseRepository):
             linked_obj_id = getattr(obj, link_field_name)  # type: ignore[arg-type]
             if not linked_obj_id:
                 setattr(df_obj, link_field_name, None)  # type: ignore[arg-type]
-                setattr(df_obj, relationship_field_name, None)  # type: ignore[arg-type]
+                if relationship_field_name is not None:
+                    setattr(df_obj, relationship_field_name, None)  # type: ignore[arg-type]
                 continue
             if linked_df is not None and linked_obj_id not in linked_df:
                 raise exc.InvalidIdsError(
@@ -545,6 +546,8 @@ class DictRepository(BaseRepository):
                     ids=[linked_obj_id],
                 )
             setattr(df_obj, link_field_name, linked_obj_id)  # type: ignore[arg-type]
+            if relationship_field_name is None:
+                continue
             linked_obj = getattr(obj, relationship_field_name)  # type: ignore[arg-type]
             if not linked_obj:
                 continue

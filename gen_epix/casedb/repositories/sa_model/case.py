@@ -1,7 +1,7 @@
 # pylint: disable=too-few-public-methods
-from __future__ import (
+from __future__ import (  # Resolves pylint not recognizing Mapped as subscriptable
     annotations,
-)  # Resolves pylint not recognizing Mapped as subscriptable
+)
 
 from datetime import datetime
 from typing import Any
@@ -366,9 +366,6 @@ class Case(Base, RowMetadataMixin):
 
     case_type_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.Case, "case_type_id"
-    )
-    subject_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Case, "subject_id"
     )
     created_in_data_collection_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Case, "created_in_data_collection_id"

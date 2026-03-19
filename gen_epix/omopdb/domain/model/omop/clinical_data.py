@@ -114,6 +114,10 @@ class Person(Model, DataLineageMixin):
     person_type_concept_id: UUID = Field(
         description="User guidance:\nNot part of OMOP CDM. The conceptual type of Person under study, e.g. human, animal or environment, since data from non-human origin are also in scope.\nETL conventions:\nNone"
     )
+    provided_by_organization_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The id of the Organization that provided the data for this Person.\nETL conventions:\nNone",
+    )
 
     @field_validator(
         "gender_concept_id",
@@ -170,6 +174,10 @@ class ObservationPeriod(Model, DataLineageMixin):
         default=None,
         description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
         max_length=55,
+    )
+    provided_by_organization_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The id of the Organization that provided the data for this Observation Period.\nETL conventions:\nNone",
     )
 
     @field_validator("period_type_concept_id", mode="before")
@@ -262,6 +270,10 @@ class VisitOccurrence(Model, DataLineageMixin):
     preceding_visit_occurrence_id: UUID | None = Field(
         default=None,
         description='User guidance:\nUse this field to find the visit that occurred for the person prior to the given visit. There could be a few days or a few years in between.\nETL conventions:\nThis field can be used to link a visit immediately preceding the current visit. Note this is not symmetrical, and there is no such thing as a "following_visit_id".',
+    )
+    provided_by_organization_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The id of the Organization that provided the data for this Visit Occurrence.\nETL conventions:\nNone",
     )
 
     @field_validator(
@@ -369,6 +381,10 @@ class VisitDetail(Model, DataLineageMixin):
     )
     visit_occurrence_id: UUID = Field(
         description="User guidance:\nUse this field to link the VISIT_DETAIL record to its VISIT_OCCURRENCE.\nETL conventions:\nPut the VISIT_OCCURRENCE_ID that subsumes the VISIT_DETAIL record here."
+    )
+    provided_by_organization_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The id of the Organization that provided the data for this Visit Detail.\nETL conventions:\nNone",
     )
 
     @field_validator(
@@ -478,6 +494,10 @@ class ConditionOccurrence(Model, DataLineageMixin):
         description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
         max_length=55,
     )
+    provided_by_organization_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The id of the Organization that provided the data for this Condition Occurrence.\nETL conventions:\nNone",
+    )
 
     @field_validator(
         "condition_concept_id",
@@ -578,6 +598,10 @@ class ProcedureOccurrence(Model, DataLineageMixin):
         default=None,
         description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
         max_length=55,
+    )
+    provided_by_organization_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The id of the Organization that provided the data for this Procedure Occurrence.\nETL conventions:\nNone",
     )
 
     @field_validator(
@@ -715,6 +739,10 @@ class DrugExposure(Model, DataLineageMixin):
         description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
         max_length=55,
     )
+    provided_by_organization_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The id of the Organization that provided the data for this Drug Exposure.\nETL conventions:\nNone",
+    )
 
     @field_validator(
         "drug_concept_id",
@@ -831,6 +859,10 @@ class DeviceExposure(Model, DataLineageMixin):
         default=None,
         description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
         max_length=55,
+    )
+    provided_by_organization_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The id of the Organization that provided the data for this Device Exposure.\nETL conventions:\nNone",
     )
 
     @field_validator(
@@ -972,6 +1004,10 @@ class Measurement(Model, DataLineageMixin):
         default=None,
         description="User guidance:\nNot part of OMOP CDM. The specimen from which this measurement was derived.\nETL conventions:\nNone",
     )
+    provided_by_organization_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The id of the Organization that provided the data for this Measurement.\nETL conventions:\nNone",
+    )
 
     @field_validator(
         "measurement_concept_id",
@@ -1108,6 +1144,10 @@ class Observation(Model, DataLineageMixin):
         description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
         max_length=55,
     )
+    provided_by_organization_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The id of the Organization that provided the data for this Observation.\nETL conventions:\nNone",
+    )
 
     @field_validator(
         "observation_concept_id",
@@ -1216,6 +1256,10 @@ class Specimen(Model, DataLineageMixin):
         default=None,
         description="User guidance:\nNot part of OMOP CDM. The protocol used to derive this specimen from the source specimen.\nETL conventions:\nNone",
     )
+    provided_by_organization_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The id of the Organization that provided the data for this Specimen.\nETL conventions:\nNone",
+    )
 
     @field_validator(
         "specimen_concept_id",
@@ -1309,6 +1353,10 @@ class Note(Model, DataLineageMixin):
     note_event_field_concept_id: UUID | None = Field(
         default=None,
         description="User guidance:\nIf the Note record is related to another record in the database, this field is the CONCEPT_ID that identifies which table the primary key of the linked record came from.\nETL conventions:\nPut the CONCEPT_ID that identifies which table and field the NOTE_EVENT_ID came from.",
+    )
+    provided_by_organization_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The id of the Organization that provided the data for this Note.\nETL conventions:\nNone",
     )
 
     @field_validator(
@@ -1545,6 +1593,10 @@ class Death(Model, DataLineageMixin):
         default=None,
         description="User guidance:\nNone\nETL conventions:\nIf the cause of death was coded using a Vocabulary present in the OMOP Vocabularies (not necessarily a standard concept) put the CONCEPT_ID representing the cause of death here.",
     )
+    provided_by_organization_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The id of the Organization that provided the data for this Death.\nETL conventions:\nNone",
+    )
 
     @field_validator(
         "death_type_concept_id",
@@ -1567,9 +1619,8 @@ class PersonIdentifier(BaseIdentifier):
     NAME: ClassVar = "PersonIdentifier"
     MODEL_CLASS: ClassVar = Person
 
-    person: Person|None = Field(
-        default=None,
-        description="The person that this identifier is associated with."
+    person: Person | None = Field(
+        default=None, description="The person that this identifier is associated with."
     )
 
 
@@ -1585,7 +1636,7 @@ class ObservationPeriodIdentifier(BaseIdentifier):
 
     observation_period: ObservationPeriod | None = Field(
         default=None,
-        description="The observation period that this identifier is associated with."
+        description="The observation period that this identifier is associated with.",
     )
 
 
@@ -1601,7 +1652,7 @@ class VisitOccurrenceIdentifier(BaseIdentifier):
 
     visit_occurrence: VisitOccurrence | None = Field(
         default=None,
-        description="The visit occurrence that this identifier is associated with."
+        description="The visit occurrence that this identifier is associated with.",
     )
 
 
@@ -1617,7 +1668,7 @@ class VisitDetailIdentifier(BaseIdentifier):
 
     visit_detail: VisitDetail | None = Field(
         default=None,
-        description="The visit detail that this identifier is associated with."
+        description="The visit detail that this identifier is associated with.",
     )
 
 
@@ -1633,7 +1684,7 @@ class ConditionOccurrenceIdentifier(BaseIdentifier):
 
     condition_occurrence: ConditionOccurrence | None = Field(
         default=None,
-        description="The condition occurrence that this identifier is associated with."
+        description="The condition occurrence that this identifier is associated with.",
     )
 
 
@@ -1649,7 +1700,7 @@ class ProcedureOccurrenceIdentifier(BaseIdentifier):
 
     procedure_occurrence: ProcedureOccurrence | None = Field(
         default=None,
-        description="The procedure occurrence that this identifier is associated with."
+        description="The procedure occurrence that this identifier is associated with.",
     )
 
 
@@ -1665,7 +1716,7 @@ class DrugExposureIdentifier(BaseIdentifier):
 
     drug_exposure: DrugExposure | None = Field(
         default=None,
-        description="The drug exposure that this identifier is associated with."
+        description="The drug exposure that this identifier is associated with.",
     )
 
 
@@ -1681,7 +1732,7 @@ class DeviceExposureIdentifier(BaseIdentifier):
 
     device_exposure: DeviceExposure | None = Field(
         default=None,
-        description="The device exposure that this identifier is associated with."
+        description="The device exposure that this identifier is associated with.",
     )
 
 
@@ -1697,7 +1748,7 @@ class MeasurementIdentifier(BaseIdentifier):
 
     measurement: Measurement | None = Field(
         default=None,
-        description="The measurement that this identifier is associated with."
+        description="The measurement that this identifier is associated with.",
     )
 
 
@@ -1713,7 +1764,7 @@ class ObservationIdentifier(BaseIdentifier):
 
     observation: Observation | None = Field(
         default=None,
-        description="The observation that this identifier is associated with."
+        description="The observation that this identifier is associated with.",
     )
 
 
@@ -1729,7 +1780,7 @@ class SpecimenIdentifier(BaseIdentifier):
 
     specimen: Specimen | None = Field(
         default=None,
-        description="The specimen that this identifier is associated with."
+        description="The specimen that this identifier is associated with.",
     )
 
 
@@ -1744,8 +1795,7 @@ class NoteIdentifier(BaseIdentifier):
     MODEL_CLASS: ClassVar = Note
 
     note: Note | None = Field(
-        default=None,
-        description="The note that this identifier is associated with."
+        default=None, description="The note that this identifier is associated with."
     )
 
 
@@ -1761,7 +1811,7 @@ class NoteNlpIdentifier(BaseIdentifier):
 
     note_nlp: NoteNlp | None = Field(
         default=None,
-        description="The note NLP that this identifier is associated with."
+        description="The note NLP that this identifier is associated with.",
     )
 
 
@@ -1777,7 +1827,7 @@ class MeasurementRelationIdentifier(BaseIdentifier):
 
     measurement_relation: MeasurementRelation | None = Field(
         default=None,
-        description="The measurement relation that this identifier is associated with."
+        description="The measurement relation that this identifier is associated with.",
     )
 
 
@@ -1792,6 +1842,5 @@ class DeathIdentifier(BaseIdentifier):
     MODEL_CLASS: ClassVar = Death
 
     death: Death | None = Field(
-        default=None,
-        description="The death that this identifier is associated with."
+        default=None, description="The death that this identifier is associated with."
     )

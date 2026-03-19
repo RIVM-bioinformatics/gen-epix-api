@@ -23,6 +23,8 @@ NO_RBAC_PERMISSIONS: set[tuple[type[fastapp.Command], PermissionType]] = {
     (command.UpdateUserOwnOrganizationCommand, PermissionType.EXECUTE),
     # Used to retrieve licenses, which is a public operation.
     (command.RetrieveLicensesCommand, PermissionType.EXECUTE),
+    # Used to retrieve feature flags, which is a public operation.
+    (command.RetrieveFeatureFlagsCommand, PermissionType.EXECUTE),
 }
 
 

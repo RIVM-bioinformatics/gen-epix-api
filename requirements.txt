@@ -18,9 +18,8 @@ ulid-py==1.1.0
 
 # configuration handling
 fire==0.7.1
-dynaconf==3.2.12
+dynaconf==3.2.13
 PyYAML==6.0.3
-types-setuptools==82.0.*
 python-multipart==0.0.22
 
 # calculation
@@ -32,4 +31,3 @@ biopython==1.86
 cachetools==7.0.5
 slowapi==0.1.9
 python-dateutil==2.9.0.post0
-types-python-dateutil==2.9.*

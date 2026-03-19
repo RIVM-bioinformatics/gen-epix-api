@@ -505,6 +505,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.casedb.integration.edge_cases_access",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_casedb_integration_edge_cases_access"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.casedb.performance",
             "type": "debugpy",
             "request": "launch",
@@ -731,6 +742,28 @@
             "program": "run.py",
             "args": [
                 "test_commondb_unit_auth"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.commondb.unit.config",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_commondb_unit_config"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.commondb.unit.logging",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_commondb_unit_logging"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

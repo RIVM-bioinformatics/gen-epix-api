@@ -91,6 +91,7 @@ class BaseAbacTestCase(TestCase):
             generate_id=Mock(return_value="svc-id"),
             generate_timestamp=Mock(return_value=0),
             create_log_message=Mock(return_value=""),
+            get_feature_flag=Mock(return_value=False),
         )
         return app
 
@@ -112,13 +113,13 @@ class BaseAbacTestCase(TestCase):
     def create_update_user_cmd(
         self, user: Any, tgt_org_id: UUID, is_new_user: bool
     ) -> Any:
-        """Create a command-like object for temp_update_user_own_organization."""
+        """Create a command-like object for update_user_own_organization."""
         return SimpleNamespace(
             user=user, organization_id=tgt_org_id, is_new_user=is_new_user
         )
 
     class UserModelStub:
-        """User model stub supporting model_copy used by temp_update_user_own_organization."""
+        """User model stub supporting model_copy used by update_user_own_organization."""
 
         def __init__(self, id_: UUID, org_id: UUID, roles: set[str]) -> None:
             self.id = id_
@@ -416,9 +417,10 @@ class TestGetCaseAbac(BaseAbacTestCase):
 
 @pytest.mark.scenario_ids("TC-SEC-29-02", "TC-RBAC-05-02")
 class TestTempUpdateUserOrganization(BaseAbacTestCase):
-    """Test temp_update_user_own_organization behavior."""
+    """Test update_user_own_organization behavior."""
 
     def test_no_change_same_org_returns_early(self) -> None:
+        self.app.get_feature_flag = Mock(return_value=True)  # type: ignore[method-assign]
         """When target org is same and not new user, returns early without side effects."""
         user = self.UserModelStub(self.user_id, self.org_id, {"ORG_USER"})
         cmd = self.create_update_user_cmd(user, self.org_id, is_new_user=False)
@@ -426,7 +428,7 @@ class TestTempUpdateUserOrganization(BaseAbacTestCase):
         self.service._get_user_by_id_cached = SimpleNamespace(cache_clear=Mock())  # type: ignore[assignment]
         self.service._get_case_abac_cached = SimpleNamespace(cache_clear=Mock())  # type: ignore[assignment]
 
-        retval = self.service.temp_update_user_own_organization(cmd)
+        retval = self.service.update_user_own_organization(cmd)
 
         self.assertIs(retval, user)
         self.repository.uow.assert_not_called()
@@ -436,6 +438,7 @@ class TestTempUpdateUserOrganization(BaseAbacTestCase):
 
     def test_happy_path_transfers_policies_and_updates_user(self) -> None:
         """Transfers policies to new org, deletes old user policies, creates new, updates user, and clears caches."""
+        self.app.get_feature_flag = Mock(return_value=True)  # type: ignore[method-assign]
         user = self.create_user_stub(self.user_id, self.org_id, {"ORG_USER"})
         cmd = self.create_update_user_cmd(user, self.new_org_id, is_new_user=False)
 
@@ -498,7 +501,7 @@ class TestTempUpdateUserOrganization(BaseAbacTestCase):
         self.service._get_user_by_id_cached = SimpleNamespace(cache_clear=Mock())  # type: ignore[assignment]
         self.service._get_case_abac_cached = SimpleNamespace(cache_clear=Mock())  # type: ignore[assignment]
 
-        updated_user = self.service.temp_update_user_own_organization(cmd)
+        updated_user = self.service.update_user_own_organization(cmd)
 
         self.assertEqual(updated_user.organization_id, self.new_org_id)
         self.assertEqual(self.service.app.handle.call_count, 9)  # type: ignore[attr-defined]

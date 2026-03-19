@@ -89,6 +89,7 @@ class OrganizationService(BaseOrganizationService):
         if user.id is None:
             raise exc.UnauthorizedAuthError("User has no ID")
         key = cmd.key
+        description = cmd.description
         initial_roles = cmd.roles
         organization_id = cmd.organization_id
 
@@ -154,6 +155,7 @@ class OrganizationService(BaseOrganizationService):
             user_invitation = self.user_invitation_class(
                 id=self.generate_id(),  # type: ignore[arg-type]
                 key=key,
+                description=description,
                 roles=initial_roles,
                 organization_id=organization_id,
                 invited_by_user_id=user.id,
@@ -241,6 +243,8 @@ class OrganizationService(BaseOrganizationService):
             user_invitation = sorted(
                 user_invitations_with_token, key=lambda x: x.expires_at
             )[-1]
+            # Set description of the user from the invitation
+            new_user.description = user_invitation.description
             # Set roles of the user
             new_user.roles = user_invitation.roles
             # Set ID and organization ID of the user
@@ -249,6 +253,7 @@ class OrganizationService(BaseOrganizationService):
             user_in_db: model.User = self.app.user_manager.create_new_user_from_token(  # type: ignore[assignment]
                 new_user,
                 user_invitation.token,
+                description=user_invitation.description,
                 created_by_user_id=user_invitation.invited_by_user_id,
                 roles=user_invitation.roles,
             )

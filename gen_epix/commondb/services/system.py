@@ -3,6 +3,7 @@ import importlib.metadata
 import re
 import string
 import tomllib
+from collections.abc import Hashable
 from typing import Any
 
 from cachetools import TTLCache, cached
@@ -51,6 +52,11 @@ class SystemService(BaseSystemService):
                 )
             )
         return outages
+
+    def retrieve_feature_flags(
+        self, cmd: command.RetrieveFeatureFlagsCommand
+    ) -> dict[Hashable, bool]:
+        return self.app.feature_flags
 
     def retrieve_licenses(
         self, cmd: command.RetrieveLicensesCommand

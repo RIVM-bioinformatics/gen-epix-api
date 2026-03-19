@@ -1,10 +1,9 @@
 import datetime
+import uuid
 from enum import Enum
 from pathlib import Path
 
 import pandas as pd
-
-from gen_epix.util import generate_ulid
 
 
 def get_test_name(test_type: Enum | str) -> str:
@@ -29,7 +28,7 @@ def get_test_output_dir(test_name: str) -> Path:
 
 def generate_uuids(n_rows: int = 1000, n_cols: int = 100) -> None:
     df = pd.DataFrame.from_dict(
-        {f"uuid{i}": [generate_ulid() for j in range(n_rows)] for i in range(100)}
+        {f"uuid{i}": [uuid.uuid4() for j in range(n_rows)] for i in range(100)}
     )
     xls_file = Path(__file__).parent.parent / "output" / "generated_uuids.xlsx"
     df.to_excel(xls_file, sheet_name="uuid", index=False)

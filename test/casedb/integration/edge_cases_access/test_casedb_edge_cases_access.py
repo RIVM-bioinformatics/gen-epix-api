@@ -1,7 +1,7 @@
 import logging
 from datetime import UTC, datetime
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.case_access.base_edge_cases import (
+from test.casedb.integration.edge_cases_access.base_edge_cases import (
     DEV_REPOSITORY_CONFIG,
     SKIP_ENDPOINTS,
     TEST_TYPE,

@@ -1,6 +1,6 @@
 import json
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Hashable
 from enum import Enum
 from typing import Any, NoReturn
 
@@ -24,6 +24,10 @@ class HealthStatus(Enum):
 
 class HealthReponseBody(PydanticBaseModel):
     status: HealthStatus
+
+
+class FeatureFlagsResponseBody(PydanticBaseModel):
+    feature_flags: dict[str, bool]
 
 
 class LogItem(PydanticBaseModel):
@@ -63,7 +67,7 @@ def create_system_endpoints(
         operation_id="health",
         name="Health",
     )
-    async def health() -> HealthReponseBody:
+    async def get__health() -> HealthReponseBody:
         """
         Returns the health status of the service. If no response is received
         within the timeout period, the service is considered unhealthy.
@@ -72,6 +76,27 @@ def create_system_endpoints(
             status=HealthStatus.HEALTHY,
         )
 
+    @router.get(
+        "/retrieve/feature_flags",
+        operation_id="retrieve__feature_flags",
+        name="Feature Flags",
+        description=command.RetrieveFeatureFlagsCommand.__doc__,
+    )
+    async def retrieve__feature_flags() -> FeatureFlagsResponseBody:
+        """
+        Returns the feature flags of the application.
+        """
+        try:
+            cmd = command.RetrieveFeatureFlagsCommand(user=None)
+            feature_flags: dict[Hashable, bool] = app.handle(cmd)
+            retval = {
+                str(x.value) if isinstance(x, Enum) else str(x): y
+                for x, y in feature_flags.items()
+            }
+        except Exception as exception:
+            handle_exception("f8e8c5e6", None, exception)
+        return FeatureFlagsResponseBody(feature_flags=retval)
+
     # Licenses endpoint
     @router.post(
         "/retrieve/licenses",
@@ -79,7 +104,7 @@ def create_system_endpoints(
         name="Licenses",
         description=command.RetrieveLicensesCommand.__doc__,
     )
-    async def licenses(
+    async def retrieve__licenses(
         idp_user: idp_user_dependency,  # type: ignore
     ) -> list[model.PackageMetadata]:
         try:

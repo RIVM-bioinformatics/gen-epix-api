@@ -75,8 +75,6 @@ from gen_epix.casedb.domain.model.ontology import Disease as Disease
 from gen_epix.casedb.domain.model.ontology import EtiologicalAgent as EtiologicalAgent
 from gen_epix.casedb.domain.model.ontology import Etiology as Etiology
 from gen_epix.casedb.domain.model.seqdb import PhylogeneticTree as PhylogeneticTree
-from gen_epix.casedb.domain.model.subject import Subject as Subject
-from gen_epix.casedb.domain.model.subject import SubjectIdentifier as SubjectIdentifier
 from gen_epix.commondb.domain import enum as common_enum
 from gen_epix.commondb.domain.model import (
     SORTED_MODELS_BY_SERVICE_TYPE as _COMMON_SORTED_MODELS_BY_SERVICE_TYPE,
@@ -146,10 +144,6 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
         ],
         enum.ServiceType.SEQDB: [
             PhylogeneticTree,
-        ],
-        enum.ServiceType.SUBJECT: [
-            Subject,
-            SubjectIdentifier,
         ],
         enum.ServiceType.CASE: [
             TreeAlgorithmClass,

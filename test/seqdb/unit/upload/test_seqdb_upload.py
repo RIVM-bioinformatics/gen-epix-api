@@ -12,9 +12,10 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.commondb.domain.enum import UploadAction, UploadStatus, UploadStatusSet
+from gen_epix.commondb.domain.enum import EtlStatus, UploadAction, UploadStatusSet
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import UploadResult, User
+from gen_epix.commondb.domain.model.upload import ParentUploadResult
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import command, enum, model
@@ -132,27 +133,35 @@ class BaseUploadTestCase(TestCase):
 
     def assertStatusCount(
         self,
-        upload_result: UploadResult,
+        upload_result: ParentUploadResult,
         n_skipped: int = 0,
         n_created: int = 0,
         n_updated: int = 0,
         n_failed: int = 0,
         n_pending: int = 0,
         n_processed: int = 0,
+        n_initialized: int = 0,
+        n_error: int = 0,
+        n_mixed: int = 0,
+        n_success: int = 0,
         include_self: bool = False,
     ) -> None:
         expected_status_count = {
-            UploadStatus.SKIPPED: n_skipped,
-            UploadStatus.CREATED: n_created,
-            UploadStatus.UPDATED: n_updated,
-            UploadStatus.FAILED: n_failed,
-            UploadStatus.PENDING: n_pending,
-            UploadStatus.PROCESSED: n_processed,
+            EtlStatus.SKIPPED: n_skipped,
+            EtlStatus.CREATED: n_created,
+            EtlStatus.UPDATED: n_updated,
+            EtlStatus.FAILED: n_failed,
+            EtlStatus.PENDING: n_pending,
+            EtlStatus.PROCESSED: n_processed,
+            EtlStatus.INITIALIZED: n_initialized,
+            EtlStatus.ERROR: n_error,
+            EtlStatus.MIXED: n_mixed,
+            EtlStatus.SUCCESS: n_success,
         }
         actual_status_count = upload_result.get_status_count(include_self=include_self)
         different_status_count = {
             (x, expected_status_count[x], actual_status_count[x])
-            for x in UploadStatus
+            for x in EtlStatus
             if actual_status_count[x] != expected_status_count[x]
         }
         if different_status_count:
@@ -340,7 +349,7 @@ class TestVerifyBatchSeqs(BaseUploadTestCase):
         self.assertTrue(success)
         self.assertTrue(retval.samples[0].seqs[0].has_warnings())
         self.assertTrue(retval.samples[0].seqs[0].has_log_code("a2b3c4d5"))
-        self.assertEqual(retval.samples[0].seqs[0].status, UploadStatus.SKIPPED)
+        self.assertEqual(retval.samples[0].seqs[0].status, EtlStatus.SKIPPED)
 
     def test_seq_exists_no_read_sets_error(self) -> None:
         """Test error when seq exists with same hash but new seq has no read sets."""
@@ -566,7 +575,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
                 retval.samples[0].allele_profiles[0].has_log_code("c7d8e9f0")
             )
             self.assertEqual(
-                retval.samples[0].allele_profiles[0].status, UploadStatus.SKIPPED
+                retval.samples[0].allele_profiles[0].status, EtlStatus.SKIPPED
             )
             self.assertEqual(sample.allele_profiles[0].id, self.random_ids[0])
         else:
@@ -930,7 +939,7 @@ class TestVerifyReferenceData(BaseUploadTestCase):
             upload_result.samples[0].allele_profiles[0].has_log_code("e7a4b2d1")
         )
         self.assertEqual(
-            upload_result.samples[0].allele_profiles[0].status, UploadStatus.FAILED
+            upload_result.samples[0].allele_profiles[0].status, EtlStatus.FAILED
         )
 
     def test_verify_refdata_allele_locus_mismatch(self) -> None:
@@ -1136,7 +1145,7 @@ class TestVerifyReferenceData(BaseUploadTestCase):
         cmd, retval = self.create_command_and_result_for_samples(sample)
 
         # Pre-mark the allele profile result as SKIPPED
-        retval.samples[0].allele_profiles[0].status = UploadStatus.SKIPPED
+        retval.samples[0].allele_profiles[0].status = EtlStatus.SKIPPED
 
         success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
@@ -1199,7 +1208,7 @@ class TestVerifyReferenceData(BaseUploadTestCase):
         self.assertIsNotNone(retval.samples[0].allele_profiles)
         self.assertTrue(len(retval.samples[0].allele_profiles) > 0)
         allele_profile_result = retval.samples[0].allele_profiles[0]
-        self.assertEqual(allele_profile_result.status, UploadStatus.FAILED)
+        self.assertEqual(allele_profile_result.status, EtlStatus.FAILED)
         self.assertTrue(allele_profile_result.has_errors())
         # TODO: replace with actual log code rather than log message
         self.assertTrue(allele_profile_result.has_log_code("d3f5c6b2"))

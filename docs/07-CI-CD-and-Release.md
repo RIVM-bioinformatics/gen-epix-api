@@ -43,7 +43,7 @@ Quality enforcement is split into focused checks:
 |------|------|--------|
 | Formatting | `isort --check-only --diff --profile black .` + `black --check --diff .` | `.github/workflows/main.yml#L73-L77` |
 | Linting | `pylint` with PR comment output | `.github/workflows/main.yml#L102-L113` |
-| Type checking | `mypy` with strict flags | `.github/workflows/main.yml#L136-L140` |
+| Type checking | `mypy --config-file mypy.ini ./` | `.github/workflows/main.yml#L136-L140` |
 | Tests | `python run.py test_all` | `.github/workflows/main.yml#L167-L170` |
 | Coverage | XML uploaded as artifact, consumed by SonarCloud | `.github/workflows/main.yml#L171-L197` |
 
@@ -55,7 +55,7 @@ Developer Note: CI test scope is exactly what `run.py test_all` includes; perfor
 |---------|-----------------|
 | Tests | `python run.py test_all` |
 | Formatting check | `isort --check-only --diff --profile black .` then `black --check --diff .` |
-| Type checking | `python run.py other_general_run_mypy` |
+| Type checking | `python run.py other_general_run_mypy` or `mypy --config-file mypy.ini ./` |
 | Linting | `python run.py other_general_run_pylint` |
 
 Tooling is present in `dev-requirements.txt` (`pytest`, `isort`, `black`, `pylint`, `mypy`, `coverage`). (Source: `dev-requirements.txt#L6-L16`)

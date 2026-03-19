@@ -170,6 +170,7 @@ class ProtocolMixin:
     )
 
     @field_validator("props", mode="before")
+    @classmethod
     def _validate_props(cls, value: str | dict) -> dict:
         if isinstance(value, str):
             value = json.loads(value)

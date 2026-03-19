@@ -12,7 +12,7 @@ from gen_epix import fastapp
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.base_env import BaseAppComposer
 from gen_epix.commondb.config import AppCfg
-from gen_epix.commondb.domain import DOMAIN, command, enum, model
+from gen_epix.commondb.domain import DOMAIN, command, enum, exc, model
 from gen_epix.commondb.domain.model import SORTED_SERVICE_TYPES
 from gen_epix.commondb.domain.policy.permission import RoleGenerator
 from gen_epix.commondb.services import AuthService, RbacService
@@ -71,6 +71,9 @@ class AppComposer(BaseAppComposer):
         self._policy_class_map = policy_class_map or {}
         self._log_setup = log_setup
 
+        # Parse config to test presence of expected values and to convert any values as necessary, such as feature flags
+        self._parse_config()
+
         # Derive some properties
         self._role_map = self._role_generator_class.get_role_map()
         self._role_set_map = self._role_generator_class.get_role_set_map()
@@ -119,6 +122,7 @@ class AppComposer(BaseAppComposer):
                 impl=app_impl,
                 logger=app_logger if self._log_setup else None,
                 id_factory=cfg["service"]["defaults"]["props"]["id_factory"],
+                feature_flags=cfg.get("feature_flags", {}),
             )
             ssl_context = create_ssl_context(
                 host=cfg["app"]["host"], ssl_cert_file=cfg["app"].get("ssl_cert_file")
@@ -319,9 +323,82 @@ class AppComposer(BaseAppComposer):
             )
         )
 
+    def _parse_config(self) -> None:
+        """Parse configuration values to test presence of expected values and convert any values as necessary, such as feature flags."""
+        # TODO: expand with a framework for parsing and validating config values, potentially using Pydantic classes to define expected config structure and types, and to perform parsing and validation.
+        cfg_content_types = [
+            ("feature_flags", None, bool),  # All feature flags
+            ("service", "auth", "props", "auto_create_new_users", bool),
+            ("service", "auth", "props", "root_token_time_to_live", int),
+        ]
+        cfg = self._app_cfg.cfg
+        # Convert boolean values
+        for cfg_path in cfg_content_types:
+            # Traverse config path to get value
+            cfg_section = cfg
+            path_exists = True
+            for ancestor_key in cfg_path[:-2]:
+                if ancestor_key not in cfg_section:
+                    path_exists = False
+                    break
+                cfg_section = cfg_section[ancestor_key]
+            if not path_exists:
+                # Config path does not exist
+                continue
+            # Check if value is of the correct type, and if not attempt to convert
+            if cfg_path[-2] is None:
+                # Special case: all leaf keys should have this content type
+                leaf_dict = cfg_section
+            else:
+                # Single leaf key with content type
+                leaf_dict = {cfg_path[-2]: cfg_section[cfg_path[-2]]}
+            for leaf_key, leaf_value in leaf_dict.items():
+                is_valid, converted_value = AppComposer._verify_type(
+                    leaf_value, cfg_path[-1]
+                )
+                if not is_valid:
+                    raise exc.InitializationServiceError(
+                        f"Invalid value for config {'.'.join((str(x) for x in cfg_path + (leaf_key,)))}: expected type {cfg_path[-1].__name__}"
+                    )
+                if converted_value != leaf_value:
+                    cfg_section[leaf_key] = converted_value
+
+    def _verify_type(value: Any, content_type: type) -> Any:
+        if isinstance(value, content_type):
+            return True, value
+        if value is None:
+            # Skip None as the value may be optional
+            return True, value
+        if content_type is bool:
+            is_bool, converted_value = AppComposer.convert_to_bool(value)
+            return is_bool, converted_value
+        elif content_type is int:
+            converted_value = int(value)
+            return True, converted_value
+        raise exc.InitializationServiceError(
+            f"Unsupported content type {content_type} for config parsing"
+        )
+
     @staticmethod
     def _get_enum_from_list(enums: Iterable[Enum], name: str) -> Enum:
         for enum_item in enums:
             if enum_item.name == name:
                 return enum_item
         raise ValueError(f"Enum with name {name} not found")
+
+    @staticmethod
+    def convert_to_bool(value: Any) -> tuple[bool, bool]:
+        """
+        Convert a value to boolean if possible. Returns a tuple of (success,
+        converted_value).
+        Accepts boolean values and strings "true", "1", "false", "0" (case
+        insensitive). If conversion is not possible, returns (False, False).
+        """
+        if isinstance(value, bool):
+            return True, value
+        if isinstance(value, str):
+            if value.lower() in {"true", "1"}:
+                return True, True
+            elif value.lower() in {"false", "0"}:
+                return True, False
+        return False, False

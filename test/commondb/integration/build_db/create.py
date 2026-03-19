@@ -253,8 +253,9 @@ class TestCreate:
             env.invite_and_register_user("root1_1", "root1_11", set_dummy_token=True)
         # TODO: OrganizationAdminPolicy.user does not exist
 
-    @pytest.mark.skipif(SKIP_ENDPOINTS, reason="Skipped endpoint tests")
     def test_openapi_json_endpoint(self, env: Env) -> None:
+        if not env.use_endpoints:
+            pytest.skip("Skipped endpoint tests")
         assert env.endpoint_test_client is not None, "EndpointTestClient not provided"
         response = env.endpoint_test_client.test_client.get("/openapi.json")
 

@@ -43,6 +43,21 @@ class GeneticDistanceProtocol(Model):
     )
     min_scale_unit: float = Field(description="The minimum unit to be shown in a scale")
 
+    @field_validator("seqdb_seq_distance_protocol_type", mode="before")
+    @classmethod
+    def _validate_seqdb_seq_distance_protocol_type(
+        cls, value: Any
+    ) -> seqdb_enum.SeqDistanceProtocolType:
+        if isinstance(value, str):
+            return seqdb_enum.SeqDistanceProtocolType(value)
+        return value
+
+    @field_serializer("seqdb_seq_distance_protocol_type", mode="plain")
+    def _serialize_seqdb_seq_distance_protocol_type(
+        self, value: seqdb_enum.SeqDistanceProtocolType
+    ) -> str:
+        return value.value
+
 
 class TreeAlgorithmClass(Model):
     ENTITY: ClassVar = Entity(
@@ -114,6 +129,17 @@ class TreeAlgorithm(Model):
         description="The rank of the tree algorithm, if relevant.",
     )
 
+    @field_validator("code", mode="before")
+    @classmethod
+    def _validate_code(cls, value: Any) -> enum.TreeAlgorithmType:
+        if isinstance(value, str):
+            return enum.TreeAlgorithmType(value)
+        return value
+
+    @field_serializer("code", mode="plain")
+    def _serialize_code(self, value: enum.TreeAlgorithmType) -> str:
+        return value.value
+
 
 class RefDim(Model):
     """
@@ -155,6 +181,17 @@ class RefDim(Model):
     def validate_code(cls, value: Any) -> str:
         """Ensure that the code is always a string."""
         return str(value)
+
+    @field_validator("dim_type", mode="before")
+    @classmethod
+    def _validate_dim_type(cls, value: Any) -> enum.DimType:
+        if isinstance(value, str):
+            return enum.DimType(value)
+        return value
+
+    @field_serializer("dim_type", mode="plain")
+    def _serialize_dim_type(self, value: enum.DimType) -> str:
+        return value.value
 
 
 class RefCol(Model):
@@ -247,6 +284,13 @@ class RefCol(Model):
         """Ensure that the code is always a string."""
         return str(value)
 
+    @field_validator("col_type", mode="before")
+    @classmethod
+    def _validate_col_type(cls, value: Any) -> enum.ColType:
+        if isinstance(value, str):
+            return enum.ColType(value)
+        return value
+
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
         """Validate the consistency of the RefCol based on its type and linked entities."""
@@ -266,6 +310,10 @@ class RefCol(Model):
                     f"No genetic_distance_protocol_id provided for col_type {self.col_type.value}"
                 )
         return self
+
+    @field_serializer("col_type", mode="plain")
+    def _serialize_col_type(self, value: enum.ColType) -> str:
+        return value.value
 
 
 class CaseType(Model):
@@ -550,7 +598,7 @@ class Col(Model):
     def _serialize_tree_algorithm_codes(
         self, value: list[enum.TreeAlgorithmType] | None
     ) -> list[str] | None:
-        return None if value is None else [x.value for x in value]
+        return None if value is None else sorted(x.value for x in value)
 
 
 class ColSet(Model):
