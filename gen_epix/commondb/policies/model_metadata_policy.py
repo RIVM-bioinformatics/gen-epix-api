@@ -132,4 +132,3 @@ class MaskModelProcessMetadataPolicy(Policy):
             model_obj.modified_at = None
             model_obj.modified_by = None
         return retval
-        return retval
