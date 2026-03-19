@@ -102,7 +102,7 @@ class BaseRetrieveStatsTestCase(TestCase):
             ref_cols={},
             dims={},
             cols={},
-            genetic_distance_protocols={},
+            protocols={},
             tree_algorithms={},
             case_type_access_abacs=case_type_access_abacs or {},
             case_type_share_abacs={},

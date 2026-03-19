@@ -1,3 +1,4 @@
+from datetime import date
 import json
 from collections.abc import Iterable
 from datetime import datetime
@@ -32,9 +33,41 @@ class Protocol(Model):
         default=None,
         description="The subtype of the protocol when protocol_type is SEQ_DISTANCE in seqdb.",
     )
-    name: str = Field(description="The name of the protocol", max_length=255)
+    code: str = Field(
+        description="A unique code for the protocol, used for external reference."
+    )
+    name: str | None = Field(
+        default=None, description="The name of the protocol", max_length=255)
     description: str | None = Field(
         default=None, description="The description of the protocol", max_length=1000
+    )
+    git_repository_uri: str | None = Field(
+        default=None,
+        description="URI of the Git repository containing the analytical logic for this protocol.",
+    )
+    git_commit_hash: str | None = Field(
+        default=None,
+        description="The specific Git commit hash to ensure reproducibility of the protocol execution.",
+    )
+    git_commit_tag: str | None = Field(
+        default=None,
+        description="An optional Git tag for easier reference to a specific version of the protocol.",
+    )
+    ref_seq_id: UUID | None = Field(
+        default=None,
+        description="The UUID of the reference sequence associated with this protocol.",
+    )
+    locus_set_id: UUID | None = Field(
+        default=None,
+        description="The UUID of the locus set associated with this protocol.",
+    )
+    valid_start_date: date | None = Field(
+        default=None,
+        description="The date from which this protocol is considered valid"
+    )
+    valid_end_date: date | None = Field(
+        default=None,
+        description="The date until which this protocol is considered valid"
     )
     seqdb_max_stored_distance: float | None = Field(
         default=None,

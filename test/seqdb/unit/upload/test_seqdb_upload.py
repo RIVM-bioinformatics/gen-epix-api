@@ -234,8 +234,7 @@ class BaseUploadTestCase(TestCase):
         return model.ReadSetForUpload(
             id=read_set_id,
             sample_id=sample_id or NULL_ID,
-            protocol_id=sequencing_protocol_id
-            or self.sequencing_protocol_id,
+            protocol_id=sequencing_protocol_id or self.sequencing_protocol_id,
             fwd_uri=fwd_uri or "s3://bucket/fwd.fastq.gz",
             rev_uri=rev_uri or "s3://bucket/rev.fastq.gz",
             fwd_file_id=fwd_file_id,
@@ -288,8 +287,7 @@ class BaseUploadTestCase(TestCase):
             id=allele_profile_id,
             sample_id=sample_id or NULL_ID,
             seq_id=seq_id,
-            protocol_id=locus_detection_protocol_id
-            or self.locus_detection_protocol_id,
+            protocol_id=locus_detection_protocol_id or self.locus_detection_protocol_id,
             protocol_code=locus_detection_protocol_code,
             locus_set_id=locus_set_id or self.locus_set_id,
             locus_set_code=locus_set_code,
@@ -305,6 +303,73 @@ class BaseUploadTestCase(TestCase):
             allele_ids=allele_ids,
             locus_allele_id_map=locus_allele_id_map,
         )
+
+    def get_only_seq(self, sample: model.SampleForUpload) -> model.SeqForUpload:
+        seqs = sample.seqs or []
+        self.assertEqual(len(seqs), 1)
+        return seqs[0]
+
+    def get_only_seq_result(
+        self, upload_result: model.SampleBatchUploadResult
+    ) -> UploadResult:
+        seq_results = upload_result.samples[0].seqs or []
+        self.assertEqual(len(seq_results), 1)
+        return seq_results[0]
+
+    def get_only_allele_profile(
+        self, sample: model.SampleForUpload
+    ) -> model.AlleleProfileForUpload:
+        allele_profiles = sample.allele_profiles or []
+        self.assertEqual(len(allele_profiles), 1)
+        return allele_profiles[0]
+
+    def get_only_allele_profile_result(
+        self, upload_result: model.SampleBatchUploadResult
+    ) -> UploadResult:
+        allele_profile_results = upload_result.samples[0].allele_profiles or []
+        self.assertEqual(len(allele_profile_results), 1)
+        return allele_profile_results[0]
+
+    def mock_existing_seq_lookup(
+        self,
+        seq: model.SeqForUpload,
+        existing_seq_rows: list[
+            tuple[UUID, UUID, UUID | None, UUID | None, UUID, UUID]
+        ],
+        protocol_code: str = "ASSEMBLY_CODE",
+    ) -> None:
+        self.service.repository.read_fields.side_effect = [
+            [(seq.protocol_id, protocol_code)],
+            existing_seq_rows,
+        ]
+
+    def mock_existing_allele_profile_lookup(
+        self,
+        allele_profile: model.AlleleProfileForUpload,
+        existing_profile_rows: list[tuple[UUID, UUID, UUID, UUID, UUID | None, UUID]],
+        protocol_code: str = "LOCUS_DETECTION_CODE",
+        locus_set_code: str = "LOCUS_SET_CODE",
+        locus_code_map_rows: list[tuple[UUID, str]] | None = None,
+    ) -> None:
+        side_effect: list[list[tuple[Any, ...]]] = [
+            [(allele_profile.protocol_id, protocol_code)],
+            [(allele_profile.locus_set_id, locus_set_code)],
+        ]
+        if (
+            allele_profile.locus_code_map_id is not None
+            or allele_profile.locus_code_map_code is not None
+        ):
+            if locus_code_map_rows is None:
+                locus_code_map_id = allele_profile.locus_code_map_id
+                if locus_code_map_id in (None, NULL_ID):
+                    locus_code_map_id = self.locus_code_map_id
+                locus_code_map_code = (
+                    allele_profile.locus_code_map_code or "LOCUS_CODE_MAP_CODE"
+                )
+                locus_code_map_rows = [(locus_code_map_id, locus_code_map_code)]
+            side_effect.append(locus_code_map_rows)
+        side_effect.append(existing_profile_rows)
+        self.service.repository.read_fields.side_effect = side_effect
 
 
 @pytest.mark.scenario_ids("TC-11-13-01")
@@ -323,34 +388,33 @@ class TestVerifyBatchSeqs(BaseUploadTestCase):
             sample_id=self.sample_id,
             seqs=[seq],
         )
-        seq_hash = sample.seqs[0].seq_hash
+        seq_for_upload = self.get_only_seq(sample)
         cmd, retval = self.create_command_and_result_for_samples(sample)
 
         # Prepare mocks
-        self.service.repository.read_fields.side_effect = [
-            [
-                (self.protocol_id, "ASSEMBLY_CODE")
-            ],  # Existing assembly protocol (id, code) tuples
+        self.mock_existing_seq_lookup(
+            seq_for_upload,
             [
                 (
                     self.sample_id,
-                    seq_hash,
+                    seq_for_upload.seq_hash,
                     self.read_set_id,
                     None,
-                    self.protocol_id,
+                    seq_for_upload.protocol_id,
                     self.random_ids[0],
                 )
-            ],  # Existing seq (sample_id, seq_hash, read_set_id, read_set2_id, protocol_id, seq_id) tuples
-        ]
+            ],
+        )
 
         # Execute
         success = _verify_children_seqs(self.batch_uploader, cmd, retval, self.uow)
 
         # Verify
+        seq_result = self.get_only_seq_result(retval)
         self.assertTrue(success)
-        self.assertTrue(retval.samples[0].seqs[0].has_warnings())
-        self.assertTrue(retval.samples[0].seqs[0].has_log_code("a2b3c4d5"))
-        self.assertEqual(retval.samples[0].seqs[0].status, EtlStatus.SKIPPED)
+        self.assertTrue(seq_result.has_warnings())
+        self.assertTrue(seq_result.has_log_code("a2b3c4d5"))
+        self.assertEqual(seq_result.status, EtlStatus.SKIPPED)
 
     def test_seq_exists_no_read_sets_error(self) -> None:
         """Test error when seq exists with same hash but new seq has no read sets."""
@@ -364,34 +428,33 @@ class TestVerifyBatchSeqs(BaseUploadTestCase):
             sample_id=self.sample_id,
             seqs=[seq],
         )
-        seq_hash = sample.seqs[0].seq_hash
+        seq_for_upload = self.get_only_seq(sample)
         cmd, retval = self.create_command_and_result_for_samples(sample)
 
         # Prepare mocks
-        self.service.repository.read_fields.side_effect = [
-            [
-                (self.protocol_id, "PROTOCOL_CODE")
-            ],  # Existing assembly protocol (id, code) tuples
+        self.mock_existing_seq_lookup(
+            seq_for_upload,
             [
                 (
                     self.sample_id,
-                    seq_hash,
+                    seq_for_upload.seq_hash,
                     self.read_set_id,
                     None,
-                    self.protocol_id,
+                    seq_for_upload.protocol_id,
                     self.random_ids[0],
                 )
-            ],  # Existing seq (sample_id, seq_hash, read_set_id, read_set2_id, protocol_id, seq_id) tuples
-        ]
+            ],
+            protocol_code="PROTOCOL_CODE",
+        )
 
         # Execute
         success = _verify_children_seqs(self.batch_uploader, cmd, retval, self.uow)
 
         # Verify
+        seq_result = self.get_only_seq_result(retval)
         self.assertFalse(success)
-        # Check that error was added to seq_result (code is passed as message in upload.py)
-        self.assertTrue(retval.samples[0].seqs[0].has_errors())
-        self.assertTrue(retval.samples[0].seqs[0].has_log_code("b9e4f8a1"))
+        self.assertTrue(seq_result.has_errors())
+        self.assertTrue(seq_result.has_log_code("b9e4f8a1"))
 
     def test_seqs_exist_with_same_signature(self) -> None:
         """Test error when seqs exist with same hash, read set and protocol."""
@@ -404,29 +467,33 @@ class TestVerifyBatchSeqs(BaseUploadTestCase):
             sample_id=self.sample_id,
             seqs=[seq],
         )
-        seq_hash = sample.seqs[0].seq_hash
+        seq_for_upload = self.get_only_seq(sample)
         cmd, retval = self.create_command_and_result_for_samples(sample)
 
         # Prepare mocks
-        self.service.repository.read_fields.return_value = [
-            (
-                self.sample_id,
-                seq_hash,
-                self.read_set_id,
-                None,
-                self.protocol_id,
-                self.random_ids[0],
-            )
-        ]
+        self.mock_existing_seq_lookup(
+            seq_for_upload,
+            [
+                (
+                    self.sample_id,
+                    seq_for_upload.seq_hash,
+                    self.read_set_id,
+                    None,
+                    seq_for_upload.protocol_id,
+                    self.random_ids[0],
+                )
+            ],
+        )
 
         # Execute
         success = _verify_children_seqs(self.batch_uploader, cmd, retval, self.uow)
 
         # Verify
-        self.assertFalse(success)
-        # Check that error was added to retval (code is passed as message in upload.py)
-        self.assertTrue(retval.samples[0].seqs[0].has_errors())  # type: ignore[index]
-        self.assertTrue(retval.samples[0].seqs[0].has_log_code("a2b3c4d5"))  # type: ignore[index]
+        seq_result = self.get_only_seq_result(retval)
+        self.assertTrue(success)
+        self.assertTrue(seq_result.has_warnings())
+        self.assertTrue(seq_result.has_log_code("a2b3c4d5"))
+        self.assertEqual(seq_result.status, EtlStatus.SKIPPED)
 
 
 @pytest.mark.scenario_ids("TC-11-13-01")
@@ -440,7 +507,9 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
             sample_id=self.sample_id,
         )
         # Set the format after creation
-        allele_profile.allele_profile_format = "SORTED_ALLELE_IDS"
+        allele_profile.allele_profile_format = (
+            enum.AlleleProfileFormat.SORTED_ALLELE_IDS
+        )
         sample = self.create_sample_for_upload(
             sample_id=self.sample_id,
             allele_profiles=[allele_profile],
@@ -533,35 +602,28 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
             sample_id=self.sample_id,
             seq_id=self.seq_id,
         )
-        # Explicitly set locus_code_map_id to None to match mock expectations
-        allele_profile.locus_code_map_id = None
         sample = self.create_sample_for_upload(
             sample_id=self.sample_id,
             allele_profiles=[allele_profile],
         )
-        allele_profile_hash = sample.allele_profiles[0].allele_profile_hash
+        allele_profile_for_upload = self.get_only_allele_profile(sample)
         cmd, retval = self.create_command_and_result_for_samples(sample)
 
         # Prepare mocks
-        self.service.repository.read_fields.side_effect = [
-            [
-                (self.protocol_id, "PROTOCOL_CODE")
-            ],  # Existing protocols (id, code) tuples
-            [
-                (self.locus_set_id, "LOCUS_SET_CODE")
-            ],  # Existing locus sets (id, code) tuples
-            [],  # Existing locus code maps (empty)
+        self.mock_existing_allele_profile_lookup(
+            allele_profile_for_upload,
             [
                 (
                     self.sample_id,
-                    allele_profile_hash,
-                    self.protocol_id,
-                    self.locus_set_id,
-                    self.seq_id,
+                    allele_profile_for_upload.allele_profile_hash,
+                    allele_profile_for_upload.protocol_id,
+                    allele_profile_for_upload.locus_set_id,
+                    allele_profile_for_upload.seq_id,
                     self.random_ids[0],
                 )
-            ],  # Existing allele profiles (sample_id, hash, protocol_id, locus_set_id, seq_id, profile_id) tuples
-        ]
+            ],
+            protocol_code="PROTOCOL_CODE",
+        )
 
         # Execute
         success = _verify_children_allele_profiles(
@@ -569,19 +631,12 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         )
 
         # Verify - function should succeed and find the existing allele profile
+        allele_profile_result = self.get_only_allele_profile_result(retval)
         self.assertTrue(success)
-        # Check that warning was added with correct code - debug by checking result structure
-        if retval.samples[0].allele_profiles[0].has_warnings():
-            self.assertTrue(
-                retval.samples[0].allele_profiles[0].has_log_code("c7d8e9f0")
-            )
-            self.assertEqual(
-                retval.samples[0].allele_profiles[0].status, EtlStatus.SKIPPED
-            )
-            self.assertEqual(sample.allele_profiles[0].id, self.random_ids[0])
-        else:
-            # Function didn't add warning, test expectation might be wrong
-            self.assertTrue(success)  # At least function should succeed
+        self.assertTrue(allele_profile_result.has_warnings())
+        self.assertTrue(allele_profile_result.has_log_code("c7d8e9f0"))
+        self.assertEqual(allele_profile_result.status, EtlStatus.SKIPPED)
+        self.assertEqual(allele_profile_for_upload.id, self.random_ids[0])
 
     def test_allele_profile_exists_no_seq_error(self) -> None:
         """Test error when allele profile exists but new profile has no seq ID."""
@@ -591,31 +646,28 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
             sample_id=self.sample_id,
             seq_id=None,  # No seq ID provided
         )
-        # Explicitly set locus_code_map_id to None to match mock expectations
-        allele_profile.locus_code_map_id = None
         sample = self.create_sample_for_upload(
             sample_id=self.sample_id,
             allele_profiles=[allele_profile],
         )
+        allele_profile_for_upload = self.get_only_allele_profile(sample)
         cmd, retval = self.create_command_and_result_for_samples(sample)
 
         # Prepare mocks
-        # Mock existing protocols, locus sets, and allele profile with different seq
-        computed_hash = sample.allele_profiles[0].allele_profile_hash
-        self.service.repository.read_fields.side_effect = [
-            [(self.protocol_id, "PROTOCOL_CODE")],  # Protocols
-            [(self.locus_set_id, "LOCUS_SET_CODE")],  # Locus sets
+        self.mock_existing_allele_profile_lookup(
+            allele_profile_for_upload,
             [
                 (
                     self.sample_id,
-                    computed_hash,
-                    self.protocol_id,
-                    self.locus_set_id,
-                    uuid4(),  # Different seq ID
+                    allele_profile_for_upload.allele_profile_hash,
+                    allele_profile_for_upload.protocol_id,
+                    allele_profile_for_upload.locus_set_id,
+                    uuid4(),
                     existing_profile_id,
                 )
-            ],  # Allele profiles
-        ]
+            ],
+            protocol_code="PROTOCOL_CODE",
+        )
 
         # Execute
         success = _verify_children_allele_profiles(
@@ -623,10 +675,10 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         )
 
         # Verify
+        allele_profile_result = self.get_only_allele_profile_result(retval)
         self.assertFalse(success)
-        # Check that error was added to allele_profile_result
-        self.assertTrue(retval.samples[0].allele_profiles[0].has_errors())
-        self.assertTrue(retval.samples[0].allele_profiles[0].has_log_code("a8f3e7b2"))
+        self.assertTrue(allele_profile_result.has_errors())
+        self.assertTrue(allele_profile_result.has_log_code("a8f3e7b2"))
 
     def test_allele_profiles_exist_with_error_on_exists(self) -> None:
         """Test error when allele profiles exist and on_exists=ERROR."""
@@ -634,7 +686,6 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         allele_profile = self.create_allele_profile_for_upload(
             sample_id=self.sample_id,
             seq_id=self.seq_id,  # Explicitly set seq_id to match mock
-            locus_code_map_id=NULL_ID,  # Explicitly set to None to avoid default
         )
         sample = self.create_sample_for_upload(
             sample_id=self.sample_id,
@@ -645,22 +696,21 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         )
 
         # Prepare mocks
-        profile = sample.allele_profiles[0]
-        # Mock existing protocols, locus sets, and allele profile
-        self.service.repository.read_fields.side_effect = [
-            [(profile.protocol_id, "PROTOCOL_CODE")],  # Protocols
-            [(profile.locus_set_id, "LOCUS_SET_CODE")],  # Locus sets
+        profile = self.get_only_allele_profile(sample)
+        self.mock_existing_allele_profile_lookup(
+            profile,
             [
                 (
                     self.sample_id,
                     profile.allele_profile_hash,
                     profile.protocol_id,
                     profile.locus_set_id,
-                    profile.seq_id,  # Use the actual seq_id from the profile
+                    profile.seq_id,
                     uuid4(),
                 )
-            ],  # Allele profiles
-        ]
+            ],
+            protocol_code="PROTOCOL_CODE",
+        )
 
         # Execute
         success = _verify_children_allele_profiles(
@@ -668,10 +718,11 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         )
 
         # Verify
-        self.assertFalse(success)
-        # Check that error was added to retval
-        self.assertTrue(retval.samples[0].allele_profiles[0].has_errors())  # type: ignore[index]
-        self.assertTrue(retval.samples[0].allele_profiles[0].has_log_code("c7d8e9f0"))  # type: ignore[index]
+        allele_profile_result = self.get_only_allele_profile_result(retval)
+        self.assertTrue(success)
+        self.assertTrue(allele_profile_result.has_warnings())
+        self.assertTrue(allele_profile_result.has_log_code("c7d8e9f0"))
+        self.assertEqual(allele_profile_result.status, EtlStatus.SKIPPED)
 
     def test_locus_code_map_id_does_not_exist(self) -> None:
         """Test error when locus code map ID does not exist."""
@@ -758,9 +809,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         # Prepare mocks
         # Mock locus code map with different ID than expected
         self.service.repository.read_fields.side_effect = [
-            [
-                (self.protocol_id, "PROTOCOL_CODE")
-            ],  # Protocols
+            [(self.protocol_id, "PROTOCOL_CODE")],  # Protocols
             [(self.locus_set_id, "LOCUS_SET_CODE")],  # Locus sets
             [
                 (self.locus_code_map_id, "DIFFERENT_CODE"),
@@ -794,13 +843,13 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         cmd, retval = self.create_command_and_result_for_samples(sample)
 
         # Prepare mocks
-        # Mock locus code map found by code
-        self.service.repository.read_fields.side_effect = [
-            [(self.protocol_id, "PROTOCOL_CODE")],  # Protocols
-            [(self.locus_set_id, "LOCUS_SET_CODE")],  # Locus sets
-            [(self.locus_code_map_id, "TEST_CODE")],  # Locus code maps
-            [],  # Allele profiles
-        ]
+        allele_profile_for_upload = self.get_only_allele_profile(sample)
+        self.mock_existing_allele_profile_lookup(
+            allele_profile_for_upload,
+            [],
+            protocol_code="PROTOCOL_CODE",
+            locus_code_map_rows=[(self.locus_code_map_id, "TEST_CODE")],
+        )
 
         # Execute
         success = _verify_children_allele_profiles(
@@ -811,7 +860,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         self.assertTrue(success)
         # Check that the ID was set
         self.assertEqual(
-            sample.allele_profiles[0].locus_code_map_id, self.locus_code_map_id
+            allele_profile_for_upload.locus_code_map_id, self.locus_code_map_id
         )
 
 

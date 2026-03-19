@@ -64,7 +64,7 @@ class RoleGenerator(CommonRoleGenerator):
         Role.REFDATA_ADMIN: COMMON_ROLE_PERMISSION_SETS[Role.REFDATA_ADMIN]
         | {
             # case
-            (command.GeneticDistanceProtocolCrudCommand, PermissionTypeSet.CRU),
+            (command.ProtocolCrudCommand, PermissionTypeSet.CRU),
             (command.CaseSetCategoryCrudCommand, PermissionTypeSet.R),
             (command.ColCrudCommand, PermissionTypeSet.CRU),
             (command.CaseTypeCrudCommand, PermissionTypeSet.CRU),
@@ -125,7 +125,7 @@ class RoleGenerator(CommonRoleGenerator):
             (command.CreateFileForReadSetCommand, PermissionTypeSet.E),
             (command.CreateFileForSeqCommand, PermissionTypeSet.E),
             (command.RefDimCrudCommand, PermissionTypeSet.R),
-            (command.GeneticDistanceProtocolCrudCommand, PermissionTypeSet.R),
+            (command.ProtocolCrudCommand, PermissionTypeSet.R),
             (command.RetrieveProtocolsCommand, PermissionTypeSet.E),
             (command.RetrieveCaseRightsCommand, PermissionTypeSet.E),
             (command.RetrieveCaseSetRightsCommand, PermissionTypeSet.E),

@@ -109,7 +109,7 @@ class BaseSimilarCasesTestCase(TestCase):
         return model.Protocol(
             seqdb_protocol_id=self.protocol_id,
             seqdb_protocol_type=seqdb_enum.ProtocolType.SEQ_DISTANCE,
-            name="KMER_EUCLIDEAN",
+            code="KMER_EUCLIDEAN",
             seqdb_is_integer_distance=False,
             min_scale_unit=0.1,
         )

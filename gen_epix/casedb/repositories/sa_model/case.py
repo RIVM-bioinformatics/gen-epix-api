@@ -3,7 +3,7 @@ from __future__ import (  # Resolves pylint not recognizing Mapped as subscripta
     annotations,
 )
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -86,15 +86,37 @@ class Protocol(Base, RowMetadataMixin):
         model.Protocol,
         "seqdb_protocol_id",
     )
-    seqdb_seq_distance_protocol_type: Mapped[seqdb_enum.SeqDistanceProtocolType] = (
-        create_mapped_column(DOMAIN, model.Protocol, "seqdb_seq_distance_protocol_type")
-    )
+    seqdb_seq_distance_protocol_type: Mapped[
+        seqdb_enum.SeqDistanceProtocolType | None
+    ] = create_mapped_column(DOMAIN, model.Protocol, "seqdb_seq_distance_protocol_type")
     seqdb_protocol_type: Mapped[seqdb_enum.ProtocolType] = create_mapped_column(
         DOMAIN, model.Protocol, "seqdb_protocol_type"
     )
-    name: Mapped[str] = create_mapped_column(DOMAIN, model.Protocol, "name")
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.Protocol, "code")
+    name: Mapped[str | None] = create_mapped_column(DOMAIN, model.Protocol, "name")
     description: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Protocol, "description"
+    )
+    git_repository_uri: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "git_repository_uri"
+    )
+    git_commit_hash: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "git_commit_hash"
+    )
+    git_commit_tag: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "git_commit_tag"
+    )
+    ref_seq_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "ref_seq_id"
+    )
+    locus_set_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "locus_set_id"
+    )
+    valid_start_date: Mapped[date | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "valid_start_date"
+    )
+    valid_end_date: Mapped[date | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "valid_end_date"
     )
     seqdb_max_stored_distance: Mapped[float | None] = create_mapped_column(
         DOMAIN,

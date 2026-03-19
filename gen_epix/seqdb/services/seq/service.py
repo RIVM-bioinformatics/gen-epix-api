@@ -113,7 +113,7 @@ class SeqService(BaseSeqService):
             return model.PhylogeneticTree(
                 id=self.generate_id(),  # type: ignore[arg-type]
                 tree_algorithm=tree_algorithm,
-                seq_distance_protocol_id=protocol_id,
+                protocol_id=protocol_id,
                 profile_ids=profile_ids,
                 leaf_names=leaf_names,
                 newick_repr=f"({leaf_names[0]});" if profile_ids else "();",

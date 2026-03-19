@@ -67,7 +67,6 @@ def _make_seq_distance_protocol_for_locus_set(
         id=protocol_id,
         code="LOCUS_HAMMING_TEST",
         name="Locus Hamming Test",
-        version="1.0",
         is_integer_distance=True,
         protocol_type=enum.ProtocolType.SEQ_DISTANCE,
         seq_distance_protocol_type=seq_distance_protocol_type,

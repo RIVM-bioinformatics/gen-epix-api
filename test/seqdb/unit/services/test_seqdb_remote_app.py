@@ -61,7 +61,7 @@ class TestSeqdbRemoteApp:
             "leaf_names": ["seq1", "seq2"],
             "newick_repr": "(seq1:0.1,seq2:0.2);",
             "tree_algorithm": "UPGMA",
-            "seq_distance_protocol_id": str(uuid4()),
+            "protocol_id": str(uuid4()),
         }
 
     def test_route_registration(self, remote_app: SeqdbRemoteApp) -> None:
@@ -148,7 +148,7 @@ class TestSeqdbRemoteApp:
             "profile_ids": [str(uuid4()), str(uuid4())],
             "newick_repr": "(seq1:0.1,seq2:0.2);",
             "tree_algorithm": "UPGMA",
-            "seq_distance_protocol_id": str(uuid4()),
+            "protocol_id": str(uuid4()),
         }
 
         # Setup mock HTTP client

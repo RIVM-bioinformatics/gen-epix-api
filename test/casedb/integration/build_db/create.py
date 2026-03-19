@@ -351,21 +351,13 @@ class TestCreate:
                 env.create_region(exec_user, "region11", "region_set1")
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
-    def test_create_genetic_distance_protocol(self, env: Env) -> None:
+    def test_create_protocol(self, env: Env) -> None:
         # Create genetic_distance_protocol as root, app_admin, refdata_admin
-        env.create_genetic_distance_protocol("root1_1", "genetic_distance_protocol1")
-        env.create_genetic_distance_protocol(
-            "app_admin1_1", "genetic_distance_protocol2"
-        )
-        env.create_genetic_distance_protocol(
-            "refdata_admin1_1", "genetic_distance_protocol3"
-        )
-        env.create_genetic_distance_protocol(
-            "refdata_admin1_2", "genetic_distance_protocol4"
-        )
-        env.create_genetic_distance_protocol(
-            "refdata_admin2_1", "genetic_distance_protocol5"
-        )
+        env.create_protocol("root1_1", "genetic_distance_protocol1")
+        env.create_protocol("app_admin1_1", "genetic_distance_protocol2")
+        env.create_protocol("refdata_admin1_1", "genetic_distance_protocol3")
+        env.create_protocol("refdata_admin1_2", "genetic_distance_protocol4")
+        env.create_protocol("refdata_admin2_1", "genetic_distance_protocol5")
 
     @pytest.mark.skipif(
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
@@ -373,9 +365,7 @@ class TestCreate:
     def test_create_genetic_distance_protocol_raise(self, env: Env) -> None:
         for exec_user in BELOW_APP_ADMIN_DATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.create_genetic_distance_protocol(
-                    exec_user, "genetic_distance_protocol11"
-                )
+                env.create_protocol(exec_user, "genetic_distance_protocol11")
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_ref_dim(self, env: Env) -> None:
@@ -429,7 +419,7 @@ class TestCreate:
                     col_type=col_type,
                     concept_set=concept_set,
                     region_set=region_set,
-                    genetic_distance_protocol=genetic_distance_protocol,
+                    protocol=genetic_distance_protocol,
                 )
                 cols = env.read_all("root1_1", model.RefCol)
 
@@ -977,10 +967,10 @@ class TestCreate:
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
                 env.create_region(ROOT, "region1_1", "region_set1")
-        # GeneticDistanceProtocol already exists
+        # Protocol already exists
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
-                env.create_genetic_distance_protocol(ROOT, "genetic_distance_protocol1")
+                env.create_protocol(ROOT, "genetic_distance_protocol1")
         # RefDim already exists
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
@@ -1160,8 +1150,8 @@ class TestCreate:
                     ROOT,
                     f"ref_col{index}_99",
                     col_type=enum.ColType.GENETIC_DISTANCE,
-                    genetic_distance_protocol="genetic_distance_protocol11",
-                    set_dummy_genetic_distance_protocol=True,
+                    protocol="genetic_distance_protocol11",
+                    set_dummy_protocol=True,
                 )
         # Etiology.disease does not exist
         if not SKIP_CREATE_DATA:

@@ -22,7 +22,7 @@ class BaseCaseService(BaseService):
     NO_ABAC_COMMAND_CLASSES: set[type[command.Command]] = {
         command.TreeAlgorithmClassCrudCommand,
         command.TreeAlgorithmCrudCommand,
-        command.GeneticDistanceProtocolCrudCommand,
+        command.ProtocolCrudCommand,
         command.CaseTypeSetCategoryCrudCommand,
         command.CaseSetCategoryCrudCommand,
         command.CaseSetStatusCrudCommand,
@@ -152,8 +152,8 @@ class BaseCaseService(BaseService):
         f(command.ColSetMemberCrudCommand, self.crud_col_set_member)
         f(command.DimCrudCommand, self.crud_dim)
         f(
-            command.GeneticDistanceProtocolCrudCommand,
-            self.crud_genetic_distance_protocol,
+            command.ProtocolCrudCommand,
+            self.crud_protocol,
         )
         f(command.RefColCrudCommand, self.crud_ref_col)
         f(command.RefDimCrudCommand, self.crud_ref_dim)
@@ -412,8 +412,8 @@ class BaseCaseService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def crud_genetic_distance_protocol(
-        self, cmd: command.GeneticDistanceProtocolCrudCommand
+    def crud_protocol(
+        self, cmd: command.ProtocolCrudCommand
     ) -> (
         list[model.Protocol]
         | model.Protocol
@@ -423,7 +423,7 @@ class BaseCaseService(BaseService):
         | bool
         | None
     ):
-        """Handle CRUD operations for GeneticDistanceProtocol entities."""
+        """Handle CRUD operations for Protocol entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod

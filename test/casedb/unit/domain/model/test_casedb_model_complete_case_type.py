@@ -111,7 +111,7 @@ class TestModelCompleteCaseType:
             ref_cols={},
             dims={x.id: x for x in dims if x.id is not None},
             cols={x.id: x for x in cols if x.id is not None},
-            genetic_distance_protocols={},
+            protocols={},
             tree_algorithms={},
             case_type_access_abacs={},
             case_type_share_abacs={},
