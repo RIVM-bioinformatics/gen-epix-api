@@ -28,6 +28,10 @@ class Protocol(Model):
     seqdb_protocol_type: seqdb_enum.ProtocolType = Field(
         description="The type of the protocol in seqdb"
     )
+    seqdb_seq_distance_protocol_type: seqdb_enum.SeqDistanceProtocolType | None = Field(
+        default=None,
+        description="The subtype of the protocol when protocol_type is SEQ_DISTANCE in seqdb.",
+    )
     name: str = Field(description="The name of the protocol", max_length=255)
     description: str | None = Field(
         default=None, description="The description of the protocol", max_length=1000
@@ -43,17 +47,13 @@ class Protocol(Model):
 
     @field_validator("seqdb_protocol_type", mode="before")
     @classmethod
-    def _validate_seqdb_protocol_type(
-        cls, value: Any
-    ) -> seqdb_enum.ProtocolType:
+    def _validate_seqdb_protocol_type(cls, value: Any) -> seqdb_enum.ProtocolType:
         if isinstance(value, str):
             return seqdb_enum.ProtocolType(value)
         return value
 
     @field_serializer("seqdb_protocol_type", mode="plain")
-    def _serialize_seqdb_protocol_type(
-        self, value: seqdb_enum.ProtocolType
-    ) -> str:
+    def _serialize_seqdb_protocol_type(self, value: seqdb_enum.ProtocolType) -> str:
         return value.value
 
 
@@ -266,9 +266,7 @@ class RefCol(Model):
             " that produces the input for the tree algorithm. FOREIGN KEY"
         ),
     )
-    protocol: Protocol | None = Field(
-        default=None, description="The protocol"
-    )
+    protocol: Protocol | None = Field(default=None, description="The protocol")
     description: str | None = Field(
         default=None, description="Description of the column.", max_length=1000
     )

@@ -39,7 +39,7 @@ from gen_epix.casedb.repositories.sa_model.case import ColSet as ColSet
 from gen_epix.casedb.repositories.sa_model.case import ColSetMember as ColSetMember
 from gen_epix.casedb.repositories.sa_model.case import Dim as Dim
 from gen_epix.casedb.repositories.sa_model.case import (
-    GeneticDistanceProtocol as GeneticDistanceProtocol,
+    Protocol as Protocol,
 )
 from gen_epix.casedb.repositories.sa_model.case import RefCol as RefCol
 from gen_epix.casedb.repositories.sa_model.case import RefDim as RefDim
@@ -151,7 +151,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.CaseTypeSetMember: CaseTypeSetMember,
         model.RefCol: RefCol,
         model.RefDim: RefDim,
-        model.Protocol: GeneticDistanceProtocol,
+        model.Protocol: Protocol,
         model.TreeAlgorithm: TreeAlgorithm,
         model.TreeAlgorithmClass: TreeAlgorithmClass,
     },

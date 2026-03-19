@@ -74,20 +74,23 @@ class TreeAlgorithm(Base, RowMetadataMixin):
     )
 
 
-class GeneticDistanceProtocol(Base, RowMetadataMixin):
+class Protocol(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.Protocol)
 
-    seqdb_seq_distance_protocol_id: Mapped[UUID] = create_mapped_column(
+    seqdb_protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN,
         model.Protocol,
-        "seqdb_seq_distance_protocol_id",
+        "seqdb_protocol_id",
     )
     seqdb_seq_distance_protocol_type: Mapped[seqdb_enum.SeqDistanceProtocolType] = (
         create_mapped_column(DOMAIN, model.Protocol, "seqdb_seq_distance_protocol_type")
+    )
+    seqdb_protocol_type: Mapped[seqdb_enum.ProtocolType] = create_mapped_column(
+        DOMAIN, model.Protocol, "seqdb_protocol_type"
     )
     name: Mapped[str] = create_mapped_column(DOMAIN, model.Protocol, "name")
     description: Mapped[str | None] = create_mapped_column(
@@ -151,8 +154,8 @@ class RefCol(Base, RowMetadataMixin):
     region_set_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.RefCol, "region_set_id"
     )
-    genetic_distance_protocol_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.RefCol, "genetic_distance_protocol_id"
+    protocol_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.RefCol, "protocol_id"
     )
     description: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.RefCol, "description"

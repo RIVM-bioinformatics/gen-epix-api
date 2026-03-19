@@ -370,7 +370,7 @@ class TestVerifyBatchSeqs(BaseUploadTestCase):
         # Prepare mocks
         self.service.repository.read_fields.side_effect = [
             [
-                (self.protocol_id, "ASSEMBLY_PROTOCOL_CODE")
+                (self.protocol_id, "PROTOCOL_CODE")
             ],  # Existing assembly protocol (id, code) tuples
             [
                 (

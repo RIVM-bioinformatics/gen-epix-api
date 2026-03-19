@@ -75,10 +75,12 @@ class Protocol(Model):
         default=None,
         description="The UUID of the locus set associated with this protocol.",
     )
-    valid_start_date: date = Field(
+    valid_start_date: date | None = Field(
+        default=None,
         description="The date from which this protocol is considered valid"
     )
-    valid_end_date: date = Field(
+    valid_end_date: date | None = Field(
+        default=None,
         description="The date until which this protocol is considered valid"
     )
     is_integer_distance: bool = Field(

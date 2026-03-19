@@ -271,7 +271,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
                     model.CalculateSeqDistancesResult(
                         id=created_new_seq_distance.id,
                         status=EtlStatus.CREATED,
-                        protocol_id=created_new_seq_distance.protocol_id,  # type : ignore[arg-type]
+                        seq_distance_profile_id=created_new_seq_distance.profile_id,  # type : ignore[arg-type]
                     )
                 )
 

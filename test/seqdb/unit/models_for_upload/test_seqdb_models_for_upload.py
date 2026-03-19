@@ -539,7 +539,7 @@ class TestModelSeqForUpload(TestCase):
 
     def test_assembly_protocol_validation_failure(self) -> None:
         """Test that validation fails when neither assembly_protocol_id nor assembly_protocol_code is provided."""
-        with self.assertRaises(ValidationError) as context:
+        with self.assertRaises(ValueError) as context:
             model.SeqForUpload(
                 sample_id=uuid4(),
                 contigs=[model.Contig(seq="ATCGATCG")],
@@ -548,7 +548,7 @@ class TestModelSeqForUpload(TestCase):
             )
 
         self.assertIn(
-            "Either assembly_protocol_code or assembly_protocol_id must be provided",
+            "Either protocol_code or protocol_id must be provided",
             str(context.exception),
         )
 
