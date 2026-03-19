@@ -1,5 +1,5 @@
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.setup.define_edge_cases import EDGE_CASES
+from test.casedb.integration.edge_cases_access.setup.define_edge_cases import EDGE_CASES
 
 import pytest
 
