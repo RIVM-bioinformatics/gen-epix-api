@@ -1098,6 +1098,7 @@ class CasedbTestClient(TestClient):
 
     # Note: We are passing the data_collections as a parameter because
     # UploadCasesCommand has it as a required field, please double check if this is necessary
+    # Note: also add the other data collections that a case is linked to
     def create_case(
         self,
         user_or_str: str | model.User,
@@ -1146,6 +1147,8 @@ class CasedbTestClient(TestClient):
         col_index_pattern = (
             col_index_pattern if col_index_pattern else r"^.*[a-z]*(\d+)_?\w*$"
         )
+        # The case is filled in completely
+        # should be a parameter of create case for ABAC access
         for col in cols:
             ref_col: model.RefCol = col.ref_col
             m = re.match(col_index_pattern, ref_col.code.lower())
@@ -1183,6 +1186,7 @@ class CasedbTestClient(TestClient):
                         model.CaseForUpload(
                             id=self.generate_id(),
                             case=model.Case(
+                                code=code,
                                 case_type_id=case_type.id,
                                 created_in_data_collection_id=created_in_data_collection_id,
                                 content=content,
@@ -1207,6 +1211,8 @@ class CasedbTestClient(TestClient):
             )
         )
 
+        case: model.Case = self._set_obj(case)  # type: ignore[assignment]
+
         # Get the data collection associations
         # stored_case_data_collection_links = self.handle(
         #     command.CaseDataCollectionLinkCrudCommand(
@@ -1228,7 +1234,7 @@ class CasedbTestClient(TestClient):
         # }
         # if stored_data_collection_ids != set(data_collection_ids):
         #     raise ValueError(f"Data collection associations mismatch")
-        return self._set_obj(case)  # type: ignore[return-value]
+        return case
 
     def create_case_data_collection_link(
         self,

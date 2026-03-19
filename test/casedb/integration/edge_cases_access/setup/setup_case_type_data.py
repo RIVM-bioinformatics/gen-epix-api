@@ -131,6 +131,17 @@ def setup_case_type_data(
     env.create_data_collection(root_user, "data_collection1")
     env.create_data_collection(root_user, "data_collection2")
 
+    # --- Cases ---
+    # One case per unique CaseType, in data_collection1.
+    # Naming convention: case{case_type_index}_1 (e.g. case1_1 for case_type1).
+    for case_type_name in sorted(created_case_types):
+        m = re.match(r"^case_type(\d+)$", case_type_name)
+        assert m, f"Unexpected CaseType name format: '{case_type_name}'"
+        case_code = f"case{m.group(1)}_1"
+        env.create_case(root_user, case_code, "data_collection1")
+        if VERBOSE:
+            print(f"Created case '{case_code}' for '{case_type_name}'")
+
     # --- OrganizationAccessCasePolicies (CaseTypeSets & ColSets) ---
     # One per unique (Organization, CaseTypeSet, ColSet) from org_access_policies.
     # Naming: "org_access_policy{org_num}_{dc_num}" e.g. "org_access_policy1_1"

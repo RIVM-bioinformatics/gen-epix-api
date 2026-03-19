@@ -72,6 +72,7 @@ class EdgeCaseSpec:
     expected_cols: list[str]
     expected_ref_cols: list[str]
     expected_ref_dims: list[str]
+    expected_cases: list[str]
 
     @property
     def description(self) -> str:
@@ -92,7 +93,8 @@ class EdgeCaseSpec:
             f"expected_col_sets=[{_fmt(self.expected_col_sets)}], "
             f"expected_cols=[{_fmt(self.expected_cols)}], "
             f"expected_ref_cols=[{_fmt(self.expected_ref_cols)}], "
-            f"expected_ref_dims=[{_fmt(self.expected_ref_dims)}]"
+            f"expected_ref_dims=[{_fmt(self.expected_ref_dims)}], "
+            f"expected_cases=[{_fmt(self.expected_cases)}]"
         )
 
 
@@ -304,6 +306,41 @@ def _compute_expected_ref_dims(col_codes: list[str]) -> list[str]:
     return sorted(result)
 
 
+def _compute_expected_cases(
+    org_access_policies: list[tuple[str, str]],
+    org_share_sets: list[str],
+    user_access_policies: list[tuple[str, str]],
+    user_share_sets: list[str],
+) -> list[str]:
+    """Determine the expected cases accessible for operational data.
+
+    For operational data, a user must satisfy BOTH org-level AND user-level policies
+    to gain access to CaseTypes (unlike reference data where only org-level matters):
+    - access CaseTypes = CaseTypes in (org_access CaseTypeSets ∩ user_access CaseTypeSets)
+    - share CaseTypes  = CaseTypes in (org_share CaseTypeSets ∩ user_share CaseTypeSets)
+    - result           = union of access CaseTypes ∪ share CaseTypes
+
+    For each accessible CaseType, exactly one case exists (naming: case{n}_1 for case_type{n}).
+    """
+    org_access_sets = {x for x, _ in org_access_policies}
+    user_access_sets = {x for x, _ in user_access_policies}
+    org_share_sets_set = set(org_share_sets)
+    user_share_sets_set = set(user_share_sets)
+
+    accessible_case_types: set[str] = set()
+    for case_type_set in org_access_sets & user_access_sets:
+        accessible_case_types.update(CASE_TYPE_SETS.get(case_type_set, []))
+    for case_type_set in org_share_sets_set & user_share_sets_set:
+        accessible_case_types.update(CASE_TYPE_SETS.get(case_type_set, []))
+
+    result: list[str] = []
+    for ct in accessible_case_types:
+        m = re.match(r"^case_type(\d+)$", ct)
+        assert m, f"Cannot extract CaseType index from: '{ct}'"
+        result.append(f"case{m.group(1)}_1")
+    return sorted(result)
+
+
 # 135 combinations — 5 org_access x
 #                 3 org_share x 3 user_access x 3 user_share (15 orgs x 9 users)
 EDGE_CASES: list[EdgeCaseSpec] = [
@@ -325,6 +362,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
         expected_ref_dims=_compute_expected_ref_dims(
             _compute_expected_cols(org_access, org_share)
         ),
+        expected_cases=_compute_expected_cases(org_access, org_share, user_access, user_share),
     )
     for org_idx, ((_, org_access), (_, org_share)) in _org_combos
     for usr_idx, ((_, user_access), (_, user_share)) in _user_combos
