@@ -1,5 +1,7 @@
 from test.test_client.enum import TestType
 
+from gen_epix.commondb.domain import enum
+
 # Variables for debugging purposes
 
 TEST_TYPE = TestType.SEQDB_INTEGRATION_BUILD_DB
