@@ -200,11 +200,11 @@ class TestSeqDistancePerformance(BaseSeqDistancePerformance):
                     )
                 )
                 profile_ids: list[UUID] = [x.id for x in profiles if x.id is not None]
-                protocols: list[model.SeqDistanceProtocol] = (
+                protocols: list[model.Protocol] = (
                     test_repository_performance.repository.crud(  # type: ignore[assignment]
                         uow,
                         env.get_root_user().id,
-                        model.SeqDistanceProtocol,
+                        model.Protocol,
                         None,
                         None,
                         CrudOperation.READ_ALL,

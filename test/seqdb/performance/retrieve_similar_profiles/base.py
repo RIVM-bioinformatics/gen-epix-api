@@ -15,8 +15,7 @@ DEV_REPOSITORY_CONFIG = DevRepositoryConfig.DICT_EMPTY
 
 ENTITIES: list[Entity] = [
     model.LocusSet.ENTITY,
-    model.LocusDetectionProtocol.ENTITY,
-    model.SeqDistanceProtocol.ENTITY,
+    model.Protocol.ENTITY,
     model.Sample.ENTITY,
     model.Seq.ENTITY,
     model.AlleleProfile.ENTITY,

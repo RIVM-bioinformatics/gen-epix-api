@@ -386,8 +386,9 @@ class TestContent:
                     raise ValueError("FASTA string should contain new lines")
                 # Retrieve SequencingProtocols
                 sequencing_protocols: list[seqdb_model.Protocol] = app.handle(
-                    command.RetrieveSequencingProtocolsCommand(
+                    command.RetrieveProtocolsCommand(
                         user=org_user,
+                        protocol_type=seqdb_enum.ProtocolType.SEQUENCING,
                     )
                 )
                 if not sequencing_protocols:
@@ -396,9 +397,10 @@ class TestContent:
                     if not sequencing_protocol.id:
                         raise ValueError("Library prep protocol ID should not be empty")
                 # Retrieve AssemblyProtocols
-                assembly_protocols: list[seqdb_model.AssemblyProtocol] = app.handle(
+                assembly_protocols: list[seqdb_model.Protocol] = app.handle(
                     command.RetrieveProtocolsCommand(
                         user=org_user,
+                        protocol_type=seqdb_enum.ProtocolType.ASSEMBLY,
                     )
                 )
                 if not assembly_protocols:

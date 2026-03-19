@@ -9,7 +9,11 @@ from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity, create_keys
-from gen_epix.seqdb.domain.enum import ProtocolType, ProtocolTypeSet
+from gen_epix.seqdb.domain.enum import (
+    ProtocolType,
+    ProtocolTypeSet,
+    SeqDistanceProtocolType,
+)
 
 
 def is_hexadecimal(s: str) -> bool:
@@ -46,6 +50,10 @@ class Protocol(Model):
         default=None, description="A detailed description of the protocol"
     )
     protocol_type: ProtocolType = Field(description="The type of the protocol.")
+    seq_distance_protocol_type: SeqDistanceProtocolType | None = Field(
+        default=None,
+        description="The subtype of the protocol when protocol_type is SEQ_DISTANCE.",
+    )
 
     git_repository_uri: str | None = Field(
         default=None,
@@ -93,6 +101,11 @@ class Protocol(Model):
                 raise ValueError("ref_seq_id must be empty for MLVA protocols.")
             if self.locus_set_id is None:
                 raise ValueError("locus_set_id must be filled for MLVA protocols.")
+        elif self.protocol_type == ProtocolType.SEQ_DISTANCE:
+            if self.seq_distance_protocol_type is None:
+                raise ValueError(
+                    "seq_distance_protocol_type must be filled for SEQ_DISTANCE protocols."
+                )
         elif self.protocol_type in ProtocolTypeSet.DETECTION_PROTOCOLS.value:
             if self.ref_seq_id is None:
                 raise ValueError(
@@ -102,6 +115,10 @@ class Protocol(Model):
                 raise ValueError(
                     "locus_set_id must be empty for SNP and LOCUS protocols."
                 )
+        elif self.seq_distance_protocol_type is not None:
+            raise ValueError(
+                "seq_distance_protocol_type must be empty for non-SEQ_DISTANCE protocols."
+            )
         return self
 
     @model_validator(mode="after")

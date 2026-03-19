@@ -331,12 +331,10 @@ class SeqService(BaseSeqService):
             assert protocol.id is not None
             locus_set_id = protocol.locus_set_id
             if locus_set_id is None:
-                raise exc.InvalidArgumentsError(
-                    "Protocol must have a locus_set_id"
-                )
+                raise exc.InvalidArgumentsError("Protocol must have a locus_set_id")
             # Get distance calculation function
             if (
-                protocol.protocol_type
+                protocol.seq_distance_protocol_type
                 == enum.SeqDistanceProtocolType.ALLELE_HAMMING
             ):
                 calculate_distance = SeqService.calculate_hamming_distance

@@ -40,9 +40,7 @@ def create_seq_distance_database(
     # create a 'dict' repository from the demo models as dict[class/model] = {instance.id: instance}
     db: dict[type, dict[UUID, Any]] = {}
     db[model.LocusSet] = {locus_set.id: locus_set}  # type: ignore[dict-item]
-    db[model.Protocol] = {
-        protocol.id: protocol  # type: ignore[dict-item]
-    }
+    db[model.Protocol] = {protocol.id: protocol}  # type: ignore[dict-item]
     db[model.DataCollection] = {data_collection.id: data_collection}  # type: ignore[dict-item]
     db[model.Sample] = {sample.id: sample}  # type: ignore[dict-item]
     db[model.Protocol] = {protocol.id: protocol}  # type: ignore[dict-item]
@@ -94,9 +92,8 @@ def get_seq_distance_protocol(locus_set: model.LocusSet) -> model.Protocol:
         id=uuid.uuid4(),
         code="ALLELE_HAMMING_TEST",
         name="Allele Hamming Test",
-        version="1.0",
         is_integer_distance=True,
-        type=enum.ProtocolType.SEQ_DISTANCE,
+        protocol_type=enum.ProtocolType.SEQ_DISTANCE,
         seq_distance_protocol_type=enum.SeqDistanceProtocolType.ALLELE_HAMMING,
         locus_set_id=locus_set.id,
         max_stored_distance=1e6,
@@ -130,8 +127,7 @@ def get_locus_detection_protocol() -> model.Protocol:
         id=uuid.uuid4(),
         code="LDP_TEST",
         name="Locus Detection Protocol Test",
-        version="1.0",
-        type=enum.ProtocolType.LOCUS_DETECTION,
+        protocol_type=enum.ProtocolType.LOCUS_DETECTION,
     )
 
     return locus_detection_protocol

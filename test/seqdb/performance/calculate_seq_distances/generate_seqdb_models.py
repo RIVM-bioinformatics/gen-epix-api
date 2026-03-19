@@ -1,6 +1,7 @@
 import base64
 import secrets
 import uuid
+from datetime import date
 from typing import Any
 from uuid import UUID
 
@@ -31,13 +32,14 @@ def generate_demo_seqdb_models(
             id=uuid.uuid4(),
             code=f"locus_protocol_code{hex_string}_{i}",
             name=f"locus_protocol_name{hex_string}_{i}",
-            type=enum.ProtocolType.LOCUS_DETECTION,
+            protocol_type=enum.ProtocolType.LOCUS_DETECTION,
+            ref_seq_id=uuid.uuid4()
         )
         assembly_protocol: model.Protocol = model.Protocol(  # type: ignore[call-arg]
             id=uuid.uuid4(),
             code=f"assembly_protocol_code{hex_string}_{i}",
             name=f"assembly_protocol_name{hex_string}_{i}",
-            type=enum.ProtocolType.ASSEMBLY,
+            protocol_type=enum.ProtocolType.ASSEMBLY
         )
 
         loci: list[model.Locus] = []
@@ -69,7 +71,10 @@ def generate_demo_seqdb_models(
         seq_distance_protocol: model.Protocol = model.Protocol(  # type: ignore[call-arg]
             id=uuid.uuid4(),
             protocol_type=enum.ProtocolType.SEQ_DISTANCE,
+            seq_distance_protocol_type=enum.SeqDistanceProtocolType.ALLELE_HAMMING,
             locus_set_id=locus_set.id,
+            valid_start_date=date(1970, 1, 1),
+            valid_end_date=date(9999, 12, 31),
             is_integer_distance=True,
             max_stored_distance=1000.0,
             code="seq_distance_protocol_code{hex_string}_{i}",
