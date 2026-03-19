@@ -1,7 +1,6 @@
 import datetime
 from test.commondb.integration.build_db.base import (
     DEFAULT_CREATED_AT,
-    SKIP_ENDPOINTS,
     SKIP_RAISE,
 )
 
@@ -267,8 +266,10 @@ class TestCreate:
 
     # We don't need a datacollection as setup for commondb tests
     # we are only testing the policy that sets created/modified metadata on create/update operations
-    @pytest.mark.skipif(SKIP_ENDPOINTS, reason="Skipped endpoint tests")
     def test_create_data_collection_with_override_of_metadat(self, env: Env) -> None:
+
+        if not env.use_endpoints:
+            pytest.skip("Skipped endpoint tests")
 
         created_at = datetime.datetime(2025, 1, 1, tzinfo=datetime.UTC)
         modified_at = datetime.datetime(2025, 6, 1, tzinfo=datetime.UTC)
