@@ -48,8 +48,8 @@ class EtlLogItem(BaseModel):
     code, message and severity. Immutable Pydantic value object.
     """
 
-    timestamp: datetime.datetime = Field(
-        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc),
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
         description="The UTC timestamp when the log item was created.",
     )
     code: str = Field(
