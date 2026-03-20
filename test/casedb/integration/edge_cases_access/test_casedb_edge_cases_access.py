@@ -127,6 +127,28 @@ class TestCasedbEdgeCasesAccess:
         #     case_result.modified_by == modified_by
         # ), "modified_by should be set to the user specified in the command for root user"
 
+    # testing capabilities of the test client for the edge cases related to access to operational data
+    def test_root_user_can_create_case_in_2_data_collections(
+        self, setup_case_type_data: None
+    ) -> None:
+        """
+        Test that a root user can create a case that belongs to 2 data collections and that the created case is retrievable.
+        This verifies that root users have the necessary permissions to create and access cases that belong to multiple data collections.
+        """
+        root_user = self.env.get_root_user()
+
+        # case_type1, data_collection1 and data_collection2 are created in the setup_case_type_data fixture
+
+        case_result = self.env.create_case(
+            root_user,
+            code="case1_100",  # Do not use a code that is already used by other test cases created in the setup.
+            data_collections=["data_collection1", "data_collection2"],
+        )
+
+        assert isinstance(case_result, model.Case)
+
+        print(f"Created case with id: {case_result.id} belonging to 2 data collections")
+
     @pytest.mark.skip(
         reason="Cases are not put in correct data collection in the setup,"
         + "also RetrieveCasesByIdCommand needs to be updated to include case_type_id for access control checks"
@@ -182,8 +204,8 @@ class TestCasedbEdgeCasesAccess:
         #         read_col_ids: set[UUID] = Field(
         #     description="The IDs of the columns for which values can be read, limited to the CaseType and data collection"
         # )
-
         #  --> What can be read for each data collection
+
         # 2. for each case retrieve which data collection it belongs to through the created_in_data_collection_id field and the
         # case data collection links table (koppeltabel)
         #  -> Data collections

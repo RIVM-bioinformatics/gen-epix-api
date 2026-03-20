@@ -10,6 +10,7 @@ from uuid import UUID
 
 from gen_epix.casedb.api.router import create_routers
 from gen_epix.casedb.domain import command, enum, model
+from gen_epix.casedb.domain.model.case.case_data import CaseDataCollectionLink
 from gen_epix.casedb.env import AppComposer
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.commondb.app_setup import create_fast_api
@@ -1096,9 +1097,6 @@ class CasedbTestClient(TestClient):
         )
         return self._set_obj(user_share_case_policy)  # type: ignore[return-value]
 
-    # Note: We are passing the data_collections as a parameter because
-    # UploadCasesCommand has it as a required field, please double check if this is necessary
-    # Note: also add the other data collections that a case is linked to
     def create_case(
         self,
         user_or_str: str | model.User,
@@ -1190,6 +1188,7 @@ class CasedbTestClient(TestClient):
                                 case_type_id=case_type.id,
                                 created_in_data_collection_id=created_in_data_collection_id,
                                 content=content,
+                                # data_collection_ids=data_collection_ids,
                                 # created_at=created_at,
                                 # modified_at=modified_at,
                                 # modified_by=modified_by,
@@ -1213,27 +1212,32 @@ class CasedbTestClient(TestClient):
 
         case: model.Case = self._set_obj(case)  # type: ignore[assignment]
 
+        # Create data collection links
+        for data_collection_id in data_collection_ids:
+            self.create_case_data_collection_link(
+                root_user, case.code, data_collection_in=data_collection_id
+            )
+
         # Get the data collection associations
-        # stored_case_data_collection_links = self.handle(
-        #     command.CaseDataCollectionLinkCrudCommand(
-        #         user=root_user,
-        #         operation=CrudOperation.READ_ALL,
-        #         query_filter=TypedEqualsUuidFilter(
-        #             type=FilterType.EQUALS_UUID.value,
-        #             key="case_id",
-        #             value=case.id,
-        #         ),
-        #     ),
-        # )
-        # stored_case_data_collection_links = [
-        #     self._set_obj(x) for x in stored_case_data_collection_links
-        # ]
+        stored_case_data_collection_links = self.handle(
+            command.CaseDataCollectionLinkCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+                query_filter=TypedEqualsUuidFilter(
+                    type=FilterType.EQUALS_UUID.value,
+                    key="case_id",
+                    value=case.id,
+                ),
+            ),
+        )
+
         # # Verify the data collection associations
-        # stored_data_collection_ids = {
-        #     x.data_collection_id for x in stored_case_data_collection_links
-        # }
-        # if stored_data_collection_ids != set(data_collection_ids):
-        #     raise ValueError(f"Data collection associations mismatch")
+        stored_data_collection_ids: list[CaseDataCollectionLink] = {
+            x.data_collection_id for x in stored_case_data_collection_links
+        }
+        if stored_data_collection_ids != set(data_collection_ids):
+            raise ValueError(f"Data collection associations mismatch")
+
         return case
 
     def create_case_data_collection_link(
@@ -1292,6 +1296,7 @@ class CasedbTestClient(TestClient):
         )
         return self._set_obj(case_set_status)  # type: ignore[return-value]
 
+    # TODO LSP-2883 not used anywhere yet, uses a key for cases as date. Why?
     def create_case_set(
         self,
         user_or_str: str | model.User,
@@ -1447,6 +1452,7 @@ class CasedbTestClient(TestClient):
         )
         return self._set_obj(contact)  # type: ignore[return-value]
 
+    # TODO LSP-2883 this is not used anywhere yet
     def read_organization_access_case_policies_with_any_right(
         self,
         user_or_str: str | model.User,
@@ -1596,6 +1602,7 @@ class CasedbTestClient(TestClient):
             if x.case_type_set_id in case_type_set_ids
         }
 
+    # TODO LSP-2883 not used anywhere yet
     def read_cols_with_any_right(
         self,
         user_or_str: str | model.User,
@@ -1635,6 +1642,7 @@ class CasedbTestClient(TestClient):
         )
         return {x.col_id for x in col_set_members if x.col_set_id in col_set_ids}
 
+    # TODO LSP-2883 not used anywhere yet, uses a key for cases as date. Why?
     def update_association_case_data_collection(
         self,
         user_or_str: str | model.User,
@@ -1818,6 +1826,7 @@ class CasedbTestClient(TestClient):
             raise ValueError(f"User data collection policies not updated")
         return self._set_obj(user, update=True)  # type: ignore[return-value]
 
+    # TODO LSP-2883 nit used anywhere yet, uses a key for cases as date. Why?
     def verify_case_content_access(
         self,
         expected_access: dict[tuple[str, str], list[str]],
@@ -2210,9 +2219,11 @@ class CasedbTestClient(TestClient):
             self.db[model_class] = {}
         table = self.db[model_class]
         key = self._get_obj_key(table, model_class, obj, on_missing)
-        if model_class == model.Case:
-            if not isinstance(key, datetime.datetime):
-                key = self._convert_case_code_to_date(key)
+
+        # TODO LSP-2883: check if this is still OK
+        # if model_class == model.Case:
+        #     if not isinstance(key, datetime.datetime):
+        #         key = self._convert_case_code_to_date(key)
         if model_class == model.CaseDataCollectionLink:
             dc_id = key[0]
             case_id = key[1]
@@ -2244,6 +2255,7 @@ class CasedbTestClient(TestClient):
                 raise NotImplementedError()
         return table[key] if not copy else table[key].model_copy()
 
+    # TODO LSP-2883 is used by a lot of methods that are not used anywhere yet, and uses a key for cases as date. Why?
     @staticmethod
     def _convert_case_code_to_date(code: str) -> datetime.datetime:
         m = re.match(r"^([a-z_]*)(\d+)_(\d+)$", code.lower())
