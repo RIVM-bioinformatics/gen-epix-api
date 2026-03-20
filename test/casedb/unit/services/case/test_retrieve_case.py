@@ -100,11 +100,7 @@ class BaseRetrieveCaseTestCase(TestCase):
             description=None,
             disease_id=None,
             etiological_agent_id=None,
-            create_max_n_cases=0,
-            read_max_n_cases=read_max_n_cases,
-            read_max_tree_size=0,
-            update_max_n_cases=0,
-            delete_max_n_cases=0,
+            props=model.CaseTypeProps(read_max_n_cases=read_max_n_cases),
         )
 
     def create_case(
@@ -649,6 +645,33 @@ class TestRetrieveCasesById(BaseRetrieveCaseTestCase):
         result: list[model.Case] = case_service_retrieve_cases_by_id(self.service, cmd)
 
         # 4. Verify
+        assert [x.id for x in result] == [self.case_id1]
+
+    def test_zero_read_max_falls_back_to_service_default(self) -> None:
+        # When props.read_max_n_cases == 0 (unconfigured), the service's
+        # _default_props.read_max_n_cases is used as the limit instead of 0.
+        # 1. Input
+        cmd: command.RetrieveCasesByIdCommand = command.RetrieveCasesByIdCommand(
+            user=self.user,
+            case_type_id=self.case_type_id,
+            case_ids=[self.case_id1, self.case_id2],
+        )
+
+        # 2. Mocks
+        self.attach_abac_policy(cmd)
+        cases: list[model.Case] = [
+            self.create_case(self.case_id1, {}),
+            self.create_case(self.case_id2, {}),
+        ]
+        self.service._retrieve_cases_with_content_right = Mock(return_value=cases)
+        # CaseType has 0 → service default of 1 should be applied
+        self.set_repository_case_type(self.create_case_type(read_max_n_cases=0))
+        self.service._default_props = model.CaseTypeProps(read_max_n_cases=1)
+
+        # 3. Execute
+        result: list[model.Case] = case_service_retrieve_cases_by_id(self.service, cmd)
+
+        # 4. Verify: only 1 case returned, not 0 and not 2
         assert [x.id for x in result] == [self.case_id1]
 
     def test_happy_path_returns_cases(self) -> None:
