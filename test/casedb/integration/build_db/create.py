@@ -248,19 +248,16 @@ class TestCreate:
             "refdata_admin1_2",
             "concept_set4_regular_language",
             enum.ConceptSetType.REGULAR_LANGUAGE,
-            regex=r"^ST(\d*)$",
         )
         env.create_concept_set(
             "refdata_admin2_1",
             "concept_set5_context_free_grammar_json",
             enum.ConceptSetType.CONTEXT_FREE_GRAMMAR_JSON,
-            schema_definition="{}",
         )
         env.create_concept_set(
             "refdata_admin2_2",
             "concept_set6_context_free_grammar_xml",
             enum.ConceptSetType.CONTEXT_FREE_GRAMMAR_XML,
-            schema_definition="<schema></schema>",
         )
 
     @pytest.mark.skipif(
@@ -292,7 +289,7 @@ class TestCreate:
         for exec_user in BELOW_APP_ADMIN_DATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_concept(exec_user, "category1_1", "concept_set1_nominal")
-        # TODO [LSP-2694]: add test for creating concept under regex or context free grammar concept set, which should not be allowed; alternatively regex and context free grammar RefCols do not have a concept set but rather the regex/schema is part of the RefCol definition
+        # TODO [LSP-2694]: add test for creating concept under regex or context free grammar concept sets, which should not be allowed; regex/schema are now stored on RefCol rather than ConceptSet.
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_region_set(self, env: Env) -> None:
@@ -407,6 +404,8 @@ class TestCreate:
                 concept_set: str | None = None
                 region_set: str | None = None
                 genetic_distance_protocol: str | None = None
+                regex: str | None = None
+                schema_definition: str | None = None
                 if col_type == enum.ColType.NOMINAL:
                     concept_set = "concept_set1_nominal"
                 elif col_type == enum.ColType.ORDINAL:
@@ -415,10 +414,13 @@ class TestCreate:
                     concept_set = "concept_set3_interval"
                 elif col_type == enum.ColType.REGULAR_LANGUAGE:
                     concept_set = "concept_set4_regular_language"
+                    regex = r"^ST(\d*)$"
                 elif col_type == enum.ColType.CONTEXT_FREE_GRAMMAR_JSON:
                     concept_set = "concept_set5_context_free_grammar_json"
+                    schema_definition = "{}"
                 elif col_type == enum.ColType.CONTEXT_FREE_GRAMMAR_XML:
                     concept_set = "concept_set6_context_free_grammar_xml"
+                    schema_definition = "<schema></schema>"
                 elif col_type in enum.ColTypeSet.HAS_REGION_SET.value:
                     region_set = f"region_set{j}"
                 elif col_type == enum.ColType.GENETIC_DISTANCE:
@@ -430,6 +432,8 @@ class TestCreate:
                     concept_set=concept_set,
                     region_set=region_set,
                     genetic_distance_protocol=genetic_distance_protocol,
+                    regex=regex,
+                    schema_definition=schema_definition,
                 )
                 cols = env.read_all("root1_1", model.RefCol)
 
@@ -449,6 +453,9 @@ class TestCreate:
         #  invalid col_type for RefDim type
         #  missing concept_set for nominal, ordinal, interval, regular_language,
         #    context_free_grammar_json, context_free_grammar_xml col_types
+        #  missing regex for regular_language col_type
+        #  missing schema_definition/schema_uri for context_free_grammar_json/xml
+        #    col_types
         #  missing region_set for region col_types
         #  missing genetic_sequence_col for genetic_distance col_type
         #  missing tree_algorithm_codes for genetic_distance col_type

@@ -708,7 +708,7 @@
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_omopdb_integration_build_db"
+                "test_omopdb_integration"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

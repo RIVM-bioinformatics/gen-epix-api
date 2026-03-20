@@ -206,6 +206,7 @@ class BaseCaseValidatorTestCase(TestCase):
             rank=2,
             col_type=enum.ColType.REGULAR_LANGUAGE,
             concept_set_id=self.concept_set_regex,
+            regex=r"^[A-Z]{2}\d{3}$",
         )
         ref_col_org = RefCol(
             id=self.org_ref_col_id,
@@ -419,38 +420,10 @@ class BaseCaseValidatorTestCase(TestCase):
         return complete_case_type
 
     def _concept_data(self) -> tuple[
-        dict[UUID, model.ConceptSet],
         dict[UUID, set[UUID]],
         dict[UUID, model.Concept],
         dict[tuple[UUID, UUID], dict[str, str]],
     ]:
-        # Concept sets
-        cs_string = model.ConceptSet(
-            id=self.concept_set_string,
-            code="STR",
-            name="Strings",
-            type=enum.ConceptSetType.NOMINAL,
-        )
-        cs_interval1 = model.ConceptSet(
-            id=self.concept_set_interval1,
-            code="INT1",
-            name="Intervals1",
-            type=enum.ConceptSetType.INTERVAL,
-        )
-        cs_interval2 = model.ConceptSet(
-            id=self.concept_set_interval2,
-            code="INT2",
-            name="Intervals2",
-            type=enum.ConceptSetType.INTERVAL,
-        )
-        cs_regex = model.ConceptSet(
-            id=self.concept_set_regex,
-            code="REGX",
-            name="Regex",
-            type=enum.ConceptSetType.REGULAR_LANGUAGE,
-            regex=r"^[A-Z]{2}\d{3}$",
-        )
-
         # Concepts
         c_string1 = model.Concept(
             id=self.string_concept1_id,
@@ -487,12 +460,6 @@ class BaseCaseValidatorTestCase(TestCase):
             props={"lb": 15.0, "ub": 25.0, "lb_in": True, "ub_in": True},
         )
 
-        concept_sets = {
-            cs_string.id: cs_string,
-            cs_interval1.id: cs_interval1,
-            cs_interval2.id: cs_interval2,
-            cs_regex.id: cs_regex,
-        }
         concepts = {
             c_string1.id: c_string1,
             c_int1_a.id: c_int1_a,
@@ -507,7 +474,7 @@ class BaseCaseValidatorTestCase(TestCase):
             self.concept_set_regex: set(),
         }
         concept_contained_in: dict[tuple[UUID, UUID], dict[str, str]] = {}
-        return concept_sets, concept_set_concepts_map, concepts, concept_contained_in  # type: ignore[return-value]
+        return concept_set_concepts_map, concepts, concept_contained_in  # type: ignore[return-value]
 
     def _region_data(self) -> tuple[
         dict[UUID, model.Region],
@@ -877,42 +844,10 @@ class TestRetrieveConceptData(BaseCaseValidatorTestCase):
         # Ensure set metadata is present
         validator._init_set_metadata()
 
-        # Build fake app.handle to return concept sets, concepts and relations
+        # Build fake app.handle to return concepts and relations
         def fake_handle(
-            cmd_obj: (
-                command.ConceptSetCrudCommand
-                | command.ConceptCrudCommand
-                | command.ConceptRelationCrudCommand
-            ),
-        ) -> list[model.ConceptSet | model.Concept | model.ConceptRelation]:
-            if isinstance(cmd_obj, command.ConceptSetCrudCommand):
-                return [
-                    model.ConceptSet(
-                        id=self.concept_set_string,
-                        code="STR",
-                        name="Strings",
-                        type=enum.ConceptSetType.NOMINAL,
-                    ),
-                    model.ConceptSet(
-                        id=self.concept_set_interval1,
-                        code="INT1",
-                        name="Intervals1",
-                        type=enum.ConceptSetType.INTERVAL,
-                    ),
-                    model.ConceptSet(
-                        id=self.concept_set_interval2,
-                        code="INT2",
-                        name="Intervals2",
-                        type=enum.ConceptSetType.INTERVAL,
-                    ),
-                    model.ConceptSet(
-                        id=self.concept_set_regex,
-                        code="REGX",
-                        name="Regex",
-                        type=enum.ConceptSetType.REGULAR_LANGUAGE,
-                        regex=r"^[A-Z]{2}\d{3}$",
-                    ),
-                ]
+            cmd_obj: command.ConceptCrudCommand | command.ConceptRelationCrudCommand,
+        ) -> list[model.Concept | model.ConceptRelation]:
             if isinstance(cmd_obj, command.ConceptCrudCommand):
                 return [
                     model.Concept(
@@ -963,11 +898,8 @@ class TestRetrieveConceptData(BaseCaseValidatorTestCase):
         self.case_service.app = Mock()
         self.case_service.app.handle = Mock(side_effect=fake_handle)
 
-        concept_sets, cset_concepts_map, concepts, concept_contained_in = (
-            validator._retrieve_concept_data()
-        )
+        cset_concepts_map, concepts, concept_contained_in = validator._retrieve_concept_data()
 
-        assert self.concept_set_string in concept_sets
         assert self.string_concept1_id in cset_concepts_map[self.concept_set_string]
         assert (
             concepts[self.interval1_b_id].concept_set_id == self.concept_set_interval1

@@ -253,9 +253,6 @@ class CasedbTestClient(TestClient):
         code: str,
         concept_set_type: enum.ConceptSetType,
         concepts: set[str | model.Concept] | None = None,
-        regex: str | None = None,
-        schema_definition: str | None = None,
-        schema_uri: str | None = None,
         set_dummy_concepts: bool = False,
     ) -> model.ConceptSet:
         user: model.User = self._get_obj(
@@ -269,9 +266,6 @@ class CasedbTestClient(TestClient):
                     code=code,
                     name=code,
                     type=concept_set_type,
-                    regex=regex,
-                    schema_definition=schema_definition,
-                    schema_uri=schema_uri,
                 ),
             )
         )
@@ -428,6 +422,9 @@ class CasedbTestClient(TestClient):
         concept_set: str | model.ConceptSet | None = None,
         region_set: str | model.RegionSet | None = None,
         genetic_distance_protocol: str | model.GeneticDistanceProtocol | None = None,
+        regex: str | None = None,
+        schema_definition: str | None = None,
+        schema_uri: str | None = None,
         set_dummy_ref_dim: bool = False,
         set_dummy_concept_set: bool = False,
         set_dummy_region_set: bool = False,
@@ -441,9 +438,14 @@ class CasedbTestClient(TestClient):
             raise ValueError(f"Invalid code {code}")
         ref_dim = "ref_dim" + m.group(2)
         rank = int(m.group(3))
-        ref_dim_id: UUID = (
-            self.generate_id() if set_dummy_ref_dim else self._get_obj(model.RefDim, ref_dim).id  # type: ignore[union-attr]
-        )
+        if set_dummy_ref_dim:
+            ref_dim_id = self.generate_id()
+        else:
+            ref_dim_obj: model.RefDim = self._get_obj(  # type: ignore[assignment]
+                model.RefDim, ref_dim
+            )
+            assert ref_dim_obj.id is not None
+            ref_dim_id = ref_dim_obj.id
         concept_set_id: UUID | None = (
             self.generate_id()
             if set_dummy_concept_set
@@ -487,6 +489,9 @@ class CasedbTestClient(TestClient):
                     concept_set_id=concept_set_id,
                     region_set_id=region_set_id,
                     genetic_distance_protocol_id=genetic_distance_protocol_id,
+                    regex=regex,
+                    schema_definition=schema_definition,
+                    schema_uri=schema_uri,
                 ),
             )
         )

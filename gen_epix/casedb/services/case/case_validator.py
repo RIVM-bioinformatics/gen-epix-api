@@ -99,7 +99,6 @@ class CaseValidator:
         # Unique concept and region sets across the complete CaseType
         self.concept_set_ids: set[UUID] = set()
         self.interval_concept_set_ids: set[UUID] = set()
-        self.regex_concept_set_ids: set[UUID] = set()
         self.region_set_ids: set[UUID] = set()
         # dict[concept_set_id, dict[lower(str(concept_id)|abbrevation|name), concept_id]]
         self.concept_value_maps: dict[UUID, dict[str, str]] = {}
@@ -107,7 +106,7 @@ class CaseValidator:
         self.concept_relation_maps: dict[tuple[UUID, UUID], dict[str, str]] = {}
         # dict[to_concept_set_id, IntervalTransformer]
         self.interval_transformers: dict[UUID, IntervalTransformer] = {}
-        # dict[concept_set_id, pattern_matcher]
+        # dict[ref_col_id, pattern_matcher]
         self.regex_patterns: dict[UUID, re.Pattern] = {}
         # dict[region_set_id, dict[lower(str(region_id)|code|name), region_id]]
         self.region_value_maps: dict[UUID, dict[str, str]] = {}
@@ -209,9 +208,8 @@ class CaseValidator:
             assert col_id is not None
             ref_col = self.complete_case_type.ref_cols[col.ref_col_id]
             if ref_col.col_type == ColType.REGULAR_LANGUAGE:
-                pattern = self.regex_patterns[
-                    ref_col.concept_set_id
-                ]  # type: ignore[arg-type]
+                assert ref_col.id is not None
+                pattern = self.regex_patterns[ref_col.id]
                 transform_fn = lambda x: (
                     x if x is None or pattern.match(x) else NoReturn
                 )
@@ -749,6 +747,7 @@ class CaseValidator:
 
     def _init_metadata(self) -> None:
         self._init_set_metadata()
+        self._init_regex_metadata()
         self._init_concept_metadata()
         self._init_region_metadata()
         self._init_organization_metadata()
@@ -756,7 +755,6 @@ class CaseValidator:
     def _init_set_metadata(self) -> None:
         self.concept_set_ids = set()
         self.interval_concept_set_ids = set()
-        self.regex_concept_set_ids = set()
         self.region_set_ids = set()
         # Get unique concept and region sets across the complete CaseType
         for ref_col in self.complete_case_type.ref_cols.values():
@@ -765,20 +763,26 @@ class CaseValidator:
                 self.concept_set_ids.add(ref_col.concept_set_id)
                 if ref_col.col_type == ColType.INTERVAL:
                     self.interval_concept_set_ids.add(ref_col.concept_set_id)
-                elif ref_col.col_type == ColType.REGULAR_LANGUAGE:
-                    self.regex_concept_set_ids.add(ref_col.concept_set_id)
             elif ref_col.col_type in ColTypeSet.HAS_REGION_SET.value:
                 assert ref_col.region_set_id
                 self.region_set_ids.add(ref_col.region_set_id)
+
+    def _init_regex_metadata(self) -> None:
+        self.regex_patterns = {}
+        for ref_col in self.complete_case_type.ref_cols.values():
+            if ref_col.col_type != ColType.REGULAR_LANGUAGE:
+                continue
+            assert ref_col.id is not None
+            assert ref_col.regex is not None
+            self.regex_patterns[ref_col.id] = re.compile(ref_col.regex)
 
     def _init_concept_metadata(self) -> None:
         self.concept_value_maps = {}
         self.concept_relation_maps = {}
         self.interval_transformers = {}
-        self.regex_patterns = {}
 
         # Retrieve relevant concept sets, concepts, and relations
-        concept_sets, concept_set_concepts_map, concepts, concept_contained_in = (
+        concept_set_concepts_map, concepts, concept_contained_in = (
             self._retrieve_concept_data()
         )
 
@@ -823,12 +827,6 @@ class CaseValidator:
                 lower_bound_is_inclusive=[x.props["lb_in"] for x in interval_concepts],
                 upper_bound_is_inclusive=[x.props["ub_in"] for x in interval_concepts],
             )
-
-        # Fill in regex matchers
-        for concept_set_id in self.regex_concept_set_ids:
-            concept_set = concept_sets[concept_set_id]
-            assert concept_set.regex is not None
-            self.regex_patterns[concept_set_id] = re.compile(concept_set.regex)
 
     def _init_region_metadata(self) -> None:
         self.region_value_maps = {}
@@ -883,24 +881,11 @@ class CaseValidator:
     def _retrieve_concept_data(
         self,
     ) -> tuple[
-        dict[UUID, model.ConceptSet],
         dict[UUID, set[UUID]],
         dict[UUID, model.Concept],
         dict[tuple[UUID, UUID], dict[str, str]],
     ]:
         app = self.case_service.app
-        # Retrieve relevant concepts sets
-        concept_sets: dict[UUID, model.ConceptSet] = {
-            x.id: x
-            for x in app.handle(
-                command.ConceptSetCrudCommand(
-                    operation=CrudOperation.READ_ALL,
-                    query_filter=UuidSetFilter(
-                        key="id", members=frozenset(self.concept_set_ids)
-                    ),
-                )
-            )
-        }
         # Retrieve relevant concepts
         concepts: dict[UUID, model.Concept] = {
             x.id: x
@@ -956,7 +941,7 @@ class CaseValidator:
             assert to_concept.id is not None
             concept_contained_in[key][str(from_concept.id)] = str(to_concept.id)
 
-        return concept_sets, concept_set_concepts_map, concepts, concept_contained_in
+        return concept_set_concepts_map, concepts, concept_contained_in
 
     def _retrieve_region_data(self) -> tuple[
         dict[UUID, model.Region],
