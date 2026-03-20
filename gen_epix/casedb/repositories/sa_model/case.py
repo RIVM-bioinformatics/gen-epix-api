@@ -450,6 +450,7 @@ class CaseSet(Base, RowMetadataMixin):
         DOMAIN, model.CaseSet, "created_in_data_collection_id"
     )
     name: Mapped[str] = create_mapped_column(DOMAIN, model.CaseSet, "name")
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.CaseSet, "code")
     description: Mapped[str] = create_mapped_column(
         DOMAIN, model.CaseSet, "description"
     )
