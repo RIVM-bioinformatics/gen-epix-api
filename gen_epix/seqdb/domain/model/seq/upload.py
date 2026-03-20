@@ -114,9 +114,7 @@ class SnpProfileForUpload(SnpProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
     additional variables.
     """
 
-    ENTITY: ClassVar[Entity] = SnpProfile.model_entity().clone(
-        update={"persistable": False}
-    )
+    ENTITY: ClassVar = SnpProfile.model_entity().clone(update={"persistable": False})
     NAME: ClassVar = "SnpProfileForUpload"
 
     IDENTIFIER_CLASS: ClassVar = SnpProfileIdentifier
@@ -207,9 +205,7 @@ class AlleleProfileForUpload(
     additional variables.
     """
 
-    ENTITY: ClassVar[Entity] = AlleleProfile.model_entity().clone(
-        update={"persistable": False}
-    )
+    ENTITY: ClassVar = AlleleProfile.model_entity().clone(update={"persistable": False})
     NAME: ClassVar = "AlleleProfileForUpload"
 
     IDENTIFIER_CLASS: ClassVar = AlleleProfileIdentifier
@@ -355,14 +351,12 @@ class MlvaProfileForUpload(MlvaProfile, IdentifiersMixin, ValidateRefDataIdCodeM
     additional variables.
     """
 
-    ENTITY: ClassVar[Entity] = MlvaProfile.model_entity().clone(
-        update={"persistable": False}
-    )
+    ENTITY: ClassVar = MlvaProfile.model_entity().clone(update={"persistable": False})
     NAME: ClassVar = "MlvaProfileForUpload"
 
     IDENTIFIER_CLASS: ClassVar = MlvaProfileIdentifier
     REFDATA_FIELD_ID_CODE_PAIRS: ClassVar = [
-        ("locus_detection_protocol_id", "locus_detection_protocol_code"),
+        ("mlva_detection_protocol_id", "mlva_detection_protocol_code"),
         ("locus_set_id", "locus_set_code"),
         ("locus_code_map_id", "locus_code_map_code"),
     ]
@@ -483,9 +477,7 @@ class KmerProfileForUpload(KmerProfile, IdentifiersMixin, ValidateRefDataIdCodeM
     additional variables.
     """
 
-    ENTITY: ClassVar[Entity] = KmerProfile.model_entity().clone(
-        update={"persistable": False}
-    )
+    ENTITY: ClassVar = KmerProfile.model_entity().clone(update={"persistable": False})
     NAME: ClassVar = "KmerProfileForUpload"
 
     IDENTIFIER_CLASS: ClassVar = KmerProfileIdentifier

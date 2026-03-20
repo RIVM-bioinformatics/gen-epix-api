@@ -8,7 +8,7 @@ from gen_epix.fastapp import BaseService
 from gen_epix.fastapp.model import Command
 
 
-class BaseAbacService(BaseService):
+class BaseAbacService(BaseService[BaseAbacRepository]):
     SERVICE_TYPE = ServiceType.ABAC
 
     ORGANIZATION_ADMIN_WRITE_COMMANDS: set[type[Command]] = {

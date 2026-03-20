@@ -12,6 +12,7 @@ from gen_epix.commondb.api.rbac import create_rbac_endpoints
 from gen_epix.commondb.api.system import create_system_endpoints
 from gen_epix.commondb.domain import enum
 from gen_epix.fastapp import App
+from gen_epix.fastapp.api.router import RouterData
 
 
 def create_routers(
@@ -20,7 +21,7 @@ def create_routers(
     router_kwargs: dict = {},
 ) -> list[APIRouter]:
     assert app
-    router_data = [
+    router_data: list[RouterData] = [
         # Common routers
         {
             "name": "auth",
@@ -48,17 +49,12 @@ def create_routers(
     ]
     routers: list[APIRouter] = []
     for curr_router_data in router_data:
-        name: str = curr_router_data["name"]  # type: ignore[assignment]
-        create_endpoints_fn: Callable = curr_router_data["create_endpoints_fn"]  # type: ignore[assignment]
-        router = APIRouter(tags=[name], **router_kwargs)
-        endpoints_function_kwargs: dict = curr_router_data.get(  # type: ignore[assignment]
-            "endpoints_function_kwargs", {}
-        )
-        create_endpoints_fn(
+        router = APIRouter(tags=[curr_router_data["name"]], **router_kwargs)
+        curr_router_data["create_endpoints_fn"](
             router,
             app,
             handle_exception=handle_exception,
-            **endpoints_function_kwargs,
+            **curr_router_data.get("endpoints_function_kwargs", {}),
         )
         routers.append(router)
     return routers
