@@ -86,5 +86,7 @@
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
-    "chat.agent.maxRequests": 50
+    "chat.agent.maxRequests": 50,
+    "editor.rulers": [88],
+    "diffEditor.wordWrap": "off"
 }

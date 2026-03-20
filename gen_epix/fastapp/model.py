@@ -4,7 +4,7 @@ import abc
 import uuid
 from collections.abc import Hashable, Iterable
 from functools import cached_property
-from typing import Any, ClassVar, Self
+from typing import Any, ClassVar, Literal, Self, overload
 
 from pydantic import BaseModel
 from pydantic import BaseModel as PydanticBaseModel
@@ -65,6 +65,33 @@ class Model(PydanticBaseModel):
                 f"Name not set for model {cls.__name__}"
             )
         return cls.NAME
+
+    @overload
+    def get_id(self, raise_on_missing: Literal[True]) -> Hashable: ...
+
+    @overload
+    def get_id(self, raise_on_missing: Literal[False] = ...) -> Hashable | None: ...
+
+    def get_id(self, raise_on_missing: bool = False) -> Hashable | None:
+        """
+        Get the ID of the model instance. If the ID is not set and
+        raise_on_missing is True, an InitializationServiceError is raised.
+        Otherwise, None is returned if the ID is not set. If the Model has no ID field, an error is raised.
+
+        This method retrieves the ID using the field name defined in the
+        associated Entity, so that it can be used generically for any model
+        without needing to know the specific field name of the ID. The ID is
+        typically used for persistence and for identifying the model instance
+        across systems.
+
+        This method should be overridden where relevant for performance reasons.
+        """
+        id_: Hashable | None = getattr(self, self.ENTITY.get_id_field_name())
+        if id_ is None and raise_on_missing:
+            raise exc.InvalidIdsError(
+                f"ID not set for model instance {self.__class__.__name__}"
+            )
+        return id_
 
 
 class User(PydanticBaseModel):

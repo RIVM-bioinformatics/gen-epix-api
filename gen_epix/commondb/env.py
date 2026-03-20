@@ -12,7 +12,7 @@ from gen_epix import fastapp
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.base_env import BaseAppComposer
 from gen_epix.commondb.config import AppCfg
-from gen_epix.commondb.domain import DOMAIN, command, enum, exc, model
+from gen_epix.commondb.domain import DOMAIN, enum, exc
 from gen_epix.commondb.domain.model import SORTED_SERVICE_TYPES
 from gen_epix.commondb.domain.policy.permission import RoleGenerator
 from gen_epix.commondb.services import AuthService, RbacService
@@ -293,6 +293,7 @@ class AppComposer(BaseAppComposer):
                         f"Setting up {service_type.value} service with {repository_type.value} repository",
                     )
                 )
+            # TODO: 2953 inject SAMapperFactory here
             curr_repository = repository_class.create_repository(
                 entities=entities, **repository_props
             )

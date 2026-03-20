@@ -166,6 +166,9 @@ set_entity_repository_model_classes(
     field_name_map=FIELD_NAME_MAP,
 )
 
+# TODO: 2953 remove service_metadata_field_names, db_metadata_field_names concept,
+# instead create perhaps a SAMapperFactory. Apply to all
+# xdb.repositories.sa_model.__init__.py files
 SERVICE_METADATA_FIELDS, DB_METADATA_FIELDS, GENERATE_SERVICE_METADATA = (
     create_field_metadata(DOMAIN)
 )

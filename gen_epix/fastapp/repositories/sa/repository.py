@@ -181,7 +181,9 @@ class SARepository(BaseRepository):
                     # Schema might not exist or have other issues
                     continue
 
+    # TODO: 2953 add an entities: list[Entity] and sa_mapper_factory: BaseSAMapperFactory argument so that the responsibility of creating the mappers can be put there. The SAMapperFactory will receive the entities and create the appropriate mappers. The argument can have a default None, in which case the current functionality is kept with using the general SAMapper class
     def __init__(self, engine: Engine, **kwargs: Any):
+        # TODO: 2953 remove register_mappers argument
         register_mappers = kwargs.pop("register_mappers", True)
         # Add properties
         self._id: str = kwargs.get("id", str(uuid.uuid4()))
@@ -200,6 +202,7 @@ class SARepository(BaseRepository):
         self._mapper_by_row: dict[type[Any], BaseSAMapper] = {}
         self._uow_context_stack: list[BaseUnitOfWork] = []
 
+        # TODO: 2953 this can become a _init_mappers function instead, asking the sa_mapper_factory to create the mappers for the given entities
         # Register mappers if necessary
         if register_mappers:
             self.register_mappers(**kwargs)
@@ -259,10 +262,12 @@ class SARepository(BaseRepository):
         )
         return session
 
+    # TODO: 2953 this can become a static "create_default_mappers" utility method that can be moved to BaseSAMapperFactory, producing a dict[type[Model], BaseSAMapper] that can be passed to the constructor as mentioned in the TODO in the __init__ method
     def register_mappers(
         self,
         entities: list[Entity] | None = None,
         field_name_map: dict[type[Model], dict[str, str]] | None = None,
+        # TODO: 2953 remove service_metadata_field_names, db_metadata_field_names concept
         service_metadata_field_names: dict[type[Model], tuple] | None = None,
         db_metadata_field_names: dict[type[Model], tuple] | None = None,
         generate_service_metadata: (
@@ -276,6 +281,7 @@ class SARepository(BaseRepository):
         # Parse arguments
         entities = entities or []
         field_name_map = field_name_map or {}
+        # TODO: 2953 remove service_metadata_field_names, db_metadata_field_names concept
         service_metadata_field_names = service_metadata_field_names or {}
         db_metadata_field_names = db_metadata_field_names or {}
         generate_service_metadata = generate_service_metadata or {}
@@ -295,12 +301,14 @@ class SARepository(BaseRepository):
                 model_class,
                 db_model_class,
                 field_name_map=field_name_map.get(model_class),
+                # TODO: 2953 remove service_metadata_field_names, db_metadata_field_names concept
                 service_metadata_field_names=service_metadata_field_names.get(
                     model_class
                 ),
                 db_metadata_field_names=db_metadata_field_names.get(model_class),
                 generate_service_metadata=generate_service_metadata.get(model_class),
             )
+            # TODO: 2953 skip this, instead add to output dict in the proposed static "create_default_mappers" utility method and pass to constructor as mentioned in the TODO in the __init__ method
             self.register_mapper(mapper)
 
     def get_mapper(self, model_class: type[Model]) -> BaseSAMapper:
@@ -598,6 +606,13 @@ class SARepository(BaseRepository):
         get_metadata = mapper.generate_service_metadata
 
         def _execute(session: Session) -> list[Model]:
+            # TODO: 2953 use the SAMapper's new update method to replace the entire
+            # update logic here. A commondb-specific SAMapper and SAMapperFactory
+            # implementation then override the standard behaviour where all fields are
+            # just updated if the new value is not None (which is undesired behaviour in
+            # any case): created_at is never updated, modified_at is never updated (is
+            # updated server-side through RowMetadataMixin on_update paramter), and
+            # modified_by is always updated to the user_id performing the update.
             updated_rows = self.to_sql(user_id, model_class, objs)
             obj_ids = [get_row_id(x) for x in updated_rows]
             rows, row_ids = SARepository._in_session_read_some(
