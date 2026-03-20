@@ -67,60 +67,18 @@ class BaseCaseService(BaseService):
     def __init__(
         self,
         *args: Any,
-        default_create_max_n_cases: int | None = None,
-        default_read_max_n_cases: int | None = None,
-        default_read_max_tree_size: int | None = None,
-        default_update_max_n_cases: int | None = None,
-        default_delete_max_n_cases: int | None = None,
+        default_props: model.CaseTypeProps | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
 
-        self._default_create_max_n_cases = (
-            default_create_max_n_cases
-            if default_create_max_n_cases is not None
-            else self.DEFAULT_CREATE_MAX_N_CASES
+        self._default_props = default_props or model.CaseTypeProps(
+            create_max_n_cases=self.DEFAULT_CREATE_MAX_N_CASES,
+            read_max_n_cases=self.DEFAULT_READ_MAX_N_CASES,
+            read_max_tree_size=self.DEFAULT_READ_MAX_TREE_SIZE,
+            update_max_n_cases=self.DEFAULT_UPDATE_MAX_N_CASES,
+            delete_max_n_cases=self.DEFAULT_DELETE_MAX_N_CASES,
         )
-        self._default_read_max_n_cases = (
-            default_read_max_n_cases
-            if default_read_max_n_cases is not None
-            else self.DEFAULT_READ_MAX_N_CASES
-        )
-        self._default_read_max_tree_size = (
-            default_read_max_tree_size
-            if default_read_max_tree_size is not None
-            else self.DEFAULT_READ_MAX_TREE_SIZE
-        )
-        self._default_update_max_n_cases = (
-            default_update_max_n_cases
-            if default_update_max_n_cases is not None
-            else self.DEFAULT_UPDATE_MAX_N_CASES
-        )
-        self._default_delete_max_n_cases = (
-            default_delete_max_n_cases
-            if default_delete_max_n_cases is not None
-            else self.DEFAULT_DELETE_MAX_N_CASES
-        )
-        if self._default_create_max_n_cases < 0:
-            raise exc.InitializationServiceError(
-                "default_create_max_n_cases must be non-negative"
-            )
-        if self._default_read_max_n_cases < 0:
-            raise exc.InitializationServiceError(
-                "default_read_max_n_cases must be non-negative"
-            )
-        if self._default_read_max_tree_size < 0:
-            raise exc.InitializationServiceError(
-                "default_read_max_tree_size must be non-negative"
-            )
-        if self._default_update_max_n_cases < 0:
-            raise exc.InitializationServiceError(
-                "default_update_max_n_cases must be non-negative"
-            )
-        if self._default_delete_max_n_cases < 0:
-            raise exc.InitializationServiceError(
-                "default_delete_max_n_cases must be non-negative"
-            )
 
     # Property overridden to provide narrower return value to support linter
     @property  # type: ignore
