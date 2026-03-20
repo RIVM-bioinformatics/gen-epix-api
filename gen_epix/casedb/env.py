@@ -20,9 +20,9 @@ class AppComposer(CommonAppComposer):
             app_cfg,
             log_setup=log_setup,
             domain=DOMAIN,
-            sorted_service_types=model.SORTED_SERVICE_TYPES,  # type: ignore[arg-type]
-            model_class_map=model.COMMON_MODEL_MAP,  # type: ignore[arg-type]
-            command_class_map=command.COMMON_COMMAND_MAP,  # type: ignore[arg-type]
+            sorted_service_types=model.SORTED_SERVICE_TYPES,
+            model_class_map=model.COMMON_MODEL_MAP,
+            command_class_map=command.COMMON_COMMAND_MAP,
             policy_class_map=COMMON_POLICY_MAP,
             role_generator_class=RoleGenerator,
             rbac_service_class=RbacService,

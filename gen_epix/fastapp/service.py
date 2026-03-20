@@ -22,14 +22,14 @@ from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.filter import CompositeFilter, LogicalOperator
 
 
-class BaseService(abc.ABC):
+class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
     SERVICE_TYPE: Hashable = None
 
     def __init__(
         self,
         app: App,
         service_type: Hashable = None,  # TODO: service_type this required
-        repository: BaseRepository | None = None,
+        repository: Repository | None = None,
         logger: logging.Logger | None = None,
         setup_logger: logging.Logger | None = None,
         id: str | None = None,
@@ -50,7 +50,7 @@ class BaseService(abc.ABC):
         self._service_type = service_type
         self._created_at: datetime.datetime = self._timestamp_factory()
         self._app: App = app
-        self._repository: BaseRepository | None = repository
+        self._repository: Repository | None = repository
         self._logger: logging.Logger | None = logger
         self._setup_logger: logging.Logger | None = setup_logger
         self._props: dict[str, Any] = props or {}
@@ -105,13 +105,13 @@ class BaseService(abc.ABC):
         self._logger = logger
 
     @property
-    def repository(self) -> BaseRepository:
+    def repository(self) -> Repository:
         if not self._repository:
             raise exc.ServiceException("Repository not set")
         return self._repository
 
     @repository.setter
-    def repository(self, repository: BaseRepository) -> None:
+    def repository(self, repository: Repository) -> None:
         self._repository = repository
 
     @property
