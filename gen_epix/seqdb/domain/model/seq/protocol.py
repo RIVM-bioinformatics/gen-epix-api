@@ -83,10 +83,10 @@ class Protocol(Model):
         default=None,
         description="The date until which this protocol is considered valid"
     )
-    is_integer_distance: bool = Field(
+    is_integer_distance: bool | None = Field(
         description="Whether the distances calculated by this protocol are integers"
     )
-    max_stored_distance: float = Field(
+    max_stored_distance: float | None = Field(
         description="The maximum distance that is guaranteed to be stored"
     )
     props: dict[str, str | int | float | bool | list] = Field(

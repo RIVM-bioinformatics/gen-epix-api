@@ -266,7 +266,6 @@ class SeqdbTestClient(TestClient):
         name: str | None = None,
     ) -> model.Protocol:
         return self._create_protocol(
-            model.Protocol,
             user_or_str,
             code,
             enum.ProtocolType.SEQUENCING,
@@ -281,7 +280,6 @@ class SeqdbTestClient(TestClient):
         has_manual_curation: bool = False,
     ) -> model.Protocol:
         return self._create_protocol(
-            model.Protocol,
             user_or_str,
             code,
             enum.ProtocolType.ASSEMBLY,
@@ -296,7 +294,6 @@ class SeqdbTestClient(TestClient):
         name: str | None = None,
     ) -> model.Protocol:
         return self._create_protocol(
-            model.Protocol,
             user_or_str,
             code,
             enum.ProtocolType.LOCUS_DETECTION,
@@ -311,7 +308,6 @@ class SeqdbTestClient(TestClient):
         target_names: list[str] = ["gene1", "gene2"],
     ) -> model.Protocol:
         return self._create_protocol(
-            model.Protocol,
             user_or_str,
             code,
             enum.ProtocolType.PCR,
@@ -328,7 +324,6 @@ class SeqdbTestClient(TestClient):
         antimicrobial_names: list[str] = ["amoxicillin", "tetracycline"],
     ) -> model.Protocol:
         return self._create_protocol(
-            model.Protocol,
             user_or_str,
             code,
             enum.ProtocolType.AST,
@@ -345,7 +340,6 @@ class SeqdbTestClient(TestClient):
         is_multiple: bool = False,
     ) -> model.Protocol:
         return self._create_protocol(
-            model.Protocol,
             user_or_str,
             code,
             enum.ProtocolType.ALIGNMENT,
@@ -360,7 +354,6 @@ class SeqdbTestClient(TestClient):
         name: str | None = None,
     ) -> model.Protocol:
         return self._create_protocol(
-            model.Protocol,
             user_or_str,
             code,
             enum.ProtocolType.TAXONOMY,
@@ -375,7 +368,6 @@ class SeqdbTestClient(TestClient):
         is_taxonomic: bool = True,
     ) -> model.Protocol:
         return self._create_protocol(
-            model.Protocol,
             user_or_str,
             code,
             enum.ProtocolType.SEQ_CLASSIFICATION,
@@ -393,7 +385,6 @@ class SeqdbTestClient(TestClient):
         max_stored_distance: float = 100.0,
     ) -> model.Protocol:
         return self._create_protocol(
-            model.Protocol,
             user_or_str,
             code,
             enum.ProtocolType.SEQ_DISTANCE,
@@ -410,7 +401,6 @@ class SeqdbTestClient(TestClient):
         name: str | None = None,
     ) -> model.Protocol:
         return self._create_protocol(
-            model.Protocol,
             user_or_str,
             code,
             enum.ProtocolType.SNP_DETECTION,
@@ -424,7 +414,6 @@ class SeqdbTestClient(TestClient):
         name: str | None = None,
     ) -> model.Protocol:
         return self._create_protocol(
-            model.Protocol,
             user_or_str,
             code,
             enum.ProtocolType.MLVA_DETECTION,
@@ -438,7 +427,6 @@ class SeqdbTestClient(TestClient):
         name: str | None = None,
     ) -> model.Protocol:
         return self._create_protocol(
-            model.Protocol,
             user_or_str,
             code,
             enum.ProtocolType.KMER_DETECTION,
@@ -605,7 +593,6 @@ class SeqdbTestClient(TestClient):
 
     def _create_protocol(
         self,
-        protocol_class: type[model.Model],
         user_or_str: str | model.User,
         code: str,
         protocol_type: enum.ProtocolType,
@@ -623,7 +610,6 @@ class SeqdbTestClient(TestClient):
             command.ProtocolCrudCommand(
                 operation=CrudOperation.CREATE_ONE,
                 user=user,
-                # objs=protocol_class(code=code, name=name if name else code, protocol_type=protocol_type, **kwargs),  # type: ignore
                 objs=model.Protocol(  # type: ignore[call-arg]
                     code=code,
                     name=name if name else code,

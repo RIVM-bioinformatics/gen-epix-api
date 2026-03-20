@@ -123,7 +123,7 @@ class Protocol(Base, RowMetadataMixin):
         model.Protocol,
         "seqdb_max_stored_distance",
     )
-    seqdb_is_integer_distance: Mapped[bool] = create_mapped_column(
+    seqdb_is_integer_distance: Mapped[bool | None] = create_mapped_column(
         DOMAIN, model.Protocol, "seqdb_is_integer_distance"
     )
     min_scale_unit: Mapped[float] = create_mapped_column(
