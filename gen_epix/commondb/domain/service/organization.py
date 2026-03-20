@@ -9,13 +9,8 @@ from gen_epix.fastapp import BaseService
 from gen_epix.fastapp.model import UpdateAssociationCommand
 
 
-class BaseOrganizationService(BaseService):
+class BaseOrganizationService(BaseService[BaseOrganizationRepository]):
     SERVICE_TYPE = ServiceType.ORGANIZATION
-
-    # Property overridden to provide narrower return value to support linter
-    @property  # type: ignore
-    def repository(self) -> BaseOrganizationRepository:  # type: ignore
-        return super().repository  # type: ignore
 
     def register_handlers(self) -> None:
         f = self.app.register_handler
