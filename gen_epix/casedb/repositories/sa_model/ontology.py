@@ -31,13 +31,6 @@ class ConceptSet(Base, RowMetadataMixin):
     type: Mapped[enum.ConceptSetType] = create_mapped_column(
         DOMAIN, model.ConceptSet, "type"
     )
-    regex: Mapped[str] = create_mapped_column(DOMAIN, model.ConceptSet, "regex")
-    schema_definition: Mapped[str] = create_mapped_column(
-        DOMAIN, model.ConceptSet, "schema_definition"
-    )
-    schema_uri: Mapped[str] = create_mapped_column(
-        DOMAIN, model.ConceptSet, "schema_uri"
-    )
     description: Mapped[str] = create_mapped_column(
         DOMAIN, model.ConceptSet, "description"
     )

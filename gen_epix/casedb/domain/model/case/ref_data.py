@@ -274,6 +274,27 @@ class RefCol(Model):
     description: str | None = Field(
         default=None, description="Description of the column.", max_length=1000
     )
+    regex: str | None = Field(
+        default=None,
+        description=(
+            "The regular expression describing the concept set,"
+            " in case of type REGULAR_EXPRESSION"
+        ),
+    )
+    schema_definition: str | None = Field(
+        default=None,
+        description=(
+            "The definition of the schema describing the concept set,"
+            " in case of type CONTEXT_FREE_GRAMMAR_XXX"
+        ),
+    )
+    schema_uri: str | None = Field(
+        default=None,
+        description=(
+            "The URI to the schema describing the concept set,"
+            " in case of type CONTEXT_FREE_GRAMMAR_XXX"
+        ),
+    )
     props: dict[str, Any] = Field(
         default_factory=dict, description="Additional properties of the column."
     )
@@ -309,6 +330,25 @@ class RefCol(Model):
                 raise exc.InvalidArgumentsError(
                     f"No genetic_distance_protocol_id provided for col_type {self.col_type.value}"
                 )
+        return self
+
+    @model_validator(mode="after")
+    def _validate_state(self) -> Self:
+        if self.col_type == enum.ColType.REGULAR_LANGUAGE:
+            if not self.regex:
+                raise AssertionError(f"Type {self.col_type.value} requires regex")
+        elif self.col_type in {
+            enum.ColType.CONTEXT_FREE_GRAMMAR_JSON,
+            enum.ColType.CONTEXT_FREE_GRAMMAR_XML,
+        }:
+            if not self.schema_definition and not self.schema_uri:
+                raise AssertionError(
+                    f"Type {self.col_type.value} requires schema_definition or schema_uri"
+                )
+        if self.schema_definition and self.schema_uri:
+            raise AssertionError(
+                "Only one of schema_definition or schema_uri can be set"
+            )
         return self
 
     @field_serializer("col_type", mode="plain")
@@ -599,6 +639,7 @@ class Col(Model):
         self, value: list[enum.TreeAlgorithmType] | None
     ) -> list[str] | None:
         return None if value is None else sorted(x.value for x in value)
+
 
 
 class ColSet(Model):

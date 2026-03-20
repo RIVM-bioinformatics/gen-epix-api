@@ -161,6 +161,11 @@ class RefCol(Base, RowMetadataMixin):
     description: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.RefCol, "description"
     )
+    regex: Mapped[str] = create_mapped_column(DOMAIN, model.RefCol, "regex")
+    schema_definition: Mapped[str] = create_mapped_column(
+        DOMAIN, model.RefCol, "schema_definition"
+    )
+    schema_uri: Mapped[str] = create_mapped_column(DOMAIN, model.RefCol, "schema_uri")
     props: Mapped[dict[str, Any]] = create_mapped_column(DOMAIN, model.RefCol, "props")
 
     ref_dim: Mapped[RefDim] = relationship(RefDim, foreign_keys=[ref_dim_id])
