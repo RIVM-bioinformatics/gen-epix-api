@@ -77,11 +77,11 @@ class Protocol(Model):
     )
     valid_start_date: date | None = Field(
         default=None,
-        description="The date from which this protocol is considered valid"
+        description="The date from which this protocol is considered valid",
     )
     valid_end_date: date | None = Field(
         default=None,
-        description="The date until which this protocol is considered valid"
+        description="The date until which this protocol is considered valid",
     )
     is_integer_distance: bool | None = Field(
         description="Whether the distances calculated by this protocol are integers"

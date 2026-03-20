@@ -37,7 +37,8 @@ class Protocol(Model):
         description="A unique code for the protocol, used for external reference."
     )
     name: str | None = Field(
-        default=None, description="The name of the protocol", max_length=255)
+        default=None, description="The name of the protocol", max_length=255
+    )
     description: str | None = Field(
         default=None, description="The description of the protocol", max_length=1000
     )
@@ -63,11 +64,11 @@ class Protocol(Model):
     )
     valid_start_date: date | None = Field(
         default=None,
-        description="The date from which this protocol is considered valid"
+        description="The date from which this protocol is considered valid",
     )
     valid_end_date: date | None = Field(
         default=None,
-        description="The date until which this protocol is considered valid"
+        description="The date until which this protocol is considered valid",
     )
     seqdb_max_stored_distance: float | None = Field(
         default=None,

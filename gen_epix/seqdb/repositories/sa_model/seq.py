@@ -58,16 +58,16 @@ class Protocol(Base, RowMetadataMixin):
     locus_set_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Protocol, "locus_set_id"
     )
-    valid_start_date: Mapped[date] = create_mapped_column(
+    valid_start_date: Mapped[date | None] = create_mapped_column(
         DOMAIN, model.Protocol, "valid_start_date"
     )
-    valid_end_date: Mapped[date] = create_mapped_column(
+    valid_end_date: Mapped[date | None] = create_mapped_column(
         DOMAIN, model.Protocol, "valid_end_date"
     )
-    is_integer_distance: Mapped[bool] = create_mapped_column(
+    is_integer_distance: Mapped[bool | None] = create_mapped_column(
         DOMAIN, model.Protocol, "is_integer_distance"
     )
-    max_stored_distance: Mapped[float] = create_mapped_column(
+    max_stored_distance: Mapped[float | None] = create_mapped_column(
         DOMAIN, model.Protocol, "max_stored_distance"
     )
     props: Mapped[dict[str, str | int | float | bool | list]] = create_mapped_column(
