@@ -13,6 +13,7 @@ gzip_response_minimum_size = 1024
 [api.http_header.general]
 CacheControl = "no-cache, no-store"
 Content-Security-Policy = "default-src 'none'; frame-ancestors 'none'; sandbox"
+Content-Security-Policy-Report-Only = "default-src 'none'; frame-ancestors 'none'; sandbox"
 Cross-Origin-Opener-Policy = "same-origin"
 Expires ="0"
 Pragma = "no-cache"

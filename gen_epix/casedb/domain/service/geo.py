@@ -6,13 +6,8 @@ from gen_epix.casedb.domain.repository import BaseGeoRepository
 from gen_epix.fastapp import BaseService
 
 
-class BaseGeoService(BaseService):
+class BaseGeoService(BaseService[BaseGeoRepository]):
     SERVICE_TYPE = ServiceType.GEO
-
-    # Property overridden to provide narrower return value to support linter
-    @property  # type: ignore
-    def repository(self) -> BaseGeoRepository:  # type: ignore
-        return super().repository  # type: ignore
 
     def register_handlers(self) -> None:
         f = self.app.register_handler

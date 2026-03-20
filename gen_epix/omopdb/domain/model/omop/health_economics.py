@@ -116,6 +116,10 @@ class PayerPlanPeriod(Model, DataLineageMixin):
         default=None,
         description="User guidance:\nNone\nETL conventions:\nIf the source data codes the stop reason in an OMOP supported vocabulary store the concept_id here.",
     )
+    provided_by_organization_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The id of the Organization that provided the data for this Payer Plan Period.\nETL conventions:\nNone",
+    )
 
     @field_validator(
         "payer_concept_id",
@@ -223,6 +227,10 @@ class Cost(Model, DataLineageMixin):
         default=None,
         description="User guidance:\nDiagnosis Related Groups are US codes used to classify hospital cases into one of approximately 500 groups.\nETL conventions:\nNone",
         max_length=3,
+    )
+    provided_by_organization_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The id of the Organization that provided the data for this Cost.\nETL conventions:\nNone",
     )
 
     @field_validator(

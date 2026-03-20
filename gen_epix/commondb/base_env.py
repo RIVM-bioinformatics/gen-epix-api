@@ -16,7 +16,7 @@ class BaseAppComposer(abc.ABC):
     def __init__(self) -> None:
         self._cfg: Dynaconf
         self._app: App
-        self._services: dict[Enum, BaseService]
+        self._services: dict[Enum, BaseService[Any]]
         self._repositories: dict[Enum, BaseRepository]
         self._registered_user_dependency: Callable
         self._new_user_dependency: Callable
@@ -32,7 +32,7 @@ class BaseAppComposer(abc.ABC):
         return self._app
 
     @property
-    def services(self) -> dict[Enum, BaseService]:
+    def services(self) -> dict[Enum, BaseService[Any]]:
         return self._services
 
     @property
