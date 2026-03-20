@@ -103,13 +103,13 @@ def _assert_default_import_payload(payload: dict, app_name: str) -> None:
     assert payload["app_cfg_type"] == "AppCfg"
     assert payload["app_composer_type"] == "AppComposer"
     assert payload["cfg_auto_create_new_users"] is spec["default_auto_create_new_users"]
-    assert payload["cfg_root_token_time_to_live"] == 900
+    assert payload["cfg_root_token_time_to_live"] == 0
     assert (
         payload["feature_flag_auto_create_new_users"]
         is spec["default_auto_create_new_users"]
     )
     assert payload["feature_flag_update_own_organization"] is False
-    assert payload["service_root_token_time_to_live"] == 900
+    assert payload["service_root_token_time_to_live"] == None
     assert payload["service_idp_client_count"] == 0
 
 
