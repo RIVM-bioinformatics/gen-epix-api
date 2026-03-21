@@ -61,7 +61,6 @@ from gen_epix.seqdb.domain.model.seq import (
 from gen_epix.seqdb.domain.model.seq import CodeMixin as CodeMixin
 from gen_epix.seqdb.domain.model.seq import Contig as Contig
 from gen_epix.seqdb.domain.model.seq import ContigAlignment as ContigAlignment
-
 from gen_epix.seqdb.domain.model.seq import KmerProfile as KmerProfile
 from gen_epix.seqdb.domain.model.seq import KmerProfileForUpload as KmerProfileForUpload
 from gen_epix.seqdb.domain.model.seq import (
@@ -69,13 +68,11 @@ from gen_epix.seqdb.domain.model.seq import (
 )
 from gen_epix.seqdb.domain.model.seq import Locus as Locus
 from gen_epix.seqdb.domain.model.seq import LocusCodeMap as LocusCodeMap
-
 from gen_epix.seqdb.domain.model.seq import LocusProfile as LocusProfile
 from gen_epix.seqdb.domain.model.seq import (
     LocusProfileIdentifier as LocusProfileIdentifier,
 )
 from gen_epix.seqdb.domain.model.seq import LocusSet as LocusSet
-
 from gen_epix.seqdb.domain.model.seq import MlvaProfile as MlvaProfile
 from gen_epix.seqdb.domain.model.seq import MlvaProfileForUpload as MlvaProfileForUpload
 from gen_epix.seqdb.domain.model.seq import (
@@ -90,7 +87,6 @@ from gen_epix.seqdb.domain.model.seq import ReadSet as ReadSet
 from gen_epix.seqdb.domain.model.seq import ReadSetForUpload as ReadSetForUpload
 from gen_epix.seqdb.domain.model.seq import ReadSetIdentifier as ReadSetIdentifier
 from gen_epix.seqdb.domain.model.seq import RefAllele as RefAllele
-from gen_epix.seqdb.domain.model.seq import RefSeq as RefSeq
 from gen_epix.seqdb.domain.model.seq import RefSnp as RefSnp
 from gen_epix.seqdb.domain.model.seq import RefSnpSet as RefSnpSet
 from gen_epix.seqdb.domain.model.seq import RefSnpSetMember as RefSnpSetMember
@@ -108,10 +104,7 @@ from gen_epix.seqdb.domain.model.seq import SampleIdentifier as SampleIdentifier
 from gen_epix.seqdb.domain.model.seq import SampleUploadResult as SampleUploadResult
 from gen_epix.seqdb.domain.model.seq import Seq as Seq
 from gen_epix.seqdb.domain.model.seq import SeqAlignment as SeqAlignment
-from gen_epix.seqdb.domain.model.seq import SeqCategory as SeqCategory
-from gen_epix.seqdb.domain.model.seq import SeqCategorySet as SeqCategorySet
 from gen_epix.seqdb.domain.model.seq import SeqClassification as SeqClassification
-
 from gen_epix.seqdb.domain.model.seq import SeqDistance as SeqDistance
 from gen_epix.seqdb.domain.model.seq import SeqForUpload as SeqForUpload
 from gen_epix.seqdb.domain.model.seq import SeqIdentifier as SeqIdentifier
@@ -124,6 +117,9 @@ from gen_epix.seqdb.domain.model.seq import TaxonSet as TaxonSet
 from gen_epix.seqdb.domain.model.seq import TaxonSetMember as TaxonSetMember
 from gen_epix.seqdb.domain.model.seq import TreeAlgorithm as TreeAlgorithm
 from gen_epix.seqdb.domain.model.seq import TreeAlgorithmClass as TreeAlgorithmClass
+from gen_epix.seqdb.domain.model.seq.category import SeqCategory as SeqCategory
+from gen_epix.seqdb.domain.model.seq.category import SeqCategorySet as SeqCategorySet
+from gen_epix.seqdb.domain.model.seq.ref_seq import RefSeq as RefSeq
 from gen_epix.util import add_parent_class_docs
 
 # List up model classes per service and sorted according to links topology
@@ -160,12 +156,11 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             RefSnp,
             RefSnpSet,
             RefSnpSetMember,
-            Protocol,
-            Protocol,
             TreeAlgorithmClass,
             TreeAlgorithm,
             SeqCategorySet,
             SeqCategory,
+            Protocol,
             Sample,
             SampleDataCollectionLink,
             SampleIdentifier,

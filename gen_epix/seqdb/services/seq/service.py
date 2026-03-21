@@ -24,7 +24,95 @@ from gen_epix.seqdb.domain.service import BaseSeqService
 from gen_epix.seqdb.services.seq.calculate_seq_distance import (
     seq_service_calculate_seq_distances_for_new_profiles,
 )
+from gen_epix.seqdb.services.seq.crud_allele import seq_service_crud_allele
+from gen_epix.seqdb.services.seq.crud_allele_alignment import (
+    seq_service_crud_allele_alignment,
+)
+from gen_epix.seqdb.services.seq.crud_allele_profile import (
+    seq_service_crud_allele_profile,
+)
+from gen_epix.seqdb.services.seq.crud_allele_profile_identifier import (
+    seq_service_crud_allele_profile_identifier,
+)
+from gen_epix.seqdb.services.seq.crud_ast_measurement import (
+    seq_service_crud_ast_measurement,
+)
+from gen_epix.seqdb.services.seq.crud_ast_prediction import (
+    seq_service_crud_ast_prediction,
+)
+from gen_epix.seqdb.services.seq.crud_file import seq_service_crud_file
+from gen_epix.seqdb.services.seq.crud_kmer_profile import seq_service_crud_kmer_profile
+from gen_epix.seqdb.services.seq.crud_kmer_profile_identifier import (
+    seq_service_crud_kmer_profile_identifier,
+)
+from gen_epix.seqdb.services.seq.crud_locus import seq_service_crud_locus
+from gen_epix.seqdb.services.seq.crud_locus_code_map import (
+    seq_service_crud_locus_code_map,
+)
+from gen_epix.seqdb.services.seq.crud_locus_profile import (
+    seq_service_crud_locus_profile,
+)
+from gen_epix.seqdb.services.seq.crud_locus_profile_identifier import (
+    seq_service_crud_locus_profile_identifier,
+)
+from gen_epix.seqdb.services.seq.crud_locus_set import seq_service_crud_locus_set
+from gen_epix.seqdb.services.seq.crud_mlva_profile import seq_service_crud_mlva_profile
+from gen_epix.seqdb.services.seq.crud_mlva_profile_identifier import (
+    seq_service_crud_mlva_profile_identifier,
+)
+from gen_epix.seqdb.services.seq.crud_pcr_measurement import (
+    seq_service_crud_pcr_measurement,
+)
 from gen_epix.seqdb.services.seq.crud_protocol import seq_service_crud_protocol
+from gen_epix.seqdb.services.seq.crud_read_set import seq_service_crud_read_set
+from gen_epix.seqdb.services.seq.crud_read_set_identifier import (
+    seq_service_crud_read_set_identifier,
+)
+from gen_epix.seqdb.services.seq.crud_ref_allele import seq_service_crud_ref_allele
+from gen_epix.seqdb.services.seq.crud_ref_seq import seq_service_crud_ref_seq
+from gen_epix.seqdb.services.seq.crud_ref_snp import seq_service_crud_ref_snp
+from gen_epix.seqdb.services.seq.crud_ref_snp_set import seq_service_crud_ref_snp_set
+from gen_epix.seqdb.services.seq.crud_ref_snp_set_member import (
+    seq_service_crud_ref_snp_set_member,
+)
+from gen_epix.seqdb.services.seq.crud_sample import seq_service_crud_sample
+from gen_epix.seqdb.services.seq.crud_sample_data_collection_link import (
+    seq_service_crud_sample_data_collection_link,
+)
+from gen_epix.seqdb.services.seq.crud_sample_identifier import (
+    seq_service_crud_sample_identifier,
+)
+from gen_epix.seqdb.services.seq.crud_seq import seq_service_crud_seq
+from gen_epix.seqdb.services.seq.crud_seq_alignment import (
+    seq_service_crud_seq_alignment,
+)
+from gen_epix.seqdb.services.seq.crud_seq_category import seq_service_crud_seq_category
+from gen_epix.seqdb.services.seq.crud_seq_category_set import (
+    seq_service_crud_seq_category_set,
+)
+from gen_epix.seqdb.services.seq.crud_seq_classification import (
+    seq_service_crud_seq_classification,
+)
+from gen_epix.seqdb.services.seq.crud_seq_distance import seq_service_crud_seq_distance
+from gen_epix.seqdb.services.seq.crud_seq_identifier import (
+    seq_service_crud_seq_identifier,
+)
+from gen_epix.seqdb.services.seq.crud_seq_taxonomy import seq_service_crud_seq_taxonomy
+from gen_epix.seqdb.services.seq.crud_snp_profile import seq_service_crud_snp_profile
+from gen_epix.seqdb.services.seq.crud_snp_profile_identifier import (
+    seq_service_crud_snp_profile_identifier,
+)
+from gen_epix.seqdb.services.seq.crud_taxon import seq_service_crud_taxon
+from gen_epix.seqdb.services.seq.crud_taxon_set import seq_service_crud_taxon_set
+from gen_epix.seqdb.services.seq.crud_taxon_set_member import (
+    seq_service_crud_taxon_set_member,
+)
+from gen_epix.seqdb.services.seq.crud_tree_algorithm import (
+    seq_service_crud_tree_algorithm,
+)
+from gen_epix.seqdb.services.seq.crud_tree_algorithm_class import (
+    seq_service_crud_tree_algorithm_class,
+)
 from gen_epix.seqdb.services.seq.upload import seq_service_upload_samples
 
 
@@ -529,3 +617,535 @@ class SeqService(BaseSeqService):
         | None
     ):
         return seq_service_crud_protocol(self, cmd)
+
+    def crud_allele(
+        self,
+        cmd: command.AlleleCrudCommand,
+    ) -> (
+        model.Allele | list[model.Allele] | UUID | list[UUID] | bool | list[bool] | None
+    ):
+        return seq_service_crud_allele(self, cmd)
+
+    def crud_allele_alignment(
+        self,
+        cmd: command.AlleleAlignmentCrudCommand,
+    ) -> (
+        model.AlleleAlignment
+        | list[model.AlleleAlignment]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_allele_alignment(self, cmd)
+
+    def crud_allele_profile(
+        self,
+        cmd: command.AlleleProfileCrudCommand,
+    ) -> (
+        model.AlleleProfile
+        | list[model.AlleleProfile]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_allele_profile(self, cmd)
+
+    def crud_allele_profile_identifier(
+        self,
+        cmd: command.AlleleProfileIdentifierCrudCommand,
+    ) -> (
+        model.AlleleProfileIdentifier
+        | list[model.AlleleProfileIdentifier]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_allele_profile_identifier(self, cmd)
+
+    def crud_ast_measurement(
+        self,
+        cmd: command.AstMeasurementCrudCommand,
+    ) -> (
+        model.AstMeasurement
+        | list[model.AstMeasurement]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_ast_measurement(self, cmd)
+
+    def crud_ast_prediction(
+        self,
+        cmd: command.AstPredictionCrudCommand,
+    ) -> (
+        model.AstPrediction
+        | list[model.AstPrediction]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_ast_prediction(self, cmd)
+
+    def crud_file(
+        self,
+        cmd: command.FileCrudCommand,
+    ) -> model.File | list[model.File] | UUID | list[UUID] | bool | list[bool] | None:
+        return seq_service_crud_file(self, cmd)
+
+    def crud_kmer_profile(
+        self,
+        cmd: command.KmerProfileCrudCommand,
+    ) -> (
+        model.KmerProfile
+        | list[model.KmerProfile]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_kmer_profile(self, cmd)
+
+    def crud_kmer_profile_identifier(
+        self,
+        cmd: command.KmerProfileIdentifierCrudCommand,
+    ) -> (
+        model.KmerProfileIdentifier
+        | list[model.KmerProfileIdentifier]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_kmer_profile_identifier(self, cmd)
+
+    def crud_locus(
+        self,
+        cmd: command.LocusCrudCommand,
+    ) -> model.Locus | list[model.Locus] | UUID | list[UUID] | bool | list[bool] | None:
+        return seq_service_crud_locus(self, cmd)
+
+    def crud_locus_code_map(
+        self,
+        cmd: command.LocusCodeMapCrudCommand,
+    ) -> (
+        model.LocusCodeMap
+        | list[model.LocusCodeMap]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_locus_code_map(self, cmd)
+
+    def crud_locus_profile(
+        self,
+        cmd: command.LocusProfileCrudCommand,
+    ) -> (
+        model.LocusProfile
+        | list[model.LocusProfile]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_locus_profile(self, cmd)
+
+    def crud_locus_profile_identifier(
+        self,
+        cmd: command.LocusProfileIdentifierCrudCommand,
+    ) -> (
+        model.LocusProfileIdentifier
+        | list[model.LocusProfileIdentifier]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_locus_profile_identifier(self, cmd)
+
+    def crud_locus_set(
+        self,
+        cmd: command.LocusSetCrudCommand,
+    ) -> (
+        model.LocusSet
+        | list[model.LocusSet]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_locus_set(self, cmd)
+
+    def crud_mlva_profile(
+        self,
+        cmd: command.MlvaProfileCrudCommand,
+    ) -> (
+        model.MlvaProfile
+        | list[model.MlvaProfile]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_mlva_profile(self, cmd)
+
+    def crud_mlva_profile_identifier(
+        self,
+        cmd: command.MlvaProfileIdentifierCrudCommand,
+    ) -> (
+        model.MlvaProfileIdentifier
+        | list[model.MlvaProfileIdentifier]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_mlva_profile_identifier(self, cmd)
+
+    def crud_pcr_measurement(
+        self,
+        cmd: command.PcrMeasurementCrudCommand,
+    ) -> (
+        model.PcrMeasurement
+        | list[model.PcrMeasurement]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_pcr_measurement(self, cmd)
+
+    def crud_read_set(
+        self,
+        cmd: command.ReadSetCrudCommand,
+    ) -> (
+        model.ReadSet
+        | list[model.ReadSet]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_read_set(self, cmd)
+
+    def crud_read_set_identifier(
+        self,
+        cmd: command.ReadSetIdentifierCrudCommand,
+    ) -> (
+        model.ReadSetIdentifier
+        | list[model.ReadSetIdentifier]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_read_set_identifier(self, cmd)
+
+    def crud_ref_allele(
+        self,
+        cmd: command.RefAlleleCrudCommand,
+    ) -> (
+        model.RefAllele
+        | list[model.RefAllele]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_ref_allele(self, cmd)
+
+    def crud_ref_seq(
+        self,
+        cmd: command.RefSeqCrudCommand,
+    ) -> (
+        model.RefSeq | list[model.RefSeq] | UUID | list[UUID] | bool | list[bool] | None
+    ):
+        return seq_service_crud_ref_seq(self, cmd)
+
+    def crud_ref_snp(
+        self,
+        cmd: command.RefSnpCrudCommand,
+    ) -> (
+        model.RefSnp | list[model.RefSnp] | UUID | list[UUID] | bool | list[bool] | None
+    ):
+        return seq_service_crud_ref_snp(self, cmd)
+
+    def crud_ref_snp_set(
+        self,
+        cmd: command.RefSnpSetCrudCommand,
+    ) -> (
+        model.RefSnpSet
+        | list[model.RefSnpSet]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_ref_snp_set(self, cmd)
+
+    def crud_ref_snp_set_member(
+        self,
+        cmd: command.RefSnpSetMemberCrudCommand,
+    ) -> (
+        model.RefSnpSetMember
+        | list[model.RefSnpSetMember]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_ref_snp_set_member(self, cmd)
+
+    def crud_sample(
+        self,
+        cmd: command.SampleCrudCommand,
+    ) -> (
+        model.Sample | list[model.Sample] | UUID | list[UUID] | bool | list[bool] | None
+    ):
+        return seq_service_crud_sample(self, cmd)
+
+    def crud_sample_data_collection_link(
+        self,
+        cmd: command.SampleDataCollectionLinkCrudCommand,
+    ) -> (
+        model.SampleDataCollectionLink
+        | list[model.SampleDataCollectionLink]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_sample_data_collection_link(self, cmd)
+
+    def crud_sample_identifier(
+        self,
+        cmd: command.SampleIdentifierCrudCommand,
+    ) -> (
+        model.SampleIdentifier
+        | list[model.SampleIdentifier]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_sample_identifier(self, cmd)
+
+    def crud_seq(
+        self,
+        cmd: command.SeqCrudCommand,
+    ) -> model.Seq | list[model.Seq] | UUID | list[UUID] | bool | list[bool] | None:
+        return seq_service_crud_seq(self, cmd)
+
+    def crud_seq_alignment(
+        self,
+        cmd: command.SeqAlignmentCrudCommand,
+    ) -> (
+        model.SeqAlignment
+        | list[model.SeqAlignment]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_seq_alignment(self, cmd)
+
+    def crud_seq_category(
+        self,
+        cmd: command.SeqCategoryCrudCommand,
+    ) -> (
+        model.SeqCategory
+        | list[model.SeqCategory]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_seq_category(self, cmd)
+
+    def crud_seq_category_set(
+        self,
+        cmd: command.SeqCategorySetCrudCommand,
+    ) -> (
+        model.SeqCategorySet
+        | list[model.SeqCategorySet]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_seq_category_set(self, cmd)
+
+    def crud_seq_classification(
+        self,
+        cmd: command.SeqClassificationCrudCommand,
+    ) -> (
+        model.SeqClassification
+        | list[model.SeqClassification]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_seq_classification(self, cmd)
+
+    def crud_seq_distance(
+        self,
+        cmd: command.SeqDistanceCrudCommand,
+    ) -> (
+        model.SeqDistance
+        | list[model.SeqDistance]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_seq_distance(self, cmd)
+
+    def crud_seq_identifier(
+        self,
+        cmd: command.SeqIdentifierCrudCommand,
+    ) -> (
+        model.SeqIdentifier
+        | list[model.SeqIdentifier]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_seq_identifier(self, cmd)
+
+    def crud_seq_taxonomy(
+        self,
+        cmd: command.SeqTaxonomyCrudCommand,
+    ) -> (
+        model.SeqTaxonomy
+        | list[model.SeqTaxonomy]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_seq_taxonomy(self, cmd)
+
+    def crud_snp_profile(
+        self,
+        cmd: command.SnpProfileCrudCommand,
+    ) -> (
+        model.SnpProfile
+        | list[model.SnpProfile]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_snp_profile(self, cmd)
+
+    def crud_snp_profile_identifier(
+        self,
+        cmd: command.SnpProfileIdentifierCrudCommand,
+    ) -> (
+        model.SnpProfileIdentifier
+        | list[model.SnpProfileIdentifier]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_snp_profile_identifier(self, cmd)
+
+    def crud_taxon(
+        self,
+        cmd: command.TaxonCrudCommand,
+    ) -> model.Taxon | list[model.Taxon] | UUID | list[UUID] | bool | list[bool] | None:
+        return seq_service_crud_taxon(self, cmd)
+
+    def crud_taxon_set(
+        self,
+        cmd: command.TaxonSetCrudCommand,
+    ) -> (
+        model.TaxonSet
+        | list[model.TaxonSet]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_taxon_set(self, cmd)
+
+    def crud_taxon_set_member(
+        self,
+        cmd: command.TaxonSetMemberCrudCommand,
+    ) -> (
+        model.TaxonSetMember
+        | list[model.TaxonSetMember]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_taxon_set_member(self, cmd)
+
+    def crud_tree_algorithm(
+        self,
+        cmd: command.TreeAlgorithmCrudCommand,
+    ) -> (
+        model.TreeAlgorithm
+        | list[model.TreeAlgorithm]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_tree_algorithm(self, cmd)
+
+    def crud_tree_algorithm_class(
+        self,
+        cmd: command.TreeAlgorithmClassCrudCommand,
+    ) -> (
+        model.TreeAlgorithmClass
+        | list[model.TreeAlgorithmClass]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_tree_algorithm_class(self, cmd)

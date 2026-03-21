@@ -18,8 +18,9 @@ from gen_epix.seqdb.domain.literal import MLVA_NO_LOCUS_REPEAT_NUMBER
 from gen_epix.seqdb.domain.model.seq.base import QualityMixin
 from gen_epix.seqdb.domain.model.seq.locus import LocusSet
 from gen_epix.seqdb.domain.model.seq.protocol import Protocol
+from gen_epix.seqdb.domain.model.seq.ref_seq import RefSeq
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
-from gen_epix.seqdb.domain.model.seq.seq import HasSeqMixin, RefSeq, Seq
+from gen_epix.seqdb.domain.model.seq.seq import HasSeqMixin, Seq
 
 
 class LocusProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):

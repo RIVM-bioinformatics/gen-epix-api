@@ -32,25 +32,20 @@ from gen_epix.commondb.repositories.sa_model import (
 )
 from gen_epix.seqdb.domain import DOMAIN, enum, model
 from gen_epix.seqdb.repositories.sa_model.file import File as File
-
 from gen_epix.seqdb.repositories.sa_model.seq import Allele as Allele
 from gen_epix.seqdb.repositories.sa_model.seq import AlleleAlignment as AlleleAlignment
 from gen_epix.seqdb.repositories.sa_model.seq import AlleleProfile as AlleleProfile
 from gen_epix.seqdb.repositories.sa_model.seq import (
     AlleleProfileIdentifier as AlleleProfileIdentifier,
 )
-
 from gen_epix.seqdb.repositories.sa_model.seq import AstMeasurement as AstMeasurement
 from gen_epix.seqdb.repositories.sa_model.seq import AstPrediction as AstPrediction
-
-
 from gen_epix.seqdb.repositories.sa_model.seq import KmerProfile as KmerProfile
 from gen_epix.seqdb.repositories.sa_model.seq import (
     KmerProfileIdentifier as KmerProfileIdentifier,
 )
 from gen_epix.seqdb.repositories.sa_model.seq import Locus as Locus
 from gen_epix.seqdb.repositories.sa_model.seq import LocusCodeMap as LocusCodeMap
-
 from gen_epix.seqdb.repositories.sa_model.seq import LocusProfile as LocusProfile
 from gen_epix.seqdb.repositories.sa_model.seq import (
     LocusProfileIdentifier as LocusProfileIdentifier,
@@ -61,7 +56,7 @@ from gen_epix.seqdb.repositories.sa_model.seq import (
     MlvaProfileIdentifier as MlvaProfileIdentifier,
 )
 from gen_epix.seqdb.repositories.sa_model.seq import PcrMeasurement as PcrMeasurement
-
+from gen_epix.seqdb.repositories.sa_model.seq import Protocol as Protocol
 from gen_epix.seqdb.repositories.sa_model.seq import ReadSet as ReadSet
 from gen_epix.seqdb.repositories.sa_model.seq import (
     ReadSetIdentifier as ReadSetIdentifier,
@@ -85,13 +80,9 @@ from gen_epix.seqdb.repositories.sa_model.seq import SeqCategorySet as SeqCatego
 from gen_epix.seqdb.repositories.sa_model.seq import (
     SeqClassification as SeqClassification,
 )
-
 from gen_epix.seqdb.repositories.sa_model.seq import SeqDistance as SeqDistance
-
 from gen_epix.seqdb.repositories.sa_model.seq import SeqIdentifier as SeqIdentifier
 from gen_epix.seqdb.repositories.sa_model.seq import SeqTaxonomy as SeqTaxonomy
-
-
 from gen_epix.seqdb.repositories.sa_model.seq import SnpProfile as SnpProfile
 from gen_epix.seqdb.repositories.sa_model.seq import (
     SnpProfileIdentifier as SnpProfileIdentifier,
@@ -103,7 +94,6 @@ from gen_epix.seqdb.repositories.sa_model.seq import TreeAlgorithm as TreeAlgori
 from gen_epix.seqdb.repositories.sa_model.seq import (
     TreeAlgorithmClass as TreeAlgorithmClass,
 )
-from gen_epix.seqdb.repositories.sa_model.seq import Protocol as Protocol
 
 SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]] = {
     enum.ServiceType.ABAC: {

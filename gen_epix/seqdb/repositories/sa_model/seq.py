@@ -40,9 +40,6 @@ class Protocol(Base, RowMetadataMixin):
     protocol_type: Mapped[enum.ProtocolType] = create_mapped_column(
         DOMAIN, model.Protocol, "protocol_type"
     )
-    seq_distance_protocol_type: Mapped[enum.SeqDistanceType | None] = (
-        create_mapped_column(DOMAIN, model.Protocol, "seq_distance_protocol_type")
-    )
     git_repository_uri: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Protocol, "git_repository_uri"
     )
@@ -52,17 +49,26 @@ class Protocol(Base, RowMetadataMixin):
     git_commit_tag: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Protocol, "git_commit_tag"
     )
-    ref_seq_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Protocol, "ref_seq_id"
-    )
-    locus_set_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Protocol, "locus_set_id"
-    )
     valid_start_date: Mapped[date | None] = create_mapped_column(
         DOMAIN, model.Protocol, "valid_start_date"
     )
     valid_end_date: Mapped[date | None] = create_mapped_column(
         DOMAIN, model.Protocol, "valid_end_date"
+    )
+    ref_seq_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "ref_seq_id"
+    )
+    seq_category_set_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "seq_category_set_id"
+    )
+    locus_set_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "locus_set_id"
+    )
+    seq_profile_type: Mapped[enum.SeqProfileType | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "seq_profile_type"
+    )
+    seq_distance_type: Mapped[enum.SeqDistanceType | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "seq_distance_type"
     )
     is_integer_distance: Mapped[bool | None] = create_mapped_column(
         DOMAIN, model.Protocol, "is_integer_distance"
@@ -636,7 +642,9 @@ class SeqCategory(Base, RowMetadataMixin):
     code: Mapped[str] = create_mapped_column(DOMAIN, model.SeqCategory, "code")
     name: Mapped[str] = create_mapped_column(DOMAIN, model.SeqCategory, "name")
     seq_category_set_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SeqCategory, "seq_category_set_id"
+        DOMAIN,
+        model.SeqCategory,
+        "seq_category_set_id",
     )
 
 

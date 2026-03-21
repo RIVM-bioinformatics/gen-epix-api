@@ -11,12 +11,39 @@ from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity, create_keys
+from gen_epix.fastapp.domain.util import create_links
 from gen_epix.seqdb.domain.enum import (
     ProtocolType,
     ProtocolTypeSet,
     SeqDistanceType,
     SeqProfileType,
 )
+from gen_epix.seqdb.domain.model.seq.category import SeqCategorySet
+from gen_epix.seqdb.domain.model.seq.locus import LocusSet
+from gen_epix.seqdb.domain.model.seq.ref_seq import RefSeq
+
+
+def _create_field_description(
+    required_protocol_types: frozenset[ProtocolType],
+    optional_protocol_types: frozenset[ProtocolType],
+) -> str:
+    """Helper function to create field descriptions based on protocol type dependencies."""
+    description = ""
+    if required_protocol_types:
+        description += (
+            "Required for protocols of type "
+            + ", ".join(sorted(x.value for x in required_protocol_types))
+            + "."
+        )
+        if optional_protocol_types:
+            description += " "
+    if optional_protocol_types:
+        description += (
+            "Optional for protocols of type "
+            + ", ".join(sorted(x.value for x in optional_protocol_types))
+            + "."
+        )
+    return description
 
 
 class Protocol(Model):
@@ -36,16 +63,37 @@ class Protocol(Model):
         table_name="protocol",
         persistable=True,
         keys=create_keys({1: "code"}),
+        links=create_links(
+            {
+                1: ("ref_seq_id", RefSeq, None),
+                2: ("seq_category_set_id", SeqCategorySet, None),
+                3: ("locus_set_id", LocusSet, None),
+            }
+        ),
     )
-    # Mapping of fields to the protocol types that require them. Used for validation.
-    PROTOCOL_TYPE_FIELD_DEPENDENCIES: ClassVar[dict[str, frozenset[ProtocolType]]] = {
-        "ref_seq_id": ProtocolTypeSet.HAS_REF_SEQ.value,
-        "locus_set_id": ProtocolTypeSet.HAS_LOCUS_SET.value,
-        "seq_profile_type": ProtocolTypeSet.SEQ_PROFILE.value,
-        "seq_distance_type": ProtocolTypeSet.IS_SEQ_DISTANCE.value,
-        "is_integer_distance": ProtocolTypeSet.IS_SEQ_DISTANCE.value,
-        "max_stored_distance": ProtocolTypeSet.IS_SEQ_DISTANCE.value,
+    # Mapping of fields to the protocol types that either require or optionally have
+    # them. Used for validation.
+    PROTOCOL_TYPE_FIELD_DEPENDENCIES: ClassVar[
+        dict[str, tuple[frozenset[ProtocolType], frozenset[ProtocolType]]]
+    ] = {
+        "ref_seq_id": (
+            ProtocolTypeSet.HAS_REF_SEQ.value,
+            ProtocolTypeSet.HAS_OPTIONAL_REF_SEQ.value,
+        ),
+        "seq_category_set_id": (
+            ProtocolTypeSet.HAS_SEQ_CATEGORY_SET.value,
+            ProtocolTypeSet.HAS_OPTIONAL_SEQ_CATEGORY_SET.value,
+        ),
+        "locus_set_id": (
+            ProtocolTypeSet.HAS_LOCUS_SET.value,
+            ProtocolTypeSet.HAS_OPTIONAL_LOCUS_SET.value,
+        ),
+        "seq_profile_type": (ProtocolTypeSet.SEQ_PROFILE.value, frozenset()),
+        "seq_distance_type": (ProtocolTypeSet.IS_SEQ_DISTANCE.value, frozenset()),
+        "is_integer_distance": (ProtocolTypeSet.IS_SEQ_DISTANCE.value, frozenset()),
+        "max_stored_distance": (ProtocolTypeSet.IS_SEQ_DISTANCE.value, frozenset()),
     }
+    PROPS_MAX_JSON_LENGTH: ClassVar[int] = 2000
 
     code: str = Field(
         description="A unique code for the protocol, used for external reference.",
@@ -88,59 +136,47 @@ class Protocol(Model):
     )
     ref_seq_id: UUID | None = Field(
         default=None,
-        description="The reference sequence used. FOREIGN KEY. Required for protocols of type "
-        + ", ".join(
-            sorted(x.value for x in PROTOCOL_TYPE_FIELD_DEPENDENCIES["ref_seq_id"])
-        )
-        + ".",
+        description="The reference sequence used. FOREIGN KEY. "
+        + _create_field_description(*PROTOCOL_TYPE_FIELD_DEPENDENCIES["ref_seq_id"]),
+    )
+    seq_category_set_id: UUID | None = Field(
+        default=None,
+        description="The sequence category set used. FOREIGN KEY. "
+        + _create_field_description(
+            *PROTOCOL_TYPE_FIELD_DEPENDENCIES["seq_category_set_id"]
+        ),
     )
     locus_set_id: UUID | None = Field(
         default=None,
-        description="The locus set used. FOREIGN KEY. Required for protocols of type "
-        + ", ".join(
-            sorted(x.value for x in PROTOCOL_TYPE_FIELD_DEPENDENCIES["locus_set_id"])
-        )
-        + ".",
+        description="The locus set used. FOREIGN KEY. "
+        + _create_field_description(*PROTOCOL_TYPE_FIELD_DEPENDENCIES["locus_set_id"]),
     )
     seq_profile_type: SeqProfileType | None = Field(
         default=None,
-        description="The type of sequence profile. Required for protocols of type "
-        + ", ".join(
-            sorted(
-                x.value for x in PROTOCOL_TYPE_FIELD_DEPENDENCIES["seq_profile_type"]
-            )
-        )
-        + ".",
+        description="The type of sequence profile. "
+        + _create_field_description(
+            *PROTOCOL_TYPE_FIELD_DEPENDENCIES["seq_profile_type"]
+        ),
     )
     seq_distance_type: SeqDistanceType | None = Field(
         default=None,
-        description="The type of sequence distance calculation used. Required for protocols of type "
-        + ", ".join(
-            sorted(
-                x.value for x in PROTOCOL_TYPE_FIELD_DEPENDENCIES["seq_distance_type"]
-            )
-        )
-        + ".",
+        description="The type of sequence distance calculation used. "
+        + _create_field_description(
+            *PROTOCOL_TYPE_FIELD_DEPENDENCIES["seq_distance_type"]
+        ),
     )
     is_integer_distance: bool | None = Field(
-        description="Whether the sequence distances are integers. Required for protocols of type "
-        + ", ".join(
-            sorted(
-                x.value for x in PROTOCOL_TYPE_FIELD_DEPENDENCIES["is_integer_distance"]
-            )
-        )
-        + ".",
+        description="Whether the sequence distances are integers. "
+        + _create_field_description(
+            *PROTOCOL_TYPE_FIELD_DEPENDENCIES["is_integer_distance"]
+        ),
     )
     max_stored_distance: float | None = Field(
-        description="The maximum sequencedistance that is guaranteed to be stored. Required for protocols of type "
-        + ", ".join(
-            sorted(
-                x.value for x in PROTOCOL_TYPE_FIELD_DEPENDENCIES["max_stored_distance"]
-            )
-        )
-        + ".",
+        description="The maximum sequencedistance that is guaranteed to be stored. "
+        + _create_field_description(
+            *PROTOCOL_TYPE_FIELD_DEPENDENCIES["max_stored_distance"]
+        ),
     )
-    PROPS_MAX_JSON_LENGTH: ClassVar[int] = 2000
 
     props: dict[str, Any] = Field(
         default_factory=dict,
@@ -201,7 +237,7 @@ class Protocol(Model):
         """
         for (
             field_name,
-            required_protocol_types,
+            (required_protocol_types, optional_protocol_types),
         ) in self.PROTOCOL_TYPE_FIELD_DEPENDENCIES.items():
             field_value = getattr(self, field_name)
             if self.protocol_type in required_protocol_types:
@@ -209,7 +245,12 @@ class Protocol(Model):
                     raise ValueError(
                         f"{field_name} must be filled for {self.protocol_type.value} protocols."
                     )
-            elif field_value is not None:
+                continue
+            if self.protocol_type in optional_protocol_types:
+                # The field is optional for this protocol type, so it can be filled or
+                # not. No validation needed.
+                continue
+            if field_value is not None:
                 raise ValueError(
                     f"{field_name} must be empty for non-{self.protocol_type.value} protocols."
                 )

@@ -11,12 +11,10 @@ from gen_epix.seqdb.domain.model.seq.base import AlignmentMixin as AlignmentMixi
 from gen_epix.seqdb.domain.model.seq.base import BaseSeq as BaseSeq
 from gen_epix.seqdb.domain.model.seq.base import CodeMixin as CodeMixin
 from gen_epix.seqdb.domain.model.seq.base import QualityMixin as QualityMixin
+from gen_epix.seqdb.domain.model.seq.category import SeqCategory as SeqCategory
+from gen_epix.seqdb.domain.model.seq.category import SeqCategorySet as SeqCategorySet
 from gen_epix.seqdb.domain.model.seq.classification import (
     AstPrediction as AstPrediction,
-)
-from gen_epix.seqdb.domain.model.seq.classification import SeqCategory as SeqCategory
-from gen_epix.seqdb.domain.model.seq.classification import (
-    SeqCategorySet as SeqCategorySet,
 )
 from gen_epix.seqdb.domain.model.seq.classification import (
     SeqClassification as SeqClassification,
@@ -34,7 +32,6 @@ from gen_epix.seqdb.domain.model.seq.profile import AlleleProfile as AlleleProfi
 from gen_epix.seqdb.domain.model.seq.profile import (
     AlleleProfileIdentifier as AlleleProfileIdentifier,
 )
-
 from gen_epix.seqdb.domain.model.seq.profile import KmerProfile as KmerProfile
 from gen_epix.seqdb.domain.model.seq.profile import (
     KmerProfileIdentifier as KmerProfileIdentifier,
@@ -51,15 +48,16 @@ from gen_epix.seqdb.domain.model.seq.profile import SnpProfile as SnpProfile
 from gen_epix.seqdb.domain.model.seq.profile import (
     SnpProfileIdentifier as SnpProfileIdentifier,
 )
+from gen_epix.seqdb.domain.model.seq.protocol import Protocol as Protocol
 from gen_epix.seqdb.domain.model.seq.reads import ReadSet as ReadSet
 from gen_epix.seqdb.domain.model.seq.reads import ReadSetIdentifier as ReadSetIdentifier
+from gen_epix.seqdb.domain.model.seq.ref_seq import RefSeq as RefSeq
 from gen_epix.seqdb.domain.model.seq.sample import Sample as Sample
 from gen_epix.seqdb.domain.model.seq.sample import (
     SampleDataCollectionLink as SampleDataCollectionLink,
 )
 from gen_epix.seqdb.domain.model.seq.sample import SampleIdentifier as SampleIdentifier
 from gen_epix.seqdb.domain.model.seq.seq import Contig as Contig
-from gen_epix.seqdb.domain.model.seq.seq import RefSeq as RefSeq
 from gen_epix.seqdb.domain.model.seq.seq import RefSnp as RefSnp
 from gen_epix.seqdb.domain.model.seq.seq import RefSnpSet as RefSnpSet
 from gen_epix.seqdb.domain.model.seq.seq import RefSnpSetMember as RefSnpSetMember
@@ -102,4 +100,3 @@ from gen_epix.seqdb.domain.model.seq.upload import SeqForUpload as SeqForUpload
 from gen_epix.seqdb.domain.model.seq.upload import (
     SnpProfileForUpload as SnpProfileForUpload,
 )
-from gen_epix.seqdb.domain.model.seq.protocol import Protocol as Protocol

@@ -42,6 +42,174 @@ class BaseSeqService(BaseService):
             command.ProtocolCrudCommand,
             self.crud_protocol,
         )
+        f(
+            command.AlleleCrudCommand,
+            self.crud_allele,
+        )
+        f(
+            command.AlleleAlignmentCrudCommand,
+            self.crud_allele_alignment,
+        )
+        f(
+            command.AlleleProfileCrudCommand,
+            self.crud_allele_profile,
+        )
+        f(
+            command.AlleleProfileIdentifierCrudCommand,
+            self.crud_allele_profile_identifier,
+        )
+        f(
+            command.AstMeasurementCrudCommand,
+            self.crud_ast_measurement,
+        )
+        f(
+            command.AstPredictionCrudCommand,
+            self.crud_ast_prediction,
+        )
+        f(
+            command.FileCrudCommand,
+            self.crud_file,
+        )
+        f(
+            command.KmerProfileCrudCommand,
+            self.crud_kmer_profile,
+        )
+        f(
+            command.KmerProfileIdentifierCrudCommand,
+            self.crud_kmer_profile_identifier,
+        )
+        f(
+            command.LocusCrudCommand,
+            self.crud_locus,
+        )
+        f(
+            command.LocusCodeMapCrudCommand,
+            self.crud_locus_code_map,
+        )
+        f(
+            command.LocusProfileCrudCommand,
+            self.crud_locus_profile,
+        )
+        f(
+            command.LocusProfileIdentifierCrudCommand,
+            self.crud_locus_profile_identifier,
+        )
+        f(
+            command.LocusSetCrudCommand,
+            self.crud_locus_set,
+        )
+        f(
+            command.MlvaProfileCrudCommand,
+            self.crud_mlva_profile,
+        )
+        f(
+            command.MlvaProfileIdentifierCrudCommand,
+            self.crud_mlva_profile_identifier,
+        )
+        f(
+            command.PcrMeasurementCrudCommand,
+            self.crud_pcr_measurement,
+        )
+        f(
+            command.ReadSetCrudCommand,
+            self.crud_read_set,
+        )
+        f(
+            command.ReadSetIdentifierCrudCommand,
+            self.crud_read_set_identifier,
+        )
+        f(
+            command.RefAlleleCrudCommand,
+            self.crud_ref_allele,
+        )
+        f(
+            command.RefSeqCrudCommand,
+            self.crud_ref_seq,
+        )
+        f(
+            command.RefSnpCrudCommand,
+            self.crud_ref_snp,
+        )
+        f(
+            command.RefSnpSetCrudCommand,
+            self.crud_ref_snp_set,
+        )
+        f(
+            command.RefSnpSetMemberCrudCommand,
+            self.crud_ref_snp_set_member,
+        )
+        f(
+            command.SampleCrudCommand,
+            self.crud_sample,
+        )
+        f(
+            command.SampleDataCollectionLinkCrudCommand,
+            self.crud_sample_data_collection_link,
+        )
+        f(
+            command.SampleIdentifierCrudCommand,
+            self.crud_sample_identifier,
+        )
+        f(
+            command.SeqCrudCommand,
+            self.crud_seq,
+        )
+        f(
+            command.SeqAlignmentCrudCommand,
+            self.crud_seq_alignment,
+        )
+        f(
+            command.SeqCategoryCrudCommand,
+            self.crud_seq_category,
+        )
+        f(
+            command.SeqCategorySetCrudCommand,
+            self.crud_seq_category_set,
+        )
+        f(
+            command.SeqClassificationCrudCommand,
+            self.crud_seq_classification,
+        )
+        f(
+            command.SeqDistanceCrudCommand,
+            self.crud_seq_distance,
+        )
+        f(
+            command.SeqIdentifierCrudCommand,
+            self.crud_seq_identifier,
+        )
+        f(
+            command.SeqTaxonomyCrudCommand,
+            self.crud_seq_taxonomy,
+        )
+        f(
+            command.SnpProfileCrudCommand,
+            self.crud_snp_profile,
+        )
+        f(
+            command.SnpProfileIdentifierCrudCommand,
+            self.crud_snp_profile_identifier,
+        )
+        f(
+            command.TaxonCrudCommand,
+            self.crud_taxon,
+        )
+        f(
+            command.TaxonSetCrudCommand,
+            self.crud_taxon_set,
+        )
+        f(
+            command.TaxonSetMemberCrudCommand,
+            self.crud_taxon_set_member,
+        )
+        f(
+            command.TreeAlgorithmCrudCommand,
+            self.crud_tree_algorithm,
+        )
+        f(
+            command.TreeAlgorithmClassCrudCommand,
+            self.crud_tree_algorithm_class,
+        )
 
     @abc.abstractmethod
     def retrieve_phylogenetic_tree(
@@ -95,6 +263,580 @@ class BaseSeqService(BaseService):
     ) -> (
         model.Protocol
         | list[model.Protocol]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_allele(
+        self,
+        cmd: command.AlleleCrudCommand,
+    ) -> (
+        model.Allele | list[model.Allele] | UUID | list[UUID] | bool | list[bool] | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_allele_alignment(
+        self,
+        cmd: command.AlleleAlignmentCrudCommand,
+    ) -> (
+        model.AlleleAlignment
+        | list[model.AlleleAlignment]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_allele_profile(
+        self,
+        cmd: command.AlleleProfileCrudCommand,
+    ) -> (
+        model.AlleleProfile
+        | list[model.AlleleProfile]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_allele_profile_identifier(
+        self,
+        cmd: command.AlleleProfileIdentifierCrudCommand,
+    ) -> (
+        model.AlleleProfileIdentifier
+        | list[model.AlleleProfileIdentifier]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_ast_measurement(
+        self,
+        cmd: command.AstMeasurementCrudCommand,
+    ) -> (
+        model.AstMeasurement
+        | list[model.AstMeasurement]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_ast_prediction(
+        self,
+        cmd: command.AstPredictionCrudCommand,
+    ) -> (
+        model.AstPrediction
+        | list[model.AstPrediction]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_file(
+        self,
+        cmd: command.FileCrudCommand,
+    ) -> model.File | list[model.File] | UUID | list[UUID] | bool | list[bool] | None:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_kmer_profile(
+        self,
+        cmd: command.KmerProfileCrudCommand,
+    ) -> (
+        model.KmerProfile
+        | list[model.KmerProfile]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_kmer_profile_identifier(
+        self,
+        cmd: command.KmerProfileIdentifierCrudCommand,
+    ) -> (
+        model.KmerProfileIdentifier
+        | list[model.KmerProfileIdentifier]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_locus(
+        self,
+        cmd: command.LocusCrudCommand,
+    ) -> model.Locus | list[model.Locus] | UUID | list[UUID] | bool | list[bool] | None:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_locus_code_map(
+        self,
+        cmd: command.LocusCodeMapCrudCommand,
+    ) -> (
+        model.LocusCodeMap
+        | list[model.LocusCodeMap]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_locus_profile(
+        self,
+        cmd: command.LocusProfileCrudCommand,
+    ) -> (
+        model.LocusProfile
+        | list[model.LocusProfile]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_locus_profile_identifier(
+        self,
+        cmd: command.LocusProfileIdentifierCrudCommand,
+    ) -> (
+        model.LocusProfileIdentifier
+        | list[model.LocusProfileIdentifier]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_locus_set(
+        self,
+        cmd: command.LocusSetCrudCommand,
+    ) -> (
+        model.LocusSet
+        | list[model.LocusSet]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_mlva_profile(
+        self,
+        cmd: command.MlvaProfileCrudCommand,
+    ) -> (
+        model.MlvaProfile
+        | list[model.MlvaProfile]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_mlva_profile_identifier(
+        self,
+        cmd: command.MlvaProfileIdentifierCrudCommand,
+    ) -> (
+        model.MlvaProfileIdentifier
+        | list[model.MlvaProfileIdentifier]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_pcr_measurement(
+        self,
+        cmd: command.PcrMeasurementCrudCommand,
+    ) -> (
+        model.PcrMeasurement
+        | list[model.PcrMeasurement]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_read_set(
+        self,
+        cmd: command.ReadSetCrudCommand,
+    ) -> (
+        model.ReadSet
+        | list[model.ReadSet]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_read_set_identifier(
+        self,
+        cmd: command.ReadSetIdentifierCrudCommand,
+    ) -> (
+        model.ReadSetIdentifier
+        | list[model.ReadSetIdentifier]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_ref_allele(
+        self,
+        cmd: command.RefAlleleCrudCommand,
+    ) -> (
+        model.RefAllele
+        | list[model.RefAllele]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_ref_seq(
+        self,
+        cmd: command.RefSeqCrudCommand,
+    ) -> (
+        model.RefSeq | list[model.RefSeq] | UUID | list[UUID] | bool | list[bool] | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_ref_snp(
+        self,
+        cmd: command.RefSnpCrudCommand,
+    ) -> (
+        model.RefSnp | list[model.RefSnp] | UUID | list[UUID] | bool | list[bool] | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_ref_snp_set(
+        self,
+        cmd: command.RefSnpSetCrudCommand,
+    ) -> (
+        model.RefSnpSet
+        | list[model.RefSnpSet]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_ref_snp_set_member(
+        self,
+        cmd: command.RefSnpSetMemberCrudCommand,
+    ) -> (
+        model.RefSnpSetMember
+        | list[model.RefSnpSetMember]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_sample(
+        self,
+        cmd: command.SampleCrudCommand,
+    ) -> (
+        model.Sample | list[model.Sample] | UUID | list[UUID] | bool | list[bool] | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_sample_data_collection_link(
+        self,
+        cmd: command.SampleDataCollectionLinkCrudCommand,
+    ) -> (
+        model.SampleDataCollectionLink
+        | list[model.SampleDataCollectionLink]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_sample_identifier(
+        self,
+        cmd: command.SampleIdentifierCrudCommand,
+    ) -> (
+        model.SampleIdentifier
+        | list[model.SampleIdentifier]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_seq(
+        self,
+        cmd: command.SeqCrudCommand,
+    ) -> model.Seq | list[model.Seq] | UUID | list[UUID] | bool | list[bool] | None:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_seq_alignment(
+        self,
+        cmd: command.SeqAlignmentCrudCommand,
+    ) -> (
+        model.SeqAlignment
+        | list[model.SeqAlignment]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_seq_category(
+        self,
+        cmd: command.SeqCategoryCrudCommand,
+    ) -> (
+        model.SeqCategory
+        | list[model.SeqCategory]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_seq_category_set(
+        self,
+        cmd: command.SeqCategorySetCrudCommand,
+    ) -> (
+        model.SeqCategorySet
+        | list[model.SeqCategorySet]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_seq_classification(
+        self,
+        cmd: command.SeqClassificationCrudCommand,
+    ) -> (
+        model.SeqClassification
+        | list[model.SeqClassification]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_seq_distance(
+        self,
+        cmd: command.SeqDistanceCrudCommand,
+    ) -> (
+        model.SeqDistance
+        | list[model.SeqDistance]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_seq_identifier(
+        self,
+        cmd: command.SeqIdentifierCrudCommand,
+    ) -> (
+        model.SeqIdentifier
+        | list[model.SeqIdentifier]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_seq_taxonomy(
+        self,
+        cmd: command.SeqTaxonomyCrudCommand,
+    ) -> (
+        model.SeqTaxonomy
+        | list[model.SeqTaxonomy]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_snp_profile(
+        self,
+        cmd: command.SnpProfileCrudCommand,
+    ) -> (
+        model.SnpProfile
+        | list[model.SnpProfile]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_snp_profile_identifier(
+        self,
+        cmd: command.SnpProfileIdentifierCrudCommand,
+    ) -> (
+        model.SnpProfileIdentifier
+        | list[model.SnpProfileIdentifier]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_taxon(
+        self,
+        cmd: command.TaxonCrudCommand,
+    ) -> model.Taxon | list[model.Taxon] | UUID | list[UUID] | bool | list[bool] | None:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_taxon_set(
+        self,
+        cmd: command.TaxonSetCrudCommand,
+    ) -> (
+        model.TaxonSet
+        | list[model.TaxonSet]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_taxon_set_member(
+        self,
+        cmd: command.TaxonSetMemberCrudCommand,
+    ) -> (
+        model.TaxonSetMember
+        | list[model.TaxonSetMember]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_tree_algorithm(
+        self,
+        cmd: command.TreeAlgorithmCrudCommand,
+    ) -> (
+        model.TreeAlgorithm
+        | list[model.TreeAlgorithm]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_tree_algorithm_class(
+        self,
+        cmd: command.TreeAlgorithmClassCrudCommand,
+    ) -> (
+        model.TreeAlgorithmClass
+        | list[model.TreeAlgorithmClass]
         | UUID
         | list[UUID]
         | bool

@@ -326,8 +326,8 @@ class ProtocolTypeSet(Enum):
     ASSEMBLY = frozenset({ProtocolType.ASSEMBLY})
     SEQ_CLASSIFICATION = frozenset({ProtocolType.SEQ_CLASSIFICATION})
     TAXONOMY = frozenset({ProtocolType.TAXONOMY})
-    CLASSIFICATION = frozenset({ProtocolType.SEQ_CLASSIFICATION, ProtocolType.TAXONOMY})
     ALIGNMENT = frozenset({ProtocolType.ALIGNMENT})
+    CLASSIFICATION = frozenset({ProtocolType.SEQ_CLASSIFICATION, ProtocolType.TAXONOMY})
     SEQ_PROFILE = frozenset(
         {
             ProtocolType.KMER_PROFILE,
@@ -343,11 +343,28 @@ class ProtocolTypeSet(Enum):
             ProtocolType.SNP_PROFILE,
         }
     )
+    HAS_OPTIONAL_REF_SEQ = frozenset(
+        {
+            ProtocolType.ASSEMBLY,
+            ProtocolType.SEQ_CLASSIFICATION,
+        }
+    )
+    HAS_SEQ_CATEGORY_SET = frozenset(
+        {
+            ProtocolType.SEQ_CLASSIFICATION,
+        }
+    )
+    HAS_OPTIONAL_SEQ_CATEGORY_SET = frozenset()
     HAS_LOCUS_SET = frozenset(
         {
             ProtocolType.LOCUS_PROFILE,
             ProtocolType.ALLELE_PROFILE,
             ProtocolType.MLVA_PROFILE,
+        }
+    )
+    HAS_OPTIONAL_LOCUS_SET = frozenset(
+        {
+            ProtocolType.PCR,
         }
     )
     IS_SEQ_DISTANCE = frozenset({ProtocolType.SEQ_DISTANCE})

@@ -7,45 +7,11 @@ from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
+from gen_epix.seqdb.domain.model.seq.category import SeqCategory
 from gen_epix.seqdb.domain.model.seq.protocol import Protocol
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 from gen_epix.seqdb.domain.model.seq.seq import Seq
 from gen_epix.seqdb.domain.model.seq.taxon import Taxon
-
-
-class SeqCategorySet(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="seq_category_sets",
-        table_name="seq_category_set",
-        persistable=True,
-        keys=create_keys({1: "code", 2: "name"}),
-    )
-    code: str = Field(description="The code of the category set", max_length=255)
-    name: str = Field(description="The name of the category set", max_length=255)
-
-
-class SeqCategory(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="seq_categories",
-        table_name="seq_category",
-        persistable=True,
-        keys=create_keys({1: "code", 2: "name"}),
-        links=create_links(
-            {
-                1: (
-                    "seq_category_set_id",
-                    SeqCategorySet,
-                    "seq_category_set",
-                )
-            }
-        ),
-    )
-    code: str = Field(description="The code of the category", max_length=255)
-    name: str = Field(description="The name of the category", max_length=255)
-    seq_category_set_id: UUID = Field(
-        description="The ID of the sequence category set. FOREIGN KEY"
-    )
-    seq_category_set: SeqCategorySet = Field(description="The sequence category set")
 
 
 class SeqClassification(Model, HasSampleMixin):

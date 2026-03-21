@@ -36,6 +36,7 @@ from gen_epix.seqdb.domain.model.seq.protocol import Protocol
 
 SAMPLE_REF_SEQ_ID: UUID = uuid4()
 SAMPLE_LOCUS_SET_ID: UUID = uuid4()
+SAMPLE_SEQ_CATEGORY_SET_ID: UUID = uuid4()
 
 VALID_GIT_HASH: str = "a" * 40
 VALID_GIT_URI: str = "https://github.com/example/repo"
@@ -69,6 +70,8 @@ def _minimal_protocol_data(protocol_type: ProtocolType) -> dict[str, Any]:
     }
     if protocol_type in ProtocolTypeSet.HAS_REF_SEQ.value:
         data["ref_seq_id"] = SAMPLE_REF_SEQ_ID
+    if protocol_type in ProtocolTypeSet.HAS_SEQ_CATEGORY_SET.value:
+        data["seq_category_set_id"] = SAMPLE_SEQ_CATEGORY_SET_ID
     if protocol_type in ProtocolTypeSet.HAS_LOCUS_SET.value:
         data["locus_set_id"] = SAMPLE_LOCUS_SET_ID
     if protocol_type in ProtocolTypeSet.SEQ_PROFILE.value:
@@ -266,6 +269,7 @@ class TestProtocolProps:
 # Tuples of (field_name, protocol_type that requires it) for "missing" tests.
 _REQUIRED_FIELD_CASES: list[tuple[str, ProtocolType]] = [
     ("ref_seq_id", ProtocolType.SNP_PROFILE),
+    ("seq_category_set_id", ProtocolType.SEQ_CLASSIFICATION),
     ("locus_set_id", ProtocolType.ALLELE_PROFILE),
     ("seq_profile_type", ProtocolType.KMER_PROFILE),
     ("seq_distance_type", ProtocolType.SEQ_DISTANCE),
@@ -277,6 +281,7 @@ _REQUIRED_FIELD_CASES: list[tuple[str, ProtocolType]] = [
 # for "extra field" tests.
 _EXTRA_FIELD_CASES: list[tuple[str, ProtocolType, Any]] = [
     ("ref_seq_id", ProtocolType.KMER_PROFILE, SAMPLE_REF_SEQ_ID),
+    ("seq_category_set_id", ProtocolType.ALIGNMENT, SAMPLE_SEQ_CATEGORY_SET_ID),
     ("locus_set_id", ProtocolType.SNP_PROFILE, SAMPLE_LOCUS_SET_ID),
     ("seq_profile_type", ProtocolType.ALIGNMENT, SeqProfileType.SNP),
     ("seq_distance_type", ProtocolType.ALIGNMENT, SeqDistanceType.ALLELE_HAMMING),
