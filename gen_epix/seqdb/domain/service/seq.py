@@ -17,10 +17,6 @@ class BaseSeqService(BaseService):
             command.RetrievePhylogeneticTreeCommand,
             self.retrieve_phylogenetic_tree,
         )
-        f(
-            command.RetrieveMultipleAlignmentCommand,
-            self.retrieve_multiple_alignment,
-        )
         f(command.RetrieveSamplesCommand, self.retrieve_samples)
         f(
             command.RetrieveSeqFastaCommand,
@@ -45,10 +41,6 @@ class BaseSeqService(BaseService):
         f(
             command.AlleleCrudCommand,
             self.crud_allele,
-        )
-        f(
-            command.AlleleAlignmentCrudCommand,
-            self.crud_allele_alignment,
         )
         f(
             command.AlleleProfileCrudCommand,
@@ -127,18 +119,6 @@ class BaseSeqService(BaseService):
             self.crud_ref_seq,
         )
         f(
-            command.RefSnpCrudCommand,
-            self.crud_ref_snp,
-        )
-        f(
-            command.RefSnpSetCrudCommand,
-            self.crud_ref_snp_set,
-        )
-        f(
-            command.RefSnpSetMemberCrudCommand,
-            self.crud_ref_snp_set_member,
-        )
-        f(
             command.SampleCrudCommand,
             self.crud_sample,
         )
@@ -153,10 +133,6 @@ class BaseSeqService(BaseService):
         f(
             command.SeqCrudCommand,
             self.crud_seq,
-        )
-        f(
-            command.SeqAlignmentCrudCommand,
-            self.crud_seq_alignment,
         )
         f(
             command.SeqCategoryCrudCommand,
@@ -218,13 +194,6 @@ class BaseSeqService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def retrieve_multiple_alignment(
-        self,
-        cmd: command.RetrieveMultipleAlignmentCommand,
-    ) -> model.MultipleAlignment | list[model.MultipleAlignment]:
-        raise NotImplementedError()
-
-    @abc.abstractmethod
     def retrieve_samples(
         self,
         cmd: command.RetrieveSamplesCommand,
@@ -277,21 +246,6 @@ class BaseSeqService(BaseService):
         cmd: command.AlleleCrudCommand,
     ) -> (
         model.Allele | list[model.Allele] | UUID | list[UUID] | bool | list[bool] | None
-    ):
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def crud_allele_alignment(
-        self,
-        cmd: command.AlleleAlignmentCrudCommand,
-    ) -> (
-        model.AlleleAlignment
-        | list[model.AlleleAlignment]
-        | UUID
-        | list[UUID]
-        | bool
-        | list[bool]
-        | None
     ):
         raise NotImplementedError()
 
@@ -559,45 +513,6 @@ class BaseSeqService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def crud_ref_snp(
-        self,
-        cmd: command.RefSnpCrudCommand,
-    ) -> (
-        model.RefSnp | list[model.RefSnp] | UUID | list[UUID] | bool | list[bool] | None
-    ):
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def crud_ref_snp_set(
-        self,
-        cmd: command.RefSnpSetCrudCommand,
-    ) -> (
-        model.RefSnpSet
-        | list[model.RefSnpSet]
-        | UUID
-        | list[UUID]
-        | bool
-        | list[bool]
-        | None
-    ):
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def crud_ref_snp_set_member(
-        self,
-        cmd: command.RefSnpSetMemberCrudCommand,
-    ) -> (
-        model.RefSnpSetMember
-        | list[model.RefSnpSetMember]
-        | UUID
-        | list[UUID]
-        | bool
-        | list[bool]
-        | None
-    ):
-        raise NotImplementedError()
-
-    @abc.abstractmethod
     def crud_sample(
         self,
         cmd: command.SampleCrudCommand,
@@ -641,21 +556,6 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.SeqCrudCommand,
     ) -> model.Seq | list[model.Seq] | UUID | list[UUID] | bool | list[bool] | None:
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def crud_seq_alignment(
-        self,
-        cmd: command.SeqAlignmentCrudCommand,
-    ) -> (
-        model.SeqAlignment
-        | list[model.SeqAlignment]
-        | UUID
-        | list[UUID]
-        | bool
-        | list[bool]
-        | None
-    ):
         raise NotImplementedError()
 
     @abc.abstractmethod

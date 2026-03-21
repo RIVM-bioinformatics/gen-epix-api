@@ -13,7 +13,6 @@ from gen_epix.commondb.repositories.sa_model import (
 from gen_epix.commondb.repositories.sa_model.organization import IdentifierMixin
 from gen_epix.seqdb.domain import DOMAIN, enum, model
 from gen_epix.seqdb.repositories.sa_model.base import (
-    AlignmentMixin,
     CodeMixin,
     QualityMixin,
     SeqMixin,
@@ -89,24 +88,6 @@ class Allele(Base, RowMetadataMixin, SeqMixin):
     __tablename__, __table_args__ = create_table_args(model.Allele)
 
     locus_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Allele, "locus_id")
-
-
-class AlleleAlignment(Base, RowMetadataMixin, AlignmentMixin, QualityMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.AlleleAlignment)
-
-    ref_allele_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.AlleleAlignment, "ref_allele_id"
-    )
-    allele_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.AlleleAlignment, "allele_id"
-    )
-    protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.AlleleAlignment, "protocol_id"
-    )
 
 
 class AlleleProfile(Base, RowMetadataMixin, QualityMixin):
@@ -481,46 +462,6 @@ class RefSeq(Base, RowMetadataMixin, SeqMixin):
     )
 
 
-class RefSnp(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.RefSnp)
-
-    code: Mapped[str] = create_mapped_column(DOMAIN, model.RefSnp, "code")
-    ref_seq_id: Mapped[str] = create_mapped_column(DOMAIN, model.RefSnp, "ref_seq_id")
-    position: Mapped[str] = create_mapped_column(DOMAIN, model.RefSnp, "position")
-    nucleotide: Mapped[str] = create_mapped_column(DOMAIN, model.RefSnp, "nucleotide")
-
-
-class RefSnpSet(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.RefSnpSet)
-
-    code: Mapped[str] = create_mapped_column(DOMAIN, model.RefSnpSet, "code")
-    name: Mapped[str] = create_mapped_column(DOMAIN, model.RefSnpSet, "name")
-
-
-class RefSnpSetMember(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.RefSnpSetMember)
-
-    ref_snp_set_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.RefSnpSetMember, "ref_snp_set_id"
-    )
-    ref_snp_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.RefSnpSetMember, "ref_snp_id"
-    )
-    index: Mapped[int] = create_mapped_column(DOMAIN, model.RefSnpSetMember, "index")
-
-
 class Sample(Base, RowMetadataMixin, CodeMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
@@ -612,24 +553,6 @@ class SeqIdentifier(Base, IdentifierMixin):
         DOMAIN, model.SeqIdentifier, "internal_id"
     )
     seq: Mapped[Seq] = relationship(Seq, foreign_keys=[internal_id])
-
-
-class SeqAlignment(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.SeqAlignment)
-
-    seq_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.SeqAlignment, "seq_id"
-    )
-    protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SeqAlignment, "protocol_id"
-    )
-    contig_alignments: Mapped[list[model.ContigAlignment]] = create_mapped_column(
-        DOMAIN, model.SeqAlignment, "contig_alignments"
-    )
 
 
 class SeqCategory(Base, RowMetadataMixin):

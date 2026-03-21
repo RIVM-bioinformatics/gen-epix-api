@@ -1,12 +1,6 @@
 from gen_epix.commondb.domain.model import IdentifierForUpload as IdentifierForUpload
 
 # pylint: disable=useless-import-alias
-from gen_epix.seqdb.domain.model.seq.alignment import AlleleAlignment as AlleleAlignment
-from gen_epix.seqdb.domain.model.seq.alignment import ContigAlignment as ContigAlignment
-from gen_epix.seqdb.domain.model.seq.alignment import (
-    MultipleAlignment as MultipleAlignment,
-)
-from gen_epix.seqdb.domain.model.seq.alignment import SeqAlignment as SeqAlignment
 from gen_epix.seqdb.domain.model.seq.base import AlignmentMixin as AlignmentMixin
 from gen_epix.seqdb.domain.model.seq.base import BaseSeq as BaseSeq
 from gen_epix.seqdb.domain.model.seq.base import CodeMixin as CodeMixin
@@ -58,9 +52,6 @@ from gen_epix.seqdb.domain.model.seq.sample import (
 )
 from gen_epix.seqdb.domain.model.seq.sample import SampleIdentifier as SampleIdentifier
 from gen_epix.seqdb.domain.model.seq.seq import Contig as Contig
-from gen_epix.seqdb.domain.model.seq.seq import RefSnp as RefSnp
-from gen_epix.seqdb.domain.model.seq.seq import RefSnpSet as RefSnpSet
-from gen_epix.seqdb.domain.model.seq.seq import RefSnpSetMember as RefSnpSetMember
 from gen_epix.seqdb.domain.model.seq.seq import Seq as Seq
 from gen_epix.seqdb.domain.model.seq.seq import SeqIdentifier as SeqIdentifier
 from gen_epix.seqdb.domain.model.seq.taxon import Taxon as Taxon

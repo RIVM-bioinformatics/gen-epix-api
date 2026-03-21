@@ -27,7 +27,6 @@ from gen_epix.seqdb.domain.model.seq.base import (
 )
 from gen_epix.seqdb.domain.model.seq.protocol import Protocol
 from gen_epix.seqdb.domain.model.seq.reads import ReadSet
-from gen_epix.seqdb.domain.model.seq.ref_seq import RefSeq
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 
 
@@ -306,69 +305,6 @@ class SeqIdentifier(BaseIdentifier):
 
     seq: Seq | None = Field(
         default=None, description="The sequence associated with this identifier."
-    )
-
-
-class RefSnp(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="ref_snps",
-        table_name="ref_snp",
-        persistable=True,
-        keys=create_keys({1: "code", 2: ("ref_seq_id", "position", "nucleotide")}),
-        links=create_links({1: ("ref_seq_id", RefSeq, "ref_seq")}),
-    )
-    code: str = Field(description="The code of the reference SNP.", max_length=255)
-    ref_seq_id: UUID = Field(
-        description="The unique identifier for the reference sequence. FOREIGN KEY"
-    )
-    ref_seq: RefSeq | None = Field(default=None, description="The reference sequence.")
-    position: int = Field(description="The position of the reference SNP.")
-    nucleotide: str = Field(
-        description="The nucleotide of the reference SNP.", min_length=1, max_length=1
-    )
-
-
-class RefSnpSet(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="ref_snp_sets",
-        table_name="ref_snp_set",
-        persistable=True,
-        keys=create_keys({1: "code", 2: "name"}),
-    )
-    code: str = Field(description="The code of the reference SNP set.", max_length=255)
-    name: str = Field(description="The name of the reference SNP set.", max_length=255)
-
-
-class RefSnpSetMember(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="ref_snp_set_members",
-        table_name="ref_snp_set_member",
-        persistable=True,
-        keys=create_keys(
-            {
-                1: ("ref_snp_set_id", "ref_snp_id"),
-                2: ("ref_snp_set_id", "index"),
-            }
-        ),
-        links=create_links(
-            {
-                1: ("ref_snp_set_id", RefSnpSet, "ref_snp_set"),
-                2: ("ref_snp_id", RefSnp, "ref_snp"),
-            }
-        ),
-    )
-    ref_snp_set_id: UUID = Field(
-        description="The unique identifier for the reference SNP set. FOREIGN KEY"
-    )
-    ref_snp_set: RefSnpSet | None = Field(
-        default=None, description="The reference SNP set."
-    )
-    ref_snp_id: UUID = Field(
-        description="The unique identifier for the reference SNP. FOREIGN KEY"
-    )
-    ref_snp: RefSnp | None = Field(default=None, description="The reference SNP.")
-    index: int = Field(
-        description="The index (ordinal number) of the reference SNP in the reference SNP set."
     )
 
 

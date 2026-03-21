@@ -33,7 +33,6 @@ from gen_epix.commondb.repositories.sa_model import (
 from gen_epix.seqdb.domain import DOMAIN, enum, model
 from gen_epix.seqdb.repositories.sa_model.file import File as File
 from gen_epix.seqdb.repositories.sa_model.seq import Allele as Allele
-from gen_epix.seqdb.repositories.sa_model.seq import AlleleAlignment as AlleleAlignment
 from gen_epix.seqdb.repositories.sa_model.seq import AlleleProfile as AlleleProfile
 from gen_epix.seqdb.repositories.sa_model.seq import (
     AlleleProfileIdentifier as AlleleProfileIdentifier,
@@ -63,9 +62,6 @@ from gen_epix.seqdb.repositories.sa_model.seq import (
 )
 from gen_epix.seqdb.repositories.sa_model.seq import RefAllele as RefAllele
 from gen_epix.seqdb.repositories.sa_model.seq import RefSeq as RefSeq
-from gen_epix.seqdb.repositories.sa_model.seq import RefSnp as RefSnp
-from gen_epix.seqdb.repositories.sa_model.seq import RefSnpSet as RefSnpSet
-from gen_epix.seqdb.repositories.sa_model.seq import RefSnpSetMember as RefSnpSetMember
 from gen_epix.seqdb.repositories.sa_model.seq import Sample as Sample
 from gen_epix.seqdb.repositories.sa_model.seq import (
     SampleDataCollectionLink as SampleDataCollectionLink,
@@ -74,7 +70,6 @@ from gen_epix.seqdb.repositories.sa_model.seq import (
     SampleIdentifier as SampleIdentifier,
 )
 from gen_epix.seqdb.repositories.sa_model.seq import Seq as Seq
-from gen_epix.seqdb.repositories.sa_model.seq import SeqAlignment as SeqAlignment
 from gen_epix.seqdb.repositories.sa_model.seq import SeqCategory as SeqCategory
 from gen_epix.seqdb.repositories.sa_model.seq import SeqCategorySet as SeqCategorySet
 from gen_epix.seqdb.repositories.sa_model.seq import (
@@ -118,7 +113,6 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
     },
     enum.ServiceType.SEQ: {
         model.Allele: Allele,
-        model.AlleleAlignment: AlleleAlignment,
         model.AlleleProfile: AlleleProfile,
         model.AlleleProfileIdentifier: AlleleProfileIdentifier,
         model.AstMeasurement: AstMeasurement,
@@ -138,15 +132,11 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.ReadSetIdentifier: ReadSetIdentifier,
         model.RefAllele: RefAllele,
         model.RefSeq: RefSeq,
-        model.RefSnp: RefSnp,
-        model.RefSnpSet: RefSnpSet,
-        model.RefSnpSetMember: RefSnpSetMember,
         model.Sample: Sample,
         model.SampleDataCollectionLink: SampleDataCollectionLink,
         model.SampleIdentifier: SampleIdentifier,
         model.Seq: Seq,
         model.SeqIdentifier: SeqIdentifier,
-        model.SeqAlignment: SeqAlignment,
         model.SeqCategory: SeqCategory,
         model.SeqCategorySet: SeqCategorySet,
         model.SeqClassification: SeqClassification,

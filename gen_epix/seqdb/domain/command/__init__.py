@@ -82,9 +82,6 @@ from gen_epix.commondb.domain.command.rbac import (
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.command.file import CreateFileCommand as CreateFileCommand
 from gen_epix.seqdb.domain.command.file import FileCrudCommand as FileCrudCommand
-from gen_epix.seqdb.domain.command.seq import (
-    AlleleAlignmentCrudCommand as AlleleAlignmentCrudCommand,
-)
 from gen_epix.seqdb.domain.command.seq import AlleleCrudCommand as AlleleCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
     AlleleProfileCrudCommand as AlleleProfileCrudCommand,
@@ -100,9 +97,6 @@ from gen_epix.seqdb.domain.command.seq import (
 )
 from gen_epix.seqdb.domain.command.seq import (
     CalculateSeqDistancesForNewProfilesCommand as CalculateSeqDistancesForNewProfilesCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
-    GenerateMultipleAlignmentCommand as GenerateMultipleAlignmentCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
     GeneratePhylogeneticTreeCommand as GeneratePhylogeneticTreeCommand,
@@ -133,7 +127,6 @@ from gen_epix.seqdb.domain.command.seq import (
 from gen_epix.seqdb.domain.command.seq import (
     PcrMeasurementCrudCommand as PcrMeasurementCrudCommand,
 )
-
 from gen_epix.seqdb.domain.command.seq import ProtocolCrudCommand as ProtocolCrudCommand
 from gen_epix.seqdb.domain.command.seq import ReadSetCrudCommand as ReadSetCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
@@ -143,16 +136,6 @@ from gen_epix.seqdb.domain.command.seq import (
     RefAlleleCrudCommand as RefAlleleCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import RefSeqCrudCommand as RefSeqCrudCommand
-from gen_epix.seqdb.domain.command.seq import RefSnpCrudCommand as RefSnpCrudCommand
-from gen_epix.seqdb.domain.command.seq import (
-    RefSnpSetCrudCommand as RefSnpSetCrudCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
-    RefSnpSetMemberCrudCommand as RefSnpSetMemberCrudCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
-    RetrieveMultipleAlignmentCommand as RetrieveMultipleAlignmentCommand,
-)
 from gen_epix.seqdb.domain.command.seq import (
     RetrievePhylogeneticTreeCommand as RetrievePhylogeneticTreeCommand,
 )
@@ -173,9 +156,6 @@ from gen_epix.seqdb.domain.command.seq import (
     SampleIdentifierCrudCommand as SampleIdentifierCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
-    SeqAlignmentCrudCommand as SeqAlignmentCrudCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
     SeqCategoryCrudCommand as SeqCategoryCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
@@ -194,7 +174,6 @@ from gen_epix.seqdb.domain.command.seq import (
 from gen_epix.seqdb.domain.command.seq import (
     SeqTaxonomyCrudCommand as SeqTaxonomyCrudCommand,
 )
-
 from gen_epix.seqdb.domain.command.seq import (
     SnpProfileCrudCommand as SnpProfileCrudCommand,
 )
@@ -223,13 +202,11 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
     )
     | set(),
     enum.ServiceType.SEQ: {
-        AlleleAlignmentCrudCommand,
         AlleleCrudCommand,
         AlleleProfileCrudCommand,
         AlleleProfileIdentifierCrudCommand,
         AstMeasurementCrudCommand,
         AstPredictionCrudCommand,
-        GenerateMultipleAlignmentCommand,
         GeneratePhylogeneticTreeCommand,
         KmerProfileCrudCommand,
         KmerProfileIdentifierCrudCommand,
@@ -247,10 +224,6 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         ReadSetIdentifierCrudCommand,
         RefAlleleCrudCommand,
         RefSeqCrudCommand,
-        RefSnpCrudCommand,
-        RefSnpSetCrudCommand,
-        RefSnpSetMemberCrudCommand,
-        RetrieveMultipleAlignmentCommand,
         RetrievePhylogeneticTreeCommand,
         RetrieveSeqFastaCommand,
         RetrieveSimilarProfilesCommand,
@@ -258,7 +231,6 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         SampleCrudCommand,
         SampleDataCollectionLinkCrudCommand,
         SampleIdentifierCrudCommand,
-        SeqAlignmentCrudCommand,
         SeqCategoryCrudCommand,
         SeqCategorySetCrudCommand,
         SeqClassificationCrudCommand,

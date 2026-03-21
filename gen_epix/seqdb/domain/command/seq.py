@@ -70,15 +70,7 @@ class CalculateSeqDistancesForNewProfilesCommand(Command):
     )
 
 
-class GenerateMultipleAlignmentCommand(Command):
-    pass
-
-
 class GeneratePhylogeneticTreeCommand(Command):
-    pass
-
-
-class RetrieveMultipleAlignmentCommand(Command):
     pass
 
 
@@ -167,10 +159,6 @@ class AlleleCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Allele
 
 
-class AlleleAlignmentCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.AlleleAlignment
-
-
 class AlleleProfileCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.AlleleProfile
 
@@ -243,18 +231,6 @@ class RefSeqCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.RefSeq
 
 
-class RefSnpCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.RefSnp
-
-
-class RefSnpSetCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.RefSnpSet
-
-
-class RefSnpSetMemberCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.RefSnpSetMember
-
-
 class SampleCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Sample
 
@@ -273,10 +249,6 @@ class SeqClassificationCrudCommand(CrudCommand):
 
 class SeqCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Seq
-
-
-class SeqAlignmentCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.SeqAlignment
 
 
 class SeqCategoryCrudCommand(CrudCommand):

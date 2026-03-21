@@ -43,7 +43,6 @@ from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.file import File as File
 from gen_epix.seqdb.domain.model.seq import AlignmentMixin as AlignmentMixin
 from gen_epix.seqdb.domain.model.seq import Allele as Allele
-from gen_epix.seqdb.domain.model.seq import AlleleAlignment as AlleleAlignment
 from gen_epix.seqdb.domain.model.seq import AlleleForUpload as AlleleForUpload
 from gen_epix.seqdb.domain.model.seq import AlleleProfile as AlleleProfile
 from gen_epix.seqdb.domain.model.seq import (
@@ -60,7 +59,6 @@ from gen_epix.seqdb.domain.model.seq import (
 )
 from gen_epix.seqdb.domain.model.seq import CodeMixin as CodeMixin
 from gen_epix.seqdb.domain.model.seq import Contig as Contig
-from gen_epix.seqdb.domain.model.seq import ContigAlignment as ContigAlignment
 from gen_epix.seqdb.domain.model.seq import KmerProfile as KmerProfile
 from gen_epix.seqdb.domain.model.seq import KmerProfileForUpload as KmerProfileForUpload
 from gen_epix.seqdb.domain.model.seq import (
@@ -78,7 +76,6 @@ from gen_epix.seqdb.domain.model.seq import MlvaProfileForUpload as MlvaProfileF
 from gen_epix.seqdb.domain.model.seq import (
     MlvaProfileIdentifier as MlvaProfileIdentifier,
 )
-from gen_epix.seqdb.domain.model.seq import MultipleAlignment as MultipleAlignment
 from gen_epix.seqdb.domain.model.seq import PcrMeasurement as PcrMeasurement
 from gen_epix.seqdb.domain.model.seq import PhylogeneticTree as PhylogeneticTree
 from gen_epix.seqdb.domain.model.seq import Protocol as Protocol
@@ -87,9 +84,6 @@ from gen_epix.seqdb.domain.model.seq import ReadSet as ReadSet
 from gen_epix.seqdb.domain.model.seq import ReadSetForUpload as ReadSetForUpload
 from gen_epix.seqdb.domain.model.seq import ReadSetIdentifier as ReadSetIdentifier
 from gen_epix.seqdb.domain.model.seq import RefAllele as RefAllele
-from gen_epix.seqdb.domain.model.seq import RefSnp as RefSnp
-from gen_epix.seqdb.domain.model.seq import RefSnpSet as RefSnpSet
-from gen_epix.seqdb.domain.model.seq import RefSnpSetMember as RefSnpSetMember
 from gen_epix.seqdb.domain.model.seq import Sample as Sample
 from gen_epix.seqdb.domain.model.seq import SampleBatchForUpload as SampleBatchForUpload
 from gen_epix.seqdb.domain.model.seq import (
@@ -103,7 +97,6 @@ from gen_epix.seqdb.domain.model.seq import SampleForUpload as SampleForUpload
 from gen_epix.seqdb.domain.model.seq import SampleIdentifier as SampleIdentifier
 from gen_epix.seqdb.domain.model.seq import SampleUploadResult as SampleUploadResult
 from gen_epix.seqdb.domain.model.seq import Seq as Seq
-from gen_epix.seqdb.domain.model.seq import SeqAlignment as SeqAlignment
 from gen_epix.seqdb.domain.model.seq import SeqClassification as SeqClassification
 from gen_epix.seqdb.domain.model.seq import SeqDistance as SeqDistance
 from gen_epix.seqdb.domain.model.seq import SeqForUpload as SeqForUpload
@@ -153,9 +146,6 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             BaseSeq,
             RefSeq,
             RefAllele,
-            RefSnp,
-            RefSnpSet,
-            RefSnpSetMember,
             TreeAlgorithmClass,
             TreeAlgorithm,
             SeqCategorySet,
@@ -182,13 +172,9 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             AstMeasurement,
             AstPrediction,
             PcrMeasurement,
-            SeqAlignment,
-            AlleleAlignment,
-            ContigAlignment,
             SeqClassification,
             SeqDistance,
             SeqTaxonomy,
-            MultipleAlignment,
             PhylogeneticTree,
             ReadSetForUpload,
             SeqForUpload,

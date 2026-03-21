@@ -25,9 +25,6 @@ from gen_epix.seqdb.services.seq.calculate_seq_distance import (
     seq_service_calculate_seq_distances_for_new_profiles,
 )
 from gen_epix.seqdb.services.seq.crud_allele import seq_service_crud_allele
-from gen_epix.seqdb.services.seq.crud_allele_alignment import (
-    seq_service_crud_allele_alignment,
-)
 from gen_epix.seqdb.services.seq.crud_allele_profile import (
     seq_service_crud_allele_profile,
 )
@@ -70,11 +67,6 @@ from gen_epix.seqdb.services.seq.crud_read_set_identifier import (
 )
 from gen_epix.seqdb.services.seq.crud_ref_allele import seq_service_crud_ref_allele
 from gen_epix.seqdb.services.seq.crud_ref_seq import seq_service_crud_ref_seq
-from gen_epix.seqdb.services.seq.crud_ref_snp import seq_service_crud_ref_snp
-from gen_epix.seqdb.services.seq.crud_ref_snp_set import seq_service_crud_ref_snp_set
-from gen_epix.seqdb.services.seq.crud_ref_snp_set_member import (
-    seq_service_crud_ref_snp_set_member,
-)
 from gen_epix.seqdb.services.seq.crud_sample import seq_service_crud_sample
 from gen_epix.seqdb.services.seq.crud_sample_data_collection_link import (
     seq_service_crud_sample_data_collection_link,
@@ -83,9 +75,6 @@ from gen_epix.seqdb.services.seq.crud_sample_identifier import (
     seq_service_crud_sample_identifier,
 )
 from gen_epix.seqdb.services.seq.crud_seq import seq_service_crud_seq
-from gen_epix.seqdb.services.seq.crud_seq_alignment import (
-    seq_service_crud_seq_alignment,
-)
 from gen_epix.seqdb.services.seq.crud_seq_category import seq_service_crud_seq_category
 from gen_epix.seqdb.services.seq.crud_seq_category_set import (
     seq_service_crud_seq_category_set,
@@ -355,11 +344,6 @@ class SeqService(BaseSeqService):
         # )
         return phylogenetic_tree
 
-    def retrieve_multiple_alignment(
-        self, cmd: command.RetrieveMultipleAlignmentCommand
-    ) -> model.MultipleAlignment | list[model.MultipleAlignment]:
-        raise NotImplementedError()
-
     def retrieve_samples(
         self, cmd: command.RetrieveSamplesCommand
     ) -> list[model.SampleForUpload]:
@@ -626,20 +610,6 @@ class SeqService(BaseSeqService):
     ):
         return seq_service_crud_allele(self, cmd)
 
-    def crud_allele_alignment(
-        self,
-        cmd: command.AlleleAlignmentCrudCommand,
-    ) -> (
-        model.AlleleAlignment
-        | list[model.AlleleAlignment]
-        | UUID
-        | list[UUID]
-        | bool
-        | list[bool]
-        | None
-    ):
-        return seq_service_crud_allele_alignment(self, cmd)
-
     def crud_allele_profile(
         self,
         cmd: command.AlleleProfileCrudCommand,
@@ -884,42 +854,6 @@ class SeqService(BaseSeqService):
     ):
         return seq_service_crud_ref_seq(self, cmd)
 
-    def crud_ref_snp(
-        self,
-        cmd: command.RefSnpCrudCommand,
-    ) -> (
-        model.RefSnp | list[model.RefSnp] | UUID | list[UUID] | bool | list[bool] | None
-    ):
-        return seq_service_crud_ref_snp(self, cmd)
-
-    def crud_ref_snp_set(
-        self,
-        cmd: command.RefSnpSetCrudCommand,
-    ) -> (
-        model.RefSnpSet
-        | list[model.RefSnpSet]
-        | UUID
-        | list[UUID]
-        | bool
-        | list[bool]
-        | None
-    ):
-        return seq_service_crud_ref_snp_set(self, cmd)
-
-    def crud_ref_snp_set_member(
-        self,
-        cmd: command.RefSnpSetMemberCrudCommand,
-    ) -> (
-        model.RefSnpSetMember
-        | list[model.RefSnpSetMember]
-        | UUID
-        | list[UUID]
-        | bool
-        | list[bool]
-        | None
-    ):
-        return seq_service_crud_ref_snp_set_member(self, cmd)
-
     def crud_sample(
         self,
         cmd: command.SampleCrudCommand,
@@ -961,20 +895,6 @@ class SeqService(BaseSeqService):
         cmd: command.SeqCrudCommand,
     ) -> model.Seq | list[model.Seq] | UUID | list[UUID] | bool | list[bool] | None:
         return seq_service_crud_seq(self, cmd)
-
-    def crud_seq_alignment(
-        self,
-        cmd: command.SeqAlignmentCrudCommand,
-    ) -> (
-        model.SeqAlignment
-        | list[model.SeqAlignment]
-        | UUID
-        | list[UUID]
-        | bool
-        | list[bool]
-        | None
-    ):
-        return seq_service_crud_seq_alignment(self, cmd)
 
     def crud_seq_category(
         self,
