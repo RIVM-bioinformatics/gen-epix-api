@@ -48,7 +48,7 @@ def _make_seq_distance_protocol_for_snp(
         name="SNP Hamming Test",
         is_integer_distance=True,
         protocol_type=enum.ProtocolType.SEQ_DISTANCE,
-        seq_distance_protocol_type=enum.SeqDistanceProtocolType.SNP_HAMMING,
+        seq_distance_type=enum.SeqDistanceType.SNP_HAMMING,
         ref_seq_id=ref_seq_id,
         locus_set_id=None,
         max_stored_distance=max_stored_distance,
@@ -60,7 +60,7 @@ def _make_seq_distance_protocol_for_locus_set(
     *,
     protocol_id: UUID,
     locus_set_id: UUID,
-    seq_distance_protocol_type: enum.SeqDistanceProtocolType,
+    seq_distance_protocol_type: enum.SeqDistanceType,
     max_stored_distance: float = 100.0,
 ) -> model.Protocol:
     return model.Protocol(  # type: ignore[call-arg]
@@ -69,7 +69,7 @@ def _make_seq_distance_protocol_for_locus_set(
         name="Locus Hamming Test",
         is_integer_distance=True,
         protocol_type=enum.ProtocolType.SEQ_DISTANCE,
-        seq_distance_protocol_type=seq_distance_protocol_type,
+        seq_distance_type=seq_distance_protocol_type,
         locus_set_id=locus_set_id,
         ref_seq_id=None,
         max_stored_distance=max_stored_distance,
@@ -487,7 +487,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         protocol: model.Protocol = _make_seq_distance_protocol_for_locus_set(
             protocol_id=self.protocol_id,
             locus_set_id=self.locus_set_id,
-            seq_distance_protocol_type=enum.SeqDistanceProtocolType.ALLELE_HAMMING,
+            seq_distance_protocol_type=enum.SeqDistanceType.ALLELE_HAMMING,
             max_stored_distance=0.5,
         )
         existing_seq_distance: model.SeqDistance = _make_seq_distance(
@@ -548,7 +548,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         protocol: model.Protocol = _make_seq_distance_protocol_for_locus_set(
             protocol_id=self.protocol_id,
             locus_set_id=self.locus_set_id,
-            seq_distance_protocol_type=enum.SeqDistanceProtocolType.MLVA_HAMMING,
+            seq_distance_protocol_type=enum.SeqDistanceType.MLVA_HAMMING,
             max_stored_distance=100.0,
         )
         existing_seq_distance: model.SeqDistance = _make_seq_distance(
@@ -630,7 +630,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         protocol: model.Protocol = _make_seq_distance_protocol_for_locus_set(
             protocol_id=self.protocol_id,
             locus_set_id=self.locus_set_id,
-            seq_distance_protocol_type=enum.SeqDistanceProtocolType.MLVA_HAMMING,
+            seq_distance_protocol_type=enum.SeqDistanceType.MLVA_HAMMING,
             max_stored_distance=100.0,
         )
         existing_seq_distance: model.SeqDistance = _make_seq_distance(
@@ -684,7 +684,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         protocol: model.Protocol = _make_seq_distance_protocol_for_locus_set(
             protocol_id=self.protocol_id,
             locus_set_id=self.locus_set_id,
-            seq_distance_protocol_type=enum.SeqDistanceProtocolType.MLVA_HAMMING,
+            seq_distance_protocol_type=enum.SeqDistanceType.MLVA_HAMMING,
             max_stored_distance=100.0,
         )
         existing_seq_distance: model.SeqDistance = _make_seq_distance(
@@ -775,7 +775,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         protocol: model.Protocol = _make_seq_distance_protocol_for_locus_set(
             protocol_id=self.protocol_id,
             locus_set_id=self.locus_set_id,
-            seq_distance_protocol_type=enum.SeqDistanceProtocolType.ALLELE_HAMMING,
+            seq_distance_protocol_type=enum.SeqDistanceType.ALLELE_HAMMING,
             max_stored_distance=100.0,
         )
         existing_seq_distance: model.SeqDistance = _make_seq_distance(
@@ -880,7 +880,7 @@ class TestCalculateSeqDistancesBatchInvariant(BaseCalculateSeqDistanceTestCase):
         protocol = _make_seq_distance_protocol_for_locus_set(
             protocol_id=self.protocol_id,
             locus_set_id=self.locus_set_id,
-            seq_distance_protocol_type=enum.SeqDistanceProtocolType.ALLELE_HAMMING,
+            seq_distance_protocol_type=enum.SeqDistanceType.ALLELE_HAMMING,
             max_stored_distance=100.0,
         )
         existing_seq_distances = [
@@ -967,7 +967,7 @@ class TestCalculateSeqDistancesBatchInvariant(BaseCalculateSeqDistanceTestCase):
         protocol = _make_seq_distance_protocol_for_locus_set(
             protocol_id=self.protocol_id,
             locus_set_id=self.locus_set_id,
-            seq_distance_protocol_type=enum.SeqDistanceProtocolType.ALLELE_HAMMING,
+            seq_distance_protocol_type=enum.SeqDistanceType.ALLELE_HAMMING,
             max_stored_distance=0.0,
         )
         existing_seq_distances = [
@@ -1023,7 +1023,7 @@ class TestCalculateSeqDistancesBatchInvariant(BaseCalculateSeqDistanceTestCase):
         protocol = _make_seq_distance_protocol_for_locus_set(
             protocol_id=self.protocol_id,
             locus_set_id=locus_set_id,
-            seq_distance_protocol_type=enum.SeqDistanceProtocolType.ALLELE_HAMMING,
+            seq_distance_protocol_type=enum.SeqDistanceType.ALLELE_HAMMING,
             max_stored_distance=100.0,
         )
 

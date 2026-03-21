@@ -94,7 +94,7 @@ def get_seq_distance_protocol(locus_set: model.LocusSet) -> model.Protocol:
         name="Allele Hamming Test",
         is_integer_distance=True,
         protocol_type=enum.ProtocolType.SEQ_DISTANCE,
-        seq_distance_protocol_type=enum.SeqDistanceProtocolType.ALLELE_HAMMING,
+        seq_distance_type=enum.SeqDistanceType.ALLELE_HAMMING,
         locus_set_id=locus_set.id,
         max_stored_distance=1e6,
     )
@@ -127,7 +127,7 @@ def get_locus_detection_protocol() -> model.Protocol:
         id=uuid.uuid4(),
         code="LDP_TEST",
         name="Locus Detection Protocol Test",
-        protocol_type=enum.ProtocolType.LOCUS_DETECTION,
+        protocol_type=enum.ProtocolType.LOCUS_PROFILE,
     )
 
     return locus_detection_protocol

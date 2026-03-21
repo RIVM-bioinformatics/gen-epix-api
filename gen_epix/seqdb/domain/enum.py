@@ -307,45 +307,81 @@ class ProtocolType(Enum):
     ALIGNMENT = "ALIGNMENT"
     ASSEMBLY = "ASSEMBLY"
     AST = "AST"
-    KMER_DETECTION = "KMER_DETECTION"
+    KMER_PROFILE = "KMER_PROFILE"
     SEQUENCING = "SEQUENCING"
-    LOCUS_DETECTION = "LOCUS_DETECTION"
-    MLVA_DETECTION = "MLVA_DETECTION"
+    ALLELE_PROFILE = "ALLELE_PROFILE"
+    LOCUS_PROFILE = "LOCUS_PROFILE"
+    MLVA_PROFILE = "MLVA_PROFILE"
     PCR = "PCR"
     SEQ_CLASSIFICATION = "SEQ_CLASSIFICATION"
     SEQ_DISTANCE = "SEQ_DISTANCE"
-    SNP_DETECTION = "SNP_DETECTION"
+    SNP_PROFILE = "SNP_PROFILE"
     TAXONOMY = "TAXONOMY"
 
 
 class ProtocolTypeSet(Enum):
-    PROFILE_PROTOCOLS = frozenset(
+    AST = frozenset({ProtocolType.AST})
+    PCR = frozenset({ProtocolType.PCR})
+    SEQUENCING = frozenset({ProtocolType.SEQUENCING})
+    ASSEMBLY = frozenset({ProtocolType.ASSEMBLY})
+    SEQ_CLASSIFICATION = frozenset({ProtocolType.SEQ_CLASSIFICATION})
+    TAXONOMY = frozenset({ProtocolType.TAXONOMY})
+    CLASSIFICATION = frozenset({ProtocolType.SEQ_CLASSIFICATION, ProtocolType.TAXONOMY})
+    ALIGNMENT = frozenset({ProtocolType.ALIGNMENT})
+    SEQ_PROFILE = frozenset(
         {
-            ProtocolType.ALIGNMENT,
-            ProtocolType.AST,
-            ProtocolType.KMER_DETECTION,
-            ProtocolType.LOCUS_DETECTION,
-            ProtocolType.MLVA_DETECTION,
-            ProtocolType.PCR,
-            ProtocolType.SEQ_CLASSIFICATION,
-            ProtocolType.SNP_DETECTION,
+            ProtocolType.KMER_PROFILE,
+            ProtocolType.ALLELE_PROFILE,
+            ProtocolType.MLVA_PROFILE,
+            ProtocolType.SNP_PROFILE,
+            ProtocolType.LOCUS_PROFILE,
         }
     )
-    SEQUENCING_PROTOCOLS = frozenset({ProtocolType.SEQUENCING})
-    SEQ_DISTANCE_PROTOCOLS = frozenset({ProtocolType.SEQ_DISTANCE})
-    TAXONOMY_PROTOCOLS = frozenset({ProtocolType.TAXONOMY})
-    DETECTION_PROTOCOLS = frozenset(
+    SEQ_DISTANCE = frozenset({ProtocolType.SEQ_DISTANCE})
+    HAS_REF_SEQ = frozenset(
         {
-            ProtocolType.KMER_DETECTION,
-            ProtocolType.LOCUS_DETECTION,
-            ProtocolType.MLVA_DETECTION,
-            ProtocolType.PCR,
-            ProtocolType.SNP_DETECTION,
+            ProtocolType.SNP_PROFILE,
+        }
+    )
+    HAS_LOCUS_SET = frozenset(
+        {
+            ProtocolType.LOCUS_PROFILE,
+            ProtocolType.ALLELE_PROFILE,
+            ProtocolType.MLVA_PROFILE,
+        }
+    )
+    IS_SEQ_DISTANCE = frozenset({ProtocolType.SEQ_DISTANCE})
+
+
+class SeqProfileType(Enum):
+    ALLELE = "ALLELE"
+    MLVA = "MLVA"
+    SNP = "SNP"
+    LOCUS = "LOCUS"
+    KMER = "KMER"
+
+
+class SeqProfileTypeSet(Enum):
+    ALLELE = frozenset({SeqProfileType.ALLELE})
+    MLVA = frozenset({SeqProfileType.MLVA})
+    SNP = frozenset({SeqProfileType.SNP})
+    LOCUS = frozenset({SeqProfileType.LOCUS})
+    KMER = frozenset({SeqProfileType.KMER})
+    LOCUS_SET_BASED = frozenset(
+        {
+            SeqProfileType.ALLELE,
+            SeqProfileType.MLVA,
+            SeqProfileType.LOCUS,
+        }
+    )
+    REF_SEQ_BASED = frozenset(
+        {
+            SeqProfileType.SNP,
         }
     )
 
 
-class SeqDistanceProtocolType(Enum):
+class SeqDistanceType(Enum):
     ALLELE_HAMMING = "ALLELE_HAMMING"
     SNP_HAMMING = "SNP_HAMMING"
     MLVA_HAMMING = "MLVA_HAMMING"
@@ -354,29 +390,29 @@ class SeqDistanceProtocolType(Enum):
 
 
 class SeqDistanceProtocolTypeSet(Enum):
-    ALLELE_PROFILE_BASED = frozenset({SeqDistanceProtocolType.ALLELE_HAMMING})
-    SNP_PROFILE_BASED = frozenset({SeqDistanceProtocolType.SNP_HAMMING})
-    KMER_PROFILE_BASED = frozenset({SeqDistanceProtocolType.KMER_EUCLIDEAN})
-    MLVA_PROFILE_BASED = frozenset({SeqDistanceProtocolType.MLVA_HAMMING})
+    ALLELE_PROFILE_BASED = frozenset({SeqDistanceType.ALLELE_HAMMING})
+    SNP_PROFILE_BASED = frozenset({SeqDistanceType.SNP_HAMMING})
+    KMER_PROFILE_BASED = frozenset({SeqDistanceType.KMER_EUCLIDEAN})
+    MLVA_PROFILE_BASED = frozenset({SeqDistanceType.MLVA_HAMMING})
     HAMMING_DISTANCE_BASED = frozenset(
         {
-            SeqDistanceProtocolType.ALLELE_HAMMING,
-            SeqDistanceProtocolType.SNP_HAMMING,
-            SeqDistanceProtocolType.MLVA_HAMMING,
+            SeqDistanceType.ALLELE_HAMMING,
+            SeqDistanceType.SNP_HAMMING,
+            SeqDistanceType.MLVA_HAMMING,
         }
     )
     EUCLIDEAN_DISTANCE_BASED = frozenset(
-        {SeqDistanceProtocolType.KMER_EUCLIDEAN, SeqDistanceProtocolType.MLVA_EUCLIDEAN}
+        {SeqDistanceType.KMER_EUCLIDEAN, SeqDistanceType.MLVA_EUCLIDEAN}
     )
     LOCUS_SET_BASED = frozenset(
         {
-            SeqDistanceProtocolType.ALLELE_HAMMING,
-            SeqDistanceProtocolType.MLVA_HAMMING,
+            SeqDistanceType.ALLELE_HAMMING,
+            SeqDistanceType.MLVA_HAMMING,
         }
     )
     REF_SEQ_BASED = frozenset(
         {
-            SeqDistanceProtocolType.SNP_HAMMING,
+            SeqDistanceType.SNP_HAMMING,
         }
     )
 

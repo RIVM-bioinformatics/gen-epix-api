@@ -593,6 +593,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.seqdb.unit.domain",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_seqdb_unit_domain"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.seqdb.unit.models_for_upload",
             "type": "debugpy",
             "request": "launch",

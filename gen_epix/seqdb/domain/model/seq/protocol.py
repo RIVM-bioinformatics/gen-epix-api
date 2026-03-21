@@ -1,9 +1,11 @@
-from typing import ClassVar, Self
+import json
+import string
+from datetime import date
+from typing import Any, ClassVar, Self
 from urllib.parse import urlparse
 from uuid import UUID
-from datetime import date
 
-from pydantic import Field, field_serializer, model_validator
+from pydantic import Field, field_serializer, field_validator, model_validator
 
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model
@@ -12,26 +14,21 @@ from gen_epix.fastapp.domain import Entity, create_keys
 from gen_epix.seqdb.domain.enum import (
     ProtocolType,
     ProtocolTypeSet,
-    SeqDistanceProtocolType,
+    SeqDistanceType,
+    SeqProfileType,
 )
-
-
-def is_hexadecimal(s: str) -> bool:
-    try:
-        int(s, 16)
-        return True
-    except ValueError:
-        return False
 
 
 class Protocol(Model):
     """
-    Represents the global protocol definition for genomic detection.
+    Represents an analytical method used to derive a result from source data. The class
+    is conceptually polymorphic, with the protocol_type field determining which
+    additional fields are required and which results it may be linked to. This design
+    allows for a flexible and extensible representation of various analytical protocols
+    while maintaining a single model for this type of reference data.
 
-    This model serves as a generic schema for various detection methods (e.g.,
-    MLVA, SNP, or Locus detection). It links specific analytical logic
-    stored in a Git repository to the reference sequences and parameters
-    required to execute the protocol reproducibly.
+    The Protocol model includes optional fields for linking to Git repositories and
+    commits, so that the exact analytical logic can be traced.
     """
 
     ENTITY: ClassVar = Entity(
@@ -40,113 +37,192 @@ class Protocol(Model):
         persistable=True,
         keys=create_keys({1: "code"}),
     )
+    # Mapping of fields to the protocol types that require them. Used for validation.
+    PROTOCOL_TYPE_FIELD_DEPENDENCIES: ClassVar[dict[str, frozenset[ProtocolType]]] = {
+        "ref_seq_id": ProtocolTypeSet.HAS_REF_SEQ.value,
+        "locus_set_id": ProtocolTypeSet.HAS_LOCUS_SET.value,
+        "seq_profile_type": ProtocolTypeSet.SEQ_PROFILE.value,
+        "seq_distance_type": ProtocolTypeSet.IS_SEQ_DISTANCE.value,
+        "is_integer_distance": ProtocolTypeSet.IS_SEQ_DISTANCE.value,
+        "max_stored_distance": ProtocolTypeSet.IS_SEQ_DISTANCE.value,
+    }
 
     code: str = Field(
-        description="A unique code for the protocol, used for external reference."
+        description="A unique code for the protocol, used for external reference.",
+        max_length=255,
     )
-    name: str | None = Field(default=None, description="The name of the protocol.")
+    name: str | None = Field(
+        default=None, description="The name of the protocol.", max_length=255
+    )
 
     description: str | None = Field(
-        default=None, description="A detailed description of the protocol"
-    )
-    protocol_type: ProtocolType = Field(description="The type of the protocol.")
-    seq_distance_protocol_type: SeqDistanceProtocolType | None = Field(
         default=None,
-        description="The subtype of the protocol when protocol_type is SEQ_DISTANCE.",
+        description="A detailed description of the protocol",
+        max_length=1000,
     )
-
+    protocol_type: ProtocolType = Field(
+        description="The type of the protocol. Determines additional required fields."
+    )
     git_repository_uri: str | None = Field(
         default=None,
-        description="URI of the Git repository containing the analytical logic for this protocol.",
+        description="URI of the Git repository containing the analytical logic for the protocol.",
+        max_length=2000,
     )
     git_commit_hash: str | None = Field(
         default=None,
-        description="The specific Git commit hash to ensure reproducibility of the protocol execution.",
+        description="The specific Git commit hash to ensure reproducibility of the protocol execution. Must be a 40-character hexadecimal string.",
+        max_length=40,
     )
     git_commit_tag: str | None = Field(
         default=None,
         description="An optional Git tag for easier reference to a specific version of the protocol.",
-    )
-    ref_seq_id: UUID | None = Field(
-        default=None,
-        description="The UUID of the reference sequence associated with this protocol.",
-    )
-    locus_set_id: UUID | None = Field(
-        default=None,
-        description="The UUID of the locus set associated with this protocol.",
+        max_length=255,
     )
     valid_start_date: date | None = Field(
         default=None,
-        description="The date from which this protocol is considered valid",
+        description="The date from which the protocol is considered valid.",
     )
     valid_end_date: date | None = Field(
         default=None,
-        description="The date until which this protocol is considered valid",
+        description="The date until which the protocol is considered valid.",
+    )
+    ref_seq_id: UUID | None = Field(
+        default=None,
+        description="The reference sequence used. FOREIGN KEY. Required for protocols of type "
+        + ", ".join(
+            sorted(x.value for x in PROTOCOL_TYPE_FIELD_DEPENDENCIES["ref_seq_id"])
+        )
+        + ".",
+    )
+    locus_set_id: UUID | None = Field(
+        default=None,
+        description="The locus set used. FOREIGN KEY. Required for protocols of type "
+        + ", ".join(
+            sorted(x.value for x in PROTOCOL_TYPE_FIELD_DEPENDENCIES["locus_set_id"])
+        )
+        + ".",
+    )
+    seq_profile_type: SeqProfileType | None = Field(
+        default=None,
+        description="The type of sequence profile. Required for protocols of type "
+        + ", ".join(
+            sorted(
+                x.value for x in PROTOCOL_TYPE_FIELD_DEPENDENCIES["seq_profile_type"]
+            )
+        )
+        + ".",
+    )
+    seq_distance_type: SeqDistanceType | None = Field(
+        default=None,
+        description="The type of sequence distance calculation used. Required for protocols of type "
+        + ", ".join(
+            sorted(
+                x.value for x in PROTOCOL_TYPE_FIELD_DEPENDENCIES["seq_distance_type"]
+            )
+        )
+        + ".",
     )
     is_integer_distance: bool | None = Field(
-        description="Whether the distances calculated by this protocol are integers"
+        description="Whether the sequence distances are integers. Required for protocols of type "
+        + ", ".join(
+            sorted(
+                x.value for x in PROTOCOL_TYPE_FIELD_DEPENDENCIES["is_integer_distance"]
+            )
+        )
+        + ".",
     )
     max_stored_distance: float | None = Field(
-        description="The maximum distance that is guaranteed to be stored"
-    )
-    props: dict[str, str | int | float | bool | list] = Field(
-        # list is added to allow PcrProtocol.target_names and AstProtocol.antimicrobial_names
-        default_factory=dict,
-        description="A dictionary of additional properties specific to the protocol.",
-    )
-
-    @model_validator(mode="after")
-    def _validate_protocol_type(self) -> Self:
-        # TODO: check if this logic is biologically correct
-        if self.protocol_type == ProtocolType.MLVA_DETECTION:
-            if self.ref_seq_id is not None:
-                raise ValueError("ref_seq_id must be empty for MLVA protocols.")
-            if self.locus_set_id is None:
-                raise ValueError("locus_set_id must be filled for MLVA protocols.")
-        elif self.protocol_type == ProtocolType.SEQ_DISTANCE:
-            if self.seq_distance_protocol_type is None:
-                raise ValueError(
-                    "seq_distance_protocol_type must be filled for SEQ_DISTANCE protocols."
-                )
-        elif self.protocol_type in ProtocolTypeSet.DETECTION_PROTOCOLS.value:
-            if self.ref_seq_id is None:
-                raise ValueError(
-                    "ref_seq_id must be filled for SNP and LOCUS protocols."
-                )
-            if self.locus_set_id is not None:
-                raise ValueError(
-                    "locus_set_id must be empty for SNP and LOCUS protocols."
-                )
-        elif self.seq_distance_protocol_type is not None:
-            raise ValueError(
-                "seq_distance_protocol_type must be empty for non-SEQ_DISTANCE protocols."
+        description="The maximum sequencedistance that is guaranteed to be stored. Required for protocols of type "
+        + ", ".join(
+            sorted(
+                x.value for x in PROTOCOL_TYPE_FIELD_DEPENDENCIES["max_stored_distance"]
             )
-        return self
+        )
+        + ".",
+    )
+    PROPS_MAX_JSON_LENGTH: ClassVar[int] = 2000
 
-    @model_validator(mode="after")
-    def _validate_git_info(self) -> Self:
-        if self.git_commit_hash is not None:
-            # TODO: maybe to strict and heavy to check if hash is valid hexadecimal
-            if not is_hexadecimal(self.git_commit_hash):
-                raise ValueError("git_commit_hash must be a valid hexadecimal string.")
-            if len(self.git_commit_hash) != 40:
-                raise ValueError("git_commit_hash must be 40 characters long.")
+    props: dict[str, Any] = Field(
+        default_factory=dict,
+        description="A dictionary of additional properties specific to the protocol. Must be JSON-serializable. Can also be passed as a JSON string.",
+    )
 
-        if self.git_repository_uri is not None:
-            parsed_uri = urlparse(self.git_repository_uri)
-            if not all([parsed_uri.scheme, parsed_uri.netloc]):
-                raise ValueError("git_repository_uri must be a valid URI.")
-
-        return self
-
-    @field_serializer("ref_seq_id", mode="plain")
-    def _serialize_ref_seq_id(self, value: UUID | None) -> str | None:
-        if value is not None:
-            return str(value)
+    @field_validator("git_commit_hash", mode="after")
+    @classmethod
+    def _validate_git_commit_hash(cls, value: str | None) -> str | None:
+        """Validates the git_commit_hash."""
+        if value is None:
+            return value
+        if not all(x in string.hexdigits for x in value):
+            raise ValueError("git_commit_hash must be a valid hexadecimal string.")
+        if len(value) != 40:
+            raise ValueError("git_commit_hash must be 40 characters long.")
         return value
 
-    @field_serializer("locus_set_id", mode="plain")
-    def _serialize_locus_set_id(self, value: UUID | None) -> str | None:
+    @field_validator("git_repository_uri", mode="after")
+    @classmethod
+    def _validate_git_repository_uri(cls, value: str | None) -> str | None:
+        """Validates the git_repository_uri."""
+        if value is None:
+            return None
+        parsed_uri = urlparse(value)
+        if not all([parsed_uri.scheme, parsed_uri.netloc]):
+            raise ValueError("git_repository_uri must be a valid URI.")
+        return value
+
+    @field_validator("props", mode="before")
+    @classmethod
+    def _validate_props(cls, value: dict[str, Any] | str) -> dict[str, Any]:
+        """Allows props to be passed as a JSON string or a dictionary. Validates
+        that the JSON representation does not exceed PROPS_MAX_JSON_LENGTH characters.
+        """
+        if isinstance(value, str):
+            if len(value) > cls.PROPS_MAX_JSON_LENGTH:
+                raise ValueError(
+                    f"props JSON string must not exceed {cls.PROPS_MAX_JSON_LENGTH} characters."
+                )
+            return json.loads(value)
+        if not isinstance(value, dict):
+            raise ValueError("props must be a dictionary.")
+        json_repr = json.dumps(value)
+        if len(json_repr) > cls.PROPS_MAX_JSON_LENGTH:
+            raise ValueError(
+                f"props JSON representation must not exceed {cls.PROPS_MAX_JSON_LENGTH} characters."
+            )
+        return value
+
+    @model_validator(mode="after")
+    def _validate_protocol_type_dependencies(self) -> Self:
+        """
+        Validates that the fields required for the specified protocol type are correctly
+        filled.For each field that has protocol type dependencies, checks if the current
+        protocol type requires it. If required, ensures the field is not None. If not
+        required, ensures the field is None.
+        """
+        for (
+            field_name,
+            required_protocol_types,
+        ) in self.PROTOCOL_TYPE_FIELD_DEPENDENCIES.items():
+            field_value = getattr(self, field_name)
+            if self.protocol_type in required_protocol_types:
+                if field_value is None:
+                    raise ValueError(
+                        f"{field_name} must be filled for {self.protocol_type.value} protocols."
+                    )
+            elif field_value is not None:
+                raise ValueError(
+                    f"{field_name} must be empty for non-{self.protocol_type.value} protocols."
+                )
+        return self
+
+    @field_serializer("protocol_type", mode="plain")
+    def _serialize_protocol_type(self, value: ProtocolType) -> str:
+        """Serializes the ProtocolType enum to its string value."""
+        return value.value
+
+    @field_serializer("ref_seq_id", "locus_set_id", mode="plain")
+    def _serialize_ref_seq_id(self, value: UUID | None) -> str | None:
+        """Serializes UUID fields as strings. If the value is None, it returns None."""
         if value is not None:
             return str(value)
         return value

@@ -296,7 +296,7 @@ class SeqdbTestClient(TestClient):
         return self._create_protocol(
             user_or_str,
             code,
-            enum.ProtocolType.LOCUS_DETECTION,
+            enum.ProtocolType.LOCUS_PROFILE,
             name,
         )  # type: ignore[return-value]
 
@@ -380,7 +380,7 @@ class SeqdbTestClient(TestClient):
         user_or_str: str | model.User,
         code: str,
         name: str | None = None,
-        seq_distance_protocol_type: enum.SeqDistanceProtocolType = enum.SeqDistanceProtocolType.ALLELE_HAMMING,
+        seq_distance_protocol_type: enum.SeqDistanceType = enum.SeqDistanceType.ALLELE_HAMMING,
         is_integer_distance: bool = True,
         max_stored_distance: float = 100.0,
     ) -> model.Protocol:
@@ -403,7 +403,7 @@ class SeqdbTestClient(TestClient):
         return self._create_protocol(
             user_or_str,
             code,
-            enum.ProtocolType.SNP_DETECTION,
+            enum.ProtocolType.SNP_PROFILE,
             name,
         )  # type: ignore[return-value]
 
@@ -416,7 +416,7 @@ class SeqdbTestClient(TestClient):
         return self._create_protocol(
             user_or_str,
             code,
-            enum.ProtocolType.MLVA_DETECTION,
+            enum.ProtocolType.MLVA_PROFILE,
             name,
         )  # type: ignore[return-value]
 
@@ -429,7 +429,7 @@ class SeqdbTestClient(TestClient):
         return self._create_protocol(
             user_or_str,
             code,
-            enum.ProtocolType.KMER_DETECTION,
+            enum.ProtocolType.KMER_PROFILE,
             name,
         )  # type: ignore[return-value]
 

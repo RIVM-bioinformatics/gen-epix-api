@@ -77,7 +77,7 @@ def _build_upload_command(
     locus_detection_protocol_id = [
         protocol.id
         for protocol in protocols
-        if protocol.protocol_type == enum.ProtocolType.LOCUS_DETECTION
+        if protocol.protocol_type == enum.ProtocolType.LOCUS_PROFILE
     ][db_index]
     locus_code_map_id = list(db[model.LocusCodeMap].keys())[db_index]
     locus_ids = db[model.LocusSet][locus_set_id].locus_ids

@@ -40,7 +40,7 @@ class Protocol(Base, RowMetadataMixin):
     protocol_type: Mapped[enum.ProtocolType] = create_mapped_column(
         DOMAIN, model.Protocol, "protocol_type"
     )
-    seq_distance_protocol_type: Mapped[enum.SeqDistanceProtocolType | None] = (
+    seq_distance_protocol_type: Mapped[enum.SeqDistanceType | None] = (
         create_mapped_column(DOMAIN, model.Protocol, "seq_distance_protocol_type")
     )
     git_repository_uri: Mapped[str | None] = create_mapped_column(

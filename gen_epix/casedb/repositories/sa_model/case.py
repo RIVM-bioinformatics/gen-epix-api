@@ -86,9 +86,9 @@ class Protocol(Base, RowMetadataMixin):
         model.Protocol,
         "seqdb_protocol_id",
     )
-    seqdb_seq_distance_protocol_type: Mapped[
-        seqdb_enum.SeqDistanceProtocolType | None
-    ] = create_mapped_column(DOMAIN, model.Protocol, "seqdb_seq_distance_protocol_type")
+    seqdb_seq_distance_protocol_type: Mapped[seqdb_enum.SeqDistanceType | None] = (
+        create_mapped_column(DOMAIN, model.Protocol, "seqdb_seq_distance_protocol_type")
+    )
     seqdb_protocol_type: Mapped[seqdb_enum.ProtocolType] = create_mapped_column(
         DOMAIN, model.Protocol, "seqdb_protocol_type"
     )

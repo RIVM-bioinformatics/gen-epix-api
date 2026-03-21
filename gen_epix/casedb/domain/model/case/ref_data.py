@@ -1,7 +1,6 @@
-from datetime import date
 import json
 from collections.abc import Iterable
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, ClassVar, Self
 from uuid import UUID
 
@@ -29,7 +28,7 @@ class Protocol(Model):
     seqdb_protocol_type: seqdb_enum.ProtocolType = Field(
         description="The type of the protocol in seqdb"
     )
-    seqdb_seq_distance_protocol_type: seqdb_enum.SeqDistanceProtocolType | None = Field(
+    seqdb_seq_distance_protocol_type: seqdb_enum.SeqDistanceType | None = Field(
         default=None,
         description="The subtype of the protocol when protocol_type is SEQ_DISTANCE in seqdb.",
     )

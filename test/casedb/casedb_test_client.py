@@ -370,7 +370,7 @@ class CasedbTestClient(TestClient):
         user_or_str: str | model.User,
         name: str,
         seqdb_seq_distance_protocol_id: UUID | None = None,
-        seqdb_seq_distance_protocol_type: seqdb_enum.SeqDistanceProtocolType = seqdb_enum.SeqDistanceProtocolType.KMER_EUCLIDEAN,
+        seqdb_seq_distance_protocol_type: seqdb_enum.SeqDistanceType = seqdb_enum.SeqDistanceType.KMER_EUCLIDEAN,
         min_scale_unit: float = 1,
     ) -> model.Protocol:
         user: model.User = self._get_obj(
