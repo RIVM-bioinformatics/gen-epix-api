@@ -11,6 +11,10 @@ from test.casedb.integration.edge_cases_access.setup.define_edge_cases import (
     EDGE_CASES,
     EdgeCaseSpec,
 )
+from test.casedb.integration.edge_cases_access.setup.define_edge_cases_operational import (
+    EDGE_CASES_OP,
+    EDGE_CASES_OP_BY_USER,
+)
 
 import pytest
 from rich import print as rich_print
@@ -223,3 +227,18 @@ class TestCasedbEdgeCasesAccess:
             f"\n  Missing access:    {sorted(missing) if missing else '∅'}"
             f"\n  Unexpected access: {sorted(unexpected) if unexpected else '∅'}"
         )
+
+    @pytest.mark.parametrize(
+        "spec",
+        EDGE_CASES_OP,
+        ids=[x.user_name for x in EDGE_CASES_OP],
+    )
+    # Note: replace setup_case_type_data with new setup for operational data later
+    def test_just_print_edge_cases_operational(
+        self, spec: EdgeCaseSpec, setup_case_type_data: None
+    ) -> None:
+        user = self.get_user(spec.user_name)
+
+        # TODO: Do sanity check on some of the edge cases to validate expectations
+        if VERBOSE:
+            rich_print(EDGE_CASES_OP_BY_USER[spec.user_name])
