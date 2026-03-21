@@ -4,11 +4,11 @@ from uuid import UUID
 
 import sqlalchemy as sa
 
+import gen_epix.seqdb.repositories.sa_model.seq as sa_model
 from gen_epix.fastapp import BaseUnitOfWork
 from gen_epix.fastapp.repositories import SARepository, SAUnitOfWork
 from gen_epix.seqdb.domain import enum, exc, model
 from gen_epix.seqdb.domain.repository import BaseSeqRepository
-from gen_epix.seqdb.repositories import sa_model
 
 
 class SeqSARepository(SARepository, BaseSeqRepository):
@@ -48,20 +48,26 @@ class SeqSARepository(SARepository, BaseSeqRepository):
             return []
         stmt = sa.select(
             sa_model.SeqDistance.id,
-            sa_model.SeqDistance.distances,
-            sa_model.SeqDistance.distance_format,
+            sa_model.SeqDistance.format,
+            sa_model.SeqDistance.content,
+            sa_model.SeqDistance.content2,
         ).where(
             (sa_model.SeqDistance.protocol_id == protocol_id)
-            & sa_model.SeqDistance.profile_id.in_(profile_ids)
+            & sa_model.SeqDistance.seq_profile_id.in_(profile_ids)
         )
         assert isinstance(uow, SAUnitOfWork)
         result_iterator = uow.session.execute(stmt)
         matching_profile_ids: set[UUID] = set()
         for row in result_iterator:
-            distances: str = row[1]
-            distance_format: enum.SeqDistanceFormat = row[2]
+            distance_format: enum.SeqDistanceFormat = row[1]
+            distances: str = row[2]
+            distances2: str | None = row[3]
             BaseSeqRepository._get_matching_profiles_for_distance_dict_format(
-                max_distance, matching_profile_ids, distances, distance_format
+                max_distance,
+                matching_profile_ids,
+                distance_format,
+                distances,
+                distances2=distances2,
             )
 
         return list(matching_profile_ids - set(profile_ids))

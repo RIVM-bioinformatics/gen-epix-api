@@ -108,9 +108,9 @@ def generate_demo_seqdb_models(
 
         seq_distance = model.SeqDistance(  # type: ignore[call-arg]
             protocol_id=seq_distance_protocol.id,  # type: ignore[arg-type]
-            profile_id=allele_profile.id,  # type: ignore[arg-type]
-            distance_format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
-            distances="{}",
+            seq_profile_id=allele_profile.id,  # type: ignore[arg-type]
+            format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
+            content="{}",
             sample_id=allele_profile.sample_id,
         )
 

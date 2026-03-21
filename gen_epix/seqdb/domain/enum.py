@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 import uuid
-from enum import Enum
+from enum import Enum, IntEnum
 
 import ulid
 
@@ -133,17 +133,6 @@ class TreeAlgorithmSet(Enum):
     )
 
 
-class Protocol(Enum):
-    SEQUENCING = "SEQUENCING"
-    LOCUS_DETECTION = "LOCUS_DETECTION"
-    ALIGNMENT = "ALIGNMENT"
-    TAXONOMY = "TAXONOMY"
-    PCR = "PCR"
-    AST = "AST"
-    CLASSIFICATION = "CLASSIFICATION"
-    SEQUENCE_DISTANCE = "SEQUENCE_DISTANCE"
-
-
 class TaxonRank(Enum):
     NO_RANK = "NO_RANK"
     ACELLULAR_ROOT = "ACELLULAR_ROOT"
@@ -180,10 +169,11 @@ class TaxonRank(Enum):
     ISOLATE = "ISOLATE"
 
 
-class QualityControlResult(Enum):
-    PASS = "PASS"
-    WARN = "WARN"
-    FAIL = "FAIL"
+class QualityControlResult(IntEnum):
+    PENDING = 1
+    PASS = 2
+    WARN = 3
+    FAIL = 4
 
     def is_usable(self) -> bool:
         return self in {QualityControlResult.PASS, QualityControlResult.WARN}
@@ -255,81 +245,83 @@ class DnaReverseAmbiguityMap(Enum):
     T = frozenset("tywkbdhn")
 
 
-class SeqFormat(Enum):
-    HASH_ONLY = "HASH_ONLY"  # Only the hash code of the sequence is known or stored
-    STR_DNA = "STR_DNA"  # String of IUPAC DNA characters without gaps
-    STR_DNA_INCL_GAP = (
-        "STR_DNA_INCL_GAP"  # String of IUPAC DNA characters including gaps
-    )
+class SeqFormat(IntEnum):
+    HASH_ONLY = 1  # Only the hash code of the sequence is known or stored
+    STR_DNA = 2  # String of IUPAC DNA characters without gaps
+    STR_DNA_INCL_GAP = 3  # String of IUPAC DNA characters including gaps
 
 
-class AlignmentFormat(Enum):
-    CIGAR = "CIGAR"
+class LocusProfileFormat(IntEnum):
+    LOCUS_PROFILE_FORMAT1 = 1
 
 
-class LocusProfileFormat(Enum):
-    LOCUS_PROFILE_FORMAT1 = "LOCUS_PROFILE_FORMAT1"
+class AlleleProfileFormat(IntEnum):
+    ORDERED_ALLELE_IDS = 1
 
 
-class AlleleProfileFormat(Enum):
-    SORTED_ALLELE_IDS = "SORTED_ALLELE_IDS"
+class SnpProfileFormat(IntEnum):
+    REF_ALN_SEQ = 1
 
 
-class SnpProfileFormat(Enum):
-    REF_ALN_SEQ = "REF_ALN_SEQ"
+class MlvaProfileFormat(IntEnum):
+    ORDERED_REPEAT_NUMBERS = 1
 
 
-class MlvaProfileFormat(Enum):
-    SORTED_REPEAT_NUMBERS = "SORTED_REPEAT_NUMBERS"
+class KmerProfileFormat(IntEnum):
+    KMER_FREQUENCY_MAP = 1
 
 
-class KmerProfileFormat(Enum):
-    KMER_FREQUENCY_MAP = "KMER_PROFILE_FORMAT1"
+class SeqProfileFormat(IntEnum):
+    LOCUS_PROFILE_FORMAT1 = 1
+    REF_ALN_SEQ = 2
+    ORDERED_ALLELE_IDS = 3
+    ORDERED_REPEAT_NUMBERS = 4
+    KMER_FREQUENCY_MAP = 5
 
 
-class SeqClassificationFormat(Enum):
-    SEQ_CLASSIFICATION_FORMAT1 = "SEQ_CLASSIFICATION_FORMAT1"
+class SeqClassificationFormat(IntEnum):
+    SEQ_CLASSIFICATION_FORMAT1 = 1
 
 
-class TaxonomyFormat(Enum):
-    TAXONOMY_FORMAT1 = "TAXONOMY_FORMAT1"
+class SeqTaxonomyFormat(IntEnum):
+    TAXONOMY_FORMAT1 = 1
 
 
-class PcrResultFormat(Enum):
-    PCR_RESULT_FORMAT1 = "PCR_RESULT_FORMAT1"
+class PcrResultFormat(IntEnum):
+    PCR_RESULT_FORMAT1 = 1
 
 
-class AstResultFormat(Enum):
-    AST_RESULT_FORMAT1 = "AST_RESULT_FORMAT1"
+class AstResultFormat(IntEnum):
+    AST_RESULT_FORMAT1 = 1
 
 
-class ProtocolType(Enum):
-    ALIGNMENT = "ALIGNMENT"
-    ASSEMBLY = "ASSEMBLY"
-    AST = "AST"
-    KMER_PROFILE = "KMER_PROFILE"
-    SEQUENCING = "SEQUENCING"
-    ALLELE_PROFILE = "ALLELE_PROFILE"
-    LOCUS_PROFILE = "LOCUS_PROFILE"
-    MLVA_PROFILE = "MLVA_PROFILE"
-    PCR = "PCR"
-    SEQ_CLASSIFICATION = "SEQ_CLASSIFICATION"
-    SEQ_DISTANCE = "SEQ_DISTANCE"
-    SNP_PROFILE = "SNP_PROFILE"
-    TAXONOMY = "TAXONOMY"
+class ProtocolType(IntEnum):
+    AST_MEASUREMENT = 3
+    PCR_MEASUREMENT = 4
+    SEQUENCING = 1
+    ASSEMBLY = 2
+    SEQ_CLASSIFICATION = 10
+    SEQ_PROFILE = 5
+    KMER_PROFILE = 6
+    ALLELE_PROFILE = 6
+    LOCUS_PROFILE = 7
+    MLVA_PROFILE = 8
+    SNP_PROFILE = 12
+    SEQ_DISTANCE = 11
+    TAXONOMY = 13
 
 
 class ProtocolTypeSet(Enum):
-    AST = frozenset({ProtocolType.AST})
-    PCR = frozenset({ProtocolType.PCR})
+    AST_MEASUREMENT = frozenset({ProtocolType.AST_MEASUREMENT})
+    PCR_MEASUREMENT = frozenset({ProtocolType.PCR_MEASUREMENT})
     SEQUENCING = frozenset({ProtocolType.SEQUENCING})
     ASSEMBLY = frozenset({ProtocolType.ASSEMBLY})
     SEQ_CLASSIFICATION = frozenset({ProtocolType.SEQ_CLASSIFICATION})
     TAXONOMY = frozenset({ProtocolType.TAXONOMY})
-    ALIGNMENT = frozenset({ProtocolType.ALIGNMENT})
     CLASSIFICATION = frozenset({ProtocolType.SEQ_CLASSIFICATION, ProtocolType.TAXONOMY})
     SEQ_PROFILE = frozenset(
         {
+            ProtocolType.SEQ_PROFILE,
             ProtocolType.KMER_PROFILE,
             ProtocolType.ALLELE_PROFILE,
             ProtocolType.MLVA_PROFILE,
@@ -345,6 +337,7 @@ class ProtocolTypeSet(Enum):
     )
     HAS_OPTIONAL_REF_SEQ = frozenset(
         {
+            ProtocolType.SEQ_PROFILE,
             ProtocolType.ASSEMBLY,
             ProtocolType.SEQ_CLASSIFICATION,
         }
@@ -354,7 +347,7 @@ class ProtocolTypeSet(Enum):
             ProtocolType.SEQ_CLASSIFICATION,
         }
     )
-    HAS_OPTIONAL_SEQ_CATEGORY_SET = frozenset()
+    HAS_OPTIONAL_SEQ_CATEGORY_SET: frozenset[ProtocolType] = frozenset()
     HAS_LOCUS_SET = frozenset(
         {
             ProtocolType.LOCUS_PROFILE,
@@ -364,18 +357,19 @@ class ProtocolTypeSet(Enum):
     )
     HAS_OPTIONAL_LOCUS_SET = frozenset(
         {
-            ProtocolType.PCR,
+            ProtocolType.SEQ_PROFILE,
+            ProtocolType.PCR_MEASUREMENT,
         }
     )
     IS_SEQ_DISTANCE = frozenset({ProtocolType.SEQ_DISTANCE})
 
 
-class SeqProfileType(Enum):
-    ALLELE = "ALLELE"
-    MLVA = "MLVA"
-    SNP = "SNP"
-    LOCUS = "LOCUS"
-    KMER = "KMER"
+class SeqProfileType(IntEnum):
+    LOCUS = 1
+    SNP = 2
+    ALLELE = 3
+    MLVA = 4
+    KMER = 5
 
 
 class SeqProfileTypeSet(Enum):
@@ -434,12 +428,12 @@ class SeqDistanceProtocolTypeSet(Enum):
     )
 
 
-class SeqDistanceResultFormat(Enum):
-    SEQ_DISTANCE_RESULT_FORMAT1 = "SEQ_DISTANCE_RESULT_FORMAT1"
+class SeqDistanceResultFormat(IntEnum):
+    SEQ_DISTANCE_RESULT_FORMAT1 = 1
 
 
-class SeqDistanceFormat(Enum):
-    PROFILE_DISTANCE_MAP = "PROFILE_DISTANCE_MAP"
+class SeqDistanceFormat(IntEnum):
+    PROFILE_DISTANCE_MAP = 1
 
 
 class SeqFileFormat(Enum):

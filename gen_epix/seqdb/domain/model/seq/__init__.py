@@ -1,9 +1,9 @@
 from gen_epix.commondb.domain.model import IdentifierForUpload as IdentifierForUpload
 
 # pylint: disable=useless-import-alias
-from gen_epix.seqdb.domain.model.seq.base import AlignmentMixin as AlignmentMixin
 from gen_epix.seqdb.domain.model.seq.base import BaseSeq as BaseSeq
 from gen_epix.seqdb.domain.model.seq.base import CodeMixin as CodeMixin
+from gen_epix.seqdb.domain.model.seq.base import ContentMixin as ContentMixin
 from gen_epix.seqdb.domain.model.seq.base import QualityMixin as QualityMixin
 from gen_epix.seqdb.domain.model.seq.category import SeqCategory as SeqCategory
 from gen_epix.seqdb.domain.model.seq.category import SeqCategorySet as SeqCategorySet
@@ -38,6 +38,7 @@ from gen_epix.seqdb.domain.model.seq.profile import MlvaProfile as MlvaProfile
 from gen_epix.seqdb.domain.model.seq.profile import (
     MlvaProfileIdentifier as MlvaProfileIdentifier,
 )
+from gen_epix.seqdb.domain.model.seq.profile import SeqProfile as SeqProfile
 from gen_epix.seqdb.domain.model.seq.profile import SnpProfile as SnpProfile
 from gen_epix.seqdb.domain.model.seq.profile import (
     SnpProfileIdentifier as SnpProfileIdentifier,

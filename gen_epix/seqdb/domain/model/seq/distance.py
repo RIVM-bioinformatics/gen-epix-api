@@ -1,16 +1,20 @@
 from typing import ClassVar
 from uuid import UUID
 
-from pydantic import Field, field_serializer
+from pydantic import Field
 
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
+from gen_epix.seqdb.domain.model.seq.base import ContentMixin
+from gen_epix.seqdb.domain.model.seq.profile import SeqProfile
+from gen_epix.seqdb.domain.model.seq.protocol import HasProtocolMixin, Protocol
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
-from gen_epix.seqdb.domain.model.seq.protocol import Protocol
 
 
-class SeqDistance(Model, HasSampleMixin):
+class SeqDistance(
+    Model, HasSampleMixin, HasProtocolMixin, ContentMixin[enum.SeqDistanceFormat]
+):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="seq_distances",
         table_name="seq_distance",
@@ -19,7 +23,7 @@ class SeqDistance(Model, HasSampleMixin):
             {
                 1: (
                     "protocol_id",
-                    "profile_id",
+                    "seq_profile_id",
                 )
             }
         ),
@@ -35,26 +39,18 @@ class SeqDistance(Model, HasSampleMixin):
                     Protocol,
                     "protocol",
                 ),
+                3: (
+                    "seq_profile_id",
+                    SeqProfile,
+                    "seq_profile",
+                ),
             }
         ),
     )
-    protocol_id: UUID = Field(
-        description="The unique identifier for the protocol. FOREIGN KEY"
+    seq_profile_id: UUID = Field(
+        description="The unique identifier for the sequence profile.",
     )
-    protocol: Protocol | None = Field(
-        default=None, description="The genetic distance protocol."
+    seq_profile: SeqProfile | None = Field(
+        default=None,
+        description="The sequence profile.",
     )
-    profile_id: UUID = Field(
-        description="The unique identifier for the profile.",
-    )
-    distance_format: enum.SeqDistanceFormat = Field(
-        default=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
-        description="The representation format of the distances.",
-    )
-    distances: str = Field(description="The distances to other sequences.")
-
-    @field_serializer("distance_format", mode="plain")
-    def _serialize_seq_format(self, value: str | enum.SeqDistanceFormat) -> str:
-        if isinstance(value, enum.SeqDistanceFormat):
-            return value.value
-        return value

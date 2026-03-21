@@ -38,8 +38,9 @@ class BaseSeqRepository(BaseRepository):
     def _get_matching_profiles_for_distance_dict_format(
         max_distance: float,
         matching_profile_ids: set[UUID],
-        distances: str,
         distance_format: enum.SeqDistanceFormat,
+        distances: str,
+        distances2: str | None = None,
     ) -> None:
         if distance_format == enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP:
             distance_dict = json.loads(distances)

@@ -32,7 +32,7 @@ def _create_field_description(
     if required_protocol_types:
         description += (
             "Required for protocols of type "
-            + ", ".join(sorted(x.value for x in required_protocol_types))
+            + ", ".join(sorted(x.name for x in required_protocol_types))
             + "."
         )
         if optional_protocol_types:
@@ -40,7 +40,7 @@ def _create_field_description(
     if optional_protocol_types:
         description += (
             "Optional for protocols of type "
-            + ", ".join(sorted(x.value for x in optional_protocol_types))
+            + ", ".join(sorted(x.name for x in optional_protocol_types))
             + "."
         )
     return description
@@ -267,3 +267,16 @@ class Protocol(Model):
         if value is not None:
             return str(value)
         return value
+
+
+class HasProtocolMixin:
+    """Mixin for models that have an associated Protocol. Provides a protocol_id field
+    and a method to retrieve the associated Protocol.
+    """
+
+    protocol_id: UUID = Field(
+        description="The ID of the associated protocol. FOREIGN KEY."
+    )
+    protocol: Protocol | None = Field(
+        default=None, description="The associated protocol."
+    )

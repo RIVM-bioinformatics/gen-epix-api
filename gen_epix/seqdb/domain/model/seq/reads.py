@@ -10,8 +10,8 @@ from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.file import File
 from gen_epix.seqdb.domain.model.seq.base import CodeMixin, QualityMixin
-from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 from gen_epix.seqdb.domain.model.seq.protocol import Protocol
+from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 
 
 class ReadSet(Model, HasSampleMixin, CodeMixin, QualityMixin):

@@ -15,12 +15,87 @@ from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.literal import MLVA_NO_LOCUS_REPEAT_NUMBER
-from gen_epix.seqdb.domain.model.seq.base import QualityMixin
+from gen_epix.seqdb.domain.model.seq.base import ContentMixin, QualityMixin
 from gen_epix.seqdb.domain.model.seq.locus import LocusSet
-from gen_epix.seqdb.domain.model.seq.protocol import Protocol
+from gen_epix.seqdb.domain.model.seq.protocol import HasProtocolMixin, Protocol
 from gen_epix.seqdb.domain.model.seq.ref_seq import RefSeq
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 from gen_epix.seqdb.domain.model.seq.seq import HasSeqMixin, Seq
+
+
+class SeqProfile(
+    Model,
+    HasSampleMixin,
+    HasSeqMixin,
+    HasProtocolMixin,
+    ContentMixin[enum.SeqProfileFormat],
+    QualityMixin,
+):
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="seq_profiles",
+        table_name="seq_profile",
+        persistable=True,
+        keys=create_keys({1: ("seq_id", "protocol_id")}),
+        links=create_links(
+            {
+                1: ("sample_id", Sample, "sample"),
+                2: ("seq_id", Seq, "seq"),
+                3: (
+                    "protocol_id",
+                    Protocol,
+                    "protocol",
+                ),
+            }
+        ),
+    )
+    FORMATS_BY_SEQ_PROFILE_TYPE: ClassVar[
+        dict[enum.SeqProfileType, frozenset[enum.SeqProfileFormat]]
+    ] = {
+        enum.SeqProfileType.LOCUS: frozenset(
+            {
+                enum.SeqProfileFormat.LOCUS_PROFILE_FORMAT1,
+            }
+        ),
+        enum.SeqProfileType.ALLELE: frozenset(
+            {
+                enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
+            }
+        ),
+        enum.SeqProfileType.SNP: frozenset(
+            {
+                enum.SeqProfileFormat.REF_ALN_SEQ,
+            }
+        ),
+        enum.SeqProfileType.MLVA: frozenset(
+            {
+                enum.SeqProfileFormat.ORDERED_REPEAT_NUMBERS,
+            }
+        ),
+        enum.SeqProfileType.KMER: frozenset(
+            {
+                enum.SeqProfileFormat.KMER_FREQUENCY_MAP,
+            }
+        ),
+    }
+
+    seq_profile_type: enum.SeqProfileType = Field(
+        description="The type of the sequence profile."
+    )
+
+    @model_validator(mode="after")
+    def _validate_seq_profile_type(self) -> Self:
+        """
+        Validate that the content format is compatible with the sequence profile type.
+        """
+        if self.format not in self.FORMATS_BY_SEQ_PROFILE_TYPE[self.seq_profile_type]:
+            raise ValueError(
+                f"Invalid format {self.format} for sequence profile type {self.seq_profile_type}"
+            )
+        return self
+
+    @field_serializer("seq_profile_type")
+    def _serialize_seq_profile_type(self, value: enum.SeqProfileType) -> int:
+        return value.value
 
 
 class LocusProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
@@ -126,7 +201,7 @@ class AlleleProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
         description="String representation of the alleles detected in the sequence for the loci in the locus set, with the format depending on allele_profile_format."
     )
     allele_profile_format: enum.AlleleProfileFormat = Field(
-        default=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
+        default=enum.AlleleProfileFormat.ORDERED_ALLELE_IDS,
         description="The representation format of the alleles.",
     )
     allele_profile_hash: UUID = Field(
@@ -143,7 +218,7 @@ class AlleleProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
         profile_hash = self.allele_profile_hash
 
         # Parse allele profile and derive values depending on allele_profile_format
-        if self.allele_profile_format == enum.AlleleProfileFormat.SORTED_ALLELE_IDS:
+        if self.allele_profile_format == enum.AlleleProfileFormat.ORDERED_ALLELE_IDS:
             # Parse the allele profile from base64 encoded concatenated 128-bit allele IDs
             allele_bytes = base64.b64decode(self.allele_profile)
             if len(allele_bytes) % 16 != 0:
@@ -189,12 +264,8 @@ class AlleleProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
         return str(value)
 
     @field_serializer("allele_profile_format", mode="plain")
-    def _serialize_allele_profile_format(
-        self, value: str | enum.AlleleProfileFormat
-    ) -> str:
-        if isinstance(value, enum.AlleleProfileFormat):
-            return value.value
-        return value
+    def _serialize_allele_profile_format(self, value: enum.AlleleProfileFormat) -> int:
+        return int(value)
 
     def get_allele_ids(self, **kwargs: Any) -> list[UUID | None]:
         """
@@ -202,7 +273,7 @@ class AlleleProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
         """
         n_loci = self.n_loci
         allele_ids: list[UUID | None] = [None] * n_loci
-        if self.allele_profile_format == enum.AlleleProfileFormat.SORTED_ALLELE_IDS:
+        if self.allele_profile_format == enum.AlleleProfileFormat.ORDERED_ALLELE_IDS:
             allele_bytes = base64.b64decode(self.allele_profile)
             null_id_bytes = NULL_ID.bytes
             for i, j in zip(range(0, len(allele_bytes), 16), range(n_loci)):
@@ -327,8 +398,8 @@ class SnpProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
         return str(value)
 
     @field_serializer("snp_profile_format", mode="plain")
-    def _serialize_snp_profile_format(self, value: enum.SnpProfileFormat) -> str:
-        return value.value
+    def _serialize_snp_profile_format(self, value: enum.SnpProfileFormat) -> int:
+        return int(value)
 
     def get_aligned_nucleotide_seq(self, **kwargs: Any) -> str:
         """
@@ -397,7 +468,7 @@ class MlvaProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
         description="String representation of the repeat number per locus in the locus set, with the format depending on mlva_profile_format."
     )
     mlva_profile_format: enum.MlvaProfileFormat = Field(
-        default=enum.MlvaProfileFormat.SORTED_REPEAT_NUMBERS,
+        default=enum.MlvaProfileFormat.ORDERED_REPEAT_NUMBERS,
         description="The representation format of the profile.",
     )
     mlva_profile_hash: UUID = Field(
@@ -414,7 +485,7 @@ class MlvaProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
         profile_hash = self.mlva_profile_hash
 
         # Parse MLVA profile and derive values depending on mlva_profile_format
-        if self.mlva_profile_format == enum.MlvaProfileFormat.SORTED_REPEAT_NUMBERS:
+        if self.mlva_profile_format == enum.MlvaProfileFormat.ORDERED_REPEAT_NUMBERS:
             # Parse the MLVA profile from json array
             repeat_numbers: list[int] = json.loads(self.mlva_profile)
             # Compute hash
@@ -440,18 +511,14 @@ class MlvaProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
         return str(value)
 
     @field_serializer("mlva_profile_format", mode="plain")
-    def _serialize_mlva_profile_format(
-        self, value: str | enum.MlvaProfileFormat
-    ) -> str:
-        if isinstance(value, enum.MlvaProfileFormat):
-            return value.value
-        return value
+    def _serialize_mlva_profile_format(self, value: enum.MlvaProfileFormat) -> int:
+        return int(value)
 
     def get_repeat_numbers(self, **kwargs: Any) -> list[int]:
         """
         Parse and return the repeat numbers from the MLVA profile based on its format.
         """
-        if self.mlva_profile_format == enum.MlvaProfileFormat.SORTED_REPEAT_NUMBERS:
+        if self.mlva_profile_format == enum.MlvaProfileFormat.ORDERED_REPEAT_NUMBERS:
             return json.loads(self.mlva_profile)
         else:
             raise NotImplementedError(

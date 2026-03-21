@@ -41,7 +41,6 @@ from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.file import File as File
-from gen_epix.seqdb.domain.model.seq import AlignmentMixin as AlignmentMixin
 from gen_epix.seqdb.domain.model.seq import Allele as Allele
 from gen_epix.seqdb.domain.model.seq import AlleleForUpload as AlleleForUpload
 from gen_epix.seqdb.domain.model.seq import AlleleProfile as AlleleProfile
@@ -58,6 +57,7 @@ from gen_epix.seqdb.domain.model.seq import (
     CalculateSeqDistancesResult as CalculateSeqDistancesResult,
 )
 from gen_epix.seqdb.domain.model.seq import CodeMixin as CodeMixin
+from gen_epix.seqdb.domain.model.seq import ContentMixin as ContentMixin
 from gen_epix.seqdb.domain.model.seq import Contig as Contig
 from gen_epix.seqdb.domain.model.seq import KmerProfile as KmerProfile
 from gen_epix.seqdb.domain.model.seq import KmerProfileForUpload as KmerProfileForUpload
@@ -101,6 +101,7 @@ from gen_epix.seqdb.domain.model.seq import SeqClassification as SeqClassificati
 from gen_epix.seqdb.domain.model.seq import SeqDistance as SeqDistance
 from gen_epix.seqdb.domain.model.seq import SeqForUpload as SeqForUpload
 from gen_epix.seqdb.domain.model.seq import SeqIdentifier as SeqIdentifier
+from gen_epix.seqdb.domain.model.seq import SeqProfile as SeqProfile
 from gen_epix.seqdb.domain.model.seq import SeqTaxonomy as SeqTaxonomy
 from gen_epix.seqdb.domain.model.seq import SnpProfile as SnpProfile
 from gen_epix.seqdb.domain.model.seq import SnpProfileForUpload as SnpProfileForUpload
@@ -159,6 +160,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             Seq,
             SeqIdentifier,
             Allele,
+            SeqProfile,
             LocusProfile,
             LocusProfileIdentifier,
             AlleleProfile,

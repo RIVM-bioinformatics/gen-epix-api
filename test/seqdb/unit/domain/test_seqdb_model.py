@@ -84,8 +84,8 @@ def _minimal_protocol_data(protocol_type: ProtocolType) -> dict[str, Any]:
 
 
 def _make_protocol(**overrides: Any) -> Protocol:
-    """Creates a minimal ALIGNMENT Protocol, applying any given field overrides."""
-    data = _minimal_protocol_data(ProtocolType.ALIGNMENT)
+    """Creates a minimal SEQUENCING Protocol, applying any given field overrides."""
+    data = _minimal_protocol_data(ProtocolType.SEQUENCING)
     data.update(overrides)
     return Protocol(**data)
 
@@ -280,13 +280,13 @@ _REQUIRED_FIELD_CASES: list[tuple[str, ProtocolType]] = [
 # Tuples of (field_name, protocol_type that does NOT require it, non-None value)
 # for "extra field" tests.
 _EXTRA_FIELD_CASES: list[tuple[str, ProtocolType, Any]] = [
-    ("ref_seq_id", ProtocolType.KMER_PROFILE, SAMPLE_REF_SEQ_ID),
-    ("seq_category_set_id", ProtocolType.ALIGNMENT, SAMPLE_SEQ_CATEGORY_SET_ID),
-    ("locus_set_id", ProtocolType.SNP_PROFILE, SAMPLE_LOCUS_SET_ID),
-    ("seq_profile_type", ProtocolType.ALIGNMENT, SeqProfileType.SNP),
-    ("seq_distance_type", ProtocolType.ALIGNMENT, SeqDistanceType.ALLELE_HAMMING),
-    ("is_integer_distance", ProtocolType.ALIGNMENT, True),
-    ("max_stored_distance", ProtocolType.ALIGNMENT, 50.0),
+    ("ref_seq_id", ProtocolType.SEQUENCING, SAMPLE_REF_SEQ_ID),
+    ("seq_category_set_id", ProtocolType.SEQUENCING, SAMPLE_SEQ_CATEGORY_SET_ID),
+    ("locus_set_id", ProtocolType.SEQUENCING, SAMPLE_LOCUS_SET_ID),
+    ("seq_profile_type", ProtocolType.SEQUENCING, SeqProfileType.SNP),
+    ("seq_distance_type", ProtocolType.SEQUENCING, SeqDistanceType.ALLELE_HAMMING),
+    ("is_integer_distance", ProtocolType.SEQUENCING, True),
+    ("max_stored_distance", ProtocolType.SEQUENCING, 50.0),
 ]
 
 
@@ -333,7 +333,7 @@ class TestProtocolSerializers:
     def test_protocol_type_serialized_as_string(self) -> None:
         protocol = _make_protocol()
         dumped = protocol.model_dump(mode="json")
-        assert dumped["protocol_type"] == ProtocolType.ALIGNMENT.value
+        assert dumped["protocol_type"] == ProtocolType.SEQUENCING.value
         assert isinstance(dumped["protocol_type"], str)
 
     def test_ref_seq_id_serialized_as_string(self) -> None:

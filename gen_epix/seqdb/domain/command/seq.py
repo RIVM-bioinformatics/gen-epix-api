@@ -52,6 +52,10 @@ class CalculateSeqDistancesForNewProfilesCommand(Command):
     similarity search).
     """
 
+    seq_profiles: list[model.SeqProfile] | None = Field(
+        default=None,
+        description="List of new sequence profiles to calculate distances for.",
+    )
     allele_profiles: list[model.AlleleProfile] | None = Field(
         default=None,
         description="List of new allele profiles to calculate distances for.",

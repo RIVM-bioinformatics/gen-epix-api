@@ -278,7 +278,7 @@ class BaseUploadTestCase(TestCase):
         locus_code_map_id: UUID | None = None,
         locus_code_map_code: str | None = None,
         allele_profile: str | None = None,
-        allele_profile_format: enum.AlleleProfileFormat = enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
+        allele_profile_format: enum.AlleleProfileFormat = enum.AlleleProfileFormat.ORDERED_ALLELE_IDS,
         allele_ids: list[UUID | None] | None = None,
         locus_allele_id_map: dict[str, UUID] | None = None,
     ) -> model.AlleleProfileForUpload:
@@ -508,7 +508,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         )
         # Set the format after creation
         allele_profile.allele_profile_format = (
-            enum.AlleleProfileFormat.SORTED_ALLELE_IDS
+            enum.AlleleProfileFormat.ORDERED_ALLELE_IDS
         )
         sample = self.create_sample_for_upload(
             sample_id=self.sample_id,

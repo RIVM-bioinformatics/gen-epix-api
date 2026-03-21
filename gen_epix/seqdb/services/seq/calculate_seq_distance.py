@@ -1,5 +1,6 @@
 import json
 from collections.abc import Sequence
+from typing import cast
 from uuid import UUID
 
 import numpy as np
@@ -66,10 +67,12 @@ def seq_service_calculate_seq_distances_for_new_profiles(
     cmd: command.CalculateSeqDistancesForNewProfilesCommand,
 ) -> list[model.CalculateSeqDistancesResult]:
     """
-    Method that takes batches of profiles (SNP, allele, MLVA — k‑mer not implemented) and finds which SeqDistanceProtocols apply.
-    For each applicable protocol it computes distances between every new profile and existing stored profiles and
-    between new profiles themselves using type-specific distance rules. It updates any modified existing SeqDistance records,
-    creates SeqDistance records for the new profiles, and returns a list of results describing the created distance records.
+    Method that takes batches of profiles (SNP, allele, MLVA — k‑mer not implemented)
+    and finds which SeqDistanceProtocols apply. For each applicable protocol it computes
+    distances between every new profile and existing stored profiles and between new
+    profiles themselves using type-specific distance rules. It updates any modified
+    existing SeqDistance records, creates SeqDistance records for the new profiles, and
+    returns a list of results describing the created distance records.
     """
 
     # TODO: to be refactored to lower both memory and computational complexity
@@ -140,6 +143,8 @@ def seq_service_calculate_seq_distances_for_new_profiles(
 
             if not applicable:
                 continue
+            max_stored_distance = protocol.max_stored_distance
+            assert max_stored_distance is not None
 
             # Initialize distance maps for new profiles.
             new_profiles_list = [x for x in new_profiles if x.id is not None]
@@ -156,7 +161,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
 
                 # Retrieve existing profiles from db based on profile_ids in existing_seq_distances
                 existing_profile_ids: list[UUID] = list(
-                    dict.fromkeys(x.profile_id for x in existing_seq_distances)
+                    dict.fromkeys(x.seq_profile_id for x in existing_seq_distances)
                 )
                 existing_profiles_list = (
                     self.repository.crud(
@@ -183,10 +188,13 @@ def seq_service_calculate_seq_distances_for_new_profiles(
                 }
 
             # Calculate distances of every existing profile against every new profile
+            # TODO: currently assumes SeqDistanceFormat.PROFILE_DISTANCE_MAP format, should be refactored to support all formats as well
             modified_existing_seq_distances: list[model.SeqDistance] = []
             for existing_seq_distance in existing_seq_distances:
-                existing_profile = existing_profiles[existing_seq_distance.profile_id]
-                existing_distance_map = json.loads(existing_seq_distance.distances)
+                existing_profile = existing_profiles[
+                    existing_seq_distance.seq_profile_id
+                ]
+                existing_distance_map = json.loads(existing_seq_distance.content)
                 modified = False
                 for new_profile in new_profiles_list:
                     distance = _calculate_profile_distance(
@@ -194,7 +202,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
                         existing_profile,
                         new_profile,
                     )
-                    if distance <= protocol.max_stored_distance:
+                    if distance <= max_stored_distance:
                         # Update existing profile's distance map with new profile
                         existing_distance_map[str(new_profile.id)] = distance
                         # Update new profile's distance map with existing profile
@@ -204,7 +212,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
                         modified = True
 
                 if modified:
-                    existing_seq_distance.distances = json.dumps(existing_distance_map)
+                    existing_seq_distance.content = json.dumps(existing_distance_map)
                     modified_existing_seq_distances.append(existing_seq_distance)
 
             # Calculate distances of new profiles against each other profile (inter-batch pairs)
@@ -217,7 +225,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
                         n_i,
                         n_j,
                     )
-                    if distance <= protocol.max_stored_distance:
+                    if distance <= max_stored_distance:
                         new_profile_distance_maps[n_i.id][str(n_j.id)] = distance  # type: ignore[index]
                         new_profile_distance_maps[n_j.id][str(n_i.id)] = distance  # type: ignore[index]
 
@@ -237,7 +245,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
                         model.CalculateSeqDistancesResult(
                             id=updated_seq_distance.id,
                             status=EtlStatus.UPDATED,
-                            seq_distance_profile_id=updated_seq_distance.profile_id,
+                            seq_distance_profile_id=updated_seq_distance.seq_profile_id,
                         )
                         for updated_seq_distance in modified_existing_seq_distances
                     ]
@@ -246,12 +254,14 @@ def seq_service_calculate_seq_distances_for_new_profiles(
             # Create all new SeqDistances objects and store them
             new_seq_distances: list[model.SeqDistance] = [
                 model.SeqDistance(  # type: ignore[call-arg]
-                    id=self.generate_id(),  # type: ignore[arg-type]
-                    protocol_id=protocol.id,  # type: ignore[arg-type]
-                    profile_id=new_profile.id,  # type: ignore[arg-type]
-                    sample_id=new_profile.sample_id,
-                    distance_format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
-                    distances=json.dumps(new_profile_distance_maps[new_profile.id]),
+                    id=cast(UUID, self.generate_id()),
+                    protocol_id=cast(UUID, protocol.id),
+                    seq_profile_id=cast(UUID, new_profile.id),
+                    sample_id=cast(UUID, new_profile.sample_id),
+                    format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
+                    content=json.dumps(
+                        new_profile_distance_maps[cast(UUID, new_profile.id)]
+                    ),
                 )
                 for new_profile in new_profiles_list
             ]
@@ -271,7 +281,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
                     model.CalculateSeqDistancesResult(
                         id=created_new_seq_distance.id,
                         status=EtlStatus.CREATED,
-                        seq_distance_profile_id=created_new_seq_distance.profile_id,  # type : ignore[arg-type]
+                        seq_distance_profile_id=created_new_seq_distance.seq_profile_id,  # type : ignore[arg-type]
                     )
                 )
 

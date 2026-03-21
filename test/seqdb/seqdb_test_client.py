@@ -310,7 +310,7 @@ class SeqdbTestClient(TestClient):
         return self._create_protocol(
             user_or_str,
             code,
-            enum.ProtocolType.PCR,
+            enum.ProtocolType.PCR_MEASUREMENT,
             name,
             target_names=target_names,  # Required field
         )  # type: ignore[return-value]
@@ -326,25 +326,10 @@ class SeqdbTestClient(TestClient):
         return self._create_protocol(
             user_or_str,
             code,
-            enum.ProtocolType.AST,
+            enum.ProtocolType.AST_MEASUREMENT,
             name,
             is_predicted=is_predicted,  # Required field
             antimicrobial_names=antimicrobial_names,  # Required field
-        )  # type: ignore[return-value]
-
-    def create_alignment_protocol(
-        self,
-        user_or_str: str | model.User,
-        code: str,
-        name: str | None = None,
-        is_multiple: bool = False,
-    ) -> model.Protocol:
-        return self._create_protocol(
-            user_or_str,
-            code,
-            enum.ProtocolType.ALIGNMENT,
-            name,
-            is_multiple=is_multiple,  # Required field
         )  # type: ignore[return-value]
 
     def create_taxonomy_protocol(
@@ -743,7 +728,7 @@ class SeqdbTestClient(TestClient):
                 protocol_id=locus_detection_protocol_id,
                 locus_code_map_id=locus_code_map_id,
                 allele_ids=allele_ids,  # type: ignore[arg-type]
-                allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
+                allele_profile_format=enum.AlleleProfileFormat.ORDERED_ALLELE_IDS,
                 seq_id=seq_id,
             )
             seq_for_upload = model.SeqForUpload(

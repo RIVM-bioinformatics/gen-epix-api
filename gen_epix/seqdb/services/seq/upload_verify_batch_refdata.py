@@ -121,7 +121,7 @@ def _verify_batch_refdata_allele_profiles(
             # Convert allele_profile representation to allele_ids
             if (
                 profile.allele_profile_format
-                == enum.AlleleProfileFormat.SORTED_ALLELE_IDS
+                == enum.AlleleProfileFormat.ORDERED_ALLELE_IDS
             ):
                 allele_ids = profile.get_allele_ids()
             else:
@@ -198,7 +198,7 @@ def _verify_batch_refdata_allele_profiles(
         profile.allele_profile = model.AlleleProfile.get_sorted_allele_ids_profile(
             allele_ids
         )
-        profile.allele_profile_format = enum.AlleleProfileFormat.SORTED_ALLELE_IDS
+        profile.allele_profile_format = enum.AlleleProfileFormat.ORDERED_ALLELE_IDS
         profile.allele_ids = None
         # Reset n_loci to 0 so AlleleProfile validator will auto-compute it from the base64 string
         # (n_loci in AlleleProfile means "detected loci count", not total loci in set)

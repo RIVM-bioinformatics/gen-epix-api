@@ -77,6 +77,7 @@ from gen_epix.seqdb.repositories.sa_model.seq import (
 )
 from gen_epix.seqdb.repositories.sa_model.seq import SeqDistance as SeqDistance
 from gen_epix.seqdb.repositories.sa_model.seq import SeqIdentifier as SeqIdentifier
+from gen_epix.seqdb.repositories.sa_model.seq import SeqProfile as SeqProfile
 from gen_epix.seqdb.repositories.sa_model.seq import SeqTaxonomy as SeqTaxonomy
 from gen_epix.seqdb.repositories.sa_model.seq import SnpProfile as SnpProfile
 from gen_epix.seqdb.repositories.sa_model.seq import (
@@ -141,6 +142,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.SeqCategorySet: SeqCategorySet,
         model.SeqClassification: SeqClassification,
         model.SeqDistance: SeqDistance,
+        model.SeqProfile: SeqProfile,
         model.SeqTaxonomy: SeqTaxonomy,
         model.SnpProfile: SnpProfile,
         model.SnpProfileIdentifier: SnpProfileIdentifier,

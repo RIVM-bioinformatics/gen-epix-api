@@ -89,9 +89,9 @@ def _make_seq_distance(
         id=seq_distance_id,
         sample_id=sample_id,
         protocol_id=protocol_id,
-        profile_id=profile_id,
-        distance_format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
-        distances=json.dumps(distances or {}),
+        seq_profile_id=profile_id,
+        format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
+        content=json.dumps(distances or {}),
     )
 
 
@@ -144,7 +144,7 @@ def _make_allele_profile(
         protocol_id=protocol_id,
         n_loci=n_loci,
         allele_profile=allele_profile,
-        allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
+        allele_profile_format=enum.AlleleProfileFormat.ORDERED_ALLELE_IDS,
         allele_profile_hash=allele_profile_hash,
         qc_score=1.0,
         qc_result=enum.QualityControlResult.PASS,
@@ -158,7 +158,7 @@ def _make_mlva_profile(
     locus_set_id: UUID,
     protocol_id: UUID,
     repeat_numbers: list[int | None],
-    profile_format: enum.MlvaProfileFormat = enum.MlvaProfileFormat.SORTED_REPEAT_NUMBERS,
+    profile_format: enum.MlvaProfileFormat = enum.MlvaProfileFormat.ORDERED_REPEAT_NUMBERS,
 ) -> model.MlvaProfile:
     mlva_profile: str = model.MlvaProfile.get_sorted_repeat_numbers_profile(
         repeat_numbers
@@ -435,15 +435,15 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         self.assertEqual(results[1].status, EtlStatus.CREATED)
 
         self.assertEqual(len(recorder.updated), 1)
-        updated_distances: dict[str, float] = json.loads(recorder.updated[0].distances)
+        updated_distances: dict[str, float] = json.loads(recorder.updated[0].content)
         self.assertIn(str(self.new_profile_id), updated_distances)
 
         self.assertEqual(len(recorder.created), 1)
         created: model.SeqDistance = recorder.created[0]
         self.assertEqual(created.protocol_id, self.protocol_id)
-        self.assertEqual(created.profile_id, self.new_profile_id)
+        self.assertEqual(created.seq_profile_id, self.new_profile_id)
         self.assertEqual(created.sample_id, self.sample_id2)
-        created_map: dict[str, float] = json.loads(created.distances)
+        created_map: dict[str, float] = json.loads(created.content)
         self.assertIn(str(self.existing_profile_id), created_map)
 
         existing_seq: str = existing_aln if existing_aln is not None else "AACCT"
@@ -518,7 +518,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
 
         self.assertEqual(len(recorder.updated), 0)
         self.assertEqual(len(recorder.created), 1)
-        created_map: dict[str, float] = json.loads(recorder.created[0].distances)
+        created_map: dict[str, float] = json.loads(recorder.created[0].content)
         self.assertEqual(created_map, {})
 
     def test_mlva_profiles_distance_ignores_missing_loci_and_stores_distance(
@@ -578,11 +578,11 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         self.assertEqual(results[1].status, EtlStatus.CREATED)
 
         self.assertEqual(len(recorder.updated), 1)
-        updated_map: dict[str, float] = json.loads(recorder.updated[0].distances)
+        updated_map: dict[str, float] = json.loads(recorder.updated[0].content)
         self.assertIn(str(self.new_profile_id), updated_map)
 
         self.assertEqual(len(recorder.created), 1)
-        created_map: dict[str, float] = json.loads(recorder.created[0].distances)
+        created_map: dict[str, float] = json.loads(recorder.created[0].content)
         self.assertIn(str(self.existing_profile_id), created_map)
 
         expected: float = float(
@@ -744,7 +744,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         self.assertEqual(len(recorder.read_some_calls), 0)
         self.assertEqual(len(recorder.updated), 0)
         self.assertEqual(len(recorder.created), 1)
-        self.assertEqual(json.loads(recorder.created[0].distances), {})
+        self.assertEqual(json.loads(recorder.created[0].content), {})
 
     def test_new_profile_without_id_is_processed(self) -> None:
         # A profile with id=None is silently filtered out by the service
@@ -924,7 +924,7 @@ class TestCalculateSeqDistancesBatchInvariant(BaseCalculateSeqDistanceTestCase):
             len(recorder.created), 3, "Expected one SeqDistance per new profile"
         )
         created_maps: dict[UUID, dict[str, float]] = {
-            sd.profile_id: json.loads(sd.distances) for sd in recorder.created
+            x.seq_profile_id: json.loads(x.content) for x in recorder.created
         }
 
         # Every inter-batch pair must be present in BOTH directions
@@ -998,7 +998,7 @@ class TestCalculateSeqDistancesBatchInvariant(BaseCalculateSeqDistanceTestCase):
         seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
 
         created_maps: dict[UUID, dict[str, float]] = {
-            sd.profile_id: json.loads(sd.distances) for sd in recorder.created
+            x.seq_profile_id: json.loads(x.content) for x in recorder.created
         }
         # All maps must be empty — nothing was within threshold
         for n_id in [n1_id, n2_id, n3_id]:
@@ -1045,4 +1045,4 @@ class TestCalculateSeqDistancesBatchInvariant(BaseCalculateSeqDistanceTestCase):
 
         self.assertEqual(len(results), 1)
         self.assertEqual(len(recorder.created), 1)
-        self.assertEqual(json.loads(recorder.created[0].distances), {})
+        self.assertEqual(json.loads(recorder.created[0].content), {})

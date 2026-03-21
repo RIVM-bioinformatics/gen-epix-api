@@ -46,7 +46,7 @@ def create_seq_distance_database(
     db[model.Protocol] = {protocol.id: protocol}  # type: ignore[dict-item]
     db[model.Seq] = {x.id: x for x in seqs}  # type: ignore[misc]
     db[model.AlleleProfile] = {x.id: x for x in allele_profiles}  # type: ignore[misc]
-    db[model.SeqDistance] = {x.profile_id: x for x in seq_distances}
+    db[model.SeqDistance] = {x.seq_profile_id: x for x in seq_distances}
 
     return db
 
@@ -69,9 +69,9 @@ def get_seq_distances(
             id=uuid.uuid4(),
             sample_id=sample.id,
             protocol_id=protocol.id,  # type: ignore[arg-type]
-            profile_id=profile_ids[i],
-            distance_format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
-            distances=pd.Series(distances_dict).to_json(),
+            seq_profile_id=profile_ids[i],
+            format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
+            content=pd.Series(distances_dict).to_json(),
         )
         seq_distances.append(seq_distance)
     return seq_distances
@@ -182,7 +182,7 @@ def get_allele_profiles(
                 protocol_id=protocol.id,  # type: ignore[arg-type]
                 n_loci=n_loci,
                 allele_profile=allele_profile_str,
-                allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
+                allele_profile_format=enum.AlleleProfileFormat.ORDERED_ALLELE_IDS,
                 allele_profile_hash=allele_profile_hash,
             )
             allele_profiles.append(allele_profile)

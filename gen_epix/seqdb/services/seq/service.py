@@ -219,7 +219,7 @@ class SeqService(BaseSeqService):
                         operator=LogicalOperator.AND,
                     ),
                 )
-                seq_distance_map = {x.profile_id: x for x in seq_distances}
+                seq_distance_map = {x.seq_profile_id: x for x in seq_distances}
             max_stored_distance = protocol.max_stored_distance
             # Calculate condensed distance matrix
             tree_seq_distances = [
@@ -228,7 +228,7 @@ class SeqService(BaseSeqService):
             tree_leaf_names = [
                 x for x, y in zip(leaf_names, profile_ids) if y in seq_distance_map
             ]
-            tree_profile_ids = [x.profile_id for x in tree_seq_distances]
+            tree_profile_ids = [x.seq_profile_id for x in tree_seq_distances]
             tree_profile_id_idx_map = {
                 str(x): i for i, x in enumerate(tree_profile_ids)
             }
@@ -244,11 +244,8 @@ class SeqService(BaseSeqService):
                 return n * j - j * (j + 1) // 2 + i - 1 - j
 
             for i, seq_distance in enumerate(tree_seq_distances):
-                if (
-                    seq_distance.distance_format
-                    == enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP
-                ):
-                    distances = json.loads(seq_distance.distances)
+                if seq_distance.format == enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP:
+                    distances = json.loads(seq_distance.content)
                     for profile_id_str, distance in distances.items():
                         if profile_id_str not in tree_profile_id_idx_map:
                             # Distance to a sequence not in the list of seq_ids
@@ -267,7 +264,7 @@ class SeqService(BaseSeqService):
                         condensed_distance_matrix[k] = distance
                 else:
                     raise exc.InvalidArgumentsError(
-                        f"Distance format {seq_distance.distance_format.value} is not supported"
+                        f"Distance format {seq_distance.format.name} is not supported"
                     )
             # Handle sequences with no stored distances
             if len(tree_profile_ids) < 2:
@@ -404,6 +401,8 @@ class SeqService(BaseSeqService):
             locus_set_id = protocol.locus_set_id
             if locus_set_id is None:
                 raise exc.InvalidArgumentsError("Protocol must have a locus_set_id")
+            max_stored_distance = protocol.max_stored_distance
+            assert max_stored_distance is not None
             # Get distance calculation function
             if protocol.seq_distance_type == enum.SeqDistanceType.ALLELE_HAMMING:
                 calculate_distance = SeqService.calculate_hamming_distance
@@ -446,7 +445,7 @@ class SeqService(BaseSeqService):
                         allele_ids2,
                     )
                     # Keep only distances up to the maximum
-                    if distance > protocol.max_stored_distance:
+                    if distance > max_stored_distance:
                         continue
                     # Add to seq_distances
                     curr_seq_distances[i][seq_id2] = distance
@@ -461,11 +460,11 @@ class SeqService(BaseSeqService):
                 # Create seq_distance and add to dict_db
                 seq_distance = model.SeqDistance(
                     id=seq_distance_id,
-                    sample_id=allele_profile.sample_id,
-                    protocol_id=protocol.id,
-                    allele_profile_id=allele_profile.id,
-                    distance_format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
-                    distances=json.dumps(curr_seq_distances[i]),
+                    sample_id=cast(UUID, allele_profile.sample_id),
+                    protocol_id=cast(UUID, protocol.id),
+                    allele_profile_id=cast(UUID, allele_profile.id),
+                    format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
+                    content=json.dumps(curr_seq_distances[i]),
                 )
                 seq_distances.append(seq_distance)
 
@@ -482,8 +481,8 @@ class SeqService(BaseSeqService):
         """
         Calculate the distance between two allele profiles
         """
-        if allele_profile_format1 == enum.AlleleProfileFormat.SORTED_ALLELE_IDS:
-            if allele_profile_format2 == enum.AlleleProfileFormat.SORTED_ALLELE_IDS:
+        if allele_profile_format1 == enum.AlleleProfileFormat.ORDERED_ALLELE_IDS:
+            if allele_profile_format2 == enum.AlleleProfileFormat.ORDERED_ALLELE_IDS:
                 distance = calculate_distance(allele_ids1, allele_ids2)
             else:
                 raise NotImplementedError()
