@@ -1,6 +1,7 @@
+from collections.abc import Callable
 from enum import Enum
 from functools import cached_property
-from typing import TypeVar, overload
+from typing import Any, TypeVar, overload
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
@@ -25,21 +26,21 @@ class AppImplDetails(BaseModel):
     sorted_service_types: list[Enum] = Field(
         description="List of service types in DAG sorted order for initialization"
     )
-    services: dict[Enum, fastapp.BaseService] = Field(
+    services: dict[Enum, fastapp.BaseService[Any]] = Field(
         default_factory=dict, description="Dictionary of services keyed by service type"
     )
     repositories: dict[Enum, fastapp.BaseRepository] = Field(
         default_factory=dict,
         description="Dictionary of repositories keyed by service type",
     )
-    registered_user_dependency_or_none: model.User | None = Field(
+    registered_user_dependency_or_none: Callable[..., model.User] | None = Field(
         default=None,
         description="Dependency that provides the currently registered user",
     )
-    new_user_dependency_or_none: model.User | None = Field(
+    new_user_dependency_or_none: Callable[..., model.User] | None = Field(
         default=None, description="Dependency that provides a new user"
     )
-    idp_user_dependency_or_none: model.User | None = Field(
+    idp_user_dependency_or_none: Callable[..., Any] | None = Field(
         default=None,
         description="Dependency that provides a user known by the identity provider but not registered in the application",
     )
@@ -85,7 +86,7 @@ class AppImplDetails(BaseModel):
         description="Dependency that provides the currently registered user."
     )
     @cached_property
-    def registered_user_dependency(self) -> model.User:
+    def registered_user_dependency(self) -> Callable[..., model.User]:
         """"""
         if self.registered_user_dependency_or_none is None:
             raise ValueError("registered_user_dependency is not set")
@@ -95,7 +96,7 @@ class AppImplDetails(BaseModel):
         description="Dependency that provides a new user."
     )
     @cached_property
-    def new_user_dependency(self) -> model.User:
+    def new_user_dependency(self) -> Callable[..., model.User]:
         """"""
         if self.new_user_dependency_or_none is None:
             raise ValueError("new_user_dependency is not set")
@@ -105,7 +106,7 @@ class AppImplDetails(BaseModel):
         description="Dependency that provides a user known by the identity provider but not registered in the application."
     )
     @cached_property
-    def idp_user_dependency(self) -> model.User:
+    def idp_user_dependency(self) -> Callable[..., Any]:
         """"""
         if self.idp_user_dependency_or_none is None:
             raise ValueError("idp_user_dependency is not set")

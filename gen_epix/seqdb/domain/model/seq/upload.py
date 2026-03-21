@@ -114,9 +114,7 @@ class SnpProfileForUpload(SnpProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
     additional variables.
     """
 
-    ENTITY: ClassVar[Entity] = SnpProfile.model_entity().clone(
-        update={"persistable": False}
-    )
+    ENTITY: ClassVar = SnpProfile.model_entity().clone(update={"persistable": False})
     NAME: ClassVar = "SnpProfileForUpload"
 
     IDENTIFIER_CLASS: ClassVar = SnpProfileIdentifier
@@ -207,9 +205,7 @@ class AlleleProfileForUpload(
     additional variables.
     """
 
-    ENTITY: ClassVar[Entity] = AlleleProfile.model_entity().clone(
-        update={"persistable": False}
-    )
+    ENTITY: ClassVar = AlleleProfile.model_entity().clone(update={"persistable": False})
     NAME: ClassVar = "AlleleProfileForUpload"
 
     IDENTIFIER_CLASS: ClassVar = AlleleProfileIdentifier
@@ -329,13 +325,8 @@ class AlleleProfileForUpload(
             # Set or verify allele_profile_hash: not possible with this representation since loci are unordered
 
         # Upload-specific validation
-        if (
-            not self.protocol_code
-            and self.protocol_id == NULL_ID
-        ):
-            raise ValueError(
-                "Either protocol_code or protocol_id must be provided."
-            )
+        if not self.protocol_code and self.protocol_id == NULL_ID:
+            raise ValueError("Either protocol_code or protocol_id must be provided.")
         if self.locus_set_code is None and self.locus_set_id == NULL_ID:
             raise ValueError("Either locus_set_code or locus_set_id must be provided.")
         if (
@@ -355,9 +346,7 @@ class MlvaProfileForUpload(MlvaProfile, IdentifiersMixin, ValidateRefDataIdCodeM
     additional variables.
     """
 
-    ENTITY: ClassVar[Entity] = MlvaProfile.model_entity().clone(
-        update={"persistable": False}
-    )
+    ENTITY: ClassVar = MlvaProfile.model_entity().clone(update={"persistable": False})
     NAME: ClassVar = "MlvaProfileForUpload"
 
     IDENTIFIER_CLASS: ClassVar = MlvaProfileIdentifier
@@ -457,13 +446,8 @@ class MlvaProfileForUpload(MlvaProfile, IdentifiersMixin, ValidateRefDataIdCodeM
             # Set or verify mlva_profile_hash: not possible with this representation since loci are unordered
 
         # Upload-specific validation
-        if (
-            not self.protocol_code
-            and self.protocol_id == NULL_ID
-        ):
-            raise ValueError(
-                "Either protocol_code or protocol_id must be provided."
-            )
+        if not self.protocol_code and self.protocol_id == NULL_ID:
+            raise ValueError("Either protocol_code or protocol_id must be provided.")
         if self.locus_set_code is None and self.locus_set_id == NULL_ID:
             raise ValueError("Either locus_set_code or locus_set_id must be provided.")
         if (
@@ -483,9 +467,7 @@ class KmerProfileForUpload(KmerProfile, IdentifiersMixin, ValidateRefDataIdCodeM
     additional variables.
     """
 
-    ENTITY: ClassVar[Entity] = KmerProfile.model_entity().clone(
-        update={"persistable": False}
-    )
+    ENTITY: ClassVar = KmerProfile.model_entity().clone(update={"persistable": False})
     NAME: ClassVar = "KmerProfileForUpload"
 
     IDENTIFIER_CLASS: ClassVar = KmerProfileIdentifier
@@ -551,13 +533,8 @@ class KmerProfileForUpload(KmerProfile, IdentifiersMixin, ValidateRefDataIdCodeM
                 )
 
         # Upload-specific validation
-        if (
-            not self.protocol_code
-            and self.protocol_id == NULL_ID
-        ):
-            raise ValueError(
-                "Either protocol_code or protocol_id must be provided."
-            )
+        if not self.protocol_code and self.protocol_id == NULL_ID:
+            raise ValueError("Either protocol_code or protocol_id must be provided.")
         return self
 
 
