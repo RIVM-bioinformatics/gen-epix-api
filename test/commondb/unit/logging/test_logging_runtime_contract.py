@@ -142,6 +142,11 @@ def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[dict]:
             "casedb.app",
         )
         logger = logging.getLogger(app_logger_name)
+        service_logger_name = next(
+            (name for name in config.get("loggers", {}) if name.endswith(".service")),
+            "casedb.service",
+        )
+        service_logger = logging.getLogger(service_logger_name)
         logger.info(
             '{"code":"e8aafcec","msg":"STARTING_APP","app":{"id":"app-123","name":"CASEDB"}}'
         )
@@ -151,6 +156,11 @@ def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[dict]:
         logger.debug(
             '{"code":"e94cad9b","msg":"STARTED_COMMAND","command":{"class":"DemoCommand","object":{"id":"cmd-obj-123"},"parent_command_id":null,"stack_trace":"DemoCommand"}}'
         )
+        service_logger.info(
+            '{"code":"c10677fe","msg":"STARTING_SERVICE","service":{"id":"svc-123","name":"UploadService"}}'
+        )
+        """
+    )
         """)
 
     proc = subprocess.run(
@@ -299,6 +309,7 @@ def test_runtime_app_lifecycle_logs_have_message_and_operational_aliases(
     assert command_info is not None
     assert command_info["message"] == "STARTED_COMMAND"
     assert command_info["command_id"] == "cmd-123"
+    assert command_info["user_id"] == "u-123"
 
     command_debug = next(
         (
@@ -314,6 +325,14 @@ def test_runtime_app_lifecycle_logs_have_message_and_operational_aliases(
     assert command_debug is not None
     assert command_debug["message"] == "STARTED_COMMAND"
     assert command_debug["command_id"] == "cmd-obj-123"
+
+    service_payload = next((x for x in payloads if x.get("code") == "c10677fe"), None)
+    assert service_payload is not None
+    assert isinstance(service_payload["service"], str)
+    assert service_payload["service_meta"] == {
+        "id": "svc-123",
+        "name": "UploadService",
+    }
 
 
 def test_runtime_log_level_resolution_diagnostic_and_env_override_behavior() -> None:

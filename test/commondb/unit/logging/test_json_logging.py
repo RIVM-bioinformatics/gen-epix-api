@@ -195,6 +195,20 @@ def test_merged_json_cannot_override_service_and_environment() -> None:
     assert payload["event"] == "ok"
 
 
+def test_structured_service_payload_is_preserved_under_service_meta() -> None:
+    formatter = JsonFormatter(service="svc-a", environment="prod")
+    record = _make_record(
+        msg='{"service":{"id":"svc-123","name":"UploadService"},"event":"ok"}'
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    assert payload["service"] == "svc-a"
+    assert payload["environment"] == "prod"
+    assert payload["service_meta"] == {"id": "svc-123", "name": "UploadService"}
+    assert payload["event"] == "ok"
+
+
 # ---------------------------------------------------------------------------
 # Fix 3 – sensitive key=value pairs are redacted
 # ---------------------------------------------------------------------------
@@ -222,6 +236,41 @@ def test_sensitive_password_is_redacted_in_plain_message() -> None:
     assert "password=[REDACTED]" in payload["message"]
 
 
+def test_sensitive_auth_fields_are_redacted_in_plain_message() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(
+        msg="auth token=tok-123 access_token=acc-123 refresh_token=ref-123 id_token=id-123 authorization=Bearer-123 jwt=jwt-123"
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    serialized = json.dumps(payload)
+    for secret in ("tok-123", "acc-123", "ref-123", "id-123", "Bearer-123", "jwt-123"):
+        assert secret not in serialized
+    assert "token=[REDACTED]" in payload["message"]
+    assert "access_token=[REDACTED]" in payload["message"]
+    assert "refresh_token=[REDACTED]" in payload["message"]
+    assert "id_token=[REDACTED]" in payload["message"]
+    assert "authorization=[REDACTED]" in payload["message"]
+    assert "jwt=[REDACTED]" in payload["message"]
+
+
+def test_sensitive_bearer_authorization_is_fully_redacted_in_plain_message() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(
+        msg="auth header authorization=Bearer abc.def.ghi token=tok-123"
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    serialized = json.dumps(payload)
+    assert "abc.def.ghi" not in serialized
+    assert "tok-123" not in serialized
+    assert payload["message"] == (
+        "auth header authorization=[REDACTED] token=[REDACTED]"
+    )
+
+
 def test_sensitive_value_is_redacted_in_string_extras() -> None:
     formatter = JsonFormatter()
     record = _make_record(
@@ -247,6 +296,49 @@ def test_sensitive_keys_are_redacted_in_merged_json_payload() -> None:
     assert payload["client_secret"] == "[REDACTED]"
     assert payload["nested"]["password"] == "[REDACTED]"
     assert payload["records"][0]["api_key"] == "[REDACTED]"
+
+
+def test_sensitive_auth_keys_are_redacted_in_merged_json_and_extras() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(
+        msg='{"jwt":"jwt-123","claims":{"sub":"user-1"},"authorization":"Bearer-123"}',
+        extra={
+            "payload": {
+                "token": "tok-123",
+                "access_token": "acc-123",
+                "refresh_token": "ref-123",
+                "id_token": "id-123",
+            }
+        },
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    serialized = json.dumps(payload)
+    for secret in ("jwt-123", "Bearer-123", "tok-123", "acc-123", "ref-123", "id-123"):
+        assert secret not in serialized
+    assert payload["jwt"] == "[REDACTED]"
+    assert payload["claims"] == "[REDACTED]"
+    assert payload["authorization"] == "[REDACTED]"
+    assert payload["props"]["payload"]["token"] == "[REDACTED]"
+    assert payload["props"]["payload"]["access_token"] == "[REDACTED]"
+    assert payload["props"]["payload"]["refresh_token"] == "[REDACTED]"
+    assert payload["props"]["payload"]["id_token"] == "[REDACTED]"
+
+
+def test_nested_claims_are_redacted_in_merged_json_payload() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(
+        msg='{"auth":{"claims":{"sub":"user-1","roles":["admin"]}},"event":"ok"}'
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    serialized = json.dumps(payload)
+    assert "user-1" not in serialized
+    assert "admin" not in serialized
+    assert payload["auth"]["claims"] == "[REDACTED]"
+    assert payload["event"] == "ok"
 
 
 def test_sensitive_keys_are_redacted_in_nested_extras() -> None:
@@ -398,6 +490,7 @@ def test_started_command_info_has_command_id_alias() -> None:
     assert payload["message"] == "STARTED_COMMAND"
     assert payload["command"]["id"] == "cmd-123"
     assert payload["command_id"] == "cmd-123"
+    assert payload["user_id"] == "u-1"
 
 
 def test_started_command_debug_derives_command_id_from_command_object() -> None:
@@ -412,6 +505,20 @@ def test_started_command_debug_derives_command_id_from_command_object() -> None:
     assert payload["message"] == "STARTED_COMMAND"
     assert payload["command"]["object"]["id"] == "cmd-obj-123"
     assert payload["command_id"] == "cmd-obj-123"
+
+
+def test_nested_command_object_promotes_user_and_organization_aliases() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(
+        msg='{"code":"e94cad9b","msg":"STARTED_COMMAND","command":{"class":"DemoCommand","object":{"id":"cmd-obj-123","user":{"id":"u-123","organization_id":"org-456"}},"parent_command_id":null}}',
+        level=logging.DEBUG,
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    assert payload["command_id"] == "cmd-obj-123"
+    assert payload["user_id"] == "u-123"
+    assert payload["organization_id"] == "org-456"
 
 
 def test_null_msg_with_code_gets_non_empty_fallback_message() -> None:
