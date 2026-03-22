@@ -302,10 +302,12 @@ class SeqProfile(
         return UUID(sha256.digest()[:16].hex())
 
     @staticmethod
-    def get_sorted_repeat_numbers_profile(repeat_numbers: list[int | None]) -> str:
+    def get_ordered_repeat_numbers_representation(
+        repeat_numbers: list[int | None],
+    ) -> str:
         """
-        Generate and return the MLVA profile in SORTED_REPEAT_NUMBERS format based on
-        the sorted repeat numbers.
+        Generate and return the MLVA profile in ORDERED_REPEAT_NUMBERS format based on
+        the ordered repeat numbers.
         """
         return json.dumps(
             [

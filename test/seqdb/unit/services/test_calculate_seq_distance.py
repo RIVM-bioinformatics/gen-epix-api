@@ -133,7 +133,9 @@ def _make_allele_profile(
     protocol_id: UUID,
     allele_ids: list[UUID | None],
 ) -> model.AlleleProfile:
-    allele_profile: str = model.AlleleProfile.get_sorted_allele_ids_profile(allele_ids)
+    allele_profile: str = model.AlleleProfile.get_ordered_allele_ids_representation(
+        allele_ids
+    )
     allele_profile_hash: UUID = model.AlleleProfile.get_allele_profile_hash(allele_ids)
     n_loci: int = len(allele_ids)
     return model.AlleleProfile.model_construct(
@@ -160,7 +162,7 @@ def _make_mlva_profile(
     repeat_numbers: list[int | None],
     profile_format: enum.MlvaProfileFormat = enum.MlvaProfileFormat.ORDERED_REPEAT_NUMBERS,
 ) -> model.MlvaProfile:
-    mlva_profile: str = model.MlvaProfile.get_sorted_repeat_numbers_profile(
+    mlva_profile: str = model.MlvaProfile.get_ordered_repeat_numbers_representation(
         repeat_numbers
     )
     repeat_numbers_int: list[int | None] = repeat_numbers
