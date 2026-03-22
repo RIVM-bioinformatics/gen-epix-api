@@ -275,31 +275,12 @@ class SeqProfile(
     @staticmethod
     def get_ordered_allele_ids_representation(allele_ids: list[UUID | None]) -> str:
         """
-        Generate and return the allele profile in SORTED_ALLELE_IDS format based on
-        the sorted allele IDs.
+        Generate and return the allele profile in ORDERED_ALLELE_IDS format based on
+        the ordered allele IDs.
         """
         return base64.b64encode(
             b"".join(NULL_ID.bytes if x is None else x.bytes for x in allele_ids)
         ).decode("ascii")
-
-    @staticmethod
-    def get_allele_profile_hash(allele_ids: list[UUID | None]) -> UUID:
-        sha256 = hashlib.sha256()
-        for allele_id in allele_ids:
-            if allele_id is not None:
-                sha256.update(allele_id.bytes)
-            else:
-                sha256.update(NULL_ID.bytes)
-        return UUID(sha256.digest()[:16].hex())
-
-    @staticmethod
-    def get_kmer_profile_hash(kmer_frequency_map: dict[str, float]) -> UUID:
-        sha256 = hashlib.sha256()
-        for kmer in sorted(kmer_frequency_map.keys()):
-            freq = kmer_frequency_map[kmer]
-            sha256.update(kmer.encode("ascii"))
-            sha256.update(bytearray(struct.pack(">d", freq)))
-        return UUID(sha256.digest()[:16].hex())
 
     @staticmethod
     def get_ordered_repeat_numbers_representation(
@@ -317,6 +298,16 @@ class SeqProfile(
         )
 
     @staticmethod
+    def get_allele_profile_hash(allele_ids: list[UUID | None]) -> UUID:
+        sha256 = hashlib.sha256()
+        for allele_id in allele_ids:
+            if allele_id is not None:
+                sha256.update(allele_id.bytes)
+            else:
+                sha256.update(NULL_ID.bytes)
+        return UUID(sha256.digest()[:16].hex())
+
+    @staticmethod
     def get_mlva_profile_hash(repeat_numbers: list[int | None]) -> UUID:
         sha256 = hashlib.sha256()
         for repeat_number in repeat_numbers:
@@ -328,6 +319,15 @@ class SeqProfile(
                         4, byteorder="big", signed=True
                     )
                 )
+        return UUID(sha256.digest()[:16].hex())
+
+    @staticmethod
+    def get_kmer_profile_hash(kmer_frequency_map: dict[str, float]) -> UUID:
+        sha256 = hashlib.sha256()
+        for kmer in sorted(kmer_frequency_map.keys()):
+            freq = kmer_frequency_map[kmer]
+            sha256.update(kmer.encode("ascii"))
+            sha256.update(bytearray(struct.pack(">d", freq)))
         return UUID(sha256.digest()[:16].hex())
 
 
