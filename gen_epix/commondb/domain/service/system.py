@@ -7,13 +7,8 @@ from gen_epix.commondb.domain.repository.system import BaseSystemRepository
 from gen_epix.fastapp import BaseService
 
 
-class BaseSystemService(BaseService):
+class BaseSystemService(BaseService[BaseSystemRepository]):
     SERVICE_TYPE = ServiceType.SYSTEM
-
-    # Property overridden to provide narrower return value to support linter
-    @property  # type: ignore
-    def repository(self) -> BaseSystemRepository:  # type: ignore
-        return super().repository  # type: ignore
 
     def register_handlers(self) -> None:
         f = self.app.register_handler
