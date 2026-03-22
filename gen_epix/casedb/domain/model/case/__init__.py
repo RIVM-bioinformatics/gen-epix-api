@@ -48,7 +48,7 @@ from gen_epix.casedb.domain.model.case.ref_data import ColSet as ColSet
 from gen_epix.casedb.domain.model.case.ref_data import ColSetMember as ColSetMember
 from gen_epix.casedb.domain.model.case.ref_data import Dim as Dim
 from gen_epix.casedb.domain.model.case.ref_data import (
-    Protocol as Protocol,
+    GeneticDistanceProtocol as GeneticDistanceProtocol,
 )
 from gen_epix.casedb.domain.model.case.ref_data import RefCol as RefCol
 from gen_epix.casedb.domain.model.case.ref_data import RefDim as RefDim

@@ -67,13 +67,10 @@ from gen_epix.casedb.domain.command.case import (
 )
 from gen_epix.casedb.domain.command.case import DimCrudCommand as DimCrudCommand
 from gen_epix.casedb.domain.command.case import (
-    ProtocolCrudCommand as ProtocolCrudCommand,
+    GeneticDistanceProtocolCrudCommand as GeneticDistanceProtocolCrudCommand,
 )
 from gen_epix.casedb.domain.command.case import RefColCrudCommand as RefColCrudCommand
 from gen_epix.casedb.domain.command.case import RefDimCrudCommand as RefDimCrudCommand
-from gen_epix.casedb.domain.command.case import (
-    RetrieveProtocolsCommand as RetrieveProtocolsCommand,
-)
 from gen_epix.casedb.domain.command.case import (
     RetrieveCaseRightsCommand as RetrieveCaseRightsCommand,
 )
@@ -100,6 +97,9 @@ from gen_epix.casedb.domain.command.case import (
 )
 from gen_epix.casedb.domain.command.case import (
     RetrievePhylogeneticTreeBySequencesCommand as RetrievePhylogeneticTreeBySequencesCommand,
+)
+from gen_epix.casedb.domain.command.case import (
+    RetrieveProtocolsCommand as RetrieveProtocolsCommand,
 )
 from gen_epix.casedb.domain.command.case import (
     RetrieveSimilarCasesCommand as RetrieveSimilarCasesCommand,
@@ -267,7 +267,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         CreateFileForReadSetCommand,
         CreateFileForSeqCommand,
         RefDimCrudCommand,
-        ProtocolCrudCommand,
+        GeneticDistanceProtocolCrudCommand,
         RetrieveProtocolsCommand,
         RetrieveCaseRightsCommand,
         RetrieveCasesByIdCommand,

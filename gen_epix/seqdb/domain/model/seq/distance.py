@@ -1,13 +1,14 @@
-from typing import ClassVar
+import json
+from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.seq.base import ContentMixin
-from gen_epix.seqdb.domain.model.seq.profile import SeqProfile
+from gen_epix.seqdb.domain.model.seq.profile import NULL_ID, SeqProfile
 from gen_epix.seqdb.domain.model.seq.protocol import HasProtocolMixin, Protocol
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 
@@ -55,3 +56,25 @@ class SeqDistance(
         default=None,
         description="The sequence profile.",
     )
+    content_hash: UUID = Field(
+        default=NULL_ID,
+        description="The content hash is not used for this model, but is required by the ContentMixin. It is set to a default value and not validated against the content.",
+    )
+
+    @model_validator(mode="after")
+    def _validate_content(self) -> Self:
+        """
+        Validate that the content representation is valid.
+        """
+        self.content_hash = NULL_ID
+        self.get_profile_distance_map()  # This will raise an error if the content is not a valid profile distance map
+        return self
+
+    def get_profile_distance_map(self) -> dict[UUID, float]:
+        """
+        Get the profile distance map from the content.
+        """
+        if self.format != enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP:
+            raise ValueError(f"Unsupported format: {self.format}")
+        content_dict = json.loads(self.content)
+        return {UUID(x): y for x, y in content_dict.items()}

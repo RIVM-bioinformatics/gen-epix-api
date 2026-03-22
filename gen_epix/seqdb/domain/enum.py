@@ -276,19 +276,14 @@ class AstResultFormat(IntEnum):
 
 
 class ProtocolType(IntEnum):
-    AST_MEASUREMENT = 3
-    PCR_MEASUREMENT = 4
-    SEQUENCING = 1
-    ASSEMBLY = 2
-    SEQ_CLASSIFICATION = 10
-    SEQ_PROFILE = 5
-    KMER_PROFILE = 6
-    ALLELE_PROFILE = 6
-    LOCUS_PROFILE = 7
-    MLVA_PROFILE = 8
-    SNP_PROFILE = 12
-    SEQ_DISTANCE = 11
-    TAXONOMY = 13
+    PCR_MEASUREMENT = 1
+    AST_MEASUREMENT = 2
+    SEQUENCING = 3
+    ASSEMBLY = 4
+    TAXONOMY = 5
+    SEQ_CLASSIFICATION = 6
+    SEQ_PROFILE = 7
+    SEQ_DISTANCE = 8
 
 
 class ProtocolTypeSet(Enum):
@@ -302,24 +297,16 @@ class ProtocolTypeSet(Enum):
     SEQ_PROFILE = frozenset(
         {
             ProtocolType.SEQ_PROFILE,
-            ProtocolType.KMER_PROFILE,
-            ProtocolType.ALLELE_PROFILE,
-            ProtocolType.MLVA_PROFILE,
-            ProtocolType.SNP_PROFILE,
-            ProtocolType.LOCUS_PROFILE,
         }
     )
     SEQ_DISTANCE = frozenset({ProtocolType.SEQ_DISTANCE})
-    HAS_REF_SEQ = frozenset(
-        {
-            ProtocolType.SNP_PROFILE,
-        }
-    )
+    HAS_REF_SEQ = frozenset()  # type: ignore[var-annotated]
     HAS_OPTIONAL_REF_SEQ = frozenset(
         {
-            ProtocolType.SEQ_PROFILE,
             ProtocolType.ASSEMBLY,
             ProtocolType.SEQ_CLASSIFICATION,
+            ProtocolType.SEQ_PROFILE,
+            ProtocolType.SEQ_DISTANCE,
         }
     )
     HAS_SEQ_CATEGORY_SET = frozenset(
@@ -328,25 +315,21 @@ class ProtocolTypeSet(Enum):
         }
     )
     HAS_OPTIONAL_SEQ_CATEGORY_SET = frozenset()  # type: ignore[var-annotated]
-    HAS_LOCUS_SET = frozenset(
-        {
-            ProtocolType.LOCUS_PROFILE,
-            ProtocolType.ALLELE_PROFILE,
-            ProtocolType.MLVA_PROFILE,
-        }
-    )
+    HAS_LOCUS_SET = frozenset()  # type: ignore[var-annotated]
     HAS_OPTIONAL_LOCUS_SET = frozenset(
         {
-            ProtocolType.SEQ_PROFILE,
             ProtocolType.PCR_MEASUREMENT,
+            ProtocolType.SEQ_CLASSIFICATION,
+            ProtocolType.SEQ_PROFILE,
+            ProtocolType.SEQ_DISTANCE,
         }
     )
     IS_SEQ_DISTANCE = frozenset({ProtocolType.SEQ_DISTANCE})
 
 
 class SeqProfileType(IntEnum):
-    LOCUS = 1
-    SNP = 2
+    SNP = 1
+    LOCUS = 2
     ALLELE = 3
     MLVA = 4
     KMER = 5
@@ -409,10 +392,6 @@ class SeqDistanceTypeSet(Enum):
             SeqDistanceType.SNP_HAMMING,
         }
     )
-
-
-class SeqDistanceResultFormat(IntEnum):
-    SEQ_DISTANCE_RESULT_FORMAT1 = 1
 
 
 class SeqDistanceFormat(IntEnum):

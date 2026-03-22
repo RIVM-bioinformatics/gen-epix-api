@@ -58,15 +58,17 @@ def case_service_retrieve_phylogenetic_tree(
             )
 
         # Get protocol
-        protocol: model.Protocol = self.repository.crud(  # type: ignore[assignment]
+        genetic_distance_protocol: model.GeneticDistanceProtocol = self.repository.crud(  # type: ignore[assignment]
             uow,
             user.id,
-            model.Protocol,
+            model.GeneticDistanceProtocol,
             None,
-            dist_ref_col.protocol_id,
+            dist_ref_col.genetic_distance_protocol_id,
             CrudOperation.READ_ONE,
         )
-        seqdb_seq_distance_protocol_id = protocol.seqdb_protocol_id
+        seqdb_seq_distance_protocol_id = (
+            genetic_distance_protocol.seqdb_seq_distance_protocol_id
+        )
 
         # Special case: zero case_ids
         if not case_ids:
@@ -78,7 +80,7 @@ def case_service_retrieve_phylogenetic_tree(
                     profile_ids=[],
                 )
             )
-            retval.protocol_id = protocol.id
+            retval.protocol_id = genetic_distance_protocol.id
             return retval
 
         # @ABAC: Get cases
@@ -113,7 +115,7 @@ def case_service_retrieve_phylogenetic_tree(
                 },
             )
         )
-        phylogenetic_tree.protocol_id = protocol.id
+        phylogenetic_tree.protocol_id = genetic_distance_protocol.id
 
     return phylogenetic_tree
 

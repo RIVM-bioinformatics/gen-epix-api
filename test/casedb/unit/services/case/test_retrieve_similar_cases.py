@@ -105,8 +105,8 @@ class BaseSimilarCasesTestCase(TestCase):
             protocol_id=protocol_id,
         )
 
-    def create_protocol(self) -> model.Protocol:
-        return model.Protocol(
+    def create_protocol(self) -> model.GeneticDistanceProtocol:
+        return model.GeneticDistanceProtocol(
             seqdb_protocol_id=self.protocol_id,
             seqdb_protocol_type=seqdb_enum.ProtocolType.SEQ_DISTANCE,
             code="KMER_EUCLIDEAN",
@@ -240,7 +240,7 @@ class TestHappyPath(BaseSimilarCasesTestCase):
             col_type=enum.ColType.GENETIC_DISTANCE,
             protocol_id=self.protocol_id,
         )
-        protocol: model.Protocol = self.create_protocol()
+        protocol: model.GeneticDistanceProtocol = self.create_protocol()
         self.repository.crud.side_effect = [dist_col, dist_ref_col, protocol]
 
         all_cases: list[model.Case] = [
@@ -282,7 +282,7 @@ class TestHappyPath(BaseSimilarCasesTestCase):
             call(
                 self.uow,
                 self.user.id,
-                model.Protocol,
+                model.GeneticDistanceProtocol,
                 None,
                 dist_ref_col.protocol_id,
                 CrudOperation.READ_ONE,
@@ -312,7 +312,7 @@ class TestHappyPath(BaseSimilarCasesTestCase):
             col_type=enum.ColType.GENETIC_DISTANCE,
             protocol_id=self.protocol_id,
         )
-        protocol: model.Protocol = self.create_protocol()
+        protocol: model.GeneticDistanceProtocol = self.create_protocol()
         self.repository.crud.side_effect = [dist_col, dist_ref_col, protocol]
 
         # Seed case does not have a profile ID in content

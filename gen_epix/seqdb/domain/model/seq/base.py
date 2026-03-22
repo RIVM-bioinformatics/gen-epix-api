@@ -1,4 +1,5 @@
 import hashlib
+import typing
 import uuid
 from enum import IntEnum
 from typing import ClassVar, Self
@@ -6,7 +7,7 @@ from uuid import UUID
 
 from pydantic import Field, Json, field_serializer, field_validator, model_validator
 
-from gen_epix.commondb.domain.model.base import Model
+from gen_epix.commondb.domain.model import Model, validate_int_enum_value
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.seqdb.domain import enum
 
@@ -32,6 +33,8 @@ class ContentMixin[FormatType: IntEnum]:
     Mixin class to add content-related fields to a model.
     """
 
+    _FORMAT_TYPE_CLASS: ClassVar[type[FormatType]] = None  # type: ignore[assignment]
+
     format: FormatType = Field(
         description="The representation format of the content.",
     )
@@ -48,14 +51,14 @@ class ContentMixin[FormatType: IntEnum]:
 
     @field_validator("format", mode="before")
     @classmethod
-    def _validate_format(cls, value: str | int | float | FormatType) -> FormatType:
-        if isinstance(value, FormatType):
-            return value
-        if isinstance(value, str):
-            return FormatType[value]
-        if isinstance(value, int):
-            return FormatType(value)
-        raise ValueError(f"Unsupported type for format field: {type(value)}")
+    def _validate_format(cls, value: str | int | float | FormatType) -> IntEnum:
+        if cls._FORMAT_TYPE_CLASS is None:
+            # Determine the actual FormatType class from the generic type parameter once
+            for base in getattr(cls, "__orig_bases__", []):  # type: ignore[unreachable]
+                if typing.get_origin(base) is not ContentMixin:
+                    continue
+                cls._FORMAT_TYPE_CLASS = format_class = typing.get_args(base)[0]  # type: ignore[assigment]
+        return validate_int_enum_value(cls._FORMAT_TYPE_CLASS, value)  # type: ignore[return-value]
 
     @model_validator(mode="after")
     def _validate_content(self) -> Self:
@@ -75,7 +78,6 @@ class QualityMixin:
     Mixin class to add quality related fields to a model.
     """
 
-    # TODO [LSP-2690] Add qc and qc_format fields
     qc_result: enum.QualityControlResult | None = Field(
         default=None,
         description="The quality of the result as a qualitative value that is used by the application, where applicable, for filtering results.",
@@ -88,6 +90,15 @@ class QualityMixin:
         default=None,
         description="A detailed report of the quality control results, which can include any relevant information such as metrics, logs, or other data that provides insights into the quality of the result. The structure and content of this report is not defined by the application and must be determined by the user. The only condition is that the data are JSON serializable.",
     )
+
+    @field_validator("qc_result", mode="before")
+    @classmethod
+    def _validate_qc_result(
+        cls, value: str | int | float | enum.QualityControlResult | None
+    ) -> enum.QualityControlResult | None:
+        if value is None:
+            return None
+        return validate_int_enum_value(enum.QualityControlResult, value)  # type: ignore[return-value]
 
     @field_serializer("qc_result", mode="plain")
     def _serialize_qc_result(
@@ -122,6 +133,13 @@ class BaseSeq(Model):
         description="The length of the sequence. Derived from the sequence if possible and if the value is set to zero. If set to zero and it is not possible to derive the length, an error is raised.",
         ge=0,
     )
+
+    @field_validator("seq_format", mode="before")
+    @classmethod
+    def _validate_seq_format(
+        cls, value: str | int | float | enum.SeqFormat
+    ) -> enum.SeqFormat:
+        return validate_int_enum_value(enum.SeqFormat, value)  # type: ignore[return-value]
 
     @model_validator(mode="after")
     def _validate_model(self) -> Self:

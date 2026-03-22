@@ -1,6 +1,7 @@
 import json
 import string
 from datetime import date
+from enum import IntEnum
 from typing import Any, ClassVar, Self
 from urllib.parse import urlparse
 from uuid import UUID
@@ -8,7 +9,7 @@ from uuid import UUID
 from pydantic import Field, field_serializer, field_validator, model_validator
 
 from gen_epix.commondb.domain.model import Model
-from gen_epix.commondb.domain.model.base import Model
+from gen_epix.commondb.domain.model.base import Model, validate_int_enum_value
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity, create_keys
 from gen_epix.fastapp.domain.util import create_links
@@ -175,22 +176,30 @@ class Protocol(Model):
         ),
     )
     is_integer_distance: bool | None = Field(
+        default=None,
         description="Whether the sequence distances are integers. "
         + _create_field_description(
             *PROTOCOL_TYPE_FIELD_DEPENDENCIES["is_integer_distance"]
         ),
     )
     max_stored_distance: float | None = Field(
+        default=None,
         description="The maximum sequencedistance that is guaranteed to be stored. "
         + _create_field_description(
             *PROTOCOL_TYPE_FIELD_DEPENDENCIES["max_stored_distance"]
         ),
     )
-
     props: dict[str, Any] = Field(
         default_factory=dict,
         description="A dictionary of additional properties specific to the protocol. Must be JSON-serializable. Can also be passed as a JSON string.",
     )
+
+    @field_validator("protocol_type", mode="before")
+    @classmethod
+    def _validate_protocol_type(
+        cls, value: str | int | float | ProtocolType
+    ) -> ProtocolType:
+        return validate_int_enum_value(ProtocolType, value)  # type: ignore[return-value]
 
     @field_validator("git_commit_hash", mode="after")
     @classmethod
@@ -214,6 +223,24 @@ class Protocol(Model):
         if not all([parsed_uri.scheme, parsed_uri.netloc]):
             raise ValueError("git_repository_uri must be a valid URI.")
         return value
+
+    @field_validator("seq_profile_type", mode="before")
+    @classmethod
+    def _validate_seq_profile_type(
+        cls, value: str | int | float | SeqProfileType | None
+    ) -> SeqProfileType | None:
+        if value is None:
+            return None
+        return validate_int_enum_value(SeqProfileType, value)  # type: ignore[return-value]
+
+    @field_validator("seq_distance_type", mode="before")
+    @classmethod
+    def _validate_seq_distance_type(
+        cls, value: str | int | float | SeqDistanceType | None
+    ) -> SeqDistanceType | None:
+        if value is None:
+            return None
+        return validate_int_enum_value(SeqDistanceType, value)  # type: ignore[return-value]
 
     @field_validator("props", mode="before")
     @classmethod
@@ -252,7 +279,7 @@ class Protocol(Model):
             if self.protocol_type in required_protocol_types:
                 if field_value is None:
                     raise ValueError(
-                        f"{field_name} must be filled for {self.protocol_type.value} protocols."
+                        f"{field_name} must be filled for {self.protocol_type.name} protocols."
                     )
                 continue
             if self.protocol_type in optional_protocol_types:
@@ -261,13 +288,17 @@ class Protocol(Model):
                 continue
             if field_value is not None:
                 raise ValueError(
-                    f"{field_name} must be empty for non-{self.protocol_type.value} protocols."
+                    f"{field_name} must be empty for non-{self.protocol_type.name} protocols."
                 )
         return self
 
-    @field_serializer("protocol_type", mode="plain")
-    def _serialize_protocol_type(self, value: ProtocolType) -> str:
-        """Serializes the ProtocolType enum to its string value."""
+    @field_serializer(
+        "protocol_type", "seq_profile_type", "seq_distance_type", mode="plain"
+    )
+    def _serialize_int_enums(self, value: IntEnum | None) -> int | None:
+        """Serializes the IntEnums to their int value."""
+        if value is None:
+            return None
         return value.value
 
     @field_serializer("ref_seq_id", "locus_set_id", mode="plain")

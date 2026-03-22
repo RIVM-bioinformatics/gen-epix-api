@@ -7,7 +7,7 @@ from pydantic import Field
 
 from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.model.case.ref_data import (
-    Protocol,
+    GeneticDistanceProtocol,
     TreeAlgorithm,
 )
 from gen_epix.commondb.domain.model.base import Model
@@ -37,7 +37,7 @@ class PhylogeneticTree(Model):
     protocol_id: UUID | None = Field(
         default=None, description="The ID of the genetic distance protocol. FOREIGN KEY"
     )
-    protocol: Protocol | None = Field(
+    protocol: GeneticDistanceProtocol | None = Field(
         default=None, description="The genetic distance protocol"
     )
     leaf_ids: list[UUID] | None = Field(

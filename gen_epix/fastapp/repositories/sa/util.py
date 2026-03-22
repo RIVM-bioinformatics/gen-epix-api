@@ -1,7 +1,7 @@
 import datetime
 import ipaddress
 from decimal import Decimal
-from enum import Enum
+from enum import Enum, IntEnum
 from pathlib import Path
 from typing import Any, TypeVar, cast
 from uuid import UUID
@@ -144,7 +144,13 @@ def create_sa_type_from_field_info(
     else:
         type_ = field_info.return_type
     if isinstance(type_, TypeVar):  # type: ignore[unreachable]
-        type_ = cast(type, type_.__bound__)
+        type_ = cast(type, type_.__bound__)  # type: ignore[unreachable]
+        if type_ is IntEnum:
+            type_ = int
+        elif type_ is Enum:
+            type_ = str
+        else:
+            raise NotImplementedError(f"Unsupported TypeVar bound for field: {type_}")
 
     def _create_sa_type(sa_type_class: type[TypeEngine]) -> TypeEngine:
         # Get column kwargs for this type, overridden by kwargs

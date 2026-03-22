@@ -1,5 +1,5 @@
 from uuid import UUID
-from gen_epix.seqdb.domain import enum as seqdb_enum
+
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.domain.repository.case import BaseCaseRepository
@@ -188,19 +188,19 @@ def case_service_retrieve_complete_case_type(
         ref_dim_map: dict[UUID, model.RefDim] = {x.id: x for x in ref_dims}  # type: ignore[misc]
 
         # Get protocols
-        protocols = self.app.handle(
-            command.ProtocolCrudCommand(
+        genetic_distance_protocols = self.app.handle(
+            command.GeneticDistanceProtocolCrudCommand(
                 user=user,
                 operation=CrudOperation.READ_SOME,
-                obj_ids=list({x.protocol_id for x in ref_cols if x.protocol_id}),
+                obj_ids=list(
+                    {
+                        x.genetic_distance_protocol_id
+                        for x in ref_cols
+                        if x.genetic_distance_protocol_id
+                    }
+                ),
             )
         )
-        # make sure all protocols are of type enum.ProtocolType.SEQ_DISTANCE
-        protocols = {
-            x.id: x
-            for x in protocols
-            if x.protocol_type == seqdb_enum.ProtocolType.SEQ_DISTANCE
-        }
 
         # Get tree algorithms
         tree_algorithm_codes: set[enum.TreeAlgorithmType] = set.union(
@@ -235,7 +235,7 @@ def case_service_retrieve_complete_case_type(
             ref_cols=ref_col_map,
             dims=dim_map,
             cols=col_map,
-            protocols=protocols,
+            genetic_distance_protocols=genetic_distance_protocols,
             tree_algorithms=tree_algorithms,
             case_type_access_abacs=case_type_access_abacs,
             case_type_share_abacs=case_type_share_abacs,

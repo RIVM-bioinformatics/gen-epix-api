@@ -2,13 +2,13 @@ import base64
 import hashlib
 import json
 import struct
-from typing import Any, ClassVar, Self
+from typing import Any, ClassVar, NoReturn, Self
 from uuid import UUID
 
-from pydantic import Field, field_serializer, model_validator
+from pydantic import Field, field_serializer, field_validator, model_validator
 
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model import Model
+from gen_epix.commondb.domain.model import Model, validate_int_enum_value
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.commondb.domain.model.organization import BaseIdentifier
 from gen_epix.fastapp import Entity
@@ -80,8 +80,15 @@ class SeqProfile(
         description="The type of the sequence profile."
     )
 
+    @field_validator("seq_profile_type", mode="before")
+    @classmethod
+    def _validate_seq_profile_type(
+        cls, value: str | int | float | enum.SeqProfileType
+    ) -> enum.SeqProfileType:
+        return validate_int_enum_value(enum.SeqProfileType, value)  # type: ignore[return-value]
+
     @model_validator(mode="after")
-    def _validate_seq_profile_type(self) -> Self:
+    def _validate_format_for_seq_profile_type(self) -> Self:
         """
         Validate that the content format is compatible with the sequence profile type.
         """
@@ -91,22 +98,22 @@ class SeqProfile(
             )
         return self
 
-    @field_serializer("seq_profile_type")
-    def _serialize_seq_profile_type(self, value: enum.SeqProfileType) -> int:
-        return value.value
-
     @model_validator(mode="after")
-    def _validate_seq_profile_hash(self) -> Self:
+    def _validate_content(self) -> Self:
         """
-        Derive the allele profile hash, if not provided, or otherwise verify that it is
-        correctly derived if possible.
+        Verify the representation of the content depending on the format. Verify or set
+        the content hash.
         """
         profile_hash = self.content_hash
+        computed_profile_hash: UUID = NULL_ID
+
+        def _raise_no_computable_hash() -> NoReturn:
+            raise ValueError("Unable to calculate profile hash for this format")
 
         if self.seq_profile_type == enum.SeqProfileType.ALLELE:
-            # Parse allele profile and derive values depending on allele_profile_format
+            # Parse ALLELE SeqProfile and derive values depending on format
             if self.format == enum.SeqProfileFormat.ORDERED_ALLELE_IDS:
-                # Parse the allele profile from base64 encoded concatenated 128-bit allele IDs
+                # Parse the profile from base64 encoded concatenated 128-bit allele IDs
                 allele_bytes = base64.b64decode(self.content)
                 if len(allele_bytes) % 16 != 0:
                     raise ValueError(
@@ -115,87 +122,48 @@ class SeqProfile(
                 sha256 = hashlib.sha256()
                 sha256.update(allele_bytes)
                 computed_profile_hash = UUID(sha256.digest()[:16].hex())
-                computed_n_loci = sum(
-                    allele_bytes[i : i + 16] != NULL_ID.bytes
-                    for i in range(0, len(allele_bytes), 16)
-                )
             else:
-                if profile_hash == NULL_ID:
-                    raise ValueError(
-                        "Unable to calculate allele profile hash for this format"
-                    )
-
-            # Set or verify allele_profile_hash
-            if profile_hash == NULL_ID:
-                self.content_hash = computed_profile_hash
-            elif profile_hash != computed_profile_hash:
-                raise ValueError(
-                    "Provided allele profile hash does not match computed hash"
-                )
+                _raise_no_computable_hash()
         elif self.seq_profile_type == enum.SeqProfileType.MLVA:
-            # Parse MLVA profile and derive values depending on mlva_profile_format
+            # Parse MLVA SeqProfile and derive values depending on format
             if self.format == enum.SeqProfileFormat.ORDERED_REPEAT_NUMBERS:
-                # Parse the MLVA profile from json array
+                # Parse the profile from json array
                 repeat_numbers: list[int] = json.loads(self.content)
                 # Compute hash
                 computed_profile_hash = SeqProfile.get_mlva_profile_hash(repeat_numbers)
             else:
-                if profile_hash == NULL_ID:
-                    raise ValueError(
-                        "Unable to calculate allele profile hash for this format"
-                    )
-                # Unable to compute n_loci or profile hash but provided -> assume correct
-                computed_profile_hash = profile_hash
-
-            # Set or verify mlva_profile_hash
-            if profile_hash == NULL_ID:
-                self.content_hash = computed_profile_hash
-            elif profile_hash != computed_profile_hash:
-                raise ValueError(
-                    "Provided MLVA profile hash does not match computed hash"
-                )
+                _raise_no_computable_hash()
         elif self.seq_profile_type == enum.SeqProfileType.KMER:
-            # Parse k-mer profile and derive hash depending on kmer_profile_format
+            # Parse KMER SeqProfile and derive hash depending on format
             if self.format == enum.SeqProfileFormat.KMER_FREQUENCY_MAP:
-                # Parse the k-mer profile from json object
+                # Parse the profile from json object
                 kmer_frequency_map: dict[str, float] = json.loads(self.content)
                 # Compute hash
                 computed_profile_hash = SeqProfile.get_kmer_profile_hash(
                     kmer_frequency_map
                 )
             else:
-                if profile_hash == NULL_ID:
-                    raise ValueError(
-                        "Unable to calculate k-mer profile hash for this format"
-                    )
-                # Unable to compute profile hash but provided -> assume correct
-                computed_profile_hash = profile_hash
-            self.content_hash = computed_profile_hash
+                _raise_no_computable_hash()
         elif self.seq_profile_type == enum.SeqProfileType.SNP:
             # Parse SNP profile and derive values depending on snp_profile_format
             if self.format == enum.SeqProfileFormat.REF_ALN_SEQ:
                 # TODO: implement any validation and calculate hash
                 computed_profile_hash = profile_hash
             else:
-                if profile_hash == NULL_ID:
-                    raise ValueError(
-                        "Unable to calculate SNP profile hash for this format"
-                    )
-                # Unable to compute profile hash but provided -> assume correct
-                computed_profile_hash = profile_hash
-
-            # Set or verify snp_profile_hash
-            if profile_hash == NULL_ID:
-                self.snp_profile_hash = computed_profile_hash
-            elif profile_hash != computed_profile_hash:
-                raise ValueError(
-                    "Provided SNP profile hash does not match computed hash"
-                )
+                _raise_no_computable_hash()
         else:
             raise NotImplementedError(
                 f"Unable to calculate profile hash for this sequence profile type: {self.seq_profile_type}"
             )
+        if profile_hash == NULL_ID:
+            self.content_hash = computed_profile_hash
+        elif profile_hash != computed_profile_hash:
+            raise ValueError("Provided content hash does not match computed hash")
         return self
+
+    @field_serializer("seq_profile_type", mode="plain")
+    def _serialize_seq_profile_type(self, value: enum.SeqProfileType) -> int:
+        return value.value
 
     def get_aligned_nucleotide_seq(self, **kwargs: Any) -> str:
         """

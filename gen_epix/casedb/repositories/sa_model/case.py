@@ -3,7 +3,7 @@ from __future__ import (  # Resolves pylint not recognizing Mapped as subscripta
     annotations,
 )
 
-from datetime import date, datetime
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -74,60 +74,37 @@ class TreeAlgorithm(Base, RowMetadataMixin):
     )
 
 
-class Protocol(Base, RowMetadataMixin):
+class GeneticDistanceProtocol(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
 
-    __tablename__, __table_args__ = create_table_args(model.Protocol)
+    __tablename__, __table_args__ = create_table_args(model.GeneticDistanceProtocol)
 
-    seqdb_protocol_id: Mapped[UUID] = create_mapped_column(
+    seqdb_seq_distance_protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN,
-        model.Protocol,
-        "seqdb_protocol_id",
+        model.GeneticDistanceProtocol,
+        "seqdb_seq_distance_protocol_id",
     )
-    seqdb_seq_distance_protocol_type: Mapped[seqdb_enum.SeqDistanceType | None] = (
-        create_mapped_column(DOMAIN, model.Protocol, "seqdb_seq_distance_protocol_type")
+    seqdb_seq_distance_type: Mapped[seqdb_enum.SeqDistanceType] = create_mapped_column(
+        DOMAIN, model.GeneticDistanceProtocol, "seqdb_seq_distance_type"
     )
-    seqdb_protocol_type: Mapped[seqdb_enum.ProtocolType] = create_mapped_column(
-        DOMAIN, model.Protocol, "seqdb_protocol_type"
+    name: Mapped[str] = create_mapped_column(
+        DOMAIN, model.GeneticDistanceProtocol, "name"
     )
-    code: Mapped[str] = create_mapped_column(DOMAIN, model.Protocol, "code")
-    name: Mapped[str | None] = create_mapped_column(DOMAIN, model.Protocol, "name")
     description: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.Protocol, "description"
-    )
-    git_repository_uri: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.Protocol, "git_repository_uri"
-    )
-    git_commit_hash: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.Protocol, "git_commit_hash"
-    )
-    git_commit_tag: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.Protocol, "git_commit_tag"
-    )
-    ref_seq_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Protocol, "ref_seq_id"
-    )
-    locus_set_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Protocol, "locus_set_id"
-    )
-    valid_start_date: Mapped[date | None] = create_mapped_column(
-        DOMAIN, model.Protocol, "valid_start_date"
-    )
-    valid_end_date: Mapped[date | None] = create_mapped_column(
-        DOMAIN, model.Protocol, "valid_end_date"
+        DOMAIN, model.GeneticDistanceProtocol, "description"
     )
     seqdb_max_stored_distance: Mapped[float | None] = create_mapped_column(
         DOMAIN,
-        model.Protocol,
+        model.GeneticDistanceProtocol,
         "seqdb_max_stored_distance",
     )
-    seqdb_is_integer_distance: Mapped[bool | None] = create_mapped_column(
-        DOMAIN, model.Protocol, "seqdb_is_integer_distance"
+    seqdb_is_integer_distance: Mapped[bool] = create_mapped_column(
+        DOMAIN, model.GeneticDistanceProtocol, "seqdb_is_integer_distance"
     )
     min_scale_unit: Mapped[float] = create_mapped_column(
-        DOMAIN, model.Protocol, "min_scale_unit"
+        DOMAIN, model.GeneticDistanceProtocol, "min_scale_unit"
     )
 
 
@@ -176,8 +153,8 @@ class RefCol(Base, RowMetadataMixin):
     region_set_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.RefCol, "region_set_id"
     )
-    protocol_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.RefCol, "protocol_id"
+    genetic_distance_protocol_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.RefCol, "genetic_distance_protocol_id"
     )
     description: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.RefCol, "description"

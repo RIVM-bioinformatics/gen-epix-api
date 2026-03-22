@@ -440,10 +440,10 @@ class RefDimCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.RefDim
 
 
-class ProtocolCrudCommand(CrudCommand):
-    """Manage protocols (e.g., TN93) available for sequence comparisons in phylogenetic analyses."""
+class GeneticDistanceProtocolCrudCommand(CrudCommand):
+    """Manage genetic distance protocols available for sequence comparisons in phylogenetic analyses."""
 
-    MODEL_CLASS: ClassVar = model.Protocol
+    MODEL_CLASS: ClassVar = model.GeneticDistanceProtocol
 
 
 class TreeAlgorithmClassCrudCommand(CrudCommand):

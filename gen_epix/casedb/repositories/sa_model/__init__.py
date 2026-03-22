@@ -39,7 +39,7 @@ from gen_epix.casedb.repositories.sa_model.case import ColSet as ColSet
 from gen_epix.casedb.repositories.sa_model.case import ColSetMember as ColSetMember
 from gen_epix.casedb.repositories.sa_model.case import Dim as Dim
 from gen_epix.casedb.repositories.sa_model.case import (
-    Protocol as Protocol,
+    GeneticDistanceProtocol as GeneticDistanceProtocol,
 )
 from gen_epix.casedb.repositories.sa_model.case import RefCol as RefCol
 from gen_epix.casedb.repositories.sa_model.case import RefDim as RefDim
@@ -82,9 +82,7 @@ from gen_epix.commondb.repositories.sa_model import (
     OrganizationSetMember as OrganizationSetMember,
 )
 from gen_epix.commondb.repositories.sa_model import Outage as Outage
-from gen_epix.commondb.repositories.sa_model import (
-    RowMetadataMixin,
-)
+from gen_epix.commondb.repositories.sa_model import RowMetadataMixin
 from gen_epix.commondb.repositories.sa_model import Site as Site
 from gen_epix.commondb.repositories.sa_model import User as User
 from gen_epix.commondb.repositories.sa_model import UserInvitation as UserInvitation
@@ -151,7 +149,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.CaseTypeSetMember: CaseTypeSetMember,
         model.RefCol: RefCol,
         model.RefDim: RefDim,
-        model.Protocol: Protocol,
+        model.GeneticDistanceProtocol: GeneticDistanceProtocol,
         model.TreeAlgorithm: TreeAlgorithm,
         model.TreeAlgorithmClass: TreeAlgorithmClass,
     },

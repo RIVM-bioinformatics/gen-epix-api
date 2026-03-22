@@ -51,8 +51,8 @@ from gen_epix.casedb.services.case.crud_col_set_member import (
     case_service_crud_col_set_member,
 )
 from gen_epix.casedb.services.case.crud_dim import case_service_crud_dim
-from gen_epix.casedb.services.case.crud_protocol import (
-    case_service_crud_protocol,
+from gen_epix.casedb.services.case.crud_genetic_distance_protocol import (
+    case_service_crud_genetic_distance_protocol,
 )
 from gen_epix.casedb.services.case.crud_ref_col import case_service_crud_ref_col
 from gen_epix.casedb.services.case.crud_ref_dim import case_service_crud_ref_dim
@@ -73,9 +73,9 @@ from gen_epix.casedb.services.case.retrieve_complete_case_type import (
     case_service_retrieve_complete_case_type,
 )
 from gen_epix.casedb.services.case.retrieve_seq import (
-    case_service_retrieve_protocols,
     case_service_retrieve_genetic_sequence_fasta_by_case,
     case_service_retrieve_phylogenetic_tree,
+    case_service_retrieve_protocols,
 )
 from gen_epix.casedb.services.case.retrieve_similar_cases import (
     case_service_retrieve_similar_cases,
@@ -1072,11 +1072,11 @@ class CaseService(BaseCaseService):
         """Handle CRUD operations for RefDim entities."""
         return case_service_crud_ref_dim(self, cmd)
 
-    def crud_protocol(
-        self, cmd: command.ProtocolCrudCommand
+    def crud_genetic_distance_protocol(
+        self, cmd: command.GeneticDistanceProtocolCrudCommand
     ) -> (
-        list[model.Protocol]
-        | model.Protocol
+        list[model.GeneticDistanceProtocol]
+        | model.GeneticDistanceProtocol
         | list[UUID]
         | UUID
         | list[bool]
@@ -1084,7 +1084,7 @@ class CaseService(BaseCaseService):
         | None
     ):
         """Handle CRUD operations for Protocol entities."""
-        return case_service_crud_protocol(self, cmd)
+        return case_service_crud_genetic_distance_protocol(self, cmd)
 
     def crud_tree_algorithm_class(
         self, cmd: command.TreeAlgorithmClassCrudCommand

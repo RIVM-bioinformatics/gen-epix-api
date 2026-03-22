@@ -410,7 +410,7 @@ class BaseCaseValidatorTestCase(TestCase):
                 self.org_col_id: org_col,
                 self.other_col_id: other_col,
             },
-            protocols={},
+            genetic_distance_protocols={},
             tree_algorithms={},
             case_type_access_abacs={},
             case_type_share_abacs={},

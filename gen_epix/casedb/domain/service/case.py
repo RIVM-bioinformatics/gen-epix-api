@@ -22,7 +22,7 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
     NO_ABAC_COMMAND_CLASSES: set[type[command.Command]] = {
         command.TreeAlgorithmClassCrudCommand,
         command.TreeAlgorithmCrudCommand,
-        command.ProtocolCrudCommand,
+        command.GeneticDistanceProtocolCrudCommand,
         command.CaseTypeSetCategoryCrudCommand,
         command.CaseSetCategoryCrudCommand,
         command.CaseSetStatusCrudCommand,
@@ -147,8 +147,8 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         f(command.ColSetMemberCrudCommand, self.crud_col_set_member)
         f(command.DimCrudCommand, self.crud_dim)
         f(
-            command.ProtocolCrudCommand,
-            self.crud_protocol,
+            command.GeneticDistanceProtocolCrudCommand,
+            self.crud_genetic_distance_protocol,
         )
         f(command.RefColCrudCommand, self.crud_ref_col)
         f(command.RefDimCrudCommand, self.crud_ref_dim)
@@ -407,11 +407,11 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def crud_protocol(
-        self, cmd: command.ProtocolCrudCommand
+    def crud_genetic_distance_protocol(
+        self, cmd: command.GeneticDistanceProtocolCrudCommand
     ) -> (
-        list[model.Protocol]
-        | model.Protocol
+        list[model.GeneticDistanceProtocol]
+        | model.GeneticDistanceProtocol
         | list[UUID]
         | UUID
         | list[bool]
@@ -529,13 +529,6 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         self,
         cmd: command.CreateFileForSeqCommand,
     ) -> UUID:
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def retrieve_sequencing_protocols(
-        self,
-        cmd: command.RetrieveProtocolsCommand,
-    ) -> list[seqdb_model.Protocol]:
         raise NotImplementedError()
 
     @abc.abstractmethod
