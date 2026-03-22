@@ -43,13 +43,6 @@ from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.file import File as File
 from gen_epix.seqdb.domain.model.seq import Allele as Allele
 from gen_epix.seqdb.domain.model.seq import AlleleForUpload as AlleleForUpload
-from gen_epix.seqdb.domain.model.seq import AlleleProfile as AlleleProfile
-from gen_epix.seqdb.domain.model.seq import (
-    AlleleProfileForUpload as AlleleProfileForUpload,
-)
-from gen_epix.seqdb.domain.model.seq import (
-    AlleleProfileIdentifier as AlleleProfileIdentifier,
-)
 from gen_epix.seqdb.domain.model.seq import AstMeasurement as AstMeasurement
 from gen_epix.seqdb.domain.model.seq import AstPrediction as AstPrediction
 from gen_epix.seqdb.domain.model.seq import BaseSeq as BaseSeq
@@ -59,23 +52,9 @@ from gen_epix.seqdb.domain.model.seq import (
 from gen_epix.seqdb.domain.model.seq import CodeMixin as CodeMixin
 from gen_epix.seqdb.domain.model.seq import ContentMixin as ContentMixin
 from gen_epix.seqdb.domain.model.seq import Contig as Contig
-from gen_epix.seqdb.domain.model.seq import KmerProfile as KmerProfile
-from gen_epix.seqdb.domain.model.seq import KmerProfileForUpload as KmerProfileForUpload
-from gen_epix.seqdb.domain.model.seq import (
-    KmerProfileIdentifier as KmerProfileIdentifier,
-)
 from gen_epix.seqdb.domain.model.seq import Locus as Locus
 from gen_epix.seqdb.domain.model.seq import LocusCodeMap as LocusCodeMap
-from gen_epix.seqdb.domain.model.seq import LocusProfile as LocusProfile
-from gen_epix.seqdb.domain.model.seq import (
-    LocusProfileIdentifier as LocusProfileIdentifier,
-)
 from gen_epix.seqdb.domain.model.seq import LocusSet as LocusSet
-from gen_epix.seqdb.domain.model.seq import MlvaProfile as MlvaProfile
-from gen_epix.seqdb.domain.model.seq import MlvaProfileForUpload as MlvaProfileForUpload
-from gen_epix.seqdb.domain.model.seq import (
-    MlvaProfileIdentifier as MlvaProfileIdentifier,
-)
 from gen_epix.seqdb.domain.model.seq import PcrMeasurement as PcrMeasurement
 from gen_epix.seqdb.domain.model.seq import PhylogeneticTree as PhylogeneticTree
 from gen_epix.seqdb.domain.model.seq import Protocol as Protocol
@@ -102,10 +81,9 @@ from gen_epix.seqdb.domain.model.seq import SeqDistance as SeqDistance
 from gen_epix.seqdb.domain.model.seq import SeqForUpload as SeqForUpload
 from gen_epix.seqdb.domain.model.seq import SeqIdentifier as SeqIdentifier
 from gen_epix.seqdb.domain.model.seq import SeqProfile as SeqProfile
+from gen_epix.seqdb.domain.model.seq import SeqProfileForUpload as SeqProfileForUpload
+from gen_epix.seqdb.domain.model.seq import SeqProfileIdentifier as SeqProfileIdentifier
 from gen_epix.seqdb.domain.model.seq import SeqTaxonomy as SeqTaxonomy
-from gen_epix.seqdb.domain.model.seq import SnpProfile as SnpProfile
-from gen_epix.seqdb.domain.model.seq import SnpProfileForUpload as SnpProfileForUpload
-from gen_epix.seqdb.domain.model.seq import SnpProfileIdentifier as SnpProfileIdentifier
 from gen_epix.seqdb.domain.model.seq import Taxon as Taxon
 from gen_epix.seqdb.domain.model.seq import TaxonSet as TaxonSet
 from gen_epix.seqdb.domain.model.seq import TaxonSetMember as TaxonSetMember
@@ -161,16 +139,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             SeqIdentifier,
             Allele,
             SeqProfile,
-            LocusProfile,
-            LocusProfileIdentifier,
-            AlleleProfile,
-            AlleleProfileIdentifier,
-            KmerProfile,
-            KmerProfileIdentifier,
-            MlvaProfile,
-            MlvaProfileIdentifier,
-            SnpProfile,
-            SnpProfileIdentifier,
+            SeqProfileIdentifier,
             AstMeasurement,
             AstPrediction,
             PcrMeasurement,
@@ -181,10 +150,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             ReadSetForUpload,
             SeqForUpload,
             AlleleForUpload,
-            AlleleProfileForUpload,
-            SnpProfileForUpload,
-            MlvaProfileForUpload,
-            KmerProfileForUpload,
+            SeqProfileForUpload,
             SampleForUpload,
             SampleBatchForUpload,
             SampleUploadResult,

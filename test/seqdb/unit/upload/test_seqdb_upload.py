@@ -23,7 +23,7 @@ from gen_epix.seqdb.domain.enum import Role
 from gen_epix.seqdb.domain.service import BaseSeqService
 from gen_epix.seqdb.services.seq import SampleBatchUploader
 from gen_epix.seqdb.services.seq.upload_verify_batch import (
-    _verify_children_allele_profiles,
+    _verify_children_seq_profiles,
     _verify_children_seqs,
     _verify_sample_refdata,
 )
@@ -521,7 +521,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         self.service.repository.read_fields.side_effect = [[], [], [], []]
 
         # Execute
-        success = _verify_children_allele_profiles(
+        success = _verify_children_seq_profiles(
             self.batch_uploader, cmd, retval, self.uow
         )
 
@@ -550,7 +550,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         self.service.repository.read_fields.return_value = []
 
         # Execute
-        success = _verify_children_allele_profiles(
+        success = _verify_children_seq_profiles(
             self.batch_uploader, cmd, retval, self.uow
         )
 
@@ -585,7 +585,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         ]
 
         # Execute
-        success = _verify_children_allele_profiles(
+        success = _verify_children_seq_profiles(
             self.batch_uploader, cmd, retval, self.uow
         )
 
@@ -626,7 +626,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         )
 
         # Execute
-        success = _verify_children_allele_profiles(
+        success = _verify_children_seq_profiles(
             self.batch_uploader, cmd, retval, self.uow
         )
 
@@ -670,7 +670,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         )
 
         # Execute
-        success = _verify_children_allele_profiles(
+        success = _verify_children_seq_profiles(
             self.batch_uploader, cmd, retval, self.uow
         )
 
@@ -713,7 +713,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         )
 
         # Execute
-        success = _verify_children_allele_profiles(
+        success = _verify_children_seq_profiles(
             self.batch_uploader, cmd, retval, self.uow
         )
 
@@ -750,7 +750,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         ]
 
         # Execute
-        success = _verify_children_allele_profiles(
+        success = _verify_children_seq_profiles(
             self.batch_uploader, cmd, retval, self.uow
         )
 
@@ -783,7 +783,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         ]
 
         # Execute
-        success = _verify_children_allele_profiles(
+        success = _verify_children_seq_profiles(
             self.batch_uploader, cmd, retval, self.uow
         )
 
@@ -819,7 +819,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         ]
 
         # Execute
-        success = _verify_children_allele_profiles(
+        success = _verify_children_seq_profiles(
             self.batch_uploader, cmd, retval, self.uow
         )
 
@@ -852,7 +852,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         )
 
         # Execute
-        success = _verify_children_allele_profiles(
+        success = _verify_children_seq_profiles(
             self.batch_uploader, cmd, retval, self.uow
         )
 

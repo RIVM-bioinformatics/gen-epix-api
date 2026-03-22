@@ -22,26 +22,9 @@ from gen_epix.seqdb.domain.model.seq.locus import LocusSet as LocusSet
 from gen_epix.seqdb.domain.model.seq.locus import RefAllele as RefAllele
 from gen_epix.seqdb.domain.model.seq.pheno import AstMeasurement as AstMeasurement
 from gen_epix.seqdb.domain.model.seq.pheno import PcrMeasurement as PcrMeasurement
-from gen_epix.seqdb.domain.model.seq.profile import AlleleProfile as AlleleProfile
-from gen_epix.seqdb.domain.model.seq.profile import (
-    AlleleProfileIdentifier as AlleleProfileIdentifier,
-)
-from gen_epix.seqdb.domain.model.seq.profile import KmerProfile as KmerProfile
-from gen_epix.seqdb.domain.model.seq.profile import (
-    KmerProfileIdentifier as KmerProfileIdentifier,
-)
-from gen_epix.seqdb.domain.model.seq.profile import LocusProfile as LocusProfile
-from gen_epix.seqdb.domain.model.seq.profile import (
-    LocusProfileIdentifier as LocusProfileIdentifier,
-)
-from gen_epix.seqdb.domain.model.seq.profile import MlvaProfile as MlvaProfile
-from gen_epix.seqdb.domain.model.seq.profile import (
-    MlvaProfileIdentifier as MlvaProfileIdentifier,
-)
 from gen_epix.seqdb.domain.model.seq.profile import SeqProfile as SeqProfile
-from gen_epix.seqdb.domain.model.seq.profile import SnpProfile as SnpProfile
 from gen_epix.seqdb.domain.model.seq.profile import (
-    SnpProfileIdentifier as SnpProfileIdentifier,
+    SeqProfileIdentifier as SeqProfileIdentifier,
 )
 from gen_epix.seqdb.domain.model.seq.protocol import Protocol as Protocol
 from gen_epix.seqdb.domain.model.seq.reads import ReadSet as ReadSet
@@ -65,16 +48,7 @@ from gen_epix.seqdb.domain.model.seq.tree import (
 )
 from gen_epix.seqdb.domain.model.seq.upload import AlleleForUpload as AlleleForUpload
 from gen_epix.seqdb.domain.model.seq.upload import (
-    AlleleProfileForUpload as AlleleProfileForUpload,
-)
-from gen_epix.seqdb.domain.model.seq.upload import (
     CalculateSeqDistancesResult as CalculateSeqDistancesResult,
-)
-from gen_epix.seqdb.domain.model.seq.upload import (
-    KmerProfileForUpload as KmerProfileForUpload,
-)
-from gen_epix.seqdb.domain.model.seq.upload import (
-    MlvaProfileForUpload as MlvaProfileForUpload,
 )
 from gen_epix.seqdb.domain.model.seq.upload import ReadSetForUpload as ReadSetForUpload
 from gen_epix.seqdb.domain.model.seq.upload import (
@@ -90,5 +64,5 @@ from gen_epix.seqdb.domain.model.seq.upload import (
 )
 from gen_epix.seqdb.domain.model.seq.upload import SeqForUpload as SeqForUpload
 from gen_epix.seqdb.domain.model.seq.upload import (
-    SnpProfileForUpload as SnpProfileForUpload,
+    SeqProfileForUpload as SeqProfileForUpload,
 )

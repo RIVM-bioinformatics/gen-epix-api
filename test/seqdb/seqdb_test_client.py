@@ -806,7 +806,7 @@ class SeqdbTestClient(TestClient):
 
     @staticmethod
     def calculate_distance_matrix_from_allele_profiles(
-        allele_profiles: list[model.AlleleProfile],
+        allele_profiles: list[model.SeqProfile],
     ) -> DistanceMatrix:
         n_profiles = len(allele_profiles)
 

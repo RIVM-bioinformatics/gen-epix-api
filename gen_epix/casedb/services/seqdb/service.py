@@ -18,7 +18,7 @@ from gen_epix.seqdb.env import AppComposer as SeqdbAppComposer
 class SeqdbService(BaseSeqdbService):
 
     COMMAND_MAP: dict[type[command.Command], type[command.Command]] = {
-        command.RetrievePhylogeneticTreeBySequencesCommand: seqdb_command.RetrievePhylogeneticTreeCommand,
+        command.RetrievePhylogeneticTreeBySequencesCommand: seqdb_command.CalculatePhylogeneticTreeCommand,
         command.RetrieveSimilarCasesCommand: seqdb_command.RetrieveSimilarProfilesCommand,
     }
     TREE_ALGORITHM_MAP = {
@@ -64,7 +64,7 @@ class SeqdbService(BaseSeqdbService):
             leaf_names = [str(leaf_id_mapper(x)) for x in cmd.profile_ids]
         else:
             leaf_names = None
-        seqdb_cmd = seqdb_command.RetrievePhylogeneticTreeCommand(
+        seqdb_cmd = seqdb_command.CalculatePhylogeneticTreeCommand(
             user=self.seqdb_user,
             protocol_id=cmd.seqdb_protocol_id,
             tree_algorithm=seqdb_enum.TreeAlgorithm[cmd.tree_algorithm_code.value],

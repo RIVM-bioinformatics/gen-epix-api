@@ -52,41 +52,19 @@ class CalculateSeqDistancesForNewProfilesCommand(Command):
     similarity search).
     """
 
-    seq_profiles: list[model.SeqProfile] | None = Field(
-        default=None,
+    seq_profiles: list[model.SeqProfile] = Field(
         description="List of new sequence profiles to calculate distances for.",
     )
-    allele_profiles: list[model.AlleleProfile] | None = Field(
-        default=None,
-        description="List of new allele profiles to calculate distances for.",
-    )
-    snp_profiles: list[model.SnpProfile] | None = Field(
-        default=None,
-        description="List of new SNP profiles to calculate distances for.",
-    )
-    mlva_profiles: list[model.MlvaProfile] | None = Field(
-        default=None,
-        description="List of new MLVA profiles to calculate distances for.",
-    )
-    kmer_profiles: list[model.KmerProfile] | None = Field(
-        default=None,
-        description="List of new k-mer profiles to calculate distances for.",
-    )
 
 
-class GeneratePhylogeneticTreeCommand(Command):
-    pass
-
-
-class RetrievePhylogeneticTreeCommand(Command):
+class CalculatePhylogeneticTreeCommand(Command):
     """
-    Retrieve a phylogenetic tree based on the given protocol, tree
-    algorithm, and query profile IDs. The returned tree is expected to contain
-    the query profiles as well as any additional profiles that are within the maximum
-    distance threshold specified in the protocol for at least one
-    of the query profiles. The leaf names in the tree correspond to the profile IDs,
-    but can optionally be replaced with custom leaf names provided in the command
-    (e.g. for better readability of the tree).
+    Calculate a phylogenetic tree based on the given protocol, tree algorithm, and query
+    profile IDs. The returned tree is expected to contain the query profiles as well as
+    any additional profiles that are within the maximum distance threshold specified in
+    the protocol for at least one of the query profiles. The leaf names in the tree
+    correspond to the profile IDs, but can optionally be replaced with custom leaf names
+    provided in the command (e.g. for better readability of the tree).
     """
 
     protocol_id: UUID = Field(
@@ -163,28 +141,12 @@ class AlleleCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Allele
 
 
-class AlleleProfileCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.AlleleProfile
-
-
-class AlleleProfileIdentifierCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.AlleleProfileIdentifier
-
-
 class AstMeasurementCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.AstMeasurement
 
 
 class AstPredictionCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.AstPrediction
-
-
-class KmerProfileCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.KmerProfile
-
-
-class KmerProfileIdentifierCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.KmerProfileIdentifier
 
 
 class LocusCodeMapCrudCommand(CrudCommand):
@@ -195,24 +157,8 @@ class LocusCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Locus
 
 
-class LocusProfileCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.LocusProfile
-
-
-class LocusProfileIdentifierCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.LocusProfileIdentifier
-
-
 class LocusSetCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.LocusSet
-
-
-class MlvaProfileCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.MlvaProfile
-
-
-class MlvaProfileIdentifierCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.MlvaProfileIdentifier
 
 
 class PcrMeasurementCrudCommand(CrudCommand):
@@ -271,16 +217,16 @@ class SeqIdentifierCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.SeqIdentifier
 
 
+class SeqProfileCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.SeqProfile
+
+
+class SeqProfileIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.SeqProfileIdentifier
+
+
 class SeqTaxonomyCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.SeqTaxonomy
-
-
-class SnpProfileCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.SnpProfile
-
-
-class SnpProfileIdentifierCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.SnpProfileIdentifier
 
 
 class TaxonCrudCommand(CrudCommand):

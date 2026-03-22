@@ -8,7 +8,7 @@ import httpx
 from gen_epix.commondb.services.remote_app import CommondbRemoteApp
 from gen_epix.fastapp.model import Command
 from gen_epix.seqdb.api import (
-    RetrievePhylogeneticTreeRequestBody,
+    CalculatePhylogeneticTreeRequestBody,
     RetrieveSeqFastaRequestBody,
     RetrieveSimilarProfilesRequestBody,
 )
@@ -22,7 +22,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
     DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN = 60  # seconds
 
     ROUTE_MAP: dict[type[Command], str] = {
-        command.RetrievePhylogeneticTreeCommand: "/retrieve/phylogenetic_tree",
+        command.CalculatePhylogeneticTreeCommand: "/retrieve/phylogenetic_tree",
         command.RetrieveSeqFastaCommand: "/retrieve/seq_fasta",
         command.CreateFileCommand: "/create/file",
         command.RetrieveSimilarProfilesCommand: "/retrieve/similar_profiles",
@@ -33,8 +33,8 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         super().__init__(DOMAIN, *args, **kwargs)
         # Register routes and handlers
         self.register_route(
-            command.RetrievePhylogeneticTreeCommand,
-            self.ROUTE_MAP[command.RetrievePhylogeneticTreeCommand],
+            command.CalculatePhylogeneticTreeCommand,
+            self.ROUTE_MAP[command.CalculatePhylogeneticTreeCommand],
         )
         self.register_route(
             command.RetrieveSeqFastaCommand,
@@ -53,7 +53,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
             self.ROUTE_MAP[command.UploadSamplesCommand],
         )
         self.register_handler(
-            command.RetrievePhylogeneticTreeCommand,
+            command.CalculatePhylogeneticTreeCommand,
             self.retrieve_phylogenetic_tree,
         )
         self.register_handler(
@@ -75,12 +75,12 @@ class SeqdbRemoteApp(CommondbRemoteApp):
 
     def retrieve_phylogenetic_tree(
         self,
-        cmd: command.RetrievePhylogeneticTreeCommand,
+        cmd: command.CalculatePhylogeneticTreeCommand,
     ) -> model.PhylogeneticTree | None:
         headers = self.get_headers(cmd)
         route = self.get_route(cmd)
 
-        request_body = RetrievePhylogeneticTreeRequestBody(
+        request_body = CalculatePhylogeneticTreeRequestBody(
             protocol_id=cmd.protocol_id,
             tree_algorithm=cmd.tree_algorithm,
             profile_ids=cmd.profile_ids,

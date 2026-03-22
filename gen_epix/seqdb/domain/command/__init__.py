@@ -84,46 +84,22 @@ from gen_epix.seqdb.domain.command.file import CreateFileCommand as CreateFileCo
 from gen_epix.seqdb.domain.command.file import FileCrudCommand as FileCrudCommand
 from gen_epix.seqdb.domain.command.seq import AlleleCrudCommand as AlleleCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
-    AlleleProfileCrudCommand as AlleleProfileCrudCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
-    AlleleProfileIdentifierCrudCommand as AlleleProfileIdentifierCrudCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
     AstMeasurementCrudCommand as AstMeasurementCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
     AstPredictionCrudCommand as AstPredictionCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
+    CalculatePhylogeneticTreeCommand as CalculatePhylogeneticTreeCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
     CalculateSeqDistancesForNewProfilesCommand as CalculateSeqDistancesForNewProfilesCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
-    GeneratePhylogeneticTreeCommand as GeneratePhylogeneticTreeCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
-    KmerProfileCrudCommand as KmerProfileCrudCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
-    KmerProfileIdentifierCrudCommand as KmerProfileIdentifierCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
     LocusCodeMapCrudCommand as LocusCodeMapCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import LocusCrudCommand as LocusCrudCommand
-from gen_epix.seqdb.domain.command.seq import (
-    LocusProfileCrudCommand as LocusProfileCrudCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
-    LocusProfileIdentifierCrudCommand as LocusProfileIdentifierCrudCommand,
-)
 from gen_epix.seqdb.domain.command.seq import LocusSetCrudCommand as LocusSetCrudCommand
-from gen_epix.seqdb.domain.command.seq import (
-    MlvaProfileCrudCommand as MlvaProfileCrudCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
-    MlvaProfileIdentifierCrudCommand as MlvaProfileIdentifierCrudCommand,
-)
 from gen_epix.seqdb.domain.command.seq import (
     PcrMeasurementCrudCommand as PcrMeasurementCrudCommand,
 )
@@ -136,9 +112,6 @@ from gen_epix.seqdb.domain.command.seq import (
     RefAlleleCrudCommand as RefAlleleCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import RefSeqCrudCommand as RefSeqCrudCommand
-from gen_epix.seqdb.domain.command.seq import (
-    RetrievePhylogeneticTreeCommand as RetrievePhylogeneticTreeCommand,
-)
 from gen_epix.seqdb.domain.command.seq import (
     RetrieveSamplesCommand as RetrieveSamplesCommand,
 )
@@ -172,13 +145,13 @@ from gen_epix.seqdb.domain.command.seq import (
     SeqIdentifierCrudCommand as SeqIdentifierCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
+    SeqProfileCrudCommand as SeqProfileCrudCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
+    SeqProfileIdentifierCrudCommand as SeqProfileIdentifierCrudCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
     SeqTaxonomyCrudCommand as SeqTaxonomyCrudCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
-    SnpProfileCrudCommand as SnpProfileCrudCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
-    SnpProfileIdentifierCrudCommand as SnpProfileIdentifierCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import TaxonCrudCommand as TaxonCrudCommand
 from gen_epix.seqdb.domain.command.seq import TaxonSetCrudCommand as TaxonSetCrudCommand
@@ -203,20 +176,11 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
     | set(),
     enum.ServiceType.SEQ: {
         AlleleCrudCommand,
-        AlleleProfileCrudCommand,
-        AlleleProfileIdentifierCrudCommand,
         AstMeasurementCrudCommand,
         AstPredictionCrudCommand,
-        GeneratePhylogeneticTreeCommand,
-        KmerProfileCrudCommand,
-        KmerProfileIdentifierCrudCommand,
         LocusCodeMapCrudCommand,
         LocusCrudCommand,
-        LocusProfileCrudCommand,
-        LocusProfileIdentifierCrudCommand,
         LocusSetCrudCommand,
-        MlvaProfileCrudCommand,
-        MlvaProfileIdentifierCrudCommand,
         PcrMeasurementCrudCommand,
         ProtocolCrudCommand,
         UploadSamplesCommand,
@@ -224,7 +188,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         ReadSetIdentifierCrudCommand,
         RefAlleleCrudCommand,
         RefSeqCrudCommand,
-        RetrievePhylogeneticTreeCommand,
+        CalculatePhylogeneticTreeCommand,
         RetrieveSeqFastaCommand,
         RetrieveSimilarProfilesCommand,
         CalculateSeqDistancesForNewProfilesCommand,
@@ -237,9 +201,9 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         SeqCrudCommand,
         SeqDistanceCrudCommand,
         SeqIdentifierCrudCommand,
+        SeqProfileCrudCommand,
+        SeqProfileIdentifierCrudCommand,
         SeqTaxonomyCrudCommand,
-        SnpProfileCrudCommand,
-        SnpProfileIdentifierCrudCommand,
         TaxonCrudCommand,
         TaxonSetCrudCommand,
         TaxonSetMemberCrudCommand,

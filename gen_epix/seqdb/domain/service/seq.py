@@ -14,7 +14,7 @@ class BaseSeqService(BaseService):
         f = self.app.register_handler
         self.register_default_crud_handlers()
         f(
-            command.RetrievePhylogeneticTreeCommand,
+            command.CalculatePhylogeneticTreeCommand,
             self.retrieve_phylogenetic_tree,
         )
         f(command.RetrieveSamplesCommand, self.retrieve_samples)
@@ -43,14 +43,6 @@ class BaseSeqService(BaseService):
             self.crud_allele,
         )
         f(
-            command.AlleleProfileCrudCommand,
-            self.crud_allele_profile,
-        )
-        f(
-            command.AlleleProfileIdentifierCrudCommand,
-            self.crud_allele_profile_identifier,
-        )
-        f(
             command.AstMeasurementCrudCommand,
             self.crud_ast_measurement,
         )
@@ -63,14 +55,6 @@ class BaseSeqService(BaseService):
             self.crud_file,
         )
         f(
-            command.KmerProfileCrudCommand,
-            self.crud_kmer_profile,
-        )
-        f(
-            command.KmerProfileIdentifierCrudCommand,
-            self.crud_kmer_profile_identifier,
-        )
-        f(
             command.LocusCrudCommand,
             self.crud_locus,
         )
@@ -79,24 +63,16 @@ class BaseSeqService(BaseService):
             self.crud_locus_code_map,
         )
         f(
-            command.LocusProfileCrudCommand,
-            self.crud_locus_profile,
+            command.SeqProfileCrudCommand,
+            self.crud_seq_profile,
         )
         f(
-            command.LocusProfileIdentifierCrudCommand,
-            self.crud_locus_profile_identifier,
+            command.SeqProfileIdentifierCrudCommand,
+            self.crud_seq_profile_identifier,
         )
         f(
             command.LocusSetCrudCommand,
             self.crud_locus_set,
-        )
-        f(
-            command.MlvaProfileCrudCommand,
-            self.crud_mlva_profile,
-        )
-        f(
-            command.MlvaProfileIdentifierCrudCommand,
-            self.crud_mlva_profile_identifier,
         )
         f(
             command.PcrMeasurementCrudCommand,
@@ -159,14 +135,6 @@ class BaseSeqService(BaseService):
             self.crud_seq_taxonomy,
         )
         f(
-            command.SnpProfileCrudCommand,
-            self.crud_snp_profile,
-        )
-        f(
-            command.SnpProfileIdentifierCrudCommand,
-            self.crud_snp_profile_identifier,
-        )
-        f(
             command.TaxonCrudCommand,
             self.crud_taxon,
         )
@@ -189,7 +157,7 @@ class BaseSeqService(BaseService):
 
     @abc.abstractmethod
     def retrieve_phylogenetic_tree(
-        self, cmd: command.RetrievePhylogeneticTreeCommand
+        self, cmd: command.CalculatePhylogeneticTreeCommand
     ) -> model.PhylogeneticTree | None:
         raise NotImplementedError()
 
@@ -250,36 +218,6 @@ class BaseSeqService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def crud_allele_profile(
-        self,
-        cmd: command.AlleleProfileCrudCommand,
-    ) -> (
-        model.AlleleProfile
-        | list[model.AlleleProfile]
-        | UUID
-        | list[UUID]
-        | bool
-        | list[bool]
-        | None
-    ):
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def crud_allele_profile_identifier(
-        self,
-        cmd: command.AlleleProfileIdentifierCrudCommand,
-    ) -> (
-        model.AlleleProfileIdentifier
-        | list[model.AlleleProfileIdentifier]
-        | UUID
-        | list[UUID]
-        | bool
-        | list[bool]
-        | None
-    ):
-        raise NotImplementedError()
-
-    @abc.abstractmethod
     def crud_ast_measurement(
         self,
         cmd: command.AstMeasurementCrudCommand,
@@ -317,36 +255,6 @@ class BaseSeqService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def crud_kmer_profile(
-        self,
-        cmd: command.KmerProfileCrudCommand,
-    ) -> (
-        model.KmerProfile
-        | list[model.KmerProfile]
-        | UUID
-        | list[UUID]
-        | bool
-        | list[bool]
-        | None
-    ):
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def crud_kmer_profile_identifier(
-        self,
-        cmd: command.KmerProfileIdentifierCrudCommand,
-    ) -> (
-        model.KmerProfileIdentifier
-        | list[model.KmerProfileIdentifier]
-        | UUID
-        | list[UUID]
-        | bool
-        | list[bool]
-        | None
-    ):
-        raise NotImplementedError()
-
-    @abc.abstractmethod
     def crud_locus(
         self,
         cmd: command.LocusCrudCommand,
@@ -369,12 +277,12 @@ class BaseSeqService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def crud_locus_profile(
+    def crud_seq_profile(
         self,
-        cmd: command.LocusProfileCrudCommand,
+        cmd: command.SeqProfileCrudCommand,
     ) -> (
-        model.LocusProfile
-        | list[model.LocusProfile]
+        model.SeqProfile
+        | list[model.SeqProfile]
         | UUID
         | list[UUID]
         | bool
@@ -384,12 +292,12 @@ class BaseSeqService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def crud_locus_profile_identifier(
+    def crud_seq_profile_identifier(
         self,
-        cmd: command.LocusProfileIdentifierCrudCommand,
+        cmd: command.SeqProfileIdentifierCrudCommand,
     ) -> (
-        model.LocusProfileIdentifier
-        | list[model.LocusProfileIdentifier]
+        model.SeqProfileIdentifier
+        | list[model.SeqProfileIdentifier]
         | UUID
         | list[UUID]
         | bool
@@ -405,36 +313,6 @@ class BaseSeqService(BaseService):
     ) -> (
         model.LocusSet
         | list[model.LocusSet]
-        | UUID
-        | list[UUID]
-        | bool
-        | list[bool]
-        | None
-    ):
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def crud_mlva_profile(
-        self,
-        cmd: command.MlvaProfileCrudCommand,
-    ) -> (
-        model.MlvaProfile
-        | list[model.MlvaProfile]
-        | UUID
-        | list[UUID]
-        | bool
-        | list[bool]
-        | None
-    ):
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def crud_mlva_profile_identifier(
-        self,
-        cmd: command.MlvaProfileIdentifierCrudCommand,
-    ) -> (
-        model.MlvaProfileIdentifier
-        | list[model.MlvaProfileIdentifier]
         | UUID
         | list[UUID]
         | bool
@@ -640,36 +518,6 @@ class BaseSeqService(BaseService):
     ) -> (
         model.SeqTaxonomy
         | list[model.SeqTaxonomy]
-        | UUID
-        | list[UUID]
-        | bool
-        | list[bool]
-        | None
-    ):
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def crud_snp_profile(
-        self,
-        cmd: command.SnpProfileCrudCommand,
-    ) -> (
-        model.SnpProfile
-        | list[model.SnpProfile]
-        | UUID
-        | list[UUID]
-        | bool
-        | list[bool]
-        | None
-    ):
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def crud_snp_profile_identifier(
-        self,
-        cmd: command.SnpProfileIdentifierCrudCommand,
-    ) -> (
-        model.SnpProfileIdentifier
-        | list[model.SnpProfileIdentifier]
         | UUID
         | list[UUID]
         | bool

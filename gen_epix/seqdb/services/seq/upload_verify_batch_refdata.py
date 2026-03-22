@@ -6,7 +6,6 @@ from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import UploadResult
 from gen_epix.commondb.services import BatchUploader
 from gen_epix.fastapp.enum import CrudOperation
-from gen_epix.filter.uuid_set import UuidSetFilter
 from gen_epix.seqdb.domain import command, enum, model
 
 
@@ -25,24 +24,44 @@ def _verify_batch_refdata_allele_profiles(
     sample_results = retval.samples
 
     # Get all allele profiles that are to be processed
-    allele_profiles: list[model.AlleleProfileForUpload] = []
-    allele_profile_results: list[UploadResult] = []
+    profiles: list[model.SeqProfileForUpload] = []
+    profile_results: list[UploadResult] = []
+    profile_indices: list[tuple[int, int]] = (
+        []
+    )  # list of (sample index, profile index) tuples to be able to assign errors to the correct profile results
     for i, (sample, sample_result) in enumerate(zip(samples, sample_results)):
-        objs = sample.allele_profiles or []
-        obj_results = sample_result.allele_profiles or []
-        for j, (obj, obj_result) in enumerate(zip(objs, obj_results)):
-            if obj_result.status != EtlStatus.PENDING:
+        curr_profiles = sample.seq_profiles or []
+        curr_profile_results = sample_result.seq_profiles or []
+        for j, (profile, profile_result) in enumerate(
+            zip(curr_profiles, curr_profile_results)
+        ):
+            if profile_result.status != EtlStatus.PENDING:
                 continue
-            allele_profiles.append(obj)
-            allele_profile_results.append(obj_result)
-    if not allele_profiles:
+            if profile.seq_profile_type not in enum.SeqProfileTypeSet.ALLELE.value:
+                continue
+            profiles.append(profile)
+            profile_results.append(profile_result)
+            profile_indices.append((i, j))
+    if not profiles:
         # Nothing to do
         return success
 
+    # Retrieve all protocols
+    uq_protocol_ids = {x.protocol_id for x in profiles}
+    protocols: list[model.Protocol] = self.service.repository.crud(  # type: ignore[assignment]
+        uow,
+        user_id,
+        model.Protocol,
+        None,
+        list(uq_protocol_ids),
+        CrudOperation.READ_SOME,
+    )
+    protocol_map = {x.id: x for x in protocols}
+
     # Retrieve locus sets
     locus_set_ids = {
-        x.locus_set_id
-        for x in allele_profiles
+        protocol_map[x.protocol_id].locus_set_id
+        for x in profiles
         if x.locus_code_map_id is not None and x.locus_code_map_id != NULL_ID
     }
     locus_sets: list[model.LocusSet] = self.service.repository.crud(  # type: ignore[assignment]
@@ -58,7 +77,7 @@ def _verify_batch_refdata_allele_profiles(
     # Retrieve locus code maps
     locus_code_map_ids = {
         x.locus_code_map_id
-        for x in allele_profiles
+        for x in profiles
         if x.locus_code_map_id is not None and x.locus_code_map_id != NULL_ID
     }
     locus_code_maps: list[model.LocusCodeMap] = self.service.repository.crud(  # type: ignore[assignment]
@@ -82,10 +101,12 @@ def _verify_batch_refdata_allele_profiles(
     allele_ids: list[UUID | None]
 
     # Convert to allele_profile representation and get unique allele IDs
-    for profile, profile_result in zip(allele_profiles, allele_profile_results):
+    for profile, profile_result in zip(profiles, profile_results):
         if profile_result.status != EtlStatus.PENDING:
             continue
-        locus_ids = locus_set_map[profile.locus_set_id].locus_ids
+        locus_ids = locus_set_map[
+            protocol_map[profile.protocol_id].locus_set_id
+        ].locus_ids
         n_loci = len(locus_ids)
         locus_allele_id_map = profile.locus_allele_id_map
         if locus_allele_id_map is not None:
@@ -93,40 +114,38 @@ def _verify_batch_refdata_allele_profiles(
             locus_code_map_id = profile.locus_code_map_id
             locus_code_map = locus_code_map_map[locus_code_map_id]
             rev_locus_code_map = rev_locus_code_map_map[locus_code_map_id]
-            invalid_locus_codes = (
-                set(locus_allele_id_map.keys())
-                - locus_code_map_locus_codes[locus_code_map_id]
-            )
-            if invalid_locus_codes:
-                # Some locus codes are invalid
-                success = False
-                if len(invalid_locus_codes) <= 5:
-                    invalid_codes_str = ", ".join(sorted(list(invalid_locus_codes)))
-                else:
-                    invalid_codes_str = (
-                        ", ".join(sorted(list(invalid_locus_codes)[:5]))
-                        + f", ... (and {len(invalid_locus_codes) - 5} more)"
-                    )
-                profile_result.add_error(
-                    "e7a4b2d1",
-                    f"Invalid locus codes for locus code map {locus_code_map.code}: {invalid_codes_str}",
-                )
-                continue
+            # TODO: 3034 this check is no longer needed since the locus_id is simply the first observed one rather than required to match. Remove once e.g. tests are updated as well.
+            # invalid_locus_codes = (
+            #     set(locus_allele_id_map.keys())
+            #     - locus_code_map_locus_codes[locus_code_map_id]
+            # )
+            # if invalid_locus_codes:
+            #     # Some locus codes are invalid
+            #     success = False
+            #     if len(invalid_locus_codes) <= 5:
+            #         invalid_codes_str = ", ".join(sorted(list(invalid_locus_codes)))
+            #     else:
+            #         invalid_codes_str = (
+            #             ", ".join(sorted(list(invalid_locus_codes)[:5]))
+            #             + f", ... (and {len(invalid_locus_codes) - 5} more)"
+            #         )
+            #     profile_result.add_error(
+            #         "e7a4b2d1",
+            #         f"Invalid locus codes for locus code map {locus_code_map.code}: {invalid_codes_str}",
+            #     )
+            #     continue
             allele_ids = [
                 locus_allele_id_map.get(rev_locus_code_map[x]) for x in locus_ids
             ]
             profile.allele_ids = allele_ids
             profile.locus_allele_id_map = None
-        elif profile.allele_profile is not None:
-            # Convert allele_profile representation to allele_ids
-            if (
-                profile.allele_profile_format
-                == enum.AlleleProfileFormat.ORDERED_ALLELE_IDS
-            ):
+        elif len(profile.content):
+            # Convert content representation to allele_ids
+            if profile.format == enum.SeqProfileFormat.ORDERED_ALLELE_IDS:
                 allele_ids = profile.get_allele_ids()
             else:
                 raise NotImplementedError(
-                    f"Allele profile format {profile.allele_profile_format} not implemented"
+                    f"Allele profile format {profile.format} not implemented"
                 )
         elif profile.allele_ids is not None:
             allele_ids = profile.allele_ids
@@ -145,64 +164,95 @@ def _verify_batch_refdata_allele_profiles(
             continue
         uq_allele_ids.update(x for x in allele_ids if x is not None and x != NULL_ID)
 
-    # Retrieve existing (allele ID, locus ID) pairs in chunks
+    # TODO: 3034 no longer needed to retrieve (allele ID, locus ID) pairs since we no longer require the locus ID to match the existing one. Remove once e.g. tests are updated as well.
+    # # Retrieve existing (allele ID, locus ID) pairs in chunks
+    # uq_allele_ids_list = list(uq_allele_ids)
+    # chunk_size = 1000  # TODO: make configurable
+    # existing_allele_locus_map: dict[UUID, UUID] = {}
+    # for i in range(0, len(uq_allele_ids_list), chunk_size):
+    #     curr_allele_ids = uq_allele_ids_list[
+    #         i : min(i + chunk_size, len(uq_allele_ids_list))
+    #     ]
+    #     result_iter = self.service.repository.read_fields(
+    #         uow,
+    #         user_id,
+    #         model.Allele,
+    #         ["id", "locus_id"],
+    #         filter=UuidSetFilter(
+    #             key="id",
+    #             members=frozenset(curr_allele_ids),
+    #         ),
+    #     )
+    #     existing_allele_locus_map.update({x[0]: x[1] for x in result_iter})
+
+    # Retrieve existing allele IDs in chunks to avoid hitting parameter limits in the database
     uq_allele_ids_list = list(uq_allele_ids)
     chunk_size = 1000  # TODO: make configurable
-    existing_allele_locus_map: dict[UUID, UUID] = {}
+    existing_allele_ids: set[UUID] = set()
+    # existing_allele_locus_map: dict[UUID, UUID] = {}
     for i in range(0, len(uq_allele_ids_list), chunk_size):
-        result_iter = self.service.repository.read_fields(
+        curr_allele_ids = uq_allele_ids_list[
+            i : min(i + chunk_size, len(uq_allele_ids_list))
+        ]
+        is_existing: list[bool] = self.service.repository.crud(  # type: ignore[assignment]
             uow,
             user_id,
             model.Allele,
-            ["id", "locus_id"],
-            filter=UuidSetFilter(
-                key="id",
-                members=frozenset(
-                    uq_allele_ids_list[i : min(i + chunk_size, len(uq_allele_ids_list))]
-                ),
-            ),
+            None,
+            curr_allele_ids,
+            CrudOperation.EXISTS_SOME,
         )
-        existing_allele_locus_map.update({x[0]: x[1] for x in result_iter})
+        existing_allele_ids.update(
+            allele_id
+            for allele_id, exists in zip(curr_allele_ids, is_existing)
+            if exists
+        )
+    new_allele_ids = uq_allele_ids - existing_allele_ids
 
-    # Verify locus IDs of existing alleles and represent as allele_profile if not already the case
+    # Convert to content represent as ORDERED_ALLELE_IDS if not already the case
+    # Record the first observed locus ID for each new allele ID to be able to set the locus ID for any new alleles
     new_allele_locus_map: dict[UUID, UUID] = {}
-    for i, (profile, profile_result) in enumerate(
-        zip(allele_profiles, allele_profile_results)
-    ):
+    for i, (profile, profile_result) in enumerate(zip(profiles, profile_results)):
         if profile_result.status != EtlStatus.PENDING:
             continue
-        locus_ids = locus_set_map[profile.locus_set_id].locus_ids
+        locus_ids = locus_set_map[
+            protocol_map[profile.protocol_id].locus_set_id
+        ].locus_ids
         assert profile.allele_ids is not None
         allele_ids = profile.allele_ids
-        n_loci = len(locus_ids)
-        invalid_locus_allele_pairs: list[tuple[UUID, UUID]] = []
-        for locus_id, allele_id in zip(locus_ids, allele_ids):
-            if allele_id is None or allele_id == NULL_ID:
+        # Record the first observed locus ID for each new allele ID
+        for allele_id, locus_id in zip(allele_ids, locus_ids):
+            if allele_id not in new_allele_ids or allele_id in new_allele_locus_map:
+                # Not a new allele or already observed
                 continue
-            if allele_id not in existing_allele_locus_map:
-                new_allele_locus_map[allele_id] = locus_id
-                continue
-            existing_locus_id = existing_allele_locus_map[allele_id]
-            if existing_locus_id != locus_id:
-                # Allele is associated with a different locus: add to invalid pairs
-                invalid_locus_allele_pairs.append((locus_id, allele_id))
-        if invalid_locus_allele_pairs:
-            # Some invalid (locus ID, allele ID) pairs found
-            success = False
-            _handle_locus_allele_pair_mismatch(
-                profile_result, invalid_locus_allele_pairs
-            )
+            assert allele_id is not None
+            new_allele_locus_map[allele_id] = locus_id
+        # TODO: 3034 no longer needed to check for mismatches between provided locus ID and existing locus ID since we no longer require the locus ID to match the existing one. Remove once e.g. tests are updated as well.
+        # invalid_locus_allele_pairs: list[tuple[UUID, UUID]] = []
+        # for locus_id, allele_id in zip(locus_ids, allele_ids):
+        #     if allele_id is None or allele_id == NULL_ID:
+        #         continue
+        #     if allele_id not in existing_allele_locus_map:
+        #         new_allele_locus_map[allele_id] = locus_id
+        #         continue
+        #     existing_locus_id = existing_allele_locus_map[allele_id]
+        #     if existing_locus_id != locus_id:
+        #         # Allele is associated with a different locus: add to invalid pairs
+        #         invalid_locus_allele_pairs.append((locus_id, allele_id))
+        # if invalid_locus_allele_pairs:
+        #     # Some invalid (locus ID, allele ID) pairs found
+        #     success = False
+        #     _handle_locus_allele_pair_mismatch(
+        #         profile_result, invalid_locus_allele_pairs
+        #     )
         # Convert to allele profile representation if not already the case
-        if profile.allele_profile != "":
+        if profile.content != "":
             continue
-        profile.allele_profile = model.AlleleProfile.get_sorted_allele_ids_profile(
+        profile.content = model.SeqProfile.get_ordered_allele_ids_representation(
             allele_ids
         )
-        profile.allele_profile_format = enum.AlleleProfileFormat.ORDERED_ALLELE_IDS
+        profile.format = enum.SeqProfileFormat.ORDERED_ALLELE_IDS
         profile.allele_ids = None
-        # Reset n_loci to 0 so AlleleProfile validator will auto-compute it from the base64 string
-        # (n_loci in AlleleProfile means "detected loci count", not total loci in set)
-        profile.n_loci = 0
 
     # Verify that any new alleles have been provided and set their locus IDs from the alleles in the sample data
     if new_allele_locus_map:
@@ -260,11 +310,11 @@ def _verify_batch_refdata_allele_profiles(
                 allele.locus_id = expected_locus_id
                 continue
             if locus_id != expected_locus_id:
-                # Incorrect locus ID
+                # Different locus ID, put the one derived from the profile
                 success = False
-                retval.add_error(
+                retval.add_warning(
                     "e4f3g2h1",
-                    f"Incorrect locus ID for new allele {allele.id}: expected {expected_locus_id}, got {locus_id}",
+                    f"Different locus ID for new allele {allele.id}: expected {expected_locus_id}, got {locus_id}, used the former",
                 )
         # Remove any extra alleles
         for index in sorted(extra_allele_indexes, reverse=True):

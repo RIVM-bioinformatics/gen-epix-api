@@ -178,56 +178,6 @@ class SeqIdentifier(Base, IdentifierMixin):
     seq: Mapped[Seq] = relationship(Seq, foreign_keys=[internal_id])
 
 
-class AlleleProfile(Base, RowMetadataMixin, QualityMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.AlleleProfile)
-
-    sample_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.AlleleProfile, "sample_id"
-    )
-    seq_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.AlleleProfile, "seq_id"
-    )
-    locus_set_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.AlleleProfile, "locus_set_id"
-    )
-    protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.AlleleProfile, "protocol_id"
-    )
-    n_loci: Mapped[int] = create_mapped_column(DOMAIN, model.AlleleProfile, "n_loci")
-    allele_profile: Mapped[str] = create_mapped_column(
-        DOMAIN, model.AlleleProfile, "allele_profile"
-    )
-    allele_profile_format: Mapped[int] = create_mapped_column(
-        DOMAIN, model.AlleleProfile, "allele_profile_format"
-    )
-    allele_profile_hash: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.AlleleProfile, "allele_profile_hash"
-    )
-
-    sample: Mapped[Sample] = relationship("Sample", foreign_keys=[sample_id])
-    seq: Mapped[Seq | None] = relationship("Seq", foreign_keys=[seq_id])
-    protocol: Mapped[Protocol] = relationship("Protocol", foreign_keys=[protocol_id])
-
-
-class AlleleProfileIdentifier(Base, IdentifierMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.AlleleProfileIdentifier)
-
-    internal_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.AlleleProfileIdentifier, "internal_id"
-    )
-    allele_profile: Mapped[AlleleProfile] = relationship(
-        AlleleProfile, foreign_keys=[internal_id]
-    )
-
-
 class AstMeasurement(
     Base, RowMetadataMixin, ContentMixin[enum.AstResultFormat], QualityMixin
 ):
@@ -270,139 +220,6 @@ class AstPrediction(
     sample: Mapped[Sample] = relationship("Sample", foreign_keys=[sample_id])
     seq: Mapped[Seq | None] = relationship("Seq", foreign_keys=[seq_id])
     protocol: Mapped[Protocol] = relationship("Protocol", foreign_keys=[protocol_id])
-
-
-class KmerProfile(Base, RowMetadataMixin, QualityMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.KmerProfile)
-
-    sample_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.KmerProfile, "sample_id"
-    )
-    seq_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.KmerProfile, "seq_id"
-    )
-    protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.KmerProfile, "protocol_id"
-    )
-    kmer_profile: Mapped[str] = create_mapped_column(
-        DOMAIN, model.KmerProfile, "kmer_profile"
-    )
-    kmer_profile_format: Mapped[int] = create_mapped_column(
-        DOMAIN, model.KmerProfile, "kmer_profile_format"
-    )
-    kmer_profile_hash: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.KmerProfile, "kmer_profile_hash"
-    )
-
-
-class KmerProfileIdentifier(Base, IdentifierMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.KmerProfileIdentifier)
-
-    internal_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.KmerProfileIdentifier, "internal_id"
-    )
-    kmer_profile: Mapped[KmerProfile] = relationship(
-        KmerProfile, foreign_keys=[internal_id]
-    )
-
-
-class LocusProfile(Base, RowMetadataMixin, QualityMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.LocusProfile)
-
-    sample_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.LocusProfile, "sample_id"
-    )
-    seq_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.LocusProfile, "seq_id"
-    )
-    locus_set_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.LocusProfile, "locus_set_id"
-    )
-    protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.LocusProfile, "protocol_id"
-    )
-    n_loci: Mapped[int] = create_mapped_column(DOMAIN, model.LocusProfile, "n_loci")
-    locus_profile: Mapped[str] = create_mapped_column(
-        DOMAIN, model.LocusProfile, "locus_profile"
-    )
-    locus_profile_format: Mapped[int] = create_mapped_column(
-        DOMAIN, model.LocusProfile, "locus_profile_format"
-    )
-    locus_profile_hash: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.LocusProfile, "locus_profile_hash"
-    )
-
-
-class LocusProfileIdentifier(Base, IdentifierMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.LocusProfileIdentifier)
-
-    internal_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.LocusProfileIdentifier, "internal_id"
-    )
-    locus_profile: Mapped[LocusProfile] = relationship(
-        LocusProfile, foreign_keys=[internal_id]
-    )
-
-
-class MlvaProfile(Base, RowMetadataMixin, QualityMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.MlvaProfile)
-
-    sample_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.MlvaProfile, "sample_id"
-    )
-    seq_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.MlvaProfile, "seq_id"
-    )
-    protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.MlvaProfile, "protocol_id"
-    )
-    locus_set_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.MlvaProfile, "locus_set_id"
-    )
-    mlva_profile: Mapped[str] = create_mapped_column(
-        DOMAIN, model.MlvaProfile, "mlva_profile"
-    )
-    mlva_profile_format: Mapped[int] = create_mapped_column(
-        DOMAIN, model.MlvaProfile, "mlva_profile_format"
-    )
-    mlva_profile_hash: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.MlvaProfile, "mlva_profile_hash"
-    )
-
-
-class MlvaProfileIdentifier(Base, IdentifierMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.MlvaProfileIdentifier)
-
-    internal_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.MlvaProfileIdentifier, "internal_id"
-    )
-    mlva_profile: Mapped[MlvaProfile] = relationship(
-        MlvaProfile, foreign_keys=[internal_id]
-    )
 
 
 class PcrMeasurement(
@@ -485,51 +302,6 @@ class SeqTaxonomy(
     )
 
 
-class SnpProfile(Base, RowMetadataMixin, QualityMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.SnpProfile)
-
-    sample_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SnpProfile, "sample_id"
-    )
-    seq_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.SnpProfile, "seq_id"
-    )
-    ref_seq_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SnpProfile, "ref_seq_id"
-    )
-    protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SnpProfile, "protocol_id"
-    )
-    snp_profile: Mapped[str] = create_mapped_column(
-        DOMAIN, model.SnpProfile, "snp_profile"
-    )
-    snp_profile_format: Mapped[enum.SnpProfileFormat] = create_mapped_column(
-        DOMAIN, model.SnpProfile, "snp_profile_format"
-    )
-    snp_profile_hash: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SnpProfile, "snp_profile_hash"
-    )
-
-
-class SnpProfileIdentifier(Base, IdentifierMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.SnpProfileIdentifier)
-
-    internal_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SnpProfileIdentifier, "internal_id"
-    )
-    snp_profile: Mapped[SnpProfile] = relationship(
-        SnpProfile, foreign_keys=[internal_id]
-    )
-
-
 class SeqProfile(Base, RowMetadataMixin, ContentMixin, QualityMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
@@ -553,6 +325,21 @@ class SeqProfile(Base, RowMetadataMixin, ContentMixin, QualityMixin):
     sample: Mapped[Sample] = relationship("Sample", foreign_keys=[sample_id])
     seq: Mapped[Seq | None] = relationship("Seq", foreign_keys=[seq_id])
     protocol: Mapped[Protocol] = relationship("Protocol", foreign_keys=[protocol_id])
+
+
+class SeqProfileIdentifier(Base, IdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.SeqProfileIdentifier)
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SeqProfileIdentifier, "internal_id"
+    )
+    seq_profile: Mapped[SeqProfile] = relationship(
+        SeqProfile, foreign_keys=[internal_id]
+    )
 
 
 class SeqDistance(Base, RowMetadataMixin, ContentMixin[enum.SeqDistanceFormat]):

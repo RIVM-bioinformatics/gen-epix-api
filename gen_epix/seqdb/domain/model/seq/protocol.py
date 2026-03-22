@@ -12,6 +12,7 @@ from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity, create_keys
 from gen_epix.fastapp.domain.util import create_links
+from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.enum import (
     ProtocolType,
     ProtocolTypeSet,
@@ -92,6 +93,14 @@ class Protocol(Model):
         "seq_distance_type": (ProtocolTypeSet.IS_SEQ_DISTANCE.value, frozenset()),
         "is_integer_distance": (ProtocolTypeSet.IS_SEQ_DISTANCE.value, frozenset()),
         "max_stored_distance": (ProtocolTypeSet.IS_SEQ_DISTANCE.value, frozenset()),
+    }
+    SEQ_PROFILE_DISTANCE_TYPE_MAP: ClassVar[
+        dict[enum.SeqProfileType, enum.SeqDistanceTypeSet]
+    ] = {
+        enum.SeqProfileType.ALLELE: enum.SeqDistanceTypeSet.ALLELE_PROFILE_BASED,
+        enum.SeqProfileType.SNP: enum.SeqDistanceTypeSet.SNP_PROFILE_BASED,
+        enum.SeqProfileType.KMER: enum.SeqDistanceTypeSet.KMER_PROFILE_BASED,
+        enum.SeqProfileType.MLVA: enum.SeqDistanceTypeSet.MLVA_PROFILE_BASED,
     }
     PROPS_MAX_JSON_LENGTH: ClassVar[int] = 2000
 

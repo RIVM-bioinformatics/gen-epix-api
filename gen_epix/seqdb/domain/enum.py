@@ -171,9 +171,9 @@ class TaxonRank(Enum):
 
 class QualityControlResult(IntEnum):
     PENDING = 1
-    PASS = 2
+    FAIL = 2
     WARN = 3
-    FAIL = 4
+    PASS = 4
 
     def is_usable(self) -> bool:
         return self in {QualityControlResult.PASS, QualityControlResult.WARN}
@@ -249,26 +249,6 @@ class SeqFormat(IntEnum):
     HASH_ONLY = 1  # Only the hash code of the sequence is known or stored
     STR_DNA = 2  # String of IUPAC DNA characters without gaps
     STR_DNA_INCL_GAP = 3  # String of IUPAC DNA characters including gaps
-
-
-class LocusProfileFormat(IntEnum):
-    LOCUS_PROFILE_FORMAT1 = 1
-
-
-class AlleleProfileFormat(IntEnum):
-    ORDERED_ALLELE_IDS = 1
-
-
-class SnpProfileFormat(IntEnum):
-    REF_ALN_SEQ = 1
-
-
-class MlvaProfileFormat(IntEnum):
-    ORDERED_REPEAT_NUMBERS = 1
-
-
-class KmerProfileFormat(IntEnum):
-    KMER_FREQUENCY_MAP = 1
 
 
 class SeqProfileFormat(IntEnum):
@@ -347,7 +327,7 @@ class ProtocolTypeSet(Enum):
             ProtocolType.SEQ_CLASSIFICATION,
         }
     )
-    HAS_OPTIONAL_SEQ_CATEGORY_SET: frozenset[ProtocolType] = frozenset()
+    HAS_OPTIONAL_SEQ_CATEGORY_SET = frozenset()  # type: ignore[var-annotated]
     HAS_LOCUS_SET = frozenset(
         {
             ProtocolType.LOCUS_PROFILE,
@@ -392,19 +372,21 @@ class SeqProfileTypeSet(Enum):
     )
 
 
-class SeqDistanceType(Enum):
-    ALLELE_HAMMING = "ALLELE_HAMMING"
-    SNP_HAMMING = "SNP_HAMMING"
-    MLVA_HAMMING = "MLVA_HAMMING"
-    MLVA_EUCLIDEAN = "MLVA_EUCLIDEAN"
-    KMER_EUCLIDEAN = "KMER_EUCLIDEAN"
+class SeqDistanceType(IntEnum):
+    SNP_HAMMING = 1
+    ALLELE_HAMMING = 2
+    MLVA_HAMMING = 3
+    MLVA_EUCLIDEAN = 4
+    KMER_EUCLIDEAN = 5
 
 
-class SeqDistanceProtocolTypeSet(Enum):
+class SeqDistanceTypeSet(Enum):
     ALLELE_PROFILE_BASED = frozenset({SeqDistanceType.ALLELE_HAMMING})
     SNP_PROFILE_BASED = frozenset({SeqDistanceType.SNP_HAMMING})
     KMER_PROFILE_BASED = frozenset({SeqDistanceType.KMER_EUCLIDEAN})
-    MLVA_PROFILE_BASED = frozenset({SeqDistanceType.MLVA_HAMMING})
+    MLVA_PROFILE_BASED = frozenset(
+        {SeqDistanceType.MLVA_HAMMING, SeqDistanceType.MLVA_EUCLIDEAN}
+    )
     HAMMING_DISTANCE_BASED = frozenset(
         {
             SeqDistanceType.ALLELE_HAMMING,
@@ -419,6 +401,7 @@ class SeqDistanceProtocolTypeSet(Enum):
         {
             SeqDistanceType.ALLELE_HAMMING,
             SeqDistanceType.MLVA_HAMMING,
+            SeqDistanceType.MLVA_EUCLIDEAN,
         }
     )
     REF_SEQ_BASED = frozenset(

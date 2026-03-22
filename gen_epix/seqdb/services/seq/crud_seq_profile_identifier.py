@@ -4,20 +4,20 @@ from gen_epix.seqdb.domain import command, model
 from gen_epix.seqdb.domain.service import BaseSeqService
 
 
-def seq_service_crud_allele_profile(
-    self: BaseSeqService, cmd: command.AlleleProfileCrudCommand
+def seq_service_crud_seq_profile_identifier(
+    self: BaseSeqService, cmd: command.SeqProfileIdentifierCrudCommand
 ) -> (
-    list[model.AlleleProfile]
-    | model.AlleleProfile
+    list[model.SeqProfileIdentifier]
+    | model.SeqProfileIdentifier
     | list[UUID]
     | UUID
     | list[bool]
     | bool
     | None
 ):
-    """Handle CRUD operations for AlleleProfile entities."""
+    """Handle CRUD operations for SeqProfileIdentifier entities."""
     user_id = cmd.user.id if cmd.user else None
-    allele_profiles: list[model.AlleleProfile] = cmd.get_objs()  # type: ignore[assignment]
+    seq_profile_identifiers: list[model.SeqProfileIdentifier] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():
         # TODO: Specific logic for create operation to be added
         pass

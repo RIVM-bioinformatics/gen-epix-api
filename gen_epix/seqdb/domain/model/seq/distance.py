@@ -47,6 +47,7 @@ class SeqDistance(
             }
         ),
     )
+
     seq_profile_id: UUID = Field(
         description="The unique identifier for the sequence profile.",
     )
