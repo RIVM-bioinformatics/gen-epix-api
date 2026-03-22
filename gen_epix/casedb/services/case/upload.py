@@ -10,7 +10,7 @@ from gen_epix.casedb.domain import exc
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.case_validator import CaseValidator
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
-from gen_epix.commondb.domain.enum import UploadStatus
+from gen_epix.commondb.domain.enum import EtlStatus
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import IdentifierForUpload
 from gen_epix.commondb.domain.model.upload import BaseBatchUploadResult
@@ -246,7 +246,7 @@ class CaseBatchUploader(BatchUploader):
         seqdb_retval: seqdb_model.SampleBatchUploadResult = self.service.app.handle(
             upload_samples_cmd
         )
-        success = seqdb_retval.get_status_count()[UploadStatus.FAILED] == 0
+        success = seqdb_retval.get_status_count()[EtlStatus.FAILED] == 0
 
         # Map verification results back to cases and child IDs back to cases
         for sample_index, sample_result in enumerate(seqdb_retval.samples):
@@ -306,10 +306,7 @@ class CaseBatchUploader(BatchUploader):
 
         # Update batch status if necessary
         status_count_after = batch_result.get_status_count()
-        if (
-            status_count_after[UploadStatus.FAILED]
-            > status_count_before[UploadStatus.FAILED]
-        ):
+        if status_count_after[EtlStatus.FAILED] > status_count_before[EtlStatus.FAILED]:
             success = False
         return success
 

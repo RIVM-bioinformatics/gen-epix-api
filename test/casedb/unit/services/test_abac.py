@@ -90,6 +90,7 @@ class BaseAbacTestCase(TestCase):
             generate_id=Mock(return_value="svc-id"),
             generate_timestamp=Mock(return_value=0),
             create_log_message=Mock(return_value=""),
+            get_feature_flag=Mock(return_value=False),
         )
         return app
 
@@ -418,6 +419,7 @@ class TestTempUpdateUserOrganization(BaseAbacTestCase):
     """Test update_user_own_organization behavior."""
 
     def test_no_change_same_org_returns_early(self) -> None:
+        self.app.get_feature_flag = Mock(return_value=True)  # type: ignore[method-assign]
         """When target org is same and not new user, returns early without side effects."""
         user = self.UserModelStub(self.user_id, self.org_id, {"ORG_USER"})
         cmd = self.create_update_user_cmd(user, self.org_id, is_new_user=False)
@@ -435,6 +437,7 @@ class TestTempUpdateUserOrganization(BaseAbacTestCase):
 
     def test_happy_path_transfers_policies_and_updates_user(self) -> None:
         """Transfers policies to new org, deletes old user policies, creates new, updates user, and clears caches."""
+        self.app.get_feature_flag = Mock(return_value=True)  # type: ignore[method-assign]
         user = self.create_user_stub(self.user_id, self.org_id, {"ORG_USER"})
         cmd = self.create_update_user_cmd(user, self.new_org_id, is_new_user=False)
 

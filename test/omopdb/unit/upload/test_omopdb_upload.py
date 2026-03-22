@@ -74,19 +74,14 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.commondb.domain.enum import (
-    Role,
-    UploadAction,
-    UploadStatus,
-    UploadStatusSet,
-)
+from gen_epix.commondb.domain.enum import EtlStatus, Role, UploadAction, UploadStatusSet
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import (
     IdentifierForUpload,
     IdentifierIssuer,
     User,
 )
-from gen_epix.commondb.domain.model.upload import UploadResult
+from gen_epix.commondb.domain.model.upload import ParentUploadResult, UploadResult
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.model import ModelFieldProps
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
@@ -482,27 +477,35 @@ class BasePersonUploadTestCase(TestCase):
 
     def assertStatusCount(
         self,
-        upload_result: UploadResult,
+        upload_result: ParentUploadResult,
         n_skipped: int = 0,
         n_created: int = 0,
         n_updated: int = 0,
         n_failed: int = 0,
         n_pending: int = 0,
         n_processed: int = 0,
+        n_initialized: int = 0,
+        n_error: int = 0,
+        n_mixed: int = 0,
+        n_success: int = 0,
         include_self: bool = False,
     ) -> None:
         expected_status_count = {
-            UploadStatus.SKIPPED: n_skipped,
-            UploadStatus.CREATED: n_created,
-            UploadStatus.UPDATED: n_updated,
-            UploadStatus.FAILED: n_failed,
-            UploadStatus.PENDING: n_pending,
-            UploadStatus.PROCESSED: n_processed,
+            EtlStatus.SKIPPED: n_skipped,
+            EtlStatus.CREATED: n_created,
+            EtlStatus.UPDATED: n_updated,
+            EtlStatus.FAILED: n_failed,
+            EtlStatus.PENDING: n_pending,
+            EtlStatus.PROCESSED: n_processed,
+            EtlStatus.INITIALIZED: n_initialized,
+            EtlStatus.ERROR: n_error,
+            EtlStatus.MIXED: n_mixed,
+            EtlStatus.SUCCESS: n_success,
         }
         actual_status_count = upload_result.get_status_count(include_self=include_self)  # type: ignore[attr-defined]
         different_status_count = {
             (x, expected_status_count[x], actual_status_count[x])
-            for x in UploadStatus
+            for x in EtlStatus
             if actual_status_count[x] != expected_status_count[x]
         }
         if different_status_count:
