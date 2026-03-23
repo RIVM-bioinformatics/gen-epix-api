@@ -212,7 +212,7 @@ def case_service_retrieve_cases_by_id(
 
         # Apply max results limit
         max_n_cases = case_type.read_max_n_cases
-        if len(cases) > max_n_cases:
+        if max_n_cases > 0 and len(cases) > max_n_cases:
             cases = cases[:max_n_cases]
 
     return cases
