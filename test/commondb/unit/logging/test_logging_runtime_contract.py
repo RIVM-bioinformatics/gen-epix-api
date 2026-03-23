@@ -47,7 +47,8 @@ def _load_class(path: str) -> object:
 
 
 def _emit_access_payload_via_dictconfig(yaml_path: Path) -> dict:
-    script = textwrap.dedent("""
+    script = textwrap.dedent(
+        """
         import json
         import logging
         import logging.config
@@ -87,7 +88,8 @@ def _emit_access_payload_via_dictconfig(yaml_path: Path) -> dict:
             "1.1",
             204,
         )
-        """)
+        """
+    )
 
     proc = subprocess.run(
         [sys.executable, "-c", script, str(yaml_path)],
@@ -107,7 +109,8 @@ def _emit_access_payload_via_dictconfig(yaml_path: Path) -> dict:
 
 
 def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[dict]:
-    script = textwrap.dedent("""\
+    script = textwrap.dedent(
+        """\
         import logging
         import logging.config
         import sys
@@ -161,7 +164,6 @@ def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[dict]:
         )
         """
     )
-        """)
 
     proc = subprocess.run(
         [sys.executable, "-c", script, str(yaml_path)],
@@ -184,7 +186,8 @@ def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[dict]:
 
 
 def _emit_log_level_resolution_payloads(enable_env_override: bool) -> list[dict]:
-    script = textwrap.dedent("""\
+    script = textwrap.dedent(
+        """\
         import json
         import logging
         import os
@@ -207,7 +210,8 @@ def _emit_log_level_resolution_payloads(enable_env_override: bool) -> list[dict]
         uvicorn_error_logger = logging.getLogger("uvicorn.error")
         uvicorn_error_logger.info("PROBE_UVICORN_INFO")
         uvicorn_error_logger.warning("PROBE_UVICORN_WARNING")
-        """)
+        """
+    )
 
     proc = subprocess.run(
         [sys.executable, "-c", script, "1" if enable_env_override else "0"],
