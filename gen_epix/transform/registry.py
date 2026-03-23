@@ -7,7 +7,7 @@ from typing import Any, TypeVar
 
 from gen_epix.transform.transformer import Transformer
 
-T = TypeVar("T", bound=Transformer)
+TransformerType = TypeVar("TransformerType", bound=Transformer)
 
 
 class Registry:
@@ -44,10 +44,12 @@ class Registry:
         return list(set(cls._transformers.keys()) | set(cls._factories.keys()))
 
     @classmethod
-    def decorator(cls, name: str) -> Callable[[type[T]], type[T]]:
+    def decorator(
+        cls, name: str
+    ) -> Callable[[type[TransformerType]], type[TransformerType]]:
         """Decorator for registering transformer classes."""
 
-        def wrapper(transformer_class: type[T]) -> type[T]:
+        def wrapper(transformer_class: type[TransformerType]) -> type[TransformerType]:
             cls.register(name, transformer_class)
             return transformer_class
 
@@ -56,10 +58,12 @@ class Registry:
     @classmethod
     def factory_decorator(
         cls, name: str
-    ) -> Callable[[Callable[..., T]], Callable[..., T]]:
+    ) -> Callable[[Callable[..., TransformerType]], Callable[..., TransformerType]]:
         """Decorator for registering factory functions."""
 
-        def wrapper(factory_fn: Callable[..., T]) -> Callable[..., T]:
+        def wrapper(
+            factory_fn: Callable[..., TransformerType],
+        ) -> Callable[..., TransformerType]:
             cls.register_factory(name, factory_fn)
             return factory_fn
 
@@ -73,11 +77,15 @@ class Registry:
 
 
 # Convenience decorators
-def register_transformer(name: str) -> Callable[[type[T]], type[T]]:
+def register_transformer(
+    name: str,
+) -> Callable[[type[TransformerType]], type[TransformerType]]:
     """Decorator to register a transformer class."""
     return Registry.decorator(name)
 
 
-def register_factory(name: str) -> Callable[[Callable[..., T]], Callable[..., T]]:
+def register_factory(
+    name: str,
+) -> Callable[[Callable[..., TransformerType]], Callable[..., TransformerType]]:
     """Decorator to register a transformer factory function."""
     return Registry.factory_decorator(name)

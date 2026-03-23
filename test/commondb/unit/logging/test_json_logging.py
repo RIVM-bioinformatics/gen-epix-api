@@ -9,6 +9,9 @@ import pytest
 from gen_epix.commondb.config.json_logging import JsonFormatter, UvicornAccessLogFilter
 
 
+_TRUNCATED_SUFFIX = "\u2026[truncated]"
+
+
 def _make_record(
     *,
     msg: str,
@@ -29,6 +32,12 @@ def _make_record(
         exc_info=exc_info,
         extra=extra,
     )
+
+
+def _format_payload(
+    formatter: JsonFormatter, record: logging.LogRecord
+) -> dict[str, Any]:
+    return json.loads(formatter.format(record))
 
 
 def test_green_formats_plain_message_and_expected_extras() -> None:
@@ -69,6 +78,14 @@ def test_keeps_message_when_json_merge_is_disabled() -> None:
     assert "event" not in payload
 
 
+@pytest.mark.parametrize("msg", ['["event","login"]', '{"event":'])
+def test_non_mergeable_json_like_messages_are_kept_as_plain_text(msg: str) -> None:
+    payload = _format_payload(JsonFormatter(), _make_record(msg=msg))
+
+    assert payload["message"] == msg
+    assert "event" not in payload
+
+
 def test_adds_exception_payload() -> None:
     formatter = JsonFormatter()
 
@@ -102,6 +119,20 @@ def test_uses_env_when_constructor_values_missing(
     assert payload["environment"] == "env-from-env"
 
 
+def test_uses_secondary_env_fallbacks_when_primary_env_vars_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("SERVICE_NAME", raising=False)
+    monkeypatch.delenv("ENVIRONMENT", raising=False)
+    monkeypatch.setenv("APP_NAME", "service-from-app-name")
+    monkeypatch.setenv("ASPNETCORE_ENVIRONMENT", "env-from-aspnet")
+
+    payload = _format_payload(JsonFormatter(), _make_record(msg="from secondary env"))
+
+    assert payload["service"] == "service-from-app-name"
+    assert payload["environment"] == "env-from-aspnet"
+
+
 # ---------------------------------------------------------------------------
 # Fix 1 – non-serializable extras must still produce valid JSON
 # ---------------------------------------------------------------------------
@@ -118,6 +149,16 @@ def test_non_serializable_extra_still_produces_valid_json() -> None:
     assert payload["message"] == "hello"
     # The non-serializable value should have been coerced to a string
     assert isinstance(payload["props"]["obj"], str)
+
+
+def test_custom_extras_key_is_used_for_extra_fields() -> None:
+    payload = _format_payload(
+        JsonFormatter(extras_key="context"),
+        _make_record(msg="hello", extra={"request_id": "req-1"}),
+    )
+
+    assert payload["context"]["request_id"] == "req-1"
+    assert "props" not in payload
 
 
 # ---------------------------------------------------------------------------
@@ -154,6 +195,20 @@ def test_merged_json_cannot_override_service_and_environment() -> None:
     assert payload["event"] == "ok"
 
 
+def test_structured_service_payload_is_preserved_under_service_meta() -> None:
+    formatter = JsonFormatter(service="svc-a", environment="prod")
+    record = _make_record(
+        msg='{"service":{"id":"svc-123","name":"UploadService"},"event":"ok"}'
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    assert payload["service"] == "svc-a"
+    assert payload["environment"] == "prod"
+    assert payload["service_meta"] == {"id": "svc-123", "name": "UploadService"}
+    assert payload["event"] == "ok"
+
+
 # ---------------------------------------------------------------------------
 # Fix 3 – sensitive key=value pairs are redacted
 # ---------------------------------------------------------------------------
@@ -181,6 +236,41 @@ def test_sensitive_password_is_redacted_in_plain_message() -> None:
     assert "password=[REDACTED]" in payload["message"]
 
 
+def test_sensitive_auth_fields_are_redacted_in_plain_message() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(
+        msg="auth token=tok-123 access_token=acc-123 refresh_token=ref-123 id_token=id-123 authorization=Bearer-123 jwt=jwt-123"
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    serialized = json.dumps(payload)
+    for secret in ("tok-123", "acc-123", "ref-123", "id-123", "Bearer-123", "jwt-123"):
+        assert secret not in serialized
+    assert "token=[REDACTED]" in payload["message"]
+    assert "access_token=[REDACTED]" in payload["message"]
+    assert "refresh_token=[REDACTED]" in payload["message"]
+    assert "id_token=[REDACTED]" in payload["message"]
+    assert "authorization=[REDACTED]" in payload["message"]
+    assert "jwt=[REDACTED]" in payload["message"]
+
+
+def test_sensitive_bearer_authorization_is_fully_redacted_in_plain_message() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(
+        msg="auth header authorization=Bearer abc.def.ghi token=tok-123"
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    serialized = json.dumps(payload)
+    assert "abc.def.ghi" not in serialized
+    assert "tok-123" not in serialized
+    assert payload["message"] == (
+        "auth header authorization=[REDACTED] token=[REDACTED]"
+    )
+
+
 def test_sensitive_value_is_redacted_in_string_extras() -> None:
     formatter = JsonFormatter()
     record = _make_record(
@@ -206,6 +296,49 @@ def test_sensitive_keys_are_redacted_in_merged_json_payload() -> None:
     assert payload["client_secret"] == "[REDACTED]"
     assert payload["nested"]["password"] == "[REDACTED]"
     assert payload["records"][0]["api_key"] == "[REDACTED]"
+
+
+def test_sensitive_auth_keys_are_redacted_in_merged_json_and_extras() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(
+        msg='{"jwt":"jwt-123","claims":{"sub":"user-1"},"authorization":"Bearer-123"}',
+        extra={
+            "payload": {
+                "token": "tok-123",
+                "access_token": "acc-123",
+                "refresh_token": "ref-123",
+                "id_token": "id-123",
+            }
+        },
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    serialized = json.dumps(payload)
+    for secret in ("jwt-123", "Bearer-123", "tok-123", "acc-123", "ref-123", "id-123"):
+        assert secret not in serialized
+    assert payload["jwt"] == "[REDACTED]"
+    assert payload["claims"] == "[REDACTED]"
+    assert payload["authorization"] == "[REDACTED]"
+    assert payload["props"]["payload"]["token"] == "[REDACTED]"
+    assert payload["props"]["payload"]["access_token"] == "[REDACTED]"
+    assert payload["props"]["payload"]["refresh_token"] == "[REDACTED]"
+    assert payload["props"]["payload"]["id_token"] == "[REDACTED]"
+
+
+def test_nested_claims_are_redacted_in_merged_json_payload() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(
+        msg='{"auth":{"claims":{"sub":"user-1","roles":["admin"]}},"event":"ok"}'
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    serialized = json.dumps(payload)
+    assert "user-1" not in serialized
+    assert "admin" not in serialized
+    assert payload["auth"]["claims"] == "[REDACTED]"
+    assert payload["event"] == "ok"
 
 
 def test_sensitive_keys_are_redacted_in_nested_extras() -> None:
@@ -280,8 +413,8 @@ def test_stacktrace_truncated_when_max_stacktrace_length_set() -> None:
 
     assert "exception" in payload
     stacktrace = payload["exception"]["stacktrace"]
-    assert len(stacktrace) <= 80 + len("…[truncated]")
-    assert stacktrace.endswith("…[truncated]")
+    assert len(stacktrace) <= 80 + len(_TRUNCATED_SUFFIX)
+    assert stacktrace.endswith(_TRUNCATED_SUFFIX)
 
 
 def test_stacktrace_not_truncated_below_threshold() -> None:
@@ -297,7 +430,7 @@ def test_stacktrace_not_truncated_below_threshold() -> None:
 
     payload = json.loads(formatter.format(record))
 
-    assert "…[truncated]" not in payload["exception"]["stacktrace"]
+    assert _TRUNCATED_SUFFIX not in payload["exception"]["stacktrace"]
 
 
 # ---------------------------------------------------------------------------
@@ -357,6 +490,7 @@ def test_started_command_info_has_command_id_alias() -> None:
     assert payload["message"] == "STARTED_COMMAND"
     assert payload["command"]["id"] == "cmd-123"
     assert payload["command_id"] == "cmd-123"
+    assert payload["user_id"] == "u-1"
 
 
 def test_started_command_debug_derives_command_id_from_command_object() -> None:
@@ -371,6 +505,20 @@ def test_started_command_debug_derives_command_id_from_command_object() -> None:
     assert payload["message"] == "STARTED_COMMAND"
     assert payload["command"]["object"]["id"] == "cmd-obj-123"
     assert payload["command_id"] == "cmd-obj-123"
+
+
+def test_nested_command_object_promotes_user_and_organization_aliases() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(
+        msg='{"code":"e94cad9b","msg":"STARTED_COMMAND","command":{"class":"DemoCommand","object":{"id":"cmd-obj-123","user":{"id":"u-123","organization_id":"org-456"}},"parent_command_id":null}}',
+        level=logging.DEBUG,
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    assert payload["command_id"] == "cmd-obj-123"
+    assert payload["user_id"] == "u-123"
+    assert payload["organization_id"] == "org-456"
 
 
 def test_null_msg_with_code_gets_non_empty_fallback_message() -> None:
@@ -488,6 +636,27 @@ def test_uvicorn_access_filter_passes_through_non_access_records() -> None:
     assert "http" not in payload
 
 
+def test_uvicorn_access_filter_leaves_unparseable_status_records_untouched() -> None:
+    filt = UvicornAccessLogFilter()
+    formatter = JsonFormatter()
+    logger = logging.getLogger("uvicorn.access")
+    record = logger.makeRecord(
+        name=logger.name,
+        level=logging.INFO,
+        fn="<uvicorn>",
+        lno=0,
+        msg='%s - "%s %s HTTP/%s" %s',
+        args=("127.0.0.1:12345", "GET", "/v1/cases", "1.1", "abc"),
+        exc_info=None,
+    )
+
+    filt.filter(record)
+    payload = _format_payload(formatter, record)
+
+    assert payload["message"] == '127.0.0.1:12345 - "GET /v1/cases HTTP/1.1" abc'
+    assert "http" not in payload
+
+
 def test_json_fields_merged_to_top_level_not_into_props() -> None:
     # _json_fields injected by a filter must appear at the top level of the
     # JSON output, not nested under 'props'.
@@ -541,3 +710,54 @@ def test_uvicorn_access_filter_hardens_plain_formatter_to_json_output() -> None:
     assert payload["level"] == "INFO"
     assert payload["message"] == "http.access GET /v1/runtime-hardening 200"
     assert payload["http"]["path"] == "/v1/runtime-hardening"
+
+
+def test_uvicorn_access_filter_reuses_existing_json_formatter_configuration() -> None:
+    # Contract: when uvicorn.access is repaired back to JSON, it must reuse the
+    # already-configured shared JsonFormatter behavior rather than install a
+    # fresh default formatter. The app centrally pins logger behavior in
+    # commondb.config.cfg, so formatter settings such as service/environment
+    # must stay aligned across managed loggers.
+    access_logger = logging.getLogger("uvicorn.access")
+    root_logger = logging.getLogger()
+
+    original_access_handlers = list(access_logger.handlers)
+    original_access_filters = list(access_logger.filters)
+    original_access_level = access_logger.level
+    original_access_propagate = access_logger.propagate
+    original_root_handlers = list(root_logger.handlers)
+
+    root_handler = logging.StreamHandler(StringIO())
+    root_handler.setFormatter(JsonFormatter(service="shared-service", environment="prod"))
+
+    stream = StringIO()
+    access_handler = logging.StreamHandler(stream)
+    access_handler.setFormatter(logging.Formatter("%(levelname)s %(message)s"))
+
+    try:
+        root_logger.handlers = [root_handler]
+        access_logger.handlers = [access_handler]
+        access_logger.filters = [UvicornAccessLogFilter()]
+        access_logger.level = logging.INFO
+        access_logger.propagate = False
+
+        access_logger.info(
+            '%s - "%s %s HTTP/%s" %d',
+            "127.0.0.1:54321",
+            "GET",
+            "/v1/discovered-formatter",
+            "1.1",
+            200,
+        )
+    finally:
+        access_logger.handlers = original_access_handlers
+        access_logger.filters = original_access_filters
+        access_logger.level = original_access_level
+        access_logger.propagate = original_access_propagate
+        root_logger.handlers = original_root_handlers
+
+    payload = json.loads(stream.getvalue().strip())
+
+    assert payload["service"] == "shared-service"
+    assert payload["environment"] == "prod"
+    assert payload["message"] == "http.access GET /v1/discovered-formatter 200"
