@@ -17,9 +17,7 @@ class DataLineageMixin:
     )
 
 
-def validate_str_primary_key_args(
-    data: Any, uuid_field_name: str, str_field_name: str
-) -> Any:
+def validate_str_key_args(data: Any, uuid_field_name: str, str_field_name: str) -> Any:
     """
     Validate and synchronize string-based primary key arguments.
 
@@ -60,9 +58,7 @@ def validate_str_primary_key_args(
             raise ValueError(msg)
 
 
-def validate_int_primary_key_args(
-    data: Any, uuid_field_name: str, int_field_name: str
-) -> Any:
+def validate_int_key_args(data: Any, uuid_field_name: str, int_field_name: str) -> Any:
     """
     Validate and synchronize integer-based primary key arguments.
 
@@ -87,6 +83,11 @@ def validate_int_primary_key_args(
         int_id = uuid_id
         data[int_field_name] = int_id
         uuid_id = None
+    elif int_id is None and uuid_id is not None and not isinstance(uuid_id, int):
+        # UUID provided directly without an int_id → normalise to UUID object and accept
+        if isinstance(uuid_id, str):
+            data[uuid_field_name] = UUID(uuid_id)
+        return
     elif not isinstance(int_id, int):
         raise ValueError(f"{int_field_name} not provided or not an integer")
     if uuid_id is None:
