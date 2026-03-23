@@ -68,6 +68,9 @@ class TestCasedbEdgeCasesAccess:
         """Auto-inject the env fixture into the class."""
         self.env = env
 
+        # if VERBOSE:
+        #     rich_print(self.env.db[model.DataCollection])
+
     def get_user(self, user_name: str) -> model.User:
         """Helper method to retrieve a user by name from the test client environment."""
         return self.env._get_obj(model.User, user_name)  # type: ignore[return-value]
@@ -239,6 +242,71 @@ class TestCasedbEdgeCasesAccess:
     ) -> None:
         user = self.get_user(spec.user_name)
 
-        # TODO: Do sanity check on some of the edge cases to validate expectations
+        # TODO LSP-2883: Do sanity check on some of the edge cases to validate expectations
         if VERBOSE:
             rich_print(EDGE_CASES_OP_BY_USER[spec.user_name])
+            # rich_print(self.env.db[model.Case])
+            # self.env.print_user_access_case_policies()
+            # self.env.print_cases()
+
+        root_user = self.env.get_root_user()
+
+        # Now retrieve cases for the user and print them out to manually verify that the access matches the expected access declared in EdgeCaseSpec.expected_cases,
+        # which is based on the intersection of org-level and user-level policies for operational data access.
+        get_cmd = CaseCrudCommand(user=root_user, operation=CrudOperation.READ_ALL)
+        full_cases = self.env.app.handle(get_cmd)
+
+        all_cases = []
+
+        # per case in full_cases, create a command
+        for case in full_cases:
+
+            # User has to retrieve cases per case type
+            get_cmd_user = RetrieveCasesByIdCommand(
+                case_type_id=case.case_type_id,  # CaseType is required for access control checks
+                case_ids=[case.id],
+                user=user,
+            )
+            try:
+                case_objs = self.env.app.handle(get_cmd_user)
+            except Exception as e:
+                rich_print(
+                    f"\nError retrieving case with code {case.code} of case type {case.case_type_id} for user '{spec.user_name}'"
+                )
+                if VERBOSE:
+                    rich_print(e)
+                # We just consume the exception. Assertions on expected access will be done based on the cases that are successfully retrieved,
+                continue
+
+            all_cases.extend(case_objs)
+
+        actual = (
+            {case.code for case in all_cases} if isinstance(all_cases, list) else set()
+        )
+
+        if VERBOSE:
+            rich_print(
+                f"\nUser '{spec.user_name}' has access to cases: {sorted(actual)}"
+            )
+
+        assert actual == set(spec.expected_cases.keys()), (
+            f"\n{spec.description}"
+            f"\n  Expected access to cases: {sorted(spec.expected_cases.keys())}"
+            f"\n  Actual access: {sorted(actual) if actual else '\u2205'}"
+        )
+
+        # For each accessible case, verify case.content contains exactly the expected cols.
+        case_by_code = {case.code: case for case in all_cases}
+        for case_code, expected_col_codes in spec.expected_cases.items():
+            case_obj = case_by_code[case_code]
+            actual_col_ids = set(case_obj.content.keys())
+            expected_col_ids = {
+                self.env._get_obj(model.Col, col_code).id  # type: ignore[union-attr]
+                for col_code in expected_col_codes
+            }
+            assert actual_col_ids == expected_col_ids, (
+                f"\n{spec.description}"
+                f"\n  Case '{case_code}': content col mismatch"
+                f"\n  Expected cols: {sorted(expected_col_codes)}"
+                f"\n  Actual col ids: {sorted(str(c) for c in actual_col_ids)}"
+            )
