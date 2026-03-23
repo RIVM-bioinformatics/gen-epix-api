@@ -18,6 +18,7 @@ Classes:
 - SourceToConceptMap: Legacy table for source-to-standard concept mappings
 """
 
+import hashlib
 from datetime import date
 from typing import Any, ClassVar
 from uuid import UUID
@@ -28,9 +29,9 @@ from gen_epix.fastapp import Model
 from gen_epix.fastapp.domain import Entity, create_links
 from gen_epix.omopdb.domain.model.omop.base import (
     validate_int_for_uuid_field,
-    validate_int_primary_key_args,
+    validate_int_key_args,
     validate_str_for_uuid_field,
-    validate_str_primary_key_args,
+    validate_str_key_args,
 )
 
 
@@ -38,7 +39,7 @@ class Vocabulary(Model):
     """The VOCABULARY table includes a list of the Vocabularies integrated from various sources or created de novo in OMOP CDM. This reference table contains a single record for each Vocabulary and includes a descriptive name and other associated attributes for the Vocabulary."""
 
     ENTITY: ClassVar = Entity(
-        snake_case_plural_name="Vocabularys",
+        snake_case_plural_name="Vocabularies",
         table_name="vocabulary",
         persistable=True,
         id_field_name="vocabulary_id",
@@ -66,13 +67,13 @@ class Vocabulary(Model):
         max_length=255,
     )
     vocabulary_concept_id: UUID = Field(
-        description="User guidance:\nA Concept that represents the Vocabulary the VOCABULARY record belongs to.\nETL conventions:\nNone"
+        description="User guidance:\nA Concept that represents the Vocabulary the VOCABULARY record belongs to.\nETL conventions:\nNone",
     )
 
     @model_validator(mode="before")
     @classmethod
     def _validate_args(cls, data: Any) -> Any:
-        validate_str_primary_key_args(data, "vocabulary_id", "vocabulary_str_id")
+        validate_str_key_args(data, "vocabulary_id", "vocabulary_str_id")
         return data
 
     @field_validator("vocabulary_concept_id", mode="before")
@@ -108,7 +109,7 @@ class Domain(Model):
     @model_validator(mode="before")
     @classmethod
     def _validate_args(cls, data: Any) -> Any:
-        validate_str_primary_key_args(data, "domain_id", "domain_str_id")
+        validate_str_key_args(data, "domain_id", "domain_str_id")
         return data
 
     @field_validator("domain_concept_id", mode="before")
@@ -138,13 +139,13 @@ class ConceptClass(Model):
         max_length=255,
     )
     concept_class_concept_id: UUID = Field(
-        description="User guidance:\nA Concept that represents the Concept Class.\nETL conventions:\nNone"
+        description="User guidance:\nA Concept that represents the Concept Class.\nETL conventions:\nNone",
     )
 
     @model_validator(mode="before")
     @classmethod
     def _validate_args(cls, data: Any) -> Any:
-        validate_str_primary_key_args(data, "concept_class_id", "concept_class_str_id")
+        validate_str_key_args(data, "concept_class_id", "concept_class_str_id")
         return data
 
     @field_validator("concept_class_concept_id", mode="before")
@@ -174,7 +175,8 @@ class Concept(Model):
         description="User guidance:\nAltered from OMOP CDM. The primary key for this table. Equal to the first 16 bytes of the SHA256 hash of the concept_int_id represented as 8 bytes, unsigned, big endian order.\nETL conventions:\nNone",
     )
     concept_int_id: int | None = Field(
-        description="User guidance:\nRenamed from CDM concept_id. A unique identifier for each Concept across all domains. Can be None if the Concept is not yet assigned an integer ID.\nETL conventions:\nNone"
+        default=None,
+        description="User guidance:\nRenamed from CDM concept_id. A unique identifier for each Concept across all domains. Can be None if the Concept is not yet assigned an integer ID.\nETL conventions:\nNone",
     )
     concept_name: str = Field(
         description="User guidance:\nAn unambiguous, meaningful and descriptive name for the Concept.\nETL conventions:\nNone",
@@ -213,7 +215,7 @@ class Concept(Model):
     @model_validator(mode="before")
     @classmethod
     def _validate_args(cls, data: Any) -> Any:
-        validate_int_primary_key_args(data, "concept_id", "concept_int_id")
+        validate_int_key_args(data, "concept_id", "concept_int_id")
         return data
 
     @field_validator("domain_id", "vocabulary_id", "concept_class_id", mode="before")
@@ -236,6 +238,9 @@ class Relationship(Model):
         default=None,
         description="User guidance:\nThe type of relationship captured by the\r\nrelationship record.\nETL conventions:\nNone",
     )
+    relationship_str_id: str = Field(
+        description="User guidance:\nRenamed from CDM relationship_id. A unique identifier for each Relationship.\nETL conventions:\nNone"
+    )
     relationship_name: str = Field(
         description="User guidance:\nNone\nETL conventions:\nNone", max_length=255
     )
@@ -247,12 +252,25 @@ class Relationship(Model):
         description="User guidance:\nDefines whether a hierarchical relationship\r\ncontributes to the concept_ancestor table.\r\nThese are subsets of the hierarchical\r\nrelationships. Valid values are 1 or 0.\nETL conventions:\nNone",
         max_length=1,
     )
-    reverse_relationship_id: UUID = Field(
+    reverse_relationship_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nThe identifier for the relationship used to\r\ndefine the reverse relationship between two\r\nconcepts.\nETL conventions:\nNone",
+    )
+    reverse_relationship_str_id: str = Field(
         description="User guidance:\nThe identifier for the relationship used to\r\ndefine the reverse relationship between two\r\nconcepts.\nETL conventions:\nNone"
     )
     relationship_concept_id: UUID = Field(
         description="User guidance:\nA foreign key that refers to an identifier in\r\nthe [CONCEPT](https://ohdsi.github.io/CommonDataModel/cdm54.html#concept) table for the unique\r\nrelationship concept.\nETL conventions:\nNone"
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _validate_args(cls, data: Any) -> Any:
+        validate_str_key_args(data, "relationship_id", "relationship_str_id")
+        validate_str_key_args(
+            data, "reverse_relationship_id", "reverse_relationship_str_id"
+        )
+        return data
 
     @field_validator("relationship_concept_id", mode="before")
     @classmethod
@@ -278,7 +296,7 @@ class ConceptRelationship(Model):
     )
     concept_relationship_id: UUID | None = Field(
         default=None,
-        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone",
+        description="User guidance:\nNot part of OMOP CDM. The primary key for this table. Always auto-computed as the SHA256 hash of the byte concatenation of concept_id_1 bytes, concept_id_2 bytes, and relationship_id bytes. Never provided by user.\nETL conventions:\nNone",
     )
     concept_id_1: UUID = Field(
         description="User guidance:\nNone\nETL conventions:\nNone"
@@ -301,10 +319,37 @@ class ConceptRelationship(Model):
         max_length=1,
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def _validate_args(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        concept_id_1 = data.get("concept_id_1")
+        concept_id_2 = data.get("concept_id_2")
+        relationship_id = data.get("relationship_id")
+        if all(v is not None for v in (concept_id_1, concept_id_2, relationship_id)):
+            concept_id_1_uuid = validate_int_for_uuid_field(concept_id_1)
+            concept_id_2_uuid = validate_int_for_uuid_field(concept_id_2)
+            relationship_id_uuid = validate_str_for_uuid_field(relationship_id)
+            composite = (
+                concept_id_1_uuid.bytes
+                + concept_id_2_uuid.bytes
+                + relationship_id_uuid.bytes
+            )
+            data["concept_relationship_id"] = UUID(
+                hashlib.sha256(composite).digest()[:16].hex()
+            )
+        return data
+
     @field_validator("concept_id_1", "concept_id_2", mode="before")
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
         return validate_int_for_uuid_field(value)
+
+    @field_validator("relationship_id", mode="before")
+    @classmethod
+    def _validate_str_for_uuid(cls, value: Any | None) -> UUID | None:
+        return validate_str_for_uuid_field(value)
 
 
 class ConceptAncestor(Model):
@@ -324,7 +369,7 @@ class ConceptAncestor(Model):
     )
     concept_ancestor_id: UUID | None = Field(
         default=None,
-        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone",
+        description="User guidance:\nNot part of OMOP CDM. The primary key for this table. Always auto-computed as the SHA256 hash of the byte concatenation of ancestor_concept_id bytes and descendant_concept_id bytes. Never provided by user.\nETL conventions:\nNone",
     )
     ancestor_concept_id: UUID = Field(
         description="User guidance:\nThe Concept Id for the higher-level concept\r\nthat forms the ancestor in the relationship.\nETL conventions:\nNone"
@@ -338,6 +383,22 @@ class ConceptAncestor(Model):
     max_levels_of_separation: int = Field(
         description="User guidance:\nThe maximum separation in number of\r\nlevels of hierarchy between ancestor and\r\ndescendant concepts. This is an attribute\r\nthat is used to simplify hierarchic analysis.\nETL conventions:\nNone"
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _validate_args(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        ancestor_concept_id = data.get("ancestor_concept_id")
+        descendant_concept_id = data.get("descendant_concept_id")
+        if ancestor_concept_id is not None and descendant_concept_id is not None:
+            ancestor_uuid = validate_int_for_uuid_field(ancestor_concept_id)
+            descendant_uuid = validate_int_for_uuid_field(descendant_concept_id)
+            composite = ancestor_uuid.bytes + descendant_uuid.bytes
+            data["concept_ancestor_id"] = UUID(
+                hashlib.sha256(composite).digest()[:16].hex()
+            )
+        return data
 
     @field_validator("ancestor_concept_id", "descendant_concept_id", mode="before")
     @classmethod
@@ -362,7 +423,7 @@ class ConceptSynonym(Model):
     )
     concept_synonym_id: UUID | None = Field(
         default=None,
-        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone",
+        description="User guidance:\nNot part of OMOP CDM. The primary key for this table. Always auto-computed as the SHA256 hash of the composite natural key (concept_id, concept_synonym_name, language_concept_id). Never provided by user.\nETL conventions:\nNone",
     )
     concept_id: UUID = Field(description="User guidance:\nNone\nETL conventions:\nNone")
     concept_synonym_name: str = Field(
@@ -372,6 +433,37 @@ class ConceptSynonym(Model):
         description="User guidance:\nNone\nETL conventions:\nNone"
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def _validate_args(cls, data: Any) -> Any:
+        """
+        Compute the concept_synonym_id as the SHA256 hash of the composite natural key (concept_id, concept_synonym_name, language_concept_id).
+        This ensures that each unique combination of these three fields will have a consistent and unique UUID, which serves as the primary key for this table.
+        The composite key is formet by concatenation of (1) the concept_id as bytes, (2) the concept synonym name as UTF-8 encoded bytes,
+        and (3) the language_concept_id as bytes.
+        """
+        if not isinstance(data, dict):
+            return data
+        concept_id = data.get("concept_id")
+        concept_synonym_name = data.get("concept_synonym_name")
+        language_concept_id = data.get("language_concept_id")
+        if all(
+            v is not None
+            for v in (concept_id, concept_synonym_name, language_concept_id)
+        ):
+            concept_id_uuid = validate_int_for_uuid_field(concept_id)
+            language_concept_id_uuid = validate_int_for_uuid_field(language_concept_id)
+            composite = (
+                concept_id_uuid.bytes
+                + concept_synonym_name.encode("utf-8")
+                + language_concept_id_uuid.bytes
+            )
+            data["concept_synonym_id"] = UUID(
+                hashlib.sha256(composite).digest()[:16].hex()
+            )
+        return data
+
+    # is this needed?
     @field_validator("concept_id", "language_concept_id", mode="before")
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
