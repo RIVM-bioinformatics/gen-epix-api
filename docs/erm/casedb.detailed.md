@@ -329,11 +329,7 @@ erDiagram
         string description
         UUID disease_id FK
         UUID etiological_agent_id FK
-        int create_max_n_cases
-        int read_max_n_cases
-        int read_max_tree_size
-        int update_max_n_cases
-        int delete_max_n_cases
+        CaseTypeProps props
     }
 
     CaseTypeSet {
