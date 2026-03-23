@@ -235,7 +235,7 @@ class TestCasedbEdgeCasesAccess:
     )
     # Note: replace setup_case_type_data with new setup for operational data later
     def test_just_print_edge_cases_operational(
-        self, spec: EdgeCaseSpec, setup_case_type_data: None
+        self, spec: EdgeCaseSpec, setup_case_data: None
     ) -> None:
         user = self.get_user(spec.user_name)
 

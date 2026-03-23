@@ -78,11 +78,14 @@
 # ---------------------------------------------------------------------------
 # Design notes
 # ---------------------------------------------------------------------------
-# One case_type per case_type_set (one-to-one mapping).
-#
 # Policy structure: (case_type_set, data_collection, col_set)
 # A policy grants access to cases whose case_type is in case_type_set AND that
-# belong to the data_collection, with cols restricted to col_set.
+# belong to data_collection, with cols restricted to col_set.
+#
+# OrganizationAccessCasePolicy and UserAccessCasePolicy are each unique per
+# (org/user, data_collection) — so each combo may have AT MOST ONE triple per dc.
+# Where a dc contains multiple case_types (dc1: ct1+ct3, dc2: ct2+ct3), the policy
+# uses a multi-ct case_type_set (case_type_set_dc1, case_type_set_dc2).
 #
 # Case access requires BOTH org AND user to have a matching (ct_set, dc) triple.
 # Accessible cols for a case = union over all accessible dcs of:
@@ -112,10 +115,14 @@ from dataclasses import dataclass
 # Case type sets — one case_type per set
 # ---------------------------------------------------------------------------
 CASE_TYPE_SETS_OP: dict[str, list[str]] = {
-    "case_type_set1": ["case_type1"],
-    "case_type_set2": ["case_type2"],
-    "case_type_set3": ["case_type3"],
-    "case_type_set4": ["case_type4"],
+    # Single-ct sets — used when only one case_type is accessed via a dc
+    "case_type_set1": ["case_type1"],   # ct1 only — dc1 single-ct access
+    "case_type_set4": ["case_type4"],   # ct4 only — dc3 access
+    # Multi-ct sets — required because (org/user, dc) policies are unique per dc;
+    # dc1 contains ct1 and ct3, dc2 contains ct2 and ct3
+    "case_type_set_dc1": ["case_type1", "case_type3"],  # ct1+ct3 — broad dc1 access
+    "case_type_set_dc2": ["case_type2", "case_type3"],  # ct2+ct3 — broad dc2 access
+    # case_type2, case_type3 do not have single-ct sets: they only appear in multi-ct dc sets
     # case_type5 and case_type6 are intentionally NOT in any set (negative controls)
 }
 
@@ -125,11 +132,10 @@ CASE_TYPE_SETS_OP: dict[str, list[str]] = {
 # dc1, dc2, dc3 are covered by policy combos.
 # dc4 is NOT covered by any policy (negative control for dc access).
 DATA_COLLECTIONS_OP: dict[str, list[str]] = {
-    "dc1": ["case1_1", "case3_1"],  # case3_1 spans dc1 and dc2
+    "dc1": ["case1_1", "case3_1", "case6_1"],  # case3_1 spans dc1+dc2; case6_1: ct6 not in any set
     "dc2": ["case2_1", "case3_1"],
     "dc3": ["case4_1"],
     "dc4": ["case5_1"],  # negative control: dc not in any policy
-    # case6_1 lives in dc1 but case_type6 is in no set → negative control for ct
 }
 
 # ---------------------------------------------------------------------------
@@ -179,26 +185,24 @@ COL_SETS_OP: dict[str, list[str]] = {
 # Each entry is a list of (case_type_set, data_collection, col_set) triples.
 # Case access requires BOTH org AND user to include a matching (ct_set, dc) triple.
 
-# 5 org-level access combos
+# 5 org-level access combos — at most ONE triple per dc (one policy per (org, dc))
 _ORG_ACCESS_COMBOS_OP: list[list[tuple[str, str, str]]] = [
     # 0: no access
     [],
-    # 1: case1_1 via dc1, full cols
+    # 1: case1_1 via dc1, full cols (ct1 only)
     [("case_type_set1", "dc1", "col_set_dc1")],
-    # 2: case1_1 via dc1, partial cols (12) — tests org restricting to a subset
+    # 2: case1_1 via dc1, partial cols (12) (ct1 only) — tests org restricting to a subset
     [("case_type_set1", "dc1", "col_set_dc1_12")],
-    # 3: broad multi-dc — case1_1+case3_1 via dc1, case2_1+case3_1 via dc2, full cols
+    # 3: broad multi-dc — ct1+ct3 via dc1 (one policy), ct2+ct3 via dc2 (one policy), full cols
     [
-        ("case_type_set1", "dc1", "col_set_dc1"),
-        ("case_type_set3", "dc1", "col_set_dc1"),
-        ("case_type_set2", "dc2", "col_set_dc2"),
-        ("case_type_set3", "dc2", "col_set_dc2"),
+        ("case_type_set_dc1", "dc1", "col_set_dc1"),
+        ("case_type_set_dc2", "dc2", "col_set_dc2"),
     ],
     # 4: case4_1 via dc3, full cols
     [("case_type_set4", "dc3", "col_set_dc3")],
 ]
 
-# 5 user-level access combos (varied to produce non-trivial intersections with org combos)
+# 5 user-level access combos — at most ONE triple per dc
 _USER_ACCESS_COMBOS_OP: list[list[tuple[str, str, str]]] = [
     # 0: no access → no cases accessible
     [],
@@ -208,12 +212,10 @@ _USER_ACCESS_COMBOS_OP: list[list[tuple[str, str, str]]] = [
     [("case_type_set1", "dc1", "col_set_dc1_23")],
     # 3: multi-dc, mixed partial — tests case3_1 getting union of dc1 and dc2 cols
     [
-        ("case_type_set1", "dc1", "col_set_dc1_12"),
-        ("case_type_set3", "dc1", "col_set_dc1_23"),
-        ("case_type_set2", "dc2", "col_set_dc2_12"),
-        ("case_type_set3", "dc2", "col_set_dc2_23"),
+        ("case_type_set_dc1", "dc1", "col_set_dc1_12"),
+        ("case_type_set_dc2", "dc2", "col_set_dc2_23"),
     ],
-    # 4: case4_1 via dc3, partial cols (1 only)
+    # 4: case4_1 via dc3, partial cols (col 1 only)
     [("case_type_set4", "dc3", "col_set_dc3_1")],
 ]
 
