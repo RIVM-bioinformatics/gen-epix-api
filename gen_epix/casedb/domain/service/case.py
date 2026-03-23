@@ -10,7 +10,7 @@ from gen_epix.fastapp import BaseService
 from gen_epix.seqdb.domain import model as seqdb_model
 
 
-class BaseCaseService(BaseService):
+class BaseCaseService(BaseService[BaseCaseRepository]):
     SERVICE_TYPE = ServiceType.CASE
 
     DEFAULT_CREATE_MAX_N_CASES = 1000
@@ -79,11 +79,6 @@ class BaseCaseService(BaseService):
             update_max_n_cases=self.DEFAULT_UPDATE_MAX_N_CASES,
             delete_max_n_cases=self.DEFAULT_DELETE_MAX_N_CASES,
         )
-
-    # Property overridden to provide narrower return value to support linter
-    @property  # type: ignore
-    def repository(self) -> BaseCaseRepository:  # type: ignore
-        return super().repository  # type: ignore
 
     def register_handlers(self) -> None:
         f = self.app.register_handler

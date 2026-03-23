@@ -1,10 +1,10 @@
 # These fixtures are used across multiple test modules in the integration test suite, so they are defined in conftest.py
 # to avoid duplication and ensure consistent setup of test users, organizations, and reference data for all tests.
 
-from test.casedb.integration.setup.setup_case_type_data import (  # noqa: F401
+from test.casedb.integration.edge_cases_access.setup.setup_case_type_data import (  # noqa: F401
     setup_case_type_data,
 )
-from test.casedb.integration.setup.setup_test_users_and_organizations import (  # noqa: F401
+from test.casedb.integration.edge_cases_access.setup.setup_test_users_and_organizations import (  # noqa: F401
     setup_test_users_and_organizations,
 )
 

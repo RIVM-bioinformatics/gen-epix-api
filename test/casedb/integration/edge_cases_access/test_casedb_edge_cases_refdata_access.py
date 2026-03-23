@@ -3,7 +3,7 @@ This module contains integration tests for CaseDB reference data access edge cas
 
 It uses:
 
-- an empty database to begin with, see DevRepositoryConfig.DICT_EMPTY in base_empty.py for configuration
+- an empty database to begin with, see DevRepositoryConfig.DICT_EMPTY in base_refdata_access.py for configuration
 - the definitions in EDGE_CASES from define_edge_cases.py
 - the setup_case_type_data fixture to create reference data and policies for all edge cases defined in define_edge_cases.py,
 - and then tests that each user has access to exactly the expected CaseTypes or other reference data
@@ -12,13 +12,13 @@ It uses:
 
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.refdata_access.base_empty import (
+from test.casedb.integration.edge_cases_access.base_refdata_access import (
     DEV_REPOSITORY_CONFIG,
     SKIP_ENDPOINTS,
     TEST_TYPE,
     VERBOSE,
 )
-from test.casedb.integration.setup.define_edge_cases import (
+from test.casedb.integration.edge_cases_access.setup.define_edge_cases import (
     EDGE_CASE_BY_USER,
     EDGE_CASES,
     EdgeCaseSpec,
@@ -58,7 +58,7 @@ def get_test_client() -> Env:
     """
     Get a test client for CaseDB integration tests.
     This fixture initializes a test client with the appropriate configuration for CaseDB integration tests.
-    It uses the DEV_REPOSITORY_CONFIG specified in the base_empty.py file,
+    It uses the DEV_REPOSITORY_CONFIG specified in the base_refdata_access.py file,
     which is set to use an empty dictionary repository for testing edge cases with no data.
     """
     return Env.get_test_client(  # type: ignore[return-value]
