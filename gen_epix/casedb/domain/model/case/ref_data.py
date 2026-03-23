@@ -4,7 +4,13 @@ from datetime import datetime
 from typing import Any, ClassVar, Self
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_serializer, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from gen_epix.casedb.domain import enum, exc
 from gen_epix.casedb.domain.model.geo import RegionSet

@@ -8,7 +8,6 @@ import pytest
 
 from gen_epix.commondb.config.json_logging import JsonFormatter, UvicornAccessLogFilter
 
-
 _TRUNCATED_SUFFIX = "\u2026[truncated]"
 
 
@@ -728,7 +727,9 @@ def test_uvicorn_access_filter_reuses_existing_json_formatter_configuration() ->
     original_root_handlers = list(root_logger.handlers)
 
     root_handler = logging.StreamHandler(StringIO())
-    root_handler.setFormatter(JsonFormatter(service="shared-service", environment="prod"))
+    root_handler.setFormatter(
+        JsonFormatter(service="shared-service", environment="prod")
+    )
 
     stream = StringIO()
     access_handler = logging.StreamHandler(stream)

@@ -378,7 +378,9 @@ class CaseService(BaseCaseService):
         case_set_data_collections: dict[UUID, set[UUID]],
         has_access: dict[UUID, set[UUID]],
     ) -> bool:
-        has_access_to_case_set = self._has_case_set_access(case_set, case_set_data_collections, has_access)
+        has_access_to_case_set = self._has_case_set_access(
+            case_set, case_set_data_collections, has_access
+        )
         if case_set_ids:
             if not has_access_to_case_set:
                 if on_invalid_case_set_id == "raise":
@@ -662,7 +664,9 @@ class CaseService(BaseCaseService):
                 max_n_cases = _raw if _raw > 0 else self._default_props.read_max_n_cases
             elif right == enum.CaseRight.WRITE_CASE:
                 _raw = case_type.props.update_max_n_cases
-                max_n_cases = _raw if _raw > 0 else self._default_props.update_max_n_cases
+                max_n_cases = (
+                    _raw if _raw > 0 else self._default_props.update_max_n_cases
+                )
             else:
                 raise NotImplementedError(f"Unsupported case right: {right}")
             case_date_col_mappers = case_service_get_case_date_col_mappers(
