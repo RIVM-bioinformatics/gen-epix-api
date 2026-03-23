@@ -29,7 +29,7 @@ from test.casedb.integration.edge_cases_access.setup.define_edge_cases_operation
 
 import pytest
 
-from gen_epix.casedb.domain import enum as casedb_enum, model
+from gen_epix.casedb.domain import enum as casedb_enum
 
 VERBOSE = True
 
@@ -193,45 +193,6 @@ def setup_case_data(
                         f"{spec.user_name}, {dc}, {ct_set}, {col_set}"
                     )
 
-    # --- Setup org and user ---
-    # A dedicated org+user with access to ALL case types in ALL data collections.
-    # Required because negative-control case types (case_type5, case_type6) have no
-    # coverage in the edge-case policies, so write_col_ids would be empty for those
-    # case types for any ordinary edge-case user — and for root user when case_type
-    # has no cols (write_col_ids = all_cols_for_case_type ∩ write_col_set = ∅).
-    # Adding cols for those case types and pairing them with a full-access setup user
-    # allows the setup fixture to create every case, including the negative controls.
-    #
-    # org9 / org_user9_1 are used to avoid collisions with org1–org5 from EDGE_CASES_OP.
-    _SETUP_ORG = "org9"
-    _SETUP_USER = "org_user9_1"
-    env.create_organization(root_user, _SETUP_ORG)
-    env.invite_and_register_user(root_user, _SETUP_USER)
-    setup_user: model.User = env._get_obj(model.User, _SETUP_USER)  # type: ignore[assignment]
-    if VERBOSE:
-        print(f"Created setup org '{_SETUP_ORG}' and user '{_SETUP_USER}'")
-
-    for dc, dc_name in _DC_TO_DATA_COLLECTION.items():
-        dc_num = dc[len("dc"):]
-        policy_name = f"setup_policy9_{dc_num}"
-        env.create_organization_access_case_policy(
-            root_user,
-            policy_name,
-            "case_type_set_all",
-            read_col_set="col_set_all",
-            write_col_set="col_set_all",
-        )
-        env.create_user_access_case_policy(
-            root_user,
-            _SETUP_USER,
-            dc_name,
-            "case_type_set_all",
-            read_col_set="col_set_all",
-            write_col_set="col_set_all",
-        )
-        if VERBOSE:
-            print(f"Granted setup user write access to {dc_name}")
-
     # RG: manually moved adding cases after the write rights on col sets were added to the policies,
     # --- Cases ---
     # Build case_code → [dc_names] from DATA_COLLECTIONS_OP.
@@ -245,6 +206,6 @@ def setup_case_data(
             case_to_dcs.setdefault(case_code, []).append(dc_name)
 
     for case_code, dc_names in sorted(case_to_dcs.items()):
-        env.create_case(setup_user, case_code, dc_names)
+        env.create_case(root_user, case_code, dc_names)
         if VERBOSE:
             print(f"Created case '{case_code}' in {dc_names}")
