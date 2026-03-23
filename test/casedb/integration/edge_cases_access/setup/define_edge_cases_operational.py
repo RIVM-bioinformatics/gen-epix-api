@@ -177,6 +177,12 @@ COL_SETS_OP: dict[str, list[str]] = {
     "col_set_dc2_23": ["col2_3_1_2", "col2_3_1_3", "col3_4_1_2"],
     "col_set_dc3": ["col4_5_1_1", "col4_5_1_2"],
     "col_set_dc3_1": ["col4_5_1_1"],
+    # Negative-control case types: one col each so the setup user can create them.
+    # These are NOT referenced in any access policy combo — they are only used so that
+    # cases of these case types can be written in the setup fixture (write_col_ids must
+    # be non-empty even for cases that should never be readable by test edge case users).
+    "col_set_ct5": ["col5_6_1_1"],  # col for case_type5 (dc4, no policy covers dc4)
+    "col_set_ct6": ["col6_7_1_1"],  # col for case_type6 (in dc1, ct not in any set)
 }
 
 # ---------------------------------------------------------------------------
