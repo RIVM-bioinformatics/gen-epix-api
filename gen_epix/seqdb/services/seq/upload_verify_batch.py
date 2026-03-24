@@ -9,6 +9,9 @@ from gen_epix.filter.uuid_set import UuidSetFilter
 from gen_epix.seqdb.domain import command, model
 from gen_epix.seqdb.services.seq.upload_verify_batch_refdata import (
     _verify_batch_refdata_allele_profiles,
+    _verify_batch_refdata_mlva_profiles,
+    _verify_batch_refdata_snp_profiles,
+    _verify_batch_refdata_kmer_profiles
 )
 
 
@@ -248,9 +251,12 @@ def _verify_sample_refdata(
     # Sequences: nothing to do
     # Allele profiles
     success &= _verify_batch_refdata_allele_profiles(self, cmd, batch_result, uow)
-    # TODO: 3034 add verification of MLVA profiles, re-using much of the allele profile logic
     # MLVA profiles
-    # success &= _verify_batch_refdata_mlva_profiles(self, cmd, batch_result, uow)
-    # TODO: 3034 add stub for verification of both SNP and k-mer profiles, raising NotImplementedError if there are any
+    success &= _verify_batch_refdata_mlva_profiles(self, cmd, batch_result, uow)
+    # SNP profiles
+    success &= _verify_batch_refdata_snp_profiles(self, cmd, batch_result, uow)
+    # K-mer profiles
+    success &= _verify_batch_refdata_kmer_profiles(self, cmd, batch_result, uow)
+
 
     return success

@@ -18,6 +18,6 @@ ENTITIES: list[Entity] = [
     model.Protocol.ENTITY,
     model.Sample.ENTITY,
     model.Seq.ENTITY,
-    model.AlleleProfile.ENTITY,
+    model.SeqProfile.ENTITY,
     model.SeqDistance.ENTITY,
 ]

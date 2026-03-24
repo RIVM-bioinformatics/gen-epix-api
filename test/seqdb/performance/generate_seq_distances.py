@@ -45,14 +45,14 @@ def create_seq_distance_database(
     db[model.Sample] = {sample.id: sample}  # type: ignore[dict-item]
     db[model.Protocol] = {protocol.id: protocol}  # type: ignore[dict-item]
     db[model.Seq] = {x.id: x for x in seqs}  # type: ignore[misc]
-    db[model.AlleleProfile] = {x.id: x for x in allele_profiles}  # type: ignore[misc]
+    db[model.SeqProfile] = {x.id: x for x in allele_profiles}  # type: ignore[misc]
     db[model.SeqDistance] = {x.seq_profile_id: x for x in seq_distances}
 
     return db
 
 
 def get_seq_distances(
-    allele_profiles: list[model.AlleleProfile],
+    allele_profiles: list[model.SeqProfile],
     sample: model.Sample,
     protocol: model.Protocol,
     profile_ids: list[UUID],
@@ -77,7 +77,7 @@ def get_seq_distances(
     return seq_distances
 
 
-def get_allele_profile_ids(allele_profiles: list[model.AlleleProfile]) -> list[UUID]:
+def get_allele_profile_ids(allele_profiles: list[model.SeqProfile]) -> list[UUID]:
     profile_ids: list[UUID] = []
     for allele_profile in allele_profiles:
         if allele_profile.id is None:
@@ -151,8 +151,8 @@ def get_allele_profiles(
     locus_set: model.LocusSet,
     protocol: model.Protocol,
     seqs: list[model.Seq],
-) -> list[model.AlleleProfile]:
-    allele_profiles: list[model.AlleleProfile] = []
+) -> list[model.SeqProfile]:
+    allele_profiles: list[model.SeqProfile] = []
     samples_for_upload: list[model.SampleForUpload] = sample_batch_for_upload.samples
     seq_idx = 0
     for sample_for_upload in samples_for_upload:
@@ -175,14 +175,14 @@ def get_allele_profiles(
                 if (allele_id is not None and allele_id != NULL_ID)
             )
 
-            allele_profile = model.AlleleProfile(  # type: ignore[call-arg]
+            allele_profile = model.SeqProfile(  # type: ignore[call-arg]
                 sample_id=sample.id,
                 seq_id=seqs[seq_idx].id,
                 locus_set_id=locus_set.id,
                 protocol_id=protocol.id,  # type: ignore[arg-type]
                 n_loci=n_loci,
                 allele_profile=allele_profile_str,
-                allele_profile_format=enum.AlleleProfileFormat.ORDERED_ALLELE_IDS,
+                allele_profile_format=enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
                 allele_profile_hash=allele_profile_hash,
             )
             allele_profiles.append(allele_profile)

@@ -7,6 +7,7 @@ from gen_epix.commondb.domain.model.upload import UploadResult
 from gen_epix.commondb.services import BatchUploader
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import command, enum, model
+from gen_epix.seqdb.domain.literal import MLVA_NO_LOCUS_REPEAT_NUMBER
 
 
 def _verify_batch_refdata_allele_profiles(
@@ -347,3 +348,172 @@ def _handle_locus_allele_pair_mismatch(
         "c9b8a7d6",
         f"Invalid (locus ID, allele ID) pairs: {invalid_pairs_str}",
     )
+
+
+def _verify_batch_refdata_mlva_profiles(
+    self: BatchUploader,
+    cmd: command.UploadSamplesCommand,
+    retval: model.SampleBatchUploadResult,
+    uow: Any,
+) -> bool:
+    """Verify MLVA profiles specific rules"""
+    success = True
+    user_id = cmd.user.id if cmd.user else None
+    samples = cmd.sample_batch.samples
+    sample_results = retval.samples
+
+    profiles: list[model.SeqProfileForUpload] = []
+    profile_results: list[UploadResult] = []
+    for sample, sample_result in zip(samples, sample_results):
+        curr_profiles = sample.seq_profiles or []
+        curr_profile_results = sample_result.seq_profiles or []
+        for profile, profile_result in zip(curr_profiles, curr_profile_results):
+            if profile_result.status != EtlStatus.PENDING:
+                continue
+            if profile.seq_profile_type not in enum.SeqProfileTypeSet.MLVA.value:
+                continue
+            profiles.append(profile)
+            profile_results.append(profile_result)
+    if not profiles:
+        return success
+
+    protocol_ids = {profile.protocol_id for profile in profiles}
+    protocols: list[model.Protocol] = self.service.repository.crud(  # type: ignore[assignment]
+        uow,
+        user_id,
+        model.Protocol,
+        None,
+        list(protocol_ids),
+        CrudOperation.READ_SOME,
+    )
+    protocol_map = {protocol.id: protocol for protocol in protocols}
+
+    locus_set_ids = {
+        protocol_map[profile.protocol_id].locus_set_id
+        for profile in profiles
+        if profile.locus_code_map_id is not None
+        and profile.locus_code_map_id != NULL_ID
+    }
+    locus_sets: list[model.LocusSet] = self.service.repository.crud(  # type: ignore[assignment]
+        uow,
+        user_id,
+        model.LocusSet,
+        None,
+        list(locus_set_ids),
+        CrudOperation.READ_SOME,
+    )
+    locus_set_map = {locus_set.id: locus_set for locus_set in locus_sets}
+
+    locus_code_map_ids = {
+        profile.locus_code_map_id
+        for profile in profiles
+        if profile.locus_code_map_id is not None
+        and profile.locus_code_map_id != NULL_ID
+    }
+    locus_code_maps: list[model.LocusCodeMap] = self.service.repository.crud(  # type: ignore[assignment]
+        uow,
+        user_id,
+        model.LocusCodeMap,
+        None,
+        list(locus_code_map_ids),
+        CrudOperation.READ_SOME,
+    )
+    rev_locus_code_map_map = {
+        locus_code_map.id: {
+            locus_id: locus_code
+            for locus_code, locus_id in locus_code_map.code_map.items()
+        }
+        for locus_code_map in locus_code_maps
+    }
+
+    repeat_numbers: list[int | None]
+    for profile, profile_result in zip(profiles, profile_results):
+        if profile_result.status != EtlStatus.PENDING:
+            continue
+        locus_ids = locus_set_map[
+            protocol_map[profile.protocol_id].locus_set_id
+        ].locus_ids
+        n_loci = len(locus_ids)
+        locus_repeat_number_map = profile.locus_repeat_number_map
+
+        if locus_repeat_number_map is not None:
+            locus_code_map_id = profile.locus_code_map_id
+            rev_locus_code_map = rev_locus_code_map_map[locus_code_map_id]
+            repeat_numbers = [
+                locus_repeat_number_map.get(rev_locus_code_map[locus_id])
+                for locus_id in locus_ids
+            ]
+            profile.repeat_numbers = repeat_numbers
+            profile.locus_repeat_number_map = None
+        elif len(profile.content):
+            if profile.format == enum.SeqProfileFormat.ORDERED_REPEAT_NUMBERS:
+                repeat_numbers = [
+                    (
+                        None
+                        if repeat_number == MLVA_NO_LOCUS_REPEAT_NUMBER
+                        else repeat_number
+                    )
+                    for repeat_number in profile.get_repeat_numbers()
+                ]
+            else:
+                raise NotImplementedError(
+                    f"MLVA profile format {profile.format} not implemented"
+                )
+        elif profile.repeat_numbers is not None:
+            repeat_numbers = profile.repeat_numbers
+        else:
+            raise AssertionError(
+                "Either locus_repeat_number_map, mlva_profile or repeat_numbers must be provided"
+            )
+
+        if len(repeat_numbers) != n_loci:
+            success = False
+            profile_result.add_error(
+                "f4b6a1c8",
+                f"Length of repeat_numbers ({len(repeat_numbers)}) does not match number of loci in locus set ({len(locus_ids)})",
+            )
+            continue
+
+        if profile.content != "":
+            continue
+        profile.content = model.SeqProfile.get_ordered_repeat_numbers_representation(
+            repeat_numbers
+        )
+        profile.format = enum.SeqProfileFormat.ORDERED_REPEAT_NUMBERS
+        profile.repeat_numbers = None
+
+    return success
+
+
+def _verify_batch_refdata_snp_profiles(
+    self: BatchUploader,
+    cmd: command.UploadSamplesCommand,
+    retval: model.SampleBatchUploadResult,
+    uow: Any,
+) -> bool:
+    """Verify SNP profiles specific rules"""
+    if any(
+        profile.seq_profile_type in enum.SeqProfileTypeSet.SNP.value
+        for sample in cmd.sample_batch.samples
+        for profile in sample.seq_profiles or []
+    ):
+        raise NotImplementedError("Verification of SNP profiles not implemented yet")
+
+    return True
+
+
+def _verify_batch_refdata_kmer_profiles(
+    self: BatchUploader,
+    cmd: command.UploadSamplesCommand,
+    retval: model.SampleBatchUploadResult,
+    uow: Any,
+) -> bool:
+    """Verify k-mer profiles specific rules"""
+    if any(
+        profile.seq_profile_type in enum.SeqProfileTypeSet.KMER.value
+        for sample in cmd.sample_batch.samples
+        for profile in sample.seq_profiles or []
+    ):
+        raise NotImplementedError("Verification of k-mer profiles not implemented yet")
+
+    return True

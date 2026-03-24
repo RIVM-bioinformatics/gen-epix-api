@@ -17,7 +17,7 @@ def generate_demo_seqdb_models(
         model.Locus,
         model.LocusSet,
         model.LocusCodeMap,
-        model.AlleleProfile,
+        model.SeqProfile,
         model.SeqDistance,
         model.Sample,
     ]
@@ -93,7 +93,7 @@ def generate_demo_seqdb_models(
         ).decode("ascii")
 
         allele_profile = (
-            model.AlleleProfile.model_construct(  # model_construct to bypass validators
+            model.SeqProfile.model_construct(  # model_construct to bypass validators
                 id=uuid.uuid4(),
                 locus_set_id=locus_set.id,
                 protocol_id=locus_detection_protocol.id,

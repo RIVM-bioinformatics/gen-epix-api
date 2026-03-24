@@ -55,9 +55,9 @@ def seq_service_calculate_seq_distances_for_new_profiles(
 
     # Retrieve relevant seq distance protocols
     seq_distance_types = list(
-        set.union(
-            *[
-                model.Protocol.SEQ_PROFILE_DISTANCE_TYPE_MAP[x].value
+        set(
+            [
+                next(iter(model.Protocol.SEQ_PROFILE_DISTANCE_TYPE_MAP[x].value))
                 for x in seq_profile_types
             ]
         )
