@@ -11,7 +11,6 @@ from gen_epix.casedb.services.case.crud_common import (
     _crud_cascade_delete,
     crud_with_access_filter,
     get_ref_data_access_from_command,
-    is_refdata_admin_or_above,
 )
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
@@ -24,9 +23,13 @@ def case_service_crud_col_set(
     with self.repository.uow() as uow:
         assert cmd.user is not None
         _crud_cascade_delete(self, uow, cmd)
-        if is_refdata_admin_or_above(self, cmd.user):
-            return _crud_col_set_without_abac(self, uow, cmd)
-        return _crud_col_set_with_abac(self, uow, cmd)
+
+        return _crud_col_set_without_abac(self, uow, cmd)
+
+        # Currently not in use. Left here for future reference if we want to add ABAC for ColSet.
+        # if is_refdata_admin_or_above(self, cmd.user):
+        #     return _crud_col_set_without_abac(self, uow, cmd)
+        # return _crud_col_set_with_abac(self, uow, cmd)
 
 
 def _crud_col_set_without_abac(
@@ -38,6 +41,8 @@ def _crud_col_set_without_abac(
     return self.crud(cmd)  # type: ignore[return-value]
 
 
+# Currently not in use. Left here for future reference if we want to add ABAC for ColSet.
+# Adding ABAC for ColSet would need to be complex: the user should see all ColSets that contain at least one ColSets that the organization has access to.
 def _crud_col_set_with_abac(
     self: BaseCaseService,
     uow: BaseUnitOfWork,

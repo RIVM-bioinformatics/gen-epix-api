@@ -1,6 +1,8 @@
 import json
 import logging
 
+import pytest
+
 from gen_epix.commondb.config.cfg import AppCfg
 
 
@@ -96,6 +98,7 @@ def _extract_diagnostic_payload(logger: _DummyLogger) -> dict:
     raise AssertionError("Missing APPLIED_LOG_LEVEL diagnostic payload")
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_set_log_level_preserves_pinned_third_party_loggers_without_handler_overwrite(
     monkeypatch,
 ) -> None:
@@ -134,6 +137,7 @@ def test_set_log_level_preserves_pinned_third_party_loggers_without_handler_over
     assert logger_map["uvicorn.error"].level == "DEBUG"
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_set_log_level_diagnostic_precedence_arg_over_env_and_settings(
     monkeypatch,
 ) -> None:
@@ -153,6 +157,7 @@ def test_set_log_level_diagnostic_precedence_arg_over_env_and_settings(
     assert diagnostic["settings_value"] == "INFO"
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_set_log_level_diagnostic_precedence_env_over_settings(
     monkeypatch,
 ) -> None:
@@ -172,6 +177,7 @@ def test_set_log_level_diagnostic_precedence_env_over_settings(
     assert diagnostic["settings_value"] == "INFO"
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_set_log_level_diagnostic_precedence_settings_when_env_absent(
     monkeypatch,
 ) -> None:
