@@ -70,6 +70,7 @@ def get_test_client() -> Env:
     )
 
 
+@pytest.mark.scenario_ids("IVO-26")
 @pytest.mark.integration
 class TestCaseDBEdgeCasesRefDataAccess:
     """Test ABAC filtering on reference data (CaseType) access across all edge cases.

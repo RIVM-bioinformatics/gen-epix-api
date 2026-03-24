@@ -32,6 +32,7 @@ def get_test_client() -> Env:
     )
 
 
+# TODO: annotate test with correct test scenario (@pytest.mark.scenario_ids("xxx"))
 class TestPersonUpload:
     # TODO: add setup to create Organizations, Users, Concepts, Domains, ...
     pass

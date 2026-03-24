@@ -15,6 +15,7 @@ import subprocess
 import sys
 import textwrap
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
@@ -39,6 +40,8 @@ _E2E_YAML_PATHS = [
 
 _ALL_YAML_PATHS = _PRODUCTION_YAML_PATHS + _DEBUG_YAML_PATHS + _E2E_YAML_PATHS
 
+JSONDict = dict[str, Any]
+
 
 def _load_class(path: str) -> object:
     module_name, class_name = path.rsplit(".", 1)
@@ -46,8 +49,9 @@ def _load_class(path: str) -> object:
     return getattr(module, class_name)
 
 
-def _emit_access_payload_via_dictconfig(yaml_path: Path) -> dict:
-    script = textwrap.dedent("""
+def _emit_access_payload_via_dictconfig(yaml_path: Path) -> JSONDict:
+    script = textwrap.dedent(
+        """
         import json
         import logging
         import logging.config
@@ -87,7 +91,8 @@ def _emit_access_payload_via_dictconfig(yaml_path: Path) -> dict:
             "1.1",
             204,
         )
-        """)
+        """
+    )
 
     proc = subprocess.run(
         [sys.executable, "-c", script, str(yaml_path)],
@@ -106,8 +111,9 @@ def _emit_access_payload_via_dictconfig(yaml_path: Path) -> dict:
     raise AssertionError(f"No JSON log line emitted for {yaml_path.name}")
 
 
-def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[dict]:
-    script = textwrap.dedent("""\
+def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[JSONDict]:
+    script = textwrap.dedent(
+        """\
         import logging
         import logging.config
         import sys
@@ -161,7 +167,6 @@ def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[dict]:
         )
         """
     )
-        """)
 
     proc = subprocess.run(
         [sys.executable, "-c", script, str(yaml_path)],
@@ -173,7 +178,7 @@ def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[dict]:
         proc.returncode == 0
     ), f"Subprocess failed for {yaml_path.name}: {proc.stderr}"
 
-    payloads: list[dict] = []
+    payloads: list[JSONDict] = []
     for line in proc.stdout.splitlines():
         line = line.strip()
         if line.startswith("{") and line.endswith("}"):
@@ -183,8 +188,9 @@ def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[dict]:
     return payloads
 
 
-def _emit_log_level_resolution_payloads(enable_env_override: bool) -> list[dict]:
-    script = textwrap.dedent("""\
+def _emit_log_level_resolution_payloads(enable_env_override: bool) -> list[JSONDict]:
+    script = textwrap.dedent(
+        """\
         import json
         import logging
         import os
@@ -207,7 +213,8 @@ def _emit_log_level_resolution_payloads(enable_env_override: bool) -> list[dict]
         uvicorn_error_logger = logging.getLogger("uvicorn.error")
         uvicorn_error_logger.info("PROBE_UVICORN_INFO")
         uvicorn_error_logger.warning("PROBE_UVICORN_WARNING")
-        """)
+        """
+    )
 
     proc = subprocess.run(
         [sys.executable, "-c", script, "1" if enable_env_override else "0"],
@@ -217,7 +224,7 @@ def _emit_log_level_resolution_payloads(enable_env_override: bool) -> list[dict]
     )
     assert proc.returncode == 0, f"Subprocess failed: {proc.stderr}"
 
-    payloads: list[dict] = []
+    payloads: list[JSONDict] = []
     for line in proc.stdout.splitlines():
         line = line.strip()
         if line.startswith("{") and line.endswith("}"):
@@ -226,7 +233,7 @@ def _emit_log_level_resolution_payloads(enable_env_override: bool) -> list[dict]
     return payloads
 
 
-def _has_message(payloads: list[dict], logger_name: str, message: str) -> bool:
+def _has_message(payloads: list[JSONDict], logger_name: str, message: str) -> bool:
     return any(
         payload.get("logger") == logger_name and payload.get("message") == message
         for payload in payloads

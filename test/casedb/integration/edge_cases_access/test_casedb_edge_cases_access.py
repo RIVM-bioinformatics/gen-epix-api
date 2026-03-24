@@ -43,6 +43,7 @@ def get_test_client() -> Env:
     )
 
 
+@pytest.mark.scenario_ids("IVO-26")
 @pytest.mark.integration
 class TestCasedbEdgeCasesAccess:
     """
