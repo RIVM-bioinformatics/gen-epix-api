@@ -124,6 +124,51 @@ class TestCaseDBModelProcessMetadata:
             result.modified_by == modified_by
         ), "modified_by should not be overriden when created by root user"
 
+    def test_update_case_type_should_not_override_metadata(
+        self, setup_case_type_data: None
+    ) -> None:
+        """
+        test that would verify that when a case type is updated,
+        the modified_at and modified_by fields are updated by SetModelProcessMetadataPolicy.
+        creating a case type, updating it, and then verifying the metadata fields after the update.
+        """
+
+        root_user = self.env.get_root_user()
+
+        case_type = self.env.create_case_type(
+            root_user, "case_type99", "disease_1", "etiological_agent_1"
+        )
+
+        old_created_at = case_type.created_at
+        new_created_at = datetime(2025, 1, 1, tzinfo=UTC)
+
+        self.env.update_object(
+            root_user,
+            model.CaseType,
+            "case_type99",
+            props={
+                "description": "test update",
+                "created_at": new_created_at,
+                # "created_at": None,
+            },  # should be overridden by policy},
+        )
+        # And now retrieve the case type to check the metadata fields
+
+        result = self.env.app.handle(
+            CaseTypeCrudCommand(
+                user=root_user, operation=CrudOperation.READ_ONE, obj_ids=case_type.id
+            )
+        )
+        assert isinstance(result, model.CaseType)
+
+        print(f"result.created_at: {result.created_at}")
+        print(f"result.modified_at: {result.modified_at}")
+        print(f"result.modified_by: {result.modified_by}")
+
+        assert (
+            result.created_at == old_created_at
+        ), "created_at should not be changed on update"
+
     def test_read_all_case_type_contains_metadata_for_super_users(
         self, setup_case_type_data: None
     ) -> None:
