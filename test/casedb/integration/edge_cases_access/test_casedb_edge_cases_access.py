@@ -158,84 +158,23 @@ class TestCasedbEdgeCasesAccess:
 
         print(f"Created case with id: {case_result.id} belonging to 2 data collections")
 
-    @pytest.mark.parametrize(
-        "spec",
-        EDGE_CASES_OP,
-        ids=[x.user_name for x in EDGE_CASES_OP],
-    )
-    def test_case_access_matches_expected(
-        self, spec: EdgeCaseSpec, setup_case_data: None
-    ) -> None:
-        """
-        For each edge case, assert that the set of accessible Cases exactly matches
-        the expected set declared in EdgeCaseSpec.expected_cases — neither more nor less.
+    # -------------------------------------------------------------------------
+    # TODO LSP-2883: Remove these comments when happy with the test coverage and confidence in the test client for testing access to operational data edge cases.
+    # (because now we set up expectation through the setup/define_edge_cases_operational.py file
+    # case.content is json, only cols that you have access through ABAC policy
+    # 1.
+    # retrieve complete case type for case type of the case
+    # this will give the case_type_access_abacs for each data collection
+    #         read_col_ids: set[UUID] = Field(
+    #     description="The IDs of the columns for which values can be read, limited to the CaseType and data collection"
+    # )
+    #  --> What can be read for each data collection
 
-        Operational data access requires BOTH org-level AND user-level policies to intersect:
-        - access CaseTypes = CaseTypes in (org_access CaseTypeSets ∩ user_access CaseTypeSets)
-        - share CaseTypes  = CaseTypes in (org_share CaseTypeSets ∩ user_share CaseTypeSets)
-        - accessible cases = union of cases belonging to either access or share CaseTypes
-        """
-        user = self.get_user(spec.user_name)
-
-        root_user = self.env.get_root_user()
-        if VERBOSE:
-            rich_print(EDGE_CASES_OP_BY_USER[spec.user_name])
-
-        get_cmd = CaseCrudCommand(user=root_user, operation=CrudOperation.READ_ALL)
-        full_cases = self.env.app.handle(get_cmd)
-
-        all_cases = []
-
-        # per case in full_cases, create a command
-        for case in full_cases:
-
-            case_objs = None
-
-            try:
-                get_cmd_user = RetrieveCasesByIdCommand(
-                    case_type_id=case.case_type_id,  # CaseType is required for access control checks
-                    case_ids=[case.id],
-                    user=user,
-                )
-                case_objs = self.env.app.handle(get_cmd_user)
-            except exc.UnauthorizedAuthError:
-                # consumer error
-                continue
-
-            if case_objs is not None:
-                all_cases.extend(case_objs)
-
-        actual = (
-            {case.code for case in all_cases} if isinstance(all_cases, list) else set()
-        )
-
-        # case.content is json, only cols that you have access through ABAC policy
-        # 1.
-        # retrieve complete case type for case type of the case
-        # this will give the case_type_access_abacs for each data collection
-        #         read_col_ids: set[UUID] = Field(
-        #     description="The IDs of the columns for which values can be read, limited to the CaseType and data collection"
-        # )
-        #  --> What can be read for each data collection
-
-        # 2. for each case retrieve which data collection it belongs to through the created_in_data_collection_id field and the
-        # case data collection links table (koppeltabel)
-        #  -> Data collections
-        # 3. compare 1. and 2. for read access on case.content (dict with col_id as key and col_value as value)
-
-        # case in two dc's: col1 in first dc, col2 in second dc => both col1 and col2 visible
-
-        expected = set(spec.expected_cases)
-
-        missing = expected - actual
-        unexpected = actual - expected
-
-        assert not missing and not unexpected, (
-            f"\n{spec.description}"
-            f"\n  Missing access:    {sorted(missing) if missing else '∅'}"
-            f"\n  Unexpected access: {sorted(unexpected) if unexpected else '∅'}"
-        )
-
+    # 2. for each case retrieve which data collection it belongs to through the created_in_data_collection_id field and the
+    # case data collection links table (koppeltabel)
+    #  -> Data collections
+    # 3. compare 1. and 2. for read access on case.content (dict with col_id as key and col_value as value)
+    # --------------------------------------------------------------------------
     @pytest.mark.parametrize(
         "spec",
         EDGE_CASES_OP,
