@@ -11,14 +11,16 @@ VERBOSE = False
 
 
 @pytest.fixture(scope="module")
-def setup_test_users_and_organizations_op(env: Env) -> None:
+def setup_test_users_and_organizations_operational(env: Env) -> None:
     """
     Set up test users and organizations for operational data edge case tests.
     Driven by EDGE_CASES_OP — analogous to setup_test_users_and_organizations
     for the reference data tests.
     """
     if VERBOSE:
-        print("\n--- Setting up users and organizations for operational edge case tests ---")
+        print(
+            "\n--- Setting up users and organizations for operational edge case tests ---"
+        )
 
     root_user = env.get_root_user()
     env._set_obj(root_user)  # noqa: SLF001

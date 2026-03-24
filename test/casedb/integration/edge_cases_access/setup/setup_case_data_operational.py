@@ -48,8 +48,8 @@ _DC_TO_DATA_COLLECTION: dict[str, str] = {
 
 
 @pytest.fixture(scope="module")
-def setup_case_data(
-    env: Env, setup_test_users_and_organizations_op: None  # noqa: ARG001
+def setup_case_data_operational(
+    env: Env, setup_test_users_and_organizations_operational: None  # noqa: ARG001
 ) -> None:
     """
     Create case types, col infrastructure, data collections, cases, and access

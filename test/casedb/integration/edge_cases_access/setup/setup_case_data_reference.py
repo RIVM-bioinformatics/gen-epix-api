@@ -6,7 +6,7 @@ and all four policy types) for tests.
 
 import re
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.edge_cases_access.setup.define_edge_cases import (
+from test.casedb.integration.edge_cases_access.setup.define_edge_cases_reference import (
     CASE_TYPE_SETS,
     COL_SETS,
     EDGE_CASES,
@@ -24,8 +24,8 @@ VERBOSE = True  # Set to True to enable detailed print statements during setup f
 # organizations are created before policies reference them.
 # The parameter is intentionally unused in the body — its presence enforces fixture ordering.
 @pytest.fixture(scope="module")
-def setup_case_type_data(
-    env: Env, setup_test_users_and_organizations: None  # noqa: ARG001
+def setup_case_data_reference(
+    env: Env, setup_test_users_and_organizations_reference: None  # noqa: ARG001
 ) -> None:  # noqa: ARG001
     """
     Create reference data (diseases, etiological agents, CaseTypes, CaseTypeSets, ColSets, and all four policy types) for tests.

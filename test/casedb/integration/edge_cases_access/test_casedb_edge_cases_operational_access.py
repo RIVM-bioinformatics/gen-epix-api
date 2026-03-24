@@ -6,12 +6,12 @@ from test.casedb.integration.edge_cases_access.base_edge_cases import (
     TEST_TYPE,
     VERBOSE,
 )
-from test.casedb.integration.edge_cases_access.setup.define_edge_cases import (
-    EdgeCaseSpec,
-)
 from test.casedb.integration.edge_cases_access.setup.define_edge_cases_operational import (
     EDGE_CASES_OP,
     EDGE_CASES_OP_BY_USER,
+)
+from test.casedb.integration.edge_cases_access.setup.define_edge_cases_reference import (
+    EdgeCaseSpec,
 )
 
 import pytest
@@ -78,7 +78,7 @@ class TestCasedbEdgeCasesAccess:
     # Read access edge cases
     # -------------------------------------------------------------------------
     def test_org_user_1_exists(
-        self, setup_test_users_and_organizations_op: None
+        self, setup_test_users_and_organizations_operational: None
     ) -> None:
         """
         Test to verify org user 1 exists and can be retrieved.
@@ -93,7 +93,7 @@ class TestCasedbEdgeCasesAccess:
         print(f"Retrieved user: {org_user.id} with name: {org_user.name}")
 
     # @pytest.mark.skip(reason="Interferes wit other tests")
-    def test_root_user_can_create_case(self, setup_case_data: None) -> None:
+    def test_root_user_can_create_case(self, setup_case_data_operational: None) -> None:
         """
         Test that a root user can create a case and that the created case is retrievable.
         This verifies that root users have the necessary permissions to create and access cases.
@@ -138,7 +138,7 @@ class TestCasedbEdgeCasesAccess:
 
     # testing capabilities of the test client for the edge cases related to access to operational data
     def test_root_user_can_create_case_in_2_data_collections(
-        self, setup_case_data: None
+        self, setup_case_data_operational: None
     ) -> None:
         """
         Test that a root user can create a case that belongs to 2 data collections and that the created case is retrievable.
@@ -182,7 +182,7 @@ class TestCasedbEdgeCasesAccess:
     )
     # Note: replace setup_case_type_data with new setup for operational data later
     def test_case_and_content_cols_access_matches_expected(
-        self, spec: EdgeCaseSpec, setup_case_data: None
+        self, spec: EdgeCaseSpec, setup_case_data_operational: None
     ) -> None:
         user = self.get_user(spec.user_name)
 
