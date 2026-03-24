@@ -1,12 +1,11 @@
-# the access to operational data needs a setup (based on relevant combinations)
+# setup of edge cases for ABAC-based access to operational data
 #
-# this file defines the setup for the edge cases related to access to operational data
 # Access to the cases and case cols depend on the access policies
 # they do not depend on the share policies
 #
-# a case can only be accesssed if
-#   there is an organization access policy that grants access to the organization of the user
-# AND a user access policy that grants access to the user, both for the case in question
+# a case can only be accesssed if:
+#   - there is an organization access policy that grants access to the organization of the user
+#   - AND a user access policy that grants access to the user, both for the case in question
 # a case has a case type and a is in a data collection
 # it can be in another data collection
 # (sidenote how you would retrieve this:
@@ -20,7 +19,7 @@
 #    case type (ct) of case is in the case type set of the org access policy yes/no
 #    data collection (dc) of case is in the data collection set of the org access policy yes/no
 #    column (col) of case is in the column set of the org access policy yes/no
-#         for this we will create 2 column sets, one with all columns and one with partial columns
+#         for this we will create 2 column sets, with partially overlapping columns
 #    so this gives us 8 combinations for org access policies
 #    but they can be simplified to 4 combinations by only including the org access policies with the following combinations of case type set, data collection set and column set:
 #    dc in set:
@@ -42,7 +41,7 @@
 # which gives us 16 combinations
 # For each of the 16 combinations, we would use the same single case when we
 # assume a case belonging to a single data collection
-# BUT we want to test a case being in 2 data collections
+# BUT we also want to test a case being in 2 data collections
 # and each data collection should have the above 16 combinations of org access and user access policies represented
 #
 # and we need 3 data collections and 4 cases for 4 different situations:
@@ -59,16 +58,15 @@
 
 # Asssumptions:
 # 1) If a case is in 2 data collections and through dc1 it has access to the partial colset
-# and through dc2 it has access to the whole colset,
-# then the user should have access to the whole colset of the case.
+# and through dc2 it has access to another partial colset,
+# then the user should have access to the union of the colsets for this case.
 # 2) The user only has access to the cases and cols that are in the intersection of the org access policies and user access policies,
 # so if either the org access policy or the user access policy does not include the case type, data collection or column,
-# then the user should not have access to the case or column.
-
+# then the user should not have access to the case / column.
 
 # We need the following capabilities in the casedb test client:
 #
-# - Create cases with specific columns
+# - Create cases with specific columns (we now added all cols to the setup)
 # - Create cases in specific data collections
 # - Read cols from the json in the content field of a case
 
@@ -86,6 +84,7 @@
 # (org/user, data_collection) — so each combo may have AT MOST ONE triple per dc.
 # Where a dc contains multiple case_types (dc1: ct1+ct3, dc2: ct2+ct3), the policy
 # uses a multi-ct case_type_set (case_type_set_dc1, case_type_set_dc2).
+# TODO LSP-2883: can a data_collection have cases of multiple case types?
 #
 # Case access requires BOTH org AND user to have a matching (ct_set, dc) triple.
 # Accessible cols for a case = union over all accessible dcs of:
@@ -110,14 +109,13 @@
 import re
 from dataclasses import dataclass
 
-
 # ---------------------------------------------------------------------------
 # Case type sets — one case_type per set
 # ---------------------------------------------------------------------------
 CASE_TYPE_SETS_OP: dict[str, list[str]] = {
     # Single-ct sets — used when only one case_type is accessed via a dc
-    "case_type_set1": ["case_type1"],   # ct1 only — dc1 single-ct access
-    "case_type_set4": ["case_type4"],   # ct4 only — dc3 access
+    "case_type_set1": ["case_type1"],  # ct1 only — dc1 single-ct access
+    "case_type_set4": ["case_type4"],  # ct4 only — dc3 access
     # Multi-ct sets — required because (org/user, dc) policies are unique per dc;
     # dc1 contains ct1 and ct3, dc2 contains ct2 and ct3
     "case_type_set_dc1": ["case_type1", "case_type3"],  # ct1+ct3 — broad dc1 access
@@ -132,7 +130,11 @@ CASE_TYPE_SETS_OP: dict[str, list[str]] = {
 # dc1, dc2, dc3 are covered by policy combos.
 # dc4 is NOT covered by any policy (negative control for dc access).
 DATA_COLLECTIONS_OP: dict[str, list[str]] = {
-    "dc1": ["case1_1", "case3_1", "case6_1"],  # case3_1 spans dc1+dc2; case6_1: ct6 not in any set
+    "dc1": [
+        "case1_1",
+        "case3_1",
+        "case6_1",
+    ],  # case3_1 spans dc1+dc2; case6_1: ct6 not in any set
     "dc2": ["case2_1", "case3_1"],
     "dc3": ["case4_1"],
     "dc4": ["case5_1"],  # negative control: dc not in any policy
