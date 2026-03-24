@@ -284,6 +284,7 @@ class ProtocolType(IntEnum):
     SEQ_CLASSIFICATION = 6
     SEQ_PROFILE = 7
     SEQ_DISTANCE = 8
+    AST_PREDICTION = 9
 
 
 class ProtocolTypeSet(Enum):

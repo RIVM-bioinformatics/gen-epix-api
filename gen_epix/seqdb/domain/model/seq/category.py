@@ -40,4 +40,6 @@ class SeqCategory(Model):
     seq_category_set_id: UUID = Field(
         description="The ID of the sequence category set. FOREIGN KEY"
     )
-    seq_category_set: SeqCategorySet = Field(description="The sequence category set")
+    seq_category_set: SeqCategorySet | None = Field(
+        default=None, description="The sequence category set"
+    )

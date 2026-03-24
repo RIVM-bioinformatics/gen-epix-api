@@ -41,10 +41,10 @@ class SeqClassification(
             }
         ),
     )
-    primary_category_id: UUID | None = Field(
-        description="The ID of the category. FOREIGN KEY"
+    primary_category_id: UUID = Field(description="The ID of the category. FOREIGN KEY")
+    primary_category: SeqCategory | None = Field(
+        default=None, description="The primary category."
     )
-    primary_category: SeqCategory = Field(description="The primary category.")
 
 
 class AstPrediction(

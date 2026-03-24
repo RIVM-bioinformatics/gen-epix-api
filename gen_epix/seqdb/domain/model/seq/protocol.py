@@ -1,6 +1,6 @@
 import json
 import string
-from datetime import date
+from datetime import datetime, timezone
 from enum import IntEnum
 from typing import Any, ClassVar, Self
 from urllib.parse import urlparse
@@ -136,13 +136,13 @@ class Protocol(Model):
         description="An optional Git tag for easier reference to a specific version of the protocol.",
         max_length=255,
     )
-    valid_start_date: date | None = Field(
+    valid_start_datetime: datetime | None = Field(
         default=None,
-        description="The date from which the protocol is considered valid.",
+        description="The UTC date and time from which the protocol is considered valid.",
     )
-    valid_end_date: date | None = Field(
+    valid_end_datetime: datetime | None = Field(
         default=None,
-        description="The date until which the protocol is considered valid.",
+        description="The UT C date and time until which the protocol is considered valid.",
     )
     ref_seq_id: UUID | None = Field(
         default=None,
@@ -193,6 +193,18 @@ class Protocol(Model):
         default_factory=dict,
         description="A dictionary of additional properties specific to the protocol. Must be JSON-serializable. Can also be passed as a JSON string.",
     )
+
+    @field_validator("valid_start_datetime", "valid_end_datetime", mode="before")
+    @classmethod
+    def _validate_datetime_to_utc(cls, value: str | datetime | None) -> datetime | None:
+        """Parses datetime strings and converts timezone-aware values to UTC."""
+        if value is None:
+            return None
+        if isinstance(value, str):
+            value = datetime.fromisoformat(value)
+        if value.tzinfo is not None:
+            value = value.astimezone(timezone.utc)
+        return value
 
     @field_validator("protocol_type", mode="before")
     @classmethod

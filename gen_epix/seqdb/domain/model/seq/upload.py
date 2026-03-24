@@ -256,6 +256,54 @@ class AlleleForUpload(Allele):
     )
 
 
+class SeqClassificationForUpload(SeqClassification, ValidateRefDataIdCodeMixin):
+    """
+    A sequence classification intended for upload. Equal to a SeqClassification, with
+    additional variables.
+    """
+
+    ENTITY: ClassVar = SeqClassification.model_entity().clone(
+        update={"persistable": False}
+    )
+    NAME: ClassVar = "SeqClassificationForUpload"
+    REFDATA_FIELD_ID_CODE_PAIRS: ClassVar = [
+        ("protocol_id", "protocol_code"),
+        ("primary_category_id", "primary_category_code"),
+    ]
+
+    sample_id: UUID = Field(
+        default=NULL_ID,
+        description="The UUID of the sample that the sequence classification is associated with. If not available, the null ID is put.",
+    )
+    seq_id: UUID | None = Field(
+        default=None,
+        description="The UUID of the sequence that the sequence classification was derived from, if available.",
+    )
+    protocol_id: UUID = Field(
+        default=NULL_ID,
+        description="The UUID of the protocol, if available. If not available, the null ID is put. Must be present if protocol_code is not present. The use of protocol_id is preferred over protocol_code since the latter may change.",
+    )
+    protocol_code: str | None = Field(
+        default=None,
+        description="The code of the protocol. Must be present if protocol_id is not present. The use of protocol_code is meant for situations where the protocol_id is not known, but the code is and/or improves human interpretation.",
+        max_length=255,
+    )
+    primary_category_id: UUID = Field(
+        default=NULL_ID,
+        description="The UUID of the primary category, if available. If not available, the null ID is put. Must be present if primary_category_code is not present. The use of primary_category_id is preferred over primary_category_code since the latter may change.",
+    )
+    primary_category_code: str | None = Field(
+        default=None,
+        description="The code of the primary category. Must be present if primary_category_id is not present. The use of primary_category_code is meant for situations where the primary_category_id is not known, but the code is and/or improves human interpretation.",
+        max_length=255,
+    )
+
+    @model_validator(mode="after")
+    def _validate_content(self) -> Self:
+        # TODO: add validation
+        return self
+
+
 # TODO: add PcrMeasurementForUpload and update SampleForUpload accordingly
 # TODO: add AstMeasurementForUpload and update SampleForUpload accordingly
 # TODO: add SeqTaxonomyForUpload and update SampleForUpload accordingly
@@ -277,7 +325,7 @@ class SampleForUpload(ParentForUpload):
         ReadSet: ReadSetForUpload,
         Seq: SeqForUpload,
         SeqTaxonomy: SeqTaxonomy,
-        SeqClassification: SeqClassification,
+        SeqClassification: SeqClassificationForUpload,
         SeqProfile: SeqProfileForUpload,
         PcrMeasurement: PcrMeasurement,
         AstMeasurement: AstMeasurement,
@@ -314,7 +362,7 @@ class SampleForUpload(ParentForUpload):
         default=None,
         description="The taxonomies associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
-    seq_classifications: list[SeqClassification] | None = Field(
+    seq_classifications: list[SeqClassificationForUpload] | None = Field(
         default=None,
         description="The classifications associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
