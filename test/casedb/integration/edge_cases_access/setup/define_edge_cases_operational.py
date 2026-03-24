@@ -3,7 +3,7 @@
 # Access to the cases and case cols depend on the access policies
 # they do not depend on the share policies
 #
-# a case can only be accesssed if:
+# a case can only be accessed if:
 #   - there is an organization access policy that grants access to the organization of the user
 #   - AND a user access policy that grants access to the user, both for the case in question
 # a case has a case type and a is in a data collection
@@ -21,35 +21,39 @@
 #    column (col) of case is in the column set of the org access policy yes/no
 #         for this we will create 2 column sets, with partially overlapping columns
 #    so this gives us 8 combinations for org access policies
-#    but they can be simplified to 4 combinations by only including the org access policies with the following combinations of case type set, data collection set and column set:
+#    but they can be simplified to 5 combinations by only including the org access policies with the following combinations of case type set, data collection set and column set:
 #    dc in set:
 #      ct in set:
 #        1. col in set (partial colset with col1 and col2)
 #        2. col in another set (partial colset with col2 and col3)
-#      3. ct not in set (rest irrelant, because no access to case if ct not in set)
-#    4. dc not in set: (rest irrelant, because no access to case if dc not in set)
+#      3. ct not in set (rest irrelevant, because no access to case if ct not in set)
+#    4. dc not in set: (rest irrelevant, because no access to case if dc not in set)
+#    5. multi-dc: broad policy covering multiple case types and multiple data collections
 # - user access policies (user_access)
 #    comparable combinations as org access policies
 #    dc in set:
 #      ct in set:
-# .       For the columns access
+#        For the columns access
 #        1. col in set (partial colset with col1 and col2)
-#        2. col in another set (partial colset woth col2 and col3)
-#      3. ct not in set (rest irrelant, because no access to case if ct not in set)
-#    4. dc not in set: (rest irrelant, because no access to case if dc not in set)
-# we need to combine the 4 org access policy combinations with the 4 user access policy combinations,
-# which gives us 16 combinations
-# For each of the 16 combinations, we would use the same single case when we
+#        2. col in another set (partial colset with col2 and col3)
+#      3. ct not in set (rest irrelevant, because no access to case if ct not in set)
+#    4. dc not in set: (rest irrelevant, because no access to case if dc not in set)
+#    5. multi-dc: broad policy covering multiple case types and multiple data collections
+# we need to combine the 5 org access policy combinations with the 5 user access policy combinations,
+# which gives us 25 combinations
+# For each of the 25 combinations, we would use the same single case when we
 # assume a case belonging to a single data collection
 # BUT we also want to test a case being in 2 data collections
-# and each data collection should have the above 16 combinations of org access and user access policies represented
+# and each data collection should have the above 25 combinations of org access and user access policies represented
 #
-# and we need 3 data collections and 4 cases for 4 different situations:
-# Each case[ct_n]_n has case type ct[ct_n] where ct_n is the caste type number
-# case1 is in dc1 (dc1 configured with colset1)
-# case2 is in dc2 (dc2 configured with colset2)
-# case3 is in dc1 and dc2 (dc1 and dc2 are configured with partially overlapping colsers colset and colset2)
-# case4 is in dc3
+# and we need 4 data collections and 6 cases for the different situations:
+# Each case{ct_n}_n has case type case_type{ct_n} where ct_n is the case type number
+# case1_1 is in dc1 (dc1 configured with col_set_dc1)
+# case2_1 is in dc2 (dc2 configured with col_set_dc2)
+# case3_1 is in dc1 and dc2 (dc1 and dc2 are configured with partially overlapping col_sets col_set_dc1 and col_set_dc2)
+# case4_1 is in dc3
+# case5_1 is in dc4 (negative control: dc4 not in any policy)
+# case6_1 is in dc1 (negative control: case_type6 not in any case_type_set)
 
 # to test the negative case of not having access to a case, we can use a case that is in a data collection that is not in any of the org access policies or user access policies
 # case 5 is in dc4, and dc4 is not in any of the org access policies or user access policies
@@ -181,7 +185,7 @@ COL_SETS_OP: dict[str, list[str]] = {
     "col_set_dc2_23": ["col2_3_1_2", "col2_3_1_3", "col3_4_1_2"],
     "col_set_dc3": ["col4_5_1_1", "col4_5_1_2"],
     "col_set_dc3_1": ["col4_5_1_1"],
-    # Negative-control case types: one col each so the setup user can create them.
+    # Negative-control case types: one col each so the root user can create them.
     # These are NOT referenced in any access policy combo — they are only used so that
     # cases of these case types can be written in the setup fixture (write_col_ids must
     # be non-empty even for cases that should never be readable by test edge case users).
