@@ -138,6 +138,8 @@ DATA_COLLECTIONS_OP: dict[str, list[str]] = {
     "dc2": ["case2_1", "case3_1"],
     "dc3": ["case4_1"],
     "dc4": ["case5_1"],  # negative control: dc not in any policy
+    "dc9": [],  # empty dc — used for other tests
+    "dc10": [],  # empty dc — used for other tests
 }
 
 # ---------------------------------------------------------------------------

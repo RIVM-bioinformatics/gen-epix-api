@@ -42,6 +42,8 @@ _DC_TO_DATA_COLLECTION: dict[str, str] = {
     "dc2": "data_collection2",
     "dc3": "data_collection3",
     "dc4": "data_collection4",
+    "dc9": "data_collection9",  # empty data collection
+    "dc10": "data_collection10",  # empty data collection
 }
 
 
@@ -83,9 +85,13 @@ def setup_case_data(
 
     # case_type_set_all covers every case type (including negative controls) so that
     # the setup user can create cases for them.
-    env.create_case_type_set(root_user, "case_type_set_all", all_case_types, "category_1")
+    env.create_case_type_set(
+        root_user, "case_type_set_all", all_case_types, "category_1"
+    )
     if VERBOSE:
-        print(f"Created case type set 'case_type_set_all' with {sorted(all_case_types)}")
+        print(
+            f"Created case type set 'case_type_set_all' with {sorted(all_case_types)}"
+        )
 
     # --- Col infrastructure (RefDims, RefCols, Dims, Cols, ColSets) ---
     # Parse col codes using convention col{ct}_{ref_dim}_{occ}_{rank}.

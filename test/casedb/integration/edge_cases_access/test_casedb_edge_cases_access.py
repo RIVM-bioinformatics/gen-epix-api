@@ -7,8 +7,6 @@ from test.casedb.integration.edge_cases_access.base_edge_cases import (
     VERBOSE,
 )
 from test.casedb.integration.edge_cases_access.setup.define_edge_cases import (
-    EDGE_CASE_BY_USER,
-    EDGE_CASES,
     EdgeCaseSpec,
 )
 from test.casedb.integration.edge_cases_access.setup.define_edge_cases_operational import (
@@ -19,7 +17,7 @@ from test.casedb.integration.edge_cases_access.setup.define_edge_cases_operation
 import pytest
 from rich import print as rich_print
 
-from gen_epix.casedb.domain import enum, model
+from gen_epix.casedb.domain import enum, exc, model
 from gen_epix.casedb.domain.command import CaseCrudCommand
 from gen_epix.casedb.domain.command.case import RetrieveCasesByIdCommand
 from gen_epix.commondb.domain.enum import AppType
@@ -78,7 +76,9 @@ class TestCasedbEdgeCasesAccess:
     # -------------------------------------------------------------------------
     # Read access edge cases
     # -------------------------------------------------------------------------
-    def test_org_user_1_exists(self, setup_test_users_and_organizations: None) -> None:
+    def test_org_user_1_exists(
+        self, setup_test_users_and_organizations_op: None
+    ) -> None:
         """
         Test to verify org user 1 exists and can be retrieved.
         """
@@ -91,7 +91,8 @@ class TestCasedbEdgeCasesAccess:
         assert org_user.name == "org_user1_1"
         print(f"Retrieved user: {org_user.id} with name: {org_user.name}")
 
-    def test_root_user_can_create_case(self, setup_case_type_data: None) -> None:
+    # @pytest.mark.skip(reason="Interferes wit other tests")
+    def test_root_user_can_create_case(self, setup_case_data: None) -> None:
         """
         Test that a root user can create a case and that the created case is retrievable.
         This verifies that root users have the necessary permissions to create and access cases.
@@ -111,7 +112,7 @@ class TestCasedbEdgeCasesAccess:
         case_result = self.env.create_case(
             root_user,
             code="case1_99",  # Do not use a code that is already used by other test cases created in the setup.
-            data_collections="data_collection1",
+            data_collections="data_collection9",
             # created_at=created_at,
             # modified_at=modified_at,
             # modified_by=modified_by,
@@ -136,7 +137,7 @@ class TestCasedbEdgeCasesAccess:
 
     # testing capabilities of the test client for the edge cases related to access to operational data
     def test_root_user_can_create_case_in_2_data_collections(
-        self, setup_case_type_data: None
+        self, setup_case_data: None
     ) -> None:
         """
         Test that a root user can create a case that belongs to 2 data collections and that the created case is retrievable.
@@ -149,24 +150,20 @@ class TestCasedbEdgeCasesAccess:
         case_result = self.env.create_case(
             root_user,
             code="case1_100",  # Do not use a code that is already used by other test cases created in the setup.
-            data_collections=["data_collection1", "data_collection2"],
+            data_collections=["data_collection9", "data_collection10"],
         )
 
         assert isinstance(case_result, model.Case)
 
         print(f"Created case with id: {case_result.id} belonging to 2 data collections")
 
-    @pytest.mark.skip(
-        reason="Cases are not put in correct data collection in the setup,"
-        + "also RetrieveCasesByIdCommand needs to be updated to include case_type_id for access control checks"
-    )
     @pytest.mark.parametrize(
         "spec",
-        EDGE_CASES,
-        ids=[x.user_name for x in EDGE_CASES],
+        EDGE_CASES_OP,
+        ids=[x.user_name for x in EDGE_CASES_OP],
     )
     def test_case_access_matches_expected(
-        self, spec: EdgeCaseSpec, setup_case_type_data: None
+        self, spec: EdgeCaseSpec, setup_case_data: None
     ) -> None:
         """
         For each edge case, assert that the set of accessible Cases exactly matches
@@ -181,7 +178,7 @@ class TestCasedbEdgeCasesAccess:
 
         root_user = self.env.get_root_user()
         if VERBOSE:
-            rich_print(EDGE_CASE_BY_USER[spec.user_name])
+            rich_print(EDGE_CASES_OP_BY_USER[spec.user_name])
 
         get_cmd = CaseCrudCommand(user=root_user, operation=CrudOperation.READ_ALL)
         full_cases = self.env.app.handle(get_cmd)
@@ -191,14 +188,21 @@ class TestCasedbEdgeCasesAccess:
         # per case in full_cases, create a command
         for case in full_cases:
 
-            get_cmd_user = RetrieveCasesByIdCommand(
-                case_type_id=case.case_type_id,  # CaseType is required for access control checks
-                case_ids=[case.id],
-                user=user,
-            )
-            case_objs = self.env.app.handle(get_cmd_user)
+            case_objs = None
 
-            all_cases.extend(case_objs)
+            try:
+                get_cmd_user = RetrieveCasesByIdCommand(
+                    case_type_id=case.case_type_id,  # CaseType is required for access control checks
+                    case_ids=[case.id],
+                    user=user,
+                )
+                case_objs = self.env.app.handle(get_cmd_user)
+            except exc.UnauthorizedAuthError:
+                # consumer error
+                continue
+
+            if case_objs is not None:
+                all_cases.extend(case_objs)
 
         actual = (
             {case.code for case in all_cases} if isinstance(all_cases, list) else set()
@@ -237,7 +241,7 @@ class TestCasedbEdgeCasesAccess:
         ids=[x.user_name for x in EDGE_CASES_OP],
     )
     # Note: replace setup_case_type_data with new setup for operational data later
-    def test_just_print_edge_cases_operational(
+    def test_case_and_content_cols_access_matches_expected(
         self, spec: EdgeCaseSpec, setup_case_data: None
     ) -> None:
         user = self.get_user(spec.user_name)
@@ -254,7 +258,7 @@ class TestCasedbEdgeCasesAccess:
         # Now retrieve cases for the user and print them out to manually verify that the access matches the expected access declared in EdgeCaseSpec.expected_cases,
         # which is based on the intersection of org-level and user-level policies for operational data access.
         get_cmd = CaseCrudCommand(user=root_user, operation=CrudOperation.READ_ALL)
-        full_cases = self.env.app.handle(get_cmd)
+        full_cases: list[model.Case] = self.env.app.handle(get_cmd)
 
         all_cases = []
 
@@ -267,18 +271,28 @@ class TestCasedbEdgeCasesAccess:
                 case_ids=[case.id],
                 user=user,
             )
-            try:
-                case_objs = self.env.app.handle(get_cmd_user)
-            except Exception as e:
-                rich_print(
-                    f"\nError retrieving case with code {case.code} of case type {case.case_type_id} for user '{spec.user_name}'"
-                )
-                if VERBOSE:
-                    rich_print(e)
-                # We just consume the exception. Assertions on expected access will be done based on the cases that are successfully retrieved,
-                continue
 
-            all_cases.extend(case_objs)
+            # If case is in expected cases, we set is_allowed to True, otherwise False.
+            is_allowed = case.code in spec.expected_cases
+
+            case_objs = None
+            try:
+                if is_allowed:
+                    case_objs = self.env.app.handle(get_cmd_user)
+                else:
+                    with pytest.raises(exc.UnauthorizedAuthError):
+                        case_objs = self.env.app.handle(get_cmd_user)
+            except Exception as e:
+                if is_allowed:
+                    msg = f"Command for case with code {case.code} of case type {case.case_type_id} for user '{spec.user_name}' (allowed={is_allowed}) raised exception: {e}"
+                else:
+                    msg = f"Command for case with code {case.code} of case type {case.case_type_id} for user '{spec.user_name}' (allowed={is_allowed}) did not raise (correct) exception: {e}"
+                if VERBOSE:
+                    print(f"\t{msg}")
+                raise AssertionError(msg)
+
+            if case_objs is not None:
+                all_cases.extend(case_objs)
 
         actual = (
             {case.code for case in all_cases} if isinstance(all_cases, list) else set()
