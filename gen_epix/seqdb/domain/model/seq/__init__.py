@@ -27,6 +27,10 @@ from gen_epix.seqdb.domain.model.seq.profile import (
     SeqProfileIdentifier as SeqProfileIdentifier,
 )
 from gen_epix.seqdb.domain.model.seq.protocol import Protocol as Protocol
+from gen_epix.seqdb.domain.model.seq.protocol import ProtocolSet as ProtocolSet
+from gen_epix.seqdb.domain.model.seq.protocol import (
+    ProtocolSetMember as ProtocolSetMember,
+)
 from gen_epix.seqdb.domain.model.seq.reads import ReadSet as ReadSet
 from gen_epix.seqdb.domain.model.seq.reads import ReadSetIdentifier as ReadSetIdentifier
 from gen_epix.seqdb.domain.model.seq.ref_seq import RefSeq as RefSeq

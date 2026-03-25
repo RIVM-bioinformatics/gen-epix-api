@@ -39,6 +39,14 @@ class BaseSeqService(BaseService):
             self.crud_protocol,
         )
         f(
+            command.ProtocolSetCrudCommand,
+            self.crud_protocol_set,
+        )
+        f(
+            command.ProtocolSetMemberCrudCommand,
+            self.crud_protocol_set_member,
+        )
+        f(
             command.AlleleCrudCommand,
             self.crud_allele,
         )
@@ -200,6 +208,36 @@ class BaseSeqService(BaseService):
     ) -> (
         model.Protocol
         | list[model.Protocol]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_protocol_set(
+        self,
+        cmd: command.ProtocolSetCrudCommand,
+    ) -> (
+        model.ProtocolSet
+        | list[model.ProtocolSet]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_protocol_set_member(
+        self,
+        cmd: command.ProtocolSetMemberCrudCommand,
+    ) -> (
+        model.ProtocolSetMember
+        | list[model.ProtocolSetMember]
         | UUID
         | list[UUID]
         | bool

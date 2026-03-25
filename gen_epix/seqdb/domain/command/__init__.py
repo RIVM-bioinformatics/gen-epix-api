@@ -104,6 +104,14 @@ from gen_epix.seqdb.domain.command.seq import (
     PcrMeasurementCrudCommand as PcrMeasurementCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import ProtocolCrudCommand as ProtocolCrudCommand
+from gen_epix.seqdb.domain.command.seq import (
+    ProtocolSetCrudCommand as ProtocolSetCrudCommand,
+)
+
+from gen_epix.seqdb.domain.command.seq import (
+    ProtocolSetMemberCrudCommand as ProtocolSetMemberCrudCommand,
+)
+
 from gen_epix.seqdb.domain.command.seq import ReadSetCrudCommand as ReadSetCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
     ReadSetIdentifierCrudCommand as ReadSetIdentifierCrudCommand,
@@ -183,6 +191,8 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         LocusSetCrudCommand,
         PcrMeasurementCrudCommand,
         ProtocolCrudCommand,
+        ProtocolSetCrudCommand,
+        ProtocolSetMemberCrudCommand,
         UploadSamplesCommand,
         ReadSetCrudCommand,
         ReadSetIdentifierCrudCommand,

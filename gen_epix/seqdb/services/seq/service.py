@@ -27,6 +27,10 @@ from gen_epix.seqdb.services.seq.crud_pcr_measurement import (
     seq_service_crud_pcr_measurement,
 )
 from gen_epix.seqdb.services.seq.crud_protocol import seq_service_crud_protocol
+from gen_epix.seqdb.services.seq.crud_protocol_set import seq_service_crud_protocol_set
+from gen_epix.seqdb.services.seq.crud_protocol_set_member import (
+    seq_service_crud_protocol_set_member,
+)
 from gen_epix.seqdb.services.seq.crud_read_set import seq_service_crud_read_set
 from gen_epix.seqdb.services.seq.crud_read_set_identifier import (
     seq_service_crud_read_set_identifier,
@@ -143,6 +147,34 @@ class SeqService(BaseSeqService):
         | None
     ):
         return seq_service_crud_protocol(self, cmd)
+
+    def crud_protocol_set(
+        self,
+        cmd: command.ProtocolSetCrudCommand,
+    ) -> (
+        model.ProtocolSet
+        | list[model.ProtocolSet]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_protocol_set(self, cmd)
+
+    def crud_protocol_set_member(
+        self,
+        cmd: command.ProtocolSetMemberCrudCommand,
+    ) -> (
+        model.ProtocolSetMember
+        | list[model.ProtocolSetMember]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_protocol_set_member(self, cmd)
 
     def crud_allele(
         self,
