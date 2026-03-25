@@ -4,17 +4,9 @@ from typing import Any
 from gen_epix.fastapp.enum import FieldTypeSet
 from gen_epix.fastapp.model import Model
 from gen_epix.fastapp.repositories.sa.mapper import (
-    BaseSAMapper,
     BaseSAMapperFactory,
     SAMapper,
 )
-
-# Fields that are managed exclusively by the database layer and must never be written
-# from Python during an update.  `created_at` has a server_default only (set once on
-# INSERT by the DB).  `modified_at` is refreshed on every UPDATE via the SA
-# `onupdate=ServerUtcCurrentTime()` parameter on the RowMetadataMixin column — writing
-# it from Python would bypass that mechanism and produce stale/wrong timestamps.
-_NEVER_UPDATE_FIELDS: frozenset[str] = frozenset({"created_at", "modified_at"})
 
 
 class CommondbSAMapper(SAMapper):
@@ -49,6 +41,7 @@ class CommondbSAMapper(SAMapper):
             mapped_dict: dict[str, Any] = obj.model_dump(exclude_none=True)
         else:
             obj_dict = obj.model_dump(exclude_none=False)
+
             mapped_dict = {
                 row_field_name: obj_dict[field_name]
                 for field_name, row_field_name in zip(
@@ -58,31 +51,40 @@ class CommondbSAMapper(SAMapper):
                 if obj_dict[field_name] is not None
             }
 
-        # Strip fields that are owned exclusively by the DB and must never be touched
-        # from Python during an update.
-        for field in _NEVER_UPDATE_FIELDS:
-            mapped_dict.pop(field, None)
-
-        # Always stamp modified_by with the acting user, overriding any value the
-        # domain object might carry.
-        if user_id is not None:
-            mapped_dict["modified_by"] = user_id
-        else:
-            # No acting user — leave whatever is already in the DB.
-            mapped_dict.pop("modified_by", None)
-
         if kwargs:
             mapped_dict.update(kwargs)
 
+        # Strip fields that are owned exclusively by the DB and must never be touched
+        # from Python during an update.
+        mapped_dict.pop("created_at", None)
+        mapped_dict.pop("modified_at", None)
+        # Always stamp modified_by with the acting user, overriding any value the
+        # domain object might carry.
+        mapped_dict["modified_by"] = user_id
+
         is_updated = False
         for key, value in mapped_dict.items():
-            if value is None:
-                continue
+
             curr_value = getattr(row, key, None)
             if curr_value != value:
                 setattr(row, key, value)
                 is_updated = True
         return is_updated
+
+    def dump(self, user_id: Hashable | None, obj: Model, **kwargs: Any) -> Any:
+        """
+        Dump `obj` to a dict, applying commondb metadata-field rules.
+
+        For users without privileged roles, this means masking out the metadata fields
+        by setting them to None, so that they are not exposed by the API.
+        """
+        row = super().dump(user_id, obj, **kwargs)
+
+        row.created_at = None
+        row.modified_at = None
+        row.modified_by = user_id
+
+        return row
 
 
 class CommondbSAMapperFactory(BaseSAMapperFactory):

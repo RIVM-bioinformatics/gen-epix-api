@@ -592,9 +592,6 @@ class CasedbTestClient(TestClient):
         etiological_agent: str | model.EtiologicalAgent | None,
         set_dummy_disease: bool = False,
         set_dummy_etiological_agent: bool = False,
-        created_at: datetime | None = None,
-        modified_at: datetime | None = None,
-        modified_by: UUID | None = None,
     ) -> model.CaseType:
         user: model.User = self._get_obj(
             model.User, user_or_str
@@ -604,13 +601,6 @@ class CasedbTestClient(TestClient):
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.CaseType(
-                    # Note, we hard code dates here just for testing.
-                    # because the root user creates all these objects in the setup phase,
-                    # and we want to have filled created_at and modified_at values, since the metadata policy only sets these for non-root users.
-                    # This allows us to test the metadata policy in the test cases, while still having created_at and modified_at values set for the case types.
-                    created_at=(created_at if created_at else DEFAULT_CREATED_AT),
-                    modified_at=(modified_at if modified_at else DEFAULT_MODIFIED_AT),
-                    modified_by=(modified_by if modified_by else user.id),
                     name=case_type_or_str,
                     disease_id=(
                         self.generate_id()
