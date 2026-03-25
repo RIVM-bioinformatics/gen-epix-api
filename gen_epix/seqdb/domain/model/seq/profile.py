@@ -92,7 +92,10 @@ class SeqProfile(
         """
         Validate that the content format is compatible with the sequence profile type.
         """
-        if self.format not in self.FORMATS_BY_SEQ_PROFILE_TYPE[self.seq_profile_type]:
+        if (
+            self.format
+            not in self.FORMATS_BY_SEQ_PROFILE_TYPE[self.seq_profile_type]
+        ):
             raise ValueError(
                 f"Invalid format {self.format} for sequence profile type {self.seq_profile_type}"
             )
@@ -104,14 +107,38 @@ class SeqProfile(
         Verify the representation of the content depending on the format. Verify or set
         the content hash.
         """
+        if self.content == "" and any(
+            getattr(self, field_name, None) is not None
+            for field_name in (
+                "aligned_nucleotide_seq",
+                "allele_ids",
+                "locus_allele_id_map",
+                "repeat_numbers",
+                "locus_repeat_number_map",
+                "kmer_frequency_map",
+            )
+        ):
+            return self
+
         profile_hash = self.content_hash
-        computed_profile_hash: UUID = NULL_ID
+        if self.seq_profile_type == enum.SeqProfileType.LOCUS:
+            if self.format == enum.SeqProfileFormat.LOCUS_PROFILE_FORMAT1:
+                computed_profile_hash = profile_hash
+            else:
+                if profile_hash == NULL_ID:
+                    raise ValueError(
+                        "Unable to calculate locus profile hash for this format"
+                    )
+                computed_profile_hash = profile_hash
 
-        def _raise_no_computable_hash() -> NoReturn:
-            raise ValueError("Unable to calculate profile hash for this format")
-
-        if self.seq_profile_type == enum.SeqProfileType.ALLELE:
-            # Parse ALLELE SeqProfile and derive values depending on format
+            if profile_hash == NULL_ID:
+                self.content_hash = computed_profile_hash
+            elif profile_hash != computed_profile_hash:
+                raise ValueError(
+                    "Provided locus profile hash does not match computed hash"
+                )
+        elif self.seq_profile_type == enum.SeqProfileType.ALLELE:
+            # Parse allele profile and derive values depending on allele_profile_format
             if self.format == enum.SeqProfileFormat.ORDERED_ALLELE_IDS:
                 # Parse the profile from base64 encoded concatenated 128-bit allele IDs
                 allele_bytes = base64.b64decode(self.content)

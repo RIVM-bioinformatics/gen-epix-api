@@ -1,3 +1,4 @@
+import json
 from typing import ClassVar, Self
 from uuid import UUID
 
@@ -168,77 +169,310 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
         description="A mapping from locus codes to repeat numbers for all detected loci, in any order and if available. Undetected loci must have None as repeat number or may be omitted. Must be present if kmer_profile is not provided: these 2 properties are different representations of the same data that can be chosen between.",
     )
 
-    @model_validator(mode="after")
-    def _validate_content(self) -> Self:
-        """
-        Override parent validation for content to handle alternative representations
-        that are specific to the upload format. The verification of the content hash is
-        not performed, instead this is expected to be done during the upload processing,
-        after any alternative representations are converted to the standard content
-        formats.
+    @staticmethod
+    def _get_representation_list(field_names: tuple[str, ...]) -> str:
+        if len(field_names) == 1:
+            return field_names[0]
+        if len(field_names) == 2:
+            return f"{field_names[0]} or {field_names[1]}"
+        return f"{', '.join(field_names[:-1])}, or {field_names[-1]}"
 
-        The validation performed here is only to verify that at least one of the
-        possible representations is provided and that they are consistent with each
-        other if more than one is provided.
-        """
-        n_representations = 0
-        if self.seq_profile_type == enum.SeqProfileType.SNP:
-            n_representations = sum(
-                [
-                    self.content != "",
-                    self.aligned_nucleotide_seq is not None,
-                ]
-            )
-        elif self.seq_profile_type == enum.SeqProfileType.ALLELE:
-            n_representations = sum(
-                [
-                    self.content != "",
-                    self.allele_ids is not None,
-                    self.locus_allele_id_map is not None,
-                ]
-            )
-            if self.locus_allele_id_map is not None:
-                # Verify locus code map provided
-                if (
-                    self.locus_code_map_id is None or self.locus_code_map_id == NULL_ID
-                ) and self.locus_code_map_code is None:
-                    raise ValueError(
-                        "locus_code_map_id or locus_code_map_code must be provided when locus_allele_id_map is used."
-                    )
-        elif self.seq_profile_type == enum.SeqProfileType.MLVA:
-            n_representations = sum(
-                [
-                    self.content != "",
-                    self.repeat_numbers is not None,
-                    self.locus_repeat_number_map is not None,
-                ]
-            )
-            if self.locus_repeat_number_map is not None:
-                # Verify locus code map provided
-                if (
-                    self.locus_code_map_id is None or self.locus_code_map_id == NULL_ID
-                ) and self.locus_code_map_code is None:
-                    raise ValueError(
-                        "locus_code_map_id or locus_code_map_code must be provided when locus_repeat_number_map is used."
-                    )
-        elif self.seq_profile_type == enum.SeqProfileType.KMER:
-            n_representations = sum(
-                [
-                    self.content != "",
-                    self.kmer_frequency_map is not None,
-                ]
-            )
-        else:
+    def _validate_exactly_one_representation(
+        self,
+        representations: tuple[tuple[str, bool], ...],
+    ) -> None:
+        if sum(is_provided for _, is_provided in representations) != 1:
             raise ValueError(
-                f"Unsupported sequence profile type: {self.seq_profile_type}"
+                "Exactly one of "
+                f"{self._get_representation_list(tuple(name for name, _ in representations))} "
+                "must be provided."
             )
-        if n_representations != 1:
+
+    def _require_locus_code_map(self, representation_name: str) -> None:
+        if (
+            self.locus_code_map_id is None or self.locus_code_map_id == NULL_ID
+        ) and self.locus_code_map_code is None:
             raise ValueError(
-                "Exactly one of content or aligned_nucleotide_seq must be provided."
+                "locus_code_map_id or locus_code_map_code must be provided when "
+                f"{representation_name} is used."
             )
-        if not self.protocol_code and self.protocol_id == NULL_ID:
-            raise ValueError("Either protocol_code or protocol_id must be provided.")
+
+    def _validate_locus_profile_upload(self) -> Self:
+        if self.content == "":
+            raise ValueError("content must be provided.")
         return self
+
+    def _validate_snp_profile_upload(self) -> Self:
+        self._validate_exactly_one_representation(
+            (
+                ("content", self.content != ""),
+                ("aligned_nucleotide_seq", self.aligned_nucleotide_seq is not None),
+            )
+        )
+        if self.aligned_nucleotide_seq is not None:
+            self.content = self.aligned_nucleotide_seq
+        return self
+
+    def _validate_allele_profile_upload(self) -> Self:
+        # Already normalized (content was derived from allele_ids on a prior validation pass)
+        if self.content != "" and self.allele_ids is not None:
+            return self
+        self._validate_exactly_one_representation(
+            (
+                ("content", self.content != ""),
+                ("allele_ids", self.allele_ids is not None),
+                ("locus_allele_id_map", self.locus_allele_id_map is not None),
+            )
+        )
+
+        if self.allele_ids is not None:
+            self.content = SeqProfile.get_ordered_allele_ids_representation(
+                self.allele_ids
+            )
+            computed_profile_hash = SeqProfile.get_allele_profile_hash(self.allele_ids)
+            if self.content_hash == NULL_ID:
+                self.content_hash = computed_profile_hash
+            elif self.content_hash != computed_profile_hash:
+                raise ValueError(
+                    "Provided allele profile hash does not match computed hash"
+                )
+        elif self.locus_allele_id_map is not None:
+            self._require_locus_code_map("locus_allele_id_map")
+        return self
+
+    def _validate_mlva_profile_upload(self) -> Self:
+        # Already normalized (content was derived from repeat_numbers on a prior validation pass)
+        if self.content != "" and self.repeat_numbers is not None:
+            return self
+        self._validate_exactly_one_representation(
+            (
+                ("content", self.content != ""),
+                ("repeat_numbers", self.repeat_numbers is not None),
+                (
+                    "locus_repeat_number_map",
+                    self.locus_repeat_number_map is not None,
+                ),
+            )
+        )
+
+        if self.repeat_numbers is not None:
+            self.content = SeqProfile.get_ordered_repeat_numbers_representation(
+                self.repeat_numbers
+            )
+            computed_profile_hash = SeqProfile.get_mlva_profile_hash(
+                self.repeat_numbers
+            )
+            if self.content_hash == NULL_ID:
+                self.content_hash = computed_profile_hash
+            elif self.content_hash != computed_profile_hash:
+                raise ValueError(
+                    "Provided MLVA profile hash does not match computed hash"
+                )
+        elif self.locus_repeat_number_map is not None:
+            self._require_locus_code_map("locus_repeat_number_map")
+        return self
+
+    def _validate_kmer_profile_upload(self) -> Self:
+        # Already normalized (content was derived from kmer_frequency_map on a prior validation pass)
+        if self.content != "" and self.kmer_frequency_map is not None:
+            return self
+        self._validate_exactly_one_representation(
+            (
+                ("content", self.content != ""),
+                ("kmer_frequency_map", self.kmer_frequency_map is not None),
+            )
+        )
+
+        if self.kmer_frequency_map is not None:
+            self.content = json.dumps(self.kmer_frequency_map)
+            computed_profile_hash = SeqProfile.get_kmer_profile_hash(
+                self.kmer_frequency_map
+            )
+            if self.content_hash == NULL_ID:
+                self.content_hash = computed_profile_hash
+            elif self.content_hash != computed_profile_hash:
+                raise ValueError(
+                    "Provided k-mer profile hash does not match computed hash"
+                )
+        return self
+
+    # Validate upload representations per profile type and normalize the ordered ones.
+    @model_validator(mode="after")
+    def _validate_model(self) -> Self:
+        validators = {
+            enum.SeqProfileType.LOCUS: self._validate_locus_profile_upload,
+            enum.SeqProfileType.ALLELE: self._validate_allele_profile_upload,
+            enum.SeqProfileType.SNP: self._validate_snp_profile_upload,
+            enum.SeqProfileType.MLVA: self._validate_mlva_profile_upload,
+            enum.SeqProfileType.KMER: self._validate_kmer_profile_upload,
+        }
+        return validators[self.seq_profile_type]()
+
+    # @model_validator(mode="after")
+    # def _validate_model(self) -> Self:
+    #     """
+    #     Override parent validation for upload format to handle alleles and locus_allele_id_map.
+    #     """
+    #     n_representations = sum(
+    #         [
+    #             self.allele_profile != "",
+    #             self.allele_ids is not None,
+    #             self.locus_allele_id_map is not None,
+    #         ]
+    #     )
+    #     if n_representations != 1:
+    #         raise ValueError(
+    #             "Exactly one of allele_profile, allele_ids, or locus_allele_id_map must be provided."
+    #         )
+
+    #     if self.allele_profile != "":
+    #         # Use parent validation for allele_profile string format
+    #         super()._validate_model()
+    #     elif self.allele_ids is not None:
+    #         # Set or verify n_loci
+    #         computed_n_loci = sum(x is not None for x in self.allele_ids)
+    #         if self.n_loci == 0:
+    #             if computed_n_loci == 0:
+    #                 raise ValueError("Unable to calculate number of loci")
+    #             self.n_loci = computed_n_loci
+    #         elif self.n_loci != computed_n_loci:
+    #             raise ValueError(
+    #                 f"Provided n_loci does not match computed n_loci: {self.n_loci} != {computed_n_loci}"
+    #             )
+    #         # Set or verify allele_profile_hash
+    #         computed_profile_hash = AlleleProfile.get_allele_profile_hash(
+    #             self.allele_ids
+    #         )  # Will raise ValueError if invalid
+    #         if self.allele_profile_hash == NULL_ID:
+    #             self.allele_profile_hash = computed_profile_hash
+    #         elif self.allele_profile_hash != computed_profile_hash:
+    #             raise ValueError(
+    #                 "Provided allele profile hash does not match computed hash"
+    #             )
+    #     elif self.locus_allele_id_map is not None:
+    #         # Set or verify n_loci
+    #         computed_n_loci = len(self.locus_allele_id_map)
+    #         if self.n_loci == 0:
+    #             if computed_n_loci == 0:
+    #                 raise ValueError("Unable to calculate number of loci")
+    #             self.n_loci = computed_n_loci
+    #         elif self.n_loci != computed_n_loci:
+    #             raise ValueError(
+    #                 f"Provided n_loci does not match computed n_loci: {self.n_loci} != {computed_n_loci}"
+    #             )
+    #         # Verify locus code map provided
+    #         if (
+    #             self.locus_code_map_id is None or self.locus_code_map_id == NULL_ID
+    #         ) and self.locus_code_map_code is None:
+    #             raise ValueError(
+    #                 "locus_code_map_id or locus_code_map_code must be provided when locus_allele_id_map is used."
+    #             )
+    #         # Set or verify allele_profile_hash: not possible with this representation since loci are unordered
+
+    #     # Upload-specific validation
+    #     if not self.protocol_code and self.protocol_id == NULL_ID:
+    #         raise ValueError("Either protocol_code or protocol_id must be provided.")
+    #     if self.locus_set_code is None and self.locus_set_id == NULL_ID:
+    #         raise ValueError("Either locus_set_code or locus_set_id must be provided.")
+    #     if (
+    #         self.locus_allele_id_map is not None
+    #         and self.locus_code_map_id == NULL_ID
+    #         and self.locus_code_map_code is None
+    #     ):
+    #         raise ValueError(
+    #             "Either locus_code_map_id or locus_code_map_code must be provided when locus_allele_id_map is used."
+    #         )
+    #     return self
+    # @model_validator(mode="after")
+    # def _validate_model(self) -> Self:
+    #     """
+    #     Override parent validation for upload format to handle alleles and locus_allele_id_map.
+    #     """
+    #     n_representations = sum(
+    #         [
+    #             self.mlva_profile != "",
+    #             self.repeat_numbers is not None,
+    #             self.locus_repeat_number_map is not None,
+    #         ]
+    #     )
+    #     if n_representations != 1:
+    #         raise ValueError(
+    #             "Exactly one of mlva_profile, repeat_numbers, or locus_repeat_number_map must be provided."
+    #         )
+
+    #     if self.mlva_profile != "":
+    #         # Use parent validation for mlva_profile string format
+    #         super()._validate_model()
+    #     elif self.repeat_numbers is not None:
+    #         # Set or verify mlva_profile_hash
+    #         computed_profile_hash = MlvaProfile.get_mlva_profile_hash(
+    #             self.repeat_numbers
+    #         )  # Will raise ValueError if invalid
+    #         if self.mlva_profile_hash == NULL_ID:
+    #             self.mlva_profile_hash = computed_profile_hash
+    #         elif self.mlva_profile_hash != computed_profile_hash:
+    #             raise ValueError(
+    #                 "Provided MLVA profile hash does not match computed hash"
+    #             )
+    #     elif self.locus_repeat_number_map is not None:
+    #         # Verify locus code map provided
+    #         if (
+    #             self.locus_code_map_id is None or self.locus_code_map_id == NULL_ID
+    #         ) and self.locus_code_map_code is None:
+    #             raise ValueError(
+    #                 "locus_code_map_id or locus_code_map_code must be provided when locus_repeat_number_map is used."
+    #             )
+    #         # Set or verify mlva_profile_hash: not possible with this representation since loci are unordered
+
+    #     # Upload-specific validation
+    #     if not self.protocol_code and self.protocol_id == NULL_ID:
+    #         raise ValueError("Either protocol_code or protocol_id must be provided.")
+    #     if self.locus_set_code is None and self.locus_set_id == NULL_ID:
+    #         raise ValueError("Either locus_set_code or locus_set_id must be provided.")
+    #     if (
+    #         self.locus_repeat_number_map is not None
+    #         and self.locus_code_map_id == NULL_ID
+    #         and self.locus_code_map_code is None
+    #     ):
+    #         raise ValueError(
+    #             "Either locus_code_map_id or locus_code_map_code must be provided when locus_repeat_number_map is used."
+    #         )
+    #     return self
+    # @model_validator(mode="after")
+    # def _validate_model(self) -> Self:
+    #     """
+    #     Override parent validation for upload format to handle kmer_frequency_map.
+    #     """
+    #     n_representations = sum(
+    #         [
+    #             self.kmer_profile != "",
+    #             self.kmer_frequency_map is not None,
+    #         ]
+    #     )
+    #     if n_representations != 1:
+    #         raise ValueError(
+    #             "Exactly one of kmer_profile or kmer_frequency_map must be provided."
+    #         )
+
+    #     if self.kmer_profile != "":
+    #         # Use parent validation for kmer_profile string format
+    #         super()._validate_model()
+    #     elif self.kmer_frequency_map is not None:
+    #         # Set or verify kmer_profile_hash
+    #         computed_profile_hash = KmerProfile.get_kmer_profile_hash(
+    #             self.kmer_frequency_map
+    #         )  # Will raise ValueError if invalid
+    #         if self.kmer_profile_hash == NULL_ID:
+    #             self.kmer_profile_hash = computed_profile_hash
+    #         elif self.kmer_profile_hash != computed_profile_hash:
+    #             raise ValueError(
+    #                 "Provided k-mer profile hash does not match computed hash"
+    #             )
+
+    #     # Upload-specific validation
+    #     if not self.protocol_code and self.protocol_id == NULL_ID:
+    #         raise ValueError("Either protocol_code or protocol_id must be provided.")
+    #     return self
 
 
 class AlleleForUpload(Allele):

@@ -66,6 +66,7 @@ from gen_epix.seqdb.domain.model.seq.upload import SampleForUpload as SampleForU
 from gen_epix.seqdb.domain.model.seq.upload import (
     SampleUploadResult as SampleUploadResult,
 )
+from gen_epix.seqdb.domain.model.seq.upload import SeqClassificationForUpload as SeqClassificationForUpload
 from gen_epix.seqdb.domain.model.seq.upload import SeqForUpload as SeqForUpload
 from gen_epix.seqdb.domain.model.seq.upload import (
     SeqProfileForUpload as SeqProfileForUpload,

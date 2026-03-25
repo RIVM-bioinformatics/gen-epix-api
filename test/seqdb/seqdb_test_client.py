@@ -724,11 +724,11 @@ class SeqdbTestClient(TestClient):
                         )
                     allele_ids[locus_idx] = alleles[clean_allele_seq].id  # type: ignore[assignment]
             allele_profile_for_upload = model.SeqProfileForUpload(
-                locus_set_id=locus_set_id,
+                # locus_set_id=locus_set_id,
                 protocol_id=locus_detection_protocol_id,
                 locus_code_map_id=locus_code_map_id,
                 allele_ids=allele_ids,  # type: ignore[arg-type]
-                allele_profile_format=enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
+                seq_profile_type=enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
                 seq_id=seq_id,
             )
             seq_for_upload = model.SeqForUpload(
@@ -743,7 +743,7 @@ class SeqdbTestClient(TestClient):
             samples_for_upload.append(
                 model.SampleForUpload(
                     seqs=[seq_for_upload],
-                    allele_profiles=[allele_profile_for_upload],
+                    seq_profiles=[allele_profile_for_upload],
                     sample=model.Sample(created_in_data_collection_id=uuid.uuid4()),
                 )
             )
