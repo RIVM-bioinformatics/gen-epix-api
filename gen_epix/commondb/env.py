@@ -188,7 +188,6 @@ class AppComposer(BaseAppComposer):
             # Only ROOT can bypass
             privileged_roles = app_impl.role_set_map[enum.RoleSet.ROOT]
 
-            # register_set_model_metadata_policy(app, privileged_roles)
             self._register_extra_policies(app, privileged_roles)
 
             # Finalise process

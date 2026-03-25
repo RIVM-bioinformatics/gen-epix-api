@@ -1,6 +1,5 @@
 from gen_epix.commondb.policies.model_metadata_policy import (
     MaskModelProcessMetadataPolicy,
-    SetModelProcessMetadataPolicy,
 )
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.enum import EventTiming
@@ -13,20 +12,6 @@ def _get_crud_command_classes(app: App) -> set:
             app.domain.get_crud_commands_for_service_type(service_type)
         )
     return crud_command_classes
-
-
-def register_set_model_metadata_policy(
-    app: App,
-    privileged_roles: frozenset[str],
-) -> None:
-    """
-    Registers SetModelProcessMetadataPolicy (BEFORE) for every CrudCommand class
-    known to the domain, so that written objects get set_created / set_modified
-    called automatically for non-privileged users.
-    """
-    policy = SetModelProcessMetadataPolicy(privileged_roles)
-    for cmd_class in _get_crud_command_classes(app):
-        app.register_policy(cmd_class, policy, EventTiming.BEFORE)
 
 
 def register_mask_model_metadata_policy(
