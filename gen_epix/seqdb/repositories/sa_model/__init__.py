@@ -40,6 +40,10 @@ from gen_epix.seqdb.repositories.sa_model.seq import LocusCodeMap as LocusCodeMa
 from gen_epix.seqdb.repositories.sa_model.seq import LocusSet as LocusSet
 from gen_epix.seqdb.repositories.sa_model.seq import PcrMeasurement as PcrMeasurement
 from gen_epix.seqdb.repositories.sa_model.seq import Protocol as Protocol
+from gen_epix.seqdb.repositories.sa_model.seq import ProtocolSet as ProtocolSet
+from gen_epix.seqdb.repositories.sa_model.seq import (
+    ProtocolSetMember as ProtocolSetMember,
+)
 from gen_epix.seqdb.repositories.sa_model.seq import ReadSet as ReadSet
 from gen_epix.seqdb.repositories.sa_model.seq import (
     ReadSetIdentifier as ReadSetIdentifier,
@@ -104,6 +108,8 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.LocusSet: LocusSet,
         model.PcrMeasurement: PcrMeasurement,
         model.Protocol: Protocol,
+        model.ProtocolSet: ProtocolSet,
+        model.ProtocolSetMember: ProtocolSetMember,
         model.ReadSet: ReadSet,
         model.ReadSetIdentifier: ReadSetIdentifier,
         model.RefAllele: RefAllele,
