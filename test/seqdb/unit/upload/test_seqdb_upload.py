@@ -202,7 +202,7 @@ class BaseUploadTestCase(TestCase):
         props: dict[str, Any] | None = None,
         read_sets: list[model.ReadSetForUpload] | None = None,
         seqs: list[model.SeqForUpload] | None = None,
-        allele_profiles: list[model.AlleleProfileForUpload] | None = None,
+        allele_profiles: list[model.SeqProfileForUpload] | None = None,
     ) -> model.SampleForUpload:
         """Helper to create a SampleForUpload with default or specified properties."""
         return model.SampleForUpload(
@@ -266,7 +266,7 @@ class BaseUploadTestCase(TestCase):
             contigs=contigs or [model.Contig(seq="ATCGATCG")],
         )
 
-    def create_allele_profile_for_upload(
+    def create_seq_profile_for_upload(
         self,
         sample_id: UUID | None = None,
         seq_id: UUID | None = None,
@@ -278,12 +278,12 @@ class BaseUploadTestCase(TestCase):
         locus_code_map_id: UUID | None = None,
         locus_code_map_code: str | None = None,
         allele_profile: str | None = None,
-        allele_profile_format: enum.AlleleProfileFormat = enum.AlleleProfileFormat.ORDERED_ALLELE_IDS,
+        allele_profile_format: enum.SeqProfileFormat = enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
         allele_ids: list[UUID | None] | None = None,
         locus_allele_id_map: dict[str, UUID] | None = None,
-    ) -> model.AlleleProfileForUpload:
-        """Helper to create an AlleleProfileForUpload with default or specified properties."""
-        return model.AlleleProfileForUpload(
+    ) -> model.SeqProfileForUpload:
+        """Helper to create a SeqProfileForUpload with default or specified properties."""
+        return model.SeqProfileForUpload(
             id=allele_profile_id,
             sample_id=sample_id or NULL_ID,
             seq_id=seq_id,
@@ -503,16 +503,16 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
     def test_locus_detection_protocol_id_does_not_exist(self) -> None:
         """Test error when locus detection protocol ID does not exist."""
         # Create input and output
-        allele_profile = self.create_allele_profile_for_upload(
+        allele_profile = self.create_seq_profile_for_upload(
             sample_id=self.sample_id,
         )
         # Set the format after creation
-        allele_profile.allele_profile_format = (
-            enum.AlleleProfileFormat.ORDERED_ALLELE_IDS
+        allele_profile.seq_profile_format = (
+            enum.SeqProfileFormat.ORDERED_ALLELE_IDS
         )
         sample = self.create_sample_for_upload(
             sample_id=self.sample_id,
-            allele_profiles=[allele_profile],
+            seq_profiles=[allele_profile],
         )
         cmd, retval = self.create_command_and_result_for_samples(sample)
 
@@ -527,21 +527,21 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
 
         # Verify
         self.assertFalse(success)
-        # Check that error was added to allele_profile_result
-        self.assertTrue(retval.samples[0].allele_profiles[0].has_errors())
-        self.assertTrue(retval.samples[0].allele_profiles[0].has_log_code("e3b5c7d9"))
+        # Check that error was added to seq_profile_result
+        self.assertTrue(retval.samples[0].seq_profiles[0].has_errors())
+        self.assertTrue(retval.samples[0].seq_profiles[0].has_log_code("e3b5c7d9"))
 
     def test_locus_detection_protocol_code_does_not_exist(self) -> None:
         """Test error when locus detection protocol code does not exist."""
         # Create input and output
-        allele_profile = self.create_allele_profile_for_upload(
+        seq_profile = self.create_seq_profile_for_upload(
             sample_id=self.sample_id,
             locus_detection_protocol_id=NULL_ID,
             locus_detection_protocol_code="INVALID_CODE",
         )
         sample = self.create_sample_for_upload(
             sample_id=self.sample_id,
-            allele_profiles=[allele_profile],
+            seq_profiles=[seq_profile],
         )
         cmd, retval = self.create_command_and_result_for_samples(sample)
 
@@ -556,14 +556,14 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
 
         # Verify
         self.assertFalse(success)
-        # Check that error was added to allele_profile_result
-        self.assertTrue(retval.samples[0].allele_profiles[0].has_errors())
-        self.assertTrue(retval.samples[0].allele_profiles[0].has_log_code("d2c4b6a8"))
+        # Check that error was added to seq_profile_result
+        self.assertTrue(retval.samples[0].seq_profiles[0].has_errors())
+        self.assertTrue(retval.samples[0].seq_profiles[0].has_log_code("d2c4b6a8"))
 
     def test_locus_detection_protocol_id_code_mismatch(self) -> None:
         """Test error when locus detection protocol ID and code don't match."""
         # Create input and output
-        allele_profile = self.create_allele_profile_for_upload(
+        seq_profile = self.create_seq_profile_for_upload(
             sample_id=self.sample_id,
             locus_detection_protocol_code="WRONG_CODE",
         )
@@ -598,7 +598,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
     def test_allele_profile_exists_gets_skipped(self) -> None:
         """Test allele profile with same hash and seq gets skipped with warning."""
         # Create input and output
-        allele_profile = self.create_allele_profile_for_upload(
+        allele_profile = self.create_seq_profile_for_upload(
             sample_id=self.sample_id,
             seq_id=self.seq_id,
         )
@@ -642,7 +642,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         """Test error when allele profile exists but new profile has no seq ID."""
         # Create input and output
         existing_profile_id = uuid4()
-        allele_profile = self.create_allele_profile_for_upload(
+        allele_profile = self.create_seq_profile_for_upload(
             sample_id=self.sample_id,
             seq_id=None,  # No seq ID provided
         )
@@ -683,7 +683,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
     def test_allele_profiles_exist_with_error_on_exists(self) -> None:
         """Test error when allele profiles exist and on_exists=ERROR."""
         # Create input and output
-        allele_profile = self.create_allele_profile_for_upload(
+        allele_profile = self.create_seq_profile_for_upload(
             sample_id=self.sample_id,
             seq_id=self.seq_id,  # Explicitly set seq_id to match mock
         )
@@ -727,7 +727,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
     def test_locus_code_map_id_does_not_exist(self) -> None:
         """Test error when locus code map ID does not exist."""
         # Create input and output
-        allele_profile = self.create_allele_profile_for_upload(
+        allele_profile = self.create_seq_profile_for_upload(
             sample_id=self.sample_id,
         )
         sample = self.create_sample_for_upload(
@@ -762,7 +762,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
     def test_locus_code_map_code_does_not_exist(self) -> None:
         """Test error when locus code map code does not exist."""
         # Create input and output
-        allele_profile = self.create_allele_profile_for_upload(
+        allele_profile = self.create_seq_profile_for_upload(
             sample_id=self.sample_id,
             locus_code_map_id=NULL_ID,
             locus_code_map_code="INVALID_CODE",
@@ -796,7 +796,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         """Test error when locus code map ID and code both exist but don't match."""
         # Create input and output
         different_id = uuid4()
-        allele_profile = self.create_allele_profile_for_upload(
+        allele_profile = self.create_seq_profile_for_upload(
             sample_id=self.sample_id,
             locus_code_map_code="LOCUS_CODE_MAP_CODE",
         )
@@ -831,7 +831,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
     def test_locus_code_map_code_sets_id(self) -> None:
         """Test that providing only locus code map code sets the ID."""
         # Create input and output
-        allele_profile = self.create_allele_profile_for_upload(
+        allele_profile = self.create_seq_profile_for_upload(
             sample_id=self.sample_id,
             locus_code_map_id=NULL_ID,
             locus_code_map_code="TEST_CODE",
@@ -934,7 +934,7 @@ class TestVerifyReferenceData(BaseUploadTestCase):
         """Test that _verify_refdata fails with invalid locus codes in locus_allele_id_map."""
         # Create input and output
         locus_allele_id_map = {"invalid_locus": uuid4(), "another_invalid": uuid4()}
-        allele_profile = self.create_allele_profile_for_upload(
+        allele_profile = self.create_seq_profile_for_upload(
             sample_id=self.sample_id,
             locus_allele_id_map=locus_allele_id_map,
         )
@@ -996,7 +996,7 @@ class TestVerifyReferenceData(BaseUploadTestCase):
         """Test that _verify_refdata fails when existing allele has wrong locus ID."""
         # Create input and output
         allele_ids = [uuid4(), uuid4()]
-        allele_profile = self.create_allele_profile_for_upload(
+        allele_profile = self.create_seq_profile_for_upload(
             sample_id=self.sample_id,
             allele_ids=allele_ids,
         )
@@ -1057,7 +1057,7 @@ class TestVerifyReferenceData(BaseUploadTestCase):
         new_allele_id = uuid4()
         existing_allele_id = uuid4()
         allele_ids = [new_allele_id, existing_allele_id]
-        allele_profile = self.create_allele_profile_for_upload(
+        allele_profile = self.create_seq_profile_for_upload(
             sample_id=self.sample_id,
             locus_code_map_id=self.locus_code_map_id,
             allele_ids=allele_ids,
@@ -1116,7 +1116,7 @@ class TestVerifyReferenceData(BaseUploadTestCase):
         """Test that _verify_refdata gives warning for superfluous alleles in batch."""
         # Create allele profile with existing alleles only
         allele_ids = [uuid4(), uuid4()]
-        allele_profile = self.create_allele_profile_for_upload(
+        allele_profile = self.create_seq_profile_for_upload(
             sample_id=self.sample_id,
             locus_code_map_id=self.locus_code_map_id,
             allele_ids=allele_ids,
@@ -1182,7 +1182,7 @@ class TestVerifyReferenceData(BaseUploadTestCase):
 
     def test_verify_refdata_skipped_samples_ignored(self) -> None:
         """Test that _verify_refdata ignores samples with FAILED/SKIPPED status."""
-        allele_profile = self.create_allele_profile_for_upload(
+        allele_profile = self.create_seq_profile_for_upload(
             sample_id=self.sample_id,
             locus_code_map_id=self.locus_code_map_id,
             # Invalid data that would normally cause errors
@@ -1207,7 +1207,7 @@ class TestVerifyReferenceData(BaseUploadTestCase):
         """Test that _verify_refdata fails when allele profile length doesn't match locus set."""
         # Create allele profile with wrong number of alleles
         allele_ids = [uuid4()]  # Only one allele, but locus set will have more
-        allele_profile = self.create_allele_profile_for_upload(
+        allele_profile = self.create_seq_profile_for_upload(
             sample_id=self.sample_id,
             locus_code_map_id=self.locus_code_map_id,
             allele_ids=allele_ids,

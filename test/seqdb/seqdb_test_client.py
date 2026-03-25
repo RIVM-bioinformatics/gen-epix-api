@@ -723,12 +723,12 @@ class SeqdbTestClient(TestClient):
                             locus_id=locus_id,
                         )
                     allele_ids[locus_idx] = alleles[clean_allele_seq].id  # type: ignore[assignment]
-            allele_profile_for_upload = model.AlleleProfileForUpload(
+            allele_profile_for_upload = model.SeqProfileForUpload(
                 locus_set_id=locus_set_id,
                 protocol_id=locus_detection_protocol_id,
                 locus_code_map_id=locus_code_map_id,
                 allele_ids=allele_ids,  # type: ignore[arg-type]
-                allele_profile_format=enum.AlleleProfileFormat.ORDERED_ALLELE_IDS,
+                allele_profile_format=enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
                 seq_id=seq_id,
             )
             seq_for_upload = model.SeqForUpload(

@@ -138,11 +138,11 @@ class ProtocolCrudCommand(CrudCommand):
 
 
 class ProtocolSetCrudCommand(CrudCommand):
-    MODEL_CLASS = ClassVar = model.ProtocolSet
+    MODEL_CLASS: ClassVar = model.ProtocolSet
 
 
 class ProtocolSetMemberCrudCommand(CrudCommand):
-    MODEL_CLASS = ClassVar = model.ProtocolSetMember
+    MODEL_CLASS: ClassVar = model.ProtocolSetMember
 
 
 class AlleleCrudCommand(CrudCommand):
