@@ -1,5 +1,5 @@
 """
-CRUD operations for GeneticDistanceProtocol entities.
+CRUD operations for Protocol entities.
 This is a simple metadata entity with no ABAC restrictions.
 """
 

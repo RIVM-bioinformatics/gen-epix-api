@@ -250,17 +250,6 @@ class TestCreate:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_ast_protocol(exec_user, "ast_protocol11")
 
-    def test_create_alignment_protocol(self, env: Env) -> None:
-        # Create alignment_protocol as root, app_admin, refdata_admin
-        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS, start=1):
-            env.create_alignment_protocol(exec_user, f"alignment_protocol{i}")
-
-    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
-    def test_create_alignment_protocol_raise(self, env: Env) -> None:
-        for exec_user in BELOW_APP_ADMIN_DATA_USERS:
-            with pytest.raises(exc.UnauthorizedAuthError):
-                env.create_alignment_protocol(exec_user, "alignment_protocol11")
-
     def test_create_taxonomy_protocol(self, env: Env) -> None:
         # Create taxonomy_protocol as root, app_admin, refdata_admin
         for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS, start=1):
@@ -491,7 +480,7 @@ class TestCreate:
             env.create_seq(
                 exec_user,
                 sample_or_str=f"sample{i}",
-                assembly_protocol_or_str="assembly_protocol1",
+                protocol_or_str="assembly_protocol1",
             )
 
     def test_create_seq_raise(self, env: Env) -> None:
@@ -500,7 +489,7 @@ class TestCreate:
                 env.create_seq(
                     exec_user,
                     sample_or_str="sample1",
-                    assembly_protocol_or_str="assembly_protocol1",
+                    protocol_or_str="assembly_protocol1",
                 )
 
     def test_create_seq_with_file(self, env: Env) -> None:
@@ -514,7 +503,7 @@ class TestCreate:
             env.create_seq(
                 exec_user,
                 sample_or_str=f"sample{i}",
-                assembly_protocol_or_str="assembly_protocol2",
+                protocol_or_str="assembly_protocol2",
                 file_id=file.id,
                 file_format=enum.FileFormat.FASTA,
                 file_compression=enum.FileCompression.GZIP,
@@ -550,9 +539,6 @@ class TestCreate:
         # AST protocol already exists
         with pytest.raises(exc.UniqueConstraintViolationError):
             env.create_ast_protocol("refdata_admin1_1", "ast_protocol1")
-        # Alignment protocol already exists
-        with pytest.raises(exc.UniqueConstraintViolationError):
-            env.create_alignment_protocol("refdata_admin1_1", "alignment_protocol1")
         # Taxonomy protocol already exists
         with pytest.raises(exc.UniqueConstraintViolationError):
             env.create_taxonomy_protocol("refdata_admin1_1", "taxonomy_protocol1")
@@ -600,4 +586,4 @@ class TestCreate:
             "sample_or_str": "sample1",
         }
         with pytest.raises(exc.InvalidLinkIdsError):
-            env.create_read_set("root1_1", set_dummy_sequencing_protocol=True, **kwargs)
+            env.create_read_set("root1_1", set_dummy_protocol=True, **kwargs)

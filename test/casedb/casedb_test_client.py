@@ -370,7 +370,7 @@ class CasedbTestClient(TestClient):
         user_or_str: str | model.User,
         name: str,
         seqdb_seq_distance_protocol_id: UUID | None = None,
-        seqdb_seq_distance_protocol_type: seqdb_enum.SeqDistanceProtocolType = seqdb_enum.SeqDistanceProtocolType.KMER_EUCLIDEAN,
+        seqdb_seq_distance_type: seqdb_enum.SeqDistanceType = seqdb_enum.SeqDistanceType.KMER_EUCLIDEAN,
         min_scale_unit: float = 1,
     ) -> model.GeneticDistanceProtocol:
         user: model.User = self._get_obj(
@@ -381,20 +381,21 @@ class CasedbTestClient(TestClient):
             if not seqdb_seq_distance_protocol_id
             else seqdb_seq_distance_protocol_id
         )
-        genetic_distance_protocol = self.handle(
+        protocol = self.handle(
             command.GeneticDistanceProtocolCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.GeneticDistanceProtocol(
-                    name=name,
+                    code=name,
                     seqdb_seq_distance_protocol_id=seqdb_seq_distance_protocol_id,
-                    seqdb_seq_distance_protocol_type=seqdb_seq_distance_protocol_type,
-                    min_scale_unit=min_scale_unit,
+                    seqdb_seq_distance_type=seqdb_seq_distance_type,
+                    seqdb_protocol_type=seqdb_enum.ProtocolType.SEQ_DISTANCE,
                     seqdb_is_integer_distance=True,
+                    min_scale_unit=min_scale_unit,
                 ),
             )
         )
-        return self._set_obj(genetic_distance_protocol)  # type: ignore[return-value]
+        return self._set_obj(protocol)  # type: ignore[return-value]
 
     def create_ref_dim(
         self,
@@ -431,7 +432,7 @@ class CasedbTestClient(TestClient):
         set_dummy_ref_dim: bool = False,
         set_dummy_concept_set: bool = False,
         set_dummy_region_set: bool = False,
-        set_dummy_genetic_distance_protocol: bool = False,
+        set_dummy_protocol: bool = False,
     ) -> model.RefCol:
         user: model.User = self._get_obj(
             model.User, user_or_str
@@ -464,7 +465,7 @@ class CasedbTestClient(TestClient):
         )
         genetic_distance_protocol_id = (
             self.generate_id()
-            if set_dummy_genetic_distance_protocol
+            if set_dummy_protocol
             else (
                 None
                 if not genetic_distance_protocol

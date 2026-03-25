@@ -144,8 +144,8 @@ class BaseRetrieveCaseTestCase(TestCase):
             concept_set=None,
             region_set_id=region_set_id,
             region_set=None,
-            genetic_distance_protocol_id=None,
-            genetic_distance_protocol=None,
+            protocol_id=None,
+            protocol=None,
             description=None,
             props={},
         )
