@@ -11,6 +11,8 @@ Verifies that:
 
 from unittest import TestCase
 
+import pytest
+
 from gen_epix.commondb.domain.enum import EtlStatus
 from gen_epix.commondb.domain.model.base import BaseEtlResult, EtlLogItem
 from gen_epix.commondb.domain.model.upload import UploadLogItem, UploadResult
@@ -21,6 +23,7 @@ from gen_epix.fastapp.enum import LogLevel
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-02")
 class _ConcreteResult(BaseEtlResult):
     """Minimal Pydantic model used to test BaseResult in isolation."""
 
@@ -35,6 +38,7 @@ class _ConcreteResult(BaseEtlResult):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestResultLogItem(TestCase):
     def test_has_required_fields(self) -> None:
         item = EtlLogItem(
@@ -55,6 +59,7 @@ class TestResultLogItem(TestCase):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestBaseResult(TestCase):
     def setUp(self) -> None:
         self.result = _ConcreteResult()
@@ -170,6 +175,7 @@ def _make_pending_upload_result() -> UploadResult:
     )
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestUploadResult(TestCase):
     def setUp(self) -> None:
         self.result = _make_pending_upload_result()

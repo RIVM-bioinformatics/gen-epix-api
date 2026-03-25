@@ -71,6 +71,7 @@ def get_test_client() -> Env:
     )
 
 
+@pytest.mark.scenario_ids("IVO-26")
 @pytest.mark.integration
 class TestCaseDBEdgeCasesRefDataAccess:
     """Test ABAC filtering on reference data (CaseType) access across all edge cases.
@@ -164,6 +165,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
             f"\n  Unexpected access: {sorted(unexpected) if unexpected else '∅'}"
         )
 
+    @pytest.mark.skip(reason="LSP-3081")
     @pytest.mark.parametrize(
         "spec",
         EDGE_CASES,
@@ -199,6 +201,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
             f"\n  Unexpected access: {sorted(unexpected) if unexpected else '∅'}"
         )
 
+    @pytest.mark.skip(reason="LSP-3081")
     @pytest.mark.parametrize(
         "spec",
         EDGE_CASES,

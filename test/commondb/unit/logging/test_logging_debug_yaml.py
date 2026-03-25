@@ -12,6 +12,7 @@ DEBUG_YAML_PATHS = [
 ]
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 @pytest.mark.parametrize(
     "yaml_path", DEBUG_YAML_PATHS, ids=lambda p: p.parent.parent.name
 )

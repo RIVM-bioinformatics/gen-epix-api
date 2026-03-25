@@ -36,6 +36,7 @@ _THIRD_PARTY_LOGGERS: dict[str, str] = {
 }
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 @pytest.mark.parametrize(
     "yaml_path", PRODUCTION_YAML_PATHS, ids=lambda p: p.parent.parent.name
 )
@@ -49,6 +50,7 @@ def test_root_logger_is_present_and_uses_console_handler(yaml_path: Path) -> Non
     ), f"root logger must route through console handler in {yaml_path.name}"
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 @pytest.mark.parametrize(
     "yaml_path", PRODUCTION_YAML_PATHS, ids=lambda p: p.parent.parent.name
 )
@@ -72,6 +74,7 @@ def test_third_party_loggers_explicitly_configured(yaml_path: Path) -> None:
         ), f"Logger '{name}' must use the console handler in {yaml_path.name}"
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 @pytest.mark.parametrize(
     "yaml_path", PRODUCTION_YAML_PATHS, ids=lambda p: p.parent.parent.name
 )
@@ -92,6 +95,7 @@ def test_uvicorn_access_has_structured_filter(yaml_path: Path) -> None:
     ], f"uvicorn.access must declare filters: [uvicorn_access_structured] in {yaml_path.name}"
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 @pytest.mark.parametrize(
     "yaml_path", PRODUCTION_YAML_PATHS, ids=lambda p: p.parent.parent.name
 )

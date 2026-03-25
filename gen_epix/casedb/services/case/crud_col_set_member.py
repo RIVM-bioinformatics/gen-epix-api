@@ -12,7 +12,6 @@ from gen_epix.casedb.services.case.crud_common import (
     _verify_is_read_operation,
     crud_with_access_filter,
     get_ref_data_access_from_command,
-    is_refdata_admin_or_above,
 )
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
@@ -33,9 +32,12 @@ def case_service_crud_col_set_member(
     with self.repository.uow() as uow:
         assert cmd.user is not None
         _crud_cascade_delete(self, uow, cmd)
-        if is_refdata_admin_or_above(self, cmd.user):
-            return _crud_col_set_member_without_abac(self, uow, cmd)
-        return _crud_col_set_member_with_abac(self, uow, cmd)
+        return _crud_col_set_member_without_abac(self, uow, cmd)
+
+        # Currently not in use. Left here for future reference if we want to add ABAC for ColSetMember.
+        # if is_refdata_admin_or_above(self, cmd.user):
+        #     return _crud_col_set_member_without_abac(self, uow, cmd)
+        # return _crud_col_set_member_with_abac(self, uow, cmd)
 
 
 def _crud_col_set_member_without_abac(
@@ -53,6 +55,10 @@ def _crud_col_set_member_without_abac(
 ):
     """ColSetMember admin command handling, no ABAC applied."""
     return self.crud(cmd)  # type: ignore[return-value]
+
+
+# Currently not in use. Left here for future reference if we want to add ABAC for ColSetMember.
+# Adding ABAC for ColSetMember would need to be complex: the user should see all ColSetMembers that belong to ColSets that the organization has access to.
 
 
 def _crud_col_set_member_with_abac(
