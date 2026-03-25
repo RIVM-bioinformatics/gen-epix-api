@@ -44,6 +44,10 @@ from gen_epix.seqdb.repositories.sa_model.seq.ref_data import (
 )
 from gen_epix.seqdb.repositories.sa_model.seq.ref_data import LocusSet as LocusSet
 from gen_epix.seqdb.repositories.sa_model.seq.ref_data import Protocol as Protocol
+from gen_epix.seqdb.repositories.sa_model.seq.ref_data import ProtocolSet as ProtocolSet
+from gen_epix.seqdb.repositories.sa_model.seq.ref_data import (
+    ProtocolSetMember as ProtocolSetMember,
+)
 from gen_epix.seqdb.repositories.sa_model.seq.ref_data import RefAllele as RefAllele
 from gen_epix.seqdb.repositories.sa_model.seq.ref_data import RefSeq as RefSeq
 from gen_epix.seqdb.repositories.sa_model.seq.ref_data import SeqCategory as SeqCategory
