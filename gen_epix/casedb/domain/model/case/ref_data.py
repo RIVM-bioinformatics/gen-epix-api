@@ -639,7 +639,6 @@ class Col(Model):
         return None if value is None else sorted(x.value for x in value)
 
 
-
 class ColSet(Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="col_sets",
@@ -687,6 +686,10 @@ class CaseSetCategory(Model):
     description: str | None = Field(
         description="The description of the CaseSetCategory", max_length=1000
     )
+    rank: int = Field(
+        default=0,
+        description="The rank of the CaseSetCategory, for (partial) ordering.",
+    )
 
 
 class CaseSetStatus(Model):
@@ -701,6 +704,10 @@ class CaseSetStatus(Model):
     )
     description: str | None = Field(
         description="The description of the CaseSetStatus", max_length=1000
+    )
+    rank: int = Field(
+        default=0,
+        description="The rank of the CaseSetStatus, for (partial) ordering.",
     )
 
 

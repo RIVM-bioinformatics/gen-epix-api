@@ -1262,6 +1262,7 @@ class CasedbTestClient(TestClient):
         self,
         user_or_str: str | model.User,
         name: str | model.CaseSetCategory,
+        rank: int | None = 0,
     ) -> model.CaseSetCategory:
         user: model.User = self._get_obj(
             model.User, user_or_str
@@ -1270,7 +1271,7 @@ class CasedbTestClient(TestClient):
             command.CaseSetCategoryCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=model.CaseSetCategory(name=name, description=name),
+                objs=model.CaseSetCategory(name=name, description=name, rank=rank),
             )
         )
         return self._set_obj(case_set_category)  # type: ignore[return-value]
@@ -1279,6 +1280,7 @@ class CasedbTestClient(TestClient):
         self,
         user_or_str: str | model.User,
         name: str | model.CaseSetStatus,
+        rank: int | None = 0,
     ) -> model.CaseSetStatus:
         user: model.User = self._get_obj(
             model.User, user_or_str
@@ -1287,7 +1289,7 @@ class CasedbTestClient(TestClient):
             command.CaseSetStatusCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=model.CaseSetStatus(name=name, description=name),
+                objs=model.CaseSetStatus(name=name, description=name, rank=rank),
             )
         )
         return self._set_obj(case_set_status)  # type: ignore[return-value]

@@ -424,6 +424,7 @@ class CaseSetCategory(Base, RowMetadataMixin):
     description: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.CaseSetCategory, "description"
     )
+    rank: Mapped[int] = create_mapped_column(DOMAIN, model.CaseSetCategory, "rank")
 
 
 class CaseSetStatus(Base, RowMetadataMixin):
@@ -437,6 +438,7 @@ class CaseSetStatus(Base, RowMetadataMixin):
     description: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.CaseSetStatus, "description"
     )
+    rank: Mapped[int] = create_mapped_column(DOMAIN, model.CaseSetStatus, "rank")
 
 
 class CaseSet(Base, RowMetadataMixin):
