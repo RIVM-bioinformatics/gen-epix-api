@@ -260,7 +260,7 @@ class SeqProfileFormat(IntEnum):
 
 
 class SeqClassificationFormat(IntEnum):
-    SEQ_CLASSIFICATION_FORMAT1 = 1
+    PRIMARY_CATEGORY_ONLY = 1
 
 
 class SeqTaxonomyFormat(IntEnum):
