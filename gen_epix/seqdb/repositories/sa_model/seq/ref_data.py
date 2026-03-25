@@ -1,5 +1,5 @@
 # pylint: disable=too-few-public-methods
-from datetime import date
+from datetime import datetime
 from uuid import UUID
 
 import sqlalchemy.orm as orm
@@ -42,11 +42,11 @@ class Protocol(Base, RowMetadataMixin):
     git_commit_tag: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Protocol, "git_commit_tag"
     )
-    valid_start_date: Mapped[date | None] = create_mapped_column(
-        DOMAIN, model.Protocol, "valid_start_date"
+    valid_start_datetime: Mapped[datetime | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "valid_start_datetime"
     )
-    valid_end_date: Mapped[date | None] = create_mapped_column(
-        DOMAIN, model.Protocol, "valid_end_date"
+    valid_end_datetime: Mapped[datetime | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "valid_end_datetime"
     )
     ref_seq_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Protocol, "ref_seq_id"
@@ -73,6 +73,7 @@ class Protocol(Base, RowMetadataMixin):
         DOMAIN, model.Protocol, "props"
     )
 
+
 class ProtocolSet(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
@@ -82,6 +83,7 @@ class ProtocolSet(Base, RowMetadataMixin):
 
     code: Mapped[str] = create_mapped_column(DOMAIN, model.ProtocolSet, "code")
     name: Mapped[str] = create_mapped_column(DOMAIN, model.ProtocolSet, "name")
+
 
 class ProtocolSetMember(Base, RowMetadataMixin):
     """
@@ -105,6 +107,7 @@ class ProtocolSetMember(Base, RowMetadataMixin):
         "Protocol",
         foreign_keys=[protocol_id],
     )
+
 
 class Allele(Base, RowMetadataMixin, SeqMixin):
     """
