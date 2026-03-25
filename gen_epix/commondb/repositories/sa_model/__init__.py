@@ -7,15 +7,6 @@ from gen_epix.commondb.repositories.sa_model.abac import (
     OrganizationAdminPolicyMixin as OrganizationAdminPolicyMixin,
 )
 from gen_epix.commondb.repositories.sa_model.base import (
-    DB_METADATA_FIELDS as DB_METADATA_FIELDS,
-)
-from gen_epix.commondb.repositories.sa_model.base import (
-    GENERATE_SERVICE_METADATA as GENERATE_SERVICE_METADATA,
-)
-from gen_epix.commondb.repositories.sa_model.base import (
-    SERVICE_METADATA_FIELDS as SERVICE_METADATA_FIELDS,
-)
-from gen_epix.commondb.repositories.sa_model.base import (
     NoIdRowMetadataMixin as NoIdRowMetadataMixin,
 )
 from gen_epix.commondb.repositories.sa_model.base import (
@@ -137,6 +128,3 @@ set_entity_repository_model_classes(
     field_name_map=FIELD_NAME_MAP,
 )
 
-SERVICE_METADATA_FIELDS, DB_METADATA_FIELDS, GENERATE_SERVICE_METADATA = (
-    create_field_metadata(DOMAIN)
-)

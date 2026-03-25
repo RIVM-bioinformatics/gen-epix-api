@@ -108,7 +108,6 @@ class BaseSAMapper(abc.ABC):
     def dump(self, user_id: Hashable | None, obj: Model, **kwargs: Any) -> Any:
         raise NotImplementedError
 
-    # TODO: 2953 added but not tested
     @abc.abstractmethod
     def update(
         self, user_id: Hashable | None, obj: Model, row: Row, **kwargs: Any
@@ -127,17 +126,35 @@ class BaseSAMapper(abc.ABC):
         return None
 
 
-# TODO: 2953 create SAMapperFactory that can be used to create mappers with specific field name maps and metadata field names, and that can be used to store the mappers for retrieval in the repository, instead of having this logic in the repository __init__ method
-# class BaseSAMapperFactory(abc.ABC):
+class BaseSAMapperFactory(abc.ABC):
+    """
+    Abstract factory for creating SAMapper instances.
 
-#     @abc.abstractmethod
-#     def create_mapper(
-#         self,
-#         model_class: type[Model],
-#         row_class: type,
-#         field_name_map: dict[str, str] | None = None,
-#     ) -> BaseSAMapper:
-#         raise NotImplementedError()
+    Subclass this in each db layer (casedb, seqdb, etc.) to provide mappers with
+    db-specific update logic. The factory is injected into SARepository at construction
+    time so that fastapp has no knowledge of process- or metadata-specific field rules.
+    """
+
+    @abc.abstractmethod
+    def create_mapper(
+        self,
+        model_class: type[Model],
+        row_class: type,
+        field_name_map: dict[str, str] | None = None,
+    ) -> BaseSAMapper:
+        raise NotImplementedError()
+
+
+class SAMapperFactory(BaseSAMapperFactory):
+    """Default factory that creates standard SAMapper instances with no special update logic."""
+
+    def create_mapper(
+        self,
+        model_class: type[Model],
+        row_class: type,
+        field_name_map: dict[str, str] | None = None,
+    ) -> "SAMapper":
+        return SAMapper(model_class, row_class, field_name_map=field_name_map)
 
 
 class SAMapper(BaseSAMapper):
@@ -253,15 +270,14 @@ class SAMapper(BaseSAMapper):
             return self.row_class(**(mapped_dict | kwargs))
         return self.row_class(**mapped_dict)
 
-    # TODO: 2953 added but not tested
     def update(
         self, user_id: Hashable | None, obj: Model, row: Row, **kwargs: Any
     ) -> bool:
         """
         Update the given row with the values from the given object. Only fields that are
-        not None in the object are updated, which is behaviour that ensures existing
-        values are not overwritten with None, but which likely needs to be overridden
-        in subclasses for specific update logic.
+        not None in the object are updated, preserving existing DB values for omitted
+        fields. Override in subclasses to add db-specific rules (e.g. never touch
+        created_at, stamp modified_by from user_id).
 
         Returns True if any fields were updated, False otherwise.
         """

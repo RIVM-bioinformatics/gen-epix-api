@@ -5,9 +5,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, declarative_mixin, mapped_column
 from sqlalchemy_utils.types.uuid import UUIDType
 
-from gen_epix.commondb.domain import DOMAIN
-from gen_epix.commondb.repositories.sa_model.util import create_field_metadata
-from gen_epix.fastapp.repositories.sa import ServerUtcCurrentTime
+from gen_epix.fastapp.repositories.sa import ServerUtcCurrentTime, UTCDateTime
 
 
 @declarative_mixin
@@ -18,10 +16,10 @@ class RowMetadataMixin:
 
     id: Mapped[UUID] = mapped_column(UUIDType(), primary_key=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
-        sa.DateTime, nullable=False, server_default=ServerUtcCurrentTime()
+        UTCDateTime, nullable=False, server_default=ServerUtcCurrentTime()
     )
     modified_at: Mapped[datetime.datetime] = mapped_column(
-        sa.DateTime,
+        UTCDateTime,
         nullable=False,
         server_default=ServerUtcCurrentTime(),
         onupdate=ServerUtcCurrentTime(),
@@ -42,10 +40,10 @@ class NoIdRowMetadataMixin:
     # id: Mapped[UUID] = mapped_column(UUIDType(), primary_key=True)
 
     created_at: Mapped[datetime.datetime] = mapped_column(
-        sa.DateTime, nullable=False, server_default=ServerUtcCurrentTime()
+        UTCDateTime, nullable=False, server_default=ServerUtcCurrentTime()
     )
     modified_at: Mapped[datetime.datetime] = mapped_column(
-        sa.DateTime,
+        UTCDateTime,
         nullable=False,
         server_default=ServerUtcCurrentTime(),
         onupdate=ServerUtcCurrentTime(),
@@ -55,6 +53,3 @@ class NoIdRowMetadataMixin:
     # __mapper_args__ = {"version_id_col": _version}
 
 
-SERVICE_METADATA_FIELDS, DB_METADATA_FIELDS, GENERATE_SERVICE_METADATA = (
-    create_field_metadata(DOMAIN)
-)

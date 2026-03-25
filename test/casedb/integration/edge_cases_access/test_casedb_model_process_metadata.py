@@ -33,10 +33,10 @@ import pytest
 from rich import print as rich_print
 
 from gen_epix.casedb.domain import enum, model
-from gen_epix.casedb.domain.command import CaseTypeCrudCommand
+from gen_epix.casedb.domain.command.case import CaseTypeCrudCommand
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.domain.util import get_app_cfgs
-from gen_epix.fastapp import CrudOperation
+from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import enum as seqdb_enum
 
 SEQDB_APP_CFGS = get_app_cfgs(
@@ -128,11 +128,15 @@ class TestCaseDBModelProcessMetadata:
         self, setup_case_type_data: None
     ) -> None:
         """
-        test that would verify that when a case type is updated,
-        the modified_at and modified_by fields are updated by SetModelProcessMetadataPolicy.
-        creating a case type, updating it, and then verifying the metadata fields after the update.
+        test that verifies that when a case type is updated,
+        the created_at, modified_at, and modified_by fields are not updated by the mapper.
+        This is to verify that the CommondbSAMapper is not allowing updates to
+        these fields and that they remain unchanged after an update operation,
+        which is the expected behavior since these fields should only be set
+        on creation and not modified afterwards.
+        Note: this test assumes that the update command is providing new values for these fields,
+        but the mapper should ignore them and keep the original values in the database unchanged.
         """
-
         root_user = self.env.get_root_user()
 
         case_type = self.env.create_case_type(
@@ -140,7 +144,11 @@ class TestCaseDBModelProcessMetadata:
         )
 
         old_created_at = case_type.created_at
+
         new_created_at = datetime(2025, 1, 1, tzinfo=UTC)
+        new_modified_at = datetime(2025, 6, 1, tzinfo=UTC)
+
+        new_modified_by = self.get_user("org_user1_1").id
 
         self.env.update_object(
             root_user,
@@ -149,6 +157,8 @@ class TestCaseDBModelProcessMetadata:
             props={
                 "description": "test update",
                 "created_at": new_created_at,
+                "modified_at": new_modified_at,
+                "modified_by": new_modified_by,
                 # "created_at": None,
             },  # should be overridden by policy},
         )
@@ -161,13 +171,26 @@ class TestCaseDBModelProcessMetadata:
         )
         assert isinstance(result, model.CaseType)
 
-        print(f"result.created_at: {result.created_at}")
-        print(f"result.modified_at: {result.modified_at}")
-        print(f"result.modified_by: {result.modified_by}")
+        if VERBOSE:
+            print("old_created_at:", old_created_at)
+            print("old_modified_at:", case_type.modified_at)
+            print("old_modified_by:", case_type.modified_by)
+            print("new_created_at provided in update command:", new_created_at)
+            print("new_modified_at provided in update command:", new_modified_at)
+            print("new_modified_by provided in update command:", new_modified_by)
+            print(f"result.created_at: {result.created_at}")
+            print(f"result.modified_at: {result.modified_at}")
+            print(f"result.modified_by: {result.modified_by}")
 
         assert (
             result.created_at == old_created_at
         ), "created_at should not be changed on update"
+        assert (
+            result.modified_at != new_modified_at
+        ), "modified_at should not be updated to the new value provided in the update command"
+        assert (
+            result.modified_by == root_user.id
+        ), "modified_by should be updated to the root user since they are performing the update"
 
     def test_read_all_case_type_contains_metadata_for_super_users(
         self, setup_case_type_data: None
@@ -236,7 +259,3 @@ class TestCaseDBModelProcessMetadata:
             assert (
                 ct.modified_by is None
             ), f"{ct.name}: modified_by should be masked for org user"
-
-    # Additional tests could include write tests to verify that SetModelProcessMetadataPolicy is setting the fields correctly
-    # on create/update operations, but this would require more setup to create objects and check their metadata after creation/modification.
-    # The current tests focus on the masking behaviour for reads, which is the main purpose of MaskModelProcessMetadataPolicy.

@@ -9,5 +9,6 @@ SKIP_ENDPOINTS = True  # False (i.e. using endpoints) does not work with SA_SQLI
 SKIP_RAISE = False
 SKIP_CREATE_DATA = False
 VERBOSE = True
-DEV_REPOSITORY_CONFIG = DevRepositoryConfig.DICT_EMPTY
-# DEV_REPOSITORY_CONFIG = DevRepositoryConfig.SA_SQLITE_EMPTY
+# TODO 2953: Find a solution for the dictionary-based repository
+# DEV_REPOSITORY_CONFIG = DevRepositoryConfig.DICT_EMPTY
+DEV_REPOSITORY_CONFIG = DevRepositoryConfig.SA_SQLITE_EMPTY

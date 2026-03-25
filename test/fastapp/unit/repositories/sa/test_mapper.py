@@ -166,6 +166,13 @@ class _DummyMapper(BaseSAMapper):
     def dump(self, user_id: Hashable | None, obj: Model, **kwargs: Any) -> Any:
         return {}
 
+    # TODO 2953: This is a dummy method since the actual update logic is now handled by
+    # the CommondbSAMapper(SAMapper) and we want to test that logic in the mapper tests,
+    #  but we need to have an implementation here to satisfy the abstract method
+    # requirement of BaseSAMapper.
+    def update(self, user_id, obj, row, **kwargs):
+        return True
+
     def load(self, row: Any, **kwargs: Any) -> Model:
         return _Model()
 

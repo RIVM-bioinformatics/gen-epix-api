@@ -28,7 +28,6 @@ from gen_epix.commondb.repositories.sa_model import Site as Site
 from gen_epix.commondb.repositories.sa_model import User as User
 from gen_epix.commondb.repositories.sa_model import UserInvitation as UserInvitation
 from gen_epix.commondb.repositories.sa_model import (
-    create_field_metadata,
     set_entity_repository_model_classes,
 )
 from gen_epix.omopdb.domain import DOMAIN, enum, model
@@ -227,6 +226,3 @@ set_entity_repository_model_classes(
     field_name_map=FIELD_NAME_MAP,
 )
 
-SERVICE_METADATA_FIELDS, DB_METADATA_FIELDS, GENERATE_SERVICE_METADATA = (
-    create_field_metadata(DOMAIN)
-)

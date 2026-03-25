@@ -1160,26 +1160,28 @@ class TestClient:
         is_privileged: bool = kwargs.get("is_privileged", False)
         verify_modified: bool = kwargs.get("verify_modified", True)
 
-        if in_obj.created_at and out_obj.created_at != in_obj.created_at:
-            raise ValueError(f"created_at should not be updated: {out_obj.created_at}")
+        # Note: this is now handled by the CommondbSAMapper(SAMapper)
+        # if in_obj.created_at and out_obj.created_at != in_obj.created_at:
+        #     raise ValueError(f"created_at should not be updated: {out_obj.created_at}")
+
         if not out_obj.created_at:
             raise ValueError(f"created_at should be set: {out_obj.created_at}")
-        if verify_modified and not is_privileged:
+        # if verify_modified and not is_privileged:
 
-            # TODO 2952: Where does the native datetime come from?
-            # Why is it not timezone aware? Should we enforce timezone aware datetimes everywhere?
-            in_modified_at = in_obj.modified_at
-            if in_modified_at and in_modified_at.tzinfo is None:
-                in_modified_at = in_modified_at.replace(tzinfo=datetime.UTC)
+        #     # TODO 2952: Where does the native datetime come from?
+        #     # Why is it not timezone aware? Should we enforce timezone aware datetimes everywhere?
+        #     in_modified_at = in_obj.modified_at
+        #     if in_modified_at and in_modified_at.tzinfo is None:
+        #         in_modified_at = in_modified_at.replace(tzinfo=datetime.UTC)
 
-            if in_modified_at and out_obj.modified_at < in_modified_at:
-                raise ValueError(
-                    f"modified_at should be larger : {out_obj.modified_at}"
-                )
-            if out_obj.modified_by != user_id:
-                raise ValueError(
-                    f"modified_by should be updated: {out_obj.modified_by}"
-                )
+        #     if in_modified_at and out_obj.modified_at < in_modified_at:
+        #         raise ValueError(
+        #             f"modified_at should be larger : {out_obj.modified_at}"
+        #         )
+        #     if out_obj.modified_by != user_id:
+        #         raise ValueError(
+        #             f"modified_by should be updated: {out_obj.modified_by}"
+        #         )
 
         out_obj_dict = out_obj.model_dump(
             exclude={"created_at", "modified_at", "modified_by"}

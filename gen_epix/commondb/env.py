@@ -15,13 +15,14 @@ from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.domain import DOMAIN, enum, exc
 from gen_epix.commondb.domain.model import SORTED_SERVICE_TYPES
 from gen_epix.commondb.domain.policy.permission import RoleGenerator
+from gen_epix.commondb.repositories.sa_mapper import CommondbSAMapperFactory
 from gen_epix.commondb.services import AuthService, RbacService
 from gen_epix.commondb.services.abac import AbacService
 from gen_epix.commondb.services.organization import OrganizationService
 from gen_epix.commondb.services.system import SystemService
 from gen_epix.commondb.services.user_manager import UserManager
-from gen_epix.commondb.util import register_set_model_metadata_policy
 from gen_epix.fastapp.domain.domain import Domain
+from gen_epix.fastapp.repositories.sa import SARepository
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.service import BaseService
 from gen_epix.fastapp.util import create_ssl_context
@@ -187,7 +188,7 @@ class AppComposer(BaseAppComposer):
             # Only ROOT can bypass
             privileged_roles = app_impl.role_set_map[enum.RoleSet.ROOT]
 
-            register_set_model_metadata_policy(app, privileged_roles)
+            # register_set_model_metadata_policy(app, privileged_roles)
             self._register_extra_policies(app, privileged_roles)
 
             # Finalise process
@@ -293,9 +294,14 @@ class AppComposer(BaseAppComposer):
                         f"Setting up {service_type.value} service with {repository_type.value} repository",
                     )
                 )
-            # TODO: 2953 inject SAMapperFactory here
+            # Inject a CommondbSAMapperFactory for SA-backed repositories so that
+            # mapper update logic (created_at/modified_at protection, modified_by
+            # stamping) lives in the db layer rather than in fastapp.
+            factory_kwargs: dict[str, Any] = {}
+            if issubclass(repository_class, SARepository):
+                factory_kwargs["sa_mapper_factory"] = CommondbSAMapperFactory()
             curr_repository = repository_class.create_repository(
-                entities=entities, **repository_props
+                entities=entities, **factory_kwargs, **repository_props
             )
             # Add to overview of repositories
             app_impl.repositories[service_type] = curr_repository

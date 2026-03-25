@@ -16,7 +16,7 @@ from gen_epix.fastapp.domain.link import Link
 from gen_epix.fastapp.enum import CrudOperation, FieldTypeSet, IsolationLevel
 from gen_epix.fastapp.model import Model
 from gen_epix.fastapp.repositories.sa.engine_factory import EngineFactory
-from gen_epix.fastapp.repositories.sa.mapper import BaseSAMapper, SAMapper
+from gen_epix.fastapp.repositories.sa.mapper import BaseSAMapper, BaseSAMapperFactory, SAMapper
 from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
@@ -181,10 +181,12 @@ class SARepository(BaseRepository):
                     # Schema might not exist or have other issues
                     continue
 
-    # TODO: 2953 add an entities: list[Entity] and sa_mapper_factory: BaseSAMapperFactory argument so that the responsibility of creating the mappers can be put there. The SAMapperFactory will receive the entities and create the appropriate mappers. The argument can have a default None, in which case the current functionality is kept with using the general SAMapper class
     def __init__(self, engine: Engine, **kwargs: Any):
         # TODO: 2953 remove register_mappers argument
         register_mappers = kwargs.pop("register_mappers", True)
+        sa_mapper_factory: BaseSAMapperFactory | None = kwargs.pop(
+            "sa_mapper_factory", None
+        )
         # Add properties
         self._id: str = kwargs.get("id", str(uuid.uuid4()))
         self._name: str = kwargs.get("name", self._id)
@@ -202,10 +204,16 @@ class SARepository(BaseRepository):
         self._mapper_by_row: dict[type[Any], BaseSAMapper] = {}
         self._uow_context_stack: list[BaseUnitOfWork] = []
 
-        # TODO: 2953 this can become a _init_mappers function instead, asking the sa_mapper_factory to create the mappers for the given entities
         # Register mappers if necessary
         if register_mappers:
-            self.register_mappers(**kwargs)
+            if sa_mapper_factory is not None:
+                entities: list[Entity] = kwargs.get("entities", [])
+                field_name_map: dict[type[Model], dict[str, str]] = kwargs.get(
+                    "field_name_map", {}
+                )
+                self._init_mappers(entities, field_name_map, sa_mapper_factory)
+            else:
+                self.register_mappers(**kwargs)
 
     @property
     def id(self) -> str:
@@ -261,6 +269,34 @@ class SARepository(BaseRepository):
             expire_on_commit=expire_on_commit
         )
         return session
+
+    def _init_mappers(
+        self,
+        entities: list[Entity],
+        field_name_map: dict[type[Model], dict[str, str]],
+        sa_mapper_factory: BaseSAMapperFactory,
+    ) -> None:
+        """
+        Create and register mappers for a list of entities using the given factory.
+        The factory encapsulates all db-specific mapper construction, so SARepository
+        has no knowledge of process fields or metadata field rules.
+        """
+        for entity in entities:
+            if not entity.persistable:
+                continue
+            model_class = entity.model_class
+            db_model_class = entity.db_model_class
+            if not db_model_class:
+                raise exc.RepositoryInitializationServiceError(
+                    f"Entity {entity.name} has no db_model_class set"
+                )
+            assert issubclass(model_class, Model)
+            mapper = sa_mapper_factory.create_mapper(
+                model_class,
+                db_model_class,
+                field_name_map=field_name_map.get(model_class),
+            )
+            self.register_mapper(mapper)
 
     # TODO: 2953 this can become a static "create_default_mappers" utility method that can be moved to BaseSAMapperFactory, producing a dict[type[Model], BaseSAMapper] that can be passed to the constructor as mentioned in the TODO in the __init__ method
     def register_mappers(
@@ -601,43 +637,18 @@ class SARepository(BaseRepository):
         # Retrieve row
         mapper = self.get_mapper(model_class)
         row_class = mapper.row_class
-        row_field_names = mapper.get_row_field_names_by_set(FieldTypeSet.DATA)
-        get_row_id = mapper.get_row_id
-        get_metadata = mapper.generate_service_metadata
 
         def _execute(session: Session) -> list[Model]:
-            # TODO: 2953 use the SAMapper's new update method to replace the entire
-            # update logic here. A commondb-specific SAMapper and SAMapperFactory
-            # implementation then override the standard behaviour where all fields are
-            # just updated if the new value is not None (which is undesired behaviour in
-            # any case): created_at is never updated, modified_at is never updated (is
-            # updated server-side through RowMetadataMixin on_update paramter), and
-            # modified_by is always updated to the user_id performing the update.
-            updated_rows = self.to_sql(user_id, model_class, objs)
-            obj_ids = [get_row_id(x) for x in updated_rows]
+            obj_ids = [mapper.get_id(obj) for obj in objs]
             rows, row_ids = SARepository._in_session_read_some(
                 mapper, session, row_class, obj_ids
             )
             map_rows = dict(zip(row_ids, rows))
-            for updated_row in updated_rows:
-                is_update = False
-                row = map_rows[get_row_id(updated_row)]
-                # Update content
-                for row_field_name in row_field_names:
-                    updated_value = getattr(updated_row, row_field_name)
-                    if getattr(row, row_field_name) != updated_value:
-                        is_update = True
-                        setattr(row, row_field_name, updated_value)
-                if is_update:
-                    # TODO: avoid calling get_metadata twice, once here and once as
-                    # part of to_sql above. This could be done by having a property
-                    # in the mapper for those metadata fields that are not generated
-                    # by the database, as only those need to be set here.
-                    for row_field_name, value in get_metadata(updated_row, user_id):
-                        setattr(row, row_field_name, value)
+            for obj in objs:
+                row = map_rows[mapper.get_id(obj)]
+                mapper.update(user_id, obj, row)
             if flush:
                 session.flush()
-            # Generate objs
             return self.from_sql(model_class, rows)
 
         updated_objs = self._execute_sa(session, _execute, kwargs)
