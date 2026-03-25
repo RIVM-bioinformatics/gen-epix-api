@@ -1,6 +1,7 @@
 import base64
 import secrets
 import uuid
+from datetime import date
 from typing import Any
 from uuid import UUID
 
@@ -12,13 +13,11 @@ def generate_demo_seqdb_models(
 ) -> dict[type, dict[UUID, Any]]:
 
     model_types = [
-        model.LocusDetectionProtocol,
-        model.AssemblyProtocol,
+        model.Protocol,
         model.Locus,
         model.LocusSet,
         model.LocusCodeMap,
-        model.SeqDistanceProtocol,
-        model.AlleleProfile,
+        model.SeqProfile,
         model.SeqDistance,
         model.Sample,
     ]
@@ -29,15 +28,18 @@ def generate_demo_seqdb_models(
 
         hex_string = secrets.token_hex(4)
 
-        locus_detection_protocol: model.LocusDetectionProtocol = model.LocusDetectionProtocol(  # type: ignore[call-arg]
+        locus_detection_protocol: model.Protocol = model.Protocol(  # type: ignore[call-arg]
             id=uuid.uuid4(),
             code=f"locus_protocol_code{hex_string}_{i}",
             name=f"locus_protocol_name{hex_string}_{i}",
+            protocol_type=enum.ProtocolType.LOCUS_PROFILE,
+            ref_seq_id=uuid.uuid4(),
         )
-        assembly_protocol: model.AssemblyProtocol = model.AssemblyProtocol(  # type: ignore[call-arg]
+        assembly_protocol: model.Protocol = model.Protocol(  # type: ignore[call-arg]
             id=uuid.uuid4(),
             code=f"assembly_protocol_code{hex_string}_{i}",
             name=f"assembly_protocol_name{hex_string}_{i}",
+            protocol_type=enum.ProtocolType.ASSEMBLY,
         )
 
         loci: list[model.Locus] = []
@@ -66,10 +68,13 @@ def generate_demo_seqdb_models(
             code_map={locus.code: locus.id for locus in loci if locus.id is not None},
         )
 
-        seq_distance_protocol: model.SeqDistanceProtocol = model.SeqDistanceProtocol(  # type: ignore[call-arg]
+        seq_distance_protocol: model.Protocol = model.Protocol(  # type: ignore[call-arg]
             id=uuid.uuid4(),
-            seq_distance_protocol_type=enum.SeqDistanceProtocolType.ALLELE_HAMMING,
+            protocol_type=enum.ProtocolType.SEQ_DISTANCE,
+            seq_distance_type=enum.SeqDistanceType.ALLELE_HAMMING,
             locus_set_id=locus_set.id,
+            valid_start_date=date(1970, 1, 1),
+            valid_end_date=date(9999, 12, 31),
             is_integer_distance=True,
             max_stored_distance=1000.0,
             code="seq_distance_protocol_code{hex_string}_{i}",
@@ -88,10 +93,10 @@ def generate_demo_seqdb_models(
         ).decode("ascii")
 
         allele_profile = (
-            model.AlleleProfile.model_construct(  # model_construct to bypass validators
+            model.SeqProfile.model_construct(  # model_construct to bypass validators
                 id=uuid.uuid4(),
                 locus_set_id=locus_set.id,
-                locus_detection_protocol_id=locus_detection_protocol.id,
+                protocol_id=locus_detection_protocol.id,
                 n_loci=n_loci,
                 allele_profile=constructed_allele_profile,
                 allele_profile_hash=base64.b64encode(uuid.uuid4().bytes).decode(
@@ -102,10 +107,10 @@ def generate_demo_seqdb_models(
         )
 
         seq_distance = model.SeqDistance(  # type: ignore[call-arg]
-            seq_distance_protocol_id=seq_distance_protocol.id,  # type: ignore[arg-type]
-            profile_id=allele_profile.id,  # type: ignore[arg-type]
-            distance_format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
-            distances="{}",
+            protocol_id=seq_distance_protocol.id,  # type: ignore[arg-type]
+            seq_profile_id=allele_profile.id,  # type: ignore[arg-type]
+            format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
+            content="{}",
             sample_id=allele_profile.sample_id,
         )
 

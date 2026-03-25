@@ -86,10 +86,8 @@ class GeneticDistanceProtocol(Base, RowMetadataMixin):
         model.GeneticDistanceProtocol,
         "seqdb_seq_distance_protocol_id",
     )
-    seqdb_seq_distance_protocol_type: Mapped[seqdb_enum.SeqDistanceProtocolType] = (
-        create_mapped_column(
-            DOMAIN, model.GeneticDistanceProtocol, "seqdb_seq_distance_protocol_type"
-        )
+    seqdb_seq_distance_type: Mapped[seqdb_enum.SeqDistanceType] = create_mapped_column(
+        DOMAIN, model.GeneticDistanceProtocol, "seqdb_seq_distance_type"
     )
     name: Mapped[str] = create_mapped_column(
         DOMAIN, model.GeneticDistanceProtocol, "name"
@@ -455,6 +453,7 @@ class CaseSet(Base, RowMetadataMixin):
         DOMAIN, model.CaseSet, "created_in_data_collection_id"
     )
     name: Mapped[str] = create_mapped_column(DOMAIN, model.CaseSet, "name")
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.CaseSet, "code")
     description: Mapped[str] = create_mapped_column(
         DOMAIN, model.CaseSet, "description"
     )

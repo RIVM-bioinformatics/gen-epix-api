@@ -10,7 +10,7 @@ import pytest
 
 from gen_epix.casedb.domain import enum as enum
 from gen_epix.casedb.domain import model as model
-from gen_epix.seqdb.api import RetrievePhylogeneticTreeRequestBody
+from gen_epix.seqdb.api import CalculatePhylogeneticTreeRequestBody
 from gen_epix.seqdb.domain import command as seqdb_command
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
@@ -43,11 +43,11 @@ class TestSeqdbRemoteApp:
     @pytest.fixture
     def sample_command(
         self, mock_user: seqdb_model.User
-    ) -> seqdb_command.RetrievePhylogeneticTreeCommand:
+    ) -> seqdb_command.CalculatePhylogeneticTreeCommand:
         """Create a sample command for testing."""
-        return seqdb_command.RetrievePhylogeneticTreeCommand(
+        return seqdb_command.CalculatePhylogeneticTreeCommand(
             user=mock_user,
-            seq_distance_protocol_id=uuid4(),
+            protocol_id=uuid4(),
             tree_algorithm=seqdb_enum.TreeAlgorithm.UPGMA,
             profile_ids=[uuid4(), uuid4()],
             leaf_names=["seq1", "seq2"],
@@ -61,7 +61,7 @@ class TestSeqdbRemoteApp:
             "leaf_names": ["seq1", "seq2"],
             "newick_repr": "(seq1:0.1,seq2:0.2);",
             "tree_algorithm": "UPGMA",
-            "seq_distance_protocol_id": str(uuid4()),
+            "protocol_id": str(uuid4()),
         }
 
     def test_route_registration(self, remote_app: SeqdbRemoteApp) -> None:
@@ -73,9 +73,9 @@ class TestSeqdbRemoteApp:
         )
 
         # Verify the route is registered
-        assert seqdb_command.RetrievePhylogeneticTreeCommand in remote_app._routes
+        assert seqdb_command.CalculatePhylogeneticTreeCommand in remote_app._routes
         registered_route = remote_app._routes[
-            seqdb_command.RetrievePhylogeneticTreeCommand
+            seqdb_command.CalculatePhylogeneticTreeCommand
         ]
         assert registered_route == expected_route
 
@@ -84,7 +84,7 @@ class TestSeqdbRemoteApp:
         self,
         mock_client_class: Mock,
         remote_app: SeqdbRemoteApp,
-        sample_command: seqdb_command.RetrievePhylogeneticTreeCommand,
+        sample_command: seqdb_command.CalculatePhylogeneticTreeCommand,
         sample_response_data: dict[str, Any],
         mock_user: seqdb_model.User,
     ) -> None:
@@ -120,8 +120,8 @@ class TestSeqdbRemoteApp:
         assert result.newick_repr == "(seq1:0.1,seq2:0.2);"
 
         # Verify the HTTP request was made correctly
-        expected_request_body = RetrievePhylogeneticTreeRequestBody(
-            seq_distance_protocol_id=sample_command.seq_distance_protocol_id,
+        expected_request_body = CalculatePhylogeneticTreeRequestBody(
+            protocol_id=sample_command.protocol_id,
             tree_algorithm=sample_command.tree_algorithm,
             profile_ids=sample_command.profile_ids,
             leaf_codes=sample_command.leaf_names,
@@ -139,7 +139,7 @@ class TestSeqdbRemoteApp:
         self,
         mock_client_class: Mock,
         remote_app: SeqdbRemoteApp,
-        sample_command: seqdb_command.RetrievePhylogeneticTreeCommand,
+        sample_command: seqdb_command.CalculatePhylogeneticTreeCommand,
         mock_user: seqdb_model.User,
     ) -> None:
         """Test successful HTTP request with response data missing leaf_ids."""
@@ -148,7 +148,7 @@ class TestSeqdbRemoteApp:
             "profile_ids": [str(uuid4()), str(uuid4())],
             "newick_repr": "(seq1:0.1,seq2:0.2);",
             "tree_algorithm": "UPGMA",
-            "seq_distance_protocol_id": str(uuid4()),
+            "protocol_id": str(uuid4()),
         }
 
         # Setup mock HTTP client
@@ -179,7 +179,7 @@ class TestSeqdbRemoteApp:
         self,
         mock_client_class: Mock,
         remote_app: SeqdbRemoteApp,
-        sample_command: seqdb_command.RetrievePhylogeneticTreeCommand,
+        sample_command: seqdb_command.CalculatePhylogeneticTreeCommand,
     ) -> None:
         """Test that empty/null response data returns None."""
         # Setup mock HTTP client with empty response
@@ -205,7 +205,7 @@ class TestSeqdbRemoteApp:
         self,
         mock_client_class: Mock,
         remote_app: SeqdbRemoteApp,
-        sample_command: seqdb_command.RetrievePhylogeneticTreeCommand,
+        sample_command: seqdb_command.CalculatePhylogeneticTreeCommand,
     ) -> None:
         """Test that empty dict response returns None."""
         # Setup mock HTTP client with empty dict response
@@ -231,7 +231,7 @@ class TestSeqdbRemoteApp:
         self,
         mock_client_class: Mock,
         remote_app: SeqdbRemoteApp,
-        sample_command: seqdb_command.RetrievePhylogeneticTreeCommand,
+        sample_command: seqdb_command.CalculatePhylogeneticTreeCommand,
     ) -> None:
         """Test that HTTP errors are properly propagated."""
         # Setup mock HTTP client with error response
@@ -257,7 +257,7 @@ class TestSeqdbRemoteApp:
         self,
         mock_client_class: Mock,
         remote_app: SeqdbRemoteApp,
-        sample_command: seqdb_command.RetrievePhylogeneticTreeCommand,
+        sample_command: seqdb_command.CalculatePhylogeneticTreeCommand,
         sample_response_data: dict[str, Any],
     ) -> None:
         """Test that authentication headers are properly included in requests."""
@@ -292,7 +292,7 @@ class TestSeqdbRemoteApp:
         self,
         mock_client_class: Mock,
         remote_app: SeqdbRemoteApp,
-        sample_command: seqdb_command.RetrievePhylogeneticTreeCommand,
+        sample_command: seqdb_command.CalculatePhylogeneticTreeCommand,
         sample_response_data: dict[str, Any],
     ) -> None:
         """Test that RetrievePhylogeneticTreeRequestBody is constructed correctly."""
@@ -313,8 +313,8 @@ class TestSeqdbRemoteApp:
         remote_app.retrieve_phylogenetic_tree(sample_command)
 
         # Verify request body construction
-        expected_request_body = RetrievePhylogeneticTreeRequestBody(
-            seq_distance_protocol_id=sample_command.seq_distance_protocol_id,
+        expected_request_body = CalculatePhylogeneticTreeRequestBody(
+            protocol_id=sample_command.protocol_id,
             tree_algorithm=sample_command.tree_algorithm,
             profile_ids=sample_command.profile_ids,
             leaf_codes=sample_command.leaf_names,
@@ -328,9 +328,9 @@ class TestSeqdbRemoteApp:
 
     def test_route_mapping_exists(self, remote_app: SeqdbRemoteApp) -> None:
         """Test that the ROUTE_MAP contains the expected mapping."""
-        assert seqdb_command.RetrievePhylogeneticTreeCommand in remote_app.ROUTE_MAP
+        assert seqdb_command.CalculatePhylogeneticTreeCommand in remote_app.ROUTE_MAP
         assert (
-            remote_app.ROUTE_MAP[seqdb_command.RetrievePhylogeneticTreeCommand]
+            remote_app.ROUTE_MAP[seqdb_command.CalculatePhylogeneticTreeCommand]
             == "/retrieve/phylogenetic_tree"
         )
 
@@ -358,4 +358,4 @@ class TestSeqdbRemoteApp:
         assert app.host == "localhost"
         assert app.port == 8001
         assert hasattr(app, "retrieve_phylogenetic_tree")
-        assert seqdb_command.RetrievePhylogeneticTreeCommand in app.ROUTE_MAP
+        assert seqdb_command.CalculatePhylogeneticTreeCommand in app.ROUTE_MAP

@@ -9,6 +9,9 @@ from gen_epix.filter.uuid_set import UuidSetFilter
 from gen_epix.seqdb.domain import command, model
 from gen_epix.seqdb.services.seq.upload_verify_batch_refdata import (
     _verify_batch_refdata_allele_profiles,
+    _verify_batch_refdata_mlva_profiles,
+    _verify_batch_refdata_snp_profiles,
+    _verify_batch_refdata_kmer_profiles
 )
 
 
@@ -29,7 +32,7 @@ def _verify_sample_children(
 
     # Child model specific verifications
     success &= _verify_children_seqs(self, cmd, batch_result, uow)
-    success &= _verify_children_allele_profiles(self, cmd, batch_result, uow)
+    success &= _verify_children_seq_profiles(self, cmd, batch_result, uow)
 
     return success
 
@@ -52,12 +55,12 @@ def _verify_children_seqs(
         uow,
         cmd.user,
         "seqs",
-        "assembly_protocol_id",
-        "assembly_protocol_code",
-        model.AssemblyProtocol,
+        "protocol_id",
+        "protocol_code",
+        model.Protocol,
     )
 
-    # Get dict[(sample_id, seq_hash), [(read_set_id, read_set2_id, assembly_protocol_id, id)]
+    # Get dict[(sample_id, seq_hash), [(read_set_id, read_set2_id, protocol_id, id)]
     sample_ids = list({sample.id for sample in samples if sample.id is not None})
     if not sample_ids:
         # No samples with ID, nothing to verify
@@ -71,7 +74,7 @@ def _verify_children_seqs(
             "seq_hash",
             "read_set_id",
             "read_set2_id",
-            "assembly_protocol_id",
+            "protocol_id",
             "id",
         ],
         filter=UuidSetFilter(key="sample_id", members=frozenset(sample_ids)),
@@ -98,11 +101,11 @@ def _verify_children_seqs(
             for (
                 read_set_id,
                 read_set2_id,
-                assembly_protocol_id,
+                protocol_id,
                 seq_id,
             ) in existing_seq_data:
-                if seq.assembly_protocol_id != assembly_protocol_id:
-                    # Different assembly protocol, cannot give rise to an issue
+                if seq.protocol_id != protocol_id:
+                    # Different protocol, cannot give rise to an issue
                     continue
                 if seq.read_set_id == read_set_id and seq.read_set2_id == read_set2_id:
                     # Same read sets -> skip since the seq is identical and there are
@@ -110,7 +113,7 @@ def _verify_children_seqs(
                     seq.id = seq_id
                     seq_result.add_warning(
                         "a2b3c4d5",
-                        f"Seq with same hash ({seq.seq_hash}), read sets and assembly protocol already exists",
+                        f"Seq with same hash ({seq.seq_hash}), read sets and protocol already exists",
                     )
                     seq_result.status = EtlStatus.SKIPPED
                     break
@@ -120,19 +123,19 @@ def _verify_children_seqs(
                     success = False
                     seq_result.add_error(
                         "b9e4f8a1",
-                        f"Seq with same hash ({seq.seq_hash}) and assembly protocol already exists with ID {seq_id}, but new seq has no read sets no read sets are provided for the new seq to compare",
+                        f"Seq with same hash ({seq.seq_hash}) and protocol already exists with ID {seq_id}, but new seq has no read sets no read sets are provided for the new seq to compare",
                     )
                     break
     return success
 
 
-def _verify_children_allele_profiles(
+def _verify_children_seq_profiles(
     self: BatchUploader,
     cmd: command.UploadSamplesCommand,
     batch_result: model.SampleBatchUploadResult,
     uow: fastapp.BaseUnitOfWork,
 ) -> bool:
-    """Verify allele profile specific rules"""
+    """Verify seq profile specific rules"""
     user_id = cmd.user.id if cmd.user else None
     samples = cmd.sample_batch.samples
     sample_results = batch_result.samples
@@ -143,51 +146,40 @@ def _verify_children_allele_profiles(
     if not sample_ids:
         # No existing samples, nothing to verify
         return success
-    alleles_profile_result_pairs = list(self.parent_result_items(cmd, batch_result))
+    seq_profile_result_pairs = list(self.parent_result_items(cmd, batch_result))
 
     # Retrieve and verify locus detection protocols provided by ID and/or code
+    # TODO: 3034 this may have to be updated to allow specifying the protocol through a composite key
     success &= self.verify_link_id(
-        alleles_profile_result_pairs,
+        seq_profile_result_pairs,
         uow,
         cmd.user,
-        "allele_profiles",
-        "locus_detection_protocol_id",
-        "locus_detection_protocol_code",
-        model.LocusDetectionProtocol,
-    )
-
-    # Retrieve and verify locus sets provided by ID and/or code
-    success &= self.verify_link_id(
-        alleles_profile_result_pairs,
-        uow,
-        cmd.user,
-        "allele_profiles",
-        "locus_set_id",
-        "locus_set_code",
-        model.LocusSet,
+        "seq_profiles",
+        "protocol_id",
+        "protocol_code",
+        model.Protocol,
     )
 
     # Retrieve and verify locus code maps provided by ID and/or code
     success &= self.verify_link_id(
-        alleles_profile_result_pairs,
+        seq_profile_result_pairs,
         uow,
         cmd.user,
-        "allele_profiles",
+        "seq_profiles",
         "locus_code_map_id",
         "locus_code_map_code",
         model.LocusCodeMap,
     )
 
-    # Get dict[(sample_id, allele_profile_hash), [(locus_detection_protocol_id, locus_set_id, seq_id,id)]
+    # Get dict[(sample_id, content_hash), [(protocol_id, seq_id, id)]
     result_iter = self.service.repository.read_fields(
         uow,
         user_id,
-        model.AlleleProfile,
+        model.SeqProfile,
         [
             "sample_id",
-            "allele_profile_hash",
-            "locus_detection_protocol_id",
-            "locus_set_id",
+            "content_hash",
+            "protocol_id",
             "seq_id",
             "id",
         ],
@@ -195,58 +187,51 @@ def _verify_children_allele_profiles(
     )
     key_map: defaultdict[tuple[UUID, UUID], list[tuple]] = defaultdict(list)
     for x in result_iter:
-        key_map[(x[0], x[1])].append((x[2], x[3], x[4], x[5]))
+        key_map[(x[0], x[1])].append((x[2], x[3], x[4]))
 
-    # Verify each allele profile
+    # Verify each seq profile
     for sample, sample_result in zip(samples, sample_results):
         if sample.id is None or sample.id == NULL_ID:
             # Sample does not exist
             continue
-        for allele_profile, allele_profile_result in zip(
-            sample.allele_profiles or [], sample_result.allele_profiles or []
+        for seq_profile, seq_profile_result in zip(
+            sample.seq_profiles or [], sample_result.seq_profiles or []
         ):
-            if allele_profile_result.status == EtlStatus.SKIPPED:
-                # Allele profile is already marked as skipped, no need to verify
+            if seq_profile_result.status == EtlStatus.SKIPPED:
+                # Seq profile is already marked as skipped, no need to verify
                 continue
-            existing_allele_profile_data = key_map.get(
-                (sample.id, allele_profile.allele_profile_hash)
+            existing_seq_profile_data = key_map.get(
+                (sample.id, seq_profile.content_hash)
             )
-            if existing_allele_profile_data is None:
-                # No existing allele profile with this hash for this sample
+            if existing_seq_profile_data is None:
+                # No existing seq profile with this hash for this sample
                 continue
-            # Compare existing allele profiles with this hash
+            # Compare existing seq profiles with this hash
             for (
-                locus_detection_protocol_id,
-                locus_set_id,
+                protocol_id,
                 seq_id,
-                allele_profile_id,
-            ) in existing_allele_profile_data:
-                if (
-                    allele_profile.locus_detection_protocol_id
-                    != locus_detection_protocol_id
-                ):
-                    # Different locus detection protocol, cannot give rise to an issue
+                seq_profile_id,
+            ) in existing_seq_profile_data:
+                if seq_profile.protocol_id != protocol_id:
+                    # Different protocol, cannot give rise to an issue
                     continue
-                if allele_profile.locus_set_id != locus_set_id:
-                    # Different locus set, cannot give rise to an issue
-                    continue
-                if allele_profile.seq_id == seq_id:
-                    # Same seq -> skip since the allele profile is identical and there are
+                if seq_profile.seq_id == seq_id:
+                    # Same seq -> skip since the seq profile is identical and there are
                     # no immutable parts
-                    allele_profile.id = allele_profile_id
-                    allele_profile_result.add_warning(
+                    seq_profile.id = seq_profile_id
+                    seq_profile_result.add_warning(
                         "c7d8e9f0",
-                        f"Allele profile with same hash ({allele_profile.allele_profile_hash}), seq and assembly protocol already exists",
+                        f"Seq profile with same hash ({seq_profile.content_hash}), seq and protocol already exists",
                     )
-                    allele_profile_result.status = EtlStatus.SKIPPED
+                    seq_profile_result.status = EtlStatus.SKIPPED
                     break
-                if allele_profile.seq_id is None:
-                    # New allele profile with same hash but unknown read sets -> error since
+                if seq_profile.seq_id is None:
+                    # New seq profile with same hash but unknown read sets -> error since
                     # cannot verify if indeed it was derived from the same seq
                     success = False
-                    allele_profile_result.add_error(
+                    seq_profile_result.add_error(
                         "a8f3e7b2",
-                        f"Allele profile with same hash ({allele_profile.allele_profile_hash}) and assembly protocol already exists with ID {allele_profile_id}, but new allele profile has no seq ID provided for the new allele profile to compare",
+                        f"Seq profile with same hash ({seq_profile.content_hash}) and protocol already exists with ID {seq_profile_id}, but new seq profile has no seq ID provided for the new seq profile to compare",
                     )
                     break
     return success
@@ -266,5 +251,12 @@ def _verify_sample_refdata(
     # Sequences: nothing to do
     # Allele profiles
     success &= _verify_batch_refdata_allele_profiles(self, cmd, batch_result, uow)
+    # MLVA profiles
+    success &= _verify_batch_refdata_mlva_profiles(self, cmd, batch_result, uow)
+    # SNP profiles
+    success &= _verify_batch_refdata_snp_profiles(self, cmd, batch_result, uow)
+    # K-mer profiles
+    success &= _verify_batch_refdata_kmer_profiles(self, cmd, batch_result, uow)
+
 
     return success

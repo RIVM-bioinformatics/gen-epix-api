@@ -14,23 +14,14 @@ from gen_epix.commondb.domain.model.upload import (
     UploadResult,
 )
 from gen_epix.fastapp.domain import Entity
+from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.seq.classification import (
     SeqClassification,
     SeqTaxonomy,
 )
 from gen_epix.seqdb.domain.model.seq.locus import Allele
 from gen_epix.seqdb.domain.model.seq.pheno import AstMeasurement, PcrMeasurement
-from gen_epix.seqdb.domain.model.seq.profile import (
-    AlleleProfile,
-    AlleleProfileIdentifier,
-    KmerProfile,
-    KmerProfileIdentifier,
-    LocusProfile,
-    MlvaProfile,
-    MlvaProfileIdentifier,
-    SnpProfile,
-    SnpProfileIdentifier,
-)
+from gen_epix.seqdb.domain.model.seq.profile import SeqProfile, SeqProfileIdentifier
 from gen_epix.seqdb.domain.model.seq.reads import ReadSet, ReadSetIdentifier
 from gen_epix.seqdb.domain.model.seq.sample import Sample, SampleIdentifier
 from gen_epix.seqdb.domain.model.seq.seq import Seq, SeqIdentifier
@@ -63,20 +54,20 @@ class ReadSetForUpload(ReadSet, IdentifiersMixin, ValidateRefDataIdCodeMixin):
 
     IDENTIFIER_CLASS: ClassVar = ReadSetIdentifier
     REFDATA_FIELD_ID_CODE_PAIRS: ClassVar = [
-        ("sequencing_protocol_id", "sequencing_protocol_code"),
+        ("protocol_id", "protocol_code"),
     ]
 
     sample_id: UUID = Field(
         default=NULL_ID,
         description="The UUID of the sample that the read set is associated with. If not available, the null ID is put.",
     )
-    sequencing_protocol_id: UUID = Field(
+    protocol_id: UUID = Field(
         default=NULL_ID,
-        description="The UUID of the sequencing protocol, if available. If not available, the null ID is put. Must be present if sequencing_protocol_code is not present. The use of sequencing_protocol_id is preferred over sequencing_protocol_code since the latter may change.",
+        description="The UUID of the protocol, if available. If not available, the null ID is put. Must be present if protocol_code is not present. The use of protocol_id is preferred over protocol_code since the latter may change.",
     )
-    sequencing_protocol_code: str | None = Field(
+    protocol_code: str | None = Field(
         default=None,
-        description="The code of the sequencing protocol. Must be present if sequencing_protocol_id is not present. The use of sequencing_protocol_code is meant for situations where the sequencing_protocol_id is not known, but the code is and/or improves human interpretation.",
+        description="The code of the protocol. Must be present if protocol_id is not present. The use of protocol_code is meant for situations where the protocol_id is not known, but the code is and/or improves human interpretation.",
         max_length=255,
     )
 
@@ -90,95 +81,163 @@ class SeqForUpload(Seq, IdentifiersMixin, ValidateRefDataIdCodeMixin):
     NAME: ClassVar = "SeqForUpload"
     IDENTIFIER_CLASS: ClassVar = SeqIdentifier
     REFDATA_FIELD_ID_CODE_PAIRS: ClassVar = [
-        ("assembly_protocol_id", "assembly_protocol_code"),
+        ("protocol_id", "protocol_code"),
     ]
 
     sample_id: UUID = Field(
         default=NULL_ID,
         description="The UUID of the sample that the sequence is associated with. If not available, the null ID is put.",
     )
-    assembly_protocol_id: UUID = Field(
+    protocol_id: UUID = Field(
         default=NULL_ID,
-        description="The UUID of the assembly protocol, if available. If not available, the null ID is put. Must be present if assembly_protocol_code is not present. The use of assembly_protocol_id is preferred over assembly_protocol_code since the latter may change.",
+        description="The UUID of the protocol, if available. If not available, the null ID is put. Must be present if protocol_code is not present. The use of protocol_id is preferred over protocol_code since the latter may change.",
     )
-    assembly_protocol_code: str | None = Field(
+    protocol_code: str | None = Field(
         default=None,
-        description="The code of the assembly protocol. Must be present if assembly_protocol_id is not present. The use of assembly_protocol_code is meant for situations where the assembly_protocol_id is not known, but the code is and/or improves human interpretation.",
+        description="The code of the protocol. Must be present if protocol_id is not present. The use of protocol_code is meant for situations where the protocol_id is not known, but the code is and/or improves human interpretation.",
         max_length=255,
     )
 
 
-class SnpProfileForUpload(SnpProfile, IdentifiersMixin, ValidateRefDataIdCodeMixin):
+class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMixin):
     """
-    A SNP profile record intended for upload. Equal to a SnpProfile, with
+    A sequence profile record intended for upload. Equal to a SeqProfile, with
     additional variables.
     """
 
-    ENTITY: ClassVar = SnpProfile.model_entity().clone(update={"persistable": False})
-    NAME: ClassVar = "SnpProfileForUpload"
+    ENTITY: ClassVar = SeqProfile.model_entity().clone(update={"persistable": False})
+    NAME: ClassVar = "SeqProfileForUpload"
 
-    IDENTIFIER_CLASS: ClassVar = SnpProfileIdentifier
+    IDENTIFIER_CLASS: ClassVar = SeqProfileIdentifier
     REFDATA_FIELD_ID_CODE_PAIRS: ClassVar = [
-        ("snp_detection_protocol_id", "snp_detection_protocol_code"),
-        ("ref_seq_id", "ref_seq_code"),
+        ("protocol_id", "protocol_code"),
     ]
 
     sample_id: UUID = Field(
         default=NULL_ID,
-        description="The UUID of the sample that the SNP profile is associated with. If not available, the null ID is put.",
+        description="The UUID of the sample that the sequence profile is associated with. If not available, the null ID is put.",
     )
     seq_id: UUID | None = Field(
         default=None,
-        description="The UUID of the sequence that the SNP profile was derived from, if available.",
+        description="The UUID of the sequence that the sequence profile was derived from, if available.",
     )
-    ref_seq_id: UUID = Field(
+    protocol_id: UUID = Field(
         default=NULL_ID,
-        description="The UUID of the reference sequence, if available. If not available, the null ID is put. Must be present if ref_seq_code is not present. The use of ref_seq_id is preferred over ref_seq_code since the latter may change.",
+        description="The UUID of the protocol, if available. If not available, the null ID is put. Must be present if protocol_code is not present. The use of protocol_id is preferred over protocol_code since the latter may change.",
     )
-    ref_seq_code: str | None = Field(
+    protocol_code: str | None = Field(
         default=None,
-        description="The code of the reference sequence. Must be present if ref_seq_id is not present. The use of ref_seq_code is meant for situations where the ref_seq_id is not known, but the code is and/or improves human interpretation.",
+        description="The code of the protocol. Must be present if protocol_id is not present. The use of protocol_code is meant for situations where the protocol_id is not known, but the code is and/or improves human interpretation.",
         max_length=255,
     )
-    snp_detection_protocol_id: UUID = Field(
-        default=NULL_ID,
-        description="The UUID of the SNP detection protocol, if available. If not available, the null ID is put. Must be present if snp_detection_protocol_code is not present. The use of snp_detection_protocol_id is preferred over snp_detection_protocol_code since the latter may change.",
-    )
-    snp_detection_protocol_code: str | None = Field(
-        default=None,
-        description="The code of the SNP detection protocol. Must be present if snp_detection_protocol_id is not present. The use of snp_detection_protocol_code is meant for situations where the snp_detection_protocol_id is not known, but the code is and/or improves human interpretation.",
-        max_length=255,
-    )
-    snp_profile: str = Field(
+    content: str = Field(
         default="",
-        description="String representation of the SNPs detected in the sequence, with the format depending on snp_profile_format. Must be present if aligned_nucleotide_seq is not provided: these 2 properties are different representations of the same data that can be chosen between.",
+        description="String representation of the sequence profile, with the format depending on the sequence profile format. Must be present if another for-upload representation is not provided.",
     )
     aligned_nucleotide_seq: str | None = Field(
         default=None,
-        description="The full nucleotide sequence aligned to the reference sequence. Must be present if snp_profile is not provided: these 2 properties are different representations of the same data that can be chosen between.",
+        description="The full nucleotide sequence aligned to the reference sequence as a for-upload representation for SNP sequence profiles. Must be present if content is not provided.",
+    )
+    locus_code_map_id: UUID | None = Field(
+        default=None,
+        description="The id of the locus code map that has to be used to map locus codes to locus IDs, if available. Must be provided if locus_code_map_code is not provided and any alleles have locus_code filled in. The use of locus_code_map_id is preferred over locus_code_map_code since the latter may change.",
+    )
+    locus_code_map_code: str | None = Field(
+        default=None,
+        description="The code of the locus code map that has to be used to map locus codes to locus IDs, if available. Must be provided if locus_code_map_id is not provided and any alleles have locus_code filled in. The use of locus_code_map_code is meant for situations where the locus_code_map_id is not known, but the code is and/or improves human interpretation.",
+        max_length=255,
+    )
+    allele_ids: list[UUID | None] | None = Field(
+        default=None,
+        description="List of all allele IDs detected for this sample and for the loci within the locus set, in the order of the locus set. Loci that are not present must have None as allele ID. Must be present if allele_profile and locus_allele_id_map are not provided: these 3 properties are different representations of the same data that can be chosen between.",
+    )
+    locus_allele_id_map: dict[str, UUID] | None = Field(
+        default=None,
+        description="A mapping from locus codes to allele ids, which are the hashes of the allele sequence, for all detected loci, in any order and if available. Must be present if allele_profile and alleles are not provided: these 3 properties are different representations of the same data that can be chosen between.",
+    )
+    repeat_numbers: list[int | None] | None = Field(
+        default=None,
+        description="List of all repeat numbers detected for this sample and for the loci within the locus set, in the order of the locus set. Loci that are not present must have None as repeat number. Must be present if mlva_profile and locus_repeat_number_map are not provided: these 3 properties are different representations of the same data that can be chosen between.",
+    )
+    locus_repeat_number_map: dict[str, int | None] | None = Field(
+        default=None,
+        description="A mapping from locus codes to repeat numbers for all detected loci, in any order and if available. Undetected loci must have None as repeat number or may be omitted. Must be present if mlva_profile and repeat_numbers are not provided: these 3 properties are different representations of the same data that can be chosen between.",
+    )
+    kmer_frequency_map: dict[str, float] | None = Field(
+        default=None,
+        description="A mapping from locus codes to repeat numbers for all detected loci, in any order and if available. Undetected loci must have None as repeat number or may be omitted. Must be present if kmer_profile is not provided: these 2 properties are different representations of the same data that can be chosen between.",
     )
 
     @model_validator(mode="after")
-    def _validate_model(self) -> Self:
+    def _validate_content(self) -> Self:
         """
-        Override parent validation for upload format to handle aligned_nucleotide_seq.
+        Override parent validation for content to handle alternative representations
+        that are specific to the upload format. The verification of the content hash is
+        not performed, instead this is expected to be done during the upload processing,
+        after any alternative representations are converted to the standard content
+        formats.
+
+        The validation performed here is only to verify that at least one of the
+        possible representations is provided and that they are consistent with each
+        other if more than one is provided.
         """
-        n_representations = sum(
-            [
-                self.snp_profile != "",
-                self.aligned_nucleotide_seq is not None,
-            ]
-        )
+        n_representations = 0
+        if self.seq_profile_type == enum.SeqProfileType.SNP:
+            n_representations = sum(
+                [
+                    self.content != "",
+                    self.aligned_nucleotide_seq is not None,
+                ]
+            )
+        elif self.seq_profile_type == enum.SeqProfileType.ALLELE:
+            n_representations = sum(
+                [
+                    self.content != "",
+                    self.allele_ids is not None,
+                    self.locus_allele_id_map is not None,
+                ]
+            )
+            if self.locus_allele_id_map is not None:
+                # Verify locus code map provided
+                if (
+                    self.locus_code_map_id is None or self.locus_code_map_id == NULL_ID
+                ) and self.locus_code_map_code is None:
+                    raise ValueError(
+                        "locus_code_map_id or locus_code_map_code must be provided when locus_allele_id_map is used."
+                    )
+        elif self.seq_profile_type == enum.SeqProfileType.MLVA:
+            n_representations = sum(
+                [
+                    self.content != "",
+                    self.repeat_numbers is not None,
+                    self.locus_repeat_number_map is not None,
+                ]
+            )
+            if self.locus_repeat_number_map is not None:
+                # Verify locus code map provided
+                if (
+                    self.locus_code_map_id is None or self.locus_code_map_id == NULL_ID
+                ) and self.locus_code_map_code is None:
+                    raise ValueError(
+                        "locus_code_map_id or locus_code_map_code must be provided when locus_repeat_number_map is used."
+                    )
+        elif self.seq_profile_type == enum.SeqProfileType.KMER:
+            n_representations = sum(
+                [
+                    self.content != "",
+                    self.kmer_frequency_map is not None,
+                ]
+            )
+        else:
+            raise ValueError(
+                f"Unsupported sequence profile type: {self.seq_profile_type}"
+            )
         if n_representations != 1:
             raise ValueError(
-                "Exactly one of snp_profile or aligned_nucleotide_seq must be provided."
+                "Exactly one of content or aligned_nucleotide_seq must be provided."
             )
-
-        if self.snp_profile != "":
-            # Use parent validation for snp_profile string format
-            super()._validate_model()
-        elif self.aligned_nucleotide_seq is not None:
-            pass
+        if not self.protocol_code and self.protocol_id == NULL_ID:
+            raise ValueError("Either protocol_code or protocol_id must be provided.")
         return self
 
 
@@ -197,359 +256,51 @@ class AlleleForUpload(Allele):
     )
 
 
-class AlleleProfileForUpload(
-    AlleleProfile, IdentifiersMixin, ValidateRefDataIdCodeMixin
-):
+class SeqClassificationForUpload(SeqClassification, ValidateRefDataIdCodeMixin):
     """
-    An allele profile record intended for upload. Equal to an AlleleProfile, with
+    A sequence classification intended for upload. Equal to a SeqClassification, with
     additional variables.
     """
 
-    ENTITY: ClassVar = AlleleProfile.model_entity().clone(update={"persistable": False})
-    NAME: ClassVar = "AlleleProfileForUpload"
-
-    IDENTIFIER_CLASS: ClassVar = AlleleProfileIdentifier
+    ENTITY: ClassVar = SeqClassification.model_entity().clone(
+        update={"persistable": False}
+    )
+    NAME: ClassVar = "SeqClassificationForUpload"
     REFDATA_FIELD_ID_CODE_PAIRS: ClassVar = [
-        ("locus_detection_protocol_id", "locus_detection_protocol_code"),
-        ("locus_set_id", "locus_set_code"),
-        ("locus_code_map_id", "locus_code_map_code"),
+        ("protocol_id", "protocol_code"),
+        ("primary_category_id", "primary_category_code"),
     ]
 
     sample_id: UUID = Field(
         default=NULL_ID,
-        description="The UUID of the sample that the allele profile is associated with. If not available, the null ID is put.",
+        description="The UUID of the sample that the sequence classification is associated with. If not available, the null ID is put.",
     )
     seq_id: UUID | None = Field(
         default=None,
-        description="The UUID of the sequence that the allele profile was derived from, if available.",
+        description="The UUID of the sequence that the sequence classification was derived from, if available.",
     )
-    locus_detection_protocol_id: UUID = Field(
+    protocol_id: UUID = Field(
         default=NULL_ID,
-        description="The UUID of the locus detection protocol, if available. If not available, the null ID is put. Must be present if locus_detection_protocol_code is not present. The use of locus_detection_protocol_id is preferred over locus_detection_protocol_code since the latter may change.",
+        description="The UUID of the protocol, if available. If not available, the null ID is put. Must be present if protocol_code is not present. The use of protocol_id is preferred over protocol_code since the latter may change.",
     )
-    locus_detection_protocol_code: str | None = Field(
+    protocol_code: str | None = Field(
         default=None,
-        description="The code of the locus detection protocol. Must be present if locus_detection_protocol_id is not present. The use of locus_detection_protocol_code is meant for situations where the locus_detection_protocol_id is not known, but the code is and/or improves human interpretation.",
+        description="The code of the protocol. Must be present if protocol_id is not present. The use of protocol_code is meant for situations where the protocol_id is not known, but the code is and/or improves human interpretation.",
         max_length=255,
     )
-    locus_set_id: UUID = Field(
+    primary_category_id: UUID = Field(
         default=NULL_ID,
-        description="UUID of the locus set, if available. If not available, the null ID is put. Must be present if locus_set_code is not present. The use of locus_set_id is preferred over locus_set_code since the latter may change.",
+        description="The UUID of the primary category, if available. If not available, the null ID is put. Must be present if primary_category_code is not present. The use of primary_category_id is preferred over primary_category_code since the latter may change.",
     )
-    locus_set_code: str | None = Field(
+    primary_category_code: str | None = Field(
         default=None,
-        description="The code of the locus set. Must be present if locus_set_id is not present. The use of locus_set_code is meant for situations where the locus_set_id is not known, but the code is and/or improves human interpretation.",
+        description="The code of the primary category. Must be present if primary_category_id is not present. The use of primary_category_code is meant for situations where the primary_category_id is not known, but the code is and/or improves human interpretation.",
         max_length=255,
-    )
-    locus_code_map_id: UUID | None = Field(
-        default=None,
-        description="The id of the locus code map that has to be used to map locus codes to locus IDs, if available. Must be provided if locus_code_map_code is not provided and any alleles have locus_code filled in. The use of locus_code_map_id is preferred over locus_code_map_code since the latter may change.",
-    )
-    locus_code_map_code: str | None = Field(
-        default=None,
-        description="The code of the locus code map that has to be used to map locus codes to locus IDs, if available. Must be provided if locus_code_map_id is not provided and any alleles have locus_code filled in. The use of locus_code_map_code is meant for situations where the locus_code_map_id is not known, but the code is and/or improves human interpretation.",
-        max_length=255,
-    )
-    allele_profile: str = Field(
-        default="",
-        description="String representation of the alleles detected in the sequence for the loci in the locus set, with the format depending on allele_profile_format. Must be present if alleles and locus_allele_id_map are not provided: these 3 properties are different representations of the same data that can be chosen between.",
-    )
-    allele_ids: list[UUID | None] | None = Field(
-        default=None,
-        description="List of all allele IDs detected for this sample and for the loci within the locus set, in the order of the locus set. Loci that are not present must have None as allele ID. Must be present if allele_profile and locus_allele_id_map are not provided: these 3 properties are different representations of the same data that can be chosen between.",
-    )
-    locus_allele_id_map: dict[str, UUID] | None = Field(
-        default=None,
-        description="A mapping from locus codes to allele ids, which are the hashes of the allele sequence, for all detected loci, in any order and if available. Must be present if allele_profile and alleles are not provided: these 3 properties are different representations of the same data that can be chosen between.",
     )
 
     @model_validator(mode="after")
-    def _validate_model(self) -> Self:
-        """
-        Override parent validation for upload format to handle alleles and locus_allele_id_map.
-        """
-        n_representations = sum(
-            [
-                self.allele_profile != "",
-                self.allele_ids is not None,
-                self.locus_allele_id_map is not None,
-            ]
-        )
-        if n_representations != 1:
-            raise ValueError(
-                "Exactly one of allele_profile, allele_ids, or locus_allele_id_map must be provided."
-            )
-
-        if self.allele_profile != "":
-            # Use parent validation for allele_profile string format
-            super()._validate_model()
-        elif self.allele_ids is not None:
-            # Set or verify n_loci
-            computed_n_loci = sum(x is not None for x in self.allele_ids)
-            if self.n_loci == 0:
-                if computed_n_loci == 0:
-                    raise ValueError("Unable to calculate number of loci")
-                self.n_loci = computed_n_loci
-            elif self.n_loci != computed_n_loci:
-                raise ValueError(
-                    f"Provided n_loci does not match computed n_loci: {self.n_loci} != {computed_n_loci}"
-                )
-            # Set or verify allele_profile_hash
-            computed_profile_hash = AlleleProfile.get_allele_profile_hash(
-                self.allele_ids
-            )  # Will raise ValueError if invalid
-            if self.allele_profile_hash == NULL_ID:
-                self.allele_profile_hash = computed_profile_hash
-            elif self.allele_profile_hash != computed_profile_hash:
-                raise ValueError(
-                    "Provided allele profile hash does not match computed hash"
-                )
-        elif self.locus_allele_id_map is not None:
-            # Set or verify n_loci
-            computed_n_loci = len(self.locus_allele_id_map)
-            if self.n_loci == 0:
-                if computed_n_loci == 0:
-                    raise ValueError("Unable to calculate number of loci")
-                self.n_loci = computed_n_loci
-            elif self.n_loci != computed_n_loci:
-                raise ValueError(
-                    f"Provided n_loci does not match computed n_loci: {self.n_loci} != {computed_n_loci}"
-                )
-            # Verify locus code map provided
-            if (
-                self.locus_code_map_id is None or self.locus_code_map_id == NULL_ID
-            ) and self.locus_code_map_code is None:
-                raise ValueError(
-                    "locus_code_map_id or locus_code_map_code must be provided when locus_allele_id_map is used."
-                )
-            # Set or verify allele_profile_hash: not possible with this representation since loci are unordered
-
-        # Upload-specific validation
-        if (
-            not self.locus_detection_protocol_code
-            and self.locus_detection_protocol_id == NULL_ID
-        ):
-            raise ValueError(
-                "Either locus_detection_protocol_code or locus_detection_protocol_id must be provided."
-            )
-        if self.locus_set_code is None and self.locus_set_id == NULL_ID:
-            raise ValueError("Either locus_set_code or locus_set_id must be provided.")
-        if (
-            self.locus_allele_id_map is not None
-            and self.locus_code_map_id == NULL_ID
-            and self.locus_code_map_code is None
-        ):
-            raise ValueError(
-                "Either locus_code_map_id or locus_code_map_code must be provided when locus_allele_id_map is used."
-            )
-        return self
-
-
-class MlvaProfileForUpload(MlvaProfile, IdentifiersMixin, ValidateRefDataIdCodeMixin):
-    """
-    An MLVA profile record intended for upload. Equal to an MlvaProfile, with
-    additional variables.
-    """
-
-    ENTITY: ClassVar = MlvaProfile.model_entity().clone(update={"persistable": False})
-    NAME: ClassVar = "MlvaProfileForUpload"
-
-    IDENTIFIER_CLASS: ClassVar = MlvaProfileIdentifier
-    REFDATA_FIELD_ID_CODE_PAIRS: ClassVar = [
-        ("mlva_detection_protocol_id", "mlva_detection_protocol_code"),
-        ("locus_set_id", "locus_set_code"),
-        ("locus_code_map_id", "locus_code_map_code"),
-    ]
-
-    sample_id: UUID = Field(
-        default=NULL_ID,
-        description="The UUID of the sample that the allele profile is associated with. If not available, the null ID is put.",
-    )
-    seq_id: UUID | None = Field(
-        default=None,
-        description="The UUID of the sequence that the allele profile was derived from, if available.",
-    )
-    mlva_detection_protocol_id: UUID = Field(
-        default=NULL_ID,
-        description="The UUID of the MLVA detection protocol, if available. If not available, the null ID is put. Must be present if mlva_detection_protocol_code is not present. The use of mlva_detection_protocol_id is preferred over mlva_detection_protocol_code since the latter may change.",
-    )
-    mlva_detection_protocol_code: str | None = Field(
-        default=None,
-        description="The code of the MLVA detection protocol. Must be present if mlva_detection_protocol_id is not present. The use of mlva_detection_protocol_code is meant for situations where the mlva_detection_protocol_id is not known, but the code is and/or improves human interpretation.",
-        max_length=255,
-    )
-    locus_set_id: UUID = Field(
-        default=NULL_ID,
-        description="UUID of the locus set, if available. If not available, the null ID is put. Must be present if locus_set_code is not present. The use of locus_set_id is preferred over locus_set_code since the latter may change.",
-    )
-    locus_set_code: str | None = Field(
-        default=None,
-        description="The code of the locus set. Must be present if locus_set_id is not present. The use of locus_set_code is meant for situations where the locus_set_id is not known, but the code is and/or improves human interpretation.",
-        max_length=255,
-    )
-    locus_code_map_id: UUID | None = Field(
-        default=None,
-        description="The id of the locus code map that has to be used to map locus codes to locus IDs, if available. Must be provided if locus_code_map_code is not provided and any alleles have locus_code filled in. The use of locus_code_map_id is preferred over locus_code_map_code since the latter may change.",
-    )
-    locus_code_map_code: str | None = Field(
-        default=None,
-        description="The code of the locus code map that has to be used to map locus codes to locus IDs, if available. Must be provided if locus_code_map_id is not provided and any alleles have locus_code filled in. The use of locus_code_map_code is meant for situations where the locus_code_map_id is not known, but the code is and/or improves human interpretation.",
-        max_length=255,
-    )
-    mlva_profile: str = Field(
-        default="",
-        description="String representation of the repeat number per locus in the locus set, with the format depending on mlva_profile_format. Must be present if repeat_numbers and locus_repeat_number_map are not provided: these 3 properties are different representations of the same data that can be chosen between.",
-    )
-    repeat_numbers: list[int | None] | None = Field(
-        default=None,
-        description="List of all repeat numbers detected for this sample and for the loci within the locus set, in the order of the locus set. Loci that are not present must have None as repeat number. Must be present if mlva_profile and locus_repeat_number_map are not provided: these 3 properties are different representations of the same data that can be chosen between.",
-    )
-    locus_repeat_number_map: dict[str, int | None] | None = Field(
-        default=None,
-        description="A mapping from locus codes to repeat numbers for all detected loci, in any order and if available. Undetected loci must have None as repeat number or may be omitted. Must be present if mlva_profile and repeat_numbers are not provided: these 3 properties are different representations of the same data that can be chosen between.",
-    )
-
-    @model_validator(mode="after")
-    def _validate_model(self) -> Self:
-        """
-        Override parent validation for upload format to handle alleles and locus_allele_id_map.
-        """
-        n_representations = sum(
-            [
-                self.mlva_profile != "",
-                self.repeat_numbers is not None,
-                self.locus_repeat_number_map is not None,
-            ]
-        )
-        if n_representations != 1:
-            raise ValueError(
-                "Exactly one of mlva_profile, repeat_numbers, or locus_repeat_number_map must be provided."
-            )
-
-        if self.mlva_profile != "":
-            # Use parent validation for mlva_profile string format
-            super()._validate_model()
-        elif self.repeat_numbers is not None:
-            # Set or verify mlva_profile_hash
-            computed_profile_hash = MlvaProfile.get_mlva_profile_hash(
-                self.repeat_numbers
-            )  # Will raise ValueError if invalid
-            if self.mlva_profile_hash == NULL_ID:
-                self.mlva_profile_hash = computed_profile_hash
-            elif self.mlva_profile_hash != computed_profile_hash:
-                raise ValueError(
-                    "Provided MLVA profile hash does not match computed hash"
-                )
-        elif self.locus_repeat_number_map is not None:
-            # Verify locus code map provided
-            if (
-                self.locus_code_map_id is None or self.locus_code_map_id == NULL_ID
-            ) and self.locus_code_map_code is None:
-                raise ValueError(
-                    "locus_code_map_id or locus_code_map_code must be provided when locus_repeat_number_map is used."
-                )
-            # Set or verify mlva_profile_hash: not possible with this representation since loci are unordered
-
-        # Upload-specific validation
-        if (
-            not self.mlva_detection_protocol_code
-            and self.mlva_detection_protocol_id == NULL_ID
-        ):
-            raise ValueError(
-                "Either mlva_detection_protocol_code or mlva_detection_protocol_id must be provided."
-            )
-        if self.locus_set_code is None and self.locus_set_id == NULL_ID:
-            raise ValueError("Either locus_set_code or locus_set_id must be provided.")
-        if (
-            self.locus_repeat_number_map is not None
-            and self.locus_code_map_id == NULL_ID
-            and self.locus_code_map_code is None
-        ):
-            raise ValueError(
-                "Either locus_code_map_id or locus_code_map_code must be provided when locus_repeat_number_map is used."
-            )
-        return self
-
-
-class KmerProfileForUpload(KmerProfile, IdentifiersMixin, ValidateRefDataIdCodeMixin):
-    """
-    A k-mer profile record intended for upload. Equal to a KmerProfile, with
-    additional variables.
-    """
-
-    ENTITY: ClassVar = KmerProfile.model_entity().clone(update={"persistable": False})
-    NAME: ClassVar = "KmerProfileForUpload"
-
-    IDENTIFIER_CLASS: ClassVar = KmerProfileIdentifier
-    REFDATA_FIELD_ID_CODE_PAIRS: ClassVar = [
-        ("kmer_detection_protocol_id", "kmer_detection_protocol_code"),
-    ]
-
-    sample_id: UUID = Field(
-        default=NULL_ID,
-        description="The UUID of the sample that the k-mer profile is associated with. If not available, the null ID is put.",
-    )
-    seq_id: UUID | None = Field(
-        default=None,
-        description="The UUID of the sequence that the k-mer profile was derived from, if available.",
-    )
-    kmer_detection_protocol_id: UUID = Field(
-        default=NULL_ID,
-        description="The UUID of the k-mer detection protocol, if available. If not available, the null ID is put. Must be present if kmer_detection_protocol_code is not present. The use of kmer_detection_protocol_id is preferred over kmer_detection_protocol_code since the latter may change.",
-    )
-    kmer_detection_protocol_code: str | None = Field(
-        default=None,
-        description="The code of the k-mer detection protocol. Must be present if kmer_detection_protocol_id is not present. The use of kmer_detection_protocol_code is meant for situations where the kmer_detection_protocol_id is not known, but the code is and/or improves human interpretation.",
-        max_length=255,
-    )
-    kmer_profile: str = Field(
-        default="",
-        description="String representation of the k-mer profile, with the format depending on kmer_profile_format. Must be present if kmer_frequency_map is not provided: these 2 properties are different representations of the same data that can be chosen between.",
-    )
-    kmer_frequency_map: dict[str, float] | None = Field(
-        default=None,
-        description="A mapping from locus codes to repeat numbers for all detected loci, in any order and if available. Undetected loci must have None as repeat number or may be omitted. Must be present if kmer_profile is not provided: these 2 properties are different representations of the same data that can be chosen between.",
-    )
-
-    @model_validator(mode="after")
-    def _validate_model(self) -> Self:
-        """
-        Override parent validation for upload format to handle kmer_frequency_map.
-        """
-        n_representations = sum(
-            [
-                self.kmer_profile != "",
-                self.kmer_frequency_map is not None,
-            ]
-        )
-        if n_representations != 1:
-            raise ValueError(
-                "Exactly one of kmer_profile or kmer_frequency_map must be provided."
-            )
-
-        if self.kmer_profile != "":
-            # Use parent validation for kmer_profile string format
-            super()._validate_model()
-        elif self.kmer_frequency_map is not None:
-            # Set or verify kmer_profile_hash
-            computed_profile_hash = KmerProfile.get_kmer_profile_hash(
-                self.kmer_frequency_map
-            )  # Will raise ValueError if invalid
-            if self.kmer_profile_hash == NULL_ID:
-                self.kmer_profile_hash = computed_profile_hash
-            elif self.kmer_profile_hash != computed_profile_hash:
-                raise ValueError(
-                    "Provided k-mer profile hash does not match computed hash"
-                )
-
-        # Upload-specific validation
-        if (
-            not self.kmer_detection_protocol_code
-            and self.kmer_detection_protocol_id == NULL_ID
-        ):
-            raise ValueError(
-                "Either kmer_detection_protocol_code or kmer_detection_protocol_id must be provided."
-            )
+    def _validate_content(self) -> Self:
+        # TODO: add validation
         return self
 
 
@@ -557,7 +308,6 @@ class KmerProfileForUpload(KmerProfile, IdentifiersMixin, ValidateRefDataIdCodeM
 # TODO: add AstMeasurementForUpload and update SampleForUpload accordingly
 # TODO: add SeqTaxonomyForUpload and update SampleForUpload accordingly
 # TODO: add SeqClassificationForUpload and update SampleForUpload accordingly
-# TODO: add LocusProfileForUpload and update SampleForUpload accordingly
 
 
 class SampleForUpload(ParentForUpload):
@@ -575,12 +325,8 @@ class SampleForUpload(ParentForUpload):
         ReadSet: ReadSetForUpload,
         Seq: SeqForUpload,
         SeqTaxonomy: SeqTaxonomy,
-        SeqClassification: SeqClassification,
-        LocusProfile: LocusProfile,
-        AlleleProfile: AlleleProfileForUpload,
-        SnpProfile: SnpProfileForUpload,
-        MlvaProfile: MlvaProfileForUpload,
-        KmerProfile: KmerProfileForUpload,
+        SeqClassification: SeqClassificationForUpload,
+        SeqProfile: SeqProfileForUpload,
         PcrMeasurement: PcrMeasurement,
         AstMeasurement: AstMeasurement,
     }
@@ -589,11 +335,7 @@ class SampleForUpload(ParentForUpload):
         Seq: "seqs",
         SeqTaxonomy: "seq_taxonomies",
         SeqClassification: "seq_classifications",
-        LocusProfile: "locus_profiles",
-        AlleleProfile: "allele_profiles",
-        SnpProfile: "snp_profiles",
-        MlvaProfile: "mlva_profiles",
-        KmerProfile: "kmer_profiles",
+        SeqProfile: "seq_profiles",
         PcrMeasurement: "pcr_measurements",
         AstMeasurement: "ast_measurements",
     }
@@ -620,29 +362,13 @@ class SampleForUpload(ParentForUpload):
         default=None,
         description="The taxonomies associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
-    seq_classifications: list[SeqClassification] | None = Field(
+    seq_classifications: list[SeqClassificationForUpload] | None = Field(
         default=None,
         description="The classifications associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
-    locus_profiles: list[LocusProfile] | None = Field(
+    seq_profiles: list[SeqProfileForUpload] | None = Field(
         default=None,
-        description="The locus profiles associated with the sample. If None, this element is not taken into consideration during the upload.",
-    )
-    allele_profiles: list[AlleleProfileForUpload] | None = Field(
-        default=None,
-        description="The allele profiles associated with the sample. If None, this element is not taken into consideration during the upload.",
-    )
-    snp_profiles: list[SnpProfileForUpload] | None = Field(
-        default=None,
-        description="The SNP profiles associated with the sample. If None, this element is not taken into consideration during the upload.",
-    )
-    mlva_profiles: list[MlvaProfileForUpload] | None = Field(
-        default=None,
-        description="The MLVA profiles associated with the sample. If None, this element is not taken into consideration during the upload.",
-    )
-    kmer_profiles: list[KmerProfileForUpload] | None = Field(
-        default=None,
-        description="The k-mer profiles associated with the sample. If None, this element is not taken into consideration during the upload.",
+        description="The sequence profiles associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
     pcr_measurements: list[PcrMeasurement] | None = Field(
         default=None,
@@ -689,25 +415,9 @@ class SampleUploadResult(ParentUploadResult):
         default=None,
         description="The results of uploading the seq classifications associated with the sample, if any were provided, in the same order as provided.",
     )
-    locus_profiles: list[UploadResult] | None = Field(
+    seq_profiles: list[UploadResult] | None = Field(
         default=None,
-        description="The results of uploading the locus profiles associated with the sample, if any were provided, in the same order as provided.",
-    )
-    allele_profiles: list[UploadResult] | None = Field(
-        default=None,
-        description="The results of uploading the allele profiles associated with the sample, if any were provided, in the same order as provided.",
-    )
-    snp_profiles: list[UploadResult] | None = Field(
-        default=None,
-        description="The results of uploading the SNP profiles associated with the sample, if any were provided, in the same order as provided.",
-    )
-    mlva_profiles: list[UploadResult] | None = Field(
-        default=None,
-        description="The results of uploading the MLVA profiles associated with the sample, if any were provided, in the same order as provided.",
-    )
-    kmer_profiles: list[UploadResult] | None = Field(
-        default=None,
-        description="The results of uploading the k-mer profiles associated with the sample, if any were provided, in the same order as provided.",
+        description="The results of uploading the sequence profiles associated with the sample, if any were provided, in the same order as provided.",
     )
     pcr_measurements: list[UploadResult] | None = Field(
         default=None,
@@ -768,33 +478,9 @@ class SampleBatchForUpload(BaseBatchForUpload):
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def has_locus_profiles(self) -> bool:
-        """Indicates whether there are any locus profiles in the sample set."""
-        return any(len(x.locus_profiles or []) > 0 for x in self.samples)
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def has_allele_profiles(self) -> bool:
-        """Indicates whether there are any allele profiles in the sample set."""
-        return any(len(x.allele_profiles or []) > 0 for x in self.samples)
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def has_snp_profiles(self) -> bool:
-        """Indicates whether there are any SNP profiles in the sample set."""
-        return any(len(x.snp_profiles or []) > 0 for x in self.samples)
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def has_mlva_profiles(self) -> bool:
-        """Indicates whether there are any MLVA profiles in the sample set."""
-        return any(len(x.mlva_profiles or []) > 0 for x in self.samples)
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def has_kmer_profiles(self) -> bool:
-        """Indicates whether there are any k-mer profiles in the sample set."""
-        return any(len(x.kmer_profiles or []) > 0 for x in self.samples)
+    def has_seq_profiles(self) -> bool:
+        """Indicates whether there are any sequence profiles in the sample set."""
+        return any(len(x.seq_profiles or []) > 0 for x in self.samples)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -811,14 +497,16 @@ class SampleBatchForUpload(BaseBatchForUpload):
 
 class CalculateSeqDistancesResult(UploadResult):
     """
-    Represents the result of calculating distances between existing profiles and new profiles or
-    between new profiles themselves, as part of the upload process.
-    The seq_distance_profile_id refers to the sequence distance profile (i.e., AlleleProfile or MlvaProfile).
+    Represents the result of calculating distances between existing profiles and new
+    profiles or between new profiles themselves, as part of the upload process.
+    The seq_distance_profile_id refers to the sequence distance profile (i.e.,
+    AlleleProfile or MlvaProfile).
     """
 
     ENTITY: ClassVar = Entity(persistable=False)
     NAME: ClassVar = "CalculateSeqDistancesResult"
 
+    # TODO: 3034 since profiles of different types and subtypes (locus set, ref seq) can be provided, there can be many different distance profiles that are relevant. TBD how to handle this in the result.
     seq_distance_profile_id: UUID = Field(
         description="The UUID of the sequence distance profile that contains the calculated distances.",
     )

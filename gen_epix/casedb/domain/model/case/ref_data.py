@@ -9,7 +9,7 @@ from pydantic import Field, field_serializer, field_validator, model_validator
 from gen_epix.casedb.domain import enum, exc
 from gen_epix.casedb.domain.model.geo import RegionSet
 from gen_epix.casedb.domain.model.ontology import ConceptSet, Disease, EtiologicalAgent
-from gen_epix.commondb.domain.model import Model
+from gen_epix.commondb.domain.model import Model, validate_int_enum_value
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain.literal import NCBI_TAXID_PATTERN
@@ -27,8 +27,8 @@ class GeneticDistanceProtocol(Model):
     seqdb_seq_distance_protocol_id: UUID = Field(
         description="The ID of the protocol in seqdb"
     )
-    seqdb_seq_distance_protocol_type: seqdb_enum.SeqDistanceProtocolType = Field(
-        description="The type of the genetic distance protocol in seqdb"
+    seqdb_seq_distance_type: seqdb_enum.SeqDistanceType = Field(
+        description="The type of the genetic distance in seqdb"
     )
     name: str = Field(description="The name of the protocol", max_length=255)
     description: str | None = Field(
@@ -43,19 +43,17 @@ class GeneticDistanceProtocol(Model):
     )
     min_scale_unit: float = Field(description="The minimum unit to be shown in a scale")
 
-    @field_validator("seqdb_seq_distance_protocol_type", mode="before")
+    @field_validator("seqdb_seq_distance_type", mode="before")
     @classmethod
-    def _validate_seqdb_seq_distance_protocol_type(
+    def _validate_seqdb_seq_distance_type(
         cls, value: Any
-    ) -> seqdb_enum.SeqDistanceProtocolType:
-        if isinstance(value, str):
-            return seqdb_enum.SeqDistanceProtocolType(value)
-        return value
+    ) -> seqdb_enum.SeqDistanceType:
+        return validate_int_enum_value(seqdb_enum.SeqDistanceType, value)  # type: ignore[return-value]
 
-    @field_serializer("seqdb_seq_distance_protocol_type", mode="plain")
-    def _serialize_seqdb_seq_distance_protocol_type(
-        self, value: seqdb_enum.SeqDistanceProtocolType
-    ) -> str:
+    @field_serializer("seqdb_seq_distance_type", mode="plain")
+    def _serialize_seqdb_seq_distance_type(
+        self, value: seqdb_enum.SeqDistanceType
+    ) -> int:
         return value.value
 
 

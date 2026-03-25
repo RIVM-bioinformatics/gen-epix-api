@@ -141,8 +141,8 @@ class CaseUploadSetup:
         # Get sequencing and assembly protocols from props
         sequencing_protocol_df: pd.DataFrame = env.props["seqdb.SequencingProtocol"]
         assembly_protocol_df: pd.DataFrame = env.props["seqdb.AssemblyProtocol"]
-        sequencing_protocols: list[seqdb_model.SequencingProtocol] = [
-            seqdb_model.SequencingProtocol(**x)
+        sequencing_protocols: list[seqdb_model.Protocol] = [
+            seqdb_model.Protocol(**x)
             for x in sequencing_protocol_df.to_dict(orient="records")
         ]
         assembly_protocols: list[seqdb_model.AssemblyProtocol] = [
@@ -167,7 +167,7 @@ class CaseUploadSetup:
             seqdb_seq_service.repository.crud(
                 uow,
                 None,
-                seqdb_model.SequencingProtocol,
+                seqdb_model.Protocol,
                 sequencing_protocols,
                 None,
                 CrudOperation.CREATE_SOME,
@@ -682,7 +682,7 @@ class TestCaseUpload(CaseUploadSetup):
                     model.ReadSetForUpload(
                         col_id=col_id,
                         other_sample_identifier=identifier_for_upload,
-                        sequencing_protocol_id=sequencing_protocol_id,
+                        protocol_id=sequencing_protocol_id,
                     )
                 )
             for col_id in found_seq_col_ids:
@@ -690,7 +690,7 @@ class TestCaseUpload(CaseUploadSetup):
                     model.SeqForUpload(
                         col_id=col_id,
                         external_sample_id=identifier_for_upload,
-                        assembly_protocol_id=assembly_protocol_id,
+                        protocol_id=assembly_protocol_id,
                     )
                 )
         # Create case or case for upload

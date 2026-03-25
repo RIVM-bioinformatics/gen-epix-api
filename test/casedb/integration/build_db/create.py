@@ -984,7 +984,7 @@ class TestCreate:
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
                 env.create_region(ROOT, "region1_1", "region_set1")
-        # GeneticDistanceProtocol already exists
+        # Protocol already exists
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
                 env.create_genetic_distance_protocol(ROOT, "genetic_distance_protocol1")
@@ -1168,7 +1168,7 @@ class TestCreate:
                     f"ref_col{index}_99",
                     col_type=enum.ColType.GENETIC_DISTANCE,
                     genetic_distance_protocol="genetic_distance_protocol11",
-                    set_dummy_genetic_distance_protocol=True,
+                    set_dummy_protocol=True,
                 )
         # Etiology.disease does not exist
         if not SKIP_CREATE_DATA:

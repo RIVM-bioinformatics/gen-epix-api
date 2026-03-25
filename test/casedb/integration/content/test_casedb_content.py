@@ -385,9 +385,10 @@ class TestContent:
                 if "\n" not in fasta_str:
                     raise ValueError("FASTA string should contain new lines")
                 # Retrieve SequencingProtocols
-                sequencing_protocols: list[seqdb_model.SequencingProtocol] = app.handle(
-                    command.RetrieveSequencingProtocolsCommand(
+                sequencing_protocols: list[seqdb_model.Protocol] = app.handle(
+                    command.RetrieveProtocolsCommand(
                         user=org_user,
+                        protocol_type=seqdb_enum.ProtocolType.SEQUENCING,
                     )
                 )
                 if not sequencing_protocols:
@@ -396,9 +397,10 @@ class TestContent:
                     if not sequencing_protocol.id:
                         raise ValueError("Library prep protocol ID should not be empty")
                 # Retrieve AssemblyProtocols
-                assembly_protocols: list[seqdb_model.AssemblyProtocol] = app.handle(
-                    command.RetrieveAssemblyProtocolsCommand(
+                assembly_protocols: list[seqdb_model.Protocol] = app.handle(
+                    command.RetrieveProtocolsCommand(
                         user=org_user,
+                        protocol_type=seqdb_enum.ProtocolType.ASSEMBLY,
                     )
                 )
                 if not assembly_protocols:

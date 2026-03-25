@@ -7,7 +7,7 @@ from gen_epix.commondb.domain.model import Model
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
-from gen_epix.seqdb.domain.model.seq.distance import SeqDistanceProtocol
+from gen_epix.seqdb.domain.model.seq.protocol import Protocol
 
 
 class TreeAlgorithmClass(Model):
@@ -85,11 +85,11 @@ class PhylogeneticTree(Model):
         persistable=False,
     )
     tree_algorithm: enum.TreeAlgorithm = Field(description="The tree algorithm")
-    seq_distance_protocol_id: UUID = Field(
-        description="The ID of the sequence distance protocol. FOREIGN KEY"
+    protocol_id: UUID = Field(
+        description="The ID of the protocol. FOREIGN KEY"
     )
-    seq_distance_protocol: SeqDistanceProtocol | None = Field(
-        default=None, description="The sequence distance protocol"
+    protocol: Protocol | None = Field(
+        default=None, description="The protocol"
     )
     leaf_names: list[str] | None = Field(
         default=None,

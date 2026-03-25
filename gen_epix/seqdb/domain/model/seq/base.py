@@ -1,12 +1,13 @@
 import hashlib
-import json
+import typing
 import uuid
+from enum import IntEnum
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, field_serializer, field_validator, model_validator
+from pydantic import Field, Json, field_serializer, field_validator, model_validator
 
-from gen_epix.commondb.domain.model.base import Model
+from gen_epix.commondb.domain.model import Model, validate_int_enum_value
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.seqdb.domain import enum
 
@@ -27,26 +28,87 @@ class CodeMixin:
     )
 
 
+class ContentMixin[FormatType: IntEnum]:
+    """
+    Mixin class to add content-related fields to a model.
+    """
+
+    _FORMAT_TYPE_CLASS: ClassVar[type[FormatType]] = None  # type: ignore[assignment]
+
+    format: FormatType = Field(
+        description="The representation format of the content.",
+    )
+    content_hash: UUID = Field(
+        description="A 128-bit hash code of the content represented as UUID.",
+    )
+    content: str = Field(
+        description="The content in a specified format. Depending on the format, the content2 field may be used as well e.g. to optimize performance."
+    )
+    content2: str | None = Field(
+        default=None,
+        description="The second part of the content, if applicabe, depending on the specified format.",
+    )
+
+    @field_validator("format", mode="before")
+    @classmethod
+    def _validate_format(cls, value: str | int | float | FormatType) -> FormatType:
+        if isinstance(value, IntEnum):
+            return value
+        format_type = cls.model_fields["format"].annotation
+        if isinstance(value, str):
+            return format_type[value]
+        if isinstance(value, int):
+            return format_type(value)
+        raise ValueError(f"Unsupported type for format field: {type(value)}")
+
+    # TODO: discuss and implement content hash validation per format
+    @model_validator(mode="after")
+    def _validate_content(self) -> Self:
+        """Validate that the content hash matches the content."""
+        raise NotImplementedError(
+            "Content validation must be implemented in the model using the mixin, as it depends on the format and content fields."
+        )
+
+    @field_serializer("format")
+    def _serialize_format(self, value: FormatType) -> int:
+        """Serialize the format enum to its integer value."""
+        return value.value
+
+
 class QualityMixin:
     """
     Mixin class to add quality related fields to a model.
     """
 
-    # TODO [LSP-2690] Add qc and qc_format fields
-    qc_score: float | None = Field(
-        default=None,
-        description="The quality of the result, as a numerical value. A higher score indicates better quality. The range and interpretation of this value is not in scope of the application and must be defined by the user.",
-    )
     qc_result: enum.QualityControlResult | None = Field(
         default=None,
         description="The quality of the result as a qualitative value that is used by the application, where applicable, for filtering results.",
     )
+    qc_score: float | None = Field(
+        default=None,
+        description="The quality of the result, as a numerical value. A higher score indicates better quality. The range and interpretation of this value is not in scope of the application and must be defined by the user.",
+    )
+    qc_report: Json | None = Field(
+        default=None,
+        description="A detailed report of the quality control results, which can include any relevant information such as metrics, logs, or other data that provides insights into the quality of the result. The structure and content of this report is not defined by the application and must be determined by the user. The only condition is that the data are JSON serializable.",
+    )
+
+    @field_validator("qc_result", mode="before")
+    @classmethod
+    def _validate_qc_result(
+        cls, value: str | int | float | enum.QualityControlResult | None
+    ) -> enum.QualityControlResult | None:
+        if value is None:
+            return None
+        return validate_int_enum_value(enum.QualityControlResult, value)  # type: ignore[return-value]
 
     @field_serializer("qc_result", mode="plain")
-    def _serialize_quality(self, value: str | enum.QualityControlResult) -> str:
-        if isinstance(value, enum.QualityControlResult):
-            return value.value
-        return value
+    def _serialize_qc_result(
+        self, value: enum.QualityControlResult | None
+    ) -> int | None:
+        if value is None:
+            return None
+        return value.value
 
 
 class BaseSeq(Model):
@@ -73,6 +135,13 @@ class BaseSeq(Model):
         description="The length of the sequence. Derived from the sequence if possible and if the value is set to zero. If set to zero and it is not possible to derive the length, an error is raised.",
         ge=0,
     )
+
+    @field_validator("seq_format", mode="before")
+    @classmethod
+    def _validate_seq_format(
+        cls, value: str | int | float | enum.SeqFormat
+    ) -> enum.SeqFormat:
+        return validate_int_enum_value(enum.SeqFormat, value)  # type: ignore[return-value]
 
     @model_validator(mode="after")
     def _validate_model(self) -> Self:
@@ -123,8 +192,8 @@ class BaseSeq(Model):
         return self
 
     @field_serializer("seq_format")
-    def _serialize_seq_format(self, value: enum.SeqFormat) -> str:
-        """Serialize the seq_format enum to its string value."""
+    def _serialize_seq_format(self, value: enum.SeqFormat) -> int:
+        """Serialize the seq_format enum to its integer value."""
         return value.value
 
     # TODO: adding the serializer gives issues writing as binary to the database, but not adding it may give other issues
@@ -133,45 +202,3 @@ class BaseSeq(Model):
     #     if isinstance(value, bytes):
     #         return value.hex()
     #     return value
-
-
-class AlignmentMixin:
-    """
-    Mixin class to add alignment related fields to a model.
-    """
-
-    aln: str = Field(
-        description="The alignment in the representation defined by alignment_format"
-    )
-    aln_format: enum.AlignmentFormat = Field(
-        default=enum.AlignmentFormat.CIGAR,
-        description="The format of the alignment",
-    )
-    aln_hash: UUID = Field(
-        description="The first 128 bits of the SHA256 hash of the ASCII lower case aligned reference sequence followed by the aligned contig seq.",
-    )
-
-
-class ProtocolMixin:
-    """
-    Mixin class to add protocol related fields to a model.
-    """
-
-    code: str = Field(description="The code of the protocol", max_length=255)
-    name: str = Field(description="The name of the protocol", max_length=255)
-    version: str | None = Field(
-        default=None, description="The version of the protocol", max_length=255
-    )
-    description: str | None = Field(
-        default=None, description="The description of the protocol"
-    )
-    props: dict[str, str] = Field(
-        default_factory=dict, description="The properties of the protocol"
-    )
-
-    @field_validator("props", mode="before")
-    @classmethod
-    def _validate_props(cls, value: str | dict) -> dict:
-        if isinstance(value, str):
-            value = json.loads(value)
-        return value

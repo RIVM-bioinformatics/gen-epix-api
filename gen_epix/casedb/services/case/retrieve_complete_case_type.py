@@ -187,7 +187,7 @@ def case_service_retrieve_complete_case_type(
         )
         ref_dim_map: dict[UUID, model.RefDim] = {x.id: x for x in ref_dims}  # type: ignore[misc]
 
-        # Get genetic distance protocols
+        # Get protocols
         genetic_distance_protocols = self.app.handle(
             command.GeneticDistanceProtocolCrudCommand(
                 user=user,
@@ -201,7 +201,6 @@ def case_service_retrieve_complete_case_type(
                 ),
             )
         )
-        genetic_distance_protocols = {x.id: x for x in genetic_distance_protocols}
 
         # Get tree algorithms
         tree_algorithm_codes: set[enum.TreeAlgorithmType] = set.union(

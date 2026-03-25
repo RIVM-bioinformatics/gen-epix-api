@@ -84,6 +84,7 @@ def _make_person() -> Person:
     )
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestPersonBatchUploadHappyPath:
     """
     Happy-path tests for POST /v1/upload/persons.
@@ -299,6 +300,7 @@ class TestPersonBatchUploadHappyPath:
         assert second_result.persons[0].status == EtlStatus.FAILED
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestPersonBatchUploadFailureModes:
     """
     Tests for cases where the upload should fail or be rejected, either at the

@@ -215,7 +215,7 @@ class TestModelBaseSeq(TestCase):
         seq = self._get_valid_dna_sequence()
         base_seq = model.BaseSeq(seq=seq)
         serialized = base_seq.model_dump()
-        self.assertEqual(serialized["seq_format"], "STR_DNA")
+        self.assertEqual(serialized["seq_format"], 2)
 
     def test_different_seq_formats(self) -> None:
         """Test handling of different sequence formats."""
@@ -316,9 +316,9 @@ class TestModelSeq(TestCase):
 
     def test_assembly_protocol_link(self) -> None:
         """Test assembly protocol relationship."""
-        assembly_protocol_id = uuid4()
-        seq = self._create_sample_seq(assembly_protocol_id=assembly_protocol_id)
-        self.assertEqual(seq.assembly_protocol_id, assembly_protocol_id)
+        protocol_id = uuid4()
+        seq = self._create_sample_seq(protocol_id=protocol_id)
+        self.assertEqual(seq.protocol_id, protocol_id)
 
     def test_file_and_read_set_relationships(self) -> None:
         """Test file and read set relationships."""
@@ -363,7 +363,7 @@ class TestModelSeqForUpload(TestCase):
             "sample_id": uuid4(),
             "code": f"seq_upload_{uuid4().hex[:8]}",
             "contigs": [model.Contig(seq="ATCGATCG")],
-            "assembly_protocol_id": uuid4(),  # Required: either assembly_protocol_id or assembly_protocol_code
+            "protocol_id": uuid4(),  # Required: either protocol_id or protocol_code
         }
         defaults.update(kwargs)
         return model.SeqForUpload(**defaults)  # type: ignore[arg-type]
@@ -376,7 +376,7 @@ class TestModelSeqForUpload(TestCase):
             sample_id=sample_id,
             code=code,  # type: ignore[call-arg]
             contigs=[model.Contig(seq="ATCGATCG")],
-            assembly_protocol_code="TEST_PROTOCOL",  # Required: either assembly_protocol_id or assembly_protocol_code
+            protocol_code="TEST_PROTOCOL",  # Required: either protocol_id or protocol_code
         )
         self.assertEqual(seq_upload.sample_id, sample_id)
         self.assertEqual(seq_upload.code, code)
@@ -399,7 +399,7 @@ class TestModelSeqForUpload(TestCase):
             sample_id=NULL_ID,
             code="test_seq",  # type: ignore[call-arg]
             contigs=[model.Contig(seq="ATCGATCG")],
-            assembly_protocol_code="TEST_PROTOCOL",  # Required: either assembly_protocol_id or assembly_protocol_code
+            protocol_code="TEST_PROTOCOL",  # Required: either protocol_id or protocol_code
         )
         self.assertEqual(seq_upload.sample_id, NULL_ID)
 
@@ -483,17 +483,17 @@ class TestModelSeqForUpload(TestCase):
     def test_optional_relationships(self) -> None:
         """Test optional relationship fields in upload context."""
         file_id = uuid4()
-        assembly_protocol_id = uuid4()
+        protocol_id = uuid4()
 
         seq_upload = self._create_sample_seq_for_upload(
             file_id=file_id,
             file_format=model.enum.SeqFileFormat.FASTA,
-            assembly_protocol_id=assembly_protocol_id,
+            protocol_id=protocol_id,
         )
 
         self.assertEqual(seq_upload.file_id, file_id)
         self.assertEqual(seq_upload.file_format, model.enum.SeqFileFormat.FASTA)
-        self.assertEqual(seq_upload.assembly_protocol_id, assembly_protocol_id)
+        self.assertEqual(seq_upload.protocol_id, protocol_id)
 
     def test_contig_validation_inheritance(self) -> None:
         """Test that contig validation is inherited from Seq."""
@@ -508,47 +508,47 @@ class TestModelSeqForUpload(TestCase):
 
     def test_assembly_protocol_id_validation(self) -> None:
         """Test that assembly_protocol_id is properly validated."""
-        assembly_protocol_id = uuid4()
+        protocol_id = uuid4()
         seq_upload = self._create_sample_seq_for_upload(
-            assembly_protocol_id=assembly_protocol_id,
-            assembly_protocol_code=None,  # Override default to test only ID
+            protocol_id=protocol_id,
+            protocol_code=None,  # Override default to test only ID
         )
-        self.assertEqual(seq_upload.assembly_protocol_id, assembly_protocol_id)
-        self.assertIsNone(seq_upload.assembly_protocol_code)
+        self.assertEqual(seq_upload.protocol_id, protocol_id)
+        self.assertIsNone(seq_upload.protocol_code)
 
     def test_assembly_protocol_code_validation(self) -> None:
         """Test that assembly_protocol_code is properly validated."""
         protocol_code = "TEST_ASSEMBLY_PROTOCOL"
         seq_upload = self._create_sample_seq_for_upload(
-            assembly_protocol_code=protocol_code,
-            assembly_protocol_id=NULL_ID,  # Override default to test only code
+            protocol_code=protocol_code,
+            protocol_id=NULL_ID,  # Override default to test only code
         )
-        self.assertEqual(seq_upload.assembly_protocol_code, protocol_code)
-        self.assertEqual(seq_upload.assembly_protocol_id, NULL_ID)
+        self.assertEqual(seq_upload.protocol_code, protocol_code)
+        self.assertEqual(seq_upload.protocol_id, NULL_ID)
 
     def test_assembly_protocol_both_provided(self) -> None:
         """Test that both assembly_protocol_id and assembly_protocol_code can be provided."""
-        assembly_protocol_id = uuid4()
+        protocol_id = uuid4()
         protocol_code = "TEST_ASSEMBLY_PROTOCOL"
         seq_upload = self._create_sample_seq_for_upload(
-            assembly_protocol_id=assembly_protocol_id,
-            assembly_protocol_code=protocol_code,
+            protocol_id=protocol_id,
+            protocol_code=protocol_code,
         )
-        self.assertEqual(seq_upload.assembly_protocol_id, assembly_protocol_id)
-        self.assertEqual(seq_upload.assembly_protocol_code, protocol_code)
+        self.assertEqual(seq_upload.protocol_id, protocol_id)
+        self.assertEqual(seq_upload.protocol_code, protocol_code)
 
     def test_assembly_protocol_validation_failure(self) -> None:
         """Test that validation fails when neither assembly_protocol_id nor assembly_protocol_code is provided."""
-        with self.assertRaises(ValidationError) as context:
+        with self.assertRaises(ValueError) as context:
             model.SeqForUpload(
                 sample_id=uuid4(),
                 contigs=[model.Contig(seq="ATCGATCG")],
-                assembly_protocol_id=NULL_ID,  # Not provided
-                assembly_protocol_code=None,  # Not provided
+                protocol_id=NULL_ID,  # Not provided
+                protocol_code=None,  # Not provided
             )
 
         self.assertIn(
-            "Either assembly_protocol_code or assembly_protocol_id must be provided",
+            "Either protocol_code or protocol_id must be provided",
             str(context.exception),
         )
 
@@ -560,30 +560,30 @@ class TestModelAlleleProfileForUpload(TestCase):
         """Test JSON serialization of AlleleProfileForUpload."""
         allele_id1, allele_id2 = uuid4(), uuid4()
         allele_ids: list[UUID | None] = [allele_id1, allele_id2]
-        allele_profile = model.AlleleProfileForUpload(
-            locus_detection_protocol_code="PROTOCOL123",
-            locus_set_code="LOCUSSET123",
-            allele_profile=base64.b64encode(
+        allele_profile = model.SeqProfileForUpload(
+            protocol_code="PROTOCOL123",
+            seq_profile_type=model.enum.SeqProfileType.ALLELE,
+            format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
+            content=base64.b64encode(
                 b"".join(NULL_ID.bytes if x is None else x.bytes for x in allele_ids)
             ).decode("ascii"),
-            n_loci=2,
-            allele_profile_hash=model.AlleleProfile.get_allele_profile_hash(allele_ids),
+            content_hash=model.SeqProfile.get_allele_profile_hash(allele_ids),
         )
         json_str = allele_profile.model_dump_json()
         data = json.loads(json_str)
-        self.assertEqual(data["locus_detection_protocol_code"], "PROTOCOL123")
-        self.assertEqual(data["locus_set_code"], "LOCUSSET123")
+        self.assertEqual(data["protocol_code"], "PROTOCOL123")
         # The stored profile uses sorted allele IDs
         self.assertEqual(
-            data["allele_profile"],
+            data["content"],
             base64.b64encode(
                 b"".join(NULL_ID.bytes if x is None else x.bytes for x in allele_ids)
             ).decode("ascii"),
         )
-        self.assertEqual(data["n_loci"], 2)
+        # n_loci is not a direct field; compute via helper
+        self.assertEqual(allele_profile.get_n_loci(), 2)
         self.assertEqual(
-            data["allele_profile_hash"],
-            str(model.AlleleProfile.get_allele_profile_hash(allele_ids)),
+            data["content_hash"],
+            str(model.SeqProfile.get_allele_profile_hash(allele_ids)),
         )
 
     def test_valid_with_protocol_code_and_locus_set_code(self) -> None:
@@ -591,40 +591,39 @@ class TestModelAlleleProfileForUpload(TestCase):
         allele_id1, allele_id2 = uuid4(), uuid4()
         # Sort allele IDs to match hash calculation
         allele_ids: list[UUID | None] = [allele_id1, allele_id2]
-        allele_profile = model.AlleleProfileForUpload(
-            locus_detection_protocol_code="PROTOCOL123",
-            locus_set_code="LOCUSSET123",
-            allele_profile=base64.b64encode(
+        allele_profile = model.SeqProfileForUpload(
+            protocol_code="PROTOCOL123",
+            seq_profile_type=model.enum.SeqProfileType.ALLELE,
+            format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
+            content=base64.b64encode(
                 b"".join(NULL_ID.bytes if x is None else x.bytes for x in allele_ids)
             ).decode("ascii"),
-            n_loci=2,
-            allele_profile_hash=model.AlleleProfile.get_allele_profile_hash(allele_ids),
+            content_hash=model.SeqProfile.get_allele_profile_hash(allele_ids),
         )
-        self.assertEqual(allele_profile.locus_detection_protocol_code, "PROTOCOL123")
-        self.assertEqual(allele_profile.locus_set_code, "LOCUSSET123")
-        self.assertEqual(allele_profile.locus_detection_protocol_id, NULL_ID)
-        self.assertEqual(allele_profile.locus_set_id, NULL_ID)
+        self.assertEqual(allele_profile.protocol_code, "PROTOCOL123")
+        # locus_set fields removed in refactor; protocol_id falls back to NULL_ID
+        self.assertEqual(allele_profile.protocol_id, NULL_ID)
 
     def test_valid_with_protocol_id_and_locus_set_id(self) -> None:
         """Test valid AlleleProfileForUpload with IDs."""
         protocol_id = uuid4()
-        locus_set_id = uuid4()
         allele_id1, allele_id2 = uuid4(), uuid4()
         # Sort allele IDs to match hash calculation
         allele_ids: list[UUID | None] = [allele_id1, allele_id2]
-        allele_profile = model.AlleleProfileForUpload(
-            locus_detection_protocol_id=protocol_id,
-            locus_set_id=locus_set_id,
-            n_loci=2,
-            allele_profile=base64.b64encode(
+        allele_profile = model.SeqProfileForUpload(
+            protocol_id=protocol_id,
+            seq_profile_type=model.enum.SeqProfileType.ALLELE,
+            format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
+            content=base64.b64encode(
                 b"".join(NULL_ID.bytes if x is None else x.bytes for x in allele_ids)
             ).decode("ascii"),
-            allele_profile_hash=model.AlleleProfile.get_allele_profile_hash(allele_ids),
+            content_hash=model.SeqProfile.get_allele_profile_hash(allele_ids),
         )
-        self.assertEqual(allele_profile.locus_detection_protocol_id, protocol_id)
-        self.assertEqual(allele_profile.locus_set_id, locus_set_id)
-        self.assertIsNone(allele_profile.locus_detection_protocol_code)
-        self.assertIsNone(allele_profile.locus_set_code)
+        self.assertEqual(allele_profile.protocol_id, protocol_id)
+        # locus_set_id removed from SeqProfileForUpload in refactor
+        # self.assertIsNone(allele_profile.locus_set_id)
+        self.assertIsNone(allele_profile.protocol_code)
+        # self.assertIsNone(allele_profile.locus_set_code)
         self.assertIsNone(allele_profile.allele_ids)
         self.assertIsNone(allele_profile.locus_allele_id_map)
 
@@ -634,43 +633,46 @@ class TestModelAlleleProfileForUpload(TestCase):
             uuid4(),
             uuid4(),
         ]
-        allele_profile = model.AlleleProfileForUpload(
-            locus_detection_protocol_code="PROTOCOL123",
-            locus_set_code="LOCUSSET123",
+        allele_profile = model.SeqProfileForUpload(
+            protocol_code="PROTOCOL123",
+            seq_profile_type=model.enum.SeqProfileType.ALLELE,
+            format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
             locus_code_map_code="MAP123",
             allele_ids=allele_ids,
-            # Don't provide n_loci for upload format with allele_ids
+            content_hash=model.SeqProfile.get_allele_profile_hash(allele_ids),
         )
-        self.assertEqual(allele_profile.allele_profile, "")
+        # content should be generated from allele_ids
+        self.assertEqual(allele_profile.content, model.SeqProfile.get_ordered_allele_ids_representation(allele_ids))
         self.assertEqual(len(allele_profile.allele_ids or []), 2)
         self.assertIsNone(allele_profile.locus_allele_id_map)
 
     def test_valid_with_locus_allele_id_map(self) -> None:
         """Test valid AlleleProfileForUpload with locus_allele_id_map."""
         locus_allele_id_map = {"locus1": uuid4(), "locus2": uuid4()}
-        allele_profile = model.AlleleProfileForUpload(
-            locus_detection_protocol_code="PROTOCOL123",
-            locus_set_code="LOCUSSET123",
+        allele_profile = model.SeqProfileForUpload(
+            protocol_code="PROTOCOL123",
+            seq_profile_type=model.enum.SeqProfileType.ALLELE,
+            format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
             locus_code_map_code="MAP123",
             locus_allele_id_map=locus_allele_id_map,
-            # Don't provide n_loci for upload format with locus_allele_id_map
+            content_hash=model.SeqProfile.get_allele_profile_hash(list(locus_allele_id_map.values()))
         )
-        self.assertEqual(allele_profile.allele_profile, "")
+        self.assertEqual(allele_profile.content, "")
         self.assertIsNone(allele_profile.allele_ids)
         self.assertEqual(allele_profile.locus_allele_id_map, locus_allele_id_map)
 
     def test_valid_with_locus_code_map_when_needed(self) -> None:
         """Test valid AlleleProfileForUpload with locus_code_map when using allele_ids."""
         allele_ids: list[UUID | None] = [uuid4()]
-        allele_profile = model.AlleleProfileForUpload(
-            locus_detection_protocol_code="PROTOCOL123",
-            locus_set_code="LOCUSSET123",
+        allele_profile = model.SeqProfileForUpload(
+            protocol_code="PROTOCOL123",
+            seq_profile_type=model.enum.SeqProfileType.ALLELE,
+            format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
             locus_code_map_code="MAP123",
             allele_ids=allele_ids,
-            # Don't provide n_loci for upload format with allele_ids
+            content_hash=model.SeqProfile.get_allele_profile_hash(allele_ids),
         )
         self.assertEqual(allele_profile.locus_code_map_code, "MAP123")
-        self.assertEqual(allele_profile.allele_profile, "")
         self.assertEqual(len(allele_profile.allele_ids or []), 1)
         self.assertIsNone(allele_profile.locus_allele_id_map)
 
@@ -678,46 +680,44 @@ class TestModelAlleleProfileForUpload(TestCase):
         """Test ValidationError when both protocol fields are missing."""
         with pytest.raises(ValidationError):
             allele_id = uuid4()
-            model.AlleleProfileForUpload(
-                locus_set_code="LOCUSSET123",
-                allele_profile=base64.b64encode(allele_id.bytes).decode("ascii"),
-                n_loci=1,
-                allele_profile_hash=model.AlleleProfile.get_allele_profile_hash(
-                    [allele_id]
-                ),
+            model.SeqProfileForUpload(
+                seq_profile_type=model.enum.SeqProfileType.ALLELE,
+                format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
+                content=base64.b64encode(allele_id.bytes).decode("ascii"),
+                content_hash=model.SeqProfile.get_allele_profile_hash([allele_id])
             )
 
     def test_invalid_missing_locus_set_fields(self) -> None:
         """Test ValidationError when both locus_set fields are missing."""
-        with pytest.raises(ValidationError):
-            allele_id = uuid4()
-            model.AlleleProfileForUpload(
-                locus_detection_protocol_code="PROTOCOL123",
-                allele_profile=base64.b64encode(allele_id.bytes).decode("ascii"),
-                n_loci=1,
-                allele_profile_hash=model.AlleleProfile.get_allele_profile_hash(
-                    [allele_id]
-                ),
-            )
+        # locus_set fields removed in refactor; providing protocol_code and content should be valid
+        allele_id = uuid4()
+        allele_profile = model.SeqProfileForUpload(
+            protocol_code="PROTOCOL123",
+            seq_profile_type=model.enum.SeqProfileType.ALLELE,
+            format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
+            content=base64.b64encode(allele_id.bytes).decode("ascii"),
+            content_hash=model.SeqProfile.get_allele_profile_hash([allele_id]),
+        )
+        self.assertEqual(allele_profile.protocol_code, "PROTOCOL123")
 
     def test_invalid_missing_allele_data(self) -> None:
         """Test ValidationError when all allele data fields are missing."""
         with pytest.raises(ValidationError):
-            model.AlleleProfileForUpload(
-                locus_detection_protocol_code="PROTOCOL123",
-                locus_set_code="LOCUSSET123",
-                n_loci=1,
+            model.SeqProfileForUpload(
+                protocol_code="PROTOCOL123",
+                seq_profile_type=model.enum.SeqProfileType.ALLELE,
+                format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
             )
 
     def test_invalid_missing_locus_code_map_when_needed(self) -> None:
         """Test ValidationError when locus_code_map is missing but alleles have locus_code."""
         locus_allele_id_map: dict[str, UUID] = {"locus1": uuid4()}
         with pytest.raises(ValidationError):
-            model.AlleleProfileForUpload(
-                locus_detection_protocol_code="PROTOCOL123",
-                locus_set_code="LOCUSSET123",
+            model.SeqProfileForUpload(
+                protocol_code="PROTOCOL123",
+                seq_profile_type=model.enum.SeqProfileType.ALLELE,
+                format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
                 locus_allele_id_map=locus_allele_id_map,
-                n_loci=1,
             )
 
     def test_valid_without_locus_code_map_when_not_needed(self) -> None:
@@ -742,20 +742,19 @@ class TestModelAlleleProfileForUpload(TestCase):
     @staticmethod
     def _get_allele_profile_for_ids(
         allele_ids: list[UUID | None], **kwargs: Any
-    ) -> model.AlleleProfileForUpload:
+    ) -> model.SeqProfileForUpload:
         # Sort allele IDs to match hash calculation
         allele_bytes = b"".join(
             NULL_ID.bytes if x is None else x.bytes for x in allele_ids
         )
         # Add NULL_ID bytes for any None values
         null_count = sum(x is None for x in allele_ids)
-
-        return model.AlleleProfileForUpload(
-            locus_detection_protocol_code="PROTOCOL456",
-            locus_set_code="LOCUSSET456",
-            allele_profile=base64.b64encode(allele_bytes).decode("ascii"),
-            n_loci=len(allele_ids),  # Use actual length of allele_ids
-            allele_profile_hash=model.AlleleProfile.get_allele_profile_hash(allele_ids),
+        return model.SeqProfileForUpload(
+            protocol_code="PROTOCOL456",
+            seq_profile_type=model.enum.SeqProfileType.ALLELE,
+            format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
+            content=base64.b64encode(allele_bytes).decode("ascii"),
+            content_hash=model.SeqProfile.get_allele_profile_hash(allele_ids),
             **kwargs,
         )
 
@@ -770,7 +769,7 @@ class TestModelSampleForUpload(TestCase):
             "sample_id": uuid4(),
             "code": f"seq_upload_{uuid4().hex[:8]}",
             "contigs": [model.Contig(seq="ATCGATCG")],
-            "assembly_protocol_id": uuid4(),  # Required: either assembly_protocol_id or assembly_protocol_code
+            "protocol_id": uuid4(),  # Required: either protocol_id or protocol_code
         }
         defaults.update(kwargs)
         return model.SeqForUpload(**defaults)  # type: ignore[arg-type]
@@ -784,7 +783,7 @@ class TestModelSampleForUpload(TestCase):
         )
         sample = model.SampleForUpload(
             id=sample_id,
-            allele_profiles=[allele_profile],
+            seq_profiles=[allele_profile],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
         self.assertEqual(sample.id, sample_id)
@@ -803,7 +802,7 @@ class TestModelSampleForUpload(TestCase):
         )
         sample = model.SampleForUpload(
             identifiers=[identifier_for_upload],
-            allele_profiles=[allele_profile],
+            seq_profiles=[allele_profile],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
         self.assertIsNone(sample.id)
@@ -822,7 +821,7 @@ class TestModelSampleForUpload(TestCase):
         sample = model.SampleForUpload(
             id=sample_id,
             identifiers=[identifier_for_upload],
-            allele_profiles=[allele_profile],
+            seq_profiles=[allele_profile],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
         self.assertEqual(sample.id, sample_id)
@@ -844,7 +843,7 @@ class TestModelSampleForUpload(TestCase):
         )
         sample_for_upload = model.SampleForUpload(
             identifiers=identifiers_for_upload,
-            allele_profiles=[allele_profile],
+            seq_profiles=[allele_profile],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
         self.assertEqual(len(sample_for_upload.identifiers or []), 2)
@@ -859,7 +858,7 @@ class TestModelSampleForUpload(TestCase):
         sample_for_upload = model.SampleForUpload(
             id=uuid4(),
             sample=model.Sample(created_in_data_collection_id=data_collection_id),
-            allele_profiles=[allele_profile],
+            seq_profiles=[allele_profile],
         )
         sample: model.Sample = sample_for_upload.sample  # type: ignore[assignment]
         self.assertEqual(sample.created_in_data_collection_id, data_collection_id)
@@ -872,7 +871,7 @@ class TestModelSampleForUpload(TestCase):
         )
         # This should not raise ValidationError since both fields are optional
         sample = model.SampleForUpload(
-            allele_profiles=[allele_profile],
+            seq_profiles=[allele_profile],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
         self.assertIsNone(sample.id)
@@ -887,7 +886,7 @@ class TestModelSampleForUpload(TestCase):
         # This should not raise ValidationError since empty list is valid
         sample_for_upload = model.SampleForUpload(
             identifiers=[],
-            allele_profiles=[allele_profile],
+            seq_profiles=[allele_profile],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
         self.assertEqual(len(sample_for_upload.identifiers or []), 0)
@@ -905,7 +904,7 @@ class TestModelSampleForUpload(TestCase):
         sample = model.SampleForUpload(
             id=sample_id,
             seqs=[seq_upload],
-            allele_profiles=[allele_profile],
+            seq_profiles=[allele_profile],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
 
@@ -929,7 +928,7 @@ class TestModelSampleForUpload(TestCase):
         sample_for_upload = model.SampleForUpload(
             id=sample_id,
             seqs=[seq1, seq2, seq3],
-            allele_profiles=[allele_profile],
+            seq_profiles=[allele_profile],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
 
@@ -954,7 +953,7 @@ class TestModelSampleForUpload(TestCase):
         sample_for_upload = model.SampleForUpload(
             id=sample_id,
             seqs=[],
-            allele_profiles=[allele_profile],
+            seq_profiles=[allele_profile],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
 
@@ -979,7 +978,7 @@ class TestModelSampleForUpload(TestCase):
             id=sample_id,
             identifiers=[identifier_for_upload],
             seqs=[seq_upload],
-            allele_profiles=[allele_profile],
+            seq_profiles=[allele_profile],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
 
@@ -992,7 +991,7 @@ class TestModelSampleForUpload(TestCase):
         """Test SampleForUpload with seqs having different properties."""
         sample_id = uuid4()
         file_id = uuid4()
-        assembly_protocol_id = uuid4()
+        protocol_id = uuid4()
 
         # Create seqs with different characteristics (all with NULL_ID sample_id)
         seq_with_file = self._create_sample_seq_for_upload(
@@ -1005,7 +1004,7 @@ class TestModelSampleForUpload(TestCase):
         seq_with_protocol = self._create_sample_seq_for_upload(
             sample_id=NULL_ID,
             code="seq_with_protocol",
-            assembly_protocol_id=assembly_protocol_id,
+            protocol_id=protocol_id,
         )
 
         seq_with_quality = self._create_sample_seq_for_upload(
@@ -1023,7 +1022,7 @@ class TestModelSampleForUpload(TestCase):
         sample = model.SampleForUpload(
             id=sample_id,
             seqs=[seq_with_file, seq_with_protocol, seq_with_quality],
-            allele_profiles=[allele_profile],
+            seq_profiles=[allele_profile],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
 
@@ -1037,7 +1036,7 @@ class TestModelSampleForUpload(TestCase):
         protocol_seq = next(
             s for s in sample.seqs or [] if s.code == "seq_with_protocol"
         )
-        self.assertEqual(protocol_seq.assembly_protocol_id, assembly_protocol_id)
+        self.assertEqual(protocol_seq.protocol_id, protocol_id)
 
         quality_seq = next(s for s in sample.seqs or [] if s.code == "seq_with_qc")
         self.assertEqual(quality_seq.qc_score, 0.95)
@@ -1056,7 +1055,7 @@ class TestModelSampleForUpload(TestCase):
         sample = model.SampleForUpload(
             id=sample_id,
             seqs=[seq_upload],
-            allele_profiles=[allele_profile],
+            seq_profiles=[allele_profile],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
 
@@ -1092,7 +1091,7 @@ class TestModelSampleForUpload(TestCase):
         sample = model.SampleForUpload(
             id=NULL_ID,  # Sample has no specific id
             seqs=[seq1, seq2],
-            allele_profiles=[allele_profile],
+            seq_profiles=[allele_profile],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
 
@@ -1118,7 +1117,7 @@ class TestModelSampleForUpload(TestCase):
         sample = model.SampleForUpload(
             id=NULL_ID,
             seqs=[seq1, seq2],
-            allele_profiles=[allele_profile],
+            seq_profiles=[allele_profile],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
 
@@ -1144,7 +1143,7 @@ class TestModelSampleBatchForUpload(TestCase):
             "sample_id": uuid4(),
             "code": f"seq_upload_{uuid4().hex[:8]}",
             "contigs": [model.Contig(seq="ATCGATCG")],
-            "assembly_protocol_id": uuid4(),  # Required: either assembly_protocol_id or assembly_protocol_code
+            "protocol_id": uuid4(),  # Required: either protocol_id or protocol_code
         }
         defaults.update(kwargs)
         return model.SeqForUpload(**defaults)  # type: ignore[arg-type]
@@ -1241,7 +1240,7 @@ class TestModelSampleBatchForUpload(TestCase):
         sample = model.SampleForUpload(
             id=uuid4(),
             sample=model.Sample(created_in_data_collection_id=uuid4()),
-            allele_profiles=[
+            seq_profiles=[
                 TestModelAlleleProfileForUpload._get_allele_profile_for_ids([allele_id])
             ],
         )
@@ -1256,7 +1255,7 @@ class TestModelSampleBatchForUpload(TestCase):
         sample = model.SampleForUpload(
             id=uuid4(),
             sample=model.Sample(created_in_data_collection_id=uuid4()),
-            allele_profiles=[
+            seq_profiles=[
                 TestModelAlleleProfileForUpload._get_allele_profile_for_ids([allele_id])
             ],
         )
@@ -1274,7 +1273,7 @@ class TestModelSampleBatchForUpload(TestCase):
         sample_without_seqs = model.SampleForUpload(
             id=uuid4(),
             sample=model.Sample(created_in_data_collection_id=uuid4()),
-            allele_profiles=[
+            seq_profiles=[
                 TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
                     [allele_id2]
                 )
@@ -1343,9 +1342,9 @@ class TestModelSampleBatchForUpload(TestCase):
         sample_with_qc.seqs = [seq_with_qc]
 
         # Sample with assembly protocol seqs
-        assembly_protocol_id = uuid4()
+        protocol_id = uuid4()
         seq_with_protocol = self._create_sample_seq_for_upload(
-            sample_id=NULL_ID, assembly_protocol_id=assembly_protocol_id
+            sample_id=NULL_ID, protocol_id=protocol_id
         )
         sample_with_protocol = self._create_sample_with_seqs()
         sample_with_protocol.seqs = [seq_with_protocol]
@@ -1367,7 +1366,7 @@ class TestModelSampleBatchForUpload(TestCase):
         self.assertEqual(qc_seq.qc_result, model.enum.QualityControlResult.PASS)
 
         protocol_seq = (sample_batch.samples[2].seqs or [])[0]
-        self.assertEqual(protocol_seq.assembly_protocol_id, assembly_protocol_id)
+        self.assertEqual(protocol_seq.protocol_id, protocol_id)
 
     def test_valid_mixed_samples_with_and_without_seqs(self) -> None:
         """Test SampleBatchForUpload with mix of samples with and without seqs."""
@@ -1382,7 +1381,7 @@ class TestModelSampleBatchForUpload(TestCase):
         sample_without_seqs = model.SampleForUpload(
             id=uuid4(),
             sample=model.Sample(created_in_data_collection_id=uuid4()),
-            allele_profiles=[
+            seq_profiles=[
                 TestModelAlleleProfileForUpload._get_allele_profile_for_ids([allele_id])
             ],
         )
@@ -1431,7 +1430,7 @@ class TestModelSampleBatchForUpload(TestCase):
             model.SampleForUpload(
                 id=uuid4(),
                 sample=model.Sample(created_in_data_collection_id=uuid4()),
-                allele_profiles=[
+                seq_profiles=[
                     TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
                         [allele_id1]
                     )
@@ -1440,7 +1439,7 @@ class TestModelSampleBatchForUpload(TestCase):
             model.SampleForUpload(
                 id=uuid4(),
                 sample=model.Sample(created_in_data_collection_id=uuid4()),
-                allele_profiles=[
+                seq_profiles=[
                     TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
                         [allele_id2]
                     )
@@ -1457,7 +1456,7 @@ class TestModelSampleBatchForUpload(TestCase):
         sample_with_empty_seqs = model.SampleForUpload(
             id=uuid4(),
             seqs=[],  # Empty list
-            allele_profiles=[
+            seq_profiles=[
                 TestModelAlleleProfileForUpload._get_allele_profile_for_ids([uuid4()])
             ],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
@@ -1476,7 +1475,7 @@ class TestModelSampleBatchForUpload(TestCase):
         sample_with_id = model.SampleForUpload(
             id=sample_id,
             seqs=[seq_with_null_sample_id],
-            allele_profiles=[
+            seq_profiles=[
                 TestModelAlleleProfileForUpload._get_allele_profile_for_ids([uuid4()])
             ],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
@@ -1491,7 +1490,7 @@ class TestModelSampleBatchForUpload(TestCase):
         sample_without_id = model.SampleForUpload(
             id=NULL_ID,
             seqs=[seq_with_own_sample_id],
-            allele_profiles=[
+            seq_profiles=[
                 TestModelAlleleProfileForUpload._get_allele_profile_for_ids([uuid4()])
             ],
             sample=model.Sample(created_in_data_collection_id=uuid4()),

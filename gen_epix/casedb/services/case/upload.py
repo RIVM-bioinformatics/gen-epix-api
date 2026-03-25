@@ -421,7 +421,7 @@ class CaseBatchUploader(BatchUploader):
                 sample_for_upload.read_sets.append(
                     seqdb_model.ReadSetForUpload(
                         sample_id=NULL_ID,
-                        sequencing_protocol_id=read_set_for_upload.sequencing_protocol_id,
+                        protocol_id=read_set_for_upload.protocol_id,
                     )
                 )
                 child_index_map[seqdb_model.ReadSetForUpload][(sample_index, i)] = (
@@ -433,15 +433,15 @@ class CaseBatchUploader(BatchUploader):
                 sample_index = _get_or_create_sample_for_upload(
                     case_index,
                     seq_for_upload.sample_id,
-                    seq_for_upload.external_sample_id,
+                    seq_for_upload.other_sample_identifier,
                 )
                 sample_for_upload = samples_for_upload[sample_index]
-                # Add read set
+                # Add sequence
                 assert sample_for_upload.seqs is not None
                 sample_for_upload.seqs.append(
                     seqdb_model.SeqForUpload(
                         sample_id=NULL_ID,
-                        assembly_protocol_id=seq_for_upload.assembly_protocol_id,
+                        protocol_id=seq_for_upload.protocol_id,
                     )
                 )
                 child_index_map[seqdb_model.SeqForUpload][(sample_index, i)] = (

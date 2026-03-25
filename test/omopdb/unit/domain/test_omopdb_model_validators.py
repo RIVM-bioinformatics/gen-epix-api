@@ -50,6 +50,7 @@ def _str_field_name() -> str:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestValidateIntForUuidField:
     """Tests for the validate_int_for_uuid_field function."""
 
@@ -122,6 +123,7 @@ class TestValidateIntForUuidField:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestValidateStrForUuidField:
     """Tests for the validate_str_for_uuid_field function."""
 
@@ -200,6 +202,7 @@ class TestValidateStrForUuidField:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestValidateStrPrimaryKeyArgs:
     """Tests for the validate_str_primary_key_args function."""
 
@@ -328,6 +331,7 @@ class TestValidateStrPrimaryKeyArgs:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestValidateIntPrimaryKeyArgs:
     """Tests for the validate_int_primary_key_args function."""
 
@@ -487,6 +491,7 @@ class TestValidateIntPrimaryKeyArgs:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestDataLineageMixin:
     """Tests for the DataLineageMixin class.
 

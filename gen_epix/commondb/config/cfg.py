@@ -17,12 +17,14 @@ from gen_epix.commondb.config.factory import IdFactory, TimestampFactory
 from gen_epix.commondb.config.settings_manager import SettingsManager
 from gen_epix.fastapp import App
 
+# Third-party loggers that keep their configured level during global log-level updates.
 _THIRD_PARTY_LOGGER_NAMES = {
     "sqlalchemy.engine",
     "sqlalchemy.pool",
     "httpx",
     "asyncio",
 }
+# Local logger suffixes that keep their configured level during global log-level updates.
 _OWN_LOGGER_SUFFIXES = {
     "setup",
     "service",
