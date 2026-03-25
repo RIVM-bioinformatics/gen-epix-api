@@ -1,5 +1,8 @@
 # pylint: disable=useless-import-alias
 from gen_epix.commondb.repositories import sa_model as sa_model  # Initialize SA Models
+from gen_epix.commondb.repositories.dict_modifier import (
+    CommondbDictModelModifier as CommondbDictModelModifier,
+)
 from gen_epix.commondb.repositories.sa_mapper import (
     CommondbSAMapper as CommondbSAMapper,
 )

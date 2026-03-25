@@ -15,6 +15,7 @@ from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.domain import DOMAIN, enum, exc
 from gen_epix.commondb.domain.model import SORTED_SERVICE_TYPES
 from gen_epix.commondb.domain.policy.permission import RoleGenerator
+from gen_epix.commondb.repositories.dict_modifier import CommondbDictModelModifier
 from gen_epix.commondb.repositories.sa_mapper import CommondbSAMapperFactory
 from gen_epix.commondb.services import AuthService, RbacService
 from gen_epix.commondb.services.abac import AbacService
@@ -22,6 +23,7 @@ from gen_epix.commondb.services.organization import OrganizationService
 from gen_epix.commondb.services.system import SystemService
 from gen_epix.commondb.services.user_manager import UserManager
 from gen_epix.fastapp.domain.domain import Domain
+from gen_epix.fastapp.repositories.dict.repository import DictRepository
 from gen_epix.fastapp.repositories.sa import SARepository
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.service import BaseService
@@ -302,6 +304,15 @@ class AppComposer(BaseAppComposer):
             curr_repository = repository_class.create_repository(
                 entities=entities, **factory_kwargs, **repository_props
             )
+            # Register a CommondbDictModelModifier for every model class that carries
+            # RowMetadataMixin fields, mirroring what CommondbSAMapper does for SA.
+            if issubclass(repository_class, DictRepository):
+                modifier = CommondbDictModelModifier()
+                for entity in entities:
+                    if "created_at" in entity.model_class.model_fields:
+                        curr_repository.register_model_modifier(
+                            entity.model_class, modifier
+                        )
             # Add to overview of repositories
             app_impl.repositories[service_type] = curr_repository
 
