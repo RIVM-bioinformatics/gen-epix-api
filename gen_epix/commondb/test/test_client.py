@@ -1164,8 +1164,12 @@ class TestClient:
         # if in_obj.created_at and out_obj.created_at != in_obj.created_at:
         #     raise ValueError(f"created_at should not be updated: {out_obj.created_at}")
 
-        if not out_obj.created_at:
-            raise ValueError(f"created_at should be set: {out_obj.created_at}")
+        # TODO 2952:
+        # We also remove this check because
+        # the AFTER policy masks the actual created_at and modified_at values for non-root users
+        # if not out_obj.created_at:
+        #     raise ValueError(f"created_at should be set: {out_obj.created_at}")
+
         # if verify_modified and not is_privileged:
 
         #     # TODO 2952: Where does the native datetime come from?

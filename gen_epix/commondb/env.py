@@ -184,8 +184,7 @@ class AppComposer(BaseAppComposer):
             rbac_service.register_policies()
             abac_service.register_policies()
 
-            # Note: the privileged roles for the SetModelProcessMetadataPolicy are
-            # those that should be able to bypass automatic setting of created/modified metadata,
+            # Note: the privileged roles for the MaskModelProcessMetadataPolicy are
             # privileged_roles = app_impl.role_set_map[enum.RoleSet.GE_APP_ADMIN]
             # Only ROOT can bypass
             privileged_roles = app_impl.role_set_map[enum.RoleSet.ROOT]
