@@ -728,8 +728,10 @@ class SeqdbTestClient(TestClient):
                 protocol_id=locus_detection_protocol_id,
                 locus_code_map_id=locus_code_map_id,
                 allele_ids=allele_ids,  # type: ignore[arg-type]
-                seq_profile_type=enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
+                seq_profile_type=enum.SeqProfileType.ALLELE,
                 seq_id=seq_id,
+                format=enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
+                content_hash=model.SeqProfile.get_allele_profile_hash(allele_ids),
             )
             seq_for_upload = model.SeqForUpload(
                 contigs=[

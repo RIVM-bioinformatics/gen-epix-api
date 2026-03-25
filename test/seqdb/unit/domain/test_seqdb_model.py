@@ -15,7 +15,7 @@ SEQ_DISTANCE types). The _minimal_protocol_data helper handles this convention.
 """
 
 import json
-from datetime import date
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -115,14 +115,16 @@ class TestProtocolHappyPaths:
             git_repository_uri=VALID_GIT_URI,
             git_commit_hash=VALID_GIT_HASH,
             git_commit_tag="v1.0.0",
-            valid_start_date=date(2024, 1, 1),
-            valid_end_date=date(2025, 1, 1),
+            valid_start_datetime=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            valid_end_datetime=datetime(2025, 1, 1, tzinfo=timezone.utc),
         )
         assert protocol.name == "My Protocol"
         assert protocol.git_commit_hash == VALID_GIT_HASH
         assert protocol.git_commit_tag == "v1.0.0"
-        assert protocol.valid_start_date == date(2024, 1, 1)
-        assert protocol.valid_end_date == date(2025, 1, 1)
+        assert protocol.valid_start_datetime == datetime(
+            2024, 1, 1, tzinfo=timezone.utc
+        )
+        assert protocol.valid_end_datetime == datetime(2025, 1, 1, tzinfo=timezone.utc)
 
 
 # ---------------------------------------------------------------------------
@@ -332,10 +334,11 @@ class TestProtocolSerializers:
         protocol = _make_protocol()
         dumped = protocol.model_dump(mode="json")
         assert dumped["protocol_type"] == ProtocolType.SEQUENCING.value
-        assert isinstance(dumped["protocol_type"], str)
+        assert isinstance(dumped["protocol_type"], int)
 
     def test_ref_seq_id_serialized_as_string(self) -> None:
         data = _minimal_protocol_data(ProtocolType.SEQ_PROFILE)
+        data["ref_seq_id"] = SAMPLE_REF_SEQ_ID  # optional for SEQ_PROFILE
         protocol = Protocol(**data)
         dumped = protocol.model_dump(mode="json")
         assert dumped["ref_seq_id"] == str(SAMPLE_REF_SEQ_ID)
@@ -343,6 +346,7 @@ class TestProtocolSerializers:
 
     def test_locus_set_id_serialized_as_string(self) -> None:
         data = _minimal_protocol_data(ProtocolType.SEQ_PROFILE)
+        data["locus_set_id"] = SAMPLE_LOCUS_SET_ID  # optional for SEQ_PROFILE
         protocol = Protocol(**data)
         dumped = protocol.model_dump(mode="json")
         assert dumped["locus_set_id"] == str(SAMPLE_LOCUS_SET_ID)
