@@ -28,6 +28,7 @@ SSL_CERTFILE = Path("cert/cert.pem").absolute().as_posix()
 SSL_KEYFILE = Path("cert/key.pem").absolute().as_posix()
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_logging_config_contract_includes_uvicorn_json_loggers() -> None:
     # Config-contract test: validating the E2E logging.yaml shape directly instead of booting servers
     config_path = Path(__file__).with_name("logging.yaml")

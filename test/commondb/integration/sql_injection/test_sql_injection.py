@@ -40,6 +40,7 @@ def get_test_client() -> Env:
     )
 
 
+@pytest.mark.scenario_ids("OWA-03-01")
 class TestSQLInjection:
 
     @pytest.fixture(scope="module")

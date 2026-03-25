@@ -15,6 +15,7 @@ import subprocess
 import sys
 import textwrap
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
@@ -39,6 +40,8 @@ _E2E_YAML_PATHS = [
 
 _ALL_YAML_PATHS = _PRODUCTION_YAML_PATHS + _DEBUG_YAML_PATHS + _E2E_YAML_PATHS
 
+JSONDict = dict[str, Any]
+
 
 def _load_class(path: str) -> object:
     module_name, class_name = path.rsplit(".", 1)
@@ -46,8 +49,9 @@ def _load_class(path: str) -> object:
     return getattr(module, class_name)
 
 
-def _emit_access_payload_via_dictconfig(yaml_path: Path) -> dict:
-    script = textwrap.dedent("""
+def _emit_access_payload_via_dictconfig(yaml_path: Path) -> JSONDict:
+    script = textwrap.dedent(
+        """
         import json
         import logging
         import logging.config
@@ -87,7 +91,8 @@ def _emit_access_payload_via_dictconfig(yaml_path: Path) -> dict:
             "1.1",
             204,
         )
-        """)
+        """
+    )
 
     proc = subprocess.run(
         [sys.executable, "-c", script, str(yaml_path)],
@@ -106,8 +111,9 @@ def _emit_access_payload_via_dictconfig(yaml_path: Path) -> dict:
     raise AssertionError(f"No JSON log line emitted for {yaml_path.name}")
 
 
-def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[dict]:
-    script = textwrap.dedent("""\
+def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[JSONDict]:
+    script = textwrap.dedent(
+        """\
         import logging
         import logging.config
         import sys
@@ -142,6 +148,11 @@ def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[dict]:
             "casedb.app",
         )
         logger = logging.getLogger(app_logger_name)
+        service_logger_name = next(
+            (name for name in config.get("loggers", {}) if name.endswith(".service")),
+            "casedb.service",
+        )
+        service_logger = logging.getLogger(service_logger_name)
         logger.info(
             '{"code":"e8aafcec","msg":"STARTING_APP","app":{"id":"app-123","name":"CASEDB"}}'
         )
@@ -151,7 +162,11 @@ def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[dict]:
         logger.debug(
             '{"code":"e94cad9b","msg":"STARTED_COMMAND","command":{"class":"DemoCommand","object":{"id":"cmd-obj-123"},"parent_command_id":null,"stack_trace":"DemoCommand"}}'
         )
-        """)
+        service_logger.info(
+            '{"code":"c10677fe","msg":"STARTING_SERVICE","service":{"id":"svc-123","name":"UploadService"}}'
+        )
+        """
+    )
 
     proc = subprocess.run(
         [sys.executable, "-c", script, str(yaml_path)],
@@ -163,7 +178,7 @@ def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[dict]:
         proc.returncode == 0
     ), f"Subprocess failed for {yaml_path.name}: {proc.stderr}"
 
-    payloads: list[dict] = []
+    payloads: list[JSONDict] = []
     for line in proc.stdout.splitlines():
         line = line.strip()
         if line.startswith("{") and line.endswith("}"):
@@ -173,8 +188,9 @@ def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[dict]:
     return payloads
 
 
-def _emit_log_level_resolution_payloads(enable_env_override: bool) -> list[dict]:
-    script = textwrap.dedent("""\
+def _emit_log_level_resolution_payloads(enable_env_override: bool) -> list[JSONDict]:
+    script = textwrap.dedent(
+        """\
         import json
         import logging
         import os
@@ -197,7 +213,8 @@ def _emit_log_level_resolution_payloads(enable_env_override: bool) -> list[dict]
         uvicorn_error_logger = logging.getLogger("uvicorn.error")
         uvicorn_error_logger.info("PROBE_UVICORN_INFO")
         uvicorn_error_logger.warning("PROBE_UVICORN_WARNING")
-        """)
+        """
+    )
 
     proc = subprocess.run(
         [sys.executable, "-c", script, "1" if enable_env_override else "0"],
@@ -207,7 +224,7 @@ def _emit_log_level_resolution_payloads(enable_env_override: bool) -> list[dict]
     )
     assert proc.returncode == 0, f"Subprocess failed: {proc.stderr}"
 
-    payloads: list[dict] = []
+    payloads: list[JSONDict] = []
     for line in proc.stdout.splitlines():
         line = line.strip()
         if line.startswith("{") and line.endswith("}"):
@@ -216,7 +233,7 @@ def _emit_log_level_resolution_payloads(enable_env_override: bool) -> list[dict]
     return payloads
 
 
-def _has_message(payloads: list[dict], logger_name: str, message: str) -> bool:
+def _has_message(payloads: list[JSONDict], logger_name: str, message: str) -> bool:
     return any(
         payload.get("logger") == logger_name and payload.get("message") == message
         for payload in payloads
@@ -299,6 +316,7 @@ def test_runtime_app_lifecycle_logs_have_message_and_operational_aliases(
     assert command_info is not None
     assert command_info["message"] == "STARTED_COMMAND"
     assert command_info["command_id"] == "cmd-123"
+    assert command_info["user_id"] == "u-123"
 
     command_debug = next(
         (
@@ -314,6 +332,14 @@ def test_runtime_app_lifecycle_logs_have_message_and_operational_aliases(
     assert command_debug is not None
     assert command_debug["message"] == "STARTED_COMMAND"
     assert command_debug["command_id"] == "cmd-obj-123"
+
+    service_payload = next((x for x in payloads if x.get("code") == "c10677fe"), None)
+    assert service_payload is not None
+    assert isinstance(service_payload["service"], str)
+    assert service_payload["service_meta"] == {
+        "id": "svc-123",
+        "name": "UploadService",
+    }
 
 
 def test_runtime_log_level_resolution_diagnostic_and_env_override_behavior() -> None:
