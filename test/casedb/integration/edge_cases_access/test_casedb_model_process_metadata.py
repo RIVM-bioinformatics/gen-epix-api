@@ -65,8 +65,8 @@ def get_test_client() -> Env:
 @pytest.mark.integration
 class TestCaseDBModelProcessMetadata:
     """
-    Tests that MaskModelProcessMetadataPolicy and SetModelProcessMetadataPolicy
-    are wired correctly in the CaseDB integration environment.
+    Tests that MaskModelProcessMetadataPolicy
+    is wired correctly in the CaseDB integration environment.
 
     Superusers bypass masking — their reads return populated metadata.
     Org users are subject to masking — their reads return None for all three fields.
@@ -84,8 +84,9 @@ class TestCaseDBModelProcessMetadata:
     ) -> None:
         """
         Assert that when a case type is created without explicitly setting metadata fields,
-        the SetModelProcessMetadataPolicy populates the created_at, modified_at, and modified_by fields.
-        This test verifies that the policy is correctly setting these fields on creation even when they are not provided in the command.
+        the CommondbSAMapper or the CommondbDictModelModifier populates the created_at, modified_at, and modified_by fields.
+        This test verifies that the mapper/modifier is correctly setting these fields on
+        creation even when they are not provided in the command.
         """
         root_user = self.env.get_root_user()
 
