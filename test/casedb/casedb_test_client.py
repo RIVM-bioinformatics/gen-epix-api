@@ -380,10 +380,9 @@ class CasedbTestClient(TestClient):
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.GeneticDistanceProtocol(
-                    code=name,
+                    name=name,
                     seqdb_seq_distance_protocol_id=seqdb_seq_distance_protocol_id,
                     seqdb_seq_distance_type=seqdb_seq_distance_type,
-                    seqdb_protocol_type=seqdb_enum.ProtocolType.SEQ_DISTANCE,
                     seqdb_is_integer_distance=True,
                     min_scale_unit=min_scale_unit,
                 ),

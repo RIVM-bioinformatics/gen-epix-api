@@ -201,6 +201,7 @@ def case_service_retrieve_complete_case_type(
                 ),
             )
         )
+        genetic_distance_protocols = {x.id: x for x in genetic_distance_protocols}
 
         # Get tree algorithms
         tree_algorithm_codes: set[enum.TreeAlgorithmType] = set.union(
