@@ -7,23 +7,24 @@ erDiagram
     %% casedb / ONTOLOGY (detailed)
 
     %% Relationships
+    ConceptRelation }o--|| Concept : "from_concept_id"
+    ConceptRelation }o--|| Concept : "to_concept_id"
     Concept }o--|| ConceptSet : "concept_set_id"
     Etiology }o--|| Disease : "disease_id"
     Etiology }o--|| EtiologicalAgent : "etiological_agent_id"
-    ConceptRelation }o--|| Concept : "from_concept_id"
-    ConceptRelation }o--|| Concept : "to_concept_id"
 
     %% Entity definitions
+    ConceptRelation {
+        UUID id PK
+        UUID from_concept_id FK
+        UUID to_concept_id FK
+        enum relation
+    }
+
     Disease {
         UUID id PK
         string name
         string icd_code
-    }
-
-    EtiologicalAgent {
-        UUID id PK
-        string name
-        string type
     }
 
     Concept {
@@ -36,28 +37,24 @@ erDiagram
         dict[string, Any] props
     }
 
-    Etiology {
-        UUID id PK
-        UUID disease_id FK
-        UUID etiological_agent_id FK
-    }
-
-    ConceptRelation {
-        UUID id PK
-        UUID from_concept_id FK
-        UUID to_concept_id FK
-        enum relation
-    }
-
     ConceptSet {
         UUID id PK
         string code
         string name
         enum type
-        string regex
-        string schema_definition
-        string schema_uri
         string description
+    }
+
+    EtiologicalAgent {
+        UUID id PK
+        string name
+        string type
+    }
+
+    Etiology {
+        UUID id PK
+        UUID disease_id FK
+        UUID etiological_agent_id FK
     }
 
 ```

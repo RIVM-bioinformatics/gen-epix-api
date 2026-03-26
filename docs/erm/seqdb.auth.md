@@ -6,10 +6,10 @@ Auto-generated.  Service type **AUTH** — 2 entities, relationships only.
 erDiagram
     %% seqdb / AUTH (simplified)
 
-    IDPUser {
+    IdentityProvider {
     }
 
-    IdentityProvider {
+    IDPUser {
     }
 
 ```
