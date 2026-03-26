@@ -1,6 +1,5 @@
 import datetime
 from test.commondb.integration.build_db.base import (
-    DEFAULT_CREATED_AT,
     SKIP_RAISE,
 )
 

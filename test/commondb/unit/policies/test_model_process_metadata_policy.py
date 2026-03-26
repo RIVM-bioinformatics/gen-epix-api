@@ -9,8 +9,6 @@ MaskModelProcessMetadataPolicy (AFTER):
 - Handles None retval.
 - Skips non-ModelNoId objects.
 
-TODO 2953: the masking should only be done on objects from casedb, not omopdb and seqdb
-
 """
 
 from test.commondb.unit.conftest import DEFAULT_CREATED_AT, DEFAULT_MODIFIED_AT

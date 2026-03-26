@@ -18,7 +18,7 @@ from sqlalchemy_utils.types.uuid import UUIDType
 from gen_epix.fastapp.domain.util import get_type_from_annotation
 
 
-# TODO 2953: double check
+# REVIEW 2953: double check
 class UTCDateTime(TypeDecorator):
     """
     A DateTime column type that always returns timezone-aware datetimes (UTC).

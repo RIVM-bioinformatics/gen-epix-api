@@ -528,7 +528,8 @@ class TestClient:
         )
         updated_tgt_user.name = tgt_user.name
         is_privileged = bool(user.roles & self.role_set_map[enum.RoleSet.ROOT])
-        # TODO 2953: verify_modified is not used anymore
+
+        # REVIEW 2953: verify_modified is not used anymore
         # is_privileged is not used anymore, it was only relevant
         # for verifying modified_by and modified_at fields
         # but those are not required to be updated by privileged users anymore

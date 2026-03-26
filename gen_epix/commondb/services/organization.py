@@ -312,10 +312,7 @@ class OrganizationService(BaseOrganizationService):
             tgt_user.is_active = is_active
             tgt_user.roles = roles
             tgt_user.organization_id = organization_id
-            # UpdateUserCommand bypasses the BEFORE policy (direct repository call),
-            # so metadata must be set explicitly here.
-            # TODO 2953: check if this is OK
-            tgt_user.set_modified(cmd.user.id)
+
             if tgt_user.created_at is None:
                 tgt_user.created_at = tgt_user.modified_at
             updated_tgt_user: model.User = self.repository.crud(  # type: ignore[assignment]

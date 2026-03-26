@@ -1,9 +1,6 @@
-import datetime
 from test.commondb.integration.build_db.base import (
     APP_ADMIN_OR_ABOVE_USERS,
     BELOW_APP_ADMIN_USERS,
-    DEFAULT_CREATED_AT,
-    DEFAULT_MODIFIED_AT,
     SKIP_RAISE,
 )
 
@@ -196,25 +193,12 @@ class TestUpdate:
 
     def test_update_data_collection(self, env: Env) -> None:
 
-        # TODO 2953: Move to separate test
-        # focussing on the metadata policy only
-        created_at = DEFAULT_CREATED_AT
-        modified_at = DEFAULT_MODIFIED_AT
-        modified_by = env.get_root_user().id
-
         env.create_data_collection(
             "root1_1",
             "data_collection23",
-            created_at=created_at,
-            modified_at=modified_at,
-            modified_by=modified_by,
         )
 
-        other_user_id = env._get_obj(model.User, "org_user1_1").id
-
         for i, user in enumerate(APP_ADMIN_OR_ABOVE_USERS):
-            created_at = created_at + datetime.timedelta(minutes=-1)
-            modified_at = modified_at + datetime.timedelta(minutes=-1)
 
             env.update_object(
                 user,
@@ -222,9 +206,6 @@ class TestUpdate:
                 "data_collection23",
                 {
                     "description": str(i),
-                    "created_at": created_at,
-                    "modified_at": modified_at,
-                    "modified_by": other_user_id,
                 },
             )
 

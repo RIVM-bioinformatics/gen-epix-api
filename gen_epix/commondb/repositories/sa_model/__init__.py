@@ -76,10 +76,6 @@ from gen_epix.commondb.repositories.sa_model.organization import (
 from gen_epix.commondb.repositories.sa_model.organization import UserMixin as UserMixin
 from gen_epix.commondb.repositories.sa_model.system import Outage as Outage
 from gen_epix.commondb.repositories.sa_model.system import OutageMixin as OutageMixin
-from gen_epix.commondb.repositories.sa_model.util import create_field_metadata
-from gen_epix.commondb.repositories.sa_model.util import (
-    create_field_metadata as create_field_metadata,
-)
 from gen_epix.commondb.repositories.sa_model.util import (
     create_mapped_column as create_mapped_column,
 )
@@ -127,4 +123,3 @@ set_entity_repository_model_classes(
     RowMetadataMixin,
     field_name_map=FIELD_NAME_MAP,
 )
-

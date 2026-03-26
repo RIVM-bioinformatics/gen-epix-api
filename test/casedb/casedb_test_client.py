@@ -23,13 +23,6 @@ from gen_epix.filter import FilterType, TypedEqualsUuidFilter, TypedUuidSetFilte
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.util import map_paired_elements
 
-# TODO 2953: Still defaults in the test client
-# because of many existing tests relying on that (for CaseType)
-# but we should move towards explicitly setting these in the test setup
-#  and then remove these defaults from the test client.
-DEFAULT_CREATED_AT = datetime(2023, 1, 1, tzinfo=UTC)
-DEFAULT_MODIFIED_AT = datetime(2023, 6, 1, tzinfo=UTC)
-
 
 class OrganismType(enum.Enum):
     ORGANISM = "ORGANISM"
@@ -2204,7 +2197,7 @@ class CasedbTestClient(TestClient):
                 f"{TestClient._convert_case_date_to_code(x.case_date)}: {curr_content}; {curr_data_collections} ({x.id})"
             )
 
-    # TODO 2953: we moved _get_obj to the parent class. Is that OK?
+    # REVIEW 2953: we moved _get_obj to the parent class. Is that OK?
 
     @staticmethod
     def _convert_case_code_to_date(code: str) -> datetime:
@@ -2224,5 +2217,6 @@ class CasedbTestClient(TestClient):
     def _convert_case_date_to_code(case_date: datetime) -> str:
         case_type_index = int(case_date.month)  # Get case_type_index from month
         case_index = int(case_date.year - 1900)  # Get case_index from year offset
+        return f"case{case_type_index}_{case_index}"
         return f"case{case_type_index}_{case_index}"
         return f"case{case_type_index}_{case_index}"
