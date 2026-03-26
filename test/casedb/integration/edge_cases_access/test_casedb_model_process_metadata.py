@@ -18,15 +18,15 @@ The test reads case types through the app layer (not directly from the db) to en
 import logging
 from datetime import UTC, datetime
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.edge_cases_access.setup.define_edge_cases import (
-    EDGE_CASE_BY_USER,
-    EDGE_CASES,
-)
-from test.casedb.integration.refdata_access.base_metadata import (
+from test.casedb.integration.edge_cases_access.base_metadata import (
     DEV_REPOSITORY_CONFIG,
     SKIP_ENDPOINTS,
     TEST_TYPE,
     VERBOSE,
+)
+from test.casedb.integration.edge_cases_access.setup.define_edge_cases import (
+    EDGE_CASE_BY_USER,
+    EDGE_CASES,
 )
 
 import pytest
