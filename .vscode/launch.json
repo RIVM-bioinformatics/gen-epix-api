@@ -505,6 +505,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.casedb.integration.metadata",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_casedb_integration_metadata"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.casedb.integration.edge_cases_access",
             "type": "debugpy",
             "request": "launch",
