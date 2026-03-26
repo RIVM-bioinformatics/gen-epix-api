@@ -122,7 +122,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         flows.authorizationCode = OAuthFlowAuthorizationCode(
             authorizationUrl=authorization_endpoint,
             tokenUrl=token_endpoint,
-            scopes={x: x for x in self.server_cfg.scope.split()},
+            scopes={x: x for x in self.server_cfg.scope.split()} if self.server_cfg.scope else {},
         )
         self.model: SecurityBase = OAuth2(flows=flows)
 
