@@ -17,7 +17,7 @@ import pytest
 from gen_epix.casedb.domain import enum as casedb_enum
 from gen_epix.casedb.domain import model
 
-VERBOSE = True  # Set to True to enable detailed print statements during setup for debugging purposes;
+VERBOSE = False  # Set to True to enable detailed print statements during setup for debugging purposes;
 
 
 # setup_case_type_data depends on setup_test_users_and_organizations to ensure that users and
