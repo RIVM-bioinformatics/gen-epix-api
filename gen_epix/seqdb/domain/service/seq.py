@@ -58,10 +58,7 @@ class BaseSeqService(BaseService):
             command.AstPredictionCrudCommand,
             self.crud_ast_prediction,
         )
-        f(
-            command.FileCrudCommand,
-            self.crud_file,
-        )
+        
         f(
             command.LocusCrudCommand,
             self.crud_locus,
@@ -285,12 +282,7 @@ class BaseSeqService(BaseService):
     ):
         raise NotImplementedError()
 
-    @abc.abstractmethod
-    def crud_file(
-        self,
-        cmd: command.FileCrudCommand,
-    ) -> model.File | list[model.File] | UUID | list[UUID] | bool | list[bool] | None:
-        raise NotImplementedError()
+    
 
     @abc.abstractmethod
     def crud_locus(
