@@ -152,7 +152,7 @@ class TestCasedbMetadataMasking:
 
     # ------------------------------------------------------------------ org admin
 
-    def test_read_all_case_types_org_admin_sees_masked_metadata(self) -> None:
+    def test_read_all_case_types_org_admin_does_not_see_masked_metadata(self) -> None:
         """Org admin must see all three metadata fields masked to None by MaskModelProcessMetadataPolicy."""
         org_admin: model.User = self.env._get_obj(model.User, "org_admin1_1")  # type: ignore[assignment]
 
@@ -174,7 +174,7 @@ class TestCasedbMetadataMasking:
 
     # ------------------------------------------------------------------ org user
 
-    def test_read_all_case_types_org_user_sees_masked_metadata(self) -> None:
+    def test_read_all_case_types_org_user_does_not_see_masked_metadata(self) -> None:
         """Org user must see all three metadata fields masked to None by MaskModelProcessMetadataPolicy."""
         org_user: model.User = self.env._get_obj(model.User, "org_user1_1")  # type: ignore[assignment]
 

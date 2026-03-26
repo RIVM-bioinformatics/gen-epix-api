@@ -104,8 +104,8 @@ class TestCasedbModelProcessMetadata:
 
     # ------------------------------------------------------------------ create
 
-    def test_create_case_type_stamps_created_at(self) -> None:
-        """created_at must be set by the backend on creation."""
+    def test_create_case_type_stamps_all_metadata(self) -> None:
+        """created_at, modified_at, and modified_by must all be set by the backend on creation."""
         root_user = self.env.get_root_user()
 
         result = self.env.create_case_type(
@@ -114,27 +114,7 @@ class TestCasedbModelProcessMetadata:
 
         assert isinstance(result, model.CaseType)
         assert result.created_at is not None, "created_at should be set on creation"
-
-    def test_create_case_type_stamps_modified_at(self) -> None:
-        """modified_at must be set by the backend on creation."""
-        root_user = self.env.get_root_user()
-
-        result = self.env.create_case_type(
-            root_user, "ct_meta_create_2", "disease_1", "etiological_agent_1"
-        )
-
-        assert isinstance(result, model.CaseType)
         assert result.modified_at is not None, "modified_at should be set on creation"
-
-    def test_create_case_type_stamps_modified_by(self) -> None:
-        """modified_by must be set to the creating user's id."""
-        root_user = self.env.get_root_user()
-
-        result = self.env.create_case_type(
-            root_user, "ct_meta_create_3", "disease_1", "etiological_agent_1"
-        )
-
-        assert isinstance(result, model.CaseType)
         assert (
             result.modified_by == root_user.id
         ), "modified_by should be set to the creating user"
