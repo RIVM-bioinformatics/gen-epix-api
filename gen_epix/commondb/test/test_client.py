@@ -528,6 +528,10 @@ class TestClient:
         )
         updated_tgt_user.name = tgt_user.name
         is_privileged = bool(user.roles & self.role_set_map[enum.RoleSet.ROOT])
+        # TODO 2953: verify_modified is not used anymore
+        # is_privileged is not used anymore, it was only relevant
+        # for verifying modified_by and modified_at fields
+        # but those are not required to be updated by privileged users anymore
         TestClient._verify_updated_obj(
             tgt_user,
             updated_tgt_user,
@@ -1155,38 +1159,22 @@ class TestClient:
 
     @staticmethod
     def _verify_updated_obj(
-        in_obj: model.Model, out_obj: model.Model, user_id: UUID, **kwargs: Any
+        in_obj: model.Model,
+        out_obj: model.Model,
+        user_id: UUID,
+        verify_modified: bool = True,
+        is_privileged: bool = False,
+        **kwargs: Any,
     ) -> None:
-        is_privileged: bool = kwargs.get("is_privileged", False)
-        verify_modified: bool = kwargs.get("verify_modified", True)
 
-        # Note: this is now handled by the CommondbSAMapper(SAMapper)
-        # if in_obj.created_at and out_obj.created_at != in_obj.created_at:
-        #     raise ValueError(f"created_at should not be updated: {out_obj.created_at}")
+        # The order of roles is sometimes changed but that would be OK
+        if isinstance(in_obj, model.User):
+            in_obj.roles = set(sorted(list(in_obj.roles)))
+            out_obj.roles = set(sorted(list(out_obj.roles)))
 
-        # TODO 2952:
-        # We also remove this check because
-        # the AFTER policy masks the actual created_at and modified_at values for non-root users
-        # if not out_obj.created_at:
-        #     raise ValueError(f"created_at should be set: {out_obj.created_at}")
-
-        # if verify_modified and not is_privileged:
-
-        #     # TODO 2952: Where does the native datetime come from?
-        #     # Why is it not timezone aware? Should we enforce timezone aware datetimes everywhere?
-        #     in_modified_at = in_obj.modified_at
-        #     if in_modified_at and in_modified_at.tzinfo is None:
-        #         in_modified_at = in_modified_at.replace(tzinfo=datetime.UTC)
-
-        #     if in_modified_at and out_obj.modified_at < in_modified_at:
-        #         raise ValueError(
-        #             f"modified_at should be larger : {out_obj.modified_at}"
-        #         )
-        #     if out_obj.modified_by != user_id:
-        #         raise ValueError(
-        #             f"modified_by should be updated: {out_obj.modified_by}"
-        #         )
-
+        # we exclude the metadata fields
+        # theser are now handled by the CommondbSAMapper(SAMapper) or the
+        # CommondbDictModelModifier
         out_obj_dict = out_obj.model_dump(
             exclude={"created_at", "modified_at", "modified_by"}
         )
@@ -1195,4 +1183,6 @@ class TestClient:
         )
 
         if out_obj_dict != in_obj_dict:
+            print(f"Input object: {in_obj_dict}")
+            print(f"Output object: {out_obj_dict}")
             raise ValueError(f"Object not updated: {in_obj}, {out_obj}")
