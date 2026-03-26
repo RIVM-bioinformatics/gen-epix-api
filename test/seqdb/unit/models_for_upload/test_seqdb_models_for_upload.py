@@ -6,6 +6,7 @@ and SampleBatchForUpload models with various validation scenarios.
 """
 
 import base64
+from gen_epix.commondb.domain.literal import NULL_ID
 import gzip
 import hashlib
 import json
@@ -17,7 +18,6 @@ from uuid import UUID, uuid4
 import pytest
 from pydantic import ValidationError
 
-from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import IdentifierForUpload
 from gen_epix.seqdb.domain import model
 
