@@ -43,7 +43,15 @@ def get_test_client() -> Env:
     )
 
 
-@pytest.mark.scenario_ids("IVO-26")
+@pytest.mark.scenario_ids(
+    "TC-RBAC-04-07",
+    "TC-RBAC-04-01",
+    "TC-BIO-04-01",
+    "TC-BIO-04-01",
+    "TC-RBAC-02-02",
+    "TC-RBAC-02-04",
+    "TC-RBAC-05-01",
+)
 @pytest.mark.integration
 class TestCasedbEdgeCasesAccess:
     """

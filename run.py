@@ -547,7 +547,7 @@ class Run:
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/casedb/integration/case_access",
+                "test/casedb/integration/edge_cases_access",
             ]
         )
 
@@ -588,16 +588,6 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/casedb/integration/metadata",
-            ]
-        )
-
-    def test_casedb_integration_edge_cases_access(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/integration/edge_cases_access",
             ]
         )
 
