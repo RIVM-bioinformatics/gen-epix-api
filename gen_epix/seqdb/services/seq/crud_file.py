@@ -1,11 +1,11 @@
 from uuid import UUID
 
 from gen_epix.seqdb.domain import command, model
-from gen_epix.seqdb.domain.service import BaseSeqService
+from gen_epix.seqdb.domain.service.file import BaseFileService
 
 
-def seq_service_crud_file(
-    self: BaseSeqService, cmd: command.FileCrudCommand
+def file_service_crud_file(
+    self: BaseFileService, cmd: command.FileCrudCommand
 ) -> list[model.File] | model.File | list[UUID] | UUID | list[bool] | bool | None:
     """Handle CRUD operations for File entities."""
     user_id = cmd.user.id if cmd.user else None

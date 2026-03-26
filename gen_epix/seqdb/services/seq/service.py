@@ -17,7 +17,7 @@ from gen_epix.seqdb.services.seq.crud_ast_measurement import (
 from gen_epix.seqdb.services.seq.crud_ast_prediction import (
     seq_service_crud_ast_prediction,
 )
-from gen_epix.seqdb.services.seq.crud_file import seq_service_crud_file
+
 from gen_epix.seqdb.services.seq.crud_locus import seq_service_crud_locus
 from gen_epix.seqdb.services.seq.crud_locus_code_map import (
     seq_service_crud_locus_code_map,
@@ -211,12 +211,6 @@ class SeqService(BaseSeqService):
         | None
     ):
         return seq_service_crud_ast_prediction(self, cmd)
-
-    def crud_file(
-        self,
-        cmd: command.FileCrudCommand,
-    ) -> model.File | list[model.File] | UUID | list[UUID] | bool | list[bool] | None:
-        return seq_service_crud_file(self, cmd)
 
     def crud_locus(
         self,
