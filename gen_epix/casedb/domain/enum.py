@@ -317,6 +317,13 @@ class ColTypeSet(Enum):
     )
     HAS_REGION_SET = frozenset({ColType.GEO_REGION})
     HAS_GENETIC_DISTANCE_PROTOCOL = frozenset({ColType.GENETIC_DISTANCE})
+    HAS_REGEX = frozenset({ColType.REGULAR_LANGUAGE})
+    HAS_SCHEMA = frozenset(
+        {
+            ColType.CONTEXT_FREE_GRAMMAR_JSON,
+            ColType.CONTEXT_FREE_GRAMMAR_XML,
+        }
+    )
     COL_TYPES_STR_LIKE = frozenset(
         {
             ColType.TIME_WEEK,

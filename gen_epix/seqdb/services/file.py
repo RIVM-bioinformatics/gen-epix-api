@@ -1,3 +1,4 @@
+from gen_epix.seqdb.services.seq.crud_file import file_service_crud_file
 import gzip
 from collections.abc import Iterable
 from io import BytesIO, StringIO
@@ -109,3 +110,9 @@ class FileService(BaseFileService):
                 )
         if not found_records:
             raise exc.InvalidArgumentsError("No sequence records found in FASTQ file")
+
+    def crud_file(
+        self,
+        cmd: command.FileCrudCommand,
+    ) -> model.File | list[model.File] | UUID | list[UUID] | bool | list[bool] | None:
+        return file_service_crud_file(self, cmd)

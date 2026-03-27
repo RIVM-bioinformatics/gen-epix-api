@@ -86,10 +86,8 @@ class GeneticDistanceProtocol(Base, RowMetadataMixin):
         model.GeneticDistanceProtocol,
         "seqdb_seq_distance_protocol_id",
     )
-    seqdb_seq_distance_protocol_type: Mapped[seqdb_enum.SeqDistanceProtocolType] = (
-        create_mapped_column(
-            DOMAIN, model.GeneticDistanceProtocol, "seqdb_seq_distance_protocol_type"
-        )
+    seqdb_seq_distance_type: Mapped[seqdb_enum.SeqDistanceType] = create_mapped_column(
+        DOMAIN, model.GeneticDistanceProtocol, "seqdb_seq_distance_type"
     )
     name: Mapped[str] = create_mapped_column(
         DOMAIN, model.GeneticDistanceProtocol, "name"
@@ -161,6 +159,11 @@ class RefCol(Base, RowMetadataMixin):
     description: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.RefCol, "description"
     )
+    regex: Mapped[str] = create_mapped_column(DOMAIN, model.RefCol, "regex")
+    schema_definition: Mapped[str] = create_mapped_column(
+        DOMAIN, model.RefCol, "schema_definition"
+    )
+    schema_uri: Mapped[str] = create_mapped_column(DOMAIN, model.RefCol, "schema_uri")
     props: Mapped[dict[str, Any]] = create_mapped_column(DOMAIN, model.RefCol, "props")
 
     ref_dim: Mapped[RefDim] = relationship(RefDim, foreign_keys=[ref_dim_id])
@@ -421,6 +424,7 @@ class CaseSetCategory(Base, RowMetadataMixin):
     description: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.CaseSetCategory, "description"
     )
+    rank: Mapped[int] = create_mapped_column(DOMAIN, model.CaseSetCategory, "rank")
 
 
 class CaseSetStatus(Base, RowMetadataMixin):
@@ -434,6 +438,7 @@ class CaseSetStatus(Base, RowMetadataMixin):
     description: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.CaseSetStatus, "description"
     )
+    rank: Mapped[int] = create_mapped_column(DOMAIN, model.CaseSetStatus, "rank")
 
 
 class CaseSet(Base, RowMetadataMixin):
@@ -450,6 +455,7 @@ class CaseSet(Base, RowMetadataMixin):
         DOMAIN, model.CaseSet, "created_in_data_collection_id"
     )
     name: Mapped[str] = create_mapped_column(DOMAIN, model.CaseSet, "name")
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.CaseSet, "code")
     description: Mapped[str] = create_mapped_column(
         DOMAIN, model.CaseSet, "description"
     )

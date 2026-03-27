@@ -600,7 +600,7 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
             retval = handler(cmd)
             self.assertEqual(upds, retval)
             self.assertEqual(FakeClient.last_request["method"], "PUT")  # type: ignore[index]
-            self.assertEqual(FakeClient.last_request["url"], base_route)  # type: ignore[index]
+            self.assertEqual(FakeClient.last_request["url"], f"{base_route}/batch")  # type: ignore[index]
 
             # DELETE_ONE
             del_id = uuid4()

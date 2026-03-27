@@ -34,10 +34,10 @@ class PhylogeneticTree(Model):
     tree_algorithm_code: enum.TreeAlgorithmType = Field(
         description="The tree algorithm"
     )
-    genetic_distance_protocol_id: UUID | None = Field(
+    protocol_id: UUID | None = Field(
         default=None, description="The ID of the genetic distance protocol. FOREIGN KEY"
     )
-    genetic_distance_protocol: GeneticDistanceProtocol | None = Field(
+    protocol: GeneticDistanceProtocol | None = Field(
         default=None, description="The genetic distance protocol"
     )
     leaf_ids: list[UUID] | None = Field(

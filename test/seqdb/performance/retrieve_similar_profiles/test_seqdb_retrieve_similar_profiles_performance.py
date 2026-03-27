@@ -189,22 +189,22 @@ class TestSeqDistancePerformance(BaseSeqDistancePerformance):
 
         for test_repository_performance in test_repositories_performance:
             with test_repository_performance.repository.uow() as uow:
-                profiles: list[model.AlleleProfile] = (
+                profiles: list[model.SeqProfile] = (
                     test_repository_performance.repository.crud(  # type: ignore[assignment]
                         uow,
                         env.get_root_user().id,
-                        model.AlleleProfile,
+                        model.SeqProfile,
                         None,
                         None,
                         CrudOperation.READ_ALL,
                     )
                 )
                 profile_ids: list[UUID] = [x.id for x in profiles if x.id is not None]
-                protocols: list[model.SeqDistanceProtocol] = (
+                protocols: list[model.Protocol] = (
                     test_repository_performance.repository.crud(  # type: ignore[assignment]
                         uow,
                         env.get_root_user().id,
-                        model.SeqDistanceProtocol,
+                        model.Protocol,
                         None,
                         None,
                         CrudOperation.READ_ALL,
