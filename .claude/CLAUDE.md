@@ -4,11 +4,13 @@
 
 - Allow git add.
 - Never git push automatically.
+- Always create new branches from `dev`.
 
 
 ## Code editing
 
 - Do not remove comments made by user, always ask.
+- Before providing a solution always look for possible ambiguities and ask the user to make a decision
 
 
 ## Architecture and context
@@ -17,5 +19,7 @@
 
 
 ## Testing
+
+- make tests compact, e.g. when checking for 3 fields try to combine them in a test with 3 assertions instead of 3 separate tests.
 
 
