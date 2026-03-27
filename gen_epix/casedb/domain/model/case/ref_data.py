@@ -456,8 +456,8 @@ class CaseType(Model):
         raise ValueError("Invalid type for props field")
 
     @field_serializer("props", mode="plain")
-    def _serialize_props(self, value: CaseTypeProps) -> str:
-        return value.model_dump_json()
+    def _serialize_props(self, value: CaseTypeProps) -> dict[str, Any]:
+        return value.model_dump()
 
 
 class CaseTypeSetCategory(Model):
