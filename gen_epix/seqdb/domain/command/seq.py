@@ -73,21 +73,21 @@ class CalculatePhylogeneticTreeCommand(Command):
     tree_algorithm: enum.TreeAlgorithm = Field(
         description="The tree algorithm to use for generating the phylogenetic tree"
     )
-    profile_ids: list[UUID] = Field(
-        description="List of profile IDs to calculate the phylogenetic tree for"
+    seq_profile_ids: list[UUID] = Field(
+        description="List of sequence profile IDs to calculate the phylogenetic tree for"
     )
     leaf_names: list[str] | None = Field(
         default=None,
-        description="Optional list of leaf names corresponding to the profile IDs",
+        description="Optional list of leaf names corresponding to the sequence profile IDs",
     )
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
         if self.leaf_names is not None and len(self.leaf_names) != len(
-            self.profile_ids
+            self.seq_profile_ids
         ):
             raise ValueError(
-                "leaf_names must be None or have the same length as profile_ids"
+                "leaf_names must be None or have the same length as sequence profile IDs"
             )
         return self
 
