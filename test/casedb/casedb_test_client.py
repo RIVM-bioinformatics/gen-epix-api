@@ -10,6 +10,7 @@ from uuid import UUID
 
 from gen_epix.casedb.api.router import create_routers
 from gen_epix.casedb.domain import command, enum, model
+from gen_epix.casedb.domain.model.case.case_data import CaseDataCollectionLink
 from gen_epix.casedb.env import AppComposer
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.commondb.app_setup import create_fast_api
@@ -1101,8 +1102,6 @@ class CasedbTestClient(TestClient):
         )
         return self._set_obj(user_share_case_policy)  # type: ignore[return-value]
 
-    # Note: We are passing the data_collections as a parameter because
-    # UploadCasesCommand has it as a required field, please double check if this is necessary
     def create_case(
         self,
         user_or_str: str | model.User,
@@ -1151,6 +1150,8 @@ class CasedbTestClient(TestClient):
         col_index_pattern = (
             col_index_pattern if col_index_pattern else r"^.*[a-z]*(\d+)_?\w*$"
         )
+        # The case is filled in completely
+        # should be a parameter of create case for ABAC access
         for col in cols:
             ref_col: model.RefCol = col.ref_col
             m = re.match(col_index_pattern, ref_col.code.lower())
@@ -1188,9 +1189,11 @@ class CasedbTestClient(TestClient):
                         model.CaseForUpload(
                             id=self.generate_id(),
                             case=model.Case(
+                                code=code,
                                 case_type_id=case_type.id,
                                 created_in_data_collection_id=created_in_data_collection_id,
                                 content=content,
+                                # data_collection_ids=data_collection_ids,
                                 # created_at=created_at,
                                 # modified_at=modified_at,
                                 # modified_by=modified_by,
@@ -1212,28 +1215,35 @@ class CasedbTestClient(TestClient):
             )
         )
 
+        case: model.Case = self._set_obj(case)  # type: ignore[assignment]
+
+        # Create data collection links
+        for data_collection_id in data_collection_ids:
+            self.create_case_data_collection_link(
+                root_user, case.code, data_collection_in=data_collection_id
+            )
+
         # Get the data collection associations
-        # stored_case_data_collection_links = self.handle(
-        #     command.CaseDataCollectionLinkCrudCommand(
-        #         user=root_user,
-        #         operation=CrudOperation.READ_ALL,
-        #         query_filter=TypedEqualsUuidFilter(
-        #             type=FilterType.EQUALS_UUID.value,
-        #             key="case_id",
-        #             value=case.id,
-        #         ),
-        #     ),
-        # )
-        # stored_case_data_collection_links = [
-        #     self._set_obj(x) for x in stored_case_data_collection_links
-        # ]
+        stored_case_data_collection_links = self.handle(
+            command.CaseDataCollectionLinkCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+                query_filter=TypedEqualsUuidFilter(
+                    type=FilterType.EQUALS_UUID.value,
+                    key="case_id",
+                    value=case.id,
+                ),
+            ),
+        )
+
         # # Verify the data collection associations
-        # stored_data_collection_ids = {
-        #     x.data_collection_id for x in stored_case_data_collection_links
-        # }
-        # if stored_data_collection_ids != set(data_collection_ids):
-        #     raise ValueError(f"Data collection associations mismatch")
-        return self._set_obj(case)  # type: ignore[return-value]
+        stored_data_collection_ids: list[CaseDataCollectionLink] = {
+            x.data_collection_id for x in stored_case_data_collection_links
+        }
+        if stored_data_collection_ids != set(data_collection_ids):
+            raise ValueError(f"Data collection associations mismatch")
+
+        return case
 
     def create_case_data_collection_link(
         self,
@@ -1293,6 +1303,7 @@ class CasedbTestClient(TestClient):
         )
         return self._set_obj(case_set_status)  # type: ignore[return-value]
 
+    # TODO LSP-2883 not used anywhere yet, uses a key for cases as date. Why?
     def create_case_set(
         self,
         user_or_str: str | model.User,
@@ -1448,6 +1459,7 @@ class CasedbTestClient(TestClient):
         )
         return self._set_obj(contact)  # type: ignore[return-value]
 
+    # TODO LSP-2883 this is not used anywhere yet
     def read_organization_access_case_policies_with_any_right(
         self,
         user_or_str: str | model.User,
@@ -1597,6 +1609,7 @@ class CasedbTestClient(TestClient):
             if x.case_type_set_id in case_type_set_ids
         }
 
+    # TODO LSP-2883 not used anywhere yet
     def read_cols_with_any_right(
         self,
         user_or_str: str | model.User,
@@ -1636,6 +1649,7 @@ class CasedbTestClient(TestClient):
         )
         return {x.col_id for x in col_set_members if x.col_set_id in col_set_ids}
 
+    # TODO LSP-2883 not used anywhere yet, uses a key for cases as date. Why?
     def update_association_case_data_collection(
         self,
         user_or_str: str | model.User,
@@ -1819,6 +1833,7 @@ class CasedbTestClient(TestClient):
             raise ValueError(f"User data collection policies not updated")
         return self._set_obj(user, update=True)  # type: ignore[return-value]
 
+    # TODO LSP-2883 nit used anywhere yet, uses a key for cases as date. Why?
     def verify_case_content_access(
         self,
         expected_access: dict[tuple[str, str], list[str]],
@@ -1885,13 +1900,15 @@ class CasedbTestClient(TestClient):
                 raise ValueError(msg)
 
     def print_case_data_collection_links(self) -> None:
-        cases = self.read_all("root1_1", model.Case, cascade=True)
+
+        root_user = self.get_root_user()
+        cases = self.read_all(root_user, model.Case, cascade=True)
         data_collections = {
             x.id: x
-            for x in self.read_all("root1_1", model.DataCollection, cascade=True)
+            for x in self.read_all(root_user, model.DataCollection, cascade=True)
         }
         case_data_collection_links = self.read_all(
-            "root1_1", model.CaseDataCollectionLink, cascade=True
+            root_user, model.CaseDataCollectionLink, cascade=True
         )
         print("\nCaseDataCollectionLinks:")
 
@@ -1917,7 +1934,8 @@ class CasedbTestClient(TestClient):
                 print(f"{case_name}: {data_collection_str} ({x.id})")
 
     def print_case_types(self) -> None:
-        case_types = self.read_all("root1_1", model.CaseType, cascade=True)
+        root_user = self.get_root_user()
+        case_types = self.read_all(root_user, model.CaseType, cascade=True)
         print("\nCaseTypes:")
         for x in sorted(case_types, key=lambda x: x.name):
             print(f"{x.name} ({x.id})")
@@ -2022,19 +2040,21 @@ class CasedbTestClient(TestClient):
             print(f"{x.name}: {cols_str}\n({x.id}: {col_ids_str})")
 
     def print_organization_access_case_policies(self) -> None:
+
+        root_user = self.get_root_user()
         organization_access_case_policies: list[model.OrganizationAccessCasePolicy] = (
-            self.read_all("root1_1", model.OrganizationAccessCasePolicy, cascade=True)
+            self.read_all(root_user, model.OrganizationAccessCasePolicy, cascade=True)
         )
         organizations: list[model.Organization] = self.read_all(
-            "root1_1", model.Organization
+            root_user, model.Organization
         )
         organization_map = {x.id: x for x in organizations}
         data_collections: list[model.DataCollection] = self.read_all(
-            "root1_1", model.DataCollection
+            root_user, model.DataCollection
         )
         data_collection_map = {x.id: x for x in data_collections}
         case_type_sets: list[model.CaseTypeSet] = self.read_all(
-            "root1_1", model.CaseTypeSet
+            root_user, model.CaseTypeSet
         )
         case_type_set_map = {x.id: x for x in case_type_sets}
         col_sets: list[model.ColSet] = self.read_all("root1_1", model.ColSet)
@@ -2058,8 +2078,9 @@ class CasedbTestClient(TestClient):
             )
 
     def print_user_access_case_policies(self) -> None:
+        root_user = self.get_root_user()
         user_access_case_policies: list[model.UserAccessCasePolicy] = self.read_all(
-            "root1_1", model.UserAccessCasePolicy, cascade=True
+            root_user, model.UserAccessCasePolicy, cascade=True
         )
         for user_access_case_policy in user_access_case_policies:
             # Get user with name filled in
@@ -2067,14 +2088,14 @@ class CasedbTestClient(TestClient):
                 model.User, user_access_case_policy.user.id
             )
         data_collections: list[model.DataCollection] = self.read_all(
-            "root1_1", model.DataCollection
+            root_user, model.DataCollection
         )
         data_collection_map = {x.id: x for x in data_collections}
         case_type_sets: list[model.CaseTypeSet] = self.read_all(
-            "root1_1", model.CaseTypeSet
+            root_user, model.CaseTypeSet
         )
         case_type_set_map = {x.id: x for x in case_type_sets}
-        col_sets: list[model.ColSet] = self.read_all("root1_1", model.ColSet)
+        col_sets: list[model.ColSet] = self.read_all(root_user, model.ColSet)
         col_set_map = {x.id: x for x in col_sets}
         print("\nUserAccessCasePolicies:")
         for x in sorted(
@@ -2095,19 +2116,20 @@ class CasedbTestClient(TestClient):
             )
 
     def print_organization_share_case_policies(self) -> None:
+        root_user = self.get_root_user()
         organization_share_case_policies: list[model.OrganizationShareCasePolicy] = (
-            self.read_all("root1_1", model.OrganizationShareCasePolicy)
+            self.read_all(root_user, model.OrganizationShareCasePolicy)
         )
         organizations: list[model.Organization] = self.read_all(
-            "root1_1", model.Organization
+            root_user, model.Organization
         )
         organization_map = {x.id: x for x in organizations}
         data_collections: list[model.DataCollection] = self.read_all(
-            "root1_1", model.DataCollection
+            root_user, model.DataCollection
         )
         data_collection_map = {x.id: x for x in data_collections}
         case_type_sets: list[model.CaseTypeSet] = self.read_all(
-            "root1_1", model.CaseTypeSet
+            root_user, model.CaseTypeSet
         )
         case_type_set_map = {x.id: x for x in case_type_sets}
         print("\nOrganizationShareCasePolicies:")
@@ -2124,8 +2146,9 @@ class CasedbTestClient(TestClient):
             )
 
     def print_user_share_case_policies(self) -> None:
+        root_user = self.get_root_user()
         user_share_case_policies: list[model.UserShareCasePolicy] = self.read_all(
-            "root1_1", model.UserShareCasePolicy
+            root_user, model.UserShareCasePolicy
         )
         for user_share_case_policy in user_share_case_policies:
             # Get user with name filled in
@@ -2133,14 +2156,14 @@ class CasedbTestClient(TestClient):
                 model.User, user_share_case_policy.user_id
             )
         case_type_sets: list[model.CaseTypeSet] = self.read_all(
-            "root1_1", model.CaseTypeSet
+            root_user, model.CaseTypeSet
         )
         case_type_set_map = {x.id: x for x in case_type_sets}
         data_collections: list[model.DataCollection] = self.read_all(
-            "root1_1", model.DataCollection
+            root_user, model.DataCollection
         )
         data_collection_map = {
-            x.id: x for x in self.read_all("root1_1", model.DataCollection)
+            x.id: x for x in self.read_all(root_user, model.DataCollection)
         }
         print("\nUserShareCasePolicies:")
         for x in sorted(
@@ -2156,22 +2179,24 @@ class CasedbTestClient(TestClient):
             )
 
     def print_cases(self, case_codes: list[str] | None = None) -> None:
-        user: model.User = self._get_obj(model.User, "root1_1")
-        cases: list[model.Case] = self.read_all(user, model.Case)
+
+        root_user = self.get_root_user()
+
+        cases: list[model.Case] = self.read_all(root_user, model.Case)
         if case_codes:
             cases = [
-                x
+                x.code
                 for x in cases
-                if TestClient._convert_case_date_to_code(x.case_date) in case_codes
+                # if self._convert_case_date_to_code(x.case_date) in case_codes
             ]
         case_data_collection_links: list[model.CaseDataCollectionLink] = self.read_all(
-            user, model.CaseDataCollectionLink
+            root_user, model.CaseDataCollectionLink
         )
         data_collections: list[model.DataCollection] = self.read_all(
-            user, model.DataCollection
+            root_user, model.DataCollection
         )
         data_collection_map = {x.id: x for x in data_collections}
-        cols: list[model.Col] = self.read_all(user, model.Col)
+        cols: list[model.Col] = self.read_all(root_user, model.Col)
         col_map = {x.id: x for x in cols}
         case_date_collections = map_paired_elements(
             ((x.case_id, x.data_collection_id) for x in case_data_collection_links),
@@ -2189,7 +2214,7 @@ class CasedbTestClient(TestClient):
             curr_content = sorted([(col_map[x].code, y) for x, y in x.content.items()])
             curr_content = ", ".join([f"{x[0]}={x[1]}" for x in curr_content])
             print(
-                f"{TestClient._convert_case_date_to_code(x.case_date)}: {curr_content}; {curr_data_collections} ({x.id})"
+                f"{self._convert_case_date_to_code(x.case_date)}: {curr_content}; {curr_data_collections} ({x.id})"
             )
 
     def _get_obj(
@@ -2211,9 +2236,11 @@ class CasedbTestClient(TestClient):
             self.db[model_class] = {}
         table = self.db[model_class]
         key = self._get_obj_key(table, model_class, obj, on_missing)
-        if model_class == model.Case:
-            if not isinstance(key, datetime.datetime):
-                key = self._convert_case_code_to_date(key)
+
+        # TODO LSP-2883: check if this is still OK
+        # if model_class == model.Case:
+        #     if not isinstance(key, datetime.datetime):
+        #         key = self._convert_case_code_to_date(key)
         if model_class == model.CaseDataCollectionLink:
             dc_id = key[0]
             case_id = key[1]
@@ -2245,6 +2272,7 @@ class CasedbTestClient(TestClient):
                 raise NotImplementedError()
         return table[key] if not copy else table[key].model_copy()
 
+    # TODO LSP-2883 is used by a lot of methods that are not used anywhere yet, and uses a key for cases as date. Why?
     @staticmethod
     def _convert_case_code_to_date(code: str) -> datetime.datetime:
         m = re.match(r"^([a-z_]*)(\d+)_(\d+)$", code.lower())

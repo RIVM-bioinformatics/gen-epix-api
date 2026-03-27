@@ -531,16 +531,6 @@ class Run:
             ]
         )
 
-    def test_casedb_integration_case_access(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/integration/case_access",
-            ]
-        )
-
     def test_casedb_integration_case_upload(self) -> None:
         import pytest
 
@@ -561,23 +551,13 @@ class Run:
             ]
         )
 
-    def test_casedb_integration_refdata_access(self) -> None:
+    def test_casedb_integration_data_access(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/casedb/integration/refdata_access",
-            ]
-        )
-
-    def test_casedb_integration_edge_cases_access(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/integration/edge_cases_access",
+                "test/casedb/integration/data_access",
             ]
         )
 

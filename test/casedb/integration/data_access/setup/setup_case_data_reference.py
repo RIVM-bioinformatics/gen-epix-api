@@ -6,7 +6,7 @@ and all four policy types) for tests.
 
 import re
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.edge_cases_access.setup.define_edge_cases import (
+from test.casedb.integration.data_access.setup.define_edge_cases_reference import (
     CASE_TYPE_SETS,
     COL_SETS,
     EDGE_CASES,
@@ -17,15 +17,15 @@ import pytest
 from gen_epix.casedb.domain import enum as casedb_enum
 from gen_epix.casedb.domain import model
 
-VERBOSE = True  # Set to True to enable detailed print statements during setup for debugging purposes;
+VERBOSE = False  # Set to True to enable detailed print statements during setup for debugging purposes;
 
 
 # setup_case_type_data depends on setup_test_users_and_organizations to ensure that users and
 # organizations are created before policies reference them.
 # The parameter is intentionally unused in the body — its presence enforces fixture ordering.
 @pytest.fixture(scope="module")
-def setup_case_type_data(
-    env: Env, setup_test_users_and_organizations: None  # noqa: ARG001
+def setup_case_data_reference(
+    env: Env, setup_test_users_and_organizations_reference: None  # noqa: ARG001
 ) -> None:  # noqa: ARG001
     """
     Create reference data (diseases, etiological agents, CaseTypes, CaseTypeSets, ColSets, and all four policy types) for tests.
@@ -130,6 +130,17 @@ def setup_case_type_data(
     # data_collection2: source collection for share policies (from_data_collection)
     env.create_data_collection(root_user, "data_collection1")
     env.create_data_collection(root_user, "data_collection2")
+
+    # --- Cases ---
+    # One case per unique CaseType, in data_collection1.
+    # Naming convention: case{case_type_index}_1 (e.g. case1_1 for case_type1).
+    for case_type_name in sorted(created_case_types):
+        m = re.match(r"^case_type(\d+)$", case_type_name)
+        assert m, f"Unexpected CaseType name format: '{case_type_name}'"
+        case_code = f"case{m.group(1)}_1"
+        env.create_case(root_user, case_code, "data_collection1")
+        if VERBOSE:
+            print(f"Created case '{case_code}' for '{case_type_name}'")
 
     # --- OrganizationAccessCasePolicies (CaseTypeSets & ColSets) ---
     # One per unique (Organization, CaseTypeSet, ColSet) from org_access_policies.

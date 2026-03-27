@@ -453,7 +453,7 @@ class CaseService(BaseCaseService):
             case_abac.is_full_access,
         )
 
-        if case_ids and len(case_ids) > max_n_cases:
+        if case_ids and max_n_cases > 0 and len(case_ids) > max_n_cases:
             raise exc.RequestLimitExceededAuthError(
                 f"Number of requested cases {len(case_ids)} exceeds maximum allowed {max_n_cases}"
             )
@@ -505,7 +505,7 @@ class CaseService(BaseCaseService):
         extra_access_col_ids: set[UUID] | None,
         access_data_collections: set[UUID],
         data_collection_col_access: dict[UUID, model.CaseTypeAccessAbac],
-        max_n_cases: float,
+        max_n_cases: int,
         cases: list[model.Case],
     ) -> list[model.Case]:
         case_data_collections = self._retrieve_case_data_collections_map(uow, user_id)
@@ -524,7 +524,7 @@ class CaseService(BaseCaseService):
                 # No access to case
                 continue
             count += case.count if case.count is not None else 1
-            if count > max_n_cases:
+            if max_n_cases > 0 and count > max_n_cases:
                 break
             # Keep case
             filtered_cases.append(case)
@@ -646,12 +646,14 @@ class CaseService(BaseCaseService):
         apply_max_n_cases: bool,
         case_type: model.CaseType,
         is_full_access: bool,
-    ) -> tuple[dict[UUID, Callable[[str], datetime.datetime]] | None, float]:
+    ) -> tuple[dict[UUID, Callable[[str], datetime.datetime]] | None, int]:
         case_date_col_mappers: dict[UUID, Callable[[str], datetime.datetime]] | None = (
             {}
         )
-        max_n_cases: float = float("inf")
-        if apply_max_n_cases and not is_full_access:
+        max_n_cases = 0
+        if not apply_max_n_cases:
+            pass
+        elif not is_full_access:
             if right == enum.CaseRight.READ_CASE:
                 _raw = case_type.props.read_max_n_cases
                 max_n_cases = _raw if _raw > 0 else self._default_props.read_max_n_cases

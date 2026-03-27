@@ -12,13 +12,13 @@ It uses:
 
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.edge_cases_access.base_refdata_access import (
+from test.casedb.integration.data_access.base_refdata import (
     DEV_REPOSITORY_CONFIG,
     SKIP_ENDPOINTS,
     TEST_TYPE,
     VERBOSE,
 )
-from test.casedb.integration.edge_cases_access.setup.define_edge_cases import (
+from test.casedb.integration.data_access.setup.define_edge_cases_reference import (
     EDGE_CASE_BY_USER,
     EDGE_CASES,
     EdgeCaseSpec,
@@ -114,7 +114,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         return self.env._get_obj(model.User, user_name)  # type: ignore[return-value]
 
     def test_root_user_has_access_to_all_case_types(
-        self, setup_case_type_data: None
+        self, setup_case_data_reference: None
     ) -> None:
         """Root user should have access to all CaseTypes regardless of policies (superuser baseline)."""
         root_user = self.env.get_root_user()
@@ -132,7 +132,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         ids=[x.user_name for x in EDGE_CASES],
     )
     def test_case_type_access_matches_expected(
-        self, spec: EdgeCaseSpec, setup_case_type_data: None
+        self, spec: EdgeCaseSpec, setup_case_data_reference: None
     ) -> None:
         """
         For each edge case, assert that the set of accessible CaseTypes exactly matches
@@ -171,7 +171,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         ids=[x.user_name for x in EDGE_CASES],
     )
     def test_case_type_set_access_matches_expected(
-        self, spec: EdgeCaseSpec, setup_case_type_data: None
+        self, spec: EdgeCaseSpec, setup_case_data_reference: None
     ) -> None:
         """
         For each edge case, assert that the set of accessible CaseTypeSets exactly matches
@@ -207,7 +207,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         ids=[x.user_name for x in EDGE_CASES],
     )
     def test_col_set_access_matches_expected(
-        self, spec: EdgeCaseSpec, setup_case_type_data: None
+        self, spec: EdgeCaseSpec, setup_case_data_reference: None
     ) -> None:
         """
         For each edge case, assert that the set of accessible ColSets exactly matches
@@ -246,7 +246,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         ids=[x.user_name for x in EDGE_CASES],
     )
     def test_col_access_matches_expected(
-        self, spec: EdgeCaseSpec, setup_case_type_data: None
+        self, spec: EdgeCaseSpec, setup_case_data_reference: None
     ) -> None:
         """
         For each edge case, assert that the set of accessible cols exactly matches
@@ -281,7 +281,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         ids=[x.user_name for x in EDGE_CASES],
     )
     def test_ref_dim_access_matches_expected(
-        self, spec: EdgeCaseSpec, setup_case_type_data: None
+        self, spec: EdgeCaseSpec, setup_case_data_reference: None
     ) -> None:
         """
         For each edge case, assert that the set of accessible ref_dims exactly matches
@@ -310,7 +310,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
             f"\n  Unexpected access: {sorted(unexpected) if unexpected else '∅'}"
         )
 
-    def test_disease_access_matches_all(self, setup_case_type_data: None) -> None:
+    def test_disease_access_matches_all(self, setup_case_data_reference: None) -> None:
         """
         take first edge case spec as a representative case (since disease access is not expected to vary across cases in this setup)
         and assert that the set of accessible diseases matches all diseases, get them from env.db since they are created there by setup_case_type_data
@@ -341,7 +341,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         )
 
     def test_etiological_agent_access_matches_all(
-        self, setup_case_type_data: None
+        self, setup_case_data_reference: None
     ) -> None:
         """
         similar to test_disease_access_matches_all but for etiological agents instead of diseases,
@@ -370,7 +370,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         )
 
     def test_case_type_set_category_access_matches_all(
-        self, setup_case_type_data: None
+        self, setup_case_data_reference: None
     ) -> None:
         """
         Assert that all created CaseTypeSet categories are accessible to any user,
