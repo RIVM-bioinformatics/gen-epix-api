@@ -310,9 +310,6 @@ class ColTypeSet(Enum):
             ColType.NOMINAL,
             ColType.ORDINAL,
             ColType.INTERVAL,
-            ColType.REGULAR_LANGUAGE,
-            ColType.CONTEXT_FREE_GRAMMAR_JSON,
-            ColType.CONTEXT_FREE_GRAMMAR_XML,
         }
     )
     HAS_REGION_SET = frozenset({ColType.GEO_REGION})
