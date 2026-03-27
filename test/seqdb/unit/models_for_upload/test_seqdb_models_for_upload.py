@@ -642,7 +642,10 @@ class TestModelAlleleProfileForUpload(TestCase):
             content_hash=model.SeqProfile.get_allele_profile_hash(allele_ids),
         )
         # content should be generated from allele_ids
-        self.assertEqual(allele_profile.content, model.SeqProfile.get_ordered_allele_ids_representation(allele_ids))
+        self.assertEqual(
+            allele_profile.content,
+            model.SeqProfile.get_ordered_allele_ids_representation(allele_ids),
+        )
         self.assertEqual(len(allele_profile.allele_ids or []), 2)
         self.assertIsNone(allele_profile.locus_allele_id_map)
 
@@ -655,7 +658,9 @@ class TestModelAlleleProfileForUpload(TestCase):
             format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
             locus_code_map_code="MAP123",
             locus_allele_id_map=locus_allele_id_map,
-            content_hash=model.SeqProfile.get_allele_profile_hash(list(locus_allele_id_map.values()))
+            content_hash=model.SeqProfile.get_allele_profile_hash(
+                list(locus_allele_id_map.values())
+            ),
         )
         self.assertEqual(allele_profile.content, "")
         self.assertIsNone(allele_profile.allele_ids)
@@ -684,7 +689,7 @@ class TestModelAlleleProfileForUpload(TestCase):
                 seq_profile_type=model.enum.SeqProfileType.ALLELE,
                 format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
                 content=base64.b64encode(allele_id.bytes).decode("ascii"),
-                content_hash=model.SeqProfile.get_allele_profile_hash([allele_id])
+                content_hash=model.SeqProfile.get_allele_profile_hash([allele_id]),
             )
 
     def test_invalid_missing_locus_set_fields(self) -> None:

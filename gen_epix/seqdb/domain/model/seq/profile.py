@@ -118,22 +118,16 @@ class SeqProfile(
             return self
 
         profile_hash = self.content_hash
+        computed_profile_hash = profile_hash
         if self.seq_profile_type == enum.SeqProfileType.LOCUS:
             if self.format == enum.SeqProfileFormat.LOCUS_PROFILE_FORMAT1:
+                # TODO: implement calculation of hash based on the content of the locus profile
                 computed_profile_hash = profile_hash
             else:
                 if profile_hash == NULL_ID:
                     raise ValueError(
                         "Unable to calculate locus profile hash for this format"
                     )
-                computed_profile_hash = profile_hash
-
-            if profile_hash == NULL_ID:
-                self.content_hash = computed_profile_hash
-            elif profile_hash != computed_profile_hash:
-                raise ValueError(
-                    "Provided locus profile hash does not match computed hash"
-                )
         elif self.seq_profile_type == enum.SeqProfileType.ALLELE:
             # Parse allele profile and derive values depending on allele_profile_format
             if self.format == enum.SeqProfileFormat.ORDERED_ALLELE_IDS:
@@ -334,7 +328,5 @@ class SeqProfileIdentifier(BaseIdentifier):
 
     seq_profile: SeqProfile | None = Field(
         default=None,
-        description="The sequence profile associated with this identifier.",
-    )
         description="The sequence profile associated with this identifier.",
     )

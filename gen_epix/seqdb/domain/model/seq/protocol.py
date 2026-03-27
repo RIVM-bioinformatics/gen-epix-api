@@ -346,7 +346,7 @@ class ProtocolSet(Model):
         persistable=True,
         keys=create_keys({1: "code", 2: "name"}),
     )
-    
+
     code: str = Field(description="The code of the protocol set", max_length=255)
     name: str = Field(description="The name of the protocol set", max_length=255)
 

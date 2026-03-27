@@ -7,92 +7,66 @@ erDiagram
     %% seqdb / SEQ (detailed)
 
     %% Relationships
-    Seq }o--|| Sample : "sample_id"
-    Seq }o--|| ReadSet : "read_set_id"
-    Seq }o--|| ReadSet : "read_set2_id"
-    Seq }o--|| Protocol : "protocol_id"
     ReadSetForUpload }o--|| Sample : "sample_id"
     ReadSetForUpload }o--|| Protocol : "protocol_id"
+    Allele }o--|| Locus : "locus_id"
+    TaxonSetMember }o--|| TaxonSet : "taxon_set_id"
+    TaxonSetMember }o--|| Taxon : "taxon_id"
+    PcrMeasurement }o--|| Sample : "sample_id"
+    PcrMeasurement }o--|| Protocol : "protocol_id"
+    ReadSetIdentifier }o--|| ReadSet : "internal_id"
+    AstMeasurement }o--|| Sample : "sample_id"
+    AstMeasurement }o--|| Protocol : "protocol_id"
     SeqIdentifier }o--|| Seq : "internal_id"
+    AstPrediction }o--|| Sample : "sample_id"
+    AstPrediction }o--|| Seq : "seq_id"
+    AstPrediction }o--|| Protocol : "protocol_id"
+    SeqClassification }o--|| Sample : "sample_id"
+    SeqClassification }o--|| Seq : "seq_id"
+    SeqClassification }o--|| Protocol : "protocol_id"
+    SeqClassification }o--|| SeqCategory : "primary_category_id"
+    SeqProfileForUpload }o--|| Sample : "sample_id"
+    SeqProfileForUpload }o--|| Seq : "seq_id"
+    SeqProfileForUpload }o--|| Protocol : "protocol_id"
+    SeqDistance }o--|| Sample : "sample_id"
+    SeqDistance }o--|| Protocol : "protocol_id"
+    SeqDistance }o--|| SeqProfile : "seq_profile_id"
+    ProtocolSetMember }o--|| ProtocolSet : "protocol_set_id"
+    ProtocolSetMember }o--|| Protocol : "protocol_id"
+    TreeAlgorithm }o--|| TreeAlgorithmClass : "tree_algorithm_class_id"
+    SeqClassificationForUpload }o--|| Sample : "sample_id"
+    SeqClassificationForUpload }o--|| Seq : "seq_id"
+    SeqClassificationForUpload }o--|| Protocol : "protocol_id"
+    SeqClassificationForUpload }o--|| SeqCategory : "primary_category_id"
+    Protocol }o--|| RefSeq : "ref_seq_id"
+    Protocol }o--|| SeqCategorySet : "seq_category_set_id"
+    Protocol }o--|| LocusSet : "locus_set_id"
+    RefAllele }o--|| Locus : "locus_id"
+    AlleleForUpload }o--|| Locus : "locus_id"
     SeqForUpload }o--|| Sample : "sample_id"
     SeqForUpload }o--|| ReadSet : "read_set_id"
     SeqForUpload }o--|| ReadSet : "read_set2_id"
     SeqForUpload }o--|| Protocol : "protocol_id"
     SeqCategory }o--|| SeqCategorySet : "seq_category_set_id"
-    TaxonSetMember }o--|| TaxonSet : "taxon_set_id"
-    TaxonSetMember }o--|| Taxon : "taxon_id"
-    TreeAlgorithm }o--|| TreeAlgorithmClass : "tree_algorithm_class_id"
-    AlleleForUpload }o--|| Locus : "locus_id"
-    ProtocolSetMember }o--|| ProtocolSet : "protocol_set_id"
-    ProtocolSetMember }o--|| Protocol : "protocol_id"
-    SampleDataCollectionLink }o--|| Sample : "sample_id"
-    SeqDistance }o--|| Sample : "sample_id"
-    SeqDistance }o--|| Protocol : "protocol_id"
-    SeqDistance }o--|| SeqProfile : "seq_profile_id"
-    RefAllele }o--|| Locus : "locus_id"
-    SeqProfile }o--|| Sample : "sample_id"
-    SeqProfile }o--|| Seq : "seq_id"
-    SeqProfile }o--|| Protocol : "protocol_id"
-    SeqProfileIdentifier }o--|| SeqProfile : "internal_id"
-    Allele }o--|| Locus : "locus_id"
-    AstMeasurement }o--|| Sample : "sample_id"
-    AstMeasurement }o--|| Protocol : "protocol_id"
-    PcrMeasurement }o--|| Sample : "sample_id"
-    PcrMeasurement }o--|| Protocol : "protocol_id"
-    SeqProfileForUpload }o--|| Sample : "sample_id"
-    SeqProfileForUpload }o--|| Seq : "seq_id"
-    SeqProfileForUpload }o--|| Protocol : "protocol_id"
-    SampleIdentifier }o--|| Sample : "internal_id"
-    Protocol }o--|| RefSeq : "ref_seq_id"
-    Protocol }o--|| SeqCategorySet : "seq_category_set_id"
-    Protocol }o--|| LocusSet : "locus_set_id"
-    SeqClassification }o--|| Sample : "sample_id"
-    SeqClassification }o--|| Seq : "seq_id"
-    SeqClassification }o--|| Protocol : "protocol_id"
-    SeqClassification }o--|| SeqCategory : "primary_category_id"
-    ReadSetIdentifier }o--|| ReadSet : "internal_id"
-    ReadSet }o--|| Sample : "sample_id"
-    ReadSet }o--|| Protocol : "protocol_id"
-    RefSeq }o--|| Taxon : "taxon_id"
     SeqTaxonomy }o--|| Sample : "sample_id"
     SeqTaxonomy }o--|| Seq : "seq_id"
     SeqTaxonomy }o--|| Protocol : "protocol_id"
     SeqTaxonomy }o--|| Taxon : "primary_taxon_id"
-    SeqClassificationForUpload }o--|| Sample : "sample_id"
-    SeqClassificationForUpload }o--|| Seq : "seq_id"
-    SeqClassificationForUpload }o--|| Protocol : "protocol_id"
-    SeqClassificationForUpload }o--|| SeqCategory : "primary_category_id"
-    AstPrediction }o--|| Sample : "sample_id"
-    AstPrediction }o--|| Seq : "seq_id"
-    AstPrediction }o--|| Protocol : "protocol_id"
+    SampleIdentifier }o--|| Sample : "internal_id"
+    SampleDataCollectionLink }o--|| Sample : "sample_id"
+    Seq }o--|| Sample : "sample_id"
+    Seq }o--|| ReadSet : "read_set_id"
+    Seq }o--|| ReadSet : "read_set2_id"
+    Seq }o--|| Protocol : "protocol_id"
+    SeqProfile }o--|| Sample : "sample_id"
+    SeqProfile }o--|| Seq : "seq_id"
+    SeqProfile }o--|| Protocol : "protocol_id"
+    SeqProfileIdentifier }o--|| SeqProfile : "internal_id"
+    ReadSet }o--|| Sample : "sample_id"
+    ReadSet }o--|| Protocol : "protocol_id"
+    RefSeq }o--|| Taxon : "taxon_id"
 
     %% Entity definitions
-    Seq {
-        enum qc_result
-        float qc_score
-        Json qc_report
-        string code
-        UUID sample_id FK
-        UUID id PK
-        string uri
-        UUID file_id FK
-        enum file_format
-        enum file_compression
-        UUID file_hash
-        UUID read_set_id FK
-        UUID read_set2_id FK
-        UUID protocol_id FK
-        list[Contig] contigs
-        any is_available
-        any seq_hash
-        any n_contigs
-        any length
-        any max_contig_length
-        any min_contig_length
-        any median_contig_length
-        any n50
-    }
-
     ReadSetForUpload {
         list[IdentifierForUpload] identifiers
         enum qc_result
@@ -115,184 +89,13 @@ erDiagram
         any is_available
     }
 
-    SeqIdentifier {
-        UUID id PK
-        UUID identifier_issuer_id FK
-        string external_id
-        UUID internal_id FK
-    }
-
-    SeqForUpload {
-        list[IdentifierForUpload] identifiers
-        enum qc_result
-        float qc_score
-        Json qc_report
-        string code
-        UUID sample_id FK
-        UUID id PK
-        string uri
-        UUID file_id FK
-        enum file_format
-        enum file_compression
-        UUID file_hash
-        UUID read_set_id FK
-        UUID read_set2_id FK
-        UUID protocol_id FK
-        list[Contig] contigs
-        string protocol_code
-        any is_available
-        any seq_hash
-        any n_contigs
-        any length
-        any max_contig_length
-        any min_contig_length
-        any median_contig_length
-        any n50
-    }
-
-    SampleForUpload {
-        list[IdentifierForUpload] identifiers
-        UUID id PK
-        Sample sample
-        list[ReadSetForUpload] read_sets
-        list[SeqForUpload] seqs
-        list[SeqTaxonomy] seq_taxonomies
-        list[SeqClassificationForUpload] seq_classifications
-        list[SeqProfileForUpload] seq_profiles
-        list[PcrMeasurement] pcr_measurements
-        list[AstMeasurement] ast_measurements
-    }
-
-    SeqCategory {
+    Locus {
         UUID id PK
         string code
-        string name
-        UUID seq_category_set_id FK
-    }
-
-    TaxonSetMember {
-        UUID id PK
-        UUID taxon_set_id FK
-        UUID taxon_id FK
-    }
-
-    TreeAlgorithm {
-        UUID id PK
-        enum code
         string name
         string description
-        UUID tree_algorithm_class_id FK
-        bool is_ultrametric
-        int rank
-    }
-
-    Taxon {
-        UUID id PK
-        string code
-        string name
-        enum rank
-        int ncbi_taxid
-        string ictv_ictv_id
-        int snomed_sctid
-        list[int] ncbi_ancestor_taxids
-        list[UUID] ancestor_taxon_ids
-    }
-
-    AlleleForUpload {
-        UUID id PK
-        string seq
-        enum seq_format
-        int length
-        UUID locus_id FK
-    }
-
-    TaxonSet {
-        UUID id PK
-        string code
-        string name
-    }
-
-    ProtocolSetMember {
-        UUID id PK
-        UUID protocol_set_id FK
-        UUID protocol_id FK
-    }
-
-    SampleDataCollectionLink {
-        UUID id PK
-        UUID sample_id FK
-        UUID data_collection_id FK
-    }
-
-    SeqDistance {
-        FormatType format
-        UUID content_hash
-        string content
-        string content2
-        UUID protocol_id FK
-        UUID sample_id FK
-        UUID id PK
-        UUID seq_profile_id FK
-    }
-
-    RefAllele {
-        UUID id PK
-        string seq
-        enum seq_format
-        int length
-        UUID locus_id FK
-        int index
-    }
-
-    SeqProfile {
-        enum qc_result
-        float qc_score
-        Json qc_report
-        FormatType format
-        UUID content_hash
-        string content
-        string content2
-        UUID protocol_id FK
-        UUID seq_id FK
-        UUID sample_id FK
-        UUID id PK
-        enum seq_profile_type
-    }
-
-    SampleBatchUploadResult {
-        list[EtlLogItem] logs
-        UUID id PK
-        enum status
-        bool is_new
-        UUID batch_id
-        list[SampleUploadResult] samples
-        list[CalculateSeqDistancesResult] seq_distances
-    }
-
-    ProtocolSet {
-        UUID id PK
-        string code
-        string name
-    }
-
-    SeqCategorySet {
-        UUID id PK
-        string code
-        string name
-    }
-
-    BaseSeq {
-        UUID id
-        string seq
-        enum seq_format
-        int length
-    }
-
-    SeqProfileIdentifier {
-        UUID id PK
-        UUID identifier_issuer_id FK
-        string external_id
-        UUID internal_id FK
+        enum locus_type
+        string gene_product_code
     }
 
     Allele {
@@ -303,23 +106,47 @@ erDiagram
         UUID locus_id FK
     }
 
-    AstMeasurement {
-        enum qc_result
-        float qc_score
-        Json qc_report
-        FormatType format
-        UUID content_hash
-        string content
-        string content2
-        UUID protocol_id FK
-        UUID sample_id FK
-        UUID id PK
+    BaseSeq {
+        UUID id
+        string seq
+        enum seq_format
+        int length
     }
 
-    LocusCodeMap {
+    LocusSet {
         UUID id PK
         string code
-        dict[string, UUID] code_map
+        string name
+        list[UUID] locus_ids
+        any n_loci
+    }
+
+    SeqCategorySet {
+        UUID id PK
+        string code
+        string name
+    }
+
+    SampleUploadResult {
+        list[EtlLogItem] logs
+        UUID id
+        enum status
+        bool is_new
+        list[UploadResult] identifiers
+        list[SampleDataIssue] data_issues
+        list[UploadResult] read_sets
+        list[UploadResult] seqs
+        list[UploadResult] seq_taxonomies
+        list[UploadResult] seq_classifications
+        list[UploadResult] seq_profiles
+        list[UploadResult] pcr_measurements
+        list[UploadResult] ast_measurements
+    }
+
+    TaxonSetMember {
+        UUID id PK
+        UUID taxon_set_id FK
+        UUID taxon_id FK
     }
 
     PcrMeasurement {
@@ -335,8 +162,47 @@ erDiagram
         UUID id PK
     }
 
-    SeqProfileForUpload {
-        list[IdentifierForUpload] identifiers
+    Sample {
+        string code
+        UUID id PK
+        UUID created_in_data_collection_id FK
+        dict[string, string | int | float] props
+    }
+
+    TaxonSet {
+        UUID id PK
+        string code
+        string name
+    }
+
+    ReadSetIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
+    AstMeasurement {
+        enum qc_result
+        float qc_score
+        Json qc_report
+        FormatType format
+        UUID content_hash
+        string content
+        string content2
+        UUID protocol_id FK
+        UUID sample_id FK
+        UUID id PK
+    }
+
+    SeqIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
+    AstPrediction {
         enum qc_result
         float qc_score
         Json qc_report
@@ -348,52 +214,6 @@ erDiagram
         UUID seq_id FK
         UUID sample_id FK
         UUID id PK
-        enum seq_profile_type
-        string protocol_code
-        string aligned_nucleotide_seq
-        UUID locus_code_map_id
-        string locus_code_map_code
-        list[UUID] allele_ids
-        dict[string, UUID] locus_allele_id_map
-        list[int] repeat_numbers
-        dict[string, int] locus_repeat_number_map
-        dict[string, float] kmer_frequency_map
-    }
-
-    SampleIdentifier {
-        UUID id PK
-        UUID identifier_issuer_id FK
-        string external_id
-        UUID internal_id FK
-    }
-
-    CalculateSeqDistancesResult {
-        list[EtlLogItem] logs
-        UUID id
-        enum status
-        bool is_new
-        UUID seq_distance_profile_id
-    }
-
-    Protocol {
-        UUID id PK
-        string code
-        string name
-        string description
-        enum protocol_type
-        string git_repository_uri
-        string git_commit_hash
-        string git_commit_tag
-        timestamp valid_start_datetime
-        timestamp valid_end_datetime
-        UUID ref_seq_id FK
-        UUID seq_category_set_id FK
-        UUID locus_set_id FK
-        enum seq_profile_type
-        enum seq_distance_type
-        bool is_integer_distance
-        float max_stored_distance
-        dict[string, Any] props
     }
 
     SeqClassification {
@@ -425,20 +245,274 @@ erDiagram
         any has_ast_measurements
     }
 
-    Locus {
+    SeqProfileForUpload {
+        list[IdentifierForUpload] identifiers
+        enum qc_result
+        float qc_score
+        Json qc_report
+        FormatType format
+        UUID content_hash
+        string content
+        string content2
+        UUID protocol_id FK
+        UUID seq_id FK
+        UUID sample_id FK
+        UUID id PK
+        enum seq_profile_type
+        string protocol_code
+        string aligned_nucleotide_seq
+        UUID locus_code_map_id
+        string locus_code_map_code
+        list[UUID] allele_ids
+        dict[string, UUID] locus_allele_id_map
+        list[int] repeat_numbers
+        dict[string, int] locus_repeat_number_map
+        dict[string, float] kmer_frequency_map
+    }
+
+    SeqDistance {
+        FormatType format
+        UUID content_hash
+        string content
+        string content2
+        UUID protocol_id FK
+        UUID sample_id FK
+        UUID id PK
+        UUID seq_profile_id FK
+    }
+
+    ProtocolSetMember {
+        UUID id PK
+        UUID protocol_set_id FK
+        UUID protocol_id FK
+    }
+
+    TreeAlgorithm {
+        UUID id PK
+        enum code
+        string name
+        string description
+        UUID tree_algorithm_class_id FK
+        bool is_ultrametric
+        int rank
+    }
+
+    LocusCodeMap {
+        UUID id PK
+        string code
+        dict[string, UUID] code_map
+    }
+
+    SeqClassificationForUpload {
+        enum qc_result
+        float qc_score
+        Json qc_report
+        FormatType format
+        UUID content_hash
+        string content
+        string content2
+        UUID protocol_id FK
+        UUID seq_id FK
+        UUID sample_id FK
+        UUID id PK
+        UUID primary_category_id FK
+        string protocol_code
+        string primary_category_code
+    }
+
+    Taxon {
+        UUID id PK
+        string code
+        string name
+        enum rank
+        int ncbi_taxid
+        string ictv_ictv_id
+        int snomed_sctid
+        list[int] ncbi_ancestor_taxids
+        list[UUID] ancestor_taxon_ids
+    }
+
+    CalculateSeqDistancesResult {
+        list[EtlLogItem] logs
+        UUID id
+        enum status
+        bool is_new
+        UUID seq_distance_profile_id
+    }
+
+    PhylogeneticTree {
+        UUID id
+        enum tree_algorithm
+        UUID protocol_id
+        Protocol protocol
+        list[string] leaf_names
+        list[UUID] profile_ids
+        string newick_repr
+    }
+
+    Protocol {
         UUID id PK
         string code
         string name
         string description
-        enum locus_type
-        string gene_product_code
+        enum protocol_type
+        string git_repository_uri
+        string git_commit_hash
+        string git_commit_tag
+        timestamp valid_start_datetime
+        timestamp valid_end_datetime
+        UUID ref_seq_id FK
+        UUID seq_category_set_id FK
+        UUID locus_set_id FK
+        enum seq_profile_type
+        enum seq_distance_type
+        bool is_integer_distance
+        float max_stored_distance
+        dict[string, Any] props
     }
 
-    ReadSetIdentifier {
+    RefAllele {
+        UUID id PK
+        string seq
+        enum seq_format
+        int length
+        UUID locus_id FK
+        int index
+    }
+
+    AlleleForUpload {
+        UUID id PK
+        string seq
+        enum seq_format
+        int length
+        UUID locus_id FK
+    }
+
+    SeqForUpload {
+        list[IdentifierForUpload] identifiers
+        enum qc_result
+        float qc_score
+        Json qc_report
+        string code
+        UUID sample_id FK
+        UUID id PK
+        string uri
+        UUID file_id FK
+        enum file_format
+        enum file_compression
+        UUID file_hash
+        UUID read_set_id FK
+        UUID read_set2_id FK
+        UUID protocol_id FK
+        list[Contig] contigs
+        string protocol_code
+        any is_available
+        any seq_hash
+        any n_contigs
+        any length
+        any max_contig_length
+        any min_contig_length
+        any median_contig_length
+        any n50
+    }
+
+    SeqCategory {
+        UUID id PK
+        string code
+        string name
+        UUID seq_category_set_id FK
+    }
+
+    SeqTaxonomy {
+        enum qc_result
+        float qc_score
+        Json qc_report
+        enum format
+        UUID content_hash
+        string content
+        string content2
+        UUID protocol_id FK
+        UUID seq_id FK
+        UUID sample_id FK
+        UUID id PK
+        UUID primary_taxon_id FK
+    }
+
+    ProtocolSet {
+        UUID id PK
+        string code
+        string name
+    }
+
+    SampleIdentifier {
         UUID id PK
         UUID identifier_issuer_id FK
         string external_id
         UUID internal_id FK
+    }
+
+    SampleDataCollectionLink {
+        UUID id PK
+        UUID sample_id FK
+        UUID data_collection_id FK
+    }
+
+    Seq {
+        enum qc_result
+        float qc_score
+        Json qc_report
+        string code
+        UUID sample_id FK
+        UUID id PK
+        string uri
+        UUID file_id FK
+        enum file_format
+        enum file_compression
+        UUID file_hash
+        UUID read_set_id FK
+        UUID read_set2_id FK
+        UUID protocol_id FK
+        list[Contig] contigs
+        any is_available
+        any seq_hash
+        any n_contigs
+        any length
+        any max_contig_length
+        any min_contig_length
+        any median_contig_length
+        any n50
+    }
+
+    SeqProfile {
+        enum qc_result
+        float qc_score
+        Json qc_report
+        FormatType format
+        UUID content_hash
+        string content
+        string content2
+        UUID protocol_id FK
+        UUID seq_id FK
+        UUID sample_id FK
+        UUID id PK
+        enum seq_profile_type
+    }
+
+    SeqProfileIdentifier {
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
+    SampleBatchUploadResult {
+        list[EtlLogItem] logs
+        UUID id PK
+        enum status
+        bool is_new
+        UUID batch_id
+        list[SampleUploadResult] samples
+        list[CalculateSeqDistancesResult] seq_distances
     }
 
     ReadSet {
@@ -461,16 +535,6 @@ erDiagram
         any is_available
     }
 
-    PhylogeneticTree {
-        UUID id
-        enum tree_algorithm
-        UUID protocol_id
-        Protocol protocol
-        list[string] leaf_names
-        list[UUID] profile_ids
-        string newick_repr
-    }
-
     TreeAlgorithmClass {
         UUID id PK
         string code
@@ -478,6 +542,19 @@ erDiagram
         bool is_seq_based
         bool is_dist_based
         int rank
+    }
+
+    SampleForUpload {
+        list[IdentifierForUpload] identifiers
+        UUID id PK
+        Sample sample
+        list[ReadSetForUpload] read_sets
+        list[SeqForUpload] seqs
+        list[SeqTaxonomy] seq_taxonomies
+        list[SeqClassificationForUpload] seq_classifications
+        list[SeqProfileForUpload] seq_profiles
+        list[PcrMeasurement] pcr_measurements
+        list[AstMeasurement] ast_measurements
     }
 
     RefSeq {
@@ -490,83 +567,6 @@ erDiagram
         string description
         UUID taxon_id FK
         string genbank_accession_code
-    }
-
-    SeqTaxonomy {
-        enum qc_result
-        float qc_score
-        Json qc_report
-        enum format
-        UUID content_hash
-        string content
-        string content2
-        UUID protocol_id FK
-        UUID seq_id FK
-        UUID sample_id FK
-        UUID id PK
-        UUID primary_taxon_id FK
-    }
-
-    SeqClassificationForUpload {
-        enum qc_result
-        float qc_score
-        Json qc_report
-        FormatType format
-        UUID content_hash
-        string content
-        string content2
-        UUID protocol_id FK
-        UUID seq_id FK
-        UUID sample_id FK
-        UUID id PK
-        UUID primary_category_id FK
-        string protocol_code
-        string primary_category_code
-    }
-
-    Sample {
-        string code
-        UUID id PK
-        UUID created_in_data_collection_id FK
-        dict[string, string | int | float] props
-    }
-
-    LocusSet {
-        UUID id PK
-        string code
-        string name
-        list[UUID] locus_ids
-        any n_loci
-    }
-
-    AstPrediction {
-        enum qc_result
-        float qc_score
-        Json qc_report
-        FormatType format
-        UUID content_hash
-        string content
-        string content2
-        UUID protocol_id FK
-        UUID seq_id FK
-        UUID sample_id FK
-        UUID id PK
-    }
-
-    SampleUploadResult {
-        list[EtlLogItem] logs
-        UUID id
-        enum status
-        bool is_new
-        list[UploadResult] identifiers
-        list[SampleDataIssue] data_issues
-        list[UploadResult] read_sets
-        list[UploadResult] seqs
-        list[UploadResult] seq_taxonomies
-        list[UploadResult] seq_classifications
-        list[UploadResult] seq_profiles
-        list[UploadResult] pcr_measurements
-        list[UploadResult] ast_measurements
     }
 
 ```

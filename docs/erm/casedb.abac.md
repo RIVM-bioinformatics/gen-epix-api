@@ -9,16 +9,16 @@ erDiagram
     UserShareCasePolicy {
     }
 
-    OrganizationAccessCasePolicy {
+    OrganizationAdminPolicy {
     }
 
-    OrganizationShareCasePolicy {
+    OrganizationAccessCasePolicy {
     }
 
     UserAccessCasePolicy {
     }
 
-    OrganizationAdminPolicy {
+    OrganizationShareCasePolicy {
     }
 
 ```

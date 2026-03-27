@@ -11,7 +11,7 @@ from gen_epix.seqdb.services.seq.upload_verify_batch_refdata import (
     _verify_batch_refdata_allele_profiles,
     _verify_batch_refdata_mlva_profiles,
     _verify_batch_refdata_snp_profiles,
-    _verify_batch_refdata_kmer_profiles
+    _verify_batch_refdata_kmer_profiles,
 )
 
 
@@ -257,6 +257,5 @@ def _verify_sample_refdata(
     success &= _verify_batch_refdata_snp_profiles(self, cmd, batch_result, uow)
     # K-mer profiles
     success &= _verify_batch_refdata_kmer_profiles(self, cmd, batch_result, uow)
-
 
     return success

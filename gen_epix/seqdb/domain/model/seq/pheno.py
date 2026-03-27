@@ -9,7 +9,13 @@ from gen_epix.seqdb.domain.model.seq.protocol import HasProtocolMixin, Protocol
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 
 
-class PcrMeasurement(Model, HasSampleMixin, HasProtocolMixin, ContentMixin[enum.PcrResultFormat], QualityMixin):
+class PcrMeasurement(
+    Model,
+    HasSampleMixin,
+    HasProtocolMixin,
+    ContentMixin[enum.PcrResultFormat],
+    QualityMixin,
+):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="pcr_measurements",
         table_name="pcr_measurement",
@@ -24,7 +30,13 @@ class PcrMeasurement(Model, HasSampleMixin, HasProtocolMixin, ContentMixin[enum.
     )
 
 
-class AstMeasurement(Model, HasSampleMixin, HasProtocolMixin, ContentMixin[enum.PcrResultFormat], QualityMixin):
+class AstMeasurement(
+    Model,
+    HasSampleMixin,
+    HasProtocolMixin,
+    ContentMixin[enum.PcrResultFormat],
+    QualityMixin,
+):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="ast_measurements",
         table_name="ast_measurement",
