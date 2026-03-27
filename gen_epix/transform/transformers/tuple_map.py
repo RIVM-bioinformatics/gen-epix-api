@@ -39,7 +39,8 @@ class TupleMapTransformer(Transformer):
             map_src_fields: A list of field names for the source fields in the mapping. If None, defaults to row_src_fields.
             map_tgt_fields: A list of field names for the target fields in the mapping. If None, defaults to row_tgt_fields.
             name: An optional name for the transformer.
-            is_active_map_field: An optional field name in the mapping that indicates whether a particular mapping should be applied or not. If provided, this field must be a boolean and only mappings with a True value will be applied.
+            is_active_map_field: An optional field name in the mapping that indicates whether a particular mapping should be applied or not.
+            If provided, this field must be a boolean and only mappings with a True value will be applied.
         """
         super().__init__(name)
 
@@ -64,7 +65,12 @@ class TupleMapTransformer(Transformer):
     def set_map(self, map_df: list[dict[Hashable, Any]]) -> None:
         tuple_map: dict[tuple, tuple] = {}
         """
-        Update the mapping with the provided mapping dataframe. The mapping dataframe is a list of dicts, where each dict contains the source and target field values for one mapping. The source and target field names in the mapping dataframe are specified by the map_src_fields and map_tgt_fields parameters, respectively. If the is_active_map_field parameter was provided during initialization, only mappings with a True value in that field will be included in the mapping.
+        Update the mapping with the provided mapping dataframe. The mapping dataframe is a list of dicts, 
+        where each dict contains the source and target field values for one mapping.
+        The source and target field names in the mapping dataframe are specified 
+        by the map_src_fields and map_tgt_fields parameters, respectively. 
+        If the is_active_map_field parameter was provided during initialization, 
+        only mappings with a True value in that field will be included in the mapping.
         """
         # Extract source and target tuples
         for row in map_df:
@@ -121,14 +127,8 @@ class TupleMapTransformer(Transformer):
         """
         Same as the transform method, but specifically for dicts instead of ObjectAdapters.
         """
-        key = tuple(row.get(x) for x in self._row_src_fields)
-        if key not in self._tuple_map:
-            raise ValueError(
-                f"Transformer {self.name}: Could not find mapping for row: {row}"
-            )
-        values = self._tuple_map[key]
-        for field, value in zip(self._row_tgt_fields, values):
-            row[field] = value
+        # The ObjectAdapter alread wraps dicts transparently, extra computation is minimal
+        self.transform(ObjectAdapter(row))
         return row
 
     def _verify_row_fields(
