@@ -112,7 +112,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
                 locus_set_id = protocol.locus_set_id
                 if (
                     locus_set_id is None
-                    or locus_set_id not in seq_distance_protocols_by_subset
+                    or locus_set_id not in new_seq_profiles_by_subset
                 ):
                     continue
                 seq_distance_protocols_by_subset.setdefault(locus_set_id, []).append(

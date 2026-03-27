@@ -147,7 +147,7 @@ class SeqProfile(
                 sha256.update(allele_bytes)
                 computed_profile_hash = UUID(sha256.digest()[:16].hex())
             else:
-                _raise_no_computable_hash()
+                SeqProfile._raise_no_computable_hash()
         elif self.seq_profile_type == enum.SeqProfileType.MLVA:
             # Parse MLVA SeqProfile and derive values depending on format
             if self.format == enum.SeqProfileFormat.ORDERED_REPEAT_NUMBERS:
@@ -156,7 +156,7 @@ class SeqProfile(
                 # Compute hash
                 computed_profile_hash = SeqProfile.get_mlva_profile_hash(repeat_numbers)
             else:
-                _raise_no_computable_hash()
+                SeqProfile._raise_no_computable_hash()
         elif self.seq_profile_type == enum.SeqProfileType.KMER:
             # Parse KMER SeqProfile and derive hash depending on format
             if self.format == enum.SeqProfileFormat.KMER_FREQUENCY_MAP:
@@ -167,14 +167,14 @@ class SeqProfile(
                     kmer_frequency_map
                 )
             else:
-                _raise_no_computable_hash()
+                SeqProfile._raise_no_computable_hash()
         elif self.seq_profile_type == enum.SeqProfileType.SNP:
             # Parse SNP profile and derive values depending on snp_profile_format
             if self.format == enum.SeqProfileFormat.REF_ALN_SEQ:
                 # TODO: implement any validation and calculate hash
                 computed_profile_hash = profile_hash
             else:
-                _raise_no_computable_hash()
+                SeqProfile._raise_no_computable_hash()
         else:
             raise NotImplementedError(
                 f"Unable to calculate profile hash for this sequence profile type: {self.seq_profile_type}"
@@ -317,6 +317,10 @@ class SeqProfile(
             sha256.update(bytearray(struct.pack(">d", freq)))
         return UUID(sha256.digest()[:16].hex())
 
+    @staticmethod
+    def _raise_no_computable_hash() -> None:
+        raise NotImplementedError("Unable to compute content hash for this format")
+
 
 class SeqProfileIdentifier(BaseIdentifier):
     ENTITY: ClassVar = BaseIdentifier.create_entity(
@@ -330,5 +334,7 @@ class SeqProfileIdentifier(BaseIdentifier):
 
     seq_profile: SeqProfile | None = Field(
         default=None,
+        description="The sequence profile associated with this identifier.",
+    )
         description="The sequence profile associated with this identifier.",
     )
