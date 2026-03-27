@@ -27,7 +27,7 @@ dependencies = [
     "gunicorn==25.2.*",
     "starlette==1.0.*",
     "httpx==0.28.1",
-    "pyjwt==2.11.0",
+    "pyjwt==2.12.1",
     "urllib3==2.6.3",
     "sqlalchemy==2.0.48",
     "sqlalchemy_utils==0.42.1",
