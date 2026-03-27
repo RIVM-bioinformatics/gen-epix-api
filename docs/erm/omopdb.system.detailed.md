@@ -7,6 +7,14 @@ erDiagram
     %% omopdb / SYSTEM (detailed)
 
     %% Entity definitions
+    PackageMetadata {
+        UUID id
+        string name
+        string version
+        string license
+        string homepage
+    }
+
     Outage {
         UUID id PK
         string description
@@ -16,14 +24,6 @@ erDiagram
         timestamp visible_to
         bool is_active
         bool is_visible
-    }
-
-    PackageMetadata {
-        UUID id
-        string name
-        string version
-        string license
-        string homepage
     }
 
 ```

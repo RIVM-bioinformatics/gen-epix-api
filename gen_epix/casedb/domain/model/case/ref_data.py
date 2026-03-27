@@ -328,6 +328,18 @@ class RefCol(Model):
                 raise exc.InvalidArgumentsError(
                     f"No genetic_distance_protocol_id provided for col_type {self.col_type.value}"
                 )
+        if self.col_type in enum.ColTypeSet.HAS_REGEX.value:
+            if self.regex is None:
+                raise AssertionError(f"Type {self.col_type.value} requires regex")
+        if self.col_type in enum.ColTypeSet.HAS_SCHEMA.value:
+            if self.schema_definition is None and self.schema_uri is None:
+                raise AssertionError(
+                    f"Type {self.col_type.value} requires schema_definition or schema_uri"
+                )
+        if self.schema_definition is not None and self.schema_uri is not None:
+            raise AssertionError(
+                "Only one of schema_definition or schema_uri can be set"
+            )
         return self
 
     @model_validator(mode="after")
@@ -687,6 +699,10 @@ class CaseSetCategory(Model):
     description: str | None = Field(
         description="The description of the CaseSetCategory", max_length=1000
     )
+    rank: int = Field(
+        default=0,
+        description="The rank of the CaseSetCategory, for (partial) ordering.",
+    )
 
 
 class CaseSetStatus(Model):
@@ -701,6 +717,10 @@ class CaseSetStatus(Model):
     )
     description: str | None = Field(
         description="The description of the CaseSetStatus", max_length=1000
+    )
+    rank: int = Field(
+        default=0,
+        description="The rank of the CaseSetStatus, for (partial) ordering.",
     )
 
 

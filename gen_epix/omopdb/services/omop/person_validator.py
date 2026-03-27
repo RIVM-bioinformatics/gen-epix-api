@@ -18,7 +18,9 @@ class PersonValidator:
         self._init_metadata()
 
     def validate_and_transform(
-        self, cmd: command.UploadPersonsCommand, retval: model.PersonBatchUploadResult
+        self,
+        cmd: command.UploadPersonsCommand,
+        batch_result: model.PersonBatchUploadResult,
     ) -> model.PersonBatchUploadResult:
         """
         Validate and transform the content of the persons in batch upload command.
@@ -29,16 +31,16 @@ class PersonValidator:
         The method adds resulting ValidatedPersonForUpload to the upload result,
         including any data issues found during validation and transformation.
         """
-        data_issues_list = self._get_data_issues(cmd, retval)
+        data_issues_list = self._get_data_issues(cmd, batch_result)
         self.transform_individual_values(cmd, data_issues_list)
         self.transform_value_pairs(cmd, data_issues_list)
 
-        return retval
+        return batch_result
 
     def _get_data_issues(
         self,
         cmd: command.UploadPersonsCommand,
-        retval: model.PersonBatchUploadResult,
+        batch_result: model.PersonBatchUploadResult,
     ) -> list[list[model.PersonDataIssue] | None]:
         """
         Get references to data_issues for all persons, as a convenience for easily
@@ -46,7 +48,7 @@ class PersonValidator:
         """
         # Get and data_issues_list references
         data_issues_list: list[list[model.PersonDataIssue] | None] = [
-            None if x is None else x.data_issues for x in retval.persons
+            None if x is None else x.data_issues for x in batch_result.persons
         ]
 
         return data_issues_list

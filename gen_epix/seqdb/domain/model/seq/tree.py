@@ -85,12 +85,8 @@ class PhylogeneticTree(Model):
         persistable=False,
     )
     tree_algorithm: enum.TreeAlgorithm = Field(description="The tree algorithm")
-    protocol_id: UUID = Field(
-        description="The ID of the protocol. FOREIGN KEY"
-    )
-    protocol: Protocol | None = Field(
-        default=None, description="The protocol"
-    )
+    protocol_id: UUID = Field(description="The ID of the protocol. FOREIGN KEY")
+    protocol: Protocol | None = Field(default=None, description="The protocol")
     leaf_names: list[str] | None = Field(
         default=None,
         description="The list of names of the leaves of the phylogenetic tree to be put in the tree representation instead of seq_ids. Must have the same length as seq_ids.",

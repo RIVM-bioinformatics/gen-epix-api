@@ -1,15 +1,23 @@
 from uuid import UUID
 
 from gen_epix.seqdb.domain import command, model
-from gen_epix.seqdb.domain.service.file import BaseFileService
+from gen_epix.seqdb.domain.service import BaseSeqService
 
 
-def file_service_crud_file(
-    self: BaseFileService, cmd: command.FileCrudCommand
-) -> list[model.File] | model.File | list[UUID] | UUID | list[bool] | bool | None:
-    """Handle CRUD operations for File entities."""
+def seq_service_crud_protocol_set(
+    self: BaseSeqService, cmd: command.ProtocolSetCrudCommand
+) -> (
+    list[model.ProtocolSet]
+    | model.ProtocolSet
+    | list[UUID]
+    | UUID
+    | list[bool]
+    | bool
+    | None
+):
+    """Handle CRUD operations for ProtocolSet entities."""
     user_id = cmd.user.id if cmd.user else None
-    files: list[model.File] = cmd.get_objs()  # type: ignore[assignment]
+    protocol_sets: list[model.ProtocolSet] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():
         # TODO: Specific logic for create operation to be added
         pass

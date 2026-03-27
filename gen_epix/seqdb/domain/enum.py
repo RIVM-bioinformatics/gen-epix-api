@@ -260,7 +260,7 @@ class SeqProfileFormat(IntEnum):
 
 
 class SeqClassificationFormat(IntEnum):
-    SEQ_CLASSIFICATION_FORMAT1 = 1
+    PRIMARY_CATEGORY_ONLY = 1
 
 
 class SeqTaxonomyFormat(IntEnum):
@@ -399,19 +399,19 @@ class SeqDistanceFormat(IntEnum):
     PROFILE_DISTANCE_MAP = 1
 
 
-class SeqFileFormat(Enum):
-    FASTA = "FASTA"
+class ReadsFileFormat(IntEnum):
+    FASTQ = 1
 
 
-class ReadsFileFormat(Enum):
-    FASTQ = "FASTQ"
+class SeqFileFormat(IntEnum):
+    FASTA = 2
 
 
-class FileFormat(Enum):
-    FASTA = "FASTA"
-    FASTQ = "FASTQ"
+class FileFormat(IntEnum):
+    FASTQ = 1
+    FASTA = 2
 
 
-class FileCompression(Enum):
-    NONE = "NONE"
-    GZIP = "GZIP"
+class FileCompression(IntEnum):
+    NONE = 1
+    GZIP = 2

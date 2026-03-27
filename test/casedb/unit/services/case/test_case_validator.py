@@ -898,7 +898,9 @@ class TestRetrieveConceptData(BaseCaseValidatorTestCase):
         self.case_service.app = Mock()
         self.case_service.app.handle = Mock(side_effect=fake_handle)
 
-        cset_concepts_map, concepts, concept_contained_in = validator._retrieve_concept_data()
+        cset_concepts_map, concepts, concept_contained_in = (
+            validator._retrieve_concept_data()
+        )
 
         assert self.string_concept1_id in cset_concepts_map[self.concept_set_string]
         assert (

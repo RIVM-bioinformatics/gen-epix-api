@@ -430,7 +430,7 @@ class TestCreate:
             "fwd_uri": env.DUMMY_VALUES["fwd_reads_uri1"],
             "rev_uri": env.DUMMY_VALUES["rev_reads_uri1"],
             "sample_or_str": "sample1",
-            "sequencing_protocol_or_str": "sequencing_protocol1",
+            "protocol_or_str": "sequencing_protocol1",
         }
         for exec_user in DATA_USERS:
             env.create_read_set(exec_user, **kwargs)
@@ -442,7 +442,7 @@ class TestCreate:
             "fwd_uri": env.DUMMY_VALUES["fwd_reads_uri1"],
             "rev_uri": env.DUMMY_VALUES["rev_reads_uri1"],
             "sample_or_str": "sample1",
-            "sequencing_protocol_or_str": "sequencing_protocol1",
+            "protocol_or_str": "sequencing_protocol1",
         }
         for exec_user in BELOW_APP_ADMIN_REFDATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
@@ -451,7 +451,7 @@ class TestCreate:
     def test_create_file_for_read_set(self, env: Env) -> None:
         kwargs = {
             "sample_or_str": "sample1",
-            "sequencing_protocol_or_str": "sequencing_protocol1",
+            "protocol_or_str": "sequencing_protocol1",
             "fwd_reads_hash": env.DUMMY_VALUES["fwd_reads_hash1"],
             "rev_reads_hash": env.DUMMY_VALUES["rev_reads_hash1"],
             "file_format": enum.FileFormat.FASTQ,

@@ -7,7 +7,7 @@ from gen_epix.seqdb.domain import command, model
 def _create_sample_refdata(
     self: BatchUploader,
     cmd: command.UploadSamplesCommand,
-    retval: model.SampleBatchUploadResult,
+    batch_result: model.SampleBatchUploadResult,
     uow: BaseUnitOfWork,
 ) -> bool:
     """

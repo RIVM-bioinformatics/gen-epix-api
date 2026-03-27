@@ -332,3 +332,48 @@ class HasProtocolMixin:
     protocol: Protocol | None = Field(
         default=None, description="The associated protocol."
     )
+
+
+class ProtocolSet(Model):
+    """
+    A set of Protocol, for example a set of Protocol that are relevant for a specific
+    analysis or application.
+    """
+
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="protocol_sets",
+        table_name="protocol_set",
+        persistable=True,
+        keys=create_keys({1: "code", 2: "name"}),
+    )
+
+    code: str = Field(description="The code of the protocol set", max_length=255)
+    name: str = Field(description="The name of the protocol set", max_length=255)
+
+
+class ProtocolSetMember(Model):
+    """Represents the membership of an entity in a protocol set. This is used to link
+    protocols to protocol sets, allowing for grouping of protocols based on shared
+    characteristics or purposes.
+    """
+
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="protocol_set_members",
+        table_name="protocol_set_member",
+        persistable=True,
+        keys=create_keys({1: ("protocol_set_id", "protocol_id")}),
+        links=create_links(
+            {
+                1: ("protocol_set_id", ProtocolSet, "protocol_set"),
+                2: ("protocol_id", Protocol, "protocol"),
+            }
+        ),
+    )
+    protocol_set_id: UUID = Field(
+        description="The ID of the protocol set. FOREIGN KEY."
+    )
+    protocol_set: ProtocolSet | None = Field(
+        default=None, description="The protocol set."
+    )
+    protocol_id: UUID = Field(description="The ID of the protocol. FOREIGN KEY.")
+    protocol: Protocol | None = Field(default=None, description="The protocol.")

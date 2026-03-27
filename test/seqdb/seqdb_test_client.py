@@ -296,8 +296,9 @@ class SeqdbTestClient(TestClient):
         return self._create_protocol(
             user_or_str,
             code,
-            enum.ProtocolType.LOCUS_PROFILE,
+            enum.ProtocolType.SEQ_PROFILE,
             name,
+            seq_profile_type=enum.SeqProfileType.LOCUS,
         )  # type: ignore[return-value]
 
     def create_pcr_protocol(
@@ -388,8 +389,9 @@ class SeqdbTestClient(TestClient):
         return self._create_protocol(
             user_or_str,
             code,
-            enum.ProtocolType.SNP_PROFILE,
+            enum.ProtocolType.SEQ_PROFILE,
             name,
+            seq_profile_type=enum.SeqProfileType.SNP,
         )  # type: ignore[return-value]
 
     def create_mlva_detection_protocol(
@@ -401,8 +403,9 @@ class SeqdbTestClient(TestClient):
         return self._create_protocol(
             user_or_str,
             code,
-            enum.ProtocolType.MLVA_PROFILE,
+            enum.ProtocolType.SEQ_PROFILE,
             name,
+            seq_profile_type=enum.SeqProfileType.MLVA,
         )  # type: ignore[return-value]
 
     def create_kmer_detection_protocol(
@@ -414,8 +417,9 @@ class SeqdbTestClient(TestClient):
         return self._create_protocol(
             user_or_str,
             code,
-            enum.ProtocolType.KMER_PROFILE,
+            enum.ProtocolType.SEQ_PROFILE,
             name,
+            seq_profile_type=enum.SeqProfileType.KMER,
         )  # type: ignore[return-value]
 
     def create_sample(
@@ -480,7 +484,7 @@ class SeqdbTestClient(TestClient):
         rev_uri: str | None = None,
         fwd_file_id: UUID | None = None,
         rev_file_id: UUID | None = None,
-        file_format: enum.FileFormat | None = None,
+        file_format: enum.FileFormat | None = enum.ReadsFileFormat.FASTQ,
         file_compression: enum.FileCompression | None = None,
         fwd_reads_hash: UUID | str | None = None,
         rev_reads_hash: UUID | str | None = None,
@@ -542,7 +546,7 @@ class SeqdbTestClient(TestClient):
         read_set2_id: UUID | None = None,
         protocol_or_str: model.Protocol | str | None = None,
         file_id: UUID | None = None,
-        file_format: enum.SeqFileFormat | None = None,
+        file_format: enum.SeqFileFormat | None = enum.SeqFileFormat.FASTA,
         file_compression: enum.FileCompression | None = None,
         set_dummy_sample: bool = False,
         set_dummy_protocol: bool = False,
@@ -588,8 +592,46 @@ class SeqdbTestClient(TestClient):
         props: dict[str, str | int | float | bool | list] = dict(
             kwargs.pop("props", {}) or {}
         )
-        if props:
-            kwargs["props"] = props
+
+        # SEQ_DISTANCE-specific fields: only valid for SEQ_DISTANCE protocol type
+        seq_distance_type: enum.SeqDistanceType | None = None
+        is_integer_distance: bool | None = None
+        max_stored_distance: float | None = None
+        if protocol_type == enum.ProtocolType.SEQ_DISTANCE:
+            seq_distance_type = kwargs.pop(
+                "seq_distance_protocol_type", enum.SeqDistanceType.ALLELE_HAMMING
+            )
+            is_integer_distance = kwargs.pop("is_integer_distance", True)
+            max_stored_distance = kwargs.pop("max_stored_distance", 100)
+        else:
+            kwargs.pop("seq_distance_protocol_type", None)
+            kwargs.pop("is_integer_distance", None)
+            kwargs.pop("max_stored_distance", None)
+
+        # SEQ_PROFILE-specific field: required for SEQ_PROFILE protocol type
+        seq_profile_type: enum.SeqProfileType | None = kwargs.pop(
+            "seq_profile_type", None
+        )
+
+        # SEQ_CLASSIFICATION-specific field: required for SEQ_CLASSIFICATION protocol type;
+        # create a real SeqCategorySet if none provided so the DB FK constraint is satisfied.
+        seq_category_set_id: UUID | None = kwargs.pop("seq_category_set_id", None)
+        if (
+            protocol_type == enum.ProtocolType.SEQ_CLASSIFICATION
+            and seq_category_set_id is None
+        ):
+            category_set_code = f"{code}_category_set"
+            seq_category_set: model.SeqCategorySet = self.app.handle(
+                command.SeqCategorySetCrudCommand(
+                    operation=CrudOperation.CREATE_ONE,
+                    user=user,
+                    objs=model.SeqCategorySet(  # type: ignore[call-arg]
+                        code=category_set_code,
+                        name=category_set_code,
+                    ),
+                )
+            )
+            seq_category_set_id = seq_category_set.id
 
         protocol = self.app.handle(
             command.ProtocolCrudCommand(
@@ -599,6 +641,11 @@ class SeqdbTestClient(TestClient):
                     code=code,
                     name=name if name else code,
                     protocol_type=protocol_type,
+                    seq_profile_type=seq_profile_type,
+                    seq_distance_type=seq_distance_type,
+                    is_integer_distance=is_integer_distance,
+                    max_stored_distance=max_stored_distance,
+                    seq_category_set_id=seq_category_set_id,
                     props=props,
                 ),
             )
@@ -723,13 +770,15 @@ class SeqdbTestClient(TestClient):
                             locus_id=locus_id,
                         )
                     allele_ids[locus_idx] = alleles[clean_allele_seq].id  # type: ignore[assignment]
-            allele_profile_for_upload = model.AlleleProfileForUpload(
-                locus_set_id=locus_set_id,
+            allele_profile_for_upload = model.SeqProfileForUpload(
+                # locus_set_id=locus_set_id,
                 protocol_id=locus_detection_protocol_id,
                 locus_code_map_id=locus_code_map_id,
                 allele_ids=allele_ids,  # type: ignore[arg-type]
-                allele_profile_format=enum.AlleleProfileFormat.ORDERED_ALLELE_IDS,
+                seq_profile_type=enum.SeqProfileType.ALLELE,
                 seq_id=seq_id,
+                format=enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
+                content_hash=model.SeqProfile.get_allele_profile_hash(allele_ids),
             )
             seq_for_upload = model.SeqForUpload(
                 contigs=[
@@ -743,7 +792,7 @@ class SeqdbTestClient(TestClient):
             samples_for_upload.append(
                 model.SampleForUpload(
                     seqs=[seq_for_upload],
-                    allele_profiles=[allele_profile_for_upload],
+                    seq_profiles=[allele_profile_for_upload],
                     sample=model.Sample(created_in_data_collection_id=uuid.uuid4()),
                 )
             )

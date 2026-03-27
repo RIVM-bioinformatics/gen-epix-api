@@ -1,5 +1,5 @@
 # pylint: disable=too-few-public-methods
-from datetime import date
+from datetime import datetime
 from uuid import UUID
 
 import sqlalchemy.orm as orm
@@ -42,11 +42,11 @@ class Protocol(Base, RowMetadataMixin):
     git_commit_tag: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Protocol, "git_commit_tag"
     )
-    valid_start_date: Mapped[date | None] = create_mapped_column(
-        DOMAIN, model.Protocol, "valid_start_date"
+    valid_start_datetime: Mapped[datetime | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "valid_start_datetime"
     )
-    valid_end_date: Mapped[date | None] = create_mapped_column(
-        DOMAIN, model.Protocol, "valid_end_date"
+    valid_end_datetime: Mapped[datetime | None] = create_mapped_column(
+        DOMAIN, model.Protocol, "valid_end_datetime"
     )
     ref_seq_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Protocol, "ref_seq_id"
@@ -71,6 +71,41 @@ class Protocol(Base, RowMetadataMixin):
     )
     props: Mapped[dict[str, str | int | float | bool | list]] = create_mapped_column(
         DOMAIN, model.Protocol, "props"
+    )
+
+
+class ProtocolSet(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.ProtocolSet)
+
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.ProtocolSet, "code")
+    name: Mapped[str] = create_mapped_column(DOMAIN, model.ProtocolSet, "name")
+
+
+class ProtocolSetMember(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.ProtocolSetMember)
+
+    protocol_set_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.ProtocolSetMember, "protocol_set_id"
+    )
+    protocol_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.ProtocolSetMember, "protocol_id"
+    )
+
+    protocol_set: Mapped[ProtocolSet] = relationship(
+        "ProtocolSet",
+        foreign_keys=[protocol_set_id],
+    )
+    protocol: Mapped[Protocol] = relationship(
+        "Protocol",
+        foreign_keys=[protocol_id],
     )
 
 

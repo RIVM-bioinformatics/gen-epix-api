@@ -14,7 +14,10 @@ from pydantic import (
 
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import Model
-from gen_epix.commondb.domain.model.base import Model
+from gen_epix.commondb.domain.model.base import (
+    Model,
+    validate_int_enum_value_or_none,
+)
 from gen_epix.commondb.domain.model.organization import BaseIdentifier
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
@@ -230,20 +233,16 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
     @field_validator("file_format", mode="before")
     @classmethod
     def _validate_file_format(
-        cls, value: enum.SeqFileFormat | str | None
+        cls, value: enum.SeqFileFormat | str | int | None
     ) -> enum.SeqFileFormat | None:
-        if isinstance(value, str):
-            return enum.SeqFileFormat(value)
-        return value
+        return validate_int_enum_value_or_none(enum.SeqFileFormat, value)  # type: ignore[return-value]
 
     @field_validator("file_compression", mode="before")
     @classmethod
     def _validate_file_compression(
-        cls, value: enum.FileCompression | str | None
+        cls, value: enum.FileCompression | str | int | None
     ) -> enum.FileCompression | None:
-        if isinstance(value, str):
-            return enum.FileCompression(value)
-        return value
+        return validate_int_enum_value_or_none(enum.FileCompression, value)  # type: ignore[return-value]
 
     @field_validator("contigs", mode="before")
     @classmethod

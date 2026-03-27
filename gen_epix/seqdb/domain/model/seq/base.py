@@ -52,14 +52,12 @@ class ContentMixin[FormatType: IntEnum]:
     @field_validator("format", mode="before")
     @classmethod
     def _validate_format(cls, value: str | int | float | FormatType) -> FormatType:
-        if isinstance(value, IntEnum):
-            return value
-        format_type = cls.model_fields["format"].annotation
-        if isinstance(value, str):
-            return format_type[value]
-        if isinstance(value, int):
-            return format_type(value)
-        raise ValueError(f"Unsupported type for format field: {type(value)}")
+        if cls._FORMAT_TYPE_CLASS is None:
+            for base in getattr(cls, "__orig_bases__", []):  # type: ignore[unreachable]
+                if typing.get_origin(base) is not ContentMixin:
+                    continue
+                cls._FORMAT_TYPE_CLASS = format_class = typing.get_args(base)[0]  # type: ignore[assigment]
+        return validate_int_enum_value(cls._FORMAT_TYPE_CLASS, value)  # type: ignore[return-value]
 
     # TODO: discuss and implement content hash validation per format
     @model_validator(mode="after")
@@ -80,8 +78,8 @@ class QualityMixin:
     Mixin class to add quality related fields to a model.
     """
 
-    qc_result: enum.QualityControlResult | None = Field(
-        default=None,
+    qc_result: enum.QualityControlResult = Field(
+        default=enum.QualityControlResult.PENDING,
         description="The quality of the result as a qualitative value that is used by the application, where applicable, for filtering results.",
     )
     qc_score: float | None = Field(
@@ -96,18 +94,12 @@ class QualityMixin:
     @field_validator("qc_result", mode="before")
     @classmethod
     def _validate_qc_result(
-        cls, value: str | int | float | enum.QualityControlResult | None
-    ) -> enum.QualityControlResult | None:
-        if value is None:
-            return None
+        cls, value: str | int | float | enum.QualityControlResult
+    ) -> enum.QualityControlResult:
         return validate_int_enum_value(enum.QualityControlResult, value)  # type: ignore[return-value]
 
     @field_serializer("qc_result", mode="plain")
-    def _serialize_qc_result(
-        self, value: enum.QualityControlResult | None
-    ) -> int | None:
-        if value is None:
-            return None
+    def _serialize_qc_result(self, value: enum.QualityControlResult) -> int:
         return value.value
 
 

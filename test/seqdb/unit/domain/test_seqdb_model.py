@@ -15,7 +15,7 @@ SEQ_DISTANCE types). The _minimal_protocol_data helper handles this convention.
 """
 
 import json
-from datetime import date
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -43,11 +43,11 @@ VALID_GIT_URI: str = "https://github.com/example/repo"
 
 # Natural mapping from each SEQ_PROFILE ProtocolType to a SeqProfileType value.
 _SEQ_PROFILE_TYPE_MAP: dict[ProtocolType, SeqProfileType] = {
-    ProtocolType.ALLELE_PROFILE: SeqProfileType.ALLELE,
-    ProtocolType.MLVA_PROFILE: SeqProfileType.MLVA,
-    ProtocolType.SNP_PROFILE: SeqProfileType.SNP,
-    ProtocolType.LOCUS_PROFILE: SeqProfileType.LOCUS,
-    ProtocolType.KMER_PROFILE: SeqProfileType.KMER,
+    ProtocolType.SEQ_PROFILE: SeqProfileType.ALLELE,
+    ProtocolType.SEQ_PROFILE: SeqProfileType.MLVA,
+    ProtocolType.SEQ_PROFILE: SeqProfileType.SNP,
+    ProtocolType.SEQ_PROFILE: SeqProfileType.LOCUS,
+    ProtocolType.SEQ_PROFILE: SeqProfileType.KMER,
 }
 
 
@@ -115,14 +115,16 @@ class TestProtocolHappyPaths:
             git_repository_uri=VALID_GIT_URI,
             git_commit_hash=VALID_GIT_HASH,
             git_commit_tag="v1.0.0",
-            valid_start_date=date(2024, 1, 1),
-            valid_end_date=date(2025, 1, 1),
+            valid_start_datetime=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            valid_end_datetime=datetime(2025, 1, 1, tzinfo=timezone.utc),
         )
         assert protocol.name == "My Protocol"
         assert protocol.git_commit_hash == VALID_GIT_HASH
         assert protocol.git_commit_tag == "v1.0.0"
-        assert protocol.valid_start_date == date(2024, 1, 1)
-        assert protocol.valid_end_date == date(2025, 1, 1)
+        assert protocol.valid_start_datetime == datetime(
+            2024, 1, 1, tzinfo=timezone.utc
+        )
+        assert protocol.valid_end_datetime == datetime(2025, 1, 1, tzinfo=timezone.utc)
 
 
 # ---------------------------------------------------------------------------
@@ -268,10 +270,8 @@ class TestProtocolProps:
 
 # Tuples of (field_name, protocol_type that requires it) for "missing" tests.
 _REQUIRED_FIELD_CASES: list[tuple[str, ProtocolType]] = [
-    ("ref_seq_id", ProtocolType.SNP_PROFILE),
     ("seq_category_set_id", ProtocolType.SEQ_CLASSIFICATION),
-    ("locus_set_id", ProtocolType.ALLELE_PROFILE),
-    ("seq_profile_type", ProtocolType.KMER_PROFILE),
+    ("seq_profile_type", ProtocolType.SEQ_PROFILE),
     ("seq_distance_type", ProtocolType.SEQ_DISTANCE),
     ("is_integer_distance", ProtocolType.SEQ_DISTANCE),
     ("max_stored_distance", ProtocolType.SEQ_DISTANCE),
@@ -334,17 +334,19 @@ class TestProtocolSerializers:
         protocol = _make_protocol()
         dumped = protocol.model_dump(mode="json")
         assert dumped["protocol_type"] == ProtocolType.SEQUENCING.value
-        assert isinstance(dumped["protocol_type"], str)
+        assert isinstance(dumped["protocol_type"], int)
 
     def test_ref_seq_id_serialized_as_string(self) -> None:
-        data = _minimal_protocol_data(ProtocolType.SNP_PROFILE)
+        data = _minimal_protocol_data(ProtocolType.SEQ_PROFILE)
+        data["ref_seq_id"] = SAMPLE_REF_SEQ_ID  # optional for SEQ_PROFILE
         protocol = Protocol(**data)
         dumped = protocol.model_dump(mode="json")
         assert dumped["ref_seq_id"] == str(SAMPLE_REF_SEQ_ID)
         assert isinstance(dumped["ref_seq_id"], str)
 
     def test_locus_set_id_serialized_as_string(self) -> None:
-        data = _minimal_protocol_data(ProtocolType.ALLELE_PROFILE)
+        data = _minimal_protocol_data(ProtocolType.SEQ_PROFILE)
+        data["locus_set_id"] = SAMPLE_LOCUS_SET_ID  # optional for SEQ_PROFILE
         protocol = Protocol(**data)
         dumped = protocol.model_dump(mode="json")
         assert dumped["locus_set_id"] == str(SAMPLE_LOCUS_SET_ID)

@@ -13,7 +13,7 @@ from gen_epix.seqdb.domain.literal import MLVA_NO_LOCUS_REPEAT_NUMBER
 def _verify_batch_refdata_allele_profiles(
     self: BatchUploader,
     cmd: command.UploadSamplesCommand,
-    retval: model.SampleBatchUploadResult,
+    batch_result: model.SampleBatchUploadResult,
     uow: Any,
 ) -> bool:
     """
@@ -22,7 +22,7 @@ def _verify_batch_refdata_allele_profiles(
     success = True
     user_id = cmd.user.id if cmd.user else None
     samples = cmd.sample_batch.samples
-    sample_results = retval.samples
+    sample_results = batch_result.samples
 
     # Get all allele profiles that are to be processed
     profiles: list[model.SeqProfileForUpload] = []
@@ -113,28 +113,7 @@ def _verify_batch_refdata_allele_profiles(
         if locus_allele_id_map is not None:
             # Convert locus_allele_id_map representation to allele_ids
             locus_code_map_id = profile.locus_code_map_id
-            locus_code_map = locus_code_map_map[locus_code_map_id]
             rev_locus_code_map = rev_locus_code_map_map[locus_code_map_id]
-            # TODO: 3034 this check is no longer needed since the locus_id is simply the first observed one rather than required to match. Remove once e.g. tests are updated as well.
-            # invalid_locus_codes = (
-            #     set(locus_allele_id_map.keys())
-            #     - locus_code_map_locus_codes[locus_code_map_id]
-            # )
-            # if invalid_locus_codes:
-            #     # Some locus codes are invalid
-            #     success = False
-            #     if len(invalid_locus_codes) <= 5:
-            #         invalid_codes_str = ", ".join(sorted(list(invalid_locus_codes)))
-            #     else:
-            #         invalid_codes_str = (
-            #             ", ".join(sorted(list(invalid_locus_codes)[:5]))
-            #             + f", ... (and {len(invalid_locus_codes) - 5} more)"
-            #         )
-            #     profile_result.add_error(
-            #         "e7a4b2d1",
-            #         f"Invalid locus codes for locus code map {locus_code_map.code}: {invalid_codes_str}",
-            #     )
-            #     continue
             allele_ids = [
                 locus_allele_id_map.get(rev_locus_code_map[x]) for x in locus_ids
             ]
@@ -164,27 +143,6 @@ def _verify_batch_refdata_allele_profiles(
             )
             continue
         uq_allele_ids.update(x for x in allele_ids if x is not None and x != NULL_ID)
-
-    # TODO: 3034 no longer needed to retrieve (allele ID, locus ID) pairs since we no longer require the locus ID to match the existing one. Remove once e.g. tests are updated as well.
-    # # Retrieve existing (allele ID, locus ID) pairs in chunks
-    # uq_allele_ids_list = list(uq_allele_ids)
-    # chunk_size = 1000  # TODO: make configurable
-    # existing_allele_locus_map: dict[UUID, UUID] = {}
-    # for i in range(0, len(uq_allele_ids_list), chunk_size):
-    #     curr_allele_ids = uq_allele_ids_list[
-    #         i : min(i + chunk_size, len(uq_allele_ids_list))
-    #     ]
-    #     result_iter = self.service.repository.read_fields(
-    #         uow,
-    #         user_id,
-    #         model.Allele,
-    #         ["id", "locus_id"],
-    #         filter=UuidSetFilter(
-    #             key="id",
-    #             members=frozenset(curr_allele_ids),
-    #         ),
-    #     )
-    #     existing_allele_locus_map.update({x[0]: x[1] for x in result_iter})
 
     # Retrieve existing allele IDs in chunks to avoid hitting parameter limits in the database
     uq_allele_ids_list = list(uq_allele_ids)
@@ -228,24 +186,6 @@ def _verify_batch_refdata_allele_profiles(
                 continue
             assert allele_id is not None
             new_allele_locus_map[allele_id] = locus_id
-        # TODO: 3034 no longer needed to check for mismatches between provided locus ID and existing locus ID since we no longer require the locus ID to match the existing one. Remove once e.g. tests are updated as well.
-        # invalid_locus_allele_pairs: list[tuple[UUID, UUID]] = []
-        # for locus_id, allele_id in zip(locus_ids, allele_ids):
-        #     if allele_id is None or allele_id == NULL_ID:
-        #         continue
-        #     if allele_id not in existing_allele_locus_map:
-        #         new_allele_locus_map[allele_id] = locus_id
-        #         continue
-        #     existing_locus_id = existing_allele_locus_map[allele_id]
-        #     if existing_locus_id != locus_id:
-        #         # Allele is associated with a different locus: add to invalid pairs
-        #         invalid_locus_allele_pairs.append((locus_id, allele_id))
-        # if invalid_locus_allele_pairs:
-        #     # Some invalid (locus ID, allele ID) pairs found
-        #     success = False
-        #     _handle_locus_allele_pair_mismatch(
-        #         profile_result, invalid_locus_allele_pairs
-        #     )
         # Convert to allele profile representation if not already the case
         if profile.content != "":
             continue
@@ -274,7 +214,7 @@ def _verify_batch_refdata_allele_profiles(
                     ", ".join([str(x) for x in missing_allele_ids_list[:5]])
                     + f", ... (and {len(missing_allele_ids_list) - 5} more)"
                 )
-            retval.add_error(
+            batch_result.add_error(
                 "a9b8c7d6",
                 f"Missing new alleles: {missing_alleles_str}",
             )
@@ -292,7 +232,7 @@ def _verify_batch_refdata_allele_profiles(
                     ", ".join([str(x) for x in extra_allele_ids_list[:5]])
                     + f", ... (and {len(extra_allele_ids_list) - 5} more)"
                 )
-            retval.add_warning(
+            batch_result.add_warning(
                 "f6e5d4c3",
                 f"Superfluous new alleles provided: {extra_alleles_str}",
             )
@@ -313,7 +253,7 @@ def _verify_batch_refdata_allele_profiles(
             if locus_id != expected_locus_id:
                 # Different locus ID, put the one derived from the profile
                 success = False
-                retval.add_warning(
+                batch_result.add_warning(
                     "e4f3g2h1",
                     f"Different locus ID for new allele {allele.id}: expected {expected_locus_id}, got {locus_id}, used the former",
                 )
@@ -353,14 +293,14 @@ def _handle_locus_allele_pair_mismatch(
 def _verify_batch_refdata_mlva_profiles(
     self: BatchUploader,
     cmd: command.UploadSamplesCommand,
-    retval: model.SampleBatchUploadResult,
+    batch_result: model.SampleBatchUploadResult,
     uow: Any,
 ) -> bool:
     """Verify MLVA profiles specific rules"""
     success = True
     user_id = cmd.user.id if cmd.user else None
     samples = cmd.sample_batch.samples
-    sample_results = retval.samples
+    sample_results = batch_result.samples
 
     profiles: list[model.SeqProfileForUpload] = []
     profile_results: list[UploadResult] = []
@@ -488,7 +428,7 @@ def _verify_batch_refdata_mlva_profiles(
 def _verify_batch_refdata_snp_profiles(
     self: BatchUploader,
     cmd: command.UploadSamplesCommand,
-    retval: model.SampleBatchUploadResult,
+    batch_result: model.SampleBatchUploadResult,
     uow: Any,
 ) -> bool:
     """Verify SNP profiles specific rules"""
@@ -505,7 +445,7 @@ def _verify_batch_refdata_snp_profiles(
 def _verify_batch_refdata_kmer_profiles(
     self: BatchUploader,
     cmd: command.UploadSamplesCommand,
-    retval: model.SampleBatchUploadResult,
+    batch_result: model.SampleBatchUploadResult,
     uow: Any,
 ) -> bool:
     """Verify k-mer profiles specific rules"""

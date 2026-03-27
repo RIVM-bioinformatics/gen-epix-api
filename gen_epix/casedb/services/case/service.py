@@ -371,7 +371,9 @@ class CaseService(BaseCaseService):
         case_set_data_collections: dict[UUID, set[UUID]],
         has_access: dict[UUID, set[UUID]],
     ) -> bool:
-        has_access_to_case_set = self._has_case_set_access(case_set, case_set_data_collections, has_access)
+        has_access_to_case_set = self._has_case_set_access(
+            case_set, case_set_data_collections, has_access
+        )
         if case_set_ids:
             if not has_access_to_case_set:
                 if on_invalid_case_set_id == "raise":

@@ -13,6 +13,7 @@ from gen_epix.casedb.services.case.retrieve_similar_cases import (
 )
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.seqdb.domain import command as seqdb_command
 from gen_epix.seqdb.domain import enum as seqdb_enum
 
 
@@ -102,14 +103,14 @@ class BaseSimilarCasesTestCase(TestCase):
             ref_dim_id=self.ref_dim_id,
             code="Specimen.Genetic.Distance",
             col_type=col_type,
-            protocol_id=protocol_id,
+            genetic_distance_protocol_id=protocol_id,
         )
 
     def create_protocol(self) -> model.GeneticDistanceProtocol:
         return model.GeneticDistanceProtocol(
-            seqdb_protocol_id=self.protocol_id,
-            seqdb_protocol_type=seqdb_enum.ProtocolType.SEQ_DISTANCE,
-            code="KMER_EUCLIDEAN",
+            seqdb_seq_distance_protocol_id=self.protocol_id,
+            seqdb_seq_distance_type=seqdb_enum.SeqDistanceType.ALLELE_HAMMING,
+            name="KMER_EUCLIDEAN",
             seqdb_is_integer_distance=False,
             min_scale_unit=0.1,
         )
@@ -294,8 +295,8 @@ class TestHappyPath(BaseSimilarCasesTestCase):
 
         # Verify cross-service command construction and call
         self.service.app.handle.assert_called_once()  # type: ignore[attr-defined]
-        seq_cmd = self.service.app.handle.call_args[0][0]  # type: ignore[attr-defined]
-        assert seq_cmd.protocol_id == protocol.seqdb_protocol_id
+        seq_cmd: seqdb_command.RetrieveSimilarProfilesCommand = self.service.app.handle.call_args[0][0]  # type: ignore[attr-defined]
+        assert seq_cmd.protocol_id == protocol.seqdb_seq_distance_protocol_id
         assert set(seq_cmd.profile_ids) == {seed_profile_id1, seed_profile_id2}
         assert seq_cmd.max_distance == 7.5
 
@@ -325,5 +326,5 @@ class TestHappyPath(BaseSimilarCasesTestCase):
         # 4. Verify
         assert result == []
         self.service.app.handle.assert_called_once()  # type: ignore[attr-defined]
-        seq_cmd = self.service.app.handle.call_args[0][0]  # type: ignore[attr-defined]
+        seq_cmd: seqdb_command.RetrieveSimilarProfilesCommand = self.service.app.handle.call_args[0][0]  # type: ignore[attr-defined]
         assert seq_cmd.profile_ids == []

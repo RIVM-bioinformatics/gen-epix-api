@@ -2,7 +2,7 @@ import base64
 import hashlib
 import json
 import struct
-from typing import Any, ClassVar, NoReturn, Self
+from typing import Any, ClassVar, Self
 from uuid import UUID
 
 from pydantic import Field, field_serializer, field_validator, model_validator
@@ -104,14 +104,32 @@ class SeqProfile(
         Verify the representation of the content depending on the format. Verify or set
         the content hash.
         """
+        if self.content == "" and any(
+            getattr(self, field_name, None) is not None
+            for field_name in (
+                "aligned_nucleotide_seq",
+                "allele_ids",
+                "locus_allele_id_map",
+                "repeat_numbers",
+                "locus_repeat_number_map",
+                "kmer_frequency_map",
+            )
+        ):
+            return self
+
         profile_hash = self.content_hash
-        computed_profile_hash: UUID = NULL_ID
-
-        def _raise_no_computable_hash() -> NoReturn:
-            raise ValueError("Unable to calculate profile hash for this format")
-
-        if self.seq_profile_type == enum.SeqProfileType.ALLELE:
-            # Parse ALLELE SeqProfile and derive values depending on format
+        computed_profile_hash = profile_hash
+        if self.seq_profile_type == enum.SeqProfileType.LOCUS:
+            if self.format == enum.SeqProfileFormat.LOCUS_PROFILE_FORMAT1:
+                # TODO: implement calculation of hash based on the content of the locus profile
+                computed_profile_hash = profile_hash
+            else:
+                if profile_hash == NULL_ID:
+                    raise ValueError(
+                        "Unable to calculate locus profile hash for this format"
+                    )
+        elif self.seq_profile_type == enum.SeqProfileType.ALLELE:
+            # Parse allele profile and derive values depending on allele_profile_format
             if self.format == enum.SeqProfileFormat.ORDERED_ALLELE_IDS:
                 # Parse the profile from base64 encoded concatenated 128-bit allele IDs
                 allele_bytes = base64.b64decode(self.content)
@@ -123,7 +141,7 @@ class SeqProfile(
                 sha256.update(allele_bytes)
                 computed_profile_hash = UUID(sha256.digest()[:16].hex())
             else:
-                _raise_no_computable_hash()
+                SeqProfile._raise_no_computable_hash()
         elif self.seq_profile_type == enum.SeqProfileType.MLVA:
             # Parse MLVA SeqProfile and derive values depending on format
             if self.format == enum.SeqProfileFormat.ORDERED_REPEAT_NUMBERS:
@@ -132,7 +150,7 @@ class SeqProfile(
                 # Compute hash
                 computed_profile_hash = SeqProfile.get_mlva_profile_hash(repeat_numbers)
             else:
-                _raise_no_computable_hash()
+                SeqProfile._raise_no_computable_hash()
         elif self.seq_profile_type == enum.SeqProfileType.KMER:
             # Parse KMER SeqProfile and derive hash depending on format
             if self.format == enum.SeqProfileFormat.KMER_FREQUENCY_MAP:
@@ -143,14 +161,14 @@ class SeqProfile(
                     kmer_frequency_map
                 )
             else:
-                _raise_no_computable_hash()
+                SeqProfile._raise_no_computable_hash()
         elif self.seq_profile_type == enum.SeqProfileType.SNP:
             # Parse SNP profile and derive values depending on snp_profile_format
             if self.format == enum.SeqProfileFormat.REF_ALN_SEQ:
                 # TODO: implement any validation and calculate hash
                 computed_profile_hash = profile_hash
             else:
-                _raise_no_computable_hash()
+                SeqProfile._raise_no_computable_hash()
         else:
             raise NotImplementedError(
                 f"Unable to calculate profile hash for this sequence profile type: {self.seq_profile_type}"
@@ -165,17 +183,15 @@ class SeqProfile(
     def _serialize_seq_profile_type(self, value: enum.SeqProfileType) -> int:
         return value.value
 
-    def get_aligned_nucleotide_seq(self, **kwargs: Any) -> str:
+    def get_repeat_numbers(self, **kwargs: Any) -> list[int]:
         """
-        Parse and return the aligned nucleotide sequence from the SNP profile based on
-        its format.
+        Parse and return the repeat numbers from the MLVA profile based on its format.
         """
         if self.format == enum.SeqProfileFormat.REF_ALN_SEQ:
             return self.content
-        else:
-            raise NotImplementedError(
-                "Unable to parse aligned nucleotide sequence for this SNP profile format"
-            )
+        raise NotImplementedError(
+            "Unable to parse aligned nucleotide sequence for this SNP profile format"
+        )
 
     def get_allele_ids(self, **kwargs: Any) -> list[UUID | None]:
         """
@@ -193,11 +209,10 @@ class SeqProfile(
                 allele_id_bytes = allele_bytes[i : i + 16]
                 if allele_id_bytes != null_id_bytes:
                     allele_ids[j] = UUID(bytes=allele_id_bytes)
-        else:
-            raise NotImplementedError(
-                "Unable to parse allele IDs for this allele profile format"
-            )
-        return allele_ids
+            return allele_ids
+        raise NotImplementedError(
+            "Unable to parse allele IDs for this allele profile format"
+        )
 
     def get_n_loci(self, **kwargs: Any) -> int:
         """
@@ -212,21 +227,21 @@ class SeqProfile(
                 for i in range(0, len(allele_bytes), 16)
             )
             return computed_n_loci
-        else:
-            raise NotImplementedError(
-                "Unable to parse number of loci for this allele profile format"
-            )
+        raise NotImplementedError(
+            "Unable to parse number of loci for this allele profile format"
+        )
 
-    def get_repeat_numbers(self, **kwargs: Any) -> list[int]:
+    @staticmethod
+    def get_ordered_allele_ids_representation(allele_ids: list[UUID | None]) -> str:
         """
-        Parse and return the repeat numbers from the MLVA profile based on its format.
+        Generate and return the allele profile in ORDERED_ALLELE_IDS format based on
+        the ordered allele IDs.
         """
         if self.format == enum.SeqProfileFormat.ORDERED_REPEAT_NUMBERS:
             return json.loads(self.content)
-        else:
-            raise NotImplementedError(
-                "Unable to parse repeat numbers for this MLVA profile format"
-            )
+        raise NotImplementedError(
+            "Unable to parse repeat numbers for this MLVA profile format"
+        )
 
     def get_kmer_frequency_map(self, **kwargs: Any) -> dict[str, float]:
         """
@@ -235,10 +250,9 @@ class SeqProfile(
         if self.format == enum.SeqProfileFormat.KMER_FREQUENCY_MAP:
             retval: dict[str, float] = json.loads(self.content)
             return retval
-        else:
-            raise NotImplementedError(
-                "Unable to parse k-mer frequency map for this k-mer profile format"
-            )
+        raise NotImplementedError(
+            "Unable to parse k-mer frequency map for this k-mer profile format"
+        )
 
     @staticmethod
     def get_ordered_allele_ids_representation(allele_ids: list[UUID | None]) -> str:
@@ -297,6 +311,10 @@ class SeqProfile(
             sha256.update(kmer.encode("ascii"))
             sha256.update(bytearray(struct.pack(">d", freq)))
         return UUID(sha256.digest()[:16].hex())
+
+    @staticmethod
+    def _raise_no_computable_hash() -> None:
+        raise NotImplementedError("Unable to compute content hash for this format")
 
 
 class SeqProfileIdentifier(BaseIdentifier):

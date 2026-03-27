@@ -77,9 +77,9 @@ def seq_service_calculate_seq_distances_for_new_profiles(
         )
 
     # Split profiles by type
-    new_seq_profiles_by_type: dict[enum.SeqProfileType, list[model.SeqProfile]] = (
-        dict.fromkeys(enum.SeqProfileType, [])
-    )
+    new_seq_profiles_by_type: dict[enum.SeqProfileType, list[model.SeqProfile]] = {
+        seq_profile_type: [] for seq_profile_type in enum.SeqProfileType
+    }
     for profile in seq_profiles:
         new_seq_profiles_by_type[profile.seq_profile_type].append(profile)
 
@@ -88,6 +88,8 @@ def seq_service_calculate_seq_distances_for_new_profiles(
         seq_profile_type,
         new_seq_profiles_for_type,
     ) in new_seq_profiles_by_type.items():
+        if not new_seq_profiles_for_type:
+            continue
 
         # Split new profiles by relevant subset (e.g. locus set for allele/MLVA profiles, ref seq for SNP profiles) if applicable, and find relevant seq distance protocols for each subset
         new_seq_profiles_by_subset: dict[UUID, list[model.SeqProfile]] = {}
@@ -110,7 +112,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
                 locus_set_id = protocol.locus_set_id
                 if (
                     locus_set_id is None
-                    or locus_set_id not in seq_distance_protocols_by_subset
+                    or locus_set_id not in new_seq_profiles_by_subset
                 ):
                     continue
                 seq_distance_protocols_by_subset.setdefault(locus_set_id, []).append(

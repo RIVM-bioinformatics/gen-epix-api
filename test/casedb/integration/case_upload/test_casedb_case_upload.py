@@ -92,8 +92,7 @@ class CaseUploadSetup:
         "command.upload_cases": "UploadCasesCommand",
         "command._case_data": "_CaseData",
         "command._case_content_data": "_CaseContentData",
-        "seqdb.SequencingProtocol": "SequencingProtocol",
-        "seqdb.AssemblyProtocol": "AssemblyProtocol",
+        "seqdb.Protocol": "Protocol",
     }
     FIXTURE_DATA_EXCEL_FILE = Path(__file__).parent / "test_casedb_case_upload.xlsx"
     FIXTURE_DATA_PICKLE_FILE = Path(__file__).parent / "test_casedb_case_upload.pkl"
@@ -138,16 +137,11 @@ class CaseUploadSetup:
                     CrudOperation.READ_ALL,
                 )
             )
-        # Get sequencing and assembly protocols from props
-        sequencing_protocol_df: pd.DataFrame = env.props["seqdb.SequencingProtocol"]
-        assembly_protocol_df: pd.DataFrame = env.props["seqdb.AssemblyProtocol"]
-        sequencing_protocols: list[seqdb_model.Protocol] = [
+        # Get protocols
+        seqdb_protocol_df: pd.DataFrame = env.props["seqdb.Protocol"]
+        protocols: list[seqdb_model.Protocol] = [
             seqdb_model.Protocol(**x)
-            for x in sequencing_protocol_df.to_dict(orient="records")
-        ]
-        assembly_protocols: list[seqdb_model.AssemblyProtocol] = [
-            seqdb_model.AssemblyProtocol(**x)
-            for x in assembly_protocol_df.to_dict(orient="records")
+            for x in seqdb_protocol_df.to_dict(orient="records")
         ]
         # Add to seqdb
         with seqdb_organization_service.repository.uow() as uow:
@@ -163,20 +157,11 @@ class CaseUploadSetup:
                 CrudOperation.CREATE_SOME,
             )
         with seqdb_seq_service.repository.uow() as uow:
-
             seqdb_seq_service.repository.crud(
                 uow,
                 None,
                 seqdb_model.Protocol,
-                sequencing_protocols,
-                None,
-                CrudOperation.CREATE_SOME,
-            )
-            seqdb_seq_service.repository.crud(
-                uow,
-                None,
-                seqdb_model.AssemblyProtocol,
-                assembly_protocols,
+                protocols,
                 None,
                 CrudOperation.CREATE_SOME,
             )

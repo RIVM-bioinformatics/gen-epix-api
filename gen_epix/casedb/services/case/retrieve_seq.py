@@ -72,7 +72,7 @@ def case_service_retrieve_phylogenetic_tree(
 
         # Special case: zero case_ids
         if not case_ids:
-            retval: model.PhylogeneticTree = self.app.handle(
+            phylogenetic_tree: model.PhylogeneticTree = self.app.handle(
                 command.RetrievePhylogeneticTreeBySequencesCommand(
                     user=user,
                     tree_algorithm_code=tree_algorithm_code,
@@ -80,8 +80,8 @@ def case_service_retrieve_phylogenetic_tree(
                     profile_ids=[],
                 )
             )
-            retval.protocol_id = genetic_distance_protocol.id
-            return retval
+            phylogenetic_tree.protocol_id = genetic_distance_protocol.id
+            return phylogenetic_tree
 
         # @ABAC: Get cases
         cases = self._retrieve_cases_with_content_right(

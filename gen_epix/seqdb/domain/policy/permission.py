@@ -26,6 +26,8 @@ class RoleGenerator(CommonRoleGenerator):
             (command.LocusCodeMapCrudCommand, PermissionTypeSet.CRUD),
             (command.LocusSetCrudCommand, PermissionTypeSet.CRU),
             (command.ProtocolCrudCommand, PermissionTypeSet.CRU),
+            (command.ProtocolSetCrudCommand, PermissionTypeSet.CRU),
+            (command.ProtocolSetMemberCrudCommand, PermissionTypeSet.CRU),
             (command.RefAlleleCrudCommand, PermissionTypeSet.CR),
             (command.RefSeqCrudCommand, PermissionTypeSet.CR),
             (command.SeqCategoryCrudCommand, PermissionTypeSet.CRU),

@@ -17,7 +17,6 @@ from gen_epix.seqdb.services.seq.crud_ast_measurement import (
 from gen_epix.seqdb.services.seq.crud_ast_prediction import (
     seq_service_crud_ast_prediction,
 )
-from gen_epix.seqdb.services.seq.crud_file import seq_service_crud_file
 from gen_epix.seqdb.services.seq.crud_locus import seq_service_crud_locus
 from gen_epix.seqdb.services.seq.crud_locus_code_map import (
     seq_service_crud_locus_code_map,
@@ -27,6 +26,10 @@ from gen_epix.seqdb.services.seq.crud_pcr_measurement import (
     seq_service_crud_pcr_measurement,
 )
 from gen_epix.seqdb.services.seq.crud_protocol import seq_service_crud_protocol
+from gen_epix.seqdb.services.seq.crud_protocol_set import seq_service_crud_protocol_set
+from gen_epix.seqdb.services.seq.crud_protocol_set_member import (
+    seq_service_crud_protocol_set_member,
+)
 from gen_epix.seqdb.services.seq.crud_read_set import seq_service_crud_read_set
 from gen_epix.seqdb.services.seq.crud_read_set_identifier import (
     seq_service_crud_read_set_identifier,
@@ -81,7 +84,7 @@ class SeqService(BaseSeqService):
     ) -> model.SampleBatchUploadResult:
         return seq_service_upload_samples(self, cmd)
 
-    def retrieve_phylogenetic_tree(
+    def calculate_phylogenetic_tree(
         self, cmd: command.CalculatePhylogeneticTreeCommand
     ) -> model.PhylogeneticTree | None:
         return seq_service_calculate_phylogenetic_tree(self, cmd)
@@ -144,6 +147,34 @@ class SeqService(BaseSeqService):
     ):
         return seq_service_crud_protocol(self, cmd)
 
+    def crud_protocol_set(
+        self,
+        cmd: command.ProtocolSetCrudCommand,
+    ) -> (
+        model.ProtocolSet
+        | list[model.ProtocolSet]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_protocol_set(self, cmd)
+
+    def crud_protocol_set_member(
+        self,
+        cmd: command.ProtocolSetMemberCrudCommand,
+    ) -> (
+        model.ProtocolSetMember
+        | list[model.ProtocolSetMember]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return seq_service_crud_protocol_set_member(self, cmd)
+
     def crud_allele(
         self,
         cmd: command.AlleleCrudCommand,
@@ -179,12 +210,6 @@ class SeqService(BaseSeqService):
         | None
     ):
         return seq_service_crud_ast_prediction(self, cmd)
-
-    def crud_file(
-        self,
-        cmd: command.FileCrudCommand,
-    ) -> model.File | list[model.File] | UUID | list[UUID] | bool | list[bool] | None:
-        return seq_service_crud_file(self, cmd)
 
     def crud_locus(
         self,

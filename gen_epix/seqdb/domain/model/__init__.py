@@ -58,6 +58,8 @@ from gen_epix.seqdb.domain.model.seq import LocusSet as LocusSet
 from gen_epix.seqdb.domain.model.seq import PcrMeasurement as PcrMeasurement
 from gen_epix.seqdb.domain.model.seq import PhylogeneticTree as PhylogeneticTree
 from gen_epix.seqdb.domain.model.seq import Protocol as Protocol
+from gen_epix.seqdb.domain.model.seq import ProtocolSet as ProtocolSet
+from gen_epix.seqdb.domain.model.seq import ProtocolSetMember as ProtocolSetMember
 from gen_epix.seqdb.domain.model.seq import QualityMixin as QualityMixin
 from gen_epix.seqdb.domain.model.seq import ReadSet as ReadSet
 from gen_epix.seqdb.domain.model.seq import ReadSetForUpload as ReadSetForUpload
@@ -77,6 +79,9 @@ from gen_epix.seqdb.domain.model.seq import SampleIdentifier as SampleIdentifier
 from gen_epix.seqdb.domain.model.seq import SampleUploadResult as SampleUploadResult
 from gen_epix.seqdb.domain.model.seq import Seq as Seq
 from gen_epix.seqdb.domain.model.seq import SeqClassification as SeqClassification
+from gen_epix.seqdb.domain.model.seq import (
+    SeqClassificationForUpload as SeqClassificationForUpload,
+)
 from gen_epix.seqdb.domain.model.seq import SeqDistance as SeqDistance
 from gen_epix.seqdb.domain.model.seq import SeqForUpload as SeqForUpload
 from gen_epix.seqdb.domain.model.seq import SeqIdentifier as SeqIdentifier
@@ -130,6 +135,8 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             SeqCategorySet,
             SeqCategory,
             Protocol,
+            ProtocolSet,
+            ProtocolSetMember,
             Sample,
             SampleDataCollectionLink,
             SampleIdentifier,
@@ -144,6 +151,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             AstPrediction,
             PcrMeasurement,
             SeqClassification,
+            SeqClassificationForUpload,
             SeqDistance,
             SeqTaxonomy,
             PhylogeneticTree,

@@ -15,7 +15,7 @@ class BaseSeqService(BaseService):
         self.register_default_crud_handlers()
         f(
             command.CalculatePhylogeneticTreeCommand,
-            self.retrieve_phylogenetic_tree,
+            self.calculate_phylogenetic_tree,
         )
         f(command.RetrieveSamplesCommand, self.retrieve_samples)
         f(
@@ -39,6 +39,14 @@ class BaseSeqService(BaseService):
             self.crud_protocol,
         )
         f(
+            command.ProtocolSetCrudCommand,
+            self.crud_protocol_set,
+        )
+        f(
+            command.ProtocolSetMemberCrudCommand,
+            self.crud_protocol_set_member,
+        )
+        f(
             command.AlleleCrudCommand,
             self.crud_allele,
         )
@@ -50,10 +58,7 @@ class BaseSeqService(BaseService):
             command.AstPredictionCrudCommand,
             self.crud_ast_prediction,
         )
-        f(
-            command.FileCrudCommand,
-            self.crud_file,
-        )
+
         f(
             command.LocusCrudCommand,
             self.crud_locus,
@@ -156,7 +161,7 @@ class BaseSeqService(BaseService):
         )
 
     @abc.abstractmethod
-    def retrieve_phylogenetic_tree(
+    def calculate_phylogenetic_tree(
         self, cmd: command.CalculatePhylogeneticTreeCommand
     ) -> model.PhylogeneticTree | None:
         raise NotImplementedError()
@@ -209,6 +214,36 @@ class BaseSeqService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def crud_protocol_set(
+        self,
+        cmd: command.ProtocolSetCrudCommand,
+    ) -> (
+        model.ProtocolSet
+        | list[model.ProtocolSet]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_protocol_set_member(
+        self,
+        cmd: command.ProtocolSetMemberCrudCommand,
+    ) -> (
+        model.ProtocolSetMember
+        | list[model.ProtocolSetMember]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def crud_allele(
         self,
         cmd: command.AlleleCrudCommand,
@@ -245,13 +280,6 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def crud_file(
-        self,
-        cmd: command.FileCrudCommand,
-    ) -> model.File | list[model.File] | UUID | list[UUID] | bool | list[bool] | None:
         raise NotImplementedError()
 
     @abc.abstractmethod

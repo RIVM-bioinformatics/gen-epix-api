@@ -22,7 +22,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
     DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN = 60  # seconds
 
     ROUTE_MAP: dict[type[Command], str] = {
-        command.CalculatePhylogeneticTreeCommand: "/retrieve/phylogenetic_tree",
+        command.CalculatePhylogeneticTreeCommand: "/calculate/phylogenetic_tree",
         command.RetrieveSeqFastaCommand: "/retrieve/seq_fasta",
         command.CreateFileCommand: "/create/file",
         command.RetrieveSimilarProfilesCommand: "/retrieve/similar_profiles",
@@ -54,7 +54,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         )
         self.register_handler(
             command.CalculatePhylogeneticTreeCommand,
-            self.retrieve_phylogenetic_tree,
+            self.calculate_phylogenetic_tree,
         )
         self.register_handler(
             command.RetrieveSeqFastaCommand,
@@ -73,7 +73,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
             self.upload_samples,
         )
 
-    def retrieve_phylogenetic_tree(
+    def calculate_phylogenetic_tree(
         self,
         cmd: command.CalculatePhylogeneticTreeCommand,
     ) -> model.PhylogeneticTree | None:

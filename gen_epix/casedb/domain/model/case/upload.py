@@ -100,9 +100,7 @@ class SeqForUpload(Model):
         default=None,
         description="Another identifier of the sample in seqdb that the sequence is associated with. If not available, None is put. Must be provided if sample_id is not provided.",
     )
-    protocol_id: UUID = copy_model_field(
-        seqdb_model.SeqForUpload, "protocol_id"
-    )
+    protocol_id: UUID = copy_model_field(seqdb_model.SeqForUpload, "protocol_id")
     protocol_code: str | None = copy_model_field(
         seqdb_model.SeqForUpload, "protocol_code"
     )
@@ -115,9 +113,7 @@ class SeqForUpload(Model):
                 "Either sample_id or other_sample_identifier must be provided."
             )
         if not self.protocol_code and self.protocol_id == NULL_ID:
-            raise ValueError(
-                "Either protocol_code or protocol_id must be provided."
-            )
+            raise ValueError("Either protocol_code or protocol_id must be provided.")
         return self
 
     @field_serializer("id", "case_id", "col_id", "sample_id", "protocol_id")
