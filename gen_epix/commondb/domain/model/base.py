@@ -103,3 +103,12 @@ def validate_int_enum_value(
     if isinstance(value, float):
         return enum_class(int(value))
     raise ValueError(f"Unsupported type for {enum_class.__name__} field: {type(value)}")
+
+
+def validate_int_enum_value_or_none(
+    enum_class: type[IntEnum], value: int | str | float | IntEnum | None
+) -> IntEnum | None:
+    """Validate that the given value is a valid member of the given IntEnum class or None."""
+    if value is None:
+        return None
+    return validate_int_enum_value(enum_class, value)
