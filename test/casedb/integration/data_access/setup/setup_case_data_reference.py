@@ -6,7 +6,7 @@ and all four policy types) for tests.
 
 import re
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.edge_cases_access.setup.define_edge_cases_reference import (
+from test.casedb.integration.data_access.setup.define_edge_cases_reference import (
     CASE_TYPE_SETS,
     COL_SETS,
     EDGE_CASES,
@@ -17,7 +17,7 @@ import pytest
 from gen_epix.casedb.domain import enum as casedb_enum
 from gen_epix.casedb.domain import model
 
-VERBOSE = True  # Set to True to enable detailed print statements during setup for debugging purposes;
+VERBOSE = False  # Set to True to enable detailed print statements during setup for debugging purposes;
 
 
 # setup_case_type_data depends on setup_test_users_and_organizations to ensure that users and

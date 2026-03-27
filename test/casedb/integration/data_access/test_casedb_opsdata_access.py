@@ -1,16 +1,16 @@
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.edge_cases_access.base_edge_cases import (
+from test.casedb.integration.data_access.base_opsdata import (
     DEV_REPOSITORY_CONFIG,
     SKIP_ENDPOINTS,
     TEST_TYPE,
     VERBOSE,
 )
-from test.casedb.integration.edge_cases_access.setup.define_edge_cases_operational import (
+from test.casedb.integration.data_access.setup.define_edge_cases_operational import (
     EDGE_CASES_OP,
     EDGE_CASES_OP_BY_USER,
 )
-from test.casedb.integration.edge_cases_access.setup.define_edge_cases_reference import (
+from test.casedb.integration.data_access.setup.define_edge_cases_reference import (
     EdgeCaseSpec,
 )
 

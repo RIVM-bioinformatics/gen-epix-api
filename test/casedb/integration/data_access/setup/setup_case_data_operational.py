@@ -8,7 +8,7 @@ define_edge_cases_operational.py.
 Comparable to setup_case_type_data.py and setup_test_users_and_organizations.py
 for the reference data tests, but for the operational data edge cases.
 
-Used by test/casedb/integration/edge_cases_access/test_edge_cases_access.py.
+Used by test/casedb/integration/data_access/test_data_access.py.
 
 Notes:
 - Data collections dc1-dc4 are created as data_collection1-data_collection4 so that
@@ -20,7 +20,7 @@ Notes:
 
 import re
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.edge_cases_access.setup.define_edge_cases_operational import (
+from test.casedb.integration.data_access.setup.define_edge_cases_operational import (
     CASE_TYPE_SETS_OP,
     COL_SETS_OP,
     DATA_COLLECTIONS_OP,
@@ -31,7 +31,7 @@ import pytest
 
 from gen_epix.casedb.domain import enum as casedb_enum
 
-VERBOSE = True
+VERBOSE = False
 
 # Map dc identifiers used in define_edge_cases_operational.py to the actual
 # data collection names used in the test environment.

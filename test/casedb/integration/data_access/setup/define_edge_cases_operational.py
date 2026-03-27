@@ -1,114 +1,116 @@
-# setup of edge cases for ABAC-based access to operational data
-#
-# Access to the cases and case cols depend on the access policies
-# they do not depend on the share policies
-#
-# a case can only be accessed if:
-#   - there is an organization access policy that grants access to the organization of the user
-#   - AND a user access policy that grants access to the user, both for the case in question
-# a case has a case type and a is in a data collection
-# it can be in another data collection
-# (sidenote how you would retrieve this:
-# For each case retrieve which data collection it belongs to through the created_in_data_collection_id field and the
-# case data collection links table (link table)
-#  -> Data collections)
+"""
+Setup of edge cases for ABAC-based access to operational data
+
+Access to the cases and case cols depend on the access policies
+they do not depend on the share policies
+
+a case can only be accessed if:
+  - there is an organization access policy that grants access to the organization of the user
+  - AND a user access policy that grants access to the user, both for the case in question
+a case has a case type and a is in a data collection
+it can be in another data collection
+(sidenote how you would retrieve this:
+For each case retrieve which data collection it belongs to through the created_in_data_collection_id field and the
+case data collection links table (link table)
+ -> Data collections)
 
 
-# For the edge cases related to access to operational data, we need to set up specific combinations of:
-# - organization access policies (org_access)
-#    case type (ct) of case is in the case type set of the org access policy yes/no
-#    data collection (dc) of case is in the data collection set of the org access policy yes/no
-#    column (col) of case is in the column set of the org access policy yes/no
-#         for this we will create 2 column sets, with partially overlapping columns
-#    so this gives us 8 combinations for org access policies
-#    but they can be simplified to 5 combinations by only including the org access policies with the following combinations of case type set, data collection set and column set:
-#    dc in set:
-#      ct in set:
-#        1. col in set (partial colset with col1 and col2)
-#        2. col in another set (partial colset with col2 and col3)
-#      3. ct not in set (rest irrelevant, because no access to case if ct not in set)
-#    4. dc not in set: (rest irrelevant, because no access to case if dc not in set)
-#    5. multi-dc: broad policy covering multiple case types and multiple data collections
-# - user access policies (user_access)
-#    comparable combinations as org access policies
-#    dc in set:
-#      ct in set:
-#        For the columns access
-#        1. col in set (partial colset with col1 and col2)
-#        2. col in another set (partial colset with col2 and col3)
-#      3. ct not in set (rest irrelevant, because no access to case if ct not in set)
-#    4. dc not in set: (rest irrelevant, because no access to case if dc not in set)
-#    5. multi-dc: broad policy covering multiple case types and multiple data collections
-# we need to combine the 5 org access policy combinations with the 5 user access policy combinations,
-# which gives us 25 combinations
-# For each of the 25 combinations, we would use the same single case when we
-# assume a case belonging to a single data collection
-# BUT we also want to test a case being in 2 data collections
-# and each data collection should have the above 25 combinations of org access and user access policies represented
-#
-# and we need 4 data collections and 6 cases for the different situations:
-# Each case{ct_n}_n has case type case_type{ct_n} where ct_n is the case type number
-# case1_1 is in dc1 (dc1 configured with col_set_dc1)
-# case2_1 is in dc2 (dc2 configured with col_set_dc2)
-# case3_1 is in dc1 and dc2 (dc1 and dc2 are configured with partially overlapping col_sets col_set_dc1 and col_set_dc2)
-# case4_1 is in dc3
-# case5_1 is in dc4 (negative control: dc4 not in any policy)
-# case6_1 is in dc1 (negative control: case_type6 not in any case_type_set)
+For the edge cases related to access to operational data, we need to set up specific combinations of:
+- organization access policies (org_access)
+   case type (ct) of case is in the case type set of the org access policy yes/no
+   data collection (dc) of case is in the data collection set of the org access policy yes/no
+   column (col) of case is in the column set of the org access policy yes/no
+        for this we will create 2 column sets, with partially overlapping columns
+   so this gives us 8 combinations for org access policies
+   but they can be simplified to 5 combinations by only including the org access policies with the following combinations of case type set, data collection set and column set:
+   dc in set:
+     ct in set:
+       1. col in set (partial colset with col1 and col2)
+       2. col in another set (partial colset with col2 and col3)
+     3. ct not in set (rest irrelevant, because no access to case if ct not in set)
+   4. dc not in set: (rest irrelevant, because no access to case if dc not in set)
+   5. multi-dc: broad policy covering multiple case types and multiple data collections
+- user access policies (user_access)
+   comparable combinations as org access policies
+   dc in set:
+     ct in set:
+       For the columns access
+       1. col in set (partial colset with col1 and col2)
+       2. col in another set (partial colset with col2 and col3)
+     3. ct not in set (rest irrelevant, because no access to case if ct not in set)
+   4. dc not in set: (rest irrelevant, because no access to case if dc not in set)
+   5. multi-dc: broad policy covering multiple case types and multiple data collections
+we need to combine the 5 org access policy combinations with the 5 user access policy combinations,
+which gives us 25 combinations
+For each of the 25 combinations, we would use the same single case when we
+assume a case belonging to a single data collection
+BUT we also want to test a case being in 2 data collections
+and each data collection should have the above 25 combinations of org access and user access policies represented
 
-# to test the negative case of not having access to a case, we can use a case that is in a data collection that is not in any of the org access policies or user access policies
-# case 5 is in dc4, and dc4 is not in any of the org access policies or user access policies
-# we also need a case that has a case type that is not in any of the org access policies or user access policies
-# case 6 has a case type that is not in any of the org access policies or user access policies
+and we need 4 data collections and 6 cases for the different situations:
+Each case{ct_n}_n has case type case_type{ct_n} where ct_n is the case type number
+case1_1 is in dc1 (dc1 configured with col_set_dc1)
+case2_1 is in dc2 (dc2 configured with col_set_dc2)
+case3_1 is in dc1 and dc2 (dc1 and dc2 are configured with partially overlapping col_sets col_set_dc1 and col_set_dc2)
+case4_1 is in dc3
+case5_1 is in dc4 (negative control: dc4 not in any policy)
+case6_1 is in dc1 (negative control: case_type6 not in any case_type_set)
 
-# Asssumptions:
-# 1) If a case is in 2 data collections and through dc1 it has access to the partial colset
-# and through dc2 it has access to another partial colset,
-# then the user should have access to the union of the colsets for this case.
-# 2) The user only has access to the cases and cols that are in the intersection of the org access policies and user access policies,
-# so if either the org access policy or the user access policy does not include the case type, data collection or column,
-# then the user should not have access to the case / column.
+to test the negative case of not having access to a case, we can use a case that is in a data collection that is not in any of the org access policies or user access policies
+case 5 is in dc4, and dc4 is not in any of the org access policies or user access policies
+we also need a case that has a case type that is not in any of the org access policies or user access policies
+case 6 has a case type that is not in any of the org access policies or user access policies
 
-# We need the following capabilities in the casedb test client:
-#
-# - Create cases with specific columns (we now added all cols to the setup)
-# - Create cases in specific data collections
-# - Read cols from the json in the content field of a case
+Asssumptions:
+1) If a case is in 2 data collections and through dc1 it has access to the partial colset
+and through dc2 it has access to another partial colset,
+then the user should have access to the union of the colsets for this case.
+2) The user only has access to the cases and cols that are in the intersection of the org access policies and user access policies,
+so if either the org access policy or the user access policy does not include the case type, data collection or column,
+then the user should not have access to the case / column.
 
-# For testing:
-# For each edge case, we need to make assertions for both the cases and the columns in a case
+We need the following capabilities in the casedb test client:
 
-# ---------------------------------------------------------------------------
-# Design notes
-# ---------------------------------------------------------------------------
-# Policy structure: (case_type_set, data_collection, col_set)
-# A policy grants access to cases whose case_type is in case_type_set AND that
-# belong to data_collection, with cols restricted to col_set.
-#
-# OrganizationAccessCasePolicy and UserAccessCasePolicy are each unique per
-# (org/user, data_collection) — so each combo may have AT MOST ONE triple per dc.
-# Where a dc contains multiple case_types (dc1: ct1+ct3, dc2: ct2+ct3), the policy
-# uses a multi-ct case_type_set (case_type_set_dc1, case_type_set_dc2).
-# TODO LSP-2883: can a data_collection have cases of multiple case types?
-#
-# Case access requires BOTH org AND user to have a matching (ct_set, dc) triple.
-# Accessible cols for a case = union over all accessible dcs of:
-#   (org col_set for (ct, dc)) ∩ (user col_set for (ct, dc))
-# filtered to cols whose embedded case_type matches the case.
-#
-# Share policies are NOT modelled — operational data access and col access are
-# determined exclusively by access policies.
-#
-# Active cases and their data collections:
-#   case1_1: case_type1, in dc1
-#   case2_1: case_type2, in dc2
-#   case3_1: case_type3, in dc1 AND dc2  (tests union of col access across dcs)
-#   case4_1: case_type4, in dc3
-#
-# Negative controls (never accessible):
-#   case5_1: case_type5, in dc4    (dc not covered by any policy)
-#   case6_1: case_type6, in dc1    (case_type not in any case_type_set)
-#
-# Total combinations: 5 org_access × 5 user_access = 25
+- Create cases with specific columns (we now added all cols to the setup)
+- Create cases in specific data collections
+- Read cols from the json in the content field of a case
+
+For testing:
+For each edge case, we need to make assertions for both the cases and the columns in a case
+
+---------------------------------------------------------------------------
+Design notes
+---------------------------------------------------------------------------
+Policy structure: (case_type_set, data_collection, col_set)
+A policy grants access to cases whose case_type is in case_type_set AND that
+belong to data_collection, with cols restricted to col_set.
+
+OrganizationAccessCasePolicy and UserAccessCasePolicy are each unique per
+(org/user, data_collection) — so each combo may have AT MOST ONE triple per dc.
+Where a dc contains multiple case_types (dc1: ct1+ct3, dc2: ct2+ct3), the policy
+uses a multi-ct case_type_set (case_type_set_dc1, case_type_set_dc2).
+TODO: LSP-2883: can a data_collection have cases of multiple case types?
+
+Case access requires BOTH org AND user to have a matching (ct_set, dc) triple.
+Accessible cols for a case = union over all accessible dcs of:
+  (org col_set for (ct, dc)) ∩ (user col_set for (ct, dc))
+filtered to cols whose embedded case_type matches the case.
+
+Share policies are NOT modelled — operational data access and col access are
+determined exclusively by access policies.
+
+Active cases and their data collections:
+  case1_1: case_type1, in dc1
+  case2_1: case_type2, in dc2
+  case3_1: case_type3, in dc1 AND dc2  (tests union of col access across dcs)
+  case4_1: case_type4, in dc3
+
+Negative controls (never accessible):
+  case5_1: case_type5, in dc4    (dc not covered by any policy)
+  case6_1: case_type6, in dc1    (case_type not in any case_type_set)
+
+Total combinations: 5 org_access × 5 user_access = 25
+"""
 
 import re
 from dataclasses import dataclass
