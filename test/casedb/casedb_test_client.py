@@ -254,9 +254,6 @@ class CasedbTestClient(TestClient):
         code: str,
         concept_set_type: enum.ConceptSetType,
         concepts: set[str | model.Concept] | None = None,
-        regex: str | None = None,
-        schema_definition: str | None = None,
-        schema_uri: str | None = None,
         set_dummy_concepts: bool = False,
     ) -> model.ConceptSet:
         user: model.User = self._get_obj(
@@ -270,9 +267,6 @@ class CasedbTestClient(TestClient):
                     code=code,
                     name=code,
                     type=concept_set_type,
-                    regex=regex,
-                    schema_definition=schema_definition,
-                    schema_uri=schema_uri,
                 ),
             )
         )
@@ -371,7 +365,7 @@ class CasedbTestClient(TestClient):
         user_or_str: str | model.User,
         name: str,
         seqdb_seq_distance_protocol_id: UUID | None = None,
-        seqdb_seq_distance_protocol_type: seqdb_enum.SeqDistanceProtocolType = seqdb_enum.SeqDistanceProtocolType.KMER_EUCLIDEAN,
+        seqdb_seq_distance_type: seqdb_enum.SeqDistanceType = seqdb_enum.SeqDistanceType.KMER_EUCLIDEAN,
         min_scale_unit: float = 1,
     ) -> model.GeneticDistanceProtocol:
         user: model.User = self._get_obj(
@@ -382,20 +376,20 @@ class CasedbTestClient(TestClient):
             if not seqdb_seq_distance_protocol_id
             else seqdb_seq_distance_protocol_id
         )
-        genetic_distance_protocol = self.handle(
+        protocol = self.handle(
             command.GeneticDistanceProtocolCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.GeneticDistanceProtocol(
                     name=name,
                     seqdb_seq_distance_protocol_id=seqdb_seq_distance_protocol_id,
-                    seqdb_seq_distance_protocol_type=seqdb_seq_distance_protocol_type,
-                    min_scale_unit=min_scale_unit,
+                    seqdb_seq_distance_type=seqdb_seq_distance_type,
                     seqdb_is_integer_distance=True,
+                    min_scale_unit=min_scale_unit,
                 ),
             )
         )
-        return self._set_obj(genetic_distance_protocol)  # type: ignore[return-value]
+        return self._set_obj(protocol)  # type: ignore[return-value]
 
     def create_ref_dim(
         self,
@@ -429,6 +423,9 @@ class CasedbTestClient(TestClient):
         concept_set: str | model.ConceptSet | None = None,
         region_set: str | model.RegionSet | None = None,
         genetic_distance_protocol: str | model.GeneticDistanceProtocol | None = None,
+        regex: str | None = None,
+        schema_definition: str | None = None,
+        schema_uri: str | None = None,
         set_dummy_ref_dim: bool = False,
         set_dummy_concept_set: bool = False,
         set_dummy_region_set: bool = False,
@@ -442,9 +439,14 @@ class CasedbTestClient(TestClient):
             raise ValueError(f"Invalid code {code}")
         ref_dim = "ref_dim" + m.group(2)
         rank = int(m.group(3))
-        ref_dim_id: UUID = (
-            self.generate_id() if set_dummy_ref_dim else self._get_obj(model.RefDim, ref_dim).id  # type: ignore[union-attr]
-        )
+        if set_dummy_ref_dim:
+            ref_dim_id = self.generate_id()
+        else:
+            ref_dim_obj: model.RefDim = self._get_obj(  # type: ignore[assignment]
+                model.RefDim, ref_dim
+            )
+            assert ref_dim_obj.id is not None
+            ref_dim_id = ref_dim_obj.id
         concept_set_id: UUID | None = (
             self.generate_id()
             if set_dummy_concept_set
@@ -488,6 +490,9 @@ class CasedbTestClient(TestClient):
                     concept_set_id=concept_set_id,
                     region_set_id=region_set_id,
                     genetic_distance_protocol_id=genetic_distance_protocol_id,
+                    regex=regex,
+                    schema_definition=schema_definition,
+                    schema_uri=schema_uri,
                 ),
             )
         )
@@ -1266,6 +1271,7 @@ class CasedbTestClient(TestClient):
         self,
         user_or_str: str | model.User,
         name: str | model.CaseSetCategory,
+        rank: int | None = 0,
     ) -> model.CaseSetCategory:
         user: model.User = self._get_obj(
             model.User, user_or_str
@@ -1274,7 +1280,7 @@ class CasedbTestClient(TestClient):
             command.CaseSetCategoryCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=model.CaseSetCategory(name=name, description=name),
+                objs=model.CaseSetCategory(name=name, description=name, rank=rank),
             )
         )
         return self._set_obj(case_set_category)  # type: ignore[return-value]
@@ -1283,6 +1289,7 @@ class CasedbTestClient(TestClient):
         self,
         user_or_str: str | model.User,
         name: str | model.CaseSetStatus,
+        rank: int | None = 0,
     ) -> model.CaseSetStatus:
         user: model.User = self._get_obj(
             model.User, user_or_str
@@ -1291,7 +1298,7 @@ class CasedbTestClient(TestClient):
             command.CaseSetStatusCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=model.CaseSetStatus(name=name, description=name),
+                objs=model.CaseSetStatus(name=name, description=name, rank=rank),
             )
         )
         return self._set_obj(case_set_status)  # type: ignore[return-value]

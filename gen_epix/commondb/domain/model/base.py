@@ -1,4 +1,5 @@
 import datetime
+from enum import IntEnum
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -87,3 +88,27 @@ class BaseEtlResult(BaseModel):
     def has_log_code(self, code: str) -> bool:
         """Return True if any log item carries the given code."""
         return any(log.code == code for log in self.logs)
+
+
+def validate_int_enum_value(
+    enum_class: type[IntEnum], value: int | str | float | IntEnum
+) -> IntEnum:
+    """Validate that the given value is a valid member of the given IntEnum class."""
+    if isinstance(value, enum_class):
+        return value
+    if isinstance(value, str):
+        return enum_class[value]
+    if isinstance(value, int):
+        return enum_class(value)
+    if isinstance(value, float):
+        return enum_class(int(value))
+    raise ValueError(f"Unsupported type for {enum_class.__name__} field: {type(value)}")
+
+
+def validate_int_enum_value_or_none(
+    enum_class: type[IntEnum], value: int | str | float | IntEnum | None
+) -> IntEnum | None:
+    """Validate that the given value is a valid member of the given IntEnum class or None."""
+    if value is None:
+        return None
+    return validate_int_enum_value(enum_class, value)

@@ -117,7 +117,8 @@ def _apply_max_results_limit(
     case_type = case_types[0]
     # Apply max results limit
     is_max_results_exceeded = False
-    max_n_cases = case_type.read_max_n_cases
+    _raw = case_type.props.read_max_n_cases
+    max_n_cases = _raw if _raw > 0 else self._default_props.read_max_n_cases
     if len(cases) > max_n_cases:
         is_max_results_exceeded = True
         cases = cases[:max_n_cases]
@@ -211,7 +212,8 @@ def case_service_retrieve_cases_by_id(
         case_type = case_types[0]
 
         # Apply max results limit
-        max_n_cases = case_type.read_max_n_cases
+        _raw = case_type.props.read_max_n_cases
+        max_n_cases = _raw if _raw > 0 else self._default_props.read_max_n_cases
         if max_n_cases > 0 and len(cases) > max_n_cases:
             cases = cases[:max_n_cases]
 

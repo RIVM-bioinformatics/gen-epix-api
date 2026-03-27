@@ -641,13 +641,13 @@ class Run:
             ]
         )
 
-    def test_seqdb_unit_upload(self) -> None:
+    def test_seqdb_unit_domain(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/seqdb/unit/upload",
+                "test/seqdb/unit/domain",
             ]
         )
 
@@ -658,6 +658,16 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/seqdb/unit/models_for_upload",
+            ]
+        )
+
+    def test_seqdb_unit_upload(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/seqdb/unit/upload",
             ]
         )
 

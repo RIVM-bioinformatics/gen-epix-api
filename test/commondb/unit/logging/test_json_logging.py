@@ -8,7 +8,6 @@ import pytest
 
 from gen_epix.commondb.config.json_logging import JsonFormatter, UvicornAccessLogFilter
 
-
 _TRUNCATED_SUFFIX = "\u2026[truncated]"
 
 

@@ -27,7 +27,7 @@ class BaseSeqRepository(BaseRepository):
     def retrieve_similar_profiles(
         self,
         uow: BaseUnitOfWork,
-        seq_distance_protocol_id: UUID,
+        protocol_id: UUID,
         profile_ids: list[UUID],
         max_distance: float,
         **kwargs: Any,
@@ -38,8 +38,9 @@ class BaseSeqRepository(BaseRepository):
     def _get_matching_profiles_for_distance_dict_format(
         max_distance: float,
         matching_profile_ids: set[UUID],
-        distances: str,
         distance_format: enum.SeqDistanceFormat,
+        distances: str,
+        distances2: str | None = None,
     ) -> None:
         if distance_format == enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP:
             distance_dict = json.loads(distances)
@@ -51,6 +52,6 @@ class BaseSeqRepository(BaseRepository):
     def iter_seq_distances(
         self,
         uow: BaseUnitOfWork,
-        seq_distance_protocol_id: UUID,
+        protocol_id: UUID,
     ) -> Iterable[model.SeqDistance]:
         raise NotImplementedError()

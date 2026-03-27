@@ -73,10 +73,9 @@ from gen_epix.casedb.services.case.retrieve_complete_case_type import (
     case_service_retrieve_complete_case_type,
 )
 from gen_epix.casedb.services.case.retrieve_seq import (
-    case_service_retrieve_assembly_protocols,
     case_service_retrieve_genetic_sequence_fasta_by_case,
     case_service_retrieve_phylogenetic_tree,
-    case_service_retrieve_sequencing_protocols,
+    case_service_retrieve_protocols,
 )
 from gen_epix.casedb.services.case.retrieve_similar_cases import (
     case_service_retrieve_similar_cases,
@@ -246,16 +245,10 @@ class CaseService(BaseCaseService):
         """
         return case_service_retrieve_genetic_sequence_fasta_by_case(self, cmd)
 
-    def retrieve_sequencing_protocols(
-        self,
-        cmd: command.RetrieveSequencingProtocolsCommand,
-    ) -> list[seqdb_model.SequencingProtocol]:
-        return case_service_retrieve_sequencing_protocols(self, cmd)
-
-    def retrieve_assembly_protocols(
-        self, cmd: command.RetrieveAssemblyProtocolsCommand
-    ) -> list[seqdb_model.AssemblyProtocol]:
-        return case_service_retrieve_assembly_protocols(self, cmd)
+    def retrieve_protocols(
+        self, cmd: command.RetrieveProtocolsCommand
+    ) -> list[seqdb_model.Protocol]:
+        return case_service_retrieve_protocols(self, cmd)
 
     def _read_association_with_valid_ids(
         self,
@@ -378,7 +371,9 @@ class CaseService(BaseCaseService):
         case_set_data_collections: dict[UUID, set[UUID]],
         has_access: dict[UUID, set[UUID]],
     ) -> bool:
-        has_access_to_case_set = self._has_case_set_access(case_set, case_set_data_collections, has_access)
+        has_access_to_case_set = self._has_case_set_access(
+            case_set, case_set_data_collections, has_access
+        )
         if case_set_ids:
             if not has_access_to_case_set:
                 if on_invalid_case_set_id == "raise":
@@ -660,9 +655,13 @@ class CaseService(BaseCaseService):
             pass
         elif not is_full_access:
             if right == enum.CaseRight.READ_CASE:
-                max_n_cases = case_type.read_max_n_cases
+                _raw = case_type.props.read_max_n_cases
+                max_n_cases = _raw if _raw > 0 else self._default_props.read_max_n_cases
             elif right == enum.CaseRight.WRITE_CASE:
-                max_n_cases = case_type.update_max_n_cases
+                _raw = case_type.props.update_max_n_cases
+                max_n_cases = (
+                    _raw if _raw > 0 else self._default_props.update_max_n_cases
+                )
             else:
                 raise NotImplementedError(f"Unsupported case right: {right}")
             case_date_col_mappers = case_service_get_case_date_col_mappers(
@@ -1109,7 +1108,7 @@ class CaseService(BaseCaseService):
         | bool
         | None
     ):
-        """Handle CRUD operations for GeneticDistanceProtocol entities."""
+        """Handle CRUD operations for Protocol entities."""
         return case_service_crud_genetic_distance_protocol(self, cmd)
 
     def crud_tree_algorithm_class(
