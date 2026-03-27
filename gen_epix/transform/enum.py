@@ -17,6 +17,7 @@ class TimeUnitTransformStrategy(Enum):
 class NoMatchStrategy(Enum):
     RAISE = "RAISE"
     SET_NONE = "SET_NONE"
+    SET_DEFAULT = "SET_DEFAULT"
 
 
 class TransformType(Enum):

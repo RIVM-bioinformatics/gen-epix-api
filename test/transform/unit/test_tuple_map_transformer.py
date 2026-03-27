@@ -1,10 +1,33 @@
 """
 Unit tests for TupleMapTransformer.
+
+# Review 2989 feature changes
+
+SUPPORT FOR DEFAULT VALUES:
+
+- Add support for default values when no mapping is found, and test this.
+- they should be part of the transformer configuration
+- There should be as many default values as there are target fields, and they should be applied to the target fields when no mapping is found.
+- The number of default values should be validated against the number of target fields, and an error should be raised if they do not match. This should be tested as well.
+- When adding a default value option, it should not throw an error if the mapping is missing and no_match_strategy = NoMatchStrategy.SET_DEFAULT,
+ but instead return the default value. This should be tested.
+
+- We should add a no_match_strategy: NoMatchStrategy = NoMatchStrategy.RAISE
+
+
+CASE INSENSITIVITY:
+- Make the matching case insensitive, and add tests for this behavior.
+- The default for case sensitivity should be configurable, and this should be tested as well.
+- The default should be case sensitive : Bool = True
+- When no default is provided and no mapping is found, it should raise an error as it currently does. This should be tested as well.
+
+
 """
 
 import pytest
 
 from gen_epix.transform.adapter import ObjectAdapter
+from gen_epix.transform.enum import NoMatchStrategy
 from gen_epix.transform.transformers.tuple_map import TupleMapTransformer
 
 
@@ -408,4 +431,85 @@ class TestTupleMapTransformerValidation:
                 ],
                 row_src_fields=["src"],
                 row_tgt_fields=["tgt"],
+            )
+
+
+@pytest.mark.scenario_ids("TC-MAIN-12-01")
+class TestTupleMapTransformerDefaultValues:
+    """Test cases for TupleMapTransformer default values (no_match_strategy=SET_DEFAULT)."""
+
+    def test_set_default_applies_defaults_on_no_match(self) -> None:
+        """Test that default values are applied when no mapping is found."""
+        transformer = TupleMapTransformer(
+            map_rows=[{"src": "A", "tgt": 1}],
+            row_src_fields=["src"],
+            row_tgt_fields=["tgt"],
+            no_match_strategy=NoMatchStrategy.SET_DEFAULT,
+            default_values=[99],
+        )
+
+        adapter = ObjectAdapter({"src": "UNKNOWN"})
+        result = transformer.transform(adapter)
+        assert result.get("tgt") == 99
+
+    def test_set_default_does_not_affect_matched_rows(self) -> None:
+        """Test that a matched row still uses the mapping, not defaults."""
+        transformer = TupleMapTransformer(
+            map_rows=[{"src": "A", "tgt": 1}],
+            row_src_fields=["src"],
+            row_tgt_fields=["tgt"],
+            no_match_strategy=NoMatchStrategy.SET_DEFAULT,
+            default_values=[99],
+        )
+
+        adapter = ObjectAdapter({"src": "A"})
+        result = transformer.transform(adapter)
+        assert result.get("tgt") == 1
+
+    def test_set_default_multiple_target_fields(self) -> None:
+        """Test default values with multiple target fields."""
+        transformer = TupleMapTransformer(
+            map_rows=[{"src": "A", "tgt_a": "alpha", "tgt_b": 100}],
+            row_src_fields=["src"],
+            row_tgt_fields=["tgt_a", "tgt_b"],
+            no_match_strategy=NoMatchStrategy.SET_DEFAULT,
+            default_values=["default_name", 0],
+        )
+
+        adapter = ObjectAdapter({"src": "UNKNOWN"})
+        result = transformer.transform(adapter)
+        assert result.get("tgt_a") == "default_name"
+        assert result.get("tgt_b") == 0
+
+    def test_set_default_wrong_length_raises_at_init(self) -> None:
+        """Test that default_values with wrong length raises at init."""
+        with pytest.raises(ValueError, match="default_values length"):
+            TupleMapTransformer(
+                map_rows=[{"src": "A", "tgt": 1}],
+                row_src_fields=["src"],
+                row_tgt_fields=["tgt"],
+                no_match_strategy=NoMatchStrategy.SET_DEFAULT,
+                default_values=[1, 2],  # too many
+            )
+
+    def test_set_default_without_default_values_raises_at_init(self) -> None:
+        """Test that SET_DEFAULT without default_values raises at init."""
+        with pytest.raises(ValueError, match="default_values must be provided"):
+            TupleMapTransformer(
+                map_rows=[{"src": "A", "tgt": 1}],
+                row_src_fields=["src"],
+                row_tgt_fields=["tgt"],
+                no_match_strategy=NoMatchStrategy.SET_DEFAULT,
+            )
+
+    # REVIEW 2989: This check is not strictly necessary
+    # Ask end user if they want to allow default_values to be provided but ignored when no_match_strategy is not SET_DEFAULT
+    def test_default_values_without_set_default_raises_at_init(self) -> None:
+        """Test that providing default_values without SET_DEFAULT raises at init."""
+        with pytest.raises(ValueError, match="default_values can only be provided"):
+            TupleMapTransformer(
+                map_rows=[{"src": "A", "tgt": 1}],
+                row_src_fields=["src"],
+                row_tgt_fields=["tgt"],
+                default_values=[99],
             )
