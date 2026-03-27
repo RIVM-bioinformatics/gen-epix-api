@@ -343,10 +343,10 @@ erDiagram
         enum qc_result
         float qc_score
         Json qc_report
+        UUID protocol_id FK
         string code
         UUID sample_id FK
         UUID id PK
-        UUID protocol_id FK
         string fwd_uri
         string rev_uri
         UUID fwd_file_id FK
