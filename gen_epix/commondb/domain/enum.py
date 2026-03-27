@@ -1,4 +1,4 @@
-from enum import Enum, IntEnum
+from enum import Enum
 
 
 class Role(Enum):
@@ -56,15 +56,6 @@ class ServiceType(Enum):
     SYSTEM = "SYSTEM"
     RBAC = "RBAC"
     ABAC = "ABAC"
-
-
-class IdentifierType(IntEnum):
-    PERSON = 1
-    ORGANIZATION = 2
-    CASE = 3
-    SAMPLE = 4
-    CASE_SET = 5
-    GENETIC_SEQUENCE = 6
 
 
 class UploadAction(Enum):
