@@ -383,10 +383,6 @@ class CasedbTestClient(TestClient):
                     code=name,
                     seqdb_seq_distance_protocol_id=seqdb_seq_distance_protocol_id,
                     seqdb_seq_distance_type=seqdb_seq_distance_type,
-<<<<<<< HEAD
-                    seqdb_protocol_type=seqdb_enum.ProtocolType.SEQ_DISTANCE,
-=======
->>>>>>> 308323364935921da85b7fa99e87c3af4ae7f9f0
                     seqdb_is_integer_distance=True,
                     min_scale_unit=min_scale_unit,
                 ),
