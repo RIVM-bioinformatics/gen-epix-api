@@ -187,7 +187,7 @@ def case_service_retrieve_complete_case_type(
         )
         ref_dim_map: dict[UUID, model.RefDim] = {x.id: x for x in ref_dims}  # type: ignore[misc]
 
-        # Get genetic distance protocols
+        # Get protocols
         genetic_distance_protocols = self.app.handle(
             command.GeneticDistanceProtocolCrudCommand(
                 user=user,

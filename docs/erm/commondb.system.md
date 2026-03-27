@@ -6,10 +6,10 @@ Auto-generated.  Service type **SYSTEM** — 2 entities, relationships only.
 erDiagram
     %% commondb / SYSTEM (simplified)
 
-    Outage {
+    PackageMetadata {
     }
 
-    PackageMetadata {
+    Outage {
     }
 
 ```

@@ -9,6 +9,13 @@ erDiagram
     %% Relationships
     OrganizationIdentifierIssuerLink }o--|| Organization : "organization_id"
     OrganizationIdentifierIssuerLink }o--|| IdentifierIssuer : "identifier_issuer_id"
+<<<<<<< HEAD
+=======
+    UserInvitation }o--|| Organization : "organization_id"
+    UserInvitation }o--|| User : "invited_by_user_id"
+    Contact }o--|| Site : "site_id"
+    Site }o--|| Organization : "organization_id"
+>>>>>>> 308323364935921da85b7fa99e87c3af4ae7f9f0
     OrganizationSetMember }o--|| OrganizationSet : "organization_set_id"
     OrganizationSetMember }o--|| Organization : "organization_id"
     Contact }o--|| Site : "site_id"
@@ -16,6 +23,7 @@ erDiagram
     DataCollectionSetMember }o--|| DataCollectionSet : "data_collection_set_id"
     DataCollectionSetMember }o--|| DataCollection : "data_collection_id"
     User }o--|| Organization : "organization_id"
+<<<<<<< HEAD
     UserInvitation }o--|| Organization : "organization_id"
     UserInvitation }o--|| User : "invited_by_user_id"
 
@@ -27,9 +35,38 @@ erDiagram
     }
 
     OrganizationSetMember {
+=======
+
+    %% Entity definitions
+    IdentifierIssuer {
+        UUID id PK
+        string code
+        string name
+        string description
+    }
+
+    OrganizationIdentifierIssuerLink {
+>>>>>>> 308323364935921da85b7fa99e87c3af4ae7f9f0
         UUID id PK
         UUID organization_set_id FK
         UUID organization_id FK
+<<<<<<< HEAD
+=======
+        UUID identifier_issuer_id FK
+    }
+
+    UserInvitation {
+        UUID id PK
+        string key
+        string email
+        string name
+        string description
+        string token
+        timestamp expires_at
+        set[string] roles
+        UUID invited_by_user_id FK
+        UUID organization_id FK
+>>>>>>> 308323364935921da85b7fa99e87c3af4ae7f9f0
     }
 
     Contact {
@@ -40,12 +77,24 @@ erDiagram
         string phone
     }
 
+<<<<<<< HEAD
     Site {
         UUID id PK
+=======
+    DataCollectionSet {
+        UUID id PK
+        string name
+        string description
+    }
+
+    Site {
+        UUID id PK
+>>>>>>> 308323364935921da85b7fa99e87c3af4ae7f9f0
         UUID organization_id FK
         string name
     }
 
+<<<<<<< HEAD
     DataCollection {
         UUID id PK
         string name
@@ -57,12 +106,11 @@ erDiagram
         string code
         string name
         string description
-    }
-
-    DataCollectionSetMember {
+=======
+    OrganizationSetMember {
         UUID id PK
-        UUID data_collection_set_id FK
-        UUID data_collection_id FK
+        UUID organization_set_id FK
+        UUID organization_id FK
     }
 
     OrganizationSet {
@@ -71,12 +119,44 @@ erDiagram
         string description
     }
 
+    UserInvitationConstraints {
+        UUID id
+        set[string] roles
+        set[UUID] organization_ids
+    }
+
+    DataCollectionSetMember {
+        UUID id PK
+        UUID data_collection_set_id FK
+        UUID data_collection_id FK
+>>>>>>> 308323364935921da85b7fa99e87c3af4ae7f9f0
+    }
+
+    DataCollectionSetMember {
+        UUID id PK
+        UUID data_collection_set_id FK
+        UUID data_collection_id FK
+    }
+
+<<<<<<< HEAD
+    OrganizationSet {
+=======
+    DataCollection {
+>>>>>>> 308323364935921da85b7fa99e87c3af4ae7f9f0
+        UUID id PK
+        string name
+        string description
+    }
+
+<<<<<<< HEAD
     UserNameEmail {
         UUID id
         string name
         string email
     }
 
+=======
+>>>>>>> 308323364935921da85b7fa99e87c3af4ae7f9f0
     Organization {
         UUID id PK
         string code
@@ -84,6 +164,7 @@ erDiagram
         string description
     }
 
+<<<<<<< HEAD
     User {
         UUID id PK
         string key
@@ -103,6 +184,10 @@ erDiagram
 
     DataCollectionSet {
         UUID id PK
+=======
+    UserNameEmail {
+        UUID id
+>>>>>>> 308323364935921da85b7fa99e87c3af4ae7f9f0
         string name
         string description
     }

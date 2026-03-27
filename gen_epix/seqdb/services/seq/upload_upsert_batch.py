@@ -7,7 +7,7 @@ from gen_epix.seqdb.domain import command, model
 def _create_sample_refdata(
     self: BatchUploader,
     cmd: command.UploadSamplesCommand,
-    retval: model.SampleBatchUploadResult,
+    batch_result: model.SampleBatchUploadResult,
     uow: BaseUnitOfWork,
 ) -> bool:
     """
@@ -46,39 +46,18 @@ def _update_profile_distances(
     """
     success = True
     user = cmd.user if cmd.user else None
-    allele_profiles: list[model.AlleleProfileForUpload] = []
-    snp_profiles: list[model.SnpProfileForUpload] = []
-    mlva_profiles: list[model.MlvaProfileForUpload] = []
-    kmer_profiles: list[model.KmerProfileForUpload] = []
+    seq_profiles: list[model.SeqProfileForUpload] = []
 
     # Collect profiles with their assigned IDs from the upload result.
     # batch_result.samples is positionally aligned with cmd.sample_batch.samples.
     for sample_for_upload, sample_result in zip(
         cmd.sample_batch.samples, batch_result.samples
     ):
-        for allele_profile, allele_profile_result in zip(
-            sample_for_upload.allele_profiles or [], sample_result.allele_profiles or []
+        for seq_profile, seq_profile_result in zip(
+            sample_for_upload.seq_profiles or [], sample_result.seq_profiles or []
         ):
-            allele_profiles.append(
-                allele_profile.model_copy(update={"id": allele_profile_result.id})
-            )
-        for snp_profile, snp_profile_result in zip(
-            sample_for_upload.snp_profiles or [], sample_result.snp_profiles or []
-        ):
-            snp_profiles.append(
-                snp_profile.model_copy(update={"id": snp_profile_result.id})  # type: ignore[arg-type]
-            )
-        for mlva_profile, mlva_profile_result in zip(
-            sample_for_upload.mlva_profiles or [], sample_result.mlva_profiles or []
-        ):
-            mlva_profiles.append(
-                mlva_profile.model_copy(update={"id": mlva_profile_result.id})  # type: ignore[arg-type]
-            )
-        for kmer_profile, kmer_profile_result in zip(
-            sample_for_upload.kmer_profiles or [], sample_result.kmer_profiles or []
-        ):
-            kmer_profiles.append(
-                kmer_profile.model_copy(update={"id": kmer_profile_result.id})  # type: ignore[arg-type]
+            seq_profiles.append(
+                seq_profile.model_copy(update={"id": seq_profile_result.id})
             )
 
     calculate_seq_distance_result: list[model.CalculateSeqDistancesResult] = (
@@ -86,10 +65,7 @@ def _update_profile_distances(
             command.CalculateSeqDistancesForNewProfilesCommand(
                 user=user,
                 # TODO: the models current being passed here are ForUpload models rather than regular models. They should be converted first.
-                allele_profiles=allele_profiles if allele_profiles else None,  # type: ignore[arg-type]
-                snp_profiles=snp_profiles if snp_profiles else None,  # type: ignore[arg-type]
-                mlva_profiles=mlva_profiles if mlva_profiles else None,  # type: ignore[arg-type]
-                kmer_profiles=kmer_profiles if kmer_profiles else None,  # type: ignore[arg-type]
+                seq_profiles=seq_profiles,
             )
         )
     )

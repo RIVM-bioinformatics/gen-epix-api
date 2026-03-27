@@ -73,10 +73,9 @@ from gen_epix.casedb.services.case.retrieve_complete_case_type import (
     case_service_retrieve_complete_case_type,
 )
 from gen_epix.casedb.services.case.retrieve_seq import (
-    case_service_retrieve_assembly_protocols,
     case_service_retrieve_genetic_sequence_fasta_by_case,
     case_service_retrieve_phylogenetic_tree,
-    case_service_retrieve_sequencing_protocols,
+    case_service_retrieve_protocols,
 )
 from gen_epix.casedb.services.case.retrieve_similar_cases import (
     case_service_retrieve_similar_cases,
@@ -246,16 +245,10 @@ class CaseService(BaseCaseService):
         """
         return case_service_retrieve_genetic_sequence_fasta_by_case(self, cmd)
 
-    def retrieve_sequencing_protocols(
-        self,
-        cmd: command.RetrieveSequencingProtocolsCommand,
-    ) -> list[seqdb_model.SequencingProtocol]:
-        return case_service_retrieve_sequencing_protocols(self, cmd)
-
-    def retrieve_assembly_protocols(
-        self, cmd: command.RetrieveAssemblyProtocolsCommand
-    ) -> list[seqdb_model.AssemblyProtocol]:
-        return case_service_retrieve_assembly_protocols(self, cmd)
+    def retrieve_protocols(
+        self, cmd: command.RetrieveProtocolsCommand
+    ) -> list[seqdb_model.Protocol]:
+        return case_service_retrieve_protocols(self, cmd)
 
     def _read_association_with_valid_ids(
         self,
@@ -1113,7 +1106,7 @@ class CaseService(BaseCaseService):
         | bool
         | None
     ):
-        """Handle CRUD operations for GeneticDistanceProtocol entities."""
+        """Handle CRUD operations for Protocol entities."""
         return case_service_crud_genetic_distance_protocol(self, cmd)
 
     def crud_tree_algorithm_class(

@@ -15,7 +15,7 @@ from pydantic import (
 from gen_epix.casedb.domain import enum, exc
 from gen_epix.casedb.domain.model.geo import RegionSet
 from gen_epix.casedb.domain.model.ontology import ConceptSet, Disease, EtiologicalAgent
-from gen_epix.commondb.domain.model import Model
+from gen_epix.commondb.domain.model import Model, validate_int_enum_value
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain.literal import NCBI_TAXID_PATTERN
@@ -33,8 +33,8 @@ class GeneticDistanceProtocol(Model):
     seqdb_seq_distance_protocol_id: UUID = Field(
         description="The ID of the protocol in seqdb"
     )
-    seqdb_seq_distance_protocol_type: seqdb_enum.SeqDistanceProtocolType = Field(
-        description="The type of the genetic distance protocol in seqdb"
+    seqdb_seq_distance_type: seqdb_enum.SeqDistanceType = Field(
+        description="The type of the genetic distance in seqdb"
     )
     name: str = Field(description="The name of the protocol", max_length=255)
     description: str | None = Field(
@@ -49,19 +49,17 @@ class GeneticDistanceProtocol(Model):
     )
     min_scale_unit: float = Field(description="The minimum unit to be shown in a scale")
 
-    @field_validator("seqdb_seq_distance_protocol_type", mode="before")
+    @field_validator("seqdb_seq_distance_type", mode="before")
     @classmethod
-    def _validate_seqdb_seq_distance_protocol_type(
+    def _validate_seqdb_seq_distance_type(
         cls, value: Any
-    ) -> seqdb_enum.SeqDistanceProtocolType:
-        if isinstance(value, str):
-            return seqdb_enum.SeqDistanceProtocolType(value)
-        return value
+    ) -> seqdb_enum.SeqDistanceType:
+        return validate_int_enum_value(seqdb_enum.SeqDistanceType, value)  # type: ignore[return-value]
 
-    @field_serializer("seqdb_seq_distance_protocol_type", mode="plain")
-    def _serialize_seqdb_seq_distance_protocol_type(
-        self, value: seqdb_enum.SeqDistanceProtocolType
-    ) -> str:
+    @field_serializer("seqdb_seq_distance_type", mode="plain")
+    def _serialize_seqdb_seq_distance_type(
+        self, value: seqdb_enum.SeqDistanceType
+    ) -> int:
         return value.value
 
 
@@ -280,6 +278,27 @@ class RefCol(Model):
     description: str | None = Field(
         default=None, description="Description of the column.", max_length=1000
     )
+    regex: str | None = Field(
+        default=None,
+        description=(
+            "The regular expression describing the concept set,"
+            " in case of type REGULAR_EXPRESSION"
+        ),
+    )
+    schema_definition: str | None = Field(
+        default=None,
+        description=(
+            "The definition of the schema describing the concept set,"
+            " in case of type CONTEXT_FREE_GRAMMAR_XXX"
+        ),
+    )
+    schema_uri: str | None = Field(
+        default=None,
+        description=(
+            "The URI to the schema describing the concept set,"
+            " in case of type CONTEXT_FREE_GRAMMAR_XXX"
+        ),
+    )
     props: dict[str, Any] = Field(
         default_factory=dict, description="Additional properties of the column."
     )
@@ -315,6 +334,18 @@ class RefCol(Model):
                 raise exc.InvalidArgumentsError(
                     f"No genetic_distance_protocol_id provided for col_type {self.col_type.value}"
                 )
+        if self.col_type in enum.ColTypeSet.HAS_REGEX.value:
+            if self.regex is None:
+                raise AssertionError(f"Type {self.col_type.value} requires regex")
+        if self.col_type in enum.ColTypeSet.HAS_SCHEMA.value:
+            if self.schema_definition is None and self.schema_uri is None:
+                raise AssertionError(
+                    f"Type {self.col_type.value} requires schema_definition or schema_uri"
+                )
+        if self.schema_definition is not None and self.schema_uri is not None:
+            raise AssertionError(
+                "Only one of schema_definition or schema_uri can be set"
+            )
         return self
 
     @field_serializer("col_type", mode="plain")
@@ -677,6 +708,10 @@ class CaseSetCategory(Model):
     description: str | None = Field(
         description="The description of the CaseSetCategory", max_length=1000
     )
+    rank: int = Field(
+        default=0,
+        description="The rank of the CaseSetCategory, for (partial) ordering.",
+    )
 
 
 class CaseSetStatus(Model):
@@ -691,6 +726,10 @@ class CaseSetStatus(Model):
     )
     description: str | None = Field(
         description="The description of the CaseSetStatus", max_length=1000
+    )
+    rank: int = Field(
+        default=0,
+        description="The rank of the CaseSetStatus, for (partial) ordering.",
     )
 
 

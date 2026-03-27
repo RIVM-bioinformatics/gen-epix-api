@@ -63,7 +63,7 @@ class CompleteCaseType(CaseType):
         description="The Cols per Dim, ordered by (rank, code). Calculated during model validation.",
     )
     genetic_distance_protocols: dict[UUID, GeneticDistanceProtocol] = Field(
-        description="The genetic distance protocols used by the CaseType"
+        description="Genetic distance protocols used by the CaseType"
     )
     tree_algorithms: dict[enum.TreeAlgorithmType, TreeAlgorithm] = Field(
         description="The tree algorithms used by the CaseType"

@@ -132,12 +132,8 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         f(command.CreateFileForReadSetCommand, self.create_file_for_read_set)
         f(command.CreateFileForSeqCommand, self.create_file_for_seq)
         f(
-            command.RetrieveSequencingProtocolsCommand,
-            self.retrieve_sequencing_protocols,
-        )
-        f(
-            command.RetrieveAssemblyProtocolsCommand,
-            self.retrieve_assembly_protocols,
+            command.RetrieveProtocolsCommand,
+            self.retrieve_protocols,
         )
 
     @abc.abstractmethod
@@ -380,7 +376,7 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         | bool
         | None
     ):
-        """Handle CRUD operations for GeneticDistanceProtocol entities."""
+        """Handle CRUD operations for Protocol entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -494,15 +490,8 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def retrieve_sequencing_protocols(
+    def retrieve_protocols(
         self,
-        cmd: command.RetrieveSequencingProtocolsCommand,
-    ) -> list[seqdb_model.SequencingProtocol]:
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def retrieve_assembly_protocols(
-        self,
-        cmd: command.RetrieveAssemblyProtocolsCommand,
-    ) -> list[seqdb_model.AssemblyProtocol]:
+        cmd: command.RetrieveProtocolsCommand,
+    ) -> list[seqdb_model.Protocol]:
         raise NotImplementedError()

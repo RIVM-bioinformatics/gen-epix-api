@@ -184,9 +184,6 @@ erDiagram
         string code
         string name
         enum type
-        string regex
-        string schema_definition
-        string schema_uri
         string description
     }
 
@@ -281,7 +278,7 @@ erDiagram
     GeneticDistanceProtocol {
         UUID id PK
         UUID seqdb_seq_distance_protocol_id
-        enum seqdb_seq_distance_protocol_type
+        enum seqdb_seq_distance_type
         string name
         string description
         float seqdb_max_stored_distance
@@ -312,6 +309,9 @@ erDiagram
         UUID region_set_id FK
         UUID genetic_distance_protocol_id FK
         string description
+        string regex
+        string schema_definition
+        string schema_uri
         dict[string, Any] props
     }
 
@@ -413,12 +413,14 @@ erDiagram
         UUID id PK
         string name
         string description
+        int rank
     }
 
     CaseSetStatus {
         UUID id PK
         string name
         string description
+        int rank
     }
 
     CaseSet {
@@ -426,6 +428,7 @@ erDiagram
         UUID case_type_id FK
         UUID created_in_data_collection_id FK
         string name
+        string code
         string description
         timestamp created_at
         UUID case_set_category_id FK
