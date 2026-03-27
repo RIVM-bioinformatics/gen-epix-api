@@ -444,9 +444,20 @@ class CaseType(Model):
         description="Operational settings for this CaseType, stored as JSON.",
     )
 
+    @field_validator("props", mode="before")
+    @classmethod
+    def _validate_props(cls, value: Any) -> CaseTypeProps:
+        if isinstance(value, CaseTypeProps):
+            return value
+        if isinstance(value, dict):
+            return CaseTypeProps(**value)
+        if isinstance(value, str):
+            return CaseTypeProps(**json.loads(value))
+        raise ValueError("Invalid type for props field")
+
     @field_serializer("props", mode="plain")
-    def _serialize_props(self, value: CaseTypeProps) -> dict[str, Any]:
-        return value.model_dump()
+    def _serialize_props(self, value: CaseTypeProps) -> str:
+        return value.model_dump_json()
 
 
 class CaseTypeSetCategory(Model):
