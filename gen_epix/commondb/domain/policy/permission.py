@@ -106,8 +106,6 @@ class RoleGenerator:
             (command.RetrieveOwnPermissionsCommand, PermissionTypeSet.E),
             # rbac
             (command.RetrieveSubRolesCommand, PermissionTypeSet.E),
-            # system
-            (command.RetrieveOutagesCommand, PermissionTypeSet.E),
         },
     }
 
