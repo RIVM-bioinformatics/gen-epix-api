@@ -56,7 +56,7 @@ def create_seq_endpoints(
     registered_user_dependency = app_impl.registered_user_dependency
 
     @router.post(
-        "/retrieve/phylogenetic_tree",
+        "/calculate/phylogenetic_tree",
         operation_id="retrieve__phylogenetic_tree",
         name="RetrievePhylogeneticTree",
         description=command.CalculatePhylogeneticTreeCommand.__doc__,

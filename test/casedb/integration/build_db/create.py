@@ -1168,7 +1168,7 @@ class TestCreate:
                     f"ref_col{index}_99",
                     col_type=enum.ColType.GENETIC_DISTANCE,
                     genetic_distance_protocol="genetic_distance_protocol11",
-                    set_dummy_protocol=True,
+                    set_dummy_genetic_distance_protocol=True,
                 )
         # Etiology.disease does not exist
         if not SKIP_CREATE_DATA:

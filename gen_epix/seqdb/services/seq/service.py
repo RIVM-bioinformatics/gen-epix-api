@@ -17,7 +17,6 @@ from gen_epix.seqdb.services.seq.crud_ast_measurement import (
 from gen_epix.seqdb.services.seq.crud_ast_prediction import (
     seq_service_crud_ast_prediction,
 )
-
 from gen_epix.seqdb.services.seq.crud_locus import seq_service_crud_locus
 from gen_epix.seqdb.services.seq.crud_locus_code_map import (
     seq_service_crud_locus_code_map,
@@ -85,7 +84,7 @@ class SeqService(BaseSeqService):
     ) -> model.SampleBatchUploadResult:
         return seq_service_upload_samples(self, cmd)
 
-    def retrieve_phylogenetic_tree(
+    def calculate_phylogenetic_tree(
         self, cmd: command.CalculatePhylogeneticTreeCommand
     ) -> model.PhylogeneticTree | None:
         return seq_service_calculate_phylogenetic_tree(self, cmd)

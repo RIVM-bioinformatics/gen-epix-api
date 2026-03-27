@@ -428,7 +428,7 @@ class CasedbTestClient(TestClient):
         set_dummy_ref_dim: bool = False,
         set_dummy_concept_set: bool = False,
         set_dummy_region_set: bool = False,
-        set_dummy_protocol: bool = False,
+        set_dummy_genetic_distance_protocol: bool = False,
     ) -> model.RefCol:
         user: model.User = self._get_obj(
             model.User, user_or_str
@@ -466,7 +466,7 @@ class CasedbTestClient(TestClient):
         )
         genetic_distance_protocol_id = (
             self.generate_id()
-            if set_dummy_protocol
+            if set_dummy_genetic_distance_protocol
             else (
                 None
                 if not genetic_distance_protocol

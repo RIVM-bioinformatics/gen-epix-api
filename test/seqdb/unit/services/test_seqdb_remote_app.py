@@ -1,4 +1,4 @@
-"""Unit tests for SeqdbRemoteApp create_retrieve_phylogenetic_tree_handler function."""
+"""Unit tests for SeqdbRemoteApp create_calculate_phylogenetic_tree_handler function."""
 
 import json
 from typing import Any
@@ -19,7 +19,7 @@ from gen_epix.seqdb.services.remote_app import SeqdbRemoteApp
 
 @pytest.mark.scenario_ids("TC-SEC-28-06")
 class TestSeqdbRemoteApp:
-    """Test the SeqdbRemoteApp class with focus on create_retrieve_phylogenetic_tree_handler."""
+    """Test the SeqdbRemoteApp class with focus on create_calculate_phylogenetic_tree_handler."""
 
     @pytest.fixture
     def mock_user(self) -> seqdb_model.User:
@@ -69,7 +69,7 @@ class TestSeqdbRemoteApp:
         expected_route = (
             remote_app.host_url
             + remote_app._default_route_prefix
-            + "/retrieve/phylogenetic_tree"
+            + "/calculate/phylogenetic_tree"
         )
 
         # Verify the route is registered
@@ -107,7 +107,7 @@ class TestSeqdbRemoteApp:
         )
 
         # Call the handler directly
-        result = remote_app.retrieve_phylogenetic_tree(sample_command)
+        result = remote_app.calculate_phylogenetic_tree(sample_command)
 
         # Verify the result - since SeqdbRemoteApp returns seqdb_model.PhylogeneticTree,
         # we need to check for seqdb model attributes
@@ -128,7 +128,7 @@ class TestSeqdbRemoteApp:
         )
 
         mock_client.post.assert_called_once_with(
-            # remote_app.host_url + "retrieve/phylogenetic_tree",
+            # remote_app.host_url + "calculate/phylogenetic_tree",
             remote_app.get_route(sample_command),
             json=json.loads(expected_request_body.model_dump_json()),
             headers={"Authorization": "Bearer test_token"},
@@ -165,7 +165,7 @@ class TestSeqdbRemoteApp:
         remote_app.get_headers = Mock(return_value={})
 
         # Call the handler directly
-        result = remote_app.retrieve_phylogenetic_tree(sample_command)
+        result = remote_app.calculate_phylogenetic_tree(sample_command)
 
         # Verify the result - check seqdb model attributes
         assert isinstance(result, seqdb_model.PhylogeneticTree)
@@ -195,7 +195,7 @@ class TestSeqdbRemoteApp:
         remote_app.get_headers = Mock(return_value={})
 
         # Call the handler directly
-        result = remote_app.retrieve_phylogenetic_tree(sample_command)
+        result = remote_app.calculate_phylogenetic_tree(sample_command)
 
         # Verify None is returned
         assert result is None
@@ -221,7 +221,7 @@ class TestSeqdbRemoteApp:
         remote_app.get_headers = Mock(return_value={})
 
         # Call the handler directly
-        result = remote_app.retrieve_phylogenetic_tree(sample_command)
+        result = remote_app.calculate_phylogenetic_tree(sample_command)
 
         # Verify None is returned
         assert result is None
@@ -250,7 +250,7 @@ class TestSeqdbRemoteApp:
 
         # Call the handler directly and verify exception is raised
         with pytest.raises(httpx.HTTPStatusError):
-            remote_app.retrieve_phylogenetic_tree(sample_command)
+            remote_app.calculate_phylogenetic_tree(sample_command)
 
     @patch("httpx.Client")
     def test_authentication_headers_included(
@@ -279,7 +279,7 @@ class TestSeqdbRemoteApp:
         remote_app.get_headers = Mock(return_value=expected_headers)
 
         # Call the handler directly
-        remote_app.retrieve_phylogenetic_tree(sample_command)
+        remote_app.calculate_phylogenetic_tree(sample_command)
 
         # Verify headers were requested and used
         remote_app.get_headers.assert_called_with(sample_command)
@@ -310,7 +310,7 @@ class TestSeqdbRemoteApp:
         remote_app.get_headers = Mock(return_value={})
 
         # Call the handler directly
-        remote_app.retrieve_phylogenetic_tree(sample_command)
+        remote_app.calculate_phylogenetic_tree(sample_command)
 
         # Verify request body construction
         expected_request_body = CalculatePhylogeneticTreeRequestBody(
@@ -331,15 +331,15 @@ class TestSeqdbRemoteApp:
         assert seqdb_command.CalculatePhylogeneticTreeCommand in remote_app.ROUTE_MAP
         assert (
             remote_app.ROUTE_MAP[seqdb_command.CalculatePhylogeneticTreeCommand]
-            == "/retrieve/phylogenetic_tree"
+            == "/calculate/phylogenetic_tree"
         )
 
-    def test_retrieve_phylogenetic_tree_method_exists(
+    def test_calculate_phylogenetic_tree_method_exists(
         self, remote_app: SeqdbRemoteApp
     ) -> None:
-        """Test that the retrieve_phylogenetic_tree method exists and is callable."""
-        assert hasattr(remote_app, "retrieve_phylogenetic_tree")
-        assert callable(remote_app.retrieve_phylogenetic_tree)
+        """Test that the calculate_phylogenetic_tree method exists and is callable."""
+        assert hasattr(remote_app, "calculate_phylogenetic_tree")
+        assert callable(remote_app.calculate_phylogenetic_tree)
 
     def test_host_url_construction(self) -> None:
         """Test that base URL is constructed correctly."""
@@ -357,5 +357,5 @@ class TestSeqdbRemoteApp:
         assert app is not None
         assert app.host == "localhost"
         assert app.port == 8001
-        assert hasattr(app, "retrieve_phylogenetic_tree")
+        assert hasattr(app, "calculate_phylogenetic_tree")
         assert seqdb_command.CalculatePhylogeneticTreeCommand in app.ROUTE_MAP

@@ -441,7 +441,7 @@ def create_case_endpoints(
         )
 
     @router.post(
-        "/retrieve/phylogenetic_tree",
+        "/calculate/phylogenetic_tree",
         operation_id="retrieve__phylogenetic_tree",
         name="Retrieve phylogenetic tree",
         description=command.RetrievePhylogeneticTreeByCasesCommand.__doc__,

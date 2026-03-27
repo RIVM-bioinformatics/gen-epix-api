@@ -328,22 +328,15 @@ class RefCol(Model):
                 raise exc.InvalidArgumentsError(
                     f"No genetic_distance_protocol_id provided for col_type {self.col_type.value}"
                 )
-        return self
-
-    @model_validator(mode="after")
-    def _validate_state(self) -> Self:
-        if self.col_type == enum.ColType.REGULAR_LANGUAGE:
-            if not self.regex:
+        if self.col_type in enum.ColTypeSet.HAS_REGEX.value:
+            if self.regex is None:
                 raise AssertionError(f"Type {self.col_type.value} requires regex")
-        elif self.col_type in {
-            enum.ColType.CONTEXT_FREE_GRAMMAR_JSON,
-            enum.ColType.CONTEXT_FREE_GRAMMAR_XML,
-        }:
-            if not self.schema_definition and not self.schema_uri:
+        if self.col_type in enum.ColTypeSet.HAS_SCHEMA.value:
+            if self.schema_definition is None and self.schema_uri is None:
                 raise AssertionError(
                     f"Type {self.col_type.value} requires schema_definition or schema_uri"
                 )
-        if self.schema_definition and self.schema_uri:
+        if self.schema_definition is not None and self.schema_uri is not None:
             raise AssertionError(
                 "Only one of schema_definition or schema_uri can be set"
             )

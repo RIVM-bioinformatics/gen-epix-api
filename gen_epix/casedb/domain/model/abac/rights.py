@@ -153,7 +153,7 @@ class CaseAbac(BaseModel):
         Get the dict[case_type_id, set[data_collection_ids]] combinations for which
         there is any access or share right. The sets are guaranteed to be non-empty.
         """
-        retval: dict[UUID, set[UUID]] = {}
+        case_type_data_collections_map: dict[UUID, set[UUID]] = {}
         for (
             case_type_id,
             data_collection_access_abac_map,
@@ -164,7 +164,7 @@ class CaseAbac(BaseModel):
                 if y.has_any_rights()
             }
             if data_collection_ids:
-                retval[case_type_id] = data_collection_ids
+                case_type_data_collections_map[case_type_id] = data_collection_ids
         for (
             case_type_id,
             data_collection_share_abac_map,
@@ -176,12 +176,12 @@ class CaseAbac(BaseModel):
             }
             if not data_collection_ids:
                 continue
-            if case_type_id in retval:
+            if case_type_id in case_type_data_collections_map:
                 # Merge with existing data collection IDs
-                retval[case_type_id].update(data_collection_ids)
+                case_type_data_collections_map[case_type_id].update(data_collection_ids)
             else:
-                retval[case_type_id] = data_collection_ids
-        return retval
+                case_type_data_collections_map[case_type_id] = data_collection_ids
+        return case_type_data_collections_map
 
     def get_combinations_with_access_right(
         self,
@@ -243,19 +243,19 @@ class CaseAbac(BaseModel):
         Get the set[col_id] for which there is any read or write access in at
         least one of the data collections. Optionally limited to the given CaseType.
         """
-        retval: set[UUID] = set()
+        col_ids: set[UUID] = set()
         if case_type_id is not None:
             if case_type_id not in self.case_type_access_abacs:
-                return retval
+                return col_ids
             data = self.case_type_access_abacs[case_type_id]
             for access_abac in data.values():
-                retval.update(access_abac.read_col_ids)
-                retval.update(access_abac.write_col_ids)
+                col_ids.update(access_abac.read_col_ids)
+                col_ids.update(access_abac.write_col_ids)
         for case_type_id, data in self.case_type_access_abacs.items():
             for access_abac in data.values():
-                retval.update(access_abac.read_col_ids)
-                retval.update(access_abac.write_col_ids)
-        return retval
+                col_ids.update(access_abac.read_col_ids)
+                col_ids.update(access_abac.write_col_ids)
+        return col_ids
 
     def get_cols_with_access_rights(
         self, right: CaseRight, case_type_id: UUID | None = None
@@ -264,16 +264,16 @@ class CaseAbac(BaseModel):
         Get the set[col_id] for which there is any read or write access in at
         least one of the data collections. Optionally limited to the given CaseType.
         """
-        retval: set[UUID] = set()
+        col_ids: set[UUID] = set()
         if case_type_id is not None:
             if case_type_id not in self.case_type_access_abacs:
-                return retval
+                return col_ids
             data = self.case_type_access_abacs[case_type_id]
-            retval = self._update_access_rights(right, retval, data)
-            return retval
+            col_ids = self._update_access_rights(right, col_ids, data)
+            return col_ids
         for case_type_id, data in self.case_type_access_abacs.items():
-            retval = self._update_access_rights(right, retval, data)
-        return retval
+            col_ids = self._update_access_rights(right, col_ids, data)
+        return col_ids
 
     def get_data_collections_with_any_rights(self) -> set[UUID]:
         """

@@ -15,7 +15,7 @@ class BaseSeqService(BaseService):
         self.register_default_crud_handlers()
         f(
             command.CalculatePhylogeneticTreeCommand,
-            self.retrieve_phylogenetic_tree,
+            self.calculate_phylogenetic_tree,
         )
         f(command.RetrieveSamplesCommand, self.retrieve_samples)
         f(
@@ -58,7 +58,7 @@ class BaseSeqService(BaseService):
             command.AstPredictionCrudCommand,
             self.crud_ast_prediction,
         )
-        
+
         f(
             command.LocusCrudCommand,
             self.crud_locus,
@@ -161,7 +161,7 @@ class BaseSeqService(BaseService):
         )
 
     @abc.abstractmethod
-    def retrieve_phylogenetic_tree(
+    def calculate_phylogenetic_tree(
         self, cmd: command.CalculatePhylogeneticTreeCommand
     ) -> model.PhylogeneticTree | None:
         raise NotImplementedError()
@@ -281,8 +281,6 @@ class BaseSeqService(BaseService):
         | None
     ):
         raise NotImplementedError()
-
-    
 
     @abc.abstractmethod
     def crud_locus(

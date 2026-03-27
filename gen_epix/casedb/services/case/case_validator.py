@@ -122,7 +122,7 @@ class CaseValidator:
         self._init_metadata()
 
     def validate_and_transform(
-        self, cmd: command.UploadCasesCommand, retval: model.CaseBatchUploadResult
+        self, cmd: command.UploadCasesCommand, batch_result: model.CaseBatchUploadResult
     ) -> model.CaseBatchUploadResult:
         """
         Validate and transform the content of the cases in batch upload command.
@@ -134,19 +134,19 @@ class CaseValidator:
         including any data issues found during validation and transformation.
         """
         contents, updated_contents, data_issues_list = self._get_content_references(
-            cmd, retval
+            cmd, batch_result
         )
         self.validate_unknown_columns(contents, data_issues_list)
         self.transform_individual_values(contents, updated_contents, data_issues_list)
         self.transform_value_pairs(contents, updated_contents, data_issues_list)
-        self.calculate_case_date(cmd, retval, updated_contents)
+        self.calculate_case_date(cmd, batch_result, updated_contents)
 
-        return retval
+        return batch_result
 
     def _get_content_references(
         self,
         cmd: command.UploadCasesCommand,
-        retval: model.CaseBatchUploadResult,
+        batch_result: model.CaseBatchUploadResult,
     ) -> tuple[
         list[dict[UUID, str | None] | None],
         list[dict[UUID, str | None] | None],
@@ -164,9 +164,11 @@ class CaseValidator:
             None if x.case is None else x.case.content for x in cmd.case_batch.cases
         ]
         updated_contents = [
-            None if x is None else x.validated_content for x in retval.cases
+            None if x is None else x.validated_content for x in batch_result.cases
         ]
-        data_issues_list = [None if x is None else x.data_issues for x in retval.cases]
+        data_issues_list = [
+            None if x is None else x.data_issues for x in batch_result.cases
+        ]
 
         return contents, updated_contents, data_issues_list
 
@@ -348,7 +350,7 @@ class CaseValidator:
     def calculate_case_date(
         self,
         cmd: command.UploadCasesCommand,
-        retval: CaseBatchUploadResult,
+        batch_result: CaseBatchUploadResult,
         updated_contents: list[dict[UUID, str | None] | None],
     ) -> None:
         """Calculate case date based on TIME dimension columns."""
@@ -374,7 +376,7 @@ class CaseValidator:
 
         # Calculate case dates
         for case_for_upload, case_result, updated_content in zip(
-            cmd.case_batch.cases, retval.cases, updated_contents
+            cmd.case_batch.cases, batch_result.cases, updated_contents
         ):
             case = case_for_upload.case
             if case is None:

@@ -78,8 +78,8 @@ class QualityMixin:
     Mixin class to add quality related fields to a model.
     """
 
-    qc_result: enum.QualityControlResult | None = Field(
-        default=None,
+    qc_result: enum.QualityControlResult = Field(
+        default=enum.QualityControlResult.PENDING,
         description="The quality of the result as a qualitative value that is used by the application, where applicable, for filtering results.",
     )
     qc_score: float | None = Field(
@@ -94,18 +94,12 @@ class QualityMixin:
     @field_validator("qc_result", mode="before")
     @classmethod
     def _validate_qc_result(
-        cls, value: str | int | float | enum.QualityControlResult | None
-    ) -> enum.QualityControlResult | None:
-        if value is None:
-            return None
+        cls, value: str | int | float | enum.QualityControlResult
+    ) -> enum.QualityControlResult:
         return validate_int_enum_value(enum.QualityControlResult, value)  # type: ignore[return-value]
 
     @field_serializer("qc_result", mode="plain")
-    def _serialize_qc_result(
-        self, value: enum.QualityControlResult | None
-    ) -> int | None:
-        if value is None:
-            return None
+    def _serialize_qc_result(self, value: enum.QualityControlResult) -> int:
         return value.value
 
 

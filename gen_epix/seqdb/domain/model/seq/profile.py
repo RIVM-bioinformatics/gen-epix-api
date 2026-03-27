@@ -2,7 +2,7 @@ import base64
 import hashlib
 import json
 import struct
-from typing import Any, ClassVar, NoReturn, Self
+from typing import Any, ClassVar, Self
 from uuid import UUID
 
 from pydantic import Field, field_serializer, field_validator, model_validator
@@ -92,10 +92,7 @@ class SeqProfile(
         """
         Validate that the content format is compatible with the sequence profile type.
         """
-        if (
-            self.format
-            not in self.FORMATS_BY_SEQ_PROFILE_TYPE[self.seq_profile_type]
-        ):
+        if self.format not in self.FORMATS_BY_SEQ_PROFILE_TYPE[self.seq_profile_type]:
             raise ValueError(
                 f"Invalid format {self.format} for sequence profile type {self.seq_profile_type}"
             )
@@ -199,10 +196,9 @@ class SeqProfile(
         """
         if self.format == enum.SeqProfileFormat.REF_ALN_SEQ:
             return self.content
-        else:
-            raise NotImplementedError(
-                "Unable to parse aligned nucleotide sequence for this SNP profile format"
-            )
+        raise NotImplementedError(
+            "Unable to parse aligned nucleotide sequence for this SNP profile format"
+        )
 
     def get_allele_ids(self, **kwargs: Any) -> list[UUID | None]:
         """
@@ -220,11 +216,10 @@ class SeqProfile(
                 allele_id_bytes = allele_bytes[i : i + 16]
                 if allele_id_bytes != null_id_bytes:
                     allele_ids[j] = UUID(bytes=allele_id_bytes)
-        else:
-            raise NotImplementedError(
-                "Unable to parse allele IDs for this allele profile format"
-            )
-        return allele_ids
+            return allele_ids
+        raise NotImplementedError(
+            "Unable to parse allele IDs for this allele profile format"
+        )
 
     def get_n_loci(self, **kwargs: Any) -> int:
         """
@@ -239,10 +234,9 @@ class SeqProfile(
                 for i in range(0, len(allele_bytes), 16)
             )
             return computed_n_loci
-        else:
-            raise NotImplementedError(
-                "Unable to parse number of loci for this allele profile format"
-            )
+        raise NotImplementedError(
+            "Unable to parse number of loci for this allele profile format"
+        )
 
     def get_repeat_numbers(self, **kwargs: Any) -> list[int]:
         """
@@ -250,10 +244,9 @@ class SeqProfile(
         """
         if self.format == enum.SeqProfileFormat.ORDERED_REPEAT_NUMBERS:
             return json.loads(self.content)
-        else:
-            raise NotImplementedError(
-                "Unable to parse repeat numbers for this MLVA profile format"
-            )
+        raise NotImplementedError(
+            "Unable to parse repeat numbers for this MLVA profile format"
+        )
 
     def get_kmer_frequency_map(self, **kwargs: Any) -> dict[str, float]:
         """
@@ -262,10 +255,9 @@ class SeqProfile(
         if self.format == enum.SeqProfileFormat.KMER_FREQUENCY_MAP:
             retval: dict[str, float] = json.loads(self.content)
             return retval
-        else:
-            raise NotImplementedError(
-                "Unable to parse k-mer frequency map for this k-mer profile format"
-            )
+        raise NotImplementedError(
+            "Unable to parse k-mer frequency map for this k-mer profile format"
+        )
 
     @staticmethod
     def get_ordered_allele_ids_representation(allele_ids: list[UUID | None]) -> str:
