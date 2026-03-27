@@ -520,6 +520,7 @@ erDiagram
         string ethnicity_source_value
         UUID ethnicity_source_concept_id FK
         UUID person_type_concept_id FK
+        UUID provided_by_organization_id
     }
 
     PersonIdentifier {
@@ -539,6 +540,7 @@ erDiagram
         UUID period_type_concept_id FK
         string observation_period_start_iso_interval
         string observation_period_end_iso_interval
+        UUID provided_by_organization_id
     }
 
     ObservationPeriodIdentifier {
@@ -568,6 +570,7 @@ erDiagram
         UUID discharged_to_concept_id FK
         string discharged_to_source_value
         UUID preceding_visit_occurrence_id
+        UUID provided_by_organization_id
     }
 
     VisitOccurrenceIdentifier {
@@ -599,6 +602,7 @@ erDiagram
         UUID preceding_visit_detail_id
         UUID parent_visit_detail_id
         UUID visit_occurrence_id FK
+        UUID provided_by_organization_id
     }
 
     VisitDetailIdentifier {
@@ -629,6 +633,7 @@ erDiagram
         string condition_status_source_value
         string condition_start_iso_interval
         string condition_end_iso_interval
+        UUID provided_by_organization_id
     }
 
     ConditionOccurrenceIdentifier {
@@ -658,6 +663,7 @@ erDiagram
         UUID procedure_source_concept_id FK
         string modifier_source_value
         string procedure_iso_interval
+        UUID provided_by_organization_id
     }
 
     ProcedureOccurrenceIdentifier {
@@ -695,6 +701,7 @@ erDiagram
         string dose_unit_source_value
         string drug_exposure_start_iso_interval
         string drug_exposure_end_iso_interval
+        UUID provided_by_organization_id
     }
 
     DrugExposureIdentifier {
@@ -728,6 +735,7 @@ erDiagram
         UUID unit_source_concept_id FK
         string device_exposure_start_iso_interval
         string device_exposure_end_iso_interval
+        UUID provided_by_organization_id
     }
 
     DeviceExposureIdentifier {
@@ -765,6 +773,7 @@ erDiagram
         UUID meas_event_field_concept_id FK
         string measurement_iso_interval
         UUID derived_from_specimen_id
+        UUID provided_by_organization_id
     }
 
     MeasurementIdentifier {
@@ -800,6 +809,7 @@ erDiagram
         UUID obs_event_field_concept_id FK
         string observation_iso_interval
         string value_as_iso_interval
+        UUID provided_by_organization_id
     }
 
     ObservationIdentifier {
@@ -830,6 +840,7 @@ erDiagram
         string specimen_iso_interval
         UUID derived_from_specimen_id
         UUID derived_from_specimen_concept_id FK
+        UUID provided_by_organization_id
     }
 
     SpecimenIdentifier {
@@ -858,6 +869,7 @@ erDiagram
         string note_source_value
         UUID note_event_id
         UUID note_event_field_concept_id FK
+        UUID provided_by_organization_id
     }
 
     NoteIdentifier {
@@ -913,6 +925,7 @@ erDiagram
         UUID cause_concept_id FK
         string cause_source_value
         UUID cause_source_concept_id FK
+        UUID provided_by_organization_id
     }
 
     DeathIdentifier {
@@ -957,6 +970,7 @@ erDiagram
         UUID stop_reason_concept_id FK
         string stop_reason_source_value
         UUID stop_reason_source_concept_id FK
+        UUID provided_by_organization_id
     }
 
     Cost {
@@ -984,6 +998,7 @@ erDiagram
         string revenue_code_source_value
         UUID drg_concept_id FK
         string drg_source_value
+        UUID provided_by_organization_id
     }
 
     ConditionEra {

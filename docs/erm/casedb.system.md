@@ -6,10 +6,10 @@ Auto-generated.  Service type **SYSTEM** — 2 entities, relationships only.
 erDiagram
     %% casedb / SYSTEM (simplified)
 
-    Outage {
+    PackageMetadata {
     }
 
-    PackageMetadata {
+    Outage {
     }
 
 ```

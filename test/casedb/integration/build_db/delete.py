@@ -126,49 +126,67 @@ class TestDelete:
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_delete_col_raise(self, env: Env) -> None:
+        env.create_ref_col(ROOT, "ref_col1_92")
+        env.create_col(ROOT, "col1_1_1_92")
         for user in BELOW_APP_ADMIN_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.delete_object(user, model.Col, "col1_1_1_1")
+                env.delete_object(user, model.Col, "col1_1_1_92")
+        env.delete_object(ROOT, model.Col, "col1_1_1_92")
+        env.delete_object(ROOT, model.RefCol, "ref_col1_92")
 
     def test_delete_col_set(self, env: Env) -> None:
+        env.create_ref_col(ROOT, "ref_col1_91")
+        env.create_col(ROOT, "col1_1_1_91")
         for user in APP_ADMIN_OR_ABOVE_USERS:
-            col_set = env.create_col_set(user, "col_set99", {"col1_1_1_1"})
+            col_set = env.create_col_set(user, "col_set91", {"col1_1_1_91"})
             env.delete_object(ROOT, model.ColSet, col_set, verify=True)
+        env.delete_object(ROOT, model.Col, "col1_1_1_91")
+        env.delete_object(ROOT, model.RefCol, "ref_col1_91")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_delete_col_set_raise(self, env: Env) -> None:
+        env.create_ref_col(ROOT, "ref_col1_90")
+        env.create_col(ROOT, "col1_1_1_90")
+        env.create_col_set(ROOT, "col_set90", {"col1_1_1_90"})
         for user in BELOW_APP_ADMIN_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.delete_object(user, model.ColSet, "col_set1")
+                env.delete_object(user, model.ColSet, "col_set90")
+        env.delete_object(ROOT, model.ColSet, "col_set90")
+        env.delete_object(ROOT, model.Col, "col1_1_1_90")
+        env.delete_object(ROOT, model.RefCol, "ref_col1_90")
 
     def test_delete_col_set_member(self, env: Env) -> None:
-        env.create_ref_col(ROOT, "ref_col1_99")
-        env.create_col(ROOT, "col1_1_1_99")
+        env.create_ref_col(ROOT, "ref_col1_89")
+        env.create_col(ROOT, "col1_1_1_89")
+        env.create_col_set(ROOT, "col_set89", set())
         for user in APP_ADMIN_OR_ABOVE_USERS:
             col_set_member = env.create_col_set_member(
                 ROOT,
-                "col_set1",
-                "col1_1_1_99",
+                "col_set89",
+                "col1_1_1_89",
             )
             env.delete_object(user, model.ColSetMember, col_set_member, verify=True)
-        env.delete_object(ROOT, model.Col, "col1_1_1_99")
-        env.delete_object(ROOT, model.RefCol, "ref_col1_99")
+        env.delete_object(ROOT, model.ColSet, "col_set89")
+        env.delete_object(ROOT, model.Col, "col1_1_1_89")
+        env.delete_object(ROOT, model.RefCol, "ref_col1_89")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_delete_col_set_member_raise(self, env: Env) -> None:
-        env.create_ref_col(ROOT, "ref_col1_99")
-        env.create_col(ROOT, "col1_1_1_99")
+        env.create_ref_col(ROOT, "ref_col1_88")
+        env.create_col(ROOT, "col1_1_1_88")
+        env.create_col_set(ROOT, "col_set88", set())
         col_set_member = env.create_col_set_member(
             ROOT,
-            "col_set1",
-            "col1_1_1_99",
+            "col_set88",
+            "col1_1_1_88",
         )
         for user in BELOW_APP_ADMIN_DATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.delete_object(user, model.ColSetMember, col_set_member)
         env.delete_object(ROOT, model.ColSetMember, col_set_member)
-        env.delete_object(ROOT, model.Col, "col1_1_1_99")
-        env.delete_object(ROOT, model.RefCol, "ref_col1_99")
+        env.delete_object(ROOT, model.ColSet, "col_set88")
+        env.delete_object(ROOT, model.Col, "col1_1_1_88")
+        env.delete_object(ROOT, model.RefCol, "ref_col1_88")
 
     def test_delete_case_set(self, env: Env) -> None:
         env.create_case_type(ROOT, "case_type99", "disease1", "etiological_agent1")

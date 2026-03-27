@@ -30,7 +30,7 @@ from gen_epix.seqdb.repositories.seq_dict import SeqDictRepository
 # Set to True to regenerate demo data, False to load from existing pickle file
 CREATE_DEMO_DATA = True
 
-N_SEQS_PER_BATCH = 100
+N_SEQS_PER_BATCH = 10
 DB_ENTRY_COUNTS: list[int] = [1, 2, 10]
 
 SEQ_SETTINGS = SeqGenerationSettings(n_loci=10, locus_length=100)
@@ -67,11 +67,19 @@ def _build_upload_command(
     to create correctly linked objects for upload.
     db_index is used to select which set of objects to use for the command from the db.
     """
-    assembly_protocol_id = list(db[model.AssemblyProtocol].keys())[db_index]
+    protocols = list(db[model.Protocol].values())
+    assembly_protocol_id = [
+        protocol.id
+        for protocol in protocols
+        if protocol.protocol_type == enum.ProtocolType.ASSEMBLY
+    ][db_index]
     locus_set_id = list(db[model.LocusSet].keys())[db_index]
-    locus_detection_protocol_id = list(db[model.LocusDetectionProtocol].keys())[
-        db_index
-    ]
+    locus_detection_protocol_id = [
+        protocol.id
+        for protocol in protocols
+        if protocol.protocol_type == enum.ProtocolType.SEQ_PROFILE
+        and protocol.seq_profile_type == enum.SeqProfileType.ALLELE
+    ][db_index]
     locus_code_map_id = list(db[model.LocusCodeMap].keys())[db_index]
     locus_ids = db[model.LocusSet][locus_set_id].locus_ids
 

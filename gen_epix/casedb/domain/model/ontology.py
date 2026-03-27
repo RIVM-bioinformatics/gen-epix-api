@@ -27,27 +27,6 @@ class ConceptSet(Model):
     code: str = Field(description="The code of the concept set", max_length=255)
     name: str = Field(description="The name of the concept set", max_length=255)
     type: enum.ConceptSetType = Field(description="The type of the concept set")
-    regex: str | None = Field(
-        default=None,
-        description=(
-            "The regular expression describing the concept set,"
-            " in case of type REGULAR_EXPRESSION"
-        ),
-    )
-    schema_definition: str | None = Field(
-        default=None,
-        description=(
-            "The definition of the schema describing the concept set,"
-            " in case of type CONTEXT_FREE_GRAMMAR_XXX"
-        ),
-    )
-    schema_uri: str | None = Field(
-        default=None,
-        description=(
-            "The URI to the schema describing the concept set,"
-            " in case of type CONTEXT_FREE_GRAMMAR_XXX"
-        ),
-    )
     description: str | None = Field(
         default=None,
         description="The description of the concept set.",
@@ -60,25 +39,6 @@ class ConceptSet(Model):
         if isinstance(value, str):
             return enum.ConceptSetType(value)
         return value
-
-    @model_validator(mode="after")
-    def _validate_state(self) -> Self:
-        if self.type == enum.ConceptSetType.REGULAR_LANGUAGE:
-            if not self.regex:
-                raise AssertionError(f"Type {self.type.value} requires regex")
-        elif self.type in {
-            enum.ConceptSetType.CONTEXT_FREE_GRAMMAR_JSON,
-            enum.ConceptSetType.CONTEXT_FREE_GRAMMAR_XML,
-        }:
-            if not self.schema_definition and not self.schema_uri:
-                raise AssertionError(
-                    f"Type {self.type.value} requires schema_definition or schema_uri"
-                )
-        if self.schema_definition and self.schema_uri:
-            raise AssertionError(
-                "Only one of schema_definition or schema_uri can be set"
-            )
-        return self
 
     @field_serializer("type", mode="plain")
     def _serialize_type(self, value: enum.ConceptSetType) -> str:

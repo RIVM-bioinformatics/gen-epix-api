@@ -12,8 +12,8 @@ erDiagram
         UUID tree_algorithm_id
         TreeAlgorithm tree_algorithm
         enum tree_algorithm_code
-        UUID genetic_distance_protocol_id
-        GeneticDistanceProtocol genetic_distance_protocol
+        UUID protocol_id
+        GeneticDistanceProtocol protocol
         list[UUID] leaf_ids
         list[UUID] profile_ids
         string newick_repr
