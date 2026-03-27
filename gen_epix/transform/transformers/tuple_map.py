@@ -19,6 +19,26 @@ class TupleMapTransformer(Transformer):
     how the mapping is defined and applied. The transformer can also optionally include
     an "is_active" field in the mapping to indicate whether a particular mapping should
     be applied or not.
+
+
+    # Review LSP-2989 feature changes
+
+    SUPPORT FOR DEFAULT VALUES:
+
+    - When no mapping is found, default values are applied to the target fields if
+    no_match_strategy=NoMatchStrategy.SET_DEFAULT.
+    - default_values is part of the transformer configuration and must have the same
+    length as row_tgt_fields.
+    - When no_match_strategy=NoMatchStrategy.RAISE (the default), a ValueError is raised
+    if no mapping is found.
+
+    CASE INSENSITIVITY:
+
+    - Matching is case-insensitive by default (case_sensitive=False).
+    - When case_sensitive=False, string source field values are lowercased before lookup;
+    non-string values are unaffected.
+    - Normalization is applied during mapping (at set_map and transform time), not at init.
+
     """
 
     def __init__(
@@ -30,27 +50,40 @@ class TupleMapTransformer(Transformer):
         map_tgt_fields: list[Hashable] | None = None,
         name: str | None = None,
         is_active_map_field: Hashable | None = None,
-        # REVIEW 2989: Consider renaming no_match_strategy to on_no_match or on_not_found for clarity,
-        # and to be more consistent with common naming conventions
-        # Also consider if we want this to be the default strategy (now we have this for for backwards compatibility,
-        # but it might make more sense to have SET_DEFAULT as the default strategy and require users to explicitly choose RAISE if they want that behavior)
+        # REVIEW LSP-2989: Consider renaming no_match_strategy to on_no_match or
+        # on_not_found for clarity, and to be more consistent with common naming
+        # conventions. Also consider if we want this to be the default strategy
+        # (now we have this for backwards compatibility, but it might make more
+        # sense to have SET_DEFAULT as the default strategy and require users to
+        # explicitly choose RAISE if they want that behavior).
         no_match_strategy: NoMatchStrategy = NoMatchStrategy.RAISE,
         default_values: list | None = None,
+        case_sensitive: bool = False,
     ) -> None:
         """
         Initialise the transformer with the provided mapping and field specifications.
         Args:
-            map_rows: A list of dicts, where each dict contains the source and target field values for one mapping.
-            row_src_fields: A list of field names for the source fields in the rows to be transformed.
-            row_tgt_fields: A list of field names for the target fields in the rows to be transformed.
-            map_src_fields: A list of field names for the source fields in the mapping. If None, defaults to row_src_fields.
-            map_tgt_fields: A list of field names for the target fields in the mapping. If None, defaults to row_tgt_fields.
+            map_rows: A list of dicts, where each dict contains the source and target
+            field values for one mapping.
+            row_src_fields: A list of field names for the source fields in the rows to
+            be transformed.
+            row_tgt_fields: A list of field names for the target fields in the rows to
+            be transformed.
+            map_src_fields: A list of field names for the source fields in the mapping.
+            If None, defaults to row_src_fields.
+            map_tgt_fields: A list of field names for the target fields in the mapping.
+            If None, defaults to row_tgt_fields.
             name: An optional name for the transformer.
-            is_active_map_field: An optional field name in the mapping that indicates whether a particular mapping should be applied or not.
-            If provided, this field must be a boolean and only mappings with a True value will be applied.
-            no_match_strategy: Strategy when no mapping is found. Defaults to NoMatchStrategy.RAISE.
-            default_values: Default values to apply to target fields when no mapping is found.
-            Must be provided when no_match_strategy is SET_DEFAULT, and must have the same length as row_tgt_fields.
+            is_active_map_field: An optional field name in the mapping that indicates
+            whether a particular mapping should be applied or not. If provided, this
+            field must be a boolean and only mappings with a True value will be applied.
+            no_match_strategy: Strategy when no mapping is found. Defaults to
+            NoMatchStrategy.RAISE.
+            default_values: Default values to apply to target fields when no mapping is
+            found. Must be provided when no_match_strategy is SET_DEFAULT, and must
+            have the same length as row_tgt_fields.
+            case_sensitive: If False, string source field values are lowercased before
+            lookup. Defaults to True.
         """
         super().__init__(name)
 
@@ -75,16 +108,17 @@ class TupleMapTransformer(Transformer):
         self._default_values = (
             tuple(default_values) if default_values is not None else None
         )
+        self._case_sensitive = case_sensitive
         self.set_map(map_rows)
 
     def set_map(self, map_df: list[dict[Hashable, Any]]) -> None:
         tuple_map: dict[tuple, tuple] = {}
         """
-        Update the mapping with the provided mapping dataframe. The mapping dataframe is a list of dicts, 
-        where each dict contains the source and target field values for one mapping.
-        The source and target field names in the mapping dataframe are specified 
-        by the map_src_fields and map_tgt_fields parameters, respectively. 
-        If the is_active_map_field parameter was provided during initialization, 
+        Update the mapping with the provided mapping dataframe. The mapping dataframe
+        is a list of dicts, where each dict contains the source and target field values
+        for one mapping. The source and target field names in the mapping dataframe are
+        specified by the map_src_fields and map_tgt_fields parameters, respectively.
+        If the is_active_map_field parameter was provided during initialization,
         only mappings with a True value in that field will be included in the mapping.
         """
         # Extract source and target tuples
@@ -94,7 +128,7 @@ class TupleMapTransformer(Transformer):
                     raise KeyError(
                         f"Transformer {self.name}: Missing field {field} in map row: {row}"
                     )
-            key = tuple(row[x] for x in self._map_src_fields)
+            key = self._normalize_key(tuple(row[x] for x in self._map_src_fields))
             if key in tuple_map:
                 raise KeyError(
                     f"Transformer {self.name}: Duplicate mapping for map field {key}"
@@ -126,9 +160,10 @@ class TupleMapTransformer(Transformer):
         """
         Transform the provided object using the mapping.
 
-        The object has the target fields added or updated based on the mapping, and is also returned again to allow for method chaining.
+        The object has the target fields added or updated based on the mapping, and is
+        also returned again to allow for method chaining.
         """
-        key = tuple(obj.get(x) for x in self._row_src_fields)
+        key = self._normalize_key(tuple(obj.get(x) for x in self._row_src_fields))
         if key not in self._tuple_map:
             if self._no_match_strategy == NoMatchStrategy.RAISE:
                 raise ValueError(
@@ -144,11 +179,17 @@ class TupleMapTransformer(Transformer):
 
     def transform_dict(self, row: dict) -> dict:
         """
-        Same as the transform method, but specifically for dicts instead of ObjectAdapters.
+        Same as the transform method, but specifically for dicts instead of
+        ObjectAdapters.
         """
         # The ObjectAdapter alread wraps dicts transparently, extra computation is minimal
         self.transform(ObjectAdapter(row))
         return row
+
+    def _normalize_key(self, key: tuple) -> tuple:
+        if self._case_sensitive:
+            return key
+        return tuple(v.lower() if isinstance(v, str) else v for v in key)
 
     def _verify_default_values(
         self,
@@ -162,10 +203,12 @@ class TupleMapTransformer(Transformer):
                 )
             if len(default_values) != self._n_tgt_fields:
                 raise ValueError(
-                    f"default_values length ({len(default_values)}) must match the number of target fields ({self._n_tgt_fields})"
+                    f"default_values length ({len(default_values)}) must match the "
+                    f"number of target fields ({self._n_tgt_fields})"
                 )
         # REVIEW 2989: This check is not strictly necessary
-        # Ask end user if they want to allow default_values to be provided but ignored when no_match_strategy is not SET_DEFAULT
+        # Ask end user if they want to allow default_values to be provided but ignored
+        # when no_match_strategy is not SET_DEFAULT
         elif default_values is not None:
             raise ValueError(
                 "default_values can only be provided when no_match_strategy is SET_DEFAULT"
@@ -177,7 +220,8 @@ class TupleMapTransformer(Transformer):
         n_src_fields = len(row_src_fields)
         if n_src_fields != self._n_src_fields:
             raise ValueError(
-                "New row source fields must have the same length as the original row source fields"
+                "New row source fields must have the same length as the original row "
+                "source fields"
             )
         if len(set(row_src_fields)) < n_src_fields:
             raise ValueError(
@@ -186,7 +230,8 @@ class TupleMapTransformer(Transformer):
         n_tgt_fields = len(row_tgt_fields)
         if n_tgt_fields != self._n_tgt_fields:
             raise ValueError(
-                "New row target fields must have the same length as the original row target fields"
+                "New row target fields must have the same length as the original row "
+                "target fields"
             )
         if len(set(row_tgt_fields)) < n_tgt_fields:
             raise ValueError(

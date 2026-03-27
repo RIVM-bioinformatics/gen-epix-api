@@ -1,27 +1,23 @@
 """
 Unit tests for TupleMapTransformer.
 
-# Review 2989 feature changes
+# LSP-2989 feature changes
 
 SUPPORT FOR DEFAULT VALUES:
 
-- Add support for default values when no mapping is found, and test this.
-- they should be part of the transformer configuration
-- There should be as many default values as there are target fields, and they should be applied to the target fields when no mapping is found.
-- The number of default values should be validated against the number of target fields, and an error should be raised if they do not match. This should be tested as well.
-- When adding a default value option, it should not throw an error if the mapping is missing and no_match_strategy = NoMatchStrategy.SET_DEFAULT,
- but instead return the default value. This should be tested.
-
-- We should add a no_match_strategy: NoMatchStrategy = NoMatchStrategy.RAISE
-
+- When no mapping is found, default values are applied to the target fields if
+  no_match_strategy=NoMatchStrategy.SET_DEFAULT.
+- default_values is part of the transformer configuration and must have the same
+  length as row_tgt_fields.
+- When no_match_strategy=NoMatchStrategy.RAISE (the default), a ValueError is raised
+  if no mapping is found.
 
 CASE INSENSITIVITY:
-- Make the matching case insensitive, and add tests for this behavior.
-- The default for case sensitivity should be configurable, and this should be tested as well.
-- The default should be case sensitive : Bool = True
-- When no default is provided and no mapping is found, it should raise an error as it currently does. This should be tested as well.
 
-
+- Matching is case-insensitive by default (case_sensitive=False).
+- When case_sensitive=False, string source field values are lowercased before lookup;
+  non-string values are unaffected.
+- Normalization is applied during mapping (at set_map and transform time), not at init.
 """
 
 import pytest
@@ -502,8 +498,6 @@ class TestTupleMapTransformerDefaultValues:
                 no_match_strategy=NoMatchStrategy.SET_DEFAULT,
             )
 
-    # REVIEW 2989: This check is not strictly necessary
-    # Ask end user if they want to allow default_values to be provided but ignored when no_match_strategy is not SET_DEFAULT
     def test_default_values_without_set_default_raises_at_init(self) -> None:
         """Test that providing default_values without SET_DEFAULT raises at init."""
         with pytest.raises(ValueError, match="default_values can only be provided"):
@@ -513,3 +507,88 @@ class TestTupleMapTransformerDefaultValues:
                 row_tgt_fields=["tgt"],
                 default_values=[99],
             )
+
+
+@pytest.mark.scenario_ids("TC-MAIN-12-01")
+class TestTupleMapTransformerCaseInsensitivity:
+    """Test cases for TupleMapTransformer case-insensitive matching."""
+
+    def test_case_insensitive_by_default(self) -> None:
+        """Test that matching is case-insensitive by default."""
+        transformer = TupleMapTransformer(
+            map_rows=[{"src": "hello", "tgt": 1}],
+            row_src_fields=["src"],
+            row_tgt_fields=["tgt"],
+        )
+
+        result = transformer.transform(ObjectAdapter({"src": "HELLO"}))
+        assert result.get("tgt") == 1
+
+    def test_case_sensitive_explicit(self) -> None:
+        """Test that case_sensitive=True raises on case mismatch."""
+        transformer = TupleMapTransformer(
+            map_rows=[{"src": "hello", "tgt": 1}],
+            row_src_fields=["src"],
+            row_tgt_fields=["tgt"],
+            case_sensitive=True,
+        )
+
+        with pytest.raises(ValueError, match="Could not find mapping"):
+            transformer.transform(ObjectAdapter({"src": "HELLO"}))
+
+    def test_case_insensitive_match(self) -> None:
+        """Test that case_sensitive=False matches regardless of string case."""
+        transformer = TupleMapTransformer(
+            map_rows=[{"src": "hello", "tgt": 1}],
+            row_src_fields=["src"],
+            row_tgt_fields=["tgt"],
+            case_sensitive=False,
+        )
+
+        for variant in ["hello", "HELLO", "Hello", "hElLo"]:
+            adapter = ObjectAdapter({"src": variant})
+            result = transformer.transform(adapter)
+            assert result.get("tgt") == 1, f"Expected match for '{variant}'"
+
+    def test_case_insensitive_non_string_values_unaffected(self) -> None:
+        """Test that non-string key values are not affected by case_sensitive=False."""
+        transformer = TupleMapTransformer(
+            map_rows=[{"label": "A", "code": 42, "tgt": 99}],
+            row_src_fields=["label", "code"],
+            row_tgt_fields=["tgt"],
+            case_sensitive=False,
+        )
+
+        adapter = ObjectAdapter({"label": "a", "code": 42})
+        result = transformer.transform(adapter)
+        assert result.get("tgt") == 99
+
+    def test_case_insensitive_map_key_conflict_raises(self) -> None:
+        """Test that case_sensitive=False raises on duplicate keys after normalization."""
+        with pytest.raises(KeyError, match="Duplicate mapping"):
+            TupleMapTransformer(
+                map_rows=[
+                    {"src": "hello", "tgt": 1},
+                    {"src": "HELLO", "tgt": 2},  # normalizes to the same key
+                ],
+                row_src_fields=["src"],
+                row_tgt_fields=["tgt"],
+                case_sensitive=False,
+            )
+
+    def test_case_insensitive_with_set_default(self) -> None:
+        """Test that case_sensitive=False and SET_DEFAULT work together."""
+        transformer = TupleMapTransformer(
+            map_rows=[{"src": "known", "tgt": 1}],
+            row_src_fields=["src"],
+            row_tgt_fields=["tgt"],
+            no_match_strategy=NoMatchStrategy.SET_DEFAULT,
+            default_values=[0],
+            case_sensitive=False,
+        )
+
+        result = transformer.transform(ObjectAdapter({"src": "KNOWN"}))
+        assert result.get("tgt") == 1
+
+        result = transformer.transform(ObjectAdapter({"src": "unknown"}))
+        assert result.get("tgt") == 0

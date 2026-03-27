@@ -11,6 +11,8 @@
 
 - Do not remove comments made by user, always ask.
 - Before providing a solution always look for possible ambiguities and ask the user to make a decision
+- When writing comments always make them fit in 89 columns
+**How to apply:** When writing or editing any comment or docstring, ensure no line exceeds 89 characters including the leading whitespace and comment marker.
 
 
 ## Architecture and context
