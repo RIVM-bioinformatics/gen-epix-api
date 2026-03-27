@@ -4,7 +4,13 @@ from datetime import datetime
 from typing import Any, ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, field_serializer, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from gen_epix.casedb.domain import enum, exc
 from gen_epix.casedb.domain.model.geo import RegionSet
@@ -347,6 +353,56 @@ class RefCol(Model):
         return value.value
 
 
+class CaseTypeProps(BaseModel):
+    """
+    Operational settings for a CaseType, stored as a single JSON column.
+
+    A value of 0 for any field means "use the service-level default" rather than
+    "no restriction". The service applies its configured default when it encounters 0.
+    """
+
+    create_max_n_cases: int = Field(
+        ge=0,
+        default=0,
+        description=(
+            "Maximum number of cases that can be created in one batch, if the user's "
+            "rights are constrained by this setting. If 0, the service default is used."
+        ),
+    )
+    read_max_n_cases: int = Field(
+        ge=0,
+        default=0,
+        description=(
+            "Maximum number of cases that can be read in one batch, if the user's "
+            "rights are constrained by this setting. If 0, the service default is used."
+        ),
+    )
+    read_max_tree_size: int = Field(
+        ge=0,
+        default=0,
+        description=(
+            "Maximum number of cases for which a tree may be calculated, if the user's "
+            "rights are constrained by this setting. If 0, the service default is used."
+        ),
+    )
+    update_max_n_cases: int = Field(
+        ge=0,
+        default=0,
+        description=(
+            "Maximum number of cases that can be updated in one batch, if the user's "
+            "rights are constrained by this setting. If 0, the service default is used."
+        ),
+    )
+    delete_max_n_cases: int = Field(
+        ge=0,
+        default=0,
+        description=(
+            "Maximum number of cases that can be deleted in one batch, if the user's "
+            "rights are constrained by this setting. If 0, the service default is used."
+        ),
+    )
+
+
 class CaseType(Model):
     """
     A CaseType is the data equivalent of an epidemiological case definition. By
@@ -383,41 +439,25 @@ class CaseType(Model):
     etiological_agent: EtiologicalAgent | None = Field(
         default=None, description="The etiological agent"
     )
-    create_max_n_cases: int = Field(
-        ge=0,
-        default=0,
-        description=(
-            "Maximum number of cases that can be created in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
-        ),
+    props: CaseTypeProps = Field(
+        default_factory=CaseTypeProps,
+        description="Operational settings for this CaseType, stored as JSON.",
     )
-    read_max_n_cases: int = Field(
-        ge=0,
-        default=0,
-        description=(
-            "Maximum number of cases that can be read in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
-        ),
-    )
-    read_max_tree_size: int = Field(
-        ge=0,
-        default=0,
-        description=(
-            "Maximum number of cases for which a tree may be calculated, if the user's rights are constrained by this setting. If 0, no restriction is applied."
-        ),
-    )
-    update_max_n_cases: int = Field(
-        ge=0,
-        default=0,
-        description=(
-            "Maximum number of cases that can be updated in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
-        ),
-    )
-    delete_max_n_cases: int = Field(
-        ge=0,
-        default=0,
-        description=(
-            "Maximum number of cases that can be deleted in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
-        ),
-    )
+
+    @field_validator("props", mode="before")
+    @classmethod
+    def _validate_props(cls, value: Any) -> CaseTypeProps:
+        if isinstance(value, CaseTypeProps):
+            return value
+        if isinstance(value, dict):
+            return CaseTypeProps(**value)
+        if isinstance(value, str):
+            return CaseTypeProps(**json.loads(value))
+        raise ValueError("Invalid type for props field")
+
+    @field_serializer("props", mode="plain")
+    def _serialize_props(self, value: CaseTypeProps) -> str:
+        return value.model_dump_json()
 
 
 class CaseTypeSetCategory(Model):
