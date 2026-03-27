@@ -2,22 +2,11 @@
 # because this is a package, and imported as such in other modules
 from __future__ import annotations
 
-import datetime
-import uuid
 from enum import Enum, IntEnum
 
-import ulid
-
+from gen_epix.commondb.domain.enum import IdFactory as IdFactory
 from gen_epix.commondb.domain.enum import RoleSet as RoleSet
-
-
-class TimestampFactory(Enum):
-    DATETIME_NOW = lambda: datetime.datetime.now(datetime.timezone.utc)
-
-
-class IdFactory(Enum):
-    UUID4 = uuid.uuid4
-    ULID = lambda: ulid.api.new().uuid
+from gen_epix.commondb.domain.enum import TimestampFactory as TimestampFactory
 
 
 class ServiceType(Enum):
