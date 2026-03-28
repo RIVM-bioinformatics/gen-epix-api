@@ -67,60 +67,18 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
     def __init__(
         self,
         *args: Any,
-        default_create_max_n_cases: int | None = None,
-        default_read_max_n_cases: int | None = None,
-        default_read_max_tree_size: int | None = None,
-        default_update_max_n_cases: int | None = None,
-        default_delete_max_n_cases: int | None = None,
+        default_props: model.CaseTypeProps | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
 
-        self._default_create_max_n_cases = (
-            default_create_max_n_cases
-            if default_create_max_n_cases is not None
-            else self.DEFAULT_CREATE_MAX_N_CASES
+        self._default_props = default_props or model.CaseTypeProps(
+            create_max_n_cases=self.DEFAULT_CREATE_MAX_N_CASES,
+            read_max_n_cases=self.DEFAULT_READ_MAX_N_CASES,
+            read_max_tree_size=self.DEFAULT_READ_MAX_TREE_SIZE,
+            update_max_n_cases=self.DEFAULT_UPDATE_MAX_N_CASES,
+            delete_max_n_cases=self.DEFAULT_DELETE_MAX_N_CASES,
         )
-        self._default_read_max_n_cases = (
-            default_read_max_n_cases
-            if default_read_max_n_cases is not None
-            else self.DEFAULT_READ_MAX_N_CASES
-        )
-        self._default_read_max_tree_size = (
-            default_read_max_tree_size
-            if default_read_max_tree_size is not None
-            else self.DEFAULT_READ_MAX_TREE_SIZE
-        )
-        self._default_update_max_n_cases = (
-            default_update_max_n_cases
-            if default_update_max_n_cases is not None
-            else self.DEFAULT_UPDATE_MAX_N_CASES
-        )
-        self._default_delete_max_n_cases = (
-            default_delete_max_n_cases
-            if default_delete_max_n_cases is not None
-            else self.DEFAULT_DELETE_MAX_N_CASES
-        )
-        if self._default_create_max_n_cases < 0:
-            raise exc.InitializationServiceError(
-                "default_create_max_n_cases must be non-negative"
-            )
-        if self._default_read_max_n_cases < 0:
-            raise exc.InitializationServiceError(
-                "default_read_max_n_cases must be non-negative"
-            )
-        if self._default_read_max_tree_size < 0:
-            raise exc.InitializationServiceError(
-                "default_read_max_tree_size must be non-negative"
-            )
-        if self._default_update_max_n_cases < 0:
-            raise exc.InitializationServiceError(
-                "default_update_max_n_cases must be non-negative"
-            )
-        if self._default_delete_max_n_cases < 0:
-            raise exc.InitializationServiceError(
-                "default_delete_max_n_cases must be non-negative"
-            )
 
     def register_handlers(self) -> None:
         f = self.app.register_handler
@@ -174,12 +132,8 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         f(command.CreateFileForReadSetCommand, self.create_file_for_read_set)
         f(command.CreateFileForSeqCommand, self.create_file_for_seq)
         f(
-            command.RetrieveSequencingProtocolsCommand,
-            self.retrieve_sequencing_protocols,
-        )
-        f(
-            command.RetrieveAssemblyProtocolsCommand,
-            self.retrieve_assembly_protocols,
+            command.RetrieveProtocolsCommand,
+            self.retrieve_protocols,
         )
 
     @abc.abstractmethod
@@ -422,7 +376,7 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         | bool
         | None
     ):
-        """Handle CRUD operations for GeneticDistanceProtocol entities."""
+        """Handle CRUD operations for Protocol entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -536,15 +490,8 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def retrieve_sequencing_protocols(
+    def retrieve_protocols(
         self,
-        cmd: command.RetrieveSequencingProtocolsCommand,
-    ) -> list[seqdb_model.SequencingProtocol]:
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def retrieve_assembly_protocols(
-        self,
-        cmd: command.RetrieveAssemblyProtocolsCommand,
-    ) -> list[seqdb_model.AssemblyProtocol]:
+        cmd: command.RetrieveProtocolsCommand,
+    ) -> list[seqdb_model.Protocol]:
         raise NotImplementedError()

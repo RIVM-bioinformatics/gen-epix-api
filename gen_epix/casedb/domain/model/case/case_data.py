@@ -113,7 +113,7 @@ class CaseSet(Model):
         snake_case_plural_name="case_sets",
         table_name="case_set",
         persistable=True,
-        keys=create_keys({1: "name"}),
+        keys=create_keys({1: "name", 2: "code"}),
         links=create_links(
             {
                 1: ("case_type_id", CaseType, "case_type"),
@@ -136,6 +136,7 @@ class CaseSet(Model):
         default=None, description="The data collection where the case set was created"
     )
     name: str = Field(description="The name of a case set, UNIQUE", max_length=255)
+    code: str = Field(description="The code of a case set, UNIQUE", max_length=255)
     description: str = Field(
         description="The description of a case set", max_length=8000
     )

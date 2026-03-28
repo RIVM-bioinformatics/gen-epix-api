@@ -6,19 +6,19 @@ Auto-generated.  Service type **ABAC** — 5 entities, relationships only.
 erDiagram
     %% casedb / ABAC (simplified)
 
-    OrganizationShareCasePolicy {
+    OrganizationAccessCasePolicy {
     }
 
-    OrganizationAccessCasePolicy {
+    UserShareCasePolicy {
     }
 
     OrganizationAdminPolicy {
     }
 
-    UserAccessCasePolicy {
+    OrganizationShareCasePolicy {
     }
 
-    UserShareCasePolicy {
+    UserAccessCasePolicy {
     }
 
 ```

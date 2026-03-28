@@ -370,22 +370,22 @@ class ParentUploadResult(UploadResultWithIdentifiers):
         Count the number of occurrences of each EtlStatus in this result (if
         include_self) and that of its child results.
         """
-        retval: dict[EtlStatus, int] = {x: 0 for x in EtlStatus}
+        status_count_map: dict[EtlStatus, int] = {x: 0 for x in EtlStatus}
         if include_self:
-            retval[self.status] += 1
+            status_count_map[self.status] += 1
         for field_name in self.get_child_results_field_names():
             child_results: list[UploadResult] = getattr(self, field_name, None) or []
             for child_result in child_results:
-                retval[child_result.status] += 1
+                status_count_map[child_result.status] += 1
                 # Any child identifiers
                 for identifier_result in (
                     child_result.get_identifier_upload_results() or []
                 ):
-                    retval[identifier_result.status] += 1
+                    status_count_map[identifier_result.status] += 1
         # Parent identifiers
         for identifier_result in self.identifiers or []:
-            retval[identifier_result.status] += 1
-        return retval
+            status_count_map[identifier_result.status] += 1
+        return status_count_map
 
     def update_status_with_data_issues(self) -> None:
         """
@@ -629,14 +629,14 @@ class BaseBatchUploadResult(UploadResult):
         Count the number of occurrences of each EtlStatus in this result (if
         include_self) and that of its child results.
         """
-        retval: dict[EtlStatus, int] = {x: 0 for x in EtlStatus}
+        status_count_map: dict[EtlStatus, int] = {x: 0 for x in EtlStatus}
         if include_self:
-            retval[self.status] += 1
+            status_count_map[self.status] += 1
         for parent_result in self.get_parent_results():
             parent_status_count = parent_result.get_status_count(include_self=True)
             for status, count in parent_status_count.items():
-                retval[status] += count
-        return retval
+                status_count_map[status] += count
+        return status_count_map
 
     def resolve_status(self) -> None:
         """

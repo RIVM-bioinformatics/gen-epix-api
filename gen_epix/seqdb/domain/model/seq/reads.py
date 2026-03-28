@@ -1,35 +1,32 @@
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, computed_field, field_validator, model_validator
+from pydantic import (
+    Field,
+    computed_field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from gen_epix.commondb.domain.model import Model
-from gen_epix.commondb.domain.model.base import Model
+from gen_epix.commondb.domain.model.base import (
+    Model,
+    validate_int_enum_value_or_none,
+)
 from gen_epix.commondb.domain.model.organization import BaseIdentifier
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.file import File
-from gen_epix.seqdb.domain.model.seq.base import CodeMixin, ProtocolMixin, QualityMixin
+from gen_epix.seqdb.domain.model.seq.base import CodeMixin, QualityMixin
+from gen_epix.seqdb.domain.model.seq.protocol import HasProtocolMixin, Protocol
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 
 
-class SequencingProtocol(Model, ProtocolMixin):
-    """
-    The protocol used for sequencing a sample.
-    """
-
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="sequencing_protocols",
-        table_name="sequencing_protocol",
-        persistable=True,
-        keys=create_keys({1: "code", 2: ("name", "version")}),
-    )
-
-
-class ReadSet(Model, HasSampleMixin, CodeMixin, QualityMixin):
+class ReadSet(Model, HasSampleMixin, CodeMixin, HasProtocolMixin, QualityMixin):
     """
     A set of sequencing reads, either single-end or paired-end, that is the result
-    of sequencing a sample using a sequencing protocol. The reads data itself are
+    of sequencing a sample using a protocol. The reads data itself are
     not included in this model, but are referenced via either URIs or file links.
 
     The actual reads data need not be referenced on creation of this instance, to allow
@@ -46,20 +43,14 @@ class ReadSet(Model, HasSampleMixin, CodeMixin, QualityMixin):
             {
                 1: ("sample_id", Sample, "sample"),
                 2: (
-                    "sequencing_protocol_id",
-                    SequencingProtocol,
-                    "sequencing_protocol",
+                    "protocol_id",
+                    Protocol,
+                    "protocol",
                 ),
                 3: ("fwd_file_id", File, "fwd_file"),
                 4: ("rev_file_id", File, "rev_file"),
             }
         ),
-    )
-    sequencing_protocol_id: UUID = Field(
-        description="The unique identifier for the sequencing protocol. FOREIGN KEY"
-    )
-    sequencing_protocol: SequencingProtocol | None = Field(
-        default=None, description="The sequencing protocol."
     )
     fwd_uri: str | None = Field(
         default=None,
@@ -116,20 +107,16 @@ class ReadSet(Model, HasSampleMixin, CodeMixin, QualityMixin):
     @field_validator("file_format", mode="before")
     @classmethod
     def _validate_file_format(
-        cls, value: enum.ReadsFileFormat | str | None
+        cls, value: enum.ReadsFileFormat | str | int | None
     ) -> enum.ReadsFileFormat | None:
-        if isinstance(value, str):
-            return enum.ReadsFileFormat(value)
-        return value
+        return validate_int_enum_value_or_none(enum.ReadsFileFormat, value)  # type: ignore[return-value]
 
     @field_validator("file_compression", mode="before")
     @classmethod
     def _validate_file_compression(
-        cls, value: enum.FileCompression | str | None
+        cls, value: enum.FileCompression | str | int | None
     ) -> enum.FileCompression | None:
-        if isinstance(value, str):
-            return enum.FileCompression(value)
-        return value
+        return validate_int_enum_value_or_none(enum.FileCompression, value)  # type: ignore[return-value]
 
     @model_validator(mode="after")
     def _validate_model(self) -> Self:
@@ -157,6 +144,14 @@ class ReadSet(Model, HasSampleMixin, CodeMixin, QualityMixin):
         ):
             raise ValueError("Cannot have both uri and file_id")
         return self
+
+    @field_serializer("file_format", "file_compression")
+    def _serialize_file_format(
+        self, value: enum.ReadsFileFormat | enum.FileCompression | None
+    ) -> int | None:
+        if value is not None:
+            return value.value
+        return value
 
 
 class ReadSetIdentifier(BaseIdentifier):

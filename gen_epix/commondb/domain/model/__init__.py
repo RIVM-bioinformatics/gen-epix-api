@@ -7,6 +7,9 @@ from gen_epix.commondb.domain.model.abac import (
 from gen_epix.commondb.domain.model.base import BaseEtlResult as BaseEtlResult
 from gen_epix.commondb.domain.model.base import EtlLogItem as EtlLogItem
 from gen_epix.commondb.domain.model.base import Model as Model
+from gen_epix.commondb.domain.model.base import (
+    validate_int_enum_value as validate_int_enum_value,
+)
 from gen_epix.commondb.domain.model.organization import BaseIdentifier as BaseIdentifier
 from gen_epix.commondb.domain.model.organization import Contact as Contact
 from gen_epix.commondb.domain.model.organization import DataCollection as DataCollection
@@ -96,17 +99,5 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[
 }
 
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
-
-COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
-
-COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
-
-COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
-
-COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
-
-COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
-
-COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
 
 COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}

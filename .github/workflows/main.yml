@@ -193,7 +193,7 @@ jobs:
           path: test/output/
       - name: SonarCloud Scan
         if: always()
-        uses: sonarsource/sonarcloud-github-action@master
+        uses: sonarsource/sonarcloud-github-action@ba3875ecf642b2129de2b589510c81a8b53dbf4e # master
         env:
           SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # needed to get PR info

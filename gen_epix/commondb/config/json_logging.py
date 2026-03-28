@@ -103,9 +103,7 @@ def _normalise_sensitive_keys(
 
 def _build_sensitive_re(sensitive_keys: tuple[str, ...]) -> re.Pattern[str]:
     escaped = "|".join(re.escape(x) for x in sensitive_keys)
-    return re.compile(
-        rf"(?i)({escaped})=((?:Bearer\s+)?[^\s&,;]+)"
-    )
+    return re.compile(rf"(?i)({escaped})=((?:Bearer\s+)?[^\s&,;]+)")
 
 
 class UvicornAccessLogFilter(logging.Filter):

@@ -5,7 +5,7 @@ from gen_epix.commondb.api import (
 from gen_epix.seqdb.api.file import CreateFileRequestBody as CreateFileRequestBody
 from gen_epix.seqdb.api.organization import ApiPermission as ApiPermission
 from gen_epix.seqdb.api.seq import (
-    RetrievePhylogeneticTreeRequestBody as RetrievePhylogeneticTreeRequestBody,
+    CalculatePhylogeneticTreeRequestBody as CalculatePhylogeneticTreeRequestBody,
 )
 from gen_epix.seqdb.api.seq import (
     RetrieveSamplesRequestBody as RetrieveSamplesRequestBody,

@@ -326,28 +326,23 @@ class CrudCommand(Command):
                     else {self.obj_ids}
                 )
             return self.obj_ids if isinstance(self.obj_ids, list) else [self.obj_ids]
-        elif self.objs is not None:
-            # Command has objs and cannot have obj_ids
-            entity = self.MODEL_CLASS.ENTITY
-            if entity is None:
-                raise exc.InitializationServiceError(
-                    f"Entity not set for model {self.MODEL_CLASS.__name__}"
-                )
-            id_field_name = entity.get_id_field_name()
-            if isinstance(self.objs, list):
-                if as_set:
-                    retval = {getattr(obj, id_field_name) for obj in self.objs}
-                    retval.discard(None)
-                    return retval
-                return [getattr(obj, id_field_name) for obj in self.objs]
-            else:
-                if as_set:
-                    retval = {getattr(self.objs, id_field_name)}
-                    retval.discard(None)
-                    return retval
-                return [getattr(self.objs, id_field_name)]
-        # Command has neither obj_ids nor objs
-        return None
+        objs = self.objs
+        if objs is None:
+            # No obj_ids and no objs
+            return None
+        if isinstance(objs, list):
+            # List of objects
+            if as_set:
+                retval = {x.get_id() for x in objs}
+                retval.discard(None)
+                return retval
+            return [x.get_id() for x in objs]
+        # Single object
+        if as_set:
+            retval = {objs.get_id()}
+            retval.discard(None)
+            return retval
+        return [objs.get_id()]
 
     def get_objs(self) -> list[Model] | None:
         """

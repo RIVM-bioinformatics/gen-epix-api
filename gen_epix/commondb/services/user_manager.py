@@ -183,7 +183,7 @@ class UserManager(BaseUserManager):
                 raise exc.ServiceException(
                     f"Unable to auto-create user with key {claims.get(self._key_claim)} from claims"
                 )
-            claims_user.id = cast(UUID, self.generate_id())
+            claims_user.id = self.generate_id()
             user: model.User = (
                 self._organization_service.repository.crud(  # type: ignore[assignment]
                     uow,
@@ -244,7 +244,7 @@ class UserManager(BaseUserManager):
                 )
             )
 
-            def convert_to_utc(x: datetime) -> datetime:
+            def convert_to_utc(x: datetime.datetime) -> datetime.datetime:
                 if x.tzinfo is None:
                     return x.replace(tzinfo=datetime.timezone.utc)
                 return x.astimezone(datetime.timezone.utc)

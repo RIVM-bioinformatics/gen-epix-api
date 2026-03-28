@@ -14,7 +14,10 @@ from pydantic import (
 
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import Model
-from gen_epix.commondb.domain.model.base import Model
+from gen_epix.commondb.domain.model.base import (
+    Model,
+    validate_int_enum_value_or_none,
+)
 from gen_epix.commondb.domain.model.organization import BaseIdentifier
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
@@ -23,73 +26,11 @@ from gen_epix.seqdb.domain.model.file import File
 from gen_epix.seqdb.domain.model.seq.base import (
     BaseSeq,
     CodeMixin,
-    ProtocolMixin,
     QualityMixin,
 )
+from gen_epix.seqdb.domain.model.seq.protocol import Protocol
 from gen_epix.seqdb.domain.model.seq.reads import ReadSet
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
-from gen_epix.seqdb.domain.model.seq.taxon import Taxon
-
-
-class RefSeq(BaseSeq):
-    """
-    A reference sequence for a single chromosome, viral segment, plasmid or other
-    contiguous DNA molecule belonging to a particular taxon. This can be an actual
-    sequence or an artificial construct, typically then a consensus sequence. It can
-    be used e.g. as a reference for alignment of other sequences or for optimising
-    storage requirements of sequences. Any IUPAC ambiguity codes are allowed in the
-    sequence.
-
-    A reference sequence is immutable: once created, it cannot be deleted or updated.
-    As such, reference sequence IDs can safely be referenced in other models and
-    outside of the application.
-
-    The ID of the reference sequence is equal to the hash of the sequence. As such, the
-    ID of the reference sequence can be computed outside of the application as well.
-    """
-
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="ref_seqs",
-        table_name="ref_seq",
-        persistable=True,
-        keys=create_keys({1: "code", 2: "name"}),
-        links=create_links({1: ("taxon_id", Taxon, "taxon")}),
-    )
-    NAME: ClassVar = "RefSeq"
-
-    code: str = Field(description="The code of the reference sequence", max_length=255)
-    name: str = Field(description="The name of the reference sequence", max_length=255)
-    description: str | None = Field(
-        default=None, description="The description of the reference sequence"
-    )
-    taxon_id: UUID = Field(description="The ID of the taxon. FOREIGN KEY")
-    taxon: Taxon | None = Field(default=None, description="The taxon")
-    genbank_accession_code: str | None = Field(
-        default=None,
-        description="The GenBank accession code of the reference sequence",
-        max_length=255,
-    )
-
-
-class AssemblyProtocol(Model, ProtocolMixin):
-    """
-    A protocol used for assembling sequencing reads into a sequence.
-
-    An assembly protocol is immutable: once created, it cannot be deleted and it
-    should not be semantically updated. As such, assembly protocol IDs can safely be
-    referenced in other models and outside of the application.
-    """
-
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="assembly_protocols",
-        table_name="assembly_protocol",
-        persistable=True,
-        keys=create_keys({1: "code", 2: ("name", "version")}),
-    )
-    has_manual_curation: bool = Field(
-        default=False,
-        description="Whether the assembly has a, potentially optional, manual curation step.",
-    )
 
 
 class Contig(BaseSeq, QualityMixin):
@@ -143,7 +84,7 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
         keys=create_keys(
             {
                 1: "code",
-                2: ("sample_id", "read_set_id", "read_set2_id", "assembly_protocol_id"),
+                2: ("sample_id", "read_set_id", "read_set2_id", "protocol_id"),
             }
         ),
         links=create_links(
@@ -152,7 +93,7 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
                 2: ("file_id", File, "file"),
                 3: ("read_set_id", ReadSet, "read_set"),
                 4: ("read_set2_id", ReadSet, "read_set2"),
-                5: ("assembly_protocol_id", AssemblyProtocol, "assembly_protocol"),
+                5: ("protocol_id", Protocol, "protocol"),
             }
         ),
     )
@@ -186,13 +127,11 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
         description="The unique identifier for a potential second read set used to generate the assembly. FOREIGN KEY",
     )
     read_set2: ReadSet | None = Field(default=None, description="The second read set.")
-    assembly_protocol_id: UUID | None = Field(
+    protocol_id: UUID | None = Field(
         default=None,
-        description="The unique identifier for the assembly protocol used to generate the sequence from reads, if available. FOREIGN KEY",
+        description="The unique identifier for the protocol used to generate the sequence from reads, if available. FOREIGN KEY",
     )
-    assembly_protocol: AssemblyProtocol | None = Field(
-        default=None, description="The assembly protocol."
-    )
+    protocol: Protocol | None = Field(default=None, description="The protocol.")
     contigs: list[Contig] = Field(
         default_factory=list,
         description="The contigs that make up the sequence. No duplicate contigs are allowed. If zero contigs are provided, the sequence is considered to be not available yet.",
@@ -294,20 +233,16 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
     @field_validator("file_format", mode="before")
     @classmethod
     def _validate_file_format(
-        cls, value: enum.SeqFileFormat | str | None
+        cls, value: enum.SeqFileFormat | str | int | None
     ) -> enum.SeqFileFormat | None:
-        if isinstance(value, str):
-            return enum.SeqFileFormat(value)
-        return value
+        return validate_int_enum_value_or_none(enum.SeqFileFormat, value)  # type: ignore[return-value]
 
     @field_validator("file_compression", mode="before")
     @classmethod
     def _validate_file_compression(
-        cls, value: enum.FileCompression | str | None
+        cls, value: enum.FileCompression | str | int | None
     ) -> enum.FileCompression | None:
-        if isinstance(value, str):
-            return enum.FileCompression(value)
-        return value
+        return validate_int_enum_value_or_none(enum.FileCompression, value)  # type: ignore[return-value]
 
     @field_validator("contigs", mode="before")
     @classmethod
@@ -369,69 +304,6 @@ class SeqIdentifier(BaseIdentifier):
 
     seq: Seq | None = Field(
         default=None, description="The sequence associated with this identifier."
-    )
-
-
-class RefSnp(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="ref_snps",
-        table_name="ref_snp",
-        persistable=True,
-        keys=create_keys({1: "code", 2: ("ref_seq_id", "position", "nucleotide")}),
-        links=create_links({1: ("ref_seq_id", RefSeq, "ref_seq")}),
-    )
-    code: str = Field(description="The code of the reference SNP.", max_length=255)
-    ref_seq_id: UUID = Field(
-        description="The unique identifier for the reference sequence. FOREIGN KEY"
-    )
-    ref_seq: RefSeq | None = Field(default=None, description="The reference sequence.")
-    position: int = Field(description="The position of the reference SNP.")
-    nucleotide: str = Field(
-        description="The nucleotide of the reference SNP.", min_length=1, max_length=1
-    )
-
-
-class RefSnpSet(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="ref_snp_sets",
-        table_name="ref_snp_set",
-        persistable=True,
-        keys=create_keys({1: "code", 2: "name"}),
-    )
-    code: str = Field(description="The code of the reference SNP set.", max_length=255)
-    name: str = Field(description="The name of the reference SNP set.", max_length=255)
-
-
-class RefSnpSetMember(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="ref_snp_set_members",
-        table_name="ref_snp_set_member",
-        persistable=True,
-        keys=create_keys(
-            {
-                1: ("ref_snp_set_id", "ref_snp_id"),
-                2: ("ref_snp_set_id", "index"),
-            }
-        ),
-        links=create_links(
-            {
-                1: ("ref_snp_set_id", RefSnpSet, "ref_snp_set"),
-                2: ("ref_snp_id", RefSnp, "ref_snp"),
-            }
-        ),
-    )
-    ref_snp_set_id: UUID = Field(
-        description="The unique identifier for the reference SNP set. FOREIGN KEY"
-    )
-    ref_snp_set: RefSnpSet | None = Field(
-        default=None, description="The reference SNP set."
-    )
-    ref_snp_id: UUID = Field(
-        description="The unique identifier for the reference SNP. FOREIGN KEY"
-    )
-    ref_snp: RefSnp | None = Field(default=None, description="The reference SNP.")
-    index: int = Field(
-        description="The index (ordinal number) of the reference SNP in the reference SNP set."
     )
 
 

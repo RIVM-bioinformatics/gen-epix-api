@@ -25,10 +25,9 @@ class BaseSeqdbService(BaseService):
         )
         f(seqdb_command.UploadSamplesCommand, self.upload_samples)
         f(seqdb_command.CreateFileCommand, self.create_file)
+        f(seqdb_command.ProtocolCrudCommand, self.crud)
         f(seqdb_command.ReadSetCrudCommand, self.crud)
         f(seqdb_command.FileCrudCommand, self.crud)
-        f(seqdb_command.SequencingProtocolCrudCommand, self.crud)
-        f(seqdb_command.AssemblyProtocolCrudCommand, self.crud)
         f(seqdb_command.SeqCrudCommand, self.crud)
         f(seqdb_command.RetrieveSimilarProfilesCommand, self.retrieve_similar_profiles)
 

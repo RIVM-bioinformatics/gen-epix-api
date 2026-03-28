@@ -1,13 +1,13 @@
 import datetime
 import ipaddress
 from decimal import Decimal
-from enum import Enum
+from enum import Enum, IntEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar, cast
 from uuid import UUID
 
 import sqlalchemy as sa
-from pydantic import BaseModel
+from pydantic import BaseModel, Json
 from pydantic.fields import ComputedFieldInfo, FieldInfo
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import expression
@@ -63,6 +63,7 @@ PYTHON_SQL_TYPE_MAP = {
     set: sa.JSON,
     frozenset: sa.JSON,
     tuple: sa.JSON,
+    Json: sa.JSON,
 }
 
 PYDANTIC_SA_FIELD_METADATA_MAP: dict[str, str] = {
@@ -166,6 +167,14 @@ def create_sa_type_from_field_info(
         type_ = get_type_from_annotation(annotation)
     else:
         type_ = field_info.return_type
+    if isinstance(type_, TypeVar):  # type: ignore[unreachable]
+        type_ = cast(type, type_.__bound__)  # type: ignore[unreachable]
+        if type_ is IntEnum:
+            type_ = int
+        elif type_ is Enum:
+            type_ = str
+        else:
+            raise NotImplementedError(f"Unsupported TypeVar bound for field: {type_}")
 
     def _create_sa_type(sa_type_class: type[TypeEngine]) -> TypeEngine:
         # Get column kwargs for this type, overridden by kwargs
