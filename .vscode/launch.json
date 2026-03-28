@@ -802,6 +802,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.commondb.integration.metadata",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_commondb_integration_metadata"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.commondb.integration.sql_injection",
             "type": "debugpy",
             "request": "launch",

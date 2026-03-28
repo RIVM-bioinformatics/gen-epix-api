@@ -446,6 +446,16 @@ class Run:
             ]
         )
 
+    def test_commondb_integration_metadata(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/commondb/integration/metadata",
+            ]
+        )
+
     def test_commondb_integration_sql_injection(self) -> None:
         import pytest
 

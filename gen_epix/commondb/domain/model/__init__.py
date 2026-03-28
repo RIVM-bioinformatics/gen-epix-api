@@ -7,6 +7,7 @@ from gen_epix.commondb.domain.model.abac import (
 from gen_epix.commondb.domain.model.base import BaseEtlResult as BaseEtlResult
 from gen_epix.commondb.domain.model.base import EtlLogItem as EtlLogItem
 from gen_epix.commondb.domain.model.base import Model as Model
+from gen_epix.commondb.domain.model.base import ModelNoId as ModelNoId
 from gen_epix.commondb.domain.model.base import (
     validate_int_enum_value as validate_int_enum_value,
 )

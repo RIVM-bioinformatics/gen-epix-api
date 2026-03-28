@@ -13,6 +13,7 @@ from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, model
 from gen_epix.commondb.domain.policy import BaseHasSystemOutagePolicy
 from gen_epix.commondb.domain.service import BaseSystemService
+from gen_epix.commondb.policies.model_metadata_policy import ModelMetadataPolicy
 from gen_epix.fastapp import CrudOperation, EventTiming
 from gen_epix.fastapp.app import App
 from gen_epix.util import get_package_root
@@ -27,15 +28,29 @@ class SystemService(BaseSystemService):
         self.has_system_outage_policy_class: type[BaseHasSystemOutagePolicy] = (
             app_impl.get_mapped_class(policies.HasSystemOutagePolicy)
         )
+        self.model_metadata_policy_class: type[ModelMetadataPolicy] = (
+            app_impl.get_mapped_class(policies.ModelMetadataPolicy)
+        )
 
     def register_policies(self) -> None:
         """
         Registers policies that checks if the system has a current outage
 
         """
-        policy = self.has_system_outage_policy_class(system_service=self)
+        # System outage policy should be BEFORE all other policies to short-circuit if there is an outage
+        system_outage_policy = self.has_system_outage_policy_class(system_service=self)
         for command_class in self.app.domain.commands:
-            self.app.register_policy(command_class, policy, EventTiming.BEFORE)
+            self.app.register_policy(
+                command_class, system_outage_policy, EventTiming.BEFORE
+            )
+        # Model metadata policy should be AFTER all other policies to ensure metadata is masked for unauthorized users even if they have access to the object itself based on other policies or
+        model_metadata_policy = self.model_metadata_policy_class(
+            role_set_map=self.app.impl.role_set_map
+        )
+        for cmd_class in self.app.domain.commands:
+            self.app.register_policy(
+                cmd_class, model_metadata_policy, EventTiming.AFTER
+            )
 
     def retrieve_outages(
         self, cmd: command.RetrieveOutagesCommand

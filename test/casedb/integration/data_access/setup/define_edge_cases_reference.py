@@ -1,16 +1,16 @@
 """
 This module defines the EDGE_CASES data structure, both used to:
-1) generate test data in setup_case_type_data and
+1) generate test data in setup_case_data_reference and
 2) drive the test scenarios in test_casedb_edge_cases_refdata_access.
 
-EDGE_CASES is a comprehensive set of edge cases for testing ABAC access control on CaseDB reference data (CaseTypes, CaseTypeSets,
+EDGE_CASES is a comprehensive set of edge cases for testing ABAC access control on casedb reference data (CaseTypes, CaseTypeSets,
 and Col sets). Each edge case represents a unique combination of organizational membership and policies at both the org and user level,
 along with the expected access results for that scenario.
 
 The expectations are defined based on the principle that for reference data access,
 only org-level policies (both access and share) should determine access,
 while user-level policies should not grant any additional access beyond what the org-level policies provide.
-(implementation: expectations are *NOT* derived from querying the created policies (set up in setup_case_type_data) directly,
+(implementation: expectations are *NOT* derived from querying the created policies (set up in setup_case_data_reference) directly,
 but from this principle and the org-level policies in each case).
 
 
@@ -362,7 +362,9 @@ EDGE_CASES: list[EdgeCaseSpec] = [
         expected_ref_dims=_compute_expected_ref_dims(
             _compute_expected_cols(org_access, org_share)
         ),
-        expected_cases=_compute_expected_cases(org_access, org_share, user_access, user_share),
+        expected_cases=_compute_expected_cases(
+            org_access, org_share, user_access, user_share
+        ),
     )
     for org_idx, ((_, org_access), (_, org_share)) in _org_combos
     for usr_idx, ((_, user_access), (_, user_share)) in _user_combos

@@ -12,6 +12,7 @@ from test.casedb.integration.build_db.base import (
     SKIP_CREATE_DATA,
     SKIP_RAISE,
 )
+from test.commondb.integration.build_db.base import DEFAULT_CREATED_AT
 from uuid import UUID
 
 import pydantic
@@ -52,7 +53,7 @@ class TestUpdate:
             print("\nUser updates:")
         for role in sorted(env.role_set_map[CommonRoleSet.ALL]):
             user_str = f"{env.rev_role_map[role].name.lower()}1_1"
-            user: model.User = env._get_obj(model.User, user_str)
+            user: model.User = env.get_obj(model.User, user_str)
             is_root = role == env.root_role
             is_not_restricted = role in is_not_restricted_roles
             org_admin_orgs = {
@@ -77,7 +78,7 @@ class TestUpdate:
                     # Occurs only for commondb
                     is_sub_role = False
                 for tgt_user_str, new_tgt_org in zip(tgt_users_str, new_tgt_orgs):
-                    tgt_user: model.User = env._get_obj(model.User, tgt_user_str)
+                    tgt_user: model.User = env.get_obj(model.User, tgt_user_str)
                     tgt_org = org_id_name_map[tgt_user.organization_id]
                     # Determine if user can update tgt_user and also their tgt_org
                     is_self = user_str == tgt_user_str
@@ -132,7 +133,7 @@ class TestUpdate:
             print("\nUser role updates:")
         for role in sorted(env.role_set_map[CommonRoleSet.ALL]):
             user_str = f"{env.rev_role_map[role].name.lower()}1_1"
-            user: model.User = env._get_obj(model.User, user_str)
+            user: model.User = env.get_obj(model.User, user_str)
             is_root = role == env.root_role
             is_not_restricted = role in is_not_restricted_roles
             org_admin_org_ids = env.get_org_ids_for_org_admin(
@@ -154,7 +155,7 @@ class TestUpdate:
                     # Occurs only for commondb
                     is_sub_role = False
                 for tgt_user_str in tgt_users_str:
-                    tgt_user: model.User = env._get_obj(model.User, tgt_user_str)
+                    tgt_user: model.User = env.get_obj(model.User, tgt_user_str)
                     tgt_user_org_id = tgt_user.organization_id
                     if not SKIP_RAISE:
                         msg = f"{user_str}: {tgt_user_str} no roles"
@@ -221,7 +222,10 @@ class TestUpdate:
         env.create_data_collection(ROOT, "data_collection99")
         for i, user in enumerate(APP_ADMIN_OR_ABOVE_USERS):
             env.update_object(
-                user, model.DataCollection, "data_collection99", {"description": str(i)}
+                user,
+                model.DataCollection,
+                "data_collection99",
+                {"description": str(i), "created_at": DEFAULT_CREATED_AT},
             )
         env.delete_object(ROOT, model.DataCollection, "data_collection99")
 
@@ -248,8 +252,8 @@ class TestUpdate:
             ROOT,
             name,
             "case_type_set1",
-            read_col_set="col_set98",
-            write_col_set="col_set98",
+            read_col_set_or_str="col_set98",
+            write_col_set_or_str="col_set98",
         )
         for i, user in enumerate(APP_ADMIN_OR_ABOVE_USERS):
             # Alternate between write False and True to make sure a change is persisted
@@ -287,22 +291,26 @@ class TestUpdate:
             ROOT,
             name,
             "case_type_set1",
-            read_col_set="col_set97",
-            write_col_set="col_set97",
+            read_col_set_or_str="col_set97",
+            write_col_set_or_str="col_set97",
         )
         args = {
             "data_collection": "data_collection97",
             "case_type_set": "case_type_set1",
         }
-        kwargs = {
-            "read_col_set": "col_set97",
-            "write_col_set": "col_set97",
+        create_kwargs = {
+            "read_col_set_or_str": "col_set97",
+            "write_col_set_or_str": "col_set97",
+        }
+        update_kwargs = {
+            "read_col_set": create_kwargs["read_col_set_or_str"],
+            "write_col_set": create_kwargs["write_col_set_or_str"],
         }
         tgt_users = ["org_admin1_1", "org_user1_1"]
         for tgt_user in tgt_users:
-            tgt_user = env._get_obj(model.User, tgt_user)
+            tgt_user = env.get_obj(model.User, tgt_user)
             user_access_case_policy = env.create_user_access_case_policy(
-                "org_admin1_1", tgt_user, *list(args.values()), **kwargs
+                "org_admin1_1", tgt_user, *list(args.values()), **create_kwargs
             )
             for i, user in enumerate(["org_admin1_1"]):
                 # Alternate between write False and True to make sure a change is persisted
@@ -311,7 +319,7 @@ class TestUpdate:
                     model.UserAccessCasePolicy,
                     user_access_case_policy,
                     args
-                    | kwargs
+                    | update_kwargs
                     | {"user_id": tgt_user.id, "write_case_set": bool(i % 2 != 0)},
                 )
             if not SKIP_RAISE:
@@ -322,7 +330,7 @@ class TestUpdate:
                             model.UserAccessCasePolicy,
                             user_access_case_policy,
                             args
-                            | kwargs
+                            | update_kwargs
                             | {
                                 "user_id": tgt_user.id,
                                 "write_case_set": bool(i % 2 != 0),

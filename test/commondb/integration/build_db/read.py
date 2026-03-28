@@ -32,7 +32,7 @@ class TestRead:
                 # Organization admins can only read users in their organization,
                 # as well as themselves and other org admins that are admins of
                 # some of their organizations
-                org_admin_user = env._get_obj(model.User, f"org_admin{i}_{j}")
+                org_admin_user = env.get_obj(model.User, f"org_admin{i}_{j}")
                 env.verify_read_all(
                     org_admin_user,
                     model.User,
@@ -42,7 +42,7 @@ class TestRead:
                 )
                 # Organization and refdata admin users can only read themselves and organization admins of their organization
                 for user_type in ["org_user", "refdata_admin"]:
-                    user = env._get_obj(
+                    user = env.get_obj(
                         model.User, f"{user_type}{i}_{j}", on_missing="return_none"
                     )
                     if not user:
@@ -73,7 +73,7 @@ class TestRead:
                 policy.user_id
             )
         for user_or_str in DATA_USERS:
-            user: model.User = env._get_obj(
+            user: model.User = env.get_obj(
                 model.User, user_or_str
             )  # type: ignore[assignment]
             user_name_emails = sorted(

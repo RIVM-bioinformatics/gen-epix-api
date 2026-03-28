@@ -8,6 +8,9 @@ erDiagram
 
     %% Entity definitions
     PhylogeneticTree {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id
         UUID tree_algorithm_id
         TreeAlgorithm tree_algorithm

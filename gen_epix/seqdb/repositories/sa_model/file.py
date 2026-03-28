@@ -1,11 +1,10 @@
 # pylint: disable=too-few-public-methods
 
-from uuid import UUID
-
 import sqlalchemy.orm as orm
 from sqlalchemy.orm import Mapped
 
 from gen_epix.commondb.repositories.sa_model import (
+    RowMetadataMixin,
     create_mapped_column,
     create_table_args,
 )
@@ -14,12 +13,11 @@ from gen_epix.seqdb.domain import DOMAIN, enum, model
 Base: type = orm.declarative_base(name=enum.ServiceType.FILE.value)
 
 
-class File(Base):
+class File(Base, RowMetadataMixin):
     """
-    SQLAlchemy model mixin for adding a number of standard fields.
+    SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.File)
 
-    id: Mapped[UUID] = create_mapped_column(DOMAIN, model.File, "id")
     content: Mapped[bytes] = create_mapped_column(DOMAIN, model.File, "content")

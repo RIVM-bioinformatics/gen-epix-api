@@ -23,10 +23,10 @@ def setup_test_users_and_organizations_operational(env: Env) -> None:
         )
 
     root_user = env.get_root_user()
-    env._set_obj(root_user)  # noqa: SLF001
+    env.set_obj(root_user)  # noqa: SLF001
 
     org1 = env.read_one_by_property(root_user, model.Organization, "name", "org1")
-    env._set_obj(org1)  # noqa: SLF001
+    env.set_obj(org1)  # noqa: SLF001
 
     created_orgs: set[str] = {"org1"}
     for spec in EDGE_CASES_OP:

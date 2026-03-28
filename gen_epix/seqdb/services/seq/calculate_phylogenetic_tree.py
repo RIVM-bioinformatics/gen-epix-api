@@ -67,7 +67,9 @@ def seq_service_calculate_phylogenetic_tree(
                 CrudOperation.READ_ALL,
                 filter=CompositeFilter(
                     filters=[
-                        UuidSetFilter(key="seq_profile_id", members=frozenset(seq_profile_ids)),
+                        UuidSetFilter(
+                            key="seq_profile_id", members=frozenset(seq_profile_ids)
+                        ),
                         EqualsUuidFilter(
                             key="protocol_id",
                             value=protocol_id,
