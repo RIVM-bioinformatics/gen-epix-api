@@ -108,7 +108,7 @@ class TestCasedbEdgeCasesAccess:
         """
         root_user = self.env.get_root_user()
 
-        # case_type1 and data_collection1 are created in the setup_case_type_data fixture
+        # case_type1 and data_collection1 are created in the setup_case_data_reference fixture
 
         # created_at = datetime(2025, 1, 1, tzinfo=UTC)
         # modified_at = datetime(2025, 6, 1, tzinfo=UTC)
@@ -154,7 +154,7 @@ class TestCasedbEdgeCasesAccess:
         """
         root_user = self.env.get_root_user()
 
-        # case_type1, data_collection1 and data_collection2 are created in the setup_case_type_data fixture
+        # case_type1, data_collection1 and data_collection2 are created in the setup_case_data_reference fixture
 
         case_result = self.env.create_case(
             root_user,
@@ -188,7 +188,7 @@ class TestCasedbEdgeCasesAccess:
         EDGE_CASES_OP,
         ids=[x.user_name for x in EDGE_CASES_OP],
     )
-    # Note: replace setup_case_type_data with new setup for operational data later
+    # Note: replace setup_case_data_reference with new setup for operational data later
     def test_case_and_content_cols_access_matches_expected(
         self, spec: EdgeCaseSpec, setup_case_data_operational: None
     ) -> None:

@@ -1,4 +1,4 @@
-import datetime
+from datetime import UTC, datetime
 from enum import IntEnum
 from uuid import UUID
 
@@ -138,4 +138,5 @@ def validate_int_enum_value_or_none(
     """Validate that the given value is a valid member of the given IntEnum class or None."""
     if value is None:
         return None
+    return validate_int_enum_value(enum_class, value)
     return validate_int_enum_value(enum_class, value)

@@ -1,5 +1,5 @@
 """
-This module defines the setup_case_type_data fixture, which creates reference data
+This module defines the setup_case_data_reference fixture, which creates reference data
 (diseases, etiological agents, CaseTypes, CaseTypeSets, ColSets,
 and all four policy types) for tests.
 """
@@ -20,7 +20,7 @@ from gen_epix.casedb.domain import model
 VERBOSE = False  # Set to True to enable detailed print statements during setup for debugging purposes;
 
 
-# setup_case_type_data depends on setup_test_users_and_organizations to ensure that users and
+# setup_case_data_reference depends on setup_test_users_and_organizations to ensure that users and
 # organizations are created before policies reference them.
 # The parameter is intentionally unused in the body — its presence enforces fixture ordering.
 @pytest.fixture(scope="module")

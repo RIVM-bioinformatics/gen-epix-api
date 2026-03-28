@@ -5,7 +5,7 @@ Creates users, organizations, case types, col infrastructure, data collections,
 cases, and access policies — all driven by EDGE_CASES_OP from
 define_edge_cases_operational.py.
 
-Comparable to setup_case_type_data.py and setup_test_users_and_organizations.py
+Comparable to setup_case_data_reference.py and setup_test_users_and_organizations.py
 for the reference data tests, but for the operational data edge cases.
 
 Used by test/casedb/integration/data_access/test_data_access.py.

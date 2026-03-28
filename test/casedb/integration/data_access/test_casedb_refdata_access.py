@@ -5,7 +5,7 @@ It uses:
 
 - an empty database to begin with, see DevRepositoryConfig.DICT_EMPTY in base_refdata_access.py for configuration
 - the definitions in EDGE_CASES from define_edge_cases.py
-- the setup_case_type_data fixture to create reference data and policies for all edge cases defined in define_edge_cases.py,
+- the setup_case_data_reference fixture to create reference data and policies for all edge cases defined in define_edge_cases.py,
 - and then tests that each user has access to exactly the expected CaseTypes or other reference data
 
 """
@@ -255,7 +255,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         ids=[x.user_name for x in EDGE_CASES],
     )
     def test_ref_col_access_matches_expected(
-        self, spec: EdgeCaseSpec, setup_case_type_data: None
+        self, spec: EdgeCaseSpec, setup_case_data_reference: None
     ) -> None:
         """
         For each edge case, assert that the set of accessible cols exactly matches
@@ -322,7 +322,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
     def test_disease_access_matches_all(self, setup_case_data_reference: None) -> None:
         """
         take first edge case spec as a representative case (since disease access is not expected to vary across cases in this setup)
-        and assert that the set of accessible diseases matches all diseases, get them from env.db since they are created there by setup_case_type_data
+        and assert that the set of accessible diseases matches all diseases, get them from env.db since they are created there by setup_case_data_reference
         """
 
         spec = EDGE_CASES[
@@ -340,7 +340,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         result: list[Disease] = self.env.app.handle(get_cmd)
         actual = {x.name for x in result}
 
-        # get all diseases from env.db since they are created there by setup_case_type_data
+        # get all diseases from env.db since they are created there by setup_case_data_reference
         expected = {x.name for x in self.env.db[model.Disease].values()}
 
         assert actual == expected, (
@@ -354,7 +354,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
     ) -> None:
         """
         similar to test_disease_access_matches_all but for etiological agents instead of diseases,
-         since both are created as reference data in setup_case_type_data and not expected to be filtered by access policies in this setup
+         since both are created as reference data in setup_case_data_reference and not expected to be filtered by access policies in this setup
         """
         spec = EDGE_CASES[
             0
@@ -413,7 +413,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         ids=[x.user_name for x in EDGE_CASES],
     )
     def test_col_access_matches_expected(
-        self, spec: EdgeCaseSpec, setup_case_type_data: None
+        self, spec: EdgeCaseSpec, setup_case_data_reference: None
     ) -> None:
         """
         For each edge case, assert that the set of accessible cols exactly matches
