@@ -13,7 +13,6 @@ from pathlib import Path
 import yaml  # type: ignore[import-untyped]
 from dynaconf import Dynaconf
 
-from gen_epix.commondb.config.factory import IdFactory, TimestampFactory
 from gen_epix.commondb.config.settings_manager import SettingsManager
 from gen_epix.fastapp import App
 
@@ -238,6 +237,8 @@ class AppCfg(BaseAppCfg):
     def _init_validate_settings(self) -> None:
         """Validate settings and apply defaults to all services and repositories."""
         # Map timestamp and id factories
+        from gen_epix.commondb.domain.enum import IdFactory, TimestampFactory  # noqa: PLC0415
+
         defaults_cfg = self._cfg["service"]["defaults"]["props"]
         timestamp_factory = getattr(
             TimestampFactory,
