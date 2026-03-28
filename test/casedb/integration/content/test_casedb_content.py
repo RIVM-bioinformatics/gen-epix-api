@@ -307,9 +307,9 @@ class TestContent:
             # Retrieve phylogenetic tree
             found_similar_cases = False
             dist_cols = [
-                col
-                for col in complete_case_type.cols.values()
-                if complete_case_type.ref_cols[col.ref_col_id].col_type
+                x
+                for x in complete_case_type.cols.values()
+                if complete_case_type.ref_cols[x.ref_col_id].col_type
                 == enum.ColType.GENETIC_DISTANCE
             ]
             for dist_col in dist_cols:

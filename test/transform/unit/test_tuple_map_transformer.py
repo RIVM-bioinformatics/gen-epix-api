@@ -1,9 +1,28 @@
 """
 Unit tests for TupleMapTransformer.
+
+# LSP-2989 feature changes
+
+SUPPORT FOR DEFAULT VALUES:
+
+- When no mapping is found, default values are applied to the target fields if
+  on_no_match=OnException.SET_DEFAULT.
+- default_values is part of the transformer configuration and must have the same
+  length as row_tgt_fields.
+- When on_no_match=OnException.RAISE (the default), a ValueError is raised
+  if no mapping is found.
+
+CASE INSENSITIVITY:
+
+- Matching is case-insensitive by default (case_sensitive=False).
+- When case_sensitive=False, string source field values are lowercased before lookup;
+  non-string values are unaffected.
+- Normalization is applied during mapping (at set_map and transform time), not at init.
 """
 
 import pytest
 
+from gen_epix.fastapp.enum import OnException
 from gen_epix.transform.adapter import ObjectAdapter
 from gen_epix.transform.transformers.tuple_map import TupleMapTransformer
 
@@ -409,3 +428,157 @@ class TestTupleMapTransformerValidation:
                 row_src_fields=["src"],
                 row_tgt_fields=["tgt"],
             )
+
+
+@pytest.mark.scenario_ids("TC-MAIN-12-01")
+class TestTupleMapTransformerDefaultValues:
+    """Test cases for TupleMapTransformer default values (on_no_match=SET_DEFAULT)."""
+
+    def test_set_default_applies_defaults_on_no_match(self) -> None:
+        """Test that default values are applied when no mapping is found."""
+        transformer = TupleMapTransformer(
+            map_rows=[{"src": "A", "tgt": 1}],
+            row_src_fields=["src"],
+            row_tgt_fields=["tgt"],
+            on_no_match=OnException.SET_DEFAULT,
+            default_values=[99],
+        )
+
+        adapter = ObjectAdapter({"src": "UNKNOWN"})
+        result = transformer.transform(adapter)
+        assert result.get("tgt") == 99
+
+    def test_set_default_does_not_affect_matched_rows(self) -> None:
+        """Test that a matched row still uses the mapping, not defaults."""
+        transformer = TupleMapTransformer(
+            map_rows=[{"src": "A", "tgt": 1}],
+            row_src_fields=["src"],
+            row_tgt_fields=["tgt"],
+            on_no_match=OnException.SET_DEFAULT,
+            default_values=[99],
+        )
+
+        adapter = ObjectAdapter({"src": "A"})
+        result = transformer.transform(adapter)
+        assert result.get("tgt") == 1
+
+    def test_set_default_multiple_target_fields(self) -> None:
+        """Test default values with multiple target fields."""
+        transformer = TupleMapTransformer(
+            map_rows=[{"src": "A", "tgt_a": "alpha", "tgt_b": 100}],
+            row_src_fields=["src"],
+            row_tgt_fields=["tgt_a", "tgt_b"],
+            on_no_match=OnException.SET_DEFAULT,
+            default_values=["default_name", 0],
+        )
+
+        adapter = ObjectAdapter({"src": "UNKNOWN"})
+        result = transformer.transform(adapter)
+        assert result.get("tgt_a") == "default_name"
+        assert result.get("tgt_b") == 0
+
+    def test_set_default_wrong_length_raises_at_init(self) -> None:
+        """Test that default_values with wrong length raises at init."""
+        with pytest.raises(ValueError, match="default_values length"):
+            TupleMapTransformer(
+                map_rows=[{"src": "A", "tgt": 1}],
+                row_src_fields=["src"],
+                row_tgt_fields=["tgt"],
+                on_no_match=OnException.SET_DEFAULT,
+                default_values=[1, 2],  # too many
+            )
+
+    def test_set_default_without_default_values_raises_at_init(self) -> None:
+        """Test that SET_DEFAULT without default_values raises at init."""
+        with pytest.raises(ValueError, match="default_values must be provided"):
+            TupleMapTransformer(
+                map_rows=[{"src": "A", "tgt": 1}],
+                row_src_fields=["src"],
+                row_tgt_fields=["tgt"],
+                on_no_match=OnException.SET_DEFAULT,
+            )
+
+
+@pytest.mark.scenario_ids("TC-MAIN-12-01")
+class TestTupleMapTransformerCaseInsensitivity:
+    """Test cases for TupleMapTransformer case-insensitive matching."""
+
+    def test_case_insensitive_by_default(self) -> None:
+        """Test that matching is case-insensitive by default."""
+        transformer = TupleMapTransformer(
+            map_rows=[{"src": "hello", "tgt": 1}],
+            row_src_fields=["src"],
+            row_tgt_fields=["tgt"],
+        )
+
+        result = transformer.transform(ObjectAdapter({"src": "HELLO"}))
+        assert result.get("tgt") == 1
+
+    def test_case_sensitive_explicit(self) -> None:
+        """Test that case_sensitive=True raises on case mismatch."""
+        transformer = TupleMapTransformer(
+            map_rows=[{"src": "hello", "tgt": 1}],
+            row_src_fields=["src"],
+            row_tgt_fields=["tgt"],
+            case_sensitive=True,
+        )
+
+        with pytest.raises(ValueError, match="Could not find mapping"):
+            transformer.transform(ObjectAdapter({"src": "HELLO"}))
+
+    def test_case_insensitive_match(self) -> None:
+        """Test that case_sensitive=False matches regardless of string case."""
+        transformer = TupleMapTransformer(
+            map_rows=[{"src": "hello", "tgt": 1}],
+            row_src_fields=["src"],
+            row_tgt_fields=["tgt"],
+            case_sensitive=False,
+        )
+
+        for variant in ["hello", "HELLO", "Hello", "hElLo"]:
+            adapter = ObjectAdapter({"src": variant})
+            result = transformer.transform(adapter)
+            assert result.get("tgt") == 1, f"Expected match for '{variant}'"
+
+    def test_case_insensitive_non_string_values_unaffected(self) -> None:
+        """Test that non-string key values are not affected by case_sensitive=False."""
+        transformer = TupleMapTransformer(
+            map_rows=[{"label": "A", "code": 42, "tgt": 99}],
+            row_src_fields=["label", "code"],
+            row_tgt_fields=["tgt"],
+            case_sensitive=False,
+        )
+
+        adapter = ObjectAdapter({"label": "a", "code": 42})
+        result = transformer.transform(adapter)
+        assert result.get("tgt") == 99
+
+    def test_case_insensitive_map_key_conflict_raises(self) -> None:
+        """Test that case_sensitive=False raises on duplicate keys after normalization."""
+        with pytest.raises(KeyError, match="Duplicate mapping"):
+            TupleMapTransformer(
+                map_rows=[
+                    {"src": "hello", "tgt": 1},
+                    {"src": "HELLO", "tgt": 2},  # normalizes to the same key
+                ],
+                row_src_fields=["src"],
+                row_tgt_fields=["tgt"],
+                case_sensitive=False,
+            )
+
+    def test_case_insensitive_with_set_default(self) -> None:
+        """Test that case_sensitive=False and SET_DEFAULT work together."""
+        transformer = TupleMapTransformer(
+            map_rows=[{"src": "known", "tgt": 1}],
+            row_src_fields=["src"],
+            row_tgt_fields=["tgt"],
+            on_no_match=OnException.SET_DEFAULT,
+            default_values=[0],
+            case_sensitive=False,
+        )
+
+        result = transformer.transform(ObjectAdapter({"src": "KNOWN"}))
+        assert result.get("tgt") == 1
+
+        result = transformer.transform(ObjectAdapter({"src": "unknown"}))
+        assert result.get("tgt") == 0

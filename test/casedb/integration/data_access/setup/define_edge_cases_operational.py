@@ -244,9 +244,11 @@ def _build_col_lookup(
 ) -> dict[tuple[str, str], set[str]]:
     """Build (case_type, dc) → union of col codes from all matching policies."""
     lookup: dict[tuple[str, str], set[str]] = {}
-    for ct_set, dc, col_set_name in policies:
-        for ct in CASE_TYPE_SETS_OP.get(ct_set, []):
-            lookup.setdefault((ct, dc), set()).update(COL_SETS_OP.get(col_set_name, []))
+    for case_type_set, data_collection, col_set_name in policies:
+        for case_type in CASE_TYPE_SETS_OP.get(case_type_set, []):
+            lookup.setdefault((case_type, data_collection), set()).update(
+                COL_SETS_OP.get(col_set_name, [])
+            )
     return lookup
 
 
@@ -277,9 +279,9 @@ def _compute_expected_cases_op(
 
             ct_idx = m.group(1)
             accessible = {
-                col
-                for col in (org_lookup[key] & user_lookup[key])
-                if col.startswith(f"col{ct_idx}_")
+                x
+                for x in (org_lookup[key] & user_lookup[key])
+                if x.startswith(f"col{ct_idx}_")
             }
             if accessible:
                 result.setdefault(case_code, set()).update(accessible)

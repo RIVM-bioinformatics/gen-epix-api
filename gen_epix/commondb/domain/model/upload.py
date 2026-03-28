@@ -147,7 +147,7 @@ class UploadResult(BaseEtlResult, Model):
         """
         if isinstance(upload_log_items, list):
             self.logs.extend(upload_log_items)
-            if any(log.severity == LogLevel.ERROR for log in upload_log_items):
+            if any(x.severity == LogLevel.ERROR for x in upload_log_items):
                 self.status = EtlStatus.FAILED
         else:
             self.logs.append(upload_log_items)

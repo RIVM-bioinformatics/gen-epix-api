@@ -7,8 +7,8 @@ from collections.abc import Hashable
 from decimal import Decimal
 from typing import NoReturn, TypedDict
 
+from gen_epix.fastapp.enum import OnException
 from gen_epix.transform.adapter import ObjectAdapter
-from gen_epix.transform.enum import NoMatchStrategy
 from gen_epix.transform.transformer import Transformer
 
 
@@ -38,14 +38,14 @@ class IntervalTransformer(Transformer):
         lower_bound_is_inclusive: list[bool] | bool = True,
         upper_bound_is_inclusive: list[bool] | bool = False,
         name: str | None = None,
-        no_match_strategy: NoMatchStrategy = NoMatchStrategy.RAISE,
+        on_no_match: OnException = OnException.RAISE,
     ) -> None:
 
         # Initialise some
         super().__init__(name)
         self.src_field = src_field
         self.tgt_field = tgt_field or src_field
-        self._no_match_strategy = no_match_strategy
+        self._on_no_match = on_no_match
         self._n_intervals = len(lower_bounds)
         self._lower_bounds = [-math.inf if x is None else x for x in lower_bounds]
         self._upper_bounds = [math.inf if x is None else x for x in upper_bounds]
@@ -123,14 +123,12 @@ class IntervalTransformer(Transformer):
         src_value = obj.get(self.src_field)
         tgt_value = self._get_interval(src_value)
         if tgt_value == NoReturn:
-            if self._no_match_strategy == NoMatchStrategy.RAISE:
+            if self._on_no_match == OnException.RAISE:
                 raise ValueError(f"Value {src_value} does not match any interval")
-            elif self._no_match_strategy == NoMatchStrategy.SET_NONE:
+            elif self._on_no_match == OnException.SET_NONE:
                 obj.set(self.tgt_field, None)
                 return obj
-            raise NotImplementedError(
-                f"Unknown no match strategy {self._no_match_strategy}"
-            )
+            raise NotImplementedError(f"Invalid on_no_match value {self._on_no_match}")
         obj.set(self.tgt_field, tgt_value)
         return obj
 
@@ -138,13 +136,11 @@ class IntervalTransformer(Transformer):
         """Map number to interval."""
         tgt_value = self._get_interval(value)
         if tgt_value == NoReturn:
-            if self._no_match_strategy == NoMatchStrategy.RAISE:
+            if self._on_no_match == OnException.RAISE:
                 raise ValueError(f"Value {value} does not match any interval")
-            elif self._no_match_strategy == NoMatchStrategy.SET_NONE:
+            elif self._on_no_match == OnException.SET_NONE:
                 return None
-            raise NotImplementedError(
-                f"Unknown no match strategy {self._no_match_strategy}"
-            )
+            raise NotImplementedError(f"Invalid on_no_match value {self._on_no_match}")
         return tgt_value
 
     def is_transformable(self, value: float | int | Decimal | None) -> bool:
@@ -179,14 +175,14 @@ class IntervalToIntervalTransformer(Transformer):
         tgt_lower_bound_is_inclusive: list[bool] | bool = True,
         tgt_upper_bound_is_inclusive: list[bool] | bool = False,
         name: str | None = None,
-        no_match_strategy: NoMatchStrategy = NoMatchStrategy.RAISE,
+        on_no_match: OnException = OnException.RAISE,
         overlap_strategy: str = "largest_overlap",  # "largest_overlap" or "exact_fit"
     ) -> None:
 
         super().__init__(name)
         self.src_field = src_field
         self.tgt_field = tgt_field or src_field
-        self._no_match_strategy = no_match_strategy
+        self._on_no_match = on_no_match
         self._overlap_strategy = overlap_strategy
 
         # Initialize source intervals
@@ -341,16 +337,14 @@ class IntervalToIntervalTransformer(Transformer):
         tgt_value = self._map_interval(src_value)
 
         if tgt_value == NoReturn:
-            if self._no_match_strategy == NoMatchStrategy.RAISE:
+            if self._on_no_match == OnException.RAISE:
                 raise ValueError(
                     f"Interval {src_value} cannot be mapped to target categorization"
                 )
-            elif self._no_match_strategy == NoMatchStrategy.SET_NONE:
+            elif self._on_no_match == OnException.SET_NONE:
                 obj.set(self.tgt_field, None)
                 return obj
-            raise NotImplementedError(
-                f"Unknown no match strategy {self._no_match_strategy}"
-            )
+            raise NotImplementedError(f"Invalid on_no_match value {self._on_no_match}")
 
         obj.set(self.tgt_field, tgt_value)
         return obj
@@ -360,15 +354,13 @@ class IntervalToIntervalTransformer(Transformer):
         tgt_value = self._map_interval(src_interval_name)
 
         if tgt_value == NoReturn:
-            if self._no_match_strategy == NoMatchStrategy.RAISE:
+            if self._on_no_match == OnException.RAISE:
                 raise ValueError(
                     f"Interval {src_interval_name} cannot be mapped to target categorization"
                 )
-            elif self._no_match_strategy == NoMatchStrategy.SET_NONE:
+            elif self._on_no_match == OnException.SET_NONE:
                 return None
-            raise NotImplementedError(
-                f"Unknown no match strategy {self._no_match_strategy}"
-            )
+            raise NotImplementedError(f"Invalid on_no_match value {self._on_no_match}")
 
         return tgt_value
 

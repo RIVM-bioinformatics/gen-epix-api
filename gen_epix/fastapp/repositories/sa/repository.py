@@ -627,7 +627,7 @@ class SARepository(BaseRepository):
         row_class = mapper.row_class
 
         def _execute(session: Session) -> list[Model]:
-            obj_ids = [mapper.get_id(obj) for obj in objs]
+            obj_ids = [mapper.get_id(x) for x in objs]
             rows, row_ids = SARepository._in_session_read_some(
                 mapper, session, row_class, obj_ids
             )
@@ -1105,7 +1105,7 @@ class SARepository(BaseRepository):
             batch_size = 1000
             for i in range(0, len(obj_ids), batch_size):
                 oid_batch = obj_ids[i : i + batch_size]
-                values = [{id_col_name: v} for v in oid_batch]
+                values = [{id_col_name: x} for x in oid_batch]
                 session.execute(sa.insert(temp_table_obj), values)
                 session.flush()
         else:
@@ -1287,7 +1287,7 @@ class SARepository(BaseRepository):
                 with engine.connect() as conn:
                     # print(conn)
                     result = conn.execute(sa.text("SELECT name FROM sys.schemas"))
-                    schemas = [row[0] for row in result]
+                    schemas = [x[0] for x in result]
                     # print(schemas)
                     conn.dialect
                     if not conn.dialect.has_schema(conn, schema_name):

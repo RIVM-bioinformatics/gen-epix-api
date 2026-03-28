@@ -334,9 +334,9 @@ def _compute_expected_cases(
         accessible_case_types.update(CASE_TYPE_SETS.get(case_type_set, []))
 
     result: list[str] = []
-    for ct in accessible_case_types:
-        m = re.match(r"^case_type(\d+)$", ct)
-        assert m, f"Cannot extract CaseType index from: '{ct}'"
+    for case_type in accessible_case_types:
+        m = re.match(r"^case_type(\d+)$", case_type)
+        assert m, f"Cannot extract CaseType index from: '{case_type}'"
         result.append(f"case{m.group(1)}_1")
     return sorted(result)
 
