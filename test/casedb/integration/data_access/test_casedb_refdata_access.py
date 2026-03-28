@@ -1,24 +1,24 @@
 """
-This module contains integration tests for CaseDB reference data access edge cases.
+This module contains integration tests for casedb reference data access edge cases.
 
 It uses:
 
 - an empty database to begin with, see DevRepositoryConfig.DICT_EMPTY in base_refdata_access.py for configuration
 - the definitions in EDGE_CASES from define_edge_cases.py
-- the setup_case_type_data fixture to create reference data and policies for all edge cases defined in define_edge_cases.py,
+- the setup_case_data_reference fixture to create reference data and policies for all edge cases defined in define_edge_cases.py,
 - and then tests that each user has access to exactly the expected CaseTypes or other reference data
 
 """
 
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.edge_cases_access.base_refdata_access import (
+from test.casedb.integration.data_access.base_refdata import (
     DEV_REPOSITORY_CONFIG,
     SKIP_ENDPOINTS,
     TEST_TYPE,
     VERBOSE,
 )
-from test.casedb.integration.edge_cases_access.setup.define_edge_cases import (
+from test.casedb.integration.data_access.setup.define_edge_cases_reference import (
     EDGE_CASE_BY_USER,
     EDGE_CASES,
     EdgeCaseSpec,
@@ -35,6 +35,7 @@ from gen_epix.casedb.domain.command import (
     RefColCrudCommand,
     RefDimCrudCommand,
 )
+from gen_epix.casedb.domain.command.case import ColCrudCommand
 from gen_epix.casedb.repositories.sa_model.ontology import Disease
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.domain.util import get_app_cfgs
@@ -56,8 +57,8 @@ CASEDB_APP_CFGS = get_app_cfgs(
 @pytest.fixture(scope="module", name="env")
 def get_test_client() -> Env:
     """
-    Get a test client for CaseDB integration tests.
-    This fixture initializes a test client with the appropriate configuration for CaseDB integration tests.
+    Get a test client for casedb integration tests.
+    This fixture initializes a test client with the appropriate configuration for casedb integration tests.
     It uses the DEV_REPOSITORY_CONFIG specified in the base_refdata_access.py file,
     which is set to use an empty dictionary repository for testing edge cases with no data.
     """
@@ -70,9 +71,17 @@ def get_test_client() -> Env:
     )
 
 
-@pytest.mark.scenario_ids("IVO-26")
+@pytest.mark.scenario_ids(
+    "TC-RBAC-04-07",
+    "TC-RBAC-04-01",
+    "TC-BIO-04-01",
+    "TC-BIO-04-01",
+    "TC-RBAC-02-02",
+    "TC-RBAC-02-04",
+    "TC-RBAC-05-01",
+)
 @pytest.mark.integration
-class TestCaseDBEdgeCasesRefDataAccess:
+class TestcasedbEdgeCasesRefDataAccess:
     """Test ABAC filtering on reference data (CaseType) access across all edge cases.
 
     Each user in EDGE_CASES represents one combination of org membership, org-level policies,
@@ -111,10 +120,10 @@ class TestCaseDBEdgeCasesRefDataAccess:
 
     def get_user(self, user_name: str) -> model.User:
         """Helper method to retrieve a user by name from the test client environment."""
-        return self.env._get_obj(model.User, user_name)  # type: ignore[return-value]
+        return self.env.get_obj(model.User, user_name)  # type: ignore[return-value]
 
     def test_root_user_has_access_to_all_case_types(
-        self, setup_case_type_data: None
+        self, setup_case_data_reference: None
     ) -> None:
         """Root user should have access to all CaseTypes regardless of policies (superuser baseline)."""
         root_user = self.env.get_root_user()
@@ -132,7 +141,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         ids=[x.user_name for x in EDGE_CASES],
     )
     def test_case_type_access_matches_expected(
-        self, spec: EdgeCaseSpec, setup_case_type_data: None
+        self, spec: EdgeCaseSpec, setup_case_data_reference: None
     ) -> None:
         """
         For each edge case, assert that the set of accessible CaseTypes exactly matches
@@ -171,7 +180,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         ids=[x.user_name for x in EDGE_CASES],
     )
     def test_case_type_set_access_matches_expected(
-        self, spec: EdgeCaseSpec, setup_case_type_data: None
+        self, spec: EdgeCaseSpec, setup_case_data_reference: None
     ) -> None:
         """
         For each edge case, assert that the set of accessible CaseTypeSets exactly matches
@@ -207,7 +216,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         ids=[x.user_name for x in EDGE_CASES],
     )
     def test_col_set_access_matches_expected(
-        self, spec: EdgeCaseSpec, setup_case_type_data: None
+        self, spec: EdgeCaseSpec, setup_case_data_reference: None
     ) -> None:
         """
         For each edge case, assert that the set of accessible ColSets exactly matches
@@ -245,8 +254,8 @@ class TestCaseDBEdgeCasesRefDataAccess:
         EDGE_CASES,
         ids=[x.user_name for x in EDGE_CASES],
     )
-    def test_col_access_matches_expected(
-        self, spec: EdgeCaseSpec, setup_case_type_data: None
+    def test_ref_col_access_matches_expected(
+        self, spec: EdgeCaseSpec, setup_case_data_reference: None
     ) -> None:
         """
         For each edge case, assert that the set of accessible cols exactly matches
@@ -281,7 +290,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         ids=[x.user_name for x in EDGE_CASES],
     )
     def test_ref_dim_access_matches_expected(
-        self, spec: EdgeCaseSpec, setup_case_type_data: None
+        self, spec: EdgeCaseSpec, setup_case_data_reference: None
     ) -> None:
         """
         For each edge case, assert that the set of accessible ref_dims exactly matches
@@ -310,10 +319,10 @@ class TestCaseDBEdgeCasesRefDataAccess:
             f"\n  Unexpected access: {sorted(unexpected) if unexpected else '∅'}"
         )
 
-    def test_disease_access_matches_all(self, setup_case_type_data: None) -> None:
+    def test_disease_access_matches_all(self, setup_case_data_reference: None) -> None:
         """
         take first edge case spec as a representative case (since disease access is not expected to vary across cases in this setup)
-        and assert that the set of accessible diseases matches all diseases, get them from env.db since they are created there by setup_case_type_data
+        and assert that the set of accessible diseases matches all diseases, get them from env.db since they are created there by setup_case_data_reference
         """
 
         spec = EDGE_CASES[
@@ -331,7 +340,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         result: list[Disease] = self.env.app.handle(get_cmd)
         actual = {x.name for x in result}
 
-        # get all diseases from env.db since they are created there by setup_case_type_data
+        # get all diseases from env.db since they are created there by setup_case_data_reference
         expected = {x.name for x in self.env.db[model.Disease].values()}
 
         assert actual == expected, (
@@ -341,11 +350,11 @@ class TestCaseDBEdgeCasesRefDataAccess:
         )
 
     def test_etiological_agent_access_matches_all(
-        self, setup_case_type_data: None
+        self, setup_case_data_reference: None
     ) -> None:
         """
         similar to test_disease_access_matches_all but for etiological agents instead of diseases,
-         since both are created as reference data in setup_case_type_data and not expected to be filtered by access policies in this setup
+         since both are created as reference data in setup_case_data_reference and not expected to be filtered by access policies in this setup
         """
         spec = EDGE_CASES[
             0
@@ -370,7 +379,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         )
 
     def test_case_type_set_category_access_matches_all(
-        self, setup_case_type_data: None
+        self, setup_case_data_reference: None
     ) -> None:
         """
         Assert that all created CaseTypeSet categories are accessible to any user,
@@ -396,4 +405,39 @@ class TestCaseDBEdgeCasesRefDataAccess:
             f"\n{spec.description}"
             f"\n  Expected access to all CaseTypeSet categories: {sorted(expected)}"
             f"\n  Actual access: {sorted(actual) if actual else '\u2205'}"
+        )
+
+    @pytest.mark.parametrize(
+        "spec",
+        EDGE_CASES,
+        ids=[x.user_name for x in EDGE_CASES],
+    )
+    def test_col_access_matches_expected(
+        self, spec: EdgeCaseSpec, setup_case_data_reference: None
+    ) -> None:
+        """
+        For each edge case, assert that the set of accessible cols exactly matches
+        the expected set declared in EdgeCaseSpec.expected_cols — neither more nor less.
+
+        Accessible cols are derived from accessible case type cols (via org access policies only).
+        User policies must not grant access to additional cols.
+        """
+        user = self.get_user(spec.user_name)
+
+        if VERBOSE:
+            rich_print(EDGE_CASE_BY_USER[spec.user_name])
+
+        get_cmd = ColCrudCommand(user=user, operation=CrudOperation.READ_ALL)
+        result = self.env.app.handle(get_cmd)
+
+        actual = {x.code for x in result} if isinstance(result, list) else set()
+        expected = set(spec.expected_cols)
+
+        missing = expected - actual
+        unexpected = actual - expected
+
+        assert not missing and not unexpected, (
+            f"\n{spec.description}"
+            f"\n  Missing access:    {sorted(missing) if missing else '∅'}"
+            f"\n  Unexpected access: {sorted(unexpected) if unexpected else '∅'}"
         )

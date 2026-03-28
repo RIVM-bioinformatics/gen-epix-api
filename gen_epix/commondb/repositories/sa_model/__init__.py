@@ -7,15 +7,6 @@ from gen_epix.commondb.repositories.sa_model.abac import (
     OrganizationAdminPolicyMixin as OrganizationAdminPolicyMixin,
 )
 from gen_epix.commondb.repositories.sa_model.base import (
-    DB_METADATA_FIELDS as DB_METADATA_FIELDS,
-)
-from gen_epix.commondb.repositories.sa_model.base import (
-    GENERATE_SERVICE_METADATA as GENERATE_SERVICE_METADATA,
-)
-from gen_epix.commondb.repositories.sa_model.base import (
-    SERVICE_METADATA_FIELDS as SERVICE_METADATA_FIELDS,
-)
-from gen_epix.commondb.repositories.sa_model.base import (
     NoIdRowMetadataMixin as NoIdRowMetadataMixin,
 )
 from gen_epix.commondb.repositories.sa_model.base import (
@@ -85,10 +76,6 @@ from gen_epix.commondb.repositories.sa_model.organization import (
 from gen_epix.commondb.repositories.sa_model.organization import UserMixin as UserMixin
 from gen_epix.commondb.repositories.sa_model.system import Outage as Outage
 from gen_epix.commondb.repositories.sa_model.system import OutageMixin as OutageMixin
-from gen_epix.commondb.repositories.sa_model.util import create_field_metadata
-from gen_epix.commondb.repositories.sa_model.util import (
-    create_field_metadata as create_field_metadata,
-)
 from gen_epix.commondb.repositories.sa_model.util import (
     create_mapped_column as create_mapped_column,
 )
@@ -135,8 +122,4 @@ set_entity_repository_model_classes(
     SA_MODELS_BY_SERVICE_TYPE,
     RowMetadataMixin,
     field_name_map=FIELD_NAME_MAP,
-)
-
-SERVICE_METADATA_FIELDS, DB_METADATA_FIELDS, GENERATE_SERVICE_METADATA = (
-    create_field_metadata(DOMAIN)
 )

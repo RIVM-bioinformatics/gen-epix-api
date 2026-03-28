@@ -119,8 +119,8 @@ class TestSampleBatchUploader:
         # Configure root user
         user: model.User = env.retrieve_user_by_key("root1_1@org1.org")
         user.name = "root1_1"
-        env._set_obj(user)
-        env._set_obj(
+        env.set_obj(user)
+        env.set_obj(
             env.read_one_by_property("root1_1", model.Organization, "name", "org1")
         )
 

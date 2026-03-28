@@ -26,12 +26,12 @@ def seq_service_calculate_phylogenetic_tree(
     # profiler.start()
 
     user_id = cmd.user.id if cmd.user else None
-    profile_ids = cmd.profile_ids
+    seq_profile_ids = cmd.seq_profile_ids
     tree_algorithm = cmd.tree_algorithm
     protocol_id = cmd.protocol_id
-    if len(set(profile_ids)) != len(profile_ids):
+    if len(set(seq_profile_ids)) != len(seq_profile_ids):
         raise exc.InvalidArgumentsError("profile_ids must be unique")
-    leaf_names = cmd.leaf_names if cmd.leaf_names else [str(x) for x in profile_ids]
+    leaf_names = cmd.leaf_names if cmd.leaf_names else [str(x) for x in seq_profile_ids]
 
     # Retrieve genetic distance protocol
     with self.repository.uow() as uow:
@@ -45,14 +45,14 @@ def seq_service_calculate_phylogenetic_tree(
         )
 
     # Special case: 0 or 1 sequences
-    if len(profile_ids) < 2:
+    if len(seq_profile_ids) < 2:
         return model.PhylogeneticTree(
             id=self.generate_id(),  # type: ignore[arg-type]
             tree_algorithm=tree_algorithm,
             protocol_id=protocol_id,
-            profile_ids=profile_ids,
+            profile_ids=seq_profile_ids,
             leaf_names=leaf_names,
-            newick_repr=f"({leaf_names[0]});" if profile_ids else "();",
+            newick_repr=f"({leaf_names[0]});" if seq_profile_ids else "();",
         )
 
     # Retrieve distance matrix
@@ -67,7 +67,9 @@ def seq_service_calculate_phylogenetic_tree(
                 CrudOperation.READ_ALL,
                 filter=CompositeFilter(
                     filters=[
-                        UuidSetFilter(key="profile_id", members=frozenset(profile_ids)),
+                        UuidSetFilter(
+                            key="seq_profile_id", members=frozenset(seq_profile_ids)
+                        ),
                         EqualsUuidFilter(
                             key="protocol_id",
                             value=protocol_id,
@@ -80,10 +82,10 @@ def seq_service_calculate_phylogenetic_tree(
         max_stored_distance = protocol.max_stored_distance
         # Calculate condensed distance matrix
         tree_seq_distances = [
-            seq_distance_map[x] for x in profile_ids if x in seq_distance_map
+            seq_distance_map[x] for x in seq_profile_ids if x in seq_distance_map
         ]
         tree_leaf_names = [
-            x for x, y in zip(leaf_names, profile_ids) if y in seq_distance_map
+            x for x, y in zip(leaf_names, seq_profile_ids) if y in seq_distance_map
         ]
         tree_profile_ids = [x.seq_profile_id for x in tree_seq_distances]
         tree_profile_id_idx_map = {str(x): i for i, x in enumerate(tree_profile_ids)}
@@ -127,7 +129,7 @@ def seq_service_calculate_phylogenetic_tree(
                 id=self.generate_id(),  # type: ignore[arg-type]
                 tree_algorithm=tree_algorithm,
                 protocol_id=protocol_id,
-                profile_ids=profile_ids,
+                profile_ids=seq_profile_ids,
                 leaf_names=leaf_names,
                 newick_repr=(f"({tree_leaf_names[0]});" if tree_profile_ids else "();"),
             )
@@ -182,7 +184,7 @@ def seq_service_calculate_phylogenetic_tree(
         id=self.generate_id(),  # type: ignore[arg-type]
         tree_algorithm=tree_algorithm,
         protocol_id=protocol_id,
-        profile_ids=profile_ids,
+        profile_ids=seq_profile_ids,
         leaf_names=leaf_names,
         newick_repr=newick_repr,
     )

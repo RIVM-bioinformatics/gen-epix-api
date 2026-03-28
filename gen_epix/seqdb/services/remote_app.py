@@ -83,7 +83,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         request_body = CalculatePhylogeneticTreeRequestBody(
             protocol_id=cmd.protocol_id,
             tree_algorithm=cmd.tree_algorithm,
-            profile_ids=cmd.profile_ids,
+            profile_ids=cmd.seq_profile_ids,
             leaf_codes=cmd.leaf_names,
         )
 

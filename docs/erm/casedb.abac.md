@@ -9,9 +9,6 @@ erDiagram
     UserShareCasePolicy {
     }
 
-    OrganizationAdminPolicy {
-    }
-
     OrganizationAccessCasePolicy {
     }
 
@@ -19,6 +16,9 @@ erDiagram
     }
 
     OrganizationShareCasePolicy {
+    }
+
+    OrganizationAdminPolicy {
     }
 
 ```

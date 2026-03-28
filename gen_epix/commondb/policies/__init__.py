@@ -6,6 +6,9 @@ from gen_epix.commondb.policies.has_system_outage_policy import (
 from gen_epix.commondb.policies.is_organization_admin_policy import (
     IsOrganizationAdminPolicy as IsOrganizationAdminPolicy,
 )
+from gen_epix.commondb.policies.model_metadata_policy import (
+    ModelMetadataPolicy as ModelMetadataPolicy,
+)
 from gen_epix.commondb.policies.read_organization_results_only_policy import (
     ReadOrganizationResultsOnlyPolicy as ReadOrganizationResultsOnlyPolicy,
 )

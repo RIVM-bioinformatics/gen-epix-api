@@ -7,48 +7,42 @@ erDiagram
     %% casedb / CASE (simplified)
 
     %% Relationships
-    CaseSetDataCollectionLink }o--|| CaseSet : "case_set_id"
-    ColSetMember }o--|| ColSet : "col_set_id"
-    ColSetMember }o--|| Col : "col_id"
-    TreeAlgorithm }o--|| TreeAlgorithmClass : "tree_algorithm_class_id"
-    Dim }o--|| CaseType : "case_type_id"
-    Dim }o--|| RefDim : "ref_dim_id"
-    CaseSetMember }o--|| CaseSet : "case_set_id"
-    CaseSetMember }o--|| Case : "case_id"
     CaseDataCollectionLink }o--|| Case : "case_id"
+    CaseTypeSet }o--|| CaseTypeSetCategory : "case_type_set_category_id"
     Case }o--|| CaseType : "case_type_id"
-    CaseIdentifier }o--|| Case : "internal_id"
-    CaseTypeSetMember }o--|| CaseTypeSet : "case_type_set_id"
-    CaseTypeSetMember }o--|| CaseType : "case_type_id"
     Col }o--|| CaseType : "case_type_id"
     Col }o--|| Dim : "dim_id"
     Col }o--|| RefCol : "ref_col_id"
-    RefCol }o--|| RefDim : "ref_dim_id"
-    RefCol }o--|| GeneticDistanceProtocol : "genetic_distance_protocol_id"
-    CaseTypeSet }o--|| CaseTypeSetCategory : "case_type_set_category_id"
+    CaseSetDataCollectionLink }o--|| CaseSet : "case_set_id"
+    CaseIdentifier }o--|| Case : "internal_id"
+    TreeAlgorithm }o--|| TreeAlgorithmClass : "tree_algorithm_class_id"
+    CaseSetMember }o--|| CaseSet : "case_set_id"
+    CaseSetMember }o--|| Case : "case_id"
     CaseSet }o--|| CaseType : "case_type_id"
     CaseSet }o--|| CaseSetCategory : "case_set_category_id"
     CaseSet }o--|| CaseSetStatus : "case_set_status_id"
-
-    RefDataAccess {
-    }
-
-    CaseBatchForUpload {
-    }
-
-    ReadSetForUpload {
-    }
+    CaseTypeSetMember }o--|| CaseTypeSet : "case_type_set_id"
+    CaseTypeSetMember }o--|| CaseType : "case_type_id"
+    RefCol }o--|| RefDim : "ref_dim_id"
+    RefCol }o--|| GeneticDistanceProtocol : "genetic_distance_protocol_id"
+    ColSetMember }o--|| ColSet : "col_set_id"
+    ColSetMember }o--|| Col : "col_id"
+    Dim }o--|| CaseType : "case_type_id"
+    Dim }o--|| RefDim : "ref_dim_id"
 
     CaseUploadResult {
     }
 
-    CaseQueryResult {
-    }
-
-    CaseRights {
+    CaseSetRights {
     }
 
     CaseQuery {
+    }
+
+    CaseStats {
+    }
+
+    CaseBatchUploadResult {
     }
 
     SeqForUpload {
@@ -57,19 +51,25 @@ erDiagram
     CompleteCaseType {
     }
 
-    CaseForUpload {
+    RefDataAccess {
     }
 
-    CaseBatchUploadResult {
+    CaseRights {
     }
 
     CaseSetQuery {
     }
 
-    CaseSetRights {
+    CaseQueryResult {
     }
 
-    CaseStats {
+    ReadSetForUpload {
+    }
+
+    CaseForUpload {
+    }
+
+    CaseBatchForUpload {
     }
 
 ```

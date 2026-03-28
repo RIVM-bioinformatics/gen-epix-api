@@ -81,6 +81,9 @@ erDiagram
 
     %% Entity definitions
     Outage {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string description
         timestamp active_from
@@ -92,6 +95,9 @@ erDiagram
     }
 
     Organization {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string code
         string name
@@ -99,36 +105,54 @@ erDiagram
     }
 
     OrganizationSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string name
         string description
     }
 
     OrganizationSetMember {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID organization_set_id FK
         UUID organization_id FK
     }
 
     DataCollection {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string name
         string description
     }
 
     DataCollectionSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string name
         string description
     }
 
     DataCollectionSetMember {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID data_collection_set_id FK
         UUID data_collection_id FK
     }
 
     IdentifierIssuer {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string code
         string name
@@ -136,18 +160,27 @@ erDiagram
     }
 
     OrganizationIdentifierIssuerLink {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID organization_id FK
         UUID identifier_issuer_id FK
     }
 
     Site {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID organization_id FK
         string name
     }
 
     Contact {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID site_id FK
         string name
@@ -156,6 +189,9 @@ erDiagram
     }
 
     User {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string key
         string email
@@ -167,6 +203,9 @@ erDiagram
     }
 
     UserInvitation {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string key
         string email
@@ -180,6 +219,9 @@ erDiagram
     }
 
     ConceptSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string code
         string name
@@ -188,6 +230,9 @@ erDiagram
     }
 
     Concept {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID concept_set_id FK
         string code
@@ -198,6 +243,9 @@ erDiagram
     }
 
     ConceptRelation {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID from_concept_id FK
         UUID to_concept_id FK
@@ -205,24 +253,36 @@ erDiagram
     }
 
     Disease {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string name
         string icd_code
     }
 
     EtiologicalAgent {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string name
         string type
     }
 
     Etiology {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID disease_id FK
         UUID etiological_agent_id FK
     }
 
     RegionSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string code
         string name
@@ -231,6 +291,9 @@ erDiagram
     }
 
     Region {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID region_set_id FK
         string code
@@ -242,6 +305,9 @@ erDiagram
     }
 
     RegionRelation {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID from_region_id FK
         UUID to_region_id FK
@@ -249,6 +315,9 @@ erDiagram
     }
 
     RegionSetShape {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID region_set_id FK
         float scale
@@ -256,6 +325,9 @@ erDiagram
     }
 
     TreeAlgorithmClass {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string code
         string name
@@ -265,6 +337,9 @@ erDiagram
     }
 
     TreeAlgorithm {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID tree_algorithm_class_id FK
         UUID seqdb_tree_algorithm_id
@@ -276,6 +351,9 @@ erDiagram
     }
 
     GeneticDistanceProtocol {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID seqdb_seq_distance_protocol_id
         enum seqdb_seq_distance_type
@@ -287,6 +365,9 @@ erDiagram
     }
 
     RefDim {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         enum dim_type
         string code
@@ -298,6 +379,9 @@ erDiagram
     }
 
     RefCol {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID ref_dim_id FK
         string code_suffix
@@ -316,6 +400,9 @@ erDiagram
     }
 
     CaseTypeSetCategory {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string name
         string description
@@ -324,19 +411,21 @@ erDiagram
     }
 
     CaseType {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string name
         string description
         UUID disease_id FK
         UUID etiological_agent_id FK
-        int create_max_n_cases
-        int read_max_n_cases
-        int read_max_tree_size
-        int update_max_n_cases
-        int delete_max_n_cases
+        CaseTypeProps props
     }
 
     CaseTypeSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string name
         string description
@@ -345,12 +434,18 @@ erDiagram
     }
 
     CaseTypeSetMember {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID case_type_set_id FK
         UUID case_type_id FK
     }
 
     Dim {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID case_type_id FK
         UUID ref_dim_id FK
@@ -363,6 +458,9 @@ erDiagram
     }
 
     Col {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID case_type_id FK
         UUID dim_id FK
@@ -385,18 +483,27 @@ erDiagram
     }
 
     ColSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string name
         string description
     }
 
     ColSetMember {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID col_set_id FK
         UUID col_id FK
     }
 
     Case {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string code
         UUID case_type_id FK
@@ -407,6 +514,9 @@ erDiagram
     }
 
     CaseIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID identifier_issuer_id FK
         string external_id
@@ -414,6 +524,9 @@ erDiagram
     }
 
     CaseSetCategory {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string name
         string description
@@ -421,6 +534,9 @@ erDiagram
     }
 
     CaseSetStatus {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string name
         string description
@@ -428,18 +544,23 @@ erDiagram
     }
 
     CaseSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID case_type_id FK
         UUID created_in_data_collection_id FK
         string name
         string code
         string description
-        timestamp created_at
         UUID case_set_category_id FK
         UUID case_set_status_id FK
     }
 
     CaseSetMember {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID case_set_id FK
         UUID case_id FK
@@ -447,18 +568,27 @@ erDiagram
     }
 
     CaseDataCollectionLink {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID case_id FK
         UUID data_collection_id FK
     }
 
     CaseSetDataCollectionLink {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID case_set_id FK
         UUID data_collection_id FK
     }
 
     OrganizationAdminPolicy {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID organization_id FK
         UUID user_id FK
@@ -466,6 +596,9 @@ erDiagram
     }
 
     OrganizationAccessCasePolicy {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID data_collection_id FK
         UUID case_type_set_id FK
@@ -483,6 +616,9 @@ erDiagram
     }
 
     OrganizationShareCasePolicy {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID data_collection_id FK
         UUID case_type_set_id FK
@@ -496,6 +632,9 @@ erDiagram
     }
 
     UserAccessCasePolicy {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID data_collection_id FK
         UUID case_type_set_id FK
@@ -512,6 +651,9 @@ erDiagram
     }
 
     UserShareCasePolicy {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID data_collection_id FK
         UUID case_type_set_id FK

@@ -1,5 +1,7 @@
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.edge_cases_access.setup.define_edge_cases import EDGE_CASES
+from test.casedb.integration.data_access.setup.define_edge_cases_reference import (
+    EDGE_CASES,
+)
 
 import pytest
 
@@ -9,7 +11,7 @@ VERBOSE = False  # Set to True to enable detailed print statements during setup 
 
 
 @pytest.fixture(scope="module")
-def setup_test_users_and_organizations(env: Env) -> None:
+def setup_test_users_and_organizations_reference(env: Env) -> None:
     """
     Set up common test users and organizations driven by EDGE_CASES.
 
@@ -25,10 +27,10 @@ def setup_test_users_and_organizations(env: Env) -> None:
         print("\n--- Setting up test users and organizations for edge case tests ---")
 
     root_user = env.get_root_user()
-    env._set_obj(root_user)  # noqa: SLF001
+    env.set_obj(root_user)  # noqa: SLF001
 
     org1 = env.read_one_by_property(root_user, model.Organization, "name", "org1")
-    env._set_obj(org1)  # noqa: SLF001
+    env.set_obj(org1)  # noqa: SLF001
 
     # Create orgs not already bootstrapped (org1 is pre-configured as the root org)
     created_orgs: set[str] = {"org1"}

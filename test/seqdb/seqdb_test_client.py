@@ -430,7 +430,7 @@ class SeqdbTestClient(TestClient):
         props: dict[str, str | int | float | None] | None = None,
         set_dummy_created_in_data_collection: bool = False,
     ) -> model.Sample:
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         created_in_data_collection_id = self._get_obj_id(
             model.DataCollection,
             created_in_data_collection_or_str,
@@ -447,7 +447,7 @@ class SeqdbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(sample)
+        return self.set_obj(sample)
 
     def create_file(
         self,
@@ -456,7 +456,7 @@ class SeqdbTestClient(TestClient):
         format: enum.FileFormat,
         compression: enum.FileCompression = enum.FileCompression.NONE,
     ) -> model.File:
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         content: bytes
         if isinstance(content_or_str, str):
             content = content_or_str.encode()
@@ -473,7 +473,7 @@ class SeqdbTestClient(TestClient):
             )
         )
 
-        return self._set_obj(model.File(id=file_id, content=content))  # type: ignore[return-value]
+        return self.set_obj(model.File(id=file_id, content=content))  # type: ignore[return-value]
 
     def create_read_set(
         self,
@@ -492,7 +492,7 @@ class SeqdbTestClient(TestClient):
         set_dummy_sample: bool = False,
         set_dummy_protocol: bool = False,
     ) -> model.ReadSet:
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         sample_id = self._get_obj_id(model.Sample, sample_or_str, set_dummy_sample)
         protocol_id = self._get_obj_id(
             model.Protocol,
@@ -536,7 +536,7 @@ class SeqdbTestClient(TestClient):
         assert read_set.rev_file_id == rev_file_id
         assert read_set.fwd_uri == fwd_uri
         assert read_set.rev_uri == rev_uri
-        return self._set_obj(read_set)  # type: ignore[return-value]
+        return self.set_obj(read_set)  # type: ignore[return-value]
 
     def create_seq(
         self,
@@ -551,7 +551,7 @@ class SeqdbTestClient(TestClient):
         set_dummy_sample: bool = False,
         set_dummy_protocol: bool = False,
     ) -> model.Seq:
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         sample_id = self._get_obj_id(model.Sample, sample_or_str, set_dummy_sample)
         protocol_id = self._get_obj_id(
             model.Protocol,
@@ -578,7 +578,7 @@ class SeqdbTestClient(TestClient):
             )
         )
         assert seq.protocol_id == protocol_id
-        return self._set_obj(seq)  # type: ignore[return-value]
+        return self.set_obj(seq)  # type: ignore[return-value]
 
     def _create_protocol(
         self,
@@ -588,7 +588,7 @@ class SeqdbTestClient(TestClient):
         name: str | None = None,
         **kwargs: Any,
     ) -> model.Model:
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         props: dict[str, str | int | float | bool | list] = dict(
             kwargs.pop("props", {}) or {}
         )
@@ -650,7 +650,7 @@ class SeqdbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(protocol)
+        return self.set_obj(protocol)
 
     def _get_obj_id(
         self,
@@ -669,7 +669,7 @@ class SeqdbTestClient(TestClient):
                     "obj_or_str must be provided when create_dummy_id is False"
                 )
             obj_id = (  # type: ignore[union-attr]
-                self._get_obj(model_class, obj_or_str)  # type: ignore[assignment]
+                self.get_obj(model_class, obj_or_str)  # type: ignore[assignment]
             ).id
         return obj_id
 

@@ -1,5 +1,6 @@
-import datetime
+from datetime import UTC, datetime
 from enum import IntEnum
+from typing import ClassVar
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -9,7 +10,40 @@ from gen_epix.commondb.domain.enum import EtlStatus as EtlStatus
 from gen_epix.fastapp.enum import LogLevel
 
 
-class Model(fastapp.Model):
+class ModelNoId(fastapp.Model):
+    CREATE_METADATA_FIELDS: ClassVar[frozenset[str]] = frozenset(
+        {"created_at", "modified_at", "modified_by"}
+    )
+    UPDATE_METADATA_FIELDS: ClassVar[frozenset[str]] = frozenset(
+        {"modified_at", "modified_by"}
+    )
+
+    created_at: datetime | None = Field(
+        default=None,
+        description="The UTC datetime when the object was created.",
+    )
+    modified_at: datetime | None = Field(
+        default=None,
+        description="The UTC datetime when the object was last modified.",
+    )
+    modified_by: UUID | None = Field(
+        default=None,
+        description="The ID of the user who last modified the object.",
+    )
+
+    def set_modified(self, user_id: UUID) -> None:
+        now = datetime.now(UTC)
+        self.modified_at = now
+        self.modified_by = user_id
+
+    def set_created(self, user_id: UUID) -> None:
+        now = datetime.now(UTC)
+        self.modified_at = now
+        self.modified_by = user_id
+        self.created_at = now
+
+
+class Model(ModelNoId):
     id: UUID | None = Field(
         default=None,
         description="The unique identifier for the object.",
@@ -22,8 +56,8 @@ class EtlLogItem(BaseModel):
     code, message and severity. Immutable Pydantic value object.
     """
 
-    timestamp: datetime.datetime = Field(
-        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc),
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
         description="The UTC timestamp when the log item was created.",
     )
     code: str = Field(
@@ -111,4 +145,5 @@ def validate_int_enum_value_or_none(
     """Validate that the given value is a valid member of the given IntEnum class or None."""
     if value is None:
         return None
+    return validate_int_enum_value(enum_class, value)
     return validate_int_enum_value(enum_class, value)

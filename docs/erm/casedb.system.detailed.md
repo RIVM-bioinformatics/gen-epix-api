@@ -8,6 +8,9 @@ erDiagram
 
     %% Entity definitions
     PackageMetadata {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id
         string name
         string version
@@ -16,6 +19,9 @@ erDiagram
     }
 
     Outage {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string description
         timestamp active_from
