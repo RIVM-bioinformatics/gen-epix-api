@@ -61,7 +61,7 @@ def _summarise_command_object(
 
     def _walk(obj: Any) -> Any:
         if isinstance(obj, dict):
-            return {k: _walk(v) for k, v in obj.items()}
+            return {x: _walk(y) for x, y in obj.items()}
         if isinstance(obj, list):
             if len(obj) > max_items:
                 return {

@@ -161,7 +161,7 @@ class TestcasedbEdgeCasesRefDataAccess:
         get_cmd = CaseTypeCrudCommand(user=user, operation=CrudOperation.READ_ALL)
         result = self.env.app.handle(get_cmd)
 
-        actual = {ct.name for ct in result}
+        actual = {x.name for x in result}
         expected = set(spec.expected_case_types)
 
         missing = expected - actual
@@ -369,7 +369,7 @@ class TestcasedbEdgeCasesRefDataAccess:
             user=user, operation=CrudOperation.READ_ALL
         )
         result: list[model.EtiologicalAgent] = self.env.app.handle(get_cmd)
-        actual = {ea.name for ea in result}
+        actual = {x.name for x in result}
         expected = {x.name for x in self.env.db[model.EtiologicalAgent].values()}
 
         assert actual == expected, (

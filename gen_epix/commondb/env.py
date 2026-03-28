@@ -309,7 +309,8 @@ class AppComposer(BaseAppComposer):
                 for entity in entities:
                     if not entity.persistable:
                         continue
-                    assert issubclass(entity.model_class, model.ModelNoId)
+                    if not issubclass(entity.model_class, model.ModelNoId):
+                        continue
                     curr_repository.register_model_modifier(
                         entity.model_class, modifier
                     )

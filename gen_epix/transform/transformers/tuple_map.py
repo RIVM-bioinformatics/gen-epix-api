@@ -5,8 +5,8 @@ Tuple map transformer implementation.
 from collections.abc import Hashable
 from typing import Any
 
+from gen_epix.fastapp.enum import OnException
 from gen_epix.transform.adapter import ObjectAdapter
-from gen_epix.transform.enum import NoMatchStrategy
 from gen_epix.transform.transformer import Transformer
 
 
@@ -26,19 +26,18 @@ class TupleMapTransformer(Transformer):
     SUPPORT FOR DEFAULT VALUES:
 
     - When no mapping is found, default values are applied to the target fields if
-    no_match_strategy=NoMatchStrategy.SET_DEFAULT.
+      on_no_match=OnException.SET_DEFAULT.
     - default_values is part of the transformer configuration and must have the same
-    length as row_tgt_fields.
-    - When no_match_strategy=NoMatchStrategy.RAISE (the default), a ValueError is raised
-    if no mapping is found.
+      length as row_tgt_fields.
+    - When on_no_match=OnException.RAISE (the default), a ValueError is raised
+      if no mapping is found.
 
     CASE INSENSITIVITY:
 
     - Matching is case-insensitive by default (case_sensitive=False).
     - When case_sensitive=False, string source field values are lowercased before lookup;
-    non-string values are unaffected.
+      non-string values are unaffected.
     - Normalization is applied during mapping (at set_map and transform time), not at init.
-
     """
 
     def __init__(
@@ -50,13 +49,7 @@ class TupleMapTransformer(Transformer):
         map_tgt_fields: list[Hashable] | None = None,
         name: str | None = None,
         is_active_map_field: Hashable | None = None,
-        # REVIEW LSP-2989: Consider renaming no_match_strategy to on_no_match or
-        # on_not_found for clarity, and to be more consistent with common naming
-        # conventions. Also consider if we want this to be the default strategy
-        # (now we have this for backwards compatibility, but it might make more
-        # sense to have SET_DEFAULT as the default strategy and require users to
-        # explicitly choose RAISE if they want that behavior).
-        no_match_strategy: NoMatchStrategy = NoMatchStrategy.RAISE,
+        on_no_match: OnException = OnException.RAISE,
         default_values: list | None = None,
         case_sensitive: bool = False,
     ) -> None:
@@ -77,11 +70,10 @@ class TupleMapTransformer(Transformer):
             is_active_map_field: An optional field name in the mapping that indicates
             whether a particular mapping should be applied or not. If provided, this
             field must be a boolean and only mappings with a True value will be applied.
-            no_match_strategy: Strategy when no mapping is found. Defaults to
-            NoMatchStrategy.RAISE.
+            on_no_match: action when no mapping is found. Defaults to OnException.RAISE.
             default_values: Default values to apply to target fields when no mapping is
-            found. Must be provided when no_match_strategy is SET_DEFAULT, and must
-            have the same length as row_tgt_fields.
+            found. Must be provided when on_no_match is OnException.SET_DEFAULT, and
+            must have the same length as row_tgt_fields.
             case_sensitive: If False, string source field values are lowercased before
             lookup. Defaults to True.
         """
@@ -94,7 +86,7 @@ class TupleMapTransformer(Transformer):
         map_tgt_fields = map_tgt_fields or row_tgt_fields
         self._verify_map_fields(map_src_fields, map_tgt_fields, is_active_map_field)
         self._verify_row_fields(row_src_fields, row_tgt_fields)
-        self._verify_default_values(no_match_strategy, default_values)
+        self._verify_default_values(on_no_match, default_values)
 
         # Initialise some
         self._row_src_fields = row_src_fields
@@ -104,7 +96,7 @@ class TupleMapTransformer(Transformer):
         self._map_tgt_fields = map_tgt_fields
         self._map_fields = map_src_fields + map_tgt_fields
         self._is_active_map_field = is_active_map_field
-        self._no_match_strategy = no_match_strategy
+        self._on_no_match = on_no_match
         self._default_values = (
             tuple(default_values) if default_values is not None else None
         )
@@ -165,15 +157,19 @@ class TupleMapTransformer(Transformer):
         """
         key = self._normalize_key(tuple(obj.get(x) for x in self._row_src_fields))
         if key not in self._tuple_map:
-            if self._no_match_strategy == NoMatchStrategy.RAISE:
+            if self._on_no_match == OnException.RAISE:
                 raise ValueError(
                     f"Transformer {self.name}: Could not find mapping for object: {obj.unwrap()}"
                 )
-            # SET_DEFAULT
-            values = self._default_values
+            elif self._on_no_match == OnException.SET_DEFAULT:
+                values = self._default_values
+            else:
+                raise ValueError(
+                    f"Transformer {self.name}: Invalid on_no_match value: {self._on_no_match.value}"
+                )
         else:
             values = self._tuple_map[key]
-        for field, value in zip(self._row_tgt_fields, values):
+        for field, value in zip(self._row_tgt_fields, values):  # type: ignore[arg-type]
             obj.set(field, value)
         return obj
 
@@ -189,30 +185,23 @@ class TupleMapTransformer(Transformer):
     def _normalize_key(self, key: tuple) -> tuple:
         if self._case_sensitive:
             return key
-        return tuple(v.lower() if isinstance(v, str) else v for v in key)
+        return tuple(x.lower() if isinstance(x, str) else x for x in key)
 
     def _verify_default_values(
         self,
-        no_match_strategy: NoMatchStrategy,
+        on_no_match: OnException,
         default_values: list | None,
     ) -> None:
-        if no_match_strategy == NoMatchStrategy.SET_DEFAULT:
+        if on_no_match == OnException.SET_DEFAULT:
             if default_values is None:
                 raise ValueError(
-                    "default_values must be provided when no_match_strategy is SET_DEFAULT"
+                    "default_values must be provided when on_no_match is SET_DEFAULT"
                 )
             if len(default_values) != self._n_tgt_fields:
                 raise ValueError(
                     f"default_values length ({len(default_values)}) must match the "
                     f"number of target fields ({self._n_tgt_fields})"
                 )
-        # REVIEW 2989: This check is not strictly necessary
-        # Ask end user if they want to allow default_values to be provided but ignored
-        # when no_match_strategy is not SET_DEFAULT
-        elif default_values is not None:
-            raise ValueError(
-                "default_values can only be provided when no_match_strategy is SET_DEFAULT"
-            )
 
     def _verify_row_fields(
         self, row_src_fields: list[Hashable], row_tgt_fields: list[Hashable]

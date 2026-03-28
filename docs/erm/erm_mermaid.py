@@ -175,15 +175,15 @@ def _render_relationships(
     We only emit a relationship when both sides are in *model_classes* so that
     diagrams scoped to a service type are self-contained.
     """
-    class_names = {mc.__name__ for mc in model_classes}
+    class_names = {x.__name__ for x in model_classes}
     lines: list[str] = []
     seen: set[tuple[str, str, str]] = set()
 
-    for mc in model_classes:
-        entity: Entity | None = getattr(mc, "ENTITY", None)
+    for model_class in model_classes:
+        entity: Entity | None = getattr(model_class, "ENTITY", None)
         if entity is None or not entity.links:
             continue
-        source = mc.__name__
+        source = model_class.__name__
         for link in entity.links.values():
             target = link.link_model_class.__name__
             if target not in class_names:
@@ -239,11 +239,11 @@ def _build_diagram(
 
     if detailed:
         parts.append("    %% Entity definitions")
-        for mc in model_classes:
-            entity: Entity | None = getattr(mc, "ENTITY", None)
+        for model_class in model_classes:
+            entity: Entity | None = getattr(model_class, "ENTITY", None)
             if entity is None:
                 continue
-            parts.extend(_render_entity_block(mc, entity))
+            parts.extend(_render_entity_block(model_class, entity))
             parts.append("")
     else:
         # In simplified mode, entities without any links (neither as source nor
@@ -254,9 +254,9 @@ def _build_diagram(
             for token in line.split():
                 if token[0].isupper():
                     mentioned.add(token)
-        for mc in model_classes:
-            if mc.__name__ not in mentioned:
-                parts.append(f"    {mc.__name__} {{")
+        for model_class in model_classes:
+            if model_class.__name__ not in mentioned:
+                parts.append(f"    {model_class.__name__} {{")
                 parts.append("    }")
                 parts.append("")
 

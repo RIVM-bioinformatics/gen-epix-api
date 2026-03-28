@@ -139,16 +139,16 @@ class TestCasedbMetadataMasking:
         result = self._read_all_case_types(root_user)
 
         assert len(result) > 0, "Expected at least one CaseType"
-        for ct in result:
+        for case_type in result:
             assert (
-                ct.created_at is not None
-            ), f"{ct.name}: created_at should not be None for root user"
+                case_type.created_at is not None
+            ), f"{case_type.name}: created_at should not be None for root user"
             assert (
-                ct.modified_at is not None
-            ), f"{ct.name}: modified_at should not be None for root user"
+                case_type.modified_at is not None
+            ), f"{case_type.name}: modified_at should not be None for root user"
             assert (
-                ct.modified_by is not None
-            ), f"{ct.name}: modified_by should not be None for root user"
+                case_type.modified_by is not None
+            ), f"{case_type.name}: modified_by should not be None for root user"
 
     # ------------------------------------------------------------------ org admin
 
@@ -161,16 +161,16 @@ class TestCasedbMetadataMasking:
         assert (
             len(result) > 0
         ), "Expected at least one CaseType accessible to org_admin1_1"
-        for ct in result:
+        for case_type in result:
             assert (
-                ct.created_at is None
-            ), f"{ct.name}: created_at should be masked for org admin"
+                case_type.created_at is None
+            ), f"{case_type.name}: created_at should be masked for org admin"
             assert (
-                ct.modified_at is None
-            ), f"{ct.name}: modified_at should be masked for org admin"
+                case_type.modified_at is None
+            ), f"{case_type.name}: modified_at should be masked for org admin"
             assert (
-                ct.modified_by is None
-            ), f"{ct.name}: modified_by should be masked for org admin"
+                case_type.modified_by is None
+            ), f"{case_type.name}: modified_by should be masked for org admin"
 
     # ------------------------------------------------------------------ org user
 
@@ -183,13 +183,13 @@ class TestCasedbMetadataMasking:
         assert (
             len(result) > 0
         ), "Expected at least one CaseType accessible to org_user1_1"
-        for ct in result:
+        for case_type in result:
             assert (
-                ct.created_at is None
-            ), f"{ct.name}: created_at should be masked for org user"
+                case_type.created_at is None
+            ), f"{case_type.name}: created_at should be masked for org user"
             assert (
-                ct.modified_at is None
-            ), f"{ct.name}: modified_at should be masked for org user"
+                case_type.modified_at is None
+            ), f"{case_type.name}: modified_at should be masked for org user"
             assert (
-                ct.modified_by is None
-            ), f"{ct.name}: modified_by should be masked for org user"
+                case_type.modified_by is None
+            ), f"{case_type.name}: modified_by should be masked for org user"

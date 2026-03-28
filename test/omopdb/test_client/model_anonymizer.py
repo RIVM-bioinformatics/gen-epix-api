@@ -88,10 +88,10 @@ class BaseAnonymizer(ABC):
     def anonymize_text(self, text_values: Collection[str]) -> dict[str, str]:
         text_values = list(set(text_values))
         mapped = dict()
-        for tv in text_values:
-            len_text = len(tv)
+        for text_value in text_values:
+            len_text = len(text_value)
             anon_text = "".join(random.choices(string.ascii_lowercase, k=len_text))
-            mapped[tv] = anon_text
+            mapped[text_value] = anon_text
         return mapped
 
     def anonymize_ints(self, int_values: Collection[int]) -> dict[int, int]:
@@ -144,7 +144,7 @@ class BaseAnonymizer(ABC):
         choices = list(set(choices))
         excluded = [None, ""]
         choices = [c for c in choices if c not in excluded]
-        mapped = {v: random.choice(choices) for v in categorical_values}
+        mapped = {x: random.choice(choices) for x in categorical_values}
         return mapped
 
 
@@ -271,7 +271,7 @@ class ModelAnonymizer(BaseAnonymizer):
                 sub_locs = self.create_anonymization_map(value)
                 for typ_meth_tup, loc_value_tups in sub_locs.items():
                     anon_map[typ_meth_tup].extend(
-                        [((field_name,) + k, v) for k, v in loc_value_tups]
+                        [((field_name,) + x, y) for x, y in loc_value_tups]
                     )
             elif isinstance(value, list):
                 for i, v in enumerate(value):
@@ -279,7 +279,7 @@ class ModelAnonymizer(BaseAnonymizer):
                         sub_locs = self.create_anonymization_map(v)
                         for typ_meth_tup, loc_value_tups in sub_locs.items():
                             anon_map[typ_meth_tup].extend(
-                                [((field_name, i) + k, v) for k, v in loc_value_tups]
+                                [((field_name, i) + x, y) for x, y in loc_value_tups]
                             )
                     else:
                         anon_map[type_, anon_method].append(((field_name, i), v))
@@ -404,14 +404,14 @@ class ModelAnonymizer(BaseAnonymizer):
         # categoricals
         # for these we need to reference a lookup dict of possible values distinct for each model/field
         # and make each location a separate payload item
-        categorical_loc_value_tups = []
+        categorical_loc_value_tuples = []
         keys = list(anonymization_map)
         for key in keys:
             if key[1] == AnonMethod.CATEGORICAL:
-                categorical_loc_value_tups.extend(anonymization_map.pop(key))
+                categorical_loc_value_tuples.extend(anonymization_map.pop(key))
         categorical_payload_items = []
-        for tup in categorical_loc_value_tups:
-            path, value = tup
+        for categorical_loc_value_tuple in categorical_loc_value_tuples:
+            path, value = categorical_loc_value_tuple
             model_inst, field_name = get_nested_attribute_model_field_name(
                 self.model, path
             )

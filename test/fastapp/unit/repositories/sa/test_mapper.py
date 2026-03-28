@@ -131,8 +131,8 @@ class _DummyMapper(BaseSAMapper):
 
     def get_field_names_by_set(self, field_type_set: FieldTypeSet) -> tuple[str, ...]:
         names: list[str] = []
-        for ft in field_type_set.value:
-            names.extend(self._by_type[ft])
+        for field_type in field_type_set.value:
+            names.extend(self._by_type[field_type])
         return tuple(names)
 
     def get_row_field_names_by_type(self, field_type: FieldType) -> tuple[str, ...]:
@@ -142,8 +142,8 @@ class _DummyMapper(BaseSAMapper):
         self, field_type_set: FieldTypeSet
     ) -> tuple[str, ...]:
         names: list[str] = []
-        for ft in field_type_set.value:
-            names.extend(self._row_by_type[ft])
+        for field_type in field_type_set.value:
+            names.extend(self._row_by_type[field_type])
         return tuple(names)
 
     def get_id(self, obj: Model) -> Hashable:
@@ -212,7 +212,7 @@ class TestBaseSAMapper(BaseMapperTestCase):
             "value": "value_col",
             "relation": "relation_col",
         }
-        assert reverse == {v: k for k, v in forward.items()}
+        assert reverse == {y: x for x, y in forward.items()}
         assert mapper.get_mapped_field_name("link") == "link_col"
         assert mapper.get_mapped_field_name("link_col", reverse=True) == "link"
 

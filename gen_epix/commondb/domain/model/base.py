@@ -109,19 +109,19 @@ class BaseEtlResult(BaseModel):
 
     def has_errors(self) -> bool:
         """Return True if any log item has ERROR severity."""
-        return any(log.severity == LogLevel.ERROR for log in self.logs)
+        return any(x.severity == LogLevel.ERROR for x in self.logs)
 
     def has_warnings(self) -> bool:
         """Return True if any log item has WARN severity."""
-        return any(log.severity == LogLevel.WARN for log in self.logs)
+        return any(x.severity == LogLevel.WARN for x in self.logs)
 
     def has_infos(self) -> bool:
         """Return True if any log item has INFO severity."""
-        return any(log.severity == LogLevel.INFO for log in self.logs)
+        return any(x.severity == LogLevel.INFO for x in self.logs)
 
     def has_log_code(self, code: str) -> bool:
         """Return True if any log item carries the given code."""
-        return any(log.code == code for log in self.logs)
+        return any(x.code == code for x in self.logs)
 
 
 def validate_int_enum_value(
