@@ -1,5 +1,6 @@
-import datetime
+from datetime import UTC, datetime
 from enum import IntEnum
+from typing import ClassVar
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -9,7 +10,40 @@ from gen_epix.commondb.domain.enum import EtlStatus as EtlStatus
 from gen_epix.fastapp.enum import LogLevel
 
 
-class Model(fastapp.Model):
+class ModelNoId(fastapp.Model):
+    CREATE_METADATA_FIELDS: ClassVar[frozenset[str]] = frozenset(
+        {"created_at", "modified_at", "modified_by"}
+    )
+    UPDATE_METADATA_FIELDS: ClassVar[frozenset[str]] = frozenset(
+        {"modified_at", "modified_by"}
+    )
+
+    created_at: datetime | None = Field(
+        default=None,
+        description="The UTC datetime when the object was created.",
+    )
+    modified_at: datetime | None = Field(
+        default=None,
+        description="The UTC datetime when the object was last modified.",
+    )
+    modified_by: UUID | None = Field(
+        default=None,
+        description="The ID of the user who last modified the object.",
+    )
+
+    def set_modified(self, user_id: UUID) -> None:
+        now = datetime.now(UTC)
+        self.modified_at = now
+        self.modified_by = user_id
+
+    def set_created(self, user_id: UUID) -> None:
+        now = datetime.now(UTC)
+        self.modified_at = now
+        self.modified_by = user_id
+        self.created_at = now
+
+
+class Model(ModelNoId):
     id: UUID | None = Field(
         default=None,
         description="The unique identifier for the object.",
@@ -22,8 +56,8 @@ class EtlLogItem(BaseModel):
     code, message and severity. Immutable Pydantic value object.
     """
 
-    timestamp: datetime.datetime = Field(
-        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc),
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
         description="The UTC timestamp when the log item was created.",
     )
     code: str = Field(
@@ -75,19 +109,19 @@ class BaseEtlResult(BaseModel):
 
     def has_errors(self) -> bool:
         """Return True if any log item has ERROR severity."""
-        return any(log.severity == LogLevel.ERROR for log in self.logs)
+        return any(x.severity == LogLevel.ERROR for x in self.logs)
 
     def has_warnings(self) -> bool:
         """Return True if any log item has WARN severity."""
-        return any(log.severity == LogLevel.WARN for log in self.logs)
+        return any(x.severity == LogLevel.WARN for x in self.logs)
 
     def has_infos(self) -> bool:
         """Return True if any log item has INFO severity."""
-        return any(log.severity == LogLevel.INFO for log in self.logs)
+        return any(x.severity == LogLevel.INFO for x in self.logs)
 
     def has_log_code(self, code: str) -> bool:
         """Return True if any log item carries the given code."""
-        return any(log.code == code for log in self.logs)
+        return any(x.code == code for x in self.logs)
 
 
 def validate_int_enum_value(
@@ -111,4 +145,5 @@ def validate_int_enum_value_or_none(
     """Validate that the given value is a valid member of the given IntEnum class or None."""
     if value is None:
         return None
+    return validate_int_enum_value(enum_class, value)
     return validate_int_enum_value(enum_class, value)

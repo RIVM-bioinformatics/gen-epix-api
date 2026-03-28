@@ -134,7 +134,7 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
     col_map: dict[UUID, model.Col] = {x.id: x for x in cols if x.id is not None}
 
     # Get RefCol data
-    ref_col_ids: set[UUID] = {col.ref_col_id for col in cols}
+    ref_col_ids: set[UUID] = {x.ref_col_id for x in cols}
     ref_cols: list[model.RefCol] = self.repository.crud(  # type: ignore[assignment]
         uow,
         user_id,

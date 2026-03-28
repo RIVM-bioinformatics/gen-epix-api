@@ -1,11 +1,12 @@
-from test.test_client.enum import TestType
+import datetime
+from test.test_client.enum import EnumTestType
 
 # Variables for debugging purposes
-from gen_epix.commondb.domain import enum
 
-TEST_TYPE = TestType.COMMONDB_INTEGRATION_BUILD_DB
+TEST_TYPE = EnumTestType.COMMONDB_INTEGRATION_BUILD_DB
 
 SKIP_RAISE = False
+SKIP_ENDPOINTS = True
 SKIP_CREATE_DATA = False
 VERBOSE = False
 
@@ -100,3 +101,5 @@ USER_NAME_ROOTS = {
     "org_user",
     "guest",
 }
+DEFAULT_CREATED_AT = datetime.datetime(2023, 1, 1, tzinfo=datetime.timezone.utc)
+DEFAULT_MODIFIED_AT = datetime.datetime(2023, 6, 1, tzinfo=datetime.timezone.utc)

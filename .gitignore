@@ -175,7 +175,7 @@ logs/*
 # Mutation Testing (gremlins)
 .gremlins_cache/
 .coveragerc.gremlins
-gremlin-report.html
+gremlin-report*
 
 cert/*.pem
 

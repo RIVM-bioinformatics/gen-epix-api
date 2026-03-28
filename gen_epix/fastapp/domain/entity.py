@@ -343,7 +343,7 @@ class Entity(BaseModel):
         """
         field_names = self.get_field_names(by_alias=by_alias, field_type=FieldType.ID)
         if not field_names:
-            raise ValueError("Entity does not have an ID field")
+            raise AttributeError("Entity does not have an ID field")
         return field_names[0]
 
     def get_keys_field_names(self, by_alias: bool = True) -> list[tuple[str, ...]]:

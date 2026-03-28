@@ -72,7 +72,7 @@ def create_seq_endpoints(
                     user=user,
                     protocol_id=request_body.protocol_id,
                     tree_algorithm=request_body.tree_algorithm,
-                    profile_ids=request_body.profile_ids,
+                    seq_profile_ids=request_body.profile_ids,
                     leaf_names=request_body.leaf_codes,
                 )
             )

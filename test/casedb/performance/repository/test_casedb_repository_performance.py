@@ -4,7 +4,9 @@ import pstats
 import sys
 from pathlib import Path
 from test.casedb.casedb_test_client import CasedbTestClient
-from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
+from test.test_client.enum import (
+    EnumTestType as EnumTestType,  # to avoid PyTest warning
+)
 
 import pandas as pd
 import pytest
@@ -62,5 +64,7 @@ class TestRead:
             repository_type=enum.RepositoryType.DICT,
         ).test_dir
         df = pd.DataFrame.from_records(PERFORMANCE_DF)
+        df.to_csv(Path(test_dir) / f"{cls.__name__}.performance.csv", index=False)
+        df.to_excel(Path(test_dir) / f"{cls.__name__}.performance.xlsx", index=False)
         df.to_csv(Path(test_dir) / f"{cls.__name__}.performance.csv", index=False)
         df.to_excel(Path(test_dir) / f"{cls.__name__}.performance.xlsx", index=False)

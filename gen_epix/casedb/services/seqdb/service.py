@@ -68,7 +68,7 @@ class SeqdbService(BaseSeqdbService):
             user=self.seqdb_user,
             protocol_id=cmd.seqdb_protocol_id,
             tree_algorithm=seqdb_enum.TreeAlgorithm[cmd.tree_algorithm_code.value],
-            profile_ids=cmd.profile_ids,
+            seq_profile_ids=cmd.profile_ids,
             leaf_names=leaf_names,
         )
         seqdb_phylogenetic_tree: seqdb_model.PhylogeneticTree = self.seqdb_app.handle(

@@ -1,5 +1,7 @@
 import logging
-from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
+from test.test_client.enum import (
+    EnumTestType as EnumTestType,  # to avoid PyTest warning
+)
 from uuid import UUID
 
 import pytest
@@ -68,7 +70,7 @@ class TestManual:
             command.RetrieveCasesByQueryCommand(
                 user=user,
                 case_query=model.CaseQuery(
-                    case_type_ids=["018b8a3f-dd6e-b080-f0fb-ff724c3cb00a"],
+                    case_type_id="018b8a3f-dd6e-b080-f0fb-ff724c3cb00a",
                     filter=TypedCompositeFilter(
                         type=FilterType.COMPOSITE.value,
                         filters=[

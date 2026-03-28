@@ -291,14 +291,14 @@ class JsonFormatter(logging.Formatter):
 
         if isinstance(value, dict):
             return {
-                k: self._redact_nested(v, key_name=str(k)) for k, v in value.items()
+                x: self._redact_nested(y, key_name=str(x)) for x, y in value.items()
             }
 
         if isinstance(value, list):
-            return [self._redact_nested(v) for v in value]
+            return [self._redact_nested(x) for x in value]
 
         if isinstance(value, tuple):
-            return tuple(self._redact_nested(v) for v in value)
+            return tuple(self._redact_nested(x) for x in value)
 
         return value
 
@@ -483,9 +483,9 @@ class JsonFormatter(logging.Formatter):
             }
 
         extras: dict[str, Any] = {
-            k: v
-            for k, v in record.__dict__.items()
-            if k not in self._reserved and not k.startswith("_")
+            x: y
+            for x, y in record.__dict__.items()
+            if x not in self._reserved and not x.startswith("_")
         }
         # Fix 3 – redact string values inside extras (e.g. request body dict).
         extras = self._redact_nested(extras)

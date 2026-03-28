@@ -58,12 +58,12 @@ class BaseFilterTestCase(TestCase):
 
     def make_rows_dict(
         self, values: List[Tuple[str, Any | None]]
-    ) -> List[dict[str, Any | None]]:
-        rows: List[dict[str, Any | None]] = [{k: v} for k, v in values]
+    ) -> list[dict[str, Any | None]]:
+        rows: list[dict[str, Any | None]] = [{x: y} for x, y in values]
         return rows
 
     def make_rows_model(self, values: List[Tuple[str, Any | None]]) -> List[RowModel]:
-        rows: List[RowModel] = [RowModel(**{k: v}) for k, v in values]
+        rows: list[RowModel] = [RowModel(**{x: y}) for x, y in values]
         return rows
 
     def collect(self, it: Iterable[Any]) -> List[Any]:

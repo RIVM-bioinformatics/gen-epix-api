@@ -108,11 +108,13 @@ class BaseRetrieveStatsTestCase(TestCase):
             case_type_share_abacs={},
             case_date_col_type_map=case_date_col_type_map or {},
             case_date_dim_id=None,  # Add this required field
-            create_max_n_cases=1000,
-            read_max_n_cases=1000,
-            read_max_tree_size=1000,
-            update_max_n_cases=1000,
-            delete_max_n_cases=1000,
+            props=case_model.CaseTypeProps(
+                create_max_n_cases=1000,
+                read_max_n_cases=1000,
+                read_max_tree_size=1000,
+                update_max_n_cases=1000,
+                delete_max_n_cases=1000,
+            ),
         )
 
     def create_case_set(

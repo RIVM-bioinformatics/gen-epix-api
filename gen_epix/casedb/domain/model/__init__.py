@@ -43,6 +43,7 @@ from gen_epix.casedb.domain.model.case import CaseSetRights as CaseSetRights
 from gen_epix.casedb.domain.model.case import CaseSetStatus as CaseSetStatus
 from gen_epix.casedb.domain.model.case import CaseStats as CaseStats
 from gen_epix.casedb.domain.model.case import CaseType as CaseType
+from gen_epix.casedb.domain.model.case import CaseTypeProps as CaseTypeProps
 from gen_epix.casedb.domain.model.case import CaseTypeSet as CaseTypeSet
 from gen_epix.casedb.domain.model.case import CaseTypeSetCategory as CaseTypeSetCategory
 from gen_epix.casedb.domain.model.case import CaseTypeSetMember as CaseTypeSetMember

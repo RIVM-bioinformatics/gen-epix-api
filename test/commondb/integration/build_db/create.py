@@ -1,4 +1,7 @@
-from test.commondb.integration.build_db.base import SKIP_RAISE
+import datetime
+from test.commondb.integration.build_db.base import (
+    SKIP_RAISE,
+)
 
 import pytest
 
@@ -24,8 +27,8 @@ class TestCreate:
         # Create a first root user and organization
         user: model.User = env.retrieve_user_by_key("root1_1@org1.org")  # type: ignore[assignment]
         user.name = "root1_1"
-        env._set_obj(user)
-        env._set_obj(
+        env.set_obj(user)
+        env.set_obj(
             env.read_one_by_property("root1_1", model.Organization, "name", "org1")
         )
 
@@ -259,3 +262,63 @@ class TestCreate:
 
         assert isinstance(data, dict), "OpenAPI response is not JSON dict"
         assert "openapi" in data and "paths" in data
+
+    # We don't need a datacollection as setup for commondb tests
+    # we are only testing the policy that sets created/modified metadata on create/update operations
+    def test_create_data_collection_with_override_of_metadat(self, env: Env) -> None:
+
+        if not env.use_endpoints:
+            pytest.skip("Skipped endpoint tests")
+
+        created_at = datetime.datetime(2025, 1, 1, tzinfo=datetime.UTC)
+        modified_at = datetime.datetime(2025, 6, 1, tzinfo=datetime.UTC)
+        # Override modified_by to be a different user to verify that the value set by the test client
+        # is not being overridden by the policy,
+        # since root user should bypass the policy and keep the values provided in the command.
+        app_admin_user: model.User = env.get_obj(model.User, "app_admin1_2")  # type: ignore[assignment]
+        modified_by = app_admin_user.id
+
+        # Create data collection as root and app_admin
+        dc1 = env.create_data_collection(
+            "root1_1",
+            "data_collection1",
+            created_at=created_at,
+            modified_at=modified_at,
+            modified_by=modified_by,
+        )
+
+        if env.verbose:
+            print(dc1.created_at)
+            print(dc1.modified_at)
+            print(dc1.modified_by)
+
+        assert (
+            dc1.created_at == created_at
+        ), "created_at should be set to the fixed value provided in the command for root user"
+        assert (
+            dc1.modified_at == modified_at
+        ), "modified_at should be set to the fixed value provided in the command for root user"
+        assert (
+            dc1.modified_by == modified_by
+        ), "modified_by should be set to the user specified in the command for root user"
+
+        dc2 = env.create_data_collection("app_admin1_2", "data_collection2")
+
+        if env.verbose:
+            print(dc2.created_at)
+            print(dc2.modified_at)
+            print(dc2.modified_by)
+
+        # app_admin1_2 should not bypass the policy
+        assert (
+            dc2.created_at is not None and dc2.created_at != DEFAULT_CREATED_AT
+        ), "created_at should be set to the fixed value provided in the command for app_admin user since app_admin should bypass the policy and keep the values provided in the command"
+        assert (
+            dc2.modified_at is not None and dc2.modified_at != DEFAULT_CREATED_AT
+        ), "modified_at should be set to the fixed value provided in the command for app_admin user since app_admin should bypass the policy and keep the values provided in the command"
+        assert (
+            dc2.modified_by == app_admin_user.id
+        ), "modified_by should be set to the user specified in the command for app_admin"
+
+        if env.verbose:
+            env.print_data_collections()

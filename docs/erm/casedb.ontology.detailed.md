@@ -7,34 +7,17 @@ erDiagram
     %% casedb / ONTOLOGY (detailed)
 
     %% Relationships
-    Etiology }o--|| Disease : "disease_id"
-    Etiology }o--|| EtiologicalAgent : "etiological_agent_id"
     Concept }o--|| ConceptSet : "concept_set_id"
     ConceptRelation }o--|| Concept : "from_concept_id"
     ConceptRelation }o--|| Concept : "to_concept_id"
+    Etiology }o--|| Disease : "disease_id"
+    Etiology }o--|| EtiologicalAgent : "etiological_agent_id"
 
     %% Entity definitions
-    Etiology {
-        UUID id PK
-        UUID disease_id FK
-        UUID etiological_agent_id FK
-    }
-
-    Disease {
-        UUID id PK
-        string name
-        string icd_code
-    }
-
-    ConceptSet {
-        UUID id PK
-        string code
-        string name
-        enum type
-        string description
-    }
-
     Concept {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID concept_set_id FK
         string code
@@ -44,17 +27,52 @@ erDiagram
         dict[string, Any] props
     }
 
+    ConceptSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        string code
+        string name
+        enum type
+        string description
+    }
+
     ConceptRelation {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID from_concept_id FK
         UUID to_concept_id FK
         enum relation
     }
 
+    Disease {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        string name
+        string icd_code
+    }
+
     EtiologicalAgent {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string name
         string type
+    }
+
+    Etiology {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID disease_id FK
+        UUID etiological_agent_id FK
     }
 
 ```

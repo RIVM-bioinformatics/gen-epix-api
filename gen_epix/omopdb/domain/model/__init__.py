@@ -12,7 +12,7 @@ from gen_epix.commondb.domain.model import (
     DataCollectionSetMember as DataCollectionSetMember,
 )
 from gen_epix.commondb.domain.model import IdentifierIssuer as IdentifierIssuer
-from gen_epix.commondb.domain.model import Model as Model
+from gen_epix.commondb.domain.model import ModelNoId as Model
 from gen_epix.commondb.domain.model import Organization as Organization
 from gen_epix.commondb.domain.model import (
     OrganizationAdminPolicy as OrganizationAdminPolicy,

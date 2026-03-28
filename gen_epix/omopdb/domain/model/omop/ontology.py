@@ -24,7 +24,7 @@ from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
 
-from gen_epix.fastapp import Model
+from gen_epix.commondb.domain.model import ModelNoId as Model
 from gen_epix.fastapp.domain import Entity, create_links
 from gen_epix.omopdb.domain.model.omop.base import (
     validate_int_for_uuid_field,

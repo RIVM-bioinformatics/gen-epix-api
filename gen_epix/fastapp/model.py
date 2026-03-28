@@ -451,15 +451,13 @@ class UpdateAssociationCommand(Command):
             )
         if association_objs:
             if obj_id1 and not all(
-                getattr(obj, self.LINK_FIELD_NAME1) == obj_id1
-                for obj in association_objs
+                getattr(x, self.LINK_FIELD_NAME1) == obj_id1 for x in association_objs
             ):
                 raise exc.DomainException(
                     f"Invalid state: obj_id1 and association_objs not matching"
                 )
             if obj_id2 and not all(
-                getattr(obj, self.LINK_FIELD_NAME2) == obj_id2
-                for obj in association_objs
+                getattr(x, self.LINK_FIELD_NAME2) == obj_id2 for x in association_objs
             ):
                 raise exc.DomainException(
                     f"Invalid state: obj_id2 and association_objs not matching"

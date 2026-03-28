@@ -186,20 +186,8 @@ class CaseType(Base, RowMetadataMixin):
     etiological_agent_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.CaseType, "etiological_agent_id"
     )
-    create_max_n_cases: Mapped[int] = create_mapped_column(
-        DOMAIN, model.CaseType, "create_max_n_cases"
-    )
-    read_max_n_cases: Mapped[int] = create_mapped_column(
-        DOMAIN, model.CaseType, "read_max_n_cases"
-    )
-    read_max_tree_size: Mapped[int] = create_mapped_column(
-        DOMAIN, model.CaseType, "read_max_tree_size"
-    )
-    update_max_n_cases: Mapped[int] = create_mapped_column(
-        DOMAIN, model.CaseType, "update_max_n_cases"
-    )
-    delete_max_n_cases: Mapped[int] = create_mapped_column(
-        DOMAIN, model.CaseType, "delete_max_n_cases"
+    props: Mapped[dict[str, Any]] = create_mapped_column(
+        DOMAIN, model.CaseType, "props"
     )
 
 

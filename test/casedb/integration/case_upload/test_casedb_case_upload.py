@@ -403,8 +403,8 @@ class TestCaseUpload(CaseUploadSetup):
         )
         uq_users = {str(x.id): x for x in uq_users_list}
         for user in uq_users.values():
-            env._set_obj(user)
-        env._set_obj(root_user, update=True)
+            env.set_obj(user)
+        env.set_obj(root_user, update=True)
 
         # Get Policies and Col IDs
         organization_access_case_policies: dict[
@@ -696,4 +696,6 @@ class TestCaseUpload(CaseUploadSetup):
                 read_sets=read_sets,
                 seqs=seqs,
             )
+        return case
+        return case
         return case

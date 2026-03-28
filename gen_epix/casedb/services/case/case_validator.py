@@ -27,11 +27,12 @@ from gen_epix.commondb.domain.literal import (
     TIME_YEAR_PATTERN,
 )
 from gen_epix.fastapp import CrudOperation
+from gen_epix.fastapp.enum import OnException
 from gen_epix.filter import UuidSetFilter
 from gen_epix.filter.composite import CompositeFilter
 from gen_epix.filter.enum import LogicalOperator
 from gen_epix.transform.adapter import ObjectAdapter
-from gen_epix.transform.enum import NoMatchStrategy, TimeUnit, TimeUnitTransformStrategy
+from gen_epix.transform.enum import TimeUnit, TimeUnitTransformStrategy
 from gen_epix.transform.transformers import IntervalTransformer
 from gen_epix.transform.transformers.interval import IntervalToIntervalTransformer
 from gen_epix.transform.transformers.iso_time import IsoTimeTransformer
@@ -658,7 +659,7 @@ class CaseValidator:
                 tgt_lower_bound_is_inclusive=tgt_transformer._lower_bound_is_inclusive,
                 tgt_upper_bound_is_inclusive=tgt_transformer._upper_bound_is_inclusive,
                 overlap_strategy="largest_overlap",
-                no_match_strategy=NoMatchStrategy.SET_NONE,
+                on_no_match=OnException.SET_NONE,
             )
         except Exception:
             # Skip if transformer creation fails

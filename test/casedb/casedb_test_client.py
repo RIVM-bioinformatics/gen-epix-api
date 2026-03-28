@@ -1,15 +1,18 @@
-import datetime
+# Prevent removing unused imports, which are needed
+# ruff: noqa: F401
 import logging
 import re
+from datetime import UTC, datetime
 from pathlib import Path
 from test.casedb.casedb_endpoint_test_client import CasedbEndpointTestClient
 from test.test_client.util import get_test_name, get_test_output_dir
 from time import sleep
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from gen_epix.casedb.api.router import create_routers
 from gen_epix.casedb.domain import command, enum, model
+from gen_epix.casedb.domain.model.case.case_data import CaseDataCollectionLink
 from gen_epix.casedb.env import AppComposer
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.commondb.app_setup import create_fast_api
@@ -108,6 +111,12 @@ class CasedbTestClient(TestClient):
         enum.ColType.ORGANIZATION: None,
         enum.ColType.OTHER: None,
     }
+
+    def get_fixed_created_at(self) -> datetime:
+        return datetime(2023, 1, 1, tzinfo=UTC)
+
+    def get_fixed_modified_at(self) -> datetime:
+        return datetime(2023, 6, 1, tzinfo=UTC)
 
     @classmethod
     def get_test_client(
@@ -219,11 +228,11 @@ class CasedbTestClient(TestClient):
         concept_set_or_str: str | model.ConceptSet | None = None,
         set_dummy_concept_set: bool = False,
     ) -> model.Concept:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         concept_set: model.ConceptSet = (
-            self._get_obj(model.ConceptSet, concept_set_or_str)  # type: ignore[assignment]
+            self.get_obj(model.ConceptSet, concept_set_or_str)  # type: ignore[assignment]
             if concept_set_or_str
             else None
         )
@@ -245,7 +254,7 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(concept)  # type: ignore[return-value]
+        return self.set_obj(concept)  # type: ignore[return-value]
 
     def create_concept_set(
         self,
@@ -255,7 +264,7 @@ class CasedbTestClient(TestClient):
         concepts: set[str | model.Concept] | None = None,
         set_dummy_concepts: bool = False,
     ) -> model.ConceptSet:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         concept_set = self.handle(
@@ -276,7 +285,7 @@ class CasedbTestClient(TestClient):
                 else:
                     # If a Concept object is passed, replicate by code
                     self.create_concept(user, x.code, concept_set)
-        return self._set_obj(concept_set)  # type: ignore[return-value]
+        return self.set_obj(concept_set)  # type: ignore[return-value]
 
     def create_region_set(
         self,
@@ -284,7 +293,7 @@ class CasedbTestClient(TestClient):
         code: str,
         resolution: int = 1,
     ) -> model.RegionSet:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         region_set = self.handle(
@@ -299,7 +308,7 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(region_set)  # type: ignore[return-value]
+        return self.set_obj(region_set)  # type: ignore[return-value]
 
     def create_region_set_shape(
         self,
@@ -308,7 +317,7 @@ class CasedbTestClient(TestClient):
         scale: float,
         set_dummy_region_set: bool = False,
     ) -> model.RegionSetShape:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         region_set_shape = self.handle(
@@ -319,14 +328,14 @@ class CasedbTestClient(TestClient):
                     region_set_id=(
                         self.generate_id()  # type: ignore[arg-type]
                         if set_dummy_region_set
-                        else self._get_obj(model.RegionSet, region_set).id
+                        else self.get_obj(model.RegionSet, region_set).id
                     ),
                     scale=scale,
                     geo_json="{}",
                 ),
             )
         )
-        return self._set_obj(region_set_shape)  # type: ignore[return-value]
+        return self.set_obj(region_set_shape)  # type: ignore[return-value]
 
     def create_region(
         self,
@@ -335,7 +344,7 @@ class CasedbTestClient(TestClient):
         region_set: str | model.RegionSet,
         set_dummy_region_set: bool = False,
     ) -> model.Region:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         region = self.handle(
@@ -346,7 +355,7 @@ class CasedbTestClient(TestClient):
                     region_set_id=(
                         self.generate_id()  # type: ignore[arg-type]
                         if set_dummy_region_set
-                        else self._get_obj(model.RegionSet, region_set).id
+                        else self.get_obj(model.RegionSet, region_set).id
                     ),
                     code=code,
                     name=code,
@@ -357,7 +366,7 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(region)  # type: ignore[return-value]
+        return self.set_obj(region)  # type: ignore[return-value]
 
     def create_genetic_distance_protocol(
         self,
@@ -367,7 +376,7 @@ class CasedbTestClient(TestClient):
         seqdb_seq_distance_type: seqdb_enum.SeqDistanceType = seqdb_enum.SeqDistanceType.KMER_EUCLIDEAN,
         min_scale_unit: float = 1,
     ) -> model.GeneticDistanceProtocol:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         seqdb_seq_distance_protocol_id = (
@@ -388,7 +397,7 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(protocol)  # type: ignore[return-value]
+        return self.set_obj(protocol)  # type: ignore[return-value]
 
     def create_ref_dim(
         self,
@@ -397,7 +406,7 @@ class CasedbTestClient(TestClient):
         dim_type: enum.DimType,
         rank: int = 1,
     ) -> model.RefDim:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         ref_dim = self.handle(
@@ -412,7 +421,7 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(ref_dim)  # type: ignore[return-value]
+        return self.set_obj(ref_dim)  # type: ignore[return-value]
 
     def create_ref_col(
         self,
@@ -430,7 +439,7 @@ class CasedbTestClient(TestClient):
         set_dummy_region_set: bool = False,
         set_dummy_genetic_distance_protocol: bool = False,
     ) -> model.RefCol:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         m = re.match(r"^(.*?)(\d+)_(\d+)_?(.*)$", code.lower())
@@ -441,7 +450,7 @@ class CasedbTestClient(TestClient):
         if set_dummy_ref_dim:
             ref_dim_id = self.generate_id()
         else:
-            ref_dim_obj: model.RefDim = self._get_obj(  # type: ignore[assignment]
+            ref_dim_obj: model.RefDim = self.get_obj(  # type: ignore[assignment]
                 model.RefDim, ref_dim
             )
             assert ref_dim_obj.id is not None
@@ -452,7 +461,7 @@ class CasedbTestClient(TestClient):
             else (
                 None
                 if not concept_set
-                else self._get_obj(model.ConceptSet, concept_set).id  # type: ignore[union-attr]
+                else self.get_obj(model.ConceptSet, concept_set).id  # type: ignore[union-attr]
             )
         )
         region_set_id: UUID | None = (
@@ -461,7 +470,7 @@ class CasedbTestClient(TestClient):
             else (
                 None
                 if not region_set
-                else self._get_obj(model.RegionSet, region_set).id  # type: ignore[union-attr]
+                else self.get_obj(model.RegionSet, region_set).id  # type: ignore[union-attr]
             )
         )
         genetic_distance_protocol_id = (
@@ -470,7 +479,7 @@ class CasedbTestClient(TestClient):
             else (
                 None
                 if not genetic_distance_protocol
-                else self._get_obj(
+                else self.get_obj(
                     model.GeneticDistanceProtocol,
                     genetic_distance_protocol,
                 ).id  # type: ignore[union-attr]
@@ -495,12 +504,12 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(ref_col)  # type: ignore[return-value]
+        return self.set_obj(ref_col)  # type: ignore[return-value]
 
     def create_disease(
         self, user_or_str: str | model.User, disease_name: str
     ) -> model.Disease:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         disease = self.handle(
@@ -510,12 +519,12 @@ class CasedbTestClient(TestClient):
                 objs=model.Disease(name=disease_name),
             )
         )
-        return self._set_obj(disease)  # type: ignore[return-value]
+        return self.set_obj(disease)  # type: ignore[return-value]
 
     def create_etiological_agent(
         self, user_or_str: str | model.User, etiological_agent_name: str
     ) -> model.EtiologicalAgent:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         etiological_agent = self.app.handle(
@@ -527,7 +536,7 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(etiological_agent)  # type: ignore[return-value]
+        return self.set_obj(etiological_agent)  # type: ignore[return-value]
 
     def create_etiology(
         self,
@@ -537,7 +546,7 @@ class CasedbTestClient(TestClient):
         set_dummy_disease: bool = False,
         set_dummy_etiological_agent: bool = False,
     ) -> model.Etiology:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         etiology = self.app.handle(
@@ -551,7 +560,7 @@ class CasedbTestClient(TestClient):
                         else (
                             None
                             if not disease
-                            else self._get_obj(model.Disease, disease).id
+                            else self.get_obj(model.Disease, disease).id
                         )
                     ),
                     etiological_agent_id=(
@@ -560,7 +569,7 @@ class CasedbTestClient(TestClient):
                         else (
                             None
                             if not etiological_agent
-                            else self._get_obj(
+                            else self.get_obj(
                                 model.EtiologicalAgent, etiological_agent
                             ).id  # type: ignore[union-attr]
                         )
@@ -568,8 +577,12 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(etiology)  # type: ignore[return-value]
+        return self.set_obj(etiology)  # type: ignore[return-value]
 
+    # Note: improve setting of dummy process metadata (created_at, modified_at, modified_by) in create_case_type and create_case_type_set,
+    # which is currently only done to allow testing of the metadata policy in the test cases, but is a bit hacky.
+    # Maybe we can add an optional parameter to the command handler to bypass the metadata policy for setting these fields,
+    # or to set them to specific values for testing purposes, which would be cleaner than setting dummy values here and then overriding them in the test cases.
     def create_case_type(
         self,
         user_or_str: str | model.User,
@@ -579,7 +592,7 @@ class CasedbTestClient(TestClient):
         set_dummy_disease: bool = False,
         set_dummy_etiological_agent: bool = False,
     ) -> model.CaseType:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         case_type: model.CaseType = self.handle(
@@ -594,7 +607,7 @@ class CasedbTestClient(TestClient):
                         else (
                             None
                             if not disease
-                            else self._get_obj(model.Disease, disease).id  # type: ignore[union-attr]
+                            else self.get_obj(model.Disease, disease).id  # type: ignore[union-attr]
                         )
                     ),
                     etiological_agent_id=(
@@ -603,7 +616,7 @@ class CasedbTestClient(TestClient):
                         else (
                             None
                             if not etiological_agent
-                            else self._get_obj(
+                            else self.get_obj(
                                 model.EtiologicalAgent, etiological_agent
                             ).id  # type: ignore[union-attr]
                         )
@@ -611,7 +624,7 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(case_type)  # type: ignore[return-value]
+        return self.set_obj(case_type)  # type: ignore[return-value]
 
     def create_case_type_set_member(
         self,
@@ -621,17 +634,17 @@ class CasedbTestClient(TestClient):
         set_dummy_case_type_set: bool = False,
         set_dummy_case_type: bool = False,
     ) -> model.CaseTypeSetMember:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         if set_dummy_case_type_set:
             case_type_set_id = self.generate_id()
         else:
-            case_type_set_id: UUID = self._get_obj(model.CaseTypeSet, case_type_set_or_str).id  # type: ignore[union-attr]
+            case_type_set_id: UUID = self.get_obj(model.CaseTypeSet, case_type_set_or_str).id  # type: ignore[union-attr]
         if set_dummy_case_type:
             case_type_id: UUID = self.generate_id()
         else:
-            case_type_id = self._get_obj(model.CaseType, case_type_or_str).id  # type: ignore[union-attr]
+            case_type_id = self.get_obj(model.CaseType, case_type_or_str).id  # type: ignore[union-attr]
 
         case_type_set_member = self.handle(
             command.CaseTypeSetMemberCrudCommand(
@@ -643,7 +656,7 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(case_type_set_member)  # type: ignore[return-value]
+        return self.set_obj(case_type_set_member)  # type: ignore[return-value]
 
     def create_case_type_set_category(
         self,
@@ -651,7 +664,7 @@ class CasedbTestClient(TestClient):
         case_type_set_category_or_str: str | model.CaseTypeSetCategory,
         rank: int = 0,
     ) -> model.CaseTypeSetCategory:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         case_type_set_category: model.CaseTypeSetCategory = self.handle(
@@ -664,7 +677,7 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(case_type_set_category)  # type: ignore[return-value]
+        return self.set_obj(case_type_set_category)  # type: ignore[return-value]
 
     def create_case_type_set(
         self,
@@ -676,13 +689,13 @@ class CasedbTestClient(TestClient):
         set_dummy_case_type_set_category: bool = False,
         set_dummy_case_types: bool = False,
     ) -> model.CaseTypeSet:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         if set_dummy_case_type_set_category:
             case_type_set_category_id = self.generate_id()
         else:
-            case_type_set_category_id = self._get_obj(
+            case_type_set_category_id = self.get_obj(
                 model.CaseTypeSetCategory, case_type_set_category_or_str
             ).id
         case_type_set: model.CaseTypeSet = self.handle(
@@ -699,7 +712,7 @@ class CasedbTestClient(TestClient):
         if set_dummy_case_types:
             case_type_ids = [self.generate_id() for _ in case_types]
         else:
-            case_type_ids = [self._get_obj(model.CaseType, x).id for x in case_types]
+            case_type_ids = [self.get_obj(model.CaseType, x).id for x in case_types]
         if case_type_ids:
             # Create members only if there are some, since this has different ABAC rights
             case_type_set_members = self.handle(
@@ -716,8 +729,8 @@ class CasedbTestClient(TestClient):
                 )
             )
             for case_type_set_member in case_type_set_members:
-                self._set_obj(case_type_set_member)
-        return self._set_obj(case_type_set)  # type: ignore[return-value]
+                self.set_obj(case_type_set_member)
+        return self.set_obj(case_type_set)  # type: ignore[return-value]
 
     def create_dim(
         self,
@@ -728,7 +741,7 @@ class CasedbTestClient(TestClient):
         set_dummy_case_type: bool = False,
         set_dummy_ref_dim: bool = False,
     ) -> model.Dim:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         m = re.match(r"^(.*?)(\d+)_(\d+)_(\d+)$", code.lower())
@@ -741,14 +754,14 @@ class CasedbTestClient(TestClient):
         case_type_id: UUID = (
             self.generate_id()
             if set_dummy_case_type
-            else self._get_obj(
-                model.CaseType, case_type_str
+            else cast(
+                model.CaseType, self.get_obj(model.CaseType, case_type_str)
             ).id  # type: ignore[assignment]
         )
         ref_dim_id = (
             self.generate_id()
             if set_dummy_ref_dim
-            else self._get_obj(model.RefDim, ref_dim_str).id
+            else cast(model.RefDim, self.get_obj(model.RefDim, ref_dim_str)).id
         )
         dim: model.Dim = self.handle(
             command.DimCrudCommand(
@@ -765,7 +778,7 @@ class CasedbTestClient(TestClient):
             )
         )
 
-        return self._set_obj(dim)  # type: ignore[return-value]
+        return self.set_obj(dim)  # type: ignore[return-value]
 
     def create_col(
         self,
@@ -777,7 +790,7 @@ class CasedbTestClient(TestClient):
         set_dummy_dim: bool = False,
         set_dummy_ref_col: bool = False,
     ) -> model.Col:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         m = re.match(r"^(.*?)(\d+)_(\d+)_(\d+)_(\d+)$", code.lower())
@@ -789,17 +802,17 @@ class CasedbTestClient(TestClient):
         if set_dummy_case_type:
             case_type_id = self.generate_id()
         else:
-            case_type = self._get_obj(model.CaseType, case_type_str)
+            case_type = self.get_obj(model.CaseType, case_type_str)
             case_type_id = case_type.id
         if set_dummy_dim:
             dim_id = self.generate_id()
         else:
-            dim = self._get_obj(model.Dim, dim_str)
+            dim = self.get_obj(model.Dim, dim_str)
             dim_id = dim.id
         if set_dummy_ref_col:
             ref_col_id = self.generate_id()
         else:
-            ref_col = self._get_obj(model.RefCol, ref_col_str)
+            ref_col = self.get_obj(model.RefCol, ref_col_str)
             ref_col_id = ref_col.id
         col: model.Col = self.handle(
             command.ColCrudCommand(
@@ -816,32 +829,32 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(col)  # type: ignore[return-value]
+        return self.set_obj(col)  # type: ignore[return-value]
 
     def create_col_set(
         self,
         user_or_str: str | model.User,
-        col_set: str | model.ColSet,
-        cols: set[str | model.Col],
+        col_set_or_str: str | model.ColSet,
+        cols_or_str: set[str | model.Col],
         set_dummy_cols: bool = False,
     ) -> model.ColSet:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
-        col_set = self.handle(
+        col_set: model.ColSet = self.handle(  # type: ignore[assignment]
             command.ColSetCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.ColSet(
-                    name=col_set,
-                    description=col_set,
+                    name=col_set_or_str,
+                    description=col_set_or_str,
                 ),
             )
         )
         if set_dummy_cols:
-            col_ids = [self.generate_id() for _ in cols]
+            col_ids = [self.generate_id() for _ in cols_or_str]
         else:
-            col_ids = [self._get_obj(model.Col, x).id for x in cols]
+            col_ids = [self.get_obj(model.Col, x).id for x in cols_or_str]
         if col_ids:
             # Create members only if there are some, since this has different ABAC rights
             col_set_members: list[model.ColSetMember] = self.handle(  # type: ignore[assignment]
@@ -858,22 +871,22 @@ class CasedbTestClient(TestClient):
                 )
             )
             for col_set_member in col_set_members:
-                self._set_obj(col_set_member)
-        return self._set_obj(col_set)  # type: ignore[return-value]
+                self.set_obj(col_set_member)
+        return self.set_obj(col_set)  # type: ignore[return-value]
 
     def create_col_set_member(
         self,
         user_or_str: str | model.User,
-        col_set: str | model.ColSet,
-        col: str | model.Col,
+        col_set_or_str: str | model.ColSet,
+        col_or_str: str | model.Col,
     ) -> model.ColSetMember:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
-        col_set: model.ColSet = self._get_obj(model.ColSet, col_set)
-        col: model.Col = self._get_obj(model.Col, col)
+        col_set: model.ColSet = self.get_obj(model.ColSet, col_set_or_str)  # type: ignore[assignment]
+        col: model.Col = self.get_obj(model.Col, col_or_str)  # type: ignore[assignment]
 
-        col_set_member = self.handle(
+        col_set_member: model.ColSetMember = self.handle(  # type: ignore[assignment]
             command.ColSetMemberCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
@@ -883,7 +896,7 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(col_set_member)  # type: ignore[return-value]
+        return self.set_obj(col_set_member)  # type: ignore[return-value]
 
     def create_organization_access_case_policy(
         self,
@@ -894,8 +907,8 @@ class CasedbTestClient(TestClient):
         is_private: bool = False,
         add_case: bool = True,
         remove_case: bool = True,
-        read_col_set: str | model.ColSet | None = None,
-        write_col_set: str | model.ColSet | None = None,
+        read_col_set_or_str: str | model.ColSet | None = None,
+        write_col_set_or_str: str | model.ColSet | None = None,
         add_case_set: bool = True,
         remove_case_set: bool = True,
         read_case_set: bool = True,
@@ -912,29 +925,35 @@ class CasedbTestClient(TestClient):
         This is to ensure that the created policy is linked to valid objects.
 
         """
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         m = re.match(r"^(.*?)(\d+)_(\d+.*)$", name.lower())
         if not m:
             raise ValueError(f"Invalid code {name}")
-        organization: model.Organization = self._get_obj(
+        organization: model.Organization = self.get_obj(
             model.Organization, f"org{m.group(2)}"
         )  # type: ignore[assignment]
         data_collection: model.DataCollection = (
-            self._get_obj(  # type: ignore[assignment]
+            self.get_obj(  # type: ignore[assignment]
                 model.DataCollection, f"data_collection{m.group(3)}"
             )
         )
-        case_type_set: model.CaseTypeSet = self._get_obj(
+        case_type_set: model.CaseTypeSet = self.get_obj(
             model.CaseTypeSet, case_type_set
         )  # type: ignore[assignment]
-        read_col_set_id = (
-            self._get_obj(model.ColSet, read_col_set).id if read_col_set else None
+        read_col_set: model.ColSet | None = (
+            cast(model.ColSet, self.get_obj(model.ColSet, read_col_set_or_str))
+            if read_col_set_or_str
+            else None
         )
-        write_col_set_id = (
-            self._get_obj(model.ColSet, write_col_set).id if write_col_set else None
+        read_col_set_id = read_col_set.id if read_col_set else None
+        write_col_set: model.ColSet | None = (
+            cast(model.ColSet, self.get_obj(model.ColSet, write_col_set_or_str))
+            if write_col_set_or_str
+            else None
         )
+        write_col_set_id = write_col_set.id if write_col_set else None
         organization_access_case_policy = self.app.handle(
             command.OrganizationAccessCasePolicyCrudCommand(
                 user=user,
@@ -959,7 +978,7 @@ class CasedbTestClient(TestClient):
         # print(
         #     f"Created organization_case_policy: {organization.name}, {data_collection.name}, {col_set.name} ({organization_case_policy.organization_id}, {organization_case_policy.data_collection_id}, {organization_case_policy.col_set_id})"
         # )
-        return self._set_obj(
+        return self.set_obj(
             organization_access_case_policy
         )  # type: ignore[return-value]
 
@@ -972,25 +991,31 @@ class CasedbTestClient(TestClient):
         is_active: bool = True,
         add_case: bool = True,
         remove_case: bool = True,
-        read_col_set: str | model.ColSet | None = None,
-        write_col_set: str | model.ColSet | None = None,
+        read_col_set_or_str: str | model.ColSet | None = None,
+        write_col_set_or_str: str | model.ColSet | None = None,
         add_case_set: bool = True,
         remove_case_set: bool = True,
         read_case_set: bool = True,
         write_case_set: bool = True,
     ) -> model.UserAccessCasePolicy:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
-        tgt_user: model.User = self._get_obj(model.User, tgt_user_or_str)
-        data_collection = self._get_obj(model.DataCollection, data_collection_or_str)
-        case_type_set = self._get_obj(model.CaseTypeSet, case_type_set_or_str)
-        read_col_set_id = (
-            self._get_obj(model.ColSet, read_col_set).id if read_col_set else None
+        tgt_user: model.User = self.get_obj(model.User, tgt_user_or_str)  # type: ignore[assignment]
+        data_collection: model.DataCollection = self.get_obj(model.DataCollection, data_collection_or_str)  # type: ignore[assignment]
+        case_type_set: model.CaseTypeSet = self.get_obj(model.CaseTypeSet, case_type_set_or_str)  # type: ignore[assignment]
+        read_col_set: model.ColSet | None = (
+            cast(model.ColSet, self.get_obj(model.ColSet, read_col_set_or_str))
+            if read_col_set_or_str
+            else None
         )
-        write_col_set_id = (
-            self._get_obj(model.ColSet, write_col_set).id if write_col_set else None
+        read_col_set_id = read_col_set.id if read_col_set else None
+        write_col_set: model.ColSet | None = (
+            cast(model.ColSet, self.get_obj(model.ColSet, write_col_set_or_str))
+            if write_col_set_or_str
+            else None
         )
+        write_col_set_id = write_col_set.id if write_col_set else None
         user_access_case_policy = self.handle(
             command.UserAccessCasePolicyCrudCommand(
                 user=user,
@@ -1011,33 +1036,33 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(user_access_case_policy)  # type: ignore[return-value]
+        return self.set_obj(user_access_case_policy)  # type: ignore[return-value]
 
     def create_organization_share_case_policy(
         self,
         user_or_str: str | model.User,
         name: str,
-        case_type_set: str | model.CaseTypeSet,
+        case_type_set_or_str: str | model.CaseTypeSet,
         is_active: bool = True,
         add_case: bool = True,
         remove_case: bool = True,
         add_case_set: bool = True,
         remove_case_set: bool = True,
     ) -> model.OrganizationShareCasePolicy:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         m = re.match(r"^(.*?)(\d+)_(\d+)_(\d+)$", name.lower())
         if not m:
             raise ValueError(f"Invalid code {name}")
-        organization = self._get_obj(model.Organization, f"org{m.group(2)}")
-        data_collection = self._get_obj(
+        organization = self.get_obj(model.Organization, f"org{m.group(2)}")
+        data_collection = self.get_obj(
             model.DataCollection, f"data_collection{m.group(3)}"
         )
-        from_data_collection = self._get_obj(
+        from_data_collection = self.get_obj(
             model.DataCollection, f"data_collection{m.group(4)}"
         )
-        case_type_set = self._get_obj(model.CaseTypeSet, case_type_set)
+        case_type_set: model.CaseTypeSet = self.get_obj(model.CaseTypeSet, case_type_set_or_str)  # type: ignore[assignment]
         organization_share_case_policy = self.app.handle(
             command.OrganizationShareCasePolicyCrudCommand(
                 user=user,
@@ -1058,7 +1083,7 @@ class CasedbTestClient(TestClient):
         # print(
         #     f"Created organization_data_collection_policy: {organization.name}, {data_collection.name}, {source_data_collection.name}"
         # )
-        return self._set_obj(
+        return self.set_obj(
             organization_share_case_policy
         )  # type: ignore[return-value]
 
@@ -1066,22 +1091,22 @@ class CasedbTestClient(TestClient):
         self,
         user_or_str: str | model.User,
         tgt_user_or_str: str | model.User,
-        data_collection: str | model.DataCollection,
-        from_data_collection: str | model.DataCollection,
-        case_type_set: str | model.CaseTypeSet,
+        data_collection_or_str: str | model.DataCollection,
+        from_data_collection_or_str: str | model.DataCollection,
+        case_type_set_or_str: str | model.CaseTypeSet,
         is_active: bool = True,
         add_case: bool = True,
         remove_case: bool = True,
         add_case_set: bool = True,
         remove_case_set: bool = True,
     ) -> model.UserShareCasePolicy:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
-        tgt_user: model.User = self._get_obj(model.User, tgt_user_or_str)
-        data_collection = self._get_obj(model.DataCollection, data_collection)
-        from_data_collection = self._get_obj(model.DataCollection, from_data_collection)
-        case_type_set = self._get_obj(model.CaseTypeSet, case_type_set)
+        tgt_user: model.User = self.get_obj(model.User, tgt_user_or_str)  # type: ignore[assignment]
+        data_collection: model.DataCollection = self.get_obj(model.DataCollection, data_collection_or_str)  # type: ignore[assignment]
+        from_data_collection: model.DataCollection = self.get_obj(model.DataCollection, from_data_collection_or_str)  # type: ignore[assignment]
+        case_type_set: model.CaseTypeSet = self.get_obj(model.CaseTypeSet, case_type_set_or_str)  # type: ignore[assignment]
         user_share_case_policy = self.handle(
             command.UserShareCasePolicyCrudCommand(
                 user=user,
@@ -1099,30 +1124,25 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(user_share_case_policy)  # type: ignore[return-value]
+        return self.set_obj(user_share_case_policy)  # type: ignore[return-value]
 
-    # Note: We are passing the data_collections as a parameter because
-    # UploadCasesCommand has it as a required field, please double check if this is necessary
     def create_case(
         self,
         user_or_str: str | model.User,
         code: str,
-        data_collections: (
+        data_collections_or_str: (
             str | model.DataCollection | list[str] | list[model.DataCollection]
         ),
         col_index_pattern: str | None = None,
-        # created_at: datetime | None = None,
-        # modified_at: datetime | None = None,
-        # modified_by: UUID | None = None,
     ) -> model.Case:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
 
-        if not isinstance(data_collections, list):
-            data_collections = [data_collections]
+        if not isinstance(data_collections_or_str, list):
+            data_collections_or_str = [data_collections_or_str]
 
-        data_collections = self._get_obj(model.DataCollection, data_collections)
+        data_collections: list[model.DataCollection] = self.get_obj(model.DataCollection, data_collections_or_str)  # type: ignore[assignment]
         data_collection_ids = [x.id for x in data_collections]
         created_in_data_collection_id = data_collection_ids[0]
         data_collection_ids = data_collection_ids[1:]
@@ -1134,7 +1154,7 @@ class CasedbTestClient(TestClient):
             raise ValueError(f"Invalid code {code}")
         case_type_index = int(m.group(2))
         case_index = int(m.group(3))
-        case_type: model.CaseType = self._get_obj(
+        case_type: model.CaseType = self.get_obj(
             model.CaseType, f"case_type{case_type_index}"
         )  # type: ignore[assignment]
 
@@ -1151,6 +1171,8 @@ class CasedbTestClient(TestClient):
         col_index_pattern = (
             col_index_pattern if col_index_pattern else r"^.*[a-z]*(\d+)_?\w*$"
         )
+        # The case is filled in completely
+        # should be a parameter of create case for ABAC access
         for col in cols:
             ref_col: model.RefCol = col.ref_col
             m = re.match(col_index_pattern, ref_col.code.lower())
@@ -1188,12 +1210,10 @@ class CasedbTestClient(TestClient):
                         model.CaseForUpload(
                             id=self.generate_id(),
                             case=model.Case(
+                                code=code,
                                 case_type_id=case_type.id,
                                 created_in_data_collection_id=created_in_data_collection_id,
                                 content=content,
-                                # created_at=created_at,
-                                # modified_at=modified_at,
-                                # modified_by=modified_by,
                             ),
                         )
                     ]
@@ -1212,28 +1232,35 @@ class CasedbTestClient(TestClient):
             )
         )
 
+        case: model.Case = self.set_obj(case)  # type: ignore[assignment]
+
+        # Create data collection links
+        for data_collection_id in data_collection_ids:
+            self.create_case_data_collection_link(
+                root_user, case.code, data_collection_in=data_collection_id
+            )
+
         # Get the data collection associations
-        # stored_case_data_collection_links = self.handle(
-        #     command.CaseDataCollectionLinkCrudCommand(
-        #         user=root_user,
-        #         operation=CrudOperation.READ_ALL,
-        #         query_filter=TypedEqualsUuidFilter(
-        #             type=FilterType.EQUALS_UUID.value,
-        #             key="case_id",
-        #             value=case.id,
-        #         ),
-        #     ),
-        # )
-        # stored_case_data_collection_links = [
-        #     self._set_obj(x) for x in stored_case_data_collection_links
-        # ]
+        stored_case_data_collection_links = self.handle(
+            command.CaseDataCollectionLinkCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+                query_filter=TypedEqualsUuidFilter(
+                    type=FilterType.EQUALS_UUID.value,
+                    key="case_id",
+                    value=case.id,
+                ),
+            ),
+        )
+
         # # Verify the data collection associations
-        # stored_data_collection_ids = {
-        #     x.data_collection_id for x in stored_case_data_collection_links
-        # }
-        # if stored_data_collection_ids != set(data_collection_ids):
-        #     raise ValueError(f"Data collection associations mismatch")
-        return self._set_obj(case)  # type: ignore[return-value]
+        stored_data_collection_ids: list[CaseDataCollectionLink] = {  # type: ignore[assignment]
+            x.data_collection_id for x in stored_case_data_collection_links
+        }
+        if stored_data_collection_ids != set(data_collection_ids):
+            raise ValueError(f"Data collection associations mismatch")
+
+        return case
 
     def create_case_data_collection_link(
         self,
@@ -1241,11 +1268,11 @@ class CasedbTestClient(TestClient):
         case_in: str | model.Case,
         data_collection_in: str | model.DataCollection,
     ) -> model.CaseDataCollectionLink:
-        user: model.User = self._get_obj(model.User, user_in)
-        case: model.Case = self._get_obj(model.Case, case_in)
-        data_collection: model.DataCollection = self._get_obj(
+        user: model.User = self.get_obj(model.User, user_in)  # type: ignore[assignment]
+        case: model.Case = self.get_obj(model.Case, case_in)  # type: ignore[assignment]
+        data_collection: model.DataCollection = self.get_obj(
             model.DataCollection, data_collection_in
-        )
+        )  # type: ignore[assignment]
         case_data_collection_link = self.handle(
             command.CaseDataCollectionLinkCrudCommand(
                 user=user,
@@ -1255,17 +1282,18 @@ class CasedbTestClient(TestClient):
                 operation=CrudOperation.CREATE_ONE,
             )
         )
-        return self._set_obj(case_data_collection_link)  # type: ignore[return-value]
+        return self.set_obj(case_data_collection_link)  # type: ignore[return-value]
 
     def create_case_set_category(
         self,
         user_or_str: str | model.User,
-        name: str | model.CaseSetCategory,
-        rank: int | None = 0,
+        name_or_enum: str | model.CaseSetCategory,
+        rank: int = 0,
     ) -> model.CaseSetCategory:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
+        name: str = name_or_enum if isinstance(name_or_enum, str) else name_or_enum.name  # type: ignore[assignment]
         case_set_category = self.handle(
             command.CaseSetCategoryCrudCommand(
                 user=user,
@@ -1273,17 +1301,18 @@ class CasedbTestClient(TestClient):
                 objs=model.CaseSetCategory(name=name, description=name, rank=rank),
             )
         )
-        return self._set_obj(case_set_category)  # type: ignore[return-value]
+        return self.set_obj(case_set_category)  # type: ignore[return-value]
 
     def create_case_set_status(
         self,
         user_or_str: str | model.User,
-        name: str | model.CaseSetStatus,
-        rank: int | None = 0,
+        name_or_enum: str | model.CaseSetStatus,
+        rank: int = 0,
     ) -> model.CaseSetStatus:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
+        name: str = name_or_enum if isinstance(name_or_enum, str) else name_or_enum.name  # type: ignore[assignment]
         case_set_status = self.handle(
             command.CaseSetStatusCrudCommand(
                 user=user,
@@ -1291,27 +1320,28 @@ class CasedbTestClient(TestClient):
                 objs=model.CaseSetStatus(name=name, description=name, rank=rank),
             )
         )
-        return self._set_obj(case_set_status)  # type: ignore[return-value]
+        return self.set_obj(case_set_status)  # type: ignore[return-value]
 
+    # TODO LSP-2883 not used anywhere yet, uses a key for cases as date. Why?
     def create_case_set(
         self,
         user_or_str: str | model.User,
         code: str,
         case_set_category: str | model.CaseSetCategory,
         case_set_status: str | model.CaseSetStatus,
-        data_collections: (
+        data_collections_or_str: (
             str | model.DataCollection | list[str] | list[model.DataCollection]
         ),
-        cases: list[model.Case] | list[str] | None = None,
+        cases_or_str: list[model.Case] | list[str] | None = None,
     ) -> model.Case:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
-        root_user: model.User = self._get_obj(model.User, "root1_1")
+        root_user: model.User = self.get_obj(model.User, "root1_1")  # type: ignore[assignment]
         # Get the data collections
-        if not isinstance(data_collections, list):
-            data_collections = [data_collections]
-        data_collections = self._get_obj(model.DataCollection, data_collections)
+        if not isinstance(data_collections_or_str, list):
+            data_collections_or_str = [data_collections_or_str]
+        data_collections: list[model.DataCollection] = self.get_obj(model.DataCollection, data_collections_or_str)  # type: ignore[assignment]
         data_collection_ids = [x.id for x in data_collections]
         created_in_data_collection_id = data_collection_ids[0]
         data_collection_ids = data_collection_ids[1:]
@@ -1320,15 +1350,15 @@ class CasedbTestClient(TestClient):
         if not m:
             raise ValueError(f"Invalid code {code}")
         case_type_index = int(m.group(2))
-        case_type = self._get_obj(model.CaseType, f"case_type{case_type_index}")
+        case_type = self.get_obj(model.CaseType, f"case_type{case_type_index}")
         # Get the case set category and status
-        case_set_category = self._get_obj(model.CaseSetCategory, case_set_category)
-        case_set_status = self._get_obj(model.CaseSetStatus, case_set_status)
+        case_set_category = self.get_obj(model.CaseSetCategory, case_set_category)
+        case_set_status = self.get_obj(model.CaseSetStatus, case_set_status)
         # Get the cases
-        if cases and isinstance(cases[0], str):
-            cases = self._get_obj(
+        if cases_or_str and isinstance(cases_or_str[0], str):
+            cases: list[model.Case] = self.get_obj(  # type: ignore[assignment]
                 model.Case,
-                [self._convert_case_code_to_date(x) for x in cases],
+                [self._convert_case_code_to_date(x) for x in cases_or_str],
             )
             case_ids = [x.id for x in cases]
         else:
@@ -1343,15 +1373,16 @@ class CasedbTestClient(TestClient):
                     case_set_category_id=case_set_category.id,
                     case_set_status_id=case_set_status.id,
                     name=code,
+                    code=code,
                     description=code,
                 ),
                 data_collection_ids=data_collection_ids,
                 case_ids=case_ids,
             )
         )
-        case_set: model.CaseSet = self._set_obj(case_set)  # type: ignore[return-value]
+        case_set: model.CaseSet = self.set_obj(case_set)  # type: ignore[return-value]
         # Get the data collection associations
-        stored_case_set_data_collection_links = self.handle(
+        stored_case_set_data_collection_links: list[model.CaseSetDataCollectionLink] = self.handle(  # type: ignore[assignment]
             command.CaseSetDataCollectionLinkCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ALL,
@@ -1363,10 +1394,10 @@ class CasedbTestClient(TestClient):
             ),
         )
         stored_case_set_data_collection_links = [
-            self._set_obj(x) for x in stored_case_set_data_collection_links
+            self.set_obj(x) for x in stored_case_set_data_collection_links
         ]
         # Get the case associations
-        stored_case_set_members = self.handle(
+        stored_case_set_members: list[model.CaseSetMember] = self.handle(  # type: ignore[assignment]
             command.CaseSetMemberCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ALL,
@@ -1398,13 +1429,13 @@ class CasedbTestClient(TestClient):
         user_or_str: str | model.User,
         code: str,
     ) -> model.Site:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(  # type: ignore[assignment]
             model.User, user_or_str
         )  # type: ignore[arg-type]
         m = re.match(r"^([a-z_]*)(\d+)_(\d+)$", code.lower())
         if not m:
             raise ValueError(f"Invalid code {code}")
-        organization = self._get_obj(model.Organization, f"org{m.group(2)}")
+        organization = self.get_obj(model.Organization, f"org{m.group(2)}")
         site = self.handle(
             command.SiteCrudCommand(
                 user=user,
@@ -1415,7 +1446,7 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(site)  # type: ignore[return-value]
+        return self.set_obj(site)  # type: ignore[return-value]
 
     def create_contact(
         self,
@@ -1425,13 +1456,13 @@ class CasedbTestClient(TestClient):
         email: str | None = None,
         phone: str | None = None,
     ) -> model.Contact:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(  # type: ignore[assignment]
             model.User, user_or_str
         )  # type: ignore[arg-type]
         m = re.match(r"^([a-z_]*)(\d+)_(\d+)_(\d+)$", code.lower())
         if not m:
             raise ValueError(f"Invalid code {code}")
-        site: model.Site = self._get_obj(
+        site: model.Site = self.get_obj(  # type: ignore[assignment]
             model.Site, f"site{m.group(2)}_{m.group(3)}"
         )  # type: ignore[arg-type]
         contact = self.handle(
@@ -1446,16 +1477,17 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(contact)  # type: ignore[return-value]
+        return self.set_obj(contact)  # type: ignore[return-value]
 
+    # TODO LSP-2883 this is not used anywhere yet
     def read_organization_access_case_policies_with_any_right(
         self,
         user_or_str: str | model.User,
     ) -> list[model.OrganizationAccessCasePolicy]:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
-        root_user: model.User = self._get_obj(
+        root_user: model.User = self.get_obj(
             model.User, "root1_1"
         )  # type: ignore[assignment]
         policies: list[model.OrganizationAccessCasePolicy] = self.app.handle(
@@ -1481,10 +1513,10 @@ class CasedbTestClient(TestClient):
         self,
         user_or_str: str | model.User,
     ) -> list[model.UserAccessCasePolicy]:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
-        root_user: model.User = self._get_obj(
+        root_user: model.User = self.get_obj(
             model.User, "root1_1"
         )  # type: ignore[assignment]
         policies: list[model.UserAccessCasePolicy] = self.app.handle(
@@ -1510,10 +1542,10 @@ class CasedbTestClient(TestClient):
         self,
         user_or_str: str | model.User,
     ) -> list[model.OrganizationShareCasePolicy]:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
-        root_user: model.User = self._get_obj(
+        root_user: model.User = self.get_obj(
             model.User, "root1_1"
         )  # type: ignore[assignment]
         policies: list[model.OrganizationShareCasePolicy] = self.app.handle(
@@ -1532,10 +1564,10 @@ class CasedbTestClient(TestClient):
         self,
         user_or_str: str | model.User,
     ) -> list[model.UserShareCasePolicy]:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
-        root_user: model.User = self._get_obj(
+        root_user: model.User = self.get_obj(
             model.User, "root1_1"
         )  # type: ignore[assignment]
         policies: list[model.UserShareCasePolicy] = self.app.handle(
@@ -1550,10 +1582,10 @@ class CasedbTestClient(TestClient):
         self,
         user_or_str: str | model.User,
     ) -> set[UUID]:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
-        root_user: model.User = self._get_obj(
+        root_user: model.User = self.get_obj(
             model.User, "root1_1"
         )  # type: ignore[assignment]
         # Admin users have access to all CaseTypes
@@ -1597,14 +1629,15 @@ class CasedbTestClient(TestClient):
             if x.case_type_set_id in case_type_set_ids
         }
 
+    # TODO LSP-2883 not used anywhere yet
     def read_cols_with_any_right(
         self,
         user_or_str: str | model.User,
     ) -> set[UUID]:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
-        root_user: model.User = self._get_obj(
+        root_user: model.User = self.get_obj(
             model.User, "root1_1"
         )  # type: ignore[assignment]
         # Admin users have access to all Cols
@@ -1636,22 +1669,23 @@ class CasedbTestClient(TestClient):
         )
         return {x.col_id for x in col_set_members if x.col_set_id in col_set_ids}
 
+    # TODO LSP-2883 not used anywhere yet, uses a key for cases as date. Why?
     def update_association_case_data_collection(
         self,
         user_or_str: str | model.User,
-        cases: str | model.Case | list[str | model.Case],
-        data_collections: set[str | model.DataCollection],
+        cases_or_str: str | model.Case | list[str | model.Case],
+        data_collections_or_str: set[str | model.DataCollection],
     ) -> list[model.CaseDataCollectionLink]:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
-        root_user: model.User = self._get_obj(model.User, "root1_1")
-        if not isinstance(cases, list):
-            cases = [cases]
-        cases = self._get_obj(
-            model.Case, [self._convert_case_code_to_date(x) for x in cases]
+        root_user: model.User = self.get_obj(model.User, "root1_1")  # type: ignore[assignment]
+        if not isinstance(cases_or_str, list):
+            cases_or_str = [cases_or_str]
+        cases: list[model.Case] = self.get_obj(  # type: ignore[assignment]
+            model.Case, [self._convert_case_code_to_date(x) for x in cases_or_str]
         )
-        data_collections = self._get_obj(model.DataCollection, list(data_collections))
+        data_collections: list[model.DataCollection] = self.get_obj(model.DataCollection, list(data_collections_or_str))  # type: ignore[assignment]
         case_ids = [x.id for x in cases]
         data_collection_ids = {x.id for x in data_collections}
         curr_case_data_collection_links = self.handle(
@@ -1719,7 +1753,7 @@ class CasedbTestClient(TestClient):
         if expected_case_data_collections != resulting_case_data_collections:
             raise ValueError(f"Case data collection associations mismatch")
         for x in new_case_data_collection_links:
-            self._set_obj(x)
+            self.set_obj(x)
         return resulting_case_data_collection_links
 
     def update_col_set_member(
@@ -1727,15 +1761,15 @@ class CasedbTestClient(TestClient):
         user_in: str | model.User,
         col_set_member: model.ColSetMember,
     ) -> model.ColSetMember:
-        user = self._get_obj(model.User, user_in)
-        updated_col_set_member = self.handle(
+        user: model.User = self.get_obj(model.User, user_in)  # type: ignore[assignment]
+        updated_col_set_member: model.ColSetMember = self.handle(  # type: ignore[assignment]
             command.ColSetMemberCrudCommand(
                 user=user,
                 operation=CrudOperation.UPDATE_ONE,
                 objs=col_set_member,
             ),
         )
-        return self._set_obj(
+        return self.set_obj(
             updated_col_set_member, update=True
         )  # type: ignore[return-value]
 
@@ -1745,16 +1779,16 @@ class CasedbTestClient(TestClient):
         organization_or_str: str | None = None,
         set_dummy_organization: bool = False,
     ) -> model.User:
-        user: model.User = self._get_obj(
+        user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
-        root_user: model.User = self._get_obj(
+        root_user: model.User = self.get_obj(
             model.User, "root1_1"
         )  # type: ignore[assignment]
         orig_organization_id = user.organization_id
         if not organization_or_str:
             if set_dummy_organization:
-                organization_id = self.generate_id()
+                organization_id: UUID = self.generate_id()
             else:
                 raise ValueError(
                     "Organization not given and set_dummy_organization False"
@@ -1762,7 +1796,7 @@ class CasedbTestClient(TestClient):
         else:
             if set_dummy_organization:
                 raise ValueError("Organization given and set_dummy_organization True")
-            organization_id = self._get_obj(model.Organization, organization_or_str).id
+            organization_id = self.get_obj(model.Organization, organization_or_str).id
         # Get current policies
         prev_user_access_case_policies = self.handle(
             command.UserAccessCasePolicyCrudCommand(
@@ -1817,21 +1851,22 @@ class CasedbTestClient(TestClient):
             raise ValueError(f"User case policies not updated")
         if new_user_share_case_policy_ids.intersection(prev_user_share_case_policy_ids):
             raise ValueError(f"User data collection policies not updated")
-        return self._set_obj(user, update=True)  # type: ignore[return-value]
+        return self.set_obj(user, update=True)  # type: ignore[return-value]
 
+    # TODO LSP-2883 nit used anywhere yet, uses a key for cases as date. Why?
     def verify_case_content_access(
         self,
         expected_access: dict[tuple[str, str], list[str]],
     ) -> None:
         for key, expected_case_content in expected_access.items():
             user, case_code = key
-            user: model.User = self._get_obj(
+            user: model.User = self.get_obj(
                 model.User, user_or_str
             )  # type: ignore[assignment]
-            full_case = self._get_obj(
+            full_case: model.Case = self.get_obj(  # type: ignore[assignment]
                 model.Case, self._convert_case_code_to_date(case_code)
             )
-            cases = self.handle(
+            cases: list[model.Case] = self.handle(  # type: ignore[assignment]
                 command.RetrieveCasesByIdCommand(
                     user=user,
                     case_ids=[full_case.id],
@@ -1865,10 +1900,10 @@ class CasedbTestClient(TestClient):
         expected_access: dict[str, list[str]],
     ) -> None:
         for user_str, expected_case_types in expected_access.items():
-            user: model.User = self._get_obj(
+            user: model.User = self.get_obj(
                 model.User, user_str
             )  # type: ignore[assignment]
-            case_types = self.handle(
+            case_types: list[model.CaseType] = self.handle(  # type: ignore[assignment]
                 command.CaseTypeCrudCommand(
                     user=user,
                     operation=CrudOperation.READ_ALL,
@@ -1885,29 +1920,31 @@ class CasedbTestClient(TestClient):
                 raise ValueError(msg)
 
     def print_case_data_collection_links(self) -> None:
-        cases = self.read_all("root1_1", model.Case, cascade=True)
-        data_collections = {
+
+        root_user = self.get_root_user()
+        cases: list[model.Case] = self.read_all(root_user, model.Case, cascade=True)  # type: ignore[assignment]
+        data_collections: dict[UUID, model.DataCollection] = {
             x.id: x
-            for x in self.read_all("root1_1", model.DataCollection, cascade=True)
+            for x in self.read_all(root_user, model.DataCollection, cascade=True)  # type: ignore[assignment]
         }
-        case_data_collection_links = self.read_all(
-            "root1_1", model.CaseDataCollectionLink, cascade=True
+        case_data_collection_links: list[model.CaseDataCollectionLink] = self.read_all(  # type: ignore[assignment]
+            root_user, model.CaseDataCollectionLink, cascade=True
         )
         print("\nCaseDataCollectionLinks:")
 
-        case_data_collection_links = map_paired_elements(
+        case_data_collection_link_sets: dict[UUID, set[UUID]] = map_paired_elements(  # type: ignore[assignment]
             ((x.case_id, x.data_collection_id) for x in case_data_collection_links),
             as_set=True,
         )
         for x in sorted(
             cases, key=lambda x: self._convert_case_date_to_code(x.case_date)
         ):
-            if x.id in case_data_collection_links:
+            if x.id in case_data_collection_link_sets:
                 data_collection_str = ", ".join(
                     [
                         data_collections[y].name
                         for y in sorted(
-                            case_data_collection_links[x.id],
+                            case_data_collection_link_sets[x.id],
                             key=lambda z: data_collections[z].name,
                         )
                     ]
@@ -1917,7 +1954,8 @@ class CasedbTestClient(TestClient):
                 print(f"{case_name}: {data_collection_str} ({x.id})")
 
     def print_case_types(self) -> None:
-        case_types = self.read_all("root1_1", model.CaseType, cascade=True)
+        root_user = self.get_root_user()
+        case_types: list[model.CaseType] = self.read_all(root_user, model.CaseType, cascade=True)  # type: ignore[assignment]
         print("\nCaseTypes:")
         for x in sorted(case_types, key=lambda x: x.name):
             print(f"{x.name} ({x.id})")
@@ -2022,22 +2060,24 @@ class CasedbTestClient(TestClient):
             print(f"{x.name}: {cols_str}\n({x.id}: {col_ids_str})")
 
     def print_organization_access_case_policies(self) -> None:
-        organization_access_case_policies: list[model.OrganizationAccessCasePolicy] = (
-            self.read_all("root1_1", model.OrganizationAccessCasePolicy, cascade=True)
+
+        root_user = self.get_root_user()
+        organization_access_case_policies: list[model.OrganizationAccessCasePolicy] = (  # type: ignore[assignment]
+            self.read_all(root_user, model.OrganizationAccessCasePolicy, cascade=True)
         )
-        organizations: list[model.Organization] = self.read_all(
-            "root1_1", model.Organization
+        organizations: list[model.Organization] = self.read_all(  # type: ignore[assignment]
+            root_user, model.Organization
         )
         organization_map = {x.id: x for x in organizations}
-        data_collections: list[model.DataCollection] = self.read_all(
-            "root1_1", model.DataCollection
+        data_collections: list[model.DataCollection] = self.read_all(  # type: ignore[assignment]
+            root_user, model.DataCollection
         )
         data_collection_map = {x.id: x for x in data_collections}
-        case_type_sets: list[model.CaseTypeSet] = self.read_all(
-            "root1_1", model.CaseTypeSet
+        case_type_sets: list[model.CaseTypeSet] = self.read_all(  # type: ignore[assignment]
+            root_user, model.CaseTypeSet
         )
         case_type_set_map = {x.id: x for x in case_type_sets}
-        col_sets: list[model.ColSet] = self.read_all("root1_1", model.ColSet)
+        col_sets: list[model.ColSet] = self.read_all("root1_1", model.ColSet)  # type: ignore[assignment]
         col_set_map = {x.id: x for x in col_sets}
         print("\nOrganizationAccessCasePolicies:")
         for x in sorted(
@@ -2058,23 +2098,25 @@ class CasedbTestClient(TestClient):
             )
 
     def print_user_access_case_policies(self) -> None:
-        user_access_case_policies: list[model.UserAccessCasePolicy] = self.read_all(
-            "root1_1", model.UserAccessCasePolicy, cascade=True
+        root_user = self.get_root_user()
+        user_access_case_policies: list[model.UserAccessCasePolicy] = self.read_all(  # type: ignore[assignment]
+            root_user, model.UserAccessCasePolicy, cascade=True
         )
         for user_access_case_policy in user_access_case_policies:
             # Get user with name filled in
-            user_access_case_policy.user = self._get_obj(
+            user: model.User = self.get_obj(  # type: ignore[assignment]
                 model.User, user_access_case_policy.user.id
             )
-        data_collections: list[model.DataCollection] = self.read_all(
-            "root1_1", model.DataCollection
+            user_access_case_policy.user = user
+        data_collections: list[model.DataCollection] = self.read_all(  # type: ignore[assignment]
+            root_user, model.DataCollection
         )
         data_collection_map = {x.id: x for x in data_collections}
-        case_type_sets: list[model.CaseTypeSet] = self.read_all(
-            "root1_1", model.CaseTypeSet
+        case_type_sets: list[model.CaseTypeSet] = self.read_all(  # type: ignore[assignment]
+            root_user, model.CaseTypeSet
         )
         case_type_set_map = {x.id: x for x in case_type_sets}
-        col_sets: list[model.ColSet] = self.read_all("root1_1", model.ColSet)
+        col_sets: list[model.ColSet] = self.read_all(root_user, model.ColSet)
         col_set_map = {x.id: x for x in col_sets}
         print("\nUserAccessCasePolicies:")
         for x in sorted(
@@ -2095,19 +2137,20 @@ class CasedbTestClient(TestClient):
             )
 
     def print_organization_share_case_policies(self) -> None:
-        organization_share_case_policies: list[model.OrganizationShareCasePolicy] = (
-            self.read_all("root1_1", model.OrganizationShareCasePolicy)
+        root_user = self.get_root_user()
+        organization_share_case_policies: list[model.OrganizationShareCasePolicy] = (  # type: ignore[assignment]
+            self.read_all(root_user, model.OrganizationShareCasePolicy)
         )
-        organizations: list[model.Organization] = self.read_all(
-            "root1_1", model.Organization
+        organizations: list[model.Organization] = self.read_all(  # type: ignore[assignment]
+            root_user, model.Organization
         )
         organization_map = {x.id: x for x in organizations}
-        data_collections: list[model.DataCollection] = self.read_all(
-            "root1_1", model.DataCollection
+        data_collections: list[model.DataCollection] = self.read_all(  # type: ignore[assignment]
+            root_user, model.DataCollection
         )
         data_collection_map = {x.id: x for x in data_collections}
-        case_type_sets: list[model.CaseTypeSet] = self.read_all(
-            "root1_1", model.CaseTypeSet
+        case_type_sets: list[model.CaseTypeSet] = self.read_all(  # type: ignore[assignment]
+            root_user, model.CaseTypeSet
         )
         case_type_set_map = {x.id: x for x in case_type_sets}
         print("\nOrganizationShareCasePolicies:")
@@ -2124,23 +2167,29 @@ class CasedbTestClient(TestClient):
             )
 
     def print_user_share_case_policies(self) -> None:
-        user_share_case_policies: list[model.UserShareCasePolicy] = self.read_all(
-            "root1_1", model.UserShareCasePolicy
+        root_user = self.get_root_user()
+        user_share_case_policies: list[model.UserShareCasePolicy] = self.read_all(  # type: ignore[assignment]
+            root_user, model.UserShareCasePolicy
         )
         for user_share_case_policy in user_share_case_policies:
             # Get user with name filled in
-            user_share_case_policy.user = self._get_obj(
+            user: model.User = self.get_obj(  # type: ignore[assignment]
                 model.User, user_share_case_policy.user_id
             )
-        case_type_sets: list[model.CaseTypeSet] = self.read_all(
-            "root1_1", model.CaseTypeSet
+            user_share_case_policy.user = user
+        case_type_sets: list[model.CaseTypeSet] = self.read_all(  # type: ignore[assignment]
+            root_user, model.CaseTypeSet
         )
         case_type_set_map = {x.id: x for x in case_type_sets}
-        data_collections: list[model.DataCollection] = self.read_all(
-            "root1_1", model.DataCollection
+        data_collections: list[model.DataCollection] = self.read_all(  # type: ignore[assignment]
+            root_user, model.DataCollection
         )
-        data_collection_map = {
-            x.id: x for x in self.read_all("root1_1", model.DataCollection)
+        data_collection_map: dict[UUID, model.DataCollection] = {
+            x.id: x
+            for x in cast(
+                list[model.DataCollection],
+                self.read_all(root_user, model.DataCollection),
+            )
         }
         print("\nUserShareCasePolicies:")
         for x in sorted(
@@ -2156,22 +2205,24 @@ class CasedbTestClient(TestClient):
             )
 
     def print_cases(self, case_codes: list[str] | None = None) -> None:
-        user: model.User = self._get_obj(model.User, "root1_1")
-        cases: list[model.Case] = self.read_all(user, model.Case)
+
+        root_user = self.get_root_user()
+
+        cases: list[model.Case] = self.read_all(root_user, model.Case)  # type: ignore[assignment]
         if case_codes:
             cases = [
-                x
+                x.code
                 for x in cases
-                if TestClient._convert_case_date_to_code(x.case_date) in case_codes
+                # if self._convert_case_date_to_code(x.case_date) in case_codes
             ]
-        case_data_collection_links: list[model.CaseDataCollectionLink] = self.read_all(
-            user, model.CaseDataCollectionLink
+        case_data_collection_links: list[model.CaseDataCollectionLink] = self.read_all(  # type: ignore[assignment]
+            root_user, model.CaseDataCollectionLink
         )
-        data_collections: list[model.DataCollection] = self.read_all(
-            user, model.DataCollection
+        data_collections: list[model.DataCollection] = self.read_all(  # type: ignore[assignment]
+            root_user, model.DataCollection
         )
         data_collection_map = {x.id: x for x in data_collections}
-        cols: list[model.Col] = self.read_all(user, model.Col)
+        cols: list[model.Col] = self.read_all(root_user, model.Col)  # type: ignore[assignment]
         col_map = {x.id: x for x in cols}
         case_date_collections = map_paired_elements(
             ((x.case_id, x.data_collection_id) for x in case_data_collection_links),
@@ -2189,10 +2240,10 @@ class CasedbTestClient(TestClient):
             curr_content = sorted([(col_map[x].code, y) for x, y in x.content.items()])
             curr_content = ", ".join([f"{x[0]}={x[1]}" for x in curr_content])
             print(
-                f"{TestClient._convert_case_date_to_code(x.case_date)}: {curr_content}; {curr_data_collections} ({x.id})"
+                f"{self._convert_case_date_to_code(x.case_date)}: {curr_content}; {curr_data_collections} ({x.id})"
             )
 
-    def _get_obj(
+    def get_obj(
         self,
         model_class: type[model.Model],
         obj: (
@@ -2204,21 +2255,18 @@ class CasedbTestClient(TestClient):
         ),
         copy: bool = False,
         on_missing: str = "raise",
-    ) -> model.Model | list[model.Model]:
+    ) -> model.Model | list[model.Model] | None:
         if isinstance(obj, list):
-            return [self._get_obj(model_class, x) for x in obj]
+            return [self.get_obj(model_class, x) for x in obj]
         if model_class not in self.db:
             self.db[model_class] = {}
         table = self.db[model_class]
         key = self._get_obj_key(table, model_class, obj, on_missing)
-        if model_class == model.Case:
-            if not isinstance(key, datetime.datetime):
-                key = self._convert_case_code_to_date(key)
         if model_class == model.CaseDataCollectionLink:
             dc_id = key[0]
             case_id = key[1]
 
-            case_data_collection_links = self.read_all(
+            case_data_collection_links: list[model.CaseDataCollectionLink] = self.read_all(  # type: ignore[assignment]
                 "root1_1", model.CaseDataCollectionLink, cascade=True
             )
             good_case_data_collection_links_list = []
@@ -2245,22 +2293,25 @@ class CasedbTestClient(TestClient):
                 raise NotImplementedError()
         return table[key] if not copy else table[key].model_copy()
 
+    # TODO LSP-2883 is used by a lot of methods that are not used anywhere yet, and uses a key for cases as date. Why?
     @staticmethod
-    def _convert_case_code_to_date(code: str) -> datetime.datetime:
+    def _convert_case_code_to_date(code: str) -> datetime:
         m = re.match(r"^([a-z_]*)(\d+)_(\d+)$", code.lower())
         if not m:
             raise ValueError(f"Invalid code {code}")
         case_type_index = int(m.group(2))
         assert case_type_index < 13
         case_index = int(m.group(3))
-        return datetime.datetime(
+        return datetime(
             year=1900 + case_index,  # Store case_index in year
             month=case_type_index,  # Store case_type_index in month
             day=1,  # Fixed day value
         )
 
     @staticmethod
-    def _convert_case_date_to_code(case_date: datetime.datetime) -> str:
+    def _convert_case_date_to_code(case_date: datetime) -> str:
         case_type_index = int(case_date.month)  # Get case_type_index from month
         case_index = int(case_date.year - 1900)  # Get case_index from year offset
+        return f"case{case_type_index}_{case_index}"
+        return f"case{case_type_index}_{case_index}"
         return f"case{case_type_index}_{case_index}"

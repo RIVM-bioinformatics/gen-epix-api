@@ -333,6 +333,9 @@ class OrganizationService(BaseOrganizationService):
             tgt_user.is_active = is_active
             tgt_user.roles = roles
             tgt_user.organization_id = organization_id
+
+            if tgt_user.created_at is None:
+                tgt_user.created_at = tgt_user.modified_at
             updated_tgt_user: model.User = self.repository.crud(  # type: ignore[assignment]
                 uow,
                 cmd.user.id,

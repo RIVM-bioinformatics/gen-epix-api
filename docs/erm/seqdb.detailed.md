@@ -76,6 +76,9 @@ erDiagram
 
     %% Entity definitions
     Outage {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string description
         timestamp active_from
@@ -87,6 +90,9 @@ erDiagram
     }
 
     Organization {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string code
         string name
@@ -94,36 +100,54 @@ erDiagram
     }
 
     OrganizationSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string name
         string description
     }
 
     OrganizationSetMember {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID organization_set_id FK
         UUID organization_id FK
     }
 
     DataCollection {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string name
         string description
     }
 
     DataCollectionSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string name
         string description
     }
 
     DataCollectionSetMember {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID data_collection_set_id FK
         UUID data_collection_id FK
     }
 
     IdentifierIssuer {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string code
         string name
@@ -131,18 +155,27 @@ erDiagram
     }
 
     OrganizationIdentifierIssuerLink {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID organization_id FK
         UUID identifier_issuer_id FK
     }
 
     Site {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID organization_id FK
         string name
     }
 
     Contact {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID site_id FK
         string name
@@ -151,6 +184,9 @@ erDiagram
     }
 
     User {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string key
         string email
@@ -162,6 +198,9 @@ erDiagram
     }
 
     UserInvitation {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string key
         string email
@@ -175,6 +214,9 @@ erDiagram
     }
 
     OrganizationAdminPolicy {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID organization_id FK
         UUID user_id FK
@@ -182,11 +224,17 @@ erDiagram
     }
 
     File {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         bytes content
     }
 
     Taxon {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string code
         string name
@@ -199,18 +247,27 @@ erDiagram
     }
 
     TaxonSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string code
         string name
     }
 
     TaxonSetMember {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID taxon_set_id FK
         UUID taxon_id FK
     }
 
     Locus {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string code
         string name
@@ -220,6 +277,9 @@ erDiagram
     }
 
     LocusSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string code
         string name
@@ -228,12 +288,18 @@ erDiagram
     }
 
     LocusCodeMap {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string code
         dict[string, UUID] code_map
     }
 
     RefSeq {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string seq
         enum seq_format
@@ -246,6 +312,9 @@ erDiagram
     }
 
     RefAllele {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string seq
         enum seq_format
@@ -255,6 +324,9 @@ erDiagram
     }
 
     TreeAlgorithmClass {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string code
         string name
@@ -264,6 +336,9 @@ erDiagram
     }
 
     TreeAlgorithm {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         enum code
         string name
@@ -274,12 +349,18 @@ erDiagram
     }
 
     SeqCategorySet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string code
         string name
     }
 
     SeqCategory {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string code
         string name
@@ -287,6 +368,9 @@ erDiagram
     }
 
     Protocol {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string code
         string name
@@ -308,12 +392,18 @@ erDiagram
     }
 
     ProtocolSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string code
         string name
     }
 
     ProtocolSetMember {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID protocol_set_id FK
         UUID protocol_id FK
@@ -321,18 +411,27 @@ erDiagram
 
     Sample {
         string code
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID created_in_data_collection_id FK
         dict[string, string | int | float] props
     }
 
     SampleDataCollectionLink {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID sample_id FK
         UUID data_collection_id FK
     }
 
     SampleIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID identifier_issuer_id FK
         string external_id
@@ -343,10 +442,13 @@ erDiagram
         enum qc_result
         float qc_score
         Json qc_report
+        UUID protocol_id FK
         string code
         UUID sample_id FK
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
-        UUID protocol_id FK
         string fwd_uri
         string rev_uri
         UUID fwd_file_id FK
@@ -360,6 +462,9 @@ erDiagram
     }
 
     ReadSetIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID identifier_issuer_id FK
         string external_id
@@ -372,6 +477,9 @@ erDiagram
         Json qc_report
         string code
         UUID sample_id FK
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string uri
         UUID file_id FK
@@ -393,6 +501,9 @@ erDiagram
     }
 
     SeqIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID identifier_issuer_id FK
         string external_id
@@ -400,6 +511,9 @@ erDiagram
     }
 
     Allele {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string seq
         enum seq_format
@@ -418,11 +532,17 @@ erDiagram
         UUID protocol_id FK
         UUID seq_id FK
         UUID sample_id FK
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         enum seq_profile_type
     }
 
     SeqProfileIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID identifier_issuer_id FK
         string external_id
@@ -439,6 +559,9 @@ erDiagram
         string content2
         UUID protocol_id FK
         UUID sample_id FK
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
     }
 
@@ -453,6 +576,9 @@ erDiagram
         UUID protocol_id FK
         UUID seq_id FK
         UUID sample_id FK
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
     }
 
@@ -466,6 +592,9 @@ erDiagram
         string content2
         UUID protocol_id FK
         UUID sample_id FK
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
     }
 
@@ -480,6 +609,9 @@ erDiagram
         UUID protocol_id FK
         UUID seq_id FK
         UUID sample_id FK
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID primary_category_id FK
     }
@@ -491,6 +623,9 @@ erDiagram
         string content2
         UUID protocol_id FK
         UUID sample_id FK
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID seq_profile_id FK
     }
@@ -506,6 +641,9 @@ erDiagram
         UUID protocol_id FK
         UUID seq_id FK
         UUID sample_id FK
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID primary_taxon_id FK
     }

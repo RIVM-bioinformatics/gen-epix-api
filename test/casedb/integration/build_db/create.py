@@ -46,8 +46,8 @@ class TestCreate:
         # Create a first root user and organization
         user: model.User = env.retrieve_user_by_key("root1_1@org1.org")  # type: ignore[assignment]
         user.name = "root1_1"
-        env._set_obj(user)  # type: ignore[arg-type]
-        env._set_obj(
+        env.set_obj(user)  # type: ignore[arg-type]
+        env.set_obj(
             env.read_one_by_property("root1_1", model.Organization, "name", "org1")
         )
 
@@ -796,37 +796,37 @@ class TestCreate:
                 f"org_case_policy{i}_{i}",
                 f"case_type_set{i}",
                 is_private=True,
-                read_col_set=f"col_set{i}",
-                write_col_set=f"col_set{i}",
+                read_col_set_or_str=f"col_set{i}",
+                write_col_set_or_str=f"col_set{i}",
             )
         # Create additional policies
         env.create_organization_access_case_policy(
             "root1_1",
             f"org_case_policy1_4",
             "case_type_set4",
-            read_col_set="col_set4",
-            write_col_set="col_set4",
+            read_col_set_or_str="col_set4",
+            write_col_set_or_str="col_set4",
         )
         env.create_organization_access_case_policy(
             "app_admin1_1",
             f"org_case_policy2_5",
             "case_type_set5",
-            read_col_set="col_set5",
-            write_col_set="col_set5",
+            read_col_set_or_str="col_set5",
+            write_col_set_or_str="col_set5",
         )
         env.create_organization_access_case_policy(
             "app_admin1_1",
             f"org_case_policy3_4",
             "case_type_set4",
-            read_col_set="col_set4",
-            write_col_set="col_set4",
+            read_col_set_or_str="col_set4",
+            write_col_set_or_str="col_set4",
         )
         env.create_organization_access_case_policy(
             "app_admin1_1",
             f"org_case_policy3_5",
             "case_type_set5",
-            read_col_set="col_set5",
-            write_col_set="col_set5",
+            read_col_set_or_str="col_set5",
+            write_col_set_or_str="col_set5",
         )
         if env.verbose:
             env.print_organization_access_case_policies()
@@ -857,8 +857,8 @@ class TestCreate:
                 f"org_user{x[1]}",
                 f"data_collection{x[2]}",
                 f"case_type_set{x[3]}",
-                read_col_set=f"col_set{x[4]}" if x[4] else None,
-                write_col_set=f"col_set{x[5]}" if x[5] else None,
+                read_col_set_or_str=f"col_set{x[4]}" if x[4] else None,
+                write_col_set_or_str=f"col_set{x[5]}" if x[5] else None,
             )
         if env.verbose:
             env.print_user_access_case_policies()

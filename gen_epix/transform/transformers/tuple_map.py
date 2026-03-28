@@ -5,6 +5,7 @@ Tuple map transformer implementation.
 from collections.abc import Hashable
 from typing import Any
 
+from gen_epix.fastapp.enum import OnException
 from gen_epix.transform.adapter import ObjectAdapter
 from gen_epix.transform.transformer import Transformer
 
@@ -18,6 +19,25 @@ class TupleMapTransformer(Transformer):
     how the mapping is defined and applied. The transformer can also optionally include
     an "is_active" field in the mapping to indicate whether a particular mapping should
     be applied or not.
+
+
+    # Review LSP-2989 feature changes
+
+    SUPPORT FOR DEFAULT VALUES:
+
+    - When no mapping is found, default values are applied to the target fields if
+      on_no_match=OnException.SET_DEFAULT.
+    - default_values is part of the transformer configuration and must have the same
+      length as row_tgt_fields.
+    - When on_no_match=OnException.RAISE (the default), a ValueError is raised
+      if no mapping is found.
+
+    CASE INSENSITIVITY:
+
+    - Matching is case-insensitive by default (case_sensitive=False).
+    - When case_sensitive=False, string source field values are lowercased before lookup;
+      non-string values are unaffected.
+    - Normalization is applied during mapping (at set_map and transform time), not at init.
     """
 
     def __init__(
@@ -29,17 +49,33 @@ class TupleMapTransformer(Transformer):
         map_tgt_fields: list[Hashable] | None = None,
         name: str | None = None,
         is_active_map_field: Hashable | None = None,
+        on_no_match: OnException = OnException.RAISE,
+        default_values: list | None = None,
+        case_sensitive: bool = False,
     ) -> None:
         """
         Initialise the transformer with the provided mapping and field specifications.
         Args:
-            map_rows: A list of dicts, where each dict contains the source and target field values for one mapping.
-            row_src_fields: A list of field names for the source fields in the rows to be transformed.
-            row_tgt_fields: A list of field names for the target fields in the rows to be transformed.
-            map_src_fields: A list of field names for the source fields in the mapping. If None, defaults to row_src_fields.
-            map_tgt_fields: A list of field names for the target fields in the mapping. If None, defaults to row_tgt_fields.
+            map_rows: A list of dicts, where each dict contains the source and target
+            field values for one mapping.
+            row_src_fields: A list of field names for the source fields in the rows to
+            be transformed.
+            row_tgt_fields: A list of field names for the target fields in the rows to
+            be transformed.
+            map_src_fields: A list of field names for the source fields in the mapping.
+            If None, defaults to row_src_fields.
+            map_tgt_fields: A list of field names for the target fields in the mapping.
+            If None, defaults to row_tgt_fields.
             name: An optional name for the transformer.
-            is_active_map_field: An optional field name in the mapping that indicates whether a particular mapping should be applied or not. If provided, this field must be a boolean and only mappings with a True value will be applied.
+            is_active_map_field: An optional field name in the mapping that indicates
+            whether a particular mapping should be applied or not. If provided, this
+            field must be a boolean and only mappings with a True value will be applied.
+            on_no_match: action when no mapping is found. Defaults to OnException.RAISE.
+            default_values: Default values to apply to target fields when no mapping is
+            found. Must be provided when on_no_match is OnException.SET_DEFAULT, and
+            must have the same length as row_tgt_fields.
+            case_sensitive: If False, string source field values are lowercased before
+            lookup. Defaults to True.
         """
         super().__init__(name)
 
@@ -50,6 +86,7 @@ class TupleMapTransformer(Transformer):
         map_tgt_fields = map_tgt_fields or row_tgt_fields
         self._verify_map_fields(map_src_fields, map_tgt_fields, is_active_map_field)
         self._verify_row_fields(row_src_fields, row_tgt_fields)
+        self._verify_default_values(on_no_match, default_values)
 
         # Initialise some
         self._row_src_fields = row_src_fields
@@ -59,12 +96,22 @@ class TupleMapTransformer(Transformer):
         self._map_tgt_fields = map_tgt_fields
         self._map_fields = map_src_fields + map_tgt_fields
         self._is_active_map_field = is_active_map_field
+        self._on_no_match = on_no_match
+        self._default_values = (
+            tuple(default_values) if default_values is not None else None
+        )
+        self._case_sensitive = case_sensitive
         self.set_map(map_rows)
 
     def set_map(self, map_df: list[dict[Hashable, Any]]) -> None:
         tuple_map: dict[tuple, tuple] = {}
         """
-        Update the mapping with the provided mapping dataframe. The mapping dataframe is a list of dicts, where each dict contains the source and target field values for one mapping. The source and target field names in the mapping dataframe are specified by the map_src_fields and map_tgt_fields parameters, respectively. If the is_active_map_field parameter was provided during initialization, only mappings with a True value in that field will be included in the mapping.
+        Update the mapping with the provided mapping dataframe. The mapping dataframe
+        is a list of dicts, where each dict contains the source and target field values
+        for one mapping. The source and target field names in the mapping dataframe are
+        specified by the map_src_fields and map_tgt_fields parameters, respectively.
+        If the is_active_map_field parameter was provided during initialization,
+        only mappings with a True value in that field will be included in the mapping.
         """
         # Extract source and target tuples
         for row in map_df:
@@ -73,7 +120,7 @@ class TupleMapTransformer(Transformer):
                     raise KeyError(
                         f"Transformer {self.name}: Missing field {field} in map row: {row}"
                     )
-            key = tuple(row[x] for x in self._map_src_fields)
+            key = self._normalize_key(tuple(row[x] for x in self._map_src_fields))
             if key in tuple_map:
                 raise KeyError(
                     f"Transformer {self.name}: Duplicate mapping for map field {key}"
@@ -105,31 +152,56 @@ class TupleMapTransformer(Transformer):
         """
         Transform the provided object using the mapping.
 
-        The object has the target fields added or updated based on the mapping, and is also returned again to allow for method chaining.
+        The object has the target fields added or updated based on the mapping, and is
+        also returned again to allow for method chaining.
         """
-        key = tuple(obj.get(x) for x in self._row_src_fields)
+        key = self._normalize_key(tuple(obj.get(x) for x in self._row_src_fields))
         if key not in self._tuple_map:
-            raise ValueError(
-                f"Transformer {self.name}: Could not find mapping for object: {obj.unwrap()}"
-            )
-        values = self._tuple_map[key]
-        for field, value in zip(self._row_tgt_fields, values):
+            if self._on_no_match == OnException.RAISE:
+                raise ValueError(
+                    f"Transformer {self.name}: Could not find mapping for object: {obj.unwrap()}"
+                )
+            elif self._on_no_match == OnException.SET_DEFAULT:
+                values = self._default_values
+            else:
+                raise ValueError(
+                    f"Transformer {self.name}: Invalid on_no_match value: {self._on_no_match.value}"
+                )
+        else:
+            values = self._tuple_map[key]
+        for field, value in zip(self._row_tgt_fields, values):  # type: ignore[arg-type]
             obj.set(field, value)
         return obj
 
     def transform_dict(self, row: dict) -> dict:
         """
-        Same as the transform method, but specifically for dicts instead of ObjectAdapters.
+        Same as the transform method, but specifically for dicts instead of
+        ObjectAdapters.
         """
-        key = tuple(row.get(x) for x in self._row_src_fields)
-        if key not in self._tuple_map:
-            raise ValueError(
-                f"Transformer {self.name}: Could not find mapping for row: {row}"
-            )
-        values = self._tuple_map[key]
-        for field, value in zip(self._row_tgt_fields, values):
-            row[field] = value
+        # The ObjectAdapter alread wraps dicts transparently, extra computation is minimal
+        self.transform(ObjectAdapter(row))
         return row
+
+    def _normalize_key(self, key: tuple) -> tuple:
+        if self._case_sensitive:
+            return key
+        return tuple(x.lower() if isinstance(x, str) else x for x in key)
+
+    def _verify_default_values(
+        self,
+        on_no_match: OnException,
+        default_values: list | None,
+    ) -> None:
+        if on_no_match == OnException.SET_DEFAULT:
+            if default_values is None:
+                raise ValueError(
+                    "default_values must be provided when on_no_match is SET_DEFAULT"
+                )
+            if len(default_values) != self._n_tgt_fields:
+                raise ValueError(
+                    f"default_values length ({len(default_values)}) must match the "
+                    f"number of target fields ({self._n_tgt_fields})"
+                )
 
     def _verify_row_fields(
         self, row_src_fields: list[Hashable], row_tgt_fields: list[Hashable]
@@ -137,7 +209,8 @@ class TupleMapTransformer(Transformer):
         n_src_fields = len(row_src_fields)
         if n_src_fields != self._n_src_fields:
             raise ValueError(
-                "New row source fields must have the same length as the original row source fields"
+                "New row source fields must have the same length as the original row "
+                "source fields"
             )
         if len(set(row_src_fields)) < n_src_fields:
             raise ValueError(
@@ -146,7 +219,8 @@ class TupleMapTransformer(Transformer):
         n_tgt_fields = len(row_tgt_fields)
         if n_tgt_fields != self._n_tgt_fields:
             raise ValueError(
-                "New row target fields must have the same length as the original row target fields"
+                "New row target fields must have the same length as the original row "
+                "target fields"
             )
         if len(set(row_tgt_fields)) < n_tgt_fields:
             raise ValueError(

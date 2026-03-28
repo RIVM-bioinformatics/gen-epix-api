@@ -12,10 +12,34 @@ from pydantic.fields import ComputedFieldInfo, FieldInfo
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import expression
 from sqlalchemy.sql.compiler import SQLCompiler
-from sqlalchemy.types import DateTime, TypeEngine
+from sqlalchemy.types import DateTime, TypeDecorator, TypeEngine
 from sqlalchemy_utils.types.uuid import UUIDType
 
 from gen_epix.fastapp.domain.util import get_type_from_annotation
+
+
+# REVIEW 2953: double check
+class UTCDateTime(TypeDecorator):
+    """
+    A DateTime column type that always returns timezone-aware datetimes (UTC).
+
+    SQLite stores datetimes as plain strings without timezone info. SQLAlchemy
+    therefore returns naive datetimes when reading from SQLite, even when the
+    original value was timezone-aware. This TypeDecorator re-attaches UTC on
+    read so callers always get a consistent, timezone-aware value regardless of
+    the backend.
+    """
+
+    impl = DateTime
+    cache_ok = True
+
+    def process_result_value(
+        self, value: datetime.datetime | None, dialect: Any
+    ) -> datetime.datetime | None:
+        if value is not None and value.tzinfo is None:
+            return value.replace(tzinfo=datetime.timezone.utc)
+        return value
+
 
 PYTHON_SQL_TYPE_MAP = {
     str: sa.String,  # sa.Text, sa.Unicode, sa.UnicodeText can be chosen

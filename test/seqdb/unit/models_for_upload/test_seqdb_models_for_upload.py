@@ -6,7 +6,6 @@ and SampleBatchForUpload models with various validation scenarios.
 """
 
 import base64
-from gen_epix.commondb.domain.literal import NULL_ID
 import gzip
 import hashlib
 import json
@@ -18,6 +17,7 @@ from uuid import UUID, uuid4
 import pytest
 from pydantic import ValidationError
 
+from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import IdentifierForUpload
 from gen_epix.seqdb.domain import model
 
@@ -1104,7 +1104,7 @@ class TestModelSampleForUpload(TestCase):
         self.assertEqual(len(sample.seqs or []), 2)
 
         # Seqs can have their own sample_ids when sample has no id
-        seq_codes_to_sample_ids = {seq.code: seq.sample_id for seq in sample.seqs or []}
+        seq_codes_to_sample_ids = {x.code: x.sample_id for x in sample.seqs or []}
         self.assertEqual(seq_codes_to_sample_ids["seq_001"], seq_sample_id1)
         self.assertEqual(seq_codes_to_sample_ids["seq_002"], seq_sample_id2)
 

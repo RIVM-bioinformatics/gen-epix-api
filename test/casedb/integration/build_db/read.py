@@ -53,7 +53,7 @@ class TestRead:
                 # Organization admins can only read users in their organization,
                 # as well as themselves and other org admins that are admins of
                 # some of their organizations
-                org_admin_user: model.User = env._get_obj(
+                org_admin_user: model.User = env.get_obj(
                     model.User, f"org_admin{i}_{j}"
                 )  # type: ignore[assignment]
                 expected_users = env.get_users_for_org_admin(
@@ -69,7 +69,7 @@ class TestRead:
                 )
                 # Organization and refdata admin users can only read themselves and organization admins of their organization
                 for user_type in ["org_user", "refdata_admin"]:
-                    user: model.User | None = env._get_obj(  # type: ignore[assignment]
+                    user: model.User | None = env.get_obj(  # type: ignore[assignment]
                         model.User, f"{user_type}{i}_{j}", on_missing="return_none"
                     )
                     if user is None:
@@ -107,7 +107,7 @@ class TestRead:
                 policy.user_id
             )
         for user_or_str in DATA_USERS:
-            user: model.User = env._get_obj(
+            user: model.User = env.get_obj(
                 model.User, user_or_str
             )  # type: ignore[assignment]
             user_name_emails = sorted(
@@ -162,7 +162,7 @@ class TestRead:
                         f"org_admin{i}_{j}", policy_class, expected_org_policy_ids
                     )
                     try:
-                        user: model.User = env._get_obj(
+                        user: model.User = env.get_obj(
                             model.User, f"org_user{i}_{j}"
                         )  # type: ignore[assignment]
                     except:
@@ -225,7 +225,7 @@ class TestRead:
                         f"org_admin{i}_{j}", policy_class, expected_user_policy_ids
                     )
                     try:
-                        user: model.User = env._get_obj(
+                        user: model.User = env.get_obj(
                             model.User, f"org_user{i}_{j}"
                         )  # type: ignore[assignment]
                     except:
@@ -273,7 +273,7 @@ class TestRead:
                 env.read_all(user, model.CaseSet)
 
     def test_read_organization_contact_by_organization_ids(self, env: Env) -> None:
-        root_user: model.User = env._get_obj(
+        root_user: model.User = env.get_obj(
             model.User, ROOT
         )  # type: ignore[assignment]
         all_contacts: list[model.Contact] = env.read_all(

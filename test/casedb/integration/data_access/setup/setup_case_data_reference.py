@@ -1,12 +1,12 @@
 """
-This module defines the setup_case_type_data fixture, which creates reference data
+This module defines the setup_case_data_reference fixture, which creates reference data
 (diseases, etiological agents, CaseTypes, CaseTypeSets, ColSets,
 and all four policy types) for tests.
 """
 
 import re
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.edge_cases_access.setup.define_edge_cases import (
+from test.casedb.integration.data_access.setup.define_edge_cases_reference import (
     CASE_TYPE_SETS,
     COL_SETS,
     EDGE_CASES,
@@ -17,15 +17,15 @@ import pytest
 from gen_epix.casedb.domain import enum as casedb_enum
 from gen_epix.casedb.domain import model
 
-VERBOSE = True  # Set to True to enable detailed print statements during setup for debugging purposes;
+VERBOSE = False  # Set to True to enable detailed print statements during setup for debugging purposes;
 
 
-# setup_case_type_data depends on setup_test_users_and_organizations to ensure that users and
+# setup_case_data_reference depends on setup_test_users_and_organizations to ensure that users and
 # organizations are created before policies reference them.
 # The parameter is intentionally unused in the body — its presence enforces fixture ordering.
 @pytest.fixture(scope="module")
-def setup_case_type_data(
-    env: Env, setup_test_users_and_organizations: None  # noqa: ARG001
+def setup_case_data_reference(
+    env: Env, setup_test_users_and_organizations_reference: None  # noqa: ARG001
 ) -> None:  # noqa: ARG001
     """
     Create reference data (diseases, etiological agents, CaseTypes, CaseTypeSets, ColSets, and all four policy types) for tests.
@@ -131,6 +131,17 @@ def setup_case_type_data(
     env.create_data_collection(root_user, "data_collection1")
     env.create_data_collection(root_user, "data_collection2")
 
+    # --- Cases ---
+    # One case per unique CaseType, in data_collection1.
+    # Naming convention: case{case_type_index}_1 (e.g. case1_1 for case_type1).
+    for case_type_name in sorted(created_case_types):
+        m = re.match(r"^case_type(\d+)$", case_type_name)
+        assert m, f"Unexpected CaseType name format: '{case_type_name}'"
+        case_code = f"case{m.group(1)}_1"
+        env.create_case(root_user, case_code, "data_collection1")
+        if VERBOSE:
+            print(f"Created case '{case_code}' for '{case_type_name}'")
+
     # --- OrganizationAccessCasePolicies (CaseTypeSets & ColSets) ---
     # One per unique (Organization, CaseTypeSet, ColSet) from org_access_policies.
     # Naming: "org_access_policy{org_num}_{dc_num}" e.g. "org_access_policy1_1"
@@ -149,7 +160,7 @@ def setup_case_type_data(
                     root_user,
                     policy_name,
                     case_type_set,
-                    read_col_set=col_set,
+                    read_col_set_or_str=col_set,
                 )
 
                 created_org_access.add(key)
@@ -173,7 +184,7 @@ def setup_case_type_data(
                     f"org_share_policy{org_num}_{target_dc_num}_{source_dc_num}"
                 )
                 env.create_organization_share_case_policy(
-                    root_user, policy_name, case_type_set
+                    root_user, policy_name, case_type_set_or_str=case_type_set
                 )
                 created_org_share.add(key)
 
@@ -191,7 +202,7 @@ def setup_case_type_data(
                 spec.user_name,
                 target_data_collection,
                 case_type_set,
-                read_col_set=col_set,
+                read_col_set_or_str=col_set,
             )
 
     # --- UserShareCasePolicies (CaseTypeSets & ColSets) ---
@@ -205,7 +216,7 @@ def setup_case_type_data(
             env.create_user_share_case_policy(
                 root_user,
                 spec.user_name,
-                data_collection="data_collection1",
-                from_data_collection="data_collection2",
-                case_type_set=case_type_set,
+                data_collection_or_str="data_collection1",
+                from_data_collection_or_str="data_collection2",
+                case_type_set_or_str=case_type_set,
             )

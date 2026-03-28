@@ -78,7 +78,7 @@ def map_paired_elements(
         for k, v in data:
             retval[k].add(v)
         if frozen:
-            return {k: frozenset(v) for k, v in retval.items()}
+            return {x: frozenset(y) for x, y in retval.items()}
         return dict(retval)
     retval = defaultdict(list)
     for k, v in data:

@@ -2,11 +2,45 @@
 # because this is a package, and imported as such in other modules
 from __future__ import annotations
 
+import datetime
+import uuid
 from enum import Enum, IntEnum
+from typing import TYPE_CHECKING
 
-from gen_epix.commondb.domain.enum import IdFactory as IdFactory
+import ulid
+
 from gen_epix.commondb.domain.enum import RoleSet as RoleSet
-from gen_epix.commondb.domain.enum import TimestampFactory as TimestampFactory
+
+if TYPE_CHECKING:
+    from pydantic import GetJsonSchemaHandler
+    from pydantic.json_schema import JsonSchemaValue
+    from pydantic_core import core_schema as _cs
+
+
+class IntEnumWithJsonSchemaMixin:
+    """
+    An IntEnum that includes the enum member names in the JSON schema for better readability.
+    """
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: _cs.CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema["x-enum-varnames"] = [e.name for e in cls]
+        return json_schema
+
+
+class TimestampFactory(Enum):
+    DATETIME_NOW = lambda: datetime.datetime.now(datetime.timezone.utc)
+
+
+class IdFactory(Enum):
+    UUID4 = uuid.uuid4
+    ULID = lambda: ulid.api.new().uuid
 
 
 class ServiceType(Enum):
@@ -158,7 +192,7 @@ class TaxonRank(Enum):
     ISOLATE = "ISOLATE"
 
 
-class QualityControlResult(IntEnum):
+class QualityControlResult(IntEnumWithJsonSchemaMixin, IntEnum):
     PENDING = 1
     FAIL = 2
     WARN = 3
@@ -234,13 +268,13 @@ class DnaReverseAmbiguityMap(Enum):
     T = frozenset("tywkbdhn")
 
 
-class SeqFormat(IntEnum):
+class SeqFormat(IntEnumWithJsonSchemaMixin, IntEnum):
     HASH_ONLY = 1  # Only the hash code of the sequence is known or stored
     STR_DNA = 2  # String of IUPAC DNA characters without gaps
     STR_DNA_INCL_GAP = 3  # String of IUPAC DNA characters including gaps
 
 
-class SeqProfileFormat(IntEnum):
+class SeqProfileFormat(IntEnumWithJsonSchemaMixin, IntEnum):
     LOCUS_PROFILE_FORMAT1 = 1
     REF_ALN_SEQ = 2
     ORDERED_ALLELE_IDS = 3
@@ -248,23 +282,23 @@ class SeqProfileFormat(IntEnum):
     KMER_FREQUENCY_MAP = 5
 
 
-class SeqClassificationFormat(IntEnum):
+class SeqClassificationFormat(IntEnumWithJsonSchemaMixin, IntEnum):
     PRIMARY_CATEGORY_ONLY = 1
 
 
-class SeqTaxonomyFormat(IntEnum):
+class SeqTaxonomyFormat(IntEnumWithJsonSchemaMixin, IntEnum):
     TAXONOMY_FORMAT1 = 1
 
 
-class PcrResultFormat(IntEnum):
+class PcrResultFormat(IntEnumWithJsonSchemaMixin, IntEnum):
     PCR_RESULT_FORMAT1 = 1
 
 
-class AstResultFormat(IntEnum):
+class AstResultFormat(IntEnumWithJsonSchemaMixin, IntEnum):
     AST_RESULT_FORMAT1 = 1
 
 
-class ProtocolType(IntEnum):
+class ProtocolType(IntEnumWithJsonSchemaMixin, IntEnum):
     PCR_MEASUREMENT = 1
     AST_MEASUREMENT = 2
     SEQUENCING = 3
@@ -317,7 +351,7 @@ class ProtocolTypeSet(Enum):
     IS_SEQ_DISTANCE = frozenset({ProtocolType.SEQ_DISTANCE})
 
 
-class SeqProfileType(IntEnum):
+class SeqProfileType(IntEnumWithJsonSchemaMixin, IntEnum):
     SNP = 1
     LOCUS = 2
     ALLELE = 3
@@ -345,7 +379,7 @@ class SeqProfileTypeSet(Enum):
     )
 
 
-class SeqDistanceType(IntEnum):
+class SeqDistanceType(IntEnumWithJsonSchemaMixin, IntEnum):
     SNP_HAMMING = 1
     ALLELE_HAMMING = 2
     MLVA_HAMMING = 3
@@ -384,23 +418,23 @@ class SeqDistanceTypeSet(Enum):
     )
 
 
-class SeqDistanceFormat(IntEnum):
+class SeqDistanceFormat(IntEnumWithJsonSchemaMixin, IntEnum):
     PROFILE_DISTANCE_MAP = 1
 
 
-class ReadsFileFormat(IntEnum):
+class ReadsFileFormat(IntEnumWithJsonSchemaMixin, IntEnum):
     FASTQ = 1
 
 
-class SeqFileFormat(IntEnum):
+class SeqFileFormat(IntEnumWithJsonSchemaMixin, IntEnum):
     FASTA = 2
 
 
-class FileFormat(IntEnum):
+class FileFormat(IntEnumWithJsonSchemaMixin, IntEnum):
     FASTQ = 1
     FASTA = 2
 
 
-class FileCompression(IntEnum):
+class FileCompression(IntEnumWithJsonSchemaMixin, IntEnum):
     NONE = 1
     GZIP = 2

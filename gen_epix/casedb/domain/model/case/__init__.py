@@ -36,6 +36,7 @@ from gen_epix.casedb.domain.model.case.ref_data import (
 )
 from gen_epix.casedb.domain.model.case.ref_data import CaseSetStatus as CaseSetStatus
 from gen_epix.casedb.domain.model.case.ref_data import CaseType as CaseType
+from gen_epix.casedb.domain.model.case.ref_data import CaseTypeProps as CaseTypeProps
 from gen_epix.casedb.domain.model.case.ref_data import CaseTypeSet as CaseTypeSet
 from gen_epix.casedb.domain.model.case.ref_data import (
     CaseTypeSetCategory as CaseTypeSetCategory,

@@ -6,8 +6,8 @@ from decimal import Decimal
 
 import pytest
 
+from gen_epix.fastapp.enum import OnException
 from gen_epix.transform.adapter import ObjectAdapter
-from gen_epix.transform.enum import NoMatchStrategy
 from gen_epix.transform.transformers.interval import (
     IntervalToIntervalTransformer,
     IntervalTransformer,
@@ -58,28 +58,28 @@ class TestIntervalTransformer:
         result = transformer.transform(adapter)
         assert result.get("value") is None
 
-    def test_no_match_raise_strategy(self) -> None:
-        """Test NoMatchStrategy.RAISE behavior."""
+    def test_on_no_match_raise(self) -> None:
+        """Test on_no_match=RAISE behavior."""
         transformer = IntervalTransformer(
             src_field="value",
             interval_names=["valid"],
             lower_bounds=[10],
             upper_bounds=[20],
-            no_match_strategy=NoMatchStrategy.RAISE,
+            on_no_match=OnException.RAISE,
         )
 
         adapter = ObjectAdapter({"value": 25})  # Outside valid range
         with pytest.raises(ValueError, match="Value 25 does not match any interval"):
             transformer.transform(adapter)
 
-    def test_no_match_set_none_strategy(self) -> None:
-        """Test NoMatchStrategy.SET_NONE behavior."""
+    def test_on_no_match_set_none(self) -> None:
+        """Test on_no_match=SET_NONE behavior."""
         transformer = IntervalTransformer(
             src_field="value",
             interval_names=["valid"],
             lower_bounds=[10],
             upper_bounds=[20],
-            no_match_strategy=NoMatchStrategy.SET_NONE,
+            on_no_match=OnException.SET_NONE,
         )
 
         adapter = ObjectAdapter({"value": 25})  # Outside valid range
@@ -225,9 +225,9 @@ class TestIntervalToIntervalTransformer:
         result = transformer.transform(adapter)
         assert result.get("interval") is None
 
-    def test_no_match_strategies_interval_to_interval(self) -> None:
-        """Test different no-match strategies for interval to interval mapping."""
-        # Test RAISE strategy
+    def test_on_no_match_values_interval_to_interval(self) -> None:
+        """Test different on_no_match values for interval to interval mapping."""
+        # Test on_no_match=RAISE
         transformer_raise = IntervalToIntervalTransformer(
             src_field="interval",
             src_interval_names=["unmappable"],
@@ -236,7 +236,7 @@ class TestIntervalToIntervalTransformer:
             tgt_interval_names=["target"],
             tgt_lower_bounds=[0],
             tgt_upper_bounds=[50],  # No overlap with source
-            no_match_strategy=NoMatchStrategy.RAISE,
+            on_no_match=OnException.RAISE,
         )
 
         adapter = ObjectAdapter({"interval": "unmappable"})
@@ -245,7 +245,7 @@ class TestIntervalToIntervalTransformer:
         ):
             transformer_raise.transform(adapter)
 
-        # Test SET_NONE strategy
+        # Test SET_NONE
         transformer_none = IntervalToIntervalTransformer(
             src_field="interval",
             src_interval_names=["unmappable"],
@@ -254,7 +254,7 @@ class TestIntervalToIntervalTransformer:
             tgt_interval_names=["target"],
             tgt_lower_bounds=[0],
             tgt_upper_bounds=[50],  # No overlap with source
-            no_match_strategy=NoMatchStrategy.SET_NONE,
+            on_no_match=OnException.SET_NONE,
         )
 
         adapter = ObjectAdapter({"interval": "unmappable"})

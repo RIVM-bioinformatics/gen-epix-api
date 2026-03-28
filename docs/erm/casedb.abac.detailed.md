@@ -8,6 +8,9 @@ erDiagram
 
     %% Entity definitions
     UserShareCasePolicy {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID data_collection_id FK
         UUID case_type_set_id FK
@@ -20,14 +23,10 @@ erDiagram
         UUID from_data_collection_id FK
     }
 
-    OrganizationAdminPolicy {
-        UUID id PK
-        UUID organization_id FK
-        UUID user_id FK
-        bool is_active
-    }
-
     OrganizationAccessCasePolicy {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID data_collection_id FK
         UUID case_type_set_id FK
@@ -45,6 +44,9 @@ erDiagram
     }
 
     UserAccessCasePolicy {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID data_collection_id FK
         UUID case_type_set_id FK
@@ -61,6 +63,9 @@ erDiagram
     }
 
     OrganizationShareCasePolicy {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID data_collection_id FK
         UUID case_type_set_id FK
@@ -71,6 +76,16 @@ erDiagram
         bool remove_case_set
         UUID organization_id FK
         UUID from_data_collection_id FK
+    }
+
+    OrganizationAdminPolicy {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID organization_id FK
+        UUID user_id FK
+        bool is_active
     }
 
 ```

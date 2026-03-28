@@ -49,7 +49,7 @@ class TestSeqdbRemoteApp:
             user=mock_user,
             protocol_id=uuid4(),
             tree_algorithm=seqdb_enum.TreeAlgorithm.UPGMA,
-            profile_ids=[uuid4(), uuid4()],
+            seq_profile_ids=[uuid4(), uuid4()],
             leaf_names=["seq1", "seq2"],
         )
 
@@ -123,7 +123,7 @@ class TestSeqdbRemoteApp:
         expected_request_body = CalculatePhylogeneticTreeRequestBody(
             protocol_id=sample_command.protocol_id,
             tree_algorithm=sample_command.tree_algorithm,
-            profile_ids=sample_command.profile_ids,
+            profile_ids=sample_command.seq_profile_ids,
             leaf_codes=sample_command.leaf_names,
         )
 
@@ -316,7 +316,7 @@ class TestSeqdbRemoteApp:
         expected_request_body = CalculatePhylogeneticTreeRequestBody(
             protocol_id=sample_command.protocol_id,
             tree_algorithm=sample_command.tree_algorithm,
-            profile_ids=sample_command.profile_ids,
+            profile_ids=sample_command.seq_profile_ids,
             leaf_codes=sample_command.leaf_names,
         )
 

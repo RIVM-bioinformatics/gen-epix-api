@@ -19,7 +19,6 @@ from gen_epix.casedb.domain.model.case.ref_data import (
 )
 from gen_epix.casedb.domain.model.ontology import EtiologicalAgent, Etiology
 from gen_epix.fastapp.domain import Entity
-from gen_epix.util import copy_model_field
 
 
 class CompleteCaseType(CaseType):
@@ -82,11 +81,6 @@ class CompleteCaseType(CaseType):
         default_factory=dict,
         description="The mapping of column types, restricted to time-related column types, to column IDs for the case date column of the CaseType. Calculated during model validation.",
     )
-    create_max_n_cases: int = copy_model_field(CaseType, "create_max_n_cases")
-    read_max_n_cases: int = copy_model_field(CaseType, "read_max_n_cases")
-    read_max_tree_size: int = copy_model_field(CaseType, "read_max_tree_size")
-    update_max_n_cases: int = copy_model_field(CaseType, "update_max_n_cases")
-    delete_max_n_cases: int = copy_model_field(CaseType, "delete_max_n_cases")
 
     @model_validator(mode="after")
     def validate_model(self) -> Self:
