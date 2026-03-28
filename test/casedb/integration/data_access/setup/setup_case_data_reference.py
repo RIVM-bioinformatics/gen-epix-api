@@ -160,7 +160,7 @@ def setup_case_data_reference(
                     root_user,
                     policy_name,
                     case_type_set,
-                    read_col_set=col_set,
+                    read_col_set_or_str=col_set,
                 )
 
                 created_org_access.add(key)
@@ -184,7 +184,7 @@ def setup_case_data_reference(
                     f"org_share_policy{org_num}_{target_dc_num}_{source_dc_num}"
                 )
                 env.create_organization_share_case_policy(
-                    root_user, policy_name, case_type_set
+                    root_user, policy_name, case_type_set_or_str=case_type_set
                 )
                 created_org_share.add(key)
 
@@ -202,7 +202,7 @@ def setup_case_data_reference(
                 spec.user_name,
                 target_data_collection,
                 case_type_set,
-                read_col_set=col_set,
+                read_col_set_or_str=col_set,
             )
 
     # --- UserShareCasePolicies (CaseTypeSets & ColSets) ---
@@ -216,7 +216,7 @@ def setup_case_data_reference(
             env.create_user_share_case_policy(
                 root_user,
                 spec.user_name,
-                data_collection="data_collection1",
-                from_data_collection="data_collection2",
-                case_type_set=case_type_set,
+                data_collection_or_str="data_collection1",
+                from_data_collection_or_str="data_collection2",
+                case_type_set_or_str=case_type_set,
             )

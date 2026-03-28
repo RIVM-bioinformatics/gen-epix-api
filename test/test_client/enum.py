@@ -1,7 +1,9 @@
 from enum import Enum
 
 
-class TestType(Enum):
+class EnumTestType(
+    Enum
+):  # Name is intentionally not starting with "Test" to avoid pytest warnings
     UNDEFINED = "UNDEFINED"
     COMMONDB_INTEGRATION_BUILD_DB = "COMMONDB_INTEGRATION_BUILD_DB"
     COMMONDB_INTEGRATION_SQL_INJECTION = "COMMONDB_INTEGRATION_SQL_INJECTION"

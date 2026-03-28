@@ -91,8 +91,10 @@ class SampleBatchUploader(BatchUploader):
         success &= self.create_children(cmd, batch_result, uow)
         success &= self.update_children(cmd, batch_result, uow)
         success &= _update_profile_distances(self, cmd, batch_result, uow)
-        # Create external identifiers
-        success &= self.create_identifiers(cmd, batch_result, uow)
+        # Create parent and child Identifiers last since all parents and children with
+        # identifiers first have to exist before a link can be created to them
+        success &= self.create_parent_identifiers(cmd, batch_result, uow)
+        success &= self.create_child_identifiers(cmd, batch_result, uow)
 
         return success
 

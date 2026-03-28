@@ -58,7 +58,7 @@ def oauth_server() -> Generator[ServerManager, None, None]:
 
 @contextmanager
 def omopdb_server(use_dict_repository: bool) -> Generator[ServerManager, None, None]:
-    """Start OmopDB server"""
+    """Start omopdb server"""
 
     omopdb_app_cfg = AppCfg(
         AppType.OMOPDB,
@@ -89,13 +89,13 @@ def omopdb_server(use_dict_repository: bool) -> Generator[ServerManager, None, N
         ssl_keyfile=SSL_KEYFILE,
     ) as server:
         if not server.start():
-            pytest.fail("Failed to start OmopDB server")
+            pytest.fail("Failed to start omopdb server")
         yield server
 
 
 @contextmanager
 def seqdb_server(use_dict_repository: bool) -> Generator[ServerManager, None, None]:
-    """Start SeqDB server"""
+    """Start seqdb server"""
 
     # Create seqdb app and fastapi instance
     seqdb_app_cfg = AppCfg(
@@ -128,13 +128,13 @@ def seqdb_server(use_dict_repository: bool) -> Generator[ServerManager, None, No
         ssl_keyfile=SSL_KEYFILE,
     ) as server:
         if not server.start():
-            pytest.fail("Failed to start SeqDB server")
+            pytest.fail("Failed to start seqdb server")
         yield server
 
 
 @contextmanager
 def casedb_server(use_dict_repository: bool) -> Generator[ServerManager, None, None]:
-    """Start CaseDB server"""
+    """Start casedb server"""
 
     # Create casedb app and fastapi instance
     casedb_app_cfg = AppCfg(
@@ -167,7 +167,7 @@ def casedb_server(use_dict_repository: bool) -> Generator[ServerManager, None, N
         ssl_keyfile=SSL_KEYFILE,
     ) as server:
         if not server.start():
-            pytest.fail("Failed to start CaseDB server")
+            pytest.fail("Failed to start casedb server")
         yield server
 
 
@@ -175,12 +175,12 @@ def casedb_server(use_dict_repository: bool) -> Generator[ServerManager, None, N
 def platform_mock_dict_demo(
     use_dict_repository: bool, start_omopdb: bool
 ) -> Generator[dict[str, ServerManager], None, None]:
-    """Start OAuth, SeqDB, and CaseDB (and optionally OmopDB) for local platform.
+    """Start OAuth, seqdb, and casedb (and optionally omopdb) for local platform.
 
     - OAuth (mock) on 9000 with TLS using cert/ and key/.
-    - SeqDB on 8003 (MOCK + DICT_DEMO).
-    - CaseDB on 8000 (MOCK + DICT_DEMO) configured to use remote SeqDB.
-    - OmopDB on 8002 (optional placeholder for now).
+    - seqdb on 8003 (MOCK + DICT_DEMO).
+    - casedb on 8000 (MOCK + DICT_DEMO) configured to use remote seqdb.
+    - omopdb on 8002 (optional placeholder for now).
 
     Returns a dict of running ServerManager instances keyed by service name.
     """
@@ -211,12 +211,12 @@ def run_platform(use_dict_repository: bool, start_omopdb: bool) -> None:
     """CLI runner to start the local platform and block until Ctrl+C."""
     print("Starting local platform (mock.dict_demo)...")
     print(" - OAuth:   https://127.0.0.1:9000")
-    print(" - SeqDB:   https://127.0.0.1:8003")
-    print(" - CaseDB:  https://127.0.0.1:8000")
+    print(" - seqdb:   https://127.0.0.1:8003")
+    print(" - casedb:  https://127.0.0.1:8000")
     if start_omopdb:
-        print(" - OmopDB:  https://127.0.0.1:8002")
+        print(" - omopdb:  https://127.0.0.1:8002")
     else:
-        print(" - OmopDB:  [disabled placeholder]")
+        print(" - omopdb:  [disabled placeholder]")
 
     stop = False
     with platform_mock_dict_demo(use_dict_repository, start_omopdb):

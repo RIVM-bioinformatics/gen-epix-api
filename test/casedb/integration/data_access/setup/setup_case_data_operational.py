@@ -164,9 +164,9 @@ def setup_case_data_operational(
                     root_user,
                     policy_name,
                     ct_set,
-                    read_col_set=col_set,
+                    read_col_set_or_str=col_set,
                     # RG Manually added
-                    write_col_set=col_set,
+                    write_col_set_or_str=col_set,
                 )
                 created_org_access.add(key)
                 if VERBOSE:
@@ -188,9 +188,9 @@ def setup_case_data_operational(
                     spec.user_name,
                     dc_name,
                     ct_set,
-                    read_col_set=col_set,
+                    read_col_set_or_str=col_set,
                     # RG manually added
-                    write_col_set=col_set,
+                    write_col_set_or_str=col_set,
                 )
                 created_user_access.add(key)
                 if VERBOSE:

@@ -23,6 +23,9 @@ erDiagram
 
     %% Entity definitions
     Outage {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string description
         timestamp active_from
@@ -34,6 +37,9 @@ erDiagram
     }
 
     Organization {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string code
         string name
@@ -41,36 +47,54 @@ erDiagram
     }
 
     OrganizationSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string name
         string description
     }
 
     OrganizationSetMember {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID organization_set_id FK
         UUID organization_id FK
     }
 
     DataCollection {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string name
         string description
     }
 
     DataCollectionSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string name
         string description
     }
 
     DataCollectionSetMember {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID data_collection_set_id FK
         UUID data_collection_id FK
     }
 
     IdentifierIssuer {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string code
         string name
@@ -78,18 +102,27 @@ erDiagram
     }
 
     OrganizationIdentifierIssuerLink {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID organization_id FK
         UUID identifier_issuer_id FK
     }
 
     Site {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID organization_id FK
         string name
     }
 
     Contact {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID site_id FK
         string name
@@ -98,6 +131,9 @@ erDiagram
     }
 
     User {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string key
         string email
@@ -109,6 +145,9 @@ erDiagram
     }
 
     UserInvitation {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string key
         string email
@@ -122,6 +161,9 @@ erDiagram
     }
 
     OrganizationAdminPolicy {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID organization_id FK
         UUID user_id FK

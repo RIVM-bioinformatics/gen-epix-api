@@ -95,7 +95,7 @@ def oauth_server() -> Generator[ServerManager, None, None]:
 def seqdb_server(
     oauth_server: ServerManager,
 ) -> Generator[ServerManager, None, None]:
-    """Start SeqDB server on port 8001."""
+    """Start seqdb server on port 8001."""
     # Set environment variables for both casedb and seqdb
     set_envvar()
 
@@ -126,7 +126,7 @@ def seqdb_server(
         ssl_keyfile=SSL_KEYFILE,
     ) as server:
         if not server.start():
-            pytest.fail("Failed to start SeqDB server")
+            pytest.fail("Failed to start seqdb server")
         yield server
 
 
@@ -134,7 +134,7 @@ def seqdb_server(
 def test_casedb_seqdb_connection(
     oauth_server: ServerManager, seqdb_server: ServerManager
 ) -> None:
-    """Test CaseDB to SeqDB connection with OAuth authentication."""
+    """Test casedb to seqdb connection with OAuth authentication."""
     # Set environment variables for both casedb and seqdb
     set_envvar()
     protocol = "https" if SSL_CERTFILE and SSL_KEYFILE else "http"
@@ -160,14 +160,14 @@ def test_casedb_seqdb_connection(
     except Exception as e:
         pytest.fail(f"OAuth server health check failed: {e}")
 
-    # Test that the SeqDB server is accessible
+    # Test that the seqdb server is accessible
     try:
         with httpx.Client(timeout=5.0, verify=SSL_CERTFILE) as client:
             response = client.get(f"{protocol}://127.0.0.1:8003/v1/health")
             assert response.status_code == 200
-            logging.info("✅ SeqDB server is accessible")
+            logging.info("✅ seqdb server is accessible")
     except Exception as e:
-        pytest.fail(f"SeqDB server health check failed: {e}")
+        pytest.fail(f"seqdb server health check failed: {e}")
 
     # Verify OAuth discovery endpoint
     try:
@@ -213,7 +213,7 @@ def test_casedb_seqdb_connection(
         )
     )
 
-    # Test phylogenetic tree retrieval (which calls SeqDB)
+    # Test phylogenetic tree retrieval (which calls seqdb)
     is_phylogenetic_tree_retrieved = False
     is_similar_cases_retrieved = False
     genetic_distance_col_ids: list[UUID] = [

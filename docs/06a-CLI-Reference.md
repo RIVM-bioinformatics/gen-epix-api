@@ -33,7 +33,7 @@ All API routes are prefixed with `/v1`.
 python run.py api_platform_local_mock_dict_demo
 ```
 
-Starts OAuth (port 9000), SeqDB (8003), and CaseDB (8000) together. CaseDB calls SeqDB via the OAuth server using client-credentials flow. Does **not** start CommonDB or OmopDB, and does not have hot-reload (servers run as `ServerManager` subprocesses).
+Starts OAuth (port 9000), seqdb (8003), and casedb (8000) together. casedb calls seqdb via the OAuth server using client-credentials flow. Does **not** start commondb or omopdb, and does not have hot-reload (servers run as `ServerManager` subprocesses).
 
 ### Self-signed certificates
 

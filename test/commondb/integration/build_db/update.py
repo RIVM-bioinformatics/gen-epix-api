@@ -26,7 +26,7 @@ class TestUpdate:
             print("\nUser updates:")
         for role in sorted(env.role_set_map[CommonRoleSet.ALL]):
             user_str = f"{env.rev_role_map[role].name.lower()}1_1"
-            user: model.User = env._get_obj(model.User, user_str)
+            user: model.User = env.get_obj(model.User, user_str)
             is_root = role == env.root_role
             is_not_restricted = role in is_not_restricted_roles
             org_admin_orgs = {
@@ -51,7 +51,7 @@ class TestUpdate:
                     # Occurs only for commondb
                     is_sub_role = False
                 for tgt_user_str, new_tgt_org in zip(tgt_users_str, new_tgt_orgs):
-                    tgt_user: model.User = env._get_obj(model.User, tgt_user_str)
+                    tgt_user: model.User = env.get_obj(model.User, tgt_user_str)
                     tgt_org = org_id_name_map[tgt_user.organization_id]
                     # Determine if user can update tgt_user and also their tgt_org
                     is_self = user_str == tgt_user_str
@@ -106,7 +106,7 @@ class TestUpdate:
             print("\nUser role updates:")
         for role in sorted(env.role_set_map[CommonRoleSet.ALL]):
             user_str = f"{env.rev_role_map[role].name.lower()}1_1"
-            user: model.User = env._get_obj(model.User, user_str)
+            user: model.User = env.get_obj(model.User, user_str)
             is_root = role == env.root_role
             is_not_restricted = role in is_not_restricted_roles
             org_admin_org_ids = env.get_org_ids_for_org_admin(
@@ -128,7 +128,7 @@ class TestUpdate:
                     # Occurs only for commondb
                     is_sub_role = False
                 for tgt_user_str in tgt_users_str:
-                    tgt_user: model.User = env._get_obj(model.User, tgt_user_str)
+                    tgt_user: model.User = env.get_obj(model.User, tgt_user_str)
                     tgt_user_org_id = tgt_user.organization_id
                     if not SKIP_RAISE:
                         msg = f"{user_str}: {tgt_user_str} no roles"

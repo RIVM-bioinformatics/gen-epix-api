@@ -1,5 +1,5 @@
 """
-Integration tests for model process metadata field behaviour in CommonDB.
+Integration tests for model process metadata field behaviour in commondb.
 
 Verifies that created_at, modified_at, and modified_by are correctly stamped
 on creation and correctly preserved / updated on update, for both the
@@ -13,7 +13,7 @@ import copy
 import datetime
 import logging
 from test.commondb.test_client.util import get_test_client as commondb_get_test_client
-from test.test_client.enum import TestType
+from test.test_client.enum import EnumTestType
 from test.test_client.pytest_params import BuildDbParams
 
 import pytest
@@ -24,7 +24,7 @@ from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.commondb.test.test_client import TestClient as Env
 from gen_epix.fastapp.enum import CrudOperation
 
-TEST_TYPE = TestType.COMMONDB_INTEGRATION_METADATA
+TEST_TYPE = EnumTestType.COMMONDB_INTEGRATION_METADATA
 
 APP_CFGS = get_app_cfgs(
     AppType.COMMONDB,
@@ -71,10 +71,8 @@ def setup_users(env: Env) -> None:
     """Register root1_1 + org1, then invite root1_2 so tests have two distinct users."""
     user: model.User = env.retrieve_user_by_key("root1_1@org1.org")  # type: ignore[assignment]
     user.name = "root1_1"
-    env._set_obj(user)
-    env._set_obj(
-        env.read_one_by_property("root1_1", model.Organization, "name", "org1")
-    )
+    env.set_obj(user)
+    env.set_obj(env.read_one_by_property("root1_1", model.Organization, "name", "org1"))
     env.invite_and_register_user("root1_1", "root1_2")
 
 
@@ -160,7 +158,7 @@ class TestCommondbModelProcessMetadata:
     def test_update_data_collection_updates_modified_by(self) -> None:
         """modified_by must be stamped with the updating user, not the creating user."""
         root1 = self.env.get_root_user()
-        root2: model.User = self.env._get_obj(model.User, "root1_2")  # type: ignore[assignment]
+        root2: model.User = self.env.get_obj(model.User, "root1_2")  # type: ignore[assignment]
         assert root1.id != root2.id, "test requires two distinct users"
 
         self.env.create_data_collection(root1, "dc_meta_update_2")
@@ -176,7 +174,7 @@ class TestCommondbModelProcessMetadata:
             command.DataCollectionCrudCommand(
                 user=root1,
                 operation=CrudOperation.READ_ONE,
-                obj_ids=self.env._get_obj(model.DataCollection, "dc_meta_update_2").id,
+                obj_ids=self.env.get_obj(model.DataCollection, "dc_meta_update_2").id,
             )
         )
 
@@ -211,7 +209,7 @@ class TestCommondbModelProcessMetadata:
             command.DataCollectionCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ONE,
-                obj_ids=self.env._get_obj(model.DataCollection, "dc_meta_update_3").id,
+                obj_ids=self.env.get_obj(model.DataCollection, "dc_meta_update_3").id,
             )
         )
 

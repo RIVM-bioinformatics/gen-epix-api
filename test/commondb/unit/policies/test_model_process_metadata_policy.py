@@ -11,6 +11,7 @@ MaskModelProcessMetadataPolicy (AFTER):
 
 """
 
+from enum import Enum
 from test.commondb.unit.conftest import DEFAULT_CREATED_AT, DEFAULT_MODIFIED_AT
 from unittest import TestCase
 from uuid import uuid4
@@ -18,18 +19,21 @@ from uuid import uuid4
 import pytest
 
 from gen_epix.commondb.domain import command
-from gen_epix.commondb.domain.enum import Role
+from gen_epix.commondb.domain.enum import Role, RoleSet
 from gen_epix.commondb.domain.model.base import ModelNoId
 from gen_epix.commondb.domain.model.organization import User
 from gen_epix.commondb.policies.model_metadata_policy import (
-    MaskModelProcessMetadataPolicy,
+    ModelMetadataPolicy,
 )
 from gen_epix.fastapp.enum import CrudOperation
 
 # _PRIVILEGED_ROLES: frozenset[str] = frozenset({Role.APP_ADMIN.value, Role.ROOT.value})
-_PRIVILEGED_ROLES_READ: frozenset[str] = frozenset(
-    {Role.APP_ADMIN.value, Role.ROOT.value}
-)
+# _PRIVILEGED_ROLES_READ: frozenset[str] = frozenset(
+#     {Role.APP_ADMIN.value, Role.ROOT.value}
+# )
+_PRIVILEGED_ROLES_READ: dict[RoleSet | Enum, frozenset[str]] = {
+    RoleSet.GE_APP_ADMIN: frozenset({x.value for x in RoleSet.GE_APP_ADMIN.value}),
+}
 
 
 def _make_user(roles: set[str]) -> User:
@@ -59,10 +63,10 @@ def _make_cmd(
 
 
 @pytest.mark.scenario_ids("TC-SEC-META-02")
-class TestMaskModelProcessMetadataPolicy(TestCase):
+class TestModelMetadataPolicy(TestCase):
 
     def setUp(self) -> None:
-        self.policy = MaskModelProcessMetadataPolicy(_PRIVILEGED_ROLES_READ)
+        self.policy = ModelMetadataPolicy(_PRIVILEGED_ROLES_READ)
         self.regular_user = _make_user({Role.ORG_USER.value})
         self.admin_user = _make_user({Role.APP_ADMIN.value})
         self.root_user = _make_user({Role.ROOT.value})

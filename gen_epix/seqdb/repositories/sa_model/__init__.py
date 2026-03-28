@@ -144,4 +144,3 @@ set_entity_repository_model_classes(
     RowMetadataMixin,
     field_name_map=FIELD_NAME_MAP,
 )
-

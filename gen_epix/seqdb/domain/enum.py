@@ -386,6 +386,7 @@ class SeqDistanceType(IntEnumWithJsonSchemaMixin, IntEnum):
     MLVA_EUCLIDEAN = 4
     KMER_EUCLIDEAN = 5
 
+
 class SeqDistanceTypeSet(Enum):
     ALLELE_PROFILE_BASED = frozenset({SeqDistanceType.ALLELE_HAMMING})
     SNP_PROFILE_BASED = frozenset({SeqDistanceType.SNP_HAMMING})

@@ -18,7 +18,6 @@ from uuid import uuid4
 from gen_epix.commondb.domain.model.base import ModelNoId
 from gen_epix.commondb.repositories.dict_modifier import CommondbDictModelModifier
 
-
 _FIXED_NOW = datetime.datetime(2024, 6, 15, 12, 0, 0, tzinfo=datetime.timezone.utc)
 
 
@@ -31,7 +30,9 @@ def _make_obj(
     modified_at: datetime.datetime | None = DEFAULT_MODIFIED_AT,
     modified_by: object = None,
 ) -> ModelNoId:
-    return ModelNoId(created_at=created_at, modified_at=modified_at, modified_by=modified_by)
+    return ModelNoId(
+        created_at=created_at, modified_at=modified_at, modified_by=modified_by
+    )
 
 
 class TestCommondbDictModelModifier(TestCase):
@@ -107,8 +108,12 @@ class TestCommondbDictModelModifier(TestCase):
 
     def test_on_update_preserves_created_at_from_stored_obj(self) -> None:
         # 1. Input
-        original_created_at = datetime.datetime(2020, 1, 1, tzinfo=datetime.timezone.utc)
-        obj = _make_obj(created_at=datetime.datetime(2099, 1, 1, tzinfo=datetime.timezone.utc))
+        original_created_at = datetime.datetime(
+            2020, 1, 1, tzinfo=datetime.timezone.utc
+        )
+        obj = _make_obj(
+            created_at=datetime.datetime(2099, 1, 1, tzinfo=datetime.timezone.utc)
+        )
         stored_obj = _make_obj(created_at=original_created_at)
 
         # 2. Mocks (none)

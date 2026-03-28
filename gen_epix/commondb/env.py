@@ -12,7 +12,7 @@ from gen_epix import fastapp
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.base_env import BaseAppComposer
 from gen_epix.commondb.config import AppCfg
-from gen_epix.commondb.domain import DOMAIN, enum, exc
+from gen_epix.commondb.domain import DOMAIN, enum, exc, model
 from gen_epix.commondb.domain.model import SORTED_SERVICE_TYPES
 from gen_epix.commondb.domain.policy.permission import RoleGenerator
 from gen_epix.commondb.repositories.dict_modifier import CommondbDictModelModifier
@@ -42,6 +42,9 @@ class App(fastapp.App):
 
 
 class AppComposer(BaseAppComposer):
+    """
+    Compose the commondb application by wiring services, repositories, and policies.
+    """
 
     def __init__(
         self,
@@ -61,6 +64,7 @@ class AppComposer(BaseAppComposer):
         log_setup: bool = True,
         **kwargs: Any,
     ):
+        """Initialise the composer, parse configuration, and compose the application."""
         # Parse input
         self._app_cfg = app_cfg
         self._cfg = app_cfg.cfg
@@ -94,6 +98,10 @@ class AppComposer(BaseAppComposer):
         self._idp_user_dependency: Callable = data["idp_user_dependency"]
 
     def compose_application(self) -> dict[str, Any]:
+        """
+        Create the App instance, initialise all services and repositories, and register
+        policies.
+        """
 
         # Get loggers
         cfg = self._app_cfg.cfg
@@ -184,13 +192,6 @@ class AppComposer(BaseAppComposer):
             rbac_service.register_policies()
             abac_service.register_policies()
 
-            # Note: the privileged roles for the MaskModelProcessMetadataPolicy are
-            # privileged_roles = app_impl.role_set_map[enum.RoleSet.GE_APP_ADMIN]
-            # Only ROOT can bypass
-            privileged_roles = app_impl.role_set_map[enum.RoleSet.ROOT]
-
-            self._register_extra_policies(app, privileged_roles)
-
             # Finalise process
             if self._log_setup and setup_logger:
                 setup_logger.debug(
@@ -219,16 +220,12 @@ class AppComposer(BaseAppComposer):
             "idp_user_dependency": app_impl.idp_user_dependency,
         }
 
-    def _register_extra_policies(
-        self, app: App, privileged_roles: frozenset[str]
-    ) -> None:
-        """Hook for subclasses to register additional policies after base registration."""
-
     def _get_services(
         self, app_impl: AppImplDetails
     ) -> tuple[
         SystemService, AuthService, RbacService, AbacService, OrganizationService
     ]:
+        """Retrieve the core services from the application implementation details."""
         system_service_type = AppComposer._get_enum_from_list(
             self._sorted_service_types, "SYSTEM"
         )
@@ -272,6 +269,7 @@ class AppComposer(BaseAppComposer):
         ssl_context: Any,
         service_type: Enum,
     ) -> None:
+        """Initialise a single service and its repository from configuration."""
         service_cfg = cfg["service"][service_type.value]
         service_class = service_cfg["class"]
         service_props = service_cfg["props"]
@@ -300,18 +298,21 @@ class AppComposer(BaseAppComposer):
             factory_kwargs: dict[str, Any] = {}
             if issubclass(repository_class, SARepository):
                 factory_kwargs["sa_mapper_factory"] = CommondbSAMapperFactory()
+            # Create repository
             curr_repository = repository_class.create_repository(
                 entities=entities, **factory_kwargs, **repository_props
             )
             # Register a CommondbDictModelModifier for every model class that carries
             # RowMetadataMixin fields, mirroring what CommondbSAMapper does for SA.
-            if issubclass(repository_class, DictRepository):
+            if isinstance(curr_repository, DictRepository):
                 modifier = CommondbDictModelModifier()
                 for entity in entities:
-                    if "created_at" in entity.model_class.model_fields:
-                        curr_repository.register_model_modifier(
-                            entity.model_class, modifier
-                        )
+                    if not entity.persistable:
+                        continue
+                    assert issubclass(entity.model_class, model.ModelNoId)
+                    curr_repository.register_model_modifier(
+                        entity.model_class, modifier
+                    )
             # Add to overview of repositories
             app_impl.repositories[service_type] = curr_repository
 
@@ -330,6 +331,7 @@ class AppComposer(BaseAppComposer):
         app_impl.services[service_type] = curr_service
 
     def _setup_application_logging(self, setup_logger: logging.Logger) -> None:
+        """Log the start of the application composition process."""
         setup_logger.debug(
             App.create_static_log_message("e8665136", "Starting composing application")
         )
@@ -340,7 +342,10 @@ class AppComposer(BaseAppComposer):
         )
 
     def _parse_config(self) -> None:
-        """Parse configuration values to test presence of expected values and convert any values as necessary, such as feature flags."""
+        """
+        Parse configuration values to test presence of expected values and convert any
+        values as necessary, such as feature flags.
+        """
         # TODO: expand with a framework for parsing and validating config values, potentially using Pydantic classes to define expected config structure and types, and to perform parsing and validation.
         cfg_content_types = [
             ("feature_flags", None, bool),  # All feature flags
@@ -380,6 +385,7 @@ class AppComposer(BaseAppComposer):
                     cfg_section[leaf_key] = converted_value
 
     def _verify_type(value: Any, content_type: type) -> Any:
+        """Verify and optionally convert a value to the expected type."""
         if isinstance(value, content_type):
             return True, value
         if value is None:
@@ -397,6 +403,7 @@ class AppComposer(BaseAppComposer):
 
     @staticmethod
     def _get_enum_from_list(enums: Iterable[Enum], name: str) -> Enum:
+        """Return the enum member with the given name from an iterable of enums."""
         for enum_item in enums:
             if enum_item.name == name:
                 return enum_item

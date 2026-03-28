@@ -1,10 +1,10 @@
-from test.test_client.enum import TestType
+from test.test_client.enum import EnumTestType
 
 from gen_epix.commondb.domain import enum
 
 # Variables for debugging purposes
 
-TEST_TYPE = TestType.SEQDB_INTEGRATION_BUILD_DB
+TEST_TYPE = EnumTestType.SEQDB_INTEGRATION_BUILD_DB
 
 SKIP_RAISE = False
 SKIP_CREATE_DATA = False

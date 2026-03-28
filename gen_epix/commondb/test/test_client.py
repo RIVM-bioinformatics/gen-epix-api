@@ -2,7 +2,6 @@ import datetime
 import logging
 import re
 from collections.abc import Hashable
-from enum import Enum
 from pathlib import Path
 from time import sleep
 from typing import Any, TypeVar, cast
@@ -22,6 +21,10 @@ BASE_MODEL_TYPE = TypeVar("BASE_MODEL_TYPE", bound=model.Model)
 
 
 class TestClient:
+    """
+    Integration test client providing helpers to set up, query, and verify application
+    state via commands and the in-memory object store.
+    """
 
     DEFAULT_ROUTE_PREFIX_VALUE = "/v1"
 
@@ -52,6 +55,7 @@ class TestClient:
         default_route_prefix: str | None = None,
         **kwargs: Any,
     ):
+        """Initialise the test client with app configuration and optional endpoint routing."""
         # Set provided parameters
         self.test_name = test_name
         self.test_dir = test_dir
@@ -141,7 +145,7 @@ class TestClient:
         # Store remainder of kwargs
         self.props = kwargs
 
-    def _get_obj(
+    def get_obj(
         self,
         model_class: type[model.Model],
         obj: (
@@ -153,38 +157,14 @@ class TestClient:
         ),
         copy: bool = False,
         on_missing: str = "raise",
-    ) -> model.Model | list[model.Model]:
+    ) -> model.Model | list[model.Model] | None:
+        """Retrieve an object from the local object store by key, id, or model instance."""
         if isinstance(obj, list):
-            return [self._get_obj(model_class, x) for x in obj]
+            return [cast(model.Model, self.get_obj(model_class, x)) for x in obj]
         if model_class not in self.db:
             self.db[model_class] = {}
         table = self.db[model_class]
         key = self._get_obj_key(table, model_class, obj, on_missing)
-        if model_class == model.Case:
-            if not isinstance(key, datetime.datetime):
-                key = self._convert_case_code_to_date(key)
-        if model_class == model.CaseDataCollectionLink:
-            dc_id = key[0]
-            case_id = key[1]
-
-            case_data_collection_links = self.read_all(
-                "root1_1", model.CaseDataCollectionLink, cascade=True
-            )
-            good_case_data_collection_links_list = []
-            for y in case_data_collection_links:
-                if y.case_id == case_id and y.data_collection_id == dc_id:
-                    good_case_data_collection_links_list.append(y)
-
-            if not good_case_data_collection_links_list:
-                return None
-
-            assert (
-                len(good_case_data_collection_links_list) == 1
-            ), "currently designed for one at a time"
-            if copy:
-                return table[key].model_copy()
-            return table[key]
-
         if key not in table:
             if on_missing == "raise":
                 raise ValueError(f"{model_class.__name__} {obj} not found")
@@ -194,6 +174,45 @@ class TestClient:
                 raise NotImplementedError()
         return table[key] if not copy else table[key].model_copy()
 
+    def set_obj(self, obj: model.Model, update: bool = False) -> model.Model:
+        """Store an object in the local object store, optionally updating an existing entry."""
+        model_class = type(obj)
+        if model_class not in self.db:
+            self.db[model_class] = {}
+        table = self.db[model_class]
+        key_fields = self.MODEL_KEY_MAP[model_class]
+        if not isinstance(key_fields, tuple):
+            key_fields = (key_fields,) if len(key_fields) > 1 else key_fields
+        model_name = model_class.__name__
+        key = tuple(getattr(obj, x) for x in key_fields)
+        key = (
+            key if len(key) > 1 else key[0]  # pyright: ignore[reportGeneralTypeIssues]
+        )
+        if key in table:
+            if update:
+                table[key] = obj
+            else:
+                raise ValueError(f"{model_name} {obj} already exists")
+        else:
+            table[key] = obj
+        return obj
+
+    def delete_obj(self, model_class: type[model.Model], obj_id: UUID) -> model.Model:
+        """Remove an object from the local object store by id."""
+        if model_class not in self.db:
+            self.db[model_class] = {}
+        table = self.db[model_class]
+        key = [x for x, y in table.items() if y.id == obj_id]
+        if key:
+            key = key[0]  # type: ignore[assignment]
+        else:
+            raise ValueError(f"{model_class} {obj_id} not found")
+        if key not in table:  # type: ignore[comparison-overlap]
+            raise ValueError(f"{model_class} {obj_id} not found")
+        obj = table[key]  # type: ignore[index]
+        del table[key]  # type: ignore[arg-type]
+        return obj
+
     def handle(
         self,
         cmd: Command,
@@ -202,6 +221,7 @@ class TestClient:
         route_prefix: str | None = None,
         **kwargs: Any,
     ) -> Any:
+        """Dispatch a command via the HTTP endpoint or directly through the app."""
         use_endpoint = use_endpoint if use_endpoint is not None else self.use_endpoints
         if use_endpoint:
             assert self.app_last_handled_exception is not None
@@ -231,13 +251,15 @@ class TestClient:
             return self.app.handle(cmd)
 
     def retrieve_user_by_key(self, user_key: str) -> model.User:
+        """Retrieve a user from the app's user manager by key."""
         user: model.User = self.app.user_manager.retrieve_user_by_key(user_key)  # type: ignore[assignment]
         return user
 
     def create_organization(
         self, user_or_str: str | model.User, organization_name: str
     ) -> model.Organization:
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        """Create an organization and store it in the local object store."""
+        user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         organization = self.app.handle(
             command.OrganizationCrudCommand(
                 user=user,
@@ -245,7 +267,7 @@ class TestClient:
                 objs=model.Organization(name=organization_name, code=organization_name),
             )
         )
-        retval: model.Organization = self._set_obj(organization)  # type: ignore[assignment]
+        retval: model.Organization = self.set_obj(organization)  # type: ignore[assignment]
         return retval
 
     def invite_and_register_user(
@@ -257,8 +279,9 @@ class TestClient:
         set_dummy_token: bool = False,
         set_key: bool = True,
     ) -> model.User:
+        """Invite and register a user, verifying role and invitation constraints."""
         root_user: model.User = self.get_root_user()
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         m = re.match(r"^(.*?)(\d+)_(\d+)$", user_name.lower())
         if not m:
             raise ValueError(f"Invalid user name {user_name}")
@@ -327,7 +350,7 @@ class TestClient:
             x.key == tgt_user.key for x in remaining_invitations
         ):
             raise ValueError(f"Some user invitations remaining for key {tgt_user.key}")
-        retval: model.User = self._set_obj(tgt_user)  # type: ignore[assignment]
+        retval: model.User = self.set_obj(tgt_user)  # type: ignore[assignment]
         return retval
 
     def create_data_collection(
@@ -338,7 +361,8 @@ class TestClient:
         modified_at: datetime.datetime | None = None,
         modified_by: UUID | None = None,
     ) -> model.DataCollection:
-        user: model.User = self._get_obj(
+        """Create a data collection and store it in the local object store."""
+        user: model.User = self.get_obj(
             self.user_class, user_or_str
         )  # type: ignore[assignment]
         data_collection = self.handle(
@@ -353,7 +377,7 @@ class TestClient:
                 ),
             )
         )
-        return self._set_obj(data_collection)  # type: ignore[return-value]
+        return self.set_obj(data_collection)  # type: ignore[return-value]
 
     def create_org_admin_policy(
         self,
@@ -362,11 +386,13 @@ class TestClient:
         organization_or_str: str | model.Organization,
         is_active: bool = True,
     ) -> model.OrganizationAdminPolicy:
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
-        tgt_user: model.User = self._get_obj(
+        """Create an organization admin policy and store it in the local object store."""
+        user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        tgt_user: model.User = self.get_obj(
             self.user_class, tgt_user_or_str
         )  # type: ignore[assignment]
-        organization: model.Organization = self._get_obj(
+        assert tgt_user.id is not None
+        organization: model.Organization = self.get_obj(
             model.Organization, organization_or_str
         )  # type: ignore[assignment]
         assert organization.id is not None
@@ -381,7 +407,7 @@ class TestClient:
                 ),
             )
         )
-        return self._set_obj(organization_admin_policy)  # type: ignore[return-value]
+        return self.set_obj(organization_admin_policy)  # type: ignore[return-value]
 
     def create_identifier_issuer(
         self,
@@ -390,7 +416,8 @@ class TestClient:
         name: str | None = None,
         description: str | None = None,
     ) -> model.IdentifierIssuer:
-        user: model.User = self._get_obj(
+        """Create an identifier issuer and store it in the local object store."""
+        user: model.User = self.get_obj(
             self.user_class, user_or_str
         )  # type: ignore[assignment]
         identifier_issuer = self.handle(
@@ -404,7 +431,7 @@ class TestClient:
                 ),
             )
         )
-        return self._set_obj(identifier_issuer)  # type: ignore[return-value]
+        return self.set_obj(identifier_issuer)  # type: ignore[return-value]
 
     def create_organization_identifier_issuer_link(
         self,
@@ -412,13 +439,14 @@ class TestClient:
         organization_or_str: str | model.Organization,
         identifier_issuer_or_str: str | model.IdentifierIssuer,
     ) -> model.OrganizationIdentifierIssuerLink:
-        user: model.User = self._get_obj(
+        """Create an organization-identifier issuer link and store it in the local object store."""
+        user: model.User = self.get_obj(
             self.user_class, user_or_str
         )  # type: ignore[assignment]
-        organization: model.Organization = self._get_obj(
+        organization: model.Organization = self.get_obj(
             model.Organization, organization_or_str
         )  # type: ignore[assignment]
-        identifier_issuer: model.IdentifierIssuer = self._get_obj(
+        identifier_issuer: model.IdentifierIssuer = self.get_obj(
             model.IdentifierIssuer, identifier_issuer_or_str
         )  # type: ignore[assignment]
         assert organization.id is not None
@@ -435,14 +463,15 @@ class TestClient:
                 )
             )
         )
-        return self._set_obj(
+        return self.set_obj(
             organization_identifier_issuer_link
         )  # type: ignore[return-value]
 
     def read_all_user_invitations(
         self, user_or_str: str | model.User
     ) -> list[model.UserInvitation]:
-        user: model.User = self._get_obj(
+        """Retrieve all user invitations via the app."""
+        user: model.User = self.get_obj(
             self.user_class, user_or_str
         )  # type: ignore[assignment]
         invitations: list[model.UserInvitation] = self.handle(
@@ -456,7 +485,8 @@ class TestClient:
     def read_organization_admin_name_emails(
         self, user_or_str: str | model.User
     ) -> list[model.UserNameEmail]:
-        user: model.User = self._get_obj(
+        """Retrieve name-email pairs for organization admins via the app."""
+        user: model.User = self.get_obj(
             self.user_class, user_or_str
         )  # type: ignore[assignment]
         user_name_emails: list[model.UserNameEmail] = self.app.handle(
@@ -465,6 +495,7 @@ class TestClient:
         return user_name_emails
 
     def read_all_users(self) -> list[model.User]:
+        """Retrieve all users via the app as the root user."""
         root_user = self.get_root_user()
         retval: list[model.User] = self.app.handle(
             self.user_crud_command_class(
@@ -474,7 +505,8 @@ class TestClient:
         )
         return retval
 
-    def read_users_by_role(self, role: Enum) -> list[model.User]:
+    def read_users_by_role(self, role: str) -> list[model.User]:
+        """Retrieve all users that have the given role."""
         users = self.read_all_users()
         return [x for x in users if role in x.roles]
 
@@ -487,10 +519,11 @@ class TestClient:
         organization_or_str: str | None = None,
         set_dummy_organization: bool = False,
     ) -> model.User:
-        user: model.User = self._get_obj(
+        """Update a user's attributes and store the result in the local object store."""
+        user: model.User = self.get_obj(
             self.user_class, user_or_str
         )  # type: ignore[assignment]
-        tgt_user: model.User = self._get_obj(
+        tgt_user: model.User = self.get_obj(
             self.user_class, tgt_user_or_str, copy=True
         )  # type: ignore[assignment]
         if not organization_or_str:
@@ -501,7 +534,7 @@ class TestClient:
         else:
             if set_dummy_organization:
                 raise ValueError("Organization given and set_dummy_organization True")
-            organization: model.Organization = self._get_obj(
+            organization: model.Organization = self.get_obj(
                 model.Organization, organization_or_str
             )  # type: ignore[assignment]
             organization_id = organization.id
@@ -527,22 +560,18 @@ class TestClient:
             )
         )
         updated_tgt_user.name = tgt_user.name
-        is_privileged = bool(user.roles & self.role_set_map[enum.RoleSet.ROOT])
 
-        # REVIEW 2953: verify_modified is not used anymore
-        # is_privileged is not used anymore, it was only relevant
-        # for verifying modified_by and modified_at fields
-        # but those are not required to be updated by privileged users anymore
+        assert user.id is not None
         TestClient._verify_updated_obj(
             tgt_user,
             updated_tgt_user,
             user.id,
             verify_modified=has_updates,
-            is_privileged=is_privileged,
         )
-        return self._set_obj(updated_tgt_user, update=True)  # type: ignore[return-value]
+        return self.set_obj(updated_tgt_user, update=True)  # type: ignore[return-value]
 
     def get_root_user(self, user_key: str | None = None) -> model.User:
+        """Retrieve the root user from the app's user manager."""
         if user_key is None:
             user_key = self.cfg["service"]["auth"]["props"]["root"]["user"]["key"]
         user: model.User = self.app.user_manager.retrieve_user_by_key(user_key)  # type: ignore[assignment]
@@ -553,13 +582,11 @@ class TestClient:
         user_or_str: str | model.User,
         include_self: bool = False,
         on_no_admin: str = "raise",
-    ) -> list[model.Organization]:
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
-        org_admin_policies: list[model.OrganizationAdminPolicy] = [  # type: ignore[assignment]
-            x
-            for x in self.db[self.organization_admin_policy_class].values()
-            if x.user_id == user.id
-        ]
+    ) -> list[UUID]:
+        """Return organisation ids for which the user is an organisation admin."""
+        user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        df: dict[UUID, model.OrganizationAdminPolicy] = self.db[self.organization_admin_policy_class]  # type: ignore[assignment]
+        org_admin_policies = [x for x in df.values() if x.user_id == user.id]
         if not org_admin_policies:
             if on_no_admin == "raise":
                 raise ValueError(f"User {user.name} is not an organization admin")
@@ -568,39 +595,37 @@ class TestClient:
         organization_ids = {x.organization_id for x in org_admin_policies}
         if include_self:
             organization_ids.add(user.organization_id)
-        return organization_ids
+        return list(organization_ids)
 
     def get_own_org_admin_users(
         self,
         user_or_str: str | model.User,
         include_self: bool = False,
     ) -> list[model.User]:
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        """Return the active admin users for the given user's own organisation."""
+        user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        df: dict[UUID, model.OrganizationAdminPolicy] = self.db[self.organization_admin_policy_class]  # type: ignore[assignment]
         org_admin_policies: list[model.OrganizationAdminPolicy] = [
             x
-            for x in self.db[self.organization_admin_policy_class].values()
+            for x in df.values()
             if x.organization_id == user.organization_id and x.is_active
         ]
-        user_ids = {x.user_id for x in org_admin_policies}
+        user_ids: set[UUID] = {x.user_id for x in org_admin_policies}
         if include_self:
+            assert user.id is not None
             user_ids.add(user.id)
-        return [
-            x
-            for x in self.db[self.user_class].values()
-            if x.id in user_ids and x.is_active
-        ]
+        df2: dict[UUID, model.User] = self.db[self.user_class]  # type: ignore[assignment]
+        return [x for x in df2.values() if x.id in user_ids and x.is_active]
 
     def get_users_for_org(
         self,
         user_or_str: str | model.User,
         on_no_admin: str = "raise",
     ) -> list[model.User]:
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
-        return [
-            x
-            for x in self.db[self.user_class].values()
-            if x.organization_id == user.organization_id
-        ]
+        """Return all users belonging to the given user's organisation."""
+        user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        df: dict[UUID, model.User] = self.db[self.user_class]  # type: ignore[assignment]
+        return [x for x in df.values() if x.organization_id == user.organization_id]
 
     def get_users_for_org_admin(
         self,
@@ -609,14 +634,12 @@ class TestClient:
         include_other_org_admins: bool = False,
         on_no_admin: str = "raise",
     ) -> list[model.User]:
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
-        org_admin_policies: list[model.OrganizationAdminPolicy] = (
-            [  # type: ignore[assignment]
-                x
-                for x in self.db[self.organization_admin_policy_class].values()
-                if x.user_id == user.id and x.is_active
-            ]
-        )
+        """Return all users managed by the given organisation admin."""
+        user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        df: dict[UUID, model.OrganizationAdminPolicy] = self.db[self.organization_admin_policy_class]  # type: ignore[assignment]
+        org_admin_policies: list[model.OrganizationAdminPolicy] = [
+            x for x in df.values() if x.user_id == user.id and x.is_active
+        ]
         if not org_admin_policies:
             if on_no_admin == "raise":
                 raise ValueError(f"User {user.name} is not an organization admin")
@@ -625,15 +648,14 @@ class TestClient:
         organization_ids = {x.organization_id for x in org_admin_policies}
         user_ids = {user.id} if include_self else set()
         if include_other_org_admins:
-            other_org_admin_policies: list[model.OrganizationAdminPolicy] = (
-                [  # type: ignore[assignment]
-                    x
-                    for x in self.db[self.organization_admin_policy_class].values()
-                    if x.organization_id in organization_ids and x.is_active
-                ]
-            )
+            other_org_admin_policies: list[model.OrganizationAdminPolicy] = [
+                x
+                for x in df.values()
+                if x.organization_id in organization_ids and x.is_active
+            ]
             user_ids.update({x.user_id for x in other_org_admin_policies})
-        tgt_users: list[model.User] = list(self.db[self.user_class].values())
+        df2: dict[UUID, model.User] = self.db[self.user_class]  # type: ignore[assignment]
+        tgt_users = list(df2.values())
         return [
             x
             for x in tgt_users
@@ -653,7 +675,7 @@ class TestClient:
         permissions = self.role_permissions_map[role]
         sub_permissions = self.role_permissions_map[sub_role]
         if allow_equal:
-            return sub_permissions.issubset(permissions[role])
+            return sub_permissions.issubset(permissions)
         return len(permissions) != len(sub_permissions) and sub_permissions.issubset(
             permissions
         )
@@ -664,7 +686,8 @@ class TestClient:
         model_class: type[model.Model],
         cascade: bool = False,
     ) -> list[model.Model]:
-        user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
+        """Read all objects of the given model class via the app."""
+        user: model.User = self.get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
         retval: list[model.Model] = self.handle(
             self.app.domain.get_crud_command_for_model(model_class)(
                 user=user,
@@ -682,7 +705,8 @@ class TestClient:
         obj_ids: list[UUID] | set[UUID],
         cascade: bool = False,
     ) -> list[model.Model]:
-        user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
+        """Read objects of the given model class by their ids via the app."""
+        user: model.User = self.get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
         retval: list[model.Model] = self.handle(
             self.app.domain.get_crud_command_for_model(model_class)(
                 user=user,
@@ -706,6 +730,7 @@ class TestClient:
         value: Any,
         cascade: bool = False,
     ) -> list[model.Model]:
+        """Read all objects matching a given property value via the app."""
         objs = self.read_all(user_or_key, model_class, cascade=cascade)
         return [x for x in objs if getattr(x, name) == value]
 
@@ -717,6 +742,7 @@ class TestClient:
         value: Any,
         cascade: bool = False,
     ) -> model.Model:
+        """Read exactly one object matching a given property value via the app."""
         objs = self.read_some_by_property(
             user_or_key, model_class, name, value, cascade=cascade
         )
@@ -735,8 +761,9 @@ class TestClient:
         set_dummy_link: dict[str, bool] | bool = False,
         exclude_none: bool = True,
     ) -> model.Model:
-        user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
-        obj: model.Model = self._get_obj(
+        """Update an object's properties and store the result in the local object store."""
+        user: model.User = self.get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
+        obj: model.Model = self.get_obj(
             model_class, obj_or_key, copy=True
         )  # type: ignore[assignment]
         self._update_object_properties(
@@ -755,7 +782,7 @@ class TestClient:
         TestClient._verify_updated_obj(
             obj, updated_obj, user.id, is_privileged=is_privileged
         )
-        return self._set_obj(updated_obj, update=True)
+        return self.set_obj(updated_obj, update=True)
 
     def delete_object(
         self,
@@ -766,11 +793,12 @@ class TestClient:
         verify: bool = False,
         delete_user_or_str: str | model.User | None = None,
     ) -> UUID:
-        user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
-        obj: model.Model = self._get_obj(model_class, obj_or_key, copy=True)  # type: ignore[assignment]
+        """Delete an object via the app and remove it from the local object store."""
+        user: model.User = self.get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
+        obj: model.Model = self.get_obj(model_class, obj_or_key, copy=True)  # type: ignore[assignment]
 
         if not obj and retry_obj:
-            obj = self._get_obj(model_class, retry_obj, copy=True)  # type: ignore[assignment]
+            obj = self.get_obj(model_class, retry_obj, copy=True)  # type: ignore[assignment]
 
         deleted_obj_id: UUID = self.handle(
             self.app.domain.get_crud_command_for_model(model_class)(
@@ -785,7 +813,7 @@ class TestClient:
             if delete_user_or_str is None:
                 delete_user: model.User = user
             else:
-                delete_user = self._get_obj(
+                delete_user = self.get_obj(
                     self.user_class, delete_user_or_str
                 )  # type: ignore[assignment]
 
@@ -798,7 +826,7 @@ class TestClient:
             )
             if is_existing_obj:
                 raise ValueError(f"Object {deleted_obj_id} not deleted")
-        self._delete_obj(model_class, deleted_obj_id)
+        self.delete_obj(model_class, deleted_obj_id)
         return deleted_obj_id
 
     def verify_read_all(
@@ -807,7 +835,8 @@ class TestClient:
         model_class: type[model.Model],
         expected_ids: set[UUID] | list[model.Model],
     ) -> None:
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        """Assert that reading all objects of the given model class returns the expected ids."""
+        user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         objs = self.handle(
             self.app.domain.get_crud_command_for_model(model_class)(
                 user=user, operation=CrudOperation.READ_ALL
@@ -821,13 +850,13 @@ class TestClient:
             missing_ids = expected_ids - actual_ids
             extra_names = [
                 self._get_key_for_obj(
-                    self._get_obj(model_class, x)  # type: ignore[arg-type]
+                    self.get_obj(model_class, x)  # type: ignore[arg-type]
                 )
                 for x in extra_ids
             ]
             missing_names = [
                 self._get_key_for_obj(
-                    self._get_obj(model_class, x)  # type: ignore[arg-type]
+                    self.get_obj(model_class, x)  # type: ignore[arg-type]
                 )
                 for x in missing_ids
             ]
@@ -836,9 +865,10 @@ class TestClient:
             )
 
     def verify_user_has_role(
-        self, user_or_str: str | model.User, role: Enum, exclusive: bool = True
+        self, user_or_str: str | model.User, role: str, exclusive: bool = True
     ) -> bool:
-        user: model.User = self._get_obj(
+        """Check whether the user has the given role (exclusively, by default)."""
+        user: model.User = self.get_obj(
             self.user_class, user_or_str
         )  # type: ignore[assignment]
         roles = user.roles
@@ -847,10 +877,12 @@ class TestClient:
         return role in roles
 
     def generate_id(self) -> UUID:
+        """Generate a new unique id via the app's id factory."""
         # Type cast needed because app.generate_id() returns Hashable
         return cast(UUID, self.app.generate_id())
 
     def print_organizations(self) -> None:
+        """Print all organisations to stdout."""
         organizations: list[model.Organization] = self.read_all(
             self.get_root_user(), model.Organization, cascade=True
         )  # type: ignore[assignment]
@@ -859,6 +891,7 @@ class TestClient:
             print(f"{x.name} ({x.id})")
 
     def print_data_collections(self) -> None:
+        """Print all data collections to stdout."""
         data_collections: list[model.DataCollection] = self.read_all(
             self.get_root_user(), model.DataCollection, cascade=True
         )  # type: ignore[assignment]
@@ -867,6 +900,7 @@ class TestClient:
             print(f"{x.name} ({x.id})")
 
     def print_users(self) -> None:
+        """Print all users with their organisations and roles to stdout."""
         root_user: model.User = self.get_root_user()
         users: list[model.User] = self.read_all(
             root_user, self.user_class
@@ -888,7 +922,8 @@ class TestClient:
             )
 
     def print_user_permissions(self, user_or_str: str | model.User) -> None:
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        """Print all permissions for the given user to stdout."""
+        user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         user_permissions = self.app.user_manager.retrieve_user_permissions(user)
         command_permissions = map_paired_elements(
             ((x.command_name, x.permission_type) for x in user_permissions), as_set=True
@@ -896,10 +931,11 @@ class TestClient:
         print(
             f"\nPermissions for user {user.name} (n_commands={len(command_permissions)}):"
         )
-        for x in sorted(list(user_permissions), key=lambda x: x.sort_key):  # type: ignore[arg-type,return-value]
+        for x in sorted(list(user_permissions), key=lambda x: x.sort_key):
             print(f"{x}")
 
     def print_org_admin_policies(self) -> None:
+        """Print all organisation admin policies to stdout."""
         org_admin_policies: list[model.OrganizationAdminPolicy] = self.read_all(  # type: ignore[assignment]
             "root1_1", self.organization_admin_policy_class, cascade=True
         )
@@ -913,6 +949,7 @@ class TestClient:
             )
 
     def print_identifier_issuers(self) -> None:
+        """Print all identifier issuers to stdout."""
         identifier_issuers: list[model.IdentifierIssuer] = self.read_all(  # type: ignore[assignment]
             "root1_1", model.IdentifierIssuer
         )
@@ -921,6 +958,7 @@ class TestClient:
             print(f"{x.code}: name={x.name} ({x.id})")
 
     def print_organization_identifier_issuer_links(self) -> None:
+        """Print all organisation-identifier issuer links to stdout."""
         organization_identifier_issuer_links: list[
             model.OrganizationIdentifierIssuerLink
         ] = self.read_all(  # type: ignore[assignment]
@@ -948,13 +986,14 @@ class TestClient:
             key=lambda x: (
                 organizations[x.organization_id].name,
                 identifier_issuers[x.identifier_issuer_id].code,
-            ),  # type: ignore[union-attr]
+            ),
         ):
             print(
-                f"{organizations[x.organization_id].name} -> {identifier_issuers[x.identifier_issuer_id].code} ({x.id})"  # type: ignore[union-attr]
+                f"{organizations[x.organization_id].name} -> {identifier_issuers[x.identifier_issuer_id].code} ({x.id})"
             )
 
     def _get_key_for_obj(self, obj: model.Model) -> Any:
+        """Return the lookup key for an object based on MODEL_KEY_MAP."""
         key_fields = self.MODEL_KEY_MAP[obj.__class__]
         if isinstance(key_fields, str):
             return getattr(obj, key_fields)
@@ -1002,12 +1041,15 @@ class TestClient:
     def _generate_link_map(
         self, model_class: type[model.Model]
     ) -> dict[str, tuple[str, type[model.Model]]]:
+        """Build a mapping from relationship field names to (link field, model class) tuples."""
+        entity = model_class.ENTITY
+        assert entity is not None
         link_map: dict[str, tuple[str, type[model.Model]]] = {
             x.relationship_field_name: (
                 x.link_field_name,
                 x.link_model_class,
             )  # type: ignore[misc]
-            for x in model_class.ENTITY.links.values()  # type: ignore[union-attr]
+            for x in entity.links.values()
             if x.relationship_field_name
         }
 
@@ -1016,6 +1058,7 @@ class TestClient:
     def _get_dummy_link_defaults(
         self, set_dummy_link: dict[str, bool] | bool
     ) -> tuple[dict[str, bool], bool]:
+        """Normalise the set_dummy_link parameter into a per-field dict and a default flag."""
         default_set_dummy_link = False
         if isinstance(set_dummy_link, bool):
             default_set_dummy_link = set_dummy_link
@@ -1033,6 +1076,7 @@ class TestClient:
         field_name: str,
         value: Any,
     ) -> tuple[str, UUID | None]:
+        """Resolve a relationship field value to its link field name and target id."""
         field_name, link_model_class = link_map[field_name]
         if not value:
             if set_dummy_link.get(field_name, default_set_dummy_link):
@@ -1044,7 +1088,7 @@ class TestClient:
                 raise ValueError(
                     f"{model_class.__name__} given and set dummy link True"
                 )
-            value = getattr(self._get_obj(link_model_class, value), id_field_name)
+            value = getattr(self.get_obj(link_model_class, value), id_field_name)
 
         return field_name, value
 
@@ -1061,6 +1105,7 @@ class TestClient:
         ),
         on_missing: str,
     ) -> tuple[UUID, UUID] | UUID | None:
+        """Derive the local object store lookup key for the given object reference."""
         key_fields = self.MODEL_KEY_MAP[model_class]
         assert model_class.ENTITY
         get_obj_id = model_class.ENTITY.get_obj_id
@@ -1072,9 +1117,9 @@ class TestClient:
             key = [
                 x for x, y in table.items() if get_obj_id(y) == obj
             ]  # type: ignore[assignment]
-            if key:
-                pass
-            elif on_missing == "raise":
+            if len(key) > 0:
+                key = key[0]  # type: ignore[assignment]
+            elif on_missing == "raise":  # type: ignore[unreachable]
                 raise ValueError(f"{model_class.__name__} {obj} not found")
             elif on_missing == "return_none":
                 return None
@@ -1089,73 +1134,9 @@ class TestClient:
         key = key if len(key) > 1 else key[0]  # type: ignore[assignment]
         return key  # type: ignore[return-value]
 
-    def _get_obj(
-        self,
-        model_class: type[model.Model],
-        obj: (
-            str
-            | UUID
-            | model.Model
-            | list[str | UUID | model.Model]
-            | tuple[UUID, UUID]
-        ),
-        copy: bool = False,
-        on_missing: str = "raise",
-    ) -> model.Model | list[model.Model] | None:
-        if model_class not in self.db:
-            self.db[model_class] = {}
-        if isinstance(obj, list):
-            return [self._get_obj(model_class, x) for x in obj]  # type: ignore[misc]
-        table = self.db[model_class]
-        key = self._get_obj_key(table, model_class, obj, on_missing)
-        if key not in table:
-            if on_missing == "raise":
-                raise ValueError(f"{model_class.__name__} {obj} not found")
-            elif on_missing == "return_none":
-                return None
-            else:
-                raise NotImplementedError()
-        return table[key] if not copy else table[key].model_copy()
-
-    def _set_obj(self, obj: model.Model, update: bool = False) -> model.Model:
-        model_class = type(obj)
-        if model_class not in self.db:
-            self.db[model_class] = {}
-        table = self.db[model_class]
-        key_fields = self.MODEL_KEY_MAP[model_class]
-        if not isinstance(key_fields, tuple):
-            key_fields = (key_fields,) if len(key_fields) > 1 else key_fields
-        model_name = model_class.__name__
-        key = tuple(getattr(obj, x) for x in key_fields)
-        key = (
-            key if len(key) > 1 else key[0]  # pyright: ignore[reportGeneralTypeIssues]
-        )
-        if key in table:
-            if update:
-                table[key] = obj
-            else:
-                raise ValueError(f"{model_name} {obj} already exists")
-        else:
-            table[key] = obj
-        return obj
-
-    def _delete_obj(self, model_class: type[model.Model], obj_id: UUID) -> model.Model:
-        if model_class not in self.db:
-            self.db[model_class] = {}
-        table = self.db[model_class]
-        key = [x for x, y in table.items() if y.id == obj_id]
-        if key:
-            key = key[0]  # type: ignore[assignment]
-        else:
-            raise ValueError(f"{model_class} {obj_id} not found")
-        if key not in table:  # type: ignore[comparison-overlap]
-            raise ValueError(f"{model_class} {obj_id} not found")
-        obj = table[key]  # type: ignore[index]
-        del table[key]  # type: ignore[arg-type]
-        return obj
-
     @staticmethod
     def _set_log_level(app_cfg: BaseAppCfg, log_level: int) -> None:
+        """Set the log level for the application logger."""
         set_log_level(app_cfg.app_name.lower(), log_level)
 
     @staticmethod
@@ -1163,25 +1144,22 @@ class TestClient:
         in_obj: model.Model,
         out_obj: model.Model,
         user_id: UUID,
-        verify_modified: bool = True,
-        is_privileged: bool = False,
         **kwargs: Any,
     ) -> None:
-
-        # The order of roles is sometimes changed but that would be OK
-        if isinstance(in_obj, model.User):
-            in_obj.roles = set(sorted(list(in_obj.roles)))
-            out_obj.roles = set(sorted(list(out_obj.roles)))
-
-        # we exclude the metadata fields
-        # theser are now handled by the CommondbSAMapper(SAMapper) or the
-        # CommondbDictModelModifier
+        """Assert that an updated object matches the input, excluding metadata fields."""
+        # The metadata fields are excluded from the comparison because they are
+        # automatically updated by the system and may not be the same in in_obj and
+        # out_obj. They are also not relevant for verifying that the content of the
+        # object was updated correctly.
         out_obj_dict = out_obj.model_dump(
-            exclude={"created_at", "modified_at", "modified_by"}
+            exclude=set(model.ModelNoId.CREATE_METADATA_FIELDS)
         )
         in_obj_dict = in_obj.model_dump(
-            exclude={"created_at", "modified_at", "modified_by"}
+            exclude=set(model.ModelNoId.CREATE_METADATA_FIELDS)
         )
+        if isinstance(in_obj, model.User):
+            in_obj_dict["roles"] = sorted(in_obj.roles)
+            out_obj_dict["roles"] = sorted(out_obj.roles)
 
         if out_obj_dict != in_obj_dict:
             print(f"Input object: {in_obj_dict}")

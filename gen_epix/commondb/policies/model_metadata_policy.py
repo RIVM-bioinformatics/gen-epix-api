@@ -16,35 +16,60 @@ set/override these fields and when to leave them alone.
 
 """
 
-from typing import Any, cast
+from typing import Any
 
-from gen_epix.commondb.domain.model.base import ModelNoId
+from gen_epix.commondb.domain import enum, model
 from gen_epix.fastapp.model import Command, Policy
 
 
-class MaskModelProcessMetadataPolicy(Policy):
+class ModelMetadataPolicy(Policy):
     """
     AFTER policy that nulls out created_at, modified_at, and modified_by on
-    returned objects, unless the user holds a privileged role.
+    returned objects.
     """
 
-    def __init__(self, privileged_roles: frozenset[str]) -> None:
-        self._privileged_roles = privileged_roles
+    def __init__(
+        self, role_set_map: dict[enum.RoleSet | enum.Enum, frozenset[str]]
+    ) -> None:
+        self._privileged_roles = role_set_map[enum.RoleSet.GE_APP_ADMIN]
 
     def filter(self, cmd: Command, retval: Any) -> Any:
-        user_roles: frozenset[str] = getattr(cmd.user, "roles", frozenset())
-        if not cmd.user or user_roles & self._privileged_roles:
+        """
+        If the user does not have a privileged role, null out created_at, modified_at,
+        and modified_by on returned models.
+        """
+        if not retval:
+            # Any falsy return value (e.g. None, empty list) does not need to be processed
             return retval
-        objs = (
-            retval
-            if isinstance(retval, list)
-            else ([retval] if retval is not None else [])
-        )
-        for obj in objs:
-            if not hasattr(obj, "created_at"):
-                continue
-            model_obj = cast(ModelNoId, obj)
-            model_obj.created_at = None
-            model_obj.modified_at = None
-            model_obj.modified_by = None
+
+        user: model.User | None = cmd.user  # type: ignore[assignment]
+        if user is None:
+            # No user interpreted as policy not applicable
+            return retval
+        user_roles = user.roles
+        if user_roles & self._privileged_roles:
+            # User has privileged role, so return unmodified retval
+            return retval
+
+        # Recursively find all models in the return value
+        # TODO: if performance becomes an issue, CrudCommands could be handled separately with a more efficient implementation that only looks for models in the expected return type, rather than recursively traversing the entire return value.
+        ModelMetadataPolicy.mask_models(retval)
+
         return retval
+
+    @staticmethod
+    def mask_models(obj: Any) -> None:
+        if isinstance(obj, model.ModelNoId):
+            # Mask metadata fields
+            obj.created_at = None
+            obj.modified_at = None
+            obj.modified_by = None
+            # Process any nested models in the fields of this model
+            for field_value in obj.__dict__.values():
+                ModelMetadataPolicy.mask_models(field_value)
+        elif isinstance(obj, list):
+            for item in obj:
+                ModelMetadataPolicy.mask_models(item)
+        elif isinstance(obj, dict):
+            for item in obj.values():
+                ModelMetadataPolicy.mask_models(item)

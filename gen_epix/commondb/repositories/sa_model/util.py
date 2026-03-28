@@ -16,6 +16,10 @@ def create_table_args(
     field_name_map: dict[str, str] | None = None,
     **kwargs: Any,
 ) -> tuple:
+    """
+    Create SQLAlchemy table args for a given model class, including unique constraints
+    based on the entity's keys, and optionally applying a field name mapping.
+    """
     assert model_class.ENTITY is not None
     entity: Entity = model_class.ENTITY
     uq_constraints = []
@@ -33,34 +37,6 @@ def create_table_args(
                 **kwargs,
             )
         )
-    # TODO: should be resolved, remove
-    # # When the entity has a non-default id_field_name (e.g. "location_id" instead of
-    # # "id"), SA models that use NoIdRowMetadataMixin end up with a composite primary key:
-    # # the surrogate "id" column from the mixin plus the domain id column (also marked
-    # # primary_key=True by create_mapped_column). SQLite requires that a FK parent column
-    # # is either the sole primary key or covered by a standalone UNIQUE constraint — a
-    # # column in a composite PK does not qualify. Adding a UniqueConstraint on the
-    # # id_field_name satisfies this requirement without affecting SQL Server.
-    # if entity.id_field_name and entity.id_field_name != Entity.DEFAULT_ID_FIELD_NAME:
-    #     id_sa_field_name = (
-    #         field_name_map.get(entity.id_field_name, entity.id_field_name)
-    #         if field_name_map
-    #         else entity.id_field_name
-    #     )
-    #     covered = any(
-    #         id_sa_field_name
-    #         in (
-    #             [field_name_map.get(x, x) for x in fns] if field_name_map else list(fns)
-    #         )
-    #         for fns in entity.get_keys_field_names()
-    #     )
-    #     if not covered:
-    #         uq_constraints.append(
-    #             sa.UniqueConstraint(
-    #                 id_sa_field_name,
-    #                 name=f"uq_{entity.table_name}_{id_sa_field_name}",
-    #             )
-    #         )
     if entity.schema_name:
         return entity.table_name, tuple(
             [*uq_constraints, {"schema": entity.schema_name}]
@@ -75,6 +51,22 @@ def create_mapped_column(
     field_name_map: dict[type[Model], dict[str, str]] | None = None,
     **kwargs: Any,
 ) -> MappedColumn[Any]:
+    """
+    Create a SQLAlchemy mapped column for a given field in a model class. If the field
+    is a link to another entity, also create the appropriate foreign key constraint, but
+    only if the linked entity is in the same service (to avoid cross-service foreign
+    keys).
+
+    Args:
+        domain: The domain object containing the model.
+        model_class: The model class containing the field.
+        field_name: The name of the field in the model class.
+        field_name_map: Optional mapping of model class to field name mappings.
+        **kwargs: Additional keyword arguments to pass to the mapped_column function.
+
+    Returns:
+        A SQLAlchemy MappedColumn object.
+    """
     assert model_class.ENTITY is not None
     entity: Entity = model_class.ENTITY
     computed_or_field_info: FieldInfo | ComputedFieldInfo
@@ -149,11 +141,16 @@ def set_entity_repository_model_classes(
     row_metadata_mixin_class: type,
     field_name_map: dict[type, dict[str, str]] | None = None,
 ) -> None:
+    """
+    Set the db_model_class for each entity in the domain based on the provided SA
+    models, and verify that the SA models have the same fields as the corresponding
+    model classes.
+    """
     if field_name_map is None:
         field_name_map = {}
-    sa_metadata_field_names = set(row_metadata_mixin_class.__annotations__.keys()) - {
-        "id"
-    }
+    sa_metadata_field_names = (
+        set()
+    )  # Currently no SA-specific metadata fields, but this would be the place to add any if needed in the future, based on row_metadata_mixin_class
     sa_model_map = _build_sa_model_map(sa_models_by_service_type)
     for entity in domain.get_dag_sorted_entities():
         if not entity.persistable:
@@ -178,18 +175,16 @@ def _validate_entity_fields(
     model_class: type,
     sa_model_class: type,
 ) -> None:
+    """
+    Verify that the SA model has exactly the same fields as the model (taking into
+    account any field name mapping and ignoring any SA metadata fields).
+    """
     field_names = set(entity.get_field_names())
     relationship_field_names = set(entity.get_relationship_field_names())
     curr_field_name_map = field_name_map.get(model_class)
     if curr_field_name_map:
         field_names = {curr_field_name_map.get(x, x) for x in field_names}
 
-    # Note RG: Original design assumption: metadata fields are framework-level
-    # (from RowMetadataMixin), not per-entity schema contract.
-    # Why this matters now:
-    # After your rename, metadata names match domain names (created_at, modified_at, modified_by), but this function still ignores them,
-    # so missing/misaligned metadata columns would not be caught here.
-    # If you want stricter behavior, we can add a dedicated check that sa_metadata_field_names exist on each SA model (and optionally on the domain model) instead of excluding them silently.
     field_names = field_names - sa_metadata_field_names
     sa_field_names: set[str] = (
         set(sa_model_class.__table__.columns.keys())  # type: ignore[attr-defined]
@@ -214,6 +209,10 @@ def _validate_entity_fields(
 def _build_sa_model_map(
     sa_models_by_service_type: dict[Enum, dict[type[BaseModel], type]],
 ) -> dict[type[BaseModel], type]:
+    """
+    Build a mapping from model class to SA model class, and verify that there are no
+    duplicate model classes across service types.
+    """
     sa_model_map: dict[type[BaseModel], type] = {}
     for curr_sa_model_map in sa_models_by_service_type.values():
         for model_class, sa_model_class in curr_sa_model_map.items():
@@ -229,6 +228,16 @@ def get_mixin_mapped_column(
     sa_column_type: type[sa.types.TypeEngine],
     **kwargs: Any,
 ) -> Mapped:
+    """
+    Helper function to create a mapped column for a field in a model mixin class, by
+    extracting the necessary information from the field's FieldInfo and annotation, and
+    applying any additional kwargs (e.g. for SA column arguments or overrides).
+     - model_mixin_class: the model mixin class containing the field
+     - field_name: the name of the field in the model mixin class
+     - sa_column_type: the SQLAlchemy column type to use for this field
+     - kwargs: additional keyword arguments, which can include:
+         - nullable: whether the column should be nullable (default is based on whether the field is required)
+    """
 
     field_info: FieldInfo = getattr(model_mixin_class, field_name)
     annotation = model_mixin_class.__annotations__[field_name]

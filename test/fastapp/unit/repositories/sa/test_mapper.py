@@ -73,10 +73,7 @@ def _make_mapper(
     *,
     row_columns: Iterable[str],
     field_name_map: dict[str, str] | None = None,
-    service_metadata: tuple[str, ...] | None = None,
-    db_metadata: tuple[str, ...] | None = None,
     schema: str | None = None,
-    generate_service: Callable[[Model, Hashable], dict[str, Any]] | None = None,
 ) -> tuple[SAMapper, type[_RowBase]]:
     entity = _make_entity()
     model_class = type("MyModel", (_Model,), {"ENTITY": entity})
@@ -85,9 +82,6 @@ def _make_mapper(
         model_class=model_class,
         row_class=row_class,
         field_name_map=field_name_map,
-        service_metadata_field_names=service_metadata,
-        db_metadata_field_names=db_metadata,
-        generate_service_metadata=generate_service,
     )
     return mapper, row_class
 
@@ -256,15 +250,7 @@ class TestSAMapper(BaseMapperTestCase):
         # 2. Mocks (none)
 
         # 3. Execute
-        mapper, row_class = _make_mapper(
-            row_columns=columns,
-            service_metadata=tuple(),  # explicitly service meta empty
-            db_metadata=(
-                "svc_a",
-                "db_a",
-            ),  # db_metadata must cover the extras; svc_a goes to db here
-            generate_service=gen_meta,
-        )
+        mapper, row_class = _make_mapper(row_columns=columns)
 
         model_obj: _Model = self.model_class(id=1, link=2, value="v", relation=["x"])
         row_obj = mapper.dump(user_id=uuid4(), obj=model_obj, extra=3)
@@ -306,8 +292,6 @@ class TestSAMapper(BaseMapperTestCase):
             "id_col",
             "link_col",
             "value_col",
-            "svc1",
-            "db1",
         ]
 
         # 2. Mocks (none)
@@ -316,8 +300,6 @@ class TestSAMapper(BaseMapperTestCase):
         mapper, row_class = _make_mapper(
             row_columns=columns,
             field_name_map=field_map,
-            service_metadata=("svc1",),
-            db_metadata=("db1",),
         )
 
         model_obj: _Model = self.model_class(
@@ -347,79 +329,6 @@ class TestSAMapper(BaseMapperTestCase):
             and loaded_obj.id == 10
             and loaded_obj.link is None
         )
-
-    def test_row_metadata_defaults_and_sets(self) -> None:
-        # 1. Input
-        columns: list[str] = ["id", "link", "value", "svc_meta", "db_meta"]
-
-        # 2. Mocks (none)
-
-        # 3. Execute
-        mapper, _ = _make_mapper(row_columns=columns)
-
-        # 4. Verify
-        assert mapper.get_row_field_names_by_type(FieldType.SERVICE_METADATA) == tuple()
-        assert set(mapper.get_row_field_names_by_type(FieldType.DB_METADATA)) == {
-            "svc_meta",
-            "db_meta",
-        }
-        db_model_fields = mapper.get_row_field_names_by_set(FieldTypeSet.DB_MODEL)
-        assert db_model_fields[:3] == ("id", "link", "value")
-
-    def test_row_metadata_both_provided_success(self) -> None:
-        # 1. Input
-        columns: list[str] = ["id", "link", "value", "only_service", "only_db"]
-
-        # 2. Mocks (none)
-
-        # 3. Execute
-        mapper, _ = _make_mapper(
-            row_columns=columns,
-            service_metadata=("only_service",),
-            db_metadata=("only_db",),
-        )
-
-        # 4. Verify
-        assert mapper.get_row_field_names_by_type(FieldType.SERVICE_METADATA) == (
-            "only_service",
-        )
-        assert mapper.get_row_field_names_by_type(FieldType.DB_METADATA) == ("only_db",)
-
-    def test_row_metadata_invalid_name_raises(self) -> None:
-        # 1. Input
-        columns: list[str] = ["id", "link", "value", "svc1", "db1"]
-
-        # 2. Mocks (none)
-
-        # 3. Execute / 4. Verify
-        with pytest.raises(RepositoryServiceError):
-            _make_mapper(
-                row_columns=columns, service_metadata=("missing",), db_metadata=None
-            )
-
-    def test_row_metadata_overlap_raises(self) -> None:
-        # 1. Input
-        columns: list[str] = ["id", "link", "value", "m", "n"]
-
-        # 2. Mocks (none)
-
-        # 3. Execute / 4. Verify
-        with pytest.raises(RepositoryServiceError):
-            _make_mapper(
-                row_columns=columns, service_metadata=("m",), db_metadata=("m", "n")
-            )
-
-    def test_row_metadata_partial_coverage_raises(self) -> None:
-        # 1. Input
-        columns: list[str] = ["id", "link", "value", "x", "y", "z"]
-
-        # 2. Mocks (none)
-
-        # 3. Execute / 4. Verify
-        with pytest.raises(RepositoryServiceError):
-            _make_mapper(
-                row_columns=columns, service_metadata=("x",), db_metadata=("y",)
-            )
 
     def test_invalid_row_field_names_raise(self) -> None:
         # 1. Input
@@ -462,37 +371,3 @@ class TestSAMapper(BaseMapperTestCase):
         assert model_id == 123
         assert row_id_instance == 123
         assert row_id_class == "CLASS_ID_COL"
-
-    def test_dump_merges_service_metadata_and_kwargs(self) -> None:
-        # 1. Input
-        field_map: dict[str, str] = {
-            "id": "id_col",
-            "link": "link_col",
-            "value": "value_col",
-        }
-        columns: list[str] = ["id_col", "link_col", "value_col", "svc1", "db1"]
-        gen_meta: Callable[[Model, Hashable], dict[str, Any]] = lambda obj, uid: {
-            "svc1": "svc",
-            "override": "svc",
-        }
-
-        # 2. Mocks (none)
-
-        # 3. Execute
-        mapper, row_class = _make_mapper(
-            row_columns=columns,
-            field_name_map=field_map,
-            service_metadata=("svc1",),
-            db_metadata=("db1",),
-            generate_service=gen_meta,
-        )
-
-        model_obj: _Model = self.model_class(id=1, link=2, value="v")
-        row_obj = mapper.dump(user_id=uuid4(), obj=model_obj, override="kwarg")
-
-        # 4. Verify
-        assert (
-            getattr(row_obj, "override") == "kwarg"
-        )  # kwargs override service metadata
-        assert getattr(row_obj, "svc1") == "svc"
-        assert getattr(row_obj, "db1", None) is None

@@ -40,8 +40,8 @@ CASEDB_APP_CFGS = get_app_cfgs(
 @pytest.fixture(scope="module", name="env")
 def get_test_client() -> Env:
     """
-    Get a test client for CaseDB integration tests.
-    This fixture initializes a test client with the appropriate configuration for CaseDB integration tests.
+    Get a test client for casedb integration tests.
+    This fixture initializes a test client with the appropriate configuration for casedb integration tests.
     It uses the DEV_REPOSITORY_CONFIG specified in the base_empty.py file,
     which is set to use an empty dictionary repository for testing edge cases with no data.
     """
@@ -80,7 +80,7 @@ class TestCasedbEdgeCasesAccess:
 
     def get_user(self, user_name: str) -> model.User:
         """Helper method to retrieve a user by name from the test client environment."""
-        return self.env._get_obj(model.User, user_name)  # type: ignore[return-value]
+        return self.env.get_obj(model.User, user_name)  # type: ignore[return-value]
 
     # -------------------------------------------------------------------------
     # Read access edge cases
@@ -121,7 +121,7 @@ class TestCasedbEdgeCasesAccess:
         case_result = self.env.create_case(
             root_user,
             code="case1_99",  # Do not use a code that is already used by other test cases created in the setup.
-            data_collections="data_collection9",
+            data_collections_or_str="data_collection9",
             # created_at=created_at,
             # modified_at=modified_at,
             # modified_by=modified_by,
@@ -159,7 +159,7 @@ class TestCasedbEdgeCasesAccess:
         case_result = self.env.create_case(
             root_user,
             code="case1_100",  # Do not use a code that is already used by other test cases created in the setup.
-            data_collections=["data_collection9", "data_collection10"],
+            data_collections_or_str=["data_collection9", "data_collection10"],
         )
 
         assert isinstance(case_result, model.Case)
@@ -263,7 +263,7 @@ class TestCasedbEdgeCasesAccess:
             case_obj = case_by_code[case_code]
             actual_col_ids = set(case_obj.content.keys())
             expected_col_ids = {
-                self.env._get_obj(model.Col, col_code).id  # type: ignore[union-attr]
+                self.env.get_obj(model.Col, col_code).id  # type: ignore[union-attr]
                 for col_code in expected_col_codes
             }
             assert actual_col_ids == expected_col_ids, (

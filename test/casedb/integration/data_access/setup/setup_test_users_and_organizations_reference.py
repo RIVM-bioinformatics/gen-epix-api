@@ -27,10 +27,10 @@ def setup_test_users_and_organizations_reference(env: Env) -> None:
         print("\n--- Setting up test users and organizations for edge case tests ---")
 
     root_user = env.get_root_user()
-    env._set_obj(root_user)  # noqa: SLF001
+    env.set_obj(root_user)  # noqa: SLF001
 
     org1 = env.read_one_by_property(root_user, model.Organization, "name", "org1")
-    env._set_obj(org1)  # noqa: SLF001
+    env.set_obj(org1)  # noqa: SLF001
 
     # Create orgs not already bootstrapped (org1 is pre-configured as the root org)
     created_orgs: set[str] = {"org1"}

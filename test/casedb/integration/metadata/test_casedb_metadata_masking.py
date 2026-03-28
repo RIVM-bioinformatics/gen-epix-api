@@ -1,5 +1,5 @@
 """
-Integration tests for metadata field masking in CaseDB.
+Integration tests for metadata field masking in casedb.
 
 Verifies that created_at, modified_at, and modified_by are:
 - visible to root users (superusers bypass MaskModelProcessMetadataPolicy)
@@ -14,7 +14,7 @@ Parametrized for both the SQLite and dictionary backends.
 import copy
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.test_client.enum import TestType
+from test.test_client.enum import EnumTestType
 from test.test_client.pytest_params import BuildDbParams
 
 import pytest
@@ -27,7 +27,7 @@ from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import enum as seqdb_enum
 
-TEST_TYPE = TestType.CASEDB_INTEGRATION_METADATA_MASKING
+TEST_TYPE = EnumTestType.CASEDB_INTEGRATION_METADATA_MASKING
 
 SEQDB_APP_CFGS = get_app_cfgs(
     AppType.SEQDB,
@@ -86,10 +86,10 @@ def setup_users_and_data(env: Env) -> None:
     """
     root_user = env.get_root_user()
     root_user.name = "root1_1"
-    env._set_obj(root_user)  # noqa: SLF001
+    env.set_obj(root_user)  # noqa: SLF001
 
     org1 = env.read_one_by_property(root_user, model.Organization, "name", "org1")
-    env._set_obj(org1)  # noqa: SLF001
+    env.set_obj(org1)  # noqa: SLF001
 
     env.invite_and_register_user("root1_1", "org_admin1_1")
     env.invite_and_register_user("root1_1", "org_user1_1")
@@ -113,7 +113,7 @@ def setup_users_and_data(env: Env) -> None:
 @pytest.mark.integration
 class TestCasedbMetadataMasking:
     """
-    Verifies that MaskModelProcessMetadataPolicy is correctly wired in CaseDB.
+    Verifies that MaskModelProcessMetadataPolicy is correctly wired in casedb.
 
     Root users bypass masking and see populated metadata.
     Org admins and org users are subject to masking and see None for all three fields.
@@ -154,7 +154,7 @@ class TestCasedbMetadataMasking:
 
     def test_read_all_case_types_org_admin_does_not_see_masked_metadata(self) -> None:
         """Org admin must see all three metadata fields masked to None by MaskModelProcessMetadataPolicy."""
-        org_admin: model.User = self.env._get_obj(model.User, "org_admin1_1")  # type: ignore[assignment]
+        org_admin: model.User = self.env.get_obj(model.User, "org_admin1_1")  # type: ignore[assignment]
 
         result = self._read_all_case_types(org_admin)
 
@@ -176,7 +176,7 @@ class TestCasedbMetadataMasking:
 
     def test_read_all_case_types_org_user_does_not_see_masked_metadata(self) -> None:
         """Org user must see all three metadata fields masked to None by MaskModelProcessMetadataPolicy."""
-        org_user: model.User = self.env._get_obj(model.User, "org_user1_1")  # type: ignore[assignment]
+        org_user: model.User = self.env.get_obj(model.User, "org_user1_1")  # type: ignore[assignment]
 
         result = self._read_all_case_types(org_user)
 

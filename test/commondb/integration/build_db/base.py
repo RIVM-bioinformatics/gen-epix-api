@@ -1,9 +1,9 @@
 import datetime
-from test.test_client.enum import TestType
+from test.test_client.enum import EnumTestType
 
 # Variables for debugging purposes
 
-TEST_TYPE = TestType.COMMONDB_INTEGRATION_BUILD_DB
+TEST_TYPE = EnumTestType.COMMONDB_INTEGRATION_BUILD_DB
 
 SKIP_RAISE = False
 SKIP_ENDPOINTS = True

@@ -5,8 +5,7 @@ from gen_epix.casedb.domain.policy import RoleGenerator
 from gen_epix.casedb.policies import COMMON_POLICY_MAP
 from gen_epix.casedb.services import RbacService
 from gen_epix.commondb.config import AppCfg
-from gen_epix.commondb.env import App, AppComposer as CommonAppComposer
-from gen_epix.commondb.util import register_mask_model_metadata_policy
+from gen_epix.commondb.env import AppComposer as CommonAppComposer
 
 
 class AppComposer(CommonAppComposer):
@@ -28,8 +27,3 @@ class AppComposer(CommonAppComposer):
             rbac_service_class=RbacService,
             **kwargs,
         )
-
-    def _register_extra_policies(
-        self, app: App, privileged_roles: frozenset[str]
-    ) -> None:
-        register_mask_model_metadata_policy(app, privileged_roles)

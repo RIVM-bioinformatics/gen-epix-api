@@ -27,8 +27,8 @@ class TestCreate:
         # Create a first root user and organization
         user: model.User = env.retrieve_user_by_key("root1_1@org1.org")  # type: ignore[assignment]
         user.name = "root1_1"
-        env._set_obj(user)
-        env._set_obj(
+        env.set_obj(user)
+        env.set_obj(
             env.read_one_by_property("root1_1", model.Organization, "name", "org1")
         )
 
@@ -275,7 +275,7 @@ class TestCreate:
         # Override modified_by to be a different user to verify that the value set by the test client
         # is not being overridden by the policy,
         # since root user should bypass the policy and keep the values provided in the command.
-        app_admin_user: model.User = env._get_obj(model.User, "app_admin1_2")  # type: ignore[assignment]
+        app_admin_user: model.User = env.get_obj(model.User, "app_admin1_2")  # type: ignore[assignment]
         modified_by = app_admin_user.id
 
         # Create data collection as root and app_admin

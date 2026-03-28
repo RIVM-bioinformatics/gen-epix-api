@@ -3,7 +3,7 @@ This module defines the EDGE_CASES data structure, both used to:
 1) generate test data in setup_case_data_reference and
 2) drive the test scenarios in test_casedb_edge_cases_refdata_access.
 
-EDGE_CASES is a comprehensive set of edge cases for testing ABAC access control on CaseDB reference data (CaseTypes, CaseTypeSets,
+EDGE_CASES is a comprehensive set of edge cases for testing ABAC access control on casedb reference data (CaseTypes, CaseTypeSets,
 and Col sets). Each edge case represents a unique combination of organizational membership and policies at both the org and user level,
 along with the expected access results for that scenario.
 

@@ -1,9 +1,9 @@
-from test.test_client.enum import TestType
+from test.test_client.enum import EnumTestType
 
 # Variables for debugging purposes
 from gen_epix.commondb.domain.enum import DevRepositoryConfig
 
-TEST_TYPE = TestType.CASEDB_INTEGRATION_CASE_ACCESS_EDGE_CASES
+TEST_TYPE = EnumTestType.CASEDB_INTEGRATION_CASE_ACCESS_EDGE_CASES
 
 SKIP_ENDPOINTS = True
 SKIP_RAISE = False

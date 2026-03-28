@@ -1,5 +1,5 @@
 """
-Unit tests for SeqDB sample upload functionality.
+Unit tests for seqdb sample upload functionality.
 
 Tests the seq_service_upload_samples function and its component steps.
 """

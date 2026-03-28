@@ -1,6 +1,6 @@
 """
 Integration tests for metadata field stamping (created_at, modified_at, modified_by)
-in CaseDB on create and update operations.
+in casedb on create and update operations.
 
 Parametrized for both the SQLite and dictionary backends.
 Uses CaseType as the test model (requires Disease + EtiologicalAgent dependencies,
@@ -11,7 +11,7 @@ import copy
 import datetime
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.test_client.enum import TestType
+from test.test_client.enum import EnumTestType
 from test.test_client.pytest_params import BuildDbParams
 
 import pytest
@@ -24,7 +24,7 @@ from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import enum as seqdb_enum
 
-TEST_TYPE = TestType.CASEDB_INTEGRATION_METADATA
+TEST_TYPE = EnumTestType.CASEDB_INTEGRATION_METADATA
 
 SEQDB_APP_CFGS = get_app_cfgs(
     AppType.SEQDB,
@@ -80,10 +80,10 @@ def setup_reference_data(env: Env) -> None:
     """Register root1_1 + org1, invite root1_2, and create minimum CaseType dependencies."""
     root_user = env.get_root_user()
     root_user.name = "root1_1"
-    env._set_obj(root_user)  # noqa: SLF001
+    env.set_obj(root_user)  # noqa: SLF001
 
     org1 = env.read_one_by_property(root_user, model.Organization, "name", "org1")
-    env._set_obj(org1)  # noqa: SLF001
+    env.set_obj(org1)  # noqa: SLF001
 
     env.invite_and_register_user("root1_1", "root1_2")
 
@@ -192,7 +192,7 @@ class TestCasedbModelProcessMetadata:
     def test_update_case_type_updates_modified_by(self) -> None:
         """modified_by must be stamped with the updating user, not the creating user."""
         root_user = self.env.get_root_user()
-        root2: model.User = self.env._get_obj(model.User, "root1_2")  # type: ignore[assignment]
+        root2: model.User = self.env.get_obj(model.User, "root1_2")  # type: ignore[assignment]
         assert root_user.id != root2.id, "test requires two distinct users"
 
         self.env.create_case_type(
@@ -210,7 +210,7 @@ class TestCasedbModelProcessMetadata:
             CaseTypeCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ONE,
-                obj_ids=self.env._get_obj(model.CaseType, "ct_meta_update_3").id,
+                obj_ids=self.env.get_obj(model.CaseType, "ct_meta_update_3").id,
             )
         )
 

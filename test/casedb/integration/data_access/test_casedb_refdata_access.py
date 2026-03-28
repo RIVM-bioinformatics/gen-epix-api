@@ -1,5 +1,5 @@
 """
-This module contains integration tests for CaseDB reference data access edge cases.
+This module contains integration tests for casedb reference data access edge cases.
 
 It uses:
 
@@ -57,8 +57,8 @@ CASEDB_APP_CFGS = get_app_cfgs(
 @pytest.fixture(scope="module", name="env")
 def get_test_client() -> Env:
     """
-    Get a test client for CaseDB integration tests.
-    This fixture initializes a test client with the appropriate configuration for CaseDB integration tests.
+    Get a test client for casedb integration tests.
+    This fixture initializes a test client with the appropriate configuration for casedb integration tests.
     It uses the DEV_REPOSITORY_CONFIG specified in the base_refdata_access.py file,
     which is set to use an empty dictionary repository for testing edge cases with no data.
     """
@@ -81,7 +81,7 @@ def get_test_client() -> Env:
     "TC-RBAC-05-01",
 )
 @pytest.mark.integration
-class TestCaseDBEdgeCasesRefDataAccess:
+class TestcasedbEdgeCasesRefDataAccess:
     """Test ABAC filtering on reference data (CaseType) access across all edge cases.
 
     Each user in EDGE_CASES represents one combination of org membership, org-level policies,
@@ -120,7 +120,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
 
     def get_user(self, user_name: str) -> model.User:
         """Helper method to retrieve a user by name from the test client environment."""
-        return self.env._get_obj(model.User, user_name)  # type: ignore[return-value]
+        return self.env.get_obj(model.User, user_name)  # type: ignore[return-value]
 
     def test_root_user_has_access_to_all_case_types(
         self, setup_case_data_reference: None

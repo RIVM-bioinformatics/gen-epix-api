@@ -13,10 +13,14 @@ import gen_epix.fastapp.exc as exc
 from gen_epix.fastapp import CrudOperation, Link
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.domain.link import Link
-from gen_epix.fastapp.enum import CrudOperation, FieldTypeSet, IsolationLevel
+from gen_epix.fastapp.enum import CrudOperation, IsolationLevel
 from gen_epix.fastapp.model import Model
 from gen_epix.fastapp.repositories.sa.engine_factory import EngineFactory
-from gen_epix.fastapp.repositories.sa.mapper import BaseSAMapper, BaseSAMapperFactory, SAMapper
+from gen_epix.fastapp.repositories.sa.mapper import (
+    BaseSAMapper,
+    BaseSAMapperFactory,
+    SAMapper,
+)
 from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
@@ -303,12 +307,6 @@ class SARepository(BaseRepository):
         self,
         entities: list[Entity] | None = None,
         field_name_map: dict[type[Model], dict[str, str]] | None = None,
-        # TODO: 2953 remove service_metadata_field_names, db_metadata_field_names concept
-        service_metadata_field_names: dict[type[Model], tuple] | None = None,
-        db_metadata_field_names: dict[type[Model], tuple] | None = None,
-        generate_service_metadata: (
-            dict[type[Model], Callable[[Model, Hashable], dict[str, Any]]] | None
-        ) = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -317,10 +315,6 @@ class SARepository(BaseRepository):
         # Parse arguments
         entities = entities or []
         field_name_map = field_name_map or {}
-        # TODO: 2953 remove service_metadata_field_names, db_metadata_field_names concept
-        service_metadata_field_names = service_metadata_field_names or {}
-        db_metadata_field_names = db_metadata_field_names or {}
-        generate_service_metadata = generate_service_metadata or {}
 
         # Create and register mapper for each entity
         for entity in entities:
@@ -337,12 +331,6 @@ class SARepository(BaseRepository):
                 model_class,
                 db_model_class,
                 field_name_map=field_name_map.get(model_class),
-                # TODO: 2953 remove service_metadata_field_names, db_metadata_field_names concept
-                service_metadata_field_names=service_metadata_field_names.get(
-                    model_class
-                ),
-                db_metadata_field_names=db_metadata_field_names.get(model_class),
-                generate_service_metadata=generate_service_metadata.get(model_class),
             )
             # TODO: 2953 skip this, instead add to output dict in the proposed static "create_default_mappers" utility method and pass to constructor as mentioned in the TODO in the __init__ method
             self.register_mapper(mapper)
@@ -1336,6 +1324,10 @@ class SARepository(BaseRepository):
                 connect_args=kwargs,
             ).connect()
             connection.close()
+            return None
+        except BaseException as exception:
+            # Connection failed, skip loading
+            return exception
             return None
         except BaseException as exception:
             # Connection failed, skip loading

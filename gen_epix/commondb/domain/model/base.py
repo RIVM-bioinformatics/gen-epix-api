@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from enum import IntEnum
+from typing import ClassVar
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -10,6 +11,12 @@ from gen_epix.fastapp.enum import LogLevel
 
 
 class ModelNoId(fastapp.Model):
+    CREATE_METADATA_FIELDS: ClassVar[frozenset[str]] = frozenset(
+        {"created_at", "modified_at", "modified_by"}
+    )
+    UPDATE_METADATA_FIELDS: ClassVar[frozenset[str]] = frozenset(
+        {"modified_at", "modified_by"}
+    )
 
     created_at: datetime | None = Field(
         default=None,

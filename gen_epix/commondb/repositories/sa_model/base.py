@@ -1,7 +1,6 @@
 import datetime
 from uuid import UUID
 
-import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, declarative_mixin, mapped_column
 from sqlalchemy_utils.types.uuid import UUIDType
 
@@ -25,9 +24,6 @@ class RowMetadataMixin:
         onupdate=ServerUtcCurrentTime(),
     )
     modified_by: Mapped[UUID] = mapped_column(UUIDType(), nullable=True)
-    # Note: commented out to have consistency between repository implementations
-    # _version: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=1)
-    # __mapper_args__ = {"version_id_col": _version}
 
 
 @declarative_mixin
@@ -36,8 +32,6 @@ class NoIdRowMetadataMixin:
     SQLAlchemy model mixin for adding a number of standard fields, but no standard `id`
     column as primary key.
     """
-
-    # id: Mapped[UUID] = mapped_column(UUIDType(), primary_key=True)
 
     created_at: Mapped[datetime.datetime] = mapped_column(
         UTCDateTime, nullable=False, server_default=ServerUtcCurrentTime()
@@ -49,7 +43,3 @@ class NoIdRowMetadataMixin:
         onupdate=ServerUtcCurrentTime(),
     )
     modified_by: Mapped[UUID] = mapped_column(UUIDType(), nullable=True)
-    # _version: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=1)
-    # __mapper_args__ = {"version_id_col": _version}
-
-

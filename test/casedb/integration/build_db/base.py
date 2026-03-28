@@ -1,8 +1,8 @@
-from test.test_client.enum import TestType
+from test.test_client.enum import EnumTestType
 
 # Variables for debugging purposes
 
-TEST_TYPE = TestType.CASEDB_INTEGRATION_BUILD_DB
+TEST_TYPE = EnumTestType.CASEDB_INTEGRATION_BUILD_DB
 
 SKIP_RAISE = False
 SKIP_CREATE_DATA = False
