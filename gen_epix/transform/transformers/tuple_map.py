@@ -50,7 +50,7 @@ class TupleMapTransformer(Transformer):
         name: str | None = None,
         is_active_map_field: Hashable | None = None,
         on_no_match: OnException = OnException.RAISE,
-        default_values: list | None = None,
+        default_values: tuple[Hashable, ...] | None = None,
         case_sensitive: bool = False,
     ) -> None:
         """
@@ -73,7 +73,8 @@ class TupleMapTransformer(Transformer):
             on_no_match: action when no mapping is found. Defaults to OnException.RAISE.
             default_values: Default values to apply to target fields when no mapping is
             found. Must be provided when on_no_match is OnException.SET_DEFAULT, and
-            must have the same length as row_tgt_fields.
+            must have the same length as row_tgt_fields. If None is provided, the
+            default will be an all-None tuple of the appropriate length.
             case_sensitive: If False, string source field values are lowercased before
             lookup. Defaults to True.
         """
@@ -86,6 +87,8 @@ class TupleMapTransformer(Transformer):
         map_tgt_fields = map_tgt_fields or row_tgt_fields
         self._verify_map_fields(map_src_fields, map_tgt_fields, is_active_map_field)
         self._verify_row_fields(row_src_fields, row_tgt_fields)
+        if default_values is None:
+            default_values = tuple([None] * self._n_tgt_fields)
         self._verify_default_values(on_no_match, default_values)
 
         # Initialise some
@@ -120,18 +123,20 @@ class TupleMapTransformer(Transformer):
                     raise KeyError(
                         f"Transformer {self.name}: Missing field {field} in map row: {row}"
                     )
-            key = self._normalize_key(tuple(row[x] for x in self._map_src_fields))
-            if key in tuple_map:
-                raise KeyError(
-                    f"Transformer {self.name}: Duplicate mapping for map field {key}"
-                )
             if self._is_active_map_field is not None and not row.get(
                 self._is_active_map_field, True
             ):
                 # Skip inactive mapping
                 continue
+            key = self._normalize_key(tuple(row[x] for x in self._map_src_fields))
             value = tuple(row[x] for x in self._map_tgt_fields)
-            tuple_map[key] = value
+            if key in tuple_map:
+                if tuple_map[key] != value:
+                    raise KeyError(
+                        f"Transformer {self.name}: Duplicate mapping for map field {key}"
+                    )
+            else:
+                tuple_map[key] = value
         self._map_df = map_df
         self._tuple_map = tuple_map
 
@@ -178,7 +183,7 @@ class TupleMapTransformer(Transformer):
         Same as the transform method, but specifically for dicts instead of
         ObjectAdapters.
         """
-        # The ObjectAdapter alread wraps dicts transparently, extra computation is minimal
+        # The ObjectAdapter already wraps dicts transparently, extra computation is minimal
         self.transform(ObjectAdapter(row))
         return row
 

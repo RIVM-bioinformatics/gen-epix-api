@@ -1024,6 +1024,19 @@ class Measurement(Model, DataLineageMixin):
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
         return validate_int_for_uuid_field(value)
 
+    @field_validator(
+        "measurement_source_value",
+        "value_source_value",
+        "unit_source_value",
+        mode="before",
+    )
+    @classmethod
+    def _validate_measurement_source_value(cls, value: Any | None) -> str | None:
+        """Truncate too long values with an ellipsis, as the database field is limited to 50 characters."""
+        if isinstance(value, str) and len(value) > 50:
+            value = value[:47] + "..."
+        return value
+
 
 class Observation(Model, DataLineageMixin):
     """The OBSERVATION table captures clinical facts about a Person obtained in the context of examination, questioning or a procedure. Any data that cannot be represented by any other domains, such as social and lifestyle facts, medical history, family history, etc. are recorded here."""
