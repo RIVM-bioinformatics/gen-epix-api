@@ -1,12 +1,17 @@
-from test.test_client.enum import TestType
+from test.test_client.enum import EnumTestType
+
+from gen_epix.commondb.domain import enum
 
 # Variables for debugging purposes
 
-TEST_TYPE = TestType.SEQDB_INTEGRATION_BUILD_DB
+TEST_TYPE = EnumTestType.SEQDB_INTEGRATION_BUILD_DB
 
 SKIP_RAISE = False
 SKIP_CREATE_DATA = False
 VERBOSE = False
+# Note: switch here
+DEV_REPOSITORY_CONFIG = enum.DevRepositoryConfig.DICT_EMPTY
+# DEV_REPOSITORY_CONFIG = enum.DevRepositoryConfig.SA_SQLITE_EMPTY
 
 ALL_USERS = [
     "root1_1",

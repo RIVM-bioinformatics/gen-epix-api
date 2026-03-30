@@ -461,17 +461,6 @@
             "justMyCode": true,
         },
         {
-            "name": "test.casedb.integration.case_access",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_casedb_integration_case_access"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
             "name": "test.casedb.integration.case_upload",
             "type": "debugpy",
             "request": "launch",
@@ -494,23 +483,12 @@
             "justMyCode": true,
         },
         {
-            "name": "test.casedb.integration.refdata_access",
+            "name": "test.casedb.integration.data_access",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_casedb_integration_refdata_access"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.casedb.integration.edge_cases_access",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_casedb_integration_edge_cases_access"
+                "test_casedb_integration_data_access"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -588,6 +566,17 @@
             "program": "run.py",
             "args": [
                 "test_unit_seqdb_remote_app"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.seqdb.unit.domain",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_seqdb_unit_domain"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -708,7 +697,7 @@
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_omopdb_integration_build_db"
+                "test_omopdb_integration"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -808,6 +797,17 @@
             "program": "run.py",
             "args": [
                 "test_commondb_integration_build_db"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.commondb.integration.metadata",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_commondb_integration_metadata"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

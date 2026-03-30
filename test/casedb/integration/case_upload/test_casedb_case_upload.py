@@ -92,8 +92,7 @@ class CaseUploadSetup:
         "command.upload_cases": "UploadCasesCommand",
         "command._case_data": "_CaseData",
         "command._case_content_data": "_CaseContentData",
-        "seqdb.SequencingProtocol": "SequencingProtocol",
-        "seqdb.AssemblyProtocol": "AssemblyProtocol",
+        "seqdb.Protocol": "Protocol",
     }
     FIXTURE_DATA_EXCEL_FILE = Path(__file__).parent / "test_casedb_case_upload.xlsx"
     FIXTURE_DATA_PICKLE_FILE = Path(__file__).parent / "test_casedb_case_upload.pkl"
@@ -138,16 +137,11 @@ class CaseUploadSetup:
                     CrudOperation.READ_ALL,
                 )
             )
-        # Get sequencing and assembly protocols from props
-        sequencing_protocol_df: pd.DataFrame = env.props["seqdb.SequencingProtocol"]
-        assembly_protocol_df: pd.DataFrame = env.props["seqdb.AssemblyProtocol"]
-        sequencing_protocols: list[seqdb_model.SequencingProtocol] = [
-            seqdb_model.SequencingProtocol(**x)
-            for x in sequencing_protocol_df.to_dict(orient="records")
-        ]
-        assembly_protocols: list[seqdb_model.AssemblyProtocol] = [
-            seqdb_model.AssemblyProtocol(**x)
-            for x in assembly_protocol_df.to_dict(orient="records")
+        # Get protocols
+        seqdb_protocol_df: pd.DataFrame = env.props["seqdb.Protocol"]
+        protocols: list[seqdb_model.Protocol] = [
+            seqdb_model.Protocol(**x)
+            for x in seqdb_protocol_df.to_dict(orient="records")
         ]
         # Add to seqdb
         with seqdb_organization_service.repository.uow() as uow:
@@ -163,20 +157,11 @@ class CaseUploadSetup:
                 CrudOperation.CREATE_SOME,
             )
         with seqdb_seq_service.repository.uow() as uow:
-
             seqdb_seq_service.repository.crud(
                 uow,
                 None,
-                seqdb_model.SequencingProtocol,
-                sequencing_protocols,
-                None,
-                CrudOperation.CREATE_SOME,
-            )
-            seqdb_seq_service.repository.crud(
-                uow,
-                None,
-                seqdb_model.AssemblyProtocol,
-                assembly_protocols,
+                seqdb_model.Protocol,
+                protocols,
                 None,
                 CrudOperation.CREATE_SOME,
             )
@@ -418,8 +403,8 @@ class TestCaseUpload(CaseUploadSetup):
         )
         uq_users = {str(x.id): x for x in uq_users_list}
         for user in uq_users.values():
-            env._set_obj(user)
-        env._set_obj(root_user, update=True)
+            env.set_obj(user)
+        env.set_obj(root_user, update=True)
 
         # Get Policies and Col IDs
         organization_access_case_policies: dict[
@@ -682,7 +667,7 @@ class TestCaseUpload(CaseUploadSetup):
                     model.ReadSetForUpload(
                         col_id=col_id,
                         other_sample_identifier=identifier_for_upload,
-                        sequencing_protocol_id=sequencing_protocol_id,
+                        protocol_id=sequencing_protocol_id,
                     )
                 )
             for col_id in found_seq_col_ids:
@@ -690,7 +675,7 @@ class TestCaseUpload(CaseUploadSetup):
                     model.SeqForUpload(
                         col_id=col_id,
                         external_sample_id=identifier_for_upload,
-                        assembly_protocol_id=assembly_protocol_id,
+                        protocol_id=assembly_protocol_id,
                     )
                 )
         # Create case or case for upload
@@ -711,4 +696,6 @@ class TestCaseUpload(CaseUploadSetup):
                 read_sets=read_sets,
                 seqs=seqs,
             )
+        return case
+        return case
         return case

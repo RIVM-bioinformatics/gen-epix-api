@@ -92,7 +92,7 @@ def case_service_retrieve_similar_cases(
         # Get similar profile IDs from seqdb, expected not to include the query profile ids
         similar_profile_ids: list[UUID] = self.app.handle(
             seqdb_command.RetrieveSimilarProfilesCommand(
-                seq_distance_protocol_id=seqdb_seq_distance_protocol_id,
+                protocol_id=seqdb_seq_distance_protocol_id,
                 profile_ids=profile_ids,
                 max_distance=max_distance,
             )

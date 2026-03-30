@@ -225,6 +225,9 @@ erDiagram
 
     %% Entity definitions
     Outage {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string description
         timestamp active_from
@@ -236,6 +239,9 @@ erDiagram
     }
 
     Organization {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string code
         string name
@@ -243,36 +249,54 @@ erDiagram
     }
 
     OrganizationSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string name
         string description
     }
 
     OrganizationSetMember {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID organization_set_id FK
         UUID organization_id FK
     }
 
     DataCollection {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string name
         string description
     }
 
     DataCollectionSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string name
         string description
     }
 
     DataCollectionSetMember {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID data_collection_set_id FK
         UUID data_collection_id FK
     }
 
     IdentifierIssuer {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string code
         string name
@@ -280,18 +304,27 @@ erDiagram
     }
 
     OrganizationIdentifierIssuerLink {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID organization_id FK
         UUID identifier_issuer_id FK
     }
 
     Site {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID organization_id FK
         string name
     }
 
     Contact {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID site_id FK
         string name
@@ -300,6 +333,9 @@ erDiagram
     }
 
     User {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string key
         string email
@@ -311,6 +347,9 @@ erDiagram
     }
 
     UserInvitation {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         string key
         string email
@@ -324,6 +363,9 @@ erDiagram
     }
 
     OrganizationAdminPolicy {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID organization_id FK
         UUID user_id FK
@@ -331,6 +373,9 @@ erDiagram
     }
 
     Vocabulary {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID vocabulary_id PK
         string vocabulary_str_id
         string vocabulary_name
@@ -340,6 +385,9 @@ erDiagram
     }
 
     Domain {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID domain_id PK
         string domain_str_id
         string domain_name
@@ -347,6 +395,9 @@ erDiagram
     }
 
     ConceptClass {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID concept_class_id PK
         string concept_class_str_id
         string concept_class_name
@@ -354,6 +405,9 @@ erDiagram
     }
 
     Concept {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID concept_id PK
         int concept_int_id
         string concept_name
@@ -368,6 +422,9 @@ erDiagram
     }
 
     Relationship {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID relationship_id PK
         string relationship_name
         string is_hierarchical
@@ -377,6 +434,9 @@ erDiagram
     }
 
     ConceptRelationship {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID concept_relationship_id PK
         UUID concept_id_1 FK
         UUID concept_id_2 FK
@@ -387,6 +447,9 @@ erDiagram
     }
 
     ConceptAncestor {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID concept_ancestor_id PK
         UUID ancestor_concept_id FK
         UUID descendant_concept_id FK
@@ -395,6 +458,9 @@ erDiagram
     }
 
     ConceptSynonym {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID concept_synonym_id PK
         UUID concept_id FK
         string concept_synonym_name
@@ -402,6 +468,9 @@ erDiagram
     }
 
     SourceToConceptMap {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID source_to_concept_map_id PK
         string source_code
         UUID source_concept_id FK
@@ -415,6 +484,9 @@ erDiagram
     }
 
     DrugStrength {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID drug_strength_id PK
         UUID drug_concept_id FK
         UUID ingredient_concept_id FK
@@ -431,6 +503,9 @@ erDiagram
     }
 
     Location {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID location_id PK
         string address_1
         string address_2
@@ -446,6 +521,9 @@ erDiagram
     }
 
     CareSite {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID care_site_id PK
         string care_site_name
         UUID place_of_service_concept_id FK
@@ -456,6 +534,9 @@ erDiagram
     }
 
     Provider {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID provider_id PK
         string provider_name
         string npi
@@ -472,6 +553,9 @@ erDiagram
     }
 
     CdmSource {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         string cdm_source_name
         string cdm_source_abbreviation
         string cdm_holder
@@ -487,6 +571,9 @@ erDiagram
     }
 
     Metadata {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID metadata_id PK
         UUID metadata_concept_id FK
         UUID metadata_type_concept_id FK
@@ -501,6 +588,9 @@ erDiagram
     Person {
         UUID provenance_id
         string source_traceback
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID person_id PK
         UUID gender_concept_id FK
         int year_of_birth
@@ -520,9 +610,13 @@ erDiagram
         string ethnicity_source_value
         UUID ethnicity_source_concept_id FK
         UUID person_type_concept_id FK
+        UUID provided_by_organization_id
     }
 
     PersonIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID identifier_issuer_id FK
         string external_id
@@ -532,6 +626,9 @@ erDiagram
     ObservationPeriod {
         UUID provenance_id
         string source_traceback
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID observation_period_id PK
         UUID person_id FK
         date observation_period_start_date
@@ -539,9 +636,13 @@ erDiagram
         UUID period_type_concept_id FK
         string observation_period_start_iso_interval
         string observation_period_end_iso_interval
+        UUID provided_by_organization_id
     }
 
     ObservationPeriodIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID identifier_issuer_id FK
         string external_id
@@ -551,6 +652,9 @@ erDiagram
     VisitOccurrence {
         UUID provenance_id
         string source_traceback
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID visit_occurrence_id PK
         UUID person_id FK
         UUID visit_concept_id FK
@@ -568,9 +672,13 @@ erDiagram
         UUID discharged_to_concept_id FK
         string discharged_to_source_value
         UUID preceding_visit_occurrence_id
+        UUID provided_by_organization_id
     }
 
     VisitOccurrenceIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID identifier_issuer_id FK
         string external_id
@@ -580,6 +688,9 @@ erDiagram
     VisitDetail {
         UUID provenance_id
         string source_traceback
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID visit_detail_id PK
         UUID person_id FK
         UUID visit_detail_concept_id FK
@@ -599,9 +710,13 @@ erDiagram
         UUID preceding_visit_detail_id
         UUID parent_visit_detail_id
         UUID visit_occurrence_id FK
+        UUID provided_by_organization_id
     }
 
     VisitDetailIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID identifier_issuer_id FK
         string external_id
@@ -611,6 +726,9 @@ erDiagram
     ConditionOccurrence {
         UUID provenance_id
         string source_traceback
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID condition_occurrence_id PK
         UUID person_id FK
         UUID condition_concept_id FK
@@ -629,9 +747,13 @@ erDiagram
         string condition_status_source_value
         string condition_start_iso_interval
         string condition_end_iso_interval
+        UUID provided_by_organization_id
     }
 
     ConditionOccurrenceIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID identifier_issuer_id FK
         string external_id
@@ -641,6 +763,9 @@ erDiagram
     ProcedureOccurrence {
         UUID provenance_id
         string source_traceback
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID procedure_occurrence_id PK
         UUID person_id FK
         UUID procedure_concept_id FK
@@ -658,9 +783,13 @@ erDiagram
         UUID procedure_source_concept_id FK
         string modifier_source_value
         string procedure_iso_interval
+        UUID provided_by_organization_id
     }
 
     ProcedureOccurrenceIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID identifier_issuer_id FK
         string external_id
@@ -670,6 +799,9 @@ erDiagram
     DrugExposure {
         UUID provenance_id
         string source_traceback
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID drug_exposure_id PK
         UUID person_id FK
         UUID drug_concept_id FK
@@ -695,9 +827,13 @@ erDiagram
         string dose_unit_source_value
         string drug_exposure_start_iso_interval
         string drug_exposure_end_iso_interval
+        UUID provided_by_organization_id
     }
 
     DrugExposureIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID identifier_issuer_id FK
         string external_id
@@ -707,6 +843,9 @@ erDiagram
     DeviceExposure {
         UUID provenance_id
         string source_traceback
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID device_exposure_id PK
         UUID person_id FK
         UUID device_concept_id FK
@@ -728,9 +867,13 @@ erDiagram
         UUID unit_source_concept_id FK
         string device_exposure_start_iso_interval
         string device_exposure_end_iso_interval
+        UUID provided_by_organization_id
     }
 
     DeviceExposureIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID identifier_issuer_id FK
         string external_id
@@ -740,6 +883,9 @@ erDiagram
     Measurement {
         UUID provenance_id
         string source_traceback
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID measurement_id PK
         UUID person_id FK
         UUID measurement_concept_id FK
@@ -765,9 +911,13 @@ erDiagram
         UUID meas_event_field_concept_id FK
         string measurement_iso_interval
         UUID derived_from_specimen_id
+        UUID provided_by_organization_id
     }
 
     MeasurementIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID identifier_issuer_id FK
         string external_id
@@ -777,6 +927,9 @@ erDiagram
     Observation {
         UUID provenance_id
         string source_traceback
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID observation_id PK
         UUID person_id FK
         UUID observation_concept_id FK
@@ -800,9 +953,13 @@ erDiagram
         UUID obs_event_field_concept_id FK
         string observation_iso_interval
         string value_as_iso_interval
+        UUID provided_by_organization_id
     }
 
     ObservationIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID identifier_issuer_id FK
         string external_id
@@ -812,6 +969,9 @@ erDiagram
     Specimen {
         UUID provenance_id
         string source_traceback
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID specimen_id PK
         UUID person_id FK
         UUID specimen_concept_id FK
@@ -830,9 +990,13 @@ erDiagram
         string specimen_iso_interval
         UUID derived_from_specimen_id
         UUID derived_from_specimen_concept_id FK
+        UUID provided_by_organization_id
     }
 
     SpecimenIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID identifier_issuer_id FK
         string external_id
@@ -842,6 +1006,9 @@ erDiagram
     Note {
         UUID provenance_id
         string source_traceback
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID note_id PK
         UUID person_id FK
         date note_date
@@ -858,9 +1025,13 @@ erDiagram
         string note_source_value
         UUID note_event_id
         UUID note_event_field_concept_id FK
+        UUID provided_by_organization_id
     }
 
     NoteIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID identifier_issuer_id FK
         string external_id
@@ -870,6 +1041,9 @@ erDiagram
     NoteNlp {
         UUID provenance_id
         string source_traceback
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID note_nlp_id PK
         UUID note_id
         UUID section_concept_id FK
@@ -887,6 +1061,9 @@ erDiagram
     }
 
     NoteNlpIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID identifier_issuer_id FK
         string external_id
@@ -894,6 +1071,9 @@ erDiagram
     }
 
     FactRelationship {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID domain_concept_id_1 FK
         int fact_id_1
         UUID domain_concept_id_2 FK
@@ -905,6 +1085,9 @@ erDiagram
     Death {
         UUID provenance_id
         string source_traceback
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID death_id PK
         UUID person_id FK
         date death_date
@@ -913,9 +1096,13 @@ erDiagram
         UUID cause_concept_id FK
         string cause_source_value
         UUID cause_source_concept_id FK
+        UUID provided_by_organization_id
     }
 
     DeathIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID identifier_issuer_id FK
         string external_id
@@ -923,6 +1110,9 @@ erDiagram
     }
 
     MeasurementRelation {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID measurement_relation_id PK
         UUID person_id FK
         UUID from_measurement_id FK
@@ -931,6 +1121,9 @@ erDiagram
     }
 
     MeasurementRelationIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID identifier_issuer_id FK
         string external_id
@@ -940,6 +1133,9 @@ erDiagram
     PayerPlanPeriod {
         UUID provenance_id
         string source_traceback
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID payer_plan_period_id PK
         UUID person_id FK
         date payer_plan_period_start_date
@@ -957,11 +1153,15 @@ erDiagram
         UUID stop_reason_concept_id FK
         string stop_reason_source_value
         UUID stop_reason_source_concept_id FK
+        UUID provided_by_organization_id
     }
 
     Cost {
         UUID provenance_id
         string source_traceback
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID cost_id PK
         UUID cost_event_id
         UUID cost_domain_id FK
@@ -984,11 +1184,15 @@ erDiagram
         string revenue_code_source_value
         UUID drg_concept_id FK
         string drg_source_value
+        UUID provided_by_organization_id
     }
 
     ConditionEra {
         UUID provenance_id
         string source_traceback
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID condition_era_id PK
         UUID person_id FK
         UUID condition_concept_id FK
@@ -1000,6 +1204,9 @@ erDiagram
     DrugEra {
         UUID provenance_id
         string source_traceback
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID drug_era_id PK
         UUID person_id FK
         UUID drug_concept_id FK
@@ -1014,6 +1221,9 @@ erDiagram
     DoseEra {
         UUID provenance_id
         string source_traceback
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID dose_era_id PK
         UUID person_id FK
         UUID drug_concept_id FK
@@ -1024,6 +1234,9 @@ erDiagram
     }
 
     CohortDefinition {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID cohort_definition_id PK
         string cohort_definition_name
         string cohort_definition_description
@@ -1034,6 +1247,9 @@ erDiagram
     }
 
     Cohort {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID cohort_definition_id
         UUID subject_id
         date cohort_start_date
@@ -1044,6 +1260,9 @@ erDiagram
     Episode {
         UUID provenance_id
         string source_traceback
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID episode_id PK
         UUID person_id FK
         UUID episode_concept_id FK
@@ -1062,6 +1281,9 @@ erDiagram
     EpisodeEvent {
         UUID provenance_id
         string source_traceback
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID episode_id FK
         UUID event_id
         UUID episode_event_field_concept_id FK

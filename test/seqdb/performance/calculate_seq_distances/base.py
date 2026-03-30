@@ -1,9 +1,9 @@
-from test.test_client.enum import TestType
+from test.test_client.enum import EnumTestType
 
 # Variables for debugging purposes
 from gen_epix.commondb.domain.enum import DevRepositoryConfig
 
-TEST_TYPE = TestType.SEQDB_INTEGRATION_CALCULATE_SEQ_DISTANCES
+TEST_TYPE = EnumTestType.SEQDB_INTEGRATION_CALCULATE_SEQ_DISTANCES
 
 SKIP_ENDPOINTS = False
 SKIP_RAISE = False

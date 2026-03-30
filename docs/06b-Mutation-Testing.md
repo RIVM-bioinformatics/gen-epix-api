@@ -45,6 +45,22 @@ python -m pip install -r dev-requirements.txt
 
 **WINDOWS USERS → see section 5 (WSL) below.**
 
+### Upstream default vs repository baseline
+
+Official `pytest-gremlins` default usage is:
+
+```console
+python -m pytest --gremlins
+```
+
+In this repository, that default command currently hits unrelated pytest collection errors before mutation execution is useful. For stable local runs, use the repository baseline below with `-c pytest.gremlins.ini`.
+
+If you want to verify current collection health quickly:
+
+```console
+python -m pytest --collect-only -q
+```
+
 ### Full run
 
 ```console

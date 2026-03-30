@@ -20,7 +20,12 @@ from gen_epix.seqdb.domain.model.seq.base import BaseSeq
 
 class Locus(Model):
     """
-    A genetic locus, e.g. a gene or other genomic region of interest.
+    A genetic locus, e.g. a gene or other genomic region of interest. The locus can be
+    defined on any taxonomic level, e.g. species, lineage, etc. As such, depending on
+    the analysis, two loci may actually represent the same genomic region, but defined
+    for lower taxonomic levels than the one used in the analysis. This information,
+    where relevant, can be captured in a LocusSet or can reside entirely outside the
+    application.
 
     A locus is immutable: once created, it cannot be deleted. Its properties
     should not change semantically either. As such, locus IDs can safely be
@@ -121,10 +126,9 @@ class LocusSet(Model):
 
 class LocusCodeMap(Model):
     """
-    A mapping from locus codes to locus IDs for a specific naming scheme.
-    This can be used e.g. to translate locus codes used by a particular
-    application to the IDs used in this application, thereby facilitating
-    interoperability.
+    A mapping from locus codes to locus IDs for a specific naming scheme. This can be
+    used e.g. to translate locus codes used by a particular application to the IDs used
+    in this application, thereby facilitating interoperability.
     """
 
     ENTITY: ClassVar = Entity(
@@ -145,8 +149,8 @@ class LocusCodeMap(Model):
     @classmethod
     def _validate_code_map(cls, value: dict[str, UUID] | str) -> dict[str, UUID]:
         """
-        Validate and convert code_map representation to a dict[str, UUID]. When given as a
-        string, it is assumed to be a JSON object.
+        Validate and convert code_map representation to a dict[str, UUID]. When given as
+        a string, it is assumed to be a JSON object.
         """
         dict_value: dict = value  # type: ignore[assignment]
         if isinstance(value, str):
@@ -196,7 +200,10 @@ class RefAllele(BaseSeq):
 class Allele(BaseSeq):
     """
     An allele for a locus, i.e., a specific DNA sequence variant observed at that locus.
-    Any IUPAC ambiguity codes are allowed in the sequence.
+    Any IUPAC ambiguity codes are allowed in the sequence. The locus only represents the
+    first observed locus that the allele was observed for, but the allele can be
+    observed for multiple loci, e.g. due to gene duplication or because the locus
+    definition is not specific enough to distinguish between multiple similar loci.
 
     An allele is immutable: once created, it cannot be deleted or updated. As such,
     allele IDs can safely be referenced in other models and outside of the application.
@@ -224,6 +231,6 @@ class Allele(BaseSeq):
     NAME: ClassVar = "Allele"
 
     locus_id: UUID = Field(
-        description="The unique identifier for the locus. FOREIGN KEY"
+        description="The unique identifier for the locus that the allele was first observed for. FOREIGN KEY"
     )
     locus: Locus | None = Field(default=None, description="The locus.")

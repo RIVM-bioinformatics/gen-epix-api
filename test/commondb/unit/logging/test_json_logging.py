@@ -8,7 +8,6 @@ import pytest
 
 from gen_epix.commondb.config.json_logging import JsonFormatter, UvicornAccessLogFilter
 
-
 _TRUNCATED_SUFFIX = "\u2026[truncated]"
 
 
@@ -40,6 +39,7 @@ def _format_payload(
     return json.loads(formatter.format(record))
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_green_formats_plain_message_and_expected_extras() -> None:
     formatter = JsonFormatter(service="commondb", environment="test")
     record = _make_record(msg="hello world", extra={"request_id": "req-1"})
@@ -57,6 +57,7 @@ def test_green_formats_plain_message_and_expected_extras() -> None:
     assert payload["ts"].endswith("Z")
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_merges_json_message_dict_by_default() -> None:
     formatter = JsonFormatter()
     record = _make_record(msg='{"event":"login","ok":true}')
@@ -68,6 +69,7 @@ def test_merges_json_message_dict_by_default() -> None:
     assert "message" not in payload
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_keeps_message_when_json_merge_is_disabled() -> None:
     formatter = JsonFormatter(merge_message_json=False)
     record = _make_record(msg='{"event":"login","ok":true}')
@@ -78,6 +80,7 @@ def test_keeps_message_when_json_merge_is_disabled() -> None:
     assert "event" not in payload
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 @pytest.mark.parametrize("msg", ['["event","login"]', '{"event":'])
 def test_non_mergeable_json_like_messages_are_kept_as_plain_text(msg: str) -> None:
     payload = _format_payload(JsonFormatter(), _make_record(msg=msg))
@@ -86,6 +89,7 @@ def test_non_mergeable_json_like_messages_are_kept_as_plain_text(msg: str) -> No
     assert "event" not in payload
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_adds_exception_payload() -> None:
     formatter = JsonFormatter()
 
@@ -104,6 +108,7 @@ def test_adds_exception_payload() -> None:
     assert "ValueError: boom" in payload["exception"]["stacktrace"]
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_uses_env_when_constructor_values_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -119,6 +124,7 @@ def test_uses_env_when_constructor_values_missing(
     assert payload["environment"] == "env-from-env"
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_uses_secondary_env_fallbacks_when_primary_env_vars_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -138,6 +144,7 @@ def test_uses_secondary_env_fallbacks_when_primary_env_vars_missing(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_non_serializable_extra_still_produces_valid_json() -> None:
     formatter = JsonFormatter()
     record = _make_record(msg="hello", extra={"obj": object()})
@@ -151,6 +158,7 @@ def test_non_serializable_extra_still_produces_valid_json() -> None:
     assert isinstance(payload["props"]["obj"], str)
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_custom_extras_key_is_used_for_extra_fields() -> None:
     payload = _format_payload(
         JsonFormatter(extras_key="context"),
@@ -166,6 +174,7 @@ def test_custom_extras_key_is_used_for_extra_fields() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_merged_json_cannot_override_envelope_ts_level_logger() -> None:
     formatter = JsonFormatter()
     record = _make_record(
@@ -182,6 +191,7 @@ def test_merged_json_cannot_override_envelope_ts_level_logger() -> None:
     assert payload["event"] == "ok"
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_merged_json_cannot_override_service_and_environment() -> None:
     formatter = JsonFormatter(service="svc-a", environment="prod")
     record = _make_record(
@@ -195,6 +205,7 @@ def test_merged_json_cannot_override_service_and_environment() -> None:
     assert payload["event"] == "ok"
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_structured_service_payload_is_preserved_under_service_meta() -> None:
     formatter = JsonFormatter(service="svc-a", environment="prod")
     record = _make_record(
@@ -214,6 +225,7 @@ def test_structured_service_payload_is_preserved_under_service_meta() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_sensitive_client_secret_is_redacted_in_plain_message() -> None:
     formatter = JsonFormatter()
     record = _make_record(
@@ -226,6 +238,7 @@ def test_sensitive_client_secret_is_redacted_in_plain_message() -> None:
     assert "client_secret=[REDACTED]" in payload["message"]
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_sensitive_password_is_redacted_in_plain_message() -> None:
     formatter = JsonFormatter()
     record = _make_record(msg="login attempt password=hunter2 user=alice")
@@ -236,6 +249,7 @@ def test_sensitive_password_is_redacted_in_plain_message() -> None:
     assert "password=[REDACTED]" in payload["message"]
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_sensitive_auth_fields_are_redacted_in_plain_message() -> None:
     formatter = JsonFormatter()
     record = _make_record(
@@ -255,6 +269,7 @@ def test_sensitive_auth_fields_are_redacted_in_plain_message() -> None:
     assert "jwt=[REDACTED]" in payload["message"]
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_sensitive_bearer_authorization_is_fully_redacted_in_plain_message() -> None:
     formatter = JsonFormatter()
     record = _make_record(
@@ -271,6 +286,7 @@ def test_sensitive_bearer_authorization_is_fully_redacted_in_plain_message() -> 
     )
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_sensitive_value_is_redacted_in_string_extras() -> None:
     formatter = JsonFormatter()
     record = _make_record(
@@ -285,6 +301,7 @@ def test_sensitive_value_is_redacted_in_string_extras() -> None:
     assert "client_secret=[REDACTED]" in serialized
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_sensitive_keys_are_redacted_in_merged_json_payload() -> None:
     formatter = JsonFormatter()
     record = _make_record(
@@ -298,6 +315,7 @@ def test_sensitive_keys_are_redacted_in_merged_json_payload() -> None:
     assert payload["records"][0]["api_key"] == "[REDACTED]"
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_sensitive_auth_keys_are_redacted_in_merged_json_and_extras() -> None:
     formatter = JsonFormatter()
     record = _make_record(
@@ -326,6 +344,7 @@ def test_sensitive_auth_keys_are_redacted_in_merged_json_and_extras() -> None:
     assert payload["props"]["payload"]["id_token"] == "[REDACTED]"
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_nested_claims_are_redacted_in_merged_json_payload() -> None:
     formatter = JsonFormatter()
     record = _make_record(
@@ -341,6 +360,7 @@ def test_nested_claims_are_redacted_in_merged_json_payload() -> None:
     assert payload["event"] == "ok"
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_sensitive_keys_are_redacted_in_nested_extras() -> None:
     formatter = JsonFormatter()
     record = _make_record(
@@ -360,6 +380,7 @@ def test_sensitive_keys_are_redacted_in_nested_extras() -> None:
     assert payload["props"]["payload"]["items"][1]["password"] == "[REDACTED]"
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_redaction_can_be_configured_with_custom_sensitive_keys() -> None:
     formatter = JsonFormatter(
         sensitive_keys=["token_subject"],
@@ -375,6 +396,7 @@ def test_redaction_can_be_configured_with_custom_sensitive_keys() -> None:
     assert payload["password"] == "hunter2"
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_redaction_can_be_configured_with_custom_redacted_value() -> None:
     formatter = JsonFormatter(redacted_value="[MASKED]")
     record = _make_record(msg="auth api_key=secret-123")
@@ -385,6 +407,7 @@ def test_redaction_can_be_configured_with_custom_redacted_value() -> None:
     assert "api_key=[MASKED]" in payload["message"]
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_non_sensitive_message_is_unchanged() -> None:
     formatter = JsonFormatter()
     record = _make_record(msg="GET /api/cases HTTP/1.1 200 OK")
@@ -399,6 +422,7 @@ def test_non_sensitive_message_is_unchanged() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_stacktrace_truncated_when_max_stacktrace_length_set() -> None:
     formatter = JsonFormatter(max_stacktrace_length=80)
 
@@ -417,6 +441,7 @@ def test_stacktrace_truncated_when_max_stacktrace_length_set() -> None:
     assert stacktrace.endswith(_TRUNCATED_SUFFIX)
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_stacktrace_not_truncated_below_threshold() -> None:
     # With a generous limit the full traceback should be preserved
     formatter = JsonFormatter(max_stacktrace_length=100_000)
@@ -438,6 +463,7 @@ def test_stacktrace_not_truncated_below_threshold() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_content_field_normalised_to_message_when_message_absent() -> None:
     formatter = JsonFormatter()
     record = _make_record(msg='{"content":"HTTP Request: GET /cases","event":"http"}')
@@ -449,6 +475,7 @@ def test_content_field_normalised_to_message_when_message_absent() -> None:
     assert payload["event"] == "http"
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_content_field_not_overriding_explicit_message() -> None:
     # When the merged dict already has 'message', 'content' should not clobber it
     formatter = JsonFormatter()
@@ -466,6 +493,7 @@ def test_content_field_not_overriding_explicit_message() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_starting_app_msg_is_promoted_and_app_id_alias_is_added() -> None:
     formatter = JsonFormatter()
     record = _make_record(
@@ -479,6 +507,7 @@ def test_starting_app_msg_is_promoted_and_app_id_alias_is_added() -> None:
     assert payload["app_id"] == "app-123"
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_started_command_info_has_command_id_alias() -> None:
     formatter = JsonFormatter()
     record = _make_record(
@@ -493,6 +522,7 @@ def test_started_command_info_has_command_id_alias() -> None:
     assert payload["user_id"] == "u-1"
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_started_command_debug_derives_command_id_from_command_object() -> None:
     formatter = JsonFormatter()
     record = _make_record(
@@ -507,6 +537,7 @@ def test_started_command_debug_derives_command_id_from_command_object() -> None:
     assert payload["command_id"] == "cmd-obj-123"
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_nested_command_object_promotes_user_and_organization_aliases() -> None:
     formatter = JsonFormatter()
     record = _make_record(
@@ -521,6 +552,7 @@ def test_nested_command_object_promotes_user_and_organization_aliases() -> None:
     assert payload["organization_id"] == "org-456"
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_null_msg_with_code_gets_non_empty_fallback_message() -> None:
     formatter = JsonFormatter()
     record = _make_record(msg='{"code":"da1d8a32","msg":null}')
@@ -572,6 +604,7 @@ def _make_uvicorn_access_record(
     return record
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_uvicorn_access_filter_parses_args_tuple() -> None:
     filt = UvicornAccessLogFilter()
     formatter = JsonFormatter()
@@ -589,6 +622,7 @@ def test_uvicorn_access_filter_parses_args_tuple() -> None:
     assert http["version"] == "1.1"
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_uvicorn_access_filter_falls_back_to_regex_on_formatted_string() -> None:
     filt = UvicornAccessLogFilter()
     formatter = JsonFormatter()
@@ -606,6 +640,7 @@ def test_uvicorn_access_filter_falls_back_to_regex_on_formatted_string() -> None
     assert http["status"] == 204
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_uvicorn_access_message_is_request_specific_not_constant() -> None:
     filt = UvicornAccessLogFilter()
     formatter = JsonFormatter()
@@ -624,6 +659,7 @@ def test_uvicorn_access_message_is_request_specific_not_constant() -> None:
     assert second_payload["message"] != "http.access"
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_uvicorn_access_filter_passes_through_non_access_records() -> None:
     filt = UvicornAccessLogFilter()
     formatter = JsonFormatter()
@@ -636,6 +672,7 @@ def test_uvicorn_access_filter_passes_through_non_access_records() -> None:
     assert "http" not in payload
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_uvicorn_access_filter_leaves_unparseable_status_records_untouched() -> None:
     filt = UvicornAccessLogFilter()
     formatter = JsonFormatter()
@@ -657,6 +694,7 @@ def test_uvicorn_access_filter_leaves_unparseable_status_records_untouched() -> 
     assert "http" not in payload
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_json_fields_merged_to_top_level_not_into_props() -> None:
     # _json_fields injected by a filter must appear at the top level of the
     # JSON output, not nested under 'props'.
@@ -671,6 +709,7 @@ def test_json_fields_merged_to_top_level_not_into_props() -> None:
     assert "http" not in payload.get("props", {})
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_uvicorn_access_filter_hardens_plain_formatter_to_json_output() -> None:
     logger = logging.getLogger("uvicorn.access")
     original_handlers = list(logger.handlers)
@@ -712,6 +751,7 @@ def test_uvicorn_access_filter_hardens_plain_formatter_to_json_output() -> None:
     assert payload["http"]["path"] == "/v1/runtime-hardening"
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_uvicorn_access_filter_reuses_existing_json_formatter_configuration() -> None:
     # Contract: when uvicorn.access is repaired back to JSON, it must reuse the
     # already-configured shared JsonFormatter behavior rather than install a
@@ -728,7 +768,9 @@ def test_uvicorn_access_filter_reuses_existing_json_formatter_configuration() ->
     original_root_handlers = list(root_logger.handlers)
 
     root_handler = logging.StreamHandler(StringIO())
-    root_handler.setFormatter(JsonFormatter(service="shared-service", environment="prod"))
+    root_handler.setFormatter(
+        JsonFormatter(service="shared-service", environment="prod")
+    )
 
     stream = StringIO()
     access_handler = logging.StreamHandler(stream)

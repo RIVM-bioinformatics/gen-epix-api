@@ -14,11 +14,6 @@ class TimeUnitTransformStrategy(Enum):
     LARGEST_OVERLAP = "LARGEST_OVERLAP"
 
 
-class NoMatchStrategy(Enum):
-    RAISE = "RAISE"
-    SET_NONE = "SET_NONE"
-
-
 class TransformType(Enum):
     BASE = "BASE"
 

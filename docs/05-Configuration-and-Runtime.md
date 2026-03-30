@@ -168,7 +168,7 @@ The most operationally useful logs mark phase transitions or control points:
 python run.py api_platform_local_mock_dict_demo
 ```
 
-Starts OAuth (port 9000), SeqDB (8003), and CaseDB (8000) together. CaseDB calls SeqDB via the OAuth server using client-credentials flow. This command does **not** start CommonDB or OmopDB, and does not have hot-reload (servers run as `ServerManager` subprocesses). (Source: `run.py#L109-L117`)
+Starts OAuth (port 9000), seqdb (8003), and casedb (8000) together. casedb calls seqdb via the OAuth server using client-credentials flow. This command does **not** start commondb or omopdb, and does not have hot-reload (servers run as `ServerManager` subprocesses). (Source: `run.py#L109-L117`)
 
 ### ETL Data Loading
 

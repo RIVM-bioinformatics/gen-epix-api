@@ -11,6 +11,12 @@ from gen_epix.fastapp.model import Model
 
 
 class BaseSAMapper(abc.ABC):
+    """
+    BaseSAMapper is an abstract base class for mappers between SQLAlchemy models
+    (rows) and Pydantic models. It defines the interface and common functionality
+    for mappers, but does not implement the actual mapping logic.
+    """
+
     def __init__(
         self,
         model_class: type[Model],
@@ -87,19 +93,21 @@ class BaseSAMapper(abc.ABC):
     def get_row_field_names_by_set(self, field_type_set: FieldTypeSet) -> tuple:
         raise NotImplementedError()
 
-    @abc.abstractmethod
     def get_id(self, obj: Model) -> Hashable | MappedColumn:
-        raise NotImplementedError()
+        return obj.get_id()
 
     @abc.abstractmethod
     def get_row_id(self, row: Row | type[Row]) -> Hashable:
         raise NotImplementedError()
 
-    def generate_service_metadata(self, obj: Model, user_id: Hashable) -> dict:
-        raise NotImplementedError()
-
     @abc.abstractmethod
     def dump(self, user_id: Hashable | None, obj: Model, **kwargs: Any) -> Any:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def update(
+        self, user_id: Hashable | None, obj: Model, row: Row, **kwargs: Any
+    ) -> bool:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -114,6 +122,37 @@ class BaseSAMapper(abc.ABC):
         return None
 
 
+class BaseSAMapperFactory(abc.ABC):
+    """
+    Abstract factory for creating SAMapper instances.
+
+    Subclass this in each db layer (casedb, seqdb, etc.) to provide mappers with
+    db-specific update logic. The factory is injected into SARepository at construction
+    time so that fastapp has no knowledge of process- or metadata-specific field rules.
+    """
+
+    @abc.abstractmethod
+    def create_mapper(
+        self,
+        model_class: type[Model],
+        row_class: type,
+        field_name_map: dict[str, str] | None = None,
+    ) -> BaseSAMapper:
+        raise NotImplementedError()
+
+
+class SAMapperFactory(BaseSAMapperFactory):
+    """Default factory that creates standard SAMapper instances with no special update logic."""
+
+    def create_mapper(
+        self,
+        model_class: type[Model],
+        row_class: type,
+        field_name_map: dict[str, str] | None = None,
+    ) -> "SAMapper":
+        return SAMapper(model_class, row_class, field_name_map=field_name_map)
+
+
 class SAMapper(BaseSAMapper):
 
     def __init__(
@@ -121,8 +160,6 @@ class SAMapper(BaseSAMapper):
         model_class: type[Model],
         row_class: type,
         field_name_map: dict[str, str] | None = None,
-        service_metadata_field_names: tuple | None = None,
-        db_metadata_field_names: tuple | None = None,
         generate_service_metadata: (
             Callable[[Model, Hashable], dict[str, Any]] | None
         ) = None,
@@ -138,9 +175,6 @@ class SAMapper(BaseSAMapper):
         self._relationship_field_name_map: dict[str, str] = {}
         self._relationship_field_name_reverse_map: dict[str, str] = {}
         self._init_field_names(model_class, row_class, self.field_name_map)
-        self._init_row_metadata_field_names(
-            row_class, service_metadata_field_names, db_metadata_field_names
-        )
         self._init_relationship_field_names(model_class, row_class, self.field_name_map)
         self._init_extract_primary_key(model_class)
         self._generate_service_metadata = (
@@ -199,11 +233,7 @@ class SAMapper(BaseSAMapper):
     def get_row_id(self, row: Row | type[Row]) -> Hashable | MappedColumn:
         return self._get_row_id(row)
 
-    def generate_service_metadata(self, obj: Model, user_id: Hashable) -> dict:
-        return self._generate_service_metadata(obj, user_id)
-
     def dump(self, user_id: Hashable | None, obj: Model, **kwargs: Any) -> Any:
-        service_metadata = self.generate_service_metadata(obj, user_id)
         if self._is_identical_common_field_names:
             mapped_dict = obj.model_dump(exclude_none=True)
         else:
@@ -216,13 +246,44 @@ class SAMapper(BaseSAMapper):
                 )
                 if obj_dict[x] is not None
             }
-        if service_metadata:
-            if kwargs:
-                return self.row_class(**(mapped_dict | service_metadata | kwargs))
-            return self.row_class(**(mapped_dict | service_metadata))
         if kwargs:
             return self.row_class(**(mapped_dict | kwargs))
         return self.row_class(**mapped_dict)
+
+    def update(
+        self, user_id: Hashable | None, obj: Model, row: Row, **kwargs: Any
+    ) -> bool:
+        """
+        Update the given row with the values from the given object. Only fields that are
+        not None in the object are updated, preserving existing DB values for omitted
+        fields. Override in subclasses to add db-specific rules (e.g. never touch
+        created_at, stamp modified_by from user_id).
+
+        Returns True if any fields were updated, False otherwise.
+        """
+        if self._is_identical_common_field_names:
+            mapped_dict = obj.model_dump(exclude_none=True)
+        else:
+            obj_dict = obj.model_dump(exclude_none=False)
+            mapped_dict = {
+                y: obj_dict[x]
+                for x, y in zip(
+                    self._field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
+                    self._row_field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
+                )
+                if obj_dict[x] is not None
+            }
+        if kwargs:
+            mapped_dict.update(kwargs)
+        is_updated = False
+        for key, value in mapped_dict.items():
+            if value is None:
+                continue
+            curr_value = getattr(row, key)
+            if curr_value != value:
+                setattr(row, key, value)
+                is_updated = True
+        return is_updated
 
     def load(self, row: Row, **kwargs: Any) -> Model:
         if self._is_identical_common_field_names:
@@ -283,83 +344,6 @@ class SAMapper(BaseSAMapper):
                 row_field_names.extend(self._row_field_names_by_type[field_type])
             self._field_names_by_set[field_type_set] = tuple(field_names)
             self._row_field_names_by_set[field_type_set] = tuple(row_field_names)
-
-    def _init_row_metadata_field_names(
-        self,
-        row_class: type,
-        service_metadata_field_names: Iterable[str] | None,
-        db_metadata_field_names: Iterable[str] | None,
-    ) -> None:
-        # Check provided field names
-        (
-            service_metadata_field_names,
-            db_metadata_field_names,
-            actual_row_only_field_names,
-            actual_row_only_field_names_set,
-        ) = self._retrieve_field_names(
-            row_class,
-            service_metadata_field_names,
-            db_metadata_field_names,
-        )
-
-        # Set service_metadata_field_names and db_metadata_field_names
-        if service_metadata_field_names is None:
-            if db_metadata_field_names is None:
-                # All db model only fields are considered db_metadata_field_names
-                service_metadata_field_names = tuple()
-                service_metadata_field_names_set = set()
-                db_metadata_field_names = tuple(actual_row_only_field_names)
-                db_metadata_field_names_set = set(db_metadata_field_names)
-            else:
-                # service_metadata_field_names is the complement of db_metadata_field_names
-                db_metadata_field_names_set = set(db_metadata_field_names)
-                service_metadata_field_names = tuple(
-                    x
-                    for x in actual_row_only_field_names
-                    if x not in db_metadata_field_names_set
-                )
-                service_metadata_field_names_set = set(service_metadata_field_names)
-        elif db_metadata_field_names is None:
-            # db_metadata_field_names is the complement of service_metadata_field_names
-            service_metadata_field_names_set = set(service_metadata_field_names)
-            db_metadata_field_names = tuple(
-                x
-                for x in actual_row_only_field_names
-                if x not in service_metadata_field_names_set
-            )
-            db_metadata_field_names_set = set(db_metadata_field_names)
-        else:
-            # Both are provided, create sets for validation
-            service_metadata_field_names_set = set(service_metadata_field_names)
-            db_metadata_field_names_set = set(db_metadata_field_names)
-
-        # Final check of field names
-        if not service_metadata_field_names_set.isdisjoint(db_metadata_field_names_set):
-            raise exc.RepositoryServiceError(
-                f"Row {row_class.__name__} service_metadata_field_names and db_metadata_field_names must be disjoint"
-            )
-        metadata_field_names_set = service_metadata_field_names_set.union(
-            db_metadata_field_names_set
-        )
-        if metadata_field_names_set != actual_row_only_field_names_set:
-            raise exc.RepositoryServiceError(
-                f"Row {row_class.__name__} service_metadata_field_names and db_metadata_field_names must cover all db model only fields"
-            )
-
-        # Update attributes
-        self._row_field_names_by_type[FieldType.SERVICE_METADATA] = (
-            service_metadata_field_names
-        )
-        self._row_field_names_by_type[FieldType.DB_METADATA] = db_metadata_field_names
-        for field_type_set in {
-            FieldTypeSet.SERVICE_METADATA,
-            FieldTypeSet.DB_METADATA,
-            FieldTypeSet.DB_MODEL,
-            FieldTypeSet.DB_MODEL_ONLY,
-        }:
-            self._row_field_names_by_set[field_type_set] = tuple(
-                self._row_field_names_by_set[field_type_set]
-            )
 
     def _retrieve_field_names(
         self,

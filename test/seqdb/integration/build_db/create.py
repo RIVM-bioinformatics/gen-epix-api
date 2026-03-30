@@ -21,8 +21,8 @@ class TestCreate:
         # Create a first root user and organization
         user = env.retrieve_user_by_key("root1_1@org1.org")
         user.name = "root1_1"
-        env._set_obj(user)
-        env._set_obj(
+        env.set_obj(user)
+        env.set_obj(
             env.read_one_by_property("root1_1", model.Organization, "name", "org1")
         )
 
@@ -250,17 +250,6 @@ class TestCreate:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_ast_protocol(exec_user, "ast_protocol11")
 
-    def test_create_alignment_protocol(self, env: Env) -> None:
-        # Create alignment_protocol as root, app_admin, refdata_admin
-        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS, start=1):
-            env.create_alignment_protocol(exec_user, f"alignment_protocol{i}")
-
-    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
-    def test_create_alignment_protocol_raise(self, env: Env) -> None:
-        for exec_user in BELOW_APP_ADMIN_DATA_USERS:
-            with pytest.raises(exc.UnauthorizedAuthError):
-                env.create_alignment_protocol(exec_user, "alignment_protocol11")
-
     def test_create_taxonomy_protocol(self, env: Env) -> None:
         # Create taxonomy_protocol as root, app_admin, refdata_admin
         for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS, start=1):
@@ -441,7 +430,7 @@ class TestCreate:
             "fwd_uri": env.DUMMY_VALUES["fwd_reads_uri1"],
             "rev_uri": env.DUMMY_VALUES["rev_reads_uri1"],
             "sample_or_str": "sample1",
-            "sequencing_protocol_or_str": "sequencing_protocol1",
+            "protocol_or_str": "sequencing_protocol1",
         }
         for exec_user in DATA_USERS:
             env.create_read_set(exec_user, **kwargs)
@@ -453,7 +442,7 @@ class TestCreate:
             "fwd_uri": env.DUMMY_VALUES["fwd_reads_uri1"],
             "rev_uri": env.DUMMY_VALUES["rev_reads_uri1"],
             "sample_or_str": "sample1",
-            "sequencing_protocol_or_str": "sequencing_protocol1",
+            "protocol_or_str": "sequencing_protocol1",
         }
         for exec_user in BELOW_APP_ADMIN_REFDATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
@@ -462,7 +451,7 @@ class TestCreate:
     def test_create_file_for_read_set(self, env: Env) -> None:
         kwargs = {
             "sample_or_str": "sample1",
-            "sequencing_protocol_or_str": "sequencing_protocol1",
+            "protocol_or_str": "sequencing_protocol1",
             "fwd_reads_hash": env.DUMMY_VALUES["fwd_reads_hash1"],
             "rev_reads_hash": env.DUMMY_VALUES["rev_reads_hash1"],
             "file_format": enum.FileFormat.FASTQ,
@@ -491,7 +480,7 @@ class TestCreate:
             env.create_seq(
                 exec_user,
                 sample_or_str=f"sample{i}",
-                assembly_protocol_or_str="assembly_protocol1",
+                protocol_or_str="assembly_protocol1",
             )
 
     def test_create_seq_raise(self, env: Env) -> None:
@@ -500,7 +489,7 @@ class TestCreate:
                 env.create_seq(
                     exec_user,
                     sample_or_str="sample1",
-                    assembly_protocol_or_str="assembly_protocol1",
+                    protocol_or_str="assembly_protocol1",
                 )
 
     def test_create_seq_with_file(self, env: Env) -> None:
@@ -514,7 +503,7 @@ class TestCreate:
             env.create_seq(
                 exec_user,
                 sample_or_str=f"sample{i}",
-                assembly_protocol_or_str="assembly_protocol2",
+                protocol_or_str="assembly_protocol2",
                 file_id=file.id,
                 file_format=enum.FileFormat.FASTA,
                 file_compression=enum.FileCompression.GZIP,
@@ -550,9 +539,6 @@ class TestCreate:
         # AST protocol already exists
         with pytest.raises(exc.UniqueConstraintViolationError):
             env.create_ast_protocol("refdata_admin1_1", "ast_protocol1")
-        # Alignment protocol already exists
-        with pytest.raises(exc.UniqueConstraintViolationError):
-            env.create_alignment_protocol("refdata_admin1_1", "alignment_protocol1")
         # Taxonomy protocol already exists
         with pytest.raises(exc.UniqueConstraintViolationError):
             env.create_taxonomy_protocol("refdata_admin1_1", "taxonomy_protocol1")
@@ -600,4 +586,4 @@ class TestCreate:
             "sample_or_str": "sample1",
         }
         with pytest.raises(exc.InvalidLinkIdsError):
-            env.create_read_set("root1_1", set_dummy_sequencing_protocol=True, **kwargs)
+            env.create_read_set("root1_1", set_dummy_protocol=True, **kwargs)

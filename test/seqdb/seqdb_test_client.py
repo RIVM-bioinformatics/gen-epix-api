@@ -113,18 +113,7 @@ class SeqdbTestClient(TestClient):
         model.UserInvitation: "email",
         model.OrganizationAdminPolicy: ("organization_id", "user_id"),
         model.DataCollection: "name",
-        model.PcrProtocol: "name",
-        model.AstProtocol: "name",
-        model.SequencingProtocol: "name",
-        model.AssemblyProtocol: "name",
-        model.AlignmentProtocol: "name",
-        model.TaxonomyProtocol: "name",
-        model.SeqClassificationProtocol: "name",
-        model.SeqDistanceProtocol: "name",
-        model.LocusDetectionProtocol: "name",
-        model.SnpDetectionProtocol: "name",
-        model.MlvaDetectionProtocol: "name",
-        model.KmerDetectionProtocol: "name",
+        model.Protocol: "name",
         model.Sample: "code",
         model.File: "id",
         model.ReadSet: "id",
@@ -275,11 +264,11 @@ class SeqdbTestClient(TestClient):
         user_or_str: str | model.User,
         code: str,
         name: str | None = None,
-    ) -> model.SequencingProtocol:
+    ) -> model.Protocol:
         return self._create_protocol(
-            model.SequencingProtocol,
             user_or_str,
             code,
+            enum.ProtocolType.SEQUENCING,
             name,
         )  # type: ignore[return-value]
 
@@ -289,11 +278,11 @@ class SeqdbTestClient(TestClient):
         code: str,
         name: str | None = None,
         has_manual_curation: bool = False,
-    ) -> model.AssemblyProtocol:
+    ) -> model.Protocol:
         return self._create_protocol(
-            model.AssemblyProtocol,
             user_or_str,
             code,
+            enum.ProtocolType.ASSEMBLY,
             name,
             has_manual_curation=has_manual_curation,
         )  # type: ignore[return-value]
@@ -303,12 +292,13 @@ class SeqdbTestClient(TestClient):
         user_or_str: str | model.User,
         code: str,
         name: str | None = None,
-    ) -> model.LocusDetectionProtocol:
+    ) -> model.Protocol:
         return self._create_protocol(
-            model.LocusDetectionProtocol,
             user_or_str,
             code,
+            enum.ProtocolType.SEQ_PROFILE,
             name,
+            seq_profile_type=enum.SeqProfileType.LOCUS,
         )  # type: ignore[return-value]
 
     def create_pcr_protocol(
@@ -317,11 +307,11 @@ class SeqdbTestClient(TestClient):
         code: str,
         name: str | None = None,
         target_names: list[str] = ["gene1", "gene2"],
-    ) -> model.PcrProtocol:
+    ) -> model.Protocol:
         return self._create_protocol(
-            model.PcrProtocol,
             user_or_str,
             code,
+            enum.ProtocolType.PCR_MEASUREMENT,
             name,
             target_names=target_names,  # Required field
         )  # type: ignore[return-value]
@@ -333,29 +323,14 @@ class SeqdbTestClient(TestClient):
         name: str | None = None,
         is_predicted: bool = False,
         antimicrobial_names: list[str] = ["amoxicillin", "tetracycline"],
-    ) -> model.AstProtocol:
+    ) -> model.Protocol:
         return self._create_protocol(
-            model.AstProtocol,
             user_or_str,
             code,
+            enum.ProtocolType.AST_MEASUREMENT,
             name,
             is_predicted=is_predicted,  # Required field
             antimicrobial_names=antimicrobial_names,  # Required field
-        )  # type: ignore[return-value]
-
-    def create_alignment_protocol(
-        self,
-        user_or_str: str | model.User,
-        code: str,
-        name: str | None = None,
-        is_multiple: bool = False,
-    ) -> model.AlignmentProtocol:
-        return self._create_protocol(
-            model.AlignmentProtocol,
-            user_or_str,
-            code,
-            name,
-            is_multiple=is_multiple,  # Required field
         )  # type: ignore[return-value]
 
     def create_taxonomy_protocol(
@@ -363,11 +338,11 @@ class SeqdbTestClient(TestClient):
         user_or_str: str | model.User,
         code: str,
         name: str | None = None,
-    ) -> model.TaxonomyProtocol:
+    ) -> model.Protocol:
         return self._create_protocol(
-            model.TaxonomyProtocol,
             user_or_str,
             code,
+            enum.ProtocolType.TAXONOMY,
             name,
         )  # type: ignore[return-value]
 
@@ -377,11 +352,11 @@ class SeqdbTestClient(TestClient):
         code: str,
         name: str | None = None,
         is_taxonomic: bool = True,
-    ) -> model.SeqClassificationProtocol:
+    ) -> model.Protocol:
         return self._create_protocol(
-            model.SeqClassificationProtocol,
             user_or_str,
             code,
+            enum.ProtocolType.SEQ_CLASSIFICATION,
             name,
             is_taxonomic=is_taxonomic,  # Required field
         )  # type: ignore[return-value]
@@ -391,17 +366,17 @@ class SeqdbTestClient(TestClient):
         user_or_str: str | model.User,
         code: str,
         name: str | None = None,
+        seq_distance_protocol_type: enum.SeqDistanceType = enum.SeqDistanceType.ALLELE_HAMMING,
         is_integer_distance: bool = True,
-        seq_distance_protocol_type: enum.SeqDistanceProtocolType = enum.SeqDistanceProtocolType.KMER_EUCLIDEAN,
         max_stored_distance: float = 100.0,
-    ) -> model.SeqDistanceProtocol:
+    ) -> model.Protocol:
         return self._create_protocol(
-            model.SeqDistanceProtocol,
             user_or_str,
             code,
+            enum.ProtocolType.SEQ_DISTANCE,
             name,
+            seq_distance_protocol_type=seq_distance_protocol_type,
             is_integer_distance=is_integer_distance,  # Required field
-            seq_distance_protocol_type=seq_distance_protocol_type,  # Required field - using KMER_EUCLIDEAN to avoid locus_set_id requirement
             max_stored_distance=max_stored_distance,  # Required field
         )  # type: ignore[return-value]
 
@@ -410,12 +385,13 @@ class SeqdbTestClient(TestClient):
         user_or_str: str | model.User,
         code: str,
         name: str | None = None,
-    ) -> model.SnpDetectionProtocol:
+    ) -> model.Protocol:
         return self._create_protocol(
-            model.SnpDetectionProtocol,
             user_or_str,
             code,
+            enum.ProtocolType.SEQ_PROFILE,
             name,
+            seq_profile_type=enum.SeqProfileType.SNP,
         )  # type: ignore[return-value]
 
     def create_mlva_detection_protocol(
@@ -423,12 +399,13 @@ class SeqdbTestClient(TestClient):
         user_or_str: str | model.User,
         code: str,
         name: str | None = None,
-    ) -> model.MlvaDetectionProtocol:
+    ) -> model.Protocol:
         return self._create_protocol(
-            model.MlvaDetectionProtocol,
             user_or_str,
             code,
+            enum.ProtocolType.SEQ_PROFILE,
             name,
+            seq_profile_type=enum.SeqProfileType.MLVA,
         )  # type: ignore[return-value]
 
     def create_kmer_detection_protocol(
@@ -436,12 +413,13 @@ class SeqdbTestClient(TestClient):
         user_or_str: str | model.User,
         code: str,
         name: str | None = None,
-    ) -> model.KmerDetectionProtocol:
+    ) -> model.Protocol:
         return self._create_protocol(
-            model.KmerDetectionProtocol,
             user_or_str,
             code,
+            enum.ProtocolType.SEQ_PROFILE,
             name,
+            seq_profile_type=enum.SeqProfileType.KMER,
         )  # type: ignore[return-value]
 
     def create_sample(
@@ -452,7 +430,7 @@ class SeqdbTestClient(TestClient):
         props: dict[str, str | int | float | None] | None = None,
         set_dummy_created_in_data_collection: bool = False,
     ) -> model.Sample:
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         created_in_data_collection_id = self._get_obj_id(
             model.DataCollection,
             created_in_data_collection_or_str,
@@ -469,7 +447,7 @@ class SeqdbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(sample)
+        return self.set_obj(sample)
 
     def create_file(
         self,
@@ -478,7 +456,7 @@ class SeqdbTestClient(TestClient):
         format: enum.FileFormat,
         compression: enum.FileCompression = enum.FileCompression.NONE,
     ) -> model.File:
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         content: bytes
         if isinstance(content_or_str, str):
             content = content_or_str.encode()
@@ -495,31 +473,31 @@ class SeqdbTestClient(TestClient):
             )
         )
 
-        return self._set_obj(model.File(id=file_id, content=content))  # type: ignore[return-value]
+        return self.set_obj(model.File(id=file_id, content=content))  # type: ignore[return-value]
 
     def create_read_set(
         self,
         user_or_str: str | model.User,
         sample_or_str: str | model.Sample | None = None,
-        sequencing_protocol_or_str: model.SequencingProtocol | str | None = None,
+        protocol_or_str: model.Protocol | str | None = None,
         fwd_uri: str | None = None,
         rev_uri: str | None = None,
         fwd_file_id: UUID | None = None,
         rev_file_id: UUID | None = None,
-        file_format: enum.FileFormat | None = None,
+        file_format: enum.FileFormat | None = enum.ReadsFileFormat.FASTQ,
         file_compression: enum.FileCompression | None = None,
         fwd_reads_hash: UUID | str | None = None,
         rev_reads_hash: UUID | str | None = None,
         sequencing_run_code: str | None = None,
         set_dummy_sample: bool = False,
-        set_dummy_sequencing_protocol: bool = False,
+        set_dummy_protocol: bool = False,
     ) -> model.ReadSet:
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         sample_id = self._get_obj_id(model.Sample, sample_or_str, set_dummy_sample)
-        sequencing_protocol_id = self._get_obj_id(
-            model.SequencingProtocol,
-            sequencing_protocol_or_str,
-            set_dummy_sequencing_protocol,
+        protocol_id = self._get_obj_id(
+            model.Protocol,
+            protocol_or_str,
+            set_dummy_protocol,
         )
         if isinstance(file_format, Enum) and not isinstance(
             file_format, enum.ReadsFileFormat
@@ -537,7 +515,7 @@ class SeqdbTestClient(TestClient):
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.ReadSet(  # type: ignore[call-arg]
                     sample_id=sample_id,
-                    sequencing_protocol_id=sequencing_protocol_id,
+                    protocol_id=protocol_id,
                     fwd_uri=fwd_uri,
                     rev_uri=rev_uri,
                     fwd_file_id=fwd_file_id,
@@ -551,14 +529,14 @@ class SeqdbTestClient(TestClient):
             )
         )
         assert read_set.sample_id == sample_id
-        assert read_set.sequencing_protocol_id == sequencing_protocol_id
+        assert read_set.protocol_id == protocol_id
         assert read_set.fwd_reads_hash == fwd_reads_hash
         assert read_set.rev_reads_hash == rev_reads_hash
         assert read_set.fwd_file_id == fwd_file_id
         assert read_set.rev_file_id == rev_file_id
         assert read_set.fwd_uri == fwd_uri
         assert read_set.rev_uri == rev_uri
-        return self._set_obj(read_set)  # type: ignore[return-value]
+        return self.set_obj(read_set)  # type: ignore[return-value]
 
     def create_seq(
         self,
@@ -566,19 +544,19 @@ class SeqdbTestClient(TestClient):
         sample_or_str: model.Sample | str | None = None,
         read_set_id: UUID | None = None,
         read_set2_id: UUID | None = None,
-        assembly_protocol_or_str: model.AssemblyProtocol | str | None = None,
+        protocol_or_str: model.Protocol | str | None = None,
         file_id: UUID | None = None,
-        file_format: enum.SeqFileFormat | None = None,
+        file_format: enum.SeqFileFormat | None = enum.SeqFileFormat.FASTA,
         file_compression: enum.FileCompression | None = None,
         set_dummy_sample: bool = False,
-        set_dummy_assembly_protocol: bool = False,
+        set_dummy_protocol: bool = False,
     ) -> model.Seq:
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         sample_id = self._get_obj_id(model.Sample, sample_or_str, set_dummy_sample)
-        assembly_protocol_id = self._get_obj_id(
-            model.AssemblyProtocol,
-            assembly_protocol_or_str,
-            set_dummy_assembly_protocol,
+        protocol_id = self._get_obj_id(
+            model.Protocol,
+            protocol_or_str,
+            set_dummy_protocol,
         )
         if isinstance(file_format, Enum) and not isinstance(
             file_format, enum.SeqFileFormat
@@ -592,34 +570,87 @@ class SeqdbTestClient(TestClient):
                     sample_id=sample_id,
                     read_set_id=read_set_id,
                     read_set2_id=read_set2_id,
-                    assembly_protocol_id=assembly_protocol_id,
+                    protocol_id=protocol_id,
                     file_id=file_id,
                     file_format=file_format,
                     file_compression=file_compression,
                 ),
             )
         )
-        assert seq.assembly_protocol_id == assembly_protocol_id
-        return self._set_obj(seq)  # type: ignore[return-value]
+        assert seq.protocol_id == protocol_id
+        return self.set_obj(seq)  # type: ignore[return-value]
 
     def _create_protocol(
         self,
-        protocol_class: type[model.Model],
         user_or_str: str | model.User,
         code: str,
+        protocol_type: enum.ProtocolType,
         name: str | None = None,
         **kwargs: Any,
     ) -> model.Model:
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
-        crud_command_class = self.app.domain.get_crud_command_for_model(protocol_class)
+        user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        props: dict[str, str | int | float | bool | list] = dict(
+            kwargs.pop("props", {}) or {}
+        )
+
+        # SEQ_DISTANCE-specific fields: only valid for SEQ_DISTANCE protocol type
+        seq_distance_type: enum.SeqDistanceType | None = None
+        is_integer_distance: bool | None = None
+        max_stored_distance: float | None = None
+        if protocol_type == enum.ProtocolType.SEQ_DISTANCE:
+            seq_distance_type = kwargs.pop(
+                "seq_distance_protocol_type", enum.SeqDistanceType.ALLELE_HAMMING
+            )
+            is_integer_distance = kwargs.pop("is_integer_distance", True)
+            max_stored_distance = kwargs.pop("max_stored_distance", 100)
+        else:
+            kwargs.pop("seq_distance_protocol_type", None)
+            kwargs.pop("is_integer_distance", None)
+            kwargs.pop("max_stored_distance", None)
+
+        # SEQ_PROFILE-specific field: required for SEQ_PROFILE protocol type
+        seq_profile_type: enum.SeqProfileType | None = kwargs.pop(
+            "seq_profile_type", None
+        )
+
+        # SEQ_CLASSIFICATION-specific field: required for SEQ_CLASSIFICATION protocol type;
+        # create a real SeqCategorySet if none provided so the DB FK constraint is satisfied.
+        seq_category_set_id: UUID | None = kwargs.pop("seq_category_set_id", None)
+        if (
+            protocol_type == enum.ProtocolType.SEQ_CLASSIFICATION
+            and seq_category_set_id is None
+        ):
+            category_set_code = f"{code}_category_set"
+            seq_category_set: model.SeqCategorySet = self.app.handle(
+                command.SeqCategorySetCrudCommand(
+                    operation=CrudOperation.CREATE_ONE,
+                    user=user,
+                    objs=model.SeqCategorySet(  # type: ignore[call-arg]
+                        code=category_set_code,
+                        name=category_set_code,
+                    ),
+                )
+            )
+            seq_category_set_id = seq_category_set.id
+
         protocol = self.app.handle(
-            crud_command_class(
+            command.ProtocolCrudCommand(
                 operation=CrudOperation.CREATE_ONE,
                 user=user,
-                objs=protocol_class(code=code, name=name if name else code, **kwargs),  # type: ignore
+                objs=model.Protocol(  # type: ignore[call-arg]
+                    code=code,
+                    name=name if name else code,
+                    protocol_type=protocol_type,
+                    seq_profile_type=seq_profile_type,
+                    seq_distance_type=seq_distance_type,
+                    is_integer_distance=is_integer_distance,
+                    max_stored_distance=max_stored_distance,
+                    seq_category_set_id=seq_category_set_id,
+                    props=props,
+                ),
             )
         )
-        return self._set_obj(protocol)
+        return self.set_obj(protocol)
 
     def _get_obj_id(
         self,
@@ -638,7 +669,7 @@ class SeqdbTestClient(TestClient):
                     "obj_or_str must be provided when create_dummy_id is False"
                 )
             obj_id = (  # type: ignore[union-attr]
-                self._get_obj(model_class, obj_or_str)  # type: ignore[assignment]
+                self.get_obj(model_class, obj_or_str)  # type: ignore[assignment]
             ).id
         return obj_id
 
@@ -739,13 +770,15 @@ class SeqdbTestClient(TestClient):
                             locus_id=locus_id,
                         )
                     allele_ids[locus_idx] = alleles[clean_allele_seq].id  # type: ignore[assignment]
-            allele_profile_for_upload = model.AlleleProfileForUpload(
-                locus_set_id=locus_set_id,
-                locus_detection_protocol_id=locus_detection_protocol_id,
+            allele_profile_for_upload = model.SeqProfileForUpload(
+                # locus_set_id=locus_set_id,
+                protocol_id=locus_detection_protocol_id,
                 locus_code_map_id=locus_code_map_id,
                 allele_ids=allele_ids,  # type: ignore[arg-type]
-                allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
+                seq_profile_type=enum.SeqProfileType.ALLELE,
                 seq_id=seq_id,
+                format=enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
+                content_hash=model.SeqProfile.get_allele_profile_hash(allele_ids),
             )
             seq_for_upload = model.SeqForUpload(
                 contigs=[
@@ -754,12 +787,12 @@ class SeqdbTestClient(TestClient):
                         seq_format=enum.SeqFormat.STR_DNA,
                     )
                 ],
-                assembly_protocol_id=assembly_protocol_id,
+                protocol_id=assembly_protocol_id,
             )
             samples_for_upload.append(
                 model.SampleForUpload(
                     seqs=[seq_for_upload],
-                    allele_profiles=[allele_profile_for_upload],
+                    seq_profiles=[allele_profile_for_upload],
                     sample=model.Sample(created_in_data_collection_id=uuid.uuid4()),
                 )
             )
@@ -822,7 +855,7 @@ class SeqdbTestClient(TestClient):
 
     @staticmethod
     def calculate_distance_matrix_from_allele_profiles(
-        allele_profiles: list[model.AlleleProfile],
+        allele_profiles: list[model.SeqProfile],
     ) -> DistanceMatrix:
         n_profiles = len(allele_profiles)
 

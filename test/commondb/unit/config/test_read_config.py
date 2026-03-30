@@ -124,12 +124,14 @@ def _assert_string_override_payload(payload: dict, app_name: str) -> None:
     assert payload["service_idp_client_count"] == 0
 
 
+@pytest.mark.scenario_ids("TC-CFG-01-01")
 def test_casedb_read_config_defaults() -> None:
     payload = _read_config("CASEDB")
 
     _assert_default_import_payload(payload, "CASEDB")
 
 
+@pytest.mark.scenario_ids("TC-CFG-01-01")
 def test_casedb_read_config_string_auth_overrides(override_tmp_dir: Path) -> None:
     override_file = _write_string_auth_override_file(override_tmp_dir, "CASEDB")
 
@@ -138,12 +140,14 @@ def test_casedb_read_config_string_auth_overrides(override_tmp_dir: Path) -> Non
     _assert_string_override_payload(payload, "CASEDB")
 
 
+@pytest.mark.scenario_ids("TC-CFG-01-01")
 def test_seqdb_read_config_defaults() -> None:
     payload = _read_config("SEQDB")
 
     _assert_default_import_payload(payload, "SEQDB")
 
 
+@pytest.mark.scenario_ids("TC-CFG-01-01")
 def test_seqdb_read_config_string_auth_overrides(override_tmp_dir: Path) -> None:
     override_file = _write_string_auth_override_file(override_tmp_dir, "SEQDB")
 
@@ -152,12 +156,14 @@ def test_seqdb_read_config_string_auth_overrides(override_tmp_dir: Path) -> None
     _assert_string_override_payload(payload, "SEQDB")
 
 
+@pytest.mark.scenario_ids("TC-CFG-01-01")
 def test_omopdb_read_config_defaults() -> None:
     payload = _read_config("OMOPDB")
 
     _assert_default_import_payload(payload, "OMOPDB")
 
 
+@pytest.mark.scenario_ids("TC-CFG-01-01")
 def test_omopdb_read_config_string_auth_overrides(override_tmp_dir: Path) -> None:
     override_file = _write_string_auth_override_file(override_tmp_dir, "OMOPDB")
 

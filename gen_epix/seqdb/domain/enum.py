@@ -4,11 +4,34 @@ from __future__ import annotations
 
 import datetime
 import uuid
-from enum import Enum
+from enum import Enum, IntEnum
+from typing import TYPE_CHECKING
 
 import ulid
 
 from gen_epix.commondb.domain.enum import RoleSet as RoleSet
+
+if TYPE_CHECKING:
+    from pydantic import GetJsonSchemaHandler
+    from pydantic.json_schema import JsonSchemaValue
+    from pydantic_core import core_schema as _cs
+
+
+class IntEnumWithJsonSchemaMixin:
+    """
+    An IntEnum that includes the enum member names in the JSON schema for better readability.
+    """
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: _cs.CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema["x-enum-varnames"] = [e.name for e in cls]
+        return json_schema
 
 
 class TimestampFactory(Enum):
@@ -133,17 +156,6 @@ class TreeAlgorithmSet(Enum):
     )
 
 
-class Protocol(Enum):
-    SEQUENCING = "SEQUENCING"
-    LOCUS_DETECTION = "LOCUS_DETECTION"
-    ALIGNMENT = "ALIGNMENT"
-    TAXONOMY = "TAXONOMY"
-    PCR = "PCR"
-    AST = "AST"
-    CLASSIFICATION = "CLASSIFICATION"
-    SEQUENCE_DISTANCE = "SEQUENCE_DISTANCE"
-
-
 class TaxonRank(Enum):
     NO_RANK = "NO_RANK"
     ACELLULAR_ROOT = "ACELLULAR_ROOT"
@@ -180,10 +192,11 @@ class TaxonRank(Enum):
     ISOLATE = "ISOLATE"
 
 
-class QualityControlResult(Enum):
-    PASS = "PASS"
-    WARN = "WARN"
-    FAIL = "FAIL"
+class QualityControlResult(IntEnumWithJsonSchemaMixin, IntEnum):
+    PENDING = 1
+    FAIL = 2
+    WARN = 3
+    PASS = 4
 
     def is_usable(self) -> bool:
         return self in {QualityControlResult.PASS, QualityControlResult.WARN}
@@ -255,111 +268,173 @@ class DnaReverseAmbiguityMap(Enum):
     T = frozenset("tywkbdhn")
 
 
-class SeqFormat(Enum):
-    HASH_ONLY = "HASH_ONLY"  # Only the hash code of the sequence is known or stored
-    STR_DNA = "STR_DNA"  # String of IUPAC DNA characters without gaps
-    STR_DNA_INCL_GAP = (
-        "STR_DNA_INCL_GAP"  # String of IUPAC DNA characters including gaps
-    )
+class SeqFormat(IntEnumWithJsonSchemaMixin, IntEnum):
+    HASH_ONLY = 1  # Only the hash code of the sequence is known or stored
+    STR_DNA = 2  # String of IUPAC DNA characters without gaps
+    STR_DNA_INCL_GAP = 3  # String of IUPAC DNA characters including gaps
 
 
-class AlignmentFormat(Enum):
-    CIGAR = "CIGAR"
+class SeqProfileFormat(IntEnumWithJsonSchemaMixin, IntEnum):
+    LOCUS_PROFILE_FORMAT1 = 1
+    REF_ALN_SEQ = 2
+    ORDERED_ALLELE_IDS = 3
+    ORDERED_REPEAT_NUMBERS = 4
+    KMER_FREQUENCY_MAP = 5
 
 
-class LocusProfileFormat(Enum):
-    LOCUS_PROFILE_FORMAT1 = "LOCUS_PROFILE_FORMAT1"
+class SeqClassificationFormat(IntEnumWithJsonSchemaMixin, IntEnum):
+    PRIMARY_CATEGORY_ONLY = 1
 
 
-class AlleleProfileFormat(Enum):
-    SORTED_ALLELE_IDS = "SORTED_ALLELE_IDS"
+class SeqTaxonomyFormat(IntEnumWithJsonSchemaMixin, IntEnum):
+    TAXONOMY_FORMAT1 = 1
 
 
-class SnpProfileFormat(Enum):
-    REF_ALN_SEQ = "REF_ALN_SEQ"
+class PcrResultFormat(IntEnumWithJsonSchemaMixin, IntEnum):
+    PCR_RESULT_FORMAT1 = 1
 
 
-class MlvaProfileFormat(Enum):
-    SORTED_REPEAT_NUMBERS = "SORTED_REPEAT_NUMBERS"
+class AstResultFormat(IntEnumWithJsonSchemaMixin, IntEnum):
+    AST_RESULT_FORMAT1 = 1
 
 
-class KmerProfileFormat(Enum):
-    KMER_FREQUENCY_MAP = "KMER_PROFILE_FORMAT1"
+class ProtocolType(IntEnumWithJsonSchemaMixin, IntEnum):
+    PCR_MEASUREMENT = 1
+    AST_MEASUREMENT = 2
+    SEQUENCING = 3
+    ASSEMBLY = 4
+    TAXONOMY = 5
+    SEQ_CLASSIFICATION = 6
+    SEQ_PROFILE = 7
+    SEQ_DISTANCE = 8
+    AST_PREDICTION = 9
 
 
-class SeqClassificationFormat(Enum):
-    SEQ_CLASSIFICATION_FORMAT1 = "SEQ_CLASSIFICATION_FORMAT1"
-
-
-class TaxonomyFormat(Enum):
-    TAXONOMY_FORMAT1 = "TAXONOMY_FORMAT1"
-
-
-class PcrResultFormat(Enum):
-    PCR_RESULT_FORMAT1 = "PCR_RESULT_FORMAT1"
-
-
-class AstResultFormat(Enum):
-    AST_RESULT_FORMAT1 = "AST_RESULT_FORMAT1"
-
-
-class SeqDistanceProtocolType(Enum):
-    ALLELE_HAMMING = "ALLELE_HAMMING"
-    SNP_HAMMING = "SNP_HAMMING"
-    MLVA_HAMMING = "MLVA_HAMMING"
-    MLVA_EUCLIDEAN = "MLVA_EUCLIDEAN"
-    KMER_EUCLIDEAN = "KMER_EUCLIDEAN"
-
-
-class SeqDistanceProtocolTypeSet(Enum):
-    ALLELE_PROFILE_BASED = frozenset({SeqDistanceProtocolType.ALLELE_HAMMING})
-    SNP_PROFILE_BASED = frozenset({SeqDistanceProtocolType.SNP_HAMMING})
-    KMER_PROFILE_BASED = frozenset({SeqDistanceProtocolType.KMER_EUCLIDEAN})
-    MLVA_PROFILE_BASED = frozenset({SeqDistanceProtocolType.MLVA_HAMMING})
-    HAMMING_DISTANCE_BASED = frozenset(
+class ProtocolTypeSet(Enum):
+    AST_MEASUREMENT = frozenset({ProtocolType.AST_MEASUREMENT})
+    PCR_MEASUREMENT = frozenset({ProtocolType.PCR_MEASUREMENT})
+    SEQUENCING = frozenset({ProtocolType.SEQUENCING})
+    ASSEMBLY = frozenset({ProtocolType.ASSEMBLY})
+    SEQ_CLASSIFICATION = frozenset({ProtocolType.SEQ_CLASSIFICATION})
+    TAXONOMY = frozenset({ProtocolType.TAXONOMY})
+    CLASSIFICATION = frozenset({ProtocolType.SEQ_CLASSIFICATION, ProtocolType.TAXONOMY})
+    SEQ_PROFILE = frozenset(
         {
-            SeqDistanceProtocolType.ALLELE_HAMMING,
-            SeqDistanceProtocolType.SNP_HAMMING,
-            SeqDistanceProtocolType.MLVA_HAMMING,
+            ProtocolType.SEQ_PROFILE,
         }
     )
-    EUCLIDEAN_DISTANCE_BASED = frozenset(
-        {SeqDistanceProtocolType.KMER_EUCLIDEAN, SeqDistanceProtocolType.MLVA_EUCLIDEAN}
+    SEQ_DISTANCE = frozenset({ProtocolType.SEQ_DISTANCE})
+    HAS_REF_SEQ = frozenset()  # type: ignore[var-annotated]
+    HAS_OPTIONAL_REF_SEQ = frozenset(
+        {
+            ProtocolType.ASSEMBLY,
+            ProtocolType.SEQ_CLASSIFICATION,
+            ProtocolType.SEQ_PROFILE,
+            ProtocolType.SEQ_DISTANCE,
+        }
     )
+    HAS_SEQ_CATEGORY_SET = frozenset(
+        {
+            ProtocolType.SEQ_CLASSIFICATION,
+        }
+    )
+    HAS_OPTIONAL_SEQ_CATEGORY_SET = frozenset()  # type: ignore[var-annotated]
+    HAS_LOCUS_SET = frozenset()  # type: ignore[var-annotated]
+    HAS_OPTIONAL_LOCUS_SET = frozenset(
+        {
+            ProtocolType.PCR_MEASUREMENT,
+            ProtocolType.SEQ_CLASSIFICATION,
+            ProtocolType.SEQ_PROFILE,
+            ProtocolType.SEQ_DISTANCE,
+        }
+    )
+    IS_SEQ_DISTANCE = frozenset({ProtocolType.SEQ_DISTANCE})
+
+
+class SeqProfileType(IntEnumWithJsonSchemaMixin, IntEnum):
+    SNP = 1
+    LOCUS = 2
+    ALLELE = 3
+    MLVA = 4
+    KMER = 5
+
+
+class SeqProfileTypeSet(Enum):
+    ALLELE = frozenset({SeqProfileType.ALLELE})
+    MLVA = frozenset({SeqProfileType.MLVA})
+    SNP = frozenset({SeqProfileType.SNP})
+    LOCUS = frozenset({SeqProfileType.LOCUS})
+    KMER = frozenset({SeqProfileType.KMER})
     LOCUS_SET_BASED = frozenset(
         {
-            SeqDistanceProtocolType.ALLELE_HAMMING,
-            SeqDistanceProtocolType.MLVA_HAMMING,
+            SeqProfileType.ALLELE,
+            SeqProfileType.MLVA,
+            SeqProfileType.LOCUS,
         }
     )
     REF_SEQ_BASED = frozenset(
         {
-            SeqDistanceProtocolType.SNP_HAMMING,
+            SeqProfileType.SNP,
         }
     )
 
 
-class SeqDistanceResultFormat(Enum):
-    SEQ_DISTANCE_RESULT_FORMAT1 = "SEQ_DISTANCE_RESULT_FORMAT1"
+class SeqDistanceType(IntEnumWithJsonSchemaMixin, IntEnum):
+    SNP_HAMMING = 1
+    ALLELE_HAMMING = 2
+    MLVA_HAMMING = 3
+    MLVA_EUCLIDEAN = 4
+    KMER_EUCLIDEAN = 5
 
 
-class SeqDistanceFormat(Enum):
-    PROFILE_DISTANCE_MAP = "PROFILE_DISTANCE_MAP"
+class SeqDistanceTypeSet(Enum):
+    ALLELE_PROFILE_BASED = frozenset({SeqDistanceType.ALLELE_HAMMING})
+    SNP_PROFILE_BASED = frozenset({SeqDistanceType.SNP_HAMMING})
+    KMER_PROFILE_BASED = frozenset({SeqDistanceType.KMER_EUCLIDEAN})
+    MLVA_PROFILE_BASED = frozenset(
+        {SeqDistanceType.MLVA_HAMMING, SeqDistanceType.MLVA_EUCLIDEAN}
+    )
+    HAMMING_DISTANCE_BASED = frozenset(
+        {
+            SeqDistanceType.ALLELE_HAMMING,
+            SeqDistanceType.SNP_HAMMING,
+            SeqDistanceType.MLVA_HAMMING,
+        }
+    )
+    EUCLIDEAN_DISTANCE_BASED = frozenset(
+        {SeqDistanceType.KMER_EUCLIDEAN, SeqDistanceType.MLVA_EUCLIDEAN}
+    )
+    LOCUS_SET_BASED = frozenset(
+        {
+            SeqDistanceType.ALLELE_HAMMING,
+            SeqDistanceType.MLVA_HAMMING,
+            SeqDistanceType.MLVA_EUCLIDEAN,
+        }
+    )
+    REF_SEQ_BASED = frozenset(
+        {
+            SeqDistanceType.SNP_HAMMING,
+        }
+    )
 
 
-class SeqFileFormat(Enum):
-    FASTA = "FASTA"
+class SeqDistanceFormat(IntEnumWithJsonSchemaMixin, IntEnum):
+    PROFILE_DISTANCE_MAP = 1
 
 
-class ReadsFileFormat(Enum):
-    FASTQ = "FASTQ"
+class ReadsFileFormat(IntEnumWithJsonSchemaMixin, IntEnum):
+    FASTQ = 1
 
 
-class FileFormat(Enum):
-    FASTA = "FASTA"
-    FASTQ = "FASTQ"
+class SeqFileFormat(IntEnumWithJsonSchemaMixin, IntEnum):
+    FASTA = 2
 
 
-class FileCompression(Enum):
-    NONE = "NONE"
-    GZIP = "GZIP"
+class FileFormat(IntEnumWithJsonSchemaMixin, IntEnum):
+    FASTQ = 1
+    FASTA = 2
+
+
+class FileCompression(IntEnumWithJsonSchemaMixin, IntEnum):
+    NONE = 1
+    GZIP = 2

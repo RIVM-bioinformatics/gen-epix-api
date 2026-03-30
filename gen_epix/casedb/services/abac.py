@@ -743,7 +743,7 @@ class AbacService(BaseAbacService):
         )
         col_ids: set[UUID] = {x.id for x in cols if x.id is not None}
         dim_ids = {x.dim_id for x in cols}
-        col_ids = {x.ref_col_id for x in cols}
+        ref_col_ids = {x.ref_col_id for x in cols}
 
         # Retrieve all dims for the allowed CaseType dims
         dims: list[model.Dim] = self.app.handle(
@@ -765,5 +765,5 @@ class AbacService(BaseAbacService):
             col_ids=col_ids,
             dim_ids=dim_ids,
             ref_dim_ids=ref_dim_ids,
-            ref_col_ids=col_ids,
+            ref_col_ids=ref_col_ids,
         )

@@ -15,6 +15,8 @@ import uuid
 from typing import ClassVar, List
 from uuid import UUID
 
+import pytest
+
 from gen_epix.fastapp.app import _summarise_command_object
 from gen_epix.fastapp.log import LogItem
 from gen_epix.fastapp.model import Command, User
@@ -40,6 +42,7 @@ def _make_user() -> User:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_short_list_is_logged_verbatim() -> None:
     """Lists with <= _MAX_LIST_ITEMS_IN_LOG items pass through unchanged."""
     data = {"ids": ["a", "b", "c"]}
@@ -47,6 +50,7 @@ def test_short_list_is_logged_verbatim() -> None:
     assert result == data
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_long_list_is_summarised() -> None:
     """Lists with > _MAX_LIST_ITEMS_IN_LOG items are replaced with a count+sample dict."""
     long_list = [str(uuid.uuid4()) for _ in range(500)]
@@ -60,6 +64,7 @@ def test_long_list_is_summarised() -> None:
     assert summary["_sample"] == long_list[:3]
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_nested_long_list_is_summarised() -> None:
     """Long lists nested inside a dict field are also summarised."""
     long_list = [str(uuid.uuid4()) for _ in range(200)]
@@ -73,6 +78,7 @@ def test_nested_long_list_is_summarised() -> None:
     assert len(summary["_sample"]) == 3
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_long_list_respects_configured_sample_items() -> None:
     """Configured sample_items controls the number of sampled list elements."""
     long_list = [str(uuid.uuid4()) for _ in range(50)]
@@ -82,6 +88,7 @@ def test_long_list_respects_configured_sample_items() -> None:
     assert summary["_sample"] == long_list[:1]
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_create_log_message_with_summarization_disabled_keeps_full_list() -> None:
     """When disabled in config, command.object preserves full lists."""
     from gen_epix.fastapp.app import App
@@ -102,6 +109,7 @@ def test_create_log_message_with_summarization_disabled_keeps_full_list() -> Non
     assert len(case_ids) == 500
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_create_log_message_uses_configured_threshold_and_sample_size() -> None:
     """Config can tune max_list_items and sample_items."""
     from gen_epix.fastapp.app import App
@@ -130,6 +138,7 @@ def test_create_log_message_uses_configured_threshold_and_sample_size() -> None:
     assert len(summary["_sample"]) == 1
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_create_log_message_invalid_config_falls_back_to_defaults() -> None:
     """Invalid config values fall back to default summarization settings."""
     from gen_epix.fastapp.app import App
@@ -158,6 +167,7 @@ def test_create_log_message_invalid_config_falls_back_to_defaults() -> None:
     assert len(summary["_sample"]) == 3
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_create_log_message_with_large_command_stays_under_16384_bytes() -> None:
     """
     End-to-end: a command carrying 500 UUIDs in case_ids produces a log message

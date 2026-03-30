@@ -8,6 +8,9 @@ erDiagram
 
     %% Entity definitions
     File {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         bytes content
     }

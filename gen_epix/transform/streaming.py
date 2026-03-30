@@ -97,7 +97,7 @@ class StreamingPipeline:
 
     async def _process_batch_async(self, batch: list[Any]) -> list[TransformResult]:
         """Process a batch of objects asynchronously."""
-        tasks = [self._process_single_async(obj) for obj in batch]
+        tasks = [self._process_single_async(x) for x in batch]
         return await asyncio.gather(*tasks)
 
     async def _process_single_async(self, obj: Any) -> TransformResult:

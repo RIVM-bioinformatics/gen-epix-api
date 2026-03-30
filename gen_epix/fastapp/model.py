@@ -4,7 +4,7 @@ import abc
 import uuid
 from collections.abc import Hashable, Iterable
 from functools import cached_property
-from typing import Any, ClassVar, Self
+from typing import Any, ClassVar, Literal, Self, overload
 
 from pydantic import BaseModel
 from pydantic import BaseModel as PydanticBaseModel
@@ -65,6 +65,33 @@ class Model(PydanticBaseModel):
                 f"Name not set for model {cls.__name__}"
             )
         return cls.NAME
+
+    @overload
+    def get_id(self, raise_on_missing: Literal[True]) -> Hashable: ...
+
+    @overload
+    def get_id(self, raise_on_missing: Literal[False] = ...) -> Hashable | None: ...
+
+    def get_id(self, raise_on_missing: bool = False) -> Hashable | None:
+        """
+        Get the ID of the model instance. If the ID is not set and
+        raise_on_missing is True, an InitializationServiceError is raised.
+        Otherwise, None is returned if the ID is not set. If the Model has no ID field, an error is raised.
+
+        This method retrieves the ID using the field name defined in the
+        associated Entity, so that it can be used generically for any model
+        without needing to know the specific field name of the ID. The ID is
+        typically used for persistence and for identifying the model instance
+        across systems.
+
+        This method should be overridden where relevant for performance reasons.
+        """
+        id_: Hashable | None = getattr(self, self.ENTITY.get_id_field_name())
+        if id_ is None and raise_on_missing:
+            raise exc.InvalidIdsError(
+                f"ID not set for model instance {self.__class__.__name__}"
+            )
+        return id_
 
 
 class User(PydanticBaseModel):
@@ -299,28 +326,23 @@ class CrudCommand(Command):
                     else {self.obj_ids}
                 )
             return self.obj_ids if isinstance(self.obj_ids, list) else [self.obj_ids]
-        elif self.objs is not None:
-            # Command has objs and cannot have obj_ids
-            entity = self.MODEL_CLASS.ENTITY
-            if entity is None:
-                raise exc.InitializationServiceError(
-                    f"Entity not set for model {self.MODEL_CLASS.__name__}"
-                )
-            id_field_name = entity.get_id_field_name()
-            if isinstance(self.objs, list):
-                if as_set:
-                    retval = {getattr(obj, id_field_name) for obj in self.objs}
-                    retval.discard(None)
-                    return retval
-                return [getattr(obj, id_field_name) for obj in self.objs]
-            else:
-                if as_set:
-                    retval = {getattr(self.objs, id_field_name)}
-                    retval.discard(None)
-                    return retval
-                return [getattr(self.objs, id_field_name)]
-        # Command has neither obj_ids nor objs
-        return None
+        objs = self.objs
+        if objs is None:
+            # No obj_ids and no objs
+            return None
+        if isinstance(objs, list):
+            # List of objects
+            if as_set:
+                retval = {x.get_id() for x in objs}
+                retval.discard(None)
+                return retval
+            return [x.get_id() for x in objs]
+        # Single object
+        if as_set:
+            retval = {objs.get_id()}
+            retval.discard(None)
+            return retval
+        return [objs.get_id()]
 
     def get_objs(self) -> list[Model] | None:
         """
@@ -429,15 +451,13 @@ class UpdateAssociationCommand(Command):
             )
         if association_objs:
             if obj_id1 and not all(
-                getattr(obj, self.LINK_FIELD_NAME1) == obj_id1
-                for obj in association_objs
+                getattr(x, self.LINK_FIELD_NAME1) == obj_id1 for x in association_objs
             ):
                 raise exc.DomainException(
                     f"Invalid state: obj_id1 and association_objs not matching"
                 )
             if obj_id2 and not all(
-                getattr(obj, self.LINK_FIELD_NAME2) == obj_id2
-                for obj in association_objs
+                getattr(x, self.LINK_FIELD_NAME2) == obj_id2 for x in association_objs
             ):
                 raise exc.DomainException(
                     f"Invalid state: obj_id2 and association_objs not matching"
