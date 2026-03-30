@@ -89,6 +89,7 @@ from gen_epix.omopdb.domain.model.omop.derived import DoseEra as DoseEra
 from gen_epix.omopdb.domain.model.omop.derived import DrugEra as DrugEra
 from gen_epix.omopdb.domain.model.omop.derived import Episode as Episode
 from gen_epix.omopdb.domain.model.omop.derived import EpisodeEvent as EpisodeEvent
+from gen_epix.omopdb.domain.model.omop.full_person import FullPerson as FullPerson
 
 # Health economics domain imports
 from gen_epix.omopdb.domain.model.omop.health_economics import Cost as Cost
