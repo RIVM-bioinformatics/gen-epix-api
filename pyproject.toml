@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "Gen-EpiX"
-version = "7.1.1"
+version = "8.0.0"
 authors = [
     { name="RIVM-bioinformatics", email="ids-bioinformatics@rivm.nl" },
 ]
@@ -37,8 +37,13 @@ dependencies = [
     "dynaconf==3.2.13",
     "PyYAML==6.0.3",
     "scipy==1.17.1",
+<<<<<<< renovate/biopython-1.x
     "numpy==2.4.3",
     "biopython==1.87",
+=======
+    "numpy==2.4.4",
+    "biopython==1.86",
+>>>>>>> dev
     "cachetools==7.0.5",
     "slowapi==0.1.9",
     "python-dateutil==2.9.0.post0",
