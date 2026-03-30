@@ -11,6 +11,8 @@ Verifies that:
 """
 
 import datetime
+
+import pytest
 from test.commondb.unit.conftest import DEFAULT_CREATED_AT, DEFAULT_MODIFIED_AT
 from unittest import TestCase
 from uuid import uuid4
@@ -35,6 +37,7 @@ def _make_obj(
     )
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-04")
 class TestCommondbDictModelModifier(TestCase):
 
     def setUp(self) -> None:

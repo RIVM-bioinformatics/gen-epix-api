@@ -6,6 +6,7 @@ from pydantic import ValidationError
 from gen_epix.casedb.domain import model
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-01")
 class TestCaseTypeProps:
     def test_default_construction(self) -> None:
         props = model.CaseTypeProps()
