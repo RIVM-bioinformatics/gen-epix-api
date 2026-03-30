@@ -91,6 +91,7 @@ def setup_users(env: Env) -> None:
 
 
 @pytest.mark.integration
+@pytest.mark.scenario_ids("TC-MET-01-01")
 class TestCommondbMetadataMasking:
     """
     Verifies that commondb does NOT mask metadata fields for any user role.

@@ -77,6 +77,7 @@ def setup_users(env: Env) -> None:
 
 
 @pytest.mark.integration
+@pytest.mark.scenario_ids("TC-MET-01-01")
 class TestCommondbModelProcessMetadata:
     """
     Verifies that the CommondbSAMapper (SA backend) and CommondbDictModelModifier

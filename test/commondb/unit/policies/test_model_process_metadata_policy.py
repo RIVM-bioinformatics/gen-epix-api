@@ -62,7 +62,7 @@ def _make_cmd(
     )
 
 
-@pytest.mark.scenario_ids("TC-SEC-META-02")
+@pytest.mark.scenario_ids("TC-SEC-META-02", "TC-SEC-30-02")
 class TestModelMetadataPolicy(TestCase):
 
     def setUp(self) -> None:

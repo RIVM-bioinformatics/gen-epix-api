@@ -111,6 +111,7 @@ def setup_users_and_data(env: Env) -> None:
 
 
 @pytest.mark.integration
+@pytest.mark.scenario_ids("TC-MET-01-01")
 class TestCasedbMetadataMasking:
     """
     Verifies that MaskModelProcessMetadataPolicy is correctly wired in casedb.

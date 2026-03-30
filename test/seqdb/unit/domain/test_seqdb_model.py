@@ -95,6 +95,7 @@ def _make_protocol(**overrides: Any) -> Protocol:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-03")
 class TestProtocolHappyPaths:
     """Valid construction for every ProtocolType."""
 
@@ -132,6 +133,7 @@ class TestProtocolHappyPaths:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-03")
 class TestProtocolGitCommitHash:
     """Tests for the git_commit_hash field validator."""
 
@@ -176,6 +178,7 @@ class TestProtocolGitCommitHash:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-03")
 class TestProtocolGitRepositoryUri:
     """Tests for the git_repository_uri field validator."""
 
@@ -213,6 +216,7 @@ class TestProtocolGitRepositoryUri:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-03")
 class TestProtocolProps:
     """Tests for the props field validator."""
 
@@ -290,6 +294,7 @@ _EXTRA_FIELD_CASES: list[tuple[str, ProtocolType, Any]] = [
 ]
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-03")
 class TestProtocolTypeDependencies:
     """Tests for the _validate_protocol_type_dependencies model validator."""
 
@@ -327,6 +332,7 @@ class TestProtocolTypeDependencies:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-03")
 class TestProtocolSerializers:
     """Tests for Protocol field serializers."""
 
