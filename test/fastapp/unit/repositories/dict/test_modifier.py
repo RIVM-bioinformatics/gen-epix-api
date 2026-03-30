@@ -31,6 +31,7 @@ class _ConcreteModifier(BaseDictModelModifier):
         self.update_calls.append((user_id, obj, stored_obj))
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 class TestBaseDictModelModifier(TestCase):
     def test_cannot_instantiate_abstract_class(self) -> None:
         # 1. Input / 2. Mocks (none)

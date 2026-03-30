@@ -570,9 +570,9 @@ location_history,end_iso_interval,No,varchar(55),Not part of OMOP CDM. See corre
 location_history,location_history_id,Yes,bigint,Not part of OMOP CDM. The primary key for this table.,NA,Yes,No,NA,NA,NA,NA,NA
 cohort,cohort_id,Yes,integer,Not part of OMOP CDM. The primary key for this table.,NA,Yes,No,NA,NA,NA,NA,NA
 cdm_source,cdm_source_id,Yes,integer,Not part of OMOP CDM. The primary key for this table.,NA,Yes,No,NA,NA,NA,NA,NA
-concept_relationship,concept_relationship_id,Yes,integer,Not part of OMOP CDM. The primary key for this table.,NA,Yes,No,NA,NA,NA,NA,NA
-concept_ancestor,concept_ancestor_id,Yes,integer,Not part of OMOP CDM. The primary key for this table.,NA,Yes,No,NA,NA,NA,NA,NA
-concept_synonym,concept_synonym_id,Yes,integer,Not part of OMOP CDM. The primary key for this table.,NA,Yes,No,NA,NA,NA,NA,NA
+concept_relationship,concept_relationship_id,Yes,integer,"Not part of OMOP CDM. The primary key for this table. Always auto-computed as the SHA256 hash of the byte concatenation of concept_id_1 bytes, concept_id_2 bytes, and relationship_id bytes.",NA,Yes,No,NA,NA,NA,NA,NA
+concept_ancestor,concept_ancestor_id,Yes,integer,"Not part of OMOP CDM. The primary key for this table. Always auto-computed as the SHA256 hash of the byte concatenation of ancestor_concept_id bytes and descendant_concept_id bytes.",NA,Yes,No,NA,NA,NA,NA,NA
+concept_synonym,concept_synonym_id,Yes,integer,"Not part of OMOP CDM. The primary key for this table. Always auto-computed as the SHA256 hash of the byte concatenation of concept_id, concept_synonym_name and language_concept_id bytes.",NA,Yes,No,NA,NA,NA,NA,NA
 drug_strength,drug_strength_id,Yes,integer,Not part of OMOP CDM. The primary key for this table.,NA,Yes,No,NA,NA,NA,NA,NA
 episode_event,episode_event_id,Yes,integer,Not part of OMOP CDM. The primary key for this table.,NA,Yes,No,NA,NA,NA,NA,NA
 source_to_concept_map,source_to_concept_map_id,Yes,integer,Not part of OMOP CDM. The primary key for this table.,NA,Yes,No,NA,NA,NA,NA,NA

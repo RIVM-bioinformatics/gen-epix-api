@@ -50,7 +50,8 @@ def _load_class(path: str) -> object:
 
 
 def _emit_access_payload_via_dictconfig(yaml_path: Path) -> JSONDict:
-    script = textwrap.dedent("""
+    script = textwrap.dedent(
+        """
         import json
         import logging
         import logging.config
@@ -90,7 +91,8 @@ def _emit_access_payload_via_dictconfig(yaml_path: Path) -> JSONDict:
             "1.1",
             204,
         )
-        """)
+        """
+    )
 
     proc = subprocess.run(
         [sys.executable, "-c", script, str(yaml_path)],
@@ -110,7 +112,8 @@ def _emit_access_payload_via_dictconfig(yaml_path: Path) -> JSONDict:
 
 
 def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[JSONDict]:
-    script = textwrap.dedent("""\
+    script = textwrap.dedent(
+        """\
         import logging
         import logging.config
         import sys
@@ -162,7 +165,8 @@ def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[JSONDic
         service_logger.info(
             '{"code":"c10677fe","msg":"STARTING_SERVICE","service":{"id":"svc-123","name":"UploadService"}}'
         )
-        """)
+        """
+    )
 
     proc = subprocess.run(
         [sys.executable, "-c", script, str(yaml_path)],
@@ -185,7 +189,8 @@ def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[JSONDic
 
 
 def _emit_log_level_resolution_payloads(enable_env_override: bool) -> list[JSONDict]:
-    script = textwrap.dedent("""\
+    script = textwrap.dedent(
+        """\
         import json
         import logging
         import os
@@ -208,7 +213,8 @@ def _emit_log_level_resolution_payloads(enable_env_override: bool) -> list[JSOND
         uvicorn_error_logger = logging.getLogger("uvicorn.error")
         uvicorn_error_logger.info("PROBE_UVICORN_INFO")
         uvicorn_error_logger.warning("PROBE_UVICORN_WARNING")
-        """)
+        """
+    )
 
     proc = subprocess.run(
         [sys.executable, "-c", script, "1" if enable_env_override else "0"],
@@ -237,6 +243,7 @@ def _has_message(payloads: list[JSONDict], logger_name: str, message: str) -> bo
 @pytest.mark.parametrize(
     "yaml_path", _ALL_YAML_PATHS, ids=lambda p: p.parent.parent.name
 )
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_logging_yaml_formatter_and_filter_paths_are_importable(
     yaml_path: Path,
 ) -> None:
@@ -260,6 +267,7 @@ def test_logging_yaml_formatter_and_filter_paths_are_importable(
     _PRODUCTION_YAML_PATHS + _E2E_YAML_PATHS,
     ids=lambda p: f"runtime-{p.parent.parent.name}",
 )
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_runtime_uvicorn_access_log_is_informative_for_downstream_logmessage(
     yaml_path: Path,
 ) -> None:
@@ -285,6 +293,7 @@ def test_runtime_uvicorn_access_log_is_informative_for_downstream_logmessage(
     _PRODUCTION_YAML_PATHS + _E2E_YAML_PATHS,
     ids=lambda p: f"runtime-app-{p.parent.parent.name}",
 )
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_runtime_app_lifecycle_logs_have_message_and_operational_aliases(
     yaml_path: Path,
 ) -> None:
@@ -336,6 +345,7 @@ def test_runtime_app_lifecycle_logs_have_message_and_operational_aliases(
     }
 
 
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_runtime_log_level_resolution_diagnostic_and_env_override_behavior() -> None:
     without_env_override = _emit_log_level_resolution_payloads(False)
     with_env_override = _emit_log_level_resolution_payloads(True)
