@@ -387,16 +387,6 @@ class TestValidateIntPrimaryKeyArgs:
         assert data[_int_field_name()] == SAMPLE_INT
         assert data[_uuid_field_name()] == int_to_uuid(SAMPLE_INT)
 
-    # commented out because we do not want this as a behaviour!
-    # def test_int_id_missing_raises_value_error(self) -> None:
-    #     """When int_id is not provided and uuid_id is not an int, should raise
-    #     ValueError."""
-    #     data: dict[str, object] = {_uuid_field_name(): uuid4()}
-    #     with pytest.raises(
-    #         ValueError, match=f"{_int_field_name()} not provided or not an integer"
-    #     ):
-    #         validate_int_key_args(data, _uuid_field_name(), _int_field_name())
-
     def test_int_id_non_int_raises_value_error(self) -> None:
         """When int_id is not an integer (e.g. str), should raise ValueError."""
         data: dict[str, object] = {

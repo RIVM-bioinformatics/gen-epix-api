@@ -252,8 +252,7 @@ class Relationship(Model):
         description="User guidance:\nDefines whether a hierarchical relationship\r\ncontributes to the concept_ancestor table.\r\nThese are subsets of the hierarchical\r\nrelationships. Valid values are 1 or 0.\nETL conventions:\nNone",
         max_length=1,
     )
-    reverse_relationship_id: UUID | None = Field(
-        default=None,
+    reverse_relationship_id: UUID = Field(
         description="User guidance:\nThe identifier for the relationship used to\r\ndefine the reverse relationship between two\r\nconcepts.\nETL conventions:\nNone",
     )
     reverse_relationship_str_id: str = Field(
@@ -296,7 +295,7 @@ class ConceptRelationship(Model):
     )
     concept_relationship_id: UUID | None = Field(
         default=None,
-        description="User guidance:\nNot part of OMOP CDM. The primary key for this table. Always auto-computed as the SHA256 hash of the byte concatenation of concept_id_1 bytes, concept_id_2 bytes, and relationship_id bytes. Never provided by user.\nETL conventions:\nNone",
+        description="User guidance:\nNot part of OMOP CDM. The primary key for this table. Always auto-computed as the SHA256 hash of the byte concatenation of concept_id_1 bytes, concept_id_2 bytes, and relationship_id bytes.\nETL conventions:\nNone",
     )
     concept_id_1: UUID = Field(
         description="User guidance:\nNone\nETL conventions:\nNone"
@@ -369,7 +368,7 @@ class ConceptAncestor(Model):
     )
     concept_ancestor_id: UUID | None = Field(
         default=None,
-        description="User guidance:\nNot part of OMOP CDM. The primary key for this table. Always auto-computed as the SHA256 hash of the byte concatenation of ancestor_concept_id bytes and descendant_concept_id bytes. Never provided by user.\nETL conventions:\nNone",
+        description="User guidance:\nNot part of OMOP CDM. The primary key for this table. Always auto-computed as the SHA256 hash of the byte concatenation of ancestor_concept_id bytes and descendant_concept_id bytes.\nETL conventions:\nNone",
     )
     ancestor_concept_id: UUID = Field(
         description="User guidance:\nThe Concept Id for the higher-level concept\r\nthat forms the ancestor in the relationship.\nETL conventions:\nNone"
@@ -423,7 +422,7 @@ class ConceptSynonym(Model):
     )
     concept_synonym_id: UUID | None = Field(
         default=None,
-        description="User guidance:\nNot part of OMOP CDM. The primary key for this table. Always auto-computed as the SHA256 hash of the composite natural key (concept_id, concept_synonym_name, language_concept_id). Never provided by user.\nETL conventions:\nNone",
+        description="User guidance:\nNot part of OMOP CDM. The primary key for this table. Always auto-computed as the SHA256 hash of the byte concatenation of concept_id, concept_synonym_name and language_concept_id bytes.\nETL conventions:\nNone",
     )
     concept_id: UUID = Field(description="User guidance:\nNone\nETL conventions:\nNone")
     concept_synonym_name: str = Field(
@@ -448,8 +447,8 @@ class ConceptSynonym(Model):
         concept_synonym_name = data.get("concept_synonym_name")
         language_concept_id = data.get("language_concept_id")
         if all(
-            v is not None
-            for v in (concept_id, concept_synonym_name, language_concept_id)
+            x is not None
+            for x in (concept_id, concept_synonym_name, language_concept_id)
         ):
             concept_id_uuid = validate_int_for_uuid_field(concept_id)
             language_concept_id_uuid = validate_int_for_uuid_field(language_concept_id)

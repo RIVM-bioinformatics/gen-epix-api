@@ -131,6 +131,9 @@ class Relationship(Base, NoIdRowMetadataMixin):
     relationship_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.Relationship, "relationship_id"
     )
+    relationship_str_id: Mapped[str] = create_mapped_column(
+        DOMAIN, model.Relationship, "relationship_str_id"
+    )
     relationship_name: Mapped[str] = create_mapped_column(
         DOMAIN, model.Relationship, "relationship_name"
     )
@@ -142,6 +145,9 @@ class Relationship(Base, NoIdRowMetadataMixin):
     )
     reverse_relationship_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.Relationship, "reverse_relationship_id"
+    )
+    reverse_relationship_str_id: Mapped[str] = create_mapped_column(
+        DOMAIN, model.Relationship, "reverse_relationship_str_id"
     )
     relationship_concept_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.Relationship, "relationship_concept_id"
