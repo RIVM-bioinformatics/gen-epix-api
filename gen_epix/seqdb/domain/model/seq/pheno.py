@@ -1,6 +1,5 @@
 from typing import ClassVar
 
-
 from gen_epix.commondb.domain.model import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum

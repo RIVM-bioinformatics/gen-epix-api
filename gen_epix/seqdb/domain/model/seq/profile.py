@@ -194,6 +194,28 @@ class SeqProfile(
             "Unable to parse aligned nucleotide sequence for this SNP profile format"
         )
 
+    def get_allele_id_bytes(
+        self,
+        **kwargs: Any,
+    ) -> list[bytes | None]:
+        """Return allele IDs as raw 16-byte chunks."""
+        if self.seq_profile_type != enum.SeqProfileType.ALLELE:
+            raise ValueError("Allele IDs can only be retrieved" " for allele profiles")
+        if self.format == enum.SeqProfileFormat.ORDERED_ALLELE_IDS:
+            allele_bytes = base64.b64decode(self.content)
+            n_loci = len(allele_bytes) // 16
+            result: list[bytes | None] = [None] * n_loci
+            null_id_bytes = NULL_ID.bytes
+            for i in range(n_loci):
+                offset = i * 16
+                chunk = allele_bytes[offset : offset + 16]
+                if chunk != null_id_bytes:
+                    result[i] = chunk
+            return result
+        raise NotImplementedError(
+            "Unable to parse allele IDs for this" " allele profile format"
+        )
+
     def get_allele_ids(self, **kwargs: Any) -> list[UUID | None]:
         """
         Parse and return the allele IDs from the allele profile based on its format.

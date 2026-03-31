@@ -237,7 +237,10 @@ class AppCfg(BaseAppCfg):
     def _init_validate_settings(self) -> None:
         """Validate settings and apply defaults to all services and repositories."""
         # Map timestamp and id factories
-        from gen_epix.commondb.domain.enum import IdFactory, TimestampFactory  # noqa: PLC0415
+        from gen_epix.commondb.domain.enum import (  # noqa: PLC0415
+            IdFactory,
+            TimestampFactory,
+        )
 
         defaults_cfg = self._cfg["service"]["defaults"]["props"]
         timestamp_factory = getattr(

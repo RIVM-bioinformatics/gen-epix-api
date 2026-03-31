@@ -35,6 +35,10 @@ class BaseSeqService(BaseService):
             self.calculate_seq_distances_for_new_profiles,
         )
         f(
+            command.UpdateSeqDistancesCommand,
+            self.update_seq_distances,
+        )
+        f(
             command.ProtocolCrudCommand,
             self.crud_protocol,
         )
@@ -195,6 +199,13 @@ class BaseSeqService(BaseService):
     def calculate_seq_distances_for_new_profiles(
         self,
         cmd: command.CalculateSeqDistancesForNewProfilesCommand,
+    ) -> list[model.CalculateSeqDistancesResult]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def update_seq_distances(
+        self,
+        cmd: command.UpdateSeqDistancesCommand,
     ) -> list[model.CalculateSeqDistancesResult]:
         raise NotImplementedError()
 

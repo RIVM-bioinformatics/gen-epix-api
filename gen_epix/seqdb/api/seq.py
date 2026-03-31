@@ -30,6 +30,10 @@ class RetrieveSimilarProfilesRequestBody(PydanticBaseModel):
     max_distance: float
 
 
+class UpdateSeqDistancesRequestBody(PydanticBaseModel):
+    protocol_id: UUID
+
+
 class RetrieveSamplesRequestBody(PydanticBaseModel):
     sample_ids: list[UUID]
 
@@ -151,6 +155,27 @@ def create_seq_endpoints(
                 "Content-Disposition": f'attachment; filename="{request_body.file_name}"'
             },
         )
+
+    @router.post(
+        "/update/seq_distances",
+        operation_id="update__seq_distances",
+        name="UpdateSeqDistances",
+        description=command.UpdateSeqDistancesCommand.__doc__,
+    )
+    async def update__seq_distances(
+        user: registered_user_dependency,
+        request_body: UpdateSeqDistancesRequestBody,  # type: ignore
+    ) -> list[model.CalculateSeqDistancesResult]:
+        try:
+            retval: list[model.CalculateSeqDistancesResult] = app.handle(
+                command.UpdateSeqDistancesCommand(
+                    user=user,
+                    protocol_id=request_body.protocol_id,
+                )
+            )
+        except Exception as exception:
+            handle_exception("a7b3c1d2", user, exception)  # type: ignore
+        return retval
 
     @router.post(
         "/upload/samples",

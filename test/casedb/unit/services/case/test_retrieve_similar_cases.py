@@ -13,8 +13,8 @@ from gen_epix.casedb.services.case.retrieve_similar_cases import (
 )
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.enum import CrudOperation
-from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import command as seqdb_command
+from gen_epix.seqdb.domain import enum as seqdb_enum
 
 
 class BaseSimilarCasesTestCase(TestCase):

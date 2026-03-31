@@ -2,6 +2,7 @@
 # This module defines base classes, methods are added later
 
 
+import datetime
 from typing import ClassVar, Self
 from uuid import UUID
 
@@ -40,6 +41,13 @@ class UploadSamplesCommand(Command, UploadBatchCommandMixin):
     sample_batch: model.SampleBatchForUpload = Field(
         description="Samples to upload, along with any associated data.",
     )
+    seq_distance_last_modified_at: datetime.datetime | None = Field(
+        default=None,
+        description=(
+            "If provided, the upload will fail if any SeqDistance was modified after this timestamp, "
+            " to prevent concurrent modification conflicts."
+        ),
+    )
 
 
 class CalculateSeqDistancesForNewProfilesCommand(Command):
@@ -54,6 +62,26 @@ class CalculateSeqDistancesForNewProfilesCommand(Command):
 
     seq_profiles: list[model.SeqProfile] = Field(
         description="List of new sequence profiles to calculate distances for.",
+    )
+    seq_distance_last_modified_at: datetime.datetime | None = Field(
+        default=None,
+        description=(
+            "If provided, fail if any SeqDistance was modified after this timestamp."
+        ),
+    )
+
+
+class UpdateSeqDistancesCommand(Command):
+    """
+    For a given distance protocol, find all profiles
+    that don't yet have a SeqDistance record, compute
+    the missing distances, and create the records while
+    maintaining the symmetry invariant (every distance
+    is stored in both directions).
+    """
+
+    protocol_id: UUID = Field(
+        description=("The ID of the seq distance protocol to update distances for."),
     )
 
 

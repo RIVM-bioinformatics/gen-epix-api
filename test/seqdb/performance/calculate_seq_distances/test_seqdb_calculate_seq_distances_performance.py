@@ -30,10 +30,10 @@ from gen_epix.seqdb.repositories.seq_dict import SeqDictRepository
 # Set to True to regenerate demo data, False to load from existing pickle file
 CREATE_DEMO_DATA = True
 
-N_SEQS_PER_BATCH = 10
-DB_ENTRY_COUNTS: list[int] = [1, 2, 10]
+N_SEQS_PER_BATCH = 100
+DB_ENTRY_COUNTS: list[int] = [1]  # ]2, 10]
 
-SEQ_SETTINGS = SeqGenerationSettings(n_loci=10, locus_length=100)
+SEQ_SETTINGS = SeqGenerationSettings(n_loci=1000, locus_length=100)
 
 SEQDB_APP_CFGS = get_app_cfgs(
     AppType.SEQDB,

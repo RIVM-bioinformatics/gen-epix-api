@@ -43,9 +43,6 @@ from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.file import File as File
 from gen_epix.seqdb.domain.model.seq import Allele as Allele
 from gen_epix.seqdb.domain.model.seq import AlleleForUpload as AlleleForUpload
-from gen_epix.seqdb.domain.model.seq import (
-    SeqClassificationForUpload as SeqClassificationForUpload,
-)
 from gen_epix.seqdb.domain.model.seq import AstMeasurement as AstMeasurement
 from gen_epix.seqdb.domain.model.seq import AstPrediction as AstPrediction
 from gen_epix.seqdb.domain.model.seq import BaseSeq as BaseSeq
@@ -82,6 +79,9 @@ from gen_epix.seqdb.domain.model.seq import SampleIdentifier as SampleIdentifier
 from gen_epix.seqdb.domain.model.seq import SampleUploadResult as SampleUploadResult
 from gen_epix.seqdb.domain.model.seq import Seq as Seq
 from gen_epix.seqdb.domain.model.seq import SeqClassification as SeqClassification
+from gen_epix.seqdb.domain.model.seq import (
+    SeqClassificationForUpload as SeqClassificationForUpload,
+)
 from gen_epix.seqdb.domain.model.seq import SeqDistance as SeqDistance
 from gen_epix.seqdb.domain.model.seq import SeqForUpload as SeqForUpload
 from gen_epix.seqdb.domain.model.seq import SeqIdentifier as SeqIdentifier

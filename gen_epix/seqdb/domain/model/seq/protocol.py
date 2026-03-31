@@ -184,7 +184,7 @@ class Protocol(Model):
     )
     max_stored_distance: float | None = Field(
         default=None,
-        description="The maximum sequencedistance that is guaranteed to be stored. "
+        description="The maximum sequence distance that is guaranteed to be stored. "
         + _create_field_description(
             *PROTOCOL_TYPE_FIELD_DEPENDENCIES["max_stored_distance"]
         ),

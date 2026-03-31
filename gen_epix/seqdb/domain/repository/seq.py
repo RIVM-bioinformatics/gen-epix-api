@@ -1,6 +1,7 @@
 import abc
 import json
 from collections.abc import Iterable
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -54,4 +55,40 @@ class BaseSeqRepository(BaseRepository):
         uow: BaseUnitOfWork,
         protocol_id: UUID,
     ) -> Iterable[model.SeqDistance]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def iter_seq_distance_profile_ids(
+        self,
+        uow: BaseUnitOfWork,
+        protocol_id: UUID,
+    ) -> Iterable[UUID]:
+        """
+        Yield unique profile IDs that have SeqDistance
+        records for the given protocol.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_max_seq_distance_modified_at(
+        self,
+        uow: BaseUnitOfWork,
+        protocol_id: UUID,
+    ) -> datetime | None:
+        """
+        Return the maximum modified_at timestamp of
+        SeqDistance records for the given protocol.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_profiles_by_protocol_ids(
+        self,
+        uow: BaseUnitOfWork,
+        protocol_ids: list[UUID],
+    ) -> list[model.SeqProfile]:
+        """
+        Return all SeqProfiles linked to the given
+        profiling protocol IDs.
+        """
         raise NotImplementedError()

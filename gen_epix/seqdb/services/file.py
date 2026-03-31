@@ -1,4 +1,3 @@
-from gen_epix.seqdb.services.seq.crud_file import file_service_crud_file
 import gzip
 from collections.abc import Iterable
 from io import BytesIO, StringIO
@@ -9,6 +8,7 @@ from Bio import SeqIO
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import command, enum, exc, model
 from gen_epix.seqdb.domain.service.file import BaseFileService
+from gen_epix.seqdb.services.seq.crud_file import file_service_crud_file
 
 
 class FileService(BaseFileService):

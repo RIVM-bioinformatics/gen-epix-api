@@ -9,9 +9,9 @@ from gen_epix.filter.uuid_set import UuidSetFilter
 from gen_epix.seqdb.domain import command, model
 from gen_epix.seqdb.services.seq.upload_verify_batch_refdata import (
     _verify_batch_refdata_allele_profiles,
+    _verify_batch_refdata_kmer_profiles,
     _verify_batch_refdata_mlva_profiles,
     _verify_batch_refdata_snp_profiles,
-    _verify_batch_refdata_kmer_profiles,
 )
 
 
