@@ -71,6 +71,7 @@ from gen_epix.omopdb.domain.model.omop import DrugStrength as DrugStrength
 from gen_epix.omopdb.domain.model.omop import Episode as Episode
 from gen_epix.omopdb.domain.model.omop import EpisodeEvent as EpisodeEvent
 from gen_epix.omopdb.domain.model.omop import FactRelationship as FactRelationship
+from gen_epix.omopdb.domain.model.omop import FullPerson as FullPerson
 from gen_epix.omopdb.domain.model.omop import Location as Location
 from gen_epix.omopdb.domain.model.omop import Measurement as Measurement
 from gen_epix.omopdb.domain.model.omop import (
@@ -219,7 +220,8 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             Cohort,
             Episode,
             EpisodeEvent,
-            # Upload
+            # Non-persistent models including upload
+            FullPerson,
             SpecimenForUpload,
             MeasurementForUpload,
             MeasurementRelationForUpload,
