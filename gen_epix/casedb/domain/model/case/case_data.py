@@ -140,6 +140,10 @@ class CaseSet(Model):
     description: str = Field(
         description="The description of a case set", max_length=8000
     )
+    case_set_date: datetime = Field(
+        description="The datetime of the case set creation",
+        default_factory=datetime.now,
+    )
     case_set_category_id: UUID = Field(
         description="The CaseSetCategory ID. FOREIGN KEY"
     )
