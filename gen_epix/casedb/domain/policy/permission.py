@@ -54,6 +54,9 @@ class RoleGenerator(CommonRoleGenerator):
                 command.ColSetColUpdateAssociationCommand,
                 PermissionTypeSet.E,
             ),
+            (command.RegionRelationCrudCommand, PermissionTypeSet.CU),
+            (command.TreeAlgorithmClassCrudCommand, PermissionTypeSet.CU),
+            (command.TreeAlgorithmCrudCommand, PermissionTypeSet.CU),
             # abac
             (command.OrganizationAccessCasePolicyCrudCommand, PermissionTypeSet.CUD),
             (
@@ -134,6 +137,7 @@ class RoleGenerator(CommonRoleGenerator):
             (command.RetrieveCasesByQueryCommand, PermissionTypeSet.E),
             (command.RetrieveCompleteCaseTypeCommand, PermissionTypeSet.E),
             (command.TreeAlgorithmClassCrudCommand, PermissionTypeSet.R),
+            (command.RegionRelationCrudCommand, PermissionTypeSet.R),
             (command.TreeAlgorithmCrudCommand, PermissionTypeSet.R),
             (command.UploadCasesCommand, PermissionTypeSet.E),
             # ontology
