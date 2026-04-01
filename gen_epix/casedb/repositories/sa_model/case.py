@@ -447,8 +447,8 @@ class CaseSet(Base, RowMetadataMixin):
     description: Mapped[str] = create_mapped_column(
         DOMAIN, model.CaseSet, "description"
     )
-    created_at: Mapped[datetime] = create_mapped_column(
-        DOMAIN, model.CaseSet, "created_at"
+    case_set_date: Mapped[datetime] = create_mapped_column(
+        DOMAIN, model.CaseSet, "case_set_date"
     )
     case_set_category_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.CaseSet, "case_set_category_id"

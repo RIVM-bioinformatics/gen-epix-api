@@ -140,7 +140,7 @@ class CaseSet(Model):
     description: str = Field(
         description="The description of a case set", max_length=8000
     )
-    created_at: datetime = Field(
+    case_set_date: datetime = Field(
         description="The datetime of the case set creation",
         default_factory=datetime.now,
     )
