@@ -199,7 +199,7 @@ class SeqProfile(
     ) -> list[bytes | None]:
         """Return allele IDs as raw 16-byte chunks."""
         if self.seq_profile_type != enum.SeqProfileType.ALLELE:
-            raise ValueError("Allele IDs can only be retrieved" " for allele profiles")
+            raise ValueError("Allele IDs can only be retrieved for allele profiles")
         if self.format == enum.SeqProfileFormat.ORDERED_ALLELE_IDS:
             allele_bytes = base64.b64decode(self.content)
             n_loci = len(allele_bytes) // 16
@@ -212,7 +212,7 @@ class SeqProfile(
                     result[i] = chunk
             return result
         raise NotImplementedError(
-            "Unable to parse allele IDs for this" " allele profile format"
+            "Unable to parse allele IDs for this allele profile format"
         )
 
     def get_allele_ids(self, **kwargs: Any) -> list[UUID | None]:

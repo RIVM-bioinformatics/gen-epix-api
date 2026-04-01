@@ -86,10 +86,7 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         seen: set[UUID] = set()
         # for seq_distance in table.values():
         for seq_distance in self.iter_seq_distances(uow, protocol_id):
-            if (
-                seq_distance.protocol_id == protocol_id
-                and seq_distance.seq_profile_id not in seen
-            ):
+            if seq_distance.seq_profile_id not in seen:
                 seen.add(seq_distance.seq_profile_id)
                 yield seq_distance.seq_profile_id
 
@@ -98,11 +95,11 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         uow: BaseUnitOfWork,
         protocol_id: UUID,
     ) -> datetime | None:
-        table: dict[UUID, model.SeqDistance] = self.db[  # type: ignore[assignment]
+        df: dict[UUID, model.SeqDistance] = self.db[  # type: ignore[assignment]
             model.SeqDistance
         ]
         maximum_modified_timestamp: datetime | None = None
-        for seq_distance in table.values():
+        for seq_distance in df.values():
             if seq_distance.protocol_id == protocol_id:
                 if seq_distance.modified_at is not None and (
                     maximum_modified_timestamp is None
@@ -117,7 +114,7 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         protocol_ids: list[UUID],
     ) -> list[model.SeqProfile]:
         unique_protocol_ids = set(protocol_ids)
-        table: dict[UUID, model.SeqProfile] = self.db[  # type: ignore[assignment]
+        df: dict[UUID, model.SeqProfile] = self.db[  # type: ignore[assignment]
             model.SeqProfile
         ]
-        return [x for x in table.values() if x.protocol_id in unique_protocol_ids]
+        return [x for x in df.values() if x.protocol_id in unique_protocol_ids]

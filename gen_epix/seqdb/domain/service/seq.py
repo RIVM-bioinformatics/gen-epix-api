@@ -1,4 +1,5 @@
 import abc
+import datetime
 from collections.abc import Iterable
 from uuid import UUID
 
@@ -29,6 +30,10 @@ class BaseSeqService(BaseService):
         f(
             command.RetrieveSimilarProfilesCommand,
             self.retrieve_similar_profiles,
+        )
+        f(
+            command.RetrieveSeqDistanceLastModifiedCommand,
+            self.retrieve_seq_distance_last_modified,
         )
         f(
             command.CalculateSeqDistancesForNewProfilesCommand,
@@ -193,6 +198,13 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.RetrieveSimilarProfilesCommand,
     ) -> list[UUID]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_seq_distance_last_modified(
+        self,
+        cmd: command.RetrieveSeqDistanceLastModifiedCommand,
+    ) -> datetime.datetime | None:
         raise NotImplementedError()
 
     @abc.abstractmethod

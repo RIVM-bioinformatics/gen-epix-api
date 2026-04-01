@@ -182,6 +182,4 @@ class TestSampleBatchUploader:
         print(f"avg_time_per_upload={avg:.4f}s\n")
 
         # profiler.stop()
-        # profiler.write_html(
-        #     "./test/output/profile_calculate_seq_distances.html"
-        # )
+        # profiler.write_html("./test/output/profile_calculate_seq_distances.html")

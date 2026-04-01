@@ -50,6 +50,22 @@ class UploadSamplesCommand(Command, UploadBatchCommandMixin):
     )
 
 
+class RetrieveSeqDistanceLastModifiedCommand(Command):
+    """
+    Retrieve the last modified datetime of any SeqDistance for a particular SeqDistance
+    protocol. This command is intended to be used in conjunction with the
+    CalculateSeqDistancesForNewProfilesCommand command, which has a
+    seq_distance_last_modified_at field that can be filled with the return value of this
+    command to prevent concurrent modification conflicts by ensuring that no SeqDistance
+    was modified after the specified datetime between the time of retrieval and the time
+    of calculation and upload of new distances.
+    """
+
+    protocol_id: UUID = Field(
+        description="The ID of the protocol for which to retrieve the last modified datetune for"
+    )
+
+
 class CalculateSeqDistancesForNewProfilesCommand(Command):
     """
     Calculate sequence distances between the given new profiles and all existing

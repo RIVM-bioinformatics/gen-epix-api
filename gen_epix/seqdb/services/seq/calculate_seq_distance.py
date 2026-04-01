@@ -10,8 +10,31 @@ from gen_epix.commondb.domain.enum import EtlStatus
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.exc import ConcurrentModificationError
 from gen_epix.filter.number_set import NumberSetFilter
-from gen_epix.seqdb.domain import command, enum, model
+from gen_epix.seqdb.domain import command, enum, exc, model
 from gen_epix.seqdb.domain.service import BaseSeqService
+
+
+def seq_service_retrieve_seq_distance_last_modified(
+    self: BaseSeqService,
+    cmd: command.RetrieveSeqDistanceLastModifiedCommand,
+) -> datetime | None:
+
+    with self.repository.uow() as uow:
+        seq_distance_protocol: model.Protocol = self.repository.crud(  # type: ignore[assignment]
+            uow,
+            cmd.user.id if cmd.user else None,
+            model.Protocol,
+            None,
+            cmd.protocol_id,
+            CrudOperation.READ_ONE,
+        )
+        if seq_distance_protocol.protocol_type != enum.ProtocolType.SEQ_DISTANCE:
+            raise exc.InvalidArgumentsError(
+                f"Protocol {cmd.protocol_id} is not a SeqDistance protocol"
+            )
+        return self.repository.get_max_seq_distance_modified_at(  # type: ignore[attr-defined]
+            uow, cmd.protocol_id
+        )
 
 
 def seq_service_calculate_seq_distances_for_new_profiles(
@@ -19,17 +42,15 @@ def seq_service_calculate_seq_distances_for_new_profiles(
     cmd: command.CalculateSeqDistancesForNewProfilesCommand,
 ) -> list[model.CalculateSeqDistancesResult]:
     """
-    For each new SeqProfile find applicable SeqDistance
-    protocols, compute distances between every new profile
-    and all existing profiles (plus between new profiles
-    themselves), update existing SeqDistance records to
-    mirror the pairwise distance, create SeqDistance
-    records for the new profiles, and return results.
+    For each new SeqProfile find applicable SeqDistance protocols, compute distances
+    between every new profile and all existing profiles (plus between new profiles
+    themselves), update existing SeqDistance records to mirror the pairwise distance,
+    create SeqDistance records for the new profiles, and return results.records for the
+    new profiles, and return results.
 
-    Uses a streaming approach: existing SeqDistances are
-    NOT fully materialized. Profile IDs are collected
-    first via a lightweight query, profiles are fetched,
-    then distances are streamed one-by-one.
+    Uses a streaming approach: existing SeqDistances are NOT fully materialized. Profile
+    IDs are collected first via a lightweight query, profiles are fetched, then
+    distances are streamed one-by-one.
     """
     user_id = cmd.user.id if cmd.user else None
     seq_profiles = cmd.seq_profiles
@@ -121,7 +142,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
                 )
         else:
             raise NotImplementedError(
-                f"Unsupported seq profile type:" f" {seq_profile_type}"
+                f"Unsupported seq profile type: {seq_profile_type}"
             )
 
         # For each subset, calculate distances
@@ -149,10 +170,9 @@ def seq_service_update_seq_distances(
     cmd: command.UpdateSeqDistancesCommand,
 ) -> list[model.CalculateSeqDistancesResult]:
     """
-    For a given distance protocol, find all profiles that
-    don't yet have a SeqDistance record, compute the
-    missing distances and create the records while
-    maintaining the symmetry invariant.
+    For a given distance protocol, find all profiles that don't yet have a SeqDistance
+    record, compute the missing distances and create the records while maintaining the
+    symmetry invariant.
     """
     user_id = cmd.user.id if cmd.user else None
     results: list[model.CalculateSeqDistancesResult] = []

@@ -1,4 +1,5 @@
 from collections.abc import Callable, Iterable
+from datetime import datetime
 from typing import Any, NoReturn
 from uuid import UUID
 
@@ -157,14 +158,35 @@ def create_seq_endpoints(
         )
 
     @router.post(
+        "/retrieve/seq_distance_last_modified/{protocol_id}",
+        operation_id="retrieve__seq_distance_last_modified",
+        name="RetrieveSeqDistanceLastModified",
+        description=command.RetrieveSeqDistanceLastModifiedCommand.__doc__,
+    )
+    async def retrieve__seq_distance_last_modified(
+        user: registered_user_dependency,  # type: ignore
+        protocol_id: UUID,
+    ) -> datetime | None:
+        try:
+            retval: datetime | None = app.handle(
+                command.RetrieveSeqDistanceLastModifiedCommand(
+                    user=user,
+                    protocol_id=protocol_id,
+                )
+            )
+        except Exception as exception:
+            handle_exception("d9e5f4a7", user, exception)  # type: ignore
+        return retval
+
+    @router.post(
         "/update/seq_distances",
         operation_id="update__seq_distances",
         name="UpdateSeqDistances",
         description=command.UpdateSeqDistancesCommand.__doc__,
     )
     async def update__seq_distances(
-        user: registered_user_dependency,
-        request_body: UpdateSeqDistancesRequestBody,  # type: ignore
+        user: registered_user_dependency,  # type: ignore
+        request_body: UpdateSeqDistancesRequestBody,
     ) -> list[model.CalculateSeqDistancesResult]:
         try:
             retval: list[model.CalculateSeqDistancesResult] = app.handle(

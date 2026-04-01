@@ -58,6 +58,7 @@ class RoleGenerator(CommonRoleGenerator):
             (command.ReadSetIdentifierCrudCommand, PermissionTypeSet.CRUD),
             (command.RefSeqCrudCommand, PermissionTypeSet.R),
             (command.CalculatePhylogeneticTreeCommand, PermissionTypeSet.E),
+            (command.RetrieveSeqDistanceLastModifiedCommand, PermissionTypeSet.E),
             (command.RetrieveSeqFastaCommand, PermissionTypeSet.E),
             (command.RetrieveSimilarProfilesCommand, PermissionTypeSet.E),
             (command.SampleCrudCommand, PermissionTypeSet.CRUD),
