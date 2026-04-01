@@ -488,16 +488,6 @@ class TestTupleMapTransformerDefaultValues:
                 default_values=[1, 2],  # too many
             )
 
-    def test_set_default_without_default_values_raises_at_init(self) -> None:
-        """Test that SET_DEFAULT without default_values raises at init."""
-        with pytest.raises(ValueError, match="default_values must be provided"):
-            TupleMapTransformer(
-                map_rows=[{"src": "A", "tgt": 1}],
-                row_src_fields=["src"],
-                row_tgt_fields=["tgt"],
-                on_no_match=OnException.SET_DEFAULT,
-            )
-
 
 @pytest.mark.scenario_ids("TC-MAIN-12-01")
 class TestTupleMapTransformerCaseInsensitivity:

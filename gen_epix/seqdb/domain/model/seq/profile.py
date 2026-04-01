@@ -12,7 +12,7 @@ from gen_epix.commondb.domain.model import Model, validate_int_enum_value
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.commondb.domain.model.organization import BaseIdentifier
 from gen_epix.fastapp import Entity
-from gen_epix.fastapp.domain import Entity, create_keys, create_links
+from gen_epix.fastapp.domain import Entity, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.literal import MLVA_NO_LOCUS_REPEAT_NUMBER
 from gen_epix.seqdb.domain.model.seq.base import ContentMixin, QualityMixin
@@ -33,7 +33,6 @@ class SeqProfile(
         snake_case_plural_name="seq_profiles",
         table_name="seq_profile",
         persistable=True,
-        keys=create_keys({1: ("seq_id", "protocol_id")}),
         links=create_links(
             {
                 1: ("sample_id", Sample, "sample"),
