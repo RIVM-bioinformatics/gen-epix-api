@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -33,7 +34,7 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
     def retrieve_similar_profiles(
         self,
         uow: BaseUnitOfWork,
-        seq_distance_protocol_id: UUID,
+        protocol_id: UUID,
         profile_ids: list[UUID],
         max_distance: float,
         **kwargs: Any,
@@ -47,17 +48,17 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         ]
         matching_profile_ids: set[UUID] = set()
         for seq_distance in table.values():
-            if seq_distance.seq_distance_protocol_id != seq_distance_protocol_id:
+            if seq_distance.protocol_id != protocol_id:
                 continue
-            if seq_distance.profile_id not in profile_id_set:
+            if seq_distance.seq_profile_id not in profile_id_set:
                 continue
             # Each seq_distance corresponds to one profile_id
-            # distances is a stringified dict: {other_profile_id: distance}
-            distances: str = seq_distance.distances
-            distance_format: enum.SeqDistanceFormat = seq_distance.distance_format
-            # shared logic to parse distances for dict format in BaseSeqRepository
             BaseSeqRepository._get_matching_profiles_for_distance_dict_format(
-                max_distance, matching_profile_ids, distances, distance_format
+                max_distance,
+                matching_profile_ids,
+                seq_distance.format,
+                seq_distance.content,
+                distances2=seq_distance.content2,
             )
 
         return list(matching_profile_ids - profile_id_set)
@@ -65,11 +66,55 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
     def iter_seq_distances(
         self,
         uow: BaseUnitOfWork,
-        seq_distance_protocol_id: UUID,
+        protocol_id: UUID,
     ) -> Iterable[model.SeqDistance]:
         table: dict[UUID, model.SeqDistance] = self.db[  # type: ignore[assignment]
             model.SeqDistance
         ]
         for seq_distance in table.values():
-            if seq_distance.seq_distance_protocol_id == seq_distance_protocol_id:
+            if seq_distance.protocol_id == protocol_id:
                 yield seq_distance
+
+    def iter_seq_distance_profile_ids(
+        self,
+        uow: BaseUnitOfWork,
+        protocol_id: UUID,
+    ) -> Iterable[UUID]:
+        # table: dict[UUID, model.SeqDistance] = self.db[  # type: ignore[assignment]
+        #     model.SeqDistance
+        # ]
+        seen: set[UUID] = set()
+        # for seq_distance in table.values():
+        for seq_distance in self.iter_seq_distances(uow, protocol_id):
+            if seq_distance.seq_profile_id not in seen:
+                seen.add(seq_distance.seq_profile_id)
+                yield seq_distance.seq_profile_id
+
+    def get_max_seq_distance_modified_at(
+        self,
+        uow: BaseUnitOfWork,
+        protocol_id: UUID,
+    ) -> datetime | None:
+        df: dict[UUID, model.SeqDistance] = self.db[  # type: ignore[assignment]
+            model.SeqDistance
+        ]
+        maximum_modified_timestamp: datetime | None = None
+        for seq_distance in df.values():
+            if seq_distance.protocol_id == protocol_id:
+                if seq_distance.modified_at is not None and (
+                    maximum_modified_timestamp is None
+                    or seq_distance.modified_at > maximum_modified_timestamp
+                ):
+                    maximum_modified_timestamp = seq_distance.modified_at
+        return maximum_modified_timestamp
+
+    def get_profiles_by_protocol_ids(
+        self,
+        uow: BaseUnitOfWork,
+        protocol_ids: list[UUID],
+    ) -> list[model.SeqProfile]:
+        unique_protocol_ids = set(protocol_ids)
+        df: dict[UUID, model.SeqProfile] = self.db[  # type: ignore[assignment]
+            model.SeqProfile
+        ]
+        return [x for x in df.values() if x.protocol_id in unique_protocol_ids]

@@ -14,10 +14,14 @@ import gen_epix.fastapp.exc as exc
 from gen_epix.fastapp import CrudOperation, Link
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.domain.link import Link
-from gen_epix.fastapp.enum import CrudOperation, FieldTypeSet, IsolationLevel
+from gen_epix.fastapp.enum import CrudOperation, IsolationLevel
 from gen_epix.fastapp.model import Model
 from gen_epix.fastapp.repositories.sa.engine_factory import EngineFactory
-from gen_epix.fastapp.repositories.sa.mapper import BaseSAMapper, SAMapper
+from gen_epix.fastapp.repositories.sa.mapper import (
+    BaseSAMapper,
+    BaseSAMapperFactory,
+    SAMapper,
+)
 from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
@@ -183,7 +187,11 @@ class SARepository(BaseRepository):
                     continue
 
     def __init__(self, engine: Engine, **kwargs: Any):
+        # TODO: 2953 remove register_mappers argument
         register_mappers = kwargs.pop("register_mappers", True)
+        sa_mapper_factory: BaseSAMapperFactory | None = kwargs.pop(
+            "sa_mapper_factory", None
+        )
         # Add properties
         self._id: str = kwargs.get("id", str(uuid.uuid4()))
         self._name: str = kwargs.get("name", self._id)
@@ -203,7 +211,14 @@ class SARepository(BaseRepository):
 
         # Register mappers if necessary
         if register_mappers:
-            self.register_mappers(**kwargs)
+            if sa_mapper_factory is not None:
+                entities: list[Entity] = kwargs.get("entities", [])
+                field_name_map: dict[type[Model], dict[str, str]] = kwargs.get(
+                    "field_name_map", {}
+                )
+                self._init_mappers(entities, field_name_map, sa_mapper_factory)
+            else:
+                self.register_mappers(**kwargs)
 
     @property
     def id(self) -> str:
@@ -264,15 +279,39 @@ class SARepository(BaseRepository):
         )
         return session
 
+    def _init_mappers(
+        self,
+        entities: list[Entity],
+        field_name_map: dict[type[Model], dict[str, str]],
+        sa_mapper_factory: BaseSAMapperFactory,
+    ) -> None:
+        """
+        Create and register mappers for a list of entities using the given factory.
+        The factory encapsulates all db-specific mapper construction, so SARepository
+        has no knowledge of process fields or metadata field rules.
+        """
+        for entity in entities:
+            if not entity.persistable:
+                continue
+            model_class = entity.model_class
+            db_model_class = entity.db_model_class
+            if not db_model_class:
+                raise exc.RepositoryInitializationServiceError(
+                    f"Entity {entity.name} has no db_model_class set"
+                )
+            assert issubclass(model_class, Model)
+            mapper = sa_mapper_factory.create_mapper(
+                model_class,
+                db_model_class,
+                field_name_map=field_name_map.get(model_class),
+            )
+            self.register_mapper(mapper)
+
+    # TODO: 2953 this can become a static "create_default_mappers" utility method that can be moved to BaseSAMapperFactory, producing a dict[type[Model], BaseSAMapper] that can be passed to the constructor as mentioned in the TODO in the __init__ method
     def register_mappers(
         self,
         entities: list[Entity] | None = None,
         field_name_map: dict[type[Model], dict[str, str]] | None = None,
-        service_metadata_field_names: dict[type[Model], tuple] | None = None,
-        db_metadata_field_names: dict[type[Model], tuple] | None = None,
-        generate_service_metadata: (
-            dict[type[Model], Callable[[Model, Hashable], dict[str, Any]]] | None
-        ) = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -281,9 +320,6 @@ class SARepository(BaseRepository):
         # Parse arguments
         entities = entities or []
         field_name_map = field_name_map or {}
-        service_metadata_field_names = service_metadata_field_names or {}
-        db_metadata_field_names = db_metadata_field_names or {}
-        generate_service_metadata = generate_service_metadata or {}
 
         # Create and register mapper for each entity
         for entity in entities:
@@ -300,12 +336,8 @@ class SARepository(BaseRepository):
                 model_class,
                 db_model_class,
                 field_name_map=field_name_map.get(model_class),
-                service_metadata_field_names=service_metadata_field_names.get(
-                    model_class
-                ),
-                db_metadata_field_names=db_metadata_field_names.get(model_class),
-                generate_service_metadata=generate_service_metadata.get(model_class),
             )
+            # TODO: 2953 skip this, instead add to output dict in the proposed static "create_default_mappers" utility method and pass to constructor as mentioned in the TODO in the __init__ method
             self.register_mapper(mapper)
 
     def get_mapper(self, model_class: type[Model]) -> BaseSAMapper:
@@ -598,36 +630,18 @@ class SARepository(BaseRepository):
         # Retrieve row
         mapper = self.get_mapper(model_class)
         row_class = mapper.row_class
-        row_field_names = mapper.get_row_field_names_by_set(FieldTypeSet.DATA)
-        get_row_id = mapper.get_row_id
-        get_metadata = mapper.generate_service_metadata
 
         def _execute(session: Session) -> list[Model]:
-            updated_rows = self.to_sql(user_id, model_class, objs)
-            obj_ids = [get_row_id(x) for x in updated_rows]
+            obj_ids = [mapper.get_id(x) for x in objs]
             rows, row_ids = SARepository._in_session_read_some(
                 mapper, session, row_class, obj_ids
             )
             map_rows = dict(zip(row_ids, rows))
-            for updated_row in updated_rows:
-                is_update = False
-                row = map_rows[get_row_id(updated_row)]
-                # Update content
-                for row_field_name in row_field_names:
-                    updated_value = getattr(updated_row, row_field_name)
-                    if getattr(row, row_field_name) != updated_value:
-                        is_update = True
-                        setattr(row, row_field_name, updated_value)
-                if is_update:
-                    # TODO: avoid calling get_metadata twice, once here and once as
-                    # part of to_sql above. This could be done by having a property
-                    # in the mapper for those metadata fields that are not generated
-                    # by the database, as only those need to be set here.
-                    for row_field_name, value in get_metadata(updated_row, user_id):
-                        setattr(row, row_field_name, value)
+            for obj in objs:
+                row = map_rows[mapper.get_id(obj)]
+                mapper.update(user_id, obj, row)
             if flush:
                 session.flush()
-            # Generate objs
             return self.from_sql(model_class, rows)
 
         updated_objs = self._execute_sa(session, _execute, kwargs)
@@ -1096,7 +1110,7 @@ class SARepository(BaseRepository):
             batch_size = 1000
             for i in range(0, len(obj_ids), batch_size):
                 oid_batch = obj_ids[i : i + batch_size]
-                values = [{id_col_name: v} for v in oid_batch]
+                values = [{id_col_name: x} for x in oid_batch]
                 session.execute(sa.insert(temp_table_obj), values)
                 session.flush()
         else:
@@ -1255,7 +1269,6 @@ class SARepository(BaseRepository):
             ) -> None:
                 cursor = dbapi_connection.cursor()
                 cursor.execute("PRAGMA foreign_keys=ON")
-
                 cursor.close()
 
             # Add each schema as a separate database, as sqlite does not support schemas
@@ -1268,6 +1281,7 @@ class SARepository(BaseRepository):
                     conn.execute(
                         sa.text(f"attach database '{sqlite_file}' as '{schema_name}';")
                     )
+
         else:
             engine = EngineFactory.create_engine(connection_string, echo)
 
@@ -1278,7 +1292,7 @@ class SARepository(BaseRepository):
                 with engine.connect() as conn:
                     # print(conn)
                     result = conn.execute(sa.text("SELECT name FROM sys.schemas"))
-                    schemas = [row[0] for row in result]
+                    schemas = [x[0] for x in result]
                     # print(schemas)
                     conn.dialect
                     if not conn.dialect.has_schema(conn, schema_name):
@@ -1315,6 +1329,10 @@ class SARepository(BaseRepository):
                 connect_args=kwargs,
             ).connect()
             connection.close()
+            return None
+        except BaseException as exception:
+            # Connection failed, skip loading
+            return exception
             return None
         except BaseException as exception:
             # Connection failed, skip loading

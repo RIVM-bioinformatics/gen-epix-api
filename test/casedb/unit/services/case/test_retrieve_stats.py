@@ -108,11 +108,13 @@ class BaseRetrieveStatsTestCase(TestCase):
             case_type_share_abacs={},
             case_date_col_type_map=case_date_col_type_map or {},
             case_date_dim_id=None,  # Add this required field
-            create_max_n_cases=1000,
-            read_max_n_cases=1000,
-            read_max_tree_size=1000,
-            update_max_n_cases=1000,
-            delete_max_n_cases=1000,
+            props=case_model.CaseTypeProps(
+                create_max_n_cases=1000,
+                read_max_n_cases=1000,
+                read_max_tree_size=1000,
+                update_max_n_cases=1000,
+                delete_max_n_cases=1000,
+            ),
         )
 
     def create_case_set(
@@ -121,6 +123,7 @@ class BaseRetrieveStatsTestCase(TestCase):
         case_set_id: UUID | None = None,
         case_type_id: UUID,
         name: str = "cs",
+        code: str = "cs",
         description: str = "desc",
         created_in_data_collection_id: UUID | None = None,
     ) -> case_model.CaseSet:
@@ -131,6 +134,7 @@ class BaseRetrieveStatsTestCase(TestCase):
                 created_in_data_collection_id or self.data_collection_id_public
             ),
             name=name,
+            code=code,
             description=description,
             case_set_category_id=uuid4(),
             case_set_status_id=uuid4(),

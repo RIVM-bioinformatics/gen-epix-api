@@ -834,6 +834,7 @@ class BatchUploader:
 
             # Determine which objects need to be created
             to_create_child_result_pairs: list[tuple[Model, UploadResult]] = []
+            to_create_child_for_uploads: list[Model] = []
             for (
                 parent_for_upload,
                 _,
@@ -857,6 +858,7 @@ class BatchUploader:
                     to_create_child_result_pairs.append(
                         (child_for_upload, child_result)
                     )
+                to_create_child_for_uploads.append(child_for_upload)
 
             if to_create_child_result_pairs:
                 success &= self.create_objects(
@@ -865,7 +867,16 @@ class BatchUploader:
                     child_model_class,
                     to_create_child_result_pairs,
                 )
-
+                # write back assigned IDs to original for-upload objects
+                child_id_field_name = self.child_id_field_name_map[child_model_class]
+                for (created_obj, _), child_for_upload in zip(
+                    to_create_child_result_pairs, to_create_child_for_uploads
+                ):
+                    setattr(
+                        child_for_upload,
+                        child_id_field_name,
+                        getattr(created_obj, child_id_field_name),
+                    )
         return success
 
     def update_children(

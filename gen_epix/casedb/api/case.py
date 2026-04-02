@@ -442,7 +442,7 @@ def create_case_endpoints(
         )
 
     @router.post(
-        "/retrieve/phylogenetic_tree",
+        "/calculate/phylogenetic_tree",
         operation_id="retrieve__phylogenetic_tree",
         name="Retrieve phylogenetic tree",
         description=command.RetrievePhylogeneticTreeByCasesCommand.__doc__,
@@ -520,7 +520,7 @@ def create_case_endpoints(
                     case_type_id=case_type_id,
                     genetic_sequence_col_id=(genetic_sequence_col_id),
                     case_ids=case_ids,
-                ),
+                )
             )
         except Exception as exception:
             handle_exception(  # type: ignore[call-arg]
@@ -596,20 +596,21 @@ def create_case_endpoints(
         "/retrieve/sequencing_protocols",
         operation_id="retrieve__sequencing_protocols",
         name="Retrieve sequencing protocols",
-        description=command.RetrieveSequencingProtocolsCommand.__doc__,
+        description=command.RetrieveProtocolsCommand.__doc__,
     )
     async def retrieve__sequencing_protocols(
         user: registered_user_dependency,  # type: ignore
-    ) -> list[seqdb_model.SequencingProtocol]:
+    ) -> list[seqdb_model.Protocol]:
         return cast(
-            list[seqdb_model.SequencingProtocol],
+            list[seqdb_model.Protocol],
             await handle_command(
                 app=app,
                 user=user,
                 exception_code="e7f8a9b0",
                 input_handle_exception=handle_exception,
-                input_command=command.RetrieveSequencingProtocolsCommand(
+                input_command=command.RetrieveProtocolsCommand(
                     user=user,
+                    protocol_type=seqdb_enum.ProtocolType.SEQUENCING,
                 ),
             ),
         )
@@ -618,20 +619,21 @@ def create_case_endpoints(
         "/retrieve/assembly_protocols",
         operation_id="retrieve__assembly_protocols",
         name="Retrieve assembly protocols",
-        description=command.RetrieveAssemblyProtocolsCommand.__doc__,
+        description=command.RetrieveProtocolsCommand.__doc__,
     )
     async def retrieve__assembly_protocols(
         user: registered_user_dependency,  # type: ignore
-    ) -> list[seqdb_model.AssemblyProtocol]:
+    ) -> list[seqdb_model.Protocol]:
         return cast(
-            list[seqdb_model.AssemblyProtocol],
+            list[seqdb_model.Protocol],
             await handle_command(
                 app=app,
                 user=user,
                 exception_code="c1d2e3f4",
                 input_handle_exception=handle_exception,
-                input_command=command.RetrieveAssemblyProtocolsCommand(
+                input_command=command.RetrieveProtocolsCommand(
                     user=user,
+                    protocol_type=seqdb_enum.ProtocolType.ASSEMBLY,
                 ),
             ),
         )

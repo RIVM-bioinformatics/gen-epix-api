@@ -73,10 +73,9 @@ from gen_epix.casedb.services.case.retrieve_complete_case_type import (
     case_service_retrieve_complete_case_type,
 )
 from gen_epix.casedb.services.case.retrieve_seq import (
-    case_service_retrieve_assembly_protocols,
     case_service_retrieve_genetic_sequence_fasta_by_case,
     case_service_retrieve_phylogenetic_tree,
-    case_service_retrieve_sequencing_protocols,
+    case_service_retrieve_protocols,
 )
 from gen_epix.casedb.services.case.retrieve_similar_cases import (
     case_service_retrieve_similar_cases,
@@ -246,16 +245,10 @@ class CaseService(BaseCaseService):
         """
         return case_service_retrieve_genetic_sequence_fasta_by_case(self, cmd)
 
-    def retrieve_sequencing_protocols(
-        self,
-        cmd: command.RetrieveSequencingProtocolsCommand,
-    ) -> list[seqdb_model.SequencingProtocol]:
-        return case_service_retrieve_sequencing_protocols(self, cmd)
-
-    def retrieve_assembly_protocols(
-        self, cmd: command.RetrieveAssemblyProtocolsCommand
-    ) -> list[seqdb_model.AssemblyProtocol]:
-        return case_service_retrieve_assembly_protocols(self, cmd)
+    def retrieve_protocols(
+        self, cmd: command.RetrieveProtocolsCommand
+    ) -> list[seqdb_model.Protocol]:
+        return case_service_retrieve_protocols(self, cmd)
 
     def _read_association_with_valid_ids(
         self,
@@ -324,17 +317,50 @@ class CaseService(BaseCaseService):
         )
         has_access = case_abac.get_combinations_with_access_right(right)
         filtered_case_sets: list[model.CaseSet] = []
-        for case_set in case_sets:
-            self._validate_case_set_access(
-                case_set,
-                user_id,
-                case_set_ids,
-                on_invalid_case_set_id,
-                case_set_data_collections,
-                has_access,
-            )
-            filtered_case_sets.append(case_set)
+        if case_set_ids:
+            # Read some: check if access to each of the requested case sets, and filter out those without access
+            for case_set in case_sets:
+                self._validate_case_set_access(
+                    case_set,
+                    user_id,
+                    case_set_ids,
+                    on_invalid_case_set_id,
+                    case_set_data_collections,
+                    has_access,
+                )
+            filtered_case_sets.extend(case_sets)
+        else:
+            # Read all: filter out case sets without access
+            for case_set in case_sets:
+                if self._validate_case_set_access(
+                    case_set,
+                    user_id,
+                    None,
+                    on_invalid_case_set_id,
+                    case_set_data_collections,
+                    has_access,
+                ):
+                    filtered_case_sets.append(case_set)
         return filtered_case_sets
+
+    def _has_case_set_access(
+        self,
+        case_set: model.CaseSet,
+        case_set_data_collections: dict[UUID, set[UUID]],
+        has_access: dict[UUID, set[UUID]],
+    ) -> bool:
+        if case_set.case_type_id not in has_access:
+            return False
+
+        # Check if user has access to any of the data collections of the case set
+        assert case_set.id is not None
+        data_collection_ids = case_set_data_collections.get(case_set.id, set())
+        data_collection_ids.add(case_set.created_in_data_collection_id)
+
+        if not data_collection_ids & has_access.get(case_set.case_type_id, set()):
+            return False
+
+        return True
 
     def _validate_case_set_access(
         self,
@@ -344,37 +370,23 @@ class CaseService(BaseCaseService):
         on_invalid_case_set_id: str,
         case_set_data_collections: dict[UUID, set[UUID]],
         has_access: dict[UUID, set[UUID]],
-    ) -> None:
-        if case_set.case_type_id not in has_access and case_set_ids:
-            if on_invalid_case_set_id == "raise":
-                raise exc.UnauthorizedAuthError(
-                    f"User {user_id} has no access to some requested cases"
-                )
-            elif on_invalid_case_set_id == "ignore":
-                pass
-            else:
-                raise AssertionError(
-                    f"Invalid on_invalid_case_id: {on_invalid_case_set_id}"
-                )
-        # Check if user has access to any of the data collections of the case set
-        assert case_set.id is not None
-        data_collection_ids = case_set_data_collections.get(case_set.id, set())
-        data_collection_ids.add(case_set.created_in_data_collection_id)
-
-        if (
-            not data_collection_ids & has_access.get(case_set.case_type_id, set())
-            and case_set_ids
-        ):
-            if on_invalid_case_set_id == "raise":
-                raise exc.UnauthorizedAuthError(
-                    f"User {user_id} has no access to some requested case sets"
-                )
-            elif on_invalid_case_set_id == "ignore":
-                pass
-            else:
-                raise AssertionError(
-                    f"Invalid on_invalid_case_set_id: {on_invalid_case_set_id}"
-                )
+    ) -> bool:
+        has_access_to_case_set = self._has_case_set_access(
+            case_set, case_set_data_collections, has_access
+        )
+        if case_set_ids:
+            if not has_access_to_case_set:
+                if on_invalid_case_set_id == "raise":
+                    raise exc.UnauthorizedAuthError(
+                        f"User {user_id} has no access to some requested cases"
+                    )
+                if on_invalid_case_set_id == "ignore":
+                    pass
+                else:
+                    raise AssertionError(
+                        f"Invalid on_invalid_case_id: {on_invalid_case_set_id}"
+                    )
+        return has_access_to_case_set
 
     def _filter_case_sets_by_same_case_type_id(
         self,
@@ -441,7 +453,7 @@ class CaseService(BaseCaseService):
             case_abac.is_full_access,
         )
 
-        if case_ids and len(case_ids) > max_n_cases:
+        if case_ids and max_n_cases > 0 and len(case_ids) > max_n_cases:
             raise exc.RequestLimitExceededAuthError(
                 f"Number of requested cases {len(case_ids)} exceeds maximum allowed {max_n_cases}"
             )
@@ -493,7 +505,7 @@ class CaseService(BaseCaseService):
         extra_access_col_ids: set[UUID] | None,
         access_data_collections: set[UUID],
         data_collection_col_access: dict[UUID, model.CaseTypeAccessAbac],
-        max_n_cases: float,
+        max_n_cases: int,
         cases: list[model.Case],
     ) -> list[model.Case]:
         case_data_collections = self._retrieve_case_data_collections_map(uow, user_id)
@@ -512,7 +524,7 @@ class CaseService(BaseCaseService):
                 # No access to case
                 continue
             count += case.count if case.count is not None else 1
-            if count > max_n_cases:
+            if max_n_cases > 0 and count > max_n_cases:
                 break
             # Keep case
             filtered_cases.append(case)
@@ -634,16 +646,22 @@ class CaseService(BaseCaseService):
         apply_max_n_cases: bool,
         case_type: model.CaseType,
         is_full_access: bool,
-    ) -> tuple[dict[UUID, Callable[[str], datetime.datetime]] | None, float]:
+    ) -> tuple[dict[UUID, Callable[[str], datetime.datetime]] | None, int]:
         case_date_col_mappers: dict[UUID, Callable[[str], datetime.datetime]] | None = (
             {}
         )
-        max_n_cases: float = float("inf")
-        if apply_max_n_cases and not is_full_access:
+        max_n_cases = 0
+        if not apply_max_n_cases:
+            pass
+        elif not is_full_access:
             if right == enum.CaseRight.READ_CASE:
-                max_n_cases = case_type.read_max_n_cases
+                _raw = case_type.props.read_max_n_cases
+                max_n_cases = _raw if _raw > 0 else self._default_props.read_max_n_cases
             elif right == enum.CaseRight.WRITE_CASE:
-                max_n_cases = case_type.update_max_n_cases
+                _raw = case_type.props.update_max_n_cases
+                max_n_cases = (
+                    _raw if _raw > 0 else self._default_props.update_max_n_cases
+                )
             else:
                 raise NotImplementedError(f"Unsupported case right: {right}")
             case_date_col_mappers = case_service_get_case_date_col_mappers(
@@ -1090,7 +1108,7 @@ class CaseService(BaseCaseService):
         | bool
         | None
     ):
-        """Handle CRUD operations for GeneticDistanceProtocol entities."""
+        """Handle CRUD operations for Protocol entities."""
         return case_service_crud_genetic_distance_protocol(self, cmd)
 
     def crud_tree_algorithm_class(

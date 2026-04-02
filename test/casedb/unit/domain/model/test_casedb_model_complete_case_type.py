@@ -115,11 +115,13 @@ class TestModelCompleteCaseType:
             tree_algorithms={},
             case_type_access_abacs={},
             case_type_share_abacs={},
-            create_max_n_cases=1000,
-            read_max_n_cases=1000,
-            read_max_tree_size=1000,
-            update_max_n_cases=1000,
-            delete_max_n_cases=1000,
+            props=model.CaseTypeProps(
+                create_max_n_cases=1000,
+                read_max_n_cases=1000,
+                read_max_tree_size=1000,
+                update_max_n_cases=1000,
+                delete_max_n_cases=1000,
+            ),
             case_date_dim_id=None,
             ordered_dim_ids=[x.id for x in dims if x.id is not None],
         )

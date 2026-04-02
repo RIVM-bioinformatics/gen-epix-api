@@ -1,6 +1,8 @@
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
+from test.test_client.enum import (
+    EnumTestType as EnumTestType,  # to avoid PyTest warning
+)
 from typing import Iterable
 from uuid import UUID
 
@@ -74,7 +76,7 @@ class TestContent:
 
         # Get root user
         root_user = env.get_root_user()
-        env._set_obj(root_user)
+        env.set_obj(root_user)
         root_permissions: set[Permission] = app.handle(
             command.RetrieveOwnPermissionsCommand(user=root_user)
         )
@@ -305,9 +307,9 @@ class TestContent:
             # Retrieve phylogenetic tree
             found_similar_cases = False
             dist_cols = [
-                col
-                for col in complete_case_type.cols.values()
-                if complete_case_type.ref_cols[col.ref_col_id].col_type
+                x
+                for x in complete_case_type.cols.values()
+                if complete_case_type.ref_cols[x.ref_col_id].col_type
                 == enum.ColType.GENETIC_DISTANCE
             ]
             for dist_col in dist_cols:
@@ -385,9 +387,10 @@ class TestContent:
                 if "\n" not in fasta_str:
                     raise ValueError("FASTA string should contain new lines")
                 # Retrieve SequencingProtocols
-                sequencing_protocols: list[seqdb_model.SequencingProtocol] = app.handle(
-                    command.RetrieveSequencingProtocolsCommand(
+                sequencing_protocols: list[seqdb_model.Protocol] = app.handle(
+                    command.RetrieveProtocolsCommand(
                         user=org_user,
+                        protocol_type=seqdb_enum.ProtocolType.SEQUENCING,
                     )
                 )
                 if not sequencing_protocols:
@@ -396,9 +399,10 @@ class TestContent:
                     if not sequencing_protocol.id:
                         raise ValueError("Library prep protocol ID should not be empty")
                 # Retrieve AssemblyProtocols
-                assembly_protocols: list[seqdb_model.AssemblyProtocol] = app.handle(
-                    command.RetrieveAssemblyProtocolsCommand(
+                assembly_protocols: list[seqdb_model.Protocol] = app.handle(
+                    command.RetrieveProtocolsCommand(
                         user=org_user,
+                        protocol_type=seqdb_enum.ProtocolType.ASSEMBLY,
                     )
                 )
                 if not assembly_protocols:
@@ -446,5 +450,7 @@ class TestContent:
             )
 
         # profiler.stop()
+        # with open(env.test_dir / f"content.performance.html", "w") as f:
+        #     f.write("".join(profiler.output_html()))
         # with open(env.test_dir / f"content.performance.html", "w") as f:
         #     f.write("".join(profiler.output_html()))

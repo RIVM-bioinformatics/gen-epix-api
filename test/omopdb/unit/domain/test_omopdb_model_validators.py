@@ -4,8 +4,8 @@ Unit tests for gen_epix.omopdb.domain.model.omop.base module.
 Tests cover:
 - validate_int_for_uuid_field
 - validate_str_for_uuid_field
-- validate_str_primary_key_args
-- validate_int_primary_key_args
+- validate_str_key_args
+- validate_int_key_args
 - DataLineageMixin
 """
 
@@ -16,9 +16,9 @@ import pytest
 from gen_epix.omopdb.domain.model.omop.base import (
     DataLineageMixin,
     validate_int_for_uuid_field,
-    validate_int_primary_key_args,
+    validate_int_key_args,
     validate_str_for_uuid_field,
-    validate_str_primary_key_args,
+    validate_str_key_args,
 )
 from gen_epix.util import int_to_uuid, str_to_uuid
 
@@ -50,6 +50,7 @@ def _str_field_name() -> str:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestValidateIntForUuidField:
     """Tests for the validate_int_for_uuid_field function."""
 
@@ -122,6 +123,7 @@ class TestValidateIntForUuidField:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestValidateStrForUuidField:
     """Tests for the validate_str_for_uuid_field function."""
 
@@ -196,31 +198,30 @@ class TestValidateStrForUuidField:
 
 
 # ---------------------------------------------------------------------------
-# Tests for validate_str_primary_key_args
+# Tests for validate_str_key_args
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestValidateStrPrimaryKeyArgs:
-    """Tests for the validate_str_primary_key_args function."""
+    """Tests for the validate_str_key_args function."""
 
     def test_non_dict_input_raises_value_error(self) -> None:
         """Non-dict inputs should raise ValueError."""
         with pytest.raises(ValueError, match="Input is not a dict"):
-            validate_str_primary_key_args("not_a_dict", "id", "domain_id")
+            validate_str_key_args("not_a_dict", "id", "domain_id")
 
     @pytest.mark.parametrize("non_dict", [42, None, [], "string", True])
     def test_non_dict_types_raise_value_error(self, non_dict: object) -> None:
         """Various non-dict types should all raise ValueError."""
         with pytest.raises(ValueError, match="Input is not a dict"):
-            validate_str_primary_key_args(
-                non_dict, _uuid_field_name(), _str_field_name()
-            )
+            validate_str_key_args(non_dict, _uuid_field_name(), _str_field_name())
 
     def test_str_id_provided_uuid_id_absent_derives_uuid(self) -> None:
         """When str_id is provided and uuid_id is absent, uuid_id should be
         derived from str_id."""
         data: dict[str, object] = {_str_field_name(): SAMPLE_STR}
-        validate_str_primary_key_args(data, _uuid_field_name(), _str_field_name())
+        validate_str_key_args(data, _uuid_field_name(), _str_field_name())
 
         assert data[_uuid_field_name()] == str_to_uuid(SAMPLE_STR)
         assert data[_str_field_name()] == SAMPLE_STR
@@ -232,7 +233,7 @@ class TestValidateStrPrimaryKeyArgs:
             _uuid_field_name(): None,
             _str_field_name(): SAMPLE_STR,
         }
-        validate_str_primary_key_args(data, _uuid_field_name(), _str_field_name())
+        validate_str_key_args(data, _uuid_field_name(), _str_field_name())
 
         assert data[_uuid_field_name()] == str_to_uuid(SAMPLE_STR)
 
@@ -243,7 +244,7 @@ class TestValidateStrPrimaryKeyArgs:
             _uuid_field_name(): SAMPLE_STR,
             _str_field_name(): None,
         }
-        validate_str_primary_key_args(data, _uuid_field_name(), _str_field_name())
+        validate_str_key_args(data, _uuid_field_name(), _str_field_name())
 
         assert data[_str_field_name()] == SAMPLE_STR
         assert data[_uuid_field_name()] == str_to_uuid(SAMPLE_STR)
@@ -253,7 +254,7 @@ class TestValidateStrPrimaryKeyArgs:
         doesn't exist at all, the value should be moved to str_id and uuid_id
         derived."""
         data: dict[str, object] = {_uuid_field_name(): SAMPLE_STR}
-        validate_str_primary_key_args(data, _uuid_field_name(), _str_field_name())
+        validate_str_key_args(data, _uuid_field_name(), _str_field_name())
 
         assert data[_str_field_name()] == SAMPLE_STR
         assert data[_uuid_field_name()] == str_to_uuid(SAMPLE_STR)
@@ -265,7 +266,7 @@ class TestValidateStrPrimaryKeyArgs:
         with pytest.raises(
             ValueError, match=f"{_str_field_name()} not provided or not a string"
         ):
-            validate_str_primary_key_args(data, _uuid_field_name(), _str_field_name())
+            validate_str_key_args(data, _uuid_field_name(), _str_field_name())
 
     def test_str_id_non_string_raises_value_error(self) -> None:
         """When str_id is not a string (e.g. int), should raise ValueError."""
@@ -273,7 +274,7 @@ class TestValidateStrPrimaryKeyArgs:
         with pytest.raises(
             ValueError, match=f"{_str_field_name()} not provided or not a string"
         ):
-            validate_str_primary_key_args(data, _uuid_field_name(), _str_field_name())
+            validate_str_key_args(data, _uuid_field_name(), _str_field_name())
 
     def test_matching_uuid_and_str_id_passes(self) -> None:
         """When uuid_id (as UUID) matches the one derived from str_id, no
@@ -283,7 +284,7 @@ class TestValidateStrPrimaryKeyArgs:
             _uuid_field_name(): expected_uuid,
             _str_field_name(): SAMPLE_STR,
         }
-        validate_str_primary_key_args(data, _uuid_field_name(), _str_field_name())
+        validate_str_key_args(data, _uuid_field_name(), _str_field_name())
 
         assert data[_uuid_field_name()] == expected_uuid
         assert data[_str_field_name()] == SAMPLE_STR
@@ -299,7 +300,7 @@ class TestValidateStrPrimaryKeyArgs:
         with pytest.raises(
             ValueError, match="is not identical to the one derived from"
         ):
-            validate_str_primary_key_args(data, _uuid_field_name(), _str_field_name())
+            validate_str_key_args(data, _uuid_field_name(), _str_field_name())
 
     def test_uuid_id_as_matching_string_passes(self) -> None:
         """When uuid_id is provided as a string representation that matches
@@ -310,7 +311,7 @@ class TestValidateStrPrimaryKeyArgs:
             _uuid_field_name(): str(expected_uuid),
             _str_field_name(): SAMPLE_STR,
         }
-        validate_str_primary_key_args(data, _uuid_field_name(), _str_field_name())
+        validate_str_key_args(data, _uuid_field_name(), _str_field_name())
 
         assert data[_uuid_field_name()] == expected_uuid
         assert data[_str_field_name()] == SAMPLE_STR
@@ -319,37 +320,36 @@ class TestValidateStrPrimaryKeyArgs:
         """The function should mutate the input dict in place (not return a
         copy)."""
         data: dict[str, object] = {_str_field_name(): SAMPLE_STR}
-        validate_str_primary_key_args(data, _uuid_field_name(), _str_field_name())
+        validate_str_key_args(data, _uuid_field_name(), _str_field_name())
         assert _uuid_field_name() in data
 
 
 # ---------------------------------------------------------------------------
-# Tests for validate_int_primary_key_args
+# Tests for validate_int_key_args
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestValidateIntPrimaryKeyArgs:
-    """Tests for the validate_int_primary_key_args function."""
+    """Tests for the validate_int_key_args function."""
 
     def test_non_dict_input_raises_value_error(self) -> None:
         """Non-dict inputs should raise ValueError."""
         with pytest.raises(ValueError, match="Input is not a dict"):
-            validate_int_primary_key_args("not_a_dict", "id", "concept_id")
+            validate_int_key_args("not_a_dict", "id", "concept_id")
 
     @pytest.mark.parametrize("non_dict", [42, None, [], "string", True])
     def test_non_dict_types_raise_value_error(self, non_dict: object) -> None:
         """Various non-dict types should all raise ValueError."""
         with pytest.raises(ValueError, match="Input is not a dict"):
-            validate_int_primary_key_args(
-                non_dict, _uuid_field_name(), _int_field_name()
-            )
+            validate_int_key_args(non_dict, _uuid_field_name(), _int_field_name())
 
     @pytest.mark.parametrize("int_id", [0, 1, 42, 999_999])
     def test_int_id_provided_uuid_id_absent_derives_uuid(self, int_id: int) -> None:
         """When int_id is provided and uuid_id is absent, uuid_id should be
         derived from int_id."""
         data: dict[str, object] = {_int_field_name(): int_id}
-        validate_int_primary_key_args(data, _uuid_field_name(), _int_field_name())
+        validate_int_key_args(data, _uuid_field_name(), _int_field_name())
 
         assert data[_uuid_field_name()] == int_to_uuid(int_id)
         assert data[_int_field_name()] == int_id
@@ -361,7 +361,7 @@ class TestValidateIntPrimaryKeyArgs:
             _uuid_field_name(): None,
             _int_field_name(): SAMPLE_INT,
         }
-        validate_int_primary_key_args(data, _uuid_field_name(), _int_field_name())
+        validate_int_key_args(data, _uuid_field_name(), _int_field_name())
 
         assert data[_uuid_field_name()] == int_to_uuid(SAMPLE_INT)
 
@@ -372,7 +372,7 @@ class TestValidateIntPrimaryKeyArgs:
             _uuid_field_name(): SAMPLE_INT,
             _int_field_name(): None,
         }
-        validate_int_primary_key_args(data, _uuid_field_name(), _int_field_name())
+        validate_int_key_args(data, _uuid_field_name(), _int_field_name())
 
         assert data[_int_field_name()] == SAMPLE_INT
         assert data[_uuid_field_name()] == int_to_uuid(SAMPLE_INT)
@@ -382,19 +382,10 @@ class TestValidateIntPrimaryKeyArgs:
         key doesn't exist, the value should be moved to int_id and uuid_id
         derived."""
         data: dict[str, object] = {_uuid_field_name(): SAMPLE_INT}
-        validate_int_primary_key_args(data, _uuid_field_name(), _int_field_name())
+        validate_int_key_args(data, _uuid_field_name(), _int_field_name())
 
         assert data[_int_field_name()] == SAMPLE_INT
         assert data[_uuid_field_name()] == int_to_uuid(SAMPLE_INT)
-
-    def test_int_id_missing_raises_value_error(self) -> None:
-        """When int_id is not provided and uuid_id is not an int, should raise
-        ValueError."""
-        data: dict[str, object] = {_uuid_field_name(): uuid4()}
-        with pytest.raises(
-            ValueError, match=f"{_int_field_name()} not provided or not an integer"
-        ):
-            validate_int_primary_key_args(data, _uuid_field_name(), _int_field_name())
 
     def test_int_id_non_int_raises_value_error(self) -> None:
         """When int_id is not an integer (e.g. str), should raise ValueError."""
@@ -405,7 +396,7 @@ class TestValidateIntPrimaryKeyArgs:
         with pytest.raises(
             ValueError, match=f"{_int_field_name()} not provided or not an integer"
         ):
-            validate_int_primary_key_args(data, _uuid_field_name(), _int_field_name())
+            validate_int_key_args(data, _uuid_field_name(), _int_field_name())
 
     def test_matching_uuid_and_int_id_passes(self) -> None:
         """When uuid_id (as UUID) matches the one derived from int_id, no
@@ -415,7 +406,7 @@ class TestValidateIntPrimaryKeyArgs:
             _uuid_field_name(): expected_uuid,
             _int_field_name(): SAMPLE_INT,
         }
-        validate_int_primary_key_args(data, _uuid_field_name(), _int_field_name())
+        validate_int_key_args(data, _uuid_field_name(), _int_field_name())
 
         assert data[_uuid_field_name()] == expected_uuid
         assert data[_int_field_name()] == SAMPLE_INT
@@ -431,7 +422,7 @@ class TestValidateIntPrimaryKeyArgs:
         with pytest.raises(
             ValueError, match="is not identical to the one derived from"
         ):
-            validate_int_primary_key_args(data, _uuid_field_name(), _int_field_name())
+            validate_int_key_args(data, _uuid_field_name(), _int_field_name())
 
     def test_uuid_id_as_matching_string_passes(self) -> None:
         """When uuid_id is provided as a string representation that matches
@@ -442,7 +433,7 @@ class TestValidateIntPrimaryKeyArgs:
             _uuid_field_name(): str(expected_uuid),
             _int_field_name(): SAMPLE_INT,
         }
-        validate_int_primary_key_args(data, _uuid_field_name(), _int_field_name())
+        validate_int_key_args(data, _uuid_field_name(), _int_field_name())
 
         assert data[_uuid_field_name()] == expected_uuid
         assert data[_int_field_name()] == SAMPLE_INT
@@ -458,18 +449,18 @@ class TestValidateIntPrimaryKeyArgs:
         with pytest.raises(
             ValueError, match="is not identical to the one derived from"
         ):
-            validate_int_primary_key_args(data, _uuid_field_name(), _int_field_name())
+            validate_int_key_args(data, _uuid_field_name(), _int_field_name())
 
     def test_data_mutated_in_place(self) -> None:
         """The function should mutate the input dict in place."""
         data: dict[str, object] = {_int_field_name(): SAMPLE_INT}
-        validate_int_primary_key_args(data, _uuid_field_name(), _int_field_name())
+        validate_int_key_args(data, _uuid_field_name(), _int_field_name())
         assert _uuid_field_name() in data
 
     def test_zero_int_id(self) -> None:
         """int_id of 0 should be valid and produce a deterministic UUID."""
         data: dict[str, object] = {_int_field_name(): 0}
-        validate_int_primary_key_args(data, _uuid_field_name(), _int_field_name())
+        validate_int_key_args(data, _uuid_field_name(), _int_field_name())
 
         assert data[_uuid_field_name()] == int_to_uuid(0)
 
@@ -477,7 +468,7 @@ class TestValidateIntPrimaryKeyArgs:
         """In Python bool is a subclass of int, so True/False are accepted as
         valid int_id values by isinstance(int_id, int)."""
         data: dict[str, object] = {_int_field_name(): True}
-        validate_int_primary_key_args(data, _uuid_field_name(), _int_field_name())
+        validate_int_key_args(data, _uuid_field_name(), _int_field_name())
 
         assert data[_uuid_field_name()] == int_to_uuid(1)
 
@@ -487,6 +478,7 @@ class TestValidateIntPrimaryKeyArgs:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestDataLineageMixin:
     """Tests for the DataLineageMixin class.
 

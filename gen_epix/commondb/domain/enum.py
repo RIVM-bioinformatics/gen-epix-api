@@ -1,4 +1,17 @@
-from enum import Enum, IntEnum
+import datetime
+import uuid
+from enum import Enum
+
+import ulid
+
+
+class TimestampFactory(Enum):
+    DATETIME_NOW = lambda: datetime.datetime.now(datetime.timezone.utc)
+
+
+class IdFactory(Enum):
+    UUID4 = uuid.uuid4
+    ULID = lambda: ulid.api.new().uuid
 
 
 class Role(Enum):
@@ -56,15 +69,6 @@ class ServiceType(Enum):
     SYSTEM = "SYSTEM"
     RBAC = "RBAC"
     ABAC = "ABAC"
-
-
-class IdentifierType(IntEnum):
-    PERSON = 1
-    ORGANIZATION = 2
-    CASE = 3
-    SAMPLE = 4
-    CASE_SET = 5
-    GENETIC_SEQUENCE = 6
 
 
 class UploadAction(Enum):

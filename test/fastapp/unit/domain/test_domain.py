@@ -4,7 +4,7 @@ from uuid import UUID
 
 import pytest
 
-from gen_epix.fastapp import ExceptionHandlingMode, exc
+from gen_epix.fastapp import OnException, exc
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import CrudOperation, PermissionType, PermissionTypeSet
@@ -458,7 +458,7 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
             entity_e,
             service_type=ServiceType.SVC3,
             model_class=ModelF,
-            on_cycle=ExceptionHandlingMode.IGNORE,
+            on_cycle=OnException.IGNORE,
         )
 
         class BrokenEntity(Entity):

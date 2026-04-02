@@ -1,4 +1,4 @@
-from typing import Any, ClassVar, Self
+from typing import ClassVar, Self
 from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
@@ -38,6 +38,19 @@ class IdentityProvider(Model):
     public: bool = Field(
         default=False, description="Whether the identity provider is public"
     )
+
+    @model_validator(mode="after")
+    def _validate(self) -> Self:
+        if self.public:
+            if self.client_id is None:
+                raise ValueError(
+                    f"client_id is required when public is True in identity provider '{self.name}'"
+                )
+            if self.scope is None:
+                raise ValueError(
+                    f"scope is required when public is True in identity provider '{self.name}'"
+                )
+        return self
 
 
 class Claims(Model):
@@ -102,7 +115,9 @@ class OidcServerCfg(Model):
     discovery_url: str | None = Field(
         default=None, description="The URL of the OpenID Connect discovery document"
     )
-    client_id: str = Field(description="The client ID of the application")
+    client_id: str | None = Field(
+        default=None, description="The client ID of the application"
+    )
     client_secret: str | None = Field(
         default=None, description="The client secret of the application"
     )
@@ -114,7 +129,7 @@ class OidcServerCfg(Model):
         default=None,
         description="The audience that the identity provider will include in the aud claim of tokens",
     )
-    scope: str = Field(description="The scope of the application")
+    scope: str | None = Field(default=None, description="The scope of the application")
     public: bool = Field(
         default=False, description="Whether the identity provider is public"
     )
@@ -293,6 +308,15 @@ class OidcServerCfg(Model):
             if new_claim_name in orig_claim_names:
                 raise ValueError(
                     f"Claim map cannot map claim '{new_claim_name}' to itself in OIDC server config '{self.name}'"
+                )
+        if self.public:
+            if self.client_id is None:
+                raise ValueError(
+                    f"client_id is required when public is True in OIDC server config '{self.name}'"
+                )
+            if self.scope is None:
+                raise ValueError(
+                    f"scope is required when public is True in OIDC server config '{self.name}'"
                 )
         return self
 

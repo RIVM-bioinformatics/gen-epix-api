@@ -8,6 +8,7 @@ from Bio import SeqIO
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import command, enum, exc, model
 from gen_epix.seqdb.domain.service.file import BaseFileService
+from gen_epix.seqdb.services.seq.crud_file import file_service_crud_file
 
 
 class FileService(BaseFileService):
@@ -109,3 +110,9 @@ class FileService(BaseFileService):
                 )
         if not found_records:
             raise exc.InvalidArgumentsError("No sequence records found in FASTQ file")
+
+    def crud_file(
+        self,
+        cmd: command.FileCrudCommand,
+    ) -> model.File | list[model.File] | UUID | list[UUID] | bool | list[bool] | None:
+        return file_service_crud_file(self, cmd)

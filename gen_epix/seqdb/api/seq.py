@@ -1,4 +1,5 @@
 from collections.abc import Callable, Iterable
+from datetime import datetime
 from typing import Any, NoReturn
 from uuid import UUID
 
@@ -18,17 +19,21 @@ class UploadSamplesRequestBody(command.UploadSamplesCommand):
     pass
 
 
-class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
-    seq_distance_protocol_id: UUID
+class CalculatePhylogeneticTreeRequestBody(PydanticBaseModel):
+    protocol_id: UUID
     tree_algorithm: enum.TreeAlgorithm
     profile_ids: list[UUID]
     leaf_codes: list[str] | None = None
 
 
 class RetrieveSimilarProfilesRequestBody(PydanticBaseModel):
-    seq_distance_protocol_id: UUID
+    protocol_id: UUID
     profile_ids: list[UUID]
     max_distance: float
+
+
+class UpdateSeqDistancesRequestBody(PydanticBaseModel):
+    protocol_id: UUID
 
 
 class RetrieveSamplesRequestBody(PydanticBaseModel):
@@ -57,24 +62,24 @@ def create_seq_endpoints(
     registered_user_dependency = app_impl.registered_user_dependency
 
     @router.post(
-        "/retrieve/phylogenetic_tree",
+        "/calculate/phylogenetic_tree",
         operation_id="retrieve__phylogenetic_tree",
         name="RetrievePhylogeneticTree",
-        description=command.RetrievePhylogeneticTreeCommand.__doc__,
+        description=command.CalculatePhylogeneticTreeCommand.__doc__,
     )
     async def retrieve__phylogenetic_tree(
         # user: registered_user_dependency, request_body: RetrievePhylogeneticTreeRequestBody  # type: ignore
         user: registered_user_dependency,
-        request_body: RetrievePhylogeneticTreeRequestBody,  # type: ignore
+        request_body: CalculatePhylogeneticTreeRequestBody,  # type: ignore
     ) -> model.PhylogeneticTree:
         try:
             retval: model.PhylogeneticTree = await run_in_threadpool(
                 app.handle,
-                command.RetrievePhylogeneticTreeCommand(
+                command.CalculatePhylogeneticTreeCommand(
                     user=user,
-                    seq_distance_protocol_id=request_body.seq_distance_protocol_id,
+                    protocol_id=request_body.protocol_id,
                     tree_algorithm=request_body.tree_algorithm,
-                    profile_ids=request_body.profile_ids,
+                    seq_profile_ids=request_body.profile_ids,
                     leaf_names=request_body.leaf_codes,
                 ),
             )
@@ -97,7 +102,7 @@ def create_seq_endpoints(
                 app.handle,
                 command.RetrieveSimilarProfilesCommand(
                     user=user,
-                    seq_distance_protocol_id=request_body.seq_distance_protocol_id,
+                    protocol_id=request_body.protocol_id,
                     profile_ids=request_body.profile_ids,
                     max_distance=request_body.max_distance,
                 ),
@@ -156,6 +161,48 @@ def create_seq_endpoints(
                 "Content-Disposition": f'attachment; filename="{request_body.file_name}"'
             },
         )
+
+    @router.post(
+        "/retrieve/seq_distance_last_modified/{protocol_id}",
+        operation_id="retrieve__seq_distance_last_modified",
+        name="RetrieveSeqDistanceLastModified",
+        description=command.RetrieveSeqDistanceLastModifiedCommand.__doc__,
+    )
+    async def retrieve__seq_distance_last_modified(
+        user: registered_user_dependency,  # type: ignore
+        protocol_id: UUID,
+    ) -> datetime | None:
+        try:
+            retval: datetime | None = app.handle(
+                command.RetrieveSeqDistanceLastModifiedCommand(
+                    user=user,
+                    protocol_id=protocol_id,
+                )
+            )
+        except Exception as exception:
+            handle_exception("d9e5f4a7", user, exception)  # type: ignore
+        return retval
+
+    @router.post(
+        "/update/seq_distances",
+        operation_id="update__seq_distances",
+        name="UpdateSeqDistances",
+        description=command.UpdateSeqDistancesCommand.__doc__,
+    )
+    async def update__seq_distances(
+        user: registered_user_dependency,  # type: ignore
+        request_body: UpdateSeqDistancesRequestBody,
+    ) -> list[model.CalculateSeqDistancesResult]:
+        try:
+            retval: list[model.CalculateSeqDistancesResult] = app.handle(
+                command.UpdateSeqDistancesCommand(
+                    user=user,
+                    protocol_id=request_body.protocol_id,
+                )
+            )
+        except Exception as exception:
+            handle_exception("a7b3c1d2", user, exception)  # type: ignore
+        return retval
 
     @router.post(
         "/upload/samples",

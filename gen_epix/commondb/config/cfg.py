@@ -13,16 +13,17 @@ from pathlib import Path
 import yaml  # type: ignore[import-untyped]
 from dynaconf import Dynaconf
 
-from gen_epix.commondb.config.factory import IdFactory, TimestampFactory
 from gen_epix.commondb.config.settings_manager import SettingsManager
 from gen_epix.fastapp import App
 
+# Third-party loggers that keep their configured level during global log-level updates.
 _THIRD_PARTY_LOGGER_NAMES = {
     "sqlalchemy.engine",
     "sqlalchemy.pool",
     "httpx",
     "asyncio",
 }
+# Local logger suffixes that keep their configured level during global log-level updates.
 _OWN_LOGGER_SUFFIXES = {
     "setup",
     "service",
@@ -236,6 +237,11 @@ class AppCfg(BaseAppCfg):
     def _init_validate_settings(self) -> None:
         """Validate settings and apply defaults to all services and repositories."""
         # Map timestamp and id factories
+        from gen_epix.commondb.domain.enum import (  # noqa: PLC0415
+            IdFactory,
+            TimestampFactory,
+        )
+
         defaults_cfg = self._cfg["service"]["defaults"]["props"]
         timestamp_factory = getattr(
             TimestampFactory,

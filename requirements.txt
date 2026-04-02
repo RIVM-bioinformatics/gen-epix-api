@@ -1,12 +1,12 @@
 # python 3.13.5
 
 # application server
-fastapi[standard]==0.135.1
-gunicorn==25.1.*
-starlette==0.52.*
+fastapi[standard]==0.135.2
+gunicorn==25.3.*
+starlette==1.0.*
 httpx==0.28.1
 urllib3==2.6.3
-pyjwt==2.11.0
+pyjwt==2.12.1
 
 #database handling
 sqlalchemy==2.0.48
@@ -24,8 +24,8 @@ python-multipart==0.0.22
 
 # calculation
 scipy==1.17.1
-numpy==2.4.3
-biopython==1.86
+numpy==2.4.4
+biopython==1.87
 
 # other
 cachetools==7.0.5

@@ -31,9 +31,9 @@ from gen_epix.seqdb.repositories.seq_dict import SeqDictRepository
 CREATE_DEMO_DATA = True
 
 N_SEQS_PER_BATCH = 100
-DB_ENTRY_COUNTS: list[int] = [1, 2, 10]
+DB_ENTRY_COUNTS: list[int] = [1]  # ]2, 10]
 
-SEQ_SETTINGS = SeqGenerationSettings(n_loci=10, locus_length=100)
+SEQ_SETTINGS = SeqGenerationSettings(n_loci=1000, locus_length=100)
 
 SEQDB_APP_CFGS = get_app_cfgs(
     AppType.SEQDB,
@@ -67,11 +67,19 @@ def _build_upload_command(
     to create correctly linked objects for upload.
     db_index is used to select which set of objects to use for the command from the db.
     """
-    assembly_protocol_id = list(db[model.AssemblyProtocol].keys())[db_index]
+    protocols = list(db[model.Protocol].values())
+    assembly_protocol_id = [
+        protocol.id
+        for protocol in protocols
+        if protocol.protocol_type == enum.ProtocolType.ASSEMBLY
+    ][db_index]
     locus_set_id = list(db[model.LocusSet].keys())[db_index]
-    locus_detection_protocol_id = list(db[model.LocusDetectionProtocol].keys())[
-        db_index
-    ]
+    locus_detection_protocol_id = [
+        protocol.id
+        for protocol in protocols
+        if protocol.protocol_type == enum.ProtocolType.SEQ_PROFILE
+        and protocol.seq_profile_type == enum.SeqProfileType.ALLELE
+    ][db_index]
     locus_code_map_id = list(db[model.LocusCodeMap].keys())[db_index]
     locus_ids = db[model.LocusSet][locus_set_id].locus_ids
 
@@ -111,8 +119,8 @@ class TestSampleBatchUploader:
         # Configure root user
         user: model.User = env.retrieve_user_by_key("root1_1@org1.org")
         user.name = "root1_1"
-        env._set_obj(user)
-        env._set_obj(
+        env.set_obj(user)
+        env.set_obj(
             env.read_one_by_property("root1_1", model.Organization, "name", "org1")
         )
 
@@ -174,6 +182,4 @@ class TestSampleBatchUploader:
         print(f"avg_time_per_upload={avg:.4f}s\n")
 
         # profiler.stop()
-        # profiler.write_html(
-        #     "./test/output/profile_calculate_seq_distances.html"
-        # )
+        # profiler.write_html("./test/output/profile_calculate_seq_distances.html")

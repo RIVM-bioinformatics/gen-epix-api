@@ -384,11 +384,13 @@ class FieldTypeSet(Enum):
     )
 
 
-class ExceptionHandlingMode(Enum):
+class OnException(Enum):
     RAISE = "RAISE"
     IGNORE = "IGNORE"
     SKIP = "SKIP"
     REPLACE = "REPLACE"
+    SET_DEFAULT = "SET_DEFAULT"
+    SET_NONE = "SET_NONE"
 
 
 class FileExtension(Enum):

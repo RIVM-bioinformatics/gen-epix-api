@@ -8,6 +8,9 @@ erDiagram
 
     %% Entity definitions
     OrganizationAdminPolicy {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID organization_id FK
         UUID user_id FK

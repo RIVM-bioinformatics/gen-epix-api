@@ -2,7 +2,7 @@ from abc import abstractmethod
 from uuid import UUID
 
 from gen_epix.fastapp.service import BaseService
-from gen_epix.seqdb.domain import command
+from gen_epix.seqdb.domain import command, model
 from gen_epix.seqdb.domain.enum import ServiceType
 
 
@@ -16,10 +16,21 @@ class BaseFileService(BaseService):
             command.CreateFileCommand,
             self.create_file,
         )
+        f(
+            command.FileCrudCommand,
+            self.crud_file,
+        )
 
     @abstractmethod
     def create_file(
         self,
         cmd: command.CreateFileCommand,
     ) -> UUID:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def crud_file(
+        self,
+        cmd: command.FileCrudCommand,
+    ) -> model.File | list[model.File] | UUID | list[UUID] | bool | list[bool] | None:
         raise NotImplementedError()

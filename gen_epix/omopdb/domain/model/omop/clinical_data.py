@@ -5,7 +5,7 @@ from uuid import UUID
 from pydantic import Field, field_validator
 
 from gen_epix.commondb.domain.model import BaseIdentifier
-from gen_epix.fastapp import Model
+from gen_epix.commondb.domain.model import ModelNoId as Model
 from gen_epix.fastapp.domain import Entity, create_links
 from gen_epix.fastapp.domain.util import create_keys
 from gen_epix.omopdb.domain.model.omop.base import (
@@ -1023,6 +1023,19 @@ class Measurement(Model, DataLineageMixin):
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
         return validate_int_for_uuid_field(value)
+
+    @field_validator(
+        "measurement_source_value",
+        "value_source_value",
+        "unit_source_value",
+        mode="before",
+    )
+    @classmethod
+    def _validate_measurement_source_value(cls, value: Any | None) -> str | None:
+        """Truncate too long values with an ellipsis, as the database field is limited to 50 characters."""
+        if isinstance(value, str) and len(value) > 50:
+            value = value[:47] + "..."
+        return value
 
 
 class Observation(Model, DataLineageMixin):

@@ -13,6 +13,7 @@ from gen_epix.fastapp import exc
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import CrudOperation, FieldTypeSet, FileExtension
 from gen_epix.fastapp.model import Model
+from gen_epix.fastapp.repositories.dict.modifier import BaseDictModelModifier
 from gen_epix.fastapp.repositories.dict.unit_of_work import DictUnitOfWork
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
@@ -139,9 +140,15 @@ class DictRepository(BaseRepository):
         self._back_links: dict[type[Model], list[tuple[type[Model], str]]] = {}
         self._value_field_names: dict[type[Model], list[str]] = {}
         self._keys_generators: dict[type[Model], dict[int, Callable[[Model], str]]] = {}
+        self._model_modifiers: dict[type[Model], BaseDictModelModifier] = {}
         self._init_properties(entities, db, missing_data)
 
         self._verify_extra_models_and_extract_reverse_links(extra_data)
+
+    def register_model_modifier(
+        self, model_class: type[Model], modifier: BaseDictModelModifier
+    ) -> None:
+        self._model_modifiers[model_class] = modifier
 
     @property
     def db(self) -> dict[type[Model], dict[Hashable, Model]]:
@@ -480,7 +487,7 @@ class DictRepository(BaseRepository):
         value_field_names = self._value_field_names[model_class]
         links = [tuple([x[0], x[2], x[4]]) for x in self._links[model_class]]
         self.upsert_model_objects(
-            model_class, objs, df, get_id, df_objs, value_field_names, links
+            user_id, model_class, objs, df, get_id, df_objs, value_field_names, links
         )
         if return_id:
             return obj_ids if is_iterable else obj_ids[0]
@@ -494,6 +501,7 @@ class DictRepository(BaseRepository):
 
     def upsert_model_objects(
         self,
+        user_id: Hashable | None,
         model_class: type[Model],
         objs: Iterable[Model],
         df: dict[Hashable, Model],
@@ -502,14 +510,19 @@ class DictRepository(BaseRepository):
         value_field_names: list[str],
         links: list[tuple[str, str | None, dict[Hashable, Model] | None]],
     ) -> None:
+        modifier = self._model_modifiers.get(model_class)
         for i, obj, df_obj in zip(range(len(df_objs)), objs, df_objs):
             if df_obj:
-                # Already existing -> update df_obj with obj data
+                # Already existing -> let modifier fix obj before values are applied
+                if modifier:
+                    modifier.on_update(user_id, obj, df_obj)
                 self._apply_value_updates(value_field_names, obj, df_obj)
                 self._apply_link_updates(model_class, get_id, links, obj, df_obj)
             else:
-                # New -> insert copy of obj
+                # New -> insert copy of obj, then stamp metadata on the stored copy
                 df_objs[i] = self._insert_new(df, get_id, obj)
+                if modifier:
+                    modifier.on_create(user_id, df_objs[i])
 
     def _insert_new(
         self,

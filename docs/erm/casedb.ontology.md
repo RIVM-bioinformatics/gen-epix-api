@@ -8,9 +8,9 @@ erDiagram
 
     %% Relationships
     Concept }o--|| ConceptSet : "concept_set_id"
-    Etiology }o--|| Disease : "disease_id"
-    Etiology }o--|| EtiologicalAgent : "etiological_agent_id"
     ConceptRelation }o--|| Concept : "from_concept_id"
     ConceptRelation }o--|| Concept : "to_concept_id"
+    Etiology }o--|| Disease : "disease_id"
+    Etiology }o--|| EtiologicalAgent : "etiological_agent_id"
 
 ```

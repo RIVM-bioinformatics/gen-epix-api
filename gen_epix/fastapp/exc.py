@@ -186,6 +186,22 @@ class UserAlreadyExistsAuthError(AuthException):
         self._init_http_props(http_props, 409)
 
 
+class ConcurrentModificationError(ServiceException):
+    def __init__(
+        self,
+        message: str | None = None,
+        http_props: dict[str, Any] | None = None,
+    ):
+        super().__init__(message, http_props)
+        if http_props is None:
+            http_props = {}
+        self._init_message(
+            message,
+            "Concurrent modification detected",
+        )
+        self._init_http_props(http_props, 409)
+
+
 class ServiceUnavailableError(ServiceException):
     def __init__(
         self, message: str | None = None, http_props: dict[str, Any] | None = None

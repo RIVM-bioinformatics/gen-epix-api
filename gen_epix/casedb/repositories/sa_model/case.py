@@ -86,10 +86,8 @@ class GeneticDistanceProtocol(Base, RowMetadataMixin):
         model.GeneticDistanceProtocol,
         "seqdb_seq_distance_protocol_id",
     )
-    seqdb_seq_distance_protocol_type: Mapped[seqdb_enum.SeqDistanceProtocolType] = (
-        create_mapped_column(
-            DOMAIN, model.GeneticDistanceProtocol, "seqdb_seq_distance_protocol_type"
-        )
+    seqdb_seq_distance_type: Mapped[seqdb_enum.SeqDistanceType] = create_mapped_column(
+        DOMAIN, model.GeneticDistanceProtocol, "seqdb_seq_distance_type"
     )
     name: Mapped[str] = create_mapped_column(
         DOMAIN, model.GeneticDistanceProtocol, "name"
@@ -161,6 +159,11 @@ class RefCol(Base, RowMetadataMixin):
     description: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.RefCol, "description"
     )
+    regex: Mapped[str] = create_mapped_column(DOMAIN, model.RefCol, "regex")
+    schema_definition: Mapped[str] = create_mapped_column(
+        DOMAIN, model.RefCol, "schema_definition"
+    )
+    schema_uri: Mapped[str] = create_mapped_column(DOMAIN, model.RefCol, "schema_uri")
     props: Mapped[dict[str, Any]] = create_mapped_column(DOMAIN, model.RefCol, "props")
 
     ref_dim: Mapped[RefDim] = relationship(RefDim, foreign_keys=[ref_dim_id])
@@ -183,20 +186,8 @@ class CaseType(Base, RowMetadataMixin):
     etiological_agent_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.CaseType, "etiological_agent_id"
     )
-    create_max_n_cases: Mapped[int] = create_mapped_column(
-        DOMAIN, model.CaseType, "create_max_n_cases"
-    )
-    read_max_n_cases: Mapped[int] = create_mapped_column(
-        DOMAIN, model.CaseType, "read_max_n_cases"
-    )
-    read_max_tree_size: Mapped[int] = create_mapped_column(
-        DOMAIN, model.CaseType, "read_max_tree_size"
-    )
-    update_max_n_cases: Mapped[int] = create_mapped_column(
-        DOMAIN, model.CaseType, "update_max_n_cases"
-    )
-    delete_max_n_cases: Mapped[int] = create_mapped_column(
-        DOMAIN, model.CaseType, "delete_max_n_cases"
+    props: Mapped[dict[str, Any]] = create_mapped_column(
+        DOMAIN, model.CaseType, "props"
     )
 
 
@@ -421,6 +412,7 @@ class CaseSetCategory(Base, RowMetadataMixin):
     description: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.CaseSetCategory, "description"
     )
+    rank: Mapped[int] = create_mapped_column(DOMAIN, model.CaseSetCategory, "rank")
 
 
 class CaseSetStatus(Base, RowMetadataMixin):
@@ -434,6 +426,7 @@ class CaseSetStatus(Base, RowMetadataMixin):
     description: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.CaseSetStatus, "description"
     )
+    rank: Mapped[int] = create_mapped_column(DOMAIN, model.CaseSetStatus, "rank")
 
 
 class CaseSet(Base, RowMetadataMixin):
@@ -450,11 +443,12 @@ class CaseSet(Base, RowMetadataMixin):
         DOMAIN, model.CaseSet, "created_in_data_collection_id"
     )
     name: Mapped[str] = create_mapped_column(DOMAIN, model.CaseSet, "name")
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.CaseSet, "code")
     description: Mapped[str] = create_mapped_column(
         DOMAIN, model.CaseSet, "description"
     )
-    created_at: Mapped[datetime] = create_mapped_column(
-        DOMAIN, model.CaseSet, "created_at"
+    case_set_date: Mapped[datetime] = create_mapped_column(
+        DOMAIN, model.CaseSet, "case_set_date"
     )
     case_set_category_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.CaseSet, "case_set_category_id"

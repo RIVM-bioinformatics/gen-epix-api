@@ -7,7 +7,10 @@ erDiagram
     %% casedb / ABAC (detailed)
 
     %% Entity definitions
-    OrganizationShareCasePolicy {
+    UserShareCasePolicy {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID data_collection_id FK
         UUID case_type_set_id FK
@@ -16,11 +19,14 @@ erDiagram
         bool remove_case
         bool add_case_set
         bool remove_case_set
-        UUID organization_id FK
+        UUID user_id FK
         UUID from_data_collection_id FK
     }
 
     OrganizationAccessCasePolicy {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID data_collection_id FK
         UUID case_type_set_id FK
@@ -37,14 +43,10 @@ erDiagram
         bool write_case_set
     }
 
-    OrganizationAdminPolicy {
-        UUID id PK
-        UUID organization_id FK
-        UUID user_id FK
-        bool is_active
-    }
-
     UserAccessCasePolicy {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID data_collection_id FK
         UUID case_type_set_id FK
@@ -60,7 +62,10 @@ erDiagram
         bool write_case_set
     }
 
-    UserShareCasePolicy {
+    OrganizationShareCasePolicy {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
         UUID id PK
         UUID data_collection_id FK
         UUID case_type_set_id FK
@@ -69,8 +74,18 @@ erDiagram
         bool remove_case
         bool add_case_set
         bool remove_case_set
-        UUID user_id FK
+        UUID organization_id FK
         UUID from_data_collection_id FK
+    }
+
+    OrganizationAdminPolicy {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID organization_id FK
+        UUID user_id FK
+        bool is_active
     }
 
 ```

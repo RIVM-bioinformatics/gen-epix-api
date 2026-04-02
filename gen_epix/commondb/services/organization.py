@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from uuid import UUID
 
 from cachetools import TTLCache, cached
 
@@ -214,58 +215,78 @@ class OrganizationService(BaseOrganizationService):
 
             # Keep invitations that are not expired and either have no key
             # (open invites) or have a key matching the registering user.
-            filtered_user_invitations: list[model.UserInvitation] = []
-            for x in user_invitations:
+            to_delete_user_invitation_ids: list[UUID] = []
+            selected_user_invitation: model.UserInvitation | None = None
+            for user_invitation in user_invitations:
+                assert user_invitation.id is not None
                 # convert x.expires_at to aware datetime if it is naive
-                expires_at = x.expires_at
-                if x.expires_at.tzinfo is None:
-                    expires_at = x.expires_at.replace(tzinfo=timezone.utc)
+                expires_at = user_invitation.expires_at
+                if user_invitation.expires_at.tzinfo is None:
+                    expires_at = user_invitation.expires_at.replace(tzinfo=timezone.utc)
 
                 if expires_at > now:
-                    if x.key is not None:
-                        if x.key == new_user.key:
-                            filtered_user_invitations.append(x)
-                    else:
-                        filtered_user_invitations.append(x)
+                    # Invitation is not expired
+                    if user_invitation.token == cmd.token:
+                        if selected_user_invitation:
+                            # Should not happen: multiple open invites with same token
+                            raise exc.ServiceException(
+                                f"Multiple open invitations found for token {cmd.token}"
+                            )
+                        # Token matches, so this is a candidate invitation
+                        if user_invitation.key is None:
+                            # No key means open invite, so accept
+                            selected_user_invitation = user_invitation
+                        elif user_invitation.key == new_user.key:
+                            # Key provided and matches user key, so accept
+                            selected_user_invitation = user_invitation
+                        else:
+                            # Key provided but does not match user key, so reject and delete
+                            to_delete_user_invitation_ids.append(user_invitation.id)
+                    elif (
+                        user_invitation.key is not None
+                        and user_invitation.key == new_user.key
+                    ):
+                        # Additional invitation for same user with matching key but non-matching token, delete it
+                        to_delete_user_invitation_ids.append(user_invitation.id)
+                else:
+                    # Expired invitation, delete it (functions as cleanup of expired invites rather than relying on separate cleanup process)
+                    to_delete_user_invitation_ids.append(user_invitation.id)
 
-            if not filtered_user_invitations:
+            # Handle case where no valid invitation is found
+            if not selected_user_invitation:
                 raise exc.UnauthorizedAuthError(
-                    f"No valid invitations found for user {new_user.id}",
+                    f"No valid invitations found for user {new_user.key} and token {cmd.token}",
                 )
-            user_invitations_with_token = [
-                x for x in filtered_user_invitations if x.token == cmd.token
-            ]
-            if not user_invitations_with_token:
-                raise exc.UnauthorizedAuthError(
-                    f"No invitation found for token {cmd.token}"
-                )
-            # Choose the invitation with the latest expiry date
-            user_invitation = sorted(
-                user_invitations_with_token, key=lambda x: x.expires_at
-            )[-1]
-            # Set description of the user from the invitation
-            new_user.description = user_invitation.description
-            # Set roles of the user
-            new_user.roles = user_invitation.roles
-            # Set ID and organization ID of the user
-            new_user.organization_id = user_invitation.organization_id
+
+            # Add selected invitation to list of invitations to delete, to prevent reuse of the same invitation
+            assert selected_user_invitation.id is not None
+            to_delete_user_invitation_ids.append(selected_user_invitation.id)
+
+            # Set new user properties
+            new_user.description = selected_user_invitation.description
+            new_user.roles = selected_user_invitation.roles
+            new_user.organization_id = selected_user_invitation.organization_id
+
             # Create user
+            # TODO: user_manager.create_new_user_from_token duplicates some of the logic above and should be refactored to avoid this duplication and potential inconsistencies
             user_in_db: model.User = self.app.user_manager.create_new_user_from_token(  # type: ignore[assignment]
                 new_user,
-                user_invitation.token,
-                description=user_invitation.description,
-                created_by_user_id=user_invitation.invited_by_user_id,
-                roles=user_invitation.roles,
+                selected_user_invitation.token,
+                description=selected_user_invitation.description,
+                created_by_user_id=selected_user_invitation.invited_by_user_id,
+                roles=selected_user_invitation.roles,
             )
-            # Delete invitation
+
+            # Delete invitations
             self.repository.crud(
                 uow,
                 None,
                 self.user_invitation_class,
                 None,
-                [x.id for x in user_invitations],
+                to_delete_user_invitation_ids,
                 CrudOperation.DELETE_SOME,
             )
+
         return user_in_db
 
     def update_user(
@@ -312,6 +333,9 @@ class OrganizationService(BaseOrganizationService):
             tgt_user.is_active = is_active
             tgt_user.roles = roles
             tgt_user.organization_id = organization_id
+
+            if tgt_user.created_at is None:
+                tgt_user.created_at = tgt_user.modified_at
             updated_tgt_user: model.User = self.repository.crud(  # type: ignore[assignment]
                 uow,
                 cmd.user.id,

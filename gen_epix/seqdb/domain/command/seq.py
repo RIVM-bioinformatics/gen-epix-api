@@ -2,6 +2,7 @@
 # This module defines base classes, methods are added later
 
 
+import datetime
 from typing import ClassVar, Self
 from uuid import UUID
 
@@ -40,6 +41,29 @@ class UploadSamplesCommand(Command, UploadBatchCommandMixin):
     sample_batch: model.SampleBatchForUpload = Field(
         description="Samples to upload, along with any associated data.",
     )
+    seq_distance_last_modified_at: datetime.datetime | None = Field(
+        default=None,
+        description=(
+            "If provided, the upload will fail if any SeqDistance was modified after this timestamp, "
+            " to prevent concurrent modification conflicts."
+        ),
+    )
+
+
+class RetrieveSeqDistanceLastModifiedCommand(Command):
+    """
+    Retrieve the last modified datetime of any SeqDistance for a particular SeqDistance
+    protocol. This command is intended to be used in conjunction with the
+    CalculateSeqDistancesForNewProfilesCommand command, which has a
+    seq_distance_last_modified_at field that can be filled with the return value of this
+    command to prevent concurrent modification conflicts by ensuring that no SeqDistance
+    was modified after the specified datetime between the time of retrieval and the time
+    of calculation and upload of new distances.
+    """
+
+    protocol_id: UUID = Field(
+        description="The ID of the protocol for which to retrieve the last modified datetune for"
+    )
 
 
 class CalculateSeqDistancesForNewProfilesCommand(Command):
@@ -52,68 +76,62 @@ class CalculateSeqDistancesForNewProfilesCommand(Command):
     similarity search).
     """
 
-    allele_profiles: list[model.AlleleProfile] | None = Field(
-        default=None,
-        description="List of new allele profiles to calculate distances for.",
+    seq_profiles: list[model.SeqProfile] = Field(
+        description="List of new sequence profiles to calculate distances for.",
     )
-    snp_profiles: list[model.SnpProfile] | None = Field(
+    seq_distance_last_modified_at: datetime.datetime | None = Field(
         default=None,
-        description="List of new SNP profiles to calculate distances for.",
-    )
-    mlva_profiles: list[model.MlvaProfile] | None = Field(
-        default=None,
-        description="List of new MLVA profiles to calculate distances for.",
-    )
-    kmer_profiles: list[model.KmerProfile] | None = Field(
-        default=None,
-        description="List of new k-mer profiles to calculate distances for.",
+        description=(
+            "If provided, fail if any SeqDistance was modified after this timestamp."
+        ),
     )
 
 
-class GenerateMultipleAlignmentCommand(Command):
-    pass
-
-
-class GeneratePhylogeneticTreeCommand(Command):
-    pass
-
-
-class RetrieveMultipleAlignmentCommand(Command):
-    pass
-
-
-class RetrievePhylogeneticTreeCommand(Command):
+class UpdateSeqDistancesCommand(Command):
     """
-    Retrieve a phylogenetic tree based on the given sequence distance protocol, tree
-    algorithm, and query profile IDs. The returned tree is expected to contain
-    the query profiles as well as any additional profiles that are within the maximum
-    distance threshold specified in the sequence distance protocol for at least one
-    of the query profiles. The leaf names in the tree correspond to the profile IDs,
-    but can optionally be replaced with custom leaf names provided in the command
-    (e.g. for better readability of the tree).
+    For a given distance protocol, find all profiles
+    that don't yet have a SeqDistance record, compute
+    the missing distances, and create the records while
+    maintaining the symmetry invariant (every distance
+    is stored in both directions).
     """
 
-    seq_distance_protocol_id: UUID = Field(
-        description="The ID of the sequence distance protocol to use for generating the distances"
+    protocol_id: UUID = Field(
+        description=("The ID of the seq distance protocol to update distances for."),
+    )
+
+
+class CalculatePhylogeneticTreeCommand(Command):
+    """
+    Calculate a phylogenetic tree based on the given protocol, tree algorithm, and query
+    profile IDs. The returned tree is expected to contain the query profiles as well as
+    any additional profiles that are within the maximum distance threshold specified in
+    the protocol for at least one of the query profiles. The leaf names in the tree
+    correspond to the profile IDs, but can optionally be replaced with custom leaf names
+    provided in the command (e.g. for better readability of the tree).
+    """
+
+    protocol_id: UUID = Field(
+        description="The ID of the protocol to use for generating the distances"
     )
     tree_algorithm: enum.TreeAlgorithm = Field(
         description="The tree algorithm to use for generating the phylogenetic tree"
     )
-    profile_ids: list[UUID] = Field(
-        description="List of profile IDs to calculate the phylogenetic tree for"
+    seq_profile_ids: list[UUID] = Field(
+        description="List of sequence profile IDs to calculate the phylogenetic tree for"
     )
     leaf_names: list[str] | None = Field(
         default=None,
-        description="Optional list of leaf names corresponding to the profile IDs",
+        description="Optional list of leaf names corresponding to the sequence profile IDs",
     )
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
         if self.leaf_names is not None and len(self.leaf_names) != len(
-            self.profile_ids
+            self.seq_profile_ids
         ):
             raise ValueError(
-                "leaf_names must be None or have the same length as profile_ids"
+                "leaf_names must be None or have the same length as sequence profile IDs"
             )
         return self
 
@@ -145,8 +163,8 @@ class RetrieveSimilarProfilesCommand(Command):
     returned profiles do not contain the query profiles.
     """
 
-    seq_distance_protocol_id: UUID = Field(
-        description="ID of the sequence distance protocol to use for similarity search.",
+    protocol_id: UUID = Field(
+        description="ID of the protocol to use for similarity search.",
     )
     profile_ids: list[UUID] = Field(
         description="List of query profile IDs to find similar profiles for.",
@@ -159,28 +177,20 @@ class RetrieveSimilarProfilesCommand(Command):
 # CRUD commands
 
 
-class AlignmentProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.AlignmentProtocol
+class ProtocolCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.Protocol
+
+
+class ProtocolSetCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.ProtocolSet
+
+
+class ProtocolSetMemberCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.ProtocolSetMember
 
 
 class AlleleCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Allele
-
-
-class AlleleAlignmentCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.AlleleAlignment
-
-
-class AlleleProfileCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.AlleleProfile
-
-
-class AlleleProfileIdentifierCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.AlleleProfileIdentifier
-
-
-class AssemblyProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.AssemblyProtocol
 
 
 class AstMeasurementCrudCommand(CrudCommand):
@@ -191,22 +201,6 @@ class AstPredictionCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.AstPrediction
 
 
-class AstProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.AstProtocol
-
-
-class KmerDetectionProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.KmerDetectionProtocol
-
-
-class KmerProfileCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.KmerProfile
-
-
-class KmerProfileIdentifierCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.KmerProfileIdentifier
-
-
 class LocusCodeMapCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.LocusCodeMap
 
@@ -215,40 +209,12 @@ class LocusCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Locus
 
 
-class LocusDetectionProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.LocusDetectionProtocol
-
-
-class LocusProfileCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.LocusProfile
-
-
-class LocusProfileIdentifierCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.LocusProfileIdentifier
-
-
 class LocusSetCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.LocusSet
 
 
-class MlvaDetectionProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.MlvaDetectionProtocol
-
-
-class MlvaProfileCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.MlvaProfile
-
-
-class MlvaProfileIdentifierCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.MlvaProfileIdentifier
-
-
 class PcrMeasurementCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.PcrMeasurement
-
-
-class PcrProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.PcrProtocol
 
 
 class ReadSetCrudCommand(CrudCommand):
@@ -267,18 +233,6 @@ class RefSeqCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.RefSeq
 
 
-class RefSnpCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.RefSnp
-
-
-class RefSnpSetCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.RefSnpSet
-
-
-class RefSnpSetMemberCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.RefSnpSetMember
-
-
 class SampleCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Sample
 
@@ -295,16 +249,8 @@ class SeqClassificationCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.SeqClassification
 
 
-class SeqClassificationProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.SeqClassificationProtocol
-
-
 class SeqCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Seq
-
-
-class SeqAlignmentCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.SeqAlignment
 
 
 class SeqCategoryCrudCommand(CrudCommand):
@@ -319,36 +265,20 @@ class SeqDistanceCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.SeqDistance
 
 
-class SeqDistanceProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.SeqDistanceProtocol
-
-
 class SeqIdentifierCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.SeqIdentifier
 
 
+class SeqProfileCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.SeqProfile
+
+
+class SeqProfileIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.SeqProfileIdentifier
+
+
 class SeqTaxonomyCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.SeqTaxonomy
-
-
-class SequencingProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.SequencingProtocol
-
-
-class SnpDetectionProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.SnpDetectionProtocol
-
-
-class SnpProfileCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.SnpProfile
-
-
-class SnpProfileIdentifierCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.SnpProfileIdentifier
-
-
-class TaxonomyProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.TaxonomyProtocol
 
 
 class TaxonCrudCommand(CrudCommand):
