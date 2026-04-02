@@ -11,11 +11,11 @@ Verifies that:
 """
 
 import datetime
-
-import pytest
 from test.commondb.unit.conftest import DEFAULT_CREATED_AT, DEFAULT_MODIFIED_AT
 from unittest import TestCase
 from uuid import uuid4
+
+import pytest
 
 from gen_epix.commondb.domain.model.base import ModelNoId
 from gen_epix.commondb.repositories.dict_modifier import CommondbDictModelModifier

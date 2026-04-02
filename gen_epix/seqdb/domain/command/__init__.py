@@ -107,11 +107,9 @@ from gen_epix.seqdb.domain.command.seq import ProtocolCrudCommand as ProtocolCru
 from gen_epix.seqdb.domain.command.seq import (
     ProtocolSetCrudCommand as ProtocolSetCrudCommand,
 )
-
 from gen_epix.seqdb.domain.command.seq import (
     ProtocolSetMemberCrudCommand as ProtocolSetMemberCrudCommand,
 )
-
 from gen_epix.seqdb.domain.command.seq import ReadSetCrudCommand as ReadSetCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
     ReadSetIdentifierCrudCommand as ReadSetIdentifierCrudCommand,
@@ -122,6 +120,9 @@ from gen_epix.seqdb.domain.command.seq import (
 from gen_epix.seqdb.domain.command.seq import RefSeqCrudCommand as RefSeqCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
     RetrieveSamplesCommand as RetrieveSamplesCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
+    RetrieveSeqDistanceLastModifiedCommand as RetrieveSeqDistanceLastModifiedCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
     RetrieveSeqFastaCommand as RetrieveSeqFastaCommand,
@@ -173,6 +174,9 @@ from gen_epix.seqdb.domain.command.seq import (
     TreeAlgorithmCrudCommand as TreeAlgorithmCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
+    UpdateSeqDistancesCommand as UpdateSeqDistancesCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
     UploadSamplesCommand as UploadSamplesCommand,
 )
 
@@ -201,7 +205,9 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         CalculatePhylogeneticTreeCommand,
         RetrieveSeqFastaCommand,
         RetrieveSimilarProfilesCommand,
+        RetrieveSeqDistanceLastModifiedCommand,
         CalculateSeqDistancesForNewProfilesCommand,
+        UpdateSeqDistancesCommand,
         SampleCrudCommand,
         SampleDataCollectionLinkCrudCommand,
         SampleIdentifierCrudCommand,

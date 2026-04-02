@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -87,3 +88,41 @@ class SeqSARepository(SARepository, BaseSeqRepository):
             sa_seq_distance: sa_model.SeqDistance = row[0]
             seq_distance: model.SeqDistance = mapper.load(sa_seq_distance)  # type: ignore[assignment]
             yield seq_distance
+
+    def iter_seq_distance_profile_ids(
+        self,
+        uow: BaseUnitOfWork,
+        protocol_id: UUID,
+    ) -> Iterable[UUID]:
+        stmt = sa.select(sa.func.distinct(sa_model.SeqDistance.seq_profile_id)).where(
+            sa_model.SeqDistance.protocol_id == protocol_id
+        )
+        assert isinstance(uow, SAUnitOfWork)
+        for row in uow.session.execute(stmt):
+            yield row[0]
+
+    def get_max_seq_distance_modified_at(
+        self,
+        uow: BaseUnitOfWork,
+        protocol_id: UUID,
+    ) -> datetime | None:
+        stmt = sa.select(sa.func.max(sa_model.SeqDistance.modified_at)).where(
+            sa_model.SeqDistance.protocol_id == protocol_id
+        )
+        assert isinstance(uow, SAUnitOfWork)
+        return uow.session.execute(stmt).scalar()
+
+    def get_profiles_by_protocol_ids(
+        self,
+        uow: BaseUnitOfWork,
+        protocol_ids: list[UUID],
+    ) -> list[model.SeqProfile]:
+        stmt = sa.select(sa_model.SeqProfile).where(
+            sa_model.SeqProfile.protocol_id.in_(protocol_ids)
+        )
+        mapper = self.get_mapper(model.SeqProfile)
+        assert isinstance(uow, SAUnitOfWork)
+        result: list[model.SeqProfile] = []
+        for row in uow.session.execute(stmt):
+            result.append(mapper.load(row[0]))  # type: ignore[arg-type]
+        return result

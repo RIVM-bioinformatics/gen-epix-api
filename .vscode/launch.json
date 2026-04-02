@@ -588,6 +588,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.seqdb.unit_calculate_seq_distance",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_seqdb_unit_calculate_seq_distance"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.seqdb.integration",
             "type": "debugpy",
             "request": "launch",

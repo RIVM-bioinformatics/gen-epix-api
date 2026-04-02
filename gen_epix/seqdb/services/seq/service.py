@@ -1,3 +1,4 @@
+import datetime
 from collections.abc import Iterable
 from uuid import UUID
 
@@ -9,6 +10,8 @@ from gen_epix.seqdb.services.seq.calculate_phylogenetic_tree import (
 )
 from gen_epix.seqdb.services.seq.calculate_seq_distance import (
     seq_service_calculate_seq_distances_for_new_profiles,
+    seq_service_retrieve_seq_distance_last_modified,
+    seq_service_update_seq_distances,
 )
 from gen_epix.seqdb.services.seq.crud_allele import seq_service_crud_allele
 from gen_epix.seqdb.services.seq.crud_ast_measurement import (
@@ -127,11 +130,23 @@ class SeqService(BaseSeqService):
             )
         return similar_profile_ids
 
+    def retrieve_seq_distance_last_modified(
+        self,
+        cmd: command.RetrieveSeqDistanceLastModifiedCommand,
+    ) -> datetime.datetime | None:
+        return seq_service_retrieve_seq_distance_last_modified(self, cmd)
+
     def calculate_seq_distances_for_new_profiles(
         self,
         cmd: command.CalculateSeqDistancesForNewProfilesCommand,
     ) -> list[model.CalculateSeqDistancesResult]:
         return seq_service_calculate_seq_distances_for_new_profiles(self, cmd)
+
+    def update_seq_distances(
+        self,
+        cmd: command.UpdateSeqDistancesCommand,
+    ) -> list[model.CalculateSeqDistancesResult]:
+        return seq_service_update_seq_distances(self, cmd)
 
     def crud_protocol(
         self,

@@ -94,11 +94,11 @@ class RoleGenerator(CommonRoleGenerator):
             (command.EtiologicalAgentCrudCommand, PermissionTypeSet.CRU),
             (command.EtiologyCrudCommand, PermissionTypeSet.CRU),
             (command.RegionCrudCommand, PermissionTypeSet.CRU),
-            (command.RegionRelationCrudCommand, PermissionTypeSet.CU),
+            (command.RegionRelationCrudCommand, PermissionTypeSet.CRU),
             (command.RegionSetCrudCommand, PermissionTypeSet.CRU),
             (command.RegionSetShapeCrudCommand, PermissionTypeSet.CRUD),
-            (command.TreeAlgorithmClassCrudCommand, PermissionTypeSet.CU),
-            (command.TreeAlgorithmCrudCommand, PermissionTypeSet.CU),
+            (command.TreeAlgorithmClassCrudCommand, PermissionTypeSet.CRU),
+            (command.TreeAlgorithmCrudCommand, PermissionTypeSet.CRU),
         },
         Role.ORG_ADMIN: COMMON_ROLE_PERMISSION_SETS[Role.ORG_ADMIN]
         | {

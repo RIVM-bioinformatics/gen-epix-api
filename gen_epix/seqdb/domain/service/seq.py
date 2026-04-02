@@ -1,4 +1,5 @@
 import abc
+import datetime
 from collections.abc import Iterable
 from uuid import UUID
 
@@ -31,8 +32,16 @@ class BaseSeqService(BaseService):
             self.retrieve_similar_profiles,
         )
         f(
+            command.RetrieveSeqDistanceLastModifiedCommand,
+            self.retrieve_seq_distance_last_modified,
+        )
+        f(
             command.CalculateSeqDistancesForNewProfilesCommand,
             self.calculate_seq_distances_for_new_profiles,
+        )
+        f(
+            command.UpdateSeqDistancesCommand,
+            self.update_seq_distances,
         )
         f(
             command.ProtocolCrudCommand,
@@ -192,9 +201,23 @@ class BaseSeqService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def retrieve_seq_distance_last_modified(
+        self,
+        cmd: command.RetrieveSeqDistanceLastModifiedCommand,
+    ) -> datetime.datetime | None:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def calculate_seq_distances_for_new_profiles(
         self,
         cmd: command.CalculateSeqDistancesForNewProfilesCommand,
+    ) -> list[model.CalculateSeqDistancesResult]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def update_seq_distances(
+        self,
+        cmd: command.UpdateSeqDistancesCommand,
     ) -> list[model.CalculateSeqDistancesResult]:
         raise NotImplementedError()
 
