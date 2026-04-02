@@ -43,6 +43,28 @@ def create_omop_endpoints(
             ),
         )
 
+    @router.post(
+        "/retrieve/full_persons",
+        operation_id="retrieve__full_persons",
+        name="Retrieve full persons",
+        description=command.RetrieveFullPersonsCommand.__doc__,
+    )
+    async def retrieve__full_persons(
+        user: registered_user_dependency,  # type: ignore
+        cmd: command.RetrieveFullPersonsCommand,
+    ) -> list[model.FullPerson]:
+        cmd.user = user
+        return cast(
+            list[model.FullPerson],
+            handle_command(
+                app=app,
+                user=user,
+                exception_code="e7f2d91b",
+                input_handle_exception=handle_exception,
+                input_command=cmd,
+            ),
+        )
+
     # CRUD
     crud_endpoint_sets = CrudEndpointGenerator.create_crud_endpoint_set_for_domain(
         app,
