@@ -770,6 +770,16 @@ class Run:
                 "test/omopdb/integration/build_db",
             ]
         )
+    
+    def test_omopdb_integration_retrieve_full_persons(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/omopdb/integration/retrieve_full_persons",
+            ]
+        )
 
     def test_general_docs(self) -> None:
         import pytest

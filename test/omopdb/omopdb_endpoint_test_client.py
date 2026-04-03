@@ -26,6 +26,10 @@ class OmopdbEndpointTestClient(EndpointTestClient):
             command.UploadPersonsCommand,
             self.handle_upload_persons,
         )
+        self.register_handler(
+            command.RetrieveFullPersonsCommand,
+            self.handle_retrieve_full_persons,
+        )
         # self.register_handler(
         #     command.RetrieveCasesByIdCommand, self.handle_retrieve_cases_by_id
         # )
@@ -65,6 +69,20 @@ class OmopdbEndpointTestClient(EndpointTestClient):
             json=json.loads(cmd.model_dump_json(exclude={"user"})),
         )
         retval = self._content_to_obj(response, model.PersonBatchUploadResult)
+        return retval, response
+
+    def handle_retrieve_full_persons(
+        self,
+        cmd: command.RetrieveFullPersonsCommand,
+        route_prefix: str,
+        headers: dict[str, str] | None,
+    ) -> tuple[Any, Response]:
+        response = self.test_client.post(
+            route_prefix + "/retrieve/full_persons",
+            headers=headers,
+            json=json.loads(cmd.model_dump_json(exclude={"user"})),
+        )
+        retval = self._content_to_obj(response, model.FullPerson, is_list=True)
         return retval, response
 
     # def handle_retrieve_cases_by_id(
