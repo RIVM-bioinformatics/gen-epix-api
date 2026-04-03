@@ -13,9 +13,16 @@ class BaseOmopService(BaseService[BaseOmopRepository]):
         self.register_default_crud_handlers()
         f = self.app.register_handler
         f(command.UploadPersonsCommand, self.upload_persons)
+        f(command.RetrieveFullPersonsCommand, self.retrieve_full_persons)
 
     @abstractmethod
     def upload_persons(
         self, cmd: command.UploadPersonsCommand
     ) -> model.PersonBatchUploadResult:
+        raise NotImplementedError("Must be implemented in subclass")
+
+    @abstractmethod
+    def retrieve_full_persons(
+        self, cmd: command.RetrieveFullPersonsCommand
+    ) -> list[model.FullPerson]:
         raise NotImplementedError("Must be implemented in subclass")

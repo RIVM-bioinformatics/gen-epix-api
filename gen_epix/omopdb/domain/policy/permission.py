@@ -77,7 +77,7 @@ class RoleGenerator(CommonRoleGenerator):
             (command.ProcedureOccurrenceIdentifierCrudCommand, PermissionTypeSet.CRUD),
             (command.ProviderCrudCommand, PermissionTypeSet.CRUD),
             (command.RelationshipCrudCommand, PermissionTypeSet.CRUD),
-            (command.RetrieveFullPersonsCommand, PermissionTypeSet.CRUD),
+            (command.RetrieveFullPersonsCommand, PermissionTypeSet.E),
             (command.SourceToConceptMapCrudCommand, PermissionTypeSet.CRUD),
             (command.SpecimenCrudCommand, PermissionTypeSet.CRUD),
             (command.SpecimenIdentifierCrudCommand, PermissionTypeSet.CRUD),

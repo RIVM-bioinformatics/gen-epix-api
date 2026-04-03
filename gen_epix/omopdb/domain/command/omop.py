@@ -33,9 +33,11 @@ class RetrieveFullPersonsCommand(Command):
     including all associated data. If a datetime range is provided
     and some of the found data are outside of this range,
     it is included in the results nevertheless.
+    Either person_ids or at least one of (modified_since, modified_until) is required (validated in service).
     """
 
-    person_ids: list[UUID] = Field(
+    person_ids: list[UUID] | None = Field(
+        default=None,
         description="IDs of the persons to retrieve.",
     )
     modified_since: datetime | None = Field(
@@ -46,38 +48,6 @@ class RetrieveFullPersonsCommand(Command):
         default=None,
         description="If provided, only retrieve persons modified until this timestamp.",
     )
-
-    @field_validator(
-        "person_ids",
-        "modified_since",
-        "modified_until",
-        mode="after",
-    )
-    @classmethod
-    def validate_retrieve_full_persons_command(
-        cls, values: dict[str, Any]
-    ) -> dict[str, Any]:
-
-        has_ids = values.get("person_ids") and len(values["person_ids"]) > 0
-        has_time = (
-            values.get("modified_since") is not None
-            or values.get("modified_until") is not None
-        )
-
-        if not has_ids and not has_time:
-            raise ValueError(
-                "Either person_ids must be provided or at least one of "
-                "(modified_since, modified_until) must be specified"
-            )
-
-        return values
-
-    @field_validator("person_ids")
-    @classmethod
-    def validate_unique_person_ids(cls, value: list[UUID]) -> list[UUID]:
-        if len(set(value)) != len(value):
-            raise ValueError("person_ids must be unique")
-        return value
 
 
 # CRUD commands
