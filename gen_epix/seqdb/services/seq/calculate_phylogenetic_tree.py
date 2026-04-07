@@ -1,3 +1,4 @@
+from uuid import UUID
 import json
 import sys
 
@@ -32,6 +33,15 @@ def seq_service_calculate_phylogenetic_tree(
     if len(set(seq_profile_ids)) != len(seq_profile_ids):
         raise exc.InvalidArgumentsError("profile_ids must be unique")
     leaf_names = cmd.leaf_names if cmd.leaf_names else [str(x) for x in seq_profile_ids]
+
+    # Filter provided seq_profile_ids by quality control result
+    with self.repository.uow() as uow:
+        seq_profile_ids: list[UUID] = (  # type: ignore[no-redef]
+            self.repository.get_filtered_seq_profiles_by_quality(  # type: ignore[attr-defined]
+                uow,
+                seq_profile_ids=seq_profile_ids,
+            )
+        )
 
     # Retrieve genetic distance protocol
     with self.repository.uow() as uow:

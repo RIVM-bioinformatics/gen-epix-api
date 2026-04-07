@@ -92,3 +92,15 @@ class BaseSeqRepository(BaseRepository):
         profiling protocol IDs.
         """
         raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_filtered_seq_profiles_by_quality(
+        self,
+        uow: BaseUnitOfWork,
+        seq_profile_ids: list[UUID],
+    ) -> list[UUID]:
+        """
+        Given a list of SeqProfile IDs, return the subset of SeqProfiles IDs
+        that have a usable quality check result.
+        """
+        raise NotImplementedError()

@@ -126,3 +126,24 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         for row in uow.session.execute(stmt):
             result.append(mapper.load(row[0]))  # type: ignore[arg-type]
         return result
+
+    def get_filtered_seq_profiles_by_quality(
+        self,
+        uow: BaseUnitOfWork,
+        seq_profile_ids: list[UUID],
+    ) -> list[UUID]:
+        if not seq_profile_ids:
+            return []
+        stmt = sa.select(sa_model.SeqProfile.id).where(
+            (sa_model.SeqProfile.id.in_(seq_profile_ids))
+            & sa.or_(
+                sa_model.SeqProfile.qc_result == enum.QualityControlResult.PASS,
+                sa_model.SeqProfile.qc_result == enum.QualityControlResult.PENDING,
+            )
+        )
+        mapper = self.get_mapper(model.SeqProfile)
+        assert isinstance(uow, SAUnitOfWork)
+        result: list[UUID] = []
+        for row in uow.session.execute(stmt):
+            result.append(mapper.load(row[0]).id)  # type: ignore[attr-defined]
+        return result

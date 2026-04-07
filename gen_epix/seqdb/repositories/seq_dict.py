@@ -118,3 +118,20 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
             model.SeqProfile
         ]
         return [x for x in df.values() if x.protocol_id in unique_protocol_ids]
+
+    def get_filtered_seq_profiles_by_quality(
+        self,
+        uow: BaseUnitOfWork,
+        seq_profile_ids: list[UUID],
+    ) -> list[UUID]:
+        unique_profile_ids = set(seq_profile_ids)
+        df: dict[UUID, model.SeqProfile] = self.db[  # type: ignore[assignment]
+            model.SeqProfile
+        ]
+        return [
+            x.id
+            for x in df.values()
+            if x.id in unique_profile_ids
+            and x.qc_result  is not None
+            and x.qc_result.is_usable()
+        ]
