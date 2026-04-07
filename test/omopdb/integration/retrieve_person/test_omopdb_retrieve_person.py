@@ -1,4 +1,5 @@
 import logging
+import uuid
 from datetime import datetime, timezone
 from test.omopdb.integration.retrieve_person.base import (
     SKIP_ENDPOINTS,
@@ -33,7 +34,9 @@ OMOPDB_APP_CFGS = get_app_cfgs(
     ],
     ids=lambda x: x.value,
 )
-def env(request):
+def env(
+    request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory
+) -> Env:
     """Return a test client configured for either DICT or SA_SQLITE demo repos.
 
     The fixture is parameterized so the whole module runs against both
@@ -43,7 +46,15 @@ def env(request):
     cfg_key = f"{TEST_TYPE.value}__{repo_cfg.value}"
     app_cfg = OMOPDB_APP_CFGS[cfg_key]
 
-    # For sqlite demos we may need to skip endpoint threads if configured.
+    # Create test directory to not affect subsequent runs (modifications of sqlite files)
+    tmp_dir = tmp_path_factory.mktemp(f"retrieve_full_persons_{repo_cfg.value}")
+    app_cfg.copy_repository_files(tmp_dir, on_exist="overwrite")
+
+    # Ensure TestClient caching uses a unique name so a new client is created
+    # and the copied repository files are used (avoids reusing a mutated client).
+    unique_name = f"{app_cfg.name}__{uuid.uuid4().hex}"
+    app_cfg._name = unique_name
+
     use_endpoints = (
         not SKIP_ENDPOINTS
         if repo_cfg == commondb_enum.DevRepositoryConfig.SA_SQLITE_DEMO
