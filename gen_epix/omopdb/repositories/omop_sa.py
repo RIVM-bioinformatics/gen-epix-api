@@ -4,11 +4,11 @@ from uuid import UUID
 
 import sqlalchemy as sa
 
-import gen_epix.omopdb.repositories.sa_model.omop as sa_model
 from gen_epix.fastapp.repositories import SARepository, SAUnitOfWork
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
-from gen_epix.omopdb.domain import model
+from gen_epix.omopdb.domain import enum, model
 from gen_epix.omopdb.domain.repository.omop import BaseOmopRepository
+from gen_epix.omopdb.repositories import sa_model as sa_model
 
 
 class OmopSARepository(SARepository, BaseOmopRepository):
@@ -19,103 +19,73 @@ class OmopSARepository(SARepository, BaseOmopRepository):
         modified_since: datetime | None = None,
         modified_until: datetime | None = None,
     ) -> list[UUID]:
-        conditions = []
-        if modified_since is not None:
-            conditions.append(sa_model.Person.modified_at >= modified_since)
-        if modified_until is not None:
-            conditions.append(sa_model.Person.modified_at <= modified_until)
-
-        stmt = sa.select(sa_model.Person.person_id).where(*conditions)
         assert isinstance(uow, SAUnitOfWork)
-        return [row[0] for row in uow.session.execute(stmt)]
-
-    def _get_person_by_person_id(
-        self,
-        uow: SAUnitOfWork,
-        person_id: UUID,
-    ) -> model.Person:
-        stmt = sa.select(sa_model.Person).where(sa_model.Person.person_id == person_id)
-        row = uow.session.execute(stmt).one()
-        return cast(model.Person, self.get_mapper(model.Person).load(row[0]))
-
-    def _get_observations_by_person_id(
-        self,
-        uow: SAUnitOfWork,
-        person_id: UUID,
-    ) -> list[model.Observation]:
-        stmt = sa.select(sa_model.Observation).where(
-            sa_model.Observation.person_id == person_id
-        )
-        mapper = self.get_mapper(model.Observation)
-        return cast(
-            list[model.Observation],
-            [mapper.load(row[0]) for row in uow.session.execute(stmt)],
-        )
-
-    def _get_measurements_by_person_id(
-        self,
-        uow: SAUnitOfWork,
-        person_id: UUID,
-    ) -> list[model.Measurement]:
-        stmt = sa.select(sa_model.Measurement).where(
-            sa_model.Measurement.person_id == person_id
-        )
-        mapper = self.get_mapper(model.Measurement)
-        return cast(
-            list[model.Measurement],
-            [mapper.load(row[0]) for row in uow.session.execute(stmt)],
-        )
-
-    def _get_specimens_by_person_id(
-        self,
-        uow: SAUnitOfWork,
-        person_id: UUID,
-    ) -> list[model.Specimen]:
-        stmt = sa.select(sa_model.Specimen).where(
-            sa_model.Specimen.person_id == person_id
-        )
-        mapper = self.get_mapper(model.Specimen)
-        return cast(
-            list[model.Specimen],
-            [mapper.load(row[0]) for row in uow.session.execute(stmt)],
-        )
-
-    def _get_measurement_relations_by_person_id(
-        self,
-        uow: SAUnitOfWork,
-        person_id: UUID,
-    ) -> list[model.MeasurementRelation]:
-        stmt = sa.select(sa_model.MeasurementRelation).where(
-            sa_model.MeasurementRelation.person_id == person_id
-        )
-        mapper = self.get_mapper(model.MeasurementRelation)
-        return cast(
-            list[model.MeasurementRelation],
-            [mapper.load(row[0]) for row in uow.session.execute(stmt)],
-        )
+        modified_person_ids: set[UUID] = set()
+        for model_class in [model.Person] + model.FullPerson.LINKED_DATA_CLASSES:
+            sa_model_class = sa_model.SA_MODELS_BY_SERVICE_TYPE[enum.ServiceType.OMOP][
+                model_class
+            ]
+            conditions = []
+            if modified_since is not None:
+                conditions.append(sa_model_class.modified_at >= modified_since)  # type: ignore[attr-defined]
+            if modified_until is not None:
+                conditions.append(sa_model_class.modified_at < modified_until)  # type: ignore[attr-defined]
+            stmt = sa.select(sa_model_class.person_id).where(*conditions)  # type: ignore[attr-defined]
+            modified_person_ids.update(row[0] for row in uow.session.execute(stmt))
+        return sorted(modified_person_ids)
 
     def get_full_persons_by_person_ids(
         self,
         person_ids: list[UUID],
     ) -> list[model.FullPerson]:
+        if not person_ids:
+            return []
+
+        # Initialize some
+        person_id_set = set(person_ids)
+        model_classes = [model.Person] + model.FullPerson.LINKED_DATA_CLASSES
+        db: dict[type[model.Model], dict[UUID, list[model.Model]]] = {
+            model_class: {person_id: [] for person_id in person_ids}
+            for model_class in model_classes
+        }
+
+        # Retrieve all data and create FullPersons
         with self.uow() as uow:
             assert isinstance(uow, SAUnitOfWork)
+            # Retrieve all data per person
+            for model_class in model_classes:
+                sa_model_class = sa_model.SA_MODELS_BY_SERVICE_TYPE[
+                    enum.ServiceType.OMOP
+                ][model_class]
+                stmt: sa.Select = sa.select(sa_model_class).where(
+                    sa_model_class.person_id.in_(person_id_set)  # type: ignore[attr-defined]
+                )
+                mapper = self.get_mapper(model_class)
+                objs_by_person = db[model_class]
+                for row in uow.session.execute(stmt):
+                    obj = cast(model.Model, mapper.load(row[0]))
+                    person_id = cast(UUID, getattr(obj, "person_id"))
+                    objs_by_person[person_id].append(obj)
+
+            # Create FullPersons
+            person_excluded_fields = set(model.Model.CREATE_METADATA_FIELDS)
             full_persons: list[model.FullPerson] = []
             for person_id in person_ids:
-                person = self._get_person_by_person_id(uow, person_id)
-                observations = self._get_observations_by_person_id(uow, person_id)
-                measurements = self._get_measurements_by_person_id(uow, person_id)
-                specimens = self._get_specimens_by_person_id(uow, person_id)
-                measurement_relations = self._get_measurement_relations_by_person_id(
-                    uow, person_id
-                )
+                persons = db[model.Person][person_id]
+                if not persons:
+                    continue
+                person = cast(model.Person, persons[0])
+                full_person_kwargs = {}
+                for (
+                    model_class,
+                    field_name,
+                ) in model.FullPerson.LINKED_DATA_CLASS_FIELD_MAP.items():
+                    full_person_kwargs[field_name] = db[model_class][person_id]
                 full_persons.append(
                     model.FullPerson(
-                        **person.model_dump(),
-                        observations=observations,
-                        measurements=measurements,
-                        specimens=specimens,
-                        measurement_relations=measurement_relations,
+                        **person.model_dump(exclude=person_excluded_fields),
+                        **full_person_kwargs,  # type: ignore[arg-type]
                     )
                 )
+
             return full_persons

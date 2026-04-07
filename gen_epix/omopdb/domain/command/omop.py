@@ -1,5 +1,4 @@
-from datetime import datetime
-from typing import Any, ClassVar
+from typing import ClassVar
 from uuid import UUID
 
 from pydantic import Field, field_validator
@@ -26,28 +25,32 @@ class UploadPersonsCommand(Command, UploadBatchCommandMixin):
     )
 
 
-class RetrieveFullPersonsCommand(Command):
+class RetrievePersonsByQueryCommand(Command):
     """
-    Retrieve all data for one or more persons in one go.
-    Given either a list of person IDs or a time range, retrieve the full data for all matching persons,
-    including all associated data. If a datetime range is provided
-    and some of the found data are outside of this range,
-    it is included in the results nevertheless.
-    Either person_ids or at least one of (modified_since, modified_until) is required (validated in service).
+    Retrieve person IDs based on a query. These IDs can then be used to retrieve the
+    actual data for these persons.
     """
 
-    person_ids: list[UUID] | None = Field(
-        default=None,
-        description="IDs of the persons to retrieve.",
+    person_query: model.PersonQuery = Field(
+        description="The query to filter persons by."
     )
-    modified_since: datetime | None = Field(
-        default=None,
-        description="If provided, only retrieve persons modified since this timestamp.",
+
+
+class RetrievePersonsByIdCommand(Command):
+    """
+    Retrieve all data for a list of person IDs, as a list of FullPerson objects in the
+    same order.
+    """
+
+    person_ids: list[UUID] = Field(
+        description="IDs of the persons to retrieve. Must be unique.",
     )
-    modified_until: datetime | None = Field(
-        default=None,
-        description="If provided, only retrieve persons modified until this timestamp.",
-    )
+
+    @field_validator("person_ids", mode="after")
+    def _validate_person_ids(cls, person_ids: list[UUID]) -> list[UUID]:
+        if len(set(person_ids)) != len(person_ids):
+            raise ValueError("person_ids must be unique")
+        return person_ids
 
 
 # CRUD commands

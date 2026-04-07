@@ -27,12 +27,12 @@ class OmopdbEndpointTestClient(EndpointTestClient):
             self.handle_upload_persons,
         )
         self.register_handler(
-            command.RetrieveFullPersonsCommand,
-            self.handle_retrieve_full_persons,
+            command.RetrievePersonsByIdCommand,
+            self.handle_retrieve_persons_by_id,
         )
-        # self.register_handler(
-        #     command.RetrieveCasesByIdCommand, self.handle_retrieve_cases_by_id
-        # )
+        self.register_handler(
+            command.RetrievePersonsByIdCommand, self.handle_retrieve_persons_by_id
+        )
         # self.register_handler(command.CreateCasesCommand, self.handle_cases_create)
         # self.register_handler(command.CreateCaseSetCommand, self.handle_case_set_create)
 
@@ -71,30 +71,30 @@ class OmopdbEndpointTestClient(EndpointTestClient):
         retval = self._content_to_obj(response, model.PersonBatchUploadResult)
         return retval, response
 
-    def handle_retrieve_full_persons(
+    def handle_retrieve_persons_by_id(
         self,
-        cmd: command.RetrieveFullPersonsCommand,
+        cmd: command.RetrievePersonsByIdCommand,
         route_prefix: str,
         headers: dict[str, str] | None,
     ) -> tuple[Any, Response]:
         response = self.test_client.post(
-            route_prefix + "/retrieve/full_persons",
+            route_prefix + "/retrieve/persons_by_id",
             headers=headers,
             json=json.loads(cmd.model_dump_json(exclude={"user"})),
         )
         retval = self._content_to_obj(response, model.FullPerson, is_list=True)
         return retval, response
 
-    # def handle_retrieve_cases_by_id(
-    #     self,
-    #     cmd: command.RetrieveCasesByIdCommand,
-    #     route_prefix: str,
-    #     headers: dict[str, str] | None,
-    # ) -> tuple[Any, Response]:
-    #     response = self.test_client.post(
-    #         route_prefix + f"/retrieve/cases_by_ids",
-    #         json=json.loads(cmd.model_dump_json())["case_ids"],
-    #         headers=headers,
-    #     )
-    #     retval = self._content_to_obj(response, model.Case, is_list=True)
-    #     return retval, response
+    def handle_retrieve_person_ids_by_query(
+        self,
+        cmd: command.RetrievePersonsByQueryCommand,
+        route_prefix: str,
+        headers: dict[str, str] | None,
+    ) -> tuple[Any, Response]:
+        response = self.test_client.post(
+            route_prefix + "/retrieve/person_ids_by_query",
+            headers=headers,
+            json=json.loads(cmd.model_dump_json(exclude={"user"})),
+        )
+        retval = self._content_to_obj(response, model.PersonQueryResult)
+        return retval, response

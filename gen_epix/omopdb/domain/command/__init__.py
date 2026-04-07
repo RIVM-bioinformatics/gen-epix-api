@@ -200,7 +200,10 @@ from gen_epix.omopdb.domain.command.omop import (
     RelationshipCrudCommand as RelationshipCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
-    RetrieveFullPersonsCommand as RetrieveFullPersonsCommand,
+    RetrievePersonsByIdCommand as RetrievePersonsByIdCommand,
+)
+from gen_epix.omopdb.domain.command.omop import (
+    RetrievePersonsByQueryCommand as RetrievePersonsByQueryCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
     SourceToConceptMapCrudCommand as SourceToConceptMapCrudCommand,
@@ -289,7 +292,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         SpecimenCrudCommand,
         SpecimenIdentifierCrudCommand,
         UploadPersonsCommand,
-        RetrieveFullPersonsCommand,
+        RetrievePersonsByIdCommand,
         VisitDetailCrudCommand,
         VisitDetailIdentifierCrudCommand,
         VisitOccurrenceCrudCommand,

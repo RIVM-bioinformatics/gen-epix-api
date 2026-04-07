@@ -17,8 +17,11 @@ class BaseOmopRepository(BaseRepository):
         modified_until: datetime | None = None,
     ) -> list[UUID]:
         """
-        Retrieve a list of person IDs for Persons modified in the specified range.
-        At least one of modified_since or modified_until must be provided.
+        Retrieve a list of person IDs for Persons, including their linked data, modified
+        in the specified range. At least one of modified_since or modified_until must be
+        provided.
+
+        modified_since is inclusive, modified_until is exclusive.
         """
         raise NotImplementedError()
 

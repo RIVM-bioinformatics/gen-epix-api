@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timezone
-from test.omopdb.integration.retrieve_full_persons.base import (
+from test.omopdb.integration.retrieve_person.base import (
     SKIP_ENDPOINTS,
     TEST_TYPE,
     VERBOSE,
@@ -88,7 +88,7 @@ class TestRetrieveFullPersons:
         assert person_ids
 
         full_persons: list[model.FullPerson] = env.handle(
-            command.RetrieveFullPersonsCommand(
+            command.RetrievePersonsByIdCommand(
                 user=env.get_root_user(),
                 person_ids=person_ids,
             ),
@@ -173,7 +173,7 @@ class TestRetrieveFullPersons:
             match="Cannot provide both person_ids and modified_since/modified_until",
         ):
             env.handle(
-                command.RetrieveFullPersonsCommand(
+                command.RetrievePersonsByIdCommand(
                     user=root_user,
                     person_ids=[env.generate_id()],
                     modified_since=datetime(2026, 1, 1, tzinfo=timezone.utc),
@@ -188,7 +188,7 @@ class TestRetrieveFullPersons:
 
         with pytest.raises(ValueError, match="person_ids must be unique"):
             env.handle(
-                command.RetrieveFullPersonsCommand(
+                command.RetrievePersonsByIdCommand(
                     user=root_user,
                     person_ids=[duplicate_person_id, duplicate_person_id],
                 ),
