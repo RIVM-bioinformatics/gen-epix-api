@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from cachetools import TTLCache, cached
+
 from gen_epix.casedb import policies as policies
 from gen_epix.casedb.domain import command, exc, model
 from gen_epix.casedb.domain.service.abac import BaseAbacService
@@ -210,7 +212,7 @@ class AbacService(BaseAbacService):
 
         return user
 
-    # @cached(cache=TTLCache(maxsize=1024, ttl=300))
+    @cached(cache=TTLCache(maxsize=1024, ttl=300))
     def _get_case_abac_cached(
         self,
         user_id: UUID,
@@ -609,7 +611,7 @@ class AbacService(BaseAbacService):
             )
         return self._get_ref_data_access_cached(user)
 
-    # @cached(cache=TTLCache(maxsize=1024, ttl=300), key=lambda self, user: user.id)
+    @cached(cache=TTLCache(maxsize=1024, ttl=300), key=lambda self, user: user.id)
     def _get_ref_data_access_cached(self, user: model.User) -> model.RefDataAccess:
 
         if not self.role_set_map[CommonRoleSet.GE_REFDATA_ADMIN].isdisjoint(user.roles):
