@@ -320,8 +320,13 @@ class SystemService(BaseSystemService):
             return "1" if value else "0"
         if isinstance(value, (int, float)):
             return str(value)
-        if isinstance(value, (datetime.datetime, datetime.date)):
-            return f"'{value}'"
+        if isinstance(value, datetime.datetime):
+            # SQL Server datetime only accepts 3-digit milliseconds (not
+            # microseconds), use ISO 8601 format truncated to milliseconds.
+            ms = value.microsecond // 1000
+            return f"'{value.strftime('%Y-%m-%dT%H:%M:%S.')}{ms:03d}'"
+        if isinstance(value, datetime.date):
+            return f"'{value.strftime('%Y-%m-%d')}'"
         if isinstance(value, uuid.UUID):
             return f"'{value}'"
         if isinstance(value, bytes):
