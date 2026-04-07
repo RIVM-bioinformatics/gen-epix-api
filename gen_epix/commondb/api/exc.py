@@ -156,14 +156,18 @@ async def handle_command(
     user: model.User,
     exception_code: str,
     input_command: command.Command,
-    input_handle_exception: Callable[[str, Any, Exception], NoReturn] | None,
+         input_handle_exception: Callable[
+         [str, model.User | None, Exception, Hashable | list[Hashable] | None],
+         NoReturn,
+     ] | None,
 ) -> Any:
     try:
         return await run_in_threadpool(app.handle, input_command)
     except Exception as exception:
         if input_handle_exception is None:
-            input_handle_exception = handle_exception  # type: ignore[assignment]
-        input_handle_exception(exception_code, user, exception)  # type: ignore[misc]
+            input_handle_exception = generate_handle_exception_function(app, logger=None)
+        input_handle_exception(exception_code, user, exception, None)
+        raise
 
 
 def __extract_invalid_ids(
