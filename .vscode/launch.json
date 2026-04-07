@@ -154,6 +154,19 @@
             "justMyCode": true
         },
         {
+            "name": "api.omopdb.local.mock.sa_sqlite_empty",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "api",
+                "OMOPDB",
+                "MOCK",
+                "SA_SQLITE_EMPTY"
+            ],
+            "justMyCode": true
+        },
+        {
             "name": "api.omopdb.local.mock.dict_demo",
             "type": "debugpy",
             "request": "launch",
