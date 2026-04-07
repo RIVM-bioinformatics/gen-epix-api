@@ -88,6 +88,9 @@ from gen_epix.commondb.domain.command.rbac import (
     RetrieveSubRolesCommand as RetrieveSubRolesCommand,
 )
 from gen_epix.commondb.domain.command.system import (
+    ExportDatabaseCommand as ExportDatabaseCommand,
+)
+from gen_epix.commondb.domain.command.system import (
     OutageCrudCommand as OutageCrudCommand,
 )
 from gen_epix.commondb.domain.command.system import (
@@ -143,6 +146,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[type[fastapp.Command]
     ),
     enum.ServiceType.SYSTEM: frozenset(
         {
+            ExportDatabaseCommand,
             OutageCrudCommand,
             RetrieveFeatureFlagsCommand,
             RetrieveOutagesCommand,

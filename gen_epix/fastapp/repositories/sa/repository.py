@@ -228,6 +228,14 @@ class SARepository(BaseRepository):
         return self._name
 
     @property
+    def engine(self) -> Engine:
+        return self._engine
+
+    @property
+    def mappers(self) -> list[BaseSAMapper]:
+        return list(self._mapper_by_model.values())
+
+    @property
     def default_isolation_level(self) -> IsolationLevel:
         return self._default_isolation_level
 

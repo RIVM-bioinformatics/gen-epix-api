@@ -1,10 +1,12 @@
+import datetime
 import json
 import logging
 from collections.abc import Callable, Hashable
 from enum import Enum
-from typing import Any, NoReturn
+from typing import Annotated, Any, NoReturn
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Form
+from fastapi.responses import Response
 from pydantic import BaseModel as PydanticBaseModel
 
 from gen_epix.commondb.api import exc
@@ -13,6 +15,7 @@ from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.domain.model.system import PackageMetadata
 from gen_epix.fastapp import App, LogLevel
 from gen_epix.fastapp.api import CrudEndpointGenerator
+from gen_epix.fastapp.services.auth.service import AuthService
 
 external_logger_fmap = exc.get_logger_fmap(logging.getLogger("commondb.external"))
 
@@ -154,6 +157,46 @@ def create_system_endpoints(
         except Exception as exception:
             handle_exception("6b47b8b6", None, exception)
         return retval
+
+    # Export database
+    @router.post(
+        "/export/database",
+        operation_id="export__database",
+        name="Export Database",
+        description=command.ExportDatabaseCommand.__doc__,
+        response_class=Response,
+    )
+    async def export__database(
+        token: Annotated[str, Form()],
+    ) -> Response:
+        """
+        Export all application data as a SQL script for re-creating the
+        database locally in Azure Data Studio.
+        """
+        user: model.User | None = None
+        try:
+            auth_service_type = next(
+                k for k in app_impl.services if k.name == "AUTH"
+            )
+            auth_service: AuthService = app_impl.services[
+                auth_service_type
+            ]  # type: ignore[assignment]
+            user = await auth_service.get_existing_user_from_token(token=token)  # type: ignore[assignment]
+            cmd = command.ExportDatabaseCommand(user=user)
+            sql_content: bytes = app.handle(cmd)
+        except Exception as exception:
+            handle_exception("b4e2f901", user, exception)
+        timestamp = datetime.datetime.now(datetime.timezone.utc).strftime(
+            "%Y%m%d_%H%M%S"
+        )
+        filename = f"database_export_{timestamp}.sql"
+        return Response(
+            content=sql_content,
+            media_type="application/octet-stream",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+            },
+        )
 
     # CRUD
     crud_endpoint_sets = CrudEndpointGenerator.create_crud_endpoint_set_for_domain(

@@ -18,6 +18,10 @@ class RetrieveFeatureFlagsCommand(Command):
     pass
 
 
+class ExportDatabaseCommand(Command):
+    """Export all data from the database as a SQL script."""
+
+
 # CRUD commands
 
 
