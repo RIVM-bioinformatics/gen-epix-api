@@ -1,7 +1,7 @@
 import logging
 import uuid
-from datetime import datetime, timezone
-from test.omopdb.integration.retrieve_person.base import (
+from datetime import timedelta
+from test.omopdb.integration.retrieve_persons.base import (
     SKIP_ENDPOINTS,
     TEST_TYPE,
     VERBOSE,
@@ -61,7 +61,7 @@ def env(
         else True
     )
 
-    return Env.get_test_client(
+    return Env.get_test_client(  # type: ignore[return-value]
         test_type=TEST_TYPE.value,
         app_cfg=app_cfg,
         verbose=VERBOSE,
@@ -70,7 +70,7 @@ def env(
     )
 
 
-class TestRetrieveFullPersons:
+class TestRetrievePersons:
 
     all_persons: ClassVar[list[model.Person]] = []
     test_persons: ClassVar[list[model.Person]] = []
@@ -121,77 +121,63 @@ class TestRetrieveFullPersons:
             assert isinstance(full_persons_by_id[person.person_id].observations, list)
             assert isinstance(full_persons_by_id[person.person_id].measurements, list)
 
-    # def test_retrieve_full_persons_by_modified_range(self, env: Env) -> None:
-    #     assert len(self.test_persons) >= 2
+    def test_retrieve_full_persons_by_modified_range(self, env: Env) -> None:
+        assert len(self.test_persons) >= 2
 
-    #     first_person = self.test_persons[0].model_copy()
-    #     second_person = self.test_persons[1]
-    #     assert first_person.person_id is not None
-    #     assert second_person.person_id is not None
+        first_person = self.test_persons[0].model_copy()
+        second_person = self.test_persons[1]
+        assert first_person.person_id is not None
+        assert second_person.person_id is not None
 
-    #     first_person.year_of_birth += 1
+        first_person.year_of_birth += 1
 
-    #     updated_first_person: model.Person = env.handle(
-    #         command.PersonCrudCommand(
-    #             user=env.get_root_user(),
-    #             operation=CrudOperation.UPDATE_ONE,
-    #             objs=first_person,
-    #         ),
-    #         use_endpoint=False,
-    #     )
-    #     assert updated_first_person.person_id is not None
+        updated_first_person: model.Person = env.handle(
+            command.PersonCrudCommand(
+                user=env.get_root_user(),
+                operation=CrudOperation.UPDATE_ONE,
+                objs=first_person,
+            ),
+            use_endpoint=False,
+        )
+        assert updated_first_person.person_id is not None
 
-    #     refreshed_persons: list[model.Person] = env.handle(
-    #         command.PersonCrudCommand(
-    #             user=env.get_root_user(),
-    #             operation=CrudOperation.READ_SOME,
-    #             obj_ids=[updated_first_person.person_id, second_person.person_id],
-    #         ),
-    #         use_endpoint=False,
-    #     )
-    #     persons_by_id = {x.person_id: x for x in refreshed_persons}
+        refreshed_persons: list[model.Person] = env.handle(
+            command.PersonCrudCommand(
+                user=env.get_root_user(),
+                operation=CrudOperation.READ_SOME,
+                obj_ids=[updated_first_person.person_id, second_person.person_id],
+            ),
+            use_endpoint=False,
+        )
+        persons_by_id = {x.person_id: x for x in refreshed_persons}
 
-    #     first_modified_at = persons_by_id[updated_first_person.person_id].modified_at
-    #     second_modified_at = second_person.modified_at
+        first_modified_at = persons_by_id[updated_first_person.person_id].modified_at
+        second_modified_at = second_person.modified_at
 
-    #     assert first_modified_at is not None
-    #     assert second_modified_at is not None
-    #     assert first_modified_at != second_modified_at
+        assert first_modified_at is not None
+        assert second_modified_at is not None
+        assert first_modified_at != second_modified_at
 
-    #     target_start = first_modified_at - timedelta(seconds=1)
-    #     target_end = first_modified_at + timedelta(seconds=1)
+        target_start = first_modified_at - timedelta(seconds=1)
+        target_end = first_modified_at + timedelta(seconds=1)
 
-    #     full_persons: list[model.FullPerson] = env.handle(
-    #         command.RetrieveFullPersonsCommand(
-    #             user=env.get_root_user(),
-    #             modified_since=target_start,
-    #             modified_until=target_end,
-    #         ),
-    #         use_endpoint=False,
-    #     )
+        query: model.PersonQuery = model.PersonQuery(
+            label="omop_integration_test_query",
+            modified_since=target_start,
+            modified_until=target_end,
+        )
 
-    #     assert len(full_persons) == 1
-    #     assert all(isinstance(person, model.FullPerson) for person in full_persons)
-    #     assert full_persons[0].person_id == updated_first_person.person_id
-    #     assert full_persons[0].year_of_birth == updated_first_person.year_of_birth
+        person_query_result: model.PersonQueryResult = env.handle(
+            command.RetrievePersonsByQueryCommand(
+                user=env.get_root_user(),
+                person_query=query,
+            ),
+            use_endpoint=False,
+        )
 
-    def test_retrieve_full_persons_with_ids_and_modified_range_raises(
-        self, env: Env
-    ) -> None:
-        root_user = env.get_root_user()
-        with pytest.raises(
-            ValueError,
-            match="Cannot provide both person_ids and modified_since/modified_until",
-        ):
-            env.handle(
-                command.RetrievePersonsByIdCommand(
-                    user=root_user,
-                    person_ids=[env.generate_id()],
-                    modified_since=datetime(2026, 1, 1, tzinfo=timezone.utc),
-                    modified_until=datetime(2026, 1, 2, tzinfo=timezone.utc),
-                ),
-                use_endpoint=False,
-            )
+        assert len(person_query_result.person_ids) == 1
+        assert person_query_result.person_ids[0] == updated_first_person.person_id
+        assert person_query_result.person_query == query
 
     def test_retrieve_full_persons_with_duplicate_ids(self, env: Env) -> None:
         root_user = env.get_root_user()

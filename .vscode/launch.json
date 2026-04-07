@@ -709,12 +709,12 @@
             "justMyCode": true,
         },
         {
-            "name": "test.omopdb.integration.retrieve_full_persons",
+            "name": "test.omopdb.integration.retrieve_persons",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_omopdb_integration_retrieve_full_persons"
+                "test_omopdb_integration_retrieve_persons"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

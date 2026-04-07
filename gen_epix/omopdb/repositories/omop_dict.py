@@ -54,7 +54,7 @@ class OmopDictRepository(DictRepository, BaseOmopRepository):
         full_persons: list[model.FullPerson] = []
         person_excluded_fields = set(model.Model.CREATE_METADATA_FIELDS)
         for person_id in person_ids:
-            person: model.Person = self.db[model.Person][person_id][0]  # type: ignore[assignment]
+            person: model.Person = self.db[model.Person][person_id]  # type: ignore[assignment]
             full_person_kwargs = {}
             for (
                 model_class,

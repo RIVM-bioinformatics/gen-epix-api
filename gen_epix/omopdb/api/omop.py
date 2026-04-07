@@ -110,4 +110,3 @@ def create_omop_endpoints(
     CrudEndpointGenerator.generate_endpoints(
         router, crud_endpoint_sets, handle_exception
     )
-    )

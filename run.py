@@ -771,13 +771,13 @@ class Run:
             ]
         )
     
-    def test_omopdb_integration_retrieve_full_persons(self) -> None:
+    def test_omopdb_integration_retrieve_persons(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/omopdb/integration/retrieve_full_persons",
+                "test/omopdb/integration/retrieve_persons",
             ]
         )
 
