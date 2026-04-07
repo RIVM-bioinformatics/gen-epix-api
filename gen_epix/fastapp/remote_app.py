@@ -248,7 +248,7 @@ class RemoteApp(App):
         model_class = cmd.MODEL_CLASS
         return_model_class: type = model_class
         is_list = False
-        with httpx.Client(verify=self.ssl_context) as client:
+        with httpx.Client(verify=self.ssl_context, timeout=30) as client:
             match cmd.operation:
                 case CrudOperation.READ_ALL:
                     if cmd.query_filter:

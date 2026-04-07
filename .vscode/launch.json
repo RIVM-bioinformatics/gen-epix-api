@@ -32,6 +32,19 @@
             "justMyCode": true
         },
         {
+            "name": "api.casedb.local.mock.sa_sqlite_empty",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "api",
+                "CASEDB",
+                "MOCK",
+                "SA_SQLITE_EMPTY"
+            ],
+            "justMyCode": true
+        },
+        {
             "name": "api.casedb.local.idps.sa_sql_demo",
             "type": "debugpy",
             "request": "launch",
