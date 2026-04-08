@@ -114,6 +114,19 @@
             "justMyCode": true
         },
         {
+            "name": "api.seqdb.local.mock.sa_sqlite_empty",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "api",
+                "SEQDB",
+                "MOCK",
+                "SA_SQLITE_EMPTY"
+            ],
+            "justMyCode": true
+        },
+        {
             "name": "api.seqdb.local.mock.dict_demo",
             "type": "debugpy",
             "request": "launch",
