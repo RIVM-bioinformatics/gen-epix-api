@@ -735,6 +735,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.omopdb.integration.retrieve_persons",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_omopdb_integration_retrieve_persons"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.commondb.unit",
             "type": "debugpy",
             "request": "launch",
