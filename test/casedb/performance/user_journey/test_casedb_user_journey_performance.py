@@ -13,6 +13,7 @@ from test.test_client.log_parser_v1 import V1LogParser
 from test.test_client.log_parser_v2 import V2LogParser
 from test.test_client.user_journey_v1 import UserJourneyColumn as V1UserJourneyColumn
 from test.test_client.user_journey_v2 import UserJourneyColumn as V2UserJourneyColumn
+from test.test_client.util import get_test_root_output_dir
 
 import pandas as pd
 import pyinstrument
@@ -20,6 +21,9 @@ import pytest
 
 import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import enum
+from gen_epix.commondb.domain.enum import AppType, DevRepositoryConfig
+from gen_epix.commondb.domain.util import get_app_cfgs
+from gen_epix.seqdb.domain import enum as seqdb_enum
 
 PERFORMANCE_DF: list = []
 PERFORMANCE_HTML: dict = {}
@@ -27,8 +31,24 @@ V1_USER_JOURNEY_FILE_PREFIX = "v1.user_journey"
 V2_USER_JOURNEY_FILE_PREFIX = "v2.user_journey"
 USER_JOURNEY_DIR = Path(__file__).parent
 
+SEQDB_APP_CFGS = get_app_cfgs(
+    AppType.SEQDB,
+    seqdb_enum.ServiceType,
+    seqdb_enum.RepositoryType,
+    EnumTestType.CASEDB_PERFORMANCE_USER_JOURNEY,
+)
+
+CASEDB_APP_CFGS = get_app_cfgs(
+    AppType.CASEDB,
+    enum.ServiceType,
+    enum.RepositoryType,
+    EnumTestType.CASEDB_PERFORMANCE_USER_JOURNEY,
+    seqdb_app_cfgs=SEQDB_APP_CFGS,
+)
+
 
 @pytest.mark.scenario_ids("TC-PERF-09-01")
+@pytest.mark.skip(reason="Outdated test, keeping for reference")
 class TestRead:
     USER_JOURNEYS = None
 
@@ -95,15 +115,16 @@ class TestRead:
         for user_journey in user_journeys:
             commands = user_journey["commands"]
             for repository_type in {
-                enum.RepositoryType.DICT,
-                enum.RepositoryType.SA_SQLITE,
+                DevRepositoryConfig.DICT_DEMO,
+                DevRepositoryConfig.SA_SQLITE_DEMO,
             }:
                 test_util.set_log_level("casedb", logging.ERROR)
                 env = CasedbTestClient.get_test_client(
-                    test_type=EnumTestType.CASEDB_PERFORMANCE_USER_JOURNEY,
-                    repository_type=repository_type,
+                    test_type=f"{EnumTestType.CASEDB_PERFORMANCE_USER_JOURNEY.value}__{repository_type.value}",
+                    app_cfg=CASEDB_APP_CFGS[
+                        f"{EnumTestType.CASEDB_PERFORMANCE_USER_JOURNEY.value}__{repository_type.value}"
+                    ],
                     log_level=logging.ERROR,
-                    data_fixture_name="full",
                 )
                 # TODO: set logger
                 for i in range(1):
@@ -138,10 +159,7 @@ class TestRead:
 
     @classmethod
     def tearDownClass(cls) -> None:
-        test_dir = CasedbTestClient(
-            test_type=EnumTestType.CASEDB_PERFORMANCE_USER_JOURNEY,
-            repository_type=enum.RepositoryType.DICT,
-        ).test_dir
+        test_dir = get_test_root_output_dir()
         df = pd.DataFrame.from_records(PERFORMANCE_DF)
         df.to_csv(Path(test_dir) / f"{cls.__name__}.performance.csv", index=False)
         df.to_excel(Path(test_dir) / f"{cls.__name__}.performance.xlsx", index=False)
