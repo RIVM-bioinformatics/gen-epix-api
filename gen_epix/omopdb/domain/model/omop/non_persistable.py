@@ -87,7 +87,7 @@ class PersonQueryResult(Model):
     )
 
 
-class FullPerson(Person):
+class FullPerson(Model):
     """
     This class represents a comprehensive view of a person in the OMOP CDM, including
     their demographic information as well as associated clinical data. It is designed to

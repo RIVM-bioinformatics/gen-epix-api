@@ -108,18 +108,18 @@ class TestRetrievePersons:
 
         assert len(full_persons) == len(person_ids)
         assert all(isinstance(person, model.FullPerson) for person in full_persons)
-        assert [person.person_id for person in full_persons] == person_ids
+        assert [x.id for x in full_persons] == person_ids
 
-        full_persons_by_id = {person.person_id: person for person in full_persons}
+        full_person_map = {x.id: x for x in full_persons}
 
         for person in self.test_persons[:2]:
             assert person.person_id is not None
             assert (
-                full_persons_by_id[person.person_id].year_of_birth
+                full_person_map[person.person_id].person.year_of_birth
                 == person.year_of_birth
             )
-            assert isinstance(full_persons_by_id[person.person_id].observations, list)
-            assert isinstance(full_persons_by_id[person.person_id].measurements, list)
+            assert isinstance(full_person_map[person.person_id].observations, list)
+            assert isinstance(full_person_map[person.person_id].measurements, list)
 
     def test_retrieve_full_persons_by_modified_range(self, env: Env) -> None:
         assert len(self.test_persons) >= 2

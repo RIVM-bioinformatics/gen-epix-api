@@ -89,6 +89,7 @@ class OmopSARepository(SARepository, BaseOmopRepository):
                     full_person_kwargs[field_name] = db[model_class][person_id]
                 full_persons.append(
                     model.FullPerson(
+                        id=person_id,
                         person=person,
                         **full_person_kwargs,  # type: ignore[arg-type]
                     )
