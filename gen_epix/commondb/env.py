@@ -1,4 +1,3 @@
-import datetime
 import logging
 import traceback
 
@@ -315,28 +314,6 @@ class AppComposer(BaseAppComposer):
                     curr_repository.register_model_modifier(
                         entity.model_class, modifier
                     )
-                # TODO: Check if this is correct or the data should be updated...
-                # Backfill timestamps on objects loaded from demo pickle files.
-                # Pkl demo data was serialized before the modifier existed, so
-                # created_at / modified_at are None on all pre-loaded objects.
-                # This runs for every DICT-backed service (omopdb, casedb,
-                # seqdb, commondb) so all repositories are treated consistently.
-                _DEFAULT_TIMESTAMP = datetime.datetime(
-                    2000, 1, 1, tzinfo=datetime.timezone.utc
-                )
-                for entity in entities:
-                    if not entity.persistable:
-                        continue
-                    if not issubclass(entity.model_class, model.ModelNoId):
-                        continue
-                    for stored_obj in curr_repository.db.get(
-                        entity.model_class, {}
-                    ).values():
-                        assert isinstance(stored_obj, model.ModelNoId)
-                        if stored_obj.modified_at is None:
-                            stored_obj.modified_at = _DEFAULT_TIMESTAMP
-                        if stored_obj.created_at is None:
-                            stored_obj.created_at = _DEFAULT_TIMESTAMP
             # Add to overview of repositories
             app_impl.repositories[service_type] = curr_repository
 
