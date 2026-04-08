@@ -114,6 +114,8 @@ from gen_epix.omopdb.domain.model.omop import (
 from gen_epix.omopdb.domain.model.omop import PersonDataIssue as PersonDataIssue
 from gen_epix.omopdb.domain.model.omop import PersonForUpload as PersonForUpload
 from gen_epix.omopdb.domain.model.omop import PersonIdentifier as PersonIdentifier
+from gen_epix.omopdb.domain.model.omop import PersonQuery as PersonQuery
+from gen_epix.omopdb.domain.model.omop import PersonQueryResult as PersonQueryResult
 from gen_epix.omopdb.domain.model.omop import PersonUploadResult as PersonUploadResult
 from gen_epix.omopdb.domain.model.omop import ProcedureOccurrence as ProcedureOccurrence
 from gen_epix.omopdb.domain.model.omop import (
@@ -221,6 +223,8 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             Episode,
             EpisodeEvent,
             # Non-persistent models including upload
+            PersonQuery,
+            PersonQueryResult,
             FullPerson,
             SpecimenForUpload,
             MeasurementForUpload,

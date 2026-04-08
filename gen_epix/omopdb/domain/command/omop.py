@@ -1,10 +1,7 @@
-# pylint: disable=too-few-public-methods
-# This module defines base classes, methods are added later
-
-
 from typing import ClassVar
+from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from gen_epix.commondb.domain.command import Command, CrudCommand
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
@@ -26,6 +23,34 @@ class UploadPersonsCommand(Command, UploadBatchCommandMixin):
     person_batch: model.PersonBatchForUpload = Field(
         description="Persons to upload, along with any associated data.",
     )
+
+
+class RetrievePersonsByQueryCommand(Command):
+    """
+    Retrieve person IDs based on a query. These IDs can then be used to retrieve the
+    actual data for these persons.
+    """
+
+    person_query: model.PersonQuery = Field(
+        description="The query to filter persons by."
+    )
+
+
+class RetrievePersonsByIdCommand(Command):
+    """
+    Retrieve all data for a list of person IDs, as a list of FullPerson objects in the
+    same order.
+    """
+
+    person_ids: list[UUID] = Field(
+        description="IDs of the persons to retrieve. Must be unique.",
+    )
+
+    @field_validator("person_ids", mode="after")
+    def _validate_person_ids(cls, person_ids: list[UUID]) -> list[UUID]:
+        if len(set(person_ids)) != len(person_ids):
+            raise ValueError("person_ids must be unique")
+        return person_ids
 
 
 # CRUD commands
