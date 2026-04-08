@@ -95,7 +95,7 @@ class Concept(Base, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Concept)
 
     concept_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Concept, "concept_id")
-    concept_int_id: Mapped[int] = create_mapped_column(
+    concept_int_id: Mapped[int | None] = create_mapped_column(
         DOMAIN, model.Concept, "concept_int_id"
     )
     concept_name: Mapped[str] = create_mapped_column(
