@@ -20,7 +20,7 @@ class OmopDictRepository(DictRepository, BaseOmopRepository):
         modified_since = modified_since or datetime.min
         modified_until = modified_until or datetime.max
         modified_person_ids: set[UUID] = set()
-        for model_class in [model.Person] + model.FullPerson.LINKED_DATA_CLASSES:
+        for model_class in [model.Person] + model.FullPerson.DATA_CLASSES:
             for obj in self.db[model_class].values():
                 assert isinstance(obj, model_class)
                 person_id: UUID = obj.person_id  # type: ignore[attr-defined]
@@ -39,31 +39,41 @@ class OmopDictRepository(DictRepository, BaseOmopRepository):
         """See parent class method"""
         # Retrieve all data per person
         person_id_set = set(person_ids)
-        model_classes = [model.Person] + model.FullPerson.LINKED_DATA_CLASSES
+        model_classes = (
+            model.FullPerson.DATA_CLASSES
+            + list(model.FullPerson.IDENTIFIER_CLASSES)
+            + [model.PersonIdentifier]
+        )
         db: dict[model.Model, dict[UUID, list[model.Model]]] = {  # type: ignore[assignment]
             x: {y: [] for y in person_ids} for x in model_classes  # type: ignore[misc]
         }
         for model_class in model_classes:
             objs_by_person = db[model_class]  # type: ignore[index]
+            id_field_name = (
+                "person_id"
+                if model_class in model.FullPerson.DATA_CLASSES
+                else "internal_id"
+            )
             for obj in self.db[model_class].values():
-                person_id: UUID = getattr(obj, "person_id")  # type: ignore[assignment]
+                person_id: UUID = getattr(obj, id_field_name)  # type: ignore[assignment]
                 if person_id in person_id_set:  # type: ignore[union-attr]
                     objs_by_person[person_id].append(obj)  # type: ignore[arg-type]
 
         # Create FullPersons
         full_persons: list[model.FullPerson] = []
-        person_excluded_fields = set(model.Model.CREATE_METADATA_FIELDS)
+        class_field_map = (
+            model.FullPerson.DATA_CLASS_FIELD_MAP
+            | model.FullPerson.IDENTIFIER_FIELD_MAP
+            | {model.PersonIdentifier: "person_identifiers"}
+        )
         for person_id in person_ids:
             person: model.Person = self.db[model.Person][person_id]  # type: ignore[assignment]
             full_person_kwargs = {}
-            for (
-                model_class,
-                field_name,
-            ) in model.FullPerson.LINKED_DATA_CLASS_FIELD_MAP.items():
+            for model_class, field_name in class_field_map.items():
                 full_person_kwargs[field_name] = db[model_class][person_id]  # type: ignore[index,arg-type]
             full_persons.append(
                 model.FullPerson(
-                    **person.model_dump(exclude=person_excluded_fields),
+                    person=person,
                     **full_person_kwargs,  # type: ignore[arg-type]
                 )
             )

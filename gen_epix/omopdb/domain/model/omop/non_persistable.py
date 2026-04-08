@@ -9,19 +9,33 @@ from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.omopdb.domain.model.base import Model
 from gen_epix.omopdb.domain.model.omop.clinical_data import (
     ConditionOccurrence,
+    ConditionOccurrenceIdentifier,
     Death,
+    DeathIdentifier,
     DeviceExposure,
+    DeviceExposureIdentifier,
     DrugExposure,
+    DrugExposureIdentifier,
     Measurement,
+    MeasurementIdentifier,
     MeasurementRelation,
+    MeasurementRelationIdentifier,
     Note,
+    NoteIdentifier,
     Observation,
+    ObservationIdentifier,
     ObservationPeriod,
+    ObservationPeriodIdentifier,
     Person,
+    PersonIdentifier,
     ProcedureOccurrence,
+    ProcedureOccurrenceIdentifier,
     Specimen,
+    SpecimenIdentifier,
     VisitDetail,
+    VisitDetailIdentifier,
     VisitOccurrence,
+    VisitOccurrenceIdentifier,
 )
 
 
@@ -85,7 +99,7 @@ class FullPerson(Person):
         snake_case_plural_name="full_persons",
         persistable=False,
     )
-    LINKED_DATA_CLASSES: ClassVar[list[type[ModelNoId]]] = [
+    DATA_CLASSES: ClassVar[list[type[ModelNoId]]] = [
         Observation,
         Measurement,
         Specimen,
@@ -100,7 +114,7 @@ class FullPerson(Person):
         DeviceExposure,
         Note,
     ]
-    LINKED_DATA_CLASS_FIELD_MAP: ClassVar[dict[type[ModelNoId], str]] = {
+    DATA_CLASS_FIELD_MAP: ClassVar[dict[type[ModelNoId], str]] = {
         Observation: "observations",
         Measurement: "measurements",
         Specimen: "specimens",
@@ -115,56 +129,160 @@ class FullPerson(Person):
         DeviceExposure: "device_exposures",
         Note: "notes",
     }
+    IDENTIFIER_CLASSES: ClassVar[list[type[ModelNoId]]] = [
+        ObservationIdentifier,
+        MeasurementIdentifier,
+        SpecimenIdentifier,
+        MeasurementRelationIdentifier,
+        ObservationPeriodIdentifier,
+        DeathIdentifier,
+        VisitOccurrenceIdentifier,
+        VisitDetailIdentifier,
+        ConditionOccurrenceIdentifier,
+        DrugExposureIdentifier,
+        ProcedureOccurrenceIdentifier,
+        DeviceExposureIdentifier,
+        NoteIdentifier,
+    ]
+    DATA_IDENTIFIER_CLASS_MAP: ClassVar[dict[type[ModelNoId], type[ModelNoId]]] = {
+        Observation: ObservationIdentifier,
+        Measurement: MeasurementIdentifier,
+        Specimen: SpecimenIdentifier,
+        MeasurementRelation: MeasurementRelationIdentifier,
+        ObservationPeriod: ObservationPeriodIdentifier,
+        Death: DeathIdentifier,
+        VisitOccurrence: VisitOccurrenceIdentifier,
+        VisitDetail: VisitDetailIdentifier,
+        ConditionOccurrence: ConditionOccurrenceIdentifier,
+        DrugExposure: DrugExposureIdentifier,
+        ProcedureOccurrence: ProcedureOccurrenceIdentifier,
+        DeviceExposure: DeviceExposureIdentifier,
+        Note: NoteIdentifier,
+    }
+    IDENTIFIER_FIELD_MAP: ClassVar[dict[type[ModelNoId], str]] = {
+        ObservationIdentifier: "observation_identifiers",
+        MeasurementIdentifier: "measurement_identifiers",
+        SpecimenIdentifier: "specimen_identifiers",
+        MeasurementRelationIdentifier: "measurement_relation_identifiers",
+        ObservationPeriodIdentifier: "observation_period_identifiers",
+        DeathIdentifier: "death_identifiers",
+        VisitOccurrenceIdentifier: "visit_occurrence_identifiers",
+        VisitDetailIdentifier: "visit_detail_identifiers",
+        ConditionOccurrenceIdentifier: "condition_occurrence_identifiers",
+        DrugExposureIdentifier: "drug_exposure_identifiers",
+        ProcedureOccurrenceIdentifier: "procedure_occurrence_identifiers",
+        DeviceExposureIdentifier: "device_exposure_identifiers",
+        NoteIdentifier: "note_identifiers",
+    }
 
+    person: Person = Field(
+        description="The person's demographic information. This is the same information as in the Person table in the OMOP CDM."
+    )
+    person_identifiers: list[PersonIdentifier] = Field(
+        default_factory=list,
+        description="List of person identifiers associated with the person. There can be multiple if the same person is represented by multiple Person records in the database, e.g. due to merging of records or different source systems.",
+    )
     observations: list[Observation] = Field(
         default_factory=list,
         description="List of observations associated with the person.",
+    )
+    observation_identifiers: list[ObservationIdentifier] = Field(
+        default_factory=list,
+        description="List of observation identifiers associated with the person.",
     )
     measurements: list[Measurement] = Field(
         default_factory=list,
         description="List of measurements associated with the person.",
     )
+    measurement_identifiers: list[MeasurementIdentifier] = Field(
+        default_factory=list,
+        description="List of measurement identifiers associated with the person.",
+    )
     specimens: list[Specimen] = Field(
         default_factory=list,
         description="List of specimens associated with the person.",
+    )
+    specimen_identifiers: list[SpecimenIdentifier] = Field(
+        default_factory=list,
+        description="List of specimen identifiers associated with the person.",
     )
     measurement_relations: list[MeasurementRelation] = Field(
         default_factory=list,
         description="List of measurement relations associated with the person.",
     )
+    measurement_relation_identifiers: list[MeasurementRelationIdentifier] = Field(
+        default_factory=list,
+        description="List of measurement relation identifiers associated with the person.",
+    )
     observation_periods: list[ObservationPeriod] = Field(
         default_factory=list,
         description="List of observation periods associated with the person.",
+    )
+    observation_period_identifiers: list[ObservationPeriodIdentifier] = Field(
+        default_factory=list,
+        description="List of observation period identifiers associated with the person.",
     )
     deaths: list[Death] = Field(
         default_factory=list,
         description="List of death records associated with the person.",
     )
+    death_identifiers: list[DeathIdentifier] = Field(
+        default_factory=list,
+        description="List of death identifiers associated with the person.",
+    )
     visit_occurrences: list[VisitOccurrence] = Field(
         default_factory=list,
         description="List of visit occurrences associated with the person.",
+    )
+    visit_occurrence_identifiers: list[VisitOccurrenceIdentifier] = Field(
+        default_factory=list,
+        description="List of visit occurrence identifiers associated with the person.",
     )
     visit_details: list[VisitDetail] = Field(
         default_factory=list,
         description="List of visit details associated with the person.",
     )
+    visit_detail_identifiers: list[VisitDetailIdentifier] = Field(
+        default_factory=list,
+        description="List of visit detail identifiers associated with the person.",
+    )
     condition_occurrences: list[ConditionOccurrence] = Field(
         default_factory=list,
         description="List of condition occurrences associated with the person.",
+    )
+    condition_occurrence_identifiers: list[ConditionOccurrenceIdentifier] = Field(
+        default_factory=list,
+        description="List of condition occurrence identifiers associated with the person.",
     )
     drug_exposures: list[DrugExposure] = Field(
         default_factory=list,
         description="List of drug exposures associated with the person.",
     )
+    drug_exposure_identifiers: list[DrugExposureIdentifier] = Field(
+        default_factory=list,
+        description="List of drug exposure identifiers associated with the person.",
+    )
     procedure_occurrences: list[ProcedureOccurrence] = Field(
         default_factory=list,
         description="List of procedure occurrences associated with the person.",
+    )
+    procedure_occurrence_identifiers: list[ProcedureOccurrenceIdentifier] = Field(
+        default_factory=list,
+        description="List of procedure occurrence identifiers associated with the person.",
     )
     device_exposures: list[DeviceExposure] = Field(
         default_factory=list,
         description="List of device exposures associated with the person.",
     )
+    device_exposure_identifiers: list[DeviceExposureIdentifier] = Field(
+        default_factory=list,
+        description="List of device exposure identifiers associated with the person.",
+    )
     notes: list[Note] = Field(
         default_factory=list,
         description="List of notes associated with the person.",
+    )
+    note_identifiers: list[NoteIdentifier] = Field(
+        default_factory=list,
+        description="List of note identifiers associated with the person.",
     )

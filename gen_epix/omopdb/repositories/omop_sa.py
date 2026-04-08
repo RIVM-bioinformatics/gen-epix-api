@@ -21,7 +21,7 @@ class OmopSARepository(SARepository, BaseOmopRepository):
     ) -> list[UUID]:
         assert isinstance(uow, SAUnitOfWork)
         modified_person_ids: set[UUID] = set()
-        for model_class in [model.Person] + model.FullPerson.LINKED_DATA_CLASSES:
+        for model_class in [model.Person] + model.FullPerson.DATA_CLASSES:
             sa_model_class = sa_model.SA_MODELS_BY_SERVICE_TYPE[enum.ServiceType.OMOP][
                 model_class
             ]
@@ -43,7 +43,11 @@ class OmopSARepository(SARepository, BaseOmopRepository):
 
         # Initialize some
         person_id_set = set(person_ids)
-        model_classes = [model.Person] + model.FullPerson.LINKED_DATA_CLASSES
+        model_classes = (
+            [model.Person, model.PersonIdentifier]
+            + model.FullPerson.DATA_CLASSES
+            + model.FullPerson.IDENTIFIER_CLASSES
+        )
         db: dict[type[model.Model], dict[UUID, list[model.Model]]] = {
             model_class: {person_id: [] for person_id in person_ids}
             for model_class in model_classes
@@ -57,8 +61,9 @@ class OmopSARepository(SARepository, BaseOmopRepository):
                 sa_model_class = sa_model.SA_MODELS_BY_SERVICE_TYPE[
                     enum.ServiceType.OMOP
                 ][model_class]
+                id_field = sa_model_class.person_id if model_class in [model.Person] + model.FullPerson.DATA_CLASSES else sa_model_class.internal_id  # type: ignore[attr-defined]
                 stmt: sa.Select = sa.select(sa_model_class).where(
-                    sa_model_class.person_id.in_(person_id_set)  # type: ignore[attr-defined]
+                    id_field.in_(person_id_set)  # type: ignore[attr-defined]
                 )
                 mapper = self.get_mapper(model_class)
                 objs_by_person = db[model_class]
@@ -68,7 +73,11 @@ class OmopSARepository(SARepository, BaseOmopRepository):
                     objs_by_person[person_id].append(obj)
 
             # Create FullPersons
-            person_excluded_fields = set(model.Model.CREATE_METADATA_FIELDS)
+            class_field_map = (
+                model.FullPerson.DATA_CLASS_FIELD_MAP
+                | model.FullPerson.IDENTIFIER_FIELD_MAP
+                | {model.PersonIdentifier: "person_identifiers"}
+            )
             full_persons: list[model.FullPerson] = []
             for person_id in person_ids:
                 persons = db[model.Person][person_id]
@@ -76,14 +85,11 @@ class OmopSARepository(SARepository, BaseOmopRepository):
                     continue
                 person = cast(model.Person, persons[0])
                 full_person_kwargs = {}
-                for (
-                    model_class,
-                    field_name,
-                ) in model.FullPerson.LINKED_DATA_CLASS_FIELD_MAP.items():
+                for model_class, field_name in class_field_map.items():
                     full_person_kwargs[field_name] = db[model_class][person_id]
                 full_persons.append(
                     model.FullPerson(
-                        **person.model_dump(exclude=person_excluded_fields),
+                        person=person,
                         **full_person_kwargs,  # type: ignore[arg-type]
                     )
                 )
