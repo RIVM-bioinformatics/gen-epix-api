@@ -1,10 +1,12 @@
 import cProfile
 import pstats
+from pathlib import Path
 from test.fastapp.command import Model2_2CrudCommand
 from test.fastapp.enum import TestType as EnumTestType  # to avoid PyTest warning
 from test.fastapp.model import DOMAIN, Model2_2
 from test.fastapp.service_test_client import ServiceTestClient as Env
 from test.fastapp.util import parse_stats
+from test.test_client.util import get_test_root_output_dir
 
 import pandas as pd
 import pyinstrument
@@ -109,12 +111,18 @@ class TestRepository:
         if env.repository_type != get_test_clients()[-1].repository_type:
             # Only execute for the last repository class
             return
-        test_dir = env.test_dir
+        test_dir = get_test_root_output_dir()
         df = pd.DataFrame.from_records(PERFORMANCE_DF)
-        df.to_csv(Path(test_dir) / f"{cls.__name__}.performance.csv", index=False)
-        df.to_excel(Path(test_dir) / f"{cls.__name__}.performance.xlsx", index=False)
-        for key, html_str in PERFORMANCE_HTML.items():
-            with open(
-                Path(test_dir) / f"{cls.__name__}.performance.{key}.html", "w"
-            ) as f:
-                f.write("".join(html_str))
+        df.to_csv(
+            Path(test_dir) / f"{cls.__name__}.fastapp.performance.repository.csv",
+            index=False,
+        )
+        df.to_excel(
+            Path(test_dir) / f"{cls.__name__}.fastapp.performance.repository.xlsx",
+            index=False,
+        )
+        # for key, html_str in PERFORMANCE_HTML.items():
+        #     with open(
+        #         Path(test_dir) / f"{cls.__name__}.fastapp.performance.repository.{key}.html", "w"
+        #     ) as f:
+        #         f.write("".join(html_str))
