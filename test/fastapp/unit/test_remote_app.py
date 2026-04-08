@@ -104,9 +104,11 @@ class FakeClient:
     next_response: FakeResponse = FakeResponse()
     last_request: dict[str, Any] | None = None
     last_verify: Any | None = None
+    last_timeout: Any | None = None
 
-    def __init__(self, verify: Any) -> None:
+    def __init__(self, verify: Any, timeout: Any) -> None:
         type(self).last_verify = verify
+        type(self).last_timeout = timeout
 
     def __enter__(self) -> "FakeClient":
         return self
