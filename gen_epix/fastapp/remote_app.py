@@ -23,6 +23,8 @@ class RemoteApp(App):
 
     DEFAULT_ROUTE_PREFIX = "/"
 
+    DEFAULT_REQUEST_TIMEOUT_SECONDS = 5
+
     DEFAULT_REQUEST_HEADERS: dict[str, str] = {"Content-Type": "application/json"}
 
     def __init__(
@@ -36,12 +38,16 @@ class RemoteApp(App):
         add_generated_crud_route_handlers: bool = True,
         ssl_cert_file: Path | str | None = None,
         disable_ssl_verification: bool = False,
+        request_timeout_seconds: int | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(domain, **kwargs)
         self._host = host
         self._port = port
         self._protocol = protocol
+        self._request_timeout_seconds = (
+            request_timeout_seconds or self.DEFAULT_REQUEST_TIMEOUT_SECONDS
+        )
         self._default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
         self._default_headers = default_headers or self.DEFAULT_REQUEST_HEADERS
         self._routes: dict[type[Command], str] = {}
@@ -248,7 +254,9 @@ class RemoteApp(App):
         model_class = cmd.MODEL_CLASS
         return_model_class: type = model_class
         is_list = False
-        with httpx.Client(verify=self.ssl_context, timeout=30) as client:
+        with httpx.Client(
+            verify=self.ssl_context, timeout=self._request_timeout_seconds
+        ) as client:
             match cmd.operation:
                 case CrudOperation.READ_ALL:
                     if cmd.query_filter:
