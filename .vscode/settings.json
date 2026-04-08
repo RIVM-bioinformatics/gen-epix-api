@@ -80,14 +80,9 @@
             "text": "Reference issue numbers with # prefix"
         }
     ],
-    "python-envs.defaultEnvManager": "ms-python.python:conda",
-    "python-envs.defaultPackageManager": "ms-python.python:conda",
     "python.testing.pytestArgs": [],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "chat.agent.maxRequests": 50,
-    "editor.rulers": [
-        88
-    ],
     "diffEditor.wordWrap": "off",
 }
