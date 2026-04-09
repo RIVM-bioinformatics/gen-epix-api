@@ -92,3 +92,27 @@ class BaseSeqRepository(BaseRepository):
         profiling protocol IDs.
         """
         raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_sample_ids_modified_in_range(
+        self,
+        uow: BaseUnitOfWork,
+        modified_since: datetime | None = None,
+        modified_until: datetime | None = None,
+    ) -> list[UUID]:
+        """
+        Retrieve sample IDs for samples and sample-linked data modified in the
+        [modified_since, modified_until) range.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_full_samples_by_sample_ids(
+        self,
+        sample_ids: list[UUID],
+    ) -> list[model.FullSample]:
+        """
+        Retrieve all relevant data for the specified sample IDs and construct
+        FullSample objects.
+        """
+        raise NotImplementedError()

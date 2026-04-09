@@ -701,6 +701,16 @@ class Run:
             ]
         )
 
+    def test_seqdb_integration_retrieve_samples(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/seqdb/integration/retrieve_samples",
+            ]
+        )
+
     def test_seqdb_performance_calculate_seq_distances(self) -> None:
         import pytest
 
@@ -770,7 +780,7 @@ class Run:
                 "test/omopdb/integration/build_db",
             ]
         )
-    
+
     def test_omopdb_integration_retrieve_persons(self) -> None:
         import pytest
 

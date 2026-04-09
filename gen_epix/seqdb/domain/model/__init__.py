@@ -52,6 +52,7 @@ from gen_epix.seqdb.domain.model.seq import (
 from gen_epix.seqdb.domain.model.seq import CodeMixin as CodeMixin
 from gen_epix.seqdb.domain.model.seq import ContentMixin as ContentMixin
 from gen_epix.seqdb.domain.model.seq import Contig as Contig
+from gen_epix.seqdb.domain.model.seq import FullSample as FullSample
 from gen_epix.seqdb.domain.model.seq import Locus as Locus
 from gen_epix.seqdb.domain.model.seq import LocusCodeMap as LocusCodeMap
 from gen_epix.seqdb.domain.model.seq import LocusSet as LocusSet
@@ -76,6 +77,8 @@ from gen_epix.seqdb.domain.model.seq import (
 from gen_epix.seqdb.domain.model.seq import SampleDataIssue as SampleDataIssue
 from gen_epix.seqdb.domain.model.seq import SampleForUpload as SampleForUpload
 from gen_epix.seqdb.domain.model.seq import SampleIdentifier as SampleIdentifier
+from gen_epix.seqdb.domain.model.seq import SampleQuery as SampleQuery
+from gen_epix.seqdb.domain.model.seq import SampleQueryResult as SampleQueryResult
 from gen_epix.seqdb.domain.model.seq import SampleUploadResult as SampleUploadResult
 from gen_epix.seqdb.domain.model.seq import Seq as Seq
 from gen_epix.seqdb.domain.model.seq import SeqClassification as SeqClassification
@@ -160,6 +163,9 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             AlleleForUpload,
             SeqProfileForUpload,
             SampleForUpload,
+            FullSample,
+            SampleQuery,
+            SampleQueryResult,
             SampleBatchForUpload,
             SampleUploadResult,
             CalculateSeqDistancesResult,

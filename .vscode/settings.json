@@ -85,4 +85,6 @@
     "python.testing.pytestEnabled": true,
     "chat.agent.maxRequests": 50,
     "diffEditor.wordWrap": "off",
+    "python-envs.defaultEnvManager": "ms-python.python:conda",
+    "python-envs.defaultPackageManager": "ms-python.python:conda",
 }
