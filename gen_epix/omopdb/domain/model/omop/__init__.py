@@ -89,7 +89,6 @@ from gen_epix.omopdb.domain.model.omop.derived import DoseEra as DoseEra
 from gen_epix.omopdb.domain.model.omop.derived import DrugEra as DrugEra
 from gen_epix.omopdb.domain.model.omop.derived import Episode as Episode
 from gen_epix.omopdb.domain.model.omop.derived import EpisodeEvent as EpisodeEvent
-from gen_epix.omopdb.domain.model.omop.full_person import FullPerson as FullPerson
 
 # Health economics domain imports
 from gen_epix.omopdb.domain.model.omop.health_economics import Cost as Cost
@@ -105,6 +104,11 @@ from gen_epix.omopdb.domain.model.omop.health_system import Provider as Provider
 # Metadata domain imports
 from gen_epix.omopdb.domain.model.omop.metadata import CdmSource as CdmSource
 from gen_epix.omopdb.domain.model.omop.metadata import Metadata as Metadata
+from gen_epix.omopdb.domain.model.omop.non_persistable import FullPerson as FullPerson
+from gen_epix.omopdb.domain.model.omop.non_persistable import PersonQuery as PersonQuery
+from gen_epix.omopdb.domain.model.omop.non_persistable import (
+    PersonQueryResult as PersonQueryResult,
+)
 
 # Ontology domain imports
 from gen_epix.omopdb.domain.model.omop.ontology import Concept as Concept

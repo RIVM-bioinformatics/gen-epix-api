@@ -32,6 +32,19 @@
             "justMyCode": true
         },
         {
+            "name": "api.casedb.local.mock.sa_sqlite_empty",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "api",
+                "CASEDB",
+                "MOCK",
+                "SA_SQLITE_EMPTY"
+            ],
+            "justMyCode": true
+        },
+        {
             "name": "api.casedb.local.idps.sa_sql_demo",
             "type": "debugpy",
             "request": "launch",
@@ -101,6 +114,19 @@
             "justMyCode": true
         },
         {
+            "name": "api.seqdb.local.mock.sa_sqlite_empty",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "api",
+                "SEQDB",
+                "MOCK",
+                "SA_SQLITE_EMPTY"
+            ],
+            "justMyCode": true
+        },
+        {
             "name": "api.seqdb.local.mock.dict_demo",
             "type": "debugpy",
             "request": "launch",
@@ -137,6 +163,19 @@
                 "OMOPDB",
                 "IDPS",
                 "SA_SQLITE_DEMO"
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "api.omopdb.local.mock.sa_sqlite_empty",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "api",
+                "OMOPDB",
+                "MOCK",
+                "SA_SQLITE_EMPTY"
             ],
             "justMyCode": true
         },
@@ -704,6 +743,17 @@
             "program": "run.py",
             "args": [
                 "test_omopdb_integration_build_db"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.omopdb.integration.retrieve_persons",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_omopdb_integration_retrieve_persons"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

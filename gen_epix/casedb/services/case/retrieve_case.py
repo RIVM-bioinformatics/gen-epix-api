@@ -61,6 +61,8 @@ def case_service_retrieve_cases_by_query(
             case_ids=None,
             datetime_range_filter=datetime_range_filter,
             filter_content=True,
+            # Disable the helper's early max results limit, since we need to apply it after filtering by case sets and filters, which happens after retrieving the cases
+            apply_max_n_cases=not case_set_ids and not case_query.filter,
         )
         # Filter cases by case sets
         if case_set_ids:
