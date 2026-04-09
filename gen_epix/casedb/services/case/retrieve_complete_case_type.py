@@ -26,9 +26,8 @@ def case_service_retrieve_complete_case_type(
             uow,
             user_id,
             model.CaseType,
-            None,
-            case_type_id,
             CrudOperation.READ_ONE,
+            obj_ids=case_type_id,
         )
 
         # @ABAC
@@ -58,8 +57,6 @@ def case_service_retrieve_complete_case_type(
                 uow,
                 user_id,
                 model.Col,
-                None,
-                None,
                 CrudOperation.READ_ALL,
                 filter=UuidSetFilter(
                     key="case_type_id",
@@ -145,9 +142,8 @@ def case_service_retrieve_complete_case_type(
             uow,
             user_id,
             model.Col,
-            None,
-            col_ids,
             CrudOperation.READ_SOME,
+            obj_ids=col_ids,
         )
         col_map: dict[UUID, model.Col] = {x.id: x for x in cols}  # type: ignore[misc]
 
@@ -157,9 +153,8 @@ def case_service_retrieve_complete_case_type(
             uow,
             user_id,
             model.Dim,
-            None,
-            dim_ids,
             CrudOperation.READ_SOME,
+            obj_ids=dim_ids,
         )
         dim_map: dict[UUID, model.Dim] = {x.id: x for x in dims}  # type: ignore[misc]
 
@@ -169,9 +164,8 @@ def case_service_retrieve_complete_case_type(
             uow,
             user_id,
             model.RefCol,
-            None,
-            ref_col_ids,
             CrudOperation.READ_SOME,
+            obj_ids=ref_col_ids,
         )
         ref_col_map: dict[UUID, model.RefCol] = {x.id: x for x in ref_cols}  # type: ignore[misc]
 
@@ -181,9 +175,8 @@ def case_service_retrieve_complete_case_type(
             uow,
             user_id,
             model.RefDim,
-            None,
-            ref_dim_ids,
             CrudOperation.READ_SOME,
+            obj_ids=ref_dim_ids,
         )
         ref_dim_map: dict[UUID, model.RefDim] = {x.id: x for x in ref_dims}  # type: ignore[misc]
 

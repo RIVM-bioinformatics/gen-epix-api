@@ -24,9 +24,8 @@ def seq_service_retrieve_seq_distance_last_modified(
             uow,
             cmd.user.id if cmd.user else None,
             model.Protocol,
-            None,
-            cmd.protocol_id,
             CrudOperation.READ_ONE,
+            obj_ids=cmd.protocol_id,
         )
         if seq_distance_protocol.protocol_type != enum.ProtocolType.SEQ_DISTANCE:
             raise exc.InvalidArgumentsError(
@@ -65,8 +64,6 @@ def seq_service_calculate_seq_distances_for_new_profiles(
             uow,
             user_id,
             model.Protocol,
-            None,
-            None,
             CrudOperation.READ_ALL,
             filter=NumberSetFilter(
                 key="seq_profile_type",
@@ -91,8 +88,6 @@ def seq_service_calculate_seq_distances_for_new_profiles(
             uow,
             user_id,
             model.Protocol,
-            None,
-            None,
             CrudOperation.READ_ALL,
             filter=NumberSetFilter(
                 key="seq_distance_type",
@@ -183,9 +178,8 @@ def seq_service_update_seq_distances(
             uow,
             user_id,
             model.Protocol,
-            None,
-            cmd.protocol_id,
             CrudOperation.READ_ONE,
+            obj_ids=cmd.protocol_id,
         )
     assert protocol.max_stored_distance is not None
     assert protocol.seq_distance_type is not None
@@ -213,8 +207,6 @@ def seq_service_update_seq_distances(
             uow,
             user_id,
             model.Protocol,
-            None,
-            None,
             CrudOperation.READ_ALL,
             filter=NumberSetFilter(
                 key="seq_profile_type",
@@ -321,9 +313,8 @@ def _calculate_and_store_distances(
                 uow,
                 user_id,
                 model.SeqProfile,
-                None,
-                existing_profile_ids,
                 CrudOperation.READ_SOME,
+                obj_ids=existing_profile_ids,
             )
             if existing_profile_ids
             else []
@@ -375,9 +366,8 @@ def _calculate_and_store_distances(
                 uow,
                 user_id,
                 model.SeqDistance,
-                modified_existing,
-                None,
                 CrudOperation.UPDATE_SOME,
+                objs=modified_existing,
             )
         results.extend(
             model.CalculateSeqDistancesResult(
@@ -405,9 +395,8 @@ def _calculate_and_store_distances(
             uow,
             user_id,
             model.SeqDistance,
-            new_seq_distances,
-            None,
             CrudOperation.CREATE_SOME,
+            objs=new_seq_distances,
         )
 
     for created_seq_distance in created_new:

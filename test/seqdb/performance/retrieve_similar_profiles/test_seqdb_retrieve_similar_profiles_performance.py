@@ -194,8 +194,6 @@ class TestSeqDistancePerformance(BaseSeqDistancePerformance):
                         uow,
                         env.get_root_user().id,
                         model.SeqProfile,
-                        None,
-                        None,
                         CrudOperation.READ_ALL,
                     )
                 )
@@ -205,8 +203,6 @@ class TestSeqDistancePerformance(BaseSeqDistancePerformance):
                         uow,
                         env.get_root_user().id,
                         model.Protocol,
-                        None,
-                        None,
                         CrudOperation.READ_ALL,
                     )
                 )

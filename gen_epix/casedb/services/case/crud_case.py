@@ -73,9 +73,8 @@ def _crud_case_with_abac(
             uow,
             cmd.user.id,
             model.Case,
-            None,
-            case_ids,
             CrudOperation.READ_SOME,
+            obj_ids=case_ids,
         )
         case_data_collection_map = self._retrieve_case_data_collections_map(
             uow,

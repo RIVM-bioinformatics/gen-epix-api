@@ -42,10 +42,10 @@ class BaseRepository(abc.ABC):
         uow: BaseUnitOfWork,
         user_id: Hashable | None,
         model_class: type[Model],
-        objs: Model | Iterable[Model] | None,
-        obj_ids: Hashable | Iterable[Hashable] | None,
         operation: CrudOperation,
         filter: Filter | None = None,
+        objs: Model | Iterable[Model] | None = None,
+        obj_ids: Hashable | Iterable[Hashable] | None = None,
         **kwargs: Any,
     ) -> Hashable | list[Hashable] | Model | list[Model] | bool | list[bool] | None:
         """
@@ -160,7 +160,7 @@ class BaseRepository(abc.ABC):
         # Retrieve non-excluded existing objects
         # TODO: replace retrieval of existing objects with a more efficient method
         all_existing_objs: list[Model] = list(
-            self.crud(uow, user_id, model_class, None, None, CrudOperation.READ_ALL)  # type: ignore
+            self.crud(uow, user_id, model_class, CrudOperation.READ_ALL)  # type: ignore
         )
         # Filter to get only associations for the specified relationship (obj_id1 or obj_id2)
         relevant_existing_objs = self._get_relevant_existing_objs(
@@ -282,9 +282,8 @@ class BaseRepository(abc.ABC):
                 uow,
                 user_id,
                 model_class,
-                to_create_objs,
-                None,
                 CrudOperation.CREATE_SOME,
+                objs=to_create_objs,
             )
 
         # Update association objects
@@ -300,9 +299,8 @@ class BaseRepository(abc.ABC):
                 uow,
                 user_id,
                 model_class,
-                to_update_objs,
-                None,
                 CrudOperation.UPDATE_SOME,
+                objs=to_update_objs,
             )
 
         # Delete association objects
@@ -311,9 +309,8 @@ class BaseRepository(abc.ABC):
                 uow,
                 user_id,
                 model_class,
-                None,
-                [get_association_id(x) for x in to_delete_objs],
                 CrudOperation.DELETE_SOME,
+                obj_ids=[get_association_id(x) for x in to_delete_objs],
             )
 
     def _delete_without_associations(
@@ -339,8 +336,6 @@ class BaseRepository(abc.ABC):
                     uow,
                     user_id,
                     model_class,
-                    None,
-                    None,
                     CrudOperation.READ_ALL,
                 )
                 if getattr(x, link_field_name) == obj_id
@@ -350,9 +345,8 @@ class BaseRepository(abc.ABC):
                 uow,
                 user_id,
                 model_class,
-                None,
-                to_delete_obj_ids,
                 CrudOperation.DELETE_SOME,
+                obj_ids=to_delete_obj_ids, 
             )
 
     def _parse_update_association_parameters(

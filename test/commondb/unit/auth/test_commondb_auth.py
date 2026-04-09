@@ -198,58 +198,58 @@ class InMemoryOrganizationRepository:
     def crud(
         self,
         uow: Any,
-        entity_id: Any,
-        entity_class: type,
-        entity: Any,
-        filter_id: Any,
+        user_id: Any,
+        model_class: type,
         operation: CrudOperation,
+        filter: Any = None,
+        objs: Any = None,
+        obj_ids: Any = None,
+        **kwargs: Any,
     ) -> Any:
-        is_org = issubclass(entity_class, commondb_model.Organization)
-        is_invitation = issubclass(entity_class, commondb_model.UserInvitation)
+        is_org = issubclass(model_class, commondb_model.Organization)
+        is_invitation = issubclass(model_class, commondb_model.UserInvitation)
 
         if operation == CrudOperation.EXISTS_ONE:
             if is_org:
-                return filter_id in self._orgs
-            # User: check by filter_id (UUID)
-            return filter_id in self._users
+                return obj_ids in self._orgs
+            # User: check by obj_ids (UUID)
+            return obj_ids in self._users
 
         elif operation == CrudOperation.CREATE_ONE:
             if is_org:
-                org_id = entity.id if entity.id is not None else entity_id
-                self._orgs[org_id] = entity
-                return entity
-            # User: always use entity.id (entity_id may be the creating user's id)
-            new_id = entity.id if entity.id is not None else entity_id
-            self._users[new_id] = entity
-            if entity.key:
-                self._users_by_key[entity.key] = entity
-            return entity
+                org_id = objs.id if objs.id is not None else user_id
+                self._orgs[org_id] = objs
+                return objs
+            # User: always use objs.id (user_id may be the creating user's id)
+            new_id = objs.id if objs.id is not None else user_id
+            self._users[new_id] = objs
+            if objs.key:
+                self._users_by_key[objs.key] = objs
+            return objs
 
         elif operation == CrudOperation.READ_ONE:
             if is_org:
-                if filter_id not in self._orgs:
+                if obj_ids not in self._orgs:
                     raise commondb_exc.NoResultsError(
-                        f"Organization {filter_id} not found"
+                        f"Organization {obj_ids} not found"
                     )
-                return self._orgs[filter_id]
+                return self._orgs[obj_ids]
             # User
-            if filter_id not in self._users:
-                raise commondb_exc.NoResultsError(f"User {filter_id} not found")
-            return self._users[filter_id]
+            if obj_ids not in self._users:
+                raise commondb_exc.NoResultsError(f"User {obj_ids} not found")
+            return self._users[obj_ids]
 
         elif operation == CrudOperation.READ_ALL:
             if is_invitation:
-                # entity_id is invited_by_user_id
-                return [
-                    x for x in self._invitations if x.invited_by_user_id == entity_id
-                ]
+                # user_id is invited_by_user_id
+                return [x for x in self._invitations if x.invited_by_user_id == user_id]
             return []
 
         elif operation == CrudOperation.UPDATE_ONE:
-            self._users[entity_id] = entity
-            if entity.key:
-                self._users_by_key[entity.key] = entity
-            return entity
+            self._users[user_id] = objs
+            if objs.key:
+                self._users_by_key[objs.key] = objs
+            return objs
 
         raise NotImplementedError(f"Operation {operation} not implemented in mock")
 

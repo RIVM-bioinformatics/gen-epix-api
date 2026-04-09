@@ -63,14 +63,14 @@ class DummyRepository(BaseRepository):
         uow: BaseUnitOfWork,
         user_id: Hashable | None,
         model_class: type[Model],
-        objs: Model | Iterable[Model] | None,
-        obj_ids: Hashable | Iterable[Hashable] | None,
         operation: CrudOperation,
         filter: Any | None = None,
+        objs: Model | Iterable[Model] | None = None,
+        obj_ids: Hashable | Iterable[Hashable] | None = None,
         **kwargs: Any,
     ) -> Any:
         return self._crud_mock(
-            uow, user_id, model_class, objs, obj_ids, operation, filter, **kwargs
+            uow, user_id, model_class, operation, filter, objs, obj_ids, **kwargs
         )
 
     def read_fields(
@@ -123,7 +123,7 @@ class BaseRepositoryTestCase(TestCase):
         assert_args: Callable[..., None] | None = None,
     ) -> None:
         calls = [
-            c for c in self.repo._crud_mock.call_args_list if c.args[5] == operation
+            c for c in self.repo._crud_mock.call_args_list if c.args[3] == operation
         ]
         if call_index is None:
             assert calls, f"Expected at least one {operation} call"
@@ -175,9 +175,10 @@ class TestUpdateAssociation(BaseRepositoryTestCase):
             _uow: Any,
             _user_id: Any,
             _model_class: Any,
+            _op: Any,
+            _filter: Any,
             _objs: Any,
             obj_ids: Any,
-            _op: Any,
             *_: Any,
             **__: Any,
         ) -> None:
@@ -218,9 +219,10 @@ class TestUpdateAssociation(BaseRepositoryTestCase):
             _uow: Any,
             _user_id: Any,
             _model_class: Any,
+            _op: Any,
+            _filter: Any,
             _objs: Any,
             obj_ids: Any,
-            _op: Any,
             *_: Any,
             **__: Any,
         ) -> None:

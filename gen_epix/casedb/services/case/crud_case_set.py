@@ -115,9 +115,8 @@ def _validate_case_set_deletion(
         uow,
         cmd.user.id,  # type: ignore[union-attr]
         model.CaseSet,
-        None,
-        case_set_ids,
         CrudOperation.READ_SOME,
+        obj_ids=case_set_ids,
     )
     case_set_data_collection_map: dict[UUID, set[UUID]] = (
         self._retrieve_case_set_data_collections_map(

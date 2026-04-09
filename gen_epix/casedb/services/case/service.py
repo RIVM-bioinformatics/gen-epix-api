@@ -167,9 +167,8 @@ class CaseService(BaseCaseService):
                 uow,
                 user.id,
                 model.CaseSet if is_case_set else model.Case,
-                None,
-                case_or_set_ids,
                 CrudOperation.READ_SOME,
+                obj_ids=case_or_set_ids,
             )
             # Retrieve case/set data collection links
             key = "case_set_id" if is_case_set else "case_id"
@@ -181,8 +180,6 @@ class CaseService(BaseCaseService):
                     if is_case_set
                     else model.CaseDataCollectionLink
                 ),
-                None,
-                None,
                 CrudOperation.READ_ALL,
                 filter=UuidSetFilter(
                     key=key,
@@ -295,10 +292,9 @@ class CaseService(BaseCaseService):
                 uow,
                 user_id,
                 model.CaseSet,
-                None,
-                case_set_ids if case_set_ids else None,
                 CrudOperation.READ_SOME if case_set_ids else CrudOperation.READ_ALL,
                 filter=None if case_set_ids else filter,
+                obj_ids=case_set_ids if case_set_ids else None,
             )
         )
 
@@ -608,9 +604,8 @@ class CaseService(BaseCaseService):
                 uow,
                 user_id,
                 model.Case,
-                None,
-                case_ids,
                 CrudOperation.READ_SOME,
+                obj_ids=case_ids,
             )
             if not all(x.case_type_id == case_type_id for x in cases):
                 raise exc.InvalidArgumentsError(
@@ -629,8 +624,6 @@ class CaseService(BaseCaseService):
                 uow,
                 user_id,
                 model.Case,
-                None,
-                None,
                 CrudOperation.READ_ALL,
                 filter=case_filter,
             )
@@ -681,9 +674,8 @@ class CaseService(BaseCaseService):
                 uow,
                 user_id,
                 model.CaseType,
-                None,
-                [case_type_id],
                 CrudOperation.READ_SOME,
+                obj_ids=[case_type_id],
             )
         )
         if not case_types:
@@ -829,17 +821,15 @@ class CaseService(BaseCaseService):
             uow,
             user.id,
             model.Col,
-            None,
-            seq_col_id,
             CrudOperation.READ_ONE,
+            obj_ids=seq_col_id,
         )
         ref_seq_col: model.RefCol = repository.crud(  # type: ignore[assignment]
             uow,
             user.id,
             model.RefCol,
-            None,
-            seq_col.ref_col_id,
             CrudOperation.READ_ONE,
+            obj_ids=seq_col.ref_col_id,
         )
         if ref_seq_col.col_type != enum.ColType.GENETIC_SEQUENCE:
             raise exc.InvalidArgumentsError(
@@ -858,9 +848,8 @@ class CaseService(BaseCaseService):
                     uow,
                     user.id if user else None,
                     model.CaseSet,
-                    None,
-                    list(case_set_ids),
                     CrudOperation.READ_SOME,
+                    obj_ids=list(case_set_ids),
                 )
             )
             case_sets = {x.id: x for x in case_sets_}
@@ -868,9 +857,8 @@ class CaseService(BaseCaseService):
                 uow,
                 user.id if user else None,
                 model.Case,
-                None,
-                list(case_ids),
                 CrudOperation.READ_SOME,
+                obj_ids=list(case_ids),
             )
             cases = {x.id: x for x in cases_}
         invalid_case_set_member_ids = [

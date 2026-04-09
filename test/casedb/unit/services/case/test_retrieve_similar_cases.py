@@ -172,9 +172,8 @@ class TestBranchErrors(BaseSimilarCasesTestCase):
             self.uow,
             self.user.id,
             model.Col,
-            None,
-            self.dist_col_id,
             CrudOperation.READ_ONE,
+            obj_ids=self.dist_col_id,
         )
         self.service._retrieve_cases_with_content_right.assert_not_called()  # type: ignore[attr-defined]
 
@@ -204,17 +203,15 @@ class TestBranchErrors(BaseSimilarCasesTestCase):
                 self.uow,
                 self.user.id,
                 model.Col,
-                None,
-                self.dist_col_id,
                 CrudOperation.READ_ONE,
+                obj_ids=self.dist_col_id,
             ),
             call(
                 self.uow,
                 self.user.id,
                 model.RefCol,
-                None,
-                dist_col.ref_col_id,
                 CrudOperation.READ_ONE,
+                obj_ids=dist_col.ref_col_id,
             ),
         ]
         assert self.repository.crud.call_count == 2
@@ -268,25 +265,22 @@ class TestHappyPath(BaseSimilarCasesTestCase):
                 self.uow,
                 self.user.id,
                 model.Col,
-                None,
-                self.dist_col_id,
                 CrudOperation.READ_ONE,
+                obj_ids=self.dist_col_id,
             ),
             call(
                 self.uow,
                 self.user.id,
                 model.RefCol,
-                None,
-                dist_col.ref_col_id,
                 CrudOperation.READ_ONE,
+                obj_ids=dist_col.ref_col_id,
             ),
             call(
                 self.uow,
                 self.user.id,
                 model.GeneticDistanceProtocol,
-                None,
-                dist_ref_col.genetic_distance_protocol_id,
                 CrudOperation.READ_ONE,
+                obj_ids=dist_ref_col.genetic_distance_protocol_id,
             ),
         ]
 

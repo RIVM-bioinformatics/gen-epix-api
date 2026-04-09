@@ -132,8 +132,6 @@ class CaseUploadSetup:
                     uow,
                     None,
                     model.IdentifierIssuer,
-                    None,
-                    None,
                     CrudOperation.READ_ALL,
                 )
             )
@@ -149,21 +147,19 @@ class CaseUploadSetup:
                 uow,
                 None,
                 model.IdentifierIssuer,
-                [
+                CrudOperation.CREATE_SOME,
+                objs=[
                     seqdb_model.IdentifierIssuer(**x.model_dump())
                     for x in identifier_issuers
                 ],
-                None,
-                CrudOperation.CREATE_SOME,
             )
         with seqdb_seq_service.repository.uow() as uow:
             seqdb_seq_service.repository.crud(
                 uow,
                 None,
                 seqdb_model.Protocol,
-                protocols,
-                None,
                 CrudOperation.CREATE_SOME,
+                objs=protocols,
             )
 
 

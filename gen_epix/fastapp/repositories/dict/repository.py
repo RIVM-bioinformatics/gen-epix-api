@@ -228,10 +228,10 @@ class DictRepository(BaseRepository):
         uow: BaseUnitOfWork,
         user_id: Hashable | None,
         model_class: type[Model],
-        objs: Model | Iterable[Model] | None,
-        obj_ids: Hashable | Iterable[Hashable] | None,
         operation: CrudOperation,
         filter: Filter | None = None,
+        objs: Model | Iterable[Model] | None = None,
+        obj_ids: Hashable | Iterable[Hashable] | None = None,
         **kwargs: Any,
     ) -> Hashable | list[Hashable] | Model | list[Model] | bool | list[bool] | None:
         BaseRepository.verify_crud_args(model_class, objs, obj_ids, operation)

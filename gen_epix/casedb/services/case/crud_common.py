@@ -143,8 +143,6 @@ def _cascade_delete_linked_models(
                 uow,
                 cmd.user.id,  # type: ignore[union-attr]
                 link_model_class,
-                None,
-                None,
                 CrudOperation.DELETE_ALL,
                 filter=(
                     self._compose_id_filter((link.link_field_name, obj_ids))

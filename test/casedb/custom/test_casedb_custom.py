@@ -57,9 +57,8 @@ class TestManual:
                 uow,
                 TestManual.ROOT_USER_ID,
                 model.User,
-                objs=None,
+                CrudOperation.READ_ONE,
                 obj_ids=user_id,
-                operation=CrudOperation.READ_ONE,
             )
 
     # TODO: add to test_build_db

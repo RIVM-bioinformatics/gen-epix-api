@@ -335,9 +335,8 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
                     uow,
                     cmd.user.id,
                     cmd.MODEL_CLASS,
-                    None,
-                    cmd.get_obj_ids(),
                     CrudOperation.READ_SOME,
+                    obj_ids=cmd.get_obj_ids(),
                 )
             if objs is not None and not all(
                 cmd.access_filter.match_rows(objs, is_model=True)
@@ -356,10 +355,10 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
             uow,
             cmd.user.id if cmd.user else None,
             cmd.MODEL_CLASS,
-            cmd.objs,
-            cmd.obj_ids,
             cmd.operation,
             filter=repository_query_filter,
+            objs=cmd.objs,
+            obj_ids=cmd.obj_ids,
             obj_filter=service_query_filter,
             links=links,
             **props,

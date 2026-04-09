@@ -47,9 +47,8 @@ def case_service_crud_ref_col(
                 uow,
                 cmd.user.id,
                 model.RefDim,
-                None,
-                ref_dim_ids,
                 CrudOperation.READ_SOME,
+                obj_ids=ref_dim_ids,
             )
             ref_dim_map: dict[UUID, model.RefDim] = {
                 x.id: x for x in ref_dims
@@ -80,9 +79,8 @@ def case_service_crud_ref_col(
                 uow,
                 cmd.user.id,
                 model.RefCol,
-                None,
-                [x.id for x in ref_cols],
                 CrudOperation.READ_SOME,
+                obj_ids=[x.id for x in ref_cols],
             )
             if any(
                 x.ref_dim_id != y.ref_dim_id
