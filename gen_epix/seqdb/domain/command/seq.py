@@ -124,6 +124,10 @@ class CalculatePhylogeneticTreeCommand(Command):
         default=None,
         description="Optional list of leaf names corresponding to the sequence profile IDs",
     )
+    allowed_qc_results: set[enum.QualityControlResult] = Field(
+        default=set(enum.QualityControlResultSet.USABLE.value),
+        description="Set of allowed quality control results for the profiles to consider in the tree. Only profiles whose qc_result is in this set will be included in the tree. This allows excluding low-quality profiles from the tree.",
+    )
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:

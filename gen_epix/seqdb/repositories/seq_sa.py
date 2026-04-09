@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from collections.abc import Set as AbstractSet
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -127,23 +128,21 @@ class SeqSARepository(SARepository, BaseSeqRepository):
             result.append(mapper.load(row[0]))  # type: ignore[arg-type]
         return result
 
-    def get_filtered_seq_profiles_by_quality(
+    def filter_seq_profiles_by_quality(
         self,
         uow: BaseUnitOfWork,
         seq_profile_ids: list[UUID],
+        allowed_qc_results: AbstractSet[
+            enum.QualityControlResult
+        ] = enum.QualityControlResultSet.USABLE.value,
     ) -> list[UUID]:
-        if not seq_profile_ids:
+        if not seq_profile_ids or not allowed_qc_results:
             return []
         stmt = sa.select(sa_model.SeqProfile.id).where(
             (sa_model.SeqProfile.id.in_(seq_profile_ids))
-            & sa.or_(
-                sa_model.SeqProfile.qc_result == enum.QualityControlResult.PASS,
-                sa_model.SeqProfile.qc_result == enum.QualityControlResult.PENDING,
-            )
+            & sa_model.SeqProfile.qc_result.in_(allowed_qc_results)
         )
-        mapper = self.get_mapper(model.SeqProfile)
         assert isinstance(uow, SAUnitOfWork)
-        result: list[UUID] = []
-        for row in uow.session.execute(stmt):
-            result.append(mapper.load(row[0]).id)  # type: ignore[attr-defined]
-        return result
+        retval: list[UUID] = uow.session.execute(stmt).scalars().all()  # type: ignore[assignment]
+        return retval
+        return retval

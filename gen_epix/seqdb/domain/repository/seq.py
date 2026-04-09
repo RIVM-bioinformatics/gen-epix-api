@@ -1,6 +1,7 @@
 import abc
 import json
 from collections.abc import Iterable
+from collections.abc import Set as AbstractSet
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -94,13 +95,17 @@ class BaseSeqRepository(BaseRepository):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def get_filtered_seq_profiles_by_quality(
+    def filter_seq_profiles_by_quality(
         self,
         uow: BaseUnitOfWork,
         seq_profile_ids: list[UUID],
+        allowed_qc_results: AbstractSet[
+            enum.QualityControlResult
+        ] = enum.QualityControlResultSet.USABLE.value,
     ) -> list[UUID]:
         """
         Given a list of SeqProfile IDs, return the subset of SeqProfiles IDs
         that have a usable quality check result.
         """
+        raise NotImplementedError()
         raise NotImplementedError()

@@ -1,12 +1,15 @@
-from uuid import UUID
 import json
 import sys
+from typing import Any, cast
+from uuid import UUID
 
 import numpy as np
-import scipy
-from Bio.Phylo.BaseTree import Clade
-from Bio.Phylo.TreeConstruction import DistanceMatrix, DistanceTreeConstructor
-from scipy.cluster.hierarchy import ClusterNode
+import scipy  # type: ignore[import-untyped]
+from Bio.Phylo.TreeConstruction import (  # type: ignore[import-untyped]
+    DistanceMatrix,
+    DistanceTreeConstructor,
+)
+from scipy.cluster.hierarchy import ClusterNode  # type: ignore[import-untyped]
 
 from gen_epix.commondb.domain import exc
 from gen_epix.fastapp.enum import CrudOperation
@@ -15,6 +18,7 @@ from gen_epix.filter.enum import LogicalOperator
 from gen_epix.filter.equals_uuid import EqualsUuidFilter
 from gen_epix.filter.uuid_set import UuidSetFilter
 from gen_epix.seqdb.domain import command, enum, model
+from gen_epix.seqdb.domain.repository.seq import BaseSeqRepository
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
 
 
@@ -34,18 +38,21 @@ def seq_service_calculate_phylogenetic_tree(
         raise exc.InvalidArgumentsError("profile_ids must be unique")
     leaf_names = cmd.leaf_names if cmd.leaf_names else [str(x) for x in seq_profile_ids]
 
-    # Filter provided seq_profile_ids by quality control result
-    with self.repository.uow() as uow:
+    # Handle transaction
+    repository: BaseSeqRepository = self.repository  # type: ignore[assignment]
+    seq_distances: list[model.SeqDistance]
+    with repository.uow() as uow:
+        # Filter provided seq_profile_ids by quality control result
         seq_profile_ids: list[UUID] = (  # type: ignore[no-redef]
-            self.repository.get_filtered_seq_profiles_by_quality(  # type: ignore[attr-defined]
+            repository.filter_seq_profiles_by_quality(
                 uow,
                 seq_profile_ids=seq_profile_ids,
+                allowed_qc_results=cast(Any, cmd).allowed_qc_results,
             )
         )
 
-    # Retrieve genetic distance protocol
-    with self.repository.uow() as uow:
-        protocol: model.Protocol = self.repository.crud(  # type: ignore[assignment]
+        # Retrieve genetic distance protocol
+        protocol: model.Protocol = repository.crud(  # type: ignore[assignment]
             uow,
             user_id,
             model.Protocol,
@@ -54,21 +61,20 @@ def seq_service_calculate_phylogenetic_tree(
             CrudOperation.READ_ONE,
         )
 
-    # Special case: 0 or 1 sequences
-    if len(seq_profile_ids) < 2:
-        return model.PhylogeneticTree(
-            id=self.generate_id(),  # type: ignore[arg-type]
-            tree_algorithm=tree_algorithm,
-            protocol_id=protocol_id,
-            profile_ids=seq_profile_ids,
-            leaf_names=leaf_names,
-            newick_repr=f"({leaf_names[0]});" if seq_profile_ids else "();",
-        )
+        # Special case: 0 or 1 sequences
+        if len(seq_profile_ids) < 2:
+            return model.PhylogeneticTree(
+                id=self.generate_id(),  # type: ignore[arg-type]
+                tree_algorithm=tree_algorithm,
+                protocol_id=protocol_id,
+                profile_ids=seq_profile_ids,
+                leaf_names=leaf_names,
+                newick_repr=f"({leaf_names[0]});" if seq_profile_ids else "();",
+            )
 
-    # Retrieve distance matrix
-    if tree_algorithm in enum.TreeAlgorithmSet.DISTANCE_BASED.value:
-        with self.repository.uow() as uow:
-            seq_distances: list[model.SeqDistance] = self.repository.crud(  # type: ignore[assignment]
+        # Retrieve distance matrix
+        if tree_algorithm in enum.TreeAlgorithmSet.DISTANCE_BASED.value:
+            seq_distances = repository.crud(  # type: ignore[assignment]
                 uow,
                 user_id,
                 model.SeqDistance,
@@ -88,7 +94,14 @@ def seq_service_calculate_phylogenetic_tree(
                     operator=LogicalOperator.AND,
                 ),
             )
-            seq_distance_map = {x.seq_profile_id: x for x in seq_distances}
+        else:
+            raise exc.InvalidArgumentsError(
+                f"{tree_algorithm.value} tree algorithm not yet implemented"
+            )
+
+    # Stop transaction here, releasing resources, since the rest of the operations are in-memory and do not require database access. This also allows for better parallelisation if the tree calculation would be made asynchronous in the future, without the need to keep the transaction open for the entire duration of the tree calculation.
+    if tree_algorithm in enum.TreeAlgorithmSet.DISTANCE_BASED.value:
+        seq_distance_map = {x.seq_profile_id: x for x in seq_distances}
         max_stored_distance = protocol.max_stored_distance
         # Calculate condensed distance matrix
         tree_seq_distances = [
@@ -133,6 +146,7 @@ def seq_service_calculate_phylogenetic_tree(
                 raise exc.InvalidArgumentsError(
                     f"Distance format {seq_distance.format.name} is not supported"
                 )
+
         # Handle sequences with no stored distances
         if len(tree_profile_ids) < 2:
             return model.PhylogeneticTree(
@@ -143,6 +157,7 @@ def seq_service_calculate_phylogenetic_tree(
                 leaf_names=leaf_names,
                 newick_repr=(f"({tree_leaf_names[0]});" if tree_profile_ids else "();"),
             )
+
         # Calculate tree
         # Increase recursion limit to allow for larger trees
         sys_recursion_limit = sys.getrecursionlimit()
@@ -170,9 +185,12 @@ def seq_service_calculate_phylogenetic_tree(
                 for i, x in enumerate(distance_matrix):
                     lower_triangle.append(list(x[: i + 1]))
                 names = [str(x) for x in tree_leaf_names]
-                distance_tree_constructor = DistanceTreeConstructor()
-                bio_distance_matrix = DistanceMatrix(names, lower_triangle)
-                tree = distance_tree_constructor.nj(bio_distance_matrix)
+                distance_tree_constructor = DistanceTreeConstructor()  # type: ignore[no-untyped-call]
+                bio_distance_matrix = DistanceMatrix(  # type: ignore[no-untyped-call]
+                    names,
+                    lower_triangle,
+                )
+                tree = distance_tree_constructor.nj(bio_distance_matrix)  # type: ignore[no-untyped-call]
                 # Neighbour joining can produce negative branch lengths
                 # https://en.wikipedia.org/wiki/Neighbor_joining
                 # https://www.researchgate.net/post/How-to-correct-negative-branches-from-neighbor-joining-method
@@ -205,7 +223,7 @@ def seq_service_calculate_phylogenetic_tree(
     return phylogenetic_tree
 
 
-def _correct_nj_tree_negative_branch_lengths_recursion(clade: Clade) -> None:
+def _correct_nj_tree_negative_branch_lengths_recursion(clade: Any) -> None:
     """
     Recursively update negative branch lengths by adding the negative branch
     length to all siblings. Only one sibling may have a negative branch length.
@@ -249,13 +267,13 @@ def _get_newick_repr_recursion(
     else:
         newick = ");"
     newick = _get_newick_repr_recursion(
-        node.get_left(),
+        cast(ClusterNode, node.get_left()),
         node.dist,
         leaf_names,
         newick=newick,
     )
     newick = _get_newick_repr_recursion(
-        node.get_right(),
+        cast(ClusterNode, node.get_right()),
         node.dist,
         leaf_names,
         newick=f",{newick}",

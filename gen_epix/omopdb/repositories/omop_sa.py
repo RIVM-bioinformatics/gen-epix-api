@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import cast
+from typing import Any, cast
 from uuid import UUID
 
 import sqlalchemy as sa
@@ -43,10 +43,11 @@ class OmopSARepository(SARepository, BaseOmopRepository):
 
         # Initialize some
         person_id_set = set(person_ids)
-        model_classes = (
+        model_classes = cast(
+            list[type[model.Model]],
             [model.Person, model.PersonIdentifier]
             + model.FullPerson.DATA_CLASSES
-            + model.FullPerson.IDENTIFIER_CLASSES
+            + model.FullPerson.IDENTIFIER_CLASSES,
         )
         db: dict[type[model.Model], dict[UUID, list[model.Model]]] = {
             model_class: {person_id: [] for person_id in person_ids}
@@ -58,12 +59,16 @@ class OmopSARepository(SARepository, BaseOmopRepository):
             assert isinstance(uow, SAUnitOfWork)
             # Retrieve all data per person
             for model_class in model_classes:
-                sa_model_class = sa_model.SA_MODELS_BY_SERVICE_TYPE[
+                sa_model_class: Any = sa_model.SA_MODELS_BY_SERVICE_TYPE[
                     enum.ServiceType.OMOP
                 ][model_class]
-                id_field = sa_model_class.person_id if model_class in [model.Person] + model.FullPerson.DATA_CLASSES else sa_model_class.internal_id  # type: ignore[attr-defined]
+                id_field: Any
+                if model_class in [model.Person] + model.FullPerson.DATA_CLASSES:
+                    id_field = sa_model_class.person_id
+                else:
+                    id_field = sa_model_class.internal_id
                 stmt: sa.Select = sa.select(sa_model_class).where(
-                    id_field.in_(person_id_set)  # type: ignore[attr-defined]
+                    id_field.in_(person_id_set)
                 )
                 mapper = self.get_mapper(model_class)
                 objs_by_person = db[model_class]
