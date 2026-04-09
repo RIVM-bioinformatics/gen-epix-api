@@ -671,6 +671,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.seqdb.integration.retrieve_samples",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_seqdb_integration_retrieve_samples"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.seqdb.performance.calculate_seq_distances",
             "type": "debugpy",
             "request": "launch",

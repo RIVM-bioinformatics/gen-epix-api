@@ -6,7 +6,7 @@ import datetime
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from gen_epix.commondb.domain.command import Command, CrudCommand
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
@@ -136,9 +136,32 @@ class CalculatePhylogeneticTreeCommand(Command):
         return self
 
 
-class RetrieveSamplesCommand(Command):
+class RetrieveSamplesByQueryCommand(Command):
+    """
+    Retrieve sample IDs based on a query. These IDs can then be used to retrieve
+    the corresponding samples.
+    """
 
-    sample_ids: list[UUID]
+    sample_query: model.SampleQuery = Field(
+        description="The query to filter samples by."
+    )
+
+
+class RetrieveSamplesByIdCommand(Command):
+    """
+    Retrieve all data for a list of sample IDs, as a list of FullSample
+    objects in the same order.
+    """
+
+    sample_ids: list[UUID] = Field(
+        description="IDs of the samples to retrieve. Must be unique.",
+    )
+
+    @field_validator("sample_ids", mode="after")
+    def _validate_sample_ids(cls, sample_ids: list[UUID]) -> list[UUID]:
+        if len(set(sample_ids)) != len(sample_ids):
+            raise ValueError("sample_ids must be unique")
+        return sample_ids
 
 
 class RetrieveSeqFastaCommand(Command):

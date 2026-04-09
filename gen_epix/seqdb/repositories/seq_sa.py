@@ -1,11 +1,11 @@
 from collections.abc import Iterable
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import sqlalchemy as sa
 
-import gen_epix.seqdb.repositories.sa_model.seq as sa_model
+import gen_epix.seqdb.repositories.sa_model as sa_model
 from gen_epix.fastapp import BaseUnitOfWork
 from gen_epix.fastapp.repositories import SARepository, SAUnitOfWork
 from gen_epix.seqdb.domain import enum, exc, model
@@ -13,6 +13,100 @@ from gen_epix.seqdb.domain.repository import BaseSeqRepository
 
 
 class SeqSARepository(SARepository, BaseSeqRepository):
+
+    def get_sample_ids_modified_in_range(
+        self,
+        uow: BaseUnitOfWork,
+        modified_since: datetime | None = None,
+        modified_until: datetime | None = None,
+    ) -> list[UUID]:
+        assert isinstance(uow, SAUnitOfWork)
+        modified_sample_ids: set[UUID] = set()
+        for model_class in [model.Sample] + model.FullSample.DATA_CLASSES:
+            sa_model_class = sa_model.SA_MODELS_BY_SERVICE_TYPE[enum.ServiceType.SEQ][
+                model_class
+            ]
+            if model_class == model.Sample:
+                id_field = sa_model_class.id  # type: ignore[attr-defined]
+            else:
+                id_field = sa_model_class.sample_id  # type: ignore[attr-defined]
+            conditions = []
+            if modified_since is not None:
+                conditions.append(sa_model_class.modified_at >= modified_since)  # type: ignore[attr-defined]
+            if modified_until is not None:
+                conditions.append(sa_model_class.modified_at < modified_until)  # type: ignore[attr-defined]
+            stmt = sa.select(id_field).where(*conditions)
+            modified_sample_ids.update(row[0] for row in uow.session.execute(stmt))
+        return sorted(modified_sample_ids)
+
+    def get_full_samples_by_sample_ids(
+        self,
+        sample_ids: list[UUID],
+    ) -> list[model.FullSample]:
+        if not sample_ids:
+            return []
+
+        # Initialize some
+        sample_id_set = set(sample_ids)
+        model_classes = (
+            [model.Sample, model.SampleIdentifier]
+            + model.FullSample.DATA_CLASSES
+            + model.FullSample.IDENTIFIER_CLASSES
+        )
+        db: dict[type[model.Model], dict[UUID, list[model.Model]]] = {
+            model_class: {sample_id: [] for sample_id in sample_ids}
+            for model_class in model_classes
+        }
+
+        # Retrieve all data and create FullSamples
+        with self.uow() as uow:
+            assert isinstance(uow, SAUnitOfWork)
+            # Retrieve all data per sample
+            for model_class in model_classes:
+                sa_model_class = sa_model.SA_MODELS_BY_SERVICE_TYPE[
+                    enum.ServiceType.SEQ
+                ][model_class]
+                if model_class == model.Sample:
+                    id_field_name = "id"
+                elif model_class in model.FullSample.DATA_CLASSES:
+                    id_field_name = "sample_id"
+                else:
+                    id_field_name = "internal_id"
+                id_field = getattr(sa_model_class, id_field_name)  # type: ignore[attr-defined]
+                stmt: sa.Select = sa.select(sa_model_class).where(
+                    id_field.in_(sample_id_set)  # type: ignore[attr-defined]
+                )
+                mapper = self.get_mapper(model_class)
+                objs_by_sample = db[model_class]
+                for row in uow.session.execute(stmt):
+                    obj = cast(model.Model, mapper.load(row[0]))
+                    sample_id = cast(UUID, getattr(obj, id_field_name))
+                    objs_by_sample[sample_id].append(obj)
+
+            # Create FullSamples
+            class_field_map = (
+                model.FullSample.DATA_CLASS_FIELD_MAP
+                | model.FullSample.IDENTIFIER_FIELD_MAP
+                | {model.SampleIdentifier: "sample_identifiers"}
+            )
+            full_samples: list[model.FullSample] = []
+            for sample_id in sample_ids:
+                samples = db[model.Sample][sample_id]
+                if not samples:
+                    continue
+                sample = cast(model.Sample, samples[0])
+                full_sample_kwargs = {}
+                for model_class, field_name in class_field_map.items():
+                    full_sample_kwargs[field_name] = db[model_class][sample_id]
+                full_samples.append(
+                    model.FullSample(
+                        id=sample_id,
+                        sample=sample,
+                        **full_sample_kwargs,  # type: ignore[arg-type]
+                    )
+                )
+
+            return full_samples
 
     def retrieve_seq_fasta(
         self,
@@ -47,14 +141,15 @@ class SeqSARepository(SARepository, BaseSeqRepository):
     ) -> list[UUID]:
         if not profile_ids:
             return []
+        seq_distance_model: Any = sa_model.SeqDistance
         stmt = sa.select(
-            sa_model.SeqDistance.id,
-            sa_model.SeqDistance.format,
-            sa_model.SeqDistance.content,
-            sa_model.SeqDistance.content2,
+            seq_distance_model.id,
+            seq_distance_model.format,
+            seq_distance_model.content,
+            seq_distance_model.content2,
         ).where(
-            (sa_model.SeqDistance.protocol_id == protocol_id)
-            & sa_model.SeqDistance.seq_profile_id.in_(profile_ids)
+            (seq_distance_model.protocol_id == protocol_id)
+            & seq_distance_model.seq_profile_id.in_(profile_ids)
         )
         assert isinstance(uow, SAUnitOfWork)
         result_iterator = uow.session.execute(stmt)
