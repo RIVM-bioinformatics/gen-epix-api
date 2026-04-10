@@ -65,6 +65,7 @@ class RoleGenerator:
             ),
             # system
             (command.OutageCrudCommand, PermissionTypeSet.CRUD),
+            (command.UpdateLogLevelCommand, PermissionTypeSet.E),
         },
         Role.REFDATA_ADMIN: {
             # organization

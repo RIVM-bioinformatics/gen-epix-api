@@ -138,6 +138,22 @@ def create_system_endpoints(
         except Exception as exception:
             handle_exception("09c8e2cd", user, exception)
 
+    @router.post(
+        "/update/log_level",
+        operation_id="update__log_level",
+        name="Update Log Level",
+        description=command.UpdateLogLevelCommand.__doc__,
+    )
+    async def update__log_level(
+        user: registered_user_dependency,
+        log_level: enum.LogLevel,  # type: ignore
+    ) -> None:
+        try:
+            cmd = command.UpdateLogLevelCommand(user=user, log_level=log_level)
+            app.handle(cmd)
+        except Exception as exception:
+            handle_exception("8c6f78ac", user, exception)
+
     # Outage
     @router.get(
         "/retrieve/outages",

@@ -5,6 +5,11 @@ from enum import Enum
 import ulid
 
 
+class LogLevel(Enum):
+    INFO = "INFO"
+    DEBUG = "DEBUG"
+
+
 class TimestampFactory(Enum):
     DATETIME_NOW = lambda: datetime.datetime.now(datetime.timezone.utc)
 

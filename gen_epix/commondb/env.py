@@ -126,6 +126,7 @@ class AppComposer(BaseAppComposer):
                 role_map=self._role_map,
                 role_set_map=self._role_set_map,
                 role_permissions_map=self._role_permissions_map,
+                app_cfg=self._app_cfg,
             )
             app = App(
                 name=self._app_cfg.app_name,

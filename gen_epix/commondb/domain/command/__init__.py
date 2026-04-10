@@ -99,6 +99,9 @@ from gen_epix.commondb.domain.command.system import (
 from gen_epix.commondb.domain.command.system import (
     RetrieveOutagesCommand as RetrieveOutagesCommand,
 )
+from gen_epix.commondb.domain.command.system import (
+    UpdateLogLevelCommand as UpdateLogLevelCommand,
+)
 from gen_epix.fastapp.services.auth import (
     GetIdentityProvidersCommand as GetIdentityProvidersCommand,
 )
@@ -147,6 +150,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[type[fastapp.Command]
             RetrieveFeatureFlagsCommand,
             RetrieveOutagesCommand,
             RetrieveLicensesCommand,
+            UpdateLogLevelCommand,
         }
     ),
     enum.ServiceType.ABAC: frozenset(

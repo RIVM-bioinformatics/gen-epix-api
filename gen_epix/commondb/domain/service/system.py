@@ -16,6 +16,7 @@ class BaseSystemService(BaseService[BaseSystemRepository]):
         f(command.RetrieveOutagesCommand, self.retrieve_outages)
         f(command.RetrieveLicensesCommand, self.retrieve_licenses)
         f(command.RetrieveFeatureFlagsCommand, self.retrieve_feature_flags)
+        f(command.UpdateLogLevelCommand, self.update_log_level)
 
     @abc.abstractmethod
     def register_policies(self) -> None:
@@ -37,4 +38,8 @@ class BaseSystemService(BaseService[BaseSystemRepository]):
     def retrieve_feature_flags(
         self, cmd: command.RetrieveFeatureFlagsCommand
     ) -> dict[Hashable, bool]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def update_log_level(self, cmd: command.UpdateLogLevelCommand) -> None:
         raise NotImplementedError

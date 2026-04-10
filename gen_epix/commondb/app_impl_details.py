@@ -6,6 +6,7 @@ from typing import Any, TypeVar, overload
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
 from gen_epix import fastapp
+from gen_epix.commondb.config.cfg import AppCfg
 from gen_epix.commondb.domain import command, enum, model
 from gen_epix.fastapp import BaseUserManager
 from gen_epix.fastapp.services.rbac import BaseRbacService
@@ -73,6 +74,7 @@ class AppImplDetails(BaseModel):
     ] = Field(
         description="Mapping of roles as strings to (command, permission type) tuples",
     )
+    app_cfg: AppCfg = Field(description="Application configuration instance")
 
     @computed_field(  # type: ignore[prop-decorator]
         description="Reverse mapping of role strings to their corresponding roles."

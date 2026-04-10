@@ -180,3 +180,6 @@ class SystemService(BaseSystemService):
 
         # If no well-known labels found, return first URL available
         return next(iter(urls.values())) if urls else ""
+
+    def update_log_level(self, cmd: command.UpdateLogLevelCommand) -> None:
+        self.app.impl.app_cfg.set_log_level(cmd.log_level.value)
