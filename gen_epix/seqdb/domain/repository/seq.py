@@ -95,6 +95,30 @@ class BaseSeqRepository(BaseRepository):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def get_sample_ids_modified_in_range(
+        self,
+        uow: BaseUnitOfWork,
+        modified_since: datetime | None = None,
+        modified_until: datetime | None = None,
+    ) -> list[UUID]:
+        """
+        Retrieve sample IDs for samples and sample-linked data modified in the
+        [modified_since, modified_until) range.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_full_samples_by_sample_ids(
+        self,
+        sample_ids: list[UUID],
+    ) -> list[model.FullSample]:
+        """
+        Retrieve all relevant data for the specified sample IDs and construct
+        FullSample objects.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def filter_seq_profiles_by_quality(
         self,
         uow: BaseUnitOfWork,
@@ -107,5 +131,4 @@ class BaseSeqRepository(BaseRepository):
         Given a list of SeqProfile IDs, return the subset of SeqProfiles IDs
         that have a usable quality check result.
         """
-        raise NotImplementedError()
         raise NotImplementedError()

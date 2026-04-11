@@ -53,9 +53,8 @@ def _verify_batch_refdata_allele_profiles(
         uow,
         user_id,
         model.Protocol,
-        None,
-        list(uq_protocol_ids),
         CrudOperation.READ_SOME,
+        obj_ids=list(uq_protocol_ids),
     )
     protocol_map = {x.id: x for x in protocols}
 
@@ -69,9 +68,8 @@ def _verify_batch_refdata_allele_profiles(
         uow,
         user_id,
         model.LocusSet,
-        None,
-        list(locus_set_ids),
         CrudOperation.READ_SOME,
+        obj_ids=list(locus_set_ids),
     )
     locus_set_map = {x.id: x for x in locus_sets}
 
@@ -85,9 +83,8 @@ def _verify_batch_refdata_allele_profiles(
         uow,
         user_id,
         model.LocusCodeMap,
-        None,
-        list(locus_code_map_ids),
         CrudOperation.READ_SOME,
+        obj_ids=list(locus_code_map_ids),
     )
     locus_code_map_map = {x.id: x for x in locus_code_maps}
 
@@ -157,9 +154,8 @@ def _verify_batch_refdata_allele_profiles(
             uow,
             user_id,
             model.Allele,
-            None,
-            curr_allele_ids,
             CrudOperation.EXISTS_SOME,
+            obj_ids=curr_allele_ids,
         )
         existing_allele_ids.update(
             allele_id
@@ -322,9 +318,8 @@ def _verify_batch_refdata_mlva_profiles(
         uow,
         user_id,
         model.Protocol,
-        None,
-        list(protocol_ids),
         CrudOperation.READ_SOME,
+        obj_ids=list(protocol_ids),
     )
     protocol_map = {protocol.id: protocol for protocol in protocols}
 
@@ -338,9 +333,8 @@ def _verify_batch_refdata_mlva_profiles(
         uow,
         user_id,
         model.LocusSet,
-        None,
-        list(locus_set_ids),
         CrudOperation.READ_SOME,
+        obj_ids=list(locus_set_ids),
     )
     locus_set_map = {locus_set.id: locus_set for locus_set in locus_sets}
 
@@ -354,9 +348,8 @@ def _verify_batch_refdata_mlva_profiles(
         uow,
         user_id,
         model.LocusCodeMap,
-        None,
-        list(locus_code_map_ids),
         CrudOperation.READ_SOME,
+        obj_ids=list(locus_code_map_ids),
     )
     rev_locus_code_map_map = {
         locus_code_map.id: {

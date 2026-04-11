@@ -22,11 +22,13 @@ class SeqdbEndpointTestClient(EndpointTestClient):
             command.UpdateUserOwnOrganizationCommand,
             self.handle_update_user_own_organization,
         )
-        # self.register_handler(
-        #     command.RetrieveCasesByIdCommand, self.handle_retrieve_cases_by_id
-        # )
-        # self.register_handler(command.CreateCasesCommand, self.handle_cases_create)
-        # self.register_handler(command.CreateCaseSetCommand, self.handle_case_set_create)
+        self.register_handler(
+            command.RetrieveSamplesByIdCommand, self.handle_retrieve_samples_by_id
+        )
+        self.register_handler(
+            command.RetrieveSamplesByQueryCommand,
+            self.handle_retrieve_sample_ids_by_query,
+        )
 
     def handle_update_user_own_organization(
         self,
@@ -49,16 +51,30 @@ class SeqdbEndpointTestClient(EndpointTestClient):
         retval = self._content_to_obj(response, model.User)
         return retval, response
 
-    # def handle_retrieve_cases_by_id(
-    #     self,
-    #     cmd: command.RetrieveCasesByIdCommand,
-    #     route_prefix: str,
-    #     headers: dict[str, str] | None,
-    # ) -> tuple[Any, Response]:
-    #     response = self.test_client.post(
-    #         route_prefix + f"/retrieve/cases_by_ids",
-    #         json=json.loads(cmd.model_dump_json())["case_ids"],
-    #         headers=headers,
-    #     )
-    #     retval = self._content_to_obj(response, model.Case, is_list=True)
-    #     return retval, response
+    def handle_retrieve_samples_by_id(
+        self,
+        cmd: command.RetrieveSamplesByIdCommand,
+        route_prefix: str,
+        headers: dict[str, str] | None,
+    ) -> tuple[Any, Response]:
+        response = self.test_client.post(
+            route_prefix + "/retrieve/samples_by_id",
+            headers=headers,
+            json=json.loads(cmd.model_dump_json(exclude={"user"})),
+        )
+        retval = self._content_to_obj(response, model.FullSample, is_list=True)
+        return retval, response
+
+    def handle_retrieve_sample_ids_by_query(
+        self,
+        cmd: command.RetrieveSamplesByQueryCommand,
+        route_prefix: str,
+        headers: dict[str, str] | None,
+    ) -> tuple[Any, Response]:
+        response = self.test_client.post(
+            route_prefix + "/retrieve/sample_ids_by_query",
+            headers=headers,
+            json=json.loads(cmd.model_dump_json(exclude={"user"})),
+        )
+        retval = self._content_to_obj(response, model.SampleQueryResult)
+        return retval, response

@@ -204,22 +204,24 @@ class BaseRetrieveCaseTestCase(TestCase):
             _uow: Any,
             _user_id: UUID,
             cls: type[model.Model],
-            _obj: Any,
-            ids: list[UUID] | None,
-            _op: Any,
+            _operation: Any,
+            _filter: Any = None,
+            _objs: Any = None,
+            obj_ids: list[UUID] | None = None,
+            **kwargs: Any,
         ) -> list[Any]:
-            if cls is model.CaseType and ids == [self.case_type_id]:
+            if cls is model.CaseType and obj_ids == [self.case_type_id]:
                 return [self._repo_case_type] if self._repo_case_type else []
             if cls is model.Col:
-                if not ids or self._repo_cols is None:
+                if not obj_ids or self._repo_cols is None:
                     return []
                 # Preserve input order of ids to align filters → map functions
-                return [next(x for x in self._repo_cols if x.id == i) for i in ids]
+                return [next(x for x in self._repo_cols if x.id == i) for i in obj_ids]
             if cls is model.RefCol:
-                if not ids or self._repo_ref_cols is None:
+                if not obj_ids or self._repo_ref_cols is None:
                     return []
                 # Preserve input order of ids to align filters → map functions
-                return [next(x for x in self._repo_ref_cols if x.id == i) for i in ids]
+                return [next(x for x in self._repo_ref_cols if x.id == i) for i in obj_ids]
             return []
 
         self.repository.crud.side_effect = _crud_side_effect

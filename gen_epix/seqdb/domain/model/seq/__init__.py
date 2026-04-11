@@ -20,6 +20,11 @@ from gen_epix.seqdb.domain.model.seq.locus import Locus as Locus
 from gen_epix.seqdb.domain.model.seq.locus import LocusCodeMap as LocusCodeMap
 from gen_epix.seqdb.domain.model.seq.locus import LocusSet as LocusSet
 from gen_epix.seqdb.domain.model.seq.locus import RefAllele as RefAllele
+from gen_epix.seqdb.domain.model.seq.non_persistable import FullSample as FullSample
+from gen_epix.seqdb.domain.model.seq.non_persistable import SampleQuery as SampleQuery
+from gen_epix.seqdb.domain.model.seq.non_persistable import (
+    SampleQueryResult as SampleQueryResult,
+)
 from gen_epix.seqdb.domain.model.seq.pheno import AstMeasurement as AstMeasurement
 from gen_epix.seqdb.domain.model.seq.pheno import PcrMeasurement as PcrMeasurement
 from gen_epix.seqdb.domain.model.seq.profile import SeqProfile as SeqProfile

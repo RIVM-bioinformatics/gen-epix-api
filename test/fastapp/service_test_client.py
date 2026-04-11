@@ -208,22 +208,38 @@ class ServiceTestClient:
         models1_1 = self.df[Model1_1].values()
         with self.service1.repository.uow() as uow:
             models1_1_created = self.service1.repository.crud(
-                uow, user_id, Model1_1, models1_1, None, CrudOperation.CREATE_SOME
+                uow,
+                user_id,
+                Model1_1,
+                CrudOperation.CREATE_SOME,
+                objs=models1_1,
             )
         models1_2 = self.df[Model1_2].values()
         with self.service1.repository.uow() as uow:
             models1_2_created = self.service1.repository.crud(
-                uow, user_id, Model1_2, models1_2, None, CrudOperation.CREATE_SOME
+                uow,
+                user_id,
+                Model1_2,
+                CrudOperation.CREATE_SOME,
+                objs=models1_2,
             )
         models2_1 = self.df[Model2_1].values()
         with self.service2.repository.uow() as uow:
             models2_1_created = self.service2.repository.crud(
-                uow, user_id, Model2_1, models2_1, None, CrudOperation.CREATE_SOME
+                uow,
+                user_id,
+                Model2_1,
+                CrudOperation.CREATE_SOME,
+                objs=models2_1,
             )
         models2_2 = self.df[Model2_2].values()
         with self.service2.repository.uow() as uow:
             models2_2_created = self.service2.repository.crud(
-                uow, user_id, Model2_2, models2_2, None, CrudOperation.CREATE_SOME
+                uow,
+                user_id,
+                Model2_2,
+                CrudOperation.CREATE_SOME,
+                objs=models2_2,
             )
         return (
             models1_1_created,

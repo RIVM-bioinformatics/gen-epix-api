@@ -62,11 +62,12 @@ class OmopSARepository(SARepository, BaseOmopRepository):
                 sa_model_class: Any = sa_model.SA_MODELS_BY_SERVICE_TYPE[
                     enum.ServiceType.OMOP
                 ][model_class]
-                id_field: Any
-                if model_class in [model.Person] + model.FullPerson.DATA_CLASSES:
-                    id_field = sa_model_class.person_id
-                else:
-                    id_field = sa_model_class.internal_id
+                id_field_name = (
+                    "person_id"
+                    if model_class in [model.Person] + model.FullPerson.DATA_CLASSES
+                    else "internal_id"
+                )
+                id_field = getattr(sa_model_class, id_field_name)
                 stmt: sa.Select = sa.select(sa_model_class).where(
                     id_field.in_(person_id_set)
                 )
@@ -74,7 +75,7 @@ class OmopSARepository(SARepository, BaseOmopRepository):
                 objs_by_person = db[model_class]
                 for row in uow.session.execute(stmt):
                     obj = cast(model.Model, mapper.load(row[0]))
-                    person_id = cast(UUID, getattr(obj, "person_id"))
+                    person_id = cast(UUID, getattr(obj, id_field_name))
                     objs_by_person[person_id].append(obj)
 
             # Create FullPersons

@@ -105,18 +105,16 @@ class UserManager(BaseUserManager):
                 uow,
                 None,
                 model.Organization,
-                None,
-                cfg_root_organization.id,
                 CrudOperation.EXISTS_ONE,
+                obj_ids=cfg_root_organization.id,
             )
             if not is_existing_organization:
                 _ = self._organization_service.repository.crud(
                     uow,
                     None,
                     model.Organization,
-                    cfg_root_organization,
-                    None,
                     CrudOperation.CREATE_ONE,
+                    objs=cfg_root_organization,
                 )
 
             # Create root user
@@ -139,9 +137,8 @@ class UserManager(BaseUserManager):
                     uow,
                     root_user.id,
                     self._user_class,
-                    root_user,
-                    None,
                     CrudOperation.CREATE_ONE,
+                    objs=root_user,
                 )
             )
 
@@ -158,9 +155,8 @@ class UserManager(BaseUserManager):
                 uow,
                 None,
                 model.Organization,
-                None,
-                organization_id,
                 CrudOperation.EXISTS_ONE,
+                obj_ids=organization_id,
             )
             if not is_existing_organization:
                 raise exc.InitializationServiceError(
@@ -189,9 +185,8 @@ class UserManager(BaseUserManager):
                     uow,
                     claims_user.id,
                     self._user_class,
-                    claims_user,
-                    None,
                     CrudOperation.CREATE_ONE,
+                    objs=claims_user,
                 )
             )
 
@@ -222,9 +217,8 @@ class UserManager(BaseUserManager):
                 uow,
                 None,
                 self._user_class,
-                None,
-                created_by_user_id,
                 CrudOperation.EXISTS_ONE,
+                obj_ids=created_by_user_id,
             )
             if not is_existing_user:
                 raise exc.UnauthorizedAuthError("Created by user does not exist")
@@ -238,8 +232,6 @@ class UserManager(BaseUserManager):
                     uow,
                     created_by_user_id,
                     self._user_invitation_class,
-                    None,
-                    None,
                     CrudOperation.READ_ALL,
                 )
             )
@@ -269,9 +261,8 @@ class UserManager(BaseUserManager):
                 uow,
                 None,
                 model.Organization,
-                None,
-                user.organization_id,
                 CrudOperation.EXISTS_ONE,
+                obj_ids=user.organization_id,
             )
             if not is_existing_organization:
                 raise exc.UnauthorizedAuthError("Organization does not exist")
@@ -286,11 +277,10 @@ class UserManager(BaseUserManager):
                         uow,
                         created_by_user_id,
                         self._user_class,
-                        self._user_class(
+                        CrudOperation.CREATE_ONE,
+                        objs=self._user_class(
                             **(user.model_dump() | {"id": self.generate_id()})
                         ),
-                        None,
-                        CrudOperation.CREATE_ONE,
                     )
                 )
             except Exception:
@@ -315,9 +305,8 @@ class UserManager(BaseUserManager):
                     uow,
                     user_id,
                     self._user_class,
-                    None,
-                    user_id,
                     CrudOperation.READ_ONE,
+                    obj_ids=user_id,
                 )
             )
         return user
@@ -334,9 +323,8 @@ class UserManager(BaseUserManager):
                     uow,
                     user.id,
                     self._user_class,
-                    user,
-                    None,
                     CrudOperation.UPDATE_ONE,
+                    objs=user,
                 )
             )
         return updated_user

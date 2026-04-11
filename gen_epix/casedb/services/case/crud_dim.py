@@ -83,8 +83,6 @@ def _verify_one_case_date_dim(
         uow,
         cmd.user.id,
         model.Dim,
-        None,
-        None,
         CrudOperation.READ_ALL,
         filter=self._compose_id_filter(("case_type_id", {dim.case_type_id})),
     )
@@ -98,9 +96,8 @@ def _verify_one_case_date_dim(
                 uow,
                 cmd.user.id,
                 model.Dim,
-                other,
-                None,
                 CrudOperation.UPDATE_ONE,
+                objs=other,
             )
 
 
@@ -115,9 +112,8 @@ def _validate_case_date_dim(
         uow,
         cmd.user.id,
         model.RefDim,
-        None,
-        [dim.ref_dim_id],
         CrudOperation.READ_SOME,
+        obj_ids=[dim.ref_dim_id],
     )
     if not ref_dim_list:
         raise exc.InvalidIdsError(
@@ -150,8 +146,6 @@ def _load_existing_dims(
         uow,
         cmd.user.id,
         model.Dim,
-        None,
-        None,
         CrudOperation.READ_ALL,
         filter=self._compose_id_filter(
             ("case_type_id", {dim.case_type_id}),
@@ -227,9 +221,8 @@ def _get_existing_dim(
         uow,
         cmd.user.id,
         model.Dim,
-        None,
-        [updated.id],
         CrudOperation.READ_SOME,
+        obj_ids=[updated.id],
     )
     if not existing_list:
         raise exc.InvalidIdsError(
