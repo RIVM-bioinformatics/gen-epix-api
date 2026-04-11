@@ -90,7 +90,7 @@ class TestAdminCreate(BaseDimTestCase):
         )
 
         def repo_crud_side_effect(*args: Any, **kwargs: Any) -> List[Any]:
-            op: CrudOperation = args[5]
+            op: CrudOperation = args[-1]
             if op == CrudOperation.READ_ALL:
                 return []
             if op == CrudOperation.READ_SOME and args[2] == model.RefDim:
@@ -155,7 +155,7 @@ class TestAdminCreate(BaseDimTestCase):
         )
 
         def repo_crud_side_effect(*args: Any, **kwargs: Any) -> List[Any]:
-            op: CrudOperation = args[5]
+            op: CrudOperation = args[-1]
             model_class = args[2]
             if op == CrudOperation.READ_ALL and model_class == model.Dim:
                 # First READ_ALL: existing dims with same key -> [existing_same_key]
@@ -190,9 +190,8 @@ class TestAdminCreate(BaseDimTestCase):
                 self.uow,
                 self.user_id,
                 model.Dim,
-                other_for_same_case_type,
-                None,
                 CrudOperation.UPDATE_ONE,
+                objs=other_for_same_case_type,
             )
             self.assertIsInstance(retval, list)
 
@@ -214,7 +213,7 @@ class TestAdminCreate(BaseDimTestCase):
         )
 
         def repo_crud_side_effect(*args: Any, **kwargs: Any) -> List[Any]:
-            op: CrudOperation = args[5]
+            op: CrudOperation = args[-1]
             if op == CrudOperation.READ_ALL:
                 return []
             if op == CrudOperation.READ_SOME and args[2] == model.RefDim:
@@ -250,7 +249,7 @@ class TestAdminCreate(BaseDimTestCase):
 
         # 2. Mocks
         def repo_crud_side_effect(*args: Any, **kwargs: Any) -> List[Any]:
-            op: CrudOperation = args[5]
+            op: CrudOperation = args[-1]
             if op == CrudOperation.READ_ALL:
                 return []
             if op == CrudOperation.READ_SOME and args[2] == model.RefDim:
@@ -294,7 +293,7 @@ class TestAdminUpdate(BaseDimTestCase):
         )
 
         def repo_crud_side_effect(*args: Any, **kwargs: Any) -> List[Any]:
-            op: CrudOperation = args[5]
+            op: CrudOperation = args[-1]
             if op == CrudOperation.READ_SOME and args[2] == model.Dim:
                 return [stored]
             return []
@@ -340,7 +339,7 @@ class TestAdminUpdate(BaseDimTestCase):
         )
 
         def repo_crud_side_effect(*args: Any, **kwargs: Any) -> List[Any]:
-            op: CrudOperation = args[5]
+            op: CrudOperation = args[-1]
             model_class = args[2]
             if op == CrudOperation.READ_SOME and model_class == model.Dim:
                 return [stored]
@@ -368,9 +367,8 @@ class TestAdminUpdate(BaseDimTestCase):
                 self.uow,
                 self.user_id,
                 model.Dim,
-                other_time_true,
-                None,
                 CrudOperation.UPDATE_ONE,
+                objs=other_time_true,
             )
             self.assertIsInstance(retval, list)
 

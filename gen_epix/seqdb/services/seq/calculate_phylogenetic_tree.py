@@ -39,9 +39,8 @@ def seq_service_calculate_phylogenetic_tree(
             uow,
             user_id,
             model.Protocol,
-            None,
-            protocol_id,
             CrudOperation.READ_ONE,
+            obj_ids=protocol_id,
         )
 
     # Special case: 0 or 1 sequences
@@ -62,8 +61,6 @@ def seq_service_calculate_phylogenetic_tree(
                 uow,
                 user_id,
                 model.SeqDistance,
-                None,
-                None,
                 CrudOperation.READ_ALL,
                 filter=CompositeFilter(
                     filters=[

@@ -385,11 +385,11 @@ class SARepository(BaseRepository):
         uow: BaseUnitOfWork,
         user_id: Hashable | None,
         model_class: type[Model],
-        objs: Model | Iterable[Model] | None,
-        obj_ids: Hashable | Iterable[Hashable] | None,
         operation: CrudOperation,
+        objs: Model | Iterable[Model] | None = None,
+        obj_ids: Hashable | Iterable[Hashable] | None = None,
         filter: Filter | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Model | list[Model] | Hashable | list[Hashable] | bool | list[bool] | None:
         if not isinstance(uow, SAUnitOfWork):
             raise exc.RepositoryServiceError(f"Invalid UnitOfWork: {uow}")
@@ -1056,9 +1056,8 @@ class SARepository(BaseRepository):
                     uow,
                     user_id,
                     model_class,
-                    None,
-                    list(obj_ids_set),
                     CrudOperation.READ_SOME,
+                    obj_ids=list(obj_ids_set),
                 )
             except exc.InvalidIdsError as e:
                 # TODO: determine invalid obj_ids and pass them to the exception

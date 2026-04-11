@@ -141,8 +141,6 @@ def create_demo_data_from_repository(
                 sa_uow,
                 user_id,
                 model_class,
-                None,
-                None,
                 CrudOperation.DELETE_ALL,
             )
     for entity in entities:
@@ -155,8 +153,6 @@ def create_demo_data_from_repository(
                 dict_uow,
                 user_id,
                 model_class,
-                None,
-                None,
                 CrudOperation.READ_ALL,
                 return_copy=False,
             )
@@ -164,9 +160,8 @@ def create_demo_data_from_repository(
                 sa_uow,
                 user_id,
                 model_class,
-                objs,
-                None,
                 CrudOperation.CREATE_SOME,
+                objs=objs,
             )
 
 

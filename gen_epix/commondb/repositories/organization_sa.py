@@ -46,8 +46,6 @@ class OrganizationSARepository(SARepository, BaseOrganizationRepository):
             uow,
             None,
             self.user_class,
-            None,
-            None,
             CrudOperation.READ_ALL,
         )
         for user in users:

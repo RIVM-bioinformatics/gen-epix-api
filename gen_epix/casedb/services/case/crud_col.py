@@ -76,9 +76,8 @@ def _validate_cols(
             uow,
             user.id,
             model.Dim,
-            None,
-            dim_ids,
             CrudOperation.READ_SOME,
+            obj_ids=dim_ids,
         )
         dim_map: dict[UUID, model.Dim] = {  # type: ignore[assignment]
             x.id: x for x in dims
@@ -90,9 +89,8 @@ def _validate_cols(
             uow,
             user.id,
             model.RefCol,
-            None,
-            ref_col_ids,
             CrudOperation.READ_SOME,
+            obj_ids=ref_col_ids,
         )
         ref_col_map: dict[UUID, model.RefCol] = {
             x.id: x for x in ref_cols

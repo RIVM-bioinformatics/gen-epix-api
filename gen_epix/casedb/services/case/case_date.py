@@ -73,8 +73,6 @@ def case_service_get_case_date_col_mappers(
         uow,
         user_id,
         model.Dim,
-        None,
-        None,
         CrudOperation.READ_ALL,
         filter=CompositeFilter(
             operator=LogicalOperator.AND,
@@ -93,9 +91,8 @@ def case_service_get_case_date_col_mappers(
         uow,
         user_id,
         model.RefDim,
-        None,
-        dim.ref_dim_id,
         CrudOperation.READ_ONE,
+        obj_ids=dim.ref_dim_id,
     )
     if ref_dim.dim_type != enum.DimType.TIME:
         raise ValueError(
@@ -106,8 +103,6 @@ def case_service_get_case_date_col_mappers(
         uow,
         user_id,
         model.Col,
-        None,
-        None,
         CrudOperation.READ_ALL,
         filter=EqualsUuidFilter(key="dim_id", value=dim.id),  # type: ignore[arg-type]
     )
@@ -121,9 +116,8 @@ def case_service_get_case_date_col_mappers(
         uow,
         user_id,
         model.RefCol,
-        None,
-        ref_col_ids,
         CrudOperation.READ_SOME,
+        obj_ids=ref_col_ids,
     )
     ref_cols_map: dict[UUID, model.RefCol] = {
         x.id: x for x in ref_cols if x.id is not None

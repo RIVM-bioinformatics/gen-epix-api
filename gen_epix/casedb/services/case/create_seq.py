@@ -127,9 +127,8 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
         uow,
         user_id,
         model.Col,
-        None,
-        list(set(col_ids)),
         CrudOperation.READ_SOME,
+        obj_ids=list(set(col_ids)),
     )
     col_map: dict[UUID, model.Col] = {x.id: x for x in cols if x.id is not None}
 
@@ -139,9 +138,8 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
         uow,
         user_id,
         model.RefCol,
-        None,
-        list(ref_col_ids),
         CrudOperation.READ_SOME,
+        obj_ids=list(ref_col_ids),
     )
     ref_col_by_id: dict[UUID, model.RefCol] = {
         x.id: x for x in ref_cols if x.id is not None
@@ -172,9 +170,8 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
         uow,
         user_id,
         model.Case,
-        None,
-        list(case_ids),
         CrudOperation.READ_SOME,
+        obj_ids=list(case_ids),
     )
 
     # Verify if all Cols are for the same CaseType as the cases

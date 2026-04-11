@@ -30,9 +30,8 @@ def case_service_retrieve_similar_cases(
             uow,
             user.id,
             model.Col,
-            None,
-            dist_col_id,
             CrudOperation.READ_ONE,
+            obj_ids=dist_col_id,
         )
         if dist_col.case_type_id != case_type_id:
             raise exc.InvalidArgumentsError(
@@ -42,9 +41,8 @@ def case_service_retrieve_similar_cases(
             uow,
             user.id,
             model.RefCol,
-            None,
-            dist_col.ref_col_id,
             CrudOperation.READ_ONE,
+            obj_ids=dist_col.ref_col_id,
         )
         if dist_ref_col.col_type != enum.ColType.GENETIC_DISTANCE:
             raise exc.InvalidArgumentsError(
@@ -57,9 +55,8 @@ def case_service_retrieve_similar_cases(
                 uow,
                 user.id,
                 model.GeneticDistanceProtocol,
-                None,
-                dist_ref_col.genetic_distance_protocol_id,
                 CrudOperation.READ_ONE,
+                obj_ids=dist_ref_col.genetic_distance_protocol_id,
             )
         )
         seqdb_seq_distance_protocol_id = (
