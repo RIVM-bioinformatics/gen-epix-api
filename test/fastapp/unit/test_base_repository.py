@@ -64,9 +64,9 @@ class DummyRepository(BaseRepository):
         user_id: Hashable | None,
         model_class: type[Model],
         operation: CrudOperation,
-        filter: Any | None = None,
         objs: Model | Iterable[Model] | None = None,
         obj_ids: Hashable | Iterable[Hashable] | None = None,
+        filter: Any | None = None,
         **kwargs: Any,
     ) -> Any:
         return self._crud_mock(

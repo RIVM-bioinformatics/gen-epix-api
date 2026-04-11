@@ -201,9 +201,9 @@ class InMemoryOrganizationRepository:
         user_id: Any,
         model_class: type,
         operation: CrudOperation,
-        filter: Any = None,
         objs: Any = None,
         obj_ids: Any = None,
+        filter: Any = None,
         **kwargs: Any,
     ) -> Any:
         is_org = issubclass(model_class, commondb_model.Organization)

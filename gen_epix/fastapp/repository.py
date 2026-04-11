@@ -43,9 +43,9 @@ class BaseRepository(abc.ABC):
         user_id: Hashable | None,
         model_class: type[Model],
         operation: CrudOperation,
-        filter: Filter | None = None,
         objs: Model | Iterable[Model] | None = None,
         obj_ids: Hashable | Iterable[Hashable] | None = None,
+        filter: Filter | None = None,
         **kwargs: Any,
     ) -> Hashable | list[Hashable] | Model | list[Model] | bool | list[bool] | None:
         """
