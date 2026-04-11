@@ -3,7 +3,7 @@ import ssl
 from collections.abc import Callable
 from functools import partial
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import httpx
@@ -233,12 +233,15 @@ class RemoteApp(App):
         entity = model_class.ENTITY
         assert entity is not None
 
-        return partial(
-            self._execute_crud_operation,
-            base_route,
-            batch_route_suffix,
-            query_route_suffix,
-            ids_route_suffix,
+        return cast(
+            Callable[[Command], Any],
+            partial(
+                self._execute_crud_operation,
+                base_route,
+                batch_route_suffix,
+                query_route_suffix,
+                ids_route_suffix,
+            ),
         )
 
     def _execute_crud_operation(

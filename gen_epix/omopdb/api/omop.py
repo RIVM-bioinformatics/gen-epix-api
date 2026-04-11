@@ -18,13 +18,13 @@ class RetrievePersonsByIdsRequestBody(PydanticBaseModel):
         command.RetrievePersonsByIdCommand, "person_ids"
     )
 
+
 def create_omop_endpoints(
     router: APIRouter | FastAPI,
     app: App,
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     **kwargs: Any,
 ) -> None:
-
     assert handle_exception
     app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency
@@ -50,7 +50,6 @@ def create_omop_endpoints(
                 input_command=cmd,
             ),
         )
-
 
     @router.post(
         "/retrieve/person_ids_by_query",
@@ -99,7 +98,6 @@ def create_omop_endpoints(
                 ),
             ),
         )
-
 
     # CRUD
     crud_endpoint_sets = CrudEndpointGenerator.create_crud_endpoint_set_for_domain(

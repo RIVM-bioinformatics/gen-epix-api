@@ -201,9 +201,9 @@ class RetrieveCaseSetRightsCommand(Command):
         return value
 
 
-class RetrievePhylogeneticTreeBySequencesCommand(Command):
+class RetrievePhylogeneticTreeByProfilesCommand(Command):
     """
-    Calculate a phylogenetic tree based on a set of sequence IDs, a tree algorithm, and
+    Calculate a phylogenetic tree based on a set of profile IDs, a tree algorithm, and
     a protocol.
     """
 
@@ -213,6 +213,10 @@ class RetrievePhylogeneticTreeBySequencesCommand(Command):
     seqdb_protocol_id: UUID = Field(description="The ID of the protocol to use.")
     profile_ids: list[UUID] = Field(
         description="The IDs of the profiles to calculate the phylogenetic tree for."
+    )
+    allowed_qc_results: set[seqdb_enum.QualityControlResult] = Field(
+        default=set(seqdb_enum.QualityControlResultSet.USABLE.value),
+        description="Set of allowed quality control results for the profiles to consider in the tree. Only profiles whose qc_result is in this set will be included in the tree. This allows excluding low-quality profiles from the tree.",
     )
 
 
@@ -233,6 +237,10 @@ class RetrievePhylogeneticTreeByCasesCommand(Command):
     )
     case_ids: list[UUID] = Field(
         description="The IDs of the cases to calculate the phylogenetic tree for."
+    )
+    allowed_qc_results: set[seqdb_enum.QualityControlResult] = Field(
+        default=set(seqdb_enum.QualityControlResultSet.USABLE.value),
+        description="Set of allowed quality control results for the profiles to consider in the tree. Only profiles whose qc_result is in this set will be included in the tree. This allows excluding low-quality profiles from the tree.",
     )
 
 

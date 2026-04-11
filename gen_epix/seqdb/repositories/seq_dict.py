@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from collections.abc import Set as AbstractSet
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -192,3 +193,24 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
             model.SeqProfile
         ]
         return [x for x in df.values() if x.protocol_id in unique_protocol_ids]
+
+    def filter_seq_profiles_by_quality(
+        self,
+        uow: BaseUnitOfWork,
+        seq_profile_ids: list[UUID],
+        allowed_qc_results: AbstractSet[
+            enum.QualityControlResult
+        ] = enum.QualityControlResultSet.USABLE.value,
+    ) -> list[UUID]:
+        unique_profile_ids = set(seq_profile_ids)
+        df: dict[UUID, model.SeqProfile] = self.db[  # type: ignore[assignment]
+            model.SeqProfile
+        ]
+        return [
+            x.id
+            for x in df.values()
+            if x.id is not None
+            and x.id in unique_profile_ids
+            and x.qc_result is not None
+            and x.qc_result in allowed_qc_results
+        ]
