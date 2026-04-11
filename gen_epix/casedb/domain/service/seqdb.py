@@ -16,7 +16,7 @@ class BaseSeqdbService(BaseService):
         f = self.app.register_handler
         self.register_default_crud_handlers()
         f(
-            command.RetrievePhylogeneticTreeBySequencesCommand,
+            command.RetrievePhylogeneticTreeByProfilesCommand,
             self.retrieve_phylogenetic_tree,
         )
         f(
@@ -33,7 +33,7 @@ class BaseSeqdbService(BaseService):
 
     @abc.abstractmethod
     def retrieve_phylogenetic_tree(
-        self, cmd: command.RetrievePhylogeneticTreeBySequencesCommand
+        self, cmd: command.RetrievePhylogeneticTreeByProfilesCommand
     ) -> model.PhylogeneticTree | None:
         raise NotImplementedError()
 

@@ -70,11 +70,12 @@ def case_service_retrieve_phylogenetic_tree(
         # Special case: zero case_ids
         if not case_ids:
             phylogenetic_tree: model.PhylogeneticTree = self.app.handle(
-                command.RetrievePhylogeneticTreeBySequencesCommand(
+                command.RetrievePhylogeneticTreeByProfilesCommand(
                     user=user,
                     tree_algorithm_code=tree_algorithm_code,
                     seqdb_protocol_id=seqdb_seq_distance_protocol_id,
                     profile_ids=[],
+                    allowed_qc_results=cmd.allowed_qc_results,
                 )
             )
             phylogenetic_tree.protocol_id = genetic_distance_protocol.id
@@ -102,11 +103,12 @@ def case_service_retrieve_phylogenetic_tree(
         profile_ids = list(case_profile_map.values())
         profile_case_map = {y: x for x, y in case_profile_map.items()}
         phylogenetic_tree: model.PhylogeneticTree = self.app.handle(
-            command.RetrievePhylogeneticTreeBySequencesCommand(
+            command.RetrievePhylogeneticTreeByProfilesCommand(
                 user=cmd.user,
                 tree_algorithm_code=tree_algorithm_code,
                 seqdb_protocol_id=seqdb_seq_distance_protocol_id,
                 profile_ids=profile_ids,
+                allowed_qc_results=cmd.allowed_qc_results,
                 props={
                     "leaf_id_mapper": lambda x: profile_case_map[x],
                 },
