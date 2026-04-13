@@ -61,8 +61,6 @@ class SystemService(BaseSystemService):
                     uow,
                     None,
                     model.Outage,
-                    None,
-                    None,
                     CrudOperation.READ_ALL,
                 )
             )

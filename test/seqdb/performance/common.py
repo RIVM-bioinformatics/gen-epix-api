@@ -67,8 +67,6 @@ def fill_empty_sqlite_repository(
                 dict_uow,
                 user_id,
                 model_class,
-                None,
-                None,
                 CrudOperation.READ_ALL,
                 return_copy=False,
             )
@@ -76,9 +74,8 @@ def fill_empty_sqlite_repository(
                 sa_uow,
                 user_id,
                 model_class,
-                objs,
-                None,
                 CrudOperation.CREATE_SOME,
+                objs=objs,
             )
 
 

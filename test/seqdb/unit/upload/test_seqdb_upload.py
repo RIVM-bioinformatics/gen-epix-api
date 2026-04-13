@@ -888,9 +888,11 @@ class TestVerifyReferenceData(BaseUploadTestCase):
             uow: Any,
             user_id: str | None,
             model_class: type,
-            obj: Any,
-            ids: list,
             operation: Any,
+            filter: Any = None,
+            objs: Any = None,
+            obj_ids: list | None = None,
+            **kwargs: Any,
         ) -> list:
             return []  # No reference data needed
 
@@ -946,9 +948,11 @@ class TestVerifyReferenceData(BaseUploadTestCase):
             uow: Any,
             user_id: str | None,
             model_class: type,
-            obj: Any,
-            ids: list,
             operation: Any,
+            filter: Any = None,
+            objs: Any = None,
+            obj_ids: list | None = None,
+            **kwargs: Any,
         ) -> list:
             if model_class.__name__ == "Protocol":
                 return [mock_protocol]
@@ -958,7 +962,9 @@ class TestVerifyReferenceData(BaseUploadTestCase):
                 return [mock_locus_code_map]
             elif model_class.__name__ == "Allele":
                 # EXISTS_SOME: return True only for the existing_allele_id
-                return [allele_id == existing_allele_id for allele_id in ids]
+                if obj_ids is None:
+                    return []
+                return [allele_id == existing_allele_id for allele_id in obj_ids]
             return []
 
         self.service.repository.crud.side_effect = mock_crud
@@ -1013,9 +1019,11 @@ class TestVerifyReferenceData(BaseUploadTestCase):
             uow: Any,
             user_id: str | None,
             model_class: type,
-            obj: Any,
-            ids: list,
             operation: Any,
+            filter: Any = None,
+            objs: Any = None,
+            obj_ids: list | None = None,
+            **kwargs: Any,
         ) -> list:
             if model_class.__name__ == "Protocol":
                 return [mock_protocol]
@@ -1025,7 +1033,9 @@ class TestVerifyReferenceData(BaseUploadTestCase):
                 return [mock_locus_code_map]
             elif model_class.__name__ == "Allele":
                 # EXISTS_SOME: both allele_ids are "existing" → they are not new
-                return [True for _ in ids]
+                if obj_ids is None:
+                    return []
+                return [True for _ in obj_ids]
             return []
 
         self.service.repository.crud.side_effect = mock_crud
@@ -1098,9 +1108,11 @@ class TestVerifyReferenceData(BaseUploadTestCase):
             uow: Any,
             user_id: str | None,
             model_class: type,
-            obj: Any,
-            ids: list,
             operation: Any,
+            filter: Any = None,
+            objs: Any = None,
+            obj_ids: list | None = None,
+            **kwargs: Any,
         ) -> list:
             if model_class.__name__ == "Protocol":
                 return [mock_protocol]

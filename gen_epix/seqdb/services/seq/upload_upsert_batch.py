@@ -19,13 +19,12 @@ def _create_sample_refdata(
     # Add any new alleles
     alleles = cmd.sample_batch.alleles
     if alleles:
-        created_alleles = self.service.repository.crud(
+        self.service.repository.crud(
             uow,
             user_id,
             model.Allele,
-            alleles,
-            None,
-            operation=CrudOperation.CREATE_SOME,
+            CrudOperation.CREATE_SOME,
+            objs=alleles,
         )
     return success
 

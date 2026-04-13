@@ -1420,9 +1420,8 @@ class BatchUploader:
                 uow,
                 user_id,
                 model_class,
-                None,
-                is_id_obj_ids,
                 CrudOperation.EXISTS_SOME,
+                obj_ids=is_id_obj_ids,
             )
         )
         # Finalise output
@@ -1461,9 +1460,8 @@ class BatchUploader:
                     uow,
                     user_id,
                     model_class,
-                    to_create_objs,
-                    None,
-                    operation=CrudOperation.CREATE_SOME,
+                    CrudOperation.CREATE_SOME,
+                    objs=to_create_objs,
                     return_id=True,  # Avoid returning the whole object list again
                 )
             )
@@ -1529,9 +1527,8 @@ class BatchUploader:
                 uow,
                 user_id,
                 model_class,
-                None,
-                obj_ids,
-                operation=CrudOperation.READ_SOME,
+                CrudOperation.READ_SOME,
+                obj_ids=obj_ids,
             )
         )
 
@@ -1592,9 +1589,8 @@ class BatchUploader:
             uow,
             user_id,
             model_class,
-            to_update_objs,
-            None,
             operation=CrudOperation.UPDATE_SOME,
+            objs=to_update_objs,
             return_id=True,  # Avoid returning the whole object list again
         )
 

@@ -32,8 +32,6 @@ def seq_service_crud_protocol(
                 uow,
                 user_id,
                 model.Protocol,
-                None,
-                None,
                 CrudOperation.READ_ALL,
                 filter=filter,
             )
@@ -56,9 +54,8 @@ def seq_service_crud_protocol(
                 uow,
                 user_id,
                 model.Protocol,
-                None,
-                protocol_ids,
                 CrudOperation.READ_SOME,
+                obj_ids=protocol_ids,
             )
             existing_protocol_map: dict[UUID, model.Protocol] = {
                 x.id: x for x in existing_protocols if x.id is not None

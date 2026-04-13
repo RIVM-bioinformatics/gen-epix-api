@@ -236,11 +236,11 @@ def _make_crud_side_effect(
         uow: BaseUnitOfWork,
         user_id: UUID | None,
         model_class: type,
-        obj: Any,
-        obj_ids: Any,
         operation: CrudOperation,
-        *_: Any,
-        **__: Any,
+        filter: Any = None,
+        objs: Any = None,
+        obj_ids: Any = None,
+        **kwargs: Any,
     ) -> Any:
         if model_class is model.Protocol and operation == CrudOperation.READ_ALL:
             return protocols
@@ -249,25 +249,25 @@ def _make_crud_side_effect(
             recorder.read_some_calls.append(obj_ids)
             return existing_profiles_by_model.get(model_class, [])
         if model_class is model.SeqDistance and operation == CrudOperation.UPDATE_ONE:
-            assert isinstance(obj, model.SeqDistance)
-            recorder.updated.append(obj)
-            return obj
+            assert isinstance(objs, model.SeqDistance)
+            recorder.updated.append(objs)
+            return objs
         if model_class is model.SeqDistance and operation == CrudOperation.UPDATE_SOME:
-            assert isinstance(obj, list)
-            for item in obj:
+            assert isinstance(objs, list)
+            for item in objs:
                 assert isinstance(item, model.SeqDistance)
-            recorder.updated.extend(obj)
-            return obj
+            recorder.updated.extend(objs)
+            return objs
         if model_class is model.SeqDistance and operation == CrudOperation.CREATE_ONE:
-            assert isinstance(obj, model.SeqDistance)
-            recorder.created.append(obj)
-            return obj
+            assert isinstance(objs, model.SeqDistance)
+            recorder.created.append(objs)
+            return objs
         if model_class is model.SeqDistance and operation == CrudOperation.CREATE_SOME:
-            assert isinstance(obj, list)
-            for item in obj:
+            assert isinstance(objs, list)
+            for item in objs:
                 assert isinstance(item, model.SeqDistance)
-            recorder.created.extend(obj)
-            return obj
+            recorder.created.extend(objs)
+            return objs
         return []
 
     return _crud
@@ -1246,11 +1246,11 @@ class TestUpdateSeqDistances(
             uow: Any,
             user_id: Any,
             model_class: Any,
-            obj: Any,
-            obj_ids: Any,
             operation: CrudOperation,
-            *a: Any,
-            **kw: Any,
+            filter: Any = None,
+            objs: Any = None,
+            obj_ids: Any = None,
+            **kwargs: Any,
         ) -> Any:
             if model_class is model.Protocol and operation == CrudOperation.READ_ONE:
                 return protocol
@@ -1328,11 +1328,11 @@ class TestUpdateSeqDistances(
             uow: Any,
             user_id: Any,
             model_class: Any,
-            obj: Any,
-            obj_ids: Any,
             operation: CrudOperation,
-            *a: Any,
-            **kw: Any,
+            filter: Any = None,
+            objs: Any = None,
+            obj_ids: Any = None,
+            **kwargs: Any,
         ) -> Any:
             if model_class is model.Protocol and operation == CrudOperation.READ_ONE:
                 return protocol
@@ -1345,14 +1345,14 @@ class TestUpdateSeqDistances(
                 model_class is model.SeqDistance
                 and operation == CrudOperation.UPDATE_SOME
             ):
-                recorder.updated.extend(obj)
-                return obj
+                recorder.updated.extend(objs)
+                return objs
             if (
                 model_class is model.SeqDistance
                 and operation == CrudOperation.CREATE_SOME
             ):
-                recorder.created.extend(obj)
-                return obj
+                recorder.created.extend(objs)
+                return objs
             return []
 
         self.service.repository.crud.side_effect = _crud

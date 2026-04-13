@@ -443,9 +443,7 @@ class TestCrudWithAccessFilter(BaseCrudTestCase):
         self.assertEqual(args[0], self.uow)
         self.assertEqual(args[1], cmd.user.id)
         self.assertIs(args[2], link_model_class)
-        self.assertIsNone(args[3])
-        self.assertIsNone(args[4])
-        self.assertEqual(args[5], CrudOperation.DELETE_ALL)
+        self.assertEqual(args[3], CrudOperation.DELETE_ALL)
         self.assertIsNone(self.service.repository.crud.call_args.kwargs.get("filter"))
 
     def test_cascade_with_matching_link_and_obj_ids_uses_compose_filter(self) -> None:

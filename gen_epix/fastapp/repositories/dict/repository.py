@@ -228,9 +228,9 @@ class DictRepository(BaseRepository):
         uow: BaseUnitOfWork,
         user_id: Hashable | None,
         model_class: type[Model],
-        objs: Model | Iterable[Model] | None,
-        obj_ids: Hashable | Iterable[Hashable] | None,
         operation: CrudOperation,
+        objs: Model | Iterable[Model] | None = None,
+        obj_ids: Hashable | Iterable[Hashable] | None = None,
         filter: Filter | None = None,
         **kwargs: Any,
     ) -> Hashable | list[Hashable] | Model | list[Model] | bool | list[bool] | None:

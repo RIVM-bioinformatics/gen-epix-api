@@ -1,4 +1,5 @@
 # pylint: disable=useless-import-alias
+
 from gen_epix import fastapp
 from gen_epix.commondb.repositories.sa_model import Contact as Contact
 from gen_epix.commondb.repositories.sa_model import DataCollection as DataCollection
