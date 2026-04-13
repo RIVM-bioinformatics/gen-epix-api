@@ -51,7 +51,7 @@ class AbacService(BaseAbacService):
 
     def get_case_abac(self, cmd: command.Command) -> model.CaseAbac:
         if cmd.user is None or cmd.user.id is None:
-            raise exc.UnauthorizedAuthError("Command has no user")
+            raise exc.UnauthorizedAuthError("94c7218c", "Command has no user")
         user_id = cmd.user.id
         return self._get_case_abac_cached(user_id)
 
@@ -78,7 +78,7 @@ class AbacService(BaseAbacService):
         """
         if not self.app.get_feature_flag("update_own_organization"):
             raise exc.FeatureDisabledServiceError(
-                "Updating own organization is disabled"
+                "4978f1f8", "Updating own organization is disabled"
             )
 
         is_new_user = cmd.is_new_user
