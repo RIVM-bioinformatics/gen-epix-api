@@ -3,96 +3,103 @@ from typing import Any
 
 
 class DomainException(Exception):
-    def __init__(self, message: str | None):
+    def __init__(self, code: str, message: str | None):
+        self.code = code
         self.message = message
 
 
 class DataException(DomainException):
-    def __init__(self, message: str | None, ids: Iterable | None = None):
-        super().__init__(message)
+    def __init__(self, code: str, message: str | None, ids: Iterable | None = None):
+        super().__init__(code, message)
         self.ids = ids
 
 
 class InvalidArgumentsError(DataException):
-    def __init__(self, message: str, ids: Iterable | None = None):
-        super().__init__(message, ids=ids)
+    def __init__(self, code: str, message: str, ids: Iterable | None = None):
+        super().__init__(code, message, ids=ids)
 
 
 class IdsError(DataException):
-    def __init__(self, message: str, ids: Iterable | None = None):
-        super().__init__(message, ids=ids)
+    def __init__(self, code: str, message: str, ids: Iterable | None = None):
+        super().__init__(code, message, ids=ids)
 
 
 class InvalidIdsError(IdsError):
-    def __init__(self, message: str, ids: Iterable | None = None):
-        super().__init__(message, ids=ids)
+    def __init__(self, code: str, message: str, ids: Iterable | None = None):
+        super().__init__(code, message, ids=ids)
 
 
 class DuplicateIdsError(IdsError):
-    def __init__(self, message: str, ids: Iterable | None = None):
-        super().__init__(message, ids=ids)
+    def __init__(self, code: str, message: str, ids: Iterable | None = None):
+        super().__init__(code, message, ids=ids)
 
 
 class InvalidModelIdsError(IdsError):
-    def __init__(self, message: str, ids: Iterable | None = None):
-        super().__init__(message, ids=ids)
+    def __init__(self, code: str, message: str, ids: Iterable | None = None):
+        super().__init__(code, message, ids=ids)
 
 
 class AlreadyExistingIdsError(IdsError):
-    def __init__(self, message: str, ids: Iterable | None = None):
-        super().__init__(message, ids=ids)
+    def __init__(self, code: str, message: str, ids: Iterable | None = None):
+        super().__init__(code, message, ids=ids)
 
 
 class InvalidLinkIdsError(IdsError):
-    def __init__(self, message: str, ids: Iterable | None = None):
-        super().__init__(message, ids=ids)
+    def __init__(self, code: str, message: str, ids: Iterable | None = None):
+        super().__init__(code, message, ids=ids)
 
 
 class LinkConstraintViolationError(IdsError):
     def __init__(
         self,
+        code: str,
         message: str,
         ids: Iterable | None = None,
         linked_ids: Iterable | None = None,
     ):
-        super().__init__(message, ids=ids)
+        super().__init__(code, message, ids=ids)
         self.linked_ids = linked_ids
 
 
 class UniqueConstraintViolationError(DataException):
     def __init__(
         self,
+        code: str,
         message: str,
         ids: Iterable | None = None,
         duplicate_key_ids: Iterable | None = None,
     ):
-        super().__init__(message, ids=ids)
+        super().__init__(code, message, ids=ids)
         self.duplicate_key_ids = duplicate_key_ids
 
 
 class NotNullConstraintViolationError(DataException):
     def __init__(
         self,
+        code: str,
         message: str,
         ids: Iterable | None = None,
         column_names: Iterable[str] | None = None,
     ):
-        super().__init__(message, ids=ids)
+        super().__init__(code, message, ids=ids)
         self.column_names = column_names
 
 
 class NoResultsError(DataException):
-    def __init__(self, message: str | None = None):
+    def __init__(self, code: str, message: str | None = None):
         # Message is optional
-        super().__init__(message)
+        super().__init__(code, message)
 
 
 class ServiceException(DomainException):
     def __init__(
-        self, message: str | None = None, http_props: dict[str, Any] | None = None
+        self,
+        code: str,
+        message: str | None = None,
+        http_props: dict[str, Any] | None = None,
     ):
         # Message is optional
-        super().__init__(message)
+        super().__init__(code, message)
         if http_props is None:
             http_props = {}
         self._init_http_props(http_props, 500)
@@ -104,7 +111,9 @@ class ServiceException(DomainException):
         return {x: y for x, y in self.http_props.items() if x not in {"status_code"}}
 
     def _init_message(self, message: str | None, default_message: str) -> None:
-        super().__init__(message=default_message if not message else message)
+        super().__init__(
+            code=self.code, message=default_message if not message else message
+        )
 
     def _init_http_props(
         self, http_props: dict[str, Any], http_status_code: int
@@ -133,9 +142,12 @@ class AuthException(ServiceException):
 
 class FeatureDisabledServiceError(ServiceException):
     def __init__(
-        self, message: str | None = None, http_props: dict[str, Any] | None = None
+        self,
+        code: str,
+        message: str | None = None,
+        http_props: dict[str, Any] | None = None,
     ):
-        super().__init__(message, http_props)
+        super().__init__(code, message, http_props)
         if http_props is None:
             http_props = {}
         self._init_message(message, "System unavailable: Feature is disabled")
@@ -144,9 +156,12 @@ class FeatureDisabledServiceError(ServiceException):
 
 class CredentialsAuthError(AuthException):
     def __init__(
-        self, message: str | None = None, http_props: dict[str, Any] | None = None
+        self,
+        code: str,
+        message: str | None = None,
+        http_props: dict[str, Any] | None = None,
     ):
-        super().__init__(message, http_props)
+        super().__init__(code, message, http_props)
         if http_props is None:
             http_props = {}
         self._init_message(message, "Could not validate credentials")
@@ -155,9 +170,12 @@ class CredentialsAuthError(AuthException):
 
 class UnauthorizedAuthError(AuthException):
     def __init__(
-        self, message: str | None = None, http_props: dict[str, Any] | None = None
+        self,
+        code: str,
+        message: str | None = None,
+        http_props: dict[str, Any] | None = None,
     ):
-        super().__init__(message, http_props)
+        super().__init__(code, message, http_props)
         if http_props is None:
             http_props = {}
         self._init_message(message, "Unauthorized: Invalid credentials")
@@ -166,9 +184,12 @@ class UnauthorizedAuthError(AuthException):
 
 class UserNotFoundAuthError(AuthException):
     def __init__(
-        self, message: str | None = None, http_props: dict[str, Any] | None = None
+        self,
+        code: str,
+        message: str | None = None,
+        http_props: dict[str, Any] | None = None,
     ):
-        super().__init__(message, http_props)
+        super().__init__(code, message, http_props)
         if http_props is None:
             http_props = {}
         self._init_message(message, "User not found")
@@ -177,9 +198,12 @@ class UserNotFoundAuthError(AuthException):
 
 class UserAlreadyExistsAuthError(AuthException):
     def __init__(
-        self, message: str | None = None, http_props: dict[str, Any] | None = None
+        self,
+        code: str,
+        message: str | None = None,
+        http_props: dict[str, Any] | None = None,
     ):
-        super().__init__(message, http_props)
+        super().__init__(code, message, http_props)
         if http_props is None:
             http_props = {}
         self._init_message(message, "User already exists")
@@ -189,10 +213,11 @@ class UserAlreadyExistsAuthError(AuthException):
 class ConcurrentModificationError(ServiceException):
     def __init__(
         self,
+        code: str,
         message: str | None = None,
         http_props: dict[str, Any] | None = None,
     ):
-        super().__init__(message, http_props)
+        super().__init__(code, message, http_props)
         if http_props is None:
             http_props = {}
         self._init_message(
@@ -204,9 +229,12 @@ class ConcurrentModificationError(ServiceException):
 
 class ServiceUnavailableError(ServiceException):
     def __init__(
-        self, message: str | None = None, http_props: dict[str, Any] | None = None
+        self,
+        code: str,
+        message: str | None = None,
+        http_props: dict[str, Any] | None = None,
     ):
-        super().__init__(message, http_props)
+        super().__init__(code, message, http_props)
         if http_props is None:
             http_props = {}
         self._init_message(message, "Service unavailable")
@@ -215,9 +243,12 @@ class ServiceUnavailableError(ServiceException):
 
 class RequestLimitExceededAuthError(AuthException):
     def __init__(
-        self, message: str | None = None, http_props: dict[str, Any] | None = None
+        self,
+        code: str,
+        message: str | None = None,
+        http_props: dict[str, Any] | None = None,
     ):
-        super().__init__(message, http_props)
+        super().__init__(code, message, http_props)
         if http_props is None:
             http_props = {}
         self._init_message(message, "Request limit exceeded")
