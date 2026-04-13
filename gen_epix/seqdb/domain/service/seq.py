@@ -18,7 +18,8 @@ class BaseSeqService(BaseService):
             command.CalculatePhylogeneticTreeCommand,
             self.calculate_phylogenetic_tree,
         )
-        f(command.RetrieveSamplesCommand, self.retrieve_samples)
+        f(command.RetrieveSamplesByQueryCommand, self.retrieve_samples_by_query)
+        f(command.RetrieveSamplesByIdCommand, self.retrieve_samples_by_id)
         f(
             command.RetrieveSeqFastaCommand,
             self.retrieve_seq_fasta,
@@ -176,10 +177,17 @@ class BaseSeqService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def retrieve_samples(
+    def retrieve_samples_by_id(
         self,
-        cmd: command.RetrieveSamplesCommand,
-    ) -> list[model.SampleForUpload]:
+        cmd: command.RetrieveSamplesByIdCommand,
+    ) -> list[model.FullSample]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_samples_by_query(
+        self,
+        cmd: command.RetrieveSamplesByQueryCommand,
+    ) -> model.SampleQueryResult:
         raise NotImplementedError()
 
     @abc.abstractmethod

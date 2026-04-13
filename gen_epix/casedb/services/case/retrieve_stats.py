@@ -32,8 +32,6 @@ def case_service_retrieve_case_stats(
                         uow,
                         user.id,
                         model.CaseType,
-                        None,
-                        None,
                         CrudOperation.READ_ALL,
                         return_id=True,
                     )

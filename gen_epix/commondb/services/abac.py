@@ -146,11 +146,9 @@ class AbacService(BaseAbacService):
             organization_admin_policies: list[model.OrganizationAdminPolicy] = (
                 self.repository.crud(  # type: ignore[assignment]
                     uow,
-                    user_id=cmd.user.id,
-                    model_class=self.organization_admin_policy_model_class,
-                    objs=None,
-                    obj_ids=None,
-                    operation=CrudOperation.READ_ALL,
+                    cmd.user.id,
+                    self.organization_admin_policy_model_class,
+                    CrudOperation.READ_ALL,
                     filter=CompositeFilter(
                         operator=LogicalOperator.AND,
                         filters=[
@@ -174,11 +172,9 @@ class AbacService(BaseAbacService):
             organization_admin_policies: list[model.OrganizationAdminPolicy] = (
                 self.repository.crud(  # type: ignore[assignment]
                     uow,
-                    user_id=cmd.user.id,
-                    model_class=self.organization_admin_policy_model_class,
-                    objs=None,
-                    obj_ids=None,
-                    operation=CrudOperation.READ_ALL,
+                    cmd.user.id,
+                    self.organization_admin_policy_model_class,
+                    CrudOperation.READ_ALL,
                     filter=EqualsUuidFilter(
                         key="organization_id", value=cmd.user.organization_id
                     ),
@@ -237,8 +233,6 @@ class AbacService(BaseAbacService):
                     uow,
                     user.id,
                     self.organization_admin_policy_model_class,
-                    None,
-                    None,
                     CrudOperation.DELETE_ALL,
                     filter=CompositeFilter(
                         operator=LogicalOperator.AND,

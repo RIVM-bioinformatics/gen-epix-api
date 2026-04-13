@@ -2,15 +2,39 @@ import cProfile
 import logging
 import pstats
 from pathlib import Path
+from test.casedb.casedb_test_client import CasedbTestClient
+from test.test_client.enum import (
+    EnumTestType as EnumTestType,  # to avoid pytest warning
+)
+from test.test_client.util import get_test_root_output_dir
 
 import pandas as pd
 import pyinstrument
 import pytest
 
+from gen_epix.casedb.domain import enum
+from gen_epix.commondb.domain.enum import AppType, DevRepositoryConfig
+from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.commondb.test.util import parse_stats
+from gen_epix.seqdb.domain import enum as seqdb_enum
 
 PERFORMANCE_DF: list = []
 PERFORMANCE_HTML: list = []
+
+SEQDB_APP_CFGS = get_app_cfgs(
+    AppType.SEQDB,
+    seqdb_enum.ServiceType,
+    seqdb_enum.RepositoryType,
+    EnumTestType.CASEDB_PERFORMANCE_STARTUP,
+)
+
+CASEDB_APP_CFGS = get_app_cfgs(
+    AppType.CASEDB,
+    enum.ServiceType,
+    enum.RepositoryType,
+    EnumTestType.CASEDB_PERFORMANCE_STARTUP,
+    seqdb_app_cfgs=SEQDB_APP_CFGS,
+)
 
 
 @pytest.mark.scenario_ids("TC-PERF-09-01")
@@ -21,18 +45,12 @@ class TestStartup:
         profiler = pyinstrument.Profiler(async_mode="enabled")
         profiler.start()
 
-        from test.test_client.app_test_client import ServiceTestClient
-        from test.test_client.enum import (
-            EnumTestType as EnumTestType,  # to avoid pytest warning
-        )
-
-        from gen_epix.casedb.domain import enum
-        from gen_epix.casedb.domain.enum import RepositoryType
-
-        repository_type = RepositoryType.DICT
-        _ = ServiceTestClient.get_test_client(
-            test_type=EnumTestType.CASEDB_PERFORMANCE_STARTUP,
-            repository_type=repository_type,
+        repository_type = DevRepositoryConfig.DICT_DEMO
+        _ = CasedbTestClient.get_test_client(
+            test_type=f"{EnumTestType.CASEDB_PERFORMANCE_STARTUP.value}__{repository_type.value}",
+            app_cfg=CASEDB_APP_CFGS[
+                f"{EnumTestType.CASEDB_PERFORMANCE_STARTUP.value}__{repository_type.value}"
+            ],
             log_level=logging.ERROR,
         )
         profiler.stop()
@@ -40,17 +58,12 @@ class TestStartup:
 
     def test_startup_cprofile(self) -> None:
         with cProfile.Profile() as profiler:
-            from test.test_client.app_test_client import ServiceTestClient
-            from test.test_client.enum import (
-                EnumTestType as EnumTestType,  # to avoid pytest warning
-            )
-
-            from gen_epix.casedb.domain.enum import RepositoryType
-
-            repository_type = RepositoryType.SA_SQLITE
-            _ = ServiceTestClient.get_test_client(
-                test_type=EnumTestType.CASEDB_PERFORMANCE_STARTUP,
-                repository_type=repository_type,
+            repository_type = DevRepositoryConfig.SA_SQLITE_DEMO
+            _ = CasedbTestClient.get_test_client(
+                test_type=f"{EnumTestType.CASEDB_PERFORMANCE_STARTUP.value}__{repository_type.value}",
+                app_cfg=CASEDB_APP_CFGS[
+                    f"{EnumTestType.CASEDB_PERFORMANCE_STARTUP.value}__{repository_type.value}"
+                ],
                 log_level=logging.ERROR,
             )
             stats = pstats.Stats(profiler)
@@ -64,33 +77,17 @@ class TestStartup:
 
     @classmethod
     def tearDownClass(cls) -> None:
-        from test.test_client.app_test_client import ServiceTestClient
-        from test.test_client.enum import (
-            EnumTestType as EnumTestType,  # to avoid pytest warning
-        )
-
-        from gen_epix.casedb.domain.enum import RepositoryType
-
-        test_dir = ServiceTestClient.get_test_client(
-            test_type=EnumTestType.CASEDB_PERFORMANCE_STARTUP,
-            repository_type=RepositoryType.DICT,
-        ).test_dir
-        with open(Path(test_dir) / f"{cls.__name__}.performance.html", "w") as f:
+        test_dir = get_test_root_output_dir()
+        with open(
+            Path(test_dir) / f"{cls.__name__}.casedb.performance.startup.html", "w"
+        ) as f:
             f.write("".join(PERFORMANCE_HTML))
         df = pd.DataFrame.from_records(PERFORMANCE_DF)
-        df.to_csv(Path(test_dir) / f"{cls.__name__}.performance.csv", index=False)
-        df.to_excel(Path(test_dir) / f"{cls.__name__}.performance.xlsx", index=False)
-
-    # @classmethod
-    # def tearDownClass(cls):
-    #     test_dir = ServiceTestClient.get_service_test_client(
-    #         test_type=EnumTestType.PERFORMANCE_STARTUP,
-    #         repository_type=enum.RepositoryType.DICT,
-    #     ).test_dir
-    #     df = pd.DataFrame.from_records(PERFORMANCE_DF)
-    #     df.to_csv(
-    #         Path(test_dir) / f"{cls.__name__}.performance.csv", index=False
-    #     )
-    #     df.to_excel(
-    #         Path(test_dir) / f"{cls.__name__}.performance.xlsx", index=False
-    #     )
+        df.to_csv(
+            Path(test_dir) / f"{cls.__name__}.casedb.performance.startup.csv",
+            index=False,
+        )
+        df.to_excel(
+            Path(test_dir) / f"{cls.__name__}.casedb.performance.startup.xlsx",
+            index=False,
+        )

@@ -34,9 +34,8 @@ class FileService(BaseFileService):
                 uow,
                 cmd.user.id,
                 model.File,
-                cmd.file,
-                None,
                 operation=CrudOperation.CREATE_ONE,
+                objs=cmd.file,
                 return_id=True,
             )
         return file_id

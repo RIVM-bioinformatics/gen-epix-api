@@ -1,4 +1,5 @@
 # pylint: disable=useless-import-alias
+
 from gen_epix import fastapp
 from gen_epix.commondb.repositories.sa_model import Contact as Contact
 from gen_epix.commondb.repositories.sa_model import DataCollection as DataCollection
@@ -21,15 +22,11 @@ from gen_epix.commondb.repositories.sa_model import (
     OrganizationSetMember as OrganizationSetMember,
 )
 from gen_epix.commondb.repositories.sa_model import Outage as Outage
-from gen_epix.commondb.repositories.sa_model import (
-    RowMetadataMixin,
-)
+from gen_epix.commondb.repositories.sa_model import RowMetadataMixin
 from gen_epix.commondb.repositories.sa_model import Site as Site
 from gen_epix.commondb.repositories.sa_model import User as User
 from gen_epix.commondb.repositories.sa_model import UserInvitation as UserInvitation
-from gen_epix.commondb.repositories.sa_model import (
-    set_entity_repository_model_classes,
-)
+from gen_epix.commondb.repositories.sa_model import set_entity_repository_model_classes
 from gen_epix.omopdb.domain import DOMAIN, enum, model
 from gen_epix.omopdb.repositories.sa_model.omop import CareSite as CareSite
 from gen_epix.omopdb.repositories.sa_model.omop import CdmSource as CdmSource

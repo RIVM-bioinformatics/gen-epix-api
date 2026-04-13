@@ -8,7 +8,7 @@ from gen_epix.seqdb.api.seq import (
     CalculatePhylogeneticTreeRequestBody as CalculatePhylogeneticTreeRequestBody,
 )
 from gen_epix.seqdb.api.seq import (
-    RetrieveSamplesRequestBody as RetrieveSamplesRequestBody,
+    RetrieveSamplesByIdsRequestBody as RetrieveSamplesByIdsRequestBody,
 )
 from gen_epix.seqdb.api.seq import (
     RetrieveSeqFastaRequestBody as RetrieveSeqFastaRequestBody,

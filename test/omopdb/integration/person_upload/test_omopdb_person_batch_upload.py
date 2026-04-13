@@ -161,7 +161,7 @@ class TestPersonBatchUploadHappyPath:
         assert result.status == EtlStatus.CREATED
 
     def test_upload_person_twice_with_on_exists_update_returns_updated(
-        self, env: Env
+        self, env: Env, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """
         Uploading the same person a second time using on_exists=UPDATE should return
@@ -170,12 +170,22 @@ class TestPersonBatchUploadHappyPath:
         """
         root_user = env.retrieve_user_by_key("root1_1@org1.org")
 
+        # Mock the link update step to isolate testing of the person upload logic
+        # On CREATE, there are no links to update, so this is a no-op.
+        # On UPDATE, the person upload logic will attempt to update links
+        monkeypatch.setattr(
+            "gen_epix.fastapp.repositories.dict.repository.DictRepository._apply_link_updates",
+            lambda *args, **kwargs: None,  # No-op
+        )
+
+        person = _make_person()
+
         # First upload – creates the person
         first_result: PersonBatchUploadResult = env.handle(
             command.UploadPersonsCommand(
                 user=root_user,
                 person_batch=PersonBatchForUpload(
-                    persons=[PersonForUpload(id=NULL_ID, person=_make_person())]
+                    persons=[PersonForUpload(id=NULL_ID, person=person)]
                 ),
             )
         )
@@ -186,15 +196,14 @@ class TestPersonBatchUploadHappyPath:
         # Second upload – same ID, explicitly allow update.
         # Change year_of_birth to ensure content differs from the first upload.
         # The Person object must carry person_id so that update_objects can locate it.
-        updated_person = _make_person()
-        updated_person.year_of_birth = 1991
-        updated_person.person_id = created_id
+        person.year_of_birth = 1991
+        person.person_id = created_id
         second_result: PersonBatchUploadResult = env.handle(
-            command.UploadPersonsCommand(
+            command.UploadPersonsCommand(  # type: ignore[call-arg]
                 user=root_user,
                 on_exists=UploadAction.UPDATE,
                 person_batch=PersonBatchForUpload(
-                    persons=[PersonForUpload(id=created_id, person=updated_person)]
+                    persons=[PersonForUpload(id=created_id, person=person)]
                 ),
             )
         )

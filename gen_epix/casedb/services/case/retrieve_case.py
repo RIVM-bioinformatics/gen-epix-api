@@ -61,6 +61,8 @@ def case_service_retrieve_cases_by_query(
             case_ids=None,
             datetime_range_filter=datetime_range_filter,
             filter_content=True,
+            # Disable the helper's early max results limit, since we need to apply it after filtering by case sets and filters, which happens after retrieving the cases
+            apply_max_n_cases=not case_set_ids and not case_query.filter,
         )
         # Filter cases by case sets
         if case_set_ids:
@@ -108,9 +110,8 @@ def _apply_max_results_limit(
         uow,
         user.id,
         model.CaseType,
-        None,
-        [case_type_id],
         CrudOperation.READ_SOME,
+        obj_ids=[case_type_id],
     )
     if not case_types:
         raise exc.InvalidArgumentsError(f"Invalid CaseType ID: {case_type_id}")
@@ -203,9 +204,8 @@ def case_service_retrieve_cases_by_id(
             uow,
             user.id,
             model.CaseType,
-            None,
-            [case_type_id],
             CrudOperation.READ_SOME,
+            obj_ids=[case_type_id],
         )
         if not case_types:
             raise exc.InvalidArgumentsError(f"Invalid CaseType ID: {case_type_id}")
@@ -373,20 +373,18 @@ def _verify_case_filter(
         uow,
         user.id,
         model.Col,
-        None,
-        filter_col_ids,
         CrudOperation.READ_SOME,
+        obj_ids=filter_col_ids,
     )
     # Retrieve cols for Cols
     ref_cols: list[model.RefCol] = self.repository.crud(  # type: ignore[assignment]
         uow,
         user.id,
         model.RefCol,
-        None,
-        list(
+        CrudOperation.READ_SOME,
+        obj_ids=list(
             {x.ref_col_id for x in filter_cols}
         ),  # TODO: consider READ_SOME allowing duplicate ids
-        CrudOperation.READ_SOME,
     )
     ref_cols_map = {x.id: x for x in ref_cols}
     ref_cols = [ref_cols_map[x.ref_col_id] for x in filter_cols]

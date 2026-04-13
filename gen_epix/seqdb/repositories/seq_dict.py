@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from collections.abc import Set as AbstractSet
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -10,6 +11,80 @@ from gen_epix.seqdb.domain.repository import BaseSeqRepository
 
 
 class SeqDictRepository(DictRepository, BaseSeqRepository):
+
+    def get_sample_ids_modified_in_range(
+        self,
+        uow: BaseUnitOfWork,
+        modified_since: datetime | None = None,
+        modified_until: datetime | None = None,
+    ) -> list[UUID]:
+        modified_since = modified_since or datetime.min
+        modified_until = modified_until or datetime.max
+        modified_sample_ids: set[UUID] = set()
+        for model_class in [model.Sample] + model.FullSample.DATA_CLASSES:
+            if model_class == model.Sample:
+                id_field_name = "id"
+            else:
+                id_field_name = "sample_id"
+            for obj in self.db[model_class].values():
+                assert isinstance(obj, model_class)
+                sample_id: UUID = getattr(obj, id_field_name)
+                modified_at: datetime = obj.modified_at  # type: ignore[attr-defined]
+                if modified_at < modified_since:
+                    continue
+                if modified_at >= modified_until:
+                    continue
+                modified_sample_ids.add(sample_id)
+        return sorted(modified_sample_ids)
+
+    def get_full_samples_by_sample_ids(
+        self,
+        sample_ids: list[UUID],
+    ) -> list[model.FullSample]:
+        """See parent class method"""
+        # Retrieve all data per sample
+        sample_id_set = set(sample_ids)
+        model_classes = (
+            model.FullSample.DATA_CLASSES
+            + list(model.FullSample.IDENTIFIER_CLASSES)
+            + [model.SampleIdentifier]
+        )
+        db: dict[model.Model, dict[UUID, list[model.Model]]] = {  # type: ignore[assignment]
+            x: {y: [] for y in sample_ids} for x in model_classes  # type: ignore[misc]
+        }
+        for model_class in model_classes:
+            objs_by_sample = db[model_class]  # type: ignore[index]
+            if model_class == model.Sample:
+                id_field_name = "id"
+            elif model_class in model.FullSample.DATA_CLASSES:
+                id_field_name = "sample_id"
+            else:
+                id_field_name = "internal_id"
+            for obj in self.db[model_class].values():
+                sample_id: UUID = getattr(obj, id_field_name)  # type: ignore[assignment]
+                if sample_id in sample_id_set:  # type: ignore[union-attr]
+                    objs_by_sample[sample_id].append(obj)  # type: ignore[arg-type]
+
+        # Create FullSamples
+        full_samples: list[model.FullSample] = []
+        class_field_map = (
+            model.FullSample.DATA_CLASS_FIELD_MAP
+            | model.FullSample.IDENTIFIER_FIELD_MAP
+            | {model.SampleIdentifier: "sample_identifiers"}
+        )
+        for sample_id in sample_ids:
+            sample: model.Sample = self.db[model.Sample][sample_id]  # type: ignore[assignment]
+            full_sample_kwargs = {}
+            for model_class, field_name in class_field_map.items():
+                full_sample_kwargs[field_name] = db[model_class][sample_id]  # type: ignore[index,arg-type]
+            full_samples.append(
+                model.FullSample(
+                    id=sample_id,
+                    sample=sample,
+                    **full_sample_kwargs,  # type: ignore[arg-type]
+                )
+            )
+        return full_samples
 
     def retrieve_seq_fasta(
         self,
@@ -118,3 +193,24 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
             model.SeqProfile
         ]
         return [x for x in df.values() if x.protocol_id in unique_protocol_ids]
+
+    def filter_seq_profiles_by_quality(
+        self,
+        uow: BaseUnitOfWork,
+        seq_profile_ids: list[UUID],
+        allowed_qc_results: AbstractSet[
+            enum.QualityControlResult
+        ] = enum.QualityControlResultSet.USABLE.value,
+    ) -> list[UUID]:
+        unique_profile_ids = set(seq_profile_ids)
+        df: dict[UUID, model.SeqProfile] = self.db[  # type: ignore[assignment]
+            model.SeqProfile
+        ]
+        return [
+            x.id
+            for x in df.values()
+            if x.id is not None
+            and x.id in unique_profile_ids
+            and x.qc_result is not None
+            and x.qc_result in allowed_qc_results
+        ]

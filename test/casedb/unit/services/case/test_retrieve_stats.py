@@ -255,7 +255,7 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
         self.repository.uow.assert_called()
         self.repository.crud.assert_called_once()
         # Assert repository.crud called with expected parameters
-        _, _, model_class, _, _, operation = self.repository.crud.call_args[0][:6]
+        _, _, model_class, operation = self.repository.crud.call_args[0][:6]
         self.assertIs(model_class, case_model.CaseType)
         self.assertEqual(operation, CrudOperation.READ_ALL)
 

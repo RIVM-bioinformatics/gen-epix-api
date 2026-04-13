@@ -36,7 +36,7 @@ class UpdateSeqDistancesRequestBody(PydanticBaseModel):
     protocol_id: UUID
 
 
-class RetrieveSamplesRequestBody(PydanticBaseModel):
+class RetrieveSamplesByIdsRequestBody(PydanticBaseModel):
     sample_ids: list[UUID]
 
 
@@ -69,7 +69,7 @@ def create_seq_endpoints(
     )
     async def retrieve__phylogenetic_tree(
         # user: registered_user_dependency, request_body: RetrievePhylogeneticTreeRequestBody  # type: ignore
-        user: registered_user_dependency,
+        user: registered_user_dependency,  # type: ignore
         request_body: CalculatePhylogeneticTreeRequestBody,  # type: ignore
     ) -> model.PhylogeneticTree:
         try:
@@ -94,7 +94,7 @@ def create_seq_endpoints(
         description=command.RetrieveSimilarProfilesCommand.__doc__,
     )
     async def retrieve__similar_profiles(
-        user: registered_user_dependency,
+        user: registered_user_dependency,  # type: ignore
         request_body: RetrieveSimilarProfilesRequestBody,  # type: ignore
     ) -> list[UUID]:
         try:
@@ -112,18 +112,39 @@ def create_seq_endpoints(
         return retval
 
     @router.post(
-        "/retrieve/samples",
-        operation_id="retrieve__samples",
-        name="RetrieveSamples",
-        description=command.RetrieveSamplesCommand.__doc__,
+        "/retrieve/sample_ids_by_query",
+        operation_id="retrieve__sample_ids_by_query",
+        name="RetrieveSampleIDsByQuery",
+        description=command.RetrieveSamplesByQueryCommand.__doc__,
     )
-    async def retrieve__samples(
-        user: registered_user_dependency, request_body: RetrieveSamplesRequestBody  # type: ignore
-    ) -> list[model.SampleForUpload]:
+    async def retrieve__sample_ids_by_query(
+        user: registered_user_dependency,  # type: ignore
+        request_body: model.SampleQuery,
+    ) -> model.SampleQueryResult:
         try:
-            retval: list[model.SampleForUpload] = await run_in_threadpool(
-                app.handle,
-                command.RetrieveSamplesCommand(
+            retval: model.SampleQueryResult = app.handle(
+                command.RetrieveSamplesByQueryCommand(
+                    user=user,
+                    sample_query=request_body,
+                )
+            )
+        except Exception as exception:
+            handle_exception("8f3a1c7d", user, exception)  # type: ignore
+        return retval
+
+    @router.post(
+        "/retrieve/samples_by_ids",
+        operation_id="retrieve__samples_by_ids",
+        name="RetrieveSamplesByIDs",
+        description=command.RetrieveSamplesByIdCommand.__doc__,
+    )
+    async def retrieve__samples_by_ids(
+        user: registered_user_dependency,  # type: ignore
+        request_body: RetrieveSamplesByIdsRequestBody,  # type: ignore
+    ) -> list[model.FullSample]:
+        try:
+            retval: list[model.FullSample] = app.handle(
+                command.RetrieveSamplesByIdCommand(
                     user=user,
                     sample_ids=request_body.sample_ids,
                 ),
@@ -139,7 +160,8 @@ def create_seq_endpoints(
         description=command.RetrieveSeqFastaCommand.__doc__,
     )
     async def retrieve__seq_fasta(
-        user: registered_user_dependency, request_body: RetrieveSeqFastaRequestBody
+        user: registered_user_dependency,  # type: ignore
+        request_body: RetrieveSeqFastaRequestBody,
     ) -> StreamingResponse:
         try:
             fasta_iterable: Iterable[str] = await run_in_threadpool(
@@ -150,9 +172,7 @@ def create_seq_endpoints(
                 ),
             )
         except Exception as exception:
-            handle_exception(
-                "e4f3b8c1", user, exception, request_ids=request_body.seq_ids
-            )
+            handle_exception("e4f3b8c1", user, exception)  # type: ignore
 
         return StreamingResponse(
             fasta_iterable,

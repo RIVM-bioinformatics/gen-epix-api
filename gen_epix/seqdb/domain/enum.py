@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 import uuid
 from enum import Enum, IntEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import ulid
 
@@ -30,7 +30,8 @@ class IntEnumWithJsonSchemaMixin:
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
-        json_schema["x-enum-varnames"] = [e.name for e in cls]
+        enum_cls = cast(type[IntEnum], cls)
+        json_schema["x-enum-varnames"] = [e.name for e in enum_cls]
         return json_schema
 
 
@@ -200,6 +201,23 @@ class QualityControlResult(IntEnumWithJsonSchemaMixin, IntEnum):
 
     def is_usable(self) -> bool:
         return self in {QualityControlResult.PASS, QualityControlResult.WARN}
+
+
+class QualityControlResultSet(Enum):
+    USABLE = frozenset(
+        {
+            QualityControlResult.PASS,
+            QualityControlResult.WARN,
+        }
+    )
+    ALL = frozenset(
+        {
+            QualityControlResult.PENDING,
+            QualityControlResult.FAIL,
+            QualityControlResult.WARN,
+            QualityControlResult.PASS,
+        }
+    )
 
 
 class LocusType(Enum):

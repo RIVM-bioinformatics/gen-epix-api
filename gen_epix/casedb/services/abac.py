@@ -254,8 +254,6 @@ class AbacService(BaseAbacService):
                 uow,
                 user_id=user_id,
                 model_class=model.OrganizationAccessCasePolicy,
-                objs=None,
-                obj_ids=None,
                 operation=CrudOperation.READ_ALL,
                 filter=organization_filter,
             )
@@ -265,8 +263,6 @@ class AbacService(BaseAbacService):
                 uow,
                 user_id=user_id,
                 model_class=model.OrganizationShareCasePolicy,
-                objs=None,
-                obj_ids=None,
                 operation=CrudOperation.READ_ALL,
                 filter=organization_filter,
             )
@@ -276,8 +272,6 @@ class AbacService(BaseAbacService):
                     uow,
                     user_id=user_id,
                     model_class=model.UserAccessCasePolicy,
-                    objs=None,
-                    obj_ids=None,
                     operation=CrudOperation.READ_ALL,
                     filter=user_filter,
                 )
@@ -287,8 +281,6 @@ class AbacService(BaseAbacService):
                     uow,
                     user_id=user_id,
                     model_class=model.UserShareCasePolicy,
-                    objs=None,
-                    obj_ids=None,
                     operation=CrudOperation.READ_ALL,
                     filter=user_filter,
                 )
@@ -638,8 +630,6 @@ class AbacService(BaseAbacService):
                     uow,
                     user.id,
                     self.organization_admin_policy_model_class,
-                    None,
-                    None,
                     CrudOperation.READ_ALL,
                     filter=CompositeFilter(
                         operator=LogicalOperator.AND,
@@ -668,8 +658,6 @@ class AbacService(BaseAbacService):
                     uow,
                     user_id=None,
                     model_class=model.OrganizationAccessCasePolicy,
-                    objs=None,
-                    obj_ids=None,
                     operation=CrudOperation.READ_ALL,
                     filter=org_filter,
                 )
@@ -679,8 +667,6 @@ class AbacService(BaseAbacService):
                     uow,
                     user_id=None,
                     model_class=model.OrganizationShareCasePolicy,
-                    objs=None,
-                    obj_ids=None,
                     operation=CrudOperation.READ_ALL,
                     filter=org_filter,
                 )

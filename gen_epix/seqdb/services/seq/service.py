@@ -58,9 +58,7 @@ from gen_epix.seqdb.services.seq.crud_seq_distance import seq_service_crud_seq_d
 from gen_epix.seqdb.services.seq.crud_seq_identifier import (
     seq_service_crud_seq_identifier,
 )
-from gen_epix.seqdb.services.seq.crud_seq_profile import (
-    seq_service_crud_seq_profile,
-)
+from gen_epix.seqdb.services.seq.crud_seq_profile import seq_service_crud_seq_profile
 from gen_epix.seqdb.services.seq.crud_seq_profile_identifier import (
     seq_service_crud_seq_profile_identifier,
 )
@@ -75,6 +73,10 @@ from gen_epix.seqdb.services.seq.crud_tree_algorithm import (
 )
 from gen_epix.seqdb.services.seq.crud_tree_algorithm_class import (
     seq_service_crud_tree_algorithm_class,
+)
+from gen_epix.seqdb.services.seq.retrieve_sample import (
+    seq_service_retrieve_samples_by_id,
+    seq_service_retrieve_samples_by_query,
 )
 from gen_epix.seqdb.services.seq.upload import seq_service_upload_samples
 
@@ -92,10 +94,16 @@ class SeqService(BaseSeqService):
     ) -> model.PhylogeneticTree | None:
         return seq_service_calculate_phylogenetic_tree(self, cmd)
 
-    def retrieve_samples(
-        self, cmd: command.RetrieveSamplesCommand
-    ) -> list[model.SampleForUpload]:
-        raise NotImplementedError()
+    def retrieve_samples_by_id(
+        self, cmd: command.RetrieveSamplesByIdCommand
+    ) -> list[model.FullSample]:
+        return seq_service_retrieve_samples_by_id(self, cmd)
+
+    def retrieve_samples_by_query(
+        self,
+        cmd: command.RetrieveSamplesByQueryCommand,
+    ) -> model.SampleQueryResult:
+        return seq_service_retrieve_samples_by_query(self, cmd)
 
     def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
         wrap = cmd.wrap or cmd.model_fields["wrap"].default

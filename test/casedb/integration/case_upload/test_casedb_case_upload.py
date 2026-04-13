@@ -132,15 +132,13 @@ class CaseUploadSetup:
                     uow,
                     None,
                     model.IdentifierIssuer,
-                    None,
-                    None,
                     CrudOperation.READ_ALL,
                 )
             )
         # Get protocols
         seqdb_protocol_df: pd.DataFrame = env.props["seqdb.Protocol"]
         protocols: list[seqdb_model.Protocol] = [
-            seqdb_model.Protocol(**x)
+            seqdb_model.Protocol(**x)  # type: ignore[misc]
             for x in seqdb_protocol_df.to_dict(orient="records")
         ]
         # Add to seqdb
@@ -149,21 +147,19 @@ class CaseUploadSetup:
                 uow,
                 None,
                 model.IdentifierIssuer,
-                [
+                CrudOperation.CREATE_SOME,
+                objs=[
                     seqdb_model.IdentifierIssuer(**x.model_dump())
                     for x in identifier_issuers
                 ],
-                None,
-                CrudOperation.CREATE_SOME,
             )
         with seqdb_seq_service.repository.uow() as uow:
             seqdb_seq_service.repository.crud(
                 uow,
                 None,
                 seqdb_model.Protocol,
-                protocols,
-                None,
                 CrudOperation.CREATE_SOME,
+                objs=protocols,
             )
 
 
@@ -227,14 +223,14 @@ class TestCaseUpload(CaseUploadSetup):
                 operation=CrudOperation.READ_ALL,
             )
         )
-        sample_id_col_ids: set[UUID] = {x.id for x in cols if ref_col_map[x.ref_col_id].col_type == enum.ColType.ID_SAMPLE}  # type: ignore[assignment]
-        read_set_col_ids: set[UUID] = {x.id for x in cols if ref_col_map[x.ref_col_id].col_type == enum.ColType.GENETIC_READS}  # type: ignore[assignment]
-        seq_col_ids: set[UUID] = {x.id for x in cols if ref_col_map[x.ref_col_id].col_type == enum.ColType.GENETIC_SEQUENCE}  # type: ignore[assignment]
+        sample_id_col_ids: set[UUID] = {x.id for x in cols if ref_col_map[x.ref_col_id].col_type == enum.ColType.ID_SAMPLE}  # type: ignore[misc]
+        read_set_col_ids: set[UUID] = {x.id for x in cols if ref_col_map[x.ref_col_id].col_type == enum.ColType.GENETIC_READS}  # type: ignore[misc]
+        seq_col_ids: set[UUID] = {x.id for x in cols if ref_col_map[x.ref_col_id].col_type == enum.ColType.GENETIC_SEQUENCE}  # type: ignore[misc]
 
         # Create and execute each command
         for row in rows:
             index = row["index"]
-            if command_idx_to_test is not None and index not in command_idx_to_test:
+            if command_idx_to_test is not None and index not in command_idx_to_test:  # type: ignore[unreachable]
                 # For debugging, skip any commands not in the list
                 continue
             row_operation = row["operation"].upper()
@@ -333,19 +329,19 @@ class TestCaseUpload(CaseUploadSetup):
         """
         # Convert case content data to content and new_content dicts
         df: pd.DataFrame = env.props["command._case_content_data"]
-        df["value"] = df["value"].apply(lambda x: None if x is None else str(x))
-        df["validated_value"] = df["validated_value"].apply(
-            lambda x: None if x is None else str(x)
-        )
         case_content: dict[UUID, dict[UUID, str | None]] = {}
         validated_case_content: dict[UUID, dict[UUID, str | None]] = {}
         for row in df.to_dict(orient="records"):
             case_id = UUID(row["case_id"])
             col_id = UUID(row["col_id"])
+            value = None if pd.isna(row["value"]) else str(row["value"])
+            validated_value = (
+                None if pd.isna(row["validated_value"]) else str(row["validated_value"])
+            )
             case_content.setdefault(case_id, {})
-            case_content[case_id][col_id] = row["value"]
+            case_content[case_id][col_id] = value
             validated_case_content.setdefault(case_id, {})
-            validated_case_content[case_id][col_id] = row["validated_value"]
+            validated_case_content[case_id][col_id] = validated_value
 
         # Convert case data to cases and new_cases
         df = env.props["command._case_data"]
@@ -371,10 +367,7 @@ class TestCaseUpload(CaseUploadSetup):
                 id=case_id,
                 case_type_id=case_type_id,
                 created_in_data_collection_id=created_in_data_collection_id,
-                content={
-                    str(x): str(y) if y is not None else None
-                    for x, y in validated_case_content.get(case_id, {}).items()
-                },
+                content=validated_case_content.get(case_id, {}).copy(),
             )
             all_validated_cases.setdefault(case_id, validated_case)
             all_validated_cases_for_upload.setdefault(
@@ -445,7 +438,7 @@ class TestCaseUpload(CaseUploadSetup):
                 for i in range(n_cases)
                 if row[f"case_id{i+1}"] is not None
             ]
-            if command_idx_to_test is not None and index not in command_idx_to_test:
+            if command_idx_to_test is not None and index not in command_idx_to_test:  # type: ignore[unreachable]
                 # For debugging, skip any commands not in the list
                 continue
             user = uq_users[row["user.id"]]
@@ -488,21 +481,22 @@ class TestCaseUpload(CaseUploadSetup):
 
             # Create cases and expected new cases
             case_batch = model.CaseBatchForUpload(
-                cases=[all_cases_for_upload[x].model_copy() for x in case_ids]
+                cases=[all_cases_for_upload[x].model_copy(deep=True) for x in case_ids]
             )
             expected_validated_cases = [
-                all_validated_cases_for_upload[x].model_copy() for x in case_ids
+                all_validated_cases_for_upload[x].model_copy(deep=True)
+                for x in case_ids
             ]
             for expected_validated_case in expected_validated_cases:
                 # Keep only writable Col IDs in expected validated case
-                expected_validated_case.case.content = {
+                expected_validated_case.case.content = {  # type: ignore[union-attr]
                     x: y
-                    for x, y in expected_validated_case.case.content.items()
+                    for x, y in expected_validated_case.case.content.items()  # type: ignore[union-attr]
                     if x in write_col_ids
                 }
 
             # Create command
-            cmd = command.UploadCasesCommand(
+            cmd = command.UploadCasesCommand(  # type: ignore[call-arg]
                 user=user,
                 case_type_id=case_type_id,
                 created_in_data_collection_id=created_in_data_collection_id,
@@ -561,7 +555,7 @@ class TestCaseUpload(CaseUploadSetup):
                     actual_validated_cases, expected_validated_cases
                 ):
                     actual_content = actual_case.content
-                    expected_content = expected_case.case.content
+                    expected_content = expected_case.case.content  # type: ignore[union-attr]
                     keys = set(actual_content.keys()).union(expected_content.keys())
                     for key in keys:
                         actual_value = actual_content.get(key)
@@ -667,15 +661,15 @@ class TestCaseUpload(CaseUploadSetup):
                     model.ReadSetForUpload(
                         col_id=col_id,
                         other_sample_identifier=identifier_for_upload,
-                        protocol_id=sequencing_protocol_id,
+                        protocol_id=sequencing_protocol_id,  # type: ignore[arg-type]
                     )
                 )
             for col_id in found_seq_col_ids:
                 seqs.append(
-                    model.SeqForUpload(
+                    model.SeqForUpload(  # type: ignore[call-arg]
                         col_id=col_id,
                         external_sample_id=identifier_for_upload,
-                        protocol_id=assembly_protocol_id,
+                        protocol_id=assembly_protocol_id,  # type: ignore[arg-type]
                     )
                 )
         # Create case or case for upload
@@ -687,7 +681,7 @@ class TestCaseUpload(CaseUploadSetup):
             content=case_content,
         )
         if for_upload:
-            return model.CaseForUpload(
+            return model.CaseForUpload(  # type: ignore[call-arg]
                 id=case.id,
                 identifiers=(
                     None if identifier_for_upload is None else [identifier_for_upload]
@@ -696,6 +690,4 @@ class TestCaseUpload(CaseUploadSetup):
                 read_sets=read_sets,
                 seqs=seqs,
             )
-        return case
-        return case
         return case

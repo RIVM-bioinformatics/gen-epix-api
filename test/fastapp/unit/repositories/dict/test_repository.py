@@ -676,42 +676,40 @@ def test_exists_one_and_some(parent_repo: DictRepository, parent_id: UUID) -> No
 def test_crud_dispatch_all_ops(parent_repo: DictRepository, parent_id: UUID) -> None:
     uow = parent_repo.uow()
     # READ_ALL
-    res_all = parent_repo.crud(
-        uow, None, ParentModel, None, None, CrudOperation.READ_ALL
-    )
+    res_all = parent_repo.crud(uow, None, ParentModel, CrudOperation.READ_ALL)
     assert isinstance(res_all, list)
     # READ_ONE
     res_one = parent_repo.crud(
-        uow, None, ParentModel, None, parent_id, CrudOperation.READ_ONE
+        uow, None, ParentModel, CrudOperation.READ_ONE, obj_ids=parent_id
     )
     assert isinstance(res_one, ParentModel)
     # READ_SOME
     res_some = parent_repo.crud(
-        uow, None, ParentModel, None, [parent_id], CrudOperation.READ_SOME
+        uow, None, ParentModel, CrudOperation.READ_SOME, obj_ids=[parent_id]
     )
     assert isinstance(res_some, list)
     # CREATE_ONE
     created_obj = ParentModel(id=uuid4(), value="c")
     res_create = parent_repo.crud(
-        uow, None, ParentModel, created_obj, None, CrudOperation.CREATE_ONE
+        uow, None, ParentModel, CrudOperation.CREATE_ONE, objs=created_obj
     )
     assert isinstance(res_create, ParentModel)
     # UPDATE_ONE
     upd_obj = ParentModel(id=parent_id, value="u")
     res_update = parent_repo.crud(
-        uow, None, ParentModel, upd_obj, None, CrudOperation.UPDATE_ONE
+        uow, None, ParentModel, CrudOperation.UPDATE_ONE, objs=upd_obj
     )
     assert isinstance(res_update, ParentModel)
     # UPSERT_ONE
     upsert_obj = ParentModel(id=uuid4(), value="x")
     res_upsert = parent_repo.crud(
-        uow, None, ParentModel, upsert_obj, None, CrudOperation.UPSERT_ONE
+        uow, None, ParentModel, CrudOperation.UPSERT_ONE, objs=upsert_obj
     )
     assert isinstance(res_upsert, ParentModel)
     # DELETE_ONE
     to_del = upsert_obj.id
     res_del = parent_repo.crud(
-        uow, None, ParentModel, None, to_del, CrudOperation.DELETE_ONE
+        uow, None, ParentModel, CrudOperation.DELETE_ONE, obj_ids=to_del
     )
     assert res_del == to_del
 
@@ -721,7 +719,7 @@ def test_crud_dispatch_all_ops(parent_repo: DictRepository, parent_id: UUID) -> 
         ParentModel(id=uuid4(), value="c2"),
     ]
     res_create_some = parent_repo.crud(
-        uow, None, ParentModel, create_some_objs, None, CrudOperation.CREATE_SOME
+        uow, None, ParentModel, CrudOperation.CREATE_SOME, objs=create_some_objs
     )
     assert isinstance(res_create_some, list)
     assert len(res_create_some) == 2
@@ -732,7 +730,7 @@ def test_crud_dispatch_all_ops(parent_repo: DictRepository, parent_id: UUID) -> 
         ParentModel(id=created_obj.id, value="c2_updated"),
     ]
     res_update_some = parent_repo.crud(
-        uow, None, ParentModel, update_some_objs, None, CrudOperation.UPDATE_SOME
+        uow, None, ParentModel, CrudOperation.UPDATE_SOME, objs=update_some_objs
     )
     assert isinstance(res_update_some, list)
     assert parent_repo.db[ParentModel][parent_id].value == "u2"  # type: ignore[attr-defined]
@@ -745,31 +743,29 @@ def test_crud_dispatch_all_ops(parent_repo: DictRepository, parent_id: UUID) -> 
         ParentModel(id=new_upsert_id, value="uxs_new"),
     ]
     res_upsert_some = parent_repo.crud(
-        uow, None, ParentModel, upsert_some_objs, None, CrudOperation.UPSERT_SOME
+        uow, None, ParentModel, CrudOperation.UPSERT_SOME, objs=upsert_some_objs
     )
     assert isinstance(res_upsert_some, list)
     assert parent_repo.db[ParentModel][parent_id].value == "u3"  # type: ignore[attr-defined]
 
     # DELETE_SOME
     res_delete_some = parent_repo.crud(
-        uow, None, ParentModel, None, [new_upsert_id], CrudOperation.DELETE_SOME
+        uow, None, ParentModel, CrudOperation.DELETE_SOME, obj_ids=[new_upsert_id]
     )
     assert isinstance(res_delete_some, list)
     assert new_upsert_id not in parent_repo.db[ParentModel]
 
     # EXISTS_ONE
     res_exists = parent_repo.crud(
-        uow, None, ParentModel, None, parent_id, CrudOperation.EXISTS_ONE
+        uow, None, ParentModel, CrudOperation.EXISTS_ONE, obj_ids=parent_id
     )
     assert isinstance(res_exists, bool)
     # DELETE_ALL
-    res_delete_all = parent_repo.crud(
-        uow, None, ParentModel, None, None, CrudOperation.DELETE_ALL
-    )
+    res_delete_all = parent_repo.crud(uow, None, ParentModel, CrudOperation.DELETE_ALL)
     assert isinstance(res_delete_all, list)
     # EXISTS_SOME
     res_exists_some = parent_repo.crud(
-        uow, None, ParentModel, None, [uuid4(), uuid4()], CrudOperation.EXISTS_SOME
+        uow, None, ParentModel, CrudOperation.EXISTS_SOME, obj_ids=[uuid4(), uuid4()]
     )
     assert isinstance(res_exists_some, list)
 
