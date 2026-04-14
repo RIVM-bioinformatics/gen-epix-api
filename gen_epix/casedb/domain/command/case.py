@@ -239,7 +239,7 @@ class RetrievePhylogeneticTreeByCasesCommand(Command):
         description="The IDs of the cases to calculate the phylogenetic tree for."
     )
     allowed_qc_results: set[seqdb_enum.QualityControlResult] = Field(
-        default=set(seqdb_enum.QualityControlResultSet.USABLE.value),
+        default=set(seqdb_enum.QualityControlResultSet.ALL.value),
         description="Set of allowed quality control results for the profiles to consider in the tree. Only profiles whose qc_result is in this set will be included in the tree. This allows excluding low-quality profiles from the tree.",
     )
 
