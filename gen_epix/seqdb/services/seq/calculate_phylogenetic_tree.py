@@ -29,7 +29,10 @@ def seq_service_calculate_phylogenetic_tree(
 
     # profiler = pyinstrument.Profiler(async_mode="enabled")
     # profiler.start()
-
+    self.app.create_log_message(
+        "104b4c39",
+        cmd.model_dump_json(),
+    )
     user_id = cmd.user.id if cmd.user else None
     seq_profile_ids = cmd.seq_profile_ids
     tree_algorithm = cmd.tree_algorithm
@@ -49,6 +52,10 @@ def seq_service_calculate_phylogenetic_tree(
                 seq_profile_ids=seq_profile_ids,
                 allowed_qc_results=cast(Any, cmd).allowed_qc_results,
             )
+        )
+        self.app.create_log_message(
+            "91ea662d",
+            json.dumps([str(x) for x in seq_profile_ids]),
         )
 
         # Retrieve genetic distance protocol

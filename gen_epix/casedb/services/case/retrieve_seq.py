@@ -1,3 +1,4 @@
+import json
 from collections.abc import Iterable
 from uuid import UUID
 
@@ -22,7 +23,10 @@ def case_service_retrieve_phylogenetic_tree(
     assert isinstance(user, model.User) and user.id is not None
     case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
     assert case_abac is not None
-
+    self.app.create_log_message(
+        "936a3ac7",
+        cmd.model_dump_json(),
+    )
     with repository.uow() as uow:
         # Get distance column data
         dist_col: model.Col = repository.crud(  # type: ignore[assignment]
@@ -69,6 +73,10 @@ def case_service_retrieve_phylogenetic_tree(
 
         # Special case: zero case_ids
         if not case_ids:
+            self.app.create_log_message(
+                "9cf366b1",
+                None,
+            )
             phylogenetic_tree: model.PhylogeneticTree = self.app.handle(
                 command.RetrievePhylogeneticTreeByProfilesCommand(
                     user=user,
@@ -91,6 +99,10 @@ def case_service_retrieve_phylogenetic_tree(
             case_ids=case_ids,
             filter_content=True,
         )
+        self.app.create_log_message(
+            "9cf366b1",
+            json.dumps([x.model_dump_json() for x in cases]),
+        )
 
         # Get profile_ids from dist_col
         case_profile_map = {}
@@ -102,6 +114,19 @@ def case_service_retrieve_phylogenetic_tree(
         # Retrieve tree
         profile_ids = list(case_profile_map.values())
         profile_case_map = {y: x for x, y in case_profile_map.items()}
+        self.app.create_log_message(
+            "f8ed20fb",
+            command.RetrievePhylogeneticTreeByProfilesCommand(
+                user=cmd.user,
+                tree_algorithm_code=tree_algorithm_code,
+                seqdb_protocol_id=seqdb_seq_distance_protocol_id,
+                profile_ids=profile_ids,
+                allowed_qc_results=cmd.allowed_qc_results,
+                props={
+                    "leaf_id_mapper": lambda x: profile_case_map[x],
+                },
+            ).model_dump_json(),
+        )
         phylogenetic_tree: model.PhylogeneticTree = self.app.handle(
             command.RetrievePhylogeneticTreeByProfilesCommand(
                 user=cmd.user,
