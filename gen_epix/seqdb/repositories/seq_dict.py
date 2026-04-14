@@ -215,5 +215,4 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
             and x.qc_result is not None
             and x.qc_result in allowed_qc_results
         ]
-        print(f"493553db {str(retval)}")
         return retval

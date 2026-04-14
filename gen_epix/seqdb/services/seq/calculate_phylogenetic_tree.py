@@ -1,7 +1,6 @@
 import json
 import sys
 from typing import Any, cast
-from uuid import UUID
 
 import numpy as np
 import scipy  # type: ignore[import-untyped]
@@ -29,10 +28,6 @@ def seq_service_calculate_phylogenetic_tree(
 
     # profiler = pyinstrument.Profiler(async_mode="enabled")
     # profiler.start()
-    self.app.create_log_message(
-        "104b4c39",
-        cmd.model_dump_json(),
-    )
     user_id = cmd.user.id if cmd.user else None
     seq_profile_ids = cmd.seq_profile_ids
     tree_algorithm = cmd.tree_algorithm
@@ -46,17 +41,17 @@ def seq_service_calculate_phylogenetic_tree(
     seq_distances: list[model.SeqDistance]
     with repository.uow() as uow:
         # Filter provided seq_profile_ids by quality control result
-        seq_profile_ids: list[UUID] = (  # type: ignore[no-redef]
-            repository.filter_seq_profiles_by_quality(
-                uow,
-                seq_profile_ids=seq_profile_ids,
-                allowed_qc_results=cast(Any, cmd).allowed_qc_results,
-            )
-        )
-        self.app.create_log_message(
-            "91ea662d",
-            json.dumps([str(x) for x in seq_profile_ids]),
-        )
+        # TODO: Fix filtering for sa_sql quality mixin enum conversion
+        # SA.QualityMixin.qc_result has Sa.String instead of sa.Integer.
+        # Even with sa.Integer it is stored as string.
+        # Sa.ContentMixin has a patermerized type (FormatType), which is handled differently. The issue may be here
+        # seq_profile_ids: list[UUID] = (  # type: ignore[no-redef]
+        #     repository.filter_seq_profiles_by_quality(
+        #         uow,
+        #         seq_profile_ids=seq_profile_ids,
+        #         allowed_qc_results=cast(Any, cmd).allowed_qc_results,
+        #     )
+        # )
 
         # Retrieve genetic distance protocol
         protocol: model.Protocol = repository.crud(  # type: ignore[assignment]

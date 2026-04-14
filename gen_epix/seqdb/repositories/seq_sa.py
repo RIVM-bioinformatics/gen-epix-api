@@ -238,9 +238,6 @@ class SeqSARepository(SARepository, BaseSeqRepository):
             (sa_model.SeqProfile.id.in_(seq_profile_ids))
             & sa_model.SeqProfile.qc_result.in_(allowed_qc_results)
         )
-        print(f"f1c3a24f {str(stmt)}")
         assert isinstance(uow, SAUnitOfWork)
         retval: list[UUID] = uow.session.execute(stmt).scalars().all()  # type: ignore[assignment]
-
-        print(f"6c969438 {str(retval)}")
         return retval

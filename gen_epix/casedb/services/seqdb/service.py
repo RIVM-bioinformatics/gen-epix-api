@@ -59,10 +59,6 @@ class SeqdbService(BaseSeqdbService):
     ) -> model.PhylogeneticTree | None:
         user = cmd.user
         # Prepare seqdb command and calculate tree via seqdb
-        self.app.create_log_message(
-            "8d761288",
-            cmd.model_dump_json(),
-        )
         leaf_id_mapper = cmd.props.get("leaf_id_mapper")
         if leaf_id_mapper:
             leaf_names = [str(leaf_id_mapper(x)) for x in cmd.profile_ids]
@@ -75,10 +71,6 @@ class SeqdbService(BaseSeqdbService):
             seq_profile_ids=cmd.profile_ids,
             leaf_names=leaf_names,
             allowed_qc_results=cmd.allowed_qc_results,
-        )
-        self.app.create_log_message(
-            "ebb004e7",
-            seqdb_cmd.model_dump_json(),
         )
         seqdb_phylogenetic_tree: seqdb_model.PhylogeneticTree = self.seqdb_app.handle(
             seqdb_cmd
