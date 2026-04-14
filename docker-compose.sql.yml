@@ -1,11 +1,7 @@
 # SA_SQL compose stack — SQL Server 2022 backend with persistent storage.
-# Starts CASEDB (8000) and OMOPDB (8002) against an empty but fully-initialized
-# SQL Server schema. Use this to reproduce lsp-data seeding behaviour locally.
-#
-# SEQDB is not a separate service here: casedb runs seqdb in LOCAL (in-process)
-# mode, which avoids a root-user conflict that would arise if both a standalone
-# seqdb container and casedb's embedded seqdb initialise against the same
-# seqdb database simultaneously. Port 8001 is therefore not exposed.
+# Starts CASEDB (8000), SEQDB (8001), OMOPDB (8002) against an empty but
+# fully-initialized SQL Server schema. Use this to reproduce lsp-data seeding
+# behaviour locally.
 #
 # Usage:
 #   docker compose -f docker-compose.sql.yml up --wait
@@ -64,6 +60,25 @@ services:
             IF DB_ID('omopdb') IS NULL CREATE DATABASE omopdb;"
     restart: "no"
 
+  seqdb:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: python run.py api SEQDB NONE SA_SQL --noreload
+    environment:
+      SEQDB_REPOSITORY__DEFAULTS__PROPS__SERVER: lsp_sql
+    ports:
+      - "8001:8001"
+    depends_on:
+      init-db:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8001/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
   omopdb:
     build:
       context: .
@@ -98,6 +113,13 @@ services:
     depends_on:
       init-db:
         condition: service_completed_successfully
+      # seqdb must be healthy before casedb starts: both the standalone seqdb
+      # service and casedb's embedded LOCAL seqdb share the same seqdb database.
+      # Ordering ensures seqdb creates the root user first so that casedb's
+      # embedded seqdb finds it already present (user_manager handles this
+      # idempotently, but ordering eliminates any residual race condition).
+      seqdb:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://127.0.0.1:8000/v1/health"]
       interval: 30s
