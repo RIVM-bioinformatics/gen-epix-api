@@ -1,0 +1,60 @@
+# Local docker-compose Dockerfile — mirrors the lsp-api production base image.
+# Uses python:3.13-slim (Debian 12) with the Microsoft ODBC driver, matching
+# what the CI/CD pipeline builds and deploys via lsp-api/Dockerfile.
+# Build context is gen-epix-api/ (repo root). lsp-api/Dockerfile differs in
+# that it expects gen-epix-api/ as a subdirectory of the lsp-api/ build context,
+# so it cannot be used directly here.
+# The entrypoint.sh (config-template substitution) is omitted — it is only
+# needed for Kubernetes/production config injection, not for DICT_EMPTY mode.
+
+ARG PYTHON_VERSION=3.13.7
+FROM python:${PYTHON_VERSION}-slim AS base
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Install system dependencies including the Microsoft ODBC 18 driver.
+# Uses Debian 12 (bookworm) package feeds — same as the production image.
+# See https://learn.microsoft.com/en-us/sql/linux/sql-server-linux-setup-tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    gnupg \
+    ca-certificates \
+    && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
+        | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
+    && curl -fsSL https://packages.microsoft.com/config/debian/12/prod.list \
+        > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends \
+        msodbcsql18 \
+        unixodbc \
+        unixodbc-dev \
+    && echo "SECLEVEL=0" >> /etc/odbcinst.ini \
+    && apt-get autoremove -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+ARG UID=10001
+RUN adduser \
+    --disabled-password \
+    --gecos "" \
+    --home "/nonexistent" \
+    --shell "/sbin/nologin" \
+    --no-create-home \
+    --uid "${UID}" \
+    appuser
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+    --mount=type=bind,source=requirements.txt,target=requirements.txt \
+    python -m pip install -r requirements.txt --no-cache-dir
+
+COPY . /app
+
+# Remove SSL certs if present — this image runs on plain HTTP.
+# The cert files are owned by root and unreadable by appuser, which causes
+# uvicorn to crash when run.py detects their presence and enables SSL.
+RUN rm -rf /app/cert
+
+USER appuser
