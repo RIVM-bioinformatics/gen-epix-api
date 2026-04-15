@@ -35,7 +35,7 @@ def seq_service_calculate_phylogenetic_tree(
     tree_algorithm = cmd.tree_algorithm
     protocol_id = cmd.protocol_id
     if len(set(seq_profile_ids)) != len(seq_profile_ids):
-        raise exc.InvalidArgumentsError("profile_ids must be unique")
+        raise exc.InvalidArgumentsError("f6ec74d0", "profile_ids must be unique")
     leaf_names = cmd.leaf_names if cmd.leaf_names else [str(x) for x in seq_profile_ids]
 
     # Handle transaction
@@ -93,7 +93,7 @@ def seq_service_calculate_phylogenetic_tree(
             )
         else:
             raise exc.InvalidArgumentsError(
-                f"{tree_algorithm.value} tree algorithm not yet implemented"
+                "1165f060", f"{tree_algorithm.value} tree algorithm not yet implemented"
             )
 
     # Stop transaction here, releasing resources, since the rest of the operations are in-memory and do not require database access. This also allows for better parallelisation if the tree calculation would be made asynchronous in the future, without the need to keep the transaction open for the entire duration of the tree calculation.
@@ -141,7 +141,8 @@ def seq_service_calculate_phylogenetic_tree(
                     condensed_distance_matrix[k] = distance
             else:
                 raise exc.InvalidArgumentsError(
-                    f"Distance format {seq_distance.format.name} is not supported"
+                    "6c579865",
+                    f"Distance format {seq_distance.format.name} is not supported",
                 )
 
         # Handle sequences with no stored distances
@@ -196,14 +197,15 @@ def seq_service_calculate_phylogenetic_tree(
                 newick_repr = tree.format("newick")
             else:
                 raise exc.InvalidArgumentsError(
-                    f"{tree_algorithm.value} tree algorithm not yet implemented"
+                    "adca965a",
+                    f"{tree_algorithm.value} tree algorithm not yet implemented",
                 )
         finally:
             # Always set recursion limit back to allow for larger trees
             sys.setrecursionlimit(sys_recursion_limit)
     else:
         raise exc.InvalidArgumentsError(
-            f"{tree_algorithm.value} tree algorithm not yet implemented"
+            "c6bcda1e", f"{tree_algorithm.value} tree algorithm not yet implemented"
         )
     phylogenetic_tree = model.PhylogeneticTree(
         id=self.generate_id(),  # type: ignore[arg-type]

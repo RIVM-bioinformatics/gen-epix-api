@@ -156,7 +156,8 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         url = url or self.server_cfg.discovery_url
         if url is None and doc is None:
             raise exc.InitializationServiceError(
-                "No discovery URL or document provided for OIDC configuration"
+                "109f98e6",
+                "No discovery URL or document provided for OIDC configuration",
             )
 
         # Special case: discovery document provided -> update from that first
@@ -186,7 +187,8 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             if not self.server_cfg.is_valid():
                 invalid_fields = self.server_cfg.get_invalid_fields()
                 raise exc.InitializationServiceError(
-                    f"OIDC configuration from discovery URL is not valid. Invalid fields: {invalid_fields}"
+                    "53851a9e",
+                    f"OIDC configuration from discovery URL is not valid. Invalid fields: {invalid_fields}",
                 )
         except Exception as exception:
             msg = "Error accessing discovery URL"
@@ -200,7 +202,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                         exception=exception,
                     ).dumps()
                 )
-            raise exc.InitializationServiceError(msg) from exception
+            raise exc.InitializationServiceError("66b9919e", msg) from exception
 
     async def get_jwk_from_jwt(self, jwt_token: str) -> jwt.PyJWK:
         key_id: str = self._validate_key_id(jwt_token, self._parse_kid(jwt_token))
@@ -214,7 +216,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             key = self._signing_keys.get(key_id)
             if not key:
                 self._log_keys_fetch_failure(key_id)
-                raise exc.UnauthorizedAuthError()
+                raise exc.UnauthorizedAuthError("759a2688")
             self._log_keys_fetch_success()
         return key
 
@@ -261,7 +263,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                         jwt=jwt_token,
                     ).dumps()
                 )
-            raise exc.UnauthorizedAuthError()
+            raise exc.UnauthorizedAuthError("d3d0bb67")
         return key_id
 
     def _parse_kid(self, jwt_token: str) -> str | None:
@@ -278,7 +280,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                         exception=e,
                     ).dumps()
                 )
-            raise exc.UnauthorizedAuthError() from e
+            raise exc.UnauthorizedAuthError("5bb8ffb6") from e
 
     async def get_claims_from_jwt(self, jwt_token: str) -> dict[str, Any] | None:
         claims = self._decode_jwt_unverified(jwt_token)
@@ -334,7 +336,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                     ).dumps()
                 )
             raise exc.CredentialsAuthError(
-                http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+                "4675ff0c", http_props={"headers": {"WWW-Authenticate": "Bearer"}}
             )
 
     def _verify_token(self, jwt_token: str, key: jwt.PyJWK) -> dict[str, Any]:
@@ -370,7 +372,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                     ).dumps()
                 )
             raise exc.CredentialsAuthError(
-                http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+                "cde2a901", http_props={"headers": {"WWW-Authenticate": "Bearer"}}
             ) from exception
 
         return claims
@@ -456,7 +458,8 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
 
         self._log_failed_token_retrieval_attempts(max_retries)
         raise exc.ServiceUnavailableError(
-            f"Token retrieval failed for server {self.server_cfg.name}: {last_exception}"
+            "721b8f82",
+            f"Token retrieval failed for server {self.server_cfg.name}: {last_exception}",
         )
 
     def _log_failed_token_retrieval_attempts(self, max_retries: int) -> None:
@@ -503,7 +506,9 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             self.update_server_config_from_discovery()
             url = self.server_cfg.token_endpoint
         if not isinstance(url, str):
-            raise exc.ServiceUnavailableError("Token endpoint URL is not set")
+            raise exc.ServiceUnavailableError(
+                "3266c09e", "Token endpoint URL is not set"
+            )
         return url
 
     def get_claims_from_userinfo(self, access_token: str) -> dict[str, Any]:
@@ -545,7 +550,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                         claims=claims,
                     ).dumps()
                 )
-            raise exc.ServiceUnavailableError()
+            raise exc.ServiceUnavailableError("6053aea9")
         return claims
 
     def get_identity_provider(self) -> IdentityProvider:
@@ -583,7 +588,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                         exception=exception,
                     ).dumps()
                 )
-            raise exc.ServiceUnavailableError() from exception
+            raise exc.ServiceUnavailableError("611dcc58") from exception
 
         # verify keys
         self._signing_keys = {}

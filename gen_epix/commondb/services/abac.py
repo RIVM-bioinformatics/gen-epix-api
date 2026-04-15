@@ -166,7 +166,8 @@ class AbacService(BaseAbacService):
     ) -> list[model.UserNameEmail]:
         if not isinstance(cmd.user, model.User):
             raise exc.ServiceException(
-                "Command has no or wrong user type: {cmd.user.__class__.__name__}"
+                "129606cd",
+                "Command has no or wrong user type: {cmd.user.__class__.__name__}",
             )
         with self.repository.uow() as uow:
             organization_admin_policies: list[model.OrganizationAdminPolicy] = (
@@ -213,7 +214,7 @@ class AbacService(BaseAbacService):
         """
         if not self.app.get_feature_flag("update_own_organization"):
             raise exc.FeatureDisabledServiceError(
-                "Updating own organization is disabled"
+                "028b20d2", "Updating own organization is disabled"
             )
 
         is_new_user = cmd.is_new_user

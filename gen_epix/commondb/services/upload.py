@@ -114,7 +114,7 @@ class BatchUploader:
         # Verify arguments
         assert isinstance(cmd, command.Command)
         if cmd.id is None:
-            raise exc.InvalidArgumentsError("cmd.id must be set")
+            raise exc.InvalidArgumentsError("d47e1515", "cmd.id must be set")
 
         #  Check user rights
         self.verify_user_rights(cmd)
@@ -513,7 +513,7 @@ class BatchUploader:
                         )
                     else:
                         parent_result.add_info(
-                            "9b5d4e32",
+                            "46b0bce4",
                             f"{self.parent_class.NAME} will be created with provided ID",
                         )
         return success
@@ -656,7 +656,7 @@ class BatchUploader:
                         # New child and on_new=CREATE: will be created
                         if self.is_null(child_id):
                             child_result.add_info(
-                                "c8f9a0b4",
+                                "85401e0e",
                                 f"{child_for_upload.__class__.NAME} will be created with generated ID",
                             )
                         else:

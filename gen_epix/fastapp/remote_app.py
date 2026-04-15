@@ -174,7 +174,8 @@ class RemoteApp(App):
             retval = handler(cmd)
         except httpx.RequestError as e:
             raise exc.ServiceException(
-                f"HTTP request error when handling remote command {command_class.NAME}: {e}"
+                "869e34b6",
+                f"HTTP request error when handling remote command {command_class.NAME}: {e}",
             ) from e
         except httpx.HTTPStatusError as e:
             # Handle HTTPStatusError with proper access to response attributes
@@ -184,11 +185,13 @@ class RemoteApp(App):
                 else "unknown"
             )
             raise exc.ServiceException(
-                f"HTTP status {status_code} error when handling remote command {command_class.NAME}: {e}"
+                "b7b0a22c",
+                f"HTTP status {status_code} error when handling remote command {command_class.NAME}: {e}",
             ) from e
         except Exception as e:
             raise exc.ServiceException(
-                f"Error when handling remote command {command_class.NAME}: {e}"
+                "3dd5acdb",
+                f"Error when handling remote command {command_class.NAME}: {e}",
             ) from e
         return retval
 
