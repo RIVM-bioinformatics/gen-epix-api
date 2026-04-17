@@ -113,11 +113,13 @@ class Run:
         )
 
     def api_platform_local_mock_dict_demo(self) -> None:
+        from test.end_to_end.casedb_seqdb_connection.envvar import set_envvar
         from test.test_client.start_all_services import run_platform
 
         run_platform(use_dict_repository=True, start_omopdb=True)
 
     def api_platform_local_mock_sa_sql_demo(self) -> None:
+        from test.end_to_end.casedb_seqdb_connection.envvar import set_envvar
         from test.test_client.start_all_services import run_platform
 
         run_platform(use_dict_repository=False, start_omopdb=True)

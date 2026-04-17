@@ -206,7 +206,8 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         df: dict[UUID, model.SeqProfile] = self.db[  # type: ignore[assignment]
             model.SeqProfile
         ]
-        return [
+
+        retval = [
             x.id
             for x in df.values()
             if x.id is not None
@@ -214,3 +215,4 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
             and x.qc_result is not None
             and x.qc_result in allowed_qc_results
         ]
+        return retval
