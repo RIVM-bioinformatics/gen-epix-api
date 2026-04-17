@@ -3,9 +3,6 @@ import time
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from test.end_to_end.casedb_seqdb_connection.envvar import (
-    set_envvar as set_environment_variables,
-)
 from test.test_client.enum import ServerType
 from test.test_client.server_manager import ServerManager
 
@@ -26,9 +23,6 @@ from gen_epix.seqdb.env import AppComposer as SeqdbAppComposer
 
 SSL_CERTFILE = Path("cert/cert.pem").absolute().as_posix()
 SSL_KEYFILE = Path("cert/key.pem").absolute().as_posix()
-
-# Set environment variables for casedb, seqdb, and omopdb
-set_environment_variables()
 
 
 @contextmanager
