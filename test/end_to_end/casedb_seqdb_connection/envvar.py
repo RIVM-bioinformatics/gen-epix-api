@@ -22,11 +22,11 @@ def set_envvar() -> None:
         path / "identity_provider.toml",
     ]
     omop_settings_files: list[Path] = [
-        path / "omop.settings.toml",
-        path / "omop.feature_flags.toml",
-        path / "omop.settings.repository.toml",
-        path / "omop.secrets.service.toml",
-        path / "omop.secrets.repository.toml",
+        path / "omopdb.settings.toml",
+        path / "omopdb.feature_flags.toml",
+        path / "omopdb.settings.repository.toml",
+        path / "omopdb.secrets.service.toml",
+        path / "omopdb.secrets.repository.toml",
         path / "identity_provider.toml",
     ]
 
