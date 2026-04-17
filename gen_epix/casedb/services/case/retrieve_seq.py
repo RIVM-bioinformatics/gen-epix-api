@@ -1,3 +1,4 @@
+import json
 from collections.abc import Iterable
 from uuid import UUID
 
@@ -22,7 +23,6 @@ def case_service_retrieve_phylogenetic_tree(
     assert isinstance(user, model.User) and user.id is not None
     case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
     assert case_abac is not None
-
     with repository.uow() as uow:
         # Get distance column data
         dist_col: model.Col = repository.crud(  # type: ignore[assignment]

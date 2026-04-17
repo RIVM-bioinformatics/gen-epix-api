@@ -154,6 +154,12 @@ async def authenticate_client(request: Request) -> Client:
     return client
 
 
+@app.get("/health")
+async def health() -> dict[str, str]:
+    """Health endpoint used by local test server orchestration."""
+    return {"status": "ok"}
+
+
 @app.get("/.well-known/openid-configuration")
 async def openid_configuration(request: Request) -> dict[str, Any]:
     """OpenID Connect Discovery endpoint."""
