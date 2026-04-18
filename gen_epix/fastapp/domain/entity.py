@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from gen_epix.fastapp.domain.key import Key
 from gen_epix.fastapp.domain.link import Link
-from gen_epix.fastapp.enum import FieldType, StringCasing
+from gen_epix.fastapp.enum import FieldType, OnException, StringCasing
 from gen_epix.fastapp.exc import DomainException
 
 
@@ -425,12 +425,12 @@ class Entity(BaseModel):
         return self._keys_generator
 
     def get_link_id(self, link_model_class: type) -> Callable[[Any], Hashable]:
-        fun = self._get_link_id_by_model_class.get(link_model_class)
-        if fun is None:
+        fn = self._get_link_id_by_model_class.get(link_model_class)
+        if fn is None:
             raise ValueError(
                 f"No link or several links to {link_model_class.__name__} exist for entity {self.name}"
             )
-        return fun
+        return fn
 
     def get_link_entity(self, link_field_name: str) -> Any | None:
         """
@@ -721,6 +721,59 @@ class Entity(BaseModel):
     @classmethod
     def camel_to_snake_case(cls, value: str) -> str:
         return cls.CAMEL_TO_SNAKE_CASE_PATTERN.sub("_", value).lower()
+
+    @classmethod
+    def topological_sort(
+        cls, entities: list[Self], on_cycle: OnException
+    ) -> list[Self]:
+        """Perform a topological sort of the entities based on their links."""
+        if not entities:
+            return []
+
+        # Create a set for O(1) lookup
+        entity_set = set(entities)
+
+        # Build adjacency list and in-degree map for only the
+        # entities in the filtered set
+        in_degree: dict[Self, int] = {entity: 0 for entity in entities}
+        adjacency: dict[Self, list[Self]] = {entity: [] for entity in entities}
+
+        for entity in entities:
+            # For each link in the entity, add dependency if the linked
+            # entity is in the filtered set
+            for link in entity.links.values():
+                linked_entity = link.link_model_class.ENTITY
+                if linked_entity in entity_set:
+                    # entity depends on linked_entity,
+                    # so linked_entity should come first
+                    adjacency[linked_entity].append(entity)
+                    in_degree[entity] += 1
+
+        # Kahn's algorithm for topological sort
+        queue = [x for x in entities if in_degree[x] == 0]
+        sorted_entities: list[Self] = []
+        while queue:
+            current = queue.pop(0)
+            sorted_entities.append(current)
+            # For each entity that depends on current
+            for dependent in adjacency[current]:
+                in_degree[dependent] -= 1
+                if in_degree[dependent] == 0:
+                    queue.append(dependent)
+
+        # If result doesn't contain all entities, there's a cycle
+        if len(sorted_entities) != len(entities):
+            extra_entities = set(entities) - set(sorted_entities)
+            extra_entities_str = ", ".join(sorted(x.name for x in extra_entities))
+            if on_cycle == OnException.RAISE:
+                raise DomainException(
+                    "c4e91a7b",
+                    f"Cycle detected in entity links, topological sort not possible. Involved entities: {extra_entities_str}",
+                )
+            elif on_cycle == OnException.IGNORE:
+                return sorted_entities
+
+        return sorted_entities
 
     @staticmethod
     def _get_model_field_names(

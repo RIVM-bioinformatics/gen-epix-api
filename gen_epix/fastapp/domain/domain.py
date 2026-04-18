@@ -86,7 +86,7 @@ class Domain:
     @staticmethod
     def get_model_name(model_class: type[Model]) -> str:
         if model_class.NAME is None:
-            model_class.NAME = model_class.__name__
+            model_class.NAME = model_class.__name__  # type: ignore
         return model_class.NAME
 
     def __init__(self, name: str, description: str | None = None):
@@ -489,6 +489,7 @@ class Domain:
         schema_name: str | None = None,
         invert: bool = False,
         reverse: bool = False,
+        on_cycle: OnException = OnException.RAISE,
     ) -> list[Entity]:
         if service_type:
             self._verify_service_type_exists(service_type)
@@ -500,39 +501,11 @@ class Domain:
             schema_name,
             invert,
         )
+        # Perform topological sort on filtered entities based on links
+        sorted_entities = Entity.topological_sort(entities, on_cycle=on_cycle)
         if reverse:
-            return list(reversed(entities))
-        return entities
-
-    def _filter_entities(
-        self,
-        service_type: Hashable | None,
-        persistable: bool | None,
-        url_name: str | None,
-        database_name: str | None,
-        schema_name: str | None,
-        invert: bool,
-    ) -> list[Entity]:
-        entities: list[Entity] = []
-        for entity in self._dag_sorted_entities:
-            if (
-                service_type
-                and (self.get_service_type_for_entity(entity) != service_type) != invert
-            ):
-                continue
-            if (
-                persistable is not None
-                and (entity.persistable != persistable) != invert
-            ):
-                continue
-            if url_name and (entity.url_name != url_name) != invert:
-                continue
-            if database_name and (entity.database_name != database_name) != invert:
-                continue
-            if schema_name and (entity.schema_name != schema_name) != invert:
-                continue
-            entities.append(entity)
-        return entities
+            return list(reversed(sorted_entities))
+        return sorted_entities
 
     def get_dag_sorted_models(
         self,
@@ -543,6 +516,7 @@ class Domain:
         schema_name: str | None = None,
         invert: bool = False,
         reverse: bool = False,
+        on_cycle: OnException = OnException.RAISE,
     ) -> list[type[Model]]:
         return [
             x.model_class  # type: ignore
@@ -554,8 +528,37 @@ class Domain:
                 schema_name=schema_name,
                 invert=invert,
                 reverse=reverse,
+                on_cycle=on_cycle,
             )
         ]
+
+    def get_dag_sorted_service_types(
+        self,
+        reverse: bool = False,
+        on_cycle: OnException = OnException.RAISE,
+    ) -> list[Hashable]:
+        entities = self.get_dag_sorted_entities(reverse=reverse, on_cycle=on_cycle)
+        if len(entities) == 0:
+            return []
+
+        entity_service_types = [self._service_type_for_entity[x] for x in entities]
+        service_types = [entity_service_types[0]]
+        seen_service_types = {entity_service_types[0]}
+        for service_type in entity_service_types[1:]:
+            if service_type == service_types[-1]:
+                # Same service type as previous entity, nothing to do
+                continue
+            if service_type in seen_service_types:
+                if on_cycle == OnException.RAISE:
+                    raise exc.DomainException(
+                        "f8b2c94d",
+                        f"Service type {service_type} is part of a cycle in the entity DAG"
+                    )
+                elif on_cycle == OnException.IGNORE:
+                    continue
+            service_types.append(service_type)
+            seen_service_types.add(service_type)
+        return service_types
 
     def register_service_type(self, service_type: Hashable) -> Hashable:
         if service_type not in self._service_types:
@@ -612,6 +615,36 @@ class Domain:
             self.register_command(entity.crud_command_class, service_type=service_type)  # type: ignore
 
         return entity
+
+    def _filter_entities(
+        self,
+        service_type: Hashable | None,
+        persistable: bool | None,
+        url_name: str | None,
+        database_name: str | None,
+        schema_name: str | None,
+        invert: bool,
+    ) -> list[Entity]:
+        entities: list[Entity] = []
+        for entity in self._dag_sorted_entities:
+            if (
+                service_type
+                and (self.get_service_type_for_entity(entity) != service_type) != invert
+            ):
+                continue
+            if (
+                persistable is not None
+                and (entity.persistable != persistable) != invert
+            ):
+                continue
+            if url_name and (entity.url_name != url_name) != invert:
+                continue
+            if database_name and (entity.database_name != database_name) != invert:
+                continue
+            if schema_name and (entity.schema_name != schema_name) != invert:
+                continue
+            entities.append(entity)
+        return entities
 
     def _update_entity_dag(self, entity: Entity, on_cycle: OnException) -> None:
         for link in entity.links.values():

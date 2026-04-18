@@ -117,15 +117,26 @@ class UserManager(BaseUserManager):
                     objs=cfg_root_organization,
                 )
 
-            # Create root user
+            # Create root user if not already present, otherwise return it.
+            # The lookup uses self._root_user.key (the configured key) rather
+            # than claims.get(self._key_claim), because NONE IDP mode calls
+            # this method with empty claims ({}), making the claim-based lookup
+            # always return None and the existence check always return False —
+            # a silent bug that causes a UniqueConstraintViolationError on the
+            # subsequent INSERT. Using the configured key fixes the check.
+            # Returning the existing user (instead of raising) makes this call
+            # idempotent, which is required when multiple services share a
+            # database: e.g. in SA_SQL mode the standalone seqdb service and
+            # casedb's embedded LOCAL seqdb both initialise against the same
+            # seqdb database and both call this method on startup.
             is_existing_root_user = (
                 self._organization_service.repository.is_existing_user_by_key(
-                    uow, claims.get(self._key_claim)
+                    uow, self._root_user.key
                 )
             )
             if is_existing_root_user:
-                raise exc.InitializationServiceError(
-                    "ed4a829f", "Root user with the specified key already exists"
+                return self._organization_service.repository.retrieve_user_by_key(
+                    uow, self._root_user.key
                 )
             # Create and store root user
             root_user = self._root_user.model_copy()

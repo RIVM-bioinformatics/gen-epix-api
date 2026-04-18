@@ -232,6 +232,7 @@ class SeqSARepository(SARepository, BaseSeqRepository):
             enum.QualityControlResult
         ] = enum.QualityControlResultSet.USABLE.value,
     ) -> list[UUID]:
+
         if not seq_profile_ids or not allowed_qc_results:
             return []
         stmt = sa.select(sa_model.SeqProfile.id).where(
@@ -240,5 +241,4 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         )
         assert isinstance(uow, SAUnitOfWork)
         retval: list[UUID] = uow.session.execute(stmt).scalars().all()  # type: ignore[assignment]
-        return retval
         return retval

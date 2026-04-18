@@ -23,7 +23,7 @@ from gen_epix.commondb.api.organization import (
     create_organization_endpoints as create_organization_endpoints,
 )
 from gen_epix.commondb.api.rbac import create_rbac_endpoints as create_rbac_endpoints
-from gen_epix.commondb.api.system import HealthReponseBody as HealthReponseBody
+from gen_epix.commondb.api.system import HealthResponseBody as HealthResponseBody
 from gen_epix.commondb.api.system import HealthStatus as HealthStatus
 from gen_epix.commondb.api.system import LicensesResponseBody as LicensesResponseBody
 from gen_epix.commondb.api.system import LogItem as LogItem
