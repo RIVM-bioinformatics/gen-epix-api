@@ -80,7 +80,10 @@ class Run:
     ]
 
     ## api
-    def api(self, app_type: str, idp_config: str, dev_repository_config: str) -> None:
+    def api(
+        self, app_type: str, idp_config: str, dev_repository_config: str,
+        reload: bool = True,
+    ) -> None:
         import uvicorn
 
         app_type_enum = AppType[app_type.upper()]
@@ -103,7 +106,7 @@ class Run:
             uri_cfg["app"],
             host=uri_cfg["host"],
             port=uri_cfg["port"],
-            reload=True,
+            reload=reload,
             ssl_keyfile=ssl_keyfile,
             ssl_certfile=ssl_certfile,
             log_config=logging_file,
