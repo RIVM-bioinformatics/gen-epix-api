@@ -102,7 +102,7 @@ class TokenIntrospectionManager:
                     ).dumps()
                 )
             raise exc.UnauthorizedAuthError(
-                http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+                "114cbc68", http_props={"headers": {"WWW-Authenticate": "Bearer"}}
             ) from exception
 
     def _get_cached_introspection_endpoint(self) -> str:
@@ -131,7 +131,7 @@ class TokenIntrospectionManager:
                     ).dumps()
                 )
             raise exc.CredentialsAuthError(
-                http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+                "cd6f91e8", http_props={"headers": {"WWW-Authenticate": "Bearer"}}
             )
         if self._is_recheck_introspection(jwt_token, now):
             if self.logger:
@@ -143,7 +143,7 @@ class TokenIntrospectionManager:
             is_active = self._introspect_token_with_server(jwt_token)
             if is_active is None:
                 raise exc.CredentialsAuthError(
-                    http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+                    "026ae562", http_props={"headers": {"WWW-Authenticate": "Bearer"}}
                 )
             exp_val = int(claims.get("exp", now))
             if is_active:
@@ -158,7 +158,7 @@ class TokenIntrospectionManager:
                         ).dumps()
                     )
                 raise exc.CredentialsAuthError(
-                    http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+                    "e36c7738", http_props={"headers": {"WWW-Authenticate": "Bearer"}}
                 )
 
     def _prune_expired_introspection_cache(self, now: int | None = None) -> None:
@@ -233,7 +233,7 @@ class TokenIntrospectionManager:
                         ).dumps()
                     )
                 raise exc.UnauthorizedAuthError(
-                    http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+                    "e042bbc2", http_props={"headers": {"WWW-Authenticate": "Bearer"}}
                 )
             payload = response.json()
             active = payload.get("active")
@@ -250,5 +250,5 @@ class TokenIntrospectionManager:
                     ).dumps()
                 )
             raise exc.UnauthorizedAuthError(
-                http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+                "f73f7db5", http_props={"headers": {"WWW-Authenticate": "Bearer"}}
             ) from exc_

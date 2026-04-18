@@ -29,7 +29,7 @@ def seq_service_retrieve_seq_distance_last_modified(
         )
         if seq_distance_protocol.protocol_type != enum.ProtocolType.SEQ_DISTANCE:
             raise exc.InvalidArgumentsError(
-                f"Protocol {cmd.protocol_id} is not a SeqDistance protocol"
+                "ad28ab0f", f"Protocol {cmd.protocol_id} is not a SeqDistance protocol"
             )
         return self.repository.get_max_seq_distance_modified_at(  # type: ignore[attr-defined]
             uow, cmd.protocol_id

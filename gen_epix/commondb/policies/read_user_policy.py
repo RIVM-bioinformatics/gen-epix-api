@@ -129,7 +129,7 @@ class ReadUserPolicy(BaseReadUserPolicy):
         ) or not (result.is_active or is_org_admin):
             # User cannot read users outside their admin organizations
             raise exc.UnauthorizedAuthError(
-                "Cannot read users outside your admin organizations"
+                "9acec44a", "Cannot read users outside your admin organizations"
             )
         return result
 
@@ -148,7 +148,7 @@ class ReadUserPolicy(BaseReadUserPolicy):
         ):
             # User cannot read users outside their admin organizations
             raise exc.UnauthorizedAuthError(
-                "Cannot read users outside your admin organizations"
+                "5710ba8d", "Cannot read users outside your admin organizations"
             )
         return results
 

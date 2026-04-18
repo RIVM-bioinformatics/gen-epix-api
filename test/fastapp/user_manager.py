@@ -47,23 +47,25 @@ class UserManager(BaseUserManager):
         if not user_id:
             user_id = claims.pop("id", self.get_user_key_from_claims(claims))
         if not user_id:
-            raise exc.NoResultsError()
+            raise exc.NoResultsError("c31ff1e1")
         new_user = self.user_class(id=user_id, **claims)
         if new_user.id in self.users:
-            raise exc.AlreadyExistingIdsError(f"{new_user.id} already exists")
+            raise exc.AlreadyExistingIdsError(
+                "1d92f264", f"{new_user.id} already exists"
+            )
         self.users[new_user.id] = new_user
         return new_user
 
     def create_new_user_from_token(self, user: User, token: str, **kwargs: Any) -> User:
         if user.id in self.users:
-            raise exc.AlreadyExistingIdsError(f"{user.id} already exists")
+            raise exc.AlreadyExistingIdsError("999b7823", f"{user.id} already exists")
         self.users[user.id] = user
         return user
 
     def retrieve_user_by_key(self, key: str) -> User:
         if key in self.users:
             return self.users[key]
-        raise exc.NoResultsError()
+        raise exc.NoResultsError("44c86617")
 
     def is_existing_user_by_key(
         self, user_key: str | None, uow: BaseUnitOfWork
@@ -73,7 +75,7 @@ class UserManager(BaseUserManager):
     def retrieve_user_by_id(self, user_id: Hashable) -> User:
         if user_id in self.users:
             return self.users[user_id]
-        raise exc.NoResultsError()
+        raise exc.NoResultsError("976c7db0")
 
     def retrieve_user_permissions(self, user: User) -> set[Permission]:
         raise NotImplementedError()

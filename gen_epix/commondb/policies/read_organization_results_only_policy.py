@@ -32,7 +32,7 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
 
     def filter(self, cmd: command.Command, retval: Any) -> Any:  # type: ignore[override]
         if not cmd.user or not cmd.user.id:
-            raise exc.ServiceException("Command has no user")
+            raise exc.ServiceException("d3d0bec8", "Command has no user")
         # TODO: replace filter for AFTER with injecting a filter DURING for efficiency
         if isinstance(cmd, command.RetrieveInviteUserConstraintsCommand):
             # Already handled DURING
@@ -96,11 +96,11 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
         if is_read_all:
             return [x for x in retval if x.organization_id in organization_ids]
         if is_read_one and retval.organization_id not in organization_ids:
-            raise exc.UnauthorizedAuthError(msg1)
+            raise exc.UnauthorizedAuthError("73bcbbeb", msg1)
         if not is_read_one and any(
             x.organization_id not in organization_ids for x in retval
         ):
-            raise exc.UnauthorizedAuthError(msg2)
+            raise exc.UnauthorizedAuthError("12ee166c", msg2)
         return retval
 
     def _filter_users_by_organization(
@@ -118,9 +118,9 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
         if is_read_all:
             return [x for x in retval if x.user_id in valid_user_ids]
         if is_read_one and retval.user_id not in valid_user_ids:
-            raise exc.UnauthorizedAuthError(msg1)
+            raise exc.UnauthorizedAuthError("35d7e912", msg1)
         if not is_read_one and not {x.user_id for x in retval}.issubset(valid_user_ids):
-            raise exc.UnauthorizedAuthError(msg2)
+            raise exc.UnauthorizedAuthError("f84db495", msg2)
         raise NotImplementedError
 
     def _get_users(self, cmd: command.Command, is_read_all: bool) -> list[model.User]:

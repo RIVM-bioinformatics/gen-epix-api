@@ -121,19 +121,19 @@ class Entity(BaseModel):
     @property
     def name(self) -> str:
         if not self.has_model():
-            raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+            raise DomainException("aa2c7c40", Entity.NO_MODEL_ERROR_MSG)
         return self._model_class.NAME  # type: ignore
 
     @property
     def model_class(self) -> type[BaseModel]:
         if not self.has_model():
-            raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+            raise DomainException("be45913e", Entity.NO_MODEL_ERROR_MSG)
         return self._model_class  # type: ignore
 
     @property
     def crud_command_class(self) -> type[BaseModel] | None:
         if not self.has_model():
-            raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+            raise DomainException("52c69320", Entity.NO_MODEL_ERROR_MSG)
         if not self.persistable:
             raise ValueError(Entity.NOT_PERSISTABLE_ERROR_MSG)
         return self._crud_command_class  # type: ignore
@@ -141,7 +141,7 @@ class Entity(BaseModel):
     @property
     def db_model_class(self) -> type | None:
         if not self.has_model():
-            raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+            raise DomainException("7ee38603", Entity.NO_MODEL_ERROR_MSG)
         if not self.persistable:
             raise ValueError(Entity.NOT_PERSISTABLE_ERROR_MSG)
         return self._db_model_class  # type: ignore
@@ -149,19 +149,19 @@ class Entity(BaseModel):
     @property
     def create_api_model_class(self) -> type | None:
         if not self.has_model():
-            raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+            raise DomainException("b0252bfa", Entity.NO_MODEL_ERROR_MSG)
         return self._create_api_model_class  # type: ignore
 
     @property
     def read_api_model_class(self) -> type | None:
         if not self.has_model():
-            raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+            raise DomainException("81bb94f3", Entity.NO_MODEL_ERROR_MSG)
         return self._read_api_model_class  # type: ignore
 
     @property
     def get_obj_id(self) -> Callable[[Any], Hashable]:
         if not self.has_model():
-            raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+            raise DomainException("3f1a0c53", Entity.NO_MODEL_ERROR_MSG)
         assert self.id_field_name
         return lambda x: getattr(x, self.id_field_name)
 
@@ -256,7 +256,7 @@ class Entity(BaseModel):
         that is stored or retrieved from the repository.
         """
         if not self.has_model():
-            raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+            raise DomainException("cffc3b23", Entity.NO_MODEL_ERROR_MSG)
         if not self.persistable:
             raise ValueError(Entity.NOT_PERSISTABLE_ERROR_MSG)
         self._db_model_class = db_model_class
@@ -268,7 +268,7 @@ class Entity(BaseModel):
         that is posted to an endpoint to create a resource.
         """
         if not self.has_model():
-            raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+            raise DomainException("8025d2b1", Entity.NO_MODEL_ERROR_MSG)
         self._create_api_model_class = create_api_model_class
         return self
 
@@ -278,7 +278,7 @@ class Entity(BaseModel):
         that returned in a response by an endpoint.
         """
         if not self.has_model():
-            raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+            raise DomainException("bb74ae18", Entity.NO_MODEL_ERROR_MSG)
         self._read_api_model_class = read_api_model_class
         return self
 
@@ -288,7 +288,7 @@ class Entity(BaseModel):
         that is stored or retrieved from the repository.
         """
         if not self.has_model():
-            raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+            raise DomainException("b8955690", Entity.NO_MODEL_ERROR_MSG)
         if not self.persistable:
             raise ValueError(Entity.NOT_PERSISTABLE_ERROR_MSG)
         self._crud_command_class = crud_command_class
@@ -767,7 +767,8 @@ class Entity(BaseModel):
             extra_entities_str = ", ".join(sorted(x.name for x in extra_entities))
             if on_cycle == OnException.RAISE:
                 raise DomainException(
-                    f"Cycle detected in entity links, topological sort not possible. Involved entities: {extra_entities_str}"
+                    "c4e91a7b",
+                    f"Cycle detected in entity links, topological sort not possible. Involved entities: {extra_entities_str}",
                 )
             elif on_cycle == OnException.IGNORE:
                 return sorted_entities

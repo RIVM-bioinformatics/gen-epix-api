@@ -76,7 +76,8 @@ def _crud_case_identifier_with_abac(
         or cmd.is_update()
     ):
         raise exc.UnauthorizedAuthError(
-            f"Operation {cmd.operation.value} not allowed for case identifiers for this user"
+            "f648da79",
+            f"Operation {cmd.operation.value} not allowed for case identifiers for this user",
         )
 
     # For now, delegate to the main crud method with extensive logic

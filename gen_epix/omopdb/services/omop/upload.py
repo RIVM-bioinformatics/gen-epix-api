@@ -22,7 +22,7 @@ class PersonBatchUploader(BatchUploader):
             service,
         )
         if not isinstance(service, BaseOmopService):
-            raise exc.InvalidArgumentsError("Invalid service type")
+            raise exc.InvalidArgumentsError("38bd57d4", "Invalid service type")
         self.service: BaseOmopService = service
 
     def verify_user_rights(self, cmd: UploadBatchCommandMixin) -> None:
@@ -33,7 +33,7 @@ class PersonBatchUploader(BatchUploader):
         """
         # Verify command type
         if not isinstance(cmd, command.UploadPersonsCommand):
-            raise exc.InvalidArgumentsError("Invalid command type")
+            raise exc.InvalidArgumentsError("f8dbeb8d", "Invalid command type")
         # TODO: implement additional user rights verifications as necessary
 
     def verify_batch(
@@ -46,9 +46,9 @@ class PersonBatchUploader(BatchUploader):
         Extends batch verification to the person content.
         """
         if not isinstance(cmd, command.UploadPersonsCommand):
-            raise exc.InvalidArgumentsError("Invalid command type")
+            raise exc.InvalidArgumentsError("7b3446fe", "Invalid command type")
         if not isinstance(batch_result, model.PersonBatchUploadResult):
-            raise exc.InvalidArgumentsError("Invalid return value type")
+            raise exc.InvalidArgumentsError("1a93de93", "Invalid return value type")
         success = True
 
         # Verify generic aspects. This will fill in any person IDs based on external
@@ -73,9 +73,9 @@ class PersonBatchUploader(BatchUploader):
         Extends batch upload to uploading the persons with this service.
         """
         if not isinstance(cmd, command.UploadPersonsCommand):
-            raise exc.InvalidArgumentsError("Invalid command type")
+            raise exc.InvalidArgumentsError("94c3402c", "Invalid command type")
         if not isinstance(batch_result, model.PersonBatchUploadResult):
-            raise exc.InvalidArgumentsError("Invalid return value type")
+            raise exc.InvalidArgumentsError("aba133d4", "Invalid return value type")
         success = True
 
         # Use the general parent method for upserting the persons

@@ -41,7 +41,7 @@ class BaseUserManager(ServiceUserManager):
         # Initialize root config
         if root_cfg is None:
             raise exc.InitializationServiceError(
-                "Root configuration for user manager is not provided"
+                "835074f1", "Root configuration for user manager is not provided"
             )
         self.init_root_cfg(root_cfg)
 
@@ -54,7 +54,8 @@ class BaseUserManager(ServiceUserManager):
         if not required_keys.issubset(root_cfg.keys()):
             missing_keys_str = ", ".join(sorted(required_keys - set(root_cfg.keys())))
             raise exc.InitializationServiceError(
-                f"Root configuration is missing required keys: {missing_keys_str}"
+                "7fc1f394",
+                f"Root configuration is missing required keys: {missing_keys_str}",
             )
         # Create root organization instance
         self._root_organization = model.Organization(
@@ -62,7 +63,7 @@ class BaseUserManager(ServiceUserManager):
         )
         if self._root_organization.id is None:
             raise exc.InitializationServiceError(
-                "Root organization ID is not set in the configuration"
+                "e72c66f9", "Root organization ID is not set in the configuration"
             )
         # Create root user instance
         self._root_user = self._user_class(
@@ -88,7 +89,8 @@ class BaseUserManager(ServiceUserManager):
                 sorted(required_keys - set(auto_created_user_cfg.keys()))
             )
             raise exc.InitializationServiceError(
-                f"Auto-created new user configuration is missing required keys: {missing_keys_str}"
+                "386d8f64",
+                f"Auto-created new user configuration is missing required keys: {missing_keys_str}",
             )
         ## Verify roles
         roles = set(auto_created_user_cfg["roles"])
@@ -96,7 +98,8 @@ class BaseUserManager(ServiceUserManager):
         if not roles.issubset(all_roles):
             extra_roles_str = ", ".join(sorted(roles - all_roles))
             raise exc.InitializationServiceError(
-                f"Auto-created new user configuration has extra roles not registered: {extra_roles_str}"
+                "9a34d173",
+                f"Auto-created new user configuration has extra roles not registered: {extra_roles_str}",
             )
         self._auto_created_user_cfg["roles"] = roles
         # Verify organization_id
@@ -105,5 +108,6 @@ class BaseUserManager(ServiceUserManager):
             self._auto_created_user_cfg["organization_id"] = UUID(organization_id_str)
         except (ValueError, KeyError):
             raise exc.InitializationServiceError(
-                f"Auto-created new user configuration has invalid organization_id: {organization_id_str}"
+                "fb19c5c0",
+                f"Auto-created new user configuration has invalid organization_id: {organization_id_str}",
             )

@@ -76,7 +76,7 @@ class UserManager(BaseUserManager):
             organization_id = self._auto_created_user_cfg["organization_id"]
         key = claims.get(self._key_claim)
         if not key:
-            raise exc.CredentialsAuthError("Key not found in claims")
+            raise exc.CredentialsAuthError("89778b52", "Key not found in claims")
         email = get_email_from_claims(claims)
         name = self.get_user_name_from_claims(claims)
         return self._user_class(
@@ -171,7 +171,7 @@ class UserManager(BaseUserManager):
             )
             if not is_existing_organization:
                 raise exc.InitializationServiceError(
-                    "Auto-created new user organization does not exist"
+                    "26baf193", "Auto-created new user organization does not exist"
                 )
 
             # Verify if user exists and add if not
@@ -183,12 +183,14 @@ class UserManager(BaseUserManager):
             )
             if is_existing_user:
                 raise exc.ServiceException(
-                    f"User with key {claims.get(self._key_claim)} already exists"
+                    "98a3327c",
+                    f"User with key {claims.get(self._key_claim)} already exists",
                 )
             claims_user = self.construct_user_instance_from_claims(claims)
             if not claims_user:
                 raise exc.ServiceException(
-                    f"Unable to auto-create user with key {claims.get(self._key_claim)} from claims"
+                    "2eb471f8",
+                    f"Unable to auto-create user with key {claims.get(self._key_claim)} from claims",
                 )
             claims_user.id = self.generate_id()
             user: model.User = (
@@ -232,10 +234,14 @@ class UserManager(BaseUserManager):
                 obj_ids=created_by_user_id,
             )
             if not is_existing_user:
-                raise exc.UnauthorizedAuthError("Created by user does not exist")
+                raise exc.UnauthorizedAuthError(
+                    "d9c42047", "Created by user does not exist"
+                )
             created_by_user = self.retrieve_user_by_id(created_by_user_id)
             if not created_by_user.is_active:
-                raise exc.UnauthorizedAuthError("Created by user is not active")
+                raise exc.UnauthorizedAuthError(
+                    "16a88680", "Created by user is not active"
+                )
 
             # Verify if create_by_user made an invitation for this user that is valid
             user_invitations: list[model.UserInvitation] = (
@@ -265,7 +271,7 @@ class UserManager(BaseUserManager):
                 and convert_to_utc(x.expires_at) > timestamp
             ]
             if not user_invitations:
-                raise exc.UnauthorizedAuthError("Invitation does not exist")
+                raise exc.UnauthorizedAuthError("edc14ebd", "Invitation does not exist")
 
             # Verify if organization exists
             is_existing_organization = self._organization_service.repository.crud(
@@ -276,11 +282,13 @@ class UserManager(BaseUserManager):
                 obj_ids=user.organization_id,
             )
             if not is_existing_organization:
-                raise exc.UnauthorizedAuthError("Organization does not exist")
+                raise exc.UnauthorizedAuthError(
+                    "c14b47ee", "Organization does not exist"
+                )
 
             is_existing_user = self.is_existing_user_by_key(user.email, uow)
             if is_existing_user:
-                raise exc.UnauthorizedAuthError("User already exists")
+                raise exc.UnauthorizedAuthError("00133e20", "User already exists")
 
             try:
                 created_user: model.User = (
@@ -295,7 +303,7 @@ class UserManager(BaseUserManager):
                     )
                 )
             except Exception:
-                raise exc.UnauthorizedAuthError("Unable to create user")
+                raise exc.UnauthorizedAuthError("28217e8d", "Unable to create user")
 
             return created_user
 

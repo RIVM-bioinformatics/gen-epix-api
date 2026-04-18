@@ -148,3 +148,9 @@ def test_error_code_unicity() -> None:
     if duplicates:
         # Format failure message
         _hanlde_duplicate_hex_codes(duplicates)
+
+    print(
+        "Unicity check passed. Checked {} files, found {} unique codes.".format(
+            len(files), len(seen_codes)
+        )
+    )

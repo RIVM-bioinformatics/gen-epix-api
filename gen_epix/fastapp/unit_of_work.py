@@ -37,4 +37,4 @@ class BaseUnitOfWork(abc.ABC):
             self.commit()
         else:
             self.rollback()
-            raise exception_class(exception_value).with_traceback(traceback)
+            raise exception_value.with_traceback(traceback)

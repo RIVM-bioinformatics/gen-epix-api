@@ -20,7 +20,7 @@ class BaseCaseAbacPolicy(Policy):
                 continue
             if case_abac:
                 raise exc.InitializationServiceError(
-                    f"Multiple policies registered to retrieve CaseAbac"
+                    "3a0dbaf4", f"Multiple policies registered to retrieve CaseAbac"
                 )
             case_abac = policy.get_content(cmd)
 
@@ -36,7 +36,7 @@ class BaseCaseAbacPolicy(Policy):
                 continue
             if ref_data_access is not None:
                 raise exc.InitializationServiceError(
-                    "Multiple policies registered to retrieve RefDataAccess"
+                    "b9d1fd22", "Multiple policies registered to retrieve RefDataAccess"
                 )
             assert isinstance(policy, BaseCaseAbacPolicy)
             ref_data_access = policy.get_ref_data_access(cmd)

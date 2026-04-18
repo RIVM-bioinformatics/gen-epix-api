@@ -28,7 +28,7 @@ class CaseBatchUploader(BatchUploader):
             service,
         )
         if not isinstance(service, BaseCaseService):
-            raise exc.InvalidArgumentsError("Invalid service type")
+            raise exc.InvalidArgumentsError("915489e8", "Invalid service type")
         self.service: BaseCaseService = service
 
     def verify_user_rights(self, cmd: UploadBatchCommandMixin) -> None:
@@ -39,7 +39,7 @@ class CaseBatchUploader(BatchUploader):
         """
         # Verify command type
         if not isinstance(cmd, command.UploadCasesCommand):
-            raise exc.InvalidArgumentsError("Invalid command type")
+            raise exc.InvalidArgumentsError("510ea98a", "Invalid command type")
         # Determine Cols with write access
         complete_case_type = self._get_complete_case_type(cmd)
         case_type_access_abac = complete_case_type.case_type_access_abacs.get(
@@ -47,12 +47,14 @@ class CaseBatchUploader(BatchUploader):
         )
         if case_type_access_abac is None:
             raise exc.UnauthorizedAuthError(
-                f"User {None if cmd.user is None else cmd.user.id} is not allowed to access cases in the given data collection"
+                "d8c05dc7",
+                f"User {None if cmd.user is None else cmd.user.id} is not allowed to access cases in the given data collection",
             )
         write_col_ids = case_type_access_abac.write_col_ids
         if not write_col_ids:
             raise exc.UnauthorizedAuthError(
-                f"User {None if cmd.user is None else cmd.user.id} is not allowed to write any Cols for cases in the given data collection"
+                "96851164",
+                f"User {None if cmd.user is None else cmd.user.id} is not allowed to write any Cols for cases in the given data collection",
             )
 
         # Determine if uploaded cases only contain writable columns
@@ -77,7 +79,8 @@ class CaseBatchUploader(BatchUploader):
         if unauthorized_cols:
             unauthorized_cols_str = ", ".join(str(x) for x in sorted(unauthorized_cols))
             raise exc.UnauthorizedAuthError(
-                f"User {None if cmd.user is None else cmd.user.id} is not allowed to write columns {unauthorized_cols_str} contained in the batch case, for the given data collection"
+                "ec85ffb9",
+                f"User {None if cmd.user is None else cmd.user.id} is not allowed to write columns {unauthorized_cols_str} contained in the batch case, for the given data collection",
             )
 
     def verify_batch(
@@ -91,9 +94,9 @@ class CaseBatchUploader(BatchUploader):
         seqs, which are verified by seqdb.
         """
         if not isinstance(cmd, command.UploadCasesCommand):
-            raise exc.InvalidArgumentsError("Invalid command type")
+            raise exc.InvalidArgumentsError("92bef72e", "Invalid command type")
         if not isinstance(batch_result, model.CaseBatchUploadResult):
-            raise exc.InvalidArgumentsError("Invalid return value type")
+            raise exc.InvalidArgumentsError("42b47de6", "Invalid return value type")
         success = True
 
         # Verify samples via seqdb service
@@ -122,9 +125,9 @@ class CaseBatchUploader(BatchUploader):
         sets and seqs to seqdb.
         """
         if not isinstance(cmd, command.UploadCasesCommand):
-            raise exc.InvalidArgumentsError("Invalid command type")
+            raise exc.InvalidArgumentsError("0935eb52", "Invalid command type")
         if not isinstance(batch_result, model.CaseBatchUploadResult):
-            raise exc.InvalidArgumentsError("Invalid return value type")
+            raise exc.InvalidArgumentsError("078d4af1", "Invalid return value type")
         success = True
 
         # Create new command with only cases and content updated during verification
@@ -352,9 +355,9 @@ class CaseBatchUploader(BatchUploader):
         the link can be made between the two batches.
         """
         if not isinstance(cmd, command.UploadCasesCommand):
-            raise exc.InvalidArgumentsError("Invalid command type")
+            raise exc.InvalidArgumentsError("7b5a31ae", "Invalid command type")
         if not isinstance(batch_result, model.CaseBatchUploadResult):
-            raise exc.InvalidArgumentsError("Invalid return value type")
+            raise exc.InvalidArgumentsError("e46018b7", "Invalid return value type")
 
         # Initialise some
         samples_for_upload: list[seqdb_model.SampleForUpload] = []

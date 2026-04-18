@@ -28,7 +28,9 @@ class DictRepository(BaseRepository):
         file = kwargs.pop("file", None)
         file_type = kwargs.pop("file_type", None)
         if file is None:
-            raise exc.RepositoryInitializationServiceError("No file provided")
+            raise exc.RepositoryInitializationServiceError(
+                "aedae059", "No file provided"
+            )
         if file_type is None:
             path = Path(file)
             suffixes = [x.lower() for x in path.suffixes]
@@ -89,7 +91,9 @@ class DictRepository(BaseRepository):
         **kwargs: Any,
     ) -> "DictRepository":
         if not zip_file.lower().endswith(".zip"):
-            raise exc.RepositoryServiceError("Invalid file format. Expected .zip")
+            raise exc.RepositoryServiceError(
+                "d7de52e2", "Invalid file format. Expected .zip"
+            )
         db = {}
         entities = list(entities)
         with zipfile.ZipFile(zip_file, "r") as zip_handle:
@@ -102,7 +106,8 @@ class DictRepository(BaseRepository):
                     json_file = entity.table_name + FileExtension.JSON.value
                 if json_file not in files:
                     raise exc.RepositoryServiceError(
-                        f"Missing file for entity {entity.name} in archive {zip_file}"
+                        "a243e8bf",
+                        f"Missing file for entity {entity.name} in archive {zip_file}",
                     )
                 model_class = entity.model_class
                 with zip_handle.open(json_file) as handle:
@@ -552,6 +557,7 @@ class DictRepository(BaseRepository):
                 continue
             if linked_df is not None and linked_obj_id not in linked_df:
                 raise exc.InvalidIdsError(
+                    "8b5592ee",
                     (
                         f"Model {model_class.__name__}: obj {get_id(obj)} has invalid id"
                         f' in {link_field_name}: "{linked_obj_id}"'
@@ -567,6 +573,7 @@ class DictRepository(BaseRepository):
             get_link_id = self._get_id[linked_obj.__class__]
             if get_link_id(linked_obj) != linked_obj_id:
                 raise exc.InvalidLinkIdsError(
+                    "40205b3a",
                     (
                         f"Model {model_class.__name__}: obj {get_link_id(obj)} has different id "
                         f'in {link_field_name} ("{linked_obj_id}") versus '
@@ -635,6 +642,7 @@ class DictRepository(BaseRepository):
             if linked_obj_ids:
                 linked_obj_ids_str = ", ".join([f'"{x}"' for x in linked_obj_ids])
                 raise exc.LinkConstraintViolationError(
+                    "50e3ec82",
                     (
                         f"Model {model_class.__name__}: link constraint conflict in model "
                         f"{link_model_class.__name__}, id(s): {linked_obj_ids_str}"
@@ -756,6 +764,7 @@ class DictRepository(BaseRepository):
         if invalid_type_ids:
             invalid_type_ids_str = ", ".join([f'"{x}"' for x in invalid_type_ids])
             raise exc.InvalidModelIdsError(
+                "2e1a28a7",
                 f"Model {model_class.__name__}: object(s) are of different type: {invalid_type_ids_str}",
                 ids=invalid_type_ids,
             )
@@ -765,6 +774,7 @@ class DictRepository(BaseRepository):
             if present_ids:
                 present_ids_str = ", ".join([f'"{x}"' for x in present_ids])
                 raise exc.AlreadyExistingIdsError(
+                    "7cef048c",
                     f"{model_class} object(s) already exist: {present_ids_str}",
                     ids=present_ids,
                 )
@@ -773,6 +783,7 @@ class DictRepository(BaseRepository):
             if missing_ids:
                 missing_ids_str = ", ".join([f"{x}" for x in missing_ids])
                 raise exc.InvalidIdsError(
+                    "18e989a1",
                     f"{model_class} object(s) do not exist: {missing_ids_str}",
                     ids=missing_ids,
                 )
@@ -793,6 +804,7 @@ class DictRepository(BaseRepository):
     ) -> None:
         invalid_obj_ids_str = ", ".join(f'"{x}"' for x in invalid_obj_ids)
         raise exc.InvalidIdsError(
+            "588b3e46",
             f"Model {model_class.__name__}: invalid object id(s) provided: {invalid_obj_ids_str}",
             ids=invalid_obj_ids,
         )
@@ -812,6 +824,7 @@ class DictRepository(BaseRepository):
     ) -> None:
         duplicate_ids_str = ", ".join([f'"{x}"' for x in duplicate_ids])
         raise exc.DuplicateIdsError(
+            "6666582f",
             f"Model {model_class.__name__}: object ids are not unique: {duplicate_ids_str}",
             ids=duplicate_ids,
         )
@@ -857,6 +870,7 @@ class DictRepository(BaseRepository):
                 ]
         if duplicate_objs:
             raise exc.UniqueConstraintViolationError(
+                "9aaac78c",
                 f"Model {model_class.__name__}: object keys are not unique",
                 duplicate_key_ids=list(set([get_id(x) for x in duplicate_objs])),
             )
@@ -880,6 +894,7 @@ class DictRepository(BaseRepository):
                 ]
         if duplicate_objs:
             raise exc.UniqueConstraintViolationError(
+                "ec20ed8b",
                 f"Model {model_class.__name__}: object keys are not unique",
                 duplicate_key_ids=list({get_id(x) for x in duplicate_objs}),
             )

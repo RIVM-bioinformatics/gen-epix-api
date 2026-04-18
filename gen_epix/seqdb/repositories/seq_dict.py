@@ -100,7 +100,8 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
             for contig in seq.contigs:
                 if contig.seq_format != enum.SeqFormat.STR_DNA:
                     raise exc.InitializationServiceError(
-                        f"FASTA export not supported for {contig.seq_format.value} format"
+                        "37fd4cf1",
+                        f"FASTA export not supported for {contig.seq_format.value} format",
                     )
                 assert contig.id is not None
                 contig_list.append((contig.id, contig.seq))

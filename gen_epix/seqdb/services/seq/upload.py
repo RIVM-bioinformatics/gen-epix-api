@@ -48,7 +48,8 @@ class SampleBatchUploader(BatchUploader):
             data_collection_id = NULL_ID
             sample_id = NULL_ID
             raise exc.UnauthorizedAuthError(
-                f"User {cmd.user.email if cmd.user else 'anonymous'} lacks WRITE access to data collection {data_collection_id} for sample {sample_id if sample_id else 'new sample'}"
+                "708b3613",
+                f"User {cmd.user.email if cmd.user else 'anonymous'} lacks WRITE access to data collection {data_collection_id} for sample {sample_id if sample_id else 'new sample'}",
             )
 
     def verify_batch(

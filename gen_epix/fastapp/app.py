@@ -172,13 +172,15 @@ class App:
     @property
     def pdp(self) -> PolicyDecisionPoint:
         if self._pdp is None:
-            raise exc.InitializationServiceError("Policy decision point not set")
+            raise exc.InitializationServiceError(
+                "a336efaf", "Policy decision point not set"
+            )
         return self._pdp
 
     @property
     def user_manager(self) -> BaseUserManager:
         if self._user_manager is None:
-            raise exc.InitializationServiceError("User manager not set")
+            raise exc.InitializationServiceError("3a557c34", "User manager not set")
         return self._user_manager
 
     @user_manager.setter
@@ -196,13 +198,17 @@ class App:
     @property
     def cfg(self) -> Any:
         if self._cfg is None:
-            raise exc.InitializationServiceError("Configuration data is not set")
+            raise exc.InitializationServiceError(
+                "67bd528f", "Configuration data is not set"
+            )
         return self._cfg
 
     @property
     def impl(self) -> Any:
         if self._impl is None:
-            raise exc.InitializationServiceError("Implementation details are not set")
+            raise exc.InitializationServiceError(
+                "0fe120d0", "Implementation details are not set"
+            )
         return self._impl
 
     @property
@@ -302,7 +308,8 @@ class App:
         if command_class in listeners:
             if listener in listeners[command_class]:
                 raise exc.InitializationServiceError(
-                    f"Listener already registered for {command_class.__name__}"
+                    "3c93380c",
+                    f"Listener already registered for {command_class.__name__}",
                 )
             listeners[command_class].append(listener)
         else:
@@ -327,7 +334,7 @@ class App:
         listeners = self._command_listeners[timing]
         if command_class not in listeners or listener not in listeners[command_class]:
             raise exc.InitializationServiceError(
-                f"Listener not registered for {command_class}"
+                "ede03a66", f"Listener not registered for {command_class}"
             )
         listeners[command_class].remove(listener)
 
@@ -362,11 +369,13 @@ class App:
             )
         if not issubclass(command_class, Command):
             raise exc.InitializationServiceError(
-                "Handler can only be set for event and command message subclasses"
+                "2d5ea504",
+                "Handler can only be set for event and command message subclasses",
             )
         if command_class in self._command_handler_map and not replace:
             raise exc.InitializationServiceError(
-                f"Command handler already added for {command_class}: {handler_fn}"
+                "3fc33bf3",
+                f"Command handler already added for {command_class}: {handler_fn}",
             )
         self._command_handler_map[command_class] = handler_fn
 
@@ -376,7 +385,7 @@ class App:
             if handler:
                 return handler
         raise exc.InitializationServiceError(
-            f"No handler set for {command_class} or any of its superclasses"
+            "6ce523f9", f"No handler set for {command_class} or any of its superclasses"
         )
 
     def handle(self, cmd: Command) -> Any:

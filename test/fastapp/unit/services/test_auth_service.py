@@ -135,7 +135,9 @@ class TestGetExistingUserFromToken(BaseAuthServiceTestCase):
         with patch.object(
             self.service,
             "get_existing_user_from_claims",
-            new=AsyncMock(side_effect=[exc.UnauthorizedAuthError(), self.user]),
+            new=AsyncMock(
+                side_effect=[exc.UnauthorizedAuthError("code", "message"), self.user]
+            ),
         ):
             # Execute
             user = self.run_async(self.service.get_existing_user_from_token(token))
@@ -437,7 +439,9 @@ class TestGetExistingUserFromClaims(BaseAuthServiceTestCase):
         self.user_manager.get_user_key_from_claims.return_value = "key"
         self.user_manager.retrieve_user_by_key.return_value = self.user
         self.user_manager.get_user_name_from_claims.return_value = "New Name"
-        self.user_manager.update_user_name.side_effect = exc.DomainException("failed")
+        self.user_manager.update_user_name.side_effect = exc.DomainException(
+            "code", "failed"
+        )
         # Execute
         retval = self.run_async(self.service.get_existing_user_from_claims(claims))
         # Verify
@@ -466,7 +470,9 @@ class TestGetExistingUserFromClaims(BaseAuthServiceTestCase):
         claims: Claims = self.create_claims(uuid4(), {"email": "root@example.com"})
         # Set up mocks
         self.user_manager.get_user_key_from_claims.return_value = "key"
-        self.user_manager.retrieve_user_by_key.side_effect = exc.NoResultsError()
+        self.user_manager.retrieve_user_by_key.side_effect = exc.NoResultsError(
+            "code", "no user"
+        )
         self.user_manager.is_root_user_claims.return_value = True
         self.user_manager.create_root_user_from_claims.return_value = self.root_user
         # Execute
@@ -480,7 +486,9 @@ class TestGetExistingUserFromClaims(BaseAuthServiceTestCase):
         claims: Claims = self.create_claims(uuid4(), {"email": "user@example.com"})
         # Set up mocks
         self.user_manager.get_user_key_from_claims.return_value = "key"
-        self.user_manager.retrieve_user_by_key.side_effect = exc.NoResultsError()
+        self.user_manager.retrieve_user_by_key.side_effect = exc.NoResultsError(
+            "code", "no user"
+        )
         self.user_manager.is_root_user_claims.return_value = False
         self.user_manager.auto_create_new_user.return_value = self.created_user
         # Execute
@@ -495,7 +503,9 @@ class TestGetExistingUserFromClaims(BaseAuthServiceTestCase):
         claims: Claims = self.create_claims(uuid4(), {"email": "user@example.com"})
         # Set up mocks
         self.user_manager.get_user_key_from_claims.return_value = "key"
-        self.user_manager.retrieve_user_by_key.side_effect = exc.NoResultsError()
+        self.user_manager.retrieve_user_by_key.side_effect = exc.NoResultsError(
+            "code", "no user"
+        )
         self.user_manager.is_root_user_claims.return_value = False
         self.user_manager.create_user_from_claims.return_value = None
         self.service._auto_create_new_users = False

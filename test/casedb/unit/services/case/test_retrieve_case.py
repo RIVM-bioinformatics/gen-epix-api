@@ -221,7 +221,9 @@ class BaseRetrieveCaseTestCase(TestCase):
                 if not obj_ids or self._repo_ref_cols is None:
                     return []
                 # Preserve input order of ids to align filters → map functions
-                return [next(x for x in self._repo_ref_cols if x.id == i) for i in obj_ids]
+                return [
+                    next(x for x in self._repo_ref_cols if x.id == i) for i in obj_ids
+                ]
             return []
 
         self.repository.crud.side_effect = _crud_side_effect
