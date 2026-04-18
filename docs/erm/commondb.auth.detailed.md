@@ -7,6 +7,11 @@ erDiagram
     %% commondb / AUTH (detailed)
 
     %% Entity definitions
+    IDPUser {
+        string issuer
+        string sub
+    }
+
     IdentityProvider {
         string name
         string label
@@ -18,11 +23,6 @@ erDiagram
         string client_secret
         string scope
         bool public
-    }
-
-    IDPUser {
-        string issuer
-        string sub
     }
 
 ```
