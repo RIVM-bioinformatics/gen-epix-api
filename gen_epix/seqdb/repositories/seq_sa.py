@@ -125,7 +125,8 @@ class SeqSARepository(SARepository, BaseSeqRepository):
             for contig in seq.contigs:
                 if contig.seq_format != enum.SeqFormat.STR_DNA:
                     raise exc.InitializationServiceError(
-                        f"FASTA export not supported for {contig.seq_format.value} format"
+                        "6672c6dd",
+                        f"FASTA export not supported for {contig.seq_format.value} format",
                     )
                 assert contig.id is not None
                 contig_list.append((contig.id, contig.seq))
@@ -231,6 +232,7 @@ class SeqSARepository(SARepository, BaseSeqRepository):
             enum.QualityControlResult
         ] = enum.QualityControlResultSet.USABLE.value,
     ) -> list[UUID]:
+
         if not seq_profile_ids or not allowed_qc_results:
             return []
         stmt = sa.select(sa_model.SeqProfile.id).where(
@@ -239,5 +241,4 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         )
         assert isinstance(uow, SAUnitOfWork)
         retval: list[UUID] = uow.session.execute(stmt).scalars().all()  # type: ignore[assignment]
-        return retval
         return retval

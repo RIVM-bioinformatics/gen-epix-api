@@ -61,7 +61,7 @@ class SARepository(BaseRepository):
         if connection_string is None:
             if file is None:
                 raise exc.RepositoryInitializationServiceError(
-                    "Either connection_string or file must be provided"
+                    "978e1ed3", "Either connection_string or file must be provided"
                 )
             connection_string = f"sqlite:///{Path(file).resolve().as_posix()}"
 
@@ -248,7 +248,8 @@ class SARepository(BaseRepository):
             # Nested within another context -> reuse the session of that context
             if kwargs:
                 raise exc.RepositoryServiceError(
-                    "Cannot pass arguments when creating a nested UnitOfWork"
+                    "b78b8c87",
+                    "Cannot pass arguments when creating a nested UnitOfWork",
                 )
             return SAUnitOfWork(
                 context_stack[-1].session,
@@ -297,7 +298,7 @@ class SARepository(BaseRepository):
             db_model_class = entity.db_model_class
             if not db_model_class:
                 raise exc.RepositoryInitializationServiceError(
-                    f"Entity {entity.name} has no db_model_class set"
+                    "d135c11c", f"Entity {entity.name} has no db_model_class set"
                 )
             assert issubclass(model_class, Model)
             mapper = sa_mapper_factory.create_mapper(
@@ -329,7 +330,7 @@ class SARepository(BaseRepository):
             db_model_class = entity.db_model_class
             if not db_model_class:
                 raise exc.RepositoryInitializationServiceError(
-                    f"Entity {entity.name} has no db_model_class set"
+                    "5f725f7a", f"Entity {entity.name} has no db_model_class set"
                 )
             assert issubclass(model_class, Model)
             mapper = SAMapper(
@@ -344,7 +345,7 @@ class SARepository(BaseRepository):
         mapper = self._mapper_by_model.get(model_class)
         if not mapper:
             raise exc.RepositoryInitializationServiceError(
-                f"No mapper set for Model {model_class}"
+                "b8bd9844", f"No mapper set for Model {model_class}"
             )
         return mapper
 
@@ -352,14 +353,14 @@ class SARepository(BaseRepository):
         for current_mapper in self._mapper_by_model.values():
             if current_mapper.row_class == mapper.row_class:
                 raise exc.RepositoryInitializationServiceError(
-                    f"Mapper for {current_mapper.model_class} already set"
+                    "bd89986f", f"Mapper for {current_mapper.model_class} already set"
                 )
             if (
                 current_mapper.schema_name == mapper.schema_name
                 and current_mapper.table_name == mapper.table_name
             ):
                 raise exc.RepositoryInitializationServiceError(
-                    f"Mapper for {current_mapper.model_class} already set"
+                    "90c9edd0", f"Mapper for {current_mapper.model_class} already set"
                 )
         model_class = mapper.model_class
         self._mapper_by_model[model_class] = mapper
@@ -397,7 +398,7 @@ class SARepository(BaseRepository):
         **kwargs: Any,
     ) -> Model | list[Model] | Hashable | list[Hashable] | bool | list[bool] | None:
         if not isinstance(uow, SAUnitOfWork):
-            raise exc.RepositoryServiceError(f"Invalid UnitOfWork: {uow}")
+            raise exc.RepositoryServiceError("ff17823b", f"Invalid UnitOfWork: {uow}")
         session = uow.session
         BaseRepository.verify_crud_args(model_class, objs, obj_ids, operation)
         match operation:
@@ -485,7 +486,8 @@ class SARepository(BaseRepository):
             n_batches = int(n_rows / max_batch_size) + (n_rows / max_batch_size > 0)
             if not flush and n_batches > 1:
                 raise exc.RepositoryServiceError(
-                    f"Creation of {n_rows} objects requires more than one (n={n_batches}) batches while flush={flush}"
+                    "fa00ce85",
+                    f"Creation of {n_rows} objects requires more than one (n={n_batches}) batches while flush={flush}",
                 )
             for i in range(n_batches):
                 slice_ = slice(
@@ -545,6 +547,7 @@ class SARepository(BaseRepository):
                 invalids_ids = [x for x, y in zip(obj_ids, objs) if y is None]
                 invalids_ids_str = ", ".join([str(x) for x in invalids_ids])
                 raise exc.InvalidIdsError(
+                    "b7efa0d3",
                     f"{model_class} object(s) do not exist: {invalids_ids_str}",
                     ids=obj_ids,
                 )
@@ -692,6 +695,7 @@ class SARepository(BaseRepository):
                 invalid_ids = [x for x, y in zip(row_ids, is_existing) if not y]
                 invalid_ids_str = ", ".join([str(x) for x in invalid_ids])
                 raise exc.InvalidIdsError(
+                    "8e431d94",
                     f"{model_class} object(s) do not exist: {invalid_ids_str}",
                     ids=invalid_ids,
                 )
@@ -816,7 +820,7 @@ class SARepository(BaseRepository):
         **kwargs: Any,
     ) -> Iterable[tuple]:
         if not isinstance(uow, SAUnitOfWork):
-            raise exc.RepositoryServiceError(f"Invalid UnitOfWork: {uow}")
+            raise exc.RepositoryServiceError("4afb32de", f"Invalid UnitOfWork: {uow}")
         mapper = self.get_mapper(model_class)
         field_name_map = mapper.get_field_name_map()
         row_field_names = [field_name_map[x] for x in field_names]
@@ -857,12 +861,13 @@ class SARepository(BaseRepository):
             if filter.operator == LogicalOperator.OR:
                 return sa.or_(*args) if not invert else sa.not_(sa.or_(*args))
             raise exc.InvalidArgumentsError(
-                f"Unsupported filter operator: {filter.operator.value}"
+                "8f411a53", f"Unsupported filter operator: {filter.operator.value}"
             )
         row_field_name = mapper.get_mapped_field_name(str(filter.get_key()))
         if row_field_name is None:
             raise exc.InvalidArgumentsError(
-                f"Filter key '{filter.get_key()}' cannot be mapped to a row field name"
+                "320f2bf7",
+                f"Filter key '{filter.get_key()}' cannot be mapped to a row field name",
             )
         column = getattr(row_class, row_field_name)
         if (
@@ -895,7 +900,7 @@ class SARepository(BaseRepository):
                 return args[0] if not invert else sa.not_(args[0])
             return sa.and_(*args) if not invert else sa.not_(sa.and_(*args))
         raise exc.InvalidArgumentsError(
-            f"Unsupported filter type: {filter.__class__.__name__}"
+            "880a6446", f"Unsupported filter type: {filter.__class__.__name__}"
         )
 
     def _split_filter_recursion(
@@ -1053,7 +1058,9 @@ class SARepository(BaseRepository):
                 x for x in obj_ids if x not in seen and not seen.add(x)  # type: ignore[func-returns-value]
             )
             duplicate_obj_ids = obj_ids_set - uq_obj_ids
-            raise exc.DuplicateIdsError("obj_ids is not unique", ids=duplicate_obj_ids)
+            raise exc.DuplicateIdsError(
+                "aac3e2af", "obj_ids is not unique", ids=duplicate_obj_ids
+            )
         # Verify existence of objs
         if verify_exists:
             try:
@@ -1066,7 +1073,9 @@ class SARepository(BaseRepository):
                 )
             except exc.InvalidIdsError as e:
                 # TODO: determine invalid obj_ids and pass them to the exception
-                raise exc.InvalidIdsError("Invalid obj_ids", ids=None) from e
+                raise exc.InvalidIdsError(
+                    "e1eb6e15", "Invalid obj_ids", ids=None
+                ) from e
 
     @staticmethod
     def _select_with_id_join(
@@ -1194,10 +1203,12 @@ class SARepository(BaseRepository):
             table_name = table_name or mapper.table_name
             if n == 1:
                 raise exc.InvalidIdsError(
-                    f"Table {table_name}: no row found for id {not_found_obj_ids_str}"
+                    "3132db4e",
+                    f"Table {table_name}: no row found for id {not_found_obj_ids_str}",
                 )
             raise exc.InvalidIdsError(
-                f"Table {table_name}: no rows found for ids {not_found_obj_ids_str}"
+                "35de72de",
+                f"Table {table_name}: no rows found for ids {not_found_obj_ids_str}",
             )
 
     @staticmethod
@@ -1215,6 +1226,7 @@ class SARepository(BaseRepository):
         duplicate_ids = set(obj_ids) - uq_obj_ids
         duplicate_ids_str = ", ".join([str(x) for x in duplicate_ids])
         raise exc.DuplicateIdsError(
+            "bba17339",
             f"Model {model_class.__name__}: object ids are not unique: {duplicate_ids_str}",
             ids=duplicate_ids_str,
         )

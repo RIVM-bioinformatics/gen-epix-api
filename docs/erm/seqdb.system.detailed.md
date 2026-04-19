@@ -1,23 +1,12 @@
 # seqdb / SYSTEM — Detailed ERD
 
-Auto-generated.  Service type **SYSTEM** — 2 entities.
+Auto-generated.  Service type **SYSTEM** — 1 entities.
 
 ```mermaid
 erDiagram
     %% seqdb / SYSTEM (detailed)
 
     %% Entity definitions
-    PackageMetadata {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id
-        string name
-        string version
-        string license
-        string homepage
-    }
-
     Outage {
         timestamp created_at
         timestamp modified_at

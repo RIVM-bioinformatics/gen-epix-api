@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from gen_epix.fastapp.domain.key import Key
 from gen_epix.fastapp.domain.link import Link
-from gen_epix.fastapp.enum import FieldType, StringCasing
+from gen_epix.fastapp.enum import FieldType, OnException, StringCasing
 from gen_epix.fastapp.exc import DomainException
 
 
@@ -121,19 +121,19 @@ class Entity(BaseModel):
     @property
     def name(self) -> str:
         if not self.has_model():
-            raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+            raise DomainException("aa2c7c40", Entity.NO_MODEL_ERROR_MSG)
         return self._model_class.NAME  # type: ignore
 
     @property
     def model_class(self) -> type[BaseModel]:
         if not self.has_model():
-            raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+            raise DomainException("be45913e", Entity.NO_MODEL_ERROR_MSG)
         return self._model_class  # type: ignore
 
     @property
     def crud_command_class(self) -> type[BaseModel] | None:
         if not self.has_model():
-            raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+            raise DomainException("52c69320", Entity.NO_MODEL_ERROR_MSG)
         if not self.persistable:
             raise ValueError(Entity.NOT_PERSISTABLE_ERROR_MSG)
         return self._crud_command_class  # type: ignore
@@ -141,7 +141,7 @@ class Entity(BaseModel):
     @property
     def db_model_class(self) -> type | None:
         if not self.has_model():
-            raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+            raise DomainException("7ee38603", Entity.NO_MODEL_ERROR_MSG)
         if not self.persistable:
             raise ValueError(Entity.NOT_PERSISTABLE_ERROR_MSG)
         return self._db_model_class  # type: ignore
@@ -149,19 +149,19 @@ class Entity(BaseModel):
     @property
     def create_api_model_class(self) -> type | None:
         if not self.has_model():
-            raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+            raise DomainException("b0252bfa", Entity.NO_MODEL_ERROR_MSG)
         return self._create_api_model_class  # type: ignore
 
     @property
     def read_api_model_class(self) -> type | None:
         if not self.has_model():
-            raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+            raise DomainException("81bb94f3", Entity.NO_MODEL_ERROR_MSG)
         return self._read_api_model_class  # type: ignore
 
     @property
     def get_obj_id(self) -> Callable[[Any], Hashable]:
         if not self.has_model():
-            raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+            raise DomainException("3f1a0c53", Entity.NO_MODEL_ERROR_MSG)
         assert self.id_field_name
         return lambda x: getattr(x, self.id_field_name)
 
@@ -256,7 +256,7 @@ class Entity(BaseModel):
         that is stored or retrieved from the repository.
         """
         if not self.has_model():
-            raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+            raise DomainException("cffc3b23", Entity.NO_MODEL_ERROR_MSG)
         if not self.persistable:
             raise ValueError(Entity.NOT_PERSISTABLE_ERROR_MSG)
         self._db_model_class = db_model_class
@@ -268,7 +268,7 @@ class Entity(BaseModel):
         that is posted to an endpoint to create a resource.
         """
         if not self.has_model():
-            raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+            raise DomainException("8025d2b1", Entity.NO_MODEL_ERROR_MSG)
         self._create_api_model_class = create_api_model_class
         return self
 
@@ -278,7 +278,7 @@ class Entity(BaseModel):
         that returned in a response by an endpoint.
         """
         if not self.has_model():
-            raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+            raise DomainException("bb74ae18", Entity.NO_MODEL_ERROR_MSG)
         self._read_api_model_class = read_api_model_class
         return self
 
@@ -288,7 +288,7 @@ class Entity(BaseModel):
         that is stored or retrieved from the repository.
         """
         if not self.has_model():
-            raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+            raise DomainException("b8955690", Entity.NO_MODEL_ERROR_MSG)
         if not self.persistable:
             raise ValueError(Entity.NOT_PERSISTABLE_ERROR_MSG)
         self._crud_command_class = crud_command_class
@@ -425,12 +425,12 @@ class Entity(BaseModel):
         return self._keys_generator
 
     def get_link_id(self, link_model_class: type) -> Callable[[Any], Hashable]:
-        fun = self._get_link_id_by_model_class.get(link_model_class)
-        if fun is None:
+        fn = self._get_link_id_by_model_class.get(link_model_class)
+        if fn is None:
             raise ValueError(
                 f"No link or several links to {link_model_class.__name__} exist for entity {self.name}"
             )
-        return fun
+        return fn
 
     def get_link_entity(self, link_field_name: str) -> Any | None:
         """
@@ -721,6 +721,59 @@ class Entity(BaseModel):
     @classmethod
     def camel_to_snake_case(cls, value: str) -> str:
         return cls.CAMEL_TO_SNAKE_CASE_PATTERN.sub("_", value).lower()
+
+    @classmethod
+    def topological_sort(
+        cls, entities: list[Self], on_cycle: OnException
+    ) -> list[Self]:
+        """Perform a topological sort of the entities based on their links."""
+        if not entities:
+            return []
+
+        # Create a set for O(1) lookup
+        entity_set = set(entities)
+
+        # Build adjacency list and in-degree map for only the
+        # entities in the filtered set
+        in_degree: dict[Self, int] = {entity: 0 for entity in entities}
+        adjacency: dict[Self, list[Self]] = {entity: [] for entity in entities}
+
+        for entity in entities:
+            # For each link in the entity, add dependency if the linked
+            # entity is in the filtered set
+            for link in entity.links.values():
+                linked_entity = link.link_model_class.ENTITY
+                if linked_entity in entity_set:
+                    # entity depends on linked_entity,
+                    # so linked_entity should come first
+                    adjacency[linked_entity].append(entity)
+                    in_degree[entity] += 1
+
+        # Kahn's algorithm for topological sort
+        queue = [x for x in entities if in_degree[x] == 0]
+        sorted_entities: list[Self] = []
+        while queue:
+            current = queue.pop(0)
+            sorted_entities.append(current)
+            # For each entity that depends on current
+            for dependent in adjacency[current]:
+                in_degree[dependent] -= 1
+                if in_degree[dependent] == 0:
+                    queue.append(dependent)
+
+        # If result doesn't contain all entities, there's a cycle
+        if len(sorted_entities) != len(entities):
+            extra_entities = set(entities) - set(sorted_entities)
+            extra_entities_str = ", ".join(sorted(x.name for x in extra_entities))
+            if on_cycle == OnException.RAISE:
+                raise DomainException(
+                    "c4e91a7b",
+                    f"Cycle detected in entity links, topological sort not possible. Involved entities: {extra_entities_str}",
+                )
+            elif on_cycle == OnException.IGNORE:
+                return sorted_entities
+
+        return sorted_entities
 
     @staticmethod
     def _get_model_field_names(

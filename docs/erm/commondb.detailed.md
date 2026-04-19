@@ -7,15 +7,15 @@ erDiagram
     %% commondb — all persistable entities (detailed)
 
     %% Relationships
+    Site }o--|| Organization : "organization_id"
+    User }o--|| Organization : "organization_id"
     OrganizationSetMember }o--|| OrganizationSet : "organization_set_id"
     OrganizationSetMember }o--|| Organization : "organization_id"
     DataCollectionSetMember }o--|| DataCollectionSet : "data_collection_set_id"
     DataCollectionSetMember }o--|| DataCollection : "data_collection_id"
     OrganizationIdentifierIssuerLink }o--|| Organization : "organization_id"
     OrganizationIdentifierIssuerLink }o--|| IdentifierIssuer : "identifier_issuer_id"
-    Site }o--|| Organization : "organization_id"
     Contact }o--|| Site : "site_id"
-    User }o--|| Organization : "organization_id"
     UserInvitation }o--|| Organization : "organization_id"
     UserInvitation }o--|| User : "invited_by_user_id"
     OrganizationAdminPolicy }o--|| Organization : "organization_id"
@@ -55,15 +55,6 @@ erDiagram
         string description
     }
 
-    OrganizationSetMember {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID organization_set_id FK
-        UUID organization_id FK
-    }
-
     DataCollection {
         timestamp created_at
         timestamp modified_at
@@ -82,15 +73,6 @@ erDiagram
         string description
     }
 
-    DataCollectionSetMember {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID data_collection_set_id FK
-        UUID data_collection_id FK
-    }
-
     IdentifierIssuer {
         timestamp created_at
         timestamp modified_at
@@ -101,15 +83,6 @@ erDiagram
         string description
     }
 
-    OrganizationIdentifierIssuerLink {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID organization_id FK
-        UUID identifier_issuer_id FK
-    }
-
     Site {
         timestamp created_at
         timestamp modified_at
@@ -117,17 +90,6 @@ erDiagram
         UUID id PK
         UUID organization_id FK
         string name
-    }
-
-    Contact {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID site_id FK
-        string name
-        string email
-        string phone
     }
 
     User {
@@ -142,6 +104,44 @@ erDiagram
         bool is_active
         set[string] roles
         UUID organization_id FK
+    }
+
+    OrganizationSetMember {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID organization_set_id FK
+        UUID organization_id FK
+    }
+
+    DataCollectionSetMember {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID data_collection_set_id FK
+        UUID data_collection_id FK
+    }
+
+    OrganizationIdentifierIssuerLink {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID organization_id FK
+        UUID identifier_issuer_id FK
+    }
+
+    Contact {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID site_id FK
+        string name
+        string email
+        string phone
     }
 
     UserInvitation {

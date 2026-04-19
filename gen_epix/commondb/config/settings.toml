@@ -48,8 +48,7 @@ level = "INFO"
 
 [log.command_object_summarization]
 enabled = true
-max_list_items = 10
-sample_items = 3
+max_list_items = 3
 
 [feature_flags]
 update_own_organization = false

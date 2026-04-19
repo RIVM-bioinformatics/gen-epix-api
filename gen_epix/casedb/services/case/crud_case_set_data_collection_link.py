@@ -82,7 +82,8 @@ def _crud_case_set_data_collection_link_with_abac(
         or cmd.is_update()
     ):
         raise exc.UnauthorizedAuthError(
-            f"Operation {cmd.operation.value} not allowed for case set data collection links for this user"
+            "8c5c07be",
+            f"Operation {cmd.operation.value} not allowed for case set data collection links for this user",
         )
 
     # For now, delegate to the main crud method with extensive logic

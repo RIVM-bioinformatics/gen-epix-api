@@ -39,4 +39,4 @@ class OrganizationDictRepository(DictRepository, BaseOrganizationRepository):
             assert isinstance(user, self.user_class)
             if user.key == user_key.lower():
                 return user
-        raise exc.NoResultsError()
+        raise exc.NoResultsError("ead06bf5")

@@ -374,7 +374,8 @@ class CaseService(BaseCaseService):
             if not has_access_to_case_set:
                 if on_invalid_case_set_id == "raise":
                     raise exc.UnauthorizedAuthError(
-                        f"User {user_id} has no access to some requested cases"
+                        "e6782185",
+                        f"User {user_id} has no access to some requested cases",
                     )
                 if on_invalid_case_set_id == "ignore":
                     pass
@@ -395,7 +396,8 @@ class CaseService(BaseCaseService):
             if on_invalid_case_set_id == "raise":
                 if not all(x.case_type_id == case_type_id for x in case_sets):
                     raise exc.InvalidArgumentsError(
-                        f"Some case sets have invalid CaseType ids: {case_set_ids}"
+                        "0c4731c3",
+                        f"Some case sets have invalid CaseType ids: {case_set_ids}",
                     )
             else:
                 raise AssertionError(
@@ -408,10 +410,12 @@ class CaseService(BaseCaseService):
         self, right: enum.CaseRight, on_invalid_case_set_id: str
     ) -> None:
         if right not in enum.CaseRightSet.CASE_SET_CONTENT.value:
-            raise exc.InvalidArgumentsError(f"Invalid case abac right: {right.value}")
+            raise exc.InvalidArgumentsError(
+                "28123c2c", f"Invalid case abac right: {right.value}"
+            )
         if on_invalid_case_set_id not in {"raise", "ignore"}:
             raise exc.InvalidArgumentsError(
-                f"Invalid on_invalid_case_set_id: {on_invalid_case_set_id}"
+                "dbc2e500", f"Invalid on_invalid_case_set_id: {on_invalid_case_set_id}"
             )
 
     def _retrieve_cases_with_content_right(
@@ -451,14 +455,16 @@ class CaseService(BaseCaseService):
 
         if case_ids and max_n_cases > 0 and len(case_ids) > max_n_cases:
             raise exc.RequestLimitExceededAuthError(
-                f"Number of requested cases {len(case_ids)} exceeds maximum allowed {max_n_cases}"
+                "f9c1adb2",
+                f"Number of requested cases {len(case_ids)} exceeds maximum allowed {max_n_cases}",
             )
 
         # Retrieve all cases, potentially filtered by datetime range
         if datetime_range_filter:
             if datetime_range_filter.key and datetime_range_filter.key != "case_date":
                 raise exc.InvalidArgumentsError(
-                    f"Invalid datetime range filter key: {datetime_range_filter.key}"
+                    "c0adc8e0",
+                    f"Invalid datetime range filter key: {datetime_range_filter.key}",
                 )
             datetime_range_filter.key = "case_date"
         cases = self._retrieve_cases_by_ids_or_case_type_filter(
@@ -580,7 +586,7 @@ class CaseService(BaseCaseService):
         if not bool(data_collection_ids & access_data_collections):
             if case_ids and on_invalid_case_id == "raise":
                 raise exc.UnauthorizedAuthError(
-                    f"User {user_id} has no access to some requested cases"
+                    "a7f7b2a0", f"User {user_id} has no access to some requested cases"
                 )
             return None
 
@@ -598,7 +604,7 @@ class CaseService(BaseCaseService):
         if case_ids:
             if datetime_range_filter:
                 raise exc.InvalidArgumentsError(
-                    "Cannot use datetime range filter with case ids"
+                    "271e9667", "Cannot use datetime range filter with case ids"
                 )
             cases = self.repository.crud(  # type: ignore[assignment]
                 uow,
@@ -609,7 +615,7 @@ class CaseService(BaseCaseService):
             )
             if not all(x.case_type_id == case_type_id for x in cases):
                 raise exc.InvalidArgumentsError(
-                    f"Some cases have invalid CaseType ids: {case_ids}"
+                    "d0120f09", f"Some cases have invalid CaseType ids: {case_ids}"
                 )
         else:
             case_type_filter = EqualsUuidFilter(key="case_type_id", value=case_type_id)
@@ -679,7 +685,9 @@ class CaseService(BaseCaseService):
             )
         )
         if not case_types:
-            raise exc.InvalidArgumentsError(f"CaseType not found: {case_type_id}")
+            raise exc.InvalidArgumentsError(
+                "ccd3ccac", f"CaseType not found: {case_type_id}"
+            )
         case_type = case_types[0]
         return case_type
 
@@ -698,7 +706,7 @@ class CaseService(BaseCaseService):
         )
         if not access_data_collections and not case_abac.is_full_access:
             raise exc.UnauthorizedAuthError(
-                f"User {user_id} has no access to CaseType {case_type_id}"
+                "666af198", f"User {user_id} has no access to CaseType {case_type_id}"
             )
 
         return access_data_collections, data_collection_col_access
@@ -833,7 +841,8 @@ class CaseService(BaseCaseService):
         )
         if ref_seq_col.col_type != enum.ColType.GENETIC_SEQUENCE:
             raise exc.InvalidArgumentsError(
-                f"Col {seq_col.id} is not of type {enum.ColType.GENETIC_SEQUENCE.value}"
+                "3983f776",
+                f"Col {seq_col.id} is not of type {enum.ColType.GENETIC_SEQUENCE.value}",
             )
         return seq_col, ref_seq_col
 
@@ -871,7 +880,8 @@ class CaseService(BaseCaseService):
                 [str(x) for x in invalid_case_set_member_ids]
             )
             raise exc.InvalidArgumentsError(
-                f"Case set members invalid, case set and case must have the same CaseType: {invalid_case_set_member_ids_str}"
+                "3e11edd5",
+                f"Case set members invalid, case set and case must have the same CaseType: {invalid_case_set_member_ids_str}",
             )
 
     # CRUD method implementations

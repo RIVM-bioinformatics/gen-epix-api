@@ -28,7 +28,8 @@ def case_service_create_case_set(
     if not is_allowed:
         assert cmd.user is not None
         raise exc.UnauthorizedAuthError(
-            f"User {cmd.user.id} is not allowed to create a case set in the given data collection(s)"
+            "806a155b",
+            f"User {cmd.user.id} is not allowed to create a case set in the given data collection(s)",
         )
 
     # Create case set, case set data collection links, and optionally

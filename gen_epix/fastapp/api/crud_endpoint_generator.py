@@ -808,7 +808,8 @@ class CrudEndpointGenerator:
             )
         else:
             raise exc.DomainException(
-                f"Invalid service type {service_type} for CRUD endpoint generation"
+                "602fbb1b",
+                f"Invalid service type {service_type} for CRUD endpoint generation",
             )
         crud_endpoint_sets = []
         for entity in entities:
@@ -863,7 +864,7 @@ class CrudEndpointGenerator:
         crud_command_class = entity.crud_command_class
         if crud_command_class is None:
             raise exc.DomainException(
-                f"Entity {entity.name} does not have a crud command class"
+                "fce23000", f"Entity {entity.name} does not have a crud command class"
             )
         assert issubclass(crud_command_class, model.CrudCommand)
         permissions = (
@@ -948,7 +949,8 @@ class CrudEndpointGenerator:
         name = entity.get_name_by_casing(string_casing, is_plural=is_plural)
         if name is None:
             raise exc.DomainException(
-                f"Entity {entity.name} does not have a {string_casing.value} name"
+                "76435508",
+                f"Entity {entity.name} does not have a {string_casing.value} name",
             )
         return name
 

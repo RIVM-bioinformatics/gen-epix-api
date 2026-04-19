@@ -117,12 +117,14 @@ def _validate_case_date_dim(
     )
     if not ref_dim_list:
         raise exc.InvalidIdsError(
+            "15c892da",
             f"Invalid ref_dim_id provided: {dim.ref_dim_id}",
             ids=[dim.ref_dim_id],
         )
     ref_dim = ref_dim_list[0]
     if dim.is_case_date_dim and ref_dim.dim_type != enum.DimType.TIME:
         raise exc.InvalidArgumentsError(
+            "4cb4593f",
             f"RefDim {ref_dim.code} must be of type TIME for is_case_date_dim=True",
             ids=[dim.ref_dim_id],
         )
@@ -174,7 +176,9 @@ def _crud_update_dim(
         # Prevent changing linked RefDim (write-once)
         if updated_dim.ref_dim_id != existing_dim.ref_dim_id:
             raise exc.InvalidArgumentsError(
-                "ref_dim_id is immutable and cannot be updated", ids=[updated_dim.id]
+                "1e9e2644",
+                "ref_dim_id is immutable and cannot be updated",
+                ids=[updated_dim.id],
             )
         # Ensure exclusivity for is_case_date_dim within same CaseType
         if updated_dim.is_case_date_dim:
@@ -226,7 +230,7 @@ def _get_existing_dim(
     )
     if not existing_list:
         raise exc.InvalidIdsError(
-            f"Invalid Dim ID provided: {updated.id}", ids=[updated.id]
+            "0813d763", f"Invalid Dim ID provided: {updated.id}", ids=[updated.id]
         )
     existing = existing_list[0]
     return existing

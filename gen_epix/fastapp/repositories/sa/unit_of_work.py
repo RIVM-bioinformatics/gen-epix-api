@@ -62,14 +62,17 @@ class SAUnitOfWork(BaseUnitOfWork):
         if issubclass(exception_class, sa_exc.IntegrityError):
             if "UNIQUE" in str(exception_value).upper():
                 raise exc.UniqueConstraintViolationError(
+                    "e2cabb6c",
                     f"Unique constraint violation: {str(exception_value)}",
                 )
             elif "NOT NULL" in str(exception_value).upper():
                 raise exc.NotNullConstraintViolationError(
+                    "f8368798",
                     f"Not null constraint violation: {str(exception_value)}",
                 )
             elif "FOREIGN KEY" in str(exception_value).upper():
                 raise exc.LinkConstraintViolationError(
+                    "eba3198a",
                     f"Foreign key constraint violation: {str(exception_value)}",
                 )
             else:

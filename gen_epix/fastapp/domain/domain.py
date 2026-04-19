@@ -55,7 +55,7 @@ class Domain:
     @staticmethod
     def get_service_name(service_type: Hashable | None) -> str:
         if service_type is None:
-            raise exc.DomainException("Service type is not given")
+            raise exc.DomainException("811a1bac", "Service type is not given")
         if isinstance(service_type, str):
             return service_type
         if isinstance(service_type, Enum):
@@ -73,7 +73,7 @@ class Domain:
         if command_class._PERMISSIONS is None:
             if command_class.NAME is None:
                 raise exc.InitializationServiceError(
-                    f"Command {command_class} has no NAME set"
+                    "d67d090a", f"Command {command_class} has no NAME set"
                 )
             command_class._PERMISSIONS = frozenset(
                 {
@@ -86,7 +86,7 @@ class Domain:
     @staticmethod
     def get_model_name(model_class: type[Model]) -> str:
         if model_class.NAME is None:
-            model_class.NAME = model_class.__name__
+            model_class.NAME = model_class.__name__  # type: ignore
         return model_class.NAME
 
     def __init__(self, name: str, description: str | None = None):
@@ -489,6 +489,7 @@ class Domain:
         schema_name: str | None = None,
         invert: bool = False,
         reverse: bool = False,
+        on_cycle: OnException = OnException.RAISE,
     ) -> list[Entity]:
         if service_type:
             self._verify_service_type_exists(service_type)
@@ -500,39 +501,11 @@ class Domain:
             schema_name,
             invert,
         )
+        # Perform topological sort on filtered entities based on links
+        sorted_entities = Entity.topological_sort(entities, on_cycle=on_cycle)
         if reverse:
-            return list(reversed(entities))
-        return entities
-
-    def _filter_entities(
-        self,
-        service_type: Hashable | None,
-        persistable: bool | None,
-        url_name: str | None,
-        database_name: str | None,
-        schema_name: str | None,
-        invert: bool,
-    ) -> list[Entity]:
-        entities: list[Entity] = []
-        for entity in self._dag_sorted_entities:
-            if (
-                service_type
-                and (self.get_service_type_for_entity(entity) != service_type) != invert
-            ):
-                continue
-            if (
-                persistable is not None
-                and (entity.persistable != persistable) != invert
-            ):
-                continue
-            if url_name and (entity.url_name != url_name) != invert:
-                continue
-            if database_name and (entity.database_name != database_name) != invert:
-                continue
-            if schema_name and (entity.schema_name != schema_name) != invert:
-                continue
-            entities.append(entity)
-        return entities
+            return list(reversed(sorted_entities))
+        return sorted_entities
 
     def get_dag_sorted_models(
         self,
@@ -543,6 +516,7 @@ class Domain:
         schema_name: str | None = None,
         invert: bool = False,
         reverse: bool = False,
+        on_cycle: OnException = OnException.RAISE,
     ) -> list[type[Model]]:
         return [
             x.model_class  # type: ignore
@@ -554,8 +528,37 @@ class Domain:
                 schema_name=schema_name,
                 invert=invert,
                 reverse=reverse,
+                on_cycle=on_cycle,
             )
         ]
+
+    def get_dag_sorted_service_types(
+        self,
+        reverse: bool = False,
+        on_cycle: OnException = OnException.RAISE,
+    ) -> list[Hashable]:
+        entities = self.get_dag_sorted_entities(reverse=reverse, on_cycle=on_cycle)
+        if len(entities) == 0:
+            return []
+
+        entity_service_types = [self._service_type_for_entity[x] for x in entities]
+        service_types = [entity_service_types[0]]
+        seen_service_types = {entity_service_types[0]}
+        for service_type in entity_service_types[1:]:
+            if service_type == service_types[-1]:
+                # Same service type as previous entity, nothing to do
+                continue
+            if service_type in seen_service_types:
+                if on_cycle == OnException.RAISE:
+                    raise exc.DomainException(
+                        "f8b2c94d",
+                        f"Service type {service_type} is part of a cycle in the entity DAG"
+                    )
+                elif on_cycle == OnException.IGNORE:
+                    continue
+            service_types.append(service_type)
+            seen_service_types.add(service_type)
+        return service_types
 
     def register_service_type(self, service_type: Hashable) -> Hashable:
         if service_type not in self._service_types:
@@ -589,12 +592,12 @@ class Domain:
             model_class = entity.model_class  # type: ignore
             if model_class is None:
                 raise exc.InitializationServiceError(
-                    f"Model class not set for entity {entity.id}"
+                    "8066762a", f"Model class not set for entity {entity.id}"
                 )
             model_name = Domain.get_model_name(model_class)
             if model_name in self._model_for_name:
                 raise exc.DomainException(
-                    f"Model name {model_name} is already registered"
+                    "2601e5ce", f"Model name {model_name} is already registered"
                 )
             # Add Entity and Model
             self._add_new_entity_and_model(entity, model_class, model_name)
@@ -613,12 +616,43 @@ class Domain:
 
         return entity
 
+    def _filter_entities(
+        self,
+        service_type: Hashable | None,
+        persistable: bool | None,
+        url_name: str | None,
+        database_name: str | None,
+        schema_name: str | None,
+        invert: bool,
+    ) -> list[Entity]:
+        entities: list[Entity] = []
+        for entity in self._dag_sorted_entities:
+            if (
+                service_type
+                and (self.get_service_type_for_entity(entity) != service_type) != invert
+            ):
+                continue
+            if (
+                persistable is not None
+                and (entity.persistable != persistable) != invert
+            ):
+                continue
+            if url_name and (entity.url_name != url_name) != invert:
+                continue
+            if database_name and (entity.database_name != database_name) != invert:
+                continue
+            if schema_name and (entity.schema_name != schema_name) != invert:
+                continue
+            entities.append(entity)
+        return entities
+
     def _update_entity_dag(self, entity: Entity, on_cycle: OnException) -> None:
         for link in entity.links.values():
             if link.link_model_class not in self._models:
                 if on_cycle == OnException.RAISE:
                     raise exc.DomainException(
-                        f"Entity {entity.name} references unknown model {link.link_model_class} - add entities in DAG sorted order"
+                        "a91b5baa",
+                        f"Entity {entity.name} references unknown model {link.link_model_class} - add entities in DAG sorted order",
                     )
                 elif on_cycle == OnException.IGNORE:
                     continue
@@ -680,16 +714,19 @@ class Domain:
             model_class = crud_command_class.MODEL_CLASS
             if not model_class:
                 raise exc.DomainException(
-                    f"Model class not set for CRUD command {command_name}"
+                    "0656f627", f"Model class not set for CRUD command {command_name}"
                 )
             # Verify entity
             entity = model_class.ENTITY
             if not entity:
                 raise exc.DomainException(
-                    f"Entity not set for model {Domain.get_model_name(model_class)}"
+                    "ca3ceeb9",
+                    f"Entity not set for model {Domain.get_model_name(model_class)}",
                 )
             if not entity.persistable:
-                raise exc.DomainException(f"Entity {entity.name} is not persistable")
+                raise exc.DomainException(
+                    "696111f4", f"Entity {entity.name} is not persistable"
+                )
             # Set entity Model and CrudCommand if necessary
             if not entity.has_model():
                 entity.set_model_class(model_class)
@@ -780,37 +817,45 @@ class Domain:
     ) -> None:
         if command_name != self._name_for_command[command_class]:
             raise exc.DomainException(
-                f"Command {command_name} is already registered with different name {self._name_for_command[command_class]}"
+                "e26100e6",
+                f"Command {command_name} is already registered with different name {self._name_for_command[command_class]}",
             )
         linked_service_type = self._service_type_for_command[command_class]
         if linked_service_type != service_type:
             raise exc.DomainException(
-                f"Command {command_name} is already registered with service type {linked_service_type}"
+                "002a9e50",
+                f"Command {command_name} is already registered with service type {linked_service_type}",
             )
         if issubclass(command_class, CrudCommand):
             if command_class.MODEL_CLASS is None:
                 raise exc.DomainException(
-                    f"Model class not set for CrudCommand {command_name}"
+                    "349edda2", f"Model class not set for CrudCommand {command_name}"
                 )
             linked_model_class = self._model_for_crud_command[command_class]
             if linked_model_class is not command_class.MODEL_CLASS:
                 raise exc.DomainException(
-                    f"Command {command_name} is already registered and linked to model {linked_model_class.NAME}"
+                    "72de613a",
+                    f"Command {command_name} is already registered and linked to model {linked_model_class.NAME}",
                 )
 
     def _verify_model_has_entity(self, model_class: type[Model]) -> None:
         if model_class.ENTITY is None:
             raise exc.DomainException(
-                f"Entity not set for model {Domain.get_model_name(model_class)}"
+                "1689f54a",
+                f"Entity not set for model {Domain.get_model_name(model_class)}",
             )
 
     def _verify_entity_exists(self, entity: Entity) -> None:
         if entity not in self._entities:
-            raise exc.DomainException(f"Entity {entity.name} is not registered")
+            raise exc.DomainException(
+                "5a937380", f"Entity {entity.name} is not registered"
+            )
 
     def _verify_service_type_exists(self, service_type: Hashable) -> None:
         if service_type not in self._service_types:
-            raise exc.DomainException(f"Service type {service_type} is not registered")
+            raise exc.DomainException(
+                "ef28d4ad", f"Service type {service_type} is not registered"
+            )
 
     def _verify_command_exists(
         self, command_class_or_name: type[Command] | str
@@ -818,25 +863,34 @@ class Domain:
         if isinstance(command_class_or_name, str):
             command_name = command_class_or_name
             if command_name not in self._command_for_name:
-                raise exc.DomainException(f"Command {command_name} is not registered")
+                raise exc.DomainException(
+                    "d990b867", f"Command {command_name} is not registered"
+                )
         else:
             command_class = command_class_or_name
             if command_class not in self._commands:
                 command_name = Domain.get_command_name(command_class)
-                raise exc.DomainException(f"Command {command_name} is not registered")
+                raise exc.DomainException(
+                    "6b98defe", f"Command {command_name} is not registered"
+                )
 
     def _verify_model_exists(self, model_class_or_name: type[Model] | str) -> None:
         if isinstance(model_class_or_name, str):
             model_name = model_class_or_name
             if model_name not in self._model_for_name:
-                raise exc.DomainException(f"Model {model_name} is not registered")
+                raise exc.DomainException(
+                    "44107f04", f"Model {model_name} is not registered"
+                )
         else:
             model_class = model_class_or_name
             if model_class not in self._models:
                 raise exc.DomainException(
-                    f"Model {Domain.get_model_name(model_class)} is not registered"
+                    "9ac1d1d4",
+                    f"Model {Domain.get_model_name(model_class)} is not registered",
                 )
 
     def _verify_permission_exists(self, permission: Permission) -> None:
         if permission not in self._permissions:
-            raise exc.DomainException(f"Permission {permission} is not registered")
+            raise exc.DomainException(
+                "b2cee1c1", f"Permission {permission} is not registered"
+            )

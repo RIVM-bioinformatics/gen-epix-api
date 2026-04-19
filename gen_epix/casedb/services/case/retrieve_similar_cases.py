@@ -35,7 +35,8 @@ def case_service_retrieve_similar_cases(
         )
         if dist_col.case_type_id != case_type_id:
             raise exc.InvalidArgumentsError(
-                f"Col {dist_col_id} does not belong to CaseType {case_type_id}"
+                "331bf264",
+                f"Col {dist_col_id} does not belong to CaseType {case_type_id}",
             )
         dist_ref_col: model.RefCol = repository.crud(  # type: ignore[assignment]
             uow,
@@ -46,7 +47,8 @@ def case_service_retrieve_similar_cases(
         )
         if dist_ref_col.col_type != enum.ColType.GENETIC_DISTANCE:
             raise exc.InvalidArgumentsError(
-                f"Column {dist_col_id} is not of type {enum.ColType.GENETIC_DISTANCE.value}"
+                "ebf33e88",
+                f"Column {dist_col_id} is not of type {enum.ColType.GENETIC_DISTANCE.value}",
             )
 
         # Get genetic distance protocol

@@ -102,11 +102,13 @@ def _validate_cols(
             ref_col = ref_col_map[col.ref_col_id]
             if col.case_type_id != dim.case_type_id:
                 raise exc.InvalidArgumentsError(
+                    "0b7ce2a3",
                     "case_type_id must match case_type_id of Dim",
                     ids=[col.dim_id],
                 )
             if ref_col.ref_dim_id != dim.ref_dim_id:
                 raise exc.InvalidArgumentsError(
+                    "6636b283",
                     "ref_col.ref_dim_id must match ref_dim_id of Dim",
                     ids=[col.ref_col_id],
                 )  # type: ignore[return-value]

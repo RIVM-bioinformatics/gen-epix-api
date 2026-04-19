@@ -46,7 +46,8 @@ def case_service_retrieve_case_stats(
                     str(x) for x in unauthorized_case_type_ids
                 )
                 raise exc.UnauthorizedAuthError(
-                    f"User {user.id} does not have READ_CASE right for CaseTypes: {unauthorized_case_type_ids_str}"
+                    "e70d1344",
+                    f"User {user.id} does not have READ_CASE right for CaseTypes: {unauthorized_case_type_ids_str}",
                 )
 
         # Retrieve case sets if applicable
@@ -65,7 +66,8 @@ def case_service_retrieve_case_stats(
             # Check if all case sets are for allowed CaseTypes
             if any(x[1] not in case_type_ids for x in case_set_case_type_tuples):
                 raise exc.UnauthorizedAuthError(
-                    f"User {user.id} does not have READ_CASE right for all case sets provided"
+                    "67dc2ef5",
+                    f"User {user.id} does not have READ_CASE right for all case sets provided",
                 )
             # Map CaseType IDs to case set IDs
             case_type_case_set_ids_map = {}

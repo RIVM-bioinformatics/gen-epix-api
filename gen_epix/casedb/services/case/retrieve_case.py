@@ -38,7 +38,9 @@ def case_service_retrieve_cases_by_query(
         enum.CaseRight.READ_CASE
     )
     if case_type_id not in has_case_read and not is_full_access:
-        raise exc.UnauthorizedAuthError(f"Unauthorized CaseType: {case_type_id}")
+        raise exc.UnauthorizedAuthError(
+            "e9a598d2", f"Unauthorized CaseType: {case_type_id}"
+        )
 
     with repository.uow() as uow:
         if case_set_ids:
@@ -114,7 +116,9 @@ def _apply_max_results_limit(
         obj_ids=[case_type_id],
     )
     if not case_types:
-        raise exc.InvalidArgumentsError(f"Invalid CaseType ID: {case_type_id}")
+        raise exc.InvalidArgumentsError(
+            "f337e785", f"Invalid CaseType ID: {case_type_id}"
+        )
     case_type = case_types[0]
     # Apply max results limit
     is_max_results_exceeded = False
@@ -166,7 +170,7 @@ def _verify_case_set_access(
             [str(x) for x in unauthorized_case_set_ids]
         )
         raise exc.UnauthorizedAuthError(
-            f"Unauthorized case sets: {unauthorized_case_set_ids_str}"
+            "cd11372a", f"Unauthorized case sets: {unauthorized_case_set_ids_str}"
         )
 
 
@@ -208,7 +212,9 @@ def case_service_retrieve_cases_by_id(
             obj_ids=[case_type_id],
         )
         if not case_types:
-            raise exc.InvalidArgumentsError(f"Invalid CaseType ID: {case_type_id}")
+            raise exc.InvalidArgumentsError(
+                "06f5019f", f"Invalid CaseType ID: {case_type_id}"
+            )
         case_type = case_types[0]
 
         # Apply max results limit
@@ -407,7 +413,8 @@ def _verify_case_filter(
                 )
             else:
                 raise exc.InvalidArgumentsError(
-                    f"Column {col.id}: invalid filter type: {composite_filter.__class__.__name__}"
+                    "290ab290",
+                    f"Column {col.id}: invalid filter type: {composite_filter.__class__.__name__}",
                 )
 
     return ref_cols
@@ -447,7 +454,8 @@ def _validate_filter_members(
     if len(invalid_values):
         invalid_values_str = ", ".join(invalid_values)
         raise exc.InvalidArgumentsError(
-            f"Column {col.id}: invalid {stringset_filter.__class__.__name__} filter members: {invalid_values_str}"
+            "b8527ecb",
+            f"Column {col.id}: invalid {stringset_filter.__class__.__name__} filter members: {invalid_values_str}",
         )
 
 
@@ -528,4 +536,6 @@ def _get_map_function_for_col(
     elif ref_col.col_type in enum.ColTypeSet.NUMBER.value - {enum.ColType.DECIMAL_0}:
         map_fns.append(lambda x: Decimal(x) if isinstance(x, str) else x)
     else:
-        raise exc.InvalidArgumentsError(f"Unsupported column type: {ref_col.col_type}")
+        raise exc.InvalidArgumentsError(
+            "ab68605a", f"Unsupported column type: {ref_col.col_type}"
+        )

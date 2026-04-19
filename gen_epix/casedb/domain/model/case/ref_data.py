@@ -322,17 +322,20 @@ class RefCol(Model):
         if self.col_type in enum.ColTypeSet.HAS_CONCEPT_SET.value:
             if self.concept_set_id is None:
                 raise exc.InvalidArgumentsError(
-                    f"No concept_set_id provided for col_type {self.col_type.value}"
+                    "00437e28",
+                    f"No concept_set_id provided for col_type {self.col_type.value}",
                 )
         if self.col_type in enum.ColTypeSet.HAS_REGION_SET.value:
             if self.region_set_id is None:
                 raise exc.InvalidArgumentsError(
-                    f"No region_set_id provided for col_type {self.col_type.value}"
+                    "3b16f972",
+                    f"No region_set_id provided for col_type {self.col_type.value}",
                 )
         if self.col_type in enum.ColTypeSet.HAS_GENETIC_DISTANCE_PROTOCOL.value:
             if self.genetic_distance_protocol_id is None:
                 raise exc.InvalidArgumentsError(
-                    f"No genetic_distance_protocol_id provided for col_type {self.col_type.value}"
+                    "b1f2639c",
+                    f"No genetic_distance_protocol_id provided for col_type {self.col_type.value}",
                 )
         if self.col_type in enum.ColTypeSet.HAS_REGEX.value:
             if self.regex is None:

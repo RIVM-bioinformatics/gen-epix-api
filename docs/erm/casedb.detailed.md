@@ -7,59 +7,46 @@ erDiagram
     %% casedb — all persistable entities (detailed)
 
     %% Relationships
+    Site }o--|| Organization : "organization_id"
+    User }o--|| Organization : "organization_id"
     OrganizationSetMember }o--|| OrganizationSet : "organization_set_id"
     OrganizationSetMember }o--|| Organization : "organization_id"
     DataCollectionSetMember }o--|| DataCollectionSet : "data_collection_set_id"
     DataCollectionSetMember }o--|| DataCollection : "data_collection_id"
     OrganizationIdentifierIssuerLink }o--|| Organization : "organization_id"
     OrganizationIdentifierIssuerLink }o--|| IdentifierIssuer : "identifier_issuer_id"
-    Site }o--|| Organization : "organization_id"
-    Contact }o--|| Site : "site_id"
-    User }o--|| Organization : "organization_id"
-    UserInvitation }o--|| Organization : "organization_id"
-    UserInvitation }o--|| User : "invited_by_user_id"
     Concept }o--|| ConceptSet : "concept_set_id"
-    ConceptRelation }o--|| Concept : "from_concept_id"
-    ConceptRelation }o--|| Concept : "to_concept_id"
     Etiology }o--|| Disease : "disease_id"
     Etiology }o--|| EtiologicalAgent : "etiological_agent_id"
+    CaseType }o--|| Disease : "disease_id"
+    CaseType }o--|| EtiologicalAgent : "etiological_agent_id"
     Region }o--|| RegionSet : "region_set_id"
-    RegionRelation }o--|| Region : "from_region_id"
-    RegionRelation }o--|| Region : "to_region_id"
     RegionSetShape }o--|| RegionSet : "region_set_id"
     TreeAlgorithm }o--|| TreeAlgorithmClass : "tree_algorithm_class_id"
     RefCol }o--|| RefDim : "ref_dim_id"
     RefCol }o--|| ConceptSet : "concept_set_id"
     RefCol }o--|| RegionSet : "region_set_id"
     RefCol }o--|| GeneticDistanceProtocol : "genetic_distance_protocol_id"
-    CaseType }o--|| Disease : "disease_id"
-    CaseType }o--|| EtiologicalAgent : "etiological_agent_id"
     CaseTypeSet }o--|| CaseTypeSetCategory : "case_type_set_category_id"
-    CaseTypeSetMember }o--|| CaseTypeSet : "case_type_set_id"
-    CaseTypeSetMember }o--|| CaseType : "case_type_id"
+    Contact }o--|| Site : "site_id"
+    UserInvitation }o--|| Organization : "organization_id"
+    UserInvitation }o--|| User : "invited_by_user_id"
+    OrganizationAdminPolicy }o--|| Organization : "organization_id"
+    OrganizationAdminPolicy }o--|| User : "user_id"
+    ConceptRelation }o--|| Concept : "from_concept_id"
+    ConceptRelation }o--|| Concept : "to_concept_id"
     Dim }o--|| CaseType : "case_type_id"
     Dim }o--|| RefDim : "ref_dim_id"
-    Col }o--|| CaseType : "case_type_id"
-    Col }o--|| Dim : "dim_id"
-    Col }o--|| RefCol : "ref_col_id"
-    ColSetMember }o--|| ColSet : "col_set_id"
-    ColSetMember }o--|| Col : "col_id"
     Case }o--|| CaseType : "case_type_id"
     Case }o--|| DataCollection : "created_in_data_collection_id"
-    CaseIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
-    CaseIdentifier }o--|| Case : "internal_id"
     CaseSet }o--|| CaseType : "case_type_id"
     CaseSet }o--|| DataCollection : "created_in_data_collection_id"
     CaseSet }o--|| CaseSetCategory : "case_set_category_id"
     CaseSet }o--|| CaseSetStatus : "case_set_status_id"
-    CaseSetMember }o--|| CaseSet : "case_set_id"
-    CaseSetMember }o--|| Case : "case_id"
-    CaseDataCollectionLink }o--|| Case : "case_id"
-    CaseDataCollectionLink }o--|| DataCollection : "data_collection_id"
-    CaseSetDataCollectionLink }o--|| CaseSet : "case_set_id"
-    CaseSetDataCollectionLink }o--|| DataCollection : "data_collection_id"
-    OrganizationAdminPolicy }o--|| Organization : "organization_id"
-    OrganizationAdminPolicy }o--|| User : "user_id"
+    RegionRelation }o--|| Region : "from_region_id"
+    RegionRelation }o--|| Region : "to_region_id"
+    CaseTypeSetMember }o--|| CaseTypeSet : "case_type_set_id"
+    CaseTypeSetMember }o--|| CaseType : "case_type_id"
     OrganizationAccessCasePolicy }o--|| Organization : "organization_id"
     OrganizationAccessCasePolicy }o--|| DataCollection : "data_collection_id"
     OrganizationAccessCasePolicy }o--|| CaseTypeSet : "case_type_set_id"
@@ -78,6 +65,19 @@ erDiagram
     UserShareCasePolicy }o--|| DataCollection : "data_collection_id"
     UserShareCasePolicy }o--|| CaseTypeSet : "case_type_set_id"
     UserShareCasePolicy }o--|| DataCollection : "from_data_collection_id"
+    Col }o--|| CaseType : "case_type_id"
+    Col }o--|| Dim : "dim_id"
+    Col }o--|| RefCol : "ref_col_id"
+    CaseIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    CaseIdentifier }o--|| Case : "internal_id"
+    CaseDataCollectionLink }o--|| Case : "case_id"
+    CaseDataCollectionLink }o--|| DataCollection : "data_collection_id"
+    CaseSetMember }o--|| CaseSet : "case_set_id"
+    CaseSetMember }o--|| Case : "case_id"
+    CaseSetDataCollectionLink }o--|| CaseSet : "case_set_id"
+    CaseSetDataCollectionLink }o--|| DataCollection : "data_collection_id"
+    ColSetMember }o--|| ColSet : "col_set_id"
+    ColSetMember }o--|| Col : "col_id"
 
     %% Entity definitions
     Outage {
@@ -113,15 +113,6 @@ erDiagram
         string description
     }
 
-    OrganizationSetMember {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID organization_set_id FK
-        UUID organization_id FK
-    }
-
     DataCollection {
         timestamp created_at
         timestamp modified_at
@@ -140,15 +131,6 @@ erDiagram
         string description
     }
 
-    DataCollectionSetMember {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID data_collection_set_id FK
-        UUID data_collection_id FK
-    }
-
     IdentifierIssuer {
         timestamp created_at
         timestamp modified_at
@@ -157,65 +139,6 @@ erDiagram
         string code
         string name
         string description
-    }
-
-    OrganizationIdentifierIssuerLink {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID organization_id FK
-        UUID identifier_issuer_id FK
-    }
-
-    Site {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID organization_id FK
-        string name
-    }
-
-    Contact {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID site_id FK
-        string name
-        string email
-        string phone
-    }
-
-    User {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        string key
-        string email
-        string name
-        string description
-        bool is_active
-        set[string] roles
-        UUID organization_id FK
-    }
-
-    UserInvitation {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        string key
-        string email
-        string name
-        string description
-        string token
-        timestamp expires_at
-        set[string] roles
-        UUID invited_by_user_id FK
-        UUID organization_id FK
     }
 
     ConceptSet {
@@ -227,29 +150,6 @@ erDiagram
         string name
         enum type
         string description
-    }
-
-    Concept {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID concept_set_id FK
-        string code
-        string name
-        string description
-        int rank
-        dict[string, Any] props
-    }
-
-    ConceptRelation {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID from_concept_id FK
-        UUID to_concept_id FK
-        enum relation
     }
 
     Disease {
@@ -270,15 +170,6 @@ erDiagram
         string type
     }
 
-    Etiology {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID disease_id FK
-        UUID etiological_agent_id FK
-    }
-
     RegionSet {
         timestamp created_at
         timestamp modified_at
@@ -290,40 +181,6 @@ erDiagram
         float resolution
     }
 
-    Region {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID region_set_id FK
-        string code
-        string name
-        float centroid_lat
-        float centroid_lon
-        float center_lat
-        float center_lon
-    }
-
-    RegionRelation {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID from_region_id FK
-        UUID to_region_id FK
-        enum relation
-    }
-
-    RegionSetShape {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID region_set_id FK
-        float scale
-        string geo_json
-    }
-
     TreeAlgorithmClass {
         timestamp created_at
         timestamp modified_at
@@ -333,20 +190,6 @@ erDiagram
         string name
         bool is_seq_based
         bool is_dist_based
-        int rank
-    }
-
-    TreeAlgorithm {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID tree_algorithm_class_id FK
-        UUID seqdb_tree_algorithm_id
-        enum code
-        string name
-        string description
-        bool is_ultrametric
         int rank
     }
 
@@ -378,27 +221,6 @@ erDiagram
         dict[string, Any] props
     }
 
-    RefCol {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID ref_dim_id FK
-        string code_suffix
-        string code
-        int rank
-        string label
-        enum col_type
-        UUID concept_set_id FK
-        UUID region_set_id FK
-        UUID genetic_distance_protocol_id FK
-        string description
-        string regex
-        string schema_definition
-        string schema_uri
-        dict[string, Any] props
-    }
-
     CaseTypeSetCategory {
         timestamp created_at
         timestamp modified_at
@@ -410,78 +232,6 @@ erDiagram
         enum purpose
     }
 
-    CaseType {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        string name
-        string description
-        UUID disease_id FK
-        UUID etiological_agent_id FK
-        CaseTypeProps props
-    }
-
-    CaseTypeSet {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        string name
-        string description
-        UUID case_type_set_category_id FK
-        float rank
-    }
-
-    CaseTypeSetMember {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID case_type_set_id FK
-        UUID case_type_id FK
-    }
-
-    Dim {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID case_type_id FK
-        UUID ref_dim_id FK
-        int occurrence
-        string code
-        string label
-        string description
-        int rank
-        bool is_case_date_dim
-    }
-
-    Col {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID case_type_id FK
-        UUID dim_id FK
-        UUID ref_col_id FK
-        string code
-        int rank
-        string label
-        string description
-        float min_value
-        float max_value
-        timestamp min_datetime
-        timestamp max_datetime
-        int min_length
-        int max_length
-        string pattern
-        string ncbi_taxid
-        UUID genetic_sequence_col_id
-        set[enum] tree_algorithm_codes
-        dict[string, Any] props
-    }
-
     ColSet {
         timestamp created_at
         timestamp modified_at
@@ -489,38 +239,6 @@ erDiagram
         UUID id PK
         string name
         string description
-    }
-
-    ColSetMember {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID col_set_id FK
-        UUID col_id FK
-    }
-
-    Case {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        string code
-        UUID case_type_id FK
-        UUID created_in_data_collection_id FK
-        int count
-        timestamp case_date
-        dict[UUID, string] content
-    }
-
-    CaseIdentifier {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID identifier_issuer_id FK
-        string external_id
-        UUID internal_id FK
     }
 
     CaseSetCategory {
@@ -543,46 +261,185 @@ erDiagram
         int rank
     }
 
-    CaseSet {
+    Site {
         timestamp created_at
         timestamp modified_at
         UUID modified_by
         UUID id PK
-        UUID case_type_id FK
-        UUID created_in_data_collection_id FK
+        UUID organization_id FK
         string name
-        string code
+    }
+
+    User {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        string key
+        string email
+        string name
         string description
-        UUID case_set_category_id FK
-        UUID case_set_status_id FK
+        bool is_active
+        set[string] roles
+        UUID organization_id FK
     }
 
-    CaseSetMember {
+    OrganizationSetMember {
         timestamp created_at
         timestamp modified_at
         UUID modified_by
         UUID id PK
-        UUID case_set_id FK
-        UUID case_id FK
-        enum classification
+        UUID organization_set_id FK
+        UUID organization_id FK
     }
 
-    CaseDataCollectionLink {
+    DataCollectionSetMember {
         timestamp created_at
         timestamp modified_at
         UUID modified_by
         UUID id PK
-        UUID case_id FK
+        UUID data_collection_set_id FK
         UUID data_collection_id FK
     }
 
-    CaseSetDataCollectionLink {
+    OrganizationIdentifierIssuerLink {
         timestamp created_at
         timestamp modified_at
         UUID modified_by
         UUID id PK
-        UUID case_set_id FK
-        UUID data_collection_id FK
+        UUID organization_id FK
+        UUID identifier_issuer_id FK
+    }
+
+    Concept {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID concept_set_id FK
+        string code
+        string name
+        string description
+        int rank
+        dict[string, Any] props
+    }
+
+    Etiology {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID disease_id FK
+        UUID etiological_agent_id FK
+    }
+
+    CaseType {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        string name
+        string description
+        UUID disease_id FK
+        UUID etiological_agent_id FK
+        CaseTypeProps props
+    }
+
+    Region {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID region_set_id FK
+        string code
+        string name
+        float centroid_lat
+        float centroid_lon
+        float center_lat
+        float center_lon
+    }
+
+    RegionSetShape {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID region_set_id FK
+        float scale
+        string geo_json
+    }
+
+    TreeAlgorithm {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID tree_algorithm_class_id FK
+        UUID seqdb_tree_algorithm_id
+        enum code
+        string name
+        string description
+        bool is_ultrametric
+        int rank
+    }
+
+    RefCol {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID ref_dim_id FK
+        string code_suffix
+        string code
+        int rank
+        string label
+        enum col_type
+        UUID concept_set_id FK
+        UUID region_set_id FK
+        UUID genetic_distance_protocol_id FK
+        string description
+        string regex
+        string schema_definition
+        string schema_uri
+        dict[string, Any] props
+    }
+
+    CaseTypeSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        string name
+        string description
+        UUID case_type_set_category_id FK
+        float rank
+    }
+
+    Contact {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID site_id FK
+        string name
+        string email
+        string phone
+    }
+
+    UserInvitation {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        string key
+        string email
+        string name
+        string description
+        string token
+        timestamp expires_at
+        set[string] roles
+        UUID invited_by_user_id FK
+        UUID organization_id FK
     }
 
     OrganizationAdminPolicy {
@@ -593,6 +450,78 @@ erDiagram
         UUID organization_id FK
         UUID user_id FK
         bool is_active
+    }
+
+    ConceptRelation {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID from_concept_id FK
+        UUID to_concept_id FK
+        enum relation
+    }
+
+    Dim {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID case_type_id FK
+        UUID ref_dim_id FK
+        int occurrence
+        string code
+        string label
+        string description
+        int rank
+        bool is_case_date_dim
+    }
+
+    Case {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        string code
+        UUID case_type_id FK
+        UUID created_in_data_collection_id FK
+        int count
+        timestamp case_date
+        dict[UUID, string] content
+    }
+
+    CaseSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID case_type_id FK
+        UUID created_in_data_collection_id FK
+        string name
+        string code
+        string description
+        timestamp case_set_date
+        UUID case_set_category_id FK
+        UUID case_set_status_id FK
+    }
+
+    RegionRelation {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID from_region_id FK
+        UUID to_region_id FK
+        enum relation
+    }
+
+    CaseTypeSetMember {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID case_type_set_id FK
+        UUID case_type_id FK
     }
 
     OrganizationAccessCasePolicy {
@@ -664,6 +593,78 @@ erDiagram
         bool remove_case_set
         UUID user_id FK
         UUID from_data_collection_id FK
+    }
+
+    Col {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID case_type_id FK
+        UUID dim_id FK
+        UUID ref_col_id FK
+        string code
+        int rank
+        string label
+        string description
+        float min_value
+        float max_value
+        timestamp min_datetime
+        timestamp max_datetime
+        int min_length
+        int max_length
+        string pattern
+        string ncbi_taxid
+        UUID genetic_sequence_col_id
+        set[enum] tree_algorithm_codes
+        dict[string, Any] props
+    }
+
+    CaseIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
+    CaseDataCollectionLink {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID case_id FK
+        UUID data_collection_id FK
+    }
+
+    CaseSetMember {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID case_set_id FK
+        UUID case_id FK
+        enum classification
+    }
+
+    CaseSetDataCollectionLink {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID case_set_id FK
+        UUID data_collection_id FK
+    }
+
+    ColSetMember {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID col_set_id FK
+        UUID col_id FK
     }
 
 ```

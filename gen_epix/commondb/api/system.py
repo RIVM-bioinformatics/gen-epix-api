@@ -23,7 +23,7 @@ class HealthStatus(Enum):
     UNHEALTHY = "UNHEALTHY"
 
 
-class HealthReponseBody(PydanticBaseModel):
+class HealthResponseBody(PydanticBaseModel):
     status: HealthStatus
 
 
@@ -68,12 +68,12 @@ def create_system_endpoints(
         operation_id="health",
         name="Health",
     )
-    async def get__health() -> HealthReponseBody:
+    async def get__health() -> HealthResponseBody:
         """
         Returns the health status of the service. If no response is received
         within the timeout period, the service is considered unhealthy.
         """
-        return HealthReponseBody(
+        return HealthResponseBody(
             status=HealthStatus.HEALTHY,
         )
 

@@ -53,7 +53,7 @@ class Model(PydanticBaseModel):
         """Get the Entity associated with this model."""
         if cls.ENTITY is None:
             raise exc.InitializationServiceError(
-                f"Entity not set for model {cls.__name__}"
+                "dd866d20", f"Entity not set for model {cls.__name__}"
             )
         return cls.ENTITY
 
@@ -62,7 +62,7 @@ class Model(PydanticBaseModel):
         """Get the name of the model."""
         if cls.NAME is None:
             raise exc.InitializationServiceError(
-                f"Name not set for model {cls.__name__}"
+                "1cea00dc", f"Name not set for model {cls.__name__}"
             )
         return cls.NAME
 
@@ -89,7 +89,7 @@ class Model(PydanticBaseModel):
         id_: Hashable | None = getattr(self, self.ENTITY.get_id_field_name())
         if id_ is None and raise_on_missing:
             raise exc.InvalidIdsError(
-                f"ID not set for model instance {self.__class__.__name__}"
+                "132d74f2", f"ID not set for model instance {self.__class__.__name__}"
             )
         return id_
 
@@ -447,25 +447,28 @@ class UpdateAssociationCommand(Command):
         association_objs = self.association_objs
         if obj_id1 and obj_id2:
             raise exc.DomainException(
-                f"Invalid state: obj_id1 and obj_id2 are both present"
+                "0a32d30f", f"Invalid state: obj_id1 and obj_id2 are both present"
             )
         if association_objs:
             if obj_id1 and not all(
                 getattr(x, self.LINK_FIELD_NAME1) == obj_id1 for x in association_objs
             ):
                 raise exc.DomainException(
-                    f"Invalid state: obj_id1 and association_objs not matching"
+                    "452a83cd",
+                    f"Invalid state: obj_id1 and association_objs not matching",
                 )
             if obj_id2 and not all(
                 getattr(x, self.LINK_FIELD_NAME2) == obj_id2 for x in association_objs
             ):
                 raise exc.DomainException(
-                    f"Invalid state: obj_id2 and association_objs not matching"
+                    "39d1a376",
+                    f"Invalid state: obj_id2 and association_objs not matching",
                 )
         else:
             if not obj_id1 and not obj_id2:
                 raise exc.DomainException(
-                    f"Invalid state: association_objs, obj_id1 and obj_id2 all empty"
+                    "448b90b2",
+                    f"Invalid state: association_objs, obj_id1 and obj_id2 all empty",
                 )
         return self
 
