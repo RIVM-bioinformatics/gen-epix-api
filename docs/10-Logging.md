@@ -42,8 +42,7 @@ and command-object list summarization is enabled:
 ```toml
 [log.command_object_summarization]
 enabled = true
-max_list_items = 10
-sample_items = 3
+max_list_items = 3
 ```
 
 (Source: `gen_epix/casedb/config/settings.toml#L46-L52`; Source: `gen_epix/seqdb/config/settings.toml#L46-L52`; Source: `gen_epix/omopdb/config/settings.toml#L46-L52`; Source: `gen_epix/commondb/config/settings.toml#L46-L52`)
