@@ -135,15 +135,13 @@ configurable under `[log.command_object_summarization]` in each app's
 
 - `enabled` (bool): turns summarization on/off.
 - `max_list_items` (int): lists with more than this many items are summarized.
-- `sample_items` (int): number of list elements copied into `_sample`.
 
 Current defaults in app settings are:
 
 ```toml
 [log.command_object_summarization]
 enabled = true
-max_list_items = 10
-sample_items = 3
+max_list_items = 3
 ```
 
 Environment overrides follow the standard Dynaconf `__` convention. Example:
