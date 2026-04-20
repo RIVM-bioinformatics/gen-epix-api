@@ -75,15 +75,17 @@ class CommondbRemoteApp(RemoteApp):
         elif auth_protocol == AuthProtocol.OAUTH2:
             if oauth_discovery_url is None:
                 raise exc.InitializationServiceError(
-                    "OAuth discovery endpoint must be provided for OAUTH2 auth protocol"
+                    "a1ad2a89",
+                    "OAuth discovery endpoint must be provided for OAUTH2 auth protocol",
                 )
             if oauth_client_id is None:
                 raise exc.InitializationServiceError(
-                    "OAuth client ID must be provided for OAUTH2 auth protocol"
+                    "47f9dfe6",
+                    "OAuth client ID must be provided for OAUTH2 auth protocol",
                 )
             if oauth_scope is None:
                 raise exc.InitializationServiceError(
-                    "OAuth scope must be provided for OAUTH2 auth protocol"
+                    "683cf2a0", "OAuth scope must be provided for OAUTH2 auth protocol"
                 )
             oauth_idp_client = OauthIdpClient(
                 server_cfg=OidcServerCfg(
@@ -101,7 +103,7 @@ class CommondbRemoteApp(RemoteApp):
             )
         else:
             raise exc.InitializationServiceError(
-                f"Auth protocol {auth_protocol} not supported"
+                "5a7ed32f", f"Auth protocol {auth_protocol} not supported"
             )
         self._auth_protocol = auth_protocol
         self._oauth_flow = oauth_flow
@@ -144,7 +146,8 @@ class CommondbRemoteApp(RemoteApp):
                 self._oauth_header_cache = (exp, headers)
             return headers
         raise exc.InitializationServiceError(
-            f"Auth protocol {self._auth_protocol.value} not supported for token retrieval"
+            "7bf9fe04",
+            f"Auth protocol {self._auth_protocol.value} not supported for token retrieval",
         )
 
     @staticmethod
@@ -163,7 +166,8 @@ class CommondbRemoteApp(RemoteApp):
         app_setup_type = app_setup_type.upper()
         if app_setup_type not in ("LOCAL", "REMOTE"):
             raise exc.InitializationServiceError(
-                f"Invalid app_setup_type: {app_setup_type}. Must be 'LOCAL' or 'REMOTE'."
+                "2ceb9c7c",
+                f"Invalid app_setup_type: {app_setup_type}. Must be 'LOCAL' or 'REMOTE'.",
             )
         # Create local or remote app
         app: App
@@ -184,7 +188,8 @@ class CommondbRemoteApp(RemoteApp):
             app, user = CommondbRemoteApp._create_remote_app(remote_app_props)
         else:
             raise exc.InitializationServiceError(
-                f"Invalid app_setup_type: {app_setup_type}. Must be 'LOCAL' or 'REMOTE'."
+                "84a87605",
+                f"Invalid app_setup_type: {app_setup_type}. Must be 'LOCAL' or 'REMOTE'.",
             )
         return app, user
 
@@ -206,11 +211,13 @@ class CommondbRemoteApp(RemoteApp):
             or repository_type_enum is None
         ):
             raise exc.InitializationServiceError(
-                "local_app_props, app_composer_class, user_class, service_type_enum, and repository_type_enum must be provided for LOCAL app setup."
+                "6451025d",
+                "local_app_props, app_composer_class, user_class, service_type_enum, and repository_type_enum must be provided for LOCAL app setup.",
             )
         if "user" not in local_app_props:
             raise exc.InitializationServiceError(
-                "local_app_props must contain 'user' key for LOCAL app setup."
+                "80bc4360",
+                "local_app_props must contain 'user' key for LOCAL app setup.",
             )
             # Get app config
         if "app_cfg" in local_app_props:
@@ -229,11 +236,12 @@ class CommondbRemoteApp(RemoteApp):
     def _create_remote_app(remote_app_props: dict[str, Any] | None) -> tuple[App, None]:
         if remote_app_props is None:
             raise exc.InitializationServiceError(
-                "remote_app_props must be provided for REMOTE app setup."
+                "4007b438", "remote_app_props must be provided for REMOTE app setup."
             )
         if "module" not in remote_app_props or "class_name" not in remote_app_props:
             raise exc.InitializationServiceError(
-                "remote_app_props must contain 'module' and 'class_name' keys for REMOTE app setup."
+                "0c268454",
+                "remote_app_props must contain 'module' and 'class_name' keys for REMOTE app setup.",
             )
             # Create remote app
         remote_app_module = remote_app_props.pop("module")

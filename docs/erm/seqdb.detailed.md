@@ -7,39 +7,44 @@ erDiagram
     %% seqdb — all persistable entities (detailed)
 
     %% Relationships
+    Site }o--|| Organization : "organization_id"
+    User }o--|| Organization : "organization_id"
     OrganizationSetMember }o--|| OrganizationSet : "organization_set_id"
     OrganizationSetMember }o--|| Organization : "organization_id"
+    Sample }o--|| DataCollection : "created_in_data_collection_id"
     DataCollectionSetMember }o--|| DataCollectionSet : "data_collection_set_id"
     DataCollectionSetMember }o--|| DataCollection : "data_collection_id"
     OrganizationIdentifierIssuerLink }o--|| Organization : "organization_id"
     OrganizationIdentifierIssuerLink }o--|| IdentifierIssuer : "identifier_issuer_id"
-    Site }o--|| Organization : "organization_id"
+    RefSeq }o--|| Taxon : "taxon_id"
+    TaxonSetMember }o--|| TaxonSet : "taxon_set_id"
+    TaxonSetMember }o--|| Taxon : "taxon_id"
+    RefAllele }o--|| Locus : "locus_id"
+    Allele }o--|| Locus : "locus_id"
+    TreeAlgorithm }o--|| TreeAlgorithmClass : "tree_algorithm_class_id"
+    SeqCategory }o--|| SeqCategorySet : "seq_category_set_id"
     Contact }o--|| Site : "site_id"
-    User }o--|| Organization : "organization_id"
     UserInvitation }o--|| Organization : "organization_id"
     UserInvitation }o--|| User : "invited_by_user_id"
     OrganizationAdminPolicy }o--|| Organization : "organization_id"
     OrganizationAdminPolicy }o--|| User : "user_id"
-    TaxonSetMember }o--|| TaxonSet : "taxon_set_id"
-    TaxonSetMember }o--|| Taxon : "taxon_id"
-    RefSeq }o--|| Taxon : "taxon_id"
-    RefAllele }o--|| Locus : "locus_id"
-    TreeAlgorithm }o--|| TreeAlgorithmClass : "tree_algorithm_class_id"
-    SeqCategory }o--|| SeqCategorySet : "seq_category_set_id"
+    SampleDataCollectionLink }o--|| Sample : "sample_id"
+    SampleDataCollectionLink }o--|| DataCollection : "data_collection_id"
+    SampleIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    SampleIdentifier }o--|| Sample : "internal_id"
     Protocol }o--|| RefSeq : "ref_seq_id"
     Protocol }o--|| SeqCategorySet : "seq_category_set_id"
     Protocol }o--|| LocusSet : "locus_set_id"
     ProtocolSetMember }o--|| ProtocolSet : "protocol_set_id"
     ProtocolSetMember }o--|| Protocol : "protocol_id"
-    Sample }o--|| DataCollection : "created_in_data_collection_id"
-    SampleDataCollectionLink }o--|| Sample : "sample_id"
-    SampleDataCollectionLink }o--|| DataCollection : "data_collection_id"
-    SampleIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
-    SampleIdentifier }o--|| Sample : "internal_id"
     ReadSet }o--|| Sample : "sample_id"
     ReadSet }o--|| Protocol : "protocol_id"
     ReadSet }o--|| File : "fwd_file_id"
     ReadSet }o--|| File : "rev_file_id"
+    AstMeasurement }o--|| Sample : "sample_id"
+    AstMeasurement }o--|| Protocol : "protocol_id"
+    PcrMeasurement }o--|| Sample : "sample_id"
+    PcrMeasurement }o--|| Protocol : "protocol_id"
     ReadSetIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
     ReadSetIdentifier }o--|| ReadSet : "internal_id"
     Seq }o--|| Sample : "sample_id"
@@ -49,30 +54,25 @@ erDiagram
     Seq }o--|| Protocol : "protocol_id"
     SeqIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
     SeqIdentifier }o--|| Seq : "internal_id"
-    Allele }o--|| Locus : "locus_id"
     SeqProfile }o--|| Sample : "sample_id"
     SeqProfile }o--|| Seq : "seq_id"
     SeqProfile }o--|| Protocol : "protocol_id"
-    SeqProfileIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
-    SeqProfileIdentifier }o--|| SeqProfile : "internal_id"
-    AstMeasurement }o--|| Sample : "sample_id"
-    AstMeasurement }o--|| Protocol : "protocol_id"
     AstPrediction }o--|| Sample : "sample_id"
     AstPrediction }o--|| Seq : "seq_id"
     AstPrediction }o--|| Protocol : "protocol_id"
-    PcrMeasurement }o--|| Sample : "sample_id"
-    PcrMeasurement }o--|| Protocol : "protocol_id"
     SeqClassification }o--|| Sample : "sample_id"
     SeqClassification }o--|| Seq : "seq_id"
     SeqClassification }o--|| Protocol : "protocol_id"
     SeqClassification }o--|| SeqCategory : "primary_category_id"
-    SeqDistance }o--|| Sample : "sample_id"
-    SeqDistance }o--|| Protocol : "protocol_id"
-    SeqDistance }o--|| SeqProfile : "seq_profile_id"
     SeqTaxonomy }o--|| Sample : "sample_id"
     SeqTaxonomy }o--|| Seq : "seq_id"
     SeqTaxonomy }o--|| Protocol : "protocol_id"
     SeqTaxonomy }o--|| Taxon : "primary_taxon_id"
+    SeqProfileIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    SeqProfileIdentifier }o--|| SeqProfile : "internal_id"
+    SeqDistance }o--|| Sample : "sample_id"
+    SeqDistance }o--|| Protocol : "protocol_id"
+    SeqDistance }o--|| SeqProfile : "seq_profile_id"
 
     %% Entity definitions
     Outage {
@@ -108,15 +108,6 @@ erDiagram
         string description
     }
 
-    OrganizationSetMember {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID organization_set_id FK
-        UUID organization_id FK
-    }
-
     DataCollection {
         timestamp created_at
         timestamp modified_at
@@ -135,15 +126,6 @@ erDiagram
         string description
     }
 
-    DataCollectionSetMember {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID data_collection_set_id FK
-        UUID data_collection_id FK
-    }
-
     IdentifierIssuer {
         timestamp created_at
         timestamp modified_at
@@ -152,75 +134,6 @@ erDiagram
         string code
         string name
         string description
-    }
-
-    OrganizationIdentifierIssuerLink {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID organization_id FK
-        UUID identifier_issuer_id FK
-    }
-
-    Site {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID organization_id FK
-        string name
-    }
-
-    Contact {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID site_id FK
-        string name
-        string email
-        string phone
-    }
-
-    User {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        string key
-        string email
-        string name
-        string description
-        bool is_active
-        set[string] roles
-        UUID organization_id FK
-    }
-
-    UserInvitation {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        string key
-        string email
-        string name
-        string description
-        string token
-        timestamp expires_at
-        set[string] roles
-        UUID invited_by_user_id FK
-        UUID organization_id FK
-    }
-
-    OrganizationAdminPolicy {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID organization_id FK
-        UUID user_id FK
-        bool is_active
     }
 
     File {
@@ -255,15 +168,6 @@ erDiagram
         string name
     }
 
-    TaxonSetMember {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID taxon_set_id FK
-        UUID taxon_id FK
-    }
-
     Locus {
         timestamp created_at
         timestamp modified_at
@@ -296,6 +200,96 @@ erDiagram
         dict[string, UUID] code_map
     }
 
+    TreeAlgorithmClass {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        string code
+        string name
+        bool is_seq_based
+        bool is_dist_based
+        int rank
+    }
+
+    SeqCategorySet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        string code
+        string name
+    }
+
+    ProtocolSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        string code
+        string name
+    }
+
+    Site {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID organization_id FK
+        string name
+    }
+
+    User {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        string key
+        string email
+        string name
+        string description
+        bool is_active
+        set[string] roles
+        UUID organization_id FK
+    }
+
+    OrganizationSetMember {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID organization_set_id FK
+        UUID organization_id FK
+    }
+
+    Sample {
+        string code
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID created_in_data_collection_id FK
+        dict[string, string | int | float] props
+    }
+
+    DataCollectionSetMember {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID data_collection_set_id FK
+        UUID data_collection_id FK
+    }
+
+    OrganizationIdentifierIssuerLink {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID organization_id FK
+        UUID identifier_issuer_id FK
+    }
+
     RefSeq {
         timestamp created_at
         timestamp modified_at
@@ -311,6 +305,15 @@ erDiagram
         string genbank_accession_code
     }
 
+    TaxonSetMember {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID taxon_set_id FK
+        UUID taxon_id FK
+    }
+
     RefAllele {
         timestamp created_at
         timestamp modified_at
@@ -323,16 +326,15 @@ erDiagram
         int index
     }
 
-    TreeAlgorithmClass {
+    Allele {
         timestamp created_at
         timestamp modified_at
         UUID modified_by
         UUID id PK
-        string code
-        string name
-        bool is_seq_based
-        bool is_dist_based
-        int rank
+        string seq
+        enum seq_format
+        int length
+        UUID locus_id FK
     }
 
     TreeAlgorithm {
@@ -348,15 +350,6 @@ erDiagram
         int rank
     }
 
-    SeqCategorySet {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        string code
-        string name
-    }
-
     SeqCategory {
         timestamp created_at
         timestamp modified_at
@@ -365,6 +358,62 @@ erDiagram
         string code
         string name
         UUID seq_category_set_id FK
+    }
+
+    Contact {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID site_id FK
+        string name
+        string email
+        string phone
+    }
+
+    UserInvitation {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        string key
+        string email
+        string name
+        string description
+        string token
+        timestamp expires_at
+        set[string] roles
+        UUID invited_by_user_id FK
+        UUID organization_id FK
+    }
+
+    OrganizationAdminPolicy {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID organization_id FK
+        UUID user_id FK
+        bool is_active
+    }
+
+    SampleDataCollectionLink {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID sample_id FK
+        UUID data_collection_id FK
+    }
+
+    SampleIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
     }
 
     Protocol {
@@ -391,15 +440,6 @@ erDiagram
         dict[string, Any] props
     }
 
-    ProtocolSet {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        string code
-        string name
-    }
-
     ProtocolSetMember {
         timestamp created_at
         timestamp modified_at
@@ -407,35 +447,6 @@ erDiagram
         UUID id PK
         UUID protocol_set_id FK
         UUID protocol_id FK
-    }
-
-    Sample {
-        string code
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID created_in_data_collection_id FK
-        dict[string, string | int | float] props
-    }
-
-    SampleDataCollectionLink {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID sample_id FK
-        UUID data_collection_id FK
-    }
-
-    SampleIdentifier {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID identifier_issuer_id FK
-        string external_id
-        UUID internal_id FK
     }
 
     ReadSet {
@@ -459,6 +470,38 @@ erDiagram
         UUID rev_reads_hash
         string sequencing_run_code
         any is_available
+    }
+
+    AstMeasurement {
+        enum qc_result
+        float qc_score
+        Json qc_report
+        FormatType format
+        UUID content_hash
+        string content
+        string content2
+        UUID protocol_id FK
+        UUID sample_id FK
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+    }
+
+    PcrMeasurement {
+        enum qc_result
+        float qc_score
+        Json qc_report
+        FormatType format
+        UUID content_hash
+        string content
+        string content2
+        UUID protocol_id FK
+        UUID sample_id FK
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
     }
 
     ReadSetIdentifier {
@@ -510,17 +553,6 @@ erDiagram
         UUID internal_id FK
     }
 
-    Allele {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        string seq
-        enum seq_format
-        int length
-        UUID locus_id FK
-    }
-
     SeqProfile {
         enum qc_result
         float qc_score
@@ -539,32 +571,6 @@ erDiagram
         enum seq_profile_type
     }
 
-    SeqProfileIdentifier {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID identifier_issuer_id FK
-        string external_id
-        UUID internal_id FK
-    }
-
-    AstMeasurement {
-        enum qc_result
-        float qc_score
-        Json qc_report
-        FormatType format
-        UUID content_hash
-        string content
-        string content2
-        UUID protocol_id FK
-        UUID sample_id FK
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-    }
-
     AstPrediction {
         enum qc_result
         float qc_score
@@ -575,22 +581,6 @@ erDiagram
         string content2
         UUID protocol_id FK
         UUID seq_id FK
-        UUID sample_id FK
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-    }
-
-    PcrMeasurement {
-        enum qc_result
-        float qc_score
-        Json qc_report
-        FormatType format
-        UUID content_hash
-        string content
-        string content2
-        UUID protocol_id FK
         UUID sample_id FK
         timestamp created_at
         timestamp modified_at
@@ -616,20 +606,6 @@ erDiagram
         UUID primary_category_id FK
     }
 
-    SeqDistance {
-        FormatType format
-        UUID content_hash
-        string content
-        string content2
-        UUID protocol_id FK
-        UUID sample_id FK
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID seq_profile_id FK
-    }
-
     SeqTaxonomy {
         enum qc_result
         float qc_score
@@ -646,6 +622,30 @@ erDiagram
         UUID modified_by
         UUID id PK
         UUID primary_taxon_id FK
+    }
+
+    SeqProfileIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
+    SeqDistance {
+        FormatType format
+        UUID content_hash
+        string content
+        string content2
+        UUID protocol_id FK
+        UUID sample_id FK
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID seq_profile_id FK
     }
 
 ```

@@ -80,7 +80,10 @@ class Run:
     ]
 
     ## api
-    def api(self, app_type: str, idp_config: str, dev_repository_config: str) -> None:
+    def api(
+        self, app_type: str, idp_config: str, dev_repository_config: str,
+        reload: bool = True,
+    ) -> None:
         import uvicorn
 
         app_type_enum = AppType[app_type.upper()]
@@ -103,21 +106,25 @@ class Run:
             uri_cfg["app"],
             host=uri_cfg["host"],
             port=uri_cfg["port"],
-            reload=True,
+            reload=reload,
             ssl_keyfile=ssl_keyfile,
             ssl_certfile=ssl_certfile,
             log_config=logging_file,
         )
 
     def api_platform_local_mock_dict_demo(self) -> None:
+        from test.end_to_end.casedb_seqdb_connection.envvar import set_envvar
         from test.test_client.start_all_services import run_platform
 
-        run_platform(use_dict_repository=True, start_omopdb=False)
+        set_envvar()
+        run_platform(use_dict_repository=True, start_omopdb=True)
 
     def api_platform_local_mock_sa_sql_demo(self) -> None:
+        from test.end_to_end.casedb_seqdb_connection.envvar import set_envvar
         from test.test_client.start_all_services import run_platform
 
-        run_platform(use_dict_repository=False, start_omopdb=False)
+        set_envvar()
+        run_platform(use_dict_repository=False, start_omopdb=True)
 
     ## env
 
@@ -871,6 +878,13 @@ class Run:
         from test.test_client.util import generate_uuids
 
         generate_uuids(n_rows=n_rows, n_cols=n_cols)
+
+    def other_general_generate_hex_strings(
+        self, n_rows: int = 1000, n_cols: int = 100, length: int = 8
+    ) -> None:
+        from test.test_client.util import generate_hex_strings
+
+        generate_hex_strings(n_rows=n_rows, n_cols=n_cols, length=length)
 
     def other_general_run_linters(self) -> None:
         from test.test_client.linter import Linter

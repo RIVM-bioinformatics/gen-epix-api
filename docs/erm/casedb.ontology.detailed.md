@@ -8,25 +8,12 @@ erDiagram
 
     %% Relationships
     Concept }o--|| ConceptSet : "concept_set_id"
-    ConceptRelation }o--|| Concept : "from_concept_id"
-    ConceptRelation }o--|| Concept : "to_concept_id"
     Etiology }o--|| Disease : "disease_id"
     Etiology }o--|| EtiologicalAgent : "etiological_agent_id"
+    ConceptRelation }o--|| Concept : "from_concept_id"
+    ConceptRelation }o--|| Concept : "to_concept_id"
 
     %% Entity definitions
-    Concept {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID concept_set_id FK
-        string code
-        string name
-        string description
-        int rank
-        dict[string, Any] props
-    }
-
     ConceptSet {
         timestamp created_at
         timestamp modified_at
@@ -36,16 +23,6 @@ erDiagram
         string name
         enum type
         string description
-    }
-
-    ConceptRelation {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID from_concept_id FK
-        UUID to_concept_id FK
-        enum relation
     }
 
     Disease {
@@ -66,6 +43,19 @@ erDiagram
         string type
     }
 
+    Concept {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID concept_set_id FK
+        string code
+        string name
+        string description
+        int rank
+        dict[string, Any] props
+    }
+
     Etiology {
         timestamp created_at
         timestamp modified_at
@@ -73,6 +63,16 @@ erDiagram
         UUID id PK
         UUID disease_id FK
         UUID etiological_agent_id FK
+    }
+
+    ConceptRelation {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID from_concept_id FK
+        UUID to_concept_id FK
+        enum relation
     }
 
 ```

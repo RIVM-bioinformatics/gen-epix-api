@@ -847,7 +847,7 @@ class TestCall(BaseOauthIdpClientTestCase):
         with patch.object(
             OauthIdpClient,
             "get_claims_from_jwt",
-            side_effect=exc.CredentialsAuthError(),
+            side_effect=exc.CredentialsAuthError("code", "message"),
         ):
             # 3. Execute
             result = asyncio.run(client(request))

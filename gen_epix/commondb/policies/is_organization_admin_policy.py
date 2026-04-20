@@ -71,7 +71,7 @@ class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
                     self._get_organization_ids_handler_map[command_class] = handler
                     return handler(cmd)
             raise exc.InitializationServiceError(
-                f"No handler registered for command: {command_class}"
+                "0f786c67", f"No handler registered for command: {command_class}"
             )
         return handler(cmd)
 

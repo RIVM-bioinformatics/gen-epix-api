@@ -98,6 +98,32 @@ class ModelF(Model):
     to_c: UUID | None = None
 
 
+class ModelX(Model):
+    id: UUID
+    NAME = None
+    ENTITY: Entity | None = None  # type: ignore[misc]
+    to_y: UUID | None = None
+
+
+class ModelY(Model):
+    id: UUID
+    NAME = None
+    ENTITY: Entity | None = None  # type: ignore[misc]
+    to_x: UUID | None = None
+
+
+class CrudX(CrudCommand):
+    NAME = None
+    MODEL_CLASS: type[Model] | None = None  # type: ignore[misc,assignment]
+    PERMISSION_TYPE_SET = PermissionTypeSet.CRUD
+
+
+class CrudY(CrudCommand):
+    NAME = None
+    MODEL_CLASS: type[Model] | None = None  # type: ignore[misc,assignment]
+    PERMISSION_TYPE_SET = PermissionTypeSet.CRUD
+
+
 class BaseDomainTestCase(TestCase):
     def setUp(self) -> None:
         # Domain under test
@@ -608,3 +634,107 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
         self.assertEqual(
             {x.permission_type for x in perms_model_filtered}, {PermissionType.READ}
         )
+
+    def test_get_service_types(self) -> None:
+        # Create input
+        # Set up mocks
+        # Execute
+        service_types = self.domain.get_service_types()
+        # Verify
+        self.assertIsInstance(service_types, set)
+        self.assertIn(self.svc1, service_types)
+        self.assertIn(self.svc2, service_types)
+        self.assertEqual(len(service_types), 2)
+
+    def test_register_service_type_idempotency(self) -> None:
+        # Create input
+        # Set up mocks
+        # Execute - calling register twice with same service type
+        svc3 = ServiceType.SVC3
+        result1 = self.domain.register_service_type(svc3)
+        result2 = self.domain.register_service_type(svc3)
+        # Verify - idempotent: calling twice should return same type
+        self.assertEqual(result1, svc3)
+        self.assertEqual(result2, svc3)
+        self.assertIn(svc3, self.domain.service_types)
+
+    def test_get_dag_sorted_service_types(self) -> None:
+        # Create input
+        # Set up mocks
+        # Execute - get DAG sorted service types (basic coverage)
+        sorted_types = self.domain.get_dag_sorted_service_types(reverse=False)
+        sorted_types_rev = self.domain.get_dag_sorted_service_types(reverse=True)
+        # Verify
+        self.assertIsInstance(sorted_types, list)
+        self.assertIsInstance(sorted_types_rev, list)
+        # With A->B link, B should come before A in default order,
+        # so svc2 (B) before svc1 (A)
+        self.assertEqual(len(sorted_types), 2)
+        self.assertEqual(sorted_types[0], self.svc2)
+        self.assertEqual(sorted_types[1], self.svc1)
+        # Reversed order
+        self.assertEqual(sorted_types_rev[0], self.svc1)
+        self.assertEqual(sorted_types_rev[1], self.svc2)
+
+
+@pytest.mark.scenario_ids("TC-SEC-28-02")
+class TestDAGAndCycleBehavior(TestCase):
+    """Test topological sorting behavior with on_cycle parameter."""
+
+    def setUp(self) -> None:
+        # Domain under test
+        self.domain = Domain(name="TEST_DAG", description="desc")
+        self.svc_main = ServiceType.SVC1
+
+        # Entities - linear dependency A -> B (no cycle)
+        self.entity_b_dag = Entity(
+            id=UUID("00000000-0000-0000-0000-000000000051"),
+            persistable=True,
+            url_name="b_dag",
+            database_name="db_b_dag",
+            schema_name="schema_b_dag",
+            links={},
+        )
+        self.entity_a_dag = Entity(
+            id=UUID("00000000-0000-0000-0000-000000000050"),
+            persistable=True,
+            url_name="a_dag",
+            database_name="db_a_dag",
+            schema_name="schema_a_dag",
+            links={1: ("a_to_b", ModelB, None)},  # type: ignore[dict-item]
+        )
+
+        # Set up model linkage
+        ModelB.ENTITY = self.entity_b_dag
+        ModelA.ENTITY = self.entity_a_dag
+
+        # Set up CRUD commands
+        CrudB.MODEL_CLASS = ModelB
+        CrudA.MODEL_CLASS = ModelA
+
+        # Register: B first, then A (due to A->B link)
+        self.domain.register_command(CrudB, service_type=self.svc_main)
+        self.domain.register_command(CrudA, service_type=self.svc_main)
+
+    def test_get_dag_sorted_entities_respects_reverse(self) -> None:
+        # Create input
+        # Set up mocks
+        # Execute - get entities in topological order
+        sorted_forward = self.domain.get_dag_sorted_entities(reverse=False)
+        sorted_backward = self.domain.get_dag_sorted_entities(reverse=True)
+
+        # Verify - with A->B link, B should come first in forward order
+        self.assertEqual(sorted_forward, [self.entity_b_dag, self.entity_a_dag])
+        self.assertEqual(sorted_backward, [self.entity_a_dag, self.entity_b_dag])
+
+    def test_get_dag_sorted_entities_on_cycle_parameter_accepted(self) -> None:
+        # Create input
+        # Set up mocks
+        # Execute - verify on_cycle parameter is accepted and doesn't error
+        # (no actual cycle in this setup, so both should work)
+        result_raise = self.domain.get_dag_sorted_entities(on_cycle=OnException.RAISE)
+        result_ignore = self.domain.get_dag_sorted_entities(on_cycle=OnException.IGNORE)
+
+        # Verify - both return valid results with no cycles
+        self.assertEqual(result_raise, [self.entity_b_dag, self.entity_a_dag])
+        self.assertEqual(result_ignore, [self.entity_b_dag, self.entity_a_dag])

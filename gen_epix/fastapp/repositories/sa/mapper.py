@@ -25,7 +25,8 @@ class BaseSAMapper(abc.ABC):
     ):
         if model_class.ENTITY is None:
             raise exc.RepositoryServiceError(
-                f"Model {model_class.__name__} does not have an ENTITY class attribute"
+                "e0c83ad7",
+                f"Model {model_class.__name__} does not have an ENTITY class attribute",
             )
         self._model_class = model_class
         self._row_class = row_class
@@ -311,7 +312,7 @@ class SAMapper(BaseSAMapper):
         entity = model_class.ENTITY
         if entity is None:
             raise exc.RepositoryInitializationServiceError(
-                f"Model {model_class.__name__} does not ENTITY set"
+                "4e09aa9b", f"Model {model_class.__name__} does not ENTITY set"
             )
         common_field_names_set = set.union(
             *[
@@ -330,7 +331,8 @@ class SAMapper(BaseSAMapper):
             if invalid_row_field_names:
                 invalid_row_field_names_str = ", ".join(invalid_row_field_names)
                 raise exc.RepositoryServiceError(
-                    f"Row {row_class.__name__} field(s) {invalid_row_field_names_str} do not exist"
+                    "ec4fcec5",
+                    f"Row {row_class.__name__} field(s) {invalid_row_field_names_str} do not exist",
                 )
             self._field_names_by_type[field_type] = tuple(field_names)
             self._row_field_names_by_type[field_type] = tuple(row_field_names)
@@ -391,13 +393,14 @@ class SAMapper(BaseSAMapper):
             out_field_names: tuple[str, ...] = tuple(field_names)
         else:
             raise exc.RepositoryServiceError(
-                f"Row {row_class.__name__} {name} must be a tuple"
+                "132ee6ed", f"Row {row_class.__name__} {name} must be a tuple"
             )
         invalid_field_names = set(out_field_names) - set(valid_field_names)
         if invalid_field_names:
             invalid_field_names_str = ", ".join(invalid_field_names)
             raise exc.RepositoryServiceError(
-                f"Row {row_class.__name__} {name} provided field(s) {invalid_field_names_str} are not in the db model"
+                "19753fac",
+                f"Row {row_class.__name__} {name} provided field(s) {invalid_field_names_str} are not in the db model",
             )
         return out_field_names
 
@@ -408,7 +411,7 @@ class SAMapper(BaseSAMapper):
         entity = model_class.ENTITY
         if entity is None:
             raise exc.RepositoryInitializationServiceError(
-                f"Model {model_class.__name__} does not have an ENTITY set"
+                "1fd34005", f"Model {model_class.__name__} does not have an ENTITY set"
             )
         relationship_field_names = entity.get_field_names(
             field_type=FieldType.RELATIONSHIP

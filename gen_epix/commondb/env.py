@@ -404,7 +404,8 @@ class AppComposer(BaseAppComposer):
                 )
                 if not is_valid:
                     raise exc.InitializationServiceError(
-                        f"Invalid value for config {'.'.join((str(x) for x in cfg_path + (leaf_key,)))}: expected type {cfg_path[-1].__name__}"
+                        "d6c2c377",
+                        f"Invalid value for config {'.'.join((str(x) for x in cfg_path + (leaf_key,)))}: expected type {cfg_path[-1].__name__}",
                     )
                 if converted_value != leaf_value:
                     cfg_section[leaf_key] = converted_value
@@ -423,7 +424,7 @@ class AppComposer(BaseAppComposer):
             converted_value = int(value)
             return True, converted_value
         raise exc.InitializationServiceError(
-            f"Unsupported content type {content_type} for config parsing"
+            "85715da3", f"Unsupported content type {content_type} for config parsing"
         )
 
     @staticmethod

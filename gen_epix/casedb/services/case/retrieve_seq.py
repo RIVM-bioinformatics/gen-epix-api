@@ -1,3 +1,4 @@
+import json
 from collections.abc import Iterable
 from uuid import UUID
 
@@ -22,7 +23,6 @@ def case_service_retrieve_phylogenetic_tree(
     assert isinstance(user, model.User) and user.id is not None
     case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
     assert case_abac is not None
-
     with repository.uow() as uow:
         # Get distance column data
         dist_col: model.Col = repository.crud(  # type: ignore[assignment]
@@ -34,7 +34,8 @@ def case_service_retrieve_phylogenetic_tree(
         )
         if dist_col.case_type_id != case_type_id:
             raise exc.InvalidArgumentsError(
-                f"Col {dist_col_id} does not belong to CaseType {case_type_id}"
+                "b081c000",
+                f"Col {dist_col_id} does not belong to CaseType {case_type_id}",
             )
         dist_ref_col: model.RefCol = repository.crud(  # type: ignore[assignment]
             uow,
@@ -45,14 +46,16 @@ def case_service_retrieve_phylogenetic_tree(
         )
         if dist_ref_col.col_type != enum.ColType.GENETIC_DISTANCE:
             raise exc.InvalidArgumentsError(
-                f"Col {dist_col} is not of type {enum.ColType.GENETIC_DISTANCE.value}"
+                "b8f2c28c",
+                f"Col {dist_col} is not of type {enum.ColType.GENETIC_DISTANCE.value}",
             )
 
         # @ABAC
         assert dist_col.tree_algorithm_codes is not None
         if tree_algorithm_code not in dist_col.tree_algorithm_codes:
             raise exc.UnauthorizedAuthError(
-                f"User {user.id} has no read access to tree algorithm {tree_algorithm_code}"
+                "cda692df",
+                f"User {user.id} has no read access to tree algorithm {tree_algorithm_code}",
             )
 
         # Get protocol
@@ -142,7 +145,7 @@ def case_service_retrieve_genetic_sequence_fasta_by_case(
     assert isinstance(user, model.User) and user.id is not None
 
     if not case_ids:
-        raise exc.InvalidArgumentsError("No case IDs given")
+        raise exc.InvalidArgumentsError("45b13e30", "No case IDs given")
 
     case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
     assert case_abac is not None
@@ -159,7 +162,7 @@ def case_service_retrieve_genetic_sequence_fasta_by_case(
             seq_col_id,
         )
         if any(x is None for x in seq_ids_or_none):
-            raise exc.NoResultsError("Not all cases have a sequence")
+            raise exc.NoResultsError("7c140425", "Not all cases have a sequence")
         seq_ids: list[UUID] = seq_ids_or_none  # type: ignore[assignment]
         retrieve_cmd = command.RetrieveGeneticSequenceFastaByIdCommand(
             user=cmd.user, seq_ids=seq_ids

@@ -51,4 +51,4 @@ class OrganizationSARepository(SARepository, BaseOrganizationRepository):
         for user in users:
             if user.key == user_key.lower():
                 return user
-        raise exc.NoResultsError()
+        raise exc.NoResultsError("cdc4af04")

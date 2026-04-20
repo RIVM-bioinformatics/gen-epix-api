@@ -65,7 +65,8 @@ def _crud_case_with_abac(
         if cmd.is_delete_all():
             # Delete all not allowed due to potential large number of case
             raise exc.UnauthorizedAuthError(
-                f"Operation {cmd.operation.value} not allowed for cases for this user"
+                "b618246b",
+                f"Operation {cmd.operation.value} not allowed for cases for this user",
             )
         # Get all cases and data collection links
         assert case_ids is not None
@@ -96,7 +97,8 @@ def _crud_case_with_abac(
             )
             if not is_allowed:
                 raise exc.UnauthorizedAuthError(
-                    f"User {cmd.user.id} is not allowed to delete case {case.id}"
+                    "23c3befa",
+                    f"User {cmd.user.id} is not allowed to delete case {case.id}",
                 )
         # Delete with cascade
         _crud_cascade_delete(self, uow, cmd)
