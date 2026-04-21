@@ -237,7 +237,7 @@ def create_seq_endpoints(
                 )
             )
         except Exception as exception:
-            handle_exception("f1d282b4", user, exception, request_ids=request_body.seq_ids)  # type: ignore
+            handle_exception("f1d282b4", user, exception)  # type: ignore
         return retval
 
     # CRUD
