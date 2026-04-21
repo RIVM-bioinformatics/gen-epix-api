@@ -94,8 +94,10 @@ class QualityMixin:
     @field_validator("qc_result", mode="before")
     @classmethod
     def _validate_qc_result(
-        cls, value: str | int | float | enum.QualityControlResult
+        cls, value: str | int | float | enum.QualityControlResult | None
     ) -> enum.QualityControlResult:
+        if value is None:
+            return enum.QualityControlResult.PENDING
         return validate_int_enum_value(enum.QualityControlResult, value)  # type: ignore[return-value]
 
     @field_serializer("qc_result", mode="plain")
