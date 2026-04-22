@@ -1,4 +1,5 @@
 import base64
+import random
 import secrets
 import uuid
 from datetime import datetime
@@ -10,8 +11,17 @@ from gen_epix.seqdb.domain import enum, model
 
 
 def generate_demo_seqdb_models(
-    n_loci: int, n_to_create: int
+    n_loci: int,
+    n_to_create: int,
+    snp_seq_length: int = 0,
 ) -> dict[type, dict[UUID, Any]]:
+    """Generate demo seqdb models.
+
+    When snp_seq_length > 0, SNP-specific
+    reference data (Taxon, RefSeq, SNP profile
+    protocol, SNP distance protocol) is also
+    generated for each entry.
+    """
 
     model_types = [
         model.Protocol,
@@ -21,6 +31,8 @@ def generate_demo_seqdb_models(
         model.SeqProfile,
         model.SeqDistance,
         model.Sample,
+        model.Taxon,
+        model.RefSeq,
     ]
 
     db: dict[type, dict[UUID, Any]] = {x: {} for x in model_types}
@@ -127,7 +139,101 @@ def generate_demo_seqdb_models(
             seq_distance,
             sample,
         ]
+
+        # SNP reference data
+        if snp_seq_length > 0:
+            snp_objects = _generate_snp_objects(
+                hex_string,
+                i,
+                snp_seq_length,
+                sample,
+            )
+            new_objects.extend(snp_objects)
+
         for obj in new_objects:
             db[type(obj)][obj.id] = obj
 
     return db
+
+
+def _generate_snp_objects(
+    hex_string: str,
+    index: int,
+    seq_length: int,
+    sample: model.Sample,
+) -> list[Any]:
+    """Generate SNP-specific reference objects.
+
+    Creates: Taxon, RefSeq, SNP profile
+    protocol, SNP distance protocol, one SNP
+    SeqProfile, and one SeqDistance.
+    """
+    rng = random.Random(42 + index)
+    ref_seq_str = "".join(rng.choice("ACGT") for _ in range(seq_length))
+
+    taxon = model.Taxon(
+        id=uuid.uuid4(),
+        code=f"taxon_{hex_string}_{index}",
+        name=f"Taxon {hex_string} {index}",
+        rank=enum.TaxonRank.SPECIES,
+        ancestor_taxon_ids=[],
+    )
+
+    ref_seq = model.RefSeq(
+        code=f"ref_seq_{hex_string}_{index}",
+        name=f"RefSeq {hex_string} {index}",
+        taxon_id=taxon.id,  # type: ignore[arg-type]
+        seq=ref_seq_str,
+        seq_format=enum.SeqFormat.STR_DNA,
+    )
+
+    snp_profile_protocol = model.Protocol(  # type: ignore[call-arg]
+        id=uuid.uuid4(),
+        code=f"snp_protocol_{hex_string}_{index}",
+        name=f"SNP Protocol {hex_string} {index}",
+        protocol_type=enum.ProtocolType.SEQ_PROFILE,
+        seq_profile_type=enum.SeqProfileType.SNP,
+        ref_seq_id=ref_seq.id,
+    )
+
+    snp_distance_protocol = model.Protocol(  # type: ignore[call-arg]
+        id=uuid.uuid4(),
+        code=(f"snp_dist_protocol_{hex_string}" f"_{index}"),
+        name=(f"SNP Distance Protocol" f" {hex_string} {index}"),
+        protocol_type=enum.ProtocolType.SEQ_DISTANCE,
+        seq_distance_type=enum.SeqDistanceType.SNP_HAMMING,
+        ref_seq_id=ref_seq.id,
+        valid_start_datetime=datetime(1970, 1, 1),
+        valid_end_datetime=datetime(9999, 12, 31),
+        is_integer_distance=True,
+        max_stored_distance=1000.0,
+    )
+
+    # One seed SNP profile (the reference
+    # itself as aligned seq)
+    snp_profile = model.SeqProfile(
+        id=uuid.uuid4(),
+        seq_profile_type=enum.SeqProfileType.SNP,
+        protocol_id=snp_profile_protocol.id,
+        format=enum.SeqProfileFormat.REF_ALN_SEQ,
+        content_hash=NULL_ID,
+        content=ref_seq_str,
+        sample_id=sample.id,
+    )
+
+    snp_seq_distance = model.SeqDistance(  # type: ignore[call-arg]
+        protocol_id=snp_distance_protocol.id,  # type: ignore[arg-type]
+        seq_profile_id=snp_profile.id,  # type: ignore[arg-type]
+        format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
+        content="{}",
+        sample_id=sample.id,
+    )
+
+    return [
+        taxon,
+        ref_seq,
+        snp_profile_protocol,
+        snp_distance_protocol,
+        snp_profile,
+        snp_seq_distance,
+    ]

@@ -31,9 +31,12 @@ from gen_epix.seqdb.repositories.seq_dict import SeqDictRepository
 CREATE_DEMO_DATA = True
 
 N_SEQS_PER_BATCH = 100
-DB_ENTRY_COUNTS: list[int] = [1]  # ]2, 10]
+DB_ENTRY_COUNTS: list[int] = [1, 2, 3]  # ]2, 10]
 
 SEQ_SETTINGS = SeqGenerationSettings(n_loci=1000, locus_length=100)
+
+SNP_SEQ_LENGTH = 100
+SNP_SEED = 99
 
 SEQDB_APP_CFGS = get_app_cfgs(
     AppType.SEQDB,
@@ -101,6 +104,42 @@ def _build_upload_command(
     )
 
 
+def _build_snp_upload_command(
+    db: dict[type, dict[UUID, Any]],
+    db_index: int,
+    env: Env,
+    seq_length: int,
+    seed: int | None = None,
+) -> command.UploadSamplesCommand:
+    """Build an UploadSamplesCommand for SNP
+    profiles using the SNP protocol from the
+    generated database.
+    """
+    protocols = list(db[model.Protocol].values())
+    snp_protocol_id = [
+        x.id
+        for x in protocols
+        if x.protocol_type == enum.ProtocolType.SEQ_PROFILE
+        and x.seq_profile_type == enum.SeqProfileType.SNP
+    ][db_index]
+    assembly_protocol_id = [
+        x.id for x in protocols if x.protocol_type == enum.ProtocolType.ASSEMBLY
+    ][db_index]
+
+    effective_seed = seed if seed is not None else SNP_SEED
+    sample_batch = env.generate_random_snp_sequences(
+        n_seqs=N_SEQS_PER_BATCH,
+        seq_length=seq_length,
+        snp_protocol_id=snp_protocol_id,
+        assembly_protocol_id=assembly_protocol_id,
+        seed=effective_seed,
+    )
+    return command.UploadSamplesCommand(
+        sample_batch=sample_batch,
+        user=env.get_root_user(),
+    )
+
+
 @pytest.mark.scenario_ids("TC-PERF-10-01")
 class TestSampleBatchUploader:
 
@@ -131,7 +170,11 @@ class TestSampleBatchUploader:
 
         if CREATE_DEMO_DATA:
             type(self).dbs = [
-                generate_demo_seqdb_models(SEQ_SETTINGS.n_loci, n_to_create=count)
+                generate_demo_seqdb_models(
+                    SEQ_SETTINGS.n_loci,
+                    n_to_create=count,
+                    snp_seq_length=SNP_SEQ_LENGTH,
+                )
                 for count in DB_ENTRY_COUNTS
             ]
             write_db_to_pickle(self.dbs[0], pickle_file)
@@ -183,3 +226,45 @@ class TestSampleBatchUploader:
 
         # profiler.stop()
         # profiler.write_html("./test/output/profile_calculate_seq_distances.html")
+
+    @pytest.mark.parametrize(
+        "dataset_idx", range(len(DB_ENTRY_COUNTS)), ids=DB_ENTRY_COUNTS
+    )
+    def test_snp_batch_for_upload_happy_flow(self, env: Env, dataset_idx: int) -> None:
+
+        set_service_repository(env, self.repositories[dataset_idx])
+
+        n_entries = len(
+            [
+                x
+                for x in self.dbs[dataset_idx][model.Protocol].values()
+                if x.protocol_type == enum.ProtocolType.SEQ_PROFILE
+                and x.seq_profile_type == enum.SeqProfileType.SNP
+            ]
+        )
+        commands_to_upload = [
+            _build_snp_upload_command(
+                self.dbs[dataset_idx],
+                i,
+                env,
+                SNP_SEQ_LENGTH,
+                seed=i,
+            )
+            for i in range(n_entries)
+        ]
+
+        durations: list[float] = []
+        for cmd in commands_to_upload:
+            start = perf_counter()
+            result: model.SampleBatchUploadResult = env.app.handle(cmd)
+            durations.append(perf_counter() - start)
+            assert result.get_status_count()[EtlStatus.FAILED] == 0
+            assert result.get_status_count()[EtlStatus.PENDING] == 0
+        total = sum(durations)
+        avg = total / len(durations) if durations else 0.0
+
+        print(f"\nSNP UploadSamplesCommands=" f"{len(commands_to_upload)}")
+        print(f"n_seqs_per_batch={N_SEQS_PER_BATCH}")
+        print(f"snp_seq_length={SNP_SEQ_LENGTH}")
+        print(f"total_time={total:.4f}s")
+        print(f"avg_time_per_upload={avg:.4f}s\n")

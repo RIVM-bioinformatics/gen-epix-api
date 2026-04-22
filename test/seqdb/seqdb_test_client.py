@@ -989,3 +989,82 @@ class SeqdbTestClient(TestClient):
             obj_ids=[x.id for x in allele_profiles if x.id is not None],
             matrix=distance_matrix,
         )
+
+    @staticmethod
+    def generate_random_snp_sequences(
+        n_seqs: int,
+        seq_length: int,
+        snp_protocol_id: UUID,
+        assembly_protocol_id: UUID | None = None,
+        seed: int = 42,
+        p_substitution: float = 0.05,
+        p_deletion: float = 0.01,
+    ) -> model.SampleBatchForUpload:
+        """Generate random SNP aligned nucleotide
+        sequences for upload.
+
+        Creates a reference-like root sequence and
+        derives n_seqs mutants from it using a
+        binary tree (same pattern as allele
+        generation).
+        """
+        rng = random.Random(seed)
+        assembly_protocol_id = (
+            assembly_protocol_id if assembly_protocol_id is not None else uuid.uuid4()
+        )
+        nucleotides = "ACGT"
+        root = [rng.choice(nucleotides) for _ in range(seq_length)]
+
+        class SnpNode:
+            __slots__ = ("seq",)
+
+            def __init__(self, seq: list[str]):
+                self.seq = seq
+
+        children: list[SnpNode] = [SnpNode(root)]
+        while len(children) < n_seqs:
+            parent = children.pop(0)
+            for _ in range(2):
+                seq = parent.seq.copy()
+                for i in range(seq_length):
+                    r = rng.random()
+                    if r <= p_deletion:
+                        seq[i] = "-"
+                    elif r <= p_deletion + p_substitution:
+                        orig = seq[i]
+                        if orig != "-":
+                            seq[i] = rng.choice([n for n in nucleotides if n != orig])
+                children.append(SnpNode(seq))
+
+        samples: list[model.SampleForUpload] = []
+        for node in children:
+            aln_seq = "".join(node.seq)
+            profile = model.SeqProfileForUpload(  # type: ignore[call-arg]
+                protocol_id=snp_protocol_id,
+                seq_profile_type=(enum.SeqProfileType.SNP),
+                content=aln_seq,
+                format=enum.SeqProfileFormat.REF_ALN_SEQ,
+                content_hash=NULL_ID,
+            )
+            seq_for_upload = model.SeqForUpload(
+                contigs=[
+                    model.Contig(
+                        seq=aln_seq.replace("-", ""),
+                        seq_format=enum.SeqFormat.STR_DNA,
+                    )
+                ],
+                protocol_id=assembly_protocol_id,
+            )
+            samples.append(
+                model.SampleForUpload(
+                    seqs=[seq_for_upload],
+                    seq_profiles=[profile],
+                    sample=model.Sample(
+                        created_in_data_collection_id=(uuid.uuid4()),
+                    ),
+                )
+            )
+        return model.SampleBatchForUpload(
+            samples=samples,
+            alleles=[],
+        )
