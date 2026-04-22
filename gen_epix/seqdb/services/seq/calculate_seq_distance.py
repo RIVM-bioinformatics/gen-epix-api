@@ -115,8 +115,21 @@ def seq_service_calculate_seq_distances_for_new_profiles(
         seq_distance_protocols_by_subset: dict[UUID, list[model.Protocol]] = {}
         if seq_profile_type == enum.SeqProfileType.KMER:
             raise NotImplementedError("K-mer distance calculation not implemented")
-        elif seq_profile_type == enum.SeqProfileType.SNP:
-            raise NotImplementedError("SNP distance calculation not implemented")
+        elif seq_profile_type in enum.SeqProfileTypeSet.REF_SEQ_BASED.value:
+            for profile in new_seq_profiles_for_type:
+                assert profile.protocol_id is not None
+                protocol = seq_profile_protocol_map[profile.protocol_id]
+                assert protocol.ref_seq_id is not None
+                new_seq_profiles_by_subset.setdefault(protocol.ref_seq_id, []).append(
+                    profile
+                )
+            for protocol in seq_distance_protocols:
+                ref_seq_id = protocol.ref_seq_id
+                if ref_seq_id is None or ref_seq_id not in new_seq_profiles_by_subset:
+                    continue
+                seq_distance_protocols_by_subset.setdefault(ref_seq_id, []).append(
+                    protocol
+                )
         elif seq_profile_type in enum.SeqProfileTypeSet.LOCUS_SET_BASED.value:
             for profile in new_seq_profiles_for_type:
                 assert profile.protocol_id is not None
@@ -481,10 +494,14 @@ def _calculate_profile_distance(
 ) -> float:
     """Return the distance between two profiles of the same type"""
     if seq_profile_model_type == enum.SeqProfileType.SNP:
-        # TODO: this implementation is not correct as the aligned sequences may contain different gaps in the reference sequence between both. Instead, the differences versus the reference sequence should be enumerated and compared.
         seq1 = profile1.get_aligned_nucleotide_seq(ref_seq=ref_seq)
         seq2 = profile2.get_aligned_nucleotide_seq(ref_seq=ref_seq)
-        return float(np.count_nonzero(np.array(list(seq1)) != np.array(list(seq2))))
+        a1 = np.frombuffer(seq1.encode("ascii"), dtype=np.uint8)
+        a2 = np.frombuffer(seq2.encode("ascii"), dtype=np.uint8)
+        _N = ord("N")
+        _DASH = ord("-")
+        skip = (a1 == _N) | (a1 == _DASH) | (a2 == _N) | (a2 == _DASH)
+        return float(np.count_nonzero((a1 != a2) & ~skip))
     elif seq_profile_model_type == enum.SeqProfileType.ALLELE:
         # Parse allele profiles as raw bytes and
         # calculate Hamming distance, ignoring missing

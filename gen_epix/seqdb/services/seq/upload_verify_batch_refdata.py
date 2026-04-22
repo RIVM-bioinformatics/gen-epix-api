@@ -424,15 +424,137 @@ def _verify_batch_refdata_snp_profiles(
     batch_result: model.SampleBatchUploadResult,
     uow: Any,
 ) -> bool:
-    """Verify SNP profiles specific rules"""
-    if any(
-        profile.seq_profile_type in enum.SeqProfileTypeSet.SNP.value
-        for sample in cmd.sample_batch.samples
-        for profile in sample.seq_profiles or []
-    ):
-        raise NotImplementedError("Verification of SNP profiles not implemented yet")
+    """Verify SNP profiles specific rules."""
+    success = True
+    user_id = cmd.user.id if cmd.user else None
+    samples = cmd.sample_batch.samples
+    sample_results = batch_result.samples
 
-    return True
+    # Collect PENDING SNP profiles
+    profiles: list[model.SeqProfileForUpload] = []
+    profile_results: list[UploadResult] = []
+    for sample, sample_result in zip(samples, sample_results):
+        curr_profiles = sample.seq_profiles or []
+        curr_profile_results = sample_result.seq_profiles or []
+        for profile, profile_result in zip(curr_profiles, curr_profile_results):
+            if profile_result.status != EtlStatus.PENDING:
+                continue
+            if profile.seq_profile_type not in enum.SeqProfileTypeSet.SNP.value:
+                continue
+            profiles.append(profile)
+            profile_results.append(profile_result)
+    if not profiles:
+        return success
+
+    # Retrieve protocols
+    uq_protocol_ids = {x.protocol_id for x in profiles}
+    protocols: list[model.Protocol] = (
+        self.service.repository.crud(  # type: ignore[assignment]
+            uow,
+            user_id,
+            model.Protocol,
+            CrudOperation.READ_SOME,
+            obj_ids=list(uq_protocol_ids),
+        )
+    )
+    protocol_map = {x.id: x for x in protocols}
+
+    # Verify ref_seq exists for each protocol
+    ref_seq_ids = {
+        protocol_map[x.protocol_id].ref_seq_id
+        for x in profiles
+        if protocol_map[x.protocol_id].ref_seq_id is not None
+    }
+    if ref_seq_ids:
+        ref_seq_exists: list[bool] = (
+            self.service.repository.crud(  # type: ignore[assignment]
+                uow,
+                user_id,
+                model.RefSeq,
+                CrudOperation.EXISTS_SOME,
+                obj_ids=list(ref_seq_ids),
+            )
+        )
+        missing_ref_seqs = {
+            ref_seq_id
+            for ref_seq_id, exists in zip(ref_seq_ids, ref_seq_exists)
+            if not exists
+        }
+        if missing_ref_seqs:
+            success = False
+            batch_result.add_error(
+                "b7c6d5e4",
+                f"Reference sequences not found:" f" {sorted(missing_ref_seqs)}",
+            )
+
+    # Track expected length per ref_seq_id
+    seq_length_by_ref_seq: dict[UUID, int] = {}
+    valid_chars = model.SeqProfile._VALID_ALIGNED_NUCLEOTIDE_CHARS
+
+    # Validate each profile and convert to
+    # canonical content
+    for profile, profile_result in zip(profiles, profile_results):
+        if profile_result.status != EtlStatus.PENDING:
+            continue
+
+        protocol = protocol_map[profile.protocol_id]
+        ref_seq_id = protocol.ref_seq_id
+        if ref_seq_id is None:
+            success = False
+            profile_result.add_error(
+                "a6b5c4d3",
+                "Protocol has no ref_seq_id for" " SNP profile",
+            )
+            continue
+
+        # Convert aligned_nucleotide_seq
+        # to content if needed
+        if profile.content == "" and profile.aligned_nucleotide_seq is not None:
+            profile.content = profile.aligned_nucleotide_seq
+            profile.aligned_nucleotide_seq = None
+
+        seq = profile.content
+        if not seq:
+            success = False
+            profile_result.add_error(
+                "d3e2f1a0",
+                "Empty aligned nucleotide sequence",
+            )
+            continue
+
+        # Validate characters
+        invalid = set(seq) - valid_chars
+        if invalid:
+            success = False
+            profile_result.add_error(
+                "e2f1a0b9",
+                "Invalid characters in aligned"
+                " nucleotide sequence:"
+                f" {sorted(invalid)}",
+            )
+            continue
+
+        # Validate length consistency per
+        # ref_seq
+        expected_len = seq_length_by_ref_seq.get(ref_seq_id)
+        if expected_len is None:
+            seq_length_by_ref_seq[ref_seq_id] = len(seq)
+        elif len(seq) != expected_len:
+            success = False
+            profile_result.add_error(
+                "f1a0b9c8",
+                "Aligned nucleotide sequence"
+                f" length ({len(seq)}) differs"
+                " from expected length"
+                f" ({expected_len}) for"
+                f" ref_seq {ref_seq_id}",
+            )
+            continue
+
+        # Set format to REF_ALN_SEQ
+        profile.format = enum.SeqProfileFormat.REF_ALN_SEQ
+
+    return success
 
 
 def _verify_batch_refdata_kmer_profiles(

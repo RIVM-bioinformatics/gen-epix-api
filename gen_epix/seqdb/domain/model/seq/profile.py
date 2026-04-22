@@ -182,15 +182,31 @@ class SeqProfile(
     def _serialize_seq_profile_type(self, value: enum.SeqProfileType) -> int:
         return value.value
 
+    # TODO: Probably not a very good place to put this, come up with a better design...
+    _VALID_ALIGNED_NUCLEOTIDE_CHARS: ClassVar[frozenset[str]] = frozenset("ACGTN-")
+
     def get_aligned_nucleotide_seq(self, **kwargs: Any) -> str:
         """
-        Parse and return the aligned nucleotide sequence from the SNP profile based on
-        its format.
+        Parse and return the aligned nucleotide
+        sequence from the SNP profile based on its
+        format. Validates that the sequence is
+        non-empty and contains only valid characters
+        (A, C, G, T, N, -).
         """
         if self.format == enum.SeqProfileFormat.REF_ALN_SEQ:
-            return self.content
+            seq = self.content
+            if not seq:
+                raise ValueError("Empty aligned nucleotide sequence")
+            invalid = set(seq) - SeqProfile._VALID_ALIGNED_NUCLEOTIDE_CHARS
+            if invalid:
+                raise ValueError(
+                    "Invalid characters in aligned"
+                    " nucleotide sequence:"
+                    f" {sorted(invalid)}"
+                )
+            return seq
         raise NotImplementedError(
-            "Unable to parse aligned nucleotide sequence for this SNP profile format"
+            "Unable to parse aligned nucleotide" " sequence for this SNP profile format"
         )
 
     def get_allele_id_bytes(
