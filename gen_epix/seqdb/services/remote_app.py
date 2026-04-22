@@ -29,6 +29,12 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         command.UploadSamplesCommand: "/upload/samples",
     }
 
+    DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {
+        command.UploadSamplesCommand: 45.0,
+        command.RetrieveSamplesByIdCommand: 45.0,
+        command.RetrieveSamplesByQueryCommand: 45.0,
+    }
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(DOMAIN, *args, **kwargs)
         # Register routes and handlers
@@ -87,7 +93,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
             leaf_codes=cmd.leaf_names,
         )
 
-        with httpx.Client(verify=self.ssl_context) as client:
+        with self.get_client(cmd) as client:
             response = client.post(
                 route,
                 json=json.loads(request_body.model_dump_json()),
@@ -113,7 +119,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         )
 
         def _iter_fasta_generator() -> Iterable[str]:
-            with httpx.Client(verify=self.ssl_context) as client:
+            with self.get_client(cmd) as client:
                 with client.stream(
                     "POST",
                     route,
@@ -163,7 +169,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
             max_distance=cmd.max_distance,
         )
 
-        with httpx.Client(verify=self.ssl_context) as client:
+        with self.get_client(cmd) as client:
             response = client.post(
                 route,
                 json=json.loads(request_body.model_dump_json()),
@@ -182,7 +188,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
 
         request_body = cmd
 
-        with httpx.Client(verify=self.ssl_context) as client:
+        with self.get_client(cmd) as client:
             response = client.post(
                 route,
                 json=json.loads(request_body.model_dump_json()),
