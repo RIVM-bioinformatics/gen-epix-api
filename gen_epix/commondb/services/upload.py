@@ -1130,7 +1130,9 @@ class BatchUploader:
                     child_for_upload,
                     self.child_id_field_name_map[child_model_class],
                 )
-                assert child_id is not None
+                if self.is_null(child_id):
+                    # Child was skipped (e.g. parent model was null); skip identifiers
+                    continue
                 identifier_tuples.append(
                     (child_id, child_for_upload.identifiers, child_result.identifiers)
                 )
