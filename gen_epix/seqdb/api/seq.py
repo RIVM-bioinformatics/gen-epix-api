@@ -233,7 +233,7 @@ def create_seq_endpoints(
             retval: model.SampleBatchUploadResult = app.handle(
                 command.UploadSamplesCommand(
                     user=user,
-                    **request_body.model_dump(),
+                    **request_body.model_dump(exclude={"user"}),
                 )
             )
         except Exception as exception:
