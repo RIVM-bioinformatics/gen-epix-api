@@ -367,13 +367,29 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
 
     def test_protocol_not_applicable_skips_distance_calculation(self) -> None:
+        # Profile's profiling protocol uses
+        # other_ref_seq_id; distance protocol uses
+        # ref_seq_id -> no match -> empty results
+        snp_profiling_protocol: model.Protocol = (
+            model.Protocol(  # type: ignore[call-arg]
+                id=self.snp_detection_protocol_id,
+                code="SNP_PROFILING_OTHER_REF",
+                protocol_type=enum.ProtocolType.SEQ_PROFILE,
+                seq_profile_type=enum.SeqProfileType.SNP,
+                ref_seq_id=self.other_ref_seq_id,
+            )
+        )
+        snp_distance_protocol: model.Protocol = _make_seq_distance_protocol_for_snp(
+            protocol_id=self.protocol_id,
+            ref_seq_id=self.ref_seq_id,
+            max_stored_distance=10.0,
+        )
         snp_profile: model.SeqProfile = _make_snp_profile_for_upload(
             profile_id=self.new_profile_id,
             sample_id=self.sample_id,
             ref_seq_id=self.other_ref_seq_id,
-            protocol_id=self.protocol_id,
+            protocol_id=self.snp_detection_protocol_id,
             snp_profile="AAAA",
-            aligned_nucleotide_seq=None,
         )
         cmd: command.CalculateSeqDistancesForNewProfilesCommand = (
             command.CalculateSeqDistancesForNewProfilesCommand(
@@ -382,28 +398,37 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             )
         )
 
-        recorder: _CrudRecorder = _CrudRecorder()
-        protocols: list[model.Protocol] = [
-            _make_seq_distance_protocol_for_snp(
-                protocol_id=self.protocol_id,
-                ref_seq_id=self.ref_seq_id,
-                max_stored_distance=10.0,
-            )
-        ]
-        self.service.repository.crud.side_effect = _make_crud_side_effect(
-            recorder=recorder,
-            protocols=protocols,
+        read_all_results: Iterator[list[model.Protocol]] = iter(
+            [
+                [snp_profiling_protocol],
+                [snp_distance_protocol],
+            ]
         )
+
+        def _crud(
+            uow: BaseUnitOfWork,
+            user_id: UUID | None,
+            model_class: type,
+            operation: CrudOperation,
+            filter: Any = None,
+            objs: Any = None,
+            obj_ids: Any = None,
+            **kwargs: Any,
+        ) -> Any:
+            if model_class is model.Protocol and operation == CrudOperation.READ_ALL:
+                return next(read_all_results)
+            return []
+
+        self.service.repository.crud.side_effect = _crud
         _setup_distance_mocks(self.service, [])
 
-        # SNP distance calculation is not yet implemented in the refactored service
-        with self.assertRaises(NotImplementedError):
+        results: list[model.CalculateSeqDistancesResult] = (
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
+        )
 
-    @pytest.mark.skip("SNP distance calculation not yet implemented")
+        self.assertEqual(results, [])
+
     def test_snp_profiles_updates_existing_and_creates_new_seq_distances(self) -> None:
-        existing_aln: str | None = "AACCT"
-        new_aln: str | None = "AATTT"
         existing_profile: model.SeqProfile = _make_snp_profile_for_upload(
             profile_id=self.existing_profile_id,
             sample_id=self.sample_id,
@@ -467,12 +492,15 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         created_map: dict[str, float] = json.loads(created.content)
         self.assertIn(str(self.existing_profile_id), created_map)
 
-        existing_seq: str = existing_aln if existing_aln is not None else "AACCT"
-        new_seq: str = new_aln if new_aln is not None else "AATTT"
-        min_len: int = min(len(existing_seq), len(new_seq))
-        expected_distance: int = sum(
-            1 for i in range(min_len) if existing_seq[i] != new_seq[i]
-        ) + abs(len(existing_seq) - len(new_seq))
+        # "AACCT" vs "AATTT": C!=T at pos 2,
+        # C!=T at pos 3 -> distance = 2
+        expected_distance: float = float(
+            sum(
+                1
+                for a, b in zip("AACCT", "AATTT")
+                if a != b and a not in ("N", "-") and b not in ("N", "-")
+            )
+        )
 
         self.assertEqual(updated_distances[str(self.new_profile_id)], expected_distance)
         self.assertEqual(created_map[str(self.existing_profile_id)], expected_distance)
@@ -721,13 +749,12 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         with self.assertRaises(NotImplementedError):
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
 
-    @pytest.mark.skip("SNP distance calculation not yet implemented")
     def test_existing_seq_distances_empty_skips_read_some_and_creates_new(self) -> None:
         new_profile: model.SeqProfile = _make_snp_profile_for_upload(
             profile_id=self.new_profile_id,
             sample_id=self.sample_id2,
             ref_seq_id=self.ref_seq_id,
-            protocol_id=self.snp_detection_protocol_id,
+            protocol_id=self.protocol_id,
             aligned_nucleotide_seq="AAAA",
         )
         cmd: command.CalculateSeqDistancesForNewProfilesCommand = (
@@ -759,6 +786,96 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         self.assertEqual(len(recorder.updated), 0)
         self.assertEqual(len(recorder.created), 1)
         self.assertEqual(json.loads(recorder.created[0].content), {})
+
+    def _run_snp_distance(
+        self,
+        existing_seq: str,
+        new_seq: str,
+        max_stored_distance: float = 100.0,
+    ) -> tuple[
+        _CrudRecorder,
+        list[model.CalculateSeqDistancesResult],
+    ]:
+        """Helper: compute SNP distance between two
+        profiles via the service."""
+        existing_profile = _make_snp_profile_for_upload(
+            profile_id=self.existing_profile_id,
+            sample_id=self.sample_id,
+            ref_seq_id=self.ref_seq_id,
+            protocol_id=self.protocol_id,
+            snp_profile=existing_seq,
+        )
+        new_profile = _make_snp_profile_for_upload(
+            profile_id=self.new_profile_id,
+            sample_id=self.sample_id2,
+            ref_seq_id=self.ref_seq_id,
+            protocol_id=self.protocol_id,
+            snp_profile=new_seq,
+        )
+        cmd = command.CalculateSeqDistancesForNewProfilesCommand(
+            user=self.user,
+            seq_profiles=[new_profile],
+        )
+        protocol = _make_seq_distance_protocol_for_snp(
+            protocol_id=self.protocol_id,
+            ref_seq_id=self.ref_seq_id,
+            max_stored_distance=max_stored_distance,
+        )
+        existing_seq_distance = _make_seq_distance(
+            seq_distance_id=uuid4(),
+            protocol_id=self.protocol_id,
+            profile_id=self.existing_profile_id,
+            sample_id=self.sample_id,
+            distances={},
+        )
+        recorder = _CrudRecorder()
+        self.service.repository.crud.side_effect = _make_crud_side_effect(
+            recorder=recorder,
+            protocols=[protocol],
+            existing_profiles_by_model={model.SeqProfile: [existing_profile]},
+        )
+        _setup_distance_mocks(self.service, [existing_seq_distance])
+        results = seq_service_calculate_seq_distances_for_new_profiles(
+            self.service, cmd
+        )
+        return recorder, results
+
+    def test_snp_distance_identical_mismatch_n_and_gap(
+        self,
+    ) -> None:
+        """Identical->0, single mismatch->1,
+        N/gap->skipped."""
+        # Identical sequences
+        recorder, results = self._run_snp_distance("ACGT", "ACGT")
+        self.assertEqual(len(results), 2)
+        self.assertEqual(
+            json.loads(recorder.created[0].content)[str(self.existing_profile_id)],
+            0.0,
+        )
+
+        # Single mismatch
+        recorder, results = self._run_snp_distance("ACGT", "ATGT")
+        self.assertEqual(
+            json.loads(recorder.created[0].content)[str(self.existing_profile_id)],
+            1.0,
+        )
+
+        # N in either position -> skipped,
+        # gap '-' -> skipped
+        # "ANTG-C" vs "ACTC-T":
+        #   N@1->skip, -@4->skip,
+        #   G!=C@3(+1), C!=T@5(+1) -> 2
+        recorder, results = self._run_snp_distance("ANTG-C", "ACTC-T")
+        self.assertEqual(
+            json.loads(recorder.created[0].content)[str(self.existing_profile_id)],
+            2.0,
+        )
+
+    def test_snp_mismatched_length_raises(
+        self,
+    ) -> None:
+        with self.assertRaises(ValueError):
+            self._run_snp_distance("ACGTACGT", "ACG")
 
     def test_new_profile_without_id_is_processed(self) -> None:
         # A profile with id=None is silently filtered out by the service
