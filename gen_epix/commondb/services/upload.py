@@ -849,8 +849,12 @@ class BatchUploader:
                     continue
                 parent_id = parent_for_upload.id
                 if self.is_null(parent_id):
-                    # Parent was skipped or failed (e.g. parent model was null); skip child
-                    continue
+                    # TODO: investigate this case
+                    raise AssertionError(
+                        f"Parent ID should not be null for child to be created, but got null for parent_for_upload={parent_for_upload}"
+                    )
+                    # # Parent was skipped or failed (e.g. parent model was null); skip child
+                    # continue
                 # Set parent ID link in child, which is known for certain at this point
                 setattr(child_for_upload, child_parent_id_field_name, parent_id)
                 # Collect for creation
@@ -926,9 +930,13 @@ class BatchUploader:
                     # Only PENDING children can be updated
                     continue
                 parent_id = parent_for_upload.id
-                if self.is_null(parent_id):
-                    # Parent was skipped or failed (e.g. parent model was null); skip child
-                    continue
+                if parent_id is None:
+                    # TODO: investigate this case
+                    raise AssertionError(
+                        f"Parent ID should not be null for child to be created, but got null for parent_for_upload={parent_for_upload}"
+                    )
+                    # # Parent was skipped or failed (e.g. parent model was null); skip child
+                    # continue
                 # Set parent ID link in child, which is known for certain at this point
                 setattr(child_for_upload, child_parent_id_field_name, parent_id)
                 # Collect for update
@@ -1131,9 +1139,13 @@ class BatchUploader:
                     self.child_id_field_name_map[child_model_class],
                 )
                 if self.is_null(child_id):
+                    # TODO: investigate this case
+                    raise AssertionError(
+                        f"Parent ID should not be null for child to be created, but got null for parent_for_upload={parent_for_upload}"
+                    )
                     # Child was skipped (e.g. parent model was null); skip identifiers
-                    continue
-                identifier_tuples.append(
+                    # continue
+                 identifier_tuples.append(
                     (child_id, child_for_upload.identifiers, child_result.identifiers)
                 )
             success &= self.create_identifiers(
