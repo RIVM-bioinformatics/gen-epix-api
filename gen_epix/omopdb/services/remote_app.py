@@ -1,7 +1,6 @@
 import json
 from typing import Any
 
-
 from gen_epix.commondb.services import CommondbRemoteApp as CommondbRemoteApp
 from gen_epix.fastapp.model import Command
 from gen_epix.omopdb.domain import DOMAIN, command, model
@@ -26,11 +25,10 @@ class OmopdbRemoteApp(CommondbRemoteApp):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(DOMAIN, *args, **kwargs)
 
-        # Register routes and handlers
-        self.register_route(
-            command.UploadPersonsCommand,
-            self.ROUTE_MAP[command.UploadPersonsCommand],
-        )
+        # Register routes
+        for cmd_class, route in self.ROUTE_MAP.items():
+            self.register_route(cmd_class, route)
+        # Register handlers
         self.register_handler(
             command.UploadPersonsCommand,
             self.upload_persons,
