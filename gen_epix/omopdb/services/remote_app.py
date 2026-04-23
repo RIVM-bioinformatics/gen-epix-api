@@ -1,7 +1,6 @@
 import json
 from typing import Any
 
-import httpx
 
 from gen_epix.commondb.services import CommondbRemoteApp as CommondbRemoteApp
 from gen_epix.fastapp.model import Command
@@ -16,6 +15,12 @@ class OmopdbRemoteApp(CommondbRemoteApp):
 
     ROUTE_MAP: dict[type[Command], str] = {
         command.UploadPersonsCommand: "/upload/persons",
+    }
+
+    DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {
+        command.UploadPersonsCommand: 45.0,
+        command.RetrievePersonsByIdCommand: 45.0,
+        command.RetrievePersonsByQueryCommand: 45.0,
     }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -40,7 +45,7 @@ class OmopdbRemoteApp(CommondbRemoteApp):
 
         request_body = cmd
 
-        with httpx.Client(verify=self.ssl_context) as client:
+        with self.get_client(cmd) as client:
             response = client.post(
                 route,
                 json=json.loads(request_body.model_dump_json()),
