@@ -42,6 +42,11 @@ def _get_best_id_per_sample(
     Retrieve the best Seq or SeqProfile ID per sample for the given protocol and sample
     IDs, based on the specified ranking strategy.
     """
+    model_class = (
+        model.SeqProfile
+        if isinstance(cmd, command.RetrieveBestSeqProfilePerSampleCommand)
+        else model.Seq
+    )
     user_id = cmd.user.id if cmd.user else None
     if cmd.ranking_strategy not in {
         enum.SeqProfileRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
@@ -72,7 +77,7 @@ def _get_best_id_per_sample(
         iter_fields = repository.read_fields(
             uow,
             user_id,
-            model.SeqProfile,
+            model_class,
             field_names=["id", "sample_id", "qc_result", "qc_score", "created_at"],
             filter=filter,
         )
@@ -88,11 +93,11 @@ def _get_best_id_per_sample(
             }
             sort_fn = lambda x: (x[1], map_qc_result_to_sort_key[x[2]], x[3], x[4])
             sorted_iter = sorted(iter_fields, key=sort_fn)
-            sample_id = None
-            for profile_id, sample_id, qc_result, qc_score, created_at in sorted_iter:
-                if sample_id != sample_id:
-                    best_id_per_sample[sample_id] = profile_id
-                    sample_id = sample_id
+            prev_sample_id = None
+            for entry_id, sample_id, qc_result, qc_score, created_at in sorted_iter:
+                if sample_id != prev_sample_id:
+                    best_id_per_sample[sample_id] = entry_id
+                    prev_sample_id = sample_id
         else:
             raise AssertionError(
                 "Should not reach here due to earlier check on ranking strategy"
