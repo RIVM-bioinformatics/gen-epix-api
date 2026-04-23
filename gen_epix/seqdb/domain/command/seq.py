@@ -201,6 +201,46 @@ class RetrieveSimilarProfilesCommand(Command):
     )
 
 
+class RetrieveBestSeqPerSampleCommand(Command):
+    """
+    Retrieve the best Seq ID for each sample among the given sample IDs and protocol
+    IDs, and using a particular ranking strategy.
+    Returns a dict[sample_id, seq_id].
+    """
+
+    protocol_ids: set[UUID] | None = Field(
+        default=None,
+        description="The IDs of the assembly protocols to search among. If None, search among all seqs.",
+    )
+    sample_ids: set[UUID] | None = Field(
+        description="The IDs of the samples to search among. If None, search among all samples.",
+    )
+    ranking_strategy: enum.SeqProfileRankingStrategy = Field(
+        default=enum.SeqProfileRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
+        description="The strategy to use for ranking the profiles. This determines how the best profile is selected.",
+    )
+
+
+class RetrieveBestSeqProfilePerSampleCommand(Command):
+    """
+    Retrieve the best SeqProfile ID for each sample among the given sample IDs and
+    protocol IDs, and using a particular ranking strategy.
+    Returns a dict[sample_id, seq_profile_id].
+    """
+
+    protocol_ids: set[UUID] = Field(
+        description="The IDs of the sequence profile protocols to search among.",
+        min_length=1,
+    )
+    sample_ids: set[UUID] | None = Field(
+        description="The IDs of the samples to search among. If None, search among all samples.",
+    )
+    ranking_strategy: enum.SeqProfileRankingStrategy = Field(
+        default=enum.SeqProfileRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
+        description="The strategy to use for ranking the profiles. This determines how the best profile is selected.",
+    )
+
+
 # CRUD commands
 
 

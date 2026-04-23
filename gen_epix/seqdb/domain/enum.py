@@ -202,6 +202,16 @@ class QualityControlResult(IntEnumWithJsonSchemaMixin, IntEnum):
     def is_usable(self) -> bool:
         return self in {QualityControlResult.PASS, QualityControlResult.WARN}
 
+    def get_sort_key(self) -> int:
+        """
+        Return a sort key for sorting instances of QualityControlResult by the quality
+        level they represent. This is equal to the enum value, but provided as a method
+        for better readability and to encapsulate the logic. Higher values represent
+        better quality, while PENDING has the lowest quality as it is intended as a
+        temporary state.
+        """
+        return self.value
+
 
 class QualityControlResultSet(Enum):
     USABLE = frozenset(
@@ -456,3 +466,11 @@ class FileFormat(IntEnumWithJsonSchemaMixin, IntEnum):
 class FileCompression(IntEnumWithJsonSchemaMixin, IntEnum):
     NONE = 1
     GZIP = 2
+
+
+class SeqRankingStrategy(Enum):
+    QC_RESULT_THEN_SCORE_THEN_CREATED = "QC_RESULT_THEN_SCORE_THEN_CREATED"
+
+
+class SeqProfileRankingStrategy(Enum):
+    QC_RESULT_THEN_SCORE_THEN_CREATED = "QC_RESULT_THEN_SCORE_THEN_CREATED"

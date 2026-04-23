@@ -104,6 +104,18 @@ class QualityMixin:
     def _serialize_qc_result(self, value: enum.QualityControlResult) -> int:
         return value.value
 
+    @staticmethod
+    def get_sort_key(instance: "QualityMixin") -> tuple[int, float]:
+        """
+        Return a sort key for sorting instances of QualityMixin by quality control
+        result and subsequently score. The qc_result is considered leading as it is
+        mandatory, and the qc_score is considered secondary as it is optional and may be
+        less reliable.
+        """
+        return instance.qc_result.get_sort_key(), (
+            instance.qc_score if instance.qc_score is not None else float("-inf")
+        )
+
 
 class BaseSeq(Model):
     """

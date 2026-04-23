@@ -45,6 +45,14 @@ class BaseSeqService(BaseService):
             self.update_seq_distances,
         )
         f(
+            command.RetrieveBestSeqPerSampleCommand,
+            self.retrieve_best_seq_per_sample,
+        )
+        f(
+            command.RetrieveBestSeqProfilePerSampleCommand,
+            self.retrieve_best_seq_profile_per_sample,
+        )
+        f(
             command.ProtocolCrudCommand,
             self.crud_protocol,
         )
@@ -227,6 +235,20 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.UpdateSeqDistancesCommand,
     ) -> list[model.CalculateSeqDistancesResult]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_best_seq_per_sample(
+        self,
+        cmd: command.RetrieveBestSeqPerSampleCommand,
+    ) -> dict[UUID, UUID]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_best_seq_profile_per_sample(
+        self,
+        cmd: command.RetrieveBestSeqProfilePerSampleCommand,
+    ) -> dict[UUID, UUID]:
         raise NotImplementedError()
 
     @abc.abstractmethod
