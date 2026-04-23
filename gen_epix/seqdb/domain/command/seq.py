@@ -209,8 +209,8 @@ class RetrieveBestSeqPerSampleCommand(Command):
     """
 
     protocol_ids: set[UUID] | None = Field(
+        default=None,
         description="The IDs of the assembly protocols to search among. If None, search among all seqs.",
-        min_length=1,
     )
     sample_ids: set[UUID] | None = Field(
         description="The IDs of the samples to search among. If None, search among all samples.",
