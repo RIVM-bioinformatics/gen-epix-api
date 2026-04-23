@@ -233,11 +233,11 @@ def create_seq_endpoints(
             retval: model.SampleBatchUploadResult = app.handle(
                 command.UploadSamplesCommand(
                     user=user,
-                    **request_body.model_dump(),
+                    **request_body.model_dump(exclude={"user"}),
                 )
             )
         except Exception as exception:
-            handle_exception("f1d282b4", user, exception, request_ids=request_body.seq_ids)  # type: ignore
+            handle_exception("f1d282b4", user, exception)  # type: ignore
         return retval
 
     # CRUD
