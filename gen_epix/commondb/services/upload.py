@@ -1145,7 +1145,7 @@ class BatchUploader:
                     # )
                     # Child was skipped (e.g. parent model was null); skip identifiers
                     continue
-                 identifier_tuples.append(
+                identifier_tuples.append(
                     (child_id, child_for_upload.identifiers, child_result.identifiers)
                 )
             success &= self.create_identifiers(
