@@ -1,7 +1,6 @@
 import json
 from typing import Any
 
-import httpx
 
 from gen_epix.casedb.domain import DOMAIN, command, model
 from gen_epix.commondb.services import CommondbRemoteApp as CommondbRemoteApp
@@ -16,6 +15,12 @@ class CasedbRemoteApp(CommondbRemoteApp):
 
     ROUTE_MAP: dict[type[Command], str] = {
         command.UploadCasesCommand: "/upload/cases",
+    }
+
+    DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {
+        command.UploadCasesCommand: 45.0,
+        command.RetrieveCasesByIdCommand: 45.0,
+        command.RetrieveCasesByQueryCommand: 45.0,
     }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -40,7 +45,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
 
         request_body = cmd
 
-        with httpx.Client(verify=self.ssl_context) as client:
+        with self.get_client(cmd) as client:
             response = client.post(
                 route,
                 json=json.loads(request_body.model_dump_json()),
