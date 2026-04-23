@@ -1,4 +1,5 @@
 import logging
+import os
 from collections.abc import Callable
 from typing import Any, NoReturn
 
@@ -72,7 +73,8 @@ def create_fast_api(
     )
 
     # Add middleware
-    if not debug:
+    ratelimit_enabled = os.environ.get("RATELIMIT_ENABLED", "1") not in ("0", "false", "False")
+    if not debug and ratelimit_enabled:
         # Rate limiting
         fast_api.state.limiter = limiter.limiter
         fast_api.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
