@@ -280,9 +280,9 @@ def create_seq_endpoints(
     async def retrieve__best_seq_per_sample(
         user: registered_user_dependency,  # type: ignore
         request_body: RetrieveBestSeqPerSampleRequestBody,  # type: ignore
-    ) -> list[UUID]:
+    ) -> dict[UUID, UUID]:
         try:
-            retval: list[UUID] = app.handle(
+            retval: dict[UUID, UUID] = app.handle(
                 command.RetrieveBestSeqPerSampleCommand(
                     user=user,
                     protocol_ids=request_body.protocol_ids,
@@ -302,9 +302,9 @@ def create_seq_endpoints(
     async def retrieve__best_seq_profile_per_sample(
         user: registered_user_dependency,  # type: ignore
         request_body: RetrieveBestSeqProfilePerSampleRequestBody,  # type: ignore
-    ) -> list[UUID]:
+    ) -> dict[UUID, UUID]:
         try:
-            retval: list[UUID] = app.handle(
+            retval: dict[UUID, UUID] = app.handle(
                 command.RetrieveBestSeqProfilePerSampleCommand(
                     user=user,
                     protocol_ids=request_body.protocol_ids,
