@@ -73,6 +73,7 @@ def create_fast_api(
     )
 
     # Add middleware
+    # TODO: make this a feature flag rather than environment variable
     ratelimit_enabled = os.environ.get("RATELIMIT_ENABLED", "1") not in ("0", "false", "False")
     if not debug and ratelimit_enabled:
         # Rate limiting
