@@ -56,10 +56,10 @@ def _get_best_id_per_sample(
             "a3f7c2b1", f"Unsupported ranking strategy: {cmd.ranking_strategy}"
         )
 
-    protocol_ids = cmd.protocol_ids or set()
     sample_ids = cmd.sample_ids or set()
-    if not protocol_ids or not sample_ids:
+    if not sample_ids:
         return {}
+    protocol_ids = cmd.protocol_ids or set()
 
     repository: BaseSeqRepository = self.repository  # type: ignore[assignment]
     sample_filter = UuidSetFilter(key="sample_id", members=frozenset(sample_ids))
