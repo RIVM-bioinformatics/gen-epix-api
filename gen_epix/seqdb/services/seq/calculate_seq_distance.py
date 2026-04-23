@@ -65,6 +65,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
             user_id,
             model.Protocol,
             CrudOperation.READ_ALL,
+            # TODO: this should be an enum set filter
             filter=StringSetFilter(
                 key="seq_profile_type",
                 members=frozenset({x.name for x in seq_profile_types}),
@@ -90,6 +91,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
             user_id,
             model.Protocol,
             CrudOperation.READ_ALL,
+            # TODO: this should be an enum set filter
             filter=StringSetFilter(
                 key="seq_distance_type",
                 members=frozenset({x.name for x in seq_distance_types}),
@@ -210,6 +212,7 @@ def seq_service_update_seq_distances(
             user_id,
             model.Protocol,
             CrudOperation.READ_ALL,
+            # TODO: this should be an enum set filter
             filter=StringSetFilter(
                 key="seq_profile_type",
                 members=frozenset({profile_type.name}),
