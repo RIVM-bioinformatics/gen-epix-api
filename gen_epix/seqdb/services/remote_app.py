@@ -77,14 +77,6 @@ class SeqdbRemoteApp(CommondbRemoteApp):
             command.UploadSamplesCommand,
             self.upload_samples,
         )
-        self.register_route(
-            command.RetrieveBestSeqPerSampleCommand,
-            self.ROUTE_MAP[command.RetrieveBestSeqPerSampleCommand],
-        )
-        self.register_route(
-            command.RetrieveBestSeqProfilePerSampleCommand,
-            self.ROUTE_MAP[command.RetrieveBestSeqProfilePerSampleCommand],
-        )
         self.register_handler(
             command.RetrieveBestSeqPerSampleCommand,
             self.retrieve_best_seq_per_sample,
