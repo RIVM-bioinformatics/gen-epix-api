@@ -182,22 +182,22 @@ class SeqProfile(
     def _serialize_seq_profile_type(self, value: enum.SeqProfileType) -> int:
         return value.value
 
-    # TODO: Probably not a very good place to put this, come up with a better design...
-    _VALID_ALIGNED_NUCLEOTIDE_CHARS: ClassVar[frozenset[str]] = frozenset("ACGTN-")
-
-    def get_aligned_nucleotide_seq(self, **kwargs: Any) -> str:
+    def get_aligned_nucleotide_seq(
+        self, ref_seq_str: str | None = None, **kwargs: Any
+    ) -> str:
         """
-        Parse and return the aligned nucleotide
-        sequence from the SNP profile based on its
-        format. Validates that the sequence is
-        non-empty and contains only valid characters
-        (A, C, G, T, N, -).
+        Parse and return the aligned nucleotide sequence from the SNP profile based on its
+        format. The sequence is guaranteed to be lower case.
         """
+        if self.seq_profile_type != enum.SeqProfileType.SNP:
+            raise ValueError(
+                "Aligned nucleotide sequence can only be retrieved for SNP profiles"
+            )
         if self.format == enum.SeqProfileFormat.REF_ALN_SEQ:
             seq = self.content
             if not seq:
                 raise ValueError("Empty aligned nucleotide sequence")
-            invalid = set(seq) - SeqProfile._VALID_ALIGNED_NUCLEOTIDE_CHARS
+            invalid = set(seq) - enum.SeqAlphabet.DNA_INCL_AMBIGUOUS_AND_GAP.value
             if invalid:
                 raise ValueError(
                     "Invalid characters in aligned"
@@ -209,10 +209,7 @@ class SeqProfile(
             "Unable to parse aligned nucleotide" " sequence for this SNP profile format"
         )
 
-    def get_allele_id_bytes(
-        self,
-        **kwargs: Any,
-    ) -> list[bytes | None]:
+    def get_allele_id_bytes(self, **kwargs: Any) -> list[bytes | None]:
         """Return allele IDs as raw 16-byte chunks."""
         if self.seq_profile_type != enum.SeqProfileType.ALLELE:
             raise ValueError("Allele IDs can only be retrieved for allele profiles")

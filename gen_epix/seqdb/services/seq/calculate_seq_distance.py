@@ -493,25 +493,34 @@ def _calculate_profile_distance(
     locus_set: model.LocusSet | None = None,
 ) -> float:
     """Return the distance between two profiles of the same type"""
+    # TODO: LSP-3268 This function forces both profile representations (i.e. ready for distance calculation) to be calculated each time for each pair. More efficient would be to calculate all representations just once and then loop over the pairs.
     if seq_profile_model_type == enum.SeqProfileType.SNP:
-        seq1 = profile1.get_aligned_nucleotide_seq(ref_seq=ref_seq)
-        seq2 = profile2.get_aligned_nucleotide_seq(ref_seq=ref_seq)
-        a1 = np.frombuffer(seq1.encode("ascii"), dtype=np.uint8)
-        a2 = np.frombuffer(seq2.encode("ascii"), dtype=np.uint8)
-        _N = ord("N")
+        assert ref_seq is not None
+        ref_seq_str = ref_seq.get_nucleotide_seq()
+        seq1 = profile1.get_aligned_nucleotide_seq(ref_seq_str=ref_seq_str)
+        seq2 = profile2.get_aligned_nucleotide_seq(ref_seq_str=ref_seq_str)
+        seq_bytes1 = np.frombuffer(seq1.encode("ascii"), dtype=np.uint8)
+        seq_bytes2 = np.frombuffer(seq2.encode("ascii"), dtype=np.uint8)
+        # TODO: LSP-3268 Avoid magic strings by putting this in an enum. Also, N must be lowercase (already adjusted here)
+        _N = ord("n")
         _DASH = ord("-")
-        skip = (a1 == _N) | (a1 == _DASH) | (a2 == _N) | (a2 == _DASH)
-        return float(np.count_nonzero((a1 != a2) & ~skip))
+        skip = (
+            (seq_bytes1 == _N)
+            | (seq_bytes1 == _DASH)
+            | (seq_bytes2 == _N)
+            | (seq_bytes2 == _DASH)
+        )
+        return float(np.count_nonzero((seq_bytes1 != seq_bytes2) & ~skip))
     elif seq_profile_model_type == enum.SeqProfileType.ALLELE:
         # Parse allele profiles as raw bytes and
         # calculate Hamming distance, ignoring missing
         # loci (where one or both are None).
-        ids1 = profile1.get_allele_id_bytes()
-        ids2 = profile2.get_allele_id_bytes()
+        id_bytes1 = profile1.get_allele_id_bytes()
+        id_bytes2 = profile2.get_allele_id_bytes()
         return float(
             sum(
                 1
-                for x, y in zip(ids1, ids2)
+                for x, y in zip(id_bytes1, id_bytes2)
                 if x != y and x is not None and y is not None
             )
         )

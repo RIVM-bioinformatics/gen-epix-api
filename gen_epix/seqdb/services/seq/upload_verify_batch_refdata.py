@@ -489,7 +489,7 @@ def _verify_batch_refdata_snp_profiles(
 
     # Track expected length per ref_seq_id
     seq_length_by_ref_seq: dict[UUID, int] = {}
-    valid_chars = model.SeqProfile._VALID_ALIGNED_NUCLEOTIDE_CHARS
+    valid_chars = enum.SeqAlphabet.DNA_INCL_AMBIGUOUS_AND_GAP.value
 
     # Validate each profile and convert to
     # canonical content
@@ -516,10 +516,7 @@ def _verify_batch_refdata_snp_profiles(
         seq = profile.content
         if not seq:
             success = False
-            profile_result.add_error(
-                "d3e2f1a0",
-                "Empty aligned nucleotide sequence",
-            )
+            profile_result.add_error("d3e2f1a0", "Empty aligned nucleotide sequence")
             continue
 
         # Validate characters
@@ -528,9 +525,7 @@ def _verify_batch_refdata_snp_profiles(
             success = False
             profile_result.add_error(
                 "e2f1a0b9",
-                "Invalid characters in aligned"
-                " nucleotide sequence:"
-                f" {sorted(invalid)}",
+                f"Invalid characters in aligned nucleotide sequence: {sorted(invalid)}",
             )
             continue
 
@@ -543,11 +538,8 @@ def _verify_batch_refdata_snp_profiles(
             success = False
             profile_result.add_error(
                 "f1a0b9c8",
-                "Aligned nucleotide sequence"
-                f" length ({len(seq)}) differs"
-                " from expected length"
-                f" ({expected_len}) for"
-                f" ref_seq {ref_seq_id}",
+                f"Aligned nucleotide sequence length ({len(seq)}) differs"
+                f" from expected length ({expected_len}) for ref_seq {ref_seq_id}",
             )
             continue
 

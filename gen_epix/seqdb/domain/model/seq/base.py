@@ -194,3 +194,12 @@ class BaseSeq(Model):
     #     if isinstance(value, bytes):
     #         return value.hex()
     #     return value
+
+    def get_nucleotide_seq(self, ref_seq_str: str | None = None) -> str:
+        """Return the nucleotide sequence as a string, if possible, otherwise raise an error."""
+        if self.seq_format == enum.SeqFormat.STR_DNA:
+            return self.seq
+        else:
+            raise NotImplementedError(
+                f"Getting the nucleotide sequence is not implemented for format {self.seq_format}"
+            )
