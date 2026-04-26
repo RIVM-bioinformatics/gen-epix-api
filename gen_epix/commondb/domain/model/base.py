@@ -3,7 +3,7 @@ from enum import IntEnum
 from typing import ClassVar
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer, field_validator
 
 from gen_epix import fastapp
 from gen_epix.commondb.domain.enum import EtlStatus as EtlStatus
@@ -69,6 +69,25 @@ class EtlLogItem(BaseModel):
     severity: LogLevel = Field(
         description="The severity level of the log item.",
     )
+    source: str | None = Field(
+        default=None,
+        description="Optional field to capture source trace information, e.g. relevant source record ids.",
+    )
+    target: str | None = Field(
+        default=None,
+        description="Optional field to capture target trace information, e.g. relevant target record ids created or updated as a result of the logged event.",
+    )
+
+    @field_validator("severity", mode="before")
+    @classmethod
+    def _validate_severity(cls, severity: LogLevel | str) -> LogLevel:
+        if isinstance(severity, str):
+            return LogLevel[severity]
+        return severity
+
+    @field_serializer("severity")
+    def _serialize_severity(self, value: LogLevel) -> str:
+        return value.value
 
 
 class BaseEtlResult(BaseModel):
@@ -89,23 +108,63 @@ class BaseEtlResult(BaseModel):
         description="Log items capturing messages and events that occurred during the operation.",
     )
 
-    def add_error(self, code: str, message: str) -> None:
+    def add_error(
+        self,
+        code: str,
+        message: str,
+        source: str | None = None,
+        target: str | None = None,
+    ) -> None:
         """Append an ERROR-severity log item and update the status."""
         self.logs.append(
-            EtlLogItem(code=code, message=message, severity=LogLevel.ERROR)
+            EtlLogItem(
+                code=code,
+                message=message,
+                severity=LogLevel.ERROR,
+                source=source,
+                target=target,
+            )
         )
         self.set_error_status()
 
     def set_error_status(self) -> None:
         """Override to set the concrete class's error status value."""
 
-    def add_warning(self, code: str, message: str) -> None:
+    def add_warning(
+        self,
+        code: str,
+        message: str,
+        source: str | None = None,
+        target: str | None = None,
+    ) -> None:
         """Append a WARN-severity log item."""
-        self.logs.append(EtlLogItem(code=code, message=message, severity=LogLevel.WARN))
+        self.logs.append(
+            EtlLogItem(
+                code=code,
+                message=message,
+                severity=LogLevel.WARN,
+                source=source,
+                target=target,
+            )
+        )
 
-    def add_info(self, code: str, message: str) -> None:
+    def add_info(
+        self,
+        code: str,
+        message: str,
+        source: str | None = None,
+        target: str | None = None,
+    ) -> None:
         """Append an INFO-severity log item."""
-        self.logs.append(EtlLogItem(code=code, message=message, severity=LogLevel.INFO))
+        self.logs.append(
+            EtlLogItem(
+                code=code,
+                message=message,
+                severity=LogLevel.INFO,
+                source=source,
+                target=target,
+            )
+        )
 
     def has_errors(self) -> bool:
         """Return True if any log item has ERROR severity."""
@@ -145,5 +204,4 @@ def validate_int_enum_value_or_none(
     """Validate that the given value is a valid member of the given IntEnum class or None."""
     if value is None:
         return None
-    return validate_int_enum_value(enum_class, value)
     return validate_int_enum_value(enum_class, value)
