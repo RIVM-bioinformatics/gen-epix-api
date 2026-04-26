@@ -14,23 +14,23 @@ class RowLike(Protocol):
 
     def get(self, key: Hashable, default: Any = None) -> Any:
         """Get value by key with optional default."""
-        ...
+        raise NotImplementedError()
 
     def __getitem__(self, key: Hashable) -> Any:
         """Get value by key."""
-        ...
+        raise NotImplementedError()
 
     def __setitem__(self, key: Hashable, value: Any) -> None:
         """Set value by key."""
-        ...
+        raise NotImplementedError()
 
     def __contains__(self, key: Hashable) -> bool:
         """Check if key exists."""
-        ...
+        raise NotImplementedError()
 
     def keys(self) -> Iterator[Hashable]:
         """Get all keys."""
-        ...
+        raise NotImplementedError()
 
 
 class DictAdapter:

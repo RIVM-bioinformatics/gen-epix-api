@@ -189,19 +189,19 @@ class Policy(abc.ABC):
 
     # Not an abstract method since it is not always needed
     def is_allowed(self, cmd: Command) -> bool:
-        raise NotImplementedError
+        raise NotImplementedError("Method is not implemented for this policy")
 
     # Not an abstract method since it is not always needed
     def get_content(self, cmd: Command) -> Any:
-        raise NotImplementedError
+        raise NotImplementedError("Method is not implemented for this policy")
 
     # Not an abstract method since it is not always needed
     def get_content_return_type(self, cmd: Command) -> type:
-        raise NotImplementedError
+        raise NotImplementedError("Method is not implemented for this policy")
 
     # Not an abstract method since it is not always needed
     def filter(self, cmd: Command, retval: Any) -> Any:
-        raise NotImplementedError
+        raise NotImplementedError("Method is not implemented for this policy")
 
 
 class Command(PydanticBaseModel):

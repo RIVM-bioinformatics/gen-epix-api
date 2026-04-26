@@ -1,5 +1,6 @@
 from collections.abc import Hashable
 from enum import Enum
+from typing import Literal
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.domain.entity import Entity
@@ -552,7 +553,7 @@ class Domain:
                 if on_cycle == OnException.RAISE:
                     raise exc.DomainException(
                         "f8b2c94d",
-                        f"Service type {service_type} is part of a cycle in the entity DAG"
+                        f"Service type {service_type} is part of a cycle in the entity DAG",
                     )
                 elif on_cycle == OnException.IGNORE:
                     continue
@@ -646,7 +647,9 @@ class Domain:
             entities.append(entity)
         return entities
 
-    def _update_entity_dag(self, entity: Entity, on_cycle: OnException) -> None:
+    def _update_entity_dag(
+        self, entity: Entity, on_cycle: Literal[OnException.RAISE, OnException.IGNORE]
+    ) -> None:
         for link in entity.links.values():
             if link.link_model_class not in self._models:
                 if on_cycle == OnException.RAISE:
@@ -657,7 +660,7 @@ class Domain:
                 elif on_cycle == OnException.IGNORE:
                     continue
                 else:
-                    raise NotImplementedError(f"Unsupported on_cycle: {on_cycle.value}")
+                    raise AssertionError(f"Unsupported on_cycle: {on_cycle.value}")
             link_entity = self.get_entity_for_model(link.link_model_class)  # type: ignore
             self._entity_dag[entity].append(link_entity)
         self._dag_sorted_entities.append(entity)

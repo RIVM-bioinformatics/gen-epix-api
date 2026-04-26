@@ -23,11 +23,13 @@ class BaseIsOrganizationAdminPolicy(BaseAbacPolicy):
         command_class: type[Command],
         handler: Callable[[Command], set[UUID]],
     ) -> None:
-        raise NotImplementedError
+        """Register a handler to retrieve organization IDs for a given command."""
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def retrieve_organization_ids(self, cmd: Command) -> set[UUID]:
-        raise NotImplementedError
+        """Retrieve organization IDs for a given command."""
+        raise NotImplementedError()
 
 
 class BaseReadOrganizationResultsOnlyPolicy(BaseAbacPolicy):

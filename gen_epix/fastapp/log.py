@@ -18,7 +18,8 @@ class BaseLogItem(abc.ABC):
     def dumps(
         self, indent: int | str | None = None, separators: tuple[str, str] = (",", ":")
     ) -> str:
-        raise NotImplementedError
+        """Convert the log item to a JSON string."""
+        raise NotImplementedError()
 
     @staticmethod
     def _custom_json_encoder(obj: Any) -> str:

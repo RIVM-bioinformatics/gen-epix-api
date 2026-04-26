@@ -27,6 +27,6 @@ def file_service_crud_file(
         pass
 
     else:
-        raise NotImplementedError(f"Unsupported operation type: {cmd.operation.value}")
+        raise AssertionError(f"Unsupported operation type: {cmd.operation.value}")
 
     return self.crud(cmd)  # type: ignore[return-value]
