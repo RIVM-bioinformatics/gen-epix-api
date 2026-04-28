@@ -1,9 +1,14 @@
+import enum as _stdlib_enum
 from typing import Any, Literal, Self
 
 from pydantic import Field, PrivateAttr, model_validator
 
 from gen_epix.filter.base import Filter
 from gen_epix.filter.enum import FilterType
+
+
+def _enum_to_str(x: Any) -> str:
+    return x.name if isinstance(x, _stdlib_enum.Enum) else x
 
 
 class StringSetFilter(Filter):
@@ -24,9 +29,9 @@ class StringSetFilter(Filter):
         # Generate the function to check if a value is in the set of terms
         # The function is generated instead of defined to be able to optimize the check
         if self.case_sensitive:
-            self._match = lambda x: x in self._members  # type: ignore
+            self._match = lambda x: _enum_to_str(x) in self._members  # type: ignore
         else:
-            self._match = lambda x: x.lower() in self._members  # type: ignore
+            self._match = lambda x: _enum_to_str(x).lower() in self._members  # type: ignore
         return self
 
     def _match(self, value: Any) -> bool:
