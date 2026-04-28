@@ -160,23 +160,25 @@ class CaseBatchUploader(BatchUploader):
         # Merge case content with that already in the database for updates, and
         # validate the merged content again so that there are no inconsistencies
         if cases_for_validation:
-            # Get content of existing cases
+            # Get content of existing cases, keyed by case id to avoid relying on
+            # result ordering from the DB.
             case_ids: list[UUID] = [
                 x.id for x in cases_for_validation  # type: ignore[misc]
             ]
-            existing_content_tuples: list[dict[UUID, str | None] | None] = (
-                self.service.repository.read_fields(  # type: ignore[assignment]
+            existing_content_by_id: dict[UUID, dict] = {
+                row[0]: row[1]
+                for row in self.service.repository.read_fields(
                     uow,
                     None if cmd.user is None else cmd.user.id,
                     model.Case,
-                    ["content"],
+                    ["id", "content"],
                     filter=UuidSetFilter(key="id", members=frozenset(case_ids)),
                 )
-            )
+                if row[1] is not None
+            }
             # Merge new content into existing
-            for case, existing_content in zip(
-                cases_for_validation, existing_content_tuples
-            ):
+            for case in cases_for_validation:
+                existing_content = existing_content_by_id.get(case.id)  # type: ignore[arg-type]
                 if existing_content is None:
                     continue
                 BatchUploader.update_sub_field_dict(existing_content, case.content)

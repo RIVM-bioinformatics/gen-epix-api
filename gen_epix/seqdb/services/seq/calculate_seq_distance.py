@@ -9,7 +9,7 @@ import numpy as np
 from gen_epix.commondb.domain.enum import EtlStatus
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.exc import ConcurrentModificationError
-from gen_epix.filter.number_set import NumberSetFilter
+from gen_epix.filter.string_set import StringSetFilter
 from gen_epix.seqdb.domain import command, enum, exc, model
 from gen_epix.seqdb.domain.service import BaseSeqService
 
@@ -65,9 +65,11 @@ def seq_service_calculate_seq_distances_for_new_profiles(
             user_id,
             model.Protocol,
             CrudOperation.READ_ALL,
-            filter=NumberSetFilter(
+            # TODO: this should be an enum set filter
+            filter=StringSetFilter(
                 key="seq_profile_type",
-                members=frozenset({x.value for x in seq_profile_types}),
+                members=frozenset({x.name for x in seq_profile_types}),
+                case_sensitive=True,
             ),
         )
     seq_profile_protocol_map = {
@@ -89,9 +91,11 @@ def seq_service_calculate_seq_distances_for_new_profiles(
             user_id,
             model.Protocol,
             CrudOperation.READ_ALL,
-            filter=NumberSetFilter(
+            # TODO: this should be an enum set filter
+            filter=StringSetFilter(
                 key="seq_distance_type",
-                members=frozenset({x.value for x in seq_distance_types}),
+                members=frozenset({x.name for x in seq_distance_types}),
+                case_sensitive=True,
             ),
         )
 
@@ -221,9 +225,11 @@ def seq_service_update_seq_distances(
             user_id,
             model.Protocol,
             CrudOperation.READ_ALL,
-            filter=NumberSetFilter(
+            # TODO: this should be an enum set filter
+            filter=StringSetFilter(
                 key="seq_profile_type",
-                members=frozenset({profile_type.value}),
+                members=frozenset({profile_type.name}),
+                case_sensitive=True,
             ),
         )
 

@@ -34,8 +34,10 @@ class BaseRbacService(ServiceBaseRbacService):
     def retrieve_own_permissions(
         self, cmd: command.RetrieveOwnPermissionsCommand
     ) -> set[Permission]:
-        raise NotImplementedError
+        """Retrieve the set of permissions for the current user."""
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def retrieve_sub_roles(self, cmd: command.RetrieveSubRolesCommand) -> set[str]:
-        raise NotImplementedError
+        """Retrieve the set of sub-roles for a given role."""
+        raise NotImplementedError()

@@ -35,6 +35,7 @@ class BaseSeqdbService(BaseService):
     def retrieve_phylogenetic_tree(
         self, cmd: command.RetrievePhylogeneticTreeByProfilesCommand
     ) -> model.PhylogeneticTree | None:
+        """Retrieve phylogenetic tree for specified profiles."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -42,6 +43,7 @@ class BaseSeqdbService(BaseService):
         self,
         cmd: command.RetrieveGeneticSequenceFastaByIdCommand,
     ) -> Iterable[str]:
+        """Retrieve genetic sequence data in FASTA format by ID."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -49,6 +51,7 @@ class BaseSeqdbService(BaseService):
         self,
         cmd: seqdb_command.UploadSamplesCommand,
     ) -> seqdb_model.SampleBatchUploadResult:
+        """Upload samples in batch."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -56,6 +59,7 @@ class BaseSeqdbService(BaseService):
         self,
         cmd: seqdb_command.CreateFileCommand,
     ) -> UUID:
+        """Create file and return file UUID."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -63,4 +67,5 @@ class BaseSeqdbService(BaseService):
         self,
         cmd: seqdb_command.RetrieveSimilarProfilesCommand,
     ) -> list[UUID]:
+        """Retrieve UUIDs of profiles similar to specified profile."""
         raise NotImplementedError()

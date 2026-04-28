@@ -30,8 +30,10 @@ class StringSetFilter(Filter):
         return self
 
     def _match(self, value: Any) -> bool:
-        # Function is implemented dynamically in _validate_state
-        raise NotImplementedError()
+        """Function is implemented dynamically in _validate_state"""
+        raise NotImplementedError(
+            "Method is implemented dynamically in _validate_state"
+        )
 
 
 class TypedStringSetFilter(StringSetFilter):

@@ -3,7 +3,7 @@ from collections.abc import Iterable
 from typing import Any
 from uuid import UUID
 
-from gen_epix.casedb.domain import command, exc, model
+from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain.enum import ServiceType
 from gen_epix.casedb.domain.repository import BaseCaseRepository
 from gen_epix.fastapp import BaseService
@@ -376,7 +376,7 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         | bool
         | None
     ):
-        """Handle CRUD operations for Protocol entities."""
+        """Handle CRUD operations for GeneticDistanceProtocol entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -413,12 +413,14 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
     def upload_cases(
         self, cmd: command.UploadCasesCommand
     ) -> model.CaseBatchUploadResult | None:
+        """Upload cases in batch."""
         raise NotImplementedError()
 
     @abc.abstractmethod
     def create_case_set(
         self, cmd: command.CreateCaseSetCommand
     ) -> model.CaseSet | None:
+        """Create a new case set."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -426,6 +428,7 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         self,
         cmd: command.RetrieveCompleteCaseTypeCommand,
     ) -> model.CompleteCaseType:
+        """Retrieve complete case type with all associated data."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -433,18 +436,21 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         self,
         cmd: command.RetrieveCaseStatsCommand,
     ) -> list[model.CaseStats]:
+        """Retrieve case statistics."""
         raise NotImplementedError()
 
     @abc.abstractmethod
     def retrieve_cases_by_query(
         self, cmd: command.RetrieveCasesByQueryCommand
     ) -> model.CaseQueryResult:
+        """Retrieve cases matching query criteria."""
         raise NotImplementedError()
 
     @abc.abstractmethod
     def retrieve_cases_by_id(
         self, cmd: command.RetrieveCasesByIdCommand
     ) -> list[model.Case]:
+        """Retrieve cases by their IDs."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -452,6 +458,7 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         self,
         cmd: command.RetrieveCaseRightsCommand | command.RetrieveCaseSetRightsCommand,
     ) -> list[model.CaseRights] | list[model.CaseSetRights]:
+        """Retrieve access rights for cases or case sets."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -459,6 +466,7 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         self,
         cmd: command.RetrievePhylogeneticTreeByCasesCommand,
     ) -> model.PhylogeneticTree:
+        """Retrieve phylogenetic tree for specified cases."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -466,6 +474,7 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         self,
         cmd: command.RetrieveSimilarCasesCommand,
     ) -> list[UUID]:
+        """Retrieve UUIDs of cases similar to specified case."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -473,6 +482,7 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         self,
         cmd: command.RetrieveGeneticSequenceFastaByCaseCommand,
     ) -> Iterable[str]:
+        """Retrieve genetic sequence data in FASTA format for case."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -480,6 +490,7 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         self,
         cmd: command.CreateFileForReadSetCommand,
     ) -> UUID:
+        """Create file for read set and return file UUID."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -487,6 +498,7 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         self,
         cmd: command.CreateFileForSeqCommand,
     ) -> UUID:
+        """Create file for sequence and return file UUID."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -494,4 +506,5 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         self,
         cmd: command.RetrieveProtocolsCommand,
     ) -> list[seqdb_model.Protocol]:
+        """Retrieve available protocols."""
         raise NotImplementedError()

@@ -20,16 +20,19 @@ class BaseOmopService(BaseService[BaseOmopRepository]):
     def upload_persons(
         self, cmd: command.UploadPersonsCommand
     ) -> model.PersonBatchUploadResult:
-        raise NotImplementedError("Must be implemented in subclass")
+        """Upload persons in batch."""
+        raise NotImplementedError()
 
     @abstractmethod
     def retrieve_persons_by_id(
         self, cmd: command.RetrievePersonsByIdCommand
     ) -> list[model.FullPerson]:
-        raise NotImplementedError("Must be implemented in subclass")
+        """Retrieve persons by their IDs."""
+        raise NotImplementedError()
 
     @abstractmethod
     def retrieve_persons_by_query(
         self, cmd: command.RetrievePersonsByQueryCommand
     ) -> model.PersonQueryResult:
-        raise NotImplementedError("Must be implemented in subclass")
+        """Retrieve persons matching query criteria."""
+        raise NotImplementedError()

@@ -20,7 +20,7 @@ class BaseDictModelModifier(abc.ABC):
         Mutate obj in-place just after it has been copied for storage.
         Called before the copy is inserted into the dict.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def on_update(
@@ -30,4 +30,4 @@ class BaseDictModelModifier(abc.ABC):
         Mutate obj in-place before its field values are applied to stored_obj.
         stored_obj holds the current stored state and may be read but not written.
         """
-        raise NotImplementedError
+        raise NotImplementedError()

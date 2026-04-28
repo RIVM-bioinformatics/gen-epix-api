@@ -1,4 +1,6 @@
-from typing import ClassVar
+from typing import ClassVar, Self
+
+from pydantic import model_validator
 
 from gen_epix.commondb.domain.model import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
@@ -28,6 +30,11 @@ class PcrMeasurement(
         ),
     )
 
+    @model_validator(mode="after")
+    def _validate_content(self) -> Self:
+        # TODO: implement content hash validation
+        return self
+
 
 class AstMeasurement(
     Model,
@@ -48,3 +55,8 @@ class AstMeasurement(
             }
         ),
     )
+
+    @model_validator(mode="after")
+    def _validate_content(self) -> Self:
+        # TODO: implement content hash validation
+        return self

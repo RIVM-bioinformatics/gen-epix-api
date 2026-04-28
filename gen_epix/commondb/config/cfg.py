@@ -103,7 +103,11 @@ class BaseAppCfg(abc.ABC):
         service_type: Enum | None = None,
         on_exist: str = "skip",
     ) -> None:
-        raise NotImplementedError("Subclasses must implement copy_repository_files")
+        """
+        Copy any repository files to a new folder and update the configuration
+        correspondingly.
+        """
+        raise NotImplementedError()
 
 
 class AppCfg(BaseAppCfg):
