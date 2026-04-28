@@ -425,6 +425,17 @@ def _verify_batch_refdata_snp_profiles(
     uow: Any,
 ) -> bool:
     """Verify SNP profiles specific rules."""
+
+    # TODO: LSP-3268-Implement-SNP-profile-support-seqdb:
+    #   - Load the related protocol
+    #   - Verify that the protocol has a ref_seq_id
+    #   - Load the 'real' ref_seq record
+    #   - If aligned_nucleotide_seq is used, copy it into content and clear aligned_nucleotide_seq
+    #   - If content and content2 are used, parse both fields.
+    #   - Rebuild the full aligned sequence by calling nextclade_get_ref_alignment().
+    #   - Compute content_hash from the rebuilt sequence.
+    #   - Set format to REF_ALN_SEQ.
+
     success = True
     user_id = cmd.user.id if cmd.user else None
     samples = cmd.sample_batch.samples

@@ -1,10 +1,14 @@
 import base64
+import collections
+import copy
 import hashlib
 import json
 import struct
 from typing import Any, ClassVar, Self
 from uuid import UUID
 
+import numpy as np
+import pandas as pd
 from pydantic import Field, field_serializer, field_validator, model_validator
 
 from gen_epix.commondb.domain.literal import NULL_ID
@@ -194,17 +198,51 @@ class SeqProfile(
                 "Aligned nucleotide sequence can only be retrieved for SNP profiles"
             )
         if self.format == enum.SeqProfileFormat.REF_ALN_SEQ:
-            seq = self.content
-            if not seq:
-                raise ValueError("Empty aligned nucleotide sequence")
-            invalid = set(seq) - enum.SeqAlphabet.DNA_INCL_AMBIGUOUS_AND_GAP.value
-            if invalid:
-                raise ValueError(
-                    "Invalid characters in aligned"
-                    " nucleotide sequence:"
-                    f" {sorted(invalid)}"
-                )
-            return seq
+            if self.content2 is None:
+                seq = self.content
+                if not seq:
+                    raise ValueError("Empty aligned nucleotide sequence")
+                invalid = set(seq) - enum.SeqAlphabet.DNA_INCL_AMBIGUOUS_AND_GAP.value
+                if invalid:
+                    raise ValueError(
+                        "Invalid characters in aligned"
+                        " nucleotide sequence:"
+                        f" {sorted(invalid)}"
+                    )
+                return seq
+            else:
+                # TODO: LSP-3268-Implement-SNP-profile-support-seqdb:
+                #    - Read content and content2
+                #    - Use the ref_seq_str and nextclade_get_ref_alignment to derive the aligned nucleotide sequence
+
+                #    - nextclade_get_ref_alignment can handle both pandas dataframe AND:
+
+                # {
+                #     "sample_clean": {
+                #         "substitutions": "A1T,C2G,G15A",
+                #         "deletions": "10-12",
+                #         "insertions": "5:GGG,50:AA",
+                #         "missing": "80-85",
+                #         "nonACGTNs": "R:30-31",
+                #         "alignmentStart": 1,
+                #         "alignmentEnd": 100
+                #     },
+                #     "sample_dirty": {
+                #         "substitutions": "A1T,C2G,G15A",
+                #         "deletions": "10-12",
+                #         "insertions": "5:GGG,50:AA",
+                #         "missing": "80-85",
+                #         "nonACGTNs": "R:30-31",
+                #         "alignmentStart": 1,
+                #         "alignmentEnd": 100
+                #     }
+                # }
+
+                if ref_seq_str is None:
+                    raise ValueError(
+                        "Reference sequence string must be provided to derive aligned nucleotide sequence when content2 is used"
+                    )
+
         raise NotImplementedError(
             "Unable to parse aligned nucleotide" " sequence for this SNP profile format"
         )
@@ -348,6 +386,491 @@ class SeqProfile(
     @staticmethod
     def _raise_no_computable_hash() -> None:
         raise NotImplementedError("Unable to compute content hash for this format")
+
+    @staticmethod
+    def nextclade_get_ref_alignment(
+        nextclade_df: pd.DataFrame | dict[str, dict[str, Any]],
+        ref_seq: str | None = None,
+        remove_conserved: bool | str = False,
+        uppercase: bool = True,
+        verify: bool = False,
+    ) -> pd.DataFrame:
+        """
+        Derive the alignment to the reference that is encoded in NextClade output. The alignment is represented
+        as a dataframe with the same order of rows, the NextClade 'seqName' column used as index and an ordered series
+        of alignment columns containing the uppercase symbols. Column names start with the reference sequence symbol
+        followed by the reference sequence position. Insertions with respect to the reference each have a separate
+        column with symbol 'X' or '-' depending on whether the insertion is present, and the column name has an
+        additional suffix of : followed by the inserted symbols. Before the first and after the last aligned position,
+        the '*' symbol is used instead of '-', to distinguish from a deletion.
+
+        If no reference sequence is provided, the alignment will only contain columns that are not conserved with
+        respect to the reference, i.e. for which at least one sequence has either a substitution, a deletion, an
+        insertion or a non-ACGTN. In that case, remove_conserved must be set to True. Without the reference
+        sequence, columns with no subsitutions and only deletions, insertions or non-ACGTNs, have an 'X' put as symbol
+        where the reference sequence symbol should otherwise be put (if a substitution is present, the reference
+        sequence symbol can be derived from the way the substitution is encoded in the NextClade output).
+
+        :param nextclade_df: NextClade output as a DataFrame or dict. If dict, keys are sample names and
+            values are dicts with NextClade fields (substitutions, deletions, insertions, missing,
+            nonACGTNs, alignmentStart, alignmentEnd)
+        :type nextclade_df: pd.DataFrame or dict[str, dict[str, Any]]
+        :param ref_seq: reference sequence
+        :type ref_seq: str
+        :param remove_conserved: whether conserved positions should be removed. Can also be string 'ALL' (equivalent to True)
+        or 'REF_ONLY' (only conserved positions that are also equal to the reference sequence are removed).
+        :type remove_conserved: bool or str
+        :param uppercase: whether the symbols should be in uppercase
+        :type uppercase: bool
+        :param verify: whether the generated reference alignment should be verified against the source NextClade output
+        :type verify: bool
+        :return: alignment to a reference as described above
+        :rtype: dataframe
+        """
+        # Convert dict input to DataFrame if needed
+        if isinstance(nextclade_df, dict):
+            records = []
+            for seq_name, fields in nextclade_df.items():
+                record = {"seqName": seq_name}
+                record.update(fields)
+                records.append(record)
+            nextclade_df = pd.DataFrame.from_records(records)
+
+        # Process input
+        if isinstance(remove_conserved, str):
+            if remove_conserved == "REF_ONLY":
+                remove_conserved_ref = True
+                remove_conserved_non_ref = False
+            elif remove_conserved == "ALL":
+                remove_conserved_ref = True
+                remove_conserved_non_ref = True
+            else:
+                raise ValueError(
+                    "Invalid string value for remove_conserved: {:s}".format(
+                        remove_conserved
+                    )
+                )
+        else:
+            if remove_conserved:
+                remove_conserved_ref = True
+                remove_conserved_non_ref = True
+            else:
+                remove_conserved_ref = False
+                remove_conserved_non_ref = False
+        if ref_seq is None and not remove_conserved_ref:
+            raise ValueError(
+                "Invalid input combination: keep conserved reference positions and and no reference sequence given"
+            )
+        if ref_seq is not None:
+            # Force uppercase
+            ref_seq = ref_seq.upper()
+
+        # Initialise some
+        n_seqs = nextclade_df.shape[0]
+        if not remove_conserved_ref:
+            columns = {str(i + 1): [x] * n_seqs for i, x in enumerate(ref_seq)}
+        else:
+            columns = {}
+        if ref_seq is not None:
+            partial_ref_seq = {str(i + 1): x for i, x in enumerate(ref_seq)}
+        else:
+            partial_ref_seq = {}
+
+        # Special case: no sequences
+        if nextclade_df.shape[0] == 0:
+            if remove_conserved_ref:
+                # Zero alignment positions
+                alignment_df = nextclade_df.loc[:, ["seqName"]].copy()
+            else:
+                # All reference positions
+                columns = {x + str(i): [] for i, x in enumerate(ref_seq)}
+                alignment_df = pd.concat(
+                    [nextclade_df.loc[:, ["seqName"]].copy(), pd.from_dict(columns)],
+                    axis=1,
+                    ignore_index=True,
+                )
+            return alignment_df
+
+        # Process substitutions
+        for i, substitutions in enumerate(nextclade_df["substitutions"]):
+            if substitutions is None:
+                continue
+            elif not isinstance(substitutions, str) and np.isnan(substitutions):
+                continue
+            for substitution in substitutions.split(","):
+                reference_nucleotide = substitution[0]
+                position = substitution[1:-1]
+                mutated_nucleotide = substitution[-1]
+                if position not in columns:
+                    columns[position] = [reference_nucleotide] * n_seqs
+                    if ref_seq is None:
+                        partial_ref_seq[position] = reference_nucleotide
+                    elif partial_ref_seq[position] != reference_nucleotide:
+                        raise ValueError(
+                            "Provided reference sequence does not match with reference positions encoded in substitutions at position {:s}: {s} provided, found {:s}".format(
+                                position,
+                                partial_ref_seq[position],
+                                reference_nucleotide,
+                            )
+                        )
+                columns[position][i] = mutated_nucleotide
+
+        # Process non-ACTGNs
+        for i, nonACGTN_ranges in enumerate(nextclade_df["nonACGTNs"]):
+            if nonACGTN_ranges is None:
+                continue
+            elif not isinstance(nonACGTN_ranges, str):
+                if np.isnan(nonACGTN_ranges):
+                    continue
+                nonACGTN_ranges = str(nonACGTN_ranges)
+            for nonACGTN_range in nonACGTN_ranges.split(","):
+                nonACGTN = nonACGTN_range[0]
+                nonACGTN_range = nonACGTN_range[2:].split("-")
+                nonACGTN_start = int(nonACGTN_range[0])
+                if len(nonACGTN_range) == 2:
+                    nonACGTN_end = int(nonACGTN_range[1])
+                else:
+                    nonACGTN_end = nonACGTN_start
+                for j in range(nonACGTN_start, nonACGTN_end + 1):
+                    position = str(j)
+                    if position not in columns:
+                        if ref_seq is None:
+                            columns[position] = ["X"] * n_seqs
+                        else:
+                            columns[position] = [ref_seq[int(position) - 1]] * n_seqs
+                    columns[position][i] = nonACGTN
+
+        # Process deletions
+        for i, deletion_ranges in enumerate(nextclade_df["deletions"]):
+            if deletion_ranges is None:
+                continue
+            elif not isinstance(deletion_ranges, str):
+                if np.isnan(deletion_ranges):
+                    continue
+                deletion_ranges = str(deletion_ranges)
+            for deletion_range in deletion_ranges.split(","):
+                deletion_range = deletion_range.split("-")
+                deletion_start = int(deletion_range[0])
+                if len(deletion_range) == 2:
+                    deletion_end = int(deletion_range[1])
+                else:
+                    deletion_end = deletion_start
+                for j in range(deletion_start, deletion_end + 1):
+                    position = str(j)
+                    if position not in columns:
+                        if ref_seq is None:
+                            columns[position] = ["X"] * n_seqs
+                        else:
+                            columns[position] = [ref_seq[int(position) - 1]] * n_seqs
+                    columns[position][i] = "-"
+
+        # Process insertions
+        for i, insertions in enumerate(nextclade_df["insertions"]):
+            if insertions is None:
+                continue
+            elif not isinstance(insertions, str) and np.isnan(insertions):
+                continue
+            for insertion in insertions.split(","):
+                if insertion not in columns:
+                    columns[insertion] = ["-"] * n_seqs
+                columns[insertion][i] = "X"
+
+        # Process missing
+        for i, missing_ranges in enumerate(nextclade_df["missing"]):
+            if missing_ranges is None:
+                continue
+            elif not isinstance(missing_ranges, str):
+                if np.isnan(missing_ranges):
+                    continue
+                missing_ranges = str(missing_ranges)
+            for missing_range in missing_ranges.split(","):
+                missing_range = missing_range.split("-")
+                missing_start = int(missing_range[0])
+                if len(missing_range) == 2:
+                    missing_end = int(missing_range[1])
+                else:
+                    missing_end = missing_start
+                for j in range(missing_start, missing_end + 1):
+                    position = str(j)
+                    column = columns.get(position)
+                    if column is None:
+                        # Missing position not considered by itself as polymorphic, only added completely when remove_conserved_ref=False
+                        continue
+                    column[i] = "N"
+
+        # Process alignment start
+        for i, alignment_start in enumerate(nextclade_df["alignmentStart"]):
+            if alignment_start is None:
+                continue
+            for j in range(1, int(alignment_start)):
+                position = str(j)
+                if position not in columns:
+                    continue
+                columns[position][i] = "*"
+
+        # Process alignment end
+        for i, alignment_end in enumerate(nextclade_df["alignmentEnd"]):
+            if alignment_end is None:
+                continue
+            j = int(alignment_end) + 1
+            while str(j) in columns:
+                columns[str(j)][i] = "*"
+                j = j + 1
+
+        # Get column properties and order
+        column_name_df = pd.DataFrame.from_dict(
+            {"name_without_ref": list(columns.keys())}
+        )
+        split_columns_df = column_name_df["name_without_ref"].str.split(
+            pat=":", n=2, expand=True
+        )
+        if split_columns_df.shape[1] == 2:
+            column_name_df[["position_str", "insertion_symbols"]] = split_columns_df
+        else:
+            column_name_df["position_str"] = column_name_df["name_without_ref"]
+            column_name_df["insertion_symbols"] = None
+        column_name_df["position_int"] = column_name_df["position_str"].apply(int)
+        column_name_df["ref_symbol"] = column_name_df["position_str"].apply(
+            lambda x: partial_ref_seq.get(x, "X")
+        )
+        column_name_df["is_insertion"] = column_name_df["insertion_symbols"].apply(
+            lambda x: False if pd.isna(x) or len(x) == 0 else True
+        )
+        column_name_df["name"] = (
+            column_name_df["ref_symbol"] + column_name_df["name_without_ref"]
+        )
+        column_name_df.sort_values(
+            by=["position_int", "is_insertion", "insertion_symbols"], inplace=True
+        )
+        column_name_df.set_index("name_without_ref", drop=False)
+
+        # Verify if NextClade data can be reconstructed from alignment
+        # If no reference sequence is provided, alignment start/end and missing ranges cannot be fully reconstructed and are ignored
+        if verify:
+            # Get some indexing information
+            position_names = column_name_df["name_without_ref"].tolist()
+            position_is_insertion = column_name_df["is_insertion"].tolist()
+            position_indexes = column_name_df["position_int"].tolist()
+            ref_seq_length = max(position_indexes)
+            # Get sequences from columns, i.e. the transpose, in an optimised way
+            template_seq = [partial_ref_seq.get(x, "X") for x in position_names]
+            seqs = [copy.deepcopy(template_seq) for i in range(0, n_seqs)]
+            for i, position in enumerate(position_names):
+                column = columns[position]
+                template_symbol = template_seq[i]
+                for j, mutated_nucleotide in enumerate(column):
+                    if mutated_nucleotide != template_symbol:
+                        seqs[j][i] = mutated_nucleotide
+            seqs = {x: "".join(y) for x, y in zip(nextclade_df["seqName"], seqs)}
+            # Go over each sequence
+            for seq_name, seq in seqs.items():
+                # Initialise some
+                substitutions = []
+                deletion_ranges = []
+                insertions = []
+                nonACGTN_ranges = []
+                missing_ranges = []
+                prev_index = -1
+                prev_symbol = "X"
+                deletion_start = -1
+                deletion_length = 0
+                missing_start = -1
+                missing_length = 0
+                nonACGTN_start = -1
+                nonACGTN_length = 0
+                # Determine alignment start and end, as one-based indexes
+                i = 0
+                alignment_start = 1
+                while i < len(seq) and seq[i] == "*":
+                    if not position_is_insertion[i]:
+                        alignment_start = alignment_start + 1
+                    i = i + 1
+                i = len(seq) - 1
+                alignment_end = ref_seq_length
+                while i >= 0 and seq[i] == "*":
+                    if not position_is_insertion[i]:
+                        alignment_end = alignment_end - 1
+                    i = i - 1
+                # Go over each symbol and compose substitutions, deletions, insertions, nonACTGNs and missing
+                for i, mutated_nucleotide in enumerate(seq):
+                    position = position_names[i]
+                    index = position_indexes[i]
+                    is_insertion = position_is_insertion[i]
+                    if prev_index < index - 1 or (
+                        mutated_nucleotide != prev_symbol and not is_insertion
+                    ):
+                        # Non-consecutive reference position or different symbol -> add previous missing or deletion range if any
+                        if deletion_length == 1:
+                            deletion_ranges.append(str(prev_index))
+                        elif deletion_length > 1:
+                            deletion_ranges.append(
+                                str(prev_index - deletion_length + 1)
+                                + "-"
+                                + str(prev_index)
+                            )
+                        deletion_start = -1
+                        deletion_length = 0
+                        if missing_length == 1:
+                            missing_ranges.append(str(prev_index))
+                        elif missing_length > 1:
+                            missing_ranges.append(
+                                str(prev_index - missing_length + 1)
+                                + "-"
+                                + str(prev_index)
+                            )
+                        missing_start = -1
+                        missing_length = 0
+                        if nonACGTN_length == 1:
+                            nonACGTN_length.append(prev_symbol + ":" + str(prev_index))
+                        elif nonACGTN_length > 1:
+                            nonACGTN_ranges.append(
+                                prev_symbol
+                                + ":"
+                                + str(prev_index - nonACGTN_length + 1)
+                                + "-"
+                                + str(prev_index)
+                            )
+                        nonACGTN_start = -1
+                        nonACGTN_length = 0
+                    if is_insertion:
+                        # Insertion position
+                        if mutated_nucleotide == "X":
+                            # Insertion
+                            insertions.append(position)
+                    elif mutated_nucleotide == "*":
+                        # Outside alignment
+                        pass
+                    elif mutated_nucleotide == "N":
+                        # Missing
+                        if prev_index == index - 1 and missing_length > 0:
+                            # Consecutive missing
+                            missing_length += 1
+                        else:
+                            # Start of new missing
+                            missing_start = index
+                            missing_length = 1
+                    elif mutated_nucleotide == "-":
+                        # Deletion
+                        if prev_index == index - 1 and deletion_length > 0:
+                            # Consecutive deletion
+                            deletion_length += 1
+                        else:
+                            # Start of new deletion
+                            deletion_start = index
+                            deletion_length = 1
+                    elif mutated_nucleotide in "ACGT":
+                        # Substitution or identical to reference
+                        if mutated_nucleotide != template_seq[i]:
+                            # Substitution
+                            substitutions.append(
+                                template_seq[i] + position + mutated_nucleotide
+                            )
+                    else:
+                        # nonACGTN
+                        if prev_index == index - 1 and deletion_length > 0:
+                            # Consecutive nonACTGN
+                            nonACGTN_length += 1
+                        else:
+                            # Start of new deletion
+                            nonACGTN_start = index
+                            nonACGTN_length = 1
+                    if not is_insertion:
+                        prev_index = index
+                        prev_symbol = mutated_nucleotide
+                # Add final missing or deletion range if any
+                if deletion_length == 1:
+                    deletion_ranges.append(str(prev_index))
+                elif deletion_length > 1:
+                    deletion_ranges.append(
+                        str(prev_index - deletion_length + 1) + "-" + str(prev_index)
+                    )
+                if missing_length == 1:
+                    missing_ranges.append(str(prev_index))
+                elif missing_length > 1:
+                    missing_ranges.append(
+                        str(prev_index - missing_length + 1) + "-" + str(prev_index)
+                    )
+                if nonACGTN_length == 1:
+                    nonACGTN_ranges.append(mutated_nucleotide + ":" + str(prev_index))
+                elif nonACGTN_length > 1:
+                    nonACGTN_ranges.append(
+                        mutated_nucleotide
+                        + ":"
+                        + str(prev_index - nonACGTN_length + 1)
+                        + "-"
+                        + str(prev_index)
+                    )
+                # Compare with original NextClade data
+                mask = nextclade_df["seqName"] == seq_name
+                verification_pairs = {
+                    "substitutions": substitutions,
+                    "nonACGTNs": nonACGTN_ranges,
+                    "insertions": insertions,
+                    "deletions": deletion_ranges,
+                }
+                if not remove_conserved_ref:
+                    verification_pairs = verification_pairs | {
+                        "missing": missing_ranges,
+                        "alignmentStart": [str(alignment_start)],
+                        "alignmentEnd": [str(alignment_end)],
+                    }
+                for column_name, reconstructed_values in verification_pairs.items():
+                    actual_values = nextclade_df.loc[mask, column_name].iloc[0]
+                    if column_name == "alignmentStart":
+                        # actual_values = int(actual_values) + 1
+                        actual_values = int(actual_values)
+                    if actual_values is None or isinstance(actual_values, str):
+                        pass
+                    elif np.isnan(actual_values):
+                        actual_values = None
+                    elif isinstance(actual_values, int) or isinstance(
+                        actual_values, float
+                    ):
+                        # Alignment start and end are normally numeric, potentially also single deletions and missing if only singles present -> convert to str
+                        actual_values = str(int(actual_values))
+                    actual_values = (
+                        [] if actual_values is None else actual_values.split(",")
+                    )
+                    if collections.Counter(reconstructed_values) != collections.Counter(
+                        actual_values
+                    ):
+                        raise AssertionError(
+                            "Unable to reconstruct NextClade {:s} data for sequence {:s}".format(
+                                column_name, str(seq_name)
+                            )
+                        )
+
+        # Determine columns to remove
+        columns_to_remove = []
+        if remove_conserved_ref or remove_conserved_non_ref:
+            for key, value in columns.items():
+                symbols = str(set(value))
+                if len(symbols) == 1:
+                    # Conserved column
+                    if symbols == ref_seq[column_name_df.loc[key, "position_int"] - 1]:
+                        # Reference sequence symbol
+                        if remove_conserved_ref:
+                            columns_to_remove.append(key)
+                    else:
+                        # Other symbol
+                        if remove_conserved_non_ref:
+                            columns_to_remove.append(key)
+
+        # Create alignment df, with alignment columns having also the reference symbol as prefix, and symbols set to lowercase if necessary
+        ordered_column_names = {
+            x: y
+            for x, y in zip(column_name_df["name_without_ref"], column_name_df["name"])
+            if x not in columns_to_remove
+        }
+        ref_alignment = pd.DataFrame.from_dict(
+            {
+                y: columns[x] if uppercase else [z.lower() for z in columns[x]]
+                for x, y in ordered_column_names.items()
+            }
+        )
+        ref_alignment.index = nextclade_df["seqName"]
+
+        return ref_alignment
 
 
 class SeqProfileIdentifier(BaseIdentifier):
