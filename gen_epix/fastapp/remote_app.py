@@ -367,7 +367,7 @@ class RemoteApp(App):
                     return_model_class = UUID
                     is_list = True
                 case _:
-                    raise NotImplementedError(f"Unsupported operation: {cmd.operation}")
+                    raise AssertionError(f"Unsupported operation: {cmd.operation}")
             response.raise_for_status()
         retval = self._content_to_obj(response, return_model_class, is_list=is_list)
         return retval

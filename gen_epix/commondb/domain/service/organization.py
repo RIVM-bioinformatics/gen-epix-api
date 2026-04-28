@@ -36,10 +36,12 @@ class BaseOrganizationService(BaseService[BaseOrganizationRepository]):
         self,
         cmd: command.RetrieveOrganizationContactsCommand,
     ) -> model.OrganizationContacts:
+        """Retrieve organization contact information."""
         raise NotImplementedError()
 
     @abc.abstractmethod
     def retrieve_user_by_key(self, user_key: str) -> model.User:
+        """Retrieve user by their unique key."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -47,19 +49,22 @@ class BaseOrganizationService(BaseService[BaseOrganizationRepository]):
         self,
         cmd: command.InviteUserCommand,
     ) -> model.UserInvitation:
-        raise NotImplementedError
+        """Send invitation to user."""
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def retrieve_invite_user_constraints(
         self, cmd: command.RetrieveInviteUserConstraintsCommand
     ) -> model.UserInvitationConstraints:
+        """Retrieve constraints for user invitation."""
         raise NotImplementedError()
 
     @abc.abstractmethod
     def register_invited_user(
         self, cmd: command.RegisterInvitedUserCommand
     ) -> model.User:
-        raise NotImplementedError
+        """Register user from invitation."""
+        raise NotImplementedError()
 
     def generate_user_invitation_token(self, **kwargs: Any) -> str:
         return str(uuid.uuid4())
@@ -69,4 +74,5 @@ class BaseOrganizationService(BaseService[BaseOrganizationRepository]):
         self,
         cmd: command.UpdateUserCommand,
     ) -> model.User:
-        raise NotImplementedError
+        """Update user information."""
+        raise NotImplementedError()

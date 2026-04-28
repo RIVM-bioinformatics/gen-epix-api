@@ -30,17 +30,17 @@ class MockIDPClient(IdpClient):
         return self._id
 
     def get_identity_provider(self) -> IdentityProvider:
-        raise NotImplementedError()
+        raise NotImplementedError("Method not yet implemented")
 
     async def get_claims_from_jwt(
         self, jwt_token: str
     ) -> dict[str, str | int | bool | list[str]] | None:
-        raise NotImplementedError()
+        raise NotImplementedError("Method not yet implemented")
 
     def get_claims_from_userinfo(
         self, access_token: str
     ) -> dict[str, str | int | bool | list[str]]:
-        raise NotImplementedError()
+        raise NotImplementedError("Method not yet implemented")
 
     async def __call__(self, request: Request) -> Claims | None:
         if authorization := request.headers.get("authorization"):

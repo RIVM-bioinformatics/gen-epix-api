@@ -51,10 +51,12 @@ class BaseSAMapper(abc.ABC):
 
     @abc.abstractmethod
     def get_field_names_by_type(self, field_type: FieldType) -> tuple:
+        """Get field names by field type."""
         raise NotImplementedError()
 
     @abc.abstractmethod
     def get_field_names_by_set(self, field_type_set: FieldTypeSet) -> tuple:
+        """Get field names by field type set."""
         raise NotImplementedError()
 
     def get_field_name_map(self, reverse: bool = False) -> dict[str, str]:
@@ -75,7 +77,6 @@ class BaseSAMapper(abc.ABC):
             if field_name and row_field_name
         }
 
-    @abc.abstractmethod
     def get_mapped_field_name(
         self, field_name: str, reverse: bool = False
     ) -> str | None:
@@ -88,10 +89,12 @@ class BaseSAMapper(abc.ABC):
 
     @abc.abstractmethod
     def get_row_field_names_by_type(self, field_type: FieldType) -> tuple:
+        """Get row field names by field type."""
         raise NotImplementedError()
 
     @abc.abstractmethod
     def get_row_field_names_by_set(self, field_type_set: FieldTypeSet) -> tuple:
+        """Get row field names by field type set."""
         raise NotImplementedError()
 
     def get_id(self, obj: Model) -> Hashable | MappedColumn:
@@ -99,21 +102,25 @@ class BaseSAMapper(abc.ABC):
 
     @abc.abstractmethod
     def get_row_id(self, row: Row | type[Row]) -> Hashable:
+        """Get row ID from row object or row class."""
         raise NotImplementedError()
 
     @abc.abstractmethod
     def dump(self, user_id: Hashable | None, obj: Model, **kwargs: Any) -> Any:
-        raise NotImplementedError
+        """Dump model object to SQLAlchemy format."""
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def update(
         self, user_id: Hashable | None, obj: Model, row: Row, **kwargs: Any
     ) -> bool:
-        raise NotImplementedError
+        """Update row with model object values."""
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def load(self, row: Row, **kwargs: Any) -> Model:
-        raise NotImplementedError
+        """Load model object from SQLAlchemy row."""
+        raise NotImplementedError()
 
     @staticmethod
     def _get_schema_name(row: Row | type[Row]) -> str | None:
@@ -139,6 +146,7 @@ class BaseSAMapperFactory(abc.ABC):
         row_class: type,
         field_name_map: dict[str, str] | None = None,
     ) -> BaseSAMapper:
+        """Create a SAMapper instance for model and row classes."""
         raise NotImplementedError()
 
 

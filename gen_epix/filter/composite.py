@@ -152,14 +152,18 @@ class CompositeFilter(Filter):
         return self
 
     def _match(self, value: Any) -> bool:
-        # Function is implemented dynamically in _validate_state
-        raise NotImplementedError()
+        """Function is implemented dynamically in _validate_state"""
+        raise NotImplementedError(
+            "Method is implemented dynamically in _validate_state"
+        )
 
     def _match_row(
         self, value_exists: Iterable[bool], value: Iterable[Any], is_model: bool
     ) -> bool:
-        # Function is implemented dynamically in _validate_state
-        raise NotImplementedError()
+        """Function is implemented dynamically in _validate_state"""
+        raise NotImplementedError(
+            "Method is implemented dynamically in _validate_state"
+        )
 
     def _not_none_row_iterator(
         self, row: dict[Hashable, Any | None] | BaseModel, is_model: bool = False

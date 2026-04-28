@@ -657,7 +657,7 @@ class SARepository(BaseRepository):
         _objs: Iterable[Model],
         **kwargs: Any,
     ) -> list[Model] | list[Hashable]:
-        raise NotImplementedError
+        raise NotImplementedError("Method not yet implemented")
 
     def delete_one(
         self,

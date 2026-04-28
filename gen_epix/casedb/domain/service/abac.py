@@ -82,8 +82,10 @@ class BaseAbacService(CommonAbacService):
 
     @abc.abstractmethod
     def get_case_abac(self, cmd: command.Command) -> model.CaseAbac:
-        raise NotImplementedError
+        """Get case access control permissions for command."""
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def get_ref_data_access(self, cmd: command.Command) -> model.RefDataAccess:
-        raise NotImplementedError
+        """Get reference data access permissions for command."""
+        raise NotImplementedError()

@@ -27,6 +27,7 @@ class BaseRepository(abc.ABC):
     @classmethod
     @abc.abstractmethod
     def create_repository(cls, **kwargs: Any) -> "BaseRepository":
+        """Factory method to create a repository instance with the given parameters."""
         raise NotImplementedError()
 
     @classmethod
@@ -34,7 +35,7 @@ class BaseRepository(abc.ABC):
         """
         Remove all contents of the repository.
         """
-        raise NotImplementedError()
+        raise NotImplementedError("Method is not implemented for this repository")
 
     @abc.abstractmethod
     def crud(
@@ -110,6 +111,11 @@ class BaseRepository(abc.ABC):
         association_objs: Iterable[Model],
         **kwargs: Any,
     ) -> list[Model] | list[Hashable]:
+        """
+        Update association objects of the given model class that represent an
+        association between two other objects (e.g. a user and a role, or a case and a
+        data collection). The association objects are updated to match the provided association_objs, which means that association objects will be created, updated or deleted as needed. The association is determined by the link_field_names and corresponding
+        """
         return_id = kwargs.pop("return_id", False)
         excluded_association_objs: Iterable[Model] = kwargs.pop(
             "excluded_association_objs", []
@@ -424,10 +430,16 @@ class BaseRepository(abc.ABC):
         verify_exists: bool = True,
         verify_duplicate: bool = True,
     ) -> None:
-        raise NotImplementedError
+        """
+        Verify that the given object ids are valid for the given model class, which
+        means that they exist in the repository if verify_exists is True and that they
+        are not duplicated if verify_duplicate is True.
+        """
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def uow(self, **kwargs: Any) -> BaseUnitOfWork:
+        """Return a unit of work for this repository."""
         raise NotImplementedError()
 
     @staticmethod

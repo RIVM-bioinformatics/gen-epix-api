@@ -18,8 +18,10 @@ class BaseOrganizationRepository(BaseRepository):
     def is_existing_user_by_key(
         self, uow: BaseUnitOfWork, user_key: str | None
     ) -> bool:
+        """Check if a user exists by their unique key (e.g., email)."""
         raise NotImplementedError()
 
     @abc.abstractmethod
     def retrieve_user_by_key(self, uow: BaseUnitOfWork, user_key: str) -> model.User:
+        """Retrieve a user by their unique key (e.g., email)."""
         raise NotImplementedError()
