@@ -14,6 +14,8 @@ class OmopdbRemoteApp(CommondbRemoteApp):
 
     ROUTE_MAP: dict[type[Command], str] = {
         command.UploadPersonsCommand: "/upload/persons",
+        command.RetrievePersonsByQueryCommand: "/retrieve/person_ids_by_query",
+        command.RetrievePersonsByIdCommand: "/retrieve/persons_by_ids",
     }
 
     DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {
@@ -32,6 +34,14 @@ class OmopdbRemoteApp(CommondbRemoteApp):
         self.register_handler(
             command.UploadPersonsCommand,
             self.upload_persons,
+        )
+        self.register_handler(
+            command.RetrievePersonsByQueryCommand,
+            self.retrieve_persons_by_query,
+        )
+        self.register_handler(
+            command.RetrievePersonsByIdCommand,
+            self.retrieve_persons_by_id,
         )
 
     def upload_persons(
@@ -52,3 +62,39 @@ class OmopdbRemoteApp(CommondbRemoteApp):
             response.raise_for_status()
             data = response.json()
         return model.PersonBatchUploadResult(**data)
+
+    def retrieve_persons_by_query(
+        self,
+        cmd: command.RetrievePersonsByQueryCommand,
+    ) -> model.PersonQueryResult:
+        headers = self.get_headers(cmd)
+        route = self.get_route(cmd)
+        request_body = cmd.person_query
+
+        with self.get_client(cmd) as client:
+            response = client.post(
+                route,
+                json=json.loads(request_body.model_dump_json()),
+                headers=headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+        return model.PersonQueryResult(**data)
+
+    def retrieve_persons_by_id(
+        self,
+        cmd: command.RetrievePersonsByIdCommand,
+    ) -> list[model.FullPerson]:
+        headers = self.get_headers(cmd)
+        route = self.get_route(cmd)
+        request_body = cmd
+
+        with self.get_client(cmd) as client:
+            response = client.post(
+                route,
+                json=json.loads(request_body.model_dump_json()),
+                headers=headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+        return [model.FullPerson(**person) for person in data]
