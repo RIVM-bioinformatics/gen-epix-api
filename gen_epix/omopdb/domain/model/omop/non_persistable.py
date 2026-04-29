@@ -39,6 +39,18 @@ from gen_epix.omopdb.domain.model.omop.clinical_data import (
 )
 
 
+class SpecimenIdsByCohortResult(Model):
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="specimen_ids_by_cohort_results",
+        persistable=False,
+    )
+    specimen_ids_by_cohort_id: dict[UUID, list[UUID]] = Field(
+        description=(
+            "Map from cohort_id to the specimen_ids of the person in that cohort."
+        )
+    )
+
+
 class PersonQuery(Model):
     """
     A query for retrieving persons based on their demographic information. All
