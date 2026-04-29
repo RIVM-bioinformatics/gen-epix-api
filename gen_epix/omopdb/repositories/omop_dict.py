@@ -32,6 +32,34 @@ class OmopDictRepository(DictRepository, BaseOmopRepository):
                 modified_person_ids.add(person_id)
         return sorted(modified_person_ids)
 
+    def get_specimen_ids_by_cohort_ids(
+        self,
+        cohort_definition_id: UUID,
+        cohort_ids: list[UUID],
+    ) -> dict[UUID, list[UUID]]:
+        """See parent class method"""
+        cohort_id_set = frozenset(cohort_ids)
+        person_id_to_cohort_id: dict[UUID, UUID] = {}
+        for cohort in self.db[model.Cohort].values():
+            assert isinstance(cohort, model.Cohort)
+            if cohort.cohort_id is None:
+                continue
+            if cohort.cohort_definition_id != cohort_definition_id:
+                continue
+            if cohort.cohort_id not in cohort_id_set:
+                continue
+            person_id_to_cohort_id[cohort.subject_id] = cohort.cohort_id
+        result: dict[UUID, list[UUID]] = {}
+        for specimen in self.db[model.Specimen].values():
+            assert isinstance(specimen, model.Specimen)
+            if specimen.specimen_id is None:
+                continue
+            cohort_id = person_id_to_cohort_id.get(specimen.person_id)
+            if cohort_id is None:
+                continue
+            result.setdefault(cohort_id, []).append(specimen.specimen_id)
+        return result
+
     def get_full_persons_by_person_ids(
         self,
         person_ids: list[UUID],

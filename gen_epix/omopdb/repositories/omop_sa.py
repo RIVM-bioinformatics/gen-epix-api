@@ -34,6 +34,34 @@ class OmopSARepository(SARepository, BaseOmopRepository):
             modified_person_ids.update(row[0] for row in uow.session.execute(stmt))
         return sorted(modified_person_ids)
 
+    def get_specimen_ids_by_cohort_ids(
+        self,
+        cohort_definition_id: UUID,
+        cohort_ids: list[UUID],
+    ) -> dict[UUID, list[UUID]]:
+        """See parent class method"""
+        if not cohort_ids:
+            return {}
+        with self.uow() as uow:
+            assert isinstance(uow, SAUnitOfWork)
+            stmt = (
+                sa.select(sa_model.Cohort.cohort_id, sa_model.Specimen.specimen_id)
+                .join(
+                    sa_model.Specimen,
+                    sa_model.Cohort.subject_id == sa_model.Specimen.person_id,
+                )
+                .where(
+                    sa_model.Cohort.cohort_definition_id == cohort_definition_id,
+                    sa_model.Cohort.cohort_id.in_(cohort_ids),
+                )
+            )
+            result: dict[UUID, list[UUID]] = {}
+            for cohort_id, specimen_id in uow.session.execute(stmt):
+                if cohort_id is None or specimen_id is None:
+                    continue
+                result.setdefault(cohort_id, []).append(specimen_id)
+            return result
+
     def get_full_persons_by_person_ids(
         self,
         person_ids: list[UUID],
