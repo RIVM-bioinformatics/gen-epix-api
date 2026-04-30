@@ -4,7 +4,9 @@ Creation Date: March 1, 2026
 
 ## Prerequisites
 
-- **Python ≥ 3.13** (CI uses Python 3.14). (Source: `pyproject.toml#L17-L24`; Source: `.github/workflows/main.yml#L30-L33`)
+- **Python ≥ 3.14.1** (Source: `pyproject.toml#L17-L24`; Source: `.github/workflows/main.yml#L30-L33`).
+- **Preferred environment manager: `uv`**. For new contributors, use the
+  dedicated guide: [01a-UV-Getting-Started](./01a-UV-Getting-Started.md).
 - **ODBC driver** — CI installs `unixodbc-dev` and builds `pyodbc` from source. On Windows, install the Microsoft ODBC Driver for SQL Server. (Source: `.github/workflows/main.yml#L34-L37`)
 - **Dependencies**:
   ```
