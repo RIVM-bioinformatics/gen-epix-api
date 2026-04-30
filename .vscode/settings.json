@@ -88,5 +88,7 @@
     "python.testing.pytestEnabled": true,
     "chat.agent.maxRequests": 50,
     "diffEditor.wordWrap": "off",
-    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python"
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+    "python.terminal.activateEnvironment": true,
+    "python.terminal.activateEnvInCurrentTerminal": true,
 }
