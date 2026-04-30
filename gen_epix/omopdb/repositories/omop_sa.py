@@ -48,7 +48,11 @@ class OmopSARepository(SARepository, BaseOmopRepository):
                 sa.select(sa_model.Cohort.cohort_id, sa_model.Specimen.specimen_id)
                 .join(
                     sa_model.Specimen,
-                    sa_model.Cohort.subject_id == sa_model.Specimen.person_id,
+                    sa.and_(
+                        sa_model.Cohort.subject_id == sa_model.Specimen.person_id,
+                        sa_model.Specimen.specimen_date >= sa_model.Cohort.cohort_start_date,
+                        sa_model.Specimen.specimen_date <= sa_model.Cohort.cohort_end_date,
+                    ),
                 )
                 .where(
                     sa_model.Cohort.cohort_definition_id == cohort_definition_id,

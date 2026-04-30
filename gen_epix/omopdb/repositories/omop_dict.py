@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 from gen_epix.fastapp.repositories import DictRepository
@@ -39,7 +39,7 @@ class OmopDictRepository(DictRepository, BaseOmopRepository):
     ) -> dict[UUID, list[UUID]]:
         """See parent class method"""
         cohort_id_set = frozenset(cohort_ids)
-        person_id_to_cohort_id: dict[UUID, UUID] = {}
+        person_id_to_cohorts: dict[UUID, list[tuple[UUID, date, date]]] = {}
         for cohort in self.db[model.Cohort].values():
             assert isinstance(cohort, model.Cohort)
             if cohort.cohort_id is None:
@@ -48,16 +48,17 @@ class OmopDictRepository(DictRepository, BaseOmopRepository):
                 continue
             if cohort.cohort_id not in cohort_id_set:
                 continue
-            person_id_to_cohort_id[cohort.subject_id] = cohort.cohort_id
+            person_id_to_cohorts.setdefault(cohort.subject_id, []).append(
+                (cohort.cohort_id, cohort.cohort_start_date, cohort.cohort_end_date)
+            )
         result: dict[UUID, list[UUID]] = {}
         for specimen in self.db[model.Specimen].values():
             assert isinstance(specimen, model.Specimen)
-            if specimen.specimen_id is None:
+            if specimen.specimen_id is None or specimen.specimen_date is None:
                 continue
-            cohort_id = person_id_to_cohort_id.get(specimen.person_id)
-            if cohort_id is None:
-                continue
-            result.setdefault(cohort_id, []).append(specimen.specimen_id)
+            for cohort_id, start, end in person_id_to_cohorts.get(specimen.person_id, []):
+                if start <= specimen.specimen_date <= end:
+                    result.setdefault(cohort_id, []).append(specimen.specimen_id)
         return result
 
     def get_full_persons_by_person_ids(
