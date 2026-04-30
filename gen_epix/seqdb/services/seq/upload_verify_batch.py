@@ -2,7 +2,7 @@ from collections import defaultdict
 from uuid import UUID
 
 from gen_epix import fastapp
-from gen_epix.commondb.domain.enum import EtlStatus
+from gen_epix.commondb.domain.enum import EtlStatus, UploadAction
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.services import BatchUploader
 from gen_epix.filter.uuid_set import UuidSetFilter
@@ -32,6 +32,7 @@ def _verify_sample_children(
 
     # Child model specific verifications
     success &= _verify_children_seqs(self, cmd, batch_result, uow)
+    success &= _verify_children_seq_classifications(self, cmd, batch_result, uow)
     success &= _verify_children_seq_profiles(self, cmd, batch_result, uow)
 
     return success
@@ -110,12 +111,25 @@ def _verify_children_seqs(
                 if seq.read_set_id == read_set_id and seq.read_set2_id == read_set2_id:
                     # Same read sets -> skip since the seq is identical and there are
                     # no immutable parts
+                    old_seq_id = seq.id
                     seq.id = seq_id
                     seq_result.add_warning(
                         "a2b3c4d5",
                         f"Seq with same hash ({seq.seq_hash}), read sets and protocol already exists",
                     )
                     seq_result.status = EtlStatus.SKIPPED
+                    # Propagate the resolved DB ID to any child records that were
+                    # pointing to the pre-assigned ID
+                    if old_seq_id is not None and old_seq_id != seq_id:
+                        for sc in sample.seq_classifications or []:
+                            if sc.seq_id == old_seq_id:
+                                sc.seq_id = seq_id
+                        for st in sample.seq_taxonomies or []:
+                            if st.seq_id == old_seq_id:
+                                st.seq_id = seq_id
+                        for sp in sample.seq_profiles or []:
+                            if sp.seq_id == old_seq_id:
+                                sp.seq_id = seq_id
                     break
                 if seq.read_set_id is None and seq.read_set2_id is None:
                     # New seq with same hash but unknown read sets -> error since
@@ -126,6 +140,85 @@ def _verify_children_seqs(
                         f"Seq with same hash ({seq.seq_hash}) and protocol already exists with ID {seq_id}, but new seq has no read sets no read sets are provided for the new seq to compare",
                     )
                     break
+    return success
+
+
+def _verify_children_seq_classifications(
+    self: BatchUploader,
+    cmd: command.UploadSamplesCommand,
+    batch_result: model.SampleBatchUploadResult,
+    uow: fastapp.BaseUnitOfWork,
+) -> bool:
+    """
+    Detect existing SeqClassifications by their natural key (seq_id, protocol_id).
+
+    verify_children only looks up children by their id field, which is None for
+    SeqClassificationForUpload objects built from on-prem JSON. This function
+    fills in the existing id and marks the result appropriately so that
+    create_children does not attempt a duplicate INSERT.
+    """
+    user_id = cmd.user.id if cmd.user else None
+    samples = cmd.sample_batch.samples
+    sample_results = batch_result.samples
+    success = True
+
+    # Collect all seq_ids referenced by seq_classifications in this batch.
+    seq_ids = list(
+        {
+            sc.seq_id
+            for s in samples
+            for sc in s.seq_classifications or []
+            if sc.seq_id is not None and sc.seq_id != NULL_ID
+        }
+    )
+    if not seq_ids:
+        return success
+
+    # Retrieve existing seq_classifications keyed by (seq_id, protocol_id).
+    result_iter = self.service.repository.read_fields(
+        uow,
+        user_id,
+        model.SeqClassification,
+        ["seq_id", "protocol_id", "id"],
+        filter=UuidSetFilter(key="seq_id", members=frozenset(seq_ids)),
+    )
+    existing_map: dict[tuple[UUID, UUID], UUID] = {
+        (x[0], x[1]): x[2] for x in result_iter
+    }
+    if not existing_map:
+        return success
+
+    for sample, sample_result in zip(samples, sample_results):
+        for sc, sc_result in zip(
+            sample.seq_classifications or [],
+            sample_result.seq_classifications or [],
+        ):
+            if sc_result.status != EtlStatus.PENDING:
+                continue
+            if sc.seq_id is None or sc.seq_id == NULL_ID:
+                continue
+            if sc.protocol_id is None or sc.protocol_id == NULL_ID:
+                continue
+            existing_id = existing_map.get((sc.seq_id, sc.protocol_id))
+            if existing_id is None:
+                continue
+            # Existing SeqClassification found: fill in its id and mark as not new.
+            sc.id = existing_id
+            sc_result.id = existing_id
+            sc_result.is_new = False
+            if cmd.on_exists == UploadAction.ERROR:
+                success = False
+                sc_result.add_error(
+                    "d4c5b6a7",
+                    f"SeqClassification (seq_id={sc.seq_id}, protocol_id={sc.protocol_id}) already exists and on_exists={cmd.on_exists.value}",
+                )
+            elif cmd.on_exists == UploadAction.SKIP:
+                sc_result.status = EtlStatus.SKIPPED
+                sc_result.add_info(
+                    "c3b4a5d6",
+                    f"SeqClassification (seq_id={sc.seq_id}, protocol_id={sc.protocol_id}) already exists and on_exists={cmd.on_exists.value}",
+                )
+
     return success
 
 
@@ -219,6 +312,7 @@ def _verify_children_seq_profiles(
                     # Same seq -> skip since the seq profile is identical and there are
                     # no immutable parts
                     seq_profile.id = seq_profile_id
+                    seq_profile_result.id = seq_profile_id
                     seq_profile_result.add_warning(
                         "c7d8e9f0",
                         f"Seq profile with same hash ({seq_profile.content_hash}), seq and protocol already exists",
