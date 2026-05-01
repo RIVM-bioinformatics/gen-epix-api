@@ -180,6 +180,23 @@
             "justMyCode": true
         },
         {
+            "name": "api.omopdb.local.mock.sa_sqlite_refdata",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "api",
+                "OMOPDB",
+                "MOCK",
+                "SA_SQLITE_EMPTY"
+            ],
+            "justMyCode": true,
+            "env": {
+                "OMOPDB_REPOSITORY__OMOP__PROPS__FILE": "./data/omopdb/demo/omopdb.sa_sqlite.omop.refdata.sqlite",
+                "OMOPDB_REPOSITORY__ORGANIZATION__PROPS__FILE": "./data/omopdb/demo/omopdb.sa_sqlite.refdata.organization.sqlite"
+            }
+        },
+        {
             "name": "api.omopdb.local.mock.dict_demo",
             "type": "debugpy",
             "request": "launch",
