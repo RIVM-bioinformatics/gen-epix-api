@@ -114,7 +114,7 @@ def _verify_children_seqs(
                     old_seq_id = seq.id
                     seq.id = seq_id
                     seq_result.add_warning(
-                        "a2b3c4d5",
+                        "f202a96b",
                         f"Seq with same hash ({seq.seq_hash}), read sets and protocol already exists",
                     )
                     seq_result.status = EtlStatus.SKIPPED
@@ -136,7 +136,7 @@ def _verify_children_seqs(
                     # cannot verify if indeed it was derived from the same reads sets
                     success = False
                     seq_result.add_error(
-                        "b9e4f8a1",
+                        "c837034c",
                         f"Seq with same hash ({seq.seq_hash}) and protocol already exists with ID {seq_id}, but new seq has no read sets no read sets are provided for the new seq to compare",
                     )
                     break

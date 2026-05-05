@@ -123,7 +123,7 @@ def _verify_batch_refdata_allele_profiles(
             else:
                 success = False
                 profile_result.add_error(
-                    "c4d5e6f7",
+                    "a6097022",
                     f"Allele profile format {profile.format} is not supported for upload",
                 )
                 continue
@@ -132,7 +132,7 @@ def _verify_batch_refdata_allele_profiles(
         else:
             success = False
             profile_result.add_error(
-                "b3c4d5e6",
+                "b4cb2ea0",
                 "Allele profile must provide one of: content, allele_ids, or locus_allele_id_map",
             )
             continue
@@ -141,7 +141,7 @@ def _verify_batch_refdata_allele_profiles(
         if len(allele_ids) != n_loci:
             success = False
             profile_result.add_error(
-                "d3f5c6b2",
+                "b29dcaf6",
                 f"Length of allele_ids ({len(allele_ids)}) does not match number of loci in locus set ({len(locus_ids)})",
             )
             continue
@@ -219,7 +219,7 @@ def _verify_batch_refdata_allele_profiles(
                     + f", ... (and {len(missing_allele_ids_list) - 5} more)"
                 )
             batch_result.add_error(
-                "a9b8c7d6",
+                "7eeced9e",
                 f"Missing new alleles: {missing_alleles_str}",
             )
         # Determine if any extra alleles
@@ -237,7 +237,7 @@ def _verify_batch_refdata_allele_profiles(
                     + f", ... (and {len(extra_allele_ids_list) - 5} more)"
                 )
             batch_result.add_warning(
-                "f6e5d4c3",
+                "dda74ae0",
                 f"Superfluous new alleles provided: {extra_alleles_str}",
             )
         # Verify locus IDs of provided alleles
@@ -258,7 +258,7 @@ def _verify_batch_refdata_allele_profiles(
                 # Different locus ID, put the one derived from the profile
                 success = False
                 batch_result.add_warning(
-                    "e4f3g2h1",
+                    "e401b1bd",
                     f"Different locus ID for new allele {allele.id}: expected {expected_locus_id}, got {locus_id}, used the former",
                 )
         # Remove any extra alleles

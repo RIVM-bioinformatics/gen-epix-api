@@ -122,7 +122,7 @@ class BatchUploader:
         # Initialize the upload result
         batch_result = self.init_batch_upload_result(cmd)
         batch_result.add_info(
-            code="f1e2d3c4",
+            code="4f9046fe",
             message="Upload started",
         )
 
@@ -157,25 +157,25 @@ class BatchUploader:
             if not success:
                 # Do not proceed with upsert due to errors
                 batch_result.add_error(
-                    code="d6e5c3b4",
+                    code="02095f22",
                     message="Verification found errors, upload will not proceed",
                 )
                 return batch_result
 
             # Upsert the batch data
             batch_result.add_info(
-                code="c1a2b3d4",
+                code="add3eb54",
                 message="Upsert started",
             )
             success = self.upsert_batch(cmd, batch_result, uow)
             batch_result.add_info(
-                code="e4f5a6b7",
+                code="f8b12027",
                 message="Upsert ended",
             )
             if not success:
                 # Rollback due to errors, but do not raise an exception since those will be reported in batch_result
                 batch_result.add_error(
-                    code="f8e7d6c5",
+                    code="05358e8a",
                     message="Upload had errors",
                 )
                 uow.rollback()
@@ -447,7 +447,7 @@ class BatchUploader:
                 # be processed if the parent ID is resolved via identifier lookup).
                 parent_result.status = EtlStatus.SKIPPED
                 parent_result.add_info(
-                    "9d0e1f2a",
+                    "a740e288",
                     f"{self.parent_class.NAME} model not provided; parent record will not be written",
                 )
                 continue
@@ -457,13 +457,13 @@ class BatchUploader:
                 if cmd.on_new == UploadAction.ERROR:
                     success = False
                     parent_result.add_error(
-                        "b2d4f6a8",
+                        "eacd67d4",
                         f"{self.parent_class.NAME} has no ID and on_new={cmd.on_new.value}.",
                     )
                 elif cmd.on_new == UploadAction.SKIP:
                     parent_result.status = EtlStatus.SKIPPED
                     parent_result.add_info(
-                        "c3e5g7b9",
+                        "f457324b",
                         f"{self.parent_class.NAME} has no ID and on_new={cmd.on_new.value}.",
                     )
                 continue
@@ -484,7 +484,7 @@ class BatchUploader:
                 if cmd.on_exists == UploadAction.ERROR:
                     success = False
                     parent_result.add_error(
-                        "d3f5b6a1",
+                        "1e5e22b3",
                         f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
                     )
                 elif cmd.on_exists == UploadAction.SKIP:
@@ -499,21 +499,21 @@ class BatchUploader:
                 if cmd.on_new == UploadAction.ERROR:
                     success = False
                     parent_result.add_error(
-                        "e5a6c7b2",
+                        "c544eba4",
                         f"{self.parent_class.NAME} does not exist and on_new={cmd.on_new.value}.",
                     )
                 elif cmd.on_new == UploadAction.SKIP:
                     # New parent and on_new=SKIP: do not create
                     parent_result.status = EtlStatus.SKIPPED
                     parent_result.add_info(
-                        "b6d7e8f3",
+                        "cd349a43",
                         f"{self.parent_class.NAME} does not exist and on_new={cmd.on_new.value}.",
                     )
                 elif cmd.on_new == UploadAction.CREATE:
                     # New parent and on_new=CREATE: will be created, nothing left to check for this parent
                     if self.is_null(parent_for_upload.id):
                         parent_result.add_info(
-                            "c8f9a0b4",
+                            "8f289ecb",
                             f"{self.parent_class.NAME} will be created with generated ID",
                         )
                     else:
@@ -608,7 +608,7 @@ class BatchUploader:
                             if existing_parent_id != parent_id:
                                 success = False
                                 child_result.add_error(
-                                    "e8f9a0b1",
+                                    "cfc3da21",
                                     f"{child_model_class.NAME}.id={child_id} refers to {child_parent_id_field_name}={existing_parent_id}, which does not match existing {self.parent_for_upload_class.NAME}.{self.parent_id_field_name}={parent_id}",
                                 )
                     else:
@@ -632,7 +632,7 @@ class BatchUploader:
                     if cmd.on_exists == UploadAction.ERROR:
                         success = False
                         child_result.add_error(
-                            "c6e7f8a0",
+                            "c351c931",
                             f"{child_for_upload.__class__.NAME} already exists and on_exists={cmd.on_exists.value}",
                         )
                     elif cmd.on_exists == UploadAction.SKIP:
@@ -647,14 +647,14 @@ class BatchUploader:
                     if cmd.on_new == UploadAction.ERROR:
                         success = False
                         child_result.add_error(
-                            "d5a6b7c2",
+                            "2824fa39",
                             f"{child_for_upload.__class__.NAME} does not exist and on_new={cmd.on_new.value}",
                         )
                     elif cmd.on_new == UploadAction.SKIP:
                         # New child and on_new=SKIP: do not create
                         child_result.status = EtlStatus.SKIPPED
                         child_result.add_info(
-                            "8b7c6d3f",
+                            "cfc3da21",
                             f"{child_for_upload.__class__.NAME} does not exist and on_new={cmd.on_new.value}",
                         )
                     elif cmd.on_new == UploadAction.CREATE:
@@ -855,7 +855,7 @@ class BatchUploader:
                 parent_id = parent_for_upload.id
                 if self.is_null(parent_id):
                     child_result.add_error(
-                        "f1e2d3c4",
+                        "f701df83",
                         f"Child cannot be created: parent has no resolved ID "
                         f"(parent status={parent_result.status.value})",
                     )
@@ -937,7 +937,7 @@ class BatchUploader:
                 parent_id = parent_for_upload.id
                 if self.is_null(parent_id):
                     child_result.add_error(
-                        "a5b6c7d8",
+                        "1417de99",
                         f"Child cannot be updated: parent has no resolved ID "
                         f"(parent status={parent_result.status.value})",
                     )
@@ -1058,7 +1058,7 @@ class BatchUploader:
                     if existing_identifier.internal_id != obj_id:
                         success = False
                         identifier_result.add_error(
-                            "f8a9b0c1",
+                            "0561ecd7",
                             f"{model_class.NAME} Identifier ({identifier_for_upload.identifier_issuer_id}, {identifier_for_upload.external_id}) refers to internal_id={existing_identifier.internal_id}, which does not match {obj_id_field_name}={obj_id}",
                         )
 
@@ -1202,7 +1202,7 @@ class BatchUploader:
                 if not identifier_result.is_new:
                     # Not new: unexpected since updating existing Identifiers is not supported
                     identifier_result.add_error(
-                        "a2b5c8e1",
+                        "d3ac4368",
                         f"{identifier_class.NAME} ({identifier_for_upload.identifier_issuer_id}, {identifier_for_upload.external_id}) already exists and cannot be updated",
                     )
                     continue
@@ -1362,7 +1362,7 @@ class BatchUploader:
                             # NULL_ID provided: error since eventual ID may not be NULL_ID
                             success = False
                             child_result.add_error(
-                                "b7c2e5f8",
+                                "1e496cee",
                                 f"{linked_model_id_field_name}=NULL_ID could not be resolved",
                             )
                         else:
@@ -1374,7 +1374,7 @@ class BatchUploader:
                             # Link code does not exist
                             success = False
                             child_result.add_error(
-                                "d2c4b6a8",
+                                "ff4ff6db",
                                 f"{linked_model_code_field_name}={link_code} does not exist",
                             )
                         else:
@@ -1398,7 +1398,7 @@ class BatchUploader:
                         # Link ID does not exist
                         success = False
                         child_result.add_error(
-                            "e3b5c7d9",
+                            "dec840ca",
                             f"{linked_model_id_field_name}={link_id} does not exist",
                         )
                     elif link_code is None:
@@ -1408,14 +1408,14 @@ class BatchUploader:
                         # Link code does not exist
                         success = False
                         child_result.add_error(
-                            "c7a9b2e4",
+                            "95558de7",
                             f"{linked_model_code_field_name}={link_code} does not exist",
                         )
                     elif link_code != id_code_map[link_id]:
                         # Link ID exists but code does not match provided code
                         success = False
                         child_result.add_error(
-                            "a4d7b9c3",
+                            "79de83f2",
                             f"{linked_model_code_field_name}={link_code} with {linked_model_id_field_name}={code_id_map[link_code]} does not match provided {linked_model_id_field_name}={link_id}",
                         )
                     else:
@@ -1537,7 +1537,7 @@ class BatchUploader:
                 success = False
                 obj_result.status = EtlStatus.FAILED
                 obj_result.add_error(
-                    "e9c1b3d5",
+                    "8b7824f4",
                     f"Cannot update object without valid ID: {obj}",
                 )
             else:
@@ -1574,7 +1574,7 @@ class BatchUploader:
                     success = False
                     obj_result.status = EtlStatus.FAILED
                     obj_result.add_error(
-                        "d3c9f6b1",
+                        "f5e09001",
                         f"Field {field_name} with existing value {existing_value} may not be updated.",
                     )
                     continue
@@ -1598,7 +1598,7 @@ class BatchUploader:
             # Determine whether to update, i.e. if any values are indeed different, or otherwise skip
             if not is_updated and obj_result.status != EtlStatus.FAILED:
                 obj_result.status = EtlStatus.SKIPPED
-                obj_result.add_info("f7a8b2d4", "Content is identical")
+                obj_result.add_info("f5e09001", "Content is identical")
             else:
                 to_update_objs.append(obj)
                 to_update_obj_results.append(obj_result)
