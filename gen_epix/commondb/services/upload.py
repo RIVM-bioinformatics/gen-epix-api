@@ -443,8 +443,13 @@ class BatchUploader:
             parent_id = parent_for_upload.id
             parent = parent_for_upload.get_parent()
             if parent is None:
-                # Parent not given, set status to SKIPPED
+                # Parent not given: skip writing the parent record (children may still
+                # be processed if the parent ID is resolved via identifier lookup).
                 parent_result.status = EtlStatus.SKIPPED
+                parent_result.add_info(
+                    "9d0e1f2a",
+                    f"{self.parent_class.NAME} model not provided; parent record will not be written",
+                )
                 continue
             if self.is_null(parent_id):
                 # Parent given but no ID: always a new entity.
@@ -837,7 +842,7 @@ class BatchUploader:
             to_create_child_for_uploads: list[Model] = []
             for (
                 parent_for_upload,
-                _,
+                parent_result,
                 child_for_upload,
                 child_result,
             ) in parent_child_tuples:
@@ -849,11 +854,11 @@ class BatchUploader:
                     continue
                 parent_id = parent_for_upload.id
                 if self.is_null(parent_id):
-                    # # Parent was skipped or failed (e.g. parent model was null); skip child
-                    # TODO: investigate this case
-                    # raise AssertionError(
-                    #     f"Parent ID should not be null for child to be created, but got null for parent_for_upload={parent_for_upload}"
-                    # )
+                    child_result.add_error(
+                        "f1e2d3c4",
+                        f"Child cannot be created: parent has no resolved ID "
+                        f"(parent status={parent_result.status.value})",
+                    )
                     continue
                 # Set parent ID link in child, which is known for certain at this point
                 setattr(child_for_upload, child_parent_id_field_name, parent_id)
@@ -919,7 +924,7 @@ class BatchUploader:
             )
             for (
                 parent_for_upload,
-                _,
+                parent_result,
                 child_for_upload,
                 child_result,
             ) in parent_child_tuples:
@@ -930,12 +935,12 @@ class BatchUploader:
                     # Only PENDING children can be updated
                     continue
                 parent_id = parent_for_upload.id
-                if parent_id is None:
-                    # TODO: investigate this case
-                    # raise AssertionError(
-                    #     f"Parent ID should not be null for child to be created, but got null for parent_for_upload={parent_for_upload}"
-                    # )
-                    # # Parent was skipped or failed (e.g. parent model was null); skip child
+                if self.is_null(parent_id):
+                    child_result.add_error(
+                        "a5b6c7d8",
+                        f"Child cannot be updated: parent has no resolved ID "
+                        f"(parent status={parent_result.status.value})",
+                    )
                     continue
                 # Set parent ID link in child, which is known for certain at this point
                 setattr(child_for_upload, child_parent_id_field_name, parent_id)
