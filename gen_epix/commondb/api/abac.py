@@ -12,8 +12,9 @@ from gen_epix.fastapp.api import CrudEndpointGenerator
 def create_abac_endpoints(
     router: APIRouter | FastAPI,
     app: App,
+    service_type: enum.ServiceType = enum.ServiceType.ABAC,
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
-    **kwargs: Any,
+    **_kwargs: Any,
 ) -> None:
     assert handle_exception
     app_impl: AppImplDetails = app.impl
@@ -22,7 +23,7 @@ def create_abac_endpoints(
     # CRUD
     crud_endpoint_sets = CrudEndpointGenerator.create_crud_endpoint_set_for_domain(
         app,
-        service_type=enum.ServiceType.ABAC,
+        service_type=service_type,
         user_dependency=registered_user_dependency,
     )
     CrudEndpointGenerator.generate_endpoints(
