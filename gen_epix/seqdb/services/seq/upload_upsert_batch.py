@@ -1,4 +1,4 @@
-from gen_epix.commondb.domain.enum import UploadAction
+from gen_epix.commondb.domain.enum import EtlStatus, UploadAction
 from gen_epix.commondb.services import BatchUploader
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
@@ -55,7 +55,7 @@ def _update_profile_distances(
     user = cmd.user if cmd.user else None
     seq_profiles: list[model.SeqProfileForUpload] = []
 
-    # Collect profiles with their assigned IDs from the upload result.
+    # Collect only profiles that were actually written (created or updated).
     # batch_result.samples is positionally aligned with cmd.sample_batch.samples.
     for sample_for_upload, sample_result in zip(
         cmd.sample_batch.samples, batch_result.samples
@@ -63,9 +63,14 @@ def _update_profile_distances(
         for seq_profile, seq_profile_result in zip(
             sample_for_upload.seq_profiles or [], sample_result.seq_profiles or []
         ):
+            if seq_profile_result.status not in (EtlStatus.CREATED, EtlStatus.UPDATED):
+                continue
             seq_profiles.append(
                 seq_profile.model_copy(update={"id": seq_profile_result.id})
             )
+
+    if not seq_profiles:
+        return success
 
     calculate_seq_distance_result: list[model.CalculateSeqDistancesResult] = (
         self.service.app.handle(
