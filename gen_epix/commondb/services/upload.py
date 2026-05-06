@@ -1339,6 +1339,9 @@ class BatchUploader:
             }
 
         # Verify links
+        link_msg_part = (
+            f"link to {linked_model_class.NAME}.{linked_model_id_field_name}"
+        )
         for parent, parent_result in parent_result_pairs:
             children_for_upload: list[Model] = getattr(parent, child_field_name) or []
             child_results: list[UploadResult] = (
@@ -1363,7 +1366,7 @@ class BatchUploader:
                             success = False
                             child_result.add_error(
                                 "1e496cee",
-                                f"{linked_model_id_field_name}=NULL_ID could not be resolved",
+                                f"{child_for_upload.__class__.NAME}.{link_id_field_name}=NULL_ID {link_msg_part} could not be resolved",
                             )
                         else:
                             # Nothing provided: optional link assumed, nothing to do
@@ -1375,7 +1378,7 @@ class BatchUploader:
                             success = False
                             child_result.add_error(
                                 "ff4ff6db",
-                                f"{linked_model_code_field_name}={link_code} does not exist",
+                                f"{child_for_upload.__class__.NAME}.{link_code_field_name}={link_code} link to {linked_model_class.NAME}.{linked_model_code_field_name} does not exist",
                             )
                         else:
                             # Link code exists: fill in link ID
@@ -1399,7 +1402,7 @@ class BatchUploader:
                         success = False
                         child_result.add_error(
                             "dec840ca",
-                            f"{linked_model_id_field_name}={link_id} does not exist",
+                            f"{child_for_upload.__class__.NAME}.{link_id_field_name}={link_id} link to {linked_model_class.NAME}.{linked_model_id_field_name} does not exist",
                         )
                     elif link_code is None:
                         # Link ID exists and code not given: nothing to do since code is only meant to look up ID
@@ -1409,14 +1412,14 @@ class BatchUploader:
                         success = False
                         child_result.add_error(
                             "95558de7",
-                            f"{linked_model_code_field_name}={link_code} does not exist",
+                            f"{child_for_upload.__class__.NAME}.{link_code_field_name}={link_code} link to {linked_model_class.NAME}.{linked_model_code_field_name} does not exist",
                         )
                     elif link_code != id_code_map[link_id]:
                         # Link ID exists but code does not match provided code
                         success = False
                         child_result.add_error(
                             "79de83f2",
-                            f"{linked_model_code_field_name}={link_code} with {linked_model_id_field_name}={code_id_map[link_code]} does not match provided {linked_model_id_field_name}={link_id}",
+                            f"{child_for_upload.__class__.NAME}.{linked_model_code_field_name}={link_code} with {linked_model_class.NAME}.{linked_model_id_field_name}={code_id_map[link_code]} does not match provided {child_for_upload.__class__.NAME}.{link_id_field_name}={link_id}",
                         )
                     else:
                         # Link ID and code both exist and match: nothing to do
