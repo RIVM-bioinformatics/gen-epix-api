@@ -16,12 +16,16 @@ class OmopdbRemoteApp(CommondbRemoteApp):
         command.UploadPersonsCommand: "/upload/persons",
         command.RetrievePersonsByQueryCommand: "/retrieve/person_ids_by_query",
         command.RetrievePersonsByIdCommand: "/retrieve/persons_by_ids",
+        command.RetrieveSpecimenIdsByCohortIdsCommand: (
+            "/retrieve/specimen_ids_by_cohort_ids"
+        ),
     }
 
     DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {
         command.UploadPersonsCommand: 45.0,
         command.RetrievePersonsByIdCommand: 45.0,
         command.RetrievePersonsByQueryCommand: 45.0,
+        command.RetrieveSpecimenIdsByCohortIdsCommand: 45.0,
     }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -42,6 +46,10 @@ class OmopdbRemoteApp(CommondbRemoteApp):
         self.register_handler(
             command.RetrievePersonsByIdCommand,
             self.retrieve_persons_by_id,
+        )
+        self.register_handler(
+            command.RetrieveSpecimenIdsByCohortIdsCommand,
+            self.retrieve_specimen_ids_by_cohort_ids,
         )
 
     def upload_persons(
@@ -80,6 +88,23 @@ class OmopdbRemoteApp(CommondbRemoteApp):
             response.raise_for_status()
             data = response.json()
         return model.PersonQueryResult(**data)
+
+    def retrieve_specimen_ids_by_cohort_ids(
+        self,
+        cmd: command.RetrieveSpecimenIdsByCohortIdsCommand,
+    ) -> model.SpecimenIdsByCohortResult:
+        headers = self.get_headers(cmd)
+        route = self.get_route(cmd)
+        request_body = cmd
+        with self.get_client(cmd) as client:
+            response = client.post(
+                route,
+                json=json.loads(request_body.model_dump_json()),
+                headers=headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+        return model.SpecimenIdsByCohortResult(**data)
 
     def retrieve_persons_by_id(
         self,
