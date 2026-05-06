@@ -53,6 +53,17 @@ class RetrievePersonsByIdCommand(Command):
         return person_ids
 
 
+class RetrieveSpecimenIdsByCohortIdsCommand(Command):
+    """
+    Given a set of cohort IDs (equivalent to CASEDB case IDs) and a cohort
+    definition ID, retrieve the specimen IDs (equivalent to SEQDB sample IDs)
+    for the persons belonging to those cohorts.
+    """
+
+    cohort_definition_id: UUID = Field(description="The cohort definition ID.")
+    cohort_ids: list[UUID] = Field(description="The cohort IDs to look up. UNIQUE")
+
+
 # CRUD commands
 class CareSiteCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.CareSite

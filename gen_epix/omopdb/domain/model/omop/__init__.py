@@ -109,6 +109,9 @@ from gen_epix.omopdb.domain.model.omop.non_persistable import PersonQuery as Per
 from gen_epix.omopdb.domain.model.omop.non_persistable import (
     PersonQueryResult as PersonQueryResult,
 )
+from gen_epix.omopdb.domain.model.omop.non_persistable import (
+    SpecimenIdsByCohortResult as SpecimenIdsByCohortResult,
+)
 
 # Ontology domain imports
 from gen_epix.omopdb.domain.model.omop.ontology import Concept as Concept

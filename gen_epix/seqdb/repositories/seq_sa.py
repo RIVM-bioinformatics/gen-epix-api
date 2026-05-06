@@ -191,8 +191,10 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         uow: BaseUnitOfWork,
         protocol_id: UUID,
     ) -> Iterable[UUID]:
-        stmt = sa.select(sa.func.distinct(sa_model.SeqDistance.seq_profile_id)).where(
-            sa_model.SeqDistance.protocol_id == protocol_id
+        stmt = (
+            sa.select(sa_model.SeqDistance.seq_profile_id)
+            .distinct()
+            .where(sa_model.SeqDistance.protocol_id == protocol_id)
         )
         assert isinstance(uow, SAUnitOfWork)
         for row in uow.session.execute(stmt):
