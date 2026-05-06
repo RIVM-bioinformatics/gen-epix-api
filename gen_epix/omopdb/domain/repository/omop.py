@@ -34,3 +34,16 @@ class BaseOmopRepository(BaseRepository):
         Retrieve all relevant data for the specified person_ids, and construct FullPersons.
         """
         raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_specimen_ids_by_cohort_ids(
+        self,
+        cohort_definition_id: UUID,
+        cohort_ids: list[UUID],
+    ) -> dict[UUID, list[UUID]]:
+        """
+        Return a map of cohort_id → list[specimen_id] by joining Cohort
+        (filtered by cohort_definition_id and cohort_id IN cohort_ids) to
+        Specimen via Cohort.subject_id = Specimen.person_id.
+        """
+        raise NotImplementedError()
