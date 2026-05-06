@@ -2,7 +2,7 @@ from collections import defaultdict
 from uuid import UUID
 
 from gen_epix import fastapp
-from gen_epix.commondb.domain.enum import EtlStatus
+from gen_epix.commondb.domain.enum import EtlStatus, UploadAction
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.services import BatchUploader
 from gen_epix.filter.uuid_set import UuidSetFilter
@@ -215,42 +215,46 @@ def _verify_children_seq_classifications(
         return success
 
     for sample, sample_result in zip(samples, sample_results):
-        for sc, sc_result in zip(
+        for seq_classification, seq_classification_result in zip(
             sample.seq_classifications or [],
             sample_result.seq_classifications or [],
         ):
-            if sc_result.status != EtlStatus.PENDING:
+            if seq_classification_result.status != EtlStatus.PENDING:
                 continue
-            if self.is_null(sc.protocol_id):
+            if self.is_null(seq_classification.protocol_id):
                 continue
-            if not self.is_null(sc.seq_id):
-                existing_id = existing_map.get((sc.seq_id, sc.protocol_id))
-                key_desc = f"seq_id={sc.seq_id}, protocol_id={sc.protocol_id}"
-            elif not self.is_null(sc.sample_id):
-                existing_id = null_seq_existing_map.get((sc.sample_id, sc.protocol_id))
-                key_desc = f"sample_id={sc.sample_id}, protocol_id={sc.protocol_id}"
+            if not self.is_null(seq_classification.seq_id):
+                existing_id = existing_map.get(
+                    (seq_classification.seq_id, seq_classification.protocol_id)
+                )
+                key_desc = f"seq_id={seq_classification.seq_id}, protocol_id={seq_classification.protocol_id}"
+            elif not self.is_null(seq_classification.sample_id):
+                existing_id = null_seq_existing_map.get(
+                    (seq_classification.sample_id, seq_classification.protocol_id)
+                )
+                key_desc = f"sample_id={seq_classification.sample_id}, protocol_id={seq_classification.protocol_id}"
             else:
                 continue
             if existing_id is None:
                 continue
             # Existing SeqClassification found: fill in its id and mark as not new.
-            sc.id = existing_id
-            sc_result.id = existing_id
-            sc_result.is_new = False
+            seq_classification.id = existing_id
+            seq_classification_result.id = existing_id
+            seq_classification_result.is_new = False
             if cmd.on_exists == UploadAction.ERROR:
                 success = False
-                sc_result.add_error(
+                seq_classification_result.add_error(
                     "d4c5b6a7",
                     f"SeqClassification ({key_desc}) already exists and on_exists={cmd.on_exists.value}",
                 )
             elif cmd.on_exists == UploadAction.SKIP:
-                sc_result.status = EtlStatus.SKIPPED
-                sc_result.add_info(
+                seq_classification_result.status = EtlStatus.SKIPPED
+                seq_classification_result.add_info(
                     "c3b4a5d6",
                     f"SeqClassification ({key_desc}) already exists and on_exists={cmd.on_exists.value}",
                 )
             else:
-                sc_result.add_info(
+                seq_classification_result.add_info(
                     "e2f1a0b9",
                     f"SeqClassification ({key_desc}) already exists and will be updated",
                 )
