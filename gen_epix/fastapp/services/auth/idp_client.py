@@ -32,12 +32,14 @@ class IdpClient(abc.ABC):
 
     @abc.abstractmethod
     def get_identity_provider(self) -> IdentityProvider:
+        """Get identity provider configuration."""
         raise NotImplementedError()
 
     @abc.abstractmethod
     async def get_claims_from_jwt(
         self, jwt_token: str
     ) -> dict[str, str | int | bool | list[str]] | None:
+        """Extract claims from JWT token."""
         raise NotImplementedError()
 
     # TODO: make async
@@ -45,6 +47,7 @@ class IdpClient(abc.ABC):
     def get_claims_from_userinfo(
         self, access_token: str
     ) -> dict[str, str | int | bool | list[str]]:
+        """Extract claims from userinfo endpoint using access token."""
         raise NotImplementedError()
 
     @abc.abstractmethod

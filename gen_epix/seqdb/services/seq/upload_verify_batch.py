@@ -2,7 +2,7 @@ from collections import defaultdict
 from uuid import UUID
 
 from gen_epix import fastapp
-from gen_epix.commondb.domain.enum import EtlStatus
+from gen_epix.commondb.domain.enum import EtlStatus, UploadAction
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.services import BatchUploader
 from gen_epix.filter.uuid_set import UuidSetFilter
@@ -32,6 +32,7 @@ def _verify_sample_children(
 
     # Child model specific verifications
     success &= _verify_children_seqs(self, cmd, batch_result, uow)
+    success &= _verify_children_seq_classifications(self, cmd, batch_result, uow)
     success &= _verify_children_seq_profiles(self, cmd, batch_result, uow)
 
     return success
@@ -110,22 +111,154 @@ def _verify_children_seqs(
                 if seq.read_set_id == read_set_id and seq.read_set2_id == read_set2_id:
                     # Same read sets -> skip since the seq is identical and there are
                     # no immutable parts
+                    old_seq_id = seq.id
                     seq.id = seq_id
                     seq_result.add_warning(
-                        "a2b3c4d5",
+                        "f202a96b",
                         f"Seq with same hash ({seq.seq_hash}), read sets and protocol already exists",
                     )
                     seq_result.status = EtlStatus.SKIPPED
+                    # Propagate the resolved DB ID to any child records that were
+                    # pointing to the pre-assigned ID
+                    if old_seq_id is not None and old_seq_id != seq_id:
+                        for sc in sample.seq_classifications or []:
+                            if sc.seq_id == old_seq_id:
+                                sc.seq_id = seq_id
+                        for st in sample.seq_taxonomies or []:
+                            if st.seq_id == old_seq_id:
+                                st.seq_id = seq_id
+                        for sp in sample.seq_profiles or []:
+                            if sp.seq_id == old_seq_id:
+                                sp.seq_id = seq_id
                     break
                 if seq.read_set_id is None and seq.read_set2_id is None:
                     # New seq with same hash but unknown read sets -> error since
                     # cannot verify if indeed it was derived from the same reads sets
                     success = False
                     seq_result.add_error(
-                        "b9e4f8a1",
+                        "c837034c",
                         f"Seq with same hash ({seq.seq_hash}) and protocol already exists with ID {seq_id}, but new seq has no read sets no read sets are provided for the new seq to compare",
                     )
                     break
+    return success
+
+
+def _verify_children_seq_classifications(
+    self: BatchUploader,
+    cmd: command.UploadSamplesCommand,
+    batch_result: model.SampleBatchUploadResult,
+    uow: fastapp.BaseUnitOfWork,
+) -> bool:
+    """
+    Detect existing SeqClassifications by their natural key.
+
+    verify_children only looks up children by their id field, which is None for
+    SeqClassificationForUpload objects built from on-prem JSON. This function
+    fills in the existing id and marks the result appropriately so that
+    create_children does not attempt a duplicate INSERT.
+
+    Primary key: (seq_id, protocol_id) when seq_id is known.
+    Fallback key: (sample_id, protocol_id) when seq_id is None but sample_id
+    is known, matching only DB records that also have seq_id=None.
+    """
+    user_id = cmd.user.id if cmd.user else None
+    samples = cmd.sample_batch.samples
+    sample_results = batch_result.samples
+    success = True
+
+    # --- Primary lookup: seq_id known → key = (seq_id, protocol_id) ---
+    seq_ids = list(
+        {
+            sc.seq_id
+            for s in samples
+            for sc in s.seq_classifications or []
+            if not self.is_null(sc.seq_id)
+        }
+    )
+    existing_map: dict[tuple[UUID, UUID], UUID] = {}
+    if seq_ids:
+        result_iter = self.service.repository.read_fields(
+            uow,
+            user_id,
+            model.SeqClassification,
+            ["seq_id", "protocol_id", "id"],
+            filter=UuidSetFilter(key="seq_id", members=frozenset(seq_ids)),
+        )
+        existing_map = {(x[0], x[1]): x[2] for x in result_iter}
+
+    # --- Fallback lookup: seq_id None → key = (sample_id, protocol_id) ---
+    # Only records stored with seq_id=None are considered to avoid false matches.
+    null_seq_sample_ids = list(
+        {
+            sc.sample_id
+            for s in samples
+            for sc in s.seq_classifications or []
+            if self.is_null(sc.seq_id) and not self.is_null(sc.sample_id)
+        }
+    )
+    null_seq_existing_map: dict[tuple[UUID, UUID], UUID] = {}
+    if null_seq_sample_ids:
+        result_iter = self.service.repository.read_fields(
+            uow,
+            user_id,
+            model.SeqClassification,
+            ["sample_id", "protocol_id", "id", "seq_id"],
+            filter=UuidSetFilter(
+                key="sample_id", members=frozenset(null_seq_sample_ids)
+            ),
+        )
+        null_seq_existing_map = {
+            (x[0], x[1]): x[2] for x in result_iter if x[3] is None
+        }
+
+    if not existing_map and not null_seq_existing_map:
+        return success
+
+    for sample, sample_result in zip(samples, sample_results):
+        for seq_classification, seq_classification_result in zip(
+            sample.seq_classifications or [],
+            sample_result.seq_classifications or [],
+        ):
+            if seq_classification_result.status != EtlStatus.PENDING:
+                continue
+            if self.is_null(seq_classification.protocol_id):
+                continue
+            if not self.is_null(seq_classification.seq_id):
+                existing_id = existing_map.get(
+                    (seq_classification.seq_id, seq_classification.protocol_id)
+                )
+                key_desc = f"seq_id={seq_classification.seq_id}, protocol_id={seq_classification.protocol_id}"
+            elif not self.is_null(seq_classification.sample_id):
+                existing_id = null_seq_existing_map.get(
+                    (seq_classification.sample_id, seq_classification.protocol_id)
+                )
+                key_desc = f"sample_id={seq_classification.sample_id}, protocol_id={seq_classification.protocol_id}"
+            else:
+                continue
+            if existing_id is None:
+                continue
+            # Existing SeqClassification found: fill in its id and mark as not new.
+            seq_classification.id = existing_id
+            seq_classification_result.id = existing_id
+            seq_classification_result.is_new = False
+            if cmd.on_exists == UploadAction.ERROR:
+                success = False
+                seq_classification_result.add_error(
+                    "d4c5b6a7",
+                    f"SeqClassification ({key_desc}) already exists and on_exists={cmd.on_exists.value}",
+                )
+            elif cmd.on_exists == UploadAction.SKIP:
+                seq_classification_result.status = EtlStatus.SKIPPED
+                seq_classification_result.add_info(
+                    "c3b4a5d6",
+                    f"SeqClassification ({key_desc}) already exists and on_exists={cmd.on_exists.value}",
+                )
+            else:
+                seq_classification_result.add_info(
+                    "e2f1a0b9",
+                    f"SeqClassification ({key_desc}) already exists and will be updated",
+                )
+
     return success
 
 
@@ -219,6 +352,7 @@ def _verify_children_seq_profiles(
                     # Same seq -> skip since the seq profile is identical and there are
                     # no immutable parts
                     seq_profile.id = seq_profile_id
+                    seq_profile_result.id = seq_profile_id
                     seq_profile_result.add_warning(
                         "c7d8e9f0",
                         f"Seq profile with same hash ({seq_profile.content_hash}), seq and protocol already exists",

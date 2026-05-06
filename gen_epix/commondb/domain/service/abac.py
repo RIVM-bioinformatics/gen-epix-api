@@ -60,16 +60,19 @@ class BaseAbacService(BaseService[BaseAbacRepository]):
         self,
         cmd: command.RetrieveOrganizationAdminNameEmailsCommand,
     ) -> list[model.UserNameEmail]:
-        raise NotImplementedError
+        """Retrieve name and email of organization admins for a given organization."""
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def retrieve_organizations_under_admin(
         self, cmd: command.RetrieveOrganizationsUnderAdminCommand
     ) -> set[uuid.UUID]:
-        raise NotImplementedError
+        """Retrieve organization IDs under the admin's purview."""
+        raise NotImplementedError()
 
     def update_user_own_organization(
         self,
         cmd: command.UpdateUserOwnOrganizationCommand,
     ) -> model.User:
-        raise NotImplementedError
+        """Allow a user to update their own organization affiliation."""
+        raise NotImplementedError()

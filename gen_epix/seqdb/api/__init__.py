@@ -17,3 +17,9 @@ from gen_epix.seqdb.api.seq import (
     RetrieveSimilarProfilesRequestBody as RetrieveSimilarProfilesRequestBody,
 )
 from gen_epix.seqdb.api.seq import UploadSamplesRequestBody as UploadSamplesRequestBody
+from gen_epix.seqdb.api.seq import (
+    RetrieveBestSeqPerSampleRequestBody as RetrieveBestSeqPerSampleRequestBody,
+)
+from gen_epix.seqdb.api.seq import (
+    RetrieveBestSeqProfilePerSampleRequestBody as RetrieveBestSeqProfilePerSampleRequestBody,
+)

@@ -65,4 +65,7 @@ class BaseCaseRepository(BaseRepository):
         case_ids: set[UUID] | None = None,
         datetime_range_filter: DatetimeRangeFilter | None = None,
     ) -> model.CaseStats:
+        """
+        Retrieve case statistics for a given case type and optional filters.
+        """
         raise NotImplementedError()

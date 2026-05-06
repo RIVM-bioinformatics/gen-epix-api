@@ -38,4 +38,4 @@ class ErmGenerator(ABC):
     @abstractmethod
     def generate_erm_diagrams(self, dir: Path) -> None:
         """Generate ERM diagrams and write them into *dir*."""
-        ...
+        raise NotImplementedError()

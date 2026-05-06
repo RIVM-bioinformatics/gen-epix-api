@@ -38,7 +38,7 @@ def seq_service_crud_seq_profile(
         # Delete all distances for these allele profiles as well
         raise NotImplementedError(_get_not_implemented_message(cmd))
     else:
-        raise NotImplementedError(f"Unsupported operation type: {cmd.operation.value}")
+        raise AssertionError(f"Unsupported operation type: {cmd.operation.value}")
 
     retval = self.crud(cmd)  # type: ignore[return-value]
 

@@ -120,6 +120,12 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
 
     @abc.abstractmethod
     def register_handlers(self) -> None:
+        """
+        Register command handlers for this service. This method is normally called
+        during service initialization, and should be used to register handlers for
+        commands that this service should handle. The app.register_handler method can be
+        used to register a handler for a specific command class.
+        """
         raise NotImplementedError()
 
     def register_default_crud_handlers(
@@ -552,7 +558,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
                     )
 
     def __del__(self) -> None:
-        if self._setup_logger:
+        if getattr(self, "_setup_logger", None):
             self._setup_logger.info(
                 self.create_log_message("d84f9d21", "STOPPING_SERVICE")
             )

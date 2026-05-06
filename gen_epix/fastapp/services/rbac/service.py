@@ -251,7 +251,7 @@ class BaseRbacService(BaseService):
         """
         Implement this method to retrieve the roles of a user.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def retrieve_user_is_non_rbac_authorized(self, cmd: Command) -> bool:
         """

@@ -658,11 +658,80 @@ class SARepository(BaseRepository):
     def upsert_some(
         self,
         model_class: type[Model],
-        _user_id: Hashable,
-        _objs: Iterable[Model],
+        user_id: Hashable,
+        objs: Iterable[Model],
         **kwargs: Any,
     ) -> list[Model] | list[Hashable]:
-        raise NotImplementedError
+        objs = objs if isinstance(objs, list) else list(objs)
+        if not objs:
+            return []
+        session: Session = kwargs.get("session")  # type: ignore[assignment]
+        return_id: bool = kwargs.get("return_id", False)  # type: ignore[assignment]
+        flush = kwargs.get("flush", True)
+        max_batch_size = int(
+            kwargs.get("max_batch_size", self.DEFAULT_MAX_INSERT_BATCH_SIZE)
+        )
+
+        if not all(isinstance(x, model_class) for x in objs):
+            raise ValueError(f"Not all objs are of type {model_class.__name__}")
+
+        mapper = self.get_mapper(model_class)
+        row_class = mapper.row_class
+
+        def _execute(session: Session) -> list[Model] | list[Hashable]:
+            obj_ids = [mapper.get_id(x) for x in objs]
+
+            # Chunk the existence check to avoid SQL Server's 2100-parameter limit.
+            row_id_col = mapper.get_row_id(row_class)
+            existing_ids: set[Hashable] = set()
+            for chunk_start in range(0, len(obj_ids), max_batch_size):
+                chunk = obj_ids[chunk_start : chunk_start + max_batch_size]
+                chunk_rows = session.execute(
+                    select(row_id_col).where(row_id_col.in_(chunk))
+                ).all()
+                existing_ids.update(x[0] for x in chunk_rows)
+
+            new_objs = [o for o, oid in zip(objs, obj_ids) if oid not in existing_ids]
+            existing_objs = [o for o, oid in zip(objs, obj_ids) if oid in existing_ids]
+
+            # Insert new objects in batches.
+            new_rows: list[Any] = self.to_sql(user_id, model_class, new_objs)
+            n_rows = len(new_rows)
+            n_batches = max(1, -(-n_rows // max_batch_size))  # ceiling division
+            for i in range(n_batches):
+                slice_ = slice(i * max_batch_size, min((i + 1) * max_batch_size, n_rows))
+                session.add_all(new_rows[slice_])
+                if flush:
+                    session.flush()
+
+            # Update existing objects in chunks to avoid SQL Server's 2100-parameter limit.
+            updated_rows: list[Any] = []
+            if existing_objs:
+                existing_obj_ids = [mapper.get_id(o) for o in existing_objs]
+                all_rows: list[Any] = []
+                all_row_ids: list[Hashable] = []
+                for chunk_start in range(0, len(existing_obj_ids), max_batch_size):
+                    chunk_ids = existing_obj_ids[chunk_start : chunk_start + max_batch_size]
+                    chunk_rows, chunk_row_ids = SARepository._in_session_read_some(
+                        mapper, session, row_class, chunk_ids
+                    )
+                    all_rows.extend(chunk_rows)
+                    all_row_ids.extend(chunk_row_ids)
+                map_rows = dict(zip(all_row_ids, all_rows))
+                for obj in existing_objs:
+                    row = map_rows[mapper.get_id(obj)]
+                    mapper.update(user_id, obj, row)
+                updated_rows = all_rows
+                if flush:
+                    session.flush()
+
+            all_rows = new_rows + updated_rows
+            if return_id:
+                get_row_id = mapper.get_row_id
+                return [get_row_id(x) for x in all_rows]
+            return self.from_sql(model_class, all_rows)
+
+        return self._execute_sa(session, _execute, kwargs)  # type: ignore[return-value]
 
     def delete_one(
         self,

@@ -13,6 +13,7 @@ from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
 from gen_epix.seqdb.domain import command, enum, model
+from gen_epix.util import copy_model_field
 
 
 class UploadSamplesRequestBody(command.UploadSamplesCommand):
@@ -48,6 +49,26 @@ class RetrieveSeqFastaRequestBody(PydanticBaseModel):
 
     file_name: str = Field(
         description="The desired filename for the FASTA download.",
+    )
+
+
+class RetrieveBestSeqPerSampleRequestBody(PydanticBaseModel):
+
+    protocol_ids: set[UUID] | None = copy_model_field(
+        command.RetrieveBestSeqPerSampleCommand, "protocol_ids"
+    )
+    sample_ids: set[UUID] | None = copy_model_field(
+        command.RetrieveBestSeqPerSampleCommand, "sample_ids"
+    )
+
+
+class RetrieveBestSeqProfilePerSampleRequestBody(PydanticBaseModel):
+
+    protocol_ids: set[UUID] = copy_model_field(
+        command.RetrieveBestSeqProfilePerSampleCommand, "protocol_ids"
+    )
+    sample_ids: set[UUID] | None = copy_model_field(
+        command.RetrieveBestSeqProfilePerSampleCommand, "sample_ids"
     )
 
 
@@ -238,11 +259,11 @@ def create_seq_endpoints(
                 app.handle,
                 command.UploadSamplesCommand(
                     user=user,
-                    **request_body.model_dump(),
+                    **request_body.model_dump(exclude={"user"}),
                 ),
             )
         except Exception as exception:
-            handle_exception("f1d282b4", user, exception, request_ids=request_body.seq_ids)  # type: ignore
+            handle_exception("f1d282b4", user, exception)  # type: ignore
         return retval
 
     # CRUD
@@ -254,3 +275,47 @@ def create_seq_endpoints(
     CrudEndpointGenerator.generate_endpoints(
         router, crud_endpoint_sets, handle_exception
     )
+
+    @router.post(
+        "/retrieve/best_seq_per_sample",
+        operation_id="retrieve__best_seq_per_sample",
+        name="RetrieveBestSeqPerSample",
+        description=command.RetrieveBestSeqPerSampleCommand.__doc__,
+    )
+    async def retrieve__best_seq_per_sample(
+        user: registered_user_dependency,  # type: ignore
+        request_body: RetrieveBestSeqPerSampleRequestBody,  # type: ignore
+    ) -> dict[UUID, UUID]:
+        try:
+            retval: dict[UUID, UUID] = app.handle(
+                command.RetrieveBestSeqPerSampleCommand(
+                    user=user,
+                    protocol_ids=request_body.protocol_ids,
+                    sample_ids=request_body.sample_ids,
+                )
+            )
+        except Exception as exception:
+            handle_exception("c3f7a9e1", user, exception, request_ids=request_body.sample_ids)  # type: ignore
+        return retval
+
+    @router.post(
+        "/retrieve/best_seq_profile_per_sample",
+        operation_id="retrieve__best_seq_profile_per_sample",
+        name="RetrieveBestSeqProfilePerSample",
+        description=command.RetrieveBestSeqProfilePerSampleCommand.__doc__,
+    )
+    async def retrieve__best_seq_profile_per_sample(
+        user: registered_user_dependency,  # type: ignore
+        request_body: RetrieveBestSeqProfilePerSampleRequestBody,  # type: ignore
+    ) -> dict[UUID, UUID]:
+        try:
+            retval: dict[UUID, UUID] = app.handle(
+                command.RetrieveBestSeqProfilePerSampleCommand(
+                    user=user,
+                    protocol_ids=request_body.protocol_ids,
+                    sample_ids=request_body.sample_ids,
+                )
+            )
+        except Exception as exception:
+            handle_exception("e2b4d8f6", user, exception, request_ids=request_body.sample_ids)  # type: ignore
+        return retval
