@@ -193,7 +193,7 @@
             "justMyCode": true,
             "env": {
                 "OMOPDB_REPOSITORY__OMOP__PROPS__FILE": "./data/omopdb/demo/omopdb.sa_sqlite.omop.refdata.sqlite",
-                "OMOPDB_REPOSITORY__ORGANIZATION__PROPS__FILE": "./data/omopdb/demo/omopdb.sa_sqlite.refdata.organization.sqlite"
+                "OMOPDB_REPOSITORY__ORGANIZATION__PROPS__FILE": "./data/omopdb/demo/omopdb.sa_sqlite.organization.refdata.sqlite"
             }
         },
         {
