@@ -223,42 +223,9 @@ class SeqProfile(
             raise ValueError(
                 "Aligned nucleotide sequence can only be retrieved for SNP profiles"
             )
-        if self.format == enum.SeqProfileFormat.NEXTCLADE:
-            if self.content2 is None:
-                seq = self.content
-                if not seq:
-                    raise ValueError("Empty aligned nucleotide sequence")
-                invalid = set(seq) - enum.SeqAlphabet.DNA_INCL_AMBIGUOUS_AND_GAP.value
-                if invalid:
-                    raise ValueError(
-                        "Invalid characters in aligned"
-                        " nucleotide sequence:"
-                        f" {sorted(invalid)}"
-                    )
-                return seq
-            else:
-                # TODO: LSP-3268-Implement-SNP-profile-support-seqdb:
-                #    - Read content and content2
-                #    - Use the ref_seq_str and nextclade_get_ref_alignment to derive the aligned nucleotide sequence
-
-                #    - nextclade_get_ref_alignment can handle both pandas dataframe AND:
-                # {
-                #         "substitutions": "A1T,C2G,G15A",
-                #         "deletions": "10-12",
-                #         "insertions": "5:GGG,50:AA",
-                #         "missing": "80-85",
-                #         "nonACGTNs": "R:30-31",
-                #         "alignmentStart": 1,
-                #         "alignmentEnd": 100
-                #     }
-                if ref_seq_str is None:
-                    raise ValueError(
-                        "Reference sequence string must be provided to derive aligned nucleotide sequence when content2 is used"
-                    )
-
-        raise NotImplementedError(
-            "Unable to parse aligned nucleotide" " sequence for this SNP profile format"
-        )
+        # TODO: LSP-3268-Implement-SNP-profile-support-seqdb:
+        # - derive aligned nucleotide seq for SNP profiles format other than NextClade
+        return self.content
 
     def get_allele_id_bytes(self, **kwargs: Any) -> list[bytes | None]:
         """Return allele IDs as raw 16-byte chunks."""

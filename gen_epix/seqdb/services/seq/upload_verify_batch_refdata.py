@@ -440,9 +440,9 @@ def _verify_batch_refdata_snp_profiles(
 ) -> bool:
     """Verify SNP profiles specific rules."""
 
-    # TODO: LSP-3268-Implement-SNP-profile-support-seqdb (remaining):
+    # TODO: LSP-3268-Implement-SNP-profile-support-seqdb:
     #   - Load the 'real' ref_seq record.
-    #   - Handle aligned_nucleotide_seq and content/content2 compact form.
+    #   - Handle aligned_nucleotide_seq form.
     #   - Rebuild the full aligned sequence via nextclade_get_ref_alignment().
 
     success = True
