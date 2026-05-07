@@ -127,6 +127,9 @@ from gen_epix.omopdb.domain.model.omop import SourceToConceptMap as SourceToConc
 from gen_epix.omopdb.domain.model.omop import Specimen as Specimen
 from gen_epix.omopdb.domain.model.omop import SpecimenForUpload as SpecimenForUpload
 from gen_epix.omopdb.domain.model.omop import SpecimenIdentifier as SpecimenIdentifier
+from gen_epix.omopdb.domain.model.omop import (
+    SpecimenIdsByCohortResult as SpecimenIdsByCohortResult,
+)
 from gen_epix.omopdb.domain.model.omop import VisitDetail as VisitDetail
 from gen_epix.omopdb.domain.model.omop import (
     VisitDetailIdentifier as VisitDetailIdentifier,
@@ -234,6 +237,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             PersonUploadResult,
             PersonBatchForUpload,
             PersonBatchUploadResult,
+            SpecimenIdsByCohortResult,
         ],
     }
 )

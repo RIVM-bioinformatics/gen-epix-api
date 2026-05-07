@@ -545,6 +545,8 @@ class IdentifierForUpload(BaseModel, frozen=True):
     The model is immutable (frozen) to allow its use in sets and as dictionary keys.
     """
 
+    NAME: ClassVar[str] = "IdentifierForUpload"
+
     identifier_issuer_id: UUID | None = Field(
         default=None,
         description="The UUID of the identifier issuer that issued the identifier. Must be present if the identifier_issuer_code is not present.",
