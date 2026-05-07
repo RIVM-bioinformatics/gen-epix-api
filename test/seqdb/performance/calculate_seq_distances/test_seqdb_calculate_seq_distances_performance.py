@@ -31,7 +31,7 @@ from gen_epix.seqdb.repositories.seq_dict import SeqDictRepository
 CREATE_DEMO_DATA = True
 
 N_SEQS_PER_BATCH = 100
-DB_ENTRY_COUNTS: list[int] = [1, 2, 3]  # ]2, 10]
+DB_ENTRY_COUNTS: list[int] = [1, 2, 5]
 
 SEQ_SETTINGS = SeqGenerationSettings(n_loci=1000, locus_length=100)
 
@@ -127,7 +127,7 @@ def _build_snp_upload_command(
     ][db_index]
 
     effective_seed = seed if seed is not None else SNP_SEED
-    sample_batch = env.generate_random_snp_sequences(
+    sample_batch = env.generate_random_nextclade_snp_batch(
         n_seqs=N_SEQS_PER_BATCH,
         seq_length=seq_length,
         snp_protocol_id=snp_protocol_id,
@@ -234,6 +234,9 @@ class TestSampleBatchUploader:
 
         set_service_repository(env, self.repositories[dataset_idx])
 
+        # profiler = pyinstrument.Profiler(async_mode="enabled")
+        # profiler.start()
+
         n_entries = len(
             [
                 x
@@ -268,3 +271,6 @@ class TestSampleBatchUploader:
         print(f"snp_seq_length={SNP_SEQ_LENGTH}")
         print(f"total_time={total:.4f}s")
         print(f"avg_time_per_upload={avg:.4f}s\n")
+
+        # profiler.stop()
+        # profiler.write_html("./test/output/profile_calculate_seq_distances.html")

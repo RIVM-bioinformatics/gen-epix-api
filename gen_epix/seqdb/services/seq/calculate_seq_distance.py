@@ -1,17 +1,37 @@
 import json
 from collections.abc import Iterable
 from datetime import datetime
+from functools import lru_cache
 from typing import cast
 from uuid import UUID
 
 import numpy as np
+from pydantic import BaseModel, ConfigDict
 
 from gen_epix.commondb.domain.enum import EtlStatus
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.exc import ConcurrentModificationError
 from gen_epix.filter.string_set import StringSetFilter
 from gen_epix.seqdb.domain import command, enum, exc, model
+from gen_epix.seqdb.domain.literal import (
+    NEXTCLADE_NON_ACGTN_PATTERN,
+    NEXTCLADE_POSITION_RANGE_PATTERN,
+    NEXTCLADE_SUBSTITUTION_PATTERN,
+)
 from gen_epix.seqdb.domain.service import BaseSeqService
+
+
+class _ParsedNextcladeProfile(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    substitutions: dict[int, str]
+    deletions: set[int]
+    insertions: dict[int, str]
+    missing: set[int]
+    non_acgtns: dict[int, str]
+    variant_states: dict[int, tuple[str, str | None]]
+    alignment_start: int
+    alignment_end: int
 
 
 def seq_service_retrieve_seq_distance_last_modified(
@@ -491,6 +511,157 @@ def _matching_profiling_protocol_ids(
     return []
 
 
+def _split_nextclade_field(value: str) -> list[str]:
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def _parse_nextclade_position_token(token: str) -> set[int]:
+    match = NEXTCLADE_POSITION_RANGE_PATTERN.fullmatch(token)
+    if match is None:
+        raise ValueError(f"Invalid Nextclade position token: {token}")
+    start = int(match.group(1))
+    end = int(match.group(2) or start)
+    if end < start:
+        raise ValueError(f"Invalid Nextclade position range: {token}")
+    return set(range(start, end + 1))
+
+
+def _parse_nextclade_substitutions(value: str) -> dict[int, str]:
+    substitutions: dict[int, str] = {}
+    for token in _split_nextclade_field(value):
+        match = NEXTCLADE_SUBSTITUTION_PATTERN.fullmatch(token)
+        if match is None:
+            raise ValueError(f"Invalid Nextclade substitution token: {token}")
+        substitutions[int(match.group(1))] = match.group(2).lower()
+    return substitutions
+
+
+def _parse_nextclade_ranges(value: str) -> set[int]:
+    positions: set[int] = set()
+    for token in _split_nextclade_field(value):
+        positions.update(_parse_nextclade_position_token(token))
+    return positions
+
+
+def _parse_nextclade_non_acgtns(value: str) -> dict[int, str]:
+    non_acgtns: dict[int, str] = {}
+    for token in _split_nextclade_field(value):
+        match = NEXTCLADE_NON_ACGTN_PATTERN.fullmatch(token)
+        if match is None:
+            raise ValueError(f"Invalid Nextclade nonACGTNs token: {token}")
+        base = match.group(1).lower()
+        for position in _parse_nextclade_position_token(match.group(2)):
+            non_acgtns[position] = base
+    return non_acgtns
+
+
+@lru_cache(maxsize=4096)
+def _parse_nextclade_profile_content(content: str) -> _ParsedNextcladeProfile:
+    nextclade_fields = json.loads(content)
+    if not isinstance(nextclade_fields, dict):
+        raise ValueError("Nextclade SNP profile content must be a JSON object")
+
+    alignment_start = int(nextclade_fields["alignmentStart"])
+    alignment_end = int(nextclade_fields["alignmentEnd"])
+    if alignment_end < alignment_start:
+        raise ValueError(
+            "Invalid Nextclade alignment range: " f"{alignment_start}-{alignment_end}"
+        )
+
+    substitutions = _parse_nextclade_substitutions(
+        str(nextclade_fields["substitutions"])
+    )
+    deletions = _parse_nextclade_ranges(str(nextclade_fields["deletions"]))
+    missing = _parse_nextclade_ranges(str(nextclade_fields["missing"]))
+    non_acgtns = _parse_nextclade_non_acgtns(str(nextclade_fields["nonACGTNs"]))
+
+    variant_states: dict[int, tuple[str, str | None]] = {
+        position: ("base", base) for position, base in substitutions.items()
+    }
+    variant_states.update({position: ("deletion", None) for position in deletions})
+    variant_states.update(
+        {position: ("non_acgtn", base) for position, base in non_acgtns.items()}
+    )
+    variant_states.update({position: ("missing", None) for position in missing})
+
+    return _ParsedNextcladeProfile(
+        substitutions=substitutions,
+        deletions=deletions,
+        # Insertions do not affect SNP Hamming over reference positions.
+        insertions={},
+        missing=missing,
+        non_acgtns=non_acgtns,
+        variant_states=variant_states,
+        alignment_start=alignment_start,
+        alignment_end=alignment_end,
+    )
+
+
+def _parse_nextclade_profile(profile: model.SeqProfile) -> _ParsedNextcladeProfile:
+    if profile.format != enum.SeqProfileFormat.NEXTCLADE:
+        raise NotImplementedError(
+            "SNP distance calculation currently supports only Nextclade profiles"
+        )
+    return _parse_nextclade_profile_content(profile.content)
+
+
+def _nextclade_position_state(
+    profile: _ParsedNextcladeProfile,
+    position: int,
+) -> tuple[str, str | None]:
+    if position < profile.alignment_start or position > profile.alignment_end:
+        return ("outside", None)
+    return profile.variant_states.get(position, ("reference", None))
+
+
+def _calculate_nextclade_snp_hamming_distance(
+    profile1: model.SeqProfile,
+    profile2: model.SeqProfile,
+) -> float:
+    parsed_profile1 = _parse_nextclade_profile(profile1)
+    parsed_profile2 = _parse_nextclade_profile(profile2)
+
+    overlap_start = max(
+        parsed_profile1.alignment_start,
+        parsed_profile2.alignment_start,
+    )
+    overlap_end = min(
+        parsed_profile1.alignment_end,
+        parsed_profile2.alignment_end,
+    )
+    overlap_length = max(0, overlap_end - overlap_start + 1)
+    profile1_length = (
+        parsed_profile1.alignment_end - parsed_profile1.alignment_start + 1
+    )
+    profile2_length = (
+        parsed_profile2.alignment_end - parsed_profile2.alignment_start + 1
+    )
+
+    mismatches = profile1_length + profile2_length - (2 * overlap_length)
+    if overlap_length == 0:
+        return float(mismatches)
+
+    default_state = ("reference", None)
+    get_state1 = parsed_profile1.variant_states.get
+    get_state2 = parsed_profile2.variant_states.get
+    relevant_positions = {
+        position
+        for position in parsed_profile1.variant_states
+        if overlap_start <= position <= overlap_end
+    }
+    relevant_positions.update(
+        position
+        for position in parsed_profile2.variant_states
+        if overlap_start <= position <= overlap_end
+    )
+
+    for position in relevant_positions:
+        if get_state1(position, default_state) != get_state2(position, default_state):
+            mismatches += 1
+
+    return float(mismatches)
+
+
 def _calculate_profile_distance(
     seq_profile_model_type: enum.SeqProfileType,
     profile1: model.SeqProfile,
@@ -501,6 +672,11 @@ def _calculate_profile_distance(
     """Return the distance between two profiles of the same type"""
     # TODO: LSP-3268 This function forces both profile representations (i.e. ready for distance calculation) to be calculated each time for each pair. More efficient would be to calculate all representations just once and then loop over the pairs.
     if seq_profile_model_type == enum.SeqProfileType.SNP:
+        if (
+            profile1.format == enum.SeqProfileFormat.NEXTCLADE
+            and profile2.format == enum.SeqProfileFormat.NEXTCLADE
+        ):
+            return _calculate_nextclade_snp_hamming_distance(profile1, profile2)
         assert ref_seq is not None
         ref_seq_str = ref_seq.get_nucleotide_seq()
         seq1 = profile1.get_aligned_nucleotide_seq(ref_seq_str=ref_seq_str)

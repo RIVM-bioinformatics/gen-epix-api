@@ -1,4 +1,5 @@
 import base64
+import json
 import random
 import secrets
 import uuid
@@ -8,6 +9,9 @@ from uuid import UUID
 
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.seqdb.domain import enum, model
+
+_DNA_BASES = "ACGT"
+_AMBIGUOUS_DNA_BASES = ("R", "Y", "S", "W", "K", "M", "N")
 
 
 def generate_demo_seqdb_models(
@@ -156,6 +160,81 @@ def generate_demo_seqdb_models(
     return db
 
 
+def build_random_nextclade_fields(
+    ref_seq: str,
+    rng: random.Random,
+) -> dict[str, Any]:
+    seq_length = len(ref_seq)
+    all_positions = list(range(1, seq_length + 1))
+    available_positions = all_positions.copy()
+    rng.shuffle(available_positions)
+
+    def _take_positions(min_count: int, max_count: int) -> list[int]:
+        if max_count < min_count:
+            max_count = min_count
+        max_available = len(available_positions)
+        if max_available == 0:
+            sample_size = min(max_count, max(1, seq_length))
+            return sorted(rng.sample(all_positions, k=sample_size))
+        count = min(max_available, rng.randint(min_count, max_count))
+        if count == 0:
+            count = 1
+        positions = sorted(available_positions[:count])
+        del available_positions[:count]
+        return positions
+
+    def _positions_to_ranges(positions: list[int]) -> str:
+        if not positions:
+            return ""
+        ranges: list[str] = []
+        start = positions[0]
+        end = positions[0]
+        for position in positions[1:]:
+            if position == end + 1:
+                end = position
+                continue
+            ranges.append(f"{start}-{end}" if start != end else str(start))
+            start = position
+            end = position
+        ranges.append(f"{start}-{end}" if start != end else str(start))
+        return ",".join(ranges)
+
+    substitutions_positions = _take_positions(3, max(3, min(8, seq_length // 8 or 3)))
+    deletion_positions = _take_positions(1, max(1, min(4, seq_length // 20 or 1)))
+    missing_positions = _take_positions(1, max(1, min(4, seq_length // 20 or 1)))
+    non_acgtn_positions = _take_positions(1, max(1, min(4, seq_length // 20 or 1)))
+    insertion_positions = sorted(
+        rng.sample(
+            all_positions,
+            k=min(max(1, min(3, seq_length // 25 or 1)), len(all_positions)),
+        )
+    )
+
+    substitutions = ",".join(
+        f"{ref_seq[position - 1]}{position}"
+        f"{rng.choice([base for base in _DNA_BASES if base != ref_seq[position - 1]])}"
+        for position in substitutions_positions
+    )
+    insertions = ",".join(
+        f"{position}:{''.join(rng.choice(_DNA_BASES) for _ in range(rng.randint(1, 3)))}"
+        for position in insertion_positions
+    )
+    non_acgtns = ",".join(
+        f"{rng.choice(_AMBIGUOUS_DNA_BASES)}:{position}"
+        for position in non_acgtn_positions
+    )
+
+    return {
+        "substitutions": substitutions,
+        "deletions": _positions_to_ranges(deletion_positions),
+        "insertions": insertions,
+        "missing": _positions_to_ranges(missing_positions),
+        "nonACGTNs": non_acgtns,
+        "alignmentStart": 1,
+        "alignmentEnd": seq_length,
+    }
+
+
 def _generate_snp_objects(
     hex_string: str,
     index: int,
@@ -209,15 +288,15 @@ def _generate_snp_objects(
         max_stored_distance=1000.0,
     )
 
-    # One seed SNP profile (the reference
-    # itself as aligned seq)
+    nextclade_fields = build_random_nextclade_fields(ref_seq_str, rng)
+
     snp_profile = model.SeqProfile(
         id=uuid.uuid4(),
         seq_profile_type=enum.SeqProfileType.SNP,
         protocol_id=snp_profile_protocol.id,
-        format=enum.SeqProfileFormat.REF_ALN_SEQ,
-        content_hash=NULL_ID,
-        content=ref_seq_str,
+        format=enum.SeqProfileFormat.NEXTCLADE,
+        content_hash=model.SeqProfile.get_snp_profile_hash(nextclade_fields),
+        content=json.dumps(nextclade_fields),
         sample_id=sample.id,
     )
 

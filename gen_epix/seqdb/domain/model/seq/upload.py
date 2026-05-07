@@ -135,13 +135,6 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
         default="",
         description="String representation of the sequence profile, with the format depending on the sequence profile format. Must be present if another for-upload representation is not provided.",
     )
-    # TODO: LSP-3268-Implement-SNP-profile-support-seqdb:
-    #    - Check if correct
-    #    - For SNP Profile both content and content2 are required to fix NextClade format
-    content2: str | None = Field(
-        default=None,
-        description="Additional string representation of the sequence profile, with the format depending on the sequence profile format. This is meant for formats that require two separate strings to represent the profile.",
-    )
     aligned_nucleotide_seq: str | None = Field(
         default=None,
         description="The full nucleotide sequence aligned to the reference sequence as a for-upload representation for SNP sequence profiles. Must be present if content is not provided.",
@@ -210,24 +203,16 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
         return self
 
     def _validate_snp_profile_upload(self) -> Self:
-
-        # TODO: LSP-3268-Implement-SNP-profile-support-seqdb:
-        # 1. Implement support for content and content2
-
-        self._validate_exactly_one_representation(
-            (
-                ("content", self.content != ""),
-                ("aligned_nucleotide_seq", self.aligned_nucleotide_seq is not None),
+        if self.content == "" and self.aligned_nucleotide_seq is None:
+            raise ValueError(
+                "content or aligned_nucleotide_seq must be provided for SNP profiles."
             )
-        )
-        if self.aligned_nucleotide_seq is not None:
-            self.content = self.aligned_nucleotide_seq
-
-        if self.aligned_nucleotide_seq is None:
-            if self.content == "" or self.content2 is None:
-                raise ValueError(
-                    "Both content and content2 must be provided together for SNP profiles if aligned_nucleotide_seq is not provided."
-                )
+        # TODO: When content is provided, the parent SeqProfile._validate_content validator
+        # has already parsed the JSON, validated required NextClade fields, and
+        # computed/verified the hash. Nothing more to do here.
+        # When aligned_nucleotide_seq is provided (content == ""), the parent skips
+        # validation and the conversion to content + hash computation will be
+        # implemented here.
 
         return self
 

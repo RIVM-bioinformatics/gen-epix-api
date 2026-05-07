@@ -1,8 +1,9 @@
 import hashlib
+import json
 import typing
 import uuid
 from enum import IntEnum
-from typing import ClassVar, Self
+from typing import Any, ClassVar, Self
 from uuid import UUID
 
 from pydantic import Field, Json, field_serializer, field_validator, model_validator
@@ -10,6 +11,7 @@ from pydantic import Field, Json, field_serializer, field_validator, model_valid
 from gen_epix.commondb.domain.model import Model, validate_int_enum_value
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.seqdb.domain import enum
+from gen_epix.seqdb.domain.literal import REQUIRED_NEXTCLADE_SEQ_KEYS
 
 
 def str_uuid4() -> str:
@@ -173,6 +175,36 @@ class BaseSeq(Model):
             computed_seq_hash = UUID(
                 hashlib.sha256(seq.encode("ascii")).digest()[:16].hex()
             )
+        elif self.seq_format == enum.SeqFormat.NEXTCLADE:
+            # Parse compact NextClade notation for a single sequence
+            nextclade_seq: dict[str, Any] = json.loads(self.seq)
+            # Validate required fields
+            missing_keys = [
+                x for x in REQUIRED_NEXTCLADE_SEQ_KEYS if x not in nextclade_seq
+            ]
+            if missing_keys:
+                raise ValueError(
+                    f"Missing required NextClade sequence fields: {missing_keys}"
+                )
+            # Derive alignment length from the reported alignment bounds
+            computed_length = (
+                nextclade_seq["alignmentEnd"] - nextclade_seq["alignmentStart"] + 1
+            )
+            if computed_length <= 0:
+                raise ValueError(
+                    "alignmentEnd must be greater than or equal to alignmentStart"
+                )
+            # Compute hash deterministically from sorted field names/values,
+            # mirroring the approach used in SeqProfile.get_snp_profile_hash
+            sha256 = hashlib.sha256()
+            for field_name in sorted(nextclade_seq.keys()):
+                value = nextclade_seq[field_name]
+                sha256.update(field_name.encode("ascii"))
+                if isinstance(value, str):
+                    sha256.update(value.encode("ascii"))
+                elif value is not None:
+                    sha256.update(str(value).encode("ascii"))
+            computed_seq_hash = UUID(sha256.digest()[:16].hex())
         else:
             if seq_hash is None:
                 raise ValueError("Unable to calculate sequence hash")

@@ -98,29 +98,48 @@ def _make_seq_distance(
     )
 
 
+def _make_nextclade_content(
+    *,
+    substitutions: str = "",
+    deletions: str = "",
+    insertions: str = "",
+    missing: str = "",
+    non_acgtns: str = "",
+    alignment_start: int = 1,
+    alignment_end: int = 1,
+) -> str:
+    return json.dumps(
+        {
+            "substitutions": substitutions,
+            "deletions": deletions,
+            "insertions": insertions,
+            "missing": missing,
+            "nonACGTNs": non_acgtns,
+            "alignmentStart": alignment_start,
+            "alignmentEnd": alignment_end,
+        }
+    )
+
+
 def _make_snp_profile_for_upload(
     *,
     profile_id: UUID,
     sample_id: UUID,
     ref_seq_id: UUID,
     protocol_id: UUID,
-    snp_profile: str = "AAA",
-    aligned_nucleotide_seq: str | None = None,
+    nextclade_content: str | None = None,
 ) -> model.SeqProfile:
-    # New unified SeqProfile uses `content`, `format` and `seq_profile_type`.
-    # Use model_construct to avoid invoking full validators (minimal test change).
-    content_value = (
-        aligned_nucleotide_seq if aligned_nucleotide_seq is not None else snp_profile
-    )
     return model.SeqProfile.model_construct(
         id=profile_id,
         sample_id=sample_id,
         seq_id=None,
         ref_seq_id=ref_seq_id,
         protocol_id=protocol_id,
-        content=content_value,
-        format=enum.SeqProfileFormat.REF_ALN_SEQ,
-        content_hash=uuid4(),
+        content=nextclade_content or _make_nextclade_content(),
+        format=enum.SeqProfileFormat.NEXTCLADE,
+        content_hash=model.SeqProfile.get_snp_profile_hash(
+            json.loads(nextclade_content or _make_nextclade_content())
+        ),
         seq_profile_type=enum.SeqProfileType.SNP,
         qc_score=1.0,
         qc_result=enum.QualityControlResult.PASS,
@@ -389,7 +408,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             sample_id=self.sample_id,
             ref_seq_id=self.other_ref_seq_id,
             protocol_id=self.snp_detection_protocol_id,
-            snp_profile="AAAA",
+            nextclade_content=_make_nextclade_content(alignment_end=4),
         )
         cmd: command.CalculateSeqDistancesForNewProfilesCommand = (
             command.CalculateSeqDistancesForNewProfilesCommand(
@@ -434,14 +453,20 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             sample_id=self.sample_id,
             ref_seq_id=self.ref_seq_id,
             protocol_id=self.protocol_id,
-            snp_profile="AACCT",
+            nextclade_content=_make_nextclade_content(
+                substitutions="A3C,A4C,A5T",
+                alignment_end=5,
+            ),
         )
         new_profile: model.SeqProfile = _make_snp_profile_for_upload(
             profile_id=self.new_profile_id,
             sample_id=self.sample_id2,
             ref_seq_id=self.ref_seq_id,
             protocol_id=self.protocol_id,
-            snp_profile="AATTT",
+            nextclade_content=_make_nextclade_content(
+                substitutions="A3T,A4T,A5T",
+                alignment_end=5,
+            ),
         )
         cmd: command.CalculateSeqDistancesForNewProfilesCommand = (
             command.CalculateSeqDistancesForNewProfilesCommand(
@@ -492,15 +517,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         created_map: dict[str, float] = json.loads(created.content)
         self.assertIn(str(self.existing_profile_id), created_map)
 
-        # "AACCT" vs "AATTT": C!=T at pos 2,
-        # C!=T at pos 3 -> distance = 2
-        expected_distance: float = float(
-            sum(
-                1
-                for a, b in zip("AACCT", "AATTT")
-                if a != b and a not in ("N", "-") and b not in ("N", "-")
-            )
-        )
+        expected_distance = 2.0
 
         self.assertEqual(updated_distances[str(self.new_profile_id)], expected_distance)
         self.assertEqual(created_map[str(self.existing_profile_id)], expected_distance)
@@ -755,7 +772,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             sample_id=self.sample_id2,
             ref_seq_id=self.ref_seq_id,
             protocol_id=self.protocol_id,
-            aligned_nucleotide_seq="AAAA",
+            nextclade_content=_make_nextclade_content(alignment_end=4),
         )
         cmd: command.CalculateSeqDistancesForNewProfilesCommand = (
             command.CalculateSeqDistancesForNewProfilesCommand(
@@ -789,8 +806,8 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
 
     def _run_snp_distance(
         self,
-        existing_seq: str,
-        new_seq: str,
+        existing_content: str,
+        new_content: str,
         max_stored_distance: float = 100.0,
     ) -> tuple[
         _CrudRecorder,
@@ -803,14 +820,14 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             sample_id=self.sample_id,
             ref_seq_id=self.ref_seq_id,
             protocol_id=self.protocol_id,
-            snp_profile=existing_seq,
+            nextclade_content=existing_content,
         )
         new_profile = _make_snp_profile_for_upload(
             profile_id=self.new_profile_id,
             sample_id=self.sample_id2,
             ref_seq_id=self.ref_seq_id,
             protocol_id=self.protocol_id,
-            snp_profile=new_seq,
+            nextclade_content=new_content,
         )
         cmd = command.CalculateSeqDistancesForNewProfilesCommand(
             user=self.user,
@@ -843,39 +860,51 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
     def test_snp_distance_identical_mismatch_n_and_gap(
         self,
     ) -> None:
-        """Identical->0, single mismatch->1,
-        N/gap->skipped."""
-        # Identical sequences
-        recorder, results = self._run_snp_distance("ACGT", "ACGT")
+        """Identical profiles are zero-distance and Nextclade states mismatch."""
+        recorder, results = self._run_snp_distance(
+            _make_nextclade_content(alignment_end=4),
+            _make_nextclade_content(alignment_end=4),
+        )
         self.assertEqual(len(results), 2)
         self.assertEqual(
             json.loads(recorder.created[0].content)[str(self.existing_profile_id)],
             0.0,
         )
 
-        # Single mismatch
-        recorder, results = self._run_snp_distance("ACGT", "ATGT")
+        recorder, results = self._run_snp_distance(
+            _make_nextclade_content(alignment_end=4),
+            _make_nextclade_content(substitutions="A2T", alignment_end=4),
+        )
         self.assertEqual(
             json.loads(recorder.created[0].content)[str(self.existing_profile_id)],
             1.0,
         )
 
-        # N in either position -> skipped,
-        # gap '-' -> skipped
-        # "ANTG-C" vs "ACTC-T":
-        #   N@1->skip, -@4->skip,
-        #   G!=C@3(+1), C!=T@5(+1) -> 2
-        recorder, results = self._run_snp_distance("ANTG-C", "ACTC-T")
+        recorder, results = self._run_snp_distance(
+            _make_nextclade_content(
+                deletions="4",
+                missing="2",
+                non_acgtns="R:3",
+                alignment_end=4,
+            ),
+            _make_nextclade_content(
+                substitutions="A2T",
+                alignment_end=5,
+            ),
+        )
         self.assertEqual(
             json.loads(recorder.created[0].content)[str(self.existing_profile_id)],
-            2.0,
+            4.0,
         )
 
     def test_snp_mismatched_length_raises(
         self,
     ) -> None:
         with self.assertRaises(ValueError):
-            self._run_snp_distance("ACGTACGT", "ACG")
+            self._run_snp_distance(
+                _make_nextclade_content(substitutions="bad", alignment_end=4),
+                _make_nextclade_content(alignment_end=4),
+            )
 
     def test_new_profile_without_id_is_processed(self) -> None:
         # A profile with id=None is silently filtered out by the service

@@ -426,15 +426,10 @@ def _verify_batch_refdata_snp_profiles(
 ) -> bool:
     """Verify SNP profiles specific rules."""
 
-    # TODO: LSP-3268-Implement-SNP-profile-support-seqdb:
-    #   - Load the related protocol
-    #   - Verify that the protocol has a ref_seq_id
-    #   - Load the 'real' ref_seq record
-    #   - If aligned_nucleotide_seq is used, copy it into content and clear aligned_nucleotide_seq
-    #   - If content and content2 are used, parse both fields.
-    #   - Rebuild the full aligned sequence by calling nextclade_get_ref_alignment().
-    #   - Compute content_hash from the rebuilt sequence.
-    #   - Set format to REF_ALN_SEQ.
+    # TODO: LSP-3268-Implement-SNP-profile-support-seqdb (remaining):
+    #   - Load the 'real' ref_seq record.
+    #   - Handle aligned_nucleotide_seq and content/content2 compact form.
+    #   - Rebuild the full aligned sequence via nextclade_get_ref_alignment().
 
     success = True
     user_id = cmd.user.id if cmd.user else None
@@ -498,12 +493,6 @@ def _verify_batch_refdata_snp_profiles(
                 f"Reference sequences not found:" f" {sorted(missing_ref_seqs)}",
             )
 
-    # Track expected length per ref_seq_id
-    seq_length_by_ref_seq: dict[UUID, int] = {}
-    valid_chars = enum.SeqAlphabet.DNA_INCL_AMBIGUOUS_AND_GAP.value
-
-    # Validate each profile and convert to
-    # canonical content
     for profile, profile_result in zip(profiles, profile_results):
         if profile_result.status != EtlStatus.PENDING:
             continue
@@ -514,48 +503,30 @@ def _verify_batch_refdata_snp_profiles(
             success = False
             profile_result.add_error(
                 "a6b5c4d3",
-                "Protocol has no ref_seq_id for" " SNP profile",
+                "Protocol has no ref_seq_id for SNP profile",
             )
             continue
 
-        # Convert aligned_nucleotide_seq
-        # to content if needed
-        if profile.content == "" and profile.aligned_nucleotide_seq is not None:
-            profile.content = profile.aligned_nucleotide_seq
-            profile.aligned_nucleotide_seq = None
-
-        seq = profile.content
-        if not seq:
-            success = False
-            profile_result.add_error("d3e2f1a0", "Empty aligned nucleotide sequence")
-            continue
-
-        # Validate characters
-        invalid = set(seq) - valid_chars
-        if invalid:
+        content = profile.content
+        if not content:
             success = False
             profile_result.add_error(
-                "e2f1a0b9",
-                f"Invalid characters in aligned nucleotide sequence: {sorted(invalid)}",
+                "d3e2f1a0",
+                "SNP profile content is empty",
             )
             continue
 
-        # Validate length consistency per
-        # ref_seq
-        expected_len = seq_length_by_ref_seq.get(ref_seq_id)
-        if expected_len is None:
-            seq_length_by_ref_seq[ref_seq_id] = len(seq)
-        elif len(seq) != expected_len:
+        if content is None or content == "":
             success = False
             profile_result.add_error(
-                "f1a0b9c8",
-                f"Aligned nucleotide sequence length ({len(seq)}) differs"
-                f" from expected length ({expected_len}) for ref_seq {ref_seq_id}",
+                "c5d4e3f2",
+                "SNP profile content is empty",
             )
             continue
-
-        # Set format to REF_ALN_SEQ
-        profile.format = enum.SeqProfileFormat.REF_ALN_SEQ
+        else:
+            if profile.format == enum.SeqProfileFormat.NEXTCLADE:
+                # TODO: Add more specific SNP profile validations as needed
+                pass
 
     return success
 

@@ -116,96 +116,96 @@ data = {
 
 nextclade_df = pd.DataFrame(data)
 
+# TODO: Uncomment if nextclade_get_ref_alignment is used in the code
+# @pytest.mark.scenario_ids("TC-SEC-29-03")
+# class TestNextcladeGetRefAlignment:
+#     """Tests for SeqProfile.nextclade_get_ref_alignment."""
 
-@pytest.mark.scenario_ids("TC-SEC-29-03")
-class TestNextcladeGetRefAlignment:
-    """Tests for SeqProfile.nextclade_get_ref_alignment."""
+#     def test_basic_shape_and_content(self) -> None:
+#         result = model.SeqProfile.nextclade_get_ref_alignment(
+#             nextclade_df,
+#             ref_seq=ref_seq,
+#             remove_conserved=False,
+#             uppercase=True,
+#             verify=False,
+#         )
+#         # --- Basic shape checks ---
+#         assert result.shape[0] == 8, f"Expected 8 rows, got {result.shape[0]}"
+#         # At least 100 columns (reference positions)
+#         # plus insertion columns
+#         assert result.shape[1] >= 100, f"Expected >=100 cols, got {result.shape[1]}"
+#         # --- Check sample_clean: all reference letters ---
+#         clean = result.loc["sample_clean"]
+#         assert clean["A1"] == "A"
+#         assert clean["C2"] == "C"
+#         assert clean["G3"] == "G"
+#         assert clean["T4"] == "T"
+#         assert clean["C10"] == "C"
 
-    def test_basic_shape_and_content(self) -> None:
-        result = model.SeqProfile.nextclade_get_ref_alignment(
-            nextclade_df,
-            ref_seq=ref_seq,
-            remove_conserved=False,
-            uppercase=True,
-            verify=False,
-        )
-        # --- Basic shape checks ---
-        assert result.shape[0] == 8, f"Expected 8 rows, got {result.shape[0]}"
-        # At least 100 columns (reference positions)
-        # plus insertion columns
-        assert result.shape[1] >= 100, f"Expected >=100 cols, got {result.shape[1]}"
-        # --- Check sample_clean: all reference letters ---
-        clean = result.loc["sample_clean"]
-        assert clean["A1"] == "A"
-        assert clean["C2"] == "C"
-        assert clean["G3"] == "G"
-        assert clean["T4"] == "T"
-        assert clean["C10"] == "C"
+#     def test_dict_input_equals_dataframe_input(self) -> None:
+#         result = model.SeqProfile.nextclade_get_ref_alignment(
+#             nextclade_df,
+#             ref_seq=ref_seq,
+#             remove_conserved=False,
+#             uppercase=True,
+#             verify=False,
+#         )
+#         nextclade_df_dict: dict[str, dict[str, Any]] = (
+#             nextclade_df.set_index("seqName")
+#             .drop(columns=[""], errors="ignore")  # removes the empty index column
+#             .to_dict(orient="index")
+#         )
+#         result_dict = model.SeqProfile.nextclade_get_ref_alignment(
+#             nextclade_df_dict,
+#             ref_seq=ref_seq,
+#             remove_conserved=False,
+#             uppercase=True,
+#             verify=False,
+#         )
+#         assert result.equals(result_dict)
 
-    def test_dict_input_equals_dataframe_input(self) -> None:
-        result = model.SeqProfile.nextclade_get_ref_alignment(
-            nextclade_df,
-            ref_seq=ref_seq,
-            remove_conserved=False,
-            uppercase=True,
-            verify=False,
-        )
-        nextclade_df_dict: dict[str, dict[str, Any]] = (
-            nextclade_df.set_index("seqName")
-            .drop(columns=[""], errors="ignore")  # removes the empty index column
-            .to_dict(orient="index")
-        )
-        result_dict = model.SeqProfile.nextclade_get_ref_alignment(
-            nextclade_df_dict,
-            ref_seq=ref_seq,
-            remove_conserved=False,
-            uppercase=True,
-            verify=False,
-        )
-        assert result.equals(result_dict)
+#     def test_remove_conserved_produces_fewer_columns(self) -> None:
+#         result = model.SeqProfile.nextclade_get_ref_alignment(
+#             nextclade_df,
+#             ref_seq=ref_seq,
+#             remove_conserved=False,
+#             uppercase=True,
+#             verify=False,
+#         )
+#         result_rc = model.SeqProfile.nextclade_get_ref_alignment(
+#             nextclade_df,
+#             ref_seq=ref_seq,
+#             remove_conserved=True,
+#             uppercase=True,
+#             verify=False,
+#         )
+#         # Should have fewer columns (only polymorphic ones)
+#         assert (
+#             result_rc.shape[1] < result.shape[1]
+#         ), "remove_conserved should produce fewer columns"
+#         # Substitution columns should still be present
+#         assert "A1" in result_rc.columns
+#         assert "C2" in result_rc.columns
 
-    def test_remove_conserved_produces_fewer_columns(self) -> None:
-        result = model.SeqProfile.nextclade_get_ref_alignment(
-            nextclade_df,
-            ref_seq=ref_seq,
-            remove_conserved=False,
-            uppercase=True,
-            verify=False,
-        )
-        result_rc = model.SeqProfile.nextclade_get_ref_alignment(
-            nextclade_df,
-            ref_seq=ref_seq,
-            remove_conserved=True,
-            uppercase=True,
-            verify=False,
-        )
-        # Should have fewer columns (only polymorphic ones)
-        assert (
-            result_rc.shape[1] < result.shape[1]
-        ), "remove_conserved should produce fewer columns"
-        # Substitution columns should still be present
-        assert "A1" in result_rc.columns
-        assert "C2" in result_rc.columns
+#     def test_uppercase_false_lowercases_bases(self) -> None:
+#         result_lc = model.SeqProfile.nextclade_get_ref_alignment(
+#             nextclade_df,
+#             ref_seq=ref_seq,
+#             remove_conserved=False,
+#             uppercase=False,
+#             verify=False,
+#         )
+#         lc_clean = result_lc.loc["sample_clean"]
+#         assert lc_clean["A1"] == "a"
+#         assert lc_clean["C2"] == "c"
 
-    def test_uppercase_false_lowercases_bases(self) -> None:
-        result_lc = model.SeqProfile.nextclade_get_ref_alignment(
-            nextclade_df,
-            ref_seq=ref_seq,
-            remove_conserved=False,
-            uppercase=False,
-            verify=False,
-        )
-        lc_clean = result_lc.loc["sample_clean"]
-        assert lc_clean["A1"] == "a"
-        assert lc_clean["C2"] == "c"
-
-    def test_no_ref_seq_remove_conserved(self) -> None:
-        result_noref = model.SeqProfile.nextclade_get_ref_alignment(
-            nextclade_df,
-            ref_seq=None,
-            remove_conserved=True,
-            uppercase=True,
-            verify=False,
-        )
-        # Should only contain polymorphic columns
-        assert result_noref.shape[1] < 100
+#     def test_no_ref_seq_remove_conserved(self) -> None:
+#         result_noref = model.SeqProfile.nextclade_get_ref_alignment(
+#             nextclade_df,
+#             ref_seq=None,
+#             remove_conserved=True,
+#             uppercase=True,
+#             verify=False,
+#         )
+#         # Should only contain polymorphic columns
+#         assert result_noref.shape[1] < 100

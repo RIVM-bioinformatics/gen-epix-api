@@ -79,7 +79,7 @@ class BaseSnpUploadTestCase(TestCase):
             sample_id=self.sample_id,
             seq_id=None,
             seq_profile_type=enum.SeqProfileType.SNP,
-            format=None,
+            format=enum.SeqProfileFormat.NEXTCLADE,
             content_hash=NULL_ID,
             protocol_id=protocol_id or self.protocol_id,
             protocol_code=None,
@@ -247,9 +247,9 @@ class TestSnpValidCases(BaseSnpUploadTestCase):
     def test_valid_snp_content_passes(
         self,
     ) -> None:
-        """Valid SNP profile with content
-        passes and sets format."""
-        profile = self.create_snp_profile(content="ACGTN-")
+        """Valid SNP profile with Nextclade JSON
+        content passes and sets format."""
+        profile = self.create_snp_profile(content='{"sample1": {"subs": "A1T"}}')
         cmd, retval = self.create_command_and_result(profile)
         protocol = self.create_protocol()
         self.mock_crud_for_snp([protocol], ref_seq_exists=[True])
@@ -264,39 +264,14 @@ class TestSnpValidCases(BaseSnpUploadTestCase):
         self.assertTrue(success)
         self.assertEqual(
             profile.format,
-            enum.SeqProfileFormat.REF_ALN_SEQ,
+            enum.SeqProfileFormat.NEXTCLADE,
         )
         pr = self.get_profile_result(retval)
         self.assertFalse(pr.has_errors())
 
-    def test_valid_aligned_nucleotide_seq_converts(
-        self,
-    ) -> None:
-        """aligned_nucleotide_seq is copied to
-        content and cleared."""
-        profile = self.create_snp_profile(aligned_nucleotide_seq="ACGT")
-        cmd, retval = self.create_command_and_result(profile)
-        protocol = self.create_protocol()
-        self.mock_crud_for_snp([protocol], ref_seq_exists=[True])
-
-        success = _verify_batch_refdata_snp_profiles(
-            self.batch_uploader,
-            cmd,
-            retval,
-            self.uow,
-        )
-
-        self.assertTrue(success)
-        self.assertEqual(profile.content, "ACGT")
-        self.assertIsNone(profile.aligned_nucleotide_seq)
-        self.assertEqual(
-            profile.format,
-            enum.SeqProfileFormat.REF_ALN_SEQ,
-        )
-
     def test_matching_ref_seq_accepted(self) -> None:
         """Existing ref_seq passes validation."""
-        profile = self.create_snp_profile(content="ACGT")
+        profile = self.create_snp_profile(content='{"s1": {"subs": "A1T"}}')
         cmd, retval = self.create_command_and_result(profile)
         protocol = self.create_protocol()
         self.mock_crud_for_snp([protocol], ref_seq_exists=[True])
@@ -322,9 +297,9 @@ class TestSnpValidCases(BaseSnpUploadTestCase):
         self,
     ) -> None:
         """Two profiles for the same ref_seq with
-        equal length both pass."""
-        p1 = self.create_snp_profile(content="ACGT")
-        p2 = self.create_snp_profile(content="TGCA")
+        valid JSON both pass."""
+        p1 = self.create_snp_profile(content='{"s1": {"subs": "A1T"}}')
+        p2 = self.create_snp_profile(content='{"s2": {"subs": "C3G"}}')
         cmd, retval = self.create_command_and_result([p1, p2])
         protocol = self.create_protocol()
         self.mock_crud_for_snp([protocol], ref_seq_exists=[True])
@@ -339,11 +314,11 @@ class TestSnpValidCases(BaseSnpUploadTestCase):
         self.assertTrue(success)
         self.assertEqual(
             p1.format,
-            enum.SeqProfileFormat.REF_ALN_SEQ,
+            enum.SeqProfileFormat.NEXTCLADE,
         )
         self.assertEqual(
             p2.format,
-            enum.SeqProfileFormat.REF_ALN_SEQ,
+            enum.SeqProfileFormat.NEXTCLADE,
         )
 
 
@@ -351,9 +326,8 @@ class TestSnpValidCases(BaseSnpUploadTestCase):
 class TestSnpInvalidCases(BaseSnpUploadTestCase):
     """Invalid SNP profile scenarios."""
 
-    def test_empty_sequence_fails(self) -> None:
-        """Empty content and no
-        aligned_nucleotide_seq → d3e2f1a0."""
+    def test_empty_content_fails(self) -> None:
+        """Empty content → d3e2f1a0."""
         profile = self.create_snp_profile(content="")
         cmd, retval = self.create_command_and_result(profile)
         protocol = self.create_protocol()
@@ -371,29 +345,10 @@ class TestSnpInvalidCases(BaseSnpUploadTestCase):
         self.assertTrue(pr.has_errors())
         self.assertHasLogCode(pr, "d3e2f1a0")
 
-    def test_invalid_characters_fails(self) -> None:
-        """Sequence with invalid chars → e2f1a0b9."""
-        profile = self.create_snp_profile(content="ACGT!@X")
-        cmd, retval = self.create_command_and_result(profile)
-        protocol = self.create_protocol()
-        self.mock_crud_for_snp([protocol], ref_seq_exists=[True])
-
-        success = _verify_batch_refdata_snp_profiles(
-            self.batch_uploader,
-            cmd,
-            retval,
-            self.uow,
-        )
-
-        self.assertFalse(success)
-        pr = self.get_profile_result(retval)
-        self.assertTrue(pr.has_errors())
-        self.assertHasLogCode(pr, "e2f1a0b9")
-
     def test_missing_ref_seq_fails(self) -> None:
         """Non-existent ref_seq → b7c6d5e4 on
         batch result."""
-        profile = self.create_snp_profile(content="ACGT")
+        profile = self.create_snp_profile(content='{"s1": {"subs": "A1T"}}')
         cmd, retval = self.create_command_and_result(profile)
         protocol = self.create_protocol()
         self.mock_crud_for_snp([protocol], ref_seq_exists=[False])
@@ -416,7 +371,7 @@ class TestSnpInvalidCases(BaseSnpUploadTestCase):
     ) -> None:
         """Protocol without ref_seq_id →
         a6b5c4d3."""
-        profile = self.create_snp_profile(content="ACGT")
+        profile = self.create_snp_profile(content='{"s1": {"subs": "A1T"}}')
         cmd, retval = self.create_command_and_result(profile)
         protocol = self.create_protocol(ref_seq_id=None)
         # No ref_seq_ids → no EXISTS_SOME call
@@ -434,12 +389,15 @@ class TestSnpInvalidCases(BaseSnpUploadTestCase):
         self.assertTrue(pr.has_errors())
         self.assertHasLogCode(pr, "a6b5c4d3")
 
-    def test_length_mismatch_fails(self) -> None:
-        """Profiles with different lengths for
-        same ref_seq → f1a0b9c8."""
-        p1 = self.create_snp_profile(content="ACGT")
-        p2 = self.create_snp_profile(content="ACGTNN")
-        cmd, retval = self.create_command_and_result([p1, p2])
+    def test_any_valid_json_passes_structural_only(
+        self,
+    ) -> None:
+        """Any valid JSON passes; no biological
+        validation is performed."""
+        profile = self.create_snp_profile(
+            content='"just a string"',
+        )
+        cmd, retval = self.create_command_and_result(profile)
         protocol = self.create_protocol()
         self.mock_crud_for_snp([protocol], ref_seq_exists=[True])
 
@@ -450,13 +408,9 @@ class TestSnpInvalidCases(BaseSnpUploadTestCase):
             self.uow,
         )
 
-        self.assertFalse(success)
-        # First profile passes, second fails
-        pr1 = self.get_profile_result(retval, 0, 0)
-        pr2 = self.get_profile_result(retval, 0, 1)
-        self.assertFalse(pr1.has_errors())
-        self.assertTrue(pr2.has_errors())
-        self.assertHasLogCode(pr2, "f1a0b9c8")
+        self.assertTrue(success)
+        pr = self.get_profile_result(retval)
+        self.assertFalse(pr.has_errors())
 
 
 @pytest.mark.scenario_ids("TC-11-13-01")
@@ -501,43 +455,12 @@ class TestSnpBehavior(BaseSnpUploadTestCase):
         self.assertTrue(success)
         self.service.repository.crud.assert_not_called()
 
-    def test_valid_chars_boundary(self) -> None:
-        """All valid chars ACGTN- accepted,
-        lowercase rejected."""
-        profile_ok = self.create_snp_profile(content="ACGTN-")
-        cmd_ok, retval_ok = self.create_command_and_result(profile_ok)
-        protocol = self.create_protocol()
-        self.mock_crud_for_snp([protocol], ref_seq_exists=[True])
-
-        success_ok = _verify_batch_refdata_snp_profiles(
-            self.batch_uploader,
-            cmd_ok,
-            retval_ok,
-            self.uow,
-        )
-        self.assertTrue(success_ok)
-
-        # Lowercase is invalid
-        profile_lc = self.create_snp_profile(content="acgt")
-        cmd_lc, retval_lc = self.create_command_and_result(profile_lc)
-        self.mock_crud_for_snp([protocol], ref_seq_exists=[True])
-
-        success_lc = _verify_batch_refdata_snp_profiles(
-            self.batch_uploader,
-            cmd_lc,
-            retval_lc,
-            self.uow,
-        )
-        self.assertFalse(success_lc)
-        pr = self.get_profile_result(retval_lc)
-        self.assertHasLogCode(pr, "e2f1a0b9")
-
     def test_batch_validation_idempotent(
         self,
     ) -> None:
         """Calling validation twice on same
         batch yields same result."""
-        profile = self.create_snp_profile(content="ACGT")
+        profile = self.create_snp_profile(content='{"s1": {"subs": "A1T"}}')
         cmd, retval = self.create_command_and_result(profile)
         protocol = self.create_protocol()
         self.mock_crud_for_snp([protocol], ref_seq_exists=[True])
