@@ -405,7 +405,7 @@ class TestVerifyBatchSeqs(BaseUploadTestCase):
         seq_result = self.get_only_seq_result(retval)
         self.assertTrue(success)
         self.assertTrue(seq_result.has_warnings())
-        self.assertTrue(seq_result.has_log_code("a2b3c4d5"))
+        self.assertTrue(seq_result.has_log_code("f202a96b"))
         self.assertEqual(seq_result.status, EtlStatus.SKIPPED)
 
     def test_seq_exists_no_read_sets_error(self) -> None:
@@ -446,7 +446,7 @@ class TestVerifyBatchSeqs(BaseUploadTestCase):
         seq_result = self.get_only_seq_result(retval)
         self.assertFalse(success)
         self.assertTrue(seq_result.has_errors())
-        self.assertTrue(seq_result.has_log_code("b9e4f8a1"))
+        self.assertTrue(seq_result.has_log_code("c837034c"))
 
     def test_seqs_exist_with_same_signature(self) -> None:
         """Test error when seqs exist with same hash, read set and protocol."""
@@ -484,7 +484,7 @@ class TestVerifyBatchSeqs(BaseUploadTestCase):
         seq_result = self.get_only_seq_result(retval)
         self.assertTrue(success)
         self.assertTrue(seq_result.has_warnings())
-        self.assertTrue(seq_result.has_log_code("a2b3c4d5"))
+        self.assertTrue(seq_result.has_log_code("f202a96b"))
         self.assertEqual(seq_result.status, EtlStatus.SKIPPED)
 
 
@@ -517,7 +517,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         self.assertFalse(success)
         # Check that error was added to allele_profile_result
         self.assertTrue(retval.samples[0].seq_profiles[0].has_errors())
-        self.assertTrue(retval.samples[0].seq_profiles[0].has_log_code("e3b5c7d9"))
+        self.assertTrue(retval.samples[0].seq_profiles[0].has_log_code("dec840ca"))
 
     def test_locus_detection_protocol_code_does_not_exist(self) -> None:
         """Test error when locus detection protocol code does not exist."""
@@ -546,7 +546,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         self.assertFalse(success)
         # Check that error was added to seq_profile_result
         self.assertTrue(retval.samples[0].seq_profiles[0].has_errors())
-        self.assertTrue(retval.samples[0].seq_profiles[0].has_log_code("d2c4b6a8"))
+        self.assertTrue(retval.samples[0].seq_profiles[0].has_log_code("ff4ff6db"))
 
     def test_locus_detection_protocol_id_code_mismatch(self) -> None:
         """Test error when locus detection protocol ID and code don't match."""
@@ -580,7 +580,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         self.assertFalse(success)
         # Check that error was added to seq_profile_result
         self.assertTrue(retval.samples[0].seq_profiles[0].has_errors())
-        self.assertTrue(retval.samples[0].seq_profiles[0].has_log_code("c7a9b2e4"))
+        self.assertTrue(retval.samples[0].seq_profiles[0].has_log_code("95558de7"))
 
     def test_seq_profile_exists_gets_skipped(self) -> None:
         """Test seq profile with same hash and seq gets skipped with warning."""
@@ -738,7 +738,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         # Verify
         self.assertFalse(success)
         self.assertTrue(retval.samples[0].seq_profiles[0].has_errors())
-        self.assertTrue(retval.samples[0].seq_profiles[0].has_log_code("e3b5c7d9"))
+        self.assertTrue(retval.samples[0].seq_profiles[0].has_log_code("dec840ca"))
 
     def test_locus_code_map_code_does_not_exist(self) -> None:
         """Test error when locus code map code does not exist."""
@@ -770,7 +770,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         # Verify
         self.assertFalse(success)
         self.assertTrue(retval.samples[0].seq_profiles[0].has_errors())
-        self.assertTrue(retval.samples[0].seq_profiles[0].has_log_code("d2c4b6a8"))
+        self.assertTrue(retval.samples[0].seq_profiles[0].has_log_code("dec840ca"))
 
     def test_locus_code_map_id_code_mismatch(self) -> None:
         """Test error when locus code map ID and code both exist but don't match."""
@@ -805,7 +805,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         # Verify
         self.assertFalse(success)
         self.assertTrue(retval.samples[0].seq_profiles[0].has_errors())
-        self.assertTrue(retval.samples[0].seq_profiles[0].has_log_code("a4d7b9c3"))
+        self.assertTrue(retval.samples[0].seq_profiles[0].has_log_code("79de83f2"))
 
     def test_locus_code_map_code_sets_id(self) -> None:
         """Test that providing only locus code map code sets the ID."""
@@ -974,7 +974,7 @@ class TestVerifyReferenceData(BaseUploadTestCase):
         self.assertFalse(success)
         # The error should be detected (success=False) when new alleles are missing
         self.assertTrue(retval.has_errors())
-        self.assertTrue(retval.has_log_code("a9b8c7d6"))
+        self.assertTrue(retval.has_log_code("7eeced9e"))
 
     def test_verify_refdata_extra_alleles_warning(self) -> None:
         """Test that _verify_refdata gives warning for superfluous alleles in batch."""
@@ -1136,7 +1136,7 @@ class TestVerifyReferenceData(BaseUploadTestCase):
         self.assertEqual(allele_profile_result.status, EtlStatus.FAILED)
         self.assertTrue(allele_profile_result.has_errors())
         # TODO: replace with actual log code rather than log message
-        self.assertTrue(allele_profile_result.has_log_code("d3f5c6b2"))
+        self.assertTrue(allele_profile_result.has_log_code("b29dcaf6"))
 
     def test_verify_refdata_allele_profile_format_not_implemented(self) -> None:
         """Test error when allele profile format is not implemented."""
