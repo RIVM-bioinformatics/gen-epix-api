@@ -563,9 +563,7 @@ class Domain:
         except CycleError as error:
             if on_cycle == OnException.RAISE:
                 cycle_nodes = [x for x in error.args[1] if x is not None]
-                cyclic_service_type = (
-                    cycle_nodes[0] if cycle_nodes else service_types_in_entity_order[0]
-                )
+                cyclic_service_type = cycle_nodes[0] if cycle_nodes else service_types_in_entity_order[0]
                 raise exc.DomainException(
                     "f8b2c94d",
                     f"Service type {cyclic_service_type} is part of a cycle in the entity DAG",
