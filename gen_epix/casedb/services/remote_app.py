@@ -39,6 +39,26 @@ class CasedbRemoteApp(CommondbRemoteApp):
             command.RetrieveCasesByQueryCommand,
             self.retrieve_cases_by_query,
         )
+        self.register_handler(
+            command.RetrieveCaseCohortIdsByCaseTypeCommand,
+            self.retrieve_case_cohort_ids_by_case_type,
+        )
+
+    def retrieve_case_cohort_ids_by_case_type(
+        self,
+        cmd: command.RetrieveCaseCohortIdsByCaseTypeCommand,
+    ) -> list[model.CaseCohortIds]:
+        headers = self.get_headers(cmd)
+        route = self.get_route(cmd)
+        with self.get_client(cmd) as client:
+            response = client.post(
+                route,
+                json={"case_type_id": str(cmd.case_type_id)},
+                headers=headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+        return [model.CaseCohortIds(**item) for item in data]
 
     def retrieve_cases_by_query(
         self,
