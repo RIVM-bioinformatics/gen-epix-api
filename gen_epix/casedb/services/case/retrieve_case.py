@@ -107,31 +107,24 @@ def case_service_retrieve_case_cohort_ids_by_case_type(
 ) -> list[model.CaseCohortIds]:
     user, repository = self._get_user_and_repository(cmd)
     assert isinstance(user, model.User) and user.id is not None
-    case_type_id = cmd.case_type_id
 
-    # @ABAC: get case abac
-    case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
-    assert case_abac is not None
-
+    case_type_filter = UuidSetFilter(
+        key="case_type_id", members=frozenset({cmd.case_type_id})
+    )
     with repository.uow() as uow:
-        cases = self._retrieve_cases_with_content_right(
-            uow,
-            user.id,
-            case_abac,
-            enum.CaseRight.READ_CASE,
-            case_type_id,
-            case_ids=None,
-            filter_content=False,
-            # No row limit — this endpoint is designed for full exports
-            apply_max_n_cases=False,
+        rows = list(
+            self.repository.read_fields(
+                uow=uow,
+                user_id=user.id,
+                model_class=model.Case,
+                field_names=["id"],
+                filter=case_type_filter,
+            )
         )
 
     # cohort_id == case_id (identity mapping); in future a case may have
     # multiple linked cohort IDs stored in a dedicated relation.
-    return [
-        model.CaseCohortIds(case_id=case.id, cohort_ids=[case.id])  # type: ignore[arg-type, list-item]
-        for case in cases
-    ]
+    return [model.CaseCohortIds(case_id=row[0], cohort_ids=[row[0]]) for row in rows]
 
 
 def _apply_max_results_limit(
