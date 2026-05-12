@@ -31,3 +31,7 @@ biopython==1.87
 cachetools==7.0.5
 slowapi==0.1.9
 python-dateutil==2.9.0.post0
+
+# mock OIDC server (test/test_client/oauth) — needed in Docker for the IDP compose stack
+cryptography==46.0.4
+oauthlib==3.3.1

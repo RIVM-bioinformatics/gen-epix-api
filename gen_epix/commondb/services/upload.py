@@ -1526,30 +1526,34 @@ class BatchUploader:
     ) -> bool:
         """
         Update any existing objects and update the corresponding UploadResults.
+        Per-object errors (missing ID, immutable field) are logged to the individual
+        UploadResult and that object is skipped; they do not abort the remaining batch.
         """
         success = True
         if not to_update_obj_result_pairs:
             return success
 
-        # Collect object IDs to update
-        obj_ids: list[UUID] = []
         obj_id_field_name = model_class.ENTITY.get_id_field_name()
+        stored_model_field_props = self.stored_model_field_props[model_class]
+
+        # Separate pairs with valid IDs from those without, to keep zip alignment correct
+        valid_pairs: list[tuple[Model, UploadResult]] = []
+        obj_ids: list[UUID] = []
         for obj, obj_result in to_update_obj_result_pairs:
             obj_id = getattr(obj, obj_id_field_name)
             if self.is_null(obj_id):
-                success = False
-                obj_result.status = EtlStatus.FAILED
                 obj_result.add_error(
                     "8b7824f4",
                     f"Cannot update object without valid ID: {obj}",
                 )
             else:
+                valid_pairs.append((obj, obj_result))
                 obj_ids.append(obj_id)
 
-        # Determine model class and stored model field properties
-        stored_model_field_props = self.stored_model_field_props[model_class]
+        if not obj_ids:
+            return success
 
-        # Retrieve existing objects
+        # Retrieve existing objects (aligned with valid_pairs / obj_ids)
         existing_objs: list[Model] = (
             self.service.repository.crud(  # type: ignore[assignment]
                 uow,
@@ -1563,26 +1567,26 @@ class BatchUploader:
         # Determine which objects actually need to be updated instead of having identical data
         to_update_objs: list[Model] = []
         to_update_obj_results: list[model.UploadResult] = []
-        for (obj, obj_result), existing_obj in zip(
-            to_update_obj_result_pairs, existing_objs
-        ):
+        for (obj, obj_result), existing_obj in zip(valid_pairs, existing_objs):
             # Only check props for updates, other fields are not updatable
             is_updated = False
             for field_name, field_props in stored_model_field_props.items():
                 if field_name == obj_id_field_name:
                     continue  # ID field is the lookup key; never part of updates
                 existing_value = getattr(existing_obj, field_name)
-                # Field if the field, with its existing value, is (still) mutable
-                if not field_props.is_mutable_value(existing_value):
-                    success = False
-                    obj_result.status = EtlStatus.FAILED
-                    obj_result.add_error(
-                        "f5e09001",
-                        f"Field {field_name} with existing value {existing_value} may not be updated.",
-                    )
-                    continue
-                # Update the existing object's field if the new value is different
                 new_value = getattr(obj, field_name)
+                if not field_props.is_mutable_value(existing_value):
+                    # Immutable field: only an error if the value is actually changing.
+                    # Re-uploading the same value (e.g. a full record with one extra
+                    # field added) is fine and requires no action for this field.
+                    if new_value != existing_value:
+                        obj_result.add_error(
+                            "f5e09001",
+                            f"Field {field_name} with existing value {existing_value} may not be updated.",
+                        )
+                        break
+                    continue
+                # Mutable field: apply update if value differs
                 if existing_value is None:
                     # Existing value is None: set new value if not None
                     if new_value:
@@ -1598,17 +1602,16 @@ class BatchUploader:
                     if new_value != existing_value:
                         is_updated = True
                         setattr(existing_obj, field_name, new_value)
-            # Determine whether to update, i.e. if any values are indeed different, or otherwise skip
-            if not is_updated and obj_result.status != EtlStatus.FAILED:
+            if obj_result.status == EtlStatus.FAILED:
+                # Per-object error logged above; skip without aborting the batch
+                continue
+            # Determine whether to update or skip (identical content)
+            if not is_updated:
                 obj_result.status = EtlStatus.SKIPPED
                 obj_result.add_info("f5e09001", "Content is identical")
             else:
                 to_update_objs.append(obj)
                 to_update_obj_results.append(obj_result)
-
-        # Stop if there were errors
-        if not success:
-            return success
 
         # Update the objects whose data are different
         if not to_update_objs:

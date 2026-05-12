@@ -13,6 +13,7 @@ The server includes:
 """
 
 import logging
+import os
 import time
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -34,6 +35,11 @@ from pydantic import BaseModel
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# When set, all JWTs and the discovery document use this as the issuer instead of
+# deriving it from request.url.netloc. Useful for docker-compose stacks where the
+# service hostname (mock-oidc:8080) differs from the host-facing URL (localhost:8080).
+_ISSUER: str | None = os.environ.get("MOCK_OIDC_ISSUER")
 
 # Initialize components
 client_store = ClientStore()
@@ -166,7 +172,7 @@ async def openid_configuration(request: Request) -> dict[str, Any]:
     base_url = f"{request.url.scheme}://{request.url.netloc}"
 
     return {
-        "issuer": base_url,
+        "issuer": _ISSUER or base_url,
         "authorization_endpoint": f"{base_url}/oauth/authorize",
         "token_endpoint": f"{base_url}/oauth/token",
         "userinfo_endpoint": f"{base_url}/oauth/userinfo",
@@ -244,7 +250,7 @@ async def token_endpoint(request: Request) -> JSONResponse:
         expires_at = now + timedelta(seconds=expires_in)
 
         access_token_payload = {
-            "iss": f"{request.url.scheme}://{request.url.netloc}",
+            "iss": _ISSUER or f"{request.url.scheme}://{request.url.netloc}",
             "sub": auth_code.user_id,
             "aud": client.audience or client.client_id,
             "iat": int(now.timestamp()),
@@ -274,7 +280,7 @@ async def token_endpoint(request: Request) -> JSONResponse:
 
         if "openid" in auth_code.scopes:
             id_token_payload = {
-                "iss": f"{request.url.scheme}://{request.url.netloc}",
+                "iss": _ISSUER or f"{request.url.scheme}://{request.url.netloc}",
                 "sub": auth_code.user_id,
                 "aud": client.audience or client.client_id,
                 "iat": int(now.timestamp()),
@@ -343,7 +349,7 @@ async def token_endpoint(request: Request) -> JSONResponse:
     # Add ID token if openid scope is requested
     if "openid" in allowed_scopes:
         id_token_payload = {
-            "iss": f"{request.url.scheme}://{request.url.netloc}",
+            "iss": _ISSUER or f"{request.url.scheme}://{request.url.netloc}",
             "sub": client.client_id,
             "aud": client.audience or client.client_id,  # Use client's audience if set
             "iat": int(now.timestamp()),
