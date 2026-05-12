@@ -189,8 +189,8 @@ class TestTupleMapTransformer:
         with pytest.raises(ValueError, match="Could not find mapping"):
             transformer.transform(adapter)
 
-    def test_transform_dict(self) -> None:
-        """Test transform_dict for direct dict transformation."""
+    def test_transform_row(self) -> None:
+        """Test transform_row for direct dict transformation."""
         map_rows = [
             {"src": "A", "tgt": 1},
             {"src": "B", "tgt": 2},
@@ -202,12 +202,12 @@ class TestTupleMapTransformer:
         )
 
         row = {"src": "A"}
-        result = transformer.transform_dict(row)
+        result = transformer.transform_row(row)
         assert result["tgt"] == 1
         assert result is row  # Should mutate and return the same dict
 
-    def test_transform_dict_no_match_raises(self) -> None:
-        """Test that transform_dict raises ValueError when no mapping is found."""
+    def test_transform_row_no_match_raises(self) -> None:
+        """Test that transform_row raises ValueError when no mapping is found."""
         map_rows = [
             {"src": "A", "tgt": 1},
         ]
@@ -218,7 +218,7 @@ class TestTupleMapTransformer:
         )
 
         with pytest.raises(ValueError, match="Could not find mapping"):
-            transformer.transform_dict({"src": "MISSING"})
+            transformer.transform_row({"src": "MISSING"})
 
     def test_update_map(self) -> None:
         """Test that update_map replaces the mapping."""

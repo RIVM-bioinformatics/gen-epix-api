@@ -14,6 +14,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
 
     ROUTE_MAP: dict[type[Command], str] = {
         command.UploadCasesCommand: "/upload/cases",
+        command.RetrieveCasesByQueryCommand: "/retrieve/case_ids_by_query",
     }
 
     DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {
@@ -33,6 +34,27 @@ class CasedbRemoteApp(CommondbRemoteApp):
             command.UploadCasesCommand,
             self.upload_cases,
         )
+        self.register_handler(
+            command.RetrieveCasesByQueryCommand,
+            self.retrieve_cases_by_query,
+        )
+
+    def retrieve_cases_by_query(
+        self,
+        cmd: command.RetrieveCasesByQueryCommand,
+    ) -> model.CaseQueryResult:
+        headers = self.get_headers(cmd)
+        route = self.get_route(cmd)
+        request_body = cmd.case_query
+        with self.get_client(cmd) as client:
+            response = client.post(
+                route,
+                json=json.loads(request_body.model_dump_json()),
+                headers=headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+        return model.CaseQueryResult(**data)
 
     def upload_cases(
         self,

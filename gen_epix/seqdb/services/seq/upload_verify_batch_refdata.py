@@ -121,21 +121,27 @@ def _verify_batch_refdata_allele_profiles(
             if profile.format == enum.SeqProfileFormat.ORDERED_ALLELE_IDS:
                 allele_ids = profile.get_allele_ids()
             else:
-                raise NotImplementedError(
-                    f"Allele profile format {profile.format} not implemented"
+                success = False
+                profile_result.add_error(
+                    "a6097022",
+                    f"Allele profile format {profile.format} is not supported for upload",
                 )
+                continue
         elif profile.allele_ids is not None:
             allele_ids = profile.allele_ids
         else:
-            raise AssertionError(
-                "Either locus_allele_id_map, allele_profile or allele_ids must be provided"
+            success = False
+            profile_result.add_error(
+                "b4cb2ea0",
+                "Allele profile must provide one of: content, allele_ids, or locus_allele_id_map",
             )
+            continue
         # Verify allele_ids representation
         assert allele_ids is not None
         if len(allele_ids) != n_loci:
             success = False
             profile_result.add_error(
-                "d3f5c6b2",
+                "b29dcaf6",
                 f"Length of allele_ids ({len(allele_ids)}) does not match number of loci in locus set ({len(locus_ids)})",
             )
             continue
@@ -189,6 +195,8 @@ def _verify_batch_refdata_allele_profiles(
             allele_ids
         )
         profile.format = enum.SeqProfileFormat.ORDERED_ALLELE_IDS
+        if profile.content_hash == NULL_ID:
+            profile.content_hash = model.SeqProfile.get_allele_profile_hash(allele_ids)
         profile.allele_ids = None
 
     # Verify that any new alleles have been provided and set their locus IDs from the alleles in the sample data
@@ -211,7 +219,7 @@ def _verify_batch_refdata_allele_profiles(
                     + f", ... (and {len(missing_allele_ids_list) - 5} more)"
                 )
             batch_result.add_error(
-                "a9b8c7d6",
+                "7eeced9e",
                 f"Missing new alleles: {missing_alleles_str}",
             )
         # Determine if any extra alleles
@@ -229,7 +237,7 @@ def _verify_batch_refdata_allele_profiles(
                     + f", ... (and {len(extra_allele_ids_list) - 5} more)"
                 )
             batch_result.add_warning(
-                "f6e5d4c3",
+                "dda74ae0",
                 f"Superfluous new alleles provided: {extra_alleles_str}",
             )
         # Verify locus IDs of provided alleles
@@ -250,7 +258,7 @@ def _verify_batch_refdata_allele_profiles(
                 # Different locus ID, put the one derived from the profile
                 success = False
                 batch_result.add_warning(
-                    "e4f3g2h1",
+                    "e401b1bd",
                     f"Different locus ID for new allele {allele.id}: expected {expected_locus_id}, got {locus_id}, used the former",
                 )
         # Remove any extra alleles
@@ -389,15 +397,21 @@ def _verify_batch_refdata_mlva_profiles(
                     for repeat_number in profile.get_repeat_numbers()
                 ]
             else:
-                raise NotImplementedError(
-                    f"MLVA profile format {profile.format} not implemented"
+                success = False
+                profile_result.add_error(
+                    "d5e6f7a8",
+                    f"MLVA profile format {profile.format} is not supported for upload",
                 )
+                continue
         elif profile.repeat_numbers is not None:
             repeat_numbers = profile.repeat_numbers
         else:
-            raise AssertionError(
-                "Either locus_repeat_number_map, mlva_profile or repeat_numbers must be provided"
+            success = False
+            profile_result.add_error(
+                "e6f7a8b9",
+                "MLVA profile must provide one of: content, repeat_numbers, or locus_repeat_number_map",
             )
+            continue
 
         if len(repeat_numbers) != n_loci:
             success = False
@@ -425,14 +439,21 @@ def _verify_batch_refdata_snp_profiles(
     uow: Any,
 ) -> bool:
     """Verify SNP profiles specific rules"""
-    if any(
-        profile.seq_profile_type in enum.SeqProfileTypeSet.SNP.value
-        for sample in cmd.sample_batch.samples
-        for profile in sample.seq_profiles or []
-    ):
-        raise NotImplementedError("Verification of SNP profiles not implemented yet")
-
-    return True
+    success = True
+    for sample, sample_result in zip(cmd.sample_batch.samples, batch_result.samples):
+        for profile, profile_result in zip(
+            sample.seq_profiles or [], sample_result.seq_profiles or []
+        ):
+            if profile_result.status != EtlStatus.PENDING:
+                continue
+            if profile.seq_profile_type not in enum.SeqProfileTypeSet.SNP.value:
+                continue
+            success = False
+            profile_result.add_error(
+                "f7a8b9c0",
+                "Verification of SNP profiles is not yet implemented",
+            )
+    return success
 
 
 def _verify_batch_refdata_kmer_profiles(
@@ -442,11 +463,18 @@ def _verify_batch_refdata_kmer_profiles(
     uow: Any,
 ) -> bool:
     """Verify k-mer profiles specific rules"""
-    if any(
-        profile.seq_profile_type in enum.SeqProfileTypeSet.KMER.value
-        for sample in cmd.sample_batch.samples
-        for profile in sample.seq_profiles or []
-    ):
-        raise NotImplementedError("Verification of k-mer profiles not implemented yet")
-
-    return True
+    success = True
+    for sample, sample_result in zip(cmd.sample_batch.samples, batch_result.samples):
+        for profile, profile_result in zip(
+            sample.seq_profiles or [], sample_result.seq_profiles or []
+        ):
+            if profile_result.status != EtlStatus.PENDING:
+                continue
+            if profile.seq_profile_type not in enum.SeqProfileTypeSet.KMER.value:
+                continue
+            success = False
+            profile_result.add_error(
+                "a9b0c1d2",
+                "Verification of k-mer profiles is not yet implemented",
+            )
+    return success
