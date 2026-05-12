@@ -3,6 +3,7 @@ from typing import Any, NoReturn
 
 from fastapi import APIRouter
 
+from gen_epix.commondb.api.abac import create_abac_endpoints
 from gen_epix.commondb.api.auth import create_auth_endpoints
 from gen_epix.commondb.api.organization import create_organization_endpoints
 from gen_epix.commondb.api.rbac import create_rbac_endpoints
@@ -42,6 +43,11 @@ def create_routers(
                 "service_type": enum.ServiceType.ORGANIZATION,
                 "api_permission_class": ApiPermission,
             },
+        },
+        {
+            "name": "abac",
+            "create_endpoints_fn": create_abac_endpoints,
+            "endpoints_function_kwargs": {"service_type": enum.ServiceType.ABAC},
         },
         {
             "name": "system",
