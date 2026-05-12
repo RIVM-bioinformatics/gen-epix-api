@@ -146,6 +146,19 @@ class RetrieveCasesByQueryCommand(Command):
     case_query: model.CaseQuery = Field(description="The query to filter cases by.")
 
 
+class RetrieveCaseCohortIdsByCaseTypeCommand(Command):
+    """
+    Retrieve all (case_id, cohort_ids) pairs for a given CaseType.
+    Returns every case without pagination. Restricted to APP_ADMIN.
+    Today cohort_id == case_id; in the future a case may have multiple
+    linked cohort IDs.
+    """
+
+    case_type_id: UUID = Field(
+        description="The CaseType ID to retrieve pairs for."
+    )
+
+
 class RetrieveCasesByIdCommand(Command):
     """
     Retrieve cases by their IDs.

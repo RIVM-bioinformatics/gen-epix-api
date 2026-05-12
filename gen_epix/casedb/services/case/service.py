@@ -66,6 +66,7 @@ from gen_epix.casedb.services.case.read_association_with_valid_ids import (
     case_service_read_association_with_valid_ids,
 )
 from gen_epix.casedb.services.case.retrieve_case import (
+    case_service_retrieve_case_cohort_ids_by_case_type,
     case_service_retrieve_cases_by_id,
     case_service_retrieve_cases_by_query,
 )
@@ -138,6 +139,11 @@ class CaseService(BaseCaseService):
         self, cmd: command.RetrieveCasesByQueryCommand
     ) -> model.CaseQueryResult:
         return case_service_retrieve_cases_by_query(self, cmd)
+
+    def retrieve_case_cohort_ids_by_case_type(
+        self, cmd: command.RetrieveCaseCohortIdsByCaseTypeCommand
+    ) -> list[model.CaseCohortIds]:
+        return case_service_retrieve_case_cohort_ids_by_case_type(self, cmd)
 
     def retrieve_cases_by_id(
         self, cmd: command.RetrieveCasesByIdCommand

@@ -78,6 +78,9 @@ from gen_epix.casedb.domain.command.case import (
     RetrieveCasesByIdCommand as RetrieveCasesByIdCommand,
 )
 from gen_epix.casedb.domain.command.case import (
+    RetrieveCaseCohortIdsByCaseTypeCommand as RetrieveCaseCohortIdsByCaseTypeCommand,
+)
+from gen_epix.casedb.domain.command.case import (
     RetrieveCasesByQueryCommand as RetrieveCasesByQueryCommand,
 )
 from gen_epix.casedb.domain.command.case import (
@@ -269,6 +272,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         RefDimCrudCommand,
         GeneticDistanceProtocolCrudCommand,
         RetrieveProtocolsCommand,
+        RetrieveCaseCohortIdsByCaseTypeCommand,
         RetrieveCaseRightsCommand,
         RetrieveCasesByIdCommand,
         RetrieveCasesByQueryCommand,

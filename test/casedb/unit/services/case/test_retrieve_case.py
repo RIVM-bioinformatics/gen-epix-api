@@ -18,6 +18,7 @@ from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.retrieve_case import (
+    case_service_retrieve_case_cohort_ids_by_case_type,
     case_service_retrieve_cases_by_id,
     case_service_retrieve_cases_by_query,
 )
@@ -700,6 +701,63 @@ class TestRetrieveCasesById(BaseRetrieveCaseTestCase):
 
         # 4. Verify
         assert [x.id for x in result] == [self.case_id1]
+
+
+@pytest.mark.scenario_ids("TC-SEC-29-02")
+class TestRetrieveCaseCohortIdsByCaseType(BaseRetrieveCaseTestCase):
+    """Tests covering case_service_retrieve_case_cohort_ids_by_case_type."""
+
+    def test_happy_path_returns_all_with_identity_cohort_mapping(self) -> None:
+        # Two cases should be returned in full (no row limit) with cohort_ids==case_id.
+        # 1. Input
+        cmd: command.RetrieveCaseCohortIdsByCaseTypeCommand = (
+            command.RetrieveCaseCohortIdsByCaseTypeCommand(
+                user=self.user, case_type_id=self.case_type_id
+            )
+        )
+
+        # 2. Mocks
+        self.attach_abac_policy(cmd)
+        cases: list[model.Case] = [
+            self.create_case(self.case_id1, {}),
+            self.create_case(self.case_id2, {}),
+        ]
+        self.service._retrieve_cases_with_content_right = Mock(return_value=cases)
+
+        # 3. Execute
+        result: list[model.CaseCohortIds] = (
+            case_service_retrieve_case_cohort_ids_by_case_type(self.service, cmd)
+        )
+
+        # 4. Verify: two entries, identity mapping, no row-limit lookup
+        assert len(result) == 2
+        assert result[0].case_id == self.case_id1
+        assert result[0].cohort_ids == [self.case_id1]
+        assert result[1].case_id == self.case_id2
+        assert result[1].cohort_ids == [self.case_id2]
+        call_kwargs = self.service._retrieve_cases_with_content_right.call_args.kwargs
+        assert call_kwargs.get("apply_max_n_cases") is False
+        assert self.repository.crud.call_count == 0  # no max-limit lookup
+
+    def test_empty_cases_returns_empty_list(self) -> None:
+        # 1. Input
+        cmd: command.RetrieveCaseCohortIdsByCaseTypeCommand = (
+            command.RetrieveCaseCohortIdsByCaseTypeCommand(
+                user=self.user, case_type_id=self.case_type_id
+            )
+        )
+
+        # 2. Mocks
+        self.attach_abac_policy(cmd)
+        self.service._retrieve_cases_with_content_right = Mock(return_value=[])
+
+        # 3. Execute
+        result: list[model.CaseCohortIds] = (
+            case_service_retrieve_case_cohort_ids_by_case_type(self.service, cmd)
+        )
+
+        # 4. Verify
+        assert result == []
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")

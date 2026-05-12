@@ -29,6 +29,7 @@ from gen_epix.casedb.domain.model.case import (
 from gen_epix.casedb.domain.model.case import CaseDataIssue as CaseDataIssue
 from gen_epix.casedb.domain.model.case import CaseForUpload as CaseForUpload
 from gen_epix.casedb.domain.model.case import CaseIdentifier as CaseIdentifier
+from gen_epix.casedb.domain.model.case import CaseCohortIds as CaseCohortIds
 from gen_epix.casedb.domain.model.case import CaseQuery as CaseQuery
 from gen_epix.casedb.domain.model.case import CaseQueryResult as CaseQueryResult
 from gen_epix.casedb.domain.model.case import CaseRights as CaseRights

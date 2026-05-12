@@ -101,6 +101,39 @@ def case_service_retrieve_cases_by_query(
     )
 
 
+def case_service_retrieve_case_cohort_ids_by_case_type(
+    self: BaseCaseService,
+    cmd: command.RetrieveCaseCohortIdsByCaseTypeCommand,
+) -> list[model.CaseCohortIds]:
+    user, repository = self._get_user_and_repository(cmd)
+    assert isinstance(user, model.User) and user.id is not None
+    case_type_id = cmd.case_type_id
+
+    # @ABAC: get case abac
+    case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+    assert case_abac is not None
+
+    with repository.uow() as uow:
+        cases = self._retrieve_cases_with_content_right(
+            uow,
+            user.id,
+            case_abac,
+            enum.CaseRight.READ_CASE,
+            case_type_id,
+            case_ids=None,
+            filter_content=False,
+            # No row limit — this endpoint is designed for full exports
+            apply_max_n_cases=False,
+        )
+
+    # cohort_id == case_id (identity mapping); in future a case may have
+    # multiple linked cohort IDs stored in a dedicated relation.
+    return [
+        model.CaseCohortIds(case_id=case.id, cohort_ids=[case.id])  # type: ignore[arg-type, list-item]
+        for case in cases
+    ]
+
+
 def _apply_max_results_limit(
     self: BaseCaseService,
     user: model.User,

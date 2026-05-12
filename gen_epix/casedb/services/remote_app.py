@@ -15,6 +15,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
     ROUTE_MAP: dict[type[Command], str] = {
         command.UploadCasesCommand: "/upload/cases",
         command.RetrieveCasesByQueryCommand: "/retrieve/case_ids_by_query",
+        command.RetrieveCaseCohortIdsByCaseTypeCommand: "/retrieve/case_cohort_ids_by_case_type",
     }
 
     DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {
