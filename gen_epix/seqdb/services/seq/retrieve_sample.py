@@ -18,6 +18,20 @@ def seq_service_retrieve_samples_by_id(
     return repository.get_full_samples_by_sample_ids(sample_ids)
 
 
+def seq_service_retrieve_sample_identifiers_by_id(
+    self: BaseSeqService,
+    cmd: command.RetrieveSampleIdentifiersByIdCommand,
+) -> list[model.SampleIdentifier]:
+    """
+    Retrieve only SampleIdentifier records for the requested sample IDs.
+    """
+    sample_ids = cmd.sample_ids or []
+    if not sample_ids:
+        return []
+    repository: BaseSeqRepository = self.repository  # type: ignore[assignment]
+    return repository.get_sample_identifiers_by_sample_ids(sample_ids)
+
+
 def seq_service_retrieve_samples_by_query(
     self: BaseSeqService,
     cmd: command.RetrieveSamplesByQueryCommand,

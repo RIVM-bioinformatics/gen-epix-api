@@ -109,6 +109,23 @@ class SeqSARepository(SARepository, BaseSeqRepository):
 
             return full_samples
 
+    def get_sample_identifiers_by_sample_ids(
+        self,
+        sample_ids: list[UUID],
+    ) -> list[model.SampleIdentifier]:
+        if not sample_ids:
+            return []
+        sa_model_class = sa_model.SA_MODELS_BY_SERVICE_TYPE[enum.ServiceType.SEQ][
+            model.SampleIdentifier
+        ]
+        stmt: sa.Select = sa.select(sa_model_class).where(
+            sa_model_class.internal_id.in_(set(sample_ids))  # type: ignore[attr-defined]
+        )
+        mapper = self.get_mapper(model.SampleIdentifier)
+        with self.uow() as uow:
+            assert isinstance(uow, SAUnitOfWork)
+            return [cast(model.SampleIdentifier, mapper.load(row[0])) for row in uow.session.execute(stmt)]
+
     def retrieve_seq_fasta(
         self,
         uow: BaseUnitOfWork,
