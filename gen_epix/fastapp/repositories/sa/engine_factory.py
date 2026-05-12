@@ -40,7 +40,10 @@ class EngineFactory:
         with cls._LOCK:
             if key not in cls._ENGINE_MAP:
                 engine = sa.create_engine(
-                    connection_string, echo=echo, pool_recycle=pool_recycle
+                    connection_string,
+                    echo=echo,
+                    pool_recycle=pool_recycle,
+                    pool_pre_ping=True,
                 )
                 cls._ENGINE_MAP[key] = engine
             return cls._ENGINE_MAP[key]
