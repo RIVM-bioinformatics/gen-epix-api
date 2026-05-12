@@ -7,6 +7,7 @@ import gen_epix.casedb.domain.model as model
 import gen_epix.seqdb.domain.command as seqdb_command
 import gen_epix.seqdb.domain.model as seqdb_model
 from gen_epix.casedb.domain import exc
+from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.case_validator import CaseValidator
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
@@ -46,11 +47,18 @@ class CaseBatchUploader(BatchUploader):
             cmd.created_in_data_collection_id
         )
         if case_type_access_abac is None:
-            raise exc.UnauthorizedAuthError(
-                "d8c05dc7",
-                f"User {None if cmd.user is None else cmd.user.id} is not allowed to access cases in the given data collection",
-            )
-        write_col_ids = case_type_access_abac.write_col_ids
+            # Full-access users (ROOT / APP_ADMIN) can upload to any data
+            # collection; fall back to all cols for the case type. The
+            # DataCollection existence is still enforced by DB constraints.
+            case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+            if case_abac is None or not case_abac.is_full_access:
+                raise exc.UnauthorizedAuthError(
+                    "d8c05dc7",
+                    f"User {None if cmd.user is None else cmd.user.id} is not allowed to access cases in the given data collection",
+                )
+            write_col_ids = set(complete_case_type.cols.keys())
+        else:
+            write_col_ids = case_type_access_abac.write_col_ids
         if not write_col_ids:
             raise exc.UnauthorizedAuthError(
                 "96851164",
