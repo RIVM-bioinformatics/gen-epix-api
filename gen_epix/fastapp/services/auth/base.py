@@ -16,4 +16,5 @@ class BaseAuthService(BaseService):
         self,
         cmd: GetIdentityProvidersCommand,
     ) -> list[model.IdentityProvider]:
-        raise NotImplementedError
+        """Retrieve a list of available identity providers for authentication."""
+        raise NotImplementedError()

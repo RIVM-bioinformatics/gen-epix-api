@@ -9,6 +9,8 @@ from gen_epix.commondb.services.remote_app import CommondbRemoteApp
 from gen_epix.fastapp.model import Command
 from gen_epix.seqdb.api import (
     CalculatePhylogeneticTreeRequestBody,
+    RetrieveBestSeqPerSampleRequestBody,
+    RetrieveBestSeqProfilePerSampleRequestBody,
     RetrieveSeqFastaRequestBody,
     RetrieveSimilarProfilesRequestBody,
 )
@@ -23,34 +25,38 @@ class SeqdbRemoteApp(CommondbRemoteApp):
 
     ROUTE_MAP: dict[type[Command], str] = {
         command.CalculatePhylogeneticTreeCommand: "/calculate/phylogenetic_tree",
+        command.RetrieveBestSeqPerSampleCommand: "/retrieve/best_seq_per_sample",
+        command.RetrieveBestSeqProfilePerSampleCommand: "/retrieve/best_seq_profile_per_sample",
         command.RetrieveSeqFastaCommand: "/retrieve/seq_fasta",
         command.CreateFileCommand: "/create/file",
         command.RetrieveSimilarProfilesCommand: "/retrieve/similar_profiles",
         command.UploadSamplesCommand: "/upload/samples",
+        command.RetrieveSamplesByQueryCommand: "/retrieve/sample_ids_by_query",
+        command.RetrieveBestSeqPerSampleCommand: "/retrieve/best_seq_per_sample",
+        command.RetrieveBestSeqProfilePerSampleCommand: "/retrieve/best_seq_profile_per_sample",
+    }
+
+    DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {
+        command.UploadSamplesCommand: 45.0,
+        command.RetrieveSamplesByIdCommand: 45.0,
+        command.RetrieveSamplesByQueryCommand: 45.0,
+        command.RetrieveBestSeqPerSampleCommand: 15.0,
+        command.RetrieveBestSeqProfilePerSampleCommand: 15.0,
     }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(DOMAIN, *args, **kwargs)
-        # Register routes and handlers
-        self.register_route(
-            command.CalculatePhylogeneticTreeCommand,
-            self.ROUTE_MAP[command.CalculatePhylogeneticTreeCommand],
+        # Register routes
+        for cmd_class, route in self.ROUTE_MAP.items():
+            self.register_route(cmd_class, route)
+        # Register handlers
+        self.register_handler(
+            command.RetrieveBestSeqPerSampleCommand,
+            self.retrieve_best_seq_per_sample,
         )
-        self.register_route(
-            command.RetrieveSeqFastaCommand,
-            self.ROUTE_MAP[command.RetrieveSeqFastaCommand],
-        )
-        self.register_route(
-            command.CreateFileCommand,
-            self.ROUTE_MAP[command.CreateFileCommand],
-        )
-        self.register_route(
-            command.RetrieveSimilarProfilesCommand,
-            self.ROUTE_MAP[command.RetrieveSimilarProfilesCommand],
-        )
-        self.register_route(
-            command.UploadSamplesCommand,
-            self.ROUTE_MAP[command.UploadSamplesCommand],
+        self.register_handler(
+            command.RetrieveBestSeqProfilePerSampleCommand,
+            self.retrieve_best_seq_profile_per_sample,
         )
         self.register_handler(
             command.CalculatePhylogeneticTreeCommand,
@@ -72,6 +78,18 @@ class SeqdbRemoteApp(CommondbRemoteApp):
             command.UploadSamplesCommand,
             self.upload_samples,
         )
+        self.register_handler(
+            command.RetrieveSamplesByQueryCommand,
+            self.retrieve_samples_by_query,
+        )
+        self.register_handler(
+            command.RetrieveBestSeqPerSampleCommand,
+            self.retrieve_best_seq_per_sample,
+        )
+        self.register_handler(
+            command.RetrieveBestSeqProfilePerSampleCommand,
+            self.retrieve_best_seq_profile_per_sample,
+        )
 
     def calculate_phylogenetic_tree(
         self,
@@ -87,7 +105,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
             leaf_codes=cmd.leaf_names,
         )
 
-        with httpx.Client(verify=self.ssl_context) as client:
+        with self.get_client(cmd) as client:
             response = client.post(
                 route,
                 json=json.loads(request_body.model_dump_json()),
@@ -113,7 +131,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         )
 
         def _iter_fasta_generator() -> Iterable[str]:
-            with httpx.Client(verify=self.ssl_context) as client:
+            with self.get_client(cmd) as client:
                 with client.stream(
                     "POST",
                     route,
@@ -163,7 +181,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
             max_distance=cmd.max_distance,
         )
 
-        with httpx.Client(verify=self.ssl_context) as client:
+        with self.get_client(cmd) as client:
             response = client.post(
                 route,
                 json=json.loads(request_body.model_dump_json()),
@@ -172,6 +190,23 @@ class SeqdbRemoteApp(CommondbRemoteApp):
             response.raise_for_status()
             data = response.json()
         return [UUID(profile_id) for profile_id in data]
+
+    def retrieve_samples_by_query(
+        self,
+        cmd: command.RetrieveSamplesByQueryCommand,
+    ) -> model.SampleQueryResult:
+        headers = self.get_headers(cmd)
+        route = self.get_route(cmd)
+        request_body = cmd.sample_query
+        with self.get_client(cmd) as client:
+            response = client.post(
+                route,
+                json=json.loads(request_body.model_dump_json()),
+                headers=headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+        return model.SampleQueryResult(**data)
 
     def upload_samples(
         self,
@@ -182,7 +217,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
 
         request_body = cmd
 
-        with httpx.Client(verify=self.ssl_context) as client:
+        with self.get_client(cmd) as client:
             response = client.post(
                 route,
                 json=json.loads(request_body.model_dump_json()),
@@ -191,3 +226,45 @@ class SeqdbRemoteApp(CommondbRemoteApp):
             response.raise_for_status()
             data = response.json()
         return model.SampleBatchUploadResult(**data)
+
+    def retrieve_best_seq_per_sample(
+        self,
+        cmd: command.RetrieveBestSeqPerSampleCommand,
+    ) -> dict[UUID, UUID]:
+        headers = self.get_headers(cmd)
+        route = self.get_route(cmd)
+
+        request_body = RetrieveBestSeqPerSampleRequestBody(
+            **cmd.model_dump(),
+        )
+
+        with self.get_client(cmd) as client:
+            response = client.post(
+                route,
+                json=json.loads(request_body.model_dump_json()),
+                headers=headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+        return {UUID(k): UUID(v) for k, v in data.items()}
+
+    def retrieve_best_seq_profile_per_sample(
+        self,
+        cmd: command.RetrieveBestSeqProfilePerSampleCommand,
+    ) -> dict[UUID, UUID]:
+        headers = self.get_headers(cmd)
+        route = self.get_route(cmd)
+
+        request_body = RetrieveBestSeqProfilePerSampleRequestBody(
+            **cmd.model_dump(),
+        )
+
+        with self.get_client(cmd) as client:
+            response = client.post(
+                route,
+                json=json.loads(request_body.model_dump_json()),
+                headers=headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+        return {UUID(k): UUID(v) for k, v in data.items()}

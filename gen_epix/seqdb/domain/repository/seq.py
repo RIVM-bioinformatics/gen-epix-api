@@ -34,6 +34,7 @@ class BaseSeqRepository(BaseRepository):
         max_distance: float,
         **kwargs: Any,
     ) -> list[UUID]:
+        """Retrieve UUIDs of profiles similar to specified profiles."""
         raise NotImplementedError()
 
     @staticmethod
@@ -56,6 +57,7 @@ class BaseSeqRepository(BaseRepository):
         uow: BaseUnitOfWork,
         protocol_id: UUID,
     ) -> Iterable[model.SeqDistance]:
+        """Iterate over sequence distance records for protocol."""
         raise NotImplementedError()
 
     @abc.abstractmethod

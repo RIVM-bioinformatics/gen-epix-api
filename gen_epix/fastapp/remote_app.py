@@ -23,7 +23,7 @@ class RemoteApp(App):
 
     DEFAULT_ROUTE_PREFIX = "/"
 
-    DEFAULT_REQUEST_TIMEOUT_SECONDS = 5
+    DEFAULT_REQUEST_TIMEOUT = 5.0
 
     DEFAULT_REQUEST_HEADERS: dict[str, str] = {"Content-Type": "application/json"}
 
@@ -35,22 +35,23 @@ class RemoteApp(App):
         protocol: HttpProtocol | str = HttpProtocol.HTTPS,
         default_route_prefix: str | None = None,
         default_headers: dict[str, str] | None = None,
+        default_request_timeout: int | None = None,
         add_generated_crud_route_handlers: bool = True,
         ssl_cert_file: Path | str | None = None,
         disable_ssl_verification: bool = False,
-        request_timeout_seconds: int | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(domain, **kwargs)
         self._host = host
         self._port = port
         self._protocol = protocol
-        self._request_timeout_seconds = (
-            request_timeout_seconds or self.DEFAULT_REQUEST_TIMEOUT_SECONDS
+        self._default_request_timeout = (
+            default_request_timeout or self.DEFAULT_REQUEST_TIMEOUT
         )
         self._default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
         self._default_headers = default_headers or self.DEFAULT_REQUEST_HEADERS
         self._routes: dict[type[Command], str] = {}
+        self._timeouts: dict[type[Command], float] = {}
 
         # Initialise SSL context
         self._initialize_ssl_context(host, ssl_cert_file, disable_ssl_verification)
@@ -195,6 +196,29 @@ class RemoteApp(App):
             ) from e
         return retval
 
+    def get_timeout(self, command_class: type[Command]) -> float:
+        """
+        Get the timeout in seconds for a specific command class. Returns the custom timeout if set, otherwise returns the default timeout.
+        """
+        return self._timeouts.get(
+            command_class,
+            self._default_request_timeout,
+        )
+
+    def set_timeout(self, command_class: type[Command], timeout_seconds: float) -> None:
+        """
+        Set a custom timeout for a specific command class. This will be used instead of the default timeout when making requests for that command.
+        """
+        if timeout_seconds <= 0:
+            raise exc.ServiceException("7f3a9c2e", "Timeout must be a positive integer")
+        self._timeouts[command_class] = timeout_seconds
+
+    def get_client(self, cmd: Command, timeout: float | None = None) -> httpx.Client:
+        """Get an httpx.Client instance with the appropriate SSL context and timeout for the given command. This can be used in handlers to make requests to the remote service."""
+        return httpx.Client(
+            verify=self.ssl_context, timeout=timeout or self.get_timeout(type(cmd))
+        )
+
     def register_generated_crud_route(
         self,
         command_class: type[CrudCommand],
@@ -260,9 +284,7 @@ class RemoteApp(App):
         model_class = cmd.MODEL_CLASS
         return_model_class: type = model_class
         is_list = False
-        with httpx.Client(
-            verify=self.ssl_context, timeout=self._request_timeout_seconds
-        ) as client:
+        with self.get_client(cmd) as client:
             match cmd.operation:
                 case CrudOperation.READ_ALL:
                     if cmd.query_filter:
@@ -345,7 +367,7 @@ class RemoteApp(App):
                     return_model_class = UUID
                     is_list = True
                 case _:
-                    raise NotImplementedError(f"Unsupported operation: {cmd.operation}")
+                    raise AssertionError(f"Unsupported operation: {cmd.operation}")
             response.raise_for_status()
         retval = self._content_to_obj(response, return_model_class, is_list=is_list)
         return retval

@@ -8,6 +8,12 @@ from gen_epix.seqdb.api.seq import (
     CalculatePhylogeneticTreeRequestBody as CalculatePhylogeneticTreeRequestBody,
 )
 from gen_epix.seqdb.api.seq import (
+    RetrieveBestSeqPerSampleRequestBody as RetrieveBestSeqPerSampleRequestBody,
+)
+from gen_epix.seqdb.api.seq import (
+    RetrieveBestSeqProfilePerSampleRequestBody as RetrieveBestSeqProfilePerSampleRequestBody,
+)
+from gen_epix.seqdb.api.seq import (
     RetrieveSamplesByIdsRequestBody as RetrieveSamplesByIdsRequestBody,
 )
 from gen_epix.seqdb.api.seq import (

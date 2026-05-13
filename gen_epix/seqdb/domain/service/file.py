@@ -26,6 +26,7 @@ class BaseFileService(BaseService):
         self,
         cmd: command.CreateFileCommand,
     ) -> UUID:
+        """Create a new file and return its unique identifier."""
         raise NotImplementedError()
 
     @abstractmethod
@@ -33,4 +34,5 @@ class BaseFileService(BaseService):
         self,
         cmd: command.FileCrudCommand,
     ) -> model.File | list[model.File] | UUID | list[UUID] | bool | list[bool] | None:
+        """Perform CRUD operations on files based on the command."""
         raise NotImplementedError()

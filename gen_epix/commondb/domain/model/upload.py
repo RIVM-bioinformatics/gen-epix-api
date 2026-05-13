@@ -88,6 +88,10 @@ class IdentifiersMixin:
 
 
 class DataIssue(PydanticBaseModel):
+    """
+    Describes an issue with a single value
+    """
+
     original_value: str | None = Field(description="The original value")
     updated_value: str | None = Field(
         description="The new value after potential resolution of the issue. If not resolved, this will be None.",

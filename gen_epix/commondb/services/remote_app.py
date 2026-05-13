@@ -24,6 +24,8 @@ class CommondbRemoteApp(RemoteApp):
 
     DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN = 60  # seconds
 
+    DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {}
+
     ROUTE_MAP: dict[type[Command], str] = {}
 
     def __init__(
@@ -150,8 +152,9 @@ class CommondbRemoteApp(RemoteApp):
             f"Auth protocol {self._auth_protocol.value} not supported for token retrieval",
         )
 
-    @staticmethod
+    @classmethod
     def create_local_or_remote_app(
+        cls,
         app_type: enum.AppType,
         app_setup_type: str,  # "LOCAL" or "REMOTE"
         local_app_props: dict[str, Any] | None = None,
@@ -174,7 +177,7 @@ class CommondbRemoteApp(RemoteApp):
         user: user_class | None  # pyright: ignore[reportInvalidTypeForm]
         if app_setup_type == "LOCAL":
             # Parse local app props
-            app, user = CommondbRemoteApp._create_local_app(
+            app, user = cls._create_local_app(
                 app_type,
                 local_app_props,
                 app_composer_class,
@@ -193,8 +196,9 @@ class CommondbRemoteApp(RemoteApp):
             )
         return app, user
 
-    @staticmethod
+    @classmethod
     def _create_local_app(
+        cls,
         app_type: enum.AppType,
         local_app_props: dict[str, Any] | None,
         app_composer_class: type | None,
@@ -232,8 +236,10 @@ class CommondbRemoteApp(RemoteApp):
 
         return app, user
 
-    @staticmethod
-    def _create_remote_app(remote_app_props: dict[str, Any] | None) -> tuple[App, None]:
+    @classmethod
+    def _create_remote_app(
+        cls, remote_app_props: dict[str, Any] | None
+    ) -> tuple[App, None]:
         if remote_app_props is None:
             raise exc.InitializationServiceError(
                 "4007b438", "remote_app_props must be provided for REMOTE app setup."
@@ -246,10 +252,12 @@ class CommondbRemoteApp(RemoteApp):
             # Create remote app
         remote_app_module = remote_app_props.pop("module")
         remote_app_class_name = remote_app_props.pop("class_name")
-        remote_app_class = getattr(
+        remote_app_class: type[RemoteApp] = getattr(
             importlib.import_module(remote_app_module), remote_app_class_name
         )
         app = remote_app_class(**remote_app_props)
+        for command_class, timeout in cls.DEFAULT_HTTP_TIMEOUTS.items():
+            app.set_timeout(command_class, timeout)
         # No user for remote app, this is handled via authentication to the actual remote service
         user = None
         return app, user

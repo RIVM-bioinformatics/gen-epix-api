@@ -14,20 +14,13 @@ from pydantic import (
 
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import Model
-from gen_epix.commondb.domain.model.base import (
-    Model,
-    validate_int_enum_value_or_none,
-)
+from gen_epix.commondb.domain.model.base import Model, validate_int_enum_value_or_none
 from gen_epix.commondb.domain.model.organization import BaseIdentifier
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.file import File
-from gen_epix.seqdb.domain.model.seq.base import (
-    BaseSeq,
-    CodeMixin,
-    QualityMixin,
-)
+from gen_epix.seqdb.domain.model.seq.base import BaseSeq, CodeMixin, QualityMixin
 from gen_epix.seqdb.domain.model.seq.protocol import Protocol
 from gen_epix.seqdb.domain.model.seq.reads import ReadSet
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
@@ -145,20 +138,10 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
         """"""
         return len(self.contigs) > 0
 
-    @computed_field(  # type: ignore[prop-decorator]
-        description="The first 128 bits of the SHA256 hash of the sorted contig seq hashes concatenated together. If the sequence has no contigs, the null UUID is returned."
+    seq_hash: UUID = Field(
+        default=NULL_ID,
+        description="The first 128 bits of the SHA256 hash of the sorted contig seq hashes concatenated together. If the sequence has no contigs, the null UUID is returned.",
     )
-    @cached_property
-    def seq_hash(self) -> UUID:
-        """"""
-        if not self.contigs:
-            return NULL_ID
-        # Get sorted list of contig seq_hashes as bytes
-        contig_hashes_bytes = sorted(x.id.bytes for x in self.contigs)
-        # Concatenate the bytes
-        concatenated = b"".join(contig_hashes_bytes)
-        # Compute SHA256 hash and take first 16 bytes (128 bits)
-        return UUID(hashlib.sha256(concatenated).digest()[:16].hex())
 
     @computed_field(  # type: ignore[prop-decorator]
         description="The number of contigs in the sequence. Zero if not available."
@@ -284,6 +267,10 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
                 )
         elif self.read_set2_id == self.read_set_id:
             raise ValueError("read_set2_id must be different from read_set_id")
+        if self.seq_hash == NULL_ID and self.contigs:
+            contig_hashes_bytes = sorted(x.id.bytes for x in self.contigs)
+            concatenated = b"".join(contig_hashes_bytes)
+            self.seq_hash = UUID(hashlib.sha256(concatenated).digest()[:16].hex())
         return self
 
     @field_serializer("contigs")
