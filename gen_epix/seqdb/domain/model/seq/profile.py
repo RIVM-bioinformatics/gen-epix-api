@@ -150,12 +150,9 @@ class SeqProfile(
             # content is a flat JSON dict of NextClade fields for this single sample
             nextclade_fields: dict[str, Any] = json.loads(self.content)
             # Validate required fields at the top level of the flat dict
-            missing_keys = [
-                x for x in REQUIRED_NEXTCLADE_KEYS if x not in nextclade_fields
-            ]
-            if missing_keys:
+            if any(field not in REQUIRED_NEXTCLADE_KEYS for field in nextclade_fields):
                 raise ValueError(
-                    f"Missing required NextClade fields in SNP profile content: {missing_keys}"
+                    f"Missing required NextClade fields for SNP profile content with format {self.format}: {REQUIRED_NEXTCLADE_SEQ_KEYS}"
                 )
             computed_profile_hash = SeqProfile.get_snp_profile_hash(nextclade_fields)
         else:
