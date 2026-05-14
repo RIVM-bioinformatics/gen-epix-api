@@ -198,8 +198,12 @@ class CaseBatchUploader(BatchUploader):
                 complete_case_type, cmd.user.id if cmd.user and cmd.user.id else NULL_ID
             )
             case_validator.validate_and_transform(cmd, batch_result)
-            # TODO: scrub any calculated case dates that are based on Cols
-            # that are not writable by the user
+            # Reset case_date on existing cases after re-validation so that
+            # the immutability check in _upsert_existing_objs treats it as
+            # "not specified" (None) rather than an attempt to overwrite the
+            # stored value. The stored case_date is preserved unchanged.
+            for case in cases_for_validation:
+                case.case_date = None
 
         # Use the general parent method for upserting the cases
         success &= super().upsert_batch(cases_only_cmd, batch_result, uow)
