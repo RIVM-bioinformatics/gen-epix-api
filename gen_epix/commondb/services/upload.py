@@ -1579,7 +1579,9 @@ class BatchUploader:
                     # Immutable field: only an error if the value is actually changing.
                     # Re-uploading the same value (e.g. a full record with one extra
                     # field added) is fine and requires no action for this field.
-                    if new_value != existing_value:
+                    # None means "not specified" — treat as a no-op for immutable fields
+                    # so that partial-update payloads (e.g. only content) don't fail.
+                    if new_value is not None and new_value != existing_value:
                         obj_result.add_error(
                             "f5e09001",
                             f"Field {field_name} with existing value {existing_value} may not be updated.",
