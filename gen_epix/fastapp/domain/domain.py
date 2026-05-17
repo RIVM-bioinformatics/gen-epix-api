@@ -1,5 +1,6 @@
 from collections.abc import Hashable
 from enum import Enum
+from graphlib import CycleError, TopologicalSorter
 from typing import Literal
 
 from gen_epix.fastapp import exc
@@ -538,28 +539,42 @@ class Domain:
         reverse: bool = False,
         on_cycle: OnException = OnException.RAISE,
     ) -> list[Hashable]:
-        entities = self.get_dag_sorted_entities(reverse=reverse, on_cycle=on_cycle)
+        entities = self.get_dag_sorted_entities(on_cycle=on_cycle)
         if len(entities) == 0:
             return []
 
-        entity_service_types = [self._service_type_for_entity[x] for x in entities]
-        service_types = [entity_service_types[0]]
-        seen_service_types = {entity_service_types[0]}
-        for service_type in entity_service_types[1:]:
-            if service_type == service_types[-1]:
-                # Same service type as previous entity, nothing to do
-                continue
-            if service_type in seen_service_types:
-                if on_cycle == OnException.RAISE:
-                    raise exc.DomainException(
-                        "f8b2c94d",
-                        f"Service type {service_type} is part of a cycle in the entity DAG",
-                    )
-                elif on_cycle == OnException.IGNORE:
+        # service_type_dependencies[X] = set of service types that X depends on.
+        service_type_dependencies: dict[Hashable, set[Hashable]] = {}
+        for entity in entities:
+            service_type = self._service_type_for_entity[entity]
+            service_type_dependencies.setdefault(service_type, set())
+            for link in entity.links.values():
+                linked_entity = link.link_model_class.ENTITY
+                linked_service_type = self._service_type_for_entity[linked_entity]
+                if linked_service_type == service_type:
                     continue
-            service_types.append(service_type)
-            seen_service_types.add(service_type)
-        return service_types
+                service_type_dependencies[service_type].add(linked_service_type)
+                service_type_dependencies.setdefault(linked_service_type, set())
+
+        try:
+            sorted_service_types = list(
+                TopologicalSorter(service_type_dependencies).static_order()
+            )
+        except CycleError as error:
+            if on_cycle == OnException.RAISE:
+                cycle_nodes = [x for x in error.args[1] if x is not None]
+                cyclic_service_type = cycle_nodes[0] if cycle_nodes else service_types_in_entity_order[0]
+                raise exc.DomainException(
+                    "f8b2c94d",
+                    f"Service type {cyclic_service_type} is part of a cycle in the entity DAG",
+                ) from error
+            sorted_service_types = list(
+                dict.fromkeys(self._service_type_for_entity[x] for x in entities)
+            )
+
+        if reverse:
+            return list(reversed(sorted_service_types))
+        return sorted_service_types
 
     def register_service_type(self, service_type: Hashable) -> Hashable:
         if service_type not in self._service_types:

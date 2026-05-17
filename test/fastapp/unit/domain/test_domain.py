@@ -738,3 +738,179 @@ class TestDAGAndCycleBehavior(TestCase):
         # Verify - both return valid results with no cycles
         self.assertEqual(result_raise, [self.entity_b_dag, self.entity_a_dag])
         self.assertEqual(result_ignore, [self.entity_b_dag, self.entity_a_dag])
+
+
+@pytest.mark.scenario_ids("TC-SEC-28-02")
+class TestServiceTypeDagSorting(TestCase):
+    def test_get_dag_sorted_service_types_handles_non_contiguous_service_blocks(
+        self,
+    ) -> None:
+        class RootS2(Model):
+            id: UUID
+            NAME = None
+            ENTITY: Entity | None = None  # type: ignore[misc]
+
+        class MidS1(Model):
+            id: UUID
+            NAME = None
+            ENTITY: Entity | None = None  # type: ignore[misc]
+            to_s2: UUID | None = None
+
+        class MidS3(Model):
+            id: UUID
+            NAME = None
+            ENTITY: Entity | None = None  # type: ignore[misc]
+            to_s2: UUID | None = None
+
+        class LeafS1(Model):
+            id: UUID
+            NAME = None
+            ENTITY: Entity | None = None  # type: ignore[misc]
+            to_s3: UUID | None = None
+
+        class CrudRootS2(CrudCommand):
+            NAME = None
+            MODEL_CLASS: type[Model] | None = None  # type: ignore[misc,assignment]
+            PERMISSION_TYPE_SET = PermissionTypeSet.CRUD
+
+        class CrudMidS1(CrudCommand):
+            NAME = None
+            MODEL_CLASS: type[Model] | None = None  # type: ignore[misc,assignment]
+            PERMISSION_TYPE_SET = PermissionTypeSet.CRUD
+
+        class CrudMidS3(CrudCommand):
+            NAME = None
+            MODEL_CLASS: type[Model] | None = None  # type: ignore[misc,assignment]
+            PERMISSION_TYPE_SET = PermissionTypeSet.CRUD
+
+        class CrudLeafS1(CrudCommand):
+            NAME = None
+            MODEL_CLASS: type[Model] | None = None  # type: ignore[misc,assignment]
+            PERMISSION_TYPE_SET = PermissionTypeSet.CRUD
+
+        domain = Domain(name="SERVICE_DAG_NON_CONTIGUOUS")
+
+        root_s2_entity = Entity(
+            id=UUID("00000000-0000-0000-0000-0000000000a1"),
+            persistable=True,
+            links={},
+        )
+        mid_s1_entity = Entity(
+            id=UUID("00000000-0000-0000-0000-0000000000a2"),
+            persistable=True,
+            links={1: ("to_s2", RootS2, None)},  # type: ignore[dict-item]
+        )
+        mid_s3_entity = Entity(
+            id=UUID("00000000-0000-0000-0000-0000000000a3"),
+            persistable=True,
+            links={1: ("to_s2", RootS2, None)},  # type: ignore[dict-item]
+        )
+        leaf_s1_entity = Entity(
+            id=UUID("00000000-0000-0000-0000-0000000000a4"),
+            persistable=True,
+            links={1: ("to_s3", MidS3, None)},  # type: ignore[dict-item]
+        )
+
+        RootS2.ENTITY = root_s2_entity
+        MidS1.ENTITY = mid_s1_entity
+        MidS3.ENTITY = mid_s3_entity
+        LeafS1.ENTITY = leaf_s1_entity
+        CrudRootS2.MODEL_CLASS = RootS2
+        CrudMidS1.MODEL_CLASS = MidS1
+        CrudMidS3.MODEL_CLASS = MidS3
+        CrudLeafS1.MODEL_CLASS = LeafS1
+
+        domain.register_command(CrudRootS2, service_type=ServiceType.SVC2)
+        domain.register_command(CrudMidS1, service_type=ServiceType.SVC1)
+        domain.register_command(CrudMidS3, service_type=ServiceType.SVC3)
+        domain.register_command(CrudLeafS1, service_type=ServiceType.SVC1)
+
+        sorted_types = domain.get_dag_sorted_service_types(on_cycle=OnException.RAISE)
+        self.assertEqual(
+            sorted_types,
+            [ServiceType.SVC2, ServiceType.SVC3, ServiceType.SVC1],
+        )
+
+    def test_get_dag_sorted_service_types_raises_on_real_service_cycle(self) -> None:
+        class AnchorS1(Model):
+            id: UUID
+            NAME = None
+            ENTITY: Entity | None = None  # type: ignore[misc]
+
+        class AnchorS2(Model):
+            id: UUID
+            NAME = None
+            ENTITY: Entity | None = None  # type: ignore[misc]
+
+        class DepS1OnS2(Model):
+            id: UUID
+            NAME = None
+            ENTITY: Entity | None = None  # type: ignore[misc]
+            to_s2: UUID | None = None
+
+        class DepS2OnS1(Model):
+            id: UUID
+            NAME = None
+            ENTITY: Entity | None = None  # type: ignore[misc]
+            to_s1: UUID | None = None
+
+        class CrudAnchorS1(CrudCommand):
+            NAME = None
+            MODEL_CLASS: type[Model] | None = None  # type: ignore[misc,assignment]
+            PERMISSION_TYPE_SET = PermissionTypeSet.CRUD
+
+        class CrudAnchorS2(CrudCommand):
+            NAME = None
+            MODEL_CLASS: type[Model] | None = None  # type: ignore[misc,assignment]
+            PERMISSION_TYPE_SET = PermissionTypeSet.CRUD
+
+        class CrudDepS1OnS2(CrudCommand):
+            NAME = None
+            MODEL_CLASS: type[Model] | None = None  # type: ignore[misc,assignment]
+            PERMISSION_TYPE_SET = PermissionTypeSet.CRUD
+
+        class CrudDepS2OnS1(CrudCommand):
+            NAME = None
+            MODEL_CLASS: type[Model] | None = None  # type: ignore[misc,assignment]
+            PERMISSION_TYPE_SET = PermissionTypeSet.CRUD
+
+        domain = Domain(name="SERVICE_DAG_CYCLE")
+
+        anchor_s1_entity = Entity(
+            id=UUID("00000000-0000-0000-0000-0000000000b1"),
+            persistable=True,
+            links={},
+        )
+        anchor_s2_entity = Entity(
+            id=UUID("00000000-0000-0000-0000-0000000000b2"),
+            persistable=True,
+            links={},
+        )
+        dep_s1_on_s2_entity = Entity(
+            id=UUID("00000000-0000-0000-0000-0000000000b3"),
+            persistable=True,
+            links={1: ("to_s2", AnchorS2, None)},  # type: ignore[dict-item]
+        )
+        dep_s2_on_s1_entity = Entity(
+            id=UUID("00000000-0000-0000-0000-0000000000b4"),
+            persistable=True,
+            links={1: ("to_s1", AnchorS1, None)},  # type: ignore[dict-item]
+        )
+
+        AnchorS1.ENTITY = anchor_s1_entity
+        AnchorS2.ENTITY = anchor_s2_entity
+        DepS1OnS2.ENTITY = dep_s1_on_s2_entity
+        DepS2OnS1.ENTITY = dep_s2_on_s1_entity
+        CrudAnchorS1.MODEL_CLASS = AnchorS1
+        CrudAnchorS2.MODEL_CLASS = AnchorS2
+        CrudDepS1OnS2.MODEL_CLASS = DepS1OnS2
+        CrudDepS2OnS1.MODEL_CLASS = DepS2OnS1
+
+        domain.register_command(CrudAnchorS1, service_type=ServiceType.SVC1)
+        domain.register_command(CrudAnchorS2, service_type=ServiceType.SVC2)
+        domain.register_command(CrudDepS1OnS2, service_type=ServiceType.SVC1)
+        domain.register_command(CrudDepS2OnS1, service_type=ServiceType.SVC2)
+
+        with self.assertRaises(exc.DomainException) as context:
+            domain.get_dag_sorted_service_types(on_cycle=OnException.RAISE)
+        self.assertEqual(context.exception.args[0], "f8b2c94d")
