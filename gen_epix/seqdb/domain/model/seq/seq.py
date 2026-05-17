@@ -136,6 +136,10 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
         default_factory=list,
         description="The contigs that make up the sequence. No duplicate contigs are allowed. If zero contigs are provided, the sequence is considered to be not available yet.",
     )
+    seq_hash: UUID = Field(
+        default=NULL_ID,
+        description="The first 128 bits of the SHA256 hash of the sorted contig seq hashes concatenated together. If the sequence has no contigs, the null UUID is returned.",
+    )
 
     @computed_field(  # type: ignore[prop-decorator]
         description="Whether the sequence has its contigs processed and available."
@@ -144,11 +148,6 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
     def is_available(self) -> bool:
         """"""
         return len(self.contigs) > 0
-
-    seq_hash: UUID = Field(
-        default=NULL_ID,
-        description="The first 128 bits of the SHA256 hash of the sorted contig seq hashes concatenated together. If the sequence has no contigs, the null UUID is returned.",
-    )
 
     @computed_field(  # type: ignore[prop-decorator]
         description="The number of contigs in the sequence. Zero if not available."
