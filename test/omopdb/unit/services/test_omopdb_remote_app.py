@@ -18,8 +18,9 @@ def _fake_app_init(self: object, domain: object, **kwargs: object) -> None:
 
 def _make_app() -> OmopdbRemoteApp:
     domain = SimpleNamespace(crud_commands=[])
-    with patch("gen_epix.omopdb.services.remote_app.DOMAIN", domain), patch(
-        "gen_epix.fastapp.remote_app.App.__init__", _fake_app_init
+    with (
+        patch("gen_epix.omopdb.services.remote_app.DOMAIN", domain),
+        patch("gen_epix.fastapp.remote_app.App.__init__", _fake_app_init),
     ):
         return OmopdbRemoteApp(
             host="example.org",
@@ -42,8 +43,14 @@ def test_registers_person_retrieval_routes_and_handlers() -> None:
 
     assert app.get_route(query_cmd).endswith("/retrieve/person_ids_by_query")
     assert app.get_route(ids_cmd).endswith("/retrieve/persons_by_ids")
-    assert app.get_handler(type(query_cmd)).__func__ is OmopdbRemoteApp.retrieve_persons_by_query
-    assert app.get_handler(type(ids_cmd)).__func__ is OmopdbRemoteApp.retrieve_persons_by_id
+    assert (
+        app.get_handler(type(query_cmd)).__func__
+        is OmopdbRemoteApp.retrieve_persons_by_query
+    )
+    assert (
+        app.get_handler(type(ids_cmd)).__func__
+        is OmopdbRemoteApp.retrieve_persons_by_id
+    )
 
 
 def test_retrieve_persons_by_query_posts_query_body() -> None:
@@ -66,8 +73,9 @@ def test_retrieve_persons_by_query_posts_query_body() -> None:
     client_context.__enter__.return_value = client
     client_context.__exit__.return_value = None
 
-    with patch.object(app, "get_client", return_value=client_context), patch.object(
-        app, "get_headers", return_value={"X-Test": "1"}
+    with (
+        patch.object(app, "get_client", return_value=client_context),
+        patch.object(app, "get_headers", return_value={"X-Test": "1"}),
     ):
         result = app.retrieve_persons_by_query(cmd)
 
