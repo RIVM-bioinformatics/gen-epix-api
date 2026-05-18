@@ -1655,7 +1655,7 @@ class BatchUploader:
                     if new_value is not None and new_value != existing_value:
                         obj_result.add_error(
                             "f5e09001",
-                            f"Field {field_name} with existing value {existing_value} may not be updated.",
+                            f"Field {field_name} with existing value {existing_value} may not be updated to {new_value}.",
                         )
                         break
                     continue
