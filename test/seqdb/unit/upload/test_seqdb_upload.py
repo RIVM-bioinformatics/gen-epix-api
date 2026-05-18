@@ -1193,3 +1193,44 @@ class TestVerifyReferenceData(BaseUploadTestCase):
         """Test assertion error when no allele data is provided."""
         # Skip this test since pydantic validates fields before we get to the assertion
         self.skipTest("Cannot test AssertionError due to pydantic validation")
+
+
+@pytest.mark.scenario_ids("TC-11-13-01")
+class TestConcurrentModificationError(BaseUploadTestCase):
+    """Test that ConcurrentModificationError in distance calculation is a soft failure."""
+
+    def test_concurrent_modification_does_not_raise(self) -> None:
+        """ConcurrentModificationError in distance calc becomes a batch warning."""
+        from gen_epix.fastapp.exc import ConcurrentModificationError
+
+        profile = self.create_seq_profile_for_upload(sample_id=self.sample_id)
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id, seq_profiles=[profile]
+        )
+        cmd, batch_result = self.create_command_and_result_for_samples(sample)
+
+        # Simulate a freshly written profile result so _update_profile_distances
+        # collects it.
+        profile_result = batch_result.samples[0].seq_profiles[0]
+        profile_result.status = EtlStatus.CREATED
+        profile_result.id = uuid4()
+
+        # app.handle raises ConcurrentModificationError for the distance command.
+        self.service.app.handle.side_effect = ConcurrentModificationError(
+            "test_code", "concurrent modification during test"
+        )
+
+        from gen_epix.seqdb.services.seq.upload_upsert_batch import (
+            _update_profile_distances,
+        )
+
+        success = _update_profile_distances(
+            self.batch_uploader, cmd, batch_result, self.uow
+        )
+
+        # No exception should escape; batch_result.seq_distances stays None.
+        self.assertTrue(success)
+        self.assertIsNone(batch_result.seq_distances)
+        self.assertTrue(batch_result.has_log_code("b3e1f49a"))
+        # Sample result must not be FAILED.
+        self.assertNotEqual(profile_result.status, EtlStatus.FAILED)

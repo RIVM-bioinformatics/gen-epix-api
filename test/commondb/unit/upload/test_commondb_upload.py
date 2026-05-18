@@ -2122,3 +2122,142 @@ class TestCombinedScenarios(BaseUploadTestCase):
         self.assertBatchProcessed(batch_result)
         # Result: 1 parent + 1 child1 + 1 child2 + 1 child2 Identifier
         self.assertStatusCount(batch_result, n_created=4)
+
+
+@pytest.mark.scenario_ids("TC-11-13-01")
+class TestDuplicateIds(BaseUploadTestCase):
+    """Duplicate-ID detection converts per-item hard failures into soft FAILED results."""
+
+    def _make_child1(self, child_id: UUID) -> Child1ForUpload:
+        """Construct a Child1ForUpload bypassing Pydantic validators (for dup-ID tests)."""
+        return Child1ForUpload.model_construct(
+            child1_id=child_id,
+            parent_id=NULL_ID,
+            ref1_id=self.ref1_id,
+            ref1_code=None,
+            a="a",
+            b=[],
+            c={},
+        )
+
+    def _make_parent(
+        self,
+        parent_id: UUID,
+        children1: list[Child1ForUpload] | None = None,
+    ) -> ParentForUpload:
+        """Construct a ParentForUpload bypassing Pydantic validators."""
+        from test.commondb.unit.upload.model import Parent
+
+        return ParentForUpload.model_construct(
+            id=parent_id,
+            identifiers=None,
+            children1=children1,
+            children2=None,
+            parent=Parent(a="a", b=[], c={}),
+        )
+
+    def _verify_only_cmd(self, parents: list[ParentForUpload]) -> UploadParentsCommand:
+        """Build an UploadParentsCommand bypassing all Pydantic batch validators."""
+        batch = ParentBatchForUpload.model_construct(
+            id=uuid4(), batch_id=uuid4(), parents=parents
+        )
+        return UploadParentsCommand.model_construct(
+            id=uuid4(),
+            user=self.user,
+            parent_batch=batch,
+            on_exists=UploadAction.UPDATE,
+            on_new=UploadAction.CREATE,
+            verify_only=True,
+        )
+
+    def test_duplicate_parent_ids_both_failed_other_unaffected(self) -> None:
+        """Duplicate parent UUID → both occurrences FAILED, distinct parent unaffected."""
+        shared_id = UUID("aaaaaaaa-0000-0000-0000-000000000001")
+        distinct_id = UUID("bbbbbbbb-0000-0000-0000-000000000002")
+        p0 = self._make_parent(shared_id)
+        p1 = self._make_parent(distinct_id)
+        p2 = self._make_parent(shared_id)
+
+        # objects_exist is called for the one distinct ID only.
+        self.service.repository.crud.return_value = [False]
+
+        batch_result = self.batch_uploader.upload_batch(  # type: ignore[assignment]
+            self._verify_only_cmd([p0, p1, p2])
+        )
+
+        r0, r1, r2 = batch_result.get_parent_results()
+        self.assertEqual(r0.status, EtlStatus.FAILED)
+        self.assertTrue(r0.has_log_code("a1b2c3d4"))
+        self.assertEqual(r2.status, EtlStatus.FAILED)
+        self.assertTrue(r2.has_log_code("a1b2c3d4"))
+        # Distinct parent: PENDING → SKIPPED by verify_only.
+        self.assertEqual(r1.status, EtlStatus.SKIPPED)
+
+    def test_duplicate_child_within_one_parent_parent_failed(self) -> None:
+        """Two children with the same UUID inside one parent → parent FAILED."""
+        child_id = UUID("cccccccc-0000-0000-0000-000000000003")
+        c0 = self._make_child1(child_id)
+        c1 = self._make_child1(child_id)
+        parent = self._make_parent(
+            UUID("dddddddd-0000-0000-0000-000000000004"), children1=[c0, c1]
+        )
+
+        batch_result = self.batch_uploader.upload_batch(  # type: ignore[assignment]
+            self._verify_only_cmd([parent])
+        )
+
+        (r,) = batch_result.get_parent_results()
+        self.assertEqual(r.status, EtlStatus.FAILED)
+        self.assertTrue(r.has_log_code("e5f6a7b8"))
+
+    def test_duplicate_child_across_two_parents_both_parents_failed(self) -> None:
+        """Same child UUID in two distinct parents → both parents FAILED, message names both."""
+        parent_id_a = UUID("eeeeeeee-0000-0000-0000-000000000005")
+        parent_id_b = UUID("ffffffff-0000-0000-0000-000000000006")
+        child_id = UUID("11111111-1111-0000-0000-000000000007")
+        pa = self._make_parent(
+            parent_id_a,
+            children1=[self._make_child1(child_id)],
+        )
+        pb = self._make_parent(
+            parent_id_b,
+            children1=[self._make_child1(child_id)],
+        )
+
+        # objects_exist for parents returns [True, True]; child objects_exist is bypassed.
+        self.service.repository.crud.return_value = [True, True]
+
+        batch_result = self.batch_uploader.upload_batch(  # type: ignore[assignment]
+            self._verify_only_cmd([pa, pb])
+        )
+
+        ra, rb = batch_result.get_parent_results()
+        self.assertEqual(ra.status, EtlStatus.FAILED)
+        self.assertTrue(ra.has_log_code("e5f6a7b8"))
+        self.assertEqual(rb.status, EtlStatus.FAILED)
+        self.assertTrue(rb.has_log_code("e5f6a7b8"))
+        error_msg = next(e.message for e in ra.logs if e.code == "e5f6a7b8")
+        self.assertIn(str(parent_id_a), error_msg)
+        self.assertIn(str(parent_id_b), error_msg)
+
+    def test_non_duplicate_batch_unaffected(self) -> None:
+        """Batch with fully distinct IDs produces no FAILED results and no duplicate codes."""
+        id_a = UUID("22222222-0000-0000-0000-000000000001")
+        id_b = UUID("33333333-0000-0000-0000-000000000002")
+        c1a = UUID("44444444-0000-0000-0000-000000000003")
+        c1b = UUID("55555555-0000-0000-0000-000000000004")
+        pa = self._make_parent(id_a, children1=[self._make_child1(c1a)])
+        pb = self._make_parent(id_b, children1=[self._make_child1(c1b)])
+
+        # Both parents exist; child objects_exist is also called (two IDs each time).
+        self.service.repository.crud.return_value = [True, True]
+
+        batch_result = self.batch_uploader.upload_batch(  # type: ignore[assignment]
+            self._verify_only_cmd([pa, pb])
+        )
+
+        ra, rb = batch_result.get_parent_results()
+        for r in (ra, rb):
+            self.assertNotEqual(r.status, EtlStatus.FAILED)
+            self.assertFalse(r.has_log_code("a1b2c3d4"))
+            self.assertFalse(r.has_log_code("e5f6a7b8"))
