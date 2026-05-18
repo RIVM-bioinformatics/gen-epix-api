@@ -228,10 +228,10 @@ def build_random_nextclade_fields(
         "substitutions": substitutions,
         "deletions": _positions_to_ranges(deletion_positions),
         "insertions": insertions,
-        "missing": _positions_to_ranges(missing_positions),
-        "nonACGTNs": non_acgtns,
-        "alignmentStart": 1,
-        "alignmentEnd": seq_length,
+        "missings": _positions_to_ranges(missing_positions),
+        "non_acgtns": non_acgtns,
+        "alignment_start": 1,
+        "alignment_end": seq_length,
     }
 
 

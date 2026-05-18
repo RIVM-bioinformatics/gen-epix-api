@@ -7,13 +7,13 @@ REQUIRED_NEXTCLADE_KEYS = [
     "substitutions",
     "deletions",
     "insertions",
-    "missing",
-    "nonACGTNs",
+    "missings",
+    "non_acgtns",
 ]
 
 REQUIRED_NEXTCLADE_SEQ_KEYS = REQUIRED_NEXTCLADE_KEYS + [
-    "alignmentStart",
-    "alignmentEnd",
+    "alignment_start",
+    "alignment_end",
 ]
 NEXTCLADE_SUBSTITUTION_PATTERN = re.compile(r"^[A-Za-z](\d+)([A-Za-z-])$")
 NEXTCLADE_INSERTION_PATTERN = re.compile(r"^(\d+):([A-Za-z-]+)$")

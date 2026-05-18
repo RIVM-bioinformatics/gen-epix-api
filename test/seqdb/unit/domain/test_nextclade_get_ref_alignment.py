@@ -9,13 +9,8 @@ Tests cover:
 - Behavior when ref_seq is None (remove_conserved mode)
 """
 
-from typing import Any
-
 import numpy as np
 import pandas as pd
-import pytest
-
-from gen_epix.seqdb.domain import model
 
 ref_seq = (
     "ACGTACGTAC"  # 1-10
@@ -32,7 +27,7 @@ ref_seq = (
 assert len(ref_seq) == 100
 
 data = {
-    "seqName": [
+    "seq_name": [
         "sample_clean",  # 0: no differences
         "sample_subs",  # 1: substitutions only
         "sample_del",  # 2: deletions only
@@ -72,7 +67,7 @@ data = {
         np.nan,  # 6
         "30:TTT",  # 7: one insertion
     ],
-    "missing": [
+    "missings": [
         np.nan,  # 0
         np.nan,  # 1
         np.nan,  # 2
@@ -82,7 +77,7 @@ data = {
         np.nan,  # 6
         "90-92",  # 7: positions 90..92
     ],
-    "nonACGTNs": [
+    "non_acgtns": [
         np.nan,  # 0
         np.nan,  # 1
         np.nan,  # 2
@@ -92,7 +87,7 @@ data = {
         np.nan,  # 6
         "Y:60",  # 7: ambiguity Y at 60
     ],
-    "alignmentStart": [
+    "alignment_start": [
         1,
         1,
         1,
@@ -102,7 +97,7 @@ data = {
         10,  # 6: starts at pos 10
         1,
     ],
-    "alignmentEnd": [
+    "alignment_end": [
         100,
         100,
         100,

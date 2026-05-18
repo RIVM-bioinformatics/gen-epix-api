@@ -1155,12 +1155,12 @@ class SeqdbTestClient(TestClient):
                 sorted(deletion_positions)
             ),
             "insertions": insertions,
-            "missing": SeqdbTestClient._positions_to_nextclade_ranges(
+            "missings": SeqdbTestClient._positions_to_nextclade_ranges(
                 missing_positions
             ),
-            "nonACGTNs": non_acgtns,
-            "alignmentStart": 1,
-            "alignmentEnd": len(ref_seq),
+            "non_acgtns": non_acgtns,
+            "alignment_start": 1,
+            "alignment_end": len(ref_seq),
         }
 
     @staticmethod

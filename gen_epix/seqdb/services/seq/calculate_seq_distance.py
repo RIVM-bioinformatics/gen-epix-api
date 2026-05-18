@@ -548,7 +548,7 @@ def _parse_nextclade_non_acgtns(value: str) -> dict[int, str]:
     for token in _split_nextclade_field(value):
         match = NEXTCLADE_NON_ACGTN_PATTERN.fullmatch(token)
         if match is None:
-            raise ValueError(f"Invalid Nextclade nonACGTNs token: {token}")
+            raise ValueError(f"Invalid Nextclade non_acgtns token: {token}")
         base = match.group(1).lower()
         for position in _parse_nextclade_position_token(match.group(2)):
             non_acgtns[position] = base
@@ -561,8 +561,8 @@ def _parse_nextclade_profile_content(content: str) -> _ParsedNextcladeProfile:
     if not isinstance(nextclade_fields, dict):
         raise ValueError("Nextclade SNP profile content must be a JSON object")
 
-    alignment_start = int(nextclade_fields["alignmentStart"])
-    alignment_end = int(nextclade_fields["alignmentEnd"])
+    alignment_start = int(nextclade_fields["alignment_start"])
+    alignment_end = int(nextclade_fields["alignment_end"])
     if alignment_end < alignment_start:
         raise ValueError(
             "Invalid Nextclade alignment range: " f"{alignment_start}-{alignment_end}"
@@ -572,8 +572,8 @@ def _parse_nextclade_profile_content(content: str) -> _ParsedNextcladeProfile:
         str(nextclade_fields["substitutions"])
     )
     deletions = _parse_nextclade_ranges(str(nextclade_fields["deletions"]))
-    missing = _parse_nextclade_ranges(str(nextclade_fields["missing"]))
-    non_acgtns = _parse_nextclade_non_acgtns(str(nextclade_fields["nonACGTNs"]))
+    missing = _parse_nextclade_ranges(str(nextclade_fields["missings"]))
+    non_acgtns = _parse_nextclade_non_acgtns(str(nextclade_fields["non_acgtns"]))
 
     variant_states: dict[int, tuple[str, str | None]] = {
         position: ("base", base) for position, base in substitutions.items()
@@ -582,7 +582,7 @@ def _parse_nextclade_profile_content(content: str) -> _ParsedNextcladeProfile:
     variant_states.update(
         {position: ("non_acgtn", base) for position, base in non_acgtns.items()}
     )
-    variant_states.update({position: ("missing", None) for position in missing})
+    variant_states.update({position: ("missings", None) for position in missing})
 
     return _ParsedNextcladeProfile(
         substitutions=substitutions,
