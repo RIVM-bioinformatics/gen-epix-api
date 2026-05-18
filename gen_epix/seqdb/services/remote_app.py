@@ -227,7 +227,9 @@ class SeqdbRemoteApp(CommondbRemoteApp):
     ) -> list[model.SampleIdentifier]:
         headers = self.get_headers(cmd)
         route = self.get_route(cmd)
-        request_body = RetrieveSampleIdentifiersByIdsRequestBody(sample_ids=cmd.sample_ids)
+        request_body = RetrieveSampleIdentifiersByIdsRequestBody(
+            sample_ids=cmd.sample_ids
+        )
         with self.get_client(cmd) as client:
             response = client.post(
                 route,

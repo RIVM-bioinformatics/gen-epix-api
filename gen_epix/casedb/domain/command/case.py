@@ -154,9 +154,7 @@ class RetrieveCaseCohortIdsByCaseTypeCommand(Command):
     linked cohort IDs.
     """
 
-    case_type_id: UUID = Field(
-        description="The CaseType ID to retrieve pairs for."
-    )
+    case_type_id: UUID = Field(description="The CaseType ID to retrieve pairs for.")
 
 
 class RetrieveCasesByIdCommand(Command):

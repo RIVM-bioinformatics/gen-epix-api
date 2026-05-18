@@ -81,7 +81,10 @@ class Run:
 
     ## api
     def api(
-        self, app_type: str, idp_config: str, dev_repository_config: str,
+        self,
+        app_type: str,
+        idp_config: str,
+        dev_repository_config: str,
         reload: bool = True,
     ) -> None:
         import uvicorn

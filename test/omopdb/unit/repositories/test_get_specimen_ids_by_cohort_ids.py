@@ -21,9 +21,9 @@ from sqlalchemy.pool import StaticPool
 from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork
 from gen_epix.omopdb.domain import model
 from gen_epix.omopdb.repositories import sa_model
-from gen_epix.omopdb.repositories.sa_model.omop import Base
 from gen_epix.omopdb.repositories.omop_dict import OmopDictRepository
 from gen_epix.omopdb.repositories.omop_sa import OmopSARepository
+from gen_epix.omopdb.repositories.sa_model.omop import Base
 
 # ---------------------------------------------------------------------------
 # Shared test data
@@ -42,10 +42,10 @@ _SPECIMEN_D_ID = UUID("00000000-0000-0000-0000-000000000104")
 _SPECIMEN_NULL_DATE_ID = UUID("00000000-0000-0000-0000-000000000105")
 
 _T = date(2023, 1, 1)
-_T2 = date(2023, 1, 3)   # T + 2 days  — cohort 1 window
+_T2 = date(2023, 1, 3)  # T + 2 days  — cohort 1 window
 _T14 = date(2023, 1, 15)  # T + 14 days — cohort 1 end
-_T60 = date(2023, 3, 2)   # T + 60 days — cohort 2 window
-_T62 = date(2023, 3, 4)   # T + 62 days — cohort 2 window
+_T60 = date(2023, 3, 2)  # T + 60 days — cohort 2 window
+_T62 = date(2023, 3, 4)  # T + 62 days — cohort 2 window
 _T74 = date(2023, 3, 16)  # T + 74 days — cohort 2 end
 
 

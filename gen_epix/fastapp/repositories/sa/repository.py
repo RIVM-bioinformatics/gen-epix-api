@@ -694,7 +694,9 @@ class SARepository(BaseRepository):
             n_rows = len(new_rows)
             n_batches = max(1, -(-n_rows // max_batch_size))  # ceiling division
             for i in range(n_batches):
-                slice_ = slice(i * max_batch_size, min((i + 1) * max_batch_size, n_rows))
+                slice_ = slice(
+                    i * max_batch_size, min((i + 1) * max_batch_size, n_rows)
+                )
                 session.add_all(new_rows[slice_])
                 if flush:
                     session.flush()
@@ -706,7 +708,9 @@ class SARepository(BaseRepository):
                 all_rows: list[Any] = []
                 all_row_ids: list[Hashable] = []
                 for chunk_start in range(0, len(existing_obj_ids), max_batch_size):
-                    chunk_ids = existing_obj_ids[chunk_start : chunk_start + max_batch_size]
+                    chunk_ids = existing_obj_ids[
+                        chunk_start : chunk_start + max_batch_size
+                    ]
                     chunk_rows, chunk_row_ids = SARepository._in_session_read_some(
                         mapper, session, row_class, chunk_ids
                     )

@@ -124,7 +124,10 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         mapper = self.get_mapper(model.SampleIdentifier)
         with self.uow() as uow:
             assert isinstance(uow, SAUnitOfWork)
-            return [cast(model.SampleIdentifier, mapper.load(row[0])) for row in uow.session.execute(stmt)]
+            return [
+                cast(model.SampleIdentifier, mapper.load(row[0]))
+                for row in uow.session.execute(stmt)
+            ]
 
     def retrieve_seq_fasta(
         self,

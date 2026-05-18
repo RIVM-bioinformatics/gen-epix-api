@@ -72,13 +72,13 @@ from gen_epix.casedb.domain.command.case import (
 from gen_epix.casedb.domain.command.case import RefColCrudCommand as RefColCrudCommand
 from gen_epix.casedb.domain.command.case import RefDimCrudCommand as RefDimCrudCommand
 from gen_epix.casedb.domain.command.case import (
+    RetrieveCaseCohortIdsByCaseTypeCommand as RetrieveCaseCohortIdsByCaseTypeCommand,
+)
+from gen_epix.casedb.domain.command.case import (
     RetrieveCaseRightsCommand as RetrieveCaseRightsCommand,
 )
 from gen_epix.casedb.domain.command.case import (
     RetrieveCasesByIdCommand as RetrieveCasesByIdCommand,
-)
-from gen_epix.casedb.domain.command.case import (
-    RetrieveCaseCohortIdsByCaseTypeCommand as RetrieveCaseCohortIdsByCaseTypeCommand,
 )
 from gen_epix.casedb.domain.command.case import (
     RetrieveCasesByQueryCommand as RetrieveCasesByQueryCommand,

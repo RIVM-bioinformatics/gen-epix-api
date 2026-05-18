@@ -56,7 +56,9 @@ class OmopDictRepository(DictRepository, BaseOmopRepository):
             assert isinstance(specimen, model.Specimen)
             if specimen.specimen_id is None or specimen.specimen_date is None:
                 continue
-            for cohort_id, start, end in person_id_to_cohorts.get(specimen.person_id, []):
+            for cohort_id, start, end in person_id_to_cohorts.get(
+                specimen.person_id, []
+            ):
                 if start <= specimen.specimen_date <= end:
                     result.setdefault(cohort_id, []).append(specimen.specimen_id)
         return result
