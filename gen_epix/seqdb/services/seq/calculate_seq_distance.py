@@ -325,6 +325,7 @@ def _calculate_and_store_distances(
                 model.SeqProfile,
                 CrudOperation.READ_SOME,
                 obj_ids=existing_profile_ids,
+                # TODO factor out limit to a constant or configuration
                 optimize_parameter_handling=len(existing_profile_ids) > 2000,
             )
             if existing_profile_ids

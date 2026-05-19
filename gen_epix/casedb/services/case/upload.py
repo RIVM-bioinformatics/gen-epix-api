@@ -202,6 +202,7 @@ class CaseBatchUploader(BatchUploader):
             # the immutability check in _upsert_existing_objs treats it as
             # "not specified" (None) rather than an attempt to overwrite the
             # stored value. The stored case_date is preserved unchanged.
+            # TODO LSP-3356: case date should be able to update
             for case in cases_for_validation:
                 case.case_date = None
 

@@ -120,6 +120,7 @@ class BaseSeqRepository(BaseRepository):
         """
         raise NotImplementedError()
 
+    # TODO [LSP-3359] use standard crud method with filter rather than dedicated method
     @abc.abstractmethod
     def get_sample_identifiers_by_sample_ids(
         self,

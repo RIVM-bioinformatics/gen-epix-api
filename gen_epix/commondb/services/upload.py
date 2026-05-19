@@ -479,20 +479,20 @@ class BatchUploader:
         # Detect duplicate parent IDs. Mark every occurrence of a duplicated UUID as
         # FAILED (including the first — a duplicate UUID is always ambiguous) and
         # remove them from the existence-check list so the repository never sees it.
-        pid_to_indices: dict[UUID, list[int]] = {}
-        for i, pid in enumerate(parent_ids):
-            if pid is None:
+        parent_id_to_indices: dict[UUID, list[int]] = {}
+        for i, parent_id in enumerate(parent_ids):
+            if parent_id is None:
                 continue
-            pid_to_indices.setdefault(pid, []).append(i)
+            parent_id_to_indices.setdefault(parent_id, []).append(i)
         parent_result_list = list(self.parent_result_items(cmd, batch_result))
-        for pid, indices in pid_to_indices.items():
+        for parent_id, indices in parent_id_to_indices.items():
             if len(indices) <= 1:
                 continue
             for i in indices:
                 _, parent_result = parent_result_list[i]
                 parent_result.add_error(
                     "a1b2c3d4",
-                    f"{self.parent_class.NAME} id={pid} appears "
+                    f"{self.parent_class.NAME} id={parent_id} appears "
                     f"{len(indices)} times in the batch.",
                 )
                 parent_ids[i] = None  # exclude from objects_exist()
@@ -582,18 +582,20 @@ class BatchUploader:
             # Detect duplicate child IDs (within a parent or across parents).
             # For every duplicated child UUID, mark all parent results that contain
             # it as FAILED and remove those child slots from the existence-check list.
-            cid_to_entries: defaultdict[
+            child_id_to_entries: defaultdict[
                 UUID,
                 list[tuple[int, model.ParentForUpload, model.ParentUploadResult]],
             ] = defaultdict(list)
             for idx, (parent_for_upload, parent_result, _, _) in enumerate(
                 parent_child_tuples
             ):
-                cid = child_ids[idx]
-                if self.is_null(cid):
+                child_id = child_ids[idx]
+                if self.is_null(child_id):
                     continue
-                cid_to_entries[cid].append((idx, parent_for_upload, parent_result))
-            for cid, entries in cid_to_entries.items():
+                child_id_to_entries[child_id].append(
+                    (idx, parent_for_upload, parent_result)
+                )
+            for child_id, entries in child_id_to_entries.items():
                 if len(entries) <= 1:
                     continue
                 seen_parent_results: set[int] = set()
@@ -606,7 +608,7 @@ class BatchUploader:
                         seen_parent_results.add(id(parent_result))
                         parent_result.add_error(
                             "e5f6a7b8",
-                            f"{child_model_class.NAME} id={cid} appears in multiple "
+                            f"{child_model_class.NAME} id={child_id} appears in multiple "
                             f"entries in the batch (parents: {parent_ids_str}).",
                         )
 
@@ -1568,6 +1570,7 @@ class BatchUploader:
                     )
                 )
         except DuplicateIdsError as exc_:
+            # TODO [LSP-3357] check how it is possible that these errors occur here
             duplicate_ids = set(exc_.ids) if exc_.ids else set()
             obj_id_field_name_local = model_class.ENTITY.get_id_field_name()
             for obj, obj_result in to_create_obj_result_pairs:

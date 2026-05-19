@@ -3,7 +3,8 @@ import threading
 import sqlalchemy as sa
 from sqlalchemy import Engine
 
-# Azure Firewall in the network path has a 240s TCP idle timeout; recycle
+# TODO [LSP-3358] make this POOL_RECYCLE configurable via environment variable or configuration file
+# Setting should be lower than any Firewall in the network path; recycle
 # connections before that to avoid stale-connection errors on pool checkout.
 DEFAULT_POOL_RECYCLE = 230
 
