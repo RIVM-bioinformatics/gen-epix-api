@@ -713,7 +713,7 @@ class BatchUploader:
                         # New child and on_new=SKIP: do not create
                         child_result.status = EtlStatus.SKIPPED
                         child_result.add_info(
-                            "cfc3da21",
+                            "cfd622df",
                             f"{child_for_upload.__class__.NAME} does not exist and on_new={cmd.on_new.value}",
                         )
                     elif cmd.on_new == UploadAction.CREATE:
@@ -1681,7 +1681,7 @@ class BatchUploader:
             # Determine whether to update or skip (identical content)
             if not is_updated:
                 obj_result.status = EtlStatus.SKIPPED
-                obj_result.add_info("f5e09001", "Content is identical")
+                obj_result.add_info("64eef8a5", "Content is identical")
             else:
                 to_update_objs.append(obj)
                 to_update_obj_results.append(obj_result)
