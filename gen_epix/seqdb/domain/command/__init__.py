@@ -125,6 +125,9 @@ from gen_epix.seqdb.domain.command.seq import (
     RetrieveBestSeqProfilePerSampleCommand as RetrieveBestSeqProfilePerSampleCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
+    RetrieveSampleIdentifiersByIdCommand as RetrieveSampleIdentifiersByIdCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
     RetrieveSamplesByIdCommand as RetrieveSamplesByIdCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
@@ -216,6 +219,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         RetrieveBestSeqProfilePerSampleCommand,
         RetrieveSamplesByQueryCommand,
         RetrieveSamplesByIdCommand,
+        RetrieveSampleIdentifiersByIdCommand,
         RetrieveSeqFastaCommand,
         RetrieveSimilarProfilesCommand,
         RetrieveSeqDistanceLastModifiedCommand,

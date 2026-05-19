@@ -101,6 +101,32 @@ def case_service_retrieve_cases_by_query(
     )
 
 
+def case_service_retrieve_case_cohort_ids_by_case_type(
+    self: BaseCaseService,
+    cmd: command.RetrieveCaseCohortIdsByCaseTypeCommand,
+) -> list[model.CaseCohortIds]:
+    user, repository = self._get_user_and_repository(cmd)
+    assert isinstance(user, model.User) and user.id is not None
+
+    case_type_filter = UuidSetFilter(
+        key="case_type_id", members=frozenset({cmd.case_type_id})
+    )
+    with repository.uow() as uow:
+        rows = list(
+            self.repository.read_fields(
+                uow=uow,
+                user_id=user.id,
+                model_class=model.Case,
+                field_names=["id"],
+                filter=case_type_filter,
+            )
+        )
+
+    # cohort_id == case_id (identity mapping); in future a case may have
+    # multiple linked cohort IDs stored in a dedicated relation.
+    return [model.CaseCohortIds(case_id=row[0], cohort_ids=[row[0]]) for row in rows]
+
+
 def _apply_max_results_limit(
     self: BaseCaseService,
     user: model.User,

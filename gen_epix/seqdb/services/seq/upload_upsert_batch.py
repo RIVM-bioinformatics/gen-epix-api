@@ -1,6 +1,7 @@
 from gen_epix.commondb.domain.enum import EtlStatus, UploadAction
 from gen_epix.commondb.services import BatchUploader
 from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.fastapp.exc import ConcurrentModificationError
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import command, model
 
@@ -72,17 +73,23 @@ def _update_profile_distances(
     if not seq_profiles:
         return success
 
-    calculate_seq_distance_result: list[model.CalculateSeqDistancesResult] = (
-        self.service.app.handle(
-            command.CalculateSeqDistancesForNewProfilesCommand(
-                user=user,
-                # TODO: the models current being passed here are ForUpload models rather than regular models. They should be converted first.
-                seq_profiles=seq_profiles,
-                seq_distance_last_modified_at=(cmd.seq_distance_last_modified_at),
+    try:
+        calculate_seq_distance_result: list[model.CalculateSeqDistancesResult] = (
+            self.service.app.handle(
+                command.CalculateSeqDistancesForNewProfilesCommand(
+                    user=user,
+                    # TODO: the models current being passed here are ForUpload models rather than regular models. They should be converted first.
+                    seq_profiles=seq_profiles,
+                    seq_distance_last_modified_at=(cmd.seq_distance_last_modified_at),
+                )
             )
         )
-    )
-
-    batch_result.seq_distances = calculate_seq_distance_result
+        batch_result.seq_distances = calculate_seq_distance_result
+    except ConcurrentModificationError as e:
+        batch_result.add_warning(
+            "b3e1f49a",
+            f"Seq distance calculation skipped due to concurrent modification: {e}. "
+            "Re-run UpdateSeqDistancesCommand to recalculate.",
+        )
 
     return success

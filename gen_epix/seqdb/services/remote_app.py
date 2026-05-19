@@ -11,6 +11,8 @@ from gen_epix.seqdb.api import (
     CalculatePhylogeneticTreeRequestBody,
     RetrieveBestSeqPerSampleRequestBody,
     RetrieveBestSeqProfilePerSampleRequestBody,
+    RetrieveSampleIdentifiersByIdsRequestBody,
+    RetrieveSamplesByIdsRequestBody,
     RetrieveSeqFastaRequestBody,
     RetrieveSimilarProfilesRequestBody,
 )
@@ -31,6 +33,8 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         command.CreateFileCommand: "/create/file",
         command.RetrieveSimilarProfilesCommand: "/retrieve/similar_profiles",
         command.UploadSamplesCommand: "/upload/samples",
+        command.RetrieveSampleIdentifiersByIdCommand: "/retrieve/sample_identifiers_by_ids",
+        command.RetrieveSamplesByIdCommand: "/retrieve/samples_by_ids",
         command.RetrieveSamplesByQueryCommand: "/retrieve/sample_ids_by_query",
         command.RetrieveBestSeqPerSampleCommand: "/retrieve/best_seq_per_sample",
         command.RetrieveBestSeqProfilePerSampleCommand: "/retrieve/best_seq_profile_per_sample",
@@ -38,6 +42,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
 
     DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {
         command.UploadSamplesCommand: 45.0,
+        command.RetrieveSampleIdentifiersByIdCommand: 45.0,
         command.RetrieveSamplesByIdCommand: 45.0,
         command.RetrieveSamplesByQueryCommand: 45.0,
         command.RetrieveBestSeqPerSampleCommand: 15.0,
@@ -77,6 +82,14 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         self.register_handler(
             command.UploadSamplesCommand,
             self.upload_samples,
+        )
+        self.register_handler(
+            command.RetrieveSampleIdentifiersByIdCommand,
+            self.retrieve_sample_identifiers_by_id,
+        )
+        self.register_handler(
+            command.RetrieveSamplesByIdCommand,
+            self.retrieve_samples_by_id,
         )
         self.register_handler(
             command.RetrieveSamplesByQueryCommand,
@@ -190,6 +203,42 @@ class SeqdbRemoteApp(CommondbRemoteApp):
             response.raise_for_status()
             data = response.json()
         return [UUID(profile_id) for profile_id in data]
+
+    def retrieve_samples_by_id(
+        self,
+        cmd: command.RetrieveSamplesByIdCommand,
+    ) -> list[model.FullSample]:
+        headers = self.get_headers(cmd)
+        route = self.get_route(cmd)
+        request_body = RetrieveSamplesByIdsRequestBody(sample_ids=cmd.sample_ids)
+        with self.get_client(cmd) as client:
+            response = client.post(
+                route,
+                json=json.loads(request_body.model_dump_json()),
+                headers=headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+        return [model.FullSample(**item) for item in data]
+
+    def retrieve_sample_identifiers_by_id(
+        self,
+        cmd: command.RetrieveSampleIdentifiersByIdCommand,
+    ) -> list[model.SampleIdentifier]:
+        headers = self.get_headers(cmd)
+        route = self.get_route(cmd)
+        request_body = RetrieveSampleIdentifiersByIdsRequestBody(
+            sample_ids=cmd.sample_ids
+        )
+        with self.get_client(cmd) as client:
+            response = client.post(
+                route,
+                json=json.loads(request_body.model_dump_json()),
+                headers=headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+        return [model.SampleIdentifier(**item) for item in data]
 
     def retrieve_samples_by_query(
         self,

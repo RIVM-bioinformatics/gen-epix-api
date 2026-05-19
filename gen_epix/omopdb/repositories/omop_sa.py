@@ -50,8 +50,10 @@ class OmopSARepository(SARepository, BaseOmopRepository):
                     sa_model.Specimen,
                     sa.and_(
                         sa_model.Cohort.subject_id == sa_model.Specimen.person_id,
-                        sa_model.Specimen.specimen_date >= sa_model.Cohort.cohort_start_date,
-                        sa_model.Specimen.specimen_date <= sa_model.Cohort.cohort_end_date,
+                        sa_model.Specimen.specimen_date
+                        >= sa_model.Cohort.cohort_start_date,
+                        sa_model.Specimen.specimen_date
+                        <= sa_model.Cohort.cohort_end_date,
                     ),
                 )
                 .where(

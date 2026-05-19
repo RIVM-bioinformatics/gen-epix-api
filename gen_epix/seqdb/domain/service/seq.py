@@ -21,6 +21,10 @@ class BaseSeqService(BaseService):
         f(command.RetrieveSamplesByQueryCommand, self.retrieve_samples_by_query)
         f(command.RetrieveSamplesByIdCommand, self.retrieve_samples_by_id)
         f(
+            command.RetrieveSampleIdentifiersByIdCommand,
+            self.retrieve_sample_identifiers_by_id,
+        )
+        f(
             command.RetrieveSeqFastaCommand,
             self.retrieve_seq_fasta,
         )
@@ -191,6 +195,14 @@ class BaseSeqService(BaseService):
         cmd: command.RetrieveSamplesByIdCommand,
     ) -> list[model.FullSample]:
         """Retrieve samples by their IDs."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_sample_identifiers_by_id(
+        self,
+        cmd: command.RetrieveSampleIdentifiersByIdCommand,
+    ) -> list[model.SampleIdentifier]:
+        """Retrieve only sample identifiers for the given sample IDs."""
         raise NotImplementedError()
 
     @abc.abstractmethod

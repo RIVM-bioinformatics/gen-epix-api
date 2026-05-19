@@ -86,6 +86,18 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
             )
         return full_samples
 
+    def get_sample_identifiers_by_sample_ids(
+        self,
+        sample_ids: list[UUID],
+    ) -> list[model.SampleIdentifier]:
+        sample_id_set = set(sample_ids)
+        return [
+            obj
+            for obj in self.db[model.SampleIdentifier].values()
+            if isinstance(obj, model.SampleIdentifier)
+            and obj.internal_id in sample_id_set
+        ]
+
     def retrieve_seq_fasta(
         self,
         uow: BaseUnitOfWork,
