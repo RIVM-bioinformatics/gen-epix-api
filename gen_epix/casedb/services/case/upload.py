@@ -268,7 +268,12 @@ class CaseBatchUploader(BatchUploader):
                 result.status = seqdb_result.status
                 result.add_logs(seqdb_result.logs)
                 assert case.read_sets is not None
-                case_content[case.read_sets[child_index].col_id] = str(seqdb_result.id)
+                # only update content if there is an ID, otherwise a unknown value appears in the content,
+                # causing a data validation issue in the case upload
+                if seqdb_result.id is not None:
+                    case_content[case.read_sets[child_index].col_id] = str(
+                        seqdb_result.id
+                    )
             # Map seqs back to cases
             for i, seqdb_result in enumerate(sample_result.seqs or []):
                 case_index, child_index = sample_case_index_map[
@@ -282,7 +287,8 @@ class CaseBatchUploader(BatchUploader):
                 result.status = seqdb_result.status
                 result.add_logs(seqdb_result.logs)
                 assert case.seqs is not None
-                case_content[case.seqs[child_index].col_id] = str(seqdb_result.id)
+                if seqdb_result.id is not None:
+                    case_content[case.seqs[child_index].col_id] = str(seqdb_result.id)
 
         return success
 
@@ -388,7 +394,7 @@ class CaseBatchUploader(BatchUploader):
                 return sample_external_id_to_index_map[external_sample_id]
             # New sample for upload: create
             assert sample_id is not None
-            assert external_sample_id is not None
+            # assert external_sample_id is not None
             sample_for_upload = seqdb_model.SampleForUpload(
                 id=sample_id,
                 sample=seqdb_model.Sample(
