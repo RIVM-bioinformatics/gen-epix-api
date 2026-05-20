@@ -296,6 +296,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         SpecimenIdentifierCrudCommand,
         UploadPersonsCommand,
         RetrievePersonsByIdCommand,
+        RetrievePersonsByQueryCommand,
         RetrieveSpecimenIdsByCohortIdsCommand,
         VisitDetailCrudCommand,
         VisitDetailIdentifierCrudCommand,

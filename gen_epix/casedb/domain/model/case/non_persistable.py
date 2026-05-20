@@ -174,6 +174,17 @@ class CaseQueryResult(Model):
     )
 
 
+class CaseCohortIds(Model):
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="case_cohort_ids",
+        persistable=False,
+    )
+    case_id: UUID = Field(description="The ID of the case.")
+    cohort_ids: list[UUID] = Field(
+        description="The IDs of the cohorts linked to this case."
+    )
+
+
 class RefDataAccess(Model):
     """
     Describes the reference data that a user has access to. This is a lightweight

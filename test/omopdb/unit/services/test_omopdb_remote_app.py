@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from types import SimpleNamespace
-from uuid import UUID
 from unittest.mock import MagicMock, Mock, patch
+from uuid import UUID
 
 from gen_epix.fastapp.enum import AuthProtocol
 from gen_epix.omopdb.domain import command, model

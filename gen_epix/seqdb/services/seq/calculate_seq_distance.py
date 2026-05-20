@@ -331,6 +331,11 @@ def _calculate_and_store_distances(
             )
         )
 
+    # Fetch profiles for distance calculation.
+    # SQL Server caps parameterized queries at 2100 parameters; use the
+    # temp-table join path when the ID list is large enough to exceed that.
+    # TODO: make read_some auto-select optimize_parameter_handling when
+    #   len(obj_ids) > 2000 so callers don't need to know about this limit.
     existing_profiles: list[model.SeqProfile] = (
         service.repository.crud(  # type: ignore[assignment]
             uow,

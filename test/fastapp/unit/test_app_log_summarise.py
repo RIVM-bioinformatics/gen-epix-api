@@ -150,6 +150,79 @@ def test_create_log_message_uses_configured_threshold_and_sample_size() -> None:
 
 
 @pytest.mark.scenario_ids("TC-LOG-01-01")
+def test_large_dict_is_summarised() -> None:
+    """Dicts with more than DEFAULT_LOG_MAX_DICT_ITEMS entries (e.g. locus_allele_id_map)
+    are replaced with a _count/_sample summary, even when individual values are short."""
+    app = App(logger=None, log_item_class=LogItem)
+    large_map = {f"LOCUS_{i:04d}": str(uuid.uuid4()) for i in range(500)}
+    result = app._summarise_command_object_for_log({"locus_allele_id_map": large_map})
+    summary = result["locus_allele_id_map"]
+    assert isinstance(summary, dict)
+    assert summary["_count"] == 500
+    assert len(summary["_sample"]) == App.DEFAULT_LOG_MAX_LIST_ITEMS
+    assert "_count" not in summary["_sample"]
+
+
+@pytest.mark.scenario_ids("TC-LOG-01-01")
+def test_small_dict_passes_through() -> None:
+    """Dicts at or below DEFAULT_LOG_MAX_DICT_ITEMS entries are not modified."""
+    app = App(logger=None, log_item_class=LogItem)
+    small_map = {f"k{i}": str(uuid.uuid4()) for i in range(App.DEFAULT_LOG_MAX_DICT_ITEMS)}
+    result = app._summarise_command_object_for_log({"mapping": small_map})
+    assert result["mapping"] == small_map
+
+
+@pytest.mark.scenario_ids("TC-LOG-01-01")
+def test_long_string_is_truncated() -> None:
+    """Strings longer than DEFAULT_LOG_MAX_STRING_LENGTH are shortened to a
+    prefix with a suffix showing the total character count; they are NOT
+    replaced by the _count/_sample dict pattern used for lists."""
+    app = App(logger=None, log_item_class=LogItem)
+    long_str = "x" * 500
+    result = app._summarise_command_object_for_log({"content": long_str})
+    truncated = result["content"]
+    assert isinstance(
+        truncated, str
+    ), "Truncated string must remain a string, not a dict"
+    assert len(truncated) < len(long_str)
+    assert truncated.startswith("x" * App.DEFAULT_LOG_MAX_STRING_LENGTH)
+    assert "[500 chars]" in truncated
+
+
+@pytest.mark.scenario_ids("TC-LOG-01-01")
+def test_short_string_passes_through() -> None:
+    """Strings at or below DEFAULT_LOG_MAX_STRING_LENGTH are not modified."""
+    app = App(logger=None, log_item_class=LogItem)
+    short_str = "x" * App.DEFAULT_LOG_MAX_STRING_LENGTH
+    result = app._summarise_command_object_for_log({"content": short_str})
+    assert result["content"] == short_str
+
+
+@pytest.mark.scenario_ids("TC-LOG-01-01")
+def test_long_string_respects_configured_max_string_length() -> None:
+    """Config key max_string_length controls both the truncation threshold and
+    the length of the preserved prefix."""
+    app = App(
+        logger=None,
+        log_item_class=LogItem,
+        cfg={
+            "log": {
+                "command_object_summarization": {
+                    "enabled": True,
+                    "max_string_length": 20,
+                }
+            }
+        },
+    )
+    long_str = "a" * 200
+    result = app._summarise_command_object_for_log({"seq": long_str})
+    truncated = result["seq"]
+    assert truncated.startswith("a" * 20)
+    assert "[200 chars]" in truncated
+    assert len(truncated) < len(long_str)
+
+
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_create_log_message_invalid_bool_config_raises() -> None:
     """Invalid boolean config value raises InitializationServiceError."""
     from gen_epix.fastapp.exc import InitializationServiceError

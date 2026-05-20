@@ -23,6 +23,7 @@ from gen_epix.casedb.domain.model.case import CaseBatchForUpload as CaseBatchFor
 from gen_epix.casedb.domain.model.case import (
     CaseBatchUploadResult as CaseBatchUploadResult,
 )
+from gen_epix.casedb.domain.model.case import CaseCohortIds as CaseCohortIds
 from gen_epix.casedb.domain.model.case import (
     CaseDataCollectionLink as CaseDataCollectionLink,
 )
