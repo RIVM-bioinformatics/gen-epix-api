@@ -150,12 +150,17 @@ def _verify_children_seq_classifications(
     uow: fastapp.BaseUnitOfWork,
 ) -> bool:
     """
-    Detect existing SeqClassifications by their natural key.
+    Validate and detect existing SeqClassifications.
 
-    verify_children only looks up children by their id field, which is None for
-    SeqClassificationForUpload objects built from on-prem JSON. This function
-    fills in the existing id and marks the result appropriately so that
-    create_children does not attempt a duplicate INSERT.
+    1. Resolves primary_category_id from primary_category_code when only
+       the code is supplied, and validates that the resolved ID exists in
+       seq_category. Without this step a missing category only surfaces as a
+       raw FK violation (error eba3198a) at INSERT time.
+
+    2. Detects existing SeqClassifications by their natural key so that
+       create_children does not attempt a duplicate INSERT. verify_children
+       only looks up children by their id field, which is None for
+       SeqClassificationForUpload objects built from on-prem JSON.
 
     Primary key: (seq_id, protocol_id) when seq_id is known.
     Fallback key: (sample_id, protocol_id) when seq_id is None but sample_id
@@ -165,6 +170,19 @@ def _verify_children_seq_classifications(
     samples = cmd.sample_batch.samples
     sample_results = batch_result.samples
     success = True
+
+    # Resolve primary_category_code → primary_category_id and verify that
+    # the referenced SeqCategory exists. This prevents a raw FK violation
+    # (eba3198a) when an unknown or not-yet-loaded category is supplied.
+    success &= self.verify_link_id(
+        list(self.parent_result_items(cmd, batch_result)),
+        uow,
+        cmd.user,
+        "seq_classifications",
+        "primary_category_id",
+        "primary_category_code",
+        model.SeqCategory,
+    )
 
     # --- Primary lookup: seq_id known → key = (seq_id, protocol_id) ---
     seq_ids = list(
