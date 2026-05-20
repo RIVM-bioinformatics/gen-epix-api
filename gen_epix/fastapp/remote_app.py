@@ -16,14 +16,14 @@ from gen_epix.fastapp.app import App
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.enum import CrudOperation, EventTiming, HttpProtocol, StringCasing
 from gen_epix.fastapp.exc import ServiceException
+from gen_epix.fastapp.model import Command, CrudCommand, Policy
+from gen_epix.fastapp.util import create_ssl_context
 from gen_epix.filter import (
     FilterType,
     TypedNumberSetFilter,
     TypedStringSetFilter,
     TypedUuidSetFilter,
 )
-from gen_epix.fastapp.model import Command, CrudCommand, Policy
-from gen_epix.fastapp.util import create_ssl_context
 
 
 class RemoteApp(App):
@@ -429,6 +429,7 @@ class RemoteApp(App):
 
         id_type = self._classify_exists_id_type(obj_ids)
         number_id_types = {"int", "float", "decimal"}
+        query_filter: TypedUuidSetFilter | TypedStringSetFilter | TypedNumberSetFilter
 
         if id_type == "uuid":
             query_filter = TypedUuidSetFilter(

@@ -643,7 +643,9 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
         # Set up mocks
         with patch("gen_epix.fastapp.remote_app.httpx.Client", FakeClient):
             # EXISTS_SOME
-            set_fake_response(payload=[str(obj_ids[0]), str(obj_ids[2])], status_code=200)
+            set_fake_response(
+                payload=[str(obj_ids[0]), str(obj_ids[2])], status_code=200
+            )
             cmd = DummyCrud(operation=CrudOperation.EXISTS_SOME, obj_ids=obj_ids)
             retval = handler(cmd)
 
@@ -687,7 +689,9 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
         self.assertEqual(RemoteApp._classify_exists_id_type(["x"]), "string")
         self.assertEqual(RemoteApp._classify_exists_id_type([1]), "int")
         self.assertEqual(RemoteApp._classify_exists_id_type([1.1]), "float")
-        self.assertEqual(RemoteApp._classify_exists_id_type([Decimal("1.1")]), "decimal")
+        self.assertEqual(
+            RemoteApp._classify_exists_id_type([Decimal("1.1")]), "decimal"
+        )
         self.assertEqual(RemoteApp._classify_exists_id_type([1, 2.0]), "mixed")
 
     def test_generated_handler_unsupported_return_type_raises(self) -> None:
