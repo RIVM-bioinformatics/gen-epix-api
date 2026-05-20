@@ -113,10 +113,10 @@ def _make_nextclade_content(
             "substitutions": substitutions,
             "deletions": deletions,
             "insertions": insertions,
-            "missing": missing,
-            "nonACGTNs": non_acgtns,
-            "alignmentStart": alignment_start,
-            "alignmentEnd": alignment_end,
+            "missings": missing,
+            "non_acgtns": non_acgtns,
+            "alignment_start": alignment_start,
+            "alignment_end": alignment_end,
         }
     )
 

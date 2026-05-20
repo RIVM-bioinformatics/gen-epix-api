@@ -190,11 +190,11 @@ class BaseSeq(Model):
                 )
             # Derive alignment length from the reported alignment bounds
             computed_length = (
-                nextclade_seq["alignmentEnd"] - nextclade_seq["alignmentStart"] + 1
+                nextclade_seq["alignment_end"] - nextclade_seq["alignment_start"] + 1
             )
             if computed_length <= 0:
                 raise ValueError(
-                    "alignmentEnd must be greater than or equal to alignmentStart"
+                    "alignment_end must be greater than or equal to alignment_start"
                 )
             # TODO: 3268: remove commented out code
             # seq_hash cannot be computed at this stage, since it requires the reference sequence, it can only be verified that a value is provided

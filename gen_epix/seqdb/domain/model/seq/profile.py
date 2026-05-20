@@ -494,7 +494,7 @@ class SeqProfile(
 
     #     :param nextclade_df: NextClade output as a DataFrame or dict. If dict, keys are sample names and
     #         values are dicts with NextClade fields (substitutions, deletions, insertions, missing,
-    #         nonACGTNs, alignmentStart, alignmentEnd)
+    #         non_acgtns, alignment_start, alignment_end)
     #     :type nextclade_df: pd.DataFrame or dict[str, dict[str, Any]]
     #     :param ref_seq: reference sequence
     #     :type ref_seq: str
@@ -597,7 +597,7 @@ class SeqProfile(
     #             columns[position][i] = mutated_nucleotide
 
     #     # Process non-ACTGNs
-    #     for i, nonACGTN_ranges in enumerate(nextclade_df["nonACGTNs"]):
+    #     for i, nonACGTN_ranges in enumerate(nextclade_df["non_acgtns"]):
     #         if nonACGTN_ranges is None:
     #             continue
     #         elif not isinstance(nonACGTN_ranges, str):
@@ -657,7 +657,7 @@ class SeqProfile(
     #             columns[insertion][i] = "X"
 
     #     # Process missing
-    #     for i, missing_ranges in enumerate(nextclade_df["missing"]):
+    #     for i, missing_ranges in enumerate(nextclade_df["missings"]):
     #         if missing_ranges is None:
     #             continue
     #         elif not isinstance(missing_ranges, str):
@@ -680,7 +680,7 @@ class SeqProfile(
     #                 column[i] = "N"
 
     #     # Process alignment start
-    #     for i, alignment_start in enumerate(nextclade_df["alignmentStart"]):
+    #     for i, alignment_start in enumerate(nextclade_df["alignment_start"]):
     #         if alignment_start is None:
     #             continue
     #         for j in range(1, int(alignment_start)):
@@ -690,7 +690,7 @@ class SeqProfile(
     #             columns[position][i] = "*"
 
     #     # Process alignment end
-    #     for i, alignment_end in enumerate(nextclade_df["alignmentEnd"]):
+    #     for i, alignment_end in enumerate(nextclade_df["alignment_end"]):
     #         if alignment_end is None:
     #             continue
     #         j = int(alignment_end) + 1
@@ -885,19 +885,19 @@ class SeqProfile(
     #             mask = nextclade_df["seqName"] == seq_name
     #             verification_pairs = {
     #                 "substitutions": substitutions,
-    #                 "nonACGTNs": nonACGTN_ranges,
+    #                 "non_acgtns": nonACGTN_ranges,
     #                 "insertions": insertions,
     #                 "deletions": deletion_ranges,
     #             }
     #             if not remove_conserved_ref:
     #                 verification_pairs = verification_pairs | {
-    #                     "missing": missing_ranges,
-    #                     "alignmentStart": [str(alignment_start)],
-    #                     "alignmentEnd": [str(alignment_end)],
+    #                     "missings": missing_ranges,
+    #                     "alignment_start": [str(alignment_start)],
+    #                     "alignment_end": [str(alignment_end)],
     #                 }
     #             for column_name, reconstructed_values in verification_pairs.items():
     #                 actual_values = nextclade_df.loc[mask, column_name].iloc[0]
-    #                 if column_name == "alignmentStart":
+    #                 if column_name == "alignment_start":
     #                     # actual_values = int(actual_values) + 1
     #                     actual_values = int(actual_values)
     #                 if actual_values is None or isinstance(actual_values, str):
