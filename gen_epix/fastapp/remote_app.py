@@ -1,6 +1,7 @@
 import json
 import ssl
 from collections.abc import Callable
+from decimal import Decimal
 from functools import partial
 from pathlib import Path
 from typing import Any, cast
@@ -15,6 +16,12 @@ from gen_epix.fastapp.app import App
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.enum import CrudOperation, EventTiming, HttpProtocol, StringCasing
 from gen_epix.fastapp.exc import ServiceException
+from gen_epix.filter import (
+    FilterType,
+    TypedNumberSetFilter,
+    TypedStringSetFilter,
+    TypedUuidSetFilter,
+)
 from gen_epix.fastapp.model import Command, CrudCommand, Policy
 from gen_epix.fastapp.util import create_ssl_context
 
@@ -319,6 +326,28 @@ class RemoteApp(App):
                     response = client.get(
                         f"{base_route}/{cmd.obj_ids}",
                         headers=headers,
+                    )
+                case CrudOperation.EXISTS_ONE:
+                    assert cmd.obj_ids is not None
+                    return self._exists_some_via_query_ids(
+                        client=client,
+                        headers=headers,
+                        model_class=model_class,
+                        base_route=base_route,
+                        query_route_suffix=query_route_suffix,
+                        ids_route_suffix=ids_route_suffix,
+                        obj_ids=[cmd.obj_ids],
+                    )[0]
+                case CrudOperation.EXISTS_SOME:
+                    assert isinstance(cmd.obj_ids, list)
+                    return self._exists_some_via_query_ids(
+                        client=client,
+                        headers=headers,
+                        model_class=model_class,
+                        base_route=base_route,
+                        query_route_suffix=query_route_suffix,
+                        ids_route_suffix=ids_route_suffix,
+                        obj_ids=cmd.obj_ids,
                     )
                 case CrudOperation.CREATE_ONE:
                     assert isinstance(cmd.objs, model.Model)
