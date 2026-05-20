@@ -295,7 +295,12 @@ def _generate_snp_objects(
         seq_profile_type=enum.SeqProfileType.SNP,
         protocol_id=snp_profile_protocol.id,
         format=enum.SeqProfileFormat.NEXTCLADE,
-        content_hash=model.SeqProfile.get_snp_profile_hash(nextclade_fields),
+        content_hash=model.SeqProfile.get_snp_profile_hash(
+            model.SeqProfile.model_construct(
+                content=json.dumps(nextclade_fields),
+                format=enum.SeqProfileFormat.NEXTCLADE,
+            ).get_snps()
+        ),
         content=json.dumps(nextclade_fields),
         sample_id=sample.id,
     )

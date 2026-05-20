@@ -16,7 +16,7 @@ from gen_epix.fastapp.domain import Entity, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.literal import (
     MLVA_NO_LOCUS_REPEAT_NUMBER,
-    REQUIRED_NEXTCLADE_KEYS,
+    REQUIRED_NEXTCLADE_SEQ_KEYS,
 )
 from gen_epix.seqdb.domain.model.seq.base import ContentMixin, QualityMixin
 from gen_epix.seqdb.domain.model.seq.protocol import HasProtocolMixin, Protocol
@@ -106,6 +106,7 @@ class SeqProfile(
         Verify the representation of the content depending on the format. Verify or set
         the content hash.
         """
+        # TODO: 3268: not sure why this is here since these fields do not exist. Perhaps because of SeqProfileForUpload having these fields?
         if self.content == "" and any(
             getattr(self, field_name, None) is not None
             for field_name in (
@@ -119,68 +120,74 @@ class SeqProfile(
         ):
             return self
 
-        profile_hash = self.content_hash
-        computed_profile_hash = profile_hash
+        # Validate
+        # TODO: 3268 changed meaning of functions from "compute hash" to in general "validate profile", and returning the hash as a by-product for further use (OK for private method)
+        computed_content_hash = NULL_ID
         if self.seq_profile_type == enum.SeqProfileType.LOCUS:
-            computed_profile_hash = self._generate_locus_profile_hash(profile_hash)
+            computed_content_hash = self._validate_locus_profile()
         elif self.seq_profile_type == enum.SeqProfileType.ALLELE:
-            # Parse allele profile and derive values depending on allele_profile_format
-            computed_profile_hash = self._generate_allele_profile_hash()
+            computed_content_hash = self._validate_allele_profile()
         elif self.seq_profile_type == enum.SeqProfileType.MLVA:
-            # Parse MLVA SeqProfile and derive values depending on format
-            computed_profile_hash = self._generate_mlva_profile_hash()
+            computed_content_hash = self._validate_mlva_profile()
         elif self.seq_profile_type == enum.SeqProfileType.KMER:
-            # Parse KMER SeqProfile and derive hash depending on format
-            computed_profile_hash = self._generate_kmer_profile_hash()
+            computed_content_hash = self._validate_kmer_profile()
         elif self.seq_profile_type == enum.SeqProfileType.SNP:
-            # Parse SNP profile and derive values depending on snp_profile_format
-            computed_profile_hash = self._generate_snp_profile_hash()
+            computed_content_hash = self._validate_snp_profile()
         else:
             raise NotImplementedError(
-                f"Unable to calculate profile hash for this sequence profile type: {self.seq_profile_type}"
+                f"Unable to validate profile hash for this sequence profile type: {self.seq_profile_type}"
             )
-        if profile_hash == NULL_ID:
-            self.content_hash = computed_profile_hash
-        elif profile_hash != computed_profile_hash:
+        if self.content_hash == NULL_ID:
+            self.content_hash = computed_content_hash
+        elif self.content_hash != computed_content_hash:
             raise ValueError("Provided content hash does not match computed hash")
         return self
 
-    def _generate_snp_profile_hash(self) -> UUID:
+    def _validate_snp_profile(self) -> UUID:
+        """Validate the SNP profile content"""
+        computed_content_hash = NULL_ID
         if self.format == enum.SeqProfileFormat.NEXTCLADE:
             # content is a flat JSON dict of NextClade fields for this single sample
-            nextclade_fields: dict[str, Any] = json.loads(self.content)
+            nextclade_dict: dict[str, Any] = json.loads(self.content)
             # Validate required fields at the top level of the flat dict
-            if any(field not in REQUIRED_NEXTCLADE_KEYS for field in nextclade_fields):
+            if any(key not in nextclade_dict for key in REQUIRED_NEXTCLADE_SEQ_KEYS):
                 raise ValueError(
                     f"Missing required NextClade fields for SNP profile content with format {self.format}: {REQUIRED_NEXTCLADE_SEQ_KEYS}"
                 )
-            computed_profile_hash = SeqProfile.get_snp_profile_hash(nextclade_fields)
+            snps = self.get_snps()
+            computed_content_hash = SeqProfile.get_snp_profile_hash(snps)
         else:
             SeqProfile._raise_no_computable_hash()
-        return computed_profile_hash
+        return computed_content_hash
 
-    def _generate_kmer_profile_hash(self) -> UUID:
+    def _validate_kmer_profile(self) -> UUID:
+        """Validate the k-mer profile content"""
+        computed_content_hash = NULL_ID
         if self.format == enum.SeqProfileFormat.KMER_FREQUENCY_MAP:
             # Parse the profile from json object
             kmer_frequency_map: dict[str, float] = json.loads(self.content)
             # Compute hash
-            computed_profile_hash = SeqProfile.get_kmer_profile_hash(kmer_frequency_map)
+            computed_content_hash = SeqProfile.get_kmer_profile_hash(kmer_frequency_map)
         else:
             SeqProfile._raise_no_computable_hash()
 
-        return computed_profile_hash
+        return computed_content_hash
 
-    def _generate_mlva_profile_hash(self) -> UUID:
+    def _validate_mlva_profile(self) -> UUID:
+        """Validate the MLVA profile content"""
+        computed_content_hash = NULL_ID
         if self.format == enum.SeqProfileFormat.ORDERED_REPEAT_NUMBERS:
             # Parse the profile from json array
-            repeat_numbers: list[int] = json.loads(self.content)
+            repeat_numbers: list[int | None] = json.loads(self.content)
             # Compute hash
-            computed_profile_hash = SeqProfile.get_mlva_profile_hash(repeat_numbers)
+            computed_content_hash = SeqProfile.get_mlva_profile_hash(repeat_numbers)
         else:
             SeqProfile._raise_no_computable_hash()
-        return computed_profile_hash
+        return computed_content_hash
 
-    def _generate_allele_profile_hash(self) -> UUID:
+    def _validate_allele_profile(self) -> UUID:
+        """Validate the allele profile content"""
+        computed_content_hash = NULL_ID
         if self.format == enum.SeqProfileFormat.ORDERED_ALLELE_IDS:
             # Parse the profile from base64 encoded concatenated 128-bit allele IDs
             allele_bytes = base64.b64decode(self.content)
@@ -188,22 +195,18 @@ class SeqProfile(
                 raise ValueError("Allele profile bytes length is not a multiple of 16")
             sha256 = hashlib.sha256()
             sha256.update(allele_bytes)
-            computed_profile_hash = UUID(sha256.digest()[:16].hex())
+            computed_content_hash = UUID(sha256.digest()[:16].hex())
         else:
             SeqProfile._raise_no_computable_hash()
 
-        return computed_profile_hash
+        return computed_content_hash
 
-    def _generate_locus_profile_hash(self, profile_hash: UUID) -> UUID:
-        if self.format == enum.SeqProfileFormat.LOCUS_PROFILE_FORMAT1:
-            # TODO: implement calculation of hash based on the content of the locus profile
-            return profile_hash
-        else:
-            if profile_hash == NULL_ID:
-                raise ValueError(
-                    "Unable to calculate locus profile hash for this format"
-                )
-        return profile_hash
+    def _validate_locus_profile(self) -> UUID:
+        """Validate the locus profile content"""
+        # TODO: 3268 just put a NotImplemented error here
+        raise NotImplementedError(
+            "Unable to validate locus profile content hash for this format"
+        )
 
     @field_serializer("seq_profile_type", mode="plain")
     def _serialize_seq_profile_type(self, value: enum.SeqProfileType) -> int:
@@ -302,6 +305,77 @@ class SeqProfile(
             "Unable to parse k-mer frequency map for this k-mer profile format"
         )
 
+    def get_snps(self, **kwargs: Any) -> list[tuple[int, str]]:
+        """
+        Parse and return the SNPs from the SNP profile based on its format as an ordered
+        list of (position, nucleotide) tuples. The position is 1-based and the
+        nucleotide is in lowercase.
+        """
+        if self.format == enum.SeqProfileFormat.NEXTCLADE:
+            nextclade_dict: dict[str, Any] = json.loads(self.content)
+            snps: list[tuple[int, str]] = []
+            substitutions = nextclade_dict.get("substitutions")
+            if isinstance(substitutions, str):
+                for substitution in substitutions.split(","):
+                    if not substitution:
+                        continue
+                    reference_nucleotide = substitution[0]
+                    position = int(substitution[1:-1])
+                    mutated_nucleotide = substitution[-1]
+                    snps.append((position, mutated_nucleotide.lower()))
+            # TODO: 3268 check if this is correct for the non_actgn representation
+            non_actgns = nextclade_dict.get("nonACGTNs")
+            if isinstance(non_actgns, str):
+                for non_actgn in non_actgns.split(","):
+                    if not non_actgn:
+                        continue
+                    non_actgn_nucleotide = non_actgn[0]
+                    non_actgn_range = non_actgn[2:].split("-")
+                    non_actgn_start = int(non_actgn_range[0])
+                    if len(non_actgn_range) == 2:
+                        non_actgn_end = int(non_actgn_range[1])
+                    else:
+                        non_actgn_end = non_actgn_start
+                    for position in range(non_actgn_start, non_actgn_end + 1):
+                        snps.append((position, non_actgn_nucleotide.lower()))
+            return sorted(snps, key=lambda x: x[0])
+        raise NotImplementedError(
+            f"Unable to parse SNPs for SNP profile format {self.format}"
+        )
+
+    def get_missing_seq_ranges(self, ref_seq_length: int) -> list[tuple[int, int]]:
+        """
+        Parse and return the missing sequence ranges from the SNP profile based on its
+        format as an ordered list of (start, end) tuples. The positions are 1-based and
+        inclusive.
+        """
+        if self.format == enum.SeqProfileFormat.NEXTCLADE:
+            nextclade_dict: dict[str, Any] = json.loads(self.content)
+            missing_ranges: list[tuple[int, int]] = []
+            # Add any missing range at the start
+            alignment_start = int(nextclade_dict["alignment_start"])
+            if alignment_start > 1:
+                missing_ranges.append((1, alignment_start - 1))
+            # Add any missing range at the end
+            alignment_end = int(nextclade_dict["alignment_end"])
+            if alignment_end < ref_seq_length:
+                missing_ranges.append((alignment_end + 1, ref_seq_length))
+            # Add any missing ranges between the start and end
+            missing = nextclade_dict["missing"]
+            if missing:
+                for missing_range in missing.split(","):
+                    missing_range_split = missing_range.split("-")
+                    missing_start = int(missing_range_split[0])
+                    if len(missing_range_split) == 2:
+                        missing_end = int(missing_range_split[1])
+                    else:
+                        missing_end = missing_start
+                    missing_ranges.append((missing_start, missing_end))
+            return sorted(missing_ranges, key=lambda x: x[0])
+        raise NotImplementedError(
+            f"Unable to parse missing sequence ranges for format {self.format}"
+        )
+
     @staticmethod
     def get_ordered_allele_ids_representation(allele_ids: list[UUID | None]) -> str:
         """
@@ -361,21 +435,33 @@ class SeqProfile(
         return UUID(sha256.digest()[:16].hex())
 
     @staticmethod
-    def get_snp_profile_hash(nextclade_fields: dict[str, Any]) -> UUID:
-        """Compute a deterministic hash from the flat NextClade fields of a single
-        sample. Field names and values are iterated in sorted order."""
+    # TODO: 3268 This should instead calculate the hash from a canonical representation of SNPs. I kept the old function commented out for reference - to be removed
+    def get_snp_profile_hash(snps: list[tuple[int, str]]) -> UUID:
+        """
+        Compute a deterministic hash from the canonical representation of SNPs of a
+        single sample. The SNPs are iterated in sorted order.
+        """
         sha256 = hashlib.sha256()
-        for field_name in sorted(nextclade_fields.keys()):
-            value = nextclade_fields[field_name]
-            sha256.update(field_name.encode("ascii"))
-            if isinstance(value, str):
-                sha256.update(value.encode("ascii"))
-            elif isinstance(value, list):
-                for item in value:
-                    sha256.update(str(item).encode("ascii"))
-            elif value is not None:
-                sha256.update(str(value).encode("ascii"))
+        for position, nucleotide in sorted(snps, key=lambda x: x[0]):
+            sha256.update(str(position).encode("ascii"))
+            sha256.update(nucleotide.encode("ascii"))
         return UUID(sha256.digest()[:16].hex())
+
+    # def get_snp_profile_hash(nextclade_fields: dict[str, Any]) -> UUID:
+    #     """Compute a deterministic hash from the flat NextClade fields of a single
+    #     sample. Field names and values are iterated in sorted order."""
+    #     sha256 = hashlib.sha256()
+    #     for field_name in sorted(nextclade_fields.keys()):
+    #         value = nextclade_fields[field_name]
+    #         sha256.update(field_name.encode("ascii"))
+    #         if isinstance(value, str):
+    #             sha256.update(value.encode("ascii"))
+    #         elif isinstance(value, list):
+    #             for item in value:
+    #                 sha256.update(str(item).encode("ascii"))
+    #         elif value is not None:
+    #             sha256.update(str(value).encode("ascii"))
+    #     return UUID(sha256.digest()[:16].hex())
 
     @staticmethod
     def _raise_no_computable_hash() -> None:

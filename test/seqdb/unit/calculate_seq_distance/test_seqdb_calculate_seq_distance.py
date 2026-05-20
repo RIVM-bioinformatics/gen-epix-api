@@ -138,7 +138,10 @@ def _make_snp_profile_for_upload(
         content=nextclade_content or _make_nextclade_content(),
         format=enum.SeqProfileFormat.NEXTCLADE,
         content_hash=model.SeqProfile.get_snp_profile_hash(
-            json.loads(nextclade_content or _make_nextclade_content())
+            model.SeqProfile.model_construct(
+                content=nextclade_content or _make_nextclade_content(),
+                format=enum.SeqProfileFormat.NEXTCLADE,
+            ).get_snps()
         ),
         seq_profile_type=enum.SeqProfileType.SNP,
         qc_score=1.0,

@@ -1045,7 +1045,12 @@ class SeqdbTestClient(TestClient):
                 seq_profile_type=(enum.SeqProfileType.SNP),
                 content=serialized_nextclade,
                 format=enum.SeqProfileFormat.NEXTCLADE,
-                content_hash=model.SeqProfile.get_snp_profile_hash(nextclade_fields),
+                content_hash=model.SeqProfile.get_snp_profile_hash(
+                    model.SeqProfile.model_construct(
+                        content=serialized_nextclade,
+                        format=enum.SeqProfileFormat.NEXTCLADE,
+                    ).get_snps()
+                ),
             )
             seq_for_upload = model.SeqForUpload(
                 contigs=[

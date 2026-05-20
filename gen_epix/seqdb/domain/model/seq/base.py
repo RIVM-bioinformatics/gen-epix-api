@@ -123,7 +123,8 @@ class BaseSeq(Model):
     """
     Base class for a sequence. The class includes validation logic to ensure
     consistency between the sequence, its format, length, and derived sequence hash.
-    The sequence hash is stored in the id field of the model.
+    The sequence hash is stored in the id field of the model and is equal to the first
+    128 bits of the SHA256 hash of the lower case sequence.
     """
 
     ENTITY: ClassVar = Entity(
@@ -154,9 +155,10 @@ class BaseSeq(Model):
     @model_validator(mode="after")
     def _validate_model(self) -> Self:
         """
-        Derive the sequence hash, if not provided, or otherwise verify that it is
-        correctly derived if possible. The sequence hash is stored in the id field
-        that must be present in the class making use of the mixin.
+        Derive the sequence hash as the first 128 bits of the SHA256 hash of the lower
+        case sequence, if not provided, or otherwise verify that it is correctly derived
+        if possible. The sequence hash is stored in the id field that must be present in
+        the class making use of the mixin.
         """
         seq_hash = self.id
         # Verify sequence hash, seq and length depending on seq_format
@@ -194,20 +196,29 @@ class BaseSeq(Model):
                 raise ValueError(
                     "alignmentEnd must be greater than or equal to alignmentStart"
                 )
-            # Compute hash deterministically from sorted field names/values,
-            # mirroring the approach used in SeqProfile.get_snp_profile_hash
-            sha256 = hashlib.sha256()
-            for field_name in sorted(nextclade_seq.keys()):
-                value = nextclade_seq[field_name]
-                sha256.update(field_name.encode("ascii"))
-                if isinstance(value, str):
-                    sha256.update(value.encode("ascii"))
-                elif value is not None:
-                    sha256.update(str(value).encode("ascii"))
-            computed_seq_hash = UUID(sha256.digest()[:16].hex())
+            # TODO: 3268: remove commented out code
+            # seq_hash cannot be computed at this stage, since it requires the reference sequence, it can only be verified that a value is provided
+            if seq_hash is None:
+                raise ValueError(
+                    f"Unable to calculate sequence hash for seq_format {self.seq_format.value}"
+                )
+            computed_seq_hash = seq_hash
+            # # Compute hash deterministically from sorted field names/values,
+            # # mirroring the approach used in SeqProfile.get_snp_profile_hash
+            # sha256 = hashlib.sha256()
+            # for field_name in sorted(nextclade_seq.keys()):
+            #     value = nextclade_seq[field_name]
+            #     sha256.update(field_name.encode("ascii"))
+            #     if isinstance(value, str):
+            #         sha256.update(value.encode("ascii"))
+            #     elif value is not None:
+            #         sha256.update(str(value).encode("ascii"))
+            # computed_seq_hash = UUID(sha256.digest()[:16].hex())
         else:
             if seq_hash is None:
-                raise ValueError("Unable to calculate sequence hash")
+                raise ValueError(
+                    f"Unable to calculate sequence hash for seq_format {self.seq_format.value}"
+                )
             # Unable to compute length or sequence hash but provided -> assume correct
             computed_length = self.length
             computed_seq_hash = seq_hash
@@ -225,7 +236,7 @@ class BaseSeq(Model):
             self.id = computed_seq_hash
         elif seq_hash != computed_seq_hash:
             raise ValueError(
-                "Provided sequence hash, i.e. the id, does not match computed sequence hash"
+                f"Provided sequence hash, i.e. the id, does not match computed sequence hash for seq_format {self.seq_format.value}: {seq_hash} != {computed_seq_hash}"
             )
         return self
 
@@ -245,6 +256,36 @@ class BaseSeq(Model):
         """Return the nucleotide sequence as a string, if possible, otherwise raise an error."""
         if self.seq_format == enum.SeqFormat.STR_DNA:
             return self.seq
+        elif self.seq_format == enum.SeqFormat.NEXTCLADE:
+            if ref_seq_str is None:
+                raise ValueError(
+                    "Reference sequence string must be provided to get the nucleotide sequence for NEXTCLADE format"
+                )
+            # Parse compact NextClade notation for a single sequence
+            nextclade_seq: dict[str, Any] = json.loads(self.seq)
+            # Derive nucleotide sequence from the reference sequence and the list of mutations
+            seq_list = list(ref_seq_str)
+            for mutation in nextclade_seq["substitutions"]:
+                pos = mutation["pos"] - 1  # Convert to 0-based index
+                if pos < 0 or pos >= len(seq_list):
+                    raise ValueError(
+                        f"Mutation position {mutation['pos']} is out of bounds for reference sequence of length {len(seq_list)}"
+                    )
+                seq_list[pos] = mutation["alt"]
+            # TODO 3268: handle insertions, deletions, alignment start/end and non-ACTGN
+            # for deletion in nextclade_seq["deletions"]:
+            #     start_pos = deletion["start"] - 1  # Convert to 0-based index
+            #     end_pos = deletion["end"] - 1  # Convert to 0-based index
+            #     if start_pos < 0 or end_pos >= len(seq_list) or start_pos > end_pos:
+            #         raise ValueError(
+            #             f"Deletion positions {deletion['start']}-{deletion['end']} are out of bounds or invalid for reference sequence of length {len(seq_list)}"
+            #         )
+            #     for pos in range(start_pos, end_pos + 1):
+            #         seq_list[pos] = "-"
+            raise NotImplementedError(
+                "Handling of insertions, deletions, alignment start/end and non-ACTGN characters is not implemented yet for getting the nucleotide sequence from NEXTCLADE format"
+            )
+            return "".join(seq_list)
         else:
             raise NotImplementedError(
                 f"Getting the nucleotide sequence is not implemented for format {self.seq_format}"
