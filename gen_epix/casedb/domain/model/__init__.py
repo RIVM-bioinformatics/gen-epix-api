@@ -204,6 +204,9 @@ COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
 STORED_MODEL_FIELD_PROPS: dict[type[fastapp.Model], dict[str, ModelFieldProps]] = {
     Case: {
         "content": ModelFieldProps(is_mutable_always=True, is_sub_field_dict=False),
+        # Immutable once set: re-upload may pass NULL_ID ("don't know") but
+        # not a different real DC ID.
+        "created_in_data_collection_id": ModelFieldProps(),
     },
 }
 complete_stored_model_field_props(

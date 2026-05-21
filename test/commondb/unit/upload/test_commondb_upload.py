@@ -45,6 +45,7 @@ combinations thereof:
 5.2.1: Stored value is empty (None, empty list, empty dict): field is set to new value
 5.2.2: Stored value is not empty, new value is empty: no issue
 5.2.3: Stored value is not empty, new value is not empty: error
+5.2.4: Stored UUID value is not empty, new value is NULL_ID: no error (NULL_ID = "not specified")
 6 Provision of Identifiers for parent objects (use IdentifierType=PERSON for testing purposes)
 6.1 No Identifiers provided: no issue
 6.2 One Identifier provided
@@ -205,6 +206,7 @@ class BaseUploadTestCase(TestCase):
         x: str | None = None,
         y: list[str] | None = None,
         z: dict[str, str | None] | None = None,
+        dc_id: UUID | None = None,
         identifiers: list[IdentifierForUpload] | None = None,
         children1: list[Child1ForUpload] | None = None,
         children2: list[Child2ForUpload] | None = None,
@@ -222,6 +224,7 @@ class BaseUploadTestCase(TestCase):
                 x=x,
                 y=y,
                 z=z,
+                dc_id=dc_id,
             ),
         )
 
@@ -235,6 +238,7 @@ class BaseUploadTestCase(TestCase):
         x: str | None = None,
         y: list[str] | None = None,
         z: dict[str, str | None] | None = None,
+        dc_id: UUID | None = None,
     ) -> Parent:
         """Get the Parent model contained in a ParentForUpload model, with optional overrides."""
         parent = parent_for_upload.parent
@@ -256,6 +260,7 @@ class BaseUploadTestCase(TestCase):
                 if parent is None or parent.z is None
                 else {x: y for x, y in parent.z.items() if y is not None}
             ),
+            dc_id=dc_id if dc_id is not None else (parent.dc_id if parent else None),
         )
 
     def create_child1_for_upload(
@@ -1047,20 +1052,62 @@ class Test5FieldMutability(BaseUploadTestCase):
         self.assertEqual(existing_parent.c, resulting_value)
 
     def test_5_2_1_mutable_if_empty_stored_empty_updated(self) -> None:
-        """Test 5.2.1: Mutable if empty field - stored value is empty, should succeed."""
-        # This test would be part of the object update logic
-        # The actual implementation would check the stored model field properties
-        pass  # Implementation would depend on the actual update logic
+        """Test 5.2.1: Mutable if empty - stored None, new value set."""
+        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id, x="new")
+        # Build existing parent with x=None independently (helper can't set x to None)
+        existing_parent = Parent(parent_id=self.parent_id, a="a", b=[], c={}, x=None)
+        self.service.repository.crud.side_effect = [
+            [True],  # Parents exist
+            [existing_parent],  # Existing parents
+            [existing_parent.parent_id],  # Updated parents returned IDs
+        ]
+        batch_result = self.upload_batch(parent_for_upload)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_updated=1)
+        self.assertEqual(existing_parent.x, "new")
 
     def test_5_2_2_mutable_if_empty_stored_not_empty_new_empty(self) -> None:
-        """Test 5.2.2: Mutable if empty field - stored not empty, new empty, should succeed."""
-        # Implementation would check field properties during update
-        pass
+        """Test 5.2.2: Mutable if empty - stored not empty, new None, no change."""
+        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id, x=None)
+        existing_parent = self.get_parent_from_for_upload(parent_for_upload, x="existing")
+        self.service.repository.crud.side_effect = [
+            [True],  # Parents exist
+            [existing_parent],  # Existing parents
+        ]
+        batch_result = self.upload_batch(parent_for_upload)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_skipped=1)
+        self.assertEqual(existing_parent.x, "existing")
 
     def test_5_2_3_mutable_if_empty_stored_not_empty_new_not_empty_fails(self) -> None:
-        """Test 5.2.3: Mutable if empty field - stored not empty, new not empty, should fail."""
-        # Implementation would check field properties
-        pass
+        """Test 5.2.3: Mutable if empty - stored not empty, new different value, error."""
+        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id, x="new")
+        existing_parent = self.get_parent_from_for_upload(parent_for_upload, x="existing")
+        self.service.repository.crud.side_effect = [
+            [True],  # Parents exist
+            [existing_parent],  # Existing parents
+        ]
+        batch_result = self.upload_batch(parent_for_upload)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_failed=1)
+
+    def test_5_2_4_immutable_uuid_null_id_treated_as_not_specified(self) -> None:
+        """Test 5.2.4: Immutable UUID field - NULL_ID is treated as "not specified", no error."""
+        stored_dc_id = self.random_ids[0]
+        parent_for_upload = self.create_parent_for_upload(
+            parent_id=self.parent_id, dc_id=NULL_ID
+        )
+        existing_parent = self.get_parent_from_for_upload(
+            parent_for_upload, dc_id=stored_dc_id
+        )
+        self.service.repository.crud.side_effect = [
+            [True],  # Parents exist
+            [existing_parent],  # Existing parents
+        ]
+        batch_result = self.upload_batch(parent_for_upload)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_skipped=1)
+        self.assertEqual(existing_parent.dc_id, stored_dc_id)
 
 
 # Test Scenario 6: Identifiers for parent objects
