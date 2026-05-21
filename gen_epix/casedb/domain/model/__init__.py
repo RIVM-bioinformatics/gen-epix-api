@@ -204,6 +204,7 @@ COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
 STORED_MODEL_FIELD_PROPS: dict[type[fastapp.Model], dict[str, ModelFieldProps]] = {
     Case: {
         "content": ModelFieldProps(is_mutable_always=True, is_sub_field_dict=False),
+        "case_date": ModelFieldProps(is_mutable_always=True),
     },
 }
 complete_stored_model_field_props(
