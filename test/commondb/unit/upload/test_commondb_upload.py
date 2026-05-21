@@ -1053,7 +1053,9 @@ class Test5FieldMutability(BaseUploadTestCase):
 
     def test_5_2_1_mutable_if_empty_stored_empty_updated(self) -> None:
         """Test 5.2.1: Mutable if empty - stored None, new value set."""
-        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id, x="new")
+        parent_for_upload = self.create_parent_for_upload(
+            parent_id=self.parent_id, x="new"
+        )
         # Build existing parent with x=None independently (helper can't set x to None)
         existing_parent = Parent(parent_id=self.parent_id, a="a", b=[], c={}, x=None)
         self.service.repository.crud.side_effect = [
@@ -1068,8 +1070,12 @@ class Test5FieldMutability(BaseUploadTestCase):
 
     def test_5_2_2_mutable_if_empty_stored_not_empty_new_empty(self) -> None:
         """Test 5.2.2: Mutable if empty - stored not empty, new None, no change."""
-        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id, x=None)
-        existing_parent = self.get_parent_from_for_upload(parent_for_upload, x="existing")
+        parent_for_upload = self.create_parent_for_upload(
+            parent_id=self.parent_id, x=None
+        )
+        existing_parent = self.get_parent_from_for_upload(
+            parent_for_upload, x="existing"
+        )
         self.service.repository.crud.side_effect = [
             [True],  # Parents exist
             [existing_parent],  # Existing parents
@@ -1081,8 +1087,12 @@ class Test5FieldMutability(BaseUploadTestCase):
 
     def test_5_2_3_mutable_if_empty_stored_not_empty_new_not_empty_fails(self) -> None:
         """Test 5.2.3: Mutable if empty - stored not empty, new different value, error."""
-        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id, x="new")
-        existing_parent = self.get_parent_from_for_upload(parent_for_upload, x="existing")
+        parent_for_upload = self.create_parent_for_upload(
+            parent_id=self.parent_id, x="new"
+        )
+        existing_parent = self.get_parent_from_for_upload(
+            parent_for_upload, x="existing"
+        )
         self.service.repository.crud.side_effect = [
             [True],  # Parents exist
             [existing_parent],  # Existing parents
