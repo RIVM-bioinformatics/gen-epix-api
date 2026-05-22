@@ -534,19 +534,25 @@ def _parse_nextclade_profile_content(content: str) -> _ParsedNextcladeProfile:
     if not isinstance(nextclade_fields, dict):
         raise ValueError("Nextclade SNP profile content must be a JSON object")
 
-    alignment_start = int(nextclade_fields["alignment_start"])
-    alignment_end = int(nextclade_fields["alignment_end"])
+    if "substitutions" not in nextclade_fields:
+        raise ValueError("Nextclade SNP profile content must contain 'substitutions'")
+    substitutions = _parse_nextclade_substitutions(
+        str(nextclade_fields["substitutions"])
+    )
+    deletions = _parse_nextclade_ranges(str(nextclade_fields.get("deletions", "")))
+    missing = _parse_nextclade_ranges(str(nextclade_fields.get("missings", "")))
+    non_acgtns = _parse_nextclade_non_acgtns(
+        str(nextclade_fields.get("non_acgtns", ""))
+    )
+
+    alignment_start = int(nextclade_fields.get("alignment_start", 0))
+    _all_positions = set(substitutions) | deletions | missing | set(non_acgtns)
+    _default_end = max(_all_positions) if _all_positions else 0
+    alignment_end = int(nextclade_fields.get("alignment_end", _default_end))
     if alignment_end < alignment_start:
         raise ValueError(
             "Invalid Nextclade alignment range: " f"{alignment_start}-{alignment_end}"
         )
-
-    substitutions = _parse_nextclade_substitutions(
-        str(nextclade_fields["substitutions"])
-    )
-    deletions = _parse_nextclade_ranges(str(nextclade_fields["deletions"]))
-    missing = _parse_nextclade_ranges(str(nextclade_fields["missings"]))
-    non_acgtns = _parse_nextclade_non_acgtns(str(nextclade_fields["non_acgtns"]))
 
     variant_states: dict[int, tuple[str, str | None]] = {
         position: ("base", base) for position, base in substitutions.items()
