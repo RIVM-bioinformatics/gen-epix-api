@@ -202,7 +202,20 @@ def _verify_batch_refdata_allele_profiles(
     # Verify that any new alleles have been provided and set their locus IDs from the alleles in the sample data
     if new_allele_locus_map:
         provided_alleles = cmd.sample_batch.alleles or []
-        provided_allele_ids = {x.id for x in provided_alleles}
+        # Deduplicate alleles in-place (keep first occurrence per ID). The
+        # batch constructor may emit the same content-addressed allele once
+        # per sample; the repository requires unique IDs.
+        _seen_allele_ids: set[UUID] = set()
+        _dup_allele_indexes: list[int] = []
+        for _i, _allele in enumerate(provided_alleles):
+            assert _allele.id is not None
+            if _allele.id in _seen_allele_ids:
+                _dup_allele_indexes.append(_i)
+            else:
+                _seen_allele_ids.add(_allele.id)
+        for _index in sorted(_dup_allele_indexes, reverse=True):
+            del provided_alleles[_index]
+        provided_allele_ids = _seen_allele_ids
         # Determine if any missing alleles
         missing_allele_ids = set(new_allele_locus_map.keys()) - provided_allele_ids
         if missing_allele_ids:
@@ -255,8 +268,9 @@ def _verify_batch_refdata_allele_profiles(
                 allele.locus_id = expected_locus_id
                 continue
             if locus_id != expected_locus_id:
-                # Different locus ID, put the one derived from the profile
-                success = False
+                # Different locus ID: override with the one derived from the
+                # profile and emit a warning (not a hard failure).
+                allele.locus_id = expected_locus_id
                 batch_result.add_warning(
                     "e401b1bd",
                     f"Different locus ID for new allele {allele.id}: expected {expected_locus_id}, got {locus_id}, used the former",
