@@ -203,7 +203,9 @@ COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
 # Additional field properties for models that have already been stored (persisted)
 STORED_MODEL_FIELD_PROPS: dict[type[fastapp.Model], dict[str, ModelFieldProps]] = {
     Case: {
+        # TODO: content should have is_sub_field_dict=True so that individual subfields can be updated. To be determined why currently set to False.
         "content": ModelFieldProps(is_mutable_always=True, is_sub_field_dict=False),
+        "created_in_data_collection_id": ModelFieldProps(),
         "case_date": ModelFieldProps(is_mutable_always=True),
     },
 }
