@@ -541,7 +541,7 @@ class BaseCaseValidatorTestCase(TestCase):
         case_contents: list[dict[UUID, str | None]],
     ) -> tuple[command.UploadCasesCommand, model.CaseBatchUploadResult]:
         # Use a single created_in_data_collection_id across all cases and the command
-        created_in_dc_id: UUID = uuid4()
+        created_in_data_collection_id: UUID = uuid4()
         cases_for_upload: list[model.CaseForUpload] = []
         case_results: list[model.CaseUploadResult] = []
         for content in case_contents:
@@ -549,7 +549,7 @@ class BaseCaseValidatorTestCase(TestCase):
                 id=uuid4(),
                 code=None,
                 case_type_id=self.case_type_id,
-                created_in_data_collection_id=created_in_dc_id,
+                created_in_data_collection_id=created_in_data_collection_id,
                 content=content,
             )
             cases_for_upload.append(model.CaseForUpload(case=c))
@@ -563,7 +563,7 @@ class BaseCaseValidatorTestCase(TestCase):
         batch = model.CaseBatchForUpload(cases=cases_for_upload)
         cmd = command.UploadCasesCommand(
             case_type_id=self.case_type_id,
-            created_in_data_collection_id=created_in_dc_id,
+            created_in_data_collection_id=created_in_data_collection_id,
             case_batch=batch,
         )
         retval = model.CaseBatchUploadResult(cases=case_results)

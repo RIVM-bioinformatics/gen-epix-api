@@ -32,6 +32,9 @@ Fix index:
      `claims` are redacted in both merged JSON payloads and extras.
  12. Actor aliases `user_id` and `organization_id` are promoted from nested
      command payloads when present.
+ 13. Exception messages longer than max_exception_message_length are truncated
+     before serialisation to prevent large SQL payloads or stringified objects
+     from making error log lines unreadable.
 """
 
 import json
@@ -69,6 +72,7 @@ _UVICORN_ACCESS_RE = re.compile(
 )
 
 _DEFAULT_MAX_STACKTRACE_LENGTH = 8000  # empirical value keeping typical stacktraces not too long for e.g. a log monitoring platform
+_DEFAULT_MAX_EXCEPTION_MSG_LENGTH = 500  # prevents huge SQL payloads in exception messages from drowning out the error context
 
 
 def _utc_iso(ts: float) -> str:
@@ -233,6 +237,7 @@ class JsonFormatter(logging.Formatter):
         sensitive_keys: list[str] | tuple[str, ...] | set[str] | None = None,
         redacted_value: str = _DEFAULT_REDACTED_VALUE,
         max_stacktrace_length: int | None = _DEFAULT_MAX_STACKTRACE_LENGTH,
+        max_exception_message_length: int | None = _DEFAULT_MAX_EXCEPTION_MSG_LENGTH,
     ):
         super().__init__()
         self.service = (
@@ -252,6 +257,7 @@ class JsonFormatter(logging.Formatter):
         self._sensitive_re = _build_sensitive_re(self.sensitive_keys)
         self._redacted_kv = rf"\1={self.redacted_value}"
         self.max_stacktrace_length = max_stacktrace_length
+        self.max_exception_message_length = max_exception_message_length
 
         self._reserved = {
             "name",
@@ -476,9 +482,17 @@ class JsonFormatter(logging.Formatter):
                 stacktrace = (
                     stacktrace[: self.max_stacktrace_length] + "\u2026[truncated]"
                 )
+            exc_msg = str(record.exc_info[1])
+            if (
+                self.max_exception_message_length is not None
+                and len(exc_msg) > self.max_exception_message_length
+            ):
+                exc_msg = (
+                    exc_msg[: self.max_exception_message_length] + "\u2026[truncated]"
+                )
             base["exception"] = {
                 "type": getattr(record.exc_info[0], "__name__", "Exception"),
-                "message": str(record.exc_info[1]),
+                "message": exc_msg,
                 "stacktrace": stacktrace,
             }
 

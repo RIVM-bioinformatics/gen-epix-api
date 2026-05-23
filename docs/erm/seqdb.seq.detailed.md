@@ -355,8 +355,8 @@ erDiagram
         UUID read_set2_id FK
         UUID protocol_id FK
         list[Contig] contigs
+        UUID seq_hash
         any is_available
-        any seq_hash
         any n_contigs
         any length
         any max_contig_length

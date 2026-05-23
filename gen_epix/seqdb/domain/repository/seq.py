@@ -120,6 +120,17 @@ class BaseSeqRepository(BaseRepository):
         """
         raise NotImplementedError()
 
+    # TODO [LSP-3359] use standard crud method with filter rather than dedicated method
+    @abc.abstractmethod
+    def get_sample_identifiers_by_sample_ids(
+        self,
+        sample_ids: list[UUID],
+    ) -> list[model.SampleIdentifier]:
+        """
+        Retrieve only SampleIdentifier records for the given sample IDs.
+        """
+        raise NotImplementedError()
+
     @abc.abstractmethod
     def filter_seq_profiles_by_quality(
         self,

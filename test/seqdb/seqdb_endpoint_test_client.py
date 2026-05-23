@@ -26,6 +26,10 @@ class SeqdbEndpointTestClient(EndpointTestClient):
             command.RetrieveSamplesByIdCommand, self.handle_retrieve_samples_by_id
         )
         self.register_handler(
+            command.RetrieveSampleIdentifiersByIdCommand,
+            self.handle_retrieve_sample_identifiers_by_id,
+        )
+        self.register_handler(
             command.RetrieveSamplesByQueryCommand,
             self.handle_retrieve_sample_ids_by_query,
         )
@@ -63,6 +67,20 @@ class SeqdbEndpointTestClient(EndpointTestClient):
             json=json.loads(cmd.model_dump_json(exclude={"user"})),
         )
         retval = self._content_to_obj(response, model.FullSample, is_list=True)
+        return retval, response
+
+    def handle_retrieve_sample_identifiers_by_id(
+        self,
+        cmd: command.RetrieveSampleIdentifiersByIdCommand,
+        route_prefix: str,
+        headers: dict[str, str] | None,
+    ) -> tuple[Any, Response]:
+        response = self.test_client.post(
+            route_prefix + "/retrieve/sample_identifiers_by_ids",
+            headers=headers,
+            json=json.loads(cmd.model_dump_json(exclude={"user"})),
+        )
+        retval = self._content_to_obj(response, model.SampleIdentifier, is_list=True)
         return retval, response
 
     def handle_retrieve_sample_ids_by_query(

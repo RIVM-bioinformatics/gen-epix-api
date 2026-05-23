@@ -41,6 +41,10 @@ class RetrieveSamplesByIdsRequestBody(PydanticBaseModel):
     sample_ids: list[UUID]
 
 
+class RetrieveSampleIdentifiersByIdsRequestBody(PydanticBaseModel):
+    sample_ids: list[UUID]
+
+
 class RetrieveSeqFastaRequestBody(PydanticBaseModel):
 
     seq_ids: list[UUID] = Field(
@@ -172,6 +176,27 @@ def create_seq_endpoints(
             )
         except Exception as exception:
             handle_exception("ac218f73", user, exception, request_ids=request_body.sample_ids)  # type: ignore
+        return retval
+
+    @router.post(
+        "/retrieve/sample_identifiers_by_ids",
+        operation_id="retrieve__sample_identifiers_by_ids",
+        name="RetrieveSampleIdentifiersByIDs",
+        description=command.RetrieveSampleIdentifiersByIdCommand.__doc__,
+    )
+    async def retrieve__sample_identifiers_by_ids(
+        user: registered_user_dependency,  # type: ignore
+        request_body: RetrieveSampleIdentifiersByIdsRequestBody,  # type: ignore
+    ) -> list[model.SampleIdentifier]:
+        try:
+            retval: list[model.SampleIdentifier] = app.handle(
+                command.RetrieveSampleIdentifiersByIdCommand(
+                    user=user,
+                    sample_ids=request_body.sample_ids,
+                )
+            )
+        except Exception as exception:
+            handle_exception("b3f91a2e", user, exception, request_ids=request_body.sample_ids)  # type: ignore
         return retval
 
     @router.post(

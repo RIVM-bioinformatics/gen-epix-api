@@ -48,6 +48,8 @@ class App:
     DEFAULT_LOG_ITEM_CLASS = LogItem
     DEFAULT_LOG_SUMMARIZATION_ENABLED: bool = True
     DEFAULT_LOG_MAX_LIST_ITEMS: int = 3
+    DEFAULT_LOG_MAX_STRING_LENGTH: int = 100
+    DEFAULT_LOG_MAX_DICT_ITEMS: int = 30
     _CFG_TRUE_VALUES: set[str] = {"1", "true", "yes", "on"}
     _CFG_FALSE_VALUES: set[str] = {"0", "false", "no", "off"}
 
@@ -515,6 +517,12 @@ class App:
         self._log_max_list_items = App._get_int_from_cfg_value(
             cfg.get("max_list_items", self.DEFAULT_LOG_MAX_LIST_ITEMS)
         )
+        self._log_max_string_length = App._get_int_from_cfg_value(
+            cfg.get("max_string_length", self.DEFAULT_LOG_MAX_STRING_LENGTH)
+        )
+        self._log_max_dict_items = App._get_int_from_cfg_value(
+            cfg.get("max_dict_items", self.DEFAULT_LOG_MAX_DICT_ITEMS)
+        )
 
     def create_log_message(
         self,
@@ -564,12 +572,22 @@ class App:
         self,
         data: dict[str, Any],
     ) -> dict[str, Any]:
-        """Recursively walk *data* and replace any list longer than *max_items* with
-        a compact ``{"_count": N, "_sample": [...]}`` dict so the serialised log
-        payload stays within downstream log-sink size constraints."""
+        """Recursively walk *data* and replace any list or mapping longer than their
+        respective thresholds with a compact ``{"_count": N, "_sample": ...}`` summary,
+        and truncate any string longer than *max_string_length* to its first N chars
+        with a suffix showing the total length. All three keep the serialised log
+        payload within downstream log-sink size constraints."""
 
         def _walk(obj: Any) -> Any:
             if isinstance(obj, dict):
+                if len(obj) > self._log_max_dict_items:
+                    return {
+                        "_count": len(obj),
+                        "_sample": {
+                            x: _walk(y)
+                            for x, y in list(obj.items())[: self._log_max_list_items]
+                        },
+                    }
                 return {x: _walk(y) for x, y in obj.items()}
             if isinstance(obj, list):
                 if len(obj) > self._log_max_list_items:
@@ -578,6 +596,8 @@ class App:
                         "_sample": [_walk(x) for x in obj[: self._log_max_list_items]],
                     }
                 return [_walk(x) for x in obj]
+            if isinstance(obj, str) and len(obj) > self._log_max_string_length:
+                return f"{obj[:self._log_max_string_length]}…[{len(obj)} chars]"
             return obj
 
         return _walk(data)  # type: ignore[return-value]

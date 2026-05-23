@@ -168,6 +168,23 @@ class RetrieveSamplesByIdCommand(Command):
         return sample_ids
 
 
+class RetrieveSampleIdentifiersByIdCommand(Command):
+    """
+    Retrieve only the SampleIdentifier records for a list of sample IDs.
+    Lighter than RetrieveSamplesByIdCommand — no sequences or read sets.
+    """
+
+    sample_ids: list[UUID] = Field(
+        description="IDs of the samples to retrieve identifiers for. Must be unique.",
+    )
+
+    @field_validator("sample_ids", mode="after")
+    def _validate_sample_ids(cls, sample_ids: list[UUID]) -> list[UUID]:
+        if len(set(sample_ids)) != len(sample_ids):
+            raise ValueError("sample_ids must be unique")
+        return sample_ids
+
+
 class RetrieveSeqFastaCommand(Command):
     """
     Retrieve the sequences for the given sequence IDs in FASTA format

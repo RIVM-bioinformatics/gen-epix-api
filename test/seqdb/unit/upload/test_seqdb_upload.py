@@ -23,6 +23,7 @@ from gen_epix.seqdb.domain.enum import Role
 from gen_epix.seqdb.domain.service import BaseSeqService
 from gen_epix.seqdb.services.seq import SampleBatchUploader
 from gen_epix.seqdb.services.seq.upload_verify_batch import (
+    _verify_children_seq_classifications,
     _verify_children_seq_profiles,
     _verify_children_seqs,
     _verify_sample_refdata,
@@ -68,6 +69,7 @@ class BaseUploadTestCase(TestCase):
         self.identifier_issuer_id = UUID("550e8400-e29b-41d4-a716-446655440013")
         self.data_collection_id = UUID("550e8400-e29b-41d4-a716-446655440014")
         self.batch_id = UUID("550e8400-e29b-41d4-a716-446655440015")
+        self.seq_category_id = UUID("550e8400-e29b-41d4-a716-446655440031")
         self.identifier_issuer_code = "IDENTIFIER_ISSUER_CODE"
         self.identifier_issuer = model.IdentifierIssuer(
             id=self.identifier_issuer_id,
@@ -201,6 +203,7 @@ class BaseUploadTestCase(TestCase):
         read_sets: list[model.ReadSetForUpload] | None = None,
         seqs: list[model.SeqForUpload] | None = None,
         seq_profiles: list[model.SeqProfileForUpload] | None = None,
+        seq_classifications: list[model.SeqClassificationForUpload] | None = None,
     ) -> model.SampleForUpload:
         """Helper to create a SampleForUpload with default or specified properties."""
         return model.SampleForUpload(
@@ -208,6 +211,7 @@ class BaseUploadTestCase(TestCase):
             read_sets=read_sets or [],
             seqs=seqs or [],
             seq_profiles=seq_profiles or [],
+            seq_classifications=seq_classifications or [],
         )
 
     def create_read_set_for_upload(
@@ -294,6 +298,26 @@ class BaseUploadTestCase(TestCase):
             ),
             allele_ids=allele_ids,
             locus_allele_id_map=locus_allele_id_map,
+        )
+
+    def create_seq_classification_for_upload(
+        self,
+        sample_id: UUID | None = None,
+        seq_id: UUID | None = None,
+        protocol_id: UUID | None = None,
+        primary_category_id: UUID | None = None,
+        primary_category_code: str | None = None,
+    ) -> model.SeqClassificationForUpload:
+        """Helper to create a SeqClassificationForUpload with default or specified properties."""
+        return model.SeqClassificationForUpload(
+            sample_id=sample_id or NULL_ID,
+            seq_id=seq_id,
+            protocol_id=protocol_id or self.protocol_id,
+            primary_category_id=primary_category_id or NULL_ID,
+            primary_category_code=primary_category_code,
+            format=enum.SeqClassificationFormat.PRIMARY_CATEGORY_ONLY,
+            content_hash=NULL_ID,
+            content="",
         )
 
     def get_only_seq(self, sample: model.SampleForUpload) -> model.SeqForUpload:
@@ -1193,3 +1217,100 @@ class TestVerifyReferenceData(BaseUploadTestCase):
         """Test assertion error when no allele data is provided."""
         # Skip this test since pydantic validates fields before we get to the assertion
         self.skipTest("Cannot test AssertionError due to pydantic validation")
+
+
+@pytest.mark.scenario_ids("TC-11-13-01")
+class TestConcurrentModificationError(BaseUploadTestCase):
+    """Test that ConcurrentModificationError in distance calculation is a soft failure."""
+
+    def test_concurrent_modification_does_not_raise(self) -> None:
+        """ConcurrentModificationError in distance calc becomes a batch warning."""
+        from gen_epix.fastapp.exc import ConcurrentModificationError
+
+        profile = self.create_seq_profile_for_upload(sample_id=self.sample_id)
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id, seq_profiles=[profile]
+        )
+        cmd, batch_result = self.create_command_and_result_for_samples(sample)
+
+        # Simulate a freshly written profile result so _update_profile_distances
+        # collects it.
+        profile_result = batch_result.samples[0].seq_profiles[0]
+        profile_result.status = EtlStatus.CREATED
+        profile_result.id = uuid4()
+
+        # app.handle raises ConcurrentModificationError for the distance command.
+        self.service.app.handle.side_effect = ConcurrentModificationError(
+            "test_code", "concurrent modification during test"
+        )
+
+        from gen_epix.seqdb.services.seq.upload_upsert_batch import (
+            _update_profile_distances,
+        )
+
+        success = _update_profile_distances(
+            self.batch_uploader, cmd, batch_result, self.uow
+        )
+
+        # No exception should escape; batch_result.seq_distances stays None.
+        self.assertTrue(success)
+        self.assertIsNone(batch_result.seq_distances)
+        self.assertTrue(batch_result.has_log_code("b3e1f49a"))
+        # Sample result must not be FAILED.
+        self.assertNotEqual(profile_result.status, EtlStatus.FAILED)
+
+
+@pytest.mark.scenario_ids("TC-11-14-01")
+class TestVerifyBatchSeqClassifications(BaseUploadTestCase):
+    """Tests for _verify_children_seq_classifications primary_category_id validation."""
+
+    def _run(self, sc: model.SeqClassificationForUpload) -> tuple[bool, model.SampleBatchUploadResult]:
+        sample = self.create_sample_for_upload(
+            sample_id=None,
+            seq_classifications=[sc],
+        )
+        cmd, retval = self.create_command_and_result_for_samples(sample)
+        success = _verify_children_seq_classifications(
+            self.batch_uploader, cmd, retval, self.uow
+        )
+        return success, retval
+
+    def test_primary_category_id_not_found(self) -> None:
+        """Error dec840ca when primary_category_id UUID is not in seq_category."""
+        sc = self.create_seq_classification_for_upload(
+            primary_category_id=self.seq_category_id,
+        )
+        self.service.repository.read_fields.return_value = []
+
+        success, retval = self._run(sc)
+
+        sc_result = retval.samples[0].seq_classifications[0]
+        self.assertFalse(success)
+        self.assertTrue(sc_result.has_log_code("dec840ca"))
+
+    def test_primary_category_code_not_found(self) -> None:
+        """Error ff4ff6db when primary_category_code is not in seq_category."""
+        sc = self.create_seq_classification_for_upload(
+            primary_category_code="UNKNOWN_SEROTYPE",
+        )
+        self.service.repository.read_fields.return_value = []
+
+        success, retval = self._run(sc)
+
+        sc_result = retval.samples[0].seq_classifications[0]
+        self.assertFalse(success)
+        self.assertTrue(sc_result.has_log_code("ff4ff6db"))
+
+    def test_primary_category_code_resolves_to_id(self) -> None:
+        """primary_category_id is filled in from code when DB lookup succeeds."""
+        sc = self.create_seq_classification_for_upload(
+            primary_category_code="TYPHIMURIUM",
+        )
+        self.service.repository.read_fields.return_value = [
+            (self.seq_category_id, "TYPHIMURIUM")
+        ]
+
+        success, retval = self._run(sc)
+
+        self.assertTrue(success)
+        self.assertEqual(sc.primary_category_id, self.seq_category_id)

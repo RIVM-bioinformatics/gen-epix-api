@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Generator, cast
 from uuid import UUID
 
@@ -14,6 +15,7 @@ from gen_epix.commondb.domain.model.upload import (
     UploadResultWithIdentifiers,
 )
 from gen_epix.fastapp import BaseService, BaseUnitOfWork, CrudOperation, Model
+from gen_epix.fastapp.exc import DuplicateIdsError
 from gen_epix.filter import (
     CompositeFilter,
     LogicalOperator,
@@ -474,11 +476,34 @@ class BatchUploader:
             # No parent IDs given, nothing left to check
             return success
 
+        # Detect duplicate parent IDs. Mark every occurrence of a duplicated UUID as
+        # FAILED (including the first — a duplicate UUID is always ambiguous) and
+        # remove them from the existence-check list so the repository never sees it.
+        parent_id_to_indices: dict[UUID, list[int]] = {}
+        for i, parent_id in enumerate(parent_ids):
+            if parent_id is None:
+                continue
+            parent_id_to_indices.setdefault(parent_id, []).append(i)
+        parent_result_list = list(self.parent_result_items(cmd, batch_result))
+        for parent_id, indices in parent_id_to_indices.items():
+            if len(indices) <= 1:
+                continue
+            for i in indices:
+                _, parent_result = parent_result_list[i]
+                parent_result.add_error(
+                    "a1b2c3d4",
+                    f"{self.parent_class.NAME} id={parent_id} appears "
+                    f"{len(indices)} times in the batch.",
+                )
+                parent_ids[i] = None  # exclude from objects_exist()
+
         # Some parent IDs are given, check existence
         parents_exist = self.objects_exist(uow, user_id, self.parent_class, parent_ids)
         for parent_exists, (parent_for_upload, parent_result) in zip(
             parents_exist, self.parent_result_items(cmd, batch_result)
         ):
+            if parent_result.status == EtlStatus.FAILED:
+                continue  # already marked by duplicate detection above
             if parent_exists:
                 parent_result.id = parent_for_upload.id
                 if cmd.on_exists == UploadAction.ERROR:
@@ -553,6 +578,40 @@ class BatchUploader:
             child_ids = [
                 getattr(x, child_id_field_name) for _, _, x, _ in parent_child_tuples
             ]
+
+            # Detect duplicate child IDs (within a parent or across parents).
+            # For every duplicated child UUID, mark all parent results that contain
+            # it as FAILED and remove those child slots from the existence-check list.
+            child_id_to_entries: defaultdict[
+                UUID,
+                list[tuple[int, model.ParentForUpload, model.ParentUploadResult]],
+            ] = defaultdict(list)
+            for idx, (parent_for_upload, parent_result, _, _) in enumerate(
+                parent_child_tuples
+            ):
+                child_id = child_ids[idx]
+                if self.is_null(child_id):
+                    continue
+                child_id_to_entries[child_id].append(
+                    (idx, parent_for_upload, parent_result)
+                )
+            for child_id, entries in child_id_to_entries.items():
+                if len(entries) <= 1:
+                    continue
+                seen_parent_results: set[int] = set()
+                parent_ids_str = ", ".join(
+                    str(e[1].id) for e in entries if e[1].id is not None
+                )
+                for idx, parent_for_upload, parent_result in entries:
+                    child_ids[idx] = None  # exclude from objects_exist()
+                    if id(parent_result) not in seen_parent_results:
+                        seen_parent_results.add(id(parent_result))
+                        parent_result.add_error(
+                            "e5f6a7b8",
+                            f"{child_model_class.NAME} id={child_id} appears in multiple "
+                            f"entries in the batch (parents: {parent_ids_str}).",
+                        )
+
             children_exist = self.objects_exist(
                 uow, user_id, child_model_class, child_ids
             )
@@ -577,10 +636,12 @@ class BatchUploader:
             # Process all children (both with and without IDs)
             for (
                 parent_for_upload,
-                _,
+                parent_result,
                 child_for_upload,
                 child_result,
             ), child_exists in zip(parent_child_tuples, children_exist):
+                if parent_result.status == EtlStatus.FAILED:
+                    continue  # parent already marked FAILED by duplicate detection above
                 parent_id = parent_for_upload.id
                 has_parent_id = not self.is_null(parent_id)
                 child_id = getattr(child_for_upload, child_id_field_name)
@@ -654,7 +715,7 @@ class BatchUploader:
                         # New child and on_new=SKIP: do not create
                         child_result.status = EtlStatus.SKIPPED
                         child_result.add_info(
-                            "cfc3da21",
+                            "cfd622df",
                             f"{child_for_upload.__class__.NAME} does not exist and on_new={cmd.on_new.value}",
                         )
                     elif cmd.on_new == UploadAction.CREATE:
@@ -1482,31 +1543,44 @@ class BatchUploader:
                 # Assign a new ID
                 obj_id = self.service.generate_id()
                 setattr(obj, obj_id_field_name, obj_id)  # type: ignore[assignment]
-        if is_same_service:
-            created_obj_ids: list[UUID] = (
-                self.service.repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user_id,
-                    model_class,
-                    CrudOperation.CREATE_SOME,
-                    objs=to_create_objs,
-                    return_id=True,  # Avoid returning the whole object list again
+        try:
+            if is_same_service:
+                created_obj_ids: list[UUID] = (
+                    self.service.repository.crud(  # type: ignore[assignment]
+                        uow,
+                        user_id,
+                        model_class,
+                        CrudOperation.CREATE_SOME,
+                        objs=to_create_objs,
+                        return_id=True,  # Avoid returning the whole object list again
+                    )
                 )
-            )
-        else:
-            crud_command_class = self.service.app.domain.get_crud_command_for_model(
-                model_class
-            )
-            created_obj_ids = self.service.app.handle(
-                crud_command_class(
-                    user=user,
-                    operation=CrudOperation.CREATE_SOME,
-                    objs=to_create_objs,
-                    props={
-                        "return_id": True
-                    },  # Avoid returning the whole object list again
+            else:
+                crud_command_class = self.service.app.domain.get_crud_command_for_model(
+                    model_class
                 )
-            )
+                created_obj_ids = self.service.app.handle(
+                    crud_command_class(
+                        user=user,
+                        operation=CrudOperation.CREATE_SOME,
+                        objs=to_create_objs,
+                        props={
+                            "return_id": True
+                        },  # Avoid returning the whole object list again
+                    )
+                )
+        except DuplicateIdsError as exc_:
+            # TODO [LSP-3357] check how it is possible that these errors occur here
+            duplicate_ids = set(exc_.ids) if exc_.ids else set()
+            obj_id_field_name_local = model_class.ENTITY.get_id_field_name()
+            for obj, obj_result in to_create_obj_result_pairs:
+                if getattr(obj, obj_id_field_name_local) in duplicate_ids:
+                    obj_result.add_error(
+                        "c9d0e1f2",
+                        f"{model_class.NAME} id={getattr(obj, obj_id_field_name_local)} "
+                        "is a duplicate and could not be created.",
+                    )
+            return False
 
         # Assign object ID and status to results
         for created_obj_id, (_, obj_result) in zip(
@@ -1526,30 +1600,34 @@ class BatchUploader:
     ) -> bool:
         """
         Update any existing objects and update the corresponding UploadResults.
+        Per-object errors (missing ID, immutable field) are logged to the individual
+        UploadResult and that object is skipped; they do not abort the remaining batch.
         """
         success = True
         if not to_update_obj_result_pairs:
             return success
 
-        # Collect object IDs to update
-        obj_ids: list[UUID] = []
         obj_id_field_name = model_class.ENTITY.get_id_field_name()
+        stored_model_field_props = self.stored_model_field_props[model_class]
+
+        # Separate pairs with valid IDs from those without, to keep zip alignment correct
+        valid_pairs: list[tuple[Model, UploadResult]] = []
+        obj_ids: list[UUID] = []
         for obj, obj_result in to_update_obj_result_pairs:
             obj_id = getattr(obj, obj_id_field_name)
             if self.is_null(obj_id):
-                success = False
-                obj_result.status = EtlStatus.FAILED
                 obj_result.add_error(
                     "8b7824f4",
                     f"Cannot update object without valid ID: {obj}",
                 )
             else:
+                valid_pairs.append((obj, obj_result))
                 obj_ids.append(obj_id)
 
-        # Determine model class and stored model field properties
-        stored_model_field_props = self.stored_model_field_props[model_class]
+        if not obj_ids:
+            return success
 
-        # Retrieve existing objects
+        # Retrieve existing objects (aligned with valid_pairs / obj_ids)
         existing_objs: list[Model] = (
             self.service.repository.crud(  # type: ignore[assignment]
                 uow,
@@ -1563,26 +1641,32 @@ class BatchUploader:
         # Determine which objects actually need to be updated instead of having identical data
         to_update_objs: list[Model] = []
         to_update_obj_results: list[model.UploadResult] = []
-        for (obj, obj_result), existing_obj in zip(
-            to_update_obj_result_pairs, existing_objs
-        ):
+        for (obj, obj_result), existing_obj in zip(valid_pairs, existing_objs):
             # Only check props for updates, other fields are not updatable
             is_updated = False
             for field_name, field_props in stored_model_field_props.items():
                 if field_name == obj_id_field_name:
                     continue  # ID field is the lookup key; never part of updates
                 existing_value = getattr(existing_obj, field_name)
-                # Field if the field, with its existing value, is (still) mutable
-                if not field_props.is_mutable_value(existing_value):
-                    success = False
-                    obj_result.status = EtlStatus.FAILED
-                    obj_result.add_error(
-                        "f5e09001",
-                        f"Field {field_name} with existing value {existing_value} may not be updated.",
-                    )
-                    continue
-                # Update the existing object's field if the new value is different
                 new_value = getattr(obj, field_name)
+                if not field_props.is_mutable_value(existing_value):
+                    # Immutable field: only an error if the value is actually changing.
+                    # Re-uploading the same value (e.g. a full record with one extra
+                    # field added) is fine and requires no action for this field.
+                    # None or NULL_ID means "not specified" — treat as a no-op for
+                    # immutable fields so that partial-update payloads don't fail.
+                    if (
+                        new_value is not None
+                        and new_value != NULL_ID
+                        and new_value != existing_value
+                    ):
+                        obj_result.add_error(
+                            "f5e09001",
+                            f"Field {field_name} with existing value {existing_value} may not be updated to {new_value}.",
+                        )
+                        break
+                    continue
+                # Mutable field: apply update if value differs
                 if existing_value is None:
                     # Existing value is None: set new value if not None
                     if new_value:
@@ -1598,17 +1682,16 @@ class BatchUploader:
                     if new_value != existing_value:
                         is_updated = True
                         setattr(existing_obj, field_name, new_value)
-            # Determine whether to update, i.e. if any values are indeed different, or otherwise skip
-            if not is_updated and obj_result.status != EtlStatus.FAILED:
+            if obj_result.status == EtlStatus.FAILED:
+                # Per-object error logged above; skip without aborting the batch
+                continue
+            # Determine whether to update or skip (identical content)
+            if not is_updated:
                 obj_result.status = EtlStatus.SKIPPED
-                obj_result.add_info("f5e09001", "Content is identical")
+                obj_result.add_info("64eef8a5", "Content is identical")
             else:
                 to_update_objs.append(obj)
                 to_update_obj_results.append(obj_result)
-
-        # Stop if there were errors
-        if not success:
-            return success
 
         # Update the objects whose data are different
         if not to_update_objs:
