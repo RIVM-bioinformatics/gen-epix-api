@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import cast
 from uuid import UUID
 
 from gen_epix import fastapp
@@ -150,12 +151,17 @@ def _verify_children_seq_classifications(
     uow: fastapp.BaseUnitOfWork,
 ) -> bool:
     """
-    Detect existing SeqClassifications by their natural key.
+    Validate and detect existing SeqClassifications.
 
-    verify_children only looks up children by their id field, which is None for
-    SeqClassificationForUpload objects built from on-prem JSON. This function
-    fills in the existing id and marks the result appropriately so that
-    create_children does not attempt a duplicate INSERT.
+    1. Resolves primary_category_id from primary_category_code when only
+       the code is supplied, and validates that the resolved ID exists in
+       seq_category. Without this step a missing category only surfaces as a
+       raw FK violation (error eba3198a) at INSERT time.
+
+    2. Detects existing SeqClassifications by their natural key so that
+       create_children does not attempt a duplicate INSERT. verify_children
+       only looks up children by their id field, which is None for
+       SeqClassificationForUpload objects built from on-prem JSON.
 
     Primary key: (seq_id, protocol_id) when seq_id is known.
     Fallback key: (sample_id, protocol_id) when seq_id is None but sample_id
@@ -166,13 +172,26 @@ def _verify_children_seq_classifications(
     sample_results = batch_result.samples
     success = True
 
+    # Resolve primary_category_code → primary_category_id and verify that
+    # the referenced SeqCategory exists. This prevents a raw FK violation
+    # (eba3198a) when an unknown or not-yet-loaded category is supplied.
+    success &= self.verify_link_id(
+        list(self.parent_result_items(cmd, batch_result)),
+        uow,
+        cmd.user,
+        "seq_classifications",
+        "primary_category_id",
+        "primary_category_code",
+        model.SeqCategory,
+    )
+
     # --- Primary lookup: seq_id known → key = (seq_id, protocol_id) ---
     seq_ids = list(
         {
-            sc.seq_id
-            for s in samples
-            for sc in s.seq_classifications or []
-            if not self.is_null(sc.seq_id)
+            cast(UUID, y.seq_id)
+            for x in samples
+            for y in x.seq_classifications or []
+            if not self.is_null(y.seq_id)
         }
     )
     existing_map: dict[tuple[UUID, UUID], UUID] = {}
@@ -190,10 +209,10 @@ def _verify_children_seq_classifications(
     # Only records stored with seq_id=None are considered to avoid false matches.
     null_seq_sample_ids = list(
         {
-            sc.sample_id
-            for s in samples
-            for sc in s.seq_classifications or []
-            if self.is_null(sc.seq_id) and not self.is_null(sc.sample_id)
+            y.sample_id
+            for x in samples
+            for y in x.seq_classifications or []
+            if self.is_null(y.seq_id) and not self.is_null(y.sample_id)
         }
     )
     null_seq_existing_map: dict[tuple[UUID, UUID], UUID] = {}
@@ -225,12 +244,18 @@ def _verify_children_seq_classifications(
                 continue
             if not self.is_null(seq_classification.seq_id):
                 existing_id = existing_map.get(
-                    (seq_classification.seq_id, seq_classification.protocol_id)
+                    (
+                        cast(UUID, seq_classification.seq_id),
+                        seq_classification.protocol_id,
+                    )
                 )
                 key_desc = f"seq_id={seq_classification.seq_id}, protocol_id={seq_classification.protocol_id}"
             elif not self.is_null(seq_classification.sample_id):
                 existing_id = null_seq_existing_map.get(
-                    (seq_classification.sample_id, seq_classification.protocol_id)
+                    (
+                        seq_classification.sample_id,
+                        seq_classification.protocol_id,
+                    )
                 )
                 key_desc = f"sample_id={seq_classification.sample_id}, protocol_id={seq_classification.protocol_id}"
             else:
@@ -284,7 +309,7 @@ def _verify_children_seq_profiles(
     # Retrieve and verify locus detection protocols provided by ID and/or code
     # TODO: 3034 this may have to be updated to allow specifying the protocol through a composite key
     success &= self.verify_link_id(
-        seq_profile_result_pairs,
+        seq_profile_result_pairs,  # type: ignore[arg-type]
         uow,
         cmd.user,
         "seq_profiles",
@@ -295,7 +320,7 @@ def _verify_children_seq_profiles(
 
     # Retrieve and verify locus code maps provided by ID and/or code
     success &= self.verify_link_id(
-        seq_profile_result_pairs,
+        seq_profile_result_pairs,  # type: ignore[arg-type]
         uow,
         cmd.user,
         "seq_profiles",
