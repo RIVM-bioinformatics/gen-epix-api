@@ -206,7 +206,7 @@ class BaseUploadTestCase(TestCase):
         x: str | None = None,
         y: list[str] | None = None,
         z: dict[str, str | None] | None = None,
-        dc_id: UUID | None = None,
+        fk_id: UUID | None = None,
         identifiers: list[IdentifierForUpload] | None = None,
         children1: list[Child1ForUpload] | None = None,
         children2: list[Child2ForUpload] | None = None,
@@ -224,7 +224,7 @@ class BaseUploadTestCase(TestCase):
                 x=x,
                 y=y,
                 z=z,
-                dc_id=dc_id,
+                fk_id=fk_id,
             ),
         )
 
@@ -238,7 +238,7 @@ class BaseUploadTestCase(TestCase):
         x: str | None = None,
         y: list[str] | None = None,
         z: dict[str, str | None] | None = None,
-        dc_id: UUID | None = None,
+        fk_id: UUID | None = None,
     ) -> Parent:
         """Get the Parent model contained in a ParentForUpload model, with optional overrides."""
         parent = parent_for_upload.parent
@@ -260,7 +260,7 @@ class BaseUploadTestCase(TestCase):
                 if parent is None or parent.z is None
                 else {x: y for x, y in parent.z.items() if y is not None}
             ),
-            dc_id=dc_id if dc_id is not None else (parent.dc_id if parent else None),
+            fk_id=fk_id if fk_id is not None else (parent.fk_id if parent else None),
         )
 
     def create_child1_for_upload(
@@ -1103,12 +1103,12 @@ class Test5FieldMutability(BaseUploadTestCase):
 
     def test_5_2_4_immutable_uuid_null_id_treated_as_not_specified(self) -> None:
         """Test 5.2.4: Immutable UUID field - NULL_ID is treated as "not specified", no error."""
-        stored_dc_id = self.random_ids[0]
+        stored_fk_id = self.random_ids[0]
         parent_for_upload = self.create_parent_for_upload(
-            parent_id=self.parent_id, dc_id=NULL_ID
+            parent_id=self.parent_id, fk_id=NULL_ID
         )
         existing_parent = self.get_parent_from_for_upload(
-            parent_for_upload, dc_id=stored_dc_id
+            parent_for_upload, fk_id=stored_fk_id
         )
         self.service.repository.crud.side_effect = [
             [True],  # Parents exist
@@ -1117,7 +1117,7 @@ class Test5FieldMutability(BaseUploadTestCase):
         batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_skipped=1)
-        self.assertEqual(existing_parent.dc_id, stored_dc_id)
+        self.assertEqual(existing_parent.fk_id, stored_fk_id)
 
 
 # Test Scenario 6: Identifiers for parent objects
