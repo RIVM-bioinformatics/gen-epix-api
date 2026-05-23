@@ -154,16 +154,16 @@ class CaseBatchUploader(BatchUploader):
             new_case_for_upload.read_sets = None
             new_case_for_upload.seqs = None
             cases_only_cmd.case_batch.cases[i] = new_case_for_upload
-            case = new_case_for_upload.case
-            if case is None:
+            case_for_upload = new_case_for_upload.case
+            if case_for_upload is None:
                 continue
-            if case.content != case_result.validated_content:
+            if case_for_upload.content != case_result.validated_content:
                 # Set case content to validated content. Since the case is a reference
                 # shared with the original cmd, it will be updated there as well
-                case.content = case_result.validated_content
-            if case.id is not None and case.content:
+                case_for_upload.content = case_result.validated_content
+            if case_for_upload.id is not None and case_for_upload.content:
                 # Case and its content will be updated and has to be validated again
-                cases_for_validation.append(case)
+                cases_for_validation.append(case_for_upload)
 
         # Merge case content with that already in the database for updates, and
         # validate the merged content again so that there are no inconsistencies
@@ -185,12 +185,14 @@ class CaseBatchUploader(BatchUploader):
                 if row[1] is not None
             }
             # Merge new content into existing
-            for case in cases_for_validation:
-                existing_content = existing_content_by_id.get(case.id)  # type: ignore[arg-type]
+            for case_for_upload in cases_for_validation:
+                existing_content = existing_content_by_id.get(case_for_upload.id)  # type: ignore[arg-type]
                 if existing_content is None:
                     continue
-                BatchUploader.update_sub_field_dict(existing_content, case.content)
-                case.content = existing_content
+                BatchUploader.update_sub_field_dict(
+                    existing_content, case_for_upload.content
+                )
+                case_for_upload.content = existing_content
             # Validate cases again, this time with a complete CaseType that includes
             # all columns, i.e. with no ABAC applied
             complete_case_type = self._get_complete_case_type(cmd, ignore_abac=True)
@@ -198,6 +200,13 @@ class CaseBatchUploader(BatchUploader):
                 complete_case_type, cmd.user.id if cmd.user and cmd.user.id else NULL_ID
             )
             case_validator.validate_and_transform(cmd, batch_result)
+            # # Reset case_date on existing cases after re-validation so that
+            # # the immutability check in _upsert_existing_objs treats it as
+            # # "not specified" (None) rather than an attempt to overwrite the
+            # # stored value. The stored case_date is preserved unchanged.
+            # # TODO LSP-3356: case date should be able to update
+            # for case in cases_for_validation:
+            #     case.case_date = None
 
         # Use the general parent method for upserting the cases
         success &= super().upsert_batch(cases_only_cmd, batch_result, uow)
@@ -214,12 +223,14 @@ class CaseBatchUploader(BatchUploader):
             curr_success = self.upload_samples(cmd, batch_result, False)
             if curr_success:
                 # The upload of samples may have updated the case content with IDs of created read sets and seqs, so the cases in the database need to be updated with the new content.
-                for case, case_only in zip(
+                for case_for_upload, case_only_for_upload in zip(
                     cmd.case_batch.cases, cases_only_cmd.case_batch.cases
                 ):
-                    assert case is not None and case.case is not None
-                    assert case_only.case is not None
-                    case_only.case.content = case.case.content
+                    assert (
+                        case_for_upload is not None and case_for_upload.case is not None
+                    )
+                    assert case_only_for_upload.case is not None
+                    case_only_for_upload.case.content = case_for_upload.case.content
                 success &= super().upsert_batch(cases_only_cmd, batch_result, uow)
         success &= curr_success
 
@@ -393,15 +404,14 @@ class CaseBatchUploader(BatchUploader):
             ):
                 return sample_external_id_to_index_map[external_sample_id]
             # New sample for upload: create
-            assert sample_id is not None
-            assert external_sample_id is not None
+            sample_for_upload_id = sample_id if has_id else NULL_ID
             sample_for_upload = seqdb_model.SampleForUpload(
-                id=sample_id,
+                id=sample_for_upload_id,
                 sample=seqdb_model.Sample(
-                    id=sample_id,
+                    id=sample_for_upload_id,
                     created_in_data_collection_id=cmd.created_in_data_collection_id,
                 ),
-                identifiers=[external_sample_id] if has_external_id else [],
+                identifiers=[external_sample_id] if has_external_id else [],  # type: ignore[call-arg]
                 read_sets=[],
                 seqs=[],
             )
