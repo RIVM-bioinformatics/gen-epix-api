@@ -462,6 +462,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.casedb.unit.upload",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_casedb_unit_upload"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.casedb.integration",
             "type": "debugpy",
             "request": "launch",
