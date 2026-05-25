@@ -46,7 +46,10 @@ class BaseRepository(abc.ABC):
         operation: CrudOperation,
         objs: Model | Iterable[Model] | None = None,
         obj_ids: Hashable | Iterable[Hashable] | None = None,
+        return_id: bool = False,
         filter: Filter | None = None,
+        limit: int = 0,
+        offset: int = 0,
         **kwargs: Any,
     ) -> Hashable | list[Hashable] | Model | list[Model] | bool | list[bool] | None:
         """
@@ -542,12 +545,6 @@ class BaseRepository(abc.ABC):
             case CrudOperation.UNDELETE_SOME:
                 _verify_some_ids()
             case CrudOperation.UNDELETE_ALL:
-                _verify_no_data()
-            case CrudOperation.RESTORE_ONE:
-                _verify_one_id()
-            case CrudOperation.RESTORE_SOME:
-                _verify_some_ids()
-            case CrudOperation.RESTORE_ALL:
                 _verify_no_data()
             case CrudOperation.EXISTS_ONE:
                 _verify_one_id()

@@ -69,7 +69,7 @@ def case_service_retrieve_complete_case_type(
                 command.DataCollectionCrudCommand(
                     user=user,
                     operation=CrudOperation.READ_ALL,
-                    props={"return_id": True},
+                    return_id=True,
                 )
             )
             case_type_access_abacs = {

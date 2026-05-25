@@ -3,10 +3,11 @@ import uuid
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Sequence
 from pathlib import Path
-from typing import Any, Self
+from typing import Any, Self, cast
 
 import sqlalchemy as sa
-from sqlalchemy import Engine, delete, inspect, select
+from sqlalchemy import Engine, delete, event, inspect, select
+from sqlalchemy.exc import SAWarning
 from sqlalchemy.orm import Session, sessionmaker
 
 import gen_epix.fastapp.exc as exc
@@ -246,8 +247,9 @@ class SARepository(BaseRepository):
                     "b78b8c87",
                     "Cannot pass arguments when creating a nested UnitOfWork",
                 )
+            last_uow: SAUnitOfWork = self._uow_context_stack[-1]  # type: ignore[assignment]
             return SAUnitOfWork(
-                self._uow_context_stack[-1].session,
+                last_uow.session,
                 context_stack=self._uow_context_stack,
             )
         isolation_level: IsolationLevel = kwargs.pop(
@@ -389,43 +391,58 @@ class SARepository(BaseRepository):
         operation: CrudOperation,
         objs: Model | Iterable[Model] | None = None,
         obj_ids: Hashable | Iterable[Hashable] | None = None,
+        return_id: bool = False,
         filter: Filter | None = None,
+        limit: int = 0,
+        offset: int = 0,
         **kwargs: Any,
     ) -> Model | list[Model] | Hashable | list[Hashable] | bool | list[bool] | None:
         if not isinstance(uow, SAUnitOfWork):
             raise exc.RepositoryServiceError("ff17823b", f"Invalid UnitOfWork: {uow}")
         session = uow.session
+        if limit < 0:
+            raise exc.RepositoryServiceError("d9c8e5b3", "Limit cannot be negative")
+        if offset < 0:
+            raise exc.RepositoryServiceError("a4f1c9d2", "Offset cannot be negative")
         BaseRepository.verify_crud_args(model_class, objs, obj_ids, operation)
         match operation:
             case CrudOperation.CREATE_ONE:
                 return self.create_one(
-                    model_class, user_id, objs, session=session, **kwargs  # type: ignore[arg-type]
+                    model_class, user_id, objs, session=session, return_id=return_id, **kwargs  # type: ignore[arg-type]
                 )
             case CrudOperation.CREATE_SOME:
                 return self.create_some(
-                    model_class, user_id, objs, session=session, **kwargs  # type: ignore[arg-type]
+                    model_class, user_id, objs, session=session, return_id=return_id, **kwargs  # type: ignore[arg-type]
                 )
             case CrudOperation.READ_ONE:
                 return self.read_one(model_class, obj_ids, session=session, **kwargs)  # type: ignore[arg-type]
             case CrudOperation.READ_SOME:
                 return self.read_some(model_class, obj_ids, session=session, **kwargs)  # type: ignore[arg-type]
             case CrudOperation.READ_ALL:
-                return self.read_all(model_class, filter, session=session, **kwargs)  # type: ignore[arg-type]
+                return self.read_all(
+                    model_class,
+                    filter,
+                    session=session,
+                    return_id=return_id,
+                    limit=limit,
+                    offset=offset,
+                    **kwargs,
+                )
             case CrudOperation.UPDATE_ONE:
                 return self.update_one(
-                    model_class, user_id, objs, session=session, **kwargs  # type: ignore[arg-type]
+                    model_class, user_id, objs, session=session, return_id=return_id, **kwargs  # type: ignore[arg-type]
                 )
             case CrudOperation.UPDATE_SOME:
                 return self.update_some(
-                    model_class, user_id, objs, session=session, **kwargs  # type: ignore[arg-type]
+                    model_class, user_id, objs, session=session, return_id=return_id, **kwargs  # type: ignore[arg-type]
                 )
             case CrudOperation.UPSERT_ONE:
                 return self.upsert_one(
-                    model_class, user_id, objs, session=session, **kwargs  # type: ignore[arg-type]
+                    model_class, user_id, objs, session=session, return_id=return_id, **kwargs  # type: ignore[arg-type]
                 )
             case CrudOperation.UPSERT_SOME:
                 return self.upsert_some(
-                    model_class, user_id, objs, session=session, **kwargs  # type: ignore[arg-type]
+                    model_class, user_id, objs, session=session, return_id=return_id, **kwargs  # type: ignore[arg-type]
                 )
             case CrudOperation.DELETE_ONE:
                 return self.delete_one(
@@ -437,7 +454,12 @@ class SARepository(BaseRepository):
                 )
             case CrudOperation.DELETE_ALL:
                 return self.delete_all(
-                    model_class, user_id, filter, session=session, **kwargs  # type: ignore[arg-type]
+                    model_class,
+                    user_id,
+                    filter,
+                    session=session,
+                    return_id=return_id,
+                    **kwargs,
                 )
             case CrudOperation.EXISTS_ONE:
                 return self.exists_one(model_class, obj_ids, session=session, **kwargs)  # type: ignore[arg-type]
@@ -447,20 +469,27 @@ class SARepository(BaseRepository):
                 raise NotImplementedError(f"Operation {operation} not implemented")
 
     def create_one(
-        self, model_class: type[Model], user_id: Hashable, obj: Model, **kwargs: Any
+        self,
+        model_class: type[Model],
+        user_id: Hashable,
+        obj: Model,
+        return_id: bool = False,
+        **kwargs: Any,
     ) -> Model | Hashable:
-        return self.create_some(model_class, user_id, [obj], **kwargs)[0]
+        return self.create_some(
+            model_class, user_id, [obj], return_id=return_id, **kwargs
+        )[0]
 
     def create_some(
         self,
         model_class: type[Model],
         user_id: Hashable,
         objs: Iterable[Model],
+        return_id: bool = False,
         **kwargs: Any,
     ) -> list[Model] | list[Hashable]:
         # Check arguments
         session: Session = kwargs.get("session")  # type: ignore[assignment]
-        return_id: bool = kwargs.get("return_id", False)  # type: ignore[assignment]
         flush = kwargs.get("flush", True)
         max_batch_size = int(
             kwargs.get("max_batch_size", self.DEFAULT_MAX_INSERT_BATCH_SIZE)
@@ -495,12 +524,13 @@ class SARepository(BaseRepository):
                     session.flush()
             if return_id:
                 mapper = self.get_mapper(model_class)
-                get_row_id = mapper.get_row_id
-                return [get_row_id(x) for x in rows]
+                return [mapper.get_row_id(x) for x in rows]
             return self.from_sql(model_class, rows)
 
-        created_objs = self._execute_sa(session, _execute, kwargs)
-        return created_objs  # type: ignore[return-value]
+        created_objs: list[Model] | list[Hashable] = self._execute_sa(
+            session, _execute, kwargs
+        )
+        return created_objs
 
     def read_one(
         self, model_class: type[Model], obj_id: Hashable, **kwargs: Any
@@ -522,13 +552,12 @@ class SARepository(BaseRepository):
         SARepository._verify_duplicate_ids(model_class, obj_ids)
         # Retrieve rows and verify result
         mapper = self.get_mapper(model_class)
-        row_class = mapper.row_class
         cascade_read = kwargs.get("cascade_read", False)
         optimize_parameter_handling = kwargs.get("optimize_parameter_handling", False)
 
-        def _execute(session: Session) -> list[Model] | list[Hashable]:
+        def _execute(session: Session) -> list[Model]:
             rows, row_ids = SARepository._in_session_read_some(
-                mapper, session, row_class, obj_ids, optimize_parameter_handling
+                mapper, session, obj_ids, optimize_parameter_handling
             )
 
             # Reorder objs to guarantee same order as obj_ids and at the
@@ -554,30 +583,59 @@ class SARepository(BaseRepository):
 
             return objs
 
-        objs = self._execute_sa(session, _execute, kwargs)
+        objs: list[Model] = self._execute_sa(session, _execute, kwargs)
         return objs
 
     def read_all(
-        self, model_class: type[Model], filter: Filter | None, **kwargs: Any
-    ) -> list[Model]:
+        self,
+        model_class: type[Model],
+        filter: Filter | None,
+        return_id: bool = False,
+        limit: int = 0,
+        offset: int = 0,
+        **kwargs: Any,
+    ) -> list[Model] | list[Hashable]:
         # Check arguments
         session: Session = kwargs.get("session")  # type: ignore[assignment]
         # Retrieve rows and generate objs
         mapper = self.get_mapper(model_class)
         row_class = mapper.row_class
-        get_row_id = mapper.get_row_id
         cascade_read: bool = kwargs.get("cascade_read", False)
-        return_id: bool = kwargs.get("return_id", False)
         obj_filter: Filter | None = kwargs.get("obj_filter", None)
+        limit = limit or -1
+        offset = offset or 0
+
+        def _add_sql_limit_offset(stmt: sa.Select) -> sa.Select:
+            if limit > 0:
+                stmt = stmt.limit(limit)
+            if offset > 0:
+                stmt = stmt.offset(offset)
+            return stmt
+
+        def _apply_obj_limit_offset(objs: list[Model]) -> list[Model]:
+            if limit > 0:
+                if offset > len(objs):
+                    return []
+                elif offset + limit > len(objs):
+                    return objs[offset:]
+                else:
+                    return objs[offset : offset + limit]
+            return objs
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
             # Get either rows or row_ids
             if return_id:
                 # Select only row_ids
-                stmt = select(get_row_id(row_class))
+                stmt = select(mapper.get_row_id_column())
+                if not obj_filter:
+                    # Only apply limit and offset if obj_filter is not used. If obj_filter is used, first all objects need to be filter by that (as well) and then limit and offset can be applied.
+                    stmt = _add_sql_limit_offset(stmt)
             else:
                 # Select entire row
                 stmt = select(row_class)
+                if not obj_filter:
+                    # Only apply limit and offset if obj_filter is not used. If obj_filter is used, first all objects need to be filter by that (as well) and then limit and offset can be applied.
+                    stmt = _add_sql_limit_offset(stmt)
             if filter:
                 # Convert filter to where clause and add to statement
                 stmt = stmt.where(
@@ -588,25 +646,35 @@ class SARepository(BaseRepository):
                 if obj_filter:
                     # Retrieve entire rows and filter them with obj_filter, then get
                     # remaining IDs
-                    stmt2 = select(row_class).where(get_row_id(row_class).in_(row_ids))
+                    stmt2: sa.Select = select(row_class).where(
+                        mapper.get_row_id_column().in_(row_ids)
+                    )
                     rows = [x[0] for x in session.execute(stmt2).all()]
-                    objs = self.from_sql(model_class, rows)
-                    objs = list(obj_filter.filter_rows(objs, is_model=True))
+                    objs = cast(list[Model], self.from_sql(model_class, rows))
+                    objs = cast(
+                        list[Model],
+                        list(obj_filter.filter_rows(objs, is_model=True)),
+                    )
+                    objs = _apply_obj_limit_offset(objs)
                     if len(objs) < len(row_ids):
                         row_ids = [mapper.get_id(x) for x in objs]
                 objs = row_ids
             else:
                 rows = [x[0] for x in session.execute(stmt).all()]
-                objs = self.from_sql(model_class, rows)
+                objs = cast(list[Model], self.from_sql(model_class, rows))
                 if obj_filter:
-                    objs = list(obj_filter.filter_rows(objs, is_model=True))
+                    objs = cast(
+                        list[Model],
+                        list(obj_filter.filter_rows(objs, is_model=True)),
+                    )
+                    objs = _apply_obj_limit_offset(objs)
                 # Read links if needed
                 if cascade_read:
                     links = kwargs.get("links", {})
                     self._in_session_add_cascade_read(session, links, objs)
             return objs
 
-        objs = self._execute_sa(session, _execute, kwargs)
+        objs: list[Model] | list[Hashable] = self._execute_sa(session, _execute, kwargs)
         return objs
 
     def update_one(
@@ -619,6 +687,7 @@ class SARepository(BaseRepository):
         model_class: type[Model],
         user_id: Hashable,
         objs: Iterable[Model],
+        return_id: bool = False,
         **kwargs: Any,
     ) -> list[Model] | list[Hashable]:
         # Check arguments
@@ -629,39 +698,48 @@ class SARepository(BaseRepository):
         mapper = self.get_mapper(model_class)
         row_class = mapper.row_class
 
-        def _execute(session: Session) -> list[Model]:
+        def _execute(session: Session) -> list[Model] | list[Hashable]:
             obj_ids = [mapper.get_id(x) for x in objs]
-            rows, row_ids = SARepository._in_session_read_some(
-                mapper, session, row_class, obj_ids
-            )
+            rows, row_ids = SARepository._in_session_read_some(mapper, session, obj_ids)
             map_rows = dict(zip(row_ids, rows))
             for obj in objs:
                 row = map_rows[mapper.get_id(obj)]
                 mapper.update(user_id, obj, row)
             if flush:
                 session.flush()
+            if return_id:
+                return obj_ids
             return self.from_sql(model_class, rows)
 
-        updated_objs = self._execute_sa(session, _execute, kwargs)
+        updated_objs: list[Model] | list[Hashable] = self._execute_sa(
+            session, _execute, kwargs
+        )
         return updated_objs
 
     def upsert_one(
-        self, model_class: type[Model], user_id: Hashable, obj: Model, **kwargs: Any
+        self,
+        model_class: type[Model],
+        user_id: Hashable,
+        obj: Model,
+        return_id: bool = False,
+        **kwargs: Any,
     ) -> Model | Hashable:
-        return self.upsert_some(model_class, user_id, [obj], **kwargs)[0]
+        return self.upsert_some(
+            model_class, user_id, [obj], return_id=return_id, **kwargs
+        )[0]
 
     def upsert_some(
         self,
         model_class: type[Model],
         user_id: Hashable,
         objs: Iterable[Model],
+        return_id: bool = False,
         **kwargs: Any,
     ) -> list[Model] | list[Hashable]:
         objs = objs if isinstance(objs, list) else list(objs)
         if not objs:
             return []
         session: Session = kwargs.get("session")  # type: ignore[assignment]
-        return_id: bool = kwargs.get("return_id", False)  # type: ignore[assignment]
         flush = kwargs.get("flush", True)
         max_batch_size = int(
             kwargs.get("max_batch_size", self.DEFAULT_MAX_INSERT_BATCH_SIZE)
@@ -677,7 +755,7 @@ class SARepository(BaseRepository):
             obj_ids = [mapper.get_id(x) for x in objs]
 
             # Chunk the existence check to avoid SQL Server's 2100-parameter limit.
-            row_id_col = mapper.get_row_id(row_class)
+            row_id_col = mapper.get_row_id_column()
             existing_ids: set[Hashable] = set()
             for chunk_start in range(0, len(obj_ids), max_batch_size):
                 chunk = obj_ids[chunk_start : chunk_start + max_batch_size]
@@ -712,7 +790,7 @@ class SARepository(BaseRepository):
                         chunk_start : chunk_start + max_batch_size
                     ]
                     chunk_rows, chunk_row_ids = SARepository._in_session_read_some(
-                        mapper, session, row_class, chunk_ids
+                        mapper, session, chunk_ids
                     )
                     all_rows.extend(chunk_rows)
                     all_row_ids.extend(chunk_row_ids)
@@ -726,11 +804,13 @@ class SARepository(BaseRepository):
 
             all_rows = new_rows + updated_rows
             if return_id:
-                get_row_id = mapper.get_row_id
-                return [get_row_id(x) for x in all_rows]
+                return [mapper.get_row_id(x) for x in all_rows]
             return self.from_sql(model_class, all_rows)
 
-        return self._execute_sa(session, _execute, kwargs)  # type: ignore[return-value]
+        retval: list[Model] | list[Hashable] = self._execute_sa(
+            session, _execute, kwargs
+        )
+        return retval
 
     def delete_one(
         self,
@@ -755,7 +835,6 @@ class SARepository(BaseRepository):
         # Delete rows
         mapper = self.get_mapper(model_class)
         row_class = mapper.row_class
-        get_row_id = mapper.get_row_id
 
         def _execute(session: Session) -> None:
             is_existing = self.exists_some(model_class, row_ids)
@@ -767,7 +846,9 @@ class SARepository(BaseRepository):
                     f"{model_class} object(s) do not exist: {invalid_ids_str}",
                     ids=invalid_ids,
                 )
-            session.execute(delete(row_class).where(get_row_id(row_class).in_(row_ids)))
+            session.execute(
+                delete(row_class).where(mapper.get_row_id_column().in_(row_ids))
+            )
             if flush:
                 session.flush()
 
@@ -779,6 +860,7 @@ class SARepository(BaseRepository):
         model_class: type[Model],
         user_id: Hashable,
         filter: Filter | None,
+        return_id: bool = False,
         **kwargs: Any,
     ) -> list[Hashable] | None:
         # Check arguments
@@ -786,8 +868,6 @@ class SARepository(BaseRepository):
         # Delete rows
         mapper = self.get_mapper(model_class)
         row_class = mapper.row_class
-        get_row_id = mapper.get_row_id
-        return_id: bool = kwargs.get("return_id", False)  # type: ignore[assignment]
         obj_filter: Filter | None = kwargs.get("obj_filter", None)
 
         def _execute(session: Session) -> list[Hashable] | None:
@@ -804,7 +884,8 @@ class SARepository(BaseRepository):
                     return_id=True,
                     obj_filter=obj_filter,
                 )
-                stmt = delete(row_class).where(get_row_id(row_class).in_(row_ids))
+                assert row_ids is not None
+                stmt = delete(row_class).where(mapper.get_row_id_column().in_(row_ids))
                 session.execute(stmt)
                 return row_ids if return_id else None
 
@@ -812,7 +893,8 @@ class SARepository(BaseRepository):
             if return_id:
                 # Get ids
                 row_ids = [
-                    x[0] for x in session.execute(select(get_row_id(row_class))).all()
+                    x[0]
+                    for x in session.execute(select(mapper.get_row_id_column())).all()
                 ]
 
             # # TODO: workaround for SQLite foreign key constraint issues. Remove ASAP.
@@ -865,18 +947,16 @@ class SARepository(BaseRepository):
         SARepository._verify_duplicate_ids(model_class, obj_ids)
 
         def _execute(session: Session) -> list[bool]:
-            # select(mapper.get_row_id(row_class)) works because mapper.get_row_id returns the attribute of the row class
-            # that functions as the primary key and this attribute is an SQLalchemy Column object that is aware of which table it is in
+            row_id_col = mapper.get_row_id_column()
             rows: Sequence = session.execute(
-                select(mapper.get_row_id(row_class)).where(
-                    mapper.get_row_id(row_class).in_(obj_ids)
-                )
+                select(row_id_col).where(row_id_col.in_(obj_ids))
             ).all()
             found_obj_ids = {x[0] for x in rows}
             is_existing_obj = [x in found_obj_ids for x in obj_ids]
             return is_existing_obj
 
-        return self._execute_sa(session, _execute, kwargs)
+        retval: list[bool] = self._execute_sa(session, _execute, kwargs)
+        return retval
 
     def read_fields(
         self,
@@ -886,7 +966,7 @@ class SARepository(BaseRepository):
         field_names: list[str],
         filter: Filter | None = None,
         **kwargs: Any,
-    ) -> Iterable[tuple]:
+    ) -> Iterable[tuple[Any, ...]]:
         if not isinstance(uow, SAUnitOfWork):
             raise exc.RepositoryServiceError("4afb32de", f"Invalid UnitOfWork: {uow}")
         mapper = self.get_mapper(model_class)
@@ -894,7 +974,7 @@ class SARepository(BaseRepository):
         row_field_names = [field_name_map[x] for x in field_names]
         row_class = mapper.row_class
 
-        def _execute(session: Session) -> Iterable[tuple]:
+        def _execute(session: Session) -> Iterable[tuple[Any, ...]]:
             stmt = select(*[getattr(row_class, x) for x in row_field_names])
             if filter:
                 # Convert filter to where clause and add to statement
@@ -902,9 +982,12 @@ class SARepository(BaseRepository):
                     self.get_where_clause_from_filter(row_class, mapper, filter)
                 )
             for row in session.execute(stmt):
-                yield row
+                yield tuple(row)
 
-        return self._execute_sa(uow.session, _execute, kwargs)
+        retval: Iterable[tuple[Any, ...]] = self._execute_sa(
+            uow.session, _execute, kwargs
+        )
+        return retval
 
     def split_filter(
         self, model_class: type[Model], filter: Filter | None
@@ -989,8 +1072,8 @@ class SARepository(BaseRepository):
         ]
         # Convert composite filter if possible
         if isinstance(filter, CompositeFilter):
-            where_clause_filters = []
-            remainder_filters = []
+            where_clause_filters: list[Filter] = []
+            remainder_filters: list[Filter] = []
             if filter.operator == LogicalOperator.OR:
                 # Split only when all sub-filters can fully be converted into a where
                 # clause
@@ -1001,6 +1084,8 @@ class SARepository(BaseRepository):
                     if remainder_filter is not None:
                         # Subfilter could not be converted completely -> filter cannot
                         # be converted
+                        return None, filter
+                    if where_clause_filter is None:
                         return None, filter
                     where_clause_filters.append(where_clause_filter)
                 return (
@@ -1040,7 +1125,7 @@ class SARepository(BaseRepository):
             # Filter cannot be converted due to unsupported operator
             return None, filter
         # Convert non-composite filter if possible
-        mapped_key = field_name_map.get(filter.get_key())
+        mapped_key = field_name_map.get(str(filter.get_key()))
         if not mapped_key:
             # Field name cannot be mapped
             return None, filter
@@ -1059,7 +1144,7 @@ class SARepository(BaseRepository):
         tables_classes = [
             mapper.row_class,
         ]
-        row_sets = []
+        row_sets: list[list[Model]] = []
         with self.get_session() as session:
             for table_class in tables_classes:
                 row_sets.append(list(session.query(table_class)) if table_class else [])
@@ -1081,29 +1166,31 @@ class SARepository(BaseRepository):
     ) -> None:
         # Go over each link
         for link in links.values():
+            link_model_class = cast(type[Model], link.link_model_class)
             # Get unique link ids to retrieve
-            link_mapper = self.get_mapper(link.link_model_class)
+            link_mapper = self.get_mapper(link_model_class)
             link_ids = [getattr(x, link.link_field_name) for x in objs]
             uq_link_ids = set(link_ids)
             uq_link_ids.discard(None)
             # Retrieve unique link objs
-            uq_link_rows, uq_link_ids = SARepository._in_session_read_some(
+            uq_link_rows, retrieved_link_ids = SARepository._in_session_read_some(
                 link_mapper,
                 session,
-                link_mapper.row_class,
                 list(uq_link_ids),
                 optimize_parameter_handling,
             )
-            uq_link_objs = self.from_sql(link.link_model_class, uq_link_rows)
+            uq_link_objs = self.from_sql(link_model_class, uq_link_rows)
             # Map link objs to ids and set in objs
-            uq_link_objs = dict(zip(uq_link_ids, uq_link_objs))
+            uq_link_objs = dict(zip(retrieved_link_ids, uq_link_objs))
             uq_link_objs[None] = None
-            for obj, link_id in zip(objs, link_ids):
-                setattr(
-                    obj,
-                    link.relationship_field_name,
-                    uq_link_objs[link_id],
-                )
+            relationship_field_name = link.relationship_field_name
+            if relationship_field_name:
+                for obj, link_id in zip(objs, link_ids):
+                    setattr(
+                        obj,
+                        relationship_field_name,
+                        uq_link_objs[link_id],
+                    )
 
     def verify_valid_ids(
         self,
@@ -1147,9 +1234,8 @@ class SARepository(BaseRepository):
 
     @staticmethod
     def _select_with_id_join(
+        mapper: BaseSAMapper,
         session: Session,
-        get_row_id: Callable[[type], sa.Column],
-        row_class: type,
         obj_ids: list[Hashable],
     ) -> sa.sql.Select:
         """
@@ -1160,18 +1246,23 @@ class SARepository(BaseRepository):
         """
 
         dialect = session.get_bind().dialect
+        row_class = mapper.row_class
+        row_metadata: sa.MetaData = getattr(row_class, "metadata")
+        row_id_column = mapper.get_row_id_column()
+        id_col_name = row_id_column.name
         if dialect.name == "mssql":
             # TODO: check if temp table exists and take a different name in that case
             temp_table_name = f"#temp_{str(uuid.uuid4()).replace('-','_')}"
-            id_col_name = get_row_id(row_class).name
-            id_datatype = row_class.__table__.c[id_col_name].type
+            id_datatype = row_id_column.type  # type: ignore[attr-defined]
             id_datatype_sql = id_datatype.compile(dialect=dialect)
             # TODO: finalize this part
             # Create the temp table
             # we might think to introspect after CREATE TABLE, but that opens us up to session/database sync and lock issues...
             # which we did experience in testing
             temp_table_obj = sa.Table(
-                temp_table_name, row_class.metadata, sa.Column(id_col_name, id_datatype)
+                temp_table_name,
+                row_metadata,
+                sa.Column(id_col_name, id_datatype),
             )
             session.execute(
                 sa.text(
@@ -1195,9 +1286,9 @@ class SARepository(BaseRepository):
             )
 
         # Select with join to restrict to ids passed
-        sql_select = select(row_class).join(
+        sql_select: sa.Select = select(mapper.row_class).join(
             temp_table_obj,
-            row_class.__table__.c[id_col_name] == temp_table_obj.c[id_col_name],
+            row_id_column == temp_table_obj.c[id_col_name],
         )
         return sql_select
 
@@ -1205,7 +1296,6 @@ class SARepository(BaseRepository):
     def _in_session_read_some(
         mapper: BaseSAMapper,
         session: Session,
-        row_class: type,
         obj_ids: list[Hashable],
         optimize_parameter_handling: bool = False,
     ) -> tuple[list[Any], list[Hashable]]:
@@ -1216,7 +1306,7 @@ class SARepository(BaseRepository):
         """
         # n = len(obj_ids)
         # Get rows as list[(Row,)], convert to list[Row]
-        get_row_id = mapper.get_row_id
+        row_class = mapper.row_class
         if obj_ids and optimize_parameter_handling:
             # TODO: finalize this part, remove the example
             # One approach to optmization relative to parameterized query with many params
@@ -1236,16 +1326,16 @@ class SARepository(BaseRepository):
             # sql_select = select(row_class).join(cte, row_class.__table__.c[id_col_name] == cte.c.obj_ids)
 
             # Or.... the temporary table method
-            sql_select = SARepository._select_with_id_join(
-                session, get_row_id, row_class, obj_ids
-            )
+            sql_select = SARepository._select_with_id_join(mapper, session, obj_ids)
         else:
-            sql_select = select(row_class).where(get_row_id(row_class).in_(obj_ids))
+            sql_select = select(row_class).where(
+                mapper.get_row_id_column().in_(obj_ids)
+            )
 
         rows = session.execute(sql_select).all()
         rows = [x[0] for x in rows]
         # Further process rows
-        row_ids = [get_row_id(x) for x in rows]
+        row_ids = [mapper.get_row_id(x) for x in rows]
         SARepository._in_session_verify_retrieved_ids(mapper, obj_ids, row_ids)
         return rows, row_ids
 
@@ -1254,6 +1344,7 @@ class SARepository(BaseRepository):
             retval = execute_fn(session)
         else:
             with self.uow(**kwargs) as uow:
+                assert isinstance(uow, SAUnitOfWork)
                 retval = execute_fn(uow.session)
         return retval
 
@@ -1284,7 +1375,7 @@ class SARepository(BaseRepository):
         model_class: type[Model], obj_ids: Iterable[Hashable]
     ) -> None:
         if not isinstance(obj_ids, list) and not isinstance(obj_ids, set):
-            obj_ids = [obj_ids]
+            obj_ids = list(obj_ids)
         seen = set()
         uq_obj_ids = set(
             x for x in obj_ids if x not in seen and not seen.add(x)  # type: ignore
@@ -1334,7 +1425,7 @@ class SARepository(BaseRepository):
             warnings.filterwarnings(
                 "ignore",
                 r"^Dialect sqlite\+pysqlite does not support updated rowcount.*",
-                sa.exc.SAWarning,
+                SAWarning,
             )
 
             # Create engine, creating the sqlite file(s) if needed
@@ -1342,7 +1433,7 @@ class SARepository(BaseRepository):
 
             # Make sure foreign key constraints are enforced,
             # which is not the default for sqlite
-            @sa.event.listens_for(engine, "connect")
+            @event.listens_for(engine, "connect")
             def set_sqlite_pragma(
                 dbapi_connection: Any, connection_record: Any
             ) -> None:
@@ -1353,8 +1444,9 @@ class SARepository(BaseRepository):
             # Add each schema as a separate database, as sqlite does not support schemas
             with engine.connect() as conn:
                 if len(schema_names) > 1:
+                    valid_schema_names = [x for x in schema_names if x is not None]
                     raise NotImplementedError(
-                        "Multiple schemas: " + ", ".join(schema_names)
+                        "Multiple schemas: " + ", ".join(sorted(valid_schema_names))
                     )
                 for schema_name in schema_names:
                     conn.execute(
@@ -1379,12 +1471,16 @@ class SARepository(BaseRepository):
                         conn.commit()
 
         # Create all tables if necessary
-        metadata_set = set()
+        metadata_set: set[sa.MetaData] = set()
         for entity in entities:
             if not entity.persistable:
                 continue
             db_model_class = entity.db_model_class
-            metadata_set.add(db_model_class.metadata)
+            if not db_model_class:
+                raise ValueError(
+                    f"Entity {entity.name} is persistable but does not have a db_model_class"
+                )
+            metadata_set.add(cast(sa.MetaData, getattr(db_model_class, "metadata")))
 
         for metadata in metadata_set:
             metadata.create_all(engine)
@@ -1408,10 +1504,6 @@ class SARepository(BaseRepository):
                 connect_args=kwargs,
             ).connect()
             connection.close()
-            return None
-        except BaseException as exception:
-            # Connection failed, skip loading
-            return exception
             return None
         except BaseException as exception:
             # Connection failed, skip loading

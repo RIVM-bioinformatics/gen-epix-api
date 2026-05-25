@@ -42,7 +42,6 @@ def case_service_create_case_set(
                 user=cmd.user,
                 operation=CrudOperation.CREATE_ONE,
                 objs=cmd.case_set,
-                props=cmd.props,
             )
         )
         # Associate case set/cases with data collections

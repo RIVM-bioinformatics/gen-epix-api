@@ -1564,9 +1564,7 @@ class BatchUploader:
                         user=user,
                         operation=CrudOperation.CREATE_SOME,
                         objs=to_create_objs,
-                        props={
-                            "return_id": True
-                        },  # Avoid returning the whole object list again
+                        return_id=True,  # Avoid returning the whole object list again
                     )
                 )
         except DuplicateIdsError as exc_:

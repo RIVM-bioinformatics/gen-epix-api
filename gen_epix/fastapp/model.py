@@ -249,6 +249,10 @@ class CrudCommand(Command):
         default=None,
         description="The object(s) to operate on. Must be set to a single object for create or update one operations, and to a list of objects for create or update some operations. Otherwise must be None.",
     )
+    return_id: bool = Field(
+        default=False,
+        description="Whether to return only the ID(s) of the affected object(s). Only used for create, update, read all and delete all operations.",
+    )
     query_filter: Filter | None = Field(
         default=None,
         description="Optional filter to apply to the results of a read or delete all operation, thereby effectively applying a query instead of reading or deleting all. Must be None for all other operations.",
@@ -257,6 +261,17 @@ class CrudCommand(Command):
         default=None,
         description="Optional filter to apply object-level access control. For a read or delete all operation, it filters the results just as the query_filter does and when both are provided only object that match both filters will be returned or deleted. For any other operation, an unauthorized exception is raised if the provided objects do not match the filter.",
     )
+    limit: int = Field(
+        default=0,
+        description="Limit to the number of objects to return for a read all operation. Ignored for other operations. Not applied when equal to zero.",
+        ge=0,
+    )
+    offset: int = Field(
+        default=0,
+        description="Offset for the results of a read all operation. Ignored for other operations. Used in combination with limit.",
+        ge=0,
+    )
+
     props: dict[str, Any] = Field(
         default_factory=dict,
         description="Additional properties to pass to the command and which can be used by custom implementations.",
@@ -305,6 +320,13 @@ class CrudCommand(Command):
                 raise ValueError(
                     f"Invalid operation for query_filter not None: {operation.value}"
                 )
+        if (
+            self.return_id
+            and operation not in CrudOperationSet.WRITE_OR_READ_ALL_OR_DELETE_ALL.value
+        ):
+            raise ValueError(f"Invalid operation for return_id=True: {operation.value}")
+        if self.limit and operation != CrudOperation.READ_ALL:
+            raise ValueError(f"Invalid operation for limit: {operation.value}")
         return self
 
     def get_obj_ids(
