@@ -1690,7 +1690,9 @@ class BatchUploader:
                 obj_result.status = EtlStatus.SKIPPED
                 obj_result.add_info("64eef8a5", "Content is identical")
             else:
-                to_update_objs.append(obj)
+                # Persist the merged existing object because mutable sub-dict fields
+                # are updated in place on existing_obj.
+                to_update_objs.append(existing_obj)
                 to_update_obj_results.append(obj_result)
 
         # Update the objects whose data are different

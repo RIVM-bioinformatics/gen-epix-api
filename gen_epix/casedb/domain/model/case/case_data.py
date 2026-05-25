@@ -50,6 +50,10 @@ class Case(Model):
     created_in_data_collection: DataCollection | None = Field(
         default=None, description="The data collection where the case was created"
     )
+    cohort: dict[UUID, UUID | None] = Field(
+        default_factory=dict,
+        description=r"The cohort(s) that this case belongs to, as {cohort_id: cohort_definition_id}. This is used for traceability of the case to any omopdb cohorts (typically one) that it was derived from. None content values are allowed to support deletion of keys but will be removed upon serialization.",
+    )
     count: int | None = Field(
         default=None,
         description="The number of cases that this case represents, if not one. This can be used to store aggregated cases (n>=0) as well as reference data (n=0).",
@@ -60,13 +64,15 @@ class Case(Model):
         description="The datetime of the case used for sorting results, limiting results and statistics such as first and last case date. Normally re-calculated from the case content variables upon persisting. Default is the current datetime.",
     )
     content: dict[UUID, str | None] = Field(
-        description=r"The data content of the case as {col_id: str_value | None}. Only columns defined for the CaseType of the case should be present here, and if no value is present, the key should be omitted. None content values are allowed but will be removed upon serialization."
+        description=r"The data content of the case as {col_id: str_value | None}. Only columns defined for the CaseType of the case should be present here, and if no value is present, the key should be omitted. None content values are allowed to support deletion of keys but will be removed upon serialization."
     )
 
+    @field_serializer("cohort", mode="plain")
+    def _serialize_cohort(self, value: dict[UUID, UUID | None]) -> dict[str, str]:
+        return {str(x): str(y) for x, y in value.items() if y is not None}
+
     @field_serializer("content", mode="plain")
-    def _serialize_content(
-        self, value: dict[UUID, str | None]
-    ) -> dict[str, str | None]:
+    def _serialize_content(self, value: dict[UUID, str | None]) -> dict[str, str]:
         return {str(x): y for x, y in value.items() if y is not None}
 
 

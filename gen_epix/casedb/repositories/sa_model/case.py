@@ -361,6 +361,9 @@ class Case(Base, RowMetadataMixin):
     created_in_data_collection_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Case, "created_in_data_collection_id"
     )
+    cohort: Mapped[dict[UUID, UUID]] = create_mapped_column(
+        DOMAIN, model.Case, "cohort"
+    )
     count: Mapped[int | None] = create_mapped_column(DOMAIN, model.Case, "count")
     case_date: Mapped[datetime] = create_mapped_column(DOMAIN, model.Case, "case_date")
     content: Mapped[dict[UUID, str]] = create_mapped_column(
