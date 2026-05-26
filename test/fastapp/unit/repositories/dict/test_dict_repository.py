@@ -390,13 +390,9 @@ def test_read_all_variants(pc_repo: DictRepository, parent_id: UUID) -> None:
     # Return IDs
     ids = pc_repo.read_all(ParentModel, filter=None, return_id=True)
     assert ids == [parent_id]
-    # Cascade read on Child
-    children = pc_repo.read_all(ChildModel, filter=None, cascade_read=True)
-    assert children[0].parent is not None  # type: ignore[attr-defined]
-    assert children[0].parent.id == parent_id  # type: ignore[attr-defined]
     # No copy
     children_no_copy = pc_repo.read_all(
-        ChildModel, filter=None, return_id=False, cascade_read=False, return_copy=False
+        ChildModel, filter=None, return_id=False, return_copy=False
     )
     assert children_no_copy[0] is pc_repo.db[ChildModel][children_no_copy[0].id]  # type: ignore[attr-defined]
 

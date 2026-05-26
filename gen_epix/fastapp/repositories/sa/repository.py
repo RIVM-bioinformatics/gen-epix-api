@@ -11,9 +11,8 @@ from sqlalchemy.exc import SAWarning
 from sqlalchemy.orm import Session, sessionmaker
 
 import gen_epix.fastapp.exc as exc
-from gen_epix.fastapp import CrudOperation, Link
+from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.domain.entity import Entity
-from gen_epix.fastapp.domain.link import Link
 from gen_epix.fastapp.enum import CrudOperation, IsolationLevel
 from gen_epix.fastapp.model import Model
 from gen_epix.fastapp.repositories.sa.engine_factory import EngineFactory
@@ -552,7 +551,6 @@ class SARepository(BaseRepository):
         SARepository._verify_duplicate_ids(model_class, obj_ids)
         # Retrieve rows and verify result
         mapper = self.get_mapper(model_class)
-        cascade_read = kwargs.get("cascade_read", False)
         optimize_parameter_handling = kwargs.get("optimize_parameter_handling", False)
 
         def _execute(session: Session) -> list[Model]:
@@ -575,12 +573,6 @@ class SARepository(BaseRepository):
                     f"{model_class} object(s) do not exist: {invalids_ids_str}",
                     ids=obj_ids,
                 )
-            # Read links if requested and known
-            # If links were not passed explicitly, retrieve them from model
-            if cascade_read:
-                links = kwargs.get("links", model_class.ENTITY.links)
-                self._in_session_add_cascade_read(session, links, objs)
-
             return objs
 
         objs: list[Model] = self._execute_sa(session, _execute, kwargs)
@@ -600,7 +592,6 @@ class SARepository(BaseRepository):
         # Retrieve rows and generate objs
         mapper = self.get_mapper(model_class)
         row_class = mapper.row_class
-        cascade_read: bool = kwargs.get("cascade_read", False)
         obj_filter: Filter | None = kwargs.get("obj_filter", None)
         limit = limit or -1
         offset = offset or 0
@@ -668,10 +659,6 @@ class SARepository(BaseRepository):
                         list(obj_filter.filter_rows(objs, is_model=True)),
                     )
                     objs = _apply_obj_limit_offset(objs)
-                # Read links if needed
-                if cascade_read:
-                    links = kwargs.get("links", {})
-                    self._in_session_add_cascade_read(session, links, objs)
             return objs
 
         objs: list[Model] | list[Hashable] = self._execute_sa(session, _execute, kwargs)
@@ -1156,41 +1143,6 @@ class SARepository(BaseRepository):
                     print(f"{header}empty {table_class}")
                 for row in row_set:
                     print(f"{header}{row}")
-
-    def _in_session_add_cascade_read(
-        self,
-        session: Session,
-        links: dict[int, Link],
-        objs: list[Model],
-        optimize_parameter_handling: bool = False,
-    ) -> None:
-        # Go over each link
-        for link in links.values():
-            link_model_class = cast(type[Model], link.link_model_class)
-            # Get unique link ids to retrieve
-            link_mapper = self.get_mapper(link_model_class)
-            link_ids = [getattr(x, link.link_field_name) for x in objs]
-            uq_link_ids = set(link_ids)
-            uq_link_ids.discard(None)
-            # Retrieve unique link objs
-            uq_link_rows, retrieved_link_ids = SARepository._in_session_read_some(
-                link_mapper,
-                session,
-                list(uq_link_ids),
-                optimize_parameter_handling,
-            )
-            uq_link_objs = self.from_sql(link_model_class, uq_link_rows)
-            # Map link objs to ids and set in objs
-            uq_link_objs = dict(zip(retrieved_link_ids, uq_link_objs))
-            uq_link_objs[None] = None
-            relationship_field_name = link.relationship_field_name
-            if relationship_field_name:
-                for obj, link_id in zip(objs, link_ids):
-                    setattr(
-                        obj,
-                        relationship_field_name,
-                        uq_link_objs[link_id],
-                    )
 
     def verify_valid_ids(
         self,

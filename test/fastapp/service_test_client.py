@@ -28,10 +28,12 @@ from gen_epix.fastapp.repositories.dict.repository import DictRepository
 
 class ServiceTestClient:
 
-    TEST_CLIENTS = {}
+    TEST_CLIENTS: dict[tuple[str, type[BaseRepository]], "ServiceTestClient"] = {}
 
     @classmethod
-    def get_test_client(cls, repository_class: type[BaseRepository], **kwargs: Any):
+    def get_test_client(
+        cls, repository_class: type[BaseRepository], **kwargs: Any
+    ) -> "ServiceTestClient":
         key = (kwargs.get("test_type", repository_class.__name__), repository_class)
         if key not in cls.TEST_CLIENTS:
             cls.TEST_CLIENTS[key] = cls(repository_class, **kwargs)
@@ -124,18 +126,21 @@ class ServiceTestClient:
         name = service.name
         entities = service.app.domain.get_dag_sorted_entities(service_type=service_type)
         model_classes = [x.model_class for x in entities]
+        repository: BaseRepository
         if issubclass(repository_class, DictRepository):
-            repository = DictRepository(entities, {}, missing_data="ignore")
+            dict_repository = DictRepository(entities, {}, missing_data="ignore")
+            repository = dict_repository
         elif issubclass(repository_class, SARepository):
             sqlite_file = Path(self.test_dir) / f"{name}.sqlite"
             connection_string = f"sqlite:///{str(sqlite_file)}"
-            repository = repository_class.create_sa_repository(
+            sa_repository = repository_class.create_sa_repository(
                 entities,
                 connection_string,
                 create_all=True,
                 recreate_sqlite_file=True,
                 **kwargs,
             )
+            repository = sa_repository
             # TODO: remove when code above is sufficiently tested
             # base = kwargs["base"]
             # schema_names = {x.ENTITY.schema_name for x in model_classes}
@@ -176,15 +181,14 @@ class ServiceTestClient:
         model_class: type[model.Model],
         as_dict: bool = False,
         set_id: bool = True,
-    ) -> model.Model | dict:
+    ) -> list[model.Model] | list[dict]:
         objs = list(self.df[model_class].values())
         if as_dict:
-            objs = [x.model_dump(exclude=None if set_id else "id") for x in objs]
-        else:
-            objs = [x.model_copy() for x in objs]
-            if not set_id:
-                for obj in objs:
-                    obj.id = None
+            return [x.model_dump(exclude=None if set_id else "id") for x in objs]  # type: ignore[arg-type,misc]
+        objs = [x.model_copy() for x in objs]
+        if not set_id:
+            for obj in objs:
+                obj.id = None  # type: ignore[attr-defined]
         return objs
 
     def get_model_instance_for_class(
@@ -197,44 +201,45 @@ class ServiceTestClient:
         objs: list[model.Model] = list(self.df[model_class].values())
         obj = objs[idx]
         if as_dict:
-            obj = obj.model_dump(exclude=None if set_id else "id")
-        else:
-            obj = obj.model_copy()
-            if not set_id:
-                obj.id = None
+            return obj.model_dump(exclude=None if set_id else "id")  # type: ignore[arg-type]
+        obj = obj.model_copy()
+        if not set_id:
+            obj.id = None  # type: ignore[attr-defined]
         return obj
 
-    def create_all_fixture_model_instances(self, user_id: Hashable) -> None:
-        models1_1 = self.df[Model1_1].values()
+    def create_all_fixture_model_instances(
+        self, user_id: Hashable
+    ) -> tuple[list[Model1_1], list[Model1_2], list[Model2_1], list[Model2_2]]:
+        models1_1: list[Model1_1] = list(self.df[Model1_1].values())  # type: ignore[arg-type]
         with self.service1.repository.uow() as uow:
-            models1_1_created = self.service1.repository.crud(
+            models1_1_created: list[Model1_1] = self.service1.repository.crud(  # type: ignore[assignment]
                 uow,
                 user_id,
                 Model1_1,
                 CrudOperation.CREATE_SOME,
                 objs=models1_1,
             )
-        models1_2 = self.df[Model1_2].values()
+        models1_2: list[Model1_2] = list(self.df[Model1_2].values())  # type: ignore[arg-type]
         with self.service1.repository.uow() as uow:
-            models1_2_created = self.service1.repository.crud(
+            models1_2_created: list[Model1_2] = self.service1.repository.crud(  # type: ignore[assignment]
                 uow,
                 user_id,
                 Model1_2,
                 CrudOperation.CREATE_SOME,
                 objs=models1_2,
             )
-        models2_1 = self.df[Model2_1].values()
+        models2_1: list[Model2_1] = list(self.df[Model2_1].values())  # type: ignore[arg-type]
         with self.service2.repository.uow() as uow:
-            models2_1_created = self.service2.repository.crud(
+            models2_1_created: list[Model2_1] = self.service2.repository.crud(  # type: ignore[assignment]
                 uow,
                 user_id,
                 Model2_1,
                 CrudOperation.CREATE_SOME,
                 objs=models2_1,
             )
-        models2_2 = self.df[Model2_2].values()
+        models2_2: list[Model2_2] = list(self.df[Model2_2].values())  # type: ignore[arg-type]
         with self.service2.repository.uow() as uow:
-            models2_2_created = self.service2.repository.crud(
+            models2_2_created: list[Model2_2] = self.service2.repository.crud(  # type: ignore[assignment]
                 uow,
                 user_id,
                 Model2_2,
@@ -249,56 +254,45 @@ class ServiceTestClient:
         )
 
     def create_all_model_instances(
-        self, cascade: bool = False, user: model.User = None
-    ) -> None:
-        models1_1 = self.get_model_instances_for_class(Model1_1, set_id=False)
+        self, user: model.User | None = None
+    ) -> tuple[list[Model1_1], list[Model1_2], list[Model2_1], list[Model2_2]]:
+        models1_1: list[Model1_1] = self.get_model_instances_for_class(Model1_1, set_id=False)  # type: ignore[assignment]
         models1_1_created = self.app.handle(
             Model1_1CrudCommand(
-                user=user, objs=models1_1, operation=CrudOperation.CREATE_SOME
+                user=user, objs=models1_1, operation=CrudOperation.CREATE_SOME  # type: ignore[arg-type]
             )
         )
         assert all([x == y for x, y in zip(models1_1, models1_1_created)])
 
-        models1_2 = self.get_model_instances_for_class(Model1_2, set_id=False)
+        models1_2: list[Model1_2] = self.get_model_instances_for_class(Model1_2, set_id=False)  # type: ignore[assignment]
         for i, model1_2 in enumerate(models1_2):
             model1_2.model1_1_id = models1_1_created[i].id
         models1_2_created = self.app.handle(
             Model1_2CrudCommand(
-                user=user, objs=models1_2, operation=CrudOperation.CREATE_SOME
+                user=user, objs=models1_2, operation=CrudOperation.CREATE_SOME  # type: ignore[arg-type]
             )
         )
         assert all([x == y for x, y in zip(models1_2, models1_2_created)])
 
-        models2_1 = self.get_model_instances_for_class(Model2_1, set_id=False)
+        models2_1: list[Model2_1] = self.get_model_instances_for_class(Model2_1, set_id=False)  # type: ignore[assignment]
         for i, model2_1 in enumerate(models2_1):
             model2_1.model1_2_id = models1_2_created[i].id
         models2_1_created = self.app.handle(
             Model2_1CrudCommand(
-                user=user, objs=models2_1, operation=CrudOperation.CREATE_SOME
+                user=user, objs=models2_1, operation=CrudOperation.CREATE_SOME  # type: ignore[arg-type]
             )
         )
         assert all([x == y for x, y in zip(models2_1, models2_1_created)])
 
-        models2_2 = self.get_model_instances_for_class(Model2_2, set_id=False)
+        models2_2: list[Model2_2] = self.get_model_instances_for_class(Model2_2, set_id=False)  # type: ignore[assignment]
         for i, model2_2 in enumerate(models2_2):
             model2_2.model2_1_id = models2_1_created[i].id
         models2_2_created = self.app.handle(
             Model2_2CrudCommand(
-                user=user, objs=models2_2, operation=CrudOperation.CREATE_SOME
+                user=user, objs=models2_2, operation=CrudOperation.CREATE_SOME  # type: ignore[arg-type]
             )
         )
         assert all([x == y for x, y in zip(models2_2, models2_2_created)])
-        # Fill in the back populate fields in case of cascade, to a depth of one
-        if cascade:
-            models1_1_dict = {x.id: x for x in models1_1}
-            models1_2_dict = {x.id: x for x in models1_2}
-            models2_1_dict = {x.id: x for x in models2_1}
-            for model2_2 in models2_2_created:
-                model2_2.model2_1 = models2_1_dict[model2_2.model2_1_id].model_copy()
-            for model2_1 in models2_1_created:
-                model2_1.model1_2 = models1_2_dict[model2_1.model1_2_id].model_copy()
-            for model1_2 in models1_2_created:
-                model1_2.model1_1 = models1_1_dict[model1_2.model1_1_id].model_copy()
         return (
             models1_1_created,
             models1_2_created,

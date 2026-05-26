@@ -382,7 +382,6 @@ class DictRepository(BaseRepository):
         filter: Filter | None = None,
         limit: int = 0,
         offset: int = 0,
-        cascade_read: bool = False,
         **kwargs: Any,
     ) -> list[Model] | list[Hashable]:
         return_copy = kwargs.get("return_copy", True)
@@ -427,23 +426,18 @@ class DictRepository(BaseRepository):
         # Make copy of objects for returning if necessary
         if not return_id and return_copy:
             objs = [x.model_copy() for x in objs if x]  # type: ignore[attr-defined]
-        # Cascade read linked objects if necessary
-        if cascade_read and not return_id:
-            self._cascade_read(model_class, objs, return_copy)  # type: ignore[arg-type]
         return objs
 
     def read_one(
         self,
         model_class: type[Model],
         obj_id: Hashable,
-        cascade_read: bool = False,
         allow_duplicate_ids: bool = False,
         **kwargs: Any,
     ) -> Model | Hashable:
         return self.read_some(
             model_class,
             [obj_id],
-            cascade_read=cascade_read,
             allow_duplicate_ids=allow_duplicate_ids,
             **kwargs,
         )[0]
@@ -452,7 +446,6 @@ class DictRepository(BaseRepository):
         self,
         model_class: type[Model],
         obj_ids: Iterable[Hashable],
-        cascade_read: bool = False,
         allow_duplicate_ids: bool = False,
         **kwargs: Any,
     ) -> list[Model]:
@@ -474,10 +467,6 @@ class DictRepository(BaseRepository):
         # Make copy of objects for returning
         if return_copy:
             objs = [x.model_copy() for x in objs if x]  # type: ignore[attr-defined]
-
-        # Cascade read linked objects if necessary
-        if cascade_read:
-            self._cascade_read(model_class, objs, return_copy)  # type: ignore[arg-type]
         return cast(list[Model], objs)
 
     def upsert_one(
@@ -773,34 +762,6 @@ class DictRepository(BaseRepository):
                 )
             )
         return links
-
-    def _cascade_read(
-        self,
-        model_class: type[Model],
-        objs: list[Model],
-        return_copy: bool,
-    ) -> None:
-        for (
-            link_field_name,
-            link_model_class,
-            relationship_field_name,
-            _,
-            linked_df,
-        ) in self._links[model_class]:
-            if linked_df is None:
-                continue
-            linked_obj_ids = [
-                getattr(x, link_field_name) for x in objs if getattr(x, link_field_name)
-            ]
-            linked_objs = self.read_some(
-                link_model_class,
-                linked_obj_ids,
-                cascade_read=False,
-                allow_duplicate_ids=True,
-                return_copy=return_copy,
-            )
-            for obj, linked_obj in zip(objs, linked_objs):
-                setattr(obj, relationship_field_name, linked_obj)
 
     def _verify_upsert_objects(
         self,

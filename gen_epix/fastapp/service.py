@@ -219,10 +219,8 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
                     self.set_object_id(obj, id_field_name, id_present)
             else:
                 self.set_object_id(cmd.objs, id_field_name, id_present)
-        # Prepare for cascaded read if necessary: determine which links
-        # are handled by this service and which by other services
-        cascade_read = cmd.props.get("cascade_read", False)
-        if cascade_read or cmd.is_write():
+        # Determine which links are handled by this service and which by other services
+        if cmd.is_write():
             same_service_links, other_service_links = self._get_model_links(cmd)
         else:
             same_service_links = {}
@@ -244,45 +242,6 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
             # Call repository CRUD operation
             retval = self.crud_repository(uow, cmd, links=same_service_links)
 
-            # Cascade read objects handled by other services
-            if cascade_read and len(other_service_links) and cmd.is_read():
-                if issubclass(type(retval), Model):
-                    objs = [retval]  # type: ignore
-                else:
-                    objs = retval  # type: ignore
-                for link in other_service_links.values():
-                    if link.relationship_field_name is None:
-                        continue
-                    # Read in unique linked objects for this relationship_field_name
-                    link_map: dict = {}
-                    for i, obj in enumerate(objs):
-                        link_obj_id = getattr(obj, link.link_field_name)
-                        if link_obj_id:
-                            idxs = link_map.get(link_obj_id, [])
-                            if not idxs:
-                                link_map[link_obj_id] = idxs
-                            idxs.append(i)
-                    link_map_ids = list(link_map.keys())
-                    if not link_map_ids:
-                        continue
-                    cmd = self._app.domain.get_crud_command_for_model(
-                        link.link_model_class
-                    )(
-                        user=cmd.user,
-                        objs=None,
-                        obj_ids=link_map_ids,
-                        operation=CrudOperation.READ_SOME,
-                        **{
-                            x: y
-                            for x, y in cmd.props.items()
-                            if x not in {"cascade_read"}
-                        },
-                    )
-                    linked_objects = self._app.handle(cmd)
-                    # Add linked objects to their parent(s)
-                    for link_obj_id, linked_obj in zip(link_map_ids, linked_objects):
-                        for idx in link_map[link_obj_id]:
-                            setattr(objs[idx], link.relationship_field_name, linked_obj)
         # Call AFTER listeners
         for listener in self._crud_listeners.get((type(cmd), EventTiming.AFTER), []):
             _, retval = listener(self, cmd, retval)
