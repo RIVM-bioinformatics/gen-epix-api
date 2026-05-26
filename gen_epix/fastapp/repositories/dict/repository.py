@@ -417,7 +417,7 @@ class DictRepository(BaseRepository):
         else:
             objs = list(df.values())
         # Apply limit and offset
-        if offset:
+        if limit or offset:
             if offset >= len(objs):
                 return []
             if offset + limit >= len(objs):

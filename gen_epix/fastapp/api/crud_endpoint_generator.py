@@ -112,12 +112,21 @@ class CrudEndpointGenerator:
     ) -> None:
         async def endpoint_function(user: route.user_dependency, limit: int | None = None, offset: int | None = None) -> Any:  # type: ignore
             obj_ids = None
-            cmd = route.crud_command_class(
-                user=user,
-                operation=CrudOperation.READ_ALL,
-                limit=limit or 0,
-                offset=offset or 0,
-            )
+            try:
+                cmd = route.crud_command_class(
+                    user=user,
+                    operation=CrudOperation.READ_ALL,
+                    limit=limit or 0,
+                    offset=offset or 0,
+                )
+            except ValueError as exception:
+                error_code = "6fa3d1c9"
+                handle_exception_fn(
+                    error_code + route.endpoint_basename,
+                    user,
+                    exc.InvalidArgumentsError(error_code, str(exception)),
+                )
+                return None
             try:
                 retval = route.app.handle(cmd)
                 if route.model_class is not route.read_api_model_class:
@@ -251,14 +260,23 @@ class CrudEndpointGenerator:
                     user,
                     exc.InvalidArgumentsError("Invalid filter"),
                 )
-            cmd = route.crud_command_class(
-                user=user,
-                operation=CrudOperation.READ_ALL,
-                return_id=return_id,
-                limit=limit or 0,
-                offset=offset or 0,
-                query_filter=filter,
-            )
+            try:
+                cmd = route.crud_command_class(
+                    user=user,
+                    operation=CrudOperation.READ_ALL,
+                    return_id=return_id,
+                    limit=limit or 0,
+                    offset=offset or 0,
+                    query_filter=filter,
+                )
+            except ValueError as exception:
+                error_code = "3bd8a4f1"
+                handle_exception_fn(
+                    error_code + route.endpoint_basename,
+                    user,
+                    exc.InvalidArgumentsError(error_code, str(exception)),
+                )
+                return None
             try:
                 retval = route.app.handle(cmd)
                 if (

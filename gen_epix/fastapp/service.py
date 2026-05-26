@@ -9,7 +9,12 @@ from typing import Any
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.domain.link import Link
-from gen_epix.fastapp.enum import CrudOperation, CrudOperationSet, EventTiming
+from gen_epix.fastapp.enum import (
+    CrudOperation,
+    CrudOperationSet,
+    EventTiming,
+    OnException,
+)
 from gen_epix.fastapp.model import (
     Command,
     CrudCommand,
@@ -208,7 +213,6 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
             cmd, _ = listener(self, cmd, None)
         # Set object ids for CREATE operations
         if cmd.is_create():
-            id_present = cmd.props.get("id_present", "keep")
             if cmd.objs is None:
                 raise exc.InvalidArgumentsError(
                     "645674fa", f"No object provided for operation {cmd.operation}"
@@ -216,9 +220,9 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
             assert id_field_name is not None
             if isinstance(cmd.objs, list):
                 for obj in cmd.objs:
-                    self.set_object_id(obj, id_field_name, id_present)
+                    self.set_object_id(obj, id_field_name, cmd.on_id_set)
             else:
-                self.set_object_id(cmd.objs, id_field_name, id_present)
+                self.set_object_id(cmd.objs, id_field_name, cmd.on_id_set)
         # Determine which links are handled by this service and which by other services
         if cmd.is_write():
             same_service_links, other_service_links = self._get_model_links(cmd)
@@ -317,7 +321,6 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
 
         # Call repository CRUD operation
         reserved_arg_names = {"filter", "obj_filter", "links"}
-        props = {x: y for x, y in cmd.props.items() if x not in reserved_arg_names}
         retval = self.repository.crud(
             uow,
             cmd.user.id if cmd.user else None,
@@ -331,7 +334,6 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
             offset=cmd.offset,
             obj_filter=service_query_filter,
             links=links,
-            **props,
         )
 
         return retval
@@ -386,20 +388,22 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
             )
         return retval
 
-    def set_object_id(self, obj: Model, id_field_name: str, id_present: str) -> None:
+    def set_object_id(
+        self, obj: Model, id_field_name: str, on_id_set: OnException = OnException.RAISE
+    ) -> None:
         if getattr(obj, id_field_name):
-            if id_present == "raise":
+            if on_id_set == OnException.RAISE:
                 raise exc.InvalidArgumentsError(
                     "679f8bd9", "Object already has id filled in"
                 )
-            if id_present == "ignore":
+            if on_id_set == OnException.REPLACE:
                 # Assign new id
                 setattr(obj, id_field_name, self.generate_id())
-            elif id_present == "keep":
+            elif on_id_set == OnException.IGNORE:
                 # Keep id
                 pass
             else:
-                raise ValueError(f"Invalid id_present: {id_present}")
+                raise ValueError(f"Invalid on_id_set: {on_id_set}")
         else:
             # Assign id
             setattr(obj, id_field_name, self.generate_id())
@@ -456,8 +460,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         objs: Iterable[Model],
         other_service_links: dict[int, Link],
     ) -> None:
-        verify_other_service_links = cmd.props.get("verify_other_service_links", True)
-        if not verify_other_service_links or not other_service_links:
+        if not cmd.verify_other_service_links or not other_service_links:
             return
         for link in other_service_links.values():
             link_obj_ids = list(
@@ -491,10 +494,9 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         objs: Iterable[Model],
         same_service_links: dict[int, Link],
     ) -> None:
-        verify_same_service_links = cmd.props.get("verify_same_service_links", True)
         if not self.repository:
             raise exc.ServiceException("63baf129", "Repository not set")
-        if not verify_same_service_links or not same_service_links:
+        if not cmd.verify_same_service_links or not same_service_links:
             return
         for link in same_service_links.values():
             link_obj_ids = list(
