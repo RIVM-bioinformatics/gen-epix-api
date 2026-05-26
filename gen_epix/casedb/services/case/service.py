@@ -169,16 +169,21 @@ class CaseService(BaseCaseService):
         # Retrieve all cases and case data collection links
         with repository.uow() as uow:
             # Retrieve cases/sets
-            cases_or_sets: list[model.CaseSet] | list[model.Case] = self.repository.crud(  # type: ignore[assignment]
-                uow,
-                user.id,
-                model.CaseSet if is_case_set else model.Case,
-                CrudOperation.READ_SOME,
-                obj_ids=case_or_set_ids,
+            cases_or_sets: list[model.CaseSet] | list[model.Case] = (
+                self.repository.crud(
+                    uow,
+                    user.id,
+                    model.CaseSet if is_case_set else model.Case,
+                    CrudOperation.READ_SOME,
+                    obj_ids=case_or_set_ids,
+                )
             )
             # Retrieve case/set data collection links
             key = "case_set_id" if is_case_set else "case_id"
-            case_or_set_data_collection_links: list[model.CaseDataCollectionLink] | list[model.CaseSetDataCollectionLink] = self.repository.crud(  # type: ignore[assignment]
+            case_or_set_data_collection_links: (
+                list[model.CaseDataCollectionLink]
+                | list[model.CaseSetDataCollectionLink]
+            ) = self.repository.crud(
                 uow,
                 user.id,
                 (
@@ -293,15 +298,13 @@ class CaseService(BaseCaseService):
     ) -> list[model.CaseSet]:
         # TODO: This is a temporary implementation, to be replaced by optimized query
         self.validate_case_right(right, on_invalid_case_set_id)
-        case_sets: list[model.CaseSet] = (
-            self.repository.crud(  # type: ignore[assignment]
-                uow,
-                user_id,
-                model.CaseSet,
-                CrudOperation.READ_SOME if case_set_ids else CrudOperation.READ_ALL,
-                filter=None if case_set_ids else filter,
-                obj_ids=case_set_ids if case_set_ids else None,
-            )
+        case_sets: list[model.CaseSet] = self.repository.crud(
+            uow,
+            user_id,
+            model.CaseSet,
+            CrudOperation.READ_SOME if case_set_ids else CrudOperation.READ_ALL,
+            filter=None if case_set_ids else filter,
+            obj_ids=case_set_ids if case_set_ids else None,
         )
 
         # Filter on case_type_id if any or verify that all case sets have the valid
@@ -612,7 +615,7 @@ class CaseService(BaseCaseService):
                 raise exc.InvalidArgumentsError(
                     "271e9667", "Cannot use datetime range filter with case ids"
                 )
-            cases = self.repository.crud(  # type: ignore[assignment]
+            cases = self.repository.crud(
                 uow,
                 user_id,
                 model.Case,
@@ -632,7 +635,7 @@ class CaseService(BaseCaseService):
                 )
             else:
                 case_filter = case_type_filter
-            cases = self.repository.crud(  # type: ignore[assignment]
+            cases = self.repository.crud(
                 uow,
                 user_id,
                 model.Case,
@@ -681,14 +684,12 @@ class CaseService(BaseCaseService):
         user_id: UUID,
         case_type_id: UUID,
     ) -> model.CaseType:
-        case_types: list[model.CaseType] = (
-            self.repository.crud(  # type: ignore[assignment]
-                uow,
-                user_id,
-                model.CaseType,
-                CrudOperation.READ_SOME,
-                obj_ids=[case_type_id],
-            )
+        case_types: list[model.CaseType] = self.repository.crud(
+            uow,
+            user_id,
+            model.CaseType,
+            CrudOperation.READ_SOME,
+            obj_ids=[case_type_id],
         )
         if not case_types:
             raise exc.InvalidArgumentsError(
@@ -831,14 +832,14 @@ class CaseService(BaseCaseService):
         self, uow: BaseUnitOfWork, user: model.User, seq_col_id: UUID
     ) -> tuple[model.Col, model.RefCol]:
         repository = self.repository
-        seq_col: model.Col = repository.crud(  # type: ignore[assignment]
+        seq_col: model.Col = repository.crud(
             uow,
             user.id,
             model.Col,
             CrudOperation.READ_ONE,
             obj_ids=seq_col_id,
         )
-        ref_seq_col: model.RefCol = repository.crud(  # type: ignore[assignment]
+        ref_seq_col: model.RefCol = repository.crud(
             uow,
             user.id,
             model.RefCol,
@@ -858,17 +859,15 @@ class CaseService(BaseCaseService):
         with self.repository.uow() as uow:
             case_set_ids = {x.case_set_id for x in case_set_members}
             case_ids = {x.case_id for x in case_set_members}
-            case_sets_: list[model.CaseSet] = (
-                self.repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user.id if user else None,
-                    model.CaseSet,
-                    CrudOperation.READ_SOME,
-                    obj_ids=list(case_set_ids),
-                )
+            case_sets_: list[model.CaseSet] = self.repository.crud(
+                uow,
+                user.id if user else None,
+                model.CaseSet,
+                CrudOperation.READ_SOME,
+                obj_ids=list(case_set_ids),
             )
             case_sets = {x.id: x for x in case_sets_}
-            cases_: list[model.Case] = self.repository.crud(  # type: ignore[assignment]
+            cases_: list[model.Case] = self.repository.crud(
                 uow,
                 user.id if user else None,
                 model.Case,

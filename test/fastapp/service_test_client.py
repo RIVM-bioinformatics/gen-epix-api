@@ -212,7 +212,7 @@ class ServiceTestClient:
     ) -> tuple[list[Model1_1], list[Model1_2], list[Model2_1], list[Model2_2]]:
         models1_1: list[Model1_1] = list(self.df[Model1_1].values())  # type: ignore[arg-type]
         with self.service1.repository.uow() as uow:
-            models1_1_created: list[Model1_1] = self.service1.repository.crud(  # type: ignore[assignment]
+            models1_1_created: list[Model1_1] = self.service1.repository.crud(
                 uow,
                 user_id,
                 Model1_1,
@@ -221,7 +221,7 @@ class ServiceTestClient:
             )
         models1_2: list[Model1_2] = list(self.df[Model1_2].values())  # type: ignore[arg-type]
         with self.service1.repository.uow() as uow:
-            models1_2_created: list[Model1_2] = self.service1.repository.crud(  # type: ignore[assignment]
+            models1_2_created: list[Model1_2] = self.service1.repository.crud(
                 uow,
                 user_id,
                 Model1_2,
@@ -230,7 +230,7 @@ class ServiceTestClient:
             )
         models2_1: list[Model2_1] = list(self.df[Model2_1].values())  # type: ignore[arg-type]
         with self.service2.repository.uow() as uow:
-            models2_1_created: list[Model2_1] = self.service2.repository.crud(  # type: ignore[assignment]
+            models2_1_created: list[Model2_1] = self.service2.repository.crud(
                 uow,
                 user_id,
                 Model2_1,
@@ -239,7 +239,7 @@ class ServiceTestClient:
             )
         models2_2: list[Model2_2] = list(self.df[Model2_2].values())  # type: ignore[arg-type]
         with self.service2.repository.uow() as uow:
-            models2_2_created: list[Model2_2] = self.service2.repository.crud(  # type: ignore[assignment]
+            models2_2_created: list[Model2_2] = self.service2.repository.crud(
                 uow,
                 user_id,
                 Model2_2,

@@ -51,7 +51,7 @@ class BaseRepository(abc.ABC):
         limit: int = 0,
         offset: int = 0,
         **kwargs: Any,
-    ) -> Hashable | list[Hashable] | Model | list[Model] | bool | list[bool] | None:
+    ) -> Any:
         """
         Perform CRUD operations on the repository within a unit of work context. The
         user_id corresponds to the user that executes the operation and can e.g. be

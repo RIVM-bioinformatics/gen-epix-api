@@ -1139,6 +1139,7 @@ class TestCreate:
                     col_type=enum.ColType.NOMINAL,
                     concept_set="concept_set11_nominal",
                     set_dummy_concept_set=True,
+                    verify_other_service_links=True,
                 )
         # RefCol.region_set does not exist
         if not SKIP_CREATE_DATA:
@@ -1154,6 +1155,7 @@ class TestCreate:
                     col_type=enum.ColType.GEO_REGION,
                     region_set="region_set11",
                     set_dummy_region_set=True,
+                    verify_other_service_links=True,
                 )
         # RefCol.genetic_distance_protocol does not exist
         if not SKIP_CREATE_DATA:
@@ -1169,6 +1171,7 @@ class TestCreate:
                     col_type=enum.ColType.GENETIC_DISTANCE,
                     genetic_distance_protocol="genetic_distance_protocol11",
                     set_dummy_genetic_distance_protocol=True,
+                    verify_other_service_links=True,
                 )
         # Etiology.disease does not exist
         if not SKIP_CREATE_DATA:
@@ -1192,7 +1195,12 @@ class TestCreate:
         if not SKIP_CREATE_DATA:
             with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
                 env.create_case_type(
-                    ROOT, "case_type11", "disease11", None, set_dummy_disease=True
+                    ROOT,
+                    "case_type11",
+                    "disease11",
+                    None,
+                    set_dummy_disease=True,
+                    verify_other_service_links=True,
                 )
         # CaseType.etiological_agent does not exist
         if not SKIP_CREATE_DATA:
@@ -1203,6 +1211,7 @@ class TestCreate:
                     None,
                     "etiological_agent11",
                     set_dummy_etiological_agent=True,
+                    verify_other_service_links=True,
                 )
         # CaseTypeSet.case_type_set_category does not exist
         if not SKIP_CREATE_DATA:

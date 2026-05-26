@@ -192,9 +192,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
             raise ValueError(f"Listener not registered for {key}")
         self._crud_listeners[key].remove(listener)
 
-    def crud(
-        self, cmd: CrudCommand
-    ) -> Hashable | list[Hashable] | Model | list[Model] | bool | list[bool] | None:
+    def crud(self, cmd: CrudCommand) -> Any:
         assert cmd.MODEL_CLASS.ENTITY is not None
         id_field_name = cmd.MODEL_CLASS.ENTITY.id_field_name
         if self._logger and self._logger.level <= logging.DEBUG:
@@ -269,7 +267,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         uow: BaseUnitOfWork,
         cmd: CrudCommand,
         links: dict[int, Link] | None = None,
-    ) -> Hashable | list[Hashable] | Model | list[Model] | bool | list[bool] | None:
+    ) -> Any:
         # Get filters depending on the operation
         if cmd.operation in CrudOperationSet.ANY_ALL.value:
             # Query filter is applied, access filter is added to query filter
@@ -300,7 +298,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
                 # Delete/exists one or some (delete all is not possible since there is
                 # an access filter) -> check if the ids match the access filter
                 assert cmd.user is not None
-                objs: list[Model] = self.repository.crud(  # type: ignore[assignment]
+                objs: list[Model] = self.repository.crud(
                     uow,
                     cmd.user.id,
                     cmd.MODEL_CLASS,

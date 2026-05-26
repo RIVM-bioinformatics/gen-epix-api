@@ -128,7 +128,7 @@ class CaseUploadSetup:
         # Get identifier issuers
         with casedb_organization_service.repository.uow() as uow:
             identifier_issuers: list[model.IdentifierIssuer] = (
-                casedb_organization_service.repository.crud(  # type: ignore[assignment]
+                casedb_organization_service.repository.crud(
                     uow,
                     None,
                     model.IdentifierIssuer,

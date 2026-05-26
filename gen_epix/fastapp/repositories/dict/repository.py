@@ -240,7 +240,7 @@ class DictRepository(BaseRepository):
         limit: int = 0,
         offset: int = 0,
         **kwargs: Any,
-    ) -> Hashable | list[Hashable] | Model | list[Model] | bool | list[bool] | None:
+    ) -> Any:
         BaseRepository.verify_crud_args(model_class, objs, obj_ids, operation)
         match operation:
             case CrudOperation.READ_ALL:

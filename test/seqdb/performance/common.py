@@ -63,7 +63,7 @@ def fill_empty_sqlite_repository(
     ):
         for entity in entities:
             model_class = entity.model_class
-            objs: list[model.Model] = dict_repository.crud(  # type: ignore[assignment]
+            objs: list[model.Model] = dict_repository.crud(
                 dict_uow,
                 user_id,
                 model_class,

@@ -43,7 +43,7 @@ def case_service_crud_ref_col(
         with self.repository.uow() as uow:
             # Get dims
             ref_dim_ids = list({x.ref_dim_id for x in ref_cols})
-            ref_dims: list[model.RefDim] = self.repository.crud(  # type: ignore[assignment]
+            ref_dims: list[model.RefDim] = self.repository.crud(
                 uow,
                 cmd.user.id,
                 model.RefDim,
@@ -76,7 +76,7 @@ def case_service_crud_ref_col(
 
     if cmd.is_update():
         with self.repository.uow() as uow:
-            existing_ref_cols: list[model.RefCol] = self.repository.crud(  # type: ignore[assignment]
+            existing_ref_cols: list[model.RefCol] = self.repository.crud(
                 uow,
                 cmd.user.id,
                 model.RefCol,

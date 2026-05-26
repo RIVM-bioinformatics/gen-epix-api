@@ -382,7 +382,7 @@ class SARepository(BaseRepository):
             return [mapper.load(x, **kwargs) for x in row]
         return mapper.load(row, **kwargs)
 
-    def crud(  # type: ignore
+    def crud(
         self,
         uow: BaseUnitOfWork,
         user_id: Hashable | None,
@@ -395,7 +395,7 @@ class SARepository(BaseRepository):
         limit: int = 0,
         offset: int = 0,
         **kwargs: Any,
-    ) -> Model | list[Model] | Hashable | list[Hashable] | bool | list[bool] | None:
+    ) -> Any:
         if not isinstance(uow, SAUnitOfWork):
             raise exc.RepositoryServiceError("ff17823b", f"Invalid UnitOfWork: {uow}")
         session = uow.session

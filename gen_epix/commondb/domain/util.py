@@ -149,7 +149,7 @@ def create_demo_data_from_repository(
             dict_repository.uow() as dict_uow,
             sa_repository.uow() as sa_uow,
         ):
-            objs: list[model.Model] = dict_repository.crud(  # type: ignore[assignment]
+            objs: list[model.Model] = dict_repository.crud(
                 dict_uow,
                 user_id,
                 model_class,

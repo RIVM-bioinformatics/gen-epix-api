@@ -28,7 +28,7 @@ def seq_service_crud_protocol(
                     }
                 ),
             )
-            existing_protocols: list[model.Protocol] = self.repository.crud(  # type: ignore[assignment]
+            existing_protocols: list[model.Protocol] = self.repository.crud(
                 uow,
                 user_id,
                 model.Protocol,
@@ -50,7 +50,7 @@ def seq_service_crud_protocol(
         # protocol_type is read-only (not allowed to update)
         protocol_ids: set[UUID] = {x.id for x in protocols if x.id is not None}
         with self.repository.uow() as uow:
-            existing_protocols: list[model.Protocol] = self.repository.crud(  # type: ignore[assignment]
+            existing_protocols: list[model.Protocol] = self.repository.crud(
                 uow,
                 user_id,
                 model.Protocol,

@@ -79,7 +79,7 @@ def _verify_one_case_date_dim(
     Method to ensure only one case_date_dim per CaseType.
     If another is found, set its is_case_date_dim to False.
     """
-    other_time_dims: list[model.Dim] = self.repository.crud(  # type: ignore[assignment]
+    other_time_dims: list[model.Dim] = self.repository.crud(
         uow,
         cmd.user.id,
         model.Dim,
@@ -108,7 +108,7 @@ def _validate_case_date_dim(
     dim: model.Dim,
 ) -> None:
     ref_dim: model.RefDim | None = None
-    ref_dim_list: list[model.RefDim] = self.repository.crud(  # type: ignore[assignment]
+    ref_dim_list: list[model.RefDim] = self.repository.crud(
         uow,
         cmd.user.id,
         model.RefDim,
@@ -144,7 +144,7 @@ def _load_existing_dims(
     uow: BaseUnitOfWork,
     dim: model.Dim,
 ) -> list[model.Dim]:
-    existing_dims: list[model.Dim] = self.repository.crud(  # type: ignore[assignment]
+    existing_dims: list[model.Dim] = self.repository.crud(
         uow,
         cmd.user.id,
         model.Dim,
@@ -221,7 +221,7 @@ def _get_existing_dim(
     uow: BaseUnitOfWork,
     updated: model.Dim,
 ) -> model.Dim:
-    existing_list: list[model.Dim] = self.repository.crud(  # type: ignore[assignment]
+    existing_list: list[model.Dim] = self.repository.crud(
         uow,
         cmd.user.id,
         model.Dim,

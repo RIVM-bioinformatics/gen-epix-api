@@ -20,7 +20,7 @@ def seq_service_retrieve_seq_distance_last_modified(
 ) -> datetime | None:
 
     with self.repository.uow() as uow:
-        seq_distance_protocol: model.Protocol = self.repository.crud(  # type: ignore[assignment]
+        seq_distance_protocol: model.Protocol = self.repository.crud(
             uow,
             cmd.user.id if cmd.user else None,
             model.Protocol,
@@ -60,7 +60,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
     # Retrieve relevant seq profile protocols
     seq_profile_types = list(set(x.seq_profile_type for x in seq_profiles))
     with self.repository.uow() as uow:
-        seq_profile_protocols: list[model.Protocol] = self.repository.crud(  # type: ignore[assignment]
+        seq_profile_protocols: list[model.Protocol] = self.repository.crud(
             uow,
             user_id,
             model.Protocol,
@@ -86,7 +86,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
         )
     )
     with self.repository.uow() as uow:
-        seq_distance_protocols: list[model.Protocol] = self.repository.crud(  # type: ignore[assignment]
+        seq_distance_protocols: list[model.Protocol] = self.repository.crud(
             uow,
             user_id,
             model.Protocol,
@@ -178,7 +178,7 @@ def seq_service_update_seq_distances(
 
     # Get the distance protocol
     with self.repository.uow() as uow:
-        protocol: model.Protocol = self.repository.crud(  # type: ignore[assignment]
+        protocol: model.Protocol = self.repository.crud(
             uow,
             user_id,
             model.Protocol,
@@ -207,7 +207,7 @@ def seq_service_update_seq_distances(
 
     # Get profiling protocols that match the distance protocol's subset criteria.
     with self.repository.uow() as uow:
-        profiling_protocols: list[model.Protocol] = self.repository.crud(  # type: ignore[assignment]
+        profiling_protocols: list[model.Protocol] = self.repository.crud(
             uow,
             user_id,
             model.Protocol,
@@ -319,7 +319,7 @@ def _calculate_and_store_distances(
     #   len(obj_ids) > 2000 so callers don't need to know about this limit.
     with service.repository.uow() as uow:
         existing_profiles_list: list[model.SeqProfile] = (
-            service.repository.crud(  # type: ignore[assignment]
+            service.repository.crud(
                 uow,
                 user_id,
                 model.SeqProfile,
@@ -403,7 +403,7 @@ def _calculate_and_store_distances(
         for x in new_profiles_list
     ]
     with service.repository.uow() as uow:
-        created_new: list[model.SeqDistance] = service.repository.crud(  # type: ignore[assignment]
+        created_new: list[model.SeqDistance] = service.repository.crud(
             uow,
             user_id,
             model.SeqDistance,
