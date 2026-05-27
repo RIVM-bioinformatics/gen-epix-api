@@ -543,6 +543,8 @@ class App:
                     ),
                 }
             if kwargs:
+                if self._log_summarization_enabled:
+                    kwargs = self._summarise_command_object_for_log(kwargs)
                 content = {**content, **kwargs}
         else:
             content = kwargs
@@ -566,6 +568,8 @@ class App:
         payload within downstream log-sink size constraints."""
 
         def _walk(obj: Any) -> Any:
+            if isinstance(obj, Exception):
+                obj = str(obj)
             if isinstance(obj, dict):
                 if len(obj) > self._log_max_dict_items:
                     return {
