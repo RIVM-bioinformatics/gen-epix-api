@@ -181,7 +181,8 @@ class CaseCohortIds(Model):
     )
     case_id: UUID = Field(description="The ID of the case.")
     cohort_ids: list[UUID] = Field(
-        description="The IDs of the cohorts linked to this case."
+        default_factory=list,
+        description="The IDs of the omopdb cohorts linked to this case.",
     )
 
 

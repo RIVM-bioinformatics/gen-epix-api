@@ -513,6 +513,16 @@ class Run:
             ]
         )
 
+    def test_casedb_unit_upload(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/casedb/unit/upload",
+            ]
+        )
+
     def test_casedb_unit_col_order(self) -> None:
         import pytest
 

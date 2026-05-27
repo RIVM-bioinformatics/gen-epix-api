@@ -28,6 +28,8 @@ dependencies = [
     "starlette==1.0.*",
     "httpx==0.28.1",
     "pyjwt==2.12.1",
+    "cryptography==46.0.6",
+    "oauthlib==3.3.1",
     "urllib3==2.6.3",
     "sqlalchemy==2.0.48",
     "sqlalchemy_utils==0.42.1",
@@ -44,6 +46,8 @@ dependencies = [
     "python-dateutil==2.9.0.post0",
     "types-python-dateutil==2.9.*",
     "types-setuptools==82.0.*",
+    "cryptography==46.0.4",
+    "oauthlib==3.3.1",
     "python-multipart==0.0.22",
 ]
 
