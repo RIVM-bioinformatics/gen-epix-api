@@ -1618,7 +1618,6 @@ class Test9Child2Identifiers(BaseUploadTestCase):
             [existing_identifier],  # The existing Identifiers
         ]
         self.service.repository.crud.side_effect = [
-            [True],  # Child exists
             [created_parent_id],  # Create parent
             [existing_child],  # Existing child for update check
         ]
@@ -1669,7 +1668,6 @@ class Test9Child2Identifiers(BaseUploadTestCase):
             [existing_identifier],  # The existing Identifiers
         ]
         self.service.repository.crud.side_effect = [
-            [True],  # Child exists
             [created_parent_id],  # Create parent
             [existing_child],  # Existing child for update check
         ]
@@ -1811,7 +1809,6 @@ class Test9Child2Identifiers(BaseUploadTestCase):
             self.random_ids[2],  # Spare ID in case another Identifier is created
         ]
         self.service.repository.crud.side_effect = [
-            [True],  # Child exists
             [created_parent_id],  # Create parent
             [existing_child],  # Existing child for update check
         ]

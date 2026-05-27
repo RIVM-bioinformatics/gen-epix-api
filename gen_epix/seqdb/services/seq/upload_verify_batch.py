@@ -185,50 +185,34 @@ def _verify_children_seq_classifications(
         model.SeqCategory,
     )
 
-    # --- Primary lookup: seq_id known → key = (seq_id, protocol_id) ---
-    seq_ids = list(
-        {
-            cast(UUID, y.seq_id)
-            for x in samples
-            for y in x.seq_classifications or []
-            if not self.is_null(y.seq_id)
-        }
+    # Single query on sample_id covers both the seq_id-keyed and the
+    # sample_id-keyed lookups. Results are split in Python: records with a
+    # non-null seq_id go into existing_map (keyed by (seq_id, protocol_id));
+    # records stored with seq_id=None go into null_seq_existing_map (keyed by
+    # (sample_id, protocol_id)), matching the original two-query semantics.
+    all_sc_sample_ids = frozenset(
+        y.sample_id
+        for x in samples
+        for y in x.seq_classifications or []
+        if not self.is_null(y.sample_id)
     )
     existing_map: dict[tuple[UUID, UUID], UUID] = {}
-    if seq_ids:
-        result_iter = self.service.repository.read_fields(
-            uow,
-            user_id,
-            model.SeqClassification,
-            ["seq_id", "protocol_id", "id"],
-            filter=UuidSetFilter(key="seq_id", members=frozenset(seq_ids)),
-        )
-        existing_map = {(x[0], x[1]): x[2] for x in result_iter}
-
-    # --- Fallback lookup: seq_id None → key = (sample_id, protocol_id) ---
-    # Only records stored with seq_id=None are considered to avoid false matches.
-    null_seq_sample_ids = list(
-        {
-            y.sample_id
-            for x in samples
-            for y in x.seq_classifications or []
-            if self.is_null(y.seq_id) and not self.is_null(y.sample_id)
-        }
-    )
     null_seq_existing_map: dict[tuple[UUID, UUID], UUID] = {}
-    if null_seq_sample_ids:
+    if all_sc_sample_ids:
         result_iter = self.service.repository.read_fields(
             uow,
             user_id,
             model.SeqClassification,
-            ["sample_id", "protocol_id", "id", "seq_id"],
+            ["sample_id", "seq_id", "protocol_id", "id"],
             filter=UuidSetFilter(
-                key="sample_id", members=frozenset(null_seq_sample_ids)
+                key="sample_id", members=all_sc_sample_ids
             ),
         )
-        null_seq_existing_map = {
-            (x[0], x[1]): x[2] for x in result_iter if x[3] is None
-        }
+        for sc_sample_id, sc_seq_id, sc_protocol_id, sc_id in result_iter:
+            if sc_seq_id is None:
+                null_seq_existing_map[(sc_sample_id, sc_protocol_id)] = sc_id
+            else:
+                existing_map[(cast(UUID, sc_seq_id), sc_protocol_id)] = sc_id
 
     if not existing_map and not null_seq_existing_map:
         return success

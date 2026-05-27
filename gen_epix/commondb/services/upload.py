@@ -612,13 +612,15 @@ class BatchUploader:
                             f"entries in the batch (parents: {parent_ids_str}).",
                         )
 
-            children_exist = self.objects_exist(
-                uow, user_id, child_model_class, child_ids
+            # Single read_fields replaces the old EXISTS_SOME + read_fields pair.
+            # Presence in the result means the child exists; absence means new.
+            # Duplicate-nulled entries (None) are excluded from the query and
+            # correctly map to children_exist=False via the `in` check below.
+            actual_child_ids = frozenset(
+                x for x in child_ids if not self.is_null(x)
             )
-
-            # Get (id, parent_id) for all existing ids
             child_parent_id_map: dict[UUID, UUID] = {}
-            if any(children_exist):
+            if actual_child_ids:
                 result_iter = self.service.repository.read_fields(
                     uow,
                     user_id,
@@ -626,12 +628,14 @@ class BatchUploader:
                     [child_id_field_name, child_parent_id_field_name],
                     filter=UuidSetFilter(
                         key=child_id_field_name,
-                        members=frozenset(
-                            [x for x, y in zip(child_ids, children_exist) if y]
-                        ),
+                        members=actual_child_ids,
                     ),
                 )
                 child_parent_id_map = {x[0]: x[1] for x in result_iter}
+            children_exist = [
+                not self.is_null(x) and x in child_parent_id_map
+                for x in child_ids
+            ]
 
             # Process all children (both with and without IDs)
             for (
