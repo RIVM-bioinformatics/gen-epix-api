@@ -486,7 +486,7 @@ class App:
         log_code = "e94cad9b"
         if self._logger.level <= logging.DEBUG:
             self._logger.debug(
-                self.create_log_message(log_code, "STARTED_COMMAND", cmd=cmd)
+                self.create_log_message(log_code, "STARTED_COMMAND", add_debug_info=self._log_cmd_object_on_error, cmd=cmd)
             )
         elif is_initial_command:
             self._logger.info(
