@@ -56,35 +56,40 @@ class SAUnitOfWork(BaseUnitOfWork):
         if issubclass(exception_class, AttributeError):
             raise exception_value
         if issubclass(exception_class, PydanticValidationError):
+            # Suppress context — the original Pydantic error may include field
+            # values (e.g. DNA sequences) in its str representation.
             raise ValueError(
                 f"Model validation error: {str(exception_value)}"
-            ).with_traceback(traceback)
+            ) from None
         if issubclass(exception_class, sa_exc.IntegrityError):
             # Use str() for keyword detection (reliable across DB backends) but
             # orig for the message — str() includes [SQL:] and [parameters:] which
             # can contain large payloads like DNA sequences.
+            # Suppress context for the same reason.
             exc_upper = str(exception_value).upper()
             orig_msg = str(getattr(exception_value, "orig", exception_value))
             if "UNIQUE" in exc_upper:
                 raise exc.UniqueConstraintViolationError(
                     "e2cabb6c",
                     f"Unique constraint violation: {orig_msg}",
-                )
+                ) from None
             elif "NOT NULL" in exc_upper:
                 raise exc.NotNullConstraintViolationError(
                     "f8368798",
                     f"Not null constraint violation: {orig_msg}",
-                )
+                ) from None
             elif "FOREIGN KEY" in exc_upper:
                 raise exc.LinkConstraintViolationError(
                     "eba3198a",
                     f"Foreign key constraint violation: {orig_msg}",
-                )
+                ) from None
             else:
-                raise NotImplementedError().with_traceback(traceback)
+                raise NotImplementedError() from None
         if issubclass(exception_class, sa_exc.StatementError):
             orig_msg = str(getattr(exception_value, "orig", exception_value))
-            raise ValueError(f"Statement error: {orig_msg}").with_traceback(traceback)
+            # Suppress context — the original SA exception includes [SQL:] and
+            # [parameters:] in its str representation.
+            raise ValueError(f"Statement error: {orig_msg}") from None
         raise NotImplementedError().with_traceback(traceback)
 
     def __enter__(self) -> Self:

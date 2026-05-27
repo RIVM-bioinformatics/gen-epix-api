@@ -90,6 +90,7 @@ class App:
             EventTiming, dict[type[Command], list[Callable[[Command, Any], None]]]
         ] = {x: {} for x in EventTiming}
         self._command_stack: list[Command] = []
+        self._log_cmd_object_on_error: bool = True
         self._init_log_settings()
 
         # Log start
@@ -399,7 +400,9 @@ class App:
             if self._logger:
                 self._logger.error(
                     self.create_log_message(
-                        "f3c7a1d9", "SERVICE_EXCEPTION", cmd=cmd, exception=exception
+                        "f3c7a1d9", "SERVICE_EXCEPTION",
+                        add_debug_info=self._log_cmd_object_on_error,
+                        cmd=cmd, exception=exception,
                     ),
                     exc_info=True,
                 )
@@ -410,7 +413,9 @@ class App:
             if self._logger:
                 self._logger.warning(
                     self.create_log_message(
-                        "e8891b42", "DOMAIN_EXCEPTION", cmd=cmd, exception=exception
+                        "e8891b42", "DOMAIN_EXCEPTION",
+                        add_debug_info=self._log_cmd_object_on_error,
+                        cmd=cmd, exception=exception,
                     )
                 )
             self._command_stack.pop()
@@ -420,7 +425,9 @@ class App:
             if self._logger:
                 self._logger.error(
                     self.create_log_message(
-                        "b575040c", "ERROR", cmd=cmd, exception=exception
+                        "b575040c", "ERROR",
+                        add_debug_info=self._log_cmd_object_on_error,
+                        cmd=cmd, exception=exception,
                     ),
                     exc_info=True,
                     stack_info=True,
@@ -436,7 +443,9 @@ class App:
             if self._logger:
                 self._logger.error(
                     self.create_log_message(
-                        "ad536c0b", "ERROR", cmd=cmd, exception=exception
+                        "ad536c0b", "ERROR",
+                        add_debug_info=self._log_cmd_object_on_error,
+                        cmd=cmd, exception=exception,
                     ),
                     exc_info=True,
                     stack_info=True,
@@ -463,7 +472,9 @@ class App:
             if self._logger:
                 self._logger.error(
                     self.create_log_message(
-                        "abd561ff", "ERROR", cmd=cmd, exception=exception
+                        "abd561ff", "ERROR",
+                        add_debug_info=self._log_cmd_object_on_error,
+                        cmd=cmd, exception=exception,
                     ),
                     exc_info=True,
                     stack_info=True,
