@@ -52,6 +52,8 @@ def _update_profile_distances(
     the same positional order as the upload objects.  We zip the two to patch the
     correct ID onto each profile before dispatching the distance command.
     """
+    if not cmd.calculate_distances:
+        return True
     success = True
     user = cmd.user if cmd.user else None
     seq_profiles: list[model.SeqProfileForUpload] = []

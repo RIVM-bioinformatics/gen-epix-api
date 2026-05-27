@@ -1259,6 +1259,33 @@ class TestConcurrentModificationError(BaseUploadTestCase):
         # Sample result must not be FAILED.
         self.assertNotEqual(profile_result.status, EtlStatus.FAILED)
 
+    def test_calculate_distances_false_skips_distance_calculation(self) -> None:
+        """When calculate_distances=False, _update_profile_distances returns early
+        without calling app.handle, so no SeqDistance records are created."""
+        from gen_epix.seqdb.services.seq.upload_upsert_batch import (
+            _update_profile_distances,
+        )
+
+        profile = self.create_seq_profile_for_upload(sample_id=self.sample_id)
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id, seq_profiles=[profile]
+        )
+        cmd, batch_result = self.create_command_and_result_for_samples(sample)
+        cmd = cmd.model_copy(update={"calculate_distances": False})
+
+        # Simulate a freshly written profile so it would normally be collected.
+        profile_result = batch_result.samples[0].seq_profiles[0]
+        profile_result.status = EtlStatus.CREATED
+        profile_result.id = uuid4()
+
+        success = _update_profile_distances(
+            self.batch_uploader, cmd, batch_result, self.uow
+        )
+
+        self.assertTrue(success)
+        self.assertIsNone(batch_result.seq_distances)
+        self.service.app.handle.assert_not_called()
+
 
 @pytest.mark.scenario_ids("TC-11-14-01")
 class TestVerifyBatchSeqClassifications(BaseUploadTestCase):

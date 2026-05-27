@@ -41,6 +41,14 @@ class UploadSamplesCommand(Command, UploadBatchCommandMixin):
     sample_batch: model.SampleBatchForUpload = Field(
         description="Samples to upload, along with any associated data.",
     )
+    calculate_distances: bool = Field(
+        default=True,
+        description=(
+            "If False, skip distance calculation for newly uploaded profiles. "
+            "Callers uploading many batches in bulk should set this to False and call "
+            "UpdateSeqDistancesCommand once at the end."
+        ),
+    )
     seq_distance_last_modified_at: datetime.datetime | None = Field(
         default=None,
         description=(

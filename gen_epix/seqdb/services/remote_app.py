@@ -6,6 +6,7 @@ from uuid import UUID
 import httpx
 
 from gen_epix.commondb.services.remote_app import CommondbRemoteApp
+from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.model import Command
 from gen_epix.seqdb.api import (
     CalculatePhylogeneticTreeRequestBody,
@@ -16,7 +17,7 @@ from gen_epix.seqdb.api import (
     RetrieveSeqFastaRequestBody,
     RetrieveSimilarProfilesRequestBody,
 )
-from gen_epix.seqdb.domain import DOMAIN, command, model
+from gen_epix.seqdb.domain import DOMAIN, command, enum, model
 
 
 class SeqdbRemoteApp(CommondbRemoteApp):
@@ -32,6 +33,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         command.RetrieveSeqFastaCommand: "/retrieve/seq_fasta",
         command.CreateFileCommand: "/create/file",
         command.RetrieveSimilarProfilesCommand: "/retrieve/similar_profiles",
+        command.UpdateSeqDistancesCommand: "/update/seq_distances",
         command.UploadSamplesCommand: "/upload/samples",
         command.RetrieveSampleIdentifiersByIdCommand: "/retrieve/sample_identifiers_by_ids",
         command.RetrieveSamplesByIdCommand: "/retrieve/samples_by_ids",
@@ -78,6 +80,10 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         self.register_handler(
             command.RetrieveSimilarProfilesCommand,
             self.retrieve_similar_profiles,
+        )
+        self.register_handler(
+            command.UpdateSeqDistancesCommand,
+            self.update_seq_distances,
         )
         self.register_handler(
             command.UploadSamplesCommand,
@@ -256,6 +262,32 @@ class SeqdbRemoteApp(CommondbRemoteApp):
             response.raise_for_status()
             data = response.json()
         return model.SampleQueryResult(**data)
+
+    def update_seq_distances(
+        self,
+        cmd: command.UpdateSeqDistancesCommand,
+    ) -> list[model.CalculateSeqDistancesResult]:
+        headers = self.get_headers(cmd)
+        route = self.get_route(cmd)
+        with self.get_client(cmd) as client:
+            response = client.post(
+                route,
+                json=json.loads(cmd.model_dump_json()),
+                headers=headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+        return [model.CalculateSeqDistancesResult(**item) for item in data]
+
+    def retrieve_seq_distance_protocol_ids(self) -> list[UUID]:
+        protocols: list[model.Protocol] = self.handle(
+            command.ProtocolCrudCommand(operation=CrudOperation.READ_ALL)
+        )
+        return [
+            p.id
+            for p in protocols
+            if p.protocol_type == enum.ProtocolType.SEQ_DISTANCE and p.id is not None
+        ]
 
     def upload_samples(
         self,
