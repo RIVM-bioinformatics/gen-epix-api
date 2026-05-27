@@ -60,27 +60,31 @@ class SAUnitOfWork(BaseUnitOfWork):
                 f"Model validation error: {str(exception_value)}"
             ).with_traceback(traceback)
         if issubclass(exception_class, sa_exc.IntegrityError):
-            if "UNIQUE" in str(exception_value).upper():
+            # Use str() for keyword detection (reliable across DB backends) but
+            # orig for the message — str() includes [SQL:] and [parameters:] which
+            # can contain large payloads like DNA sequences.
+            exc_upper = str(exception_value).upper()
+            orig_msg = str(getattr(exception_value, "orig", exception_value))
+            if "UNIQUE" in exc_upper:
                 raise exc.UniqueConstraintViolationError(
                     "e2cabb6c",
-                    f"Unique constraint violation: {str(exception_value)}",
+                    f"Unique constraint violation: {orig_msg}",
                 )
-            elif "NOT NULL" in str(exception_value).upper():
+            elif "NOT NULL" in exc_upper:
                 raise exc.NotNullConstraintViolationError(
                     "f8368798",
-                    f"Not null constraint violation: {str(exception_value)}",
+                    f"Not null constraint violation: {orig_msg}",
                 )
-            elif "FOREIGN KEY" in str(exception_value).upper():
+            elif "FOREIGN KEY" in exc_upper:
                 raise exc.LinkConstraintViolationError(
                     "eba3198a",
-                    f"Foreign key constraint violation: {str(exception_value)}",
+                    f"Foreign key constraint violation: {orig_msg}",
                 )
             else:
                 raise NotImplementedError().with_traceback(traceback)
         if issubclass(exception_class, sa_exc.StatementError):
-            raise ValueError(f"Statement error: {str(exception_value)}").with_traceback(
-                traceback
-            )
+            orig_msg = str(getattr(exception_value, "orig", exception_value))
+            raise ValueError(f"Statement error: {orig_msg}").with_traceback(traceback)
         raise NotImplementedError().with_traceback(traceback)
 
     def __enter__(self) -> Self:
