@@ -1066,9 +1066,10 @@ class TestVerifyReferenceData(BaseUploadTestCase):
 
         success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
-        # All alleles exist, extra_allele is superfluous → warning only, success expected
-        # Exact warning mechanism may vary; just verify no crash and success returned
-        # TODO: Update this test when warning behavior is clarified
+        # All profile alleles exist → else-branch clears provided_alleles; extra_allele
+        # is dropped silently so _create_sample_refdata skips the wasteful UPSERT_SOME.
+        self.assertTrue(success)
+        self.assertEqual(cmd.sample_batch.alleles, [])
 
     def test_verify_refdata_skipped_samples_ignored(self) -> None:
         """Test that _verify_refdata ignores samples with FAILED/SKIPPED status."""

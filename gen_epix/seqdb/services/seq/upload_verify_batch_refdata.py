@@ -265,6 +265,15 @@ def _verify_batch_refdata_allele_profiles(
         for index in sorted(extra_allele_indexes, reverse=True):
             del provided_alleles[index]
 
+    else:
+        # Every allele referenced in every profile is already stored. Any allele
+        # sequences included in the upload payload are redundant — drop them so
+        # _create_sample_refdata does not call UPSERT_SOME and trigger an
+        # expensive full-row reload of up to 3004 immutable allele records.
+        provided_alleles = cmd.sample_batch.alleles
+        if provided_alleles:
+            del provided_alleles[:]
+
     return success
 
 
