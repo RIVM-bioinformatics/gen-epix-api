@@ -200,6 +200,8 @@ class SeqSARepository(SARepository, BaseSeqRepository):
             sa_model.SeqDistance.protocol_id == protocol_id
         )
         if profile_ids is not None:
+            if not profile_ids:
+                return  # IN() with empty list is invalid SQL Server syntax
             stmt = stmt.where(
                 sa_model.SeqDistance.seq_profile_id.in_(profile_ids)
             )

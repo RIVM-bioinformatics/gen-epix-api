@@ -339,11 +339,13 @@ def _calculate_and_store_distances(
                 )
             )
 
-    # Process existing profiles in chunks.
+    # Process existing profiles in chunks to cap peak memory use.
     # SQL Server caps parameterized queries at 2100 parameters; chunks of
     # ≤2000 keep READ_SOME safe without optimize_parameter_handling.
-    # When existing_chunk_size is None, one chunk holds all IDs and the
-    # optimize_parameter_handling guard below still applies.
+    # iter_seq_distances is always called without a profile_ids filter to
+    # avoid SQL Server ODBC (07002) issues with IN() on uniqueidentifier
+    # FK columns; existing_profile_map.get() filters non-chunk rows in
+    # Python instead.
     # TODO: make read_some auto-select optimize_parameter_handling when
     #   len(obj_ids) > 2000 so callers don't need to know about this limit.
     for chunk_ids in _chunk_profile_ids(existing_profile_ids, existing_chunk_size):
@@ -362,10 +364,14 @@ def _calculate_and_store_distances(
             x.id: x for x in existing_profiles_list if x.id is not None
         }
 
+        # Never pass profile_ids to iter_seq_distances here: IN() with
+        # UUID parameters causes 07002 on SQL Server ODBC regardless of
+        # list size. existing_profile_map.get() already filters non-chunk
+        # records in Python, so the result is identical.
         modified_existing: list[model.SeqDistance] = []
         with service.repository.uow() as uow:
             for existing_seq_distance in service.repository.iter_seq_distances(  # type: ignore[attr-defined]
-                uow, protocol.id, profile_ids=chunk_ids
+                uow, protocol.id
             ):
                 assert isinstance(existing_seq_distance, model.SeqDistance)
                 profile = existing_profile_map.get(
