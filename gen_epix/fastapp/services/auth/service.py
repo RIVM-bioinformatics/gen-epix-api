@@ -679,7 +679,7 @@ class AuthService(BaseAuthService):
                 )
 
             raise exc.UnauthorizedAuthError(
-                "f14da79c", "User does not exist and auto-creation is disabled"
+                "f14da79c", f"User ({user_key}) does not exist and auto-creation is disabled"
             )
 
     def _auto_create_new_user(
@@ -694,7 +694,7 @@ class AuthService(BaseAuthService):
             user = user_manager.auto_create_new_user(claims.claims)
             if user is None:
                 raise exc.UnauthorizedAuthError(
-                    "61a09279", "Failed to auto-create user from claims"
+                    "61a09279", f"Failed to auto-create user ({user_key}) from claims"
                 )
             if self._logger:
                 self._logger.info(
@@ -720,7 +720,7 @@ class AuthService(BaseAuthService):
                     )
                 )
             raise exc.UnauthorizedAuthError(
-                "daa7920f", "Failed to auto-create user from claims"
+                "daa7920f", f"Failed to auto-create user ({user_key}) from claims"
             )
 
     def _generate_user_key_from_claims(
