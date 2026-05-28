@@ -625,6 +625,9 @@ class SARepository(BaseRepository):
         objs = objs if isinstance(objs, list) else list(objs)
         session: Session = kwargs.get("session")  # type: ignore[assignment]
         flush = kwargs.get("flush", True)
+        optimize_parameter_handling: bool = bool(
+            kwargs.get("optimize_parameter_handling", False)
+        )
         # Retrieve row
         mapper = self.get_mapper(model_class)
         row_class = mapper.row_class
@@ -632,7 +635,8 @@ class SARepository(BaseRepository):
         def _execute(session: Session) -> list[Model]:
             obj_ids = [mapper.get_id(x) for x in objs]
             rows, row_ids = SARepository._in_session_read_some(
-                mapper, session, row_class, obj_ids
+                mapper, session, row_class, obj_ids,
+                optimize_parameter_handling=optimize_parameter_handling,
             )
             map_rows = dict(zip(row_ids, rows))
             for obj in objs:
@@ -1190,11 +1194,13 @@ class SARepository(BaseRepository):
                 session.execute(sa.insert(temp_table_obj), values)
                 session.flush()
         else:
-            raise NotImplementedError(
-                "Only MS SQL Server is supported by _select_with_id_join"
-            )
+            # Non-mssql dialects (e.g. SQLite) don't have the ODBC 07002
+            # IN() / UNIQUEIDENTIFIER bind issue — fall back to a plain
+            # IN() filter so optimize_parameter_handling=True is safe in
+            # tests and on other backends.
+            return select(row_class).where(get_row_id(row_class).in_(obj_ids))
 
-        # Select with join to restrict to ids passed
+        # Select with join to restrict to ids passed (mssql temp-table path)
         sql_select = select(row_class).join(
             temp_table_obj,
             row_class.__table__.c[id_col_name] == temp_table_obj.c[id_col_name],

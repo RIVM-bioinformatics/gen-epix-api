@@ -291,9 +291,7 @@ def seq_service_update_seq_distances(
     return results
 
 
-def _chunk_profile_ids(
-    ids: list[UUID], chunk_size: int | None
-) -> list[list[UUID]]:
+def _chunk_profile_ids(ids: list[UUID], chunk_size: int | None) -> list[list[UUID]]:
     """Split *ids* into sub-lists of at most *chunk_size*.
 
     Returns ``[ids]`` when *chunk_size* is ``None`` (no
@@ -498,8 +496,11 @@ def _calculate_and_store_distances(
     # their distance records at a time.
     # Each chunk opens its own unit of work so it can be committed
     # independently — see the TODO below for the atomicity trade-off.
-    # SQL Server caps parameterised IN() at 2100 tokens; chunks of ≤2000
-    # keep READ_SOME within that limit without optimize_parameter_handling.
+    # optimize_parameter_handling=True uses a temp-table JOIN on mssql
+    # instead of IN() — required because IN() on UNIQUEIDENTIFIER FK
+    # columns via pyodbc raises ODBC 07002 regardless of list size.
+    # On other dialects (SQLite) _select_with_id_join falls back to IN()
+    # so this flag is safe to set unconditionally.
     for chunk_ids in _chunk_profile_ids(existing_profile_ids, existing_chunk_size):
 
         # Step 4a — Fetch SeqProfile objects for this chunk only.
@@ -517,7 +518,7 @@ def _calculate_and_store_distances(
                     model.SeqProfile,
                     CrudOperation.READ_SOME,
                     obj_ids=chunk_ids,
-                    optimize_parameter_handling=len(chunk_ids) > 2000,
+                    optimize_parameter_handling=True,
                 )
             )
 
@@ -540,9 +541,7 @@ def _calculate_and_store_distances(
                 chunk_uow, protocol.id, profile_ids=chunk_ids
             ):
                 assert isinstance(existing_seq_distance, model.SeqDistance)
-                profile = existing_profile_map.get(
-                    existing_seq_distance.seq_profile_id
-                )
+                profile = existing_profile_map.get(existing_seq_distance.seq_profile_id)
                 # Should not happen with a correct chunk filter, but the DB
                 # could return a record whose profile was deleted between the
                 # READ_SOME and this query — skip it rather than crash.
@@ -590,6 +589,8 @@ def _calculate_and_store_distances(
                     existing_seq_distance.content = json.dumps(distance_map)
                     modified_existing.append(existing_seq_distance)
 
+        # TODO: update all the existing ones only at the end after processing all chunks,
+        # rather than once per chunk.
         # Step 4d — Flush modified records for this chunk before moving on.
         # Committing per chunk bounds the UPDATE_SOME write-batch size and
         # releases the modified SeqDistance objects from memory, keeping
@@ -602,6 +603,7 @@ def _calculate_and_store_distances(
                     model.SeqDistance,
                     CrudOperation.UPDATE_SOME,
                     objs=modified_existing,
+                    optimize_parameter_handling=True,
                 )
             results.extend(
                 model.CalculateSeqDistancesResult(
