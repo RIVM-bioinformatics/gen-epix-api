@@ -1,7 +1,7 @@
 import json
 from collections.abc import Iterable
 from datetime import datetime
-from typing import cast
+from typing import Any, cast
 from uuid import UUID
 
 import numpy as np
@@ -280,6 +280,56 @@ def _chunk_profile_ids(
     return [ids[i : i + chunk_size] for i in range(0, len(ids), chunk_size)]
 
 
+def _decode_profile(
+    seq_profile_type: enum.SeqProfileType,
+    profile: model.SeqProfile,
+) -> Any:
+    """Return pre-decoded profile data for distance computation.
+
+    ALLELE → list[bytes | None] (16-byte chunks, one per locus)
+    MLVA   → list[int] (repeat numbers)
+    SNP    → str (aligned nucleotide sequence)
+    """
+    if seq_profile_type == enum.SeqProfileType.ALLELE:
+        return profile.get_allele_id_bytes()
+    if seq_profile_type == enum.SeqProfileType.MLVA:
+        return profile.get_repeat_numbers()
+    if seq_profile_type == enum.SeqProfileType.SNP:
+        return profile.get_aligned_nucleotide_seq()
+    raise NotImplementedError(
+        f"Distance calculation not implemented for {seq_profile_type}"
+    )
+
+
+def _distance_from_decoded(
+    seq_profile_type: enum.SeqProfileType,
+    data1: Any,
+    data2: Any,
+) -> float:
+    """Compute distance from pre-decoded profile data.
+
+    Accepts the values produced by ``_decode_profile``; avoids
+    repeated b64decode / json.loads inside tight comparison loops.
+    """
+    if seq_profile_type == enum.SeqProfileType.ALLELE:
+        return float(
+            sum(
+                1
+                for x, y in zip(data1, data2)
+                if x != y and x is not None and y is not None
+            )
+        )
+    if seq_profile_type == enum.SeqProfileType.MLVA:
+        return float(sum(1 for x, y in zip(data1, data2) if x != y))
+    if seq_profile_type == enum.SeqProfileType.SNP:
+        return float(
+            np.count_nonzero(np.array(list(data1)) != np.array(list(data2)))
+        )
+    raise NotImplementedError(
+        f"Distance calculation not implemented for {seq_profile_type}"
+    )
+
+
 def _calculate_and_store_distances(
     service: BaseSeqService,
     user_id: UUID | None,
@@ -312,6 +362,12 @@ def _calculate_and_store_distances(
     new_profile_distance_maps: dict[UUID, dict[str, float]] = {
         x.id: {} for x in new_profiles_list  # type: ignore[misc]
     }
+    # Pre-decode new profiles once; reused across all chunks and the
+    # intra-batch pass to avoid repeated b64decode / json.loads per
+    # comparison.
+    new_profiles_decoded: list[Any] = [
+        _decode_profile(seq_profile_type, p) for p in new_profiles_list
+    ]
 
     # Collect profile IDs + concurrency check
     with service.repository.uow() as uow:
@@ -371,22 +427,25 @@ def _calculate_and_store_distances(
                 )
                 if profile is None:
                     continue
-                distance_map = json.loads(existing_seq_distance.content)
-                modified = False
-                for new_profile in new_profiles_list:
+                existing_decoded = _decode_profile(seq_profile_type, profile)
+                updates: dict[str, float] = {}
+                for new_profile, new_decoded in zip(
+                    new_profiles_list, new_profiles_decoded
+                ):
                     assert new_profile.id is not None
-                    distance = _calculate_profile_distance(
+                    distance = _distance_from_decoded(
                         seq_profile_type,
-                        profile,
-                        new_profile,
+                        existing_decoded,
+                        new_decoded,
                     )
                     if distance <= max_stored_distance:
-                        distance_map[str(new_profile.id)] = distance
+                        updates[str(new_profile.id)] = distance
                         new_profile_distance_maps[new_profile.id][
                             str(profile.id)
                         ] = distance
-                        modified = True
-                if modified:
+                if updates:
+                    distance_map = json.loads(existing_seq_distance.content)
+                    distance_map.update(updates)
                     existing_seq_distance.content = json.dumps(distance_map)
                     modified_existing.append(existing_seq_distance)
 
@@ -459,14 +518,15 @@ def _compute_intra_batch_distances(
     Compute pairwise distances between profiles within
     a single batch and populate *distance_maps*.
     """
+    decoded = [_decode_profile(seq_profile_type, p) for p in profiles]
     for i in range(len(profiles)):
         for j in range(i + 1, len(profiles)):
             p_i = profiles[i]
             p_j = profiles[j]
-            distance = _calculate_profile_distance(
+            distance = _distance_from_decoded(
                 seq_profile_type,
-                p_i,
-                p_j,
+                decoded[i],
+                decoded[j],
             )
             if distance <= max_stored_distance:
                 distance_maps[p_i.id][str(p_j.id)] = distance  # type: ignore[index]
