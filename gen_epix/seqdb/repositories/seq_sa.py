@@ -2,9 +2,10 @@ from collections.abc import Iterable
 from collections.abc import Set as AbstractSet
 from datetime import datetime
 from typing import Any, cast
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import sqlalchemy as sa
+from sqlalchemy.orm import Session
 
 import gen_epix.seqdb.repositories.sa_model as sa_model
 from gen_epix.fastapp import BaseUnitOfWork
@@ -190,23 +191,67 @@ class SeqSARepository(SARepository, BaseSeqRepository):
 
         return list(matching_profile_ids - set(profile_ids))
 
+    @staticmethod
+    def _create_profile_filter_temp_table(
+        session: Session,
+        profile_ids: list[UUID],
+    ) -> sa.Table:
+        """Create a temp table for seq_profile_id filtering.
+
+        IN() on uniqueidentifier FK columns via pyodbc raises ODBC 07002
+        regardless of list size; a temp-table JOIN avoids the parameter
+        binding entirely. Only called on mssql dialects.
+        """
+        temp_name = f"#sdist_{uuid4().hex}"
+        col_name = "seq_profile_id"
+        col_type = sa_model.SeqDistance.__table__.c[col_name].type
+        dialect = session.get_bind().dialect
+        col_sql = col_type.compile(dialect=dialect)
+        temp_table = sa.Table(
+            temp_name,
+            sa_model.SeqDistance.metadata,
+            sa.Column(col_name, col_type),
+        )
+        session.execute(
+            sa.text(f"CREATE TABLE {temp_name} ({col_name} {col_sql})")
+        )
+        batch_size = 1000
+        for i in range(0, len(profile_ids), batch_size):
+            values = [
+                {col_name: pid}
+                for pid in profile_ids[i : i + batch_size]
+            ]
+            session.execute(sa.insert(temp_table), values)
+            session.flush()
+        return temp_table
+
     def iter_seq_distances(
         self,
         uow: BaseUnitOfWork,
         protocol_id: UUID,
         profile_ids: list[UUID] | None = None,
     ) -> Iterable[model.SeqDistance]:
+        assert isinstance(uow, SAUnitOfWork)
         stmt = sa.select(sa_model.SeqDistance).where(
             sa_model.SeqDistance.protocol_id == protocol_id
         )
         if profile_ids is not None:
             if not profile_ids:
                 return  # IN() with empty list is invalid SQL Server syntax
-            stmt = stmt.where(
-                sa_model.SeqDistance.seq_profile_id.in_(profile_ids)
-            )
+            if uow.session.get_bind().dialect.name == "mssql":
+                temp_table = self._create_profile_filter_temp_table(
+                    uow.session, profile_ids
+                )
+                stmt = stmt.join(
+                    temp_table,
+                    sa_model.SeqDistance.seq_profile_id
+                    == temp_table.c.seq_profile_id,
+                )
+            else:
+                stmt = stmt.where(
+                    sa_model.SeqDistance.seq_profile_id.in_(profile_ids)
+                )
         mapper = self.get_mapper(model.SeqDistance)
-        assert isinstance(uow, SAUnitOfWork)
         result_iterator = uow.session.execute(stmt)
         for row in result_iterator:
             sa_seq_distance: sa_model.SeqDistance = row[0]
