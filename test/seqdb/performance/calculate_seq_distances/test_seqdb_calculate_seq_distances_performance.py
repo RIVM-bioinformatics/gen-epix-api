@@ -20,6 +20,7 @@ from time import perf_counter
 from typing import Any
 from uuid import UUID
 
+import pyinstrument
 import pytest
 
 from gen_epix.commondb.domain.enum import AppType, EtlStatus
@@ -30,10 +31,10 @@ from gen_epix.seqdb.repositories.seq_dict import SeqDictRepository
 # Set to True to regenerate demo data, False to load from existing pickle file
 CREATE_DEMO_DATA = True
 
-N_SEQS_PER_BATCH = 100
-DB_ENTRY_COUNTS: list[int] = [1]  # ]2, 10]
+N_SEQS_PER_BATCH = 5
+DB_ENTRY_COUNTS: list[int] = [50]  # ]2, 10]
 
-SEQ_SETTINGS = SeqGenerationSettings(n_loci=1000, locus_length=100)
+SEQ_SETTINGS = SeqGenerationSettings(n_loci=3000, locus_length=500)
 
 SEQDB_APP_CFGS = get_app_cfgs(
     AppType.SEQDB,
@@ -157,8 +158,8 @@ class TestSampleBatchUploader:
 
         set_service_repository(env, self.repositories[dataset_idx])
 
-        # profiler = pyinstrument.Profiler(async_mode="enabled")
-        # profiler.start()
+        profiler = pyinstrument.Profiler(async_mode="enabled")
+        profiler.start()
 
         n_entries = len(self.dbs[dataset_idx][model.LocusSet])
         commands_to_upload: list[command.UploadSamplesCommand] = [
@@ -181,5 +182,5 @@ class TestSampleBatchUploader:
         print(f"total_time={total:.4f}s")
         print(f"avg_time_per_upload={avg:.4f}s\n")
 
-        # profiler.stop()
-        # profiler.write_html("./test/output/profile_calculate_seq_distances.html")
+        profiler.stop()
+        profiler.write_html("./test/output/profile_calculate_seq_distances.html")
