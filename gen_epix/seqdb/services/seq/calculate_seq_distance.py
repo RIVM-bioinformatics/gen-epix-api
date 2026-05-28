@@ -246,6 +246,8 @@ def seq_service_update_seq_distances(
     ]
     if not missing_profiles:
         return results
+    if cmd.max_new_profiles is not None:
+        missing_profiles = missing_profiles[: cmd.max_new_profiles]
 
     _calculate_and_store_distances(
         self,

@@ -34,6 +34,7 @@ class RetrieveSimilarProfilesRequestBody(PydanticBaseModel):
 
 class UpdateSeqDistancesRequestBody(PydanticBaseModel):
     protocol_id: UUID
+    max_new_profiles: int | None = None
 
 
 class RetrieveSamplesByIdsRequestBody(PydanticBaseModel):
@@ -260,6 +261,7 @@ def create_seq_endpoints(
                 command.UpdateSeqDistancesCommand(
                     user=user,
                     protocol_id=request_body.protocol_id,
+                    max_new_profiles=request_body.max_new_profiles,
                 )
             )
         except Exception as exception:

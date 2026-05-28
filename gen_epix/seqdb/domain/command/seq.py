@@ -107,6 +107,14 @@ class UpdateSeqDistancesCommand(Command):
     protocol_id: UUID = Field(
         description=("The ID of the seq distance protocol to update distances for."),
     )
+    max_new_profiles: int | None = Field(
+        default=None,
+        description=(
+            "If set, process at most this many missing profiles per call. "
+            "Call repeatedly until the result is empty to process all profiles "
+            "incrementally."
+        ),
+    )
 
 
 class CalculatePhylogeneticTreeCommand(Command):
