@@ -227,7 +227,7 @@ class CaseService(BaseCaseService):
 
     def retrieve_similar_cases(
         self, cmd: command.RetrieveSimilarCasesCommand
-    ) -> list[UUID]:
+    ) -> command.RetrieveSimilarCasesReturnValue:
         return case_service_retrieve_similar_cases(self, cmd)
 
     def retrieve_genetic_sequence_fasta_by_case(

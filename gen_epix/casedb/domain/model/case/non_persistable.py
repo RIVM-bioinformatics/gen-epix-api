@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from gen_epix import fastapp
 from gen_epix.commondb.domain.model import Model
@@ -283,3 +283,12 @@ class RefDataAccess(Model):
             key=field_name,
             members=members,
         )
+
+
+class CaseIdAndDate(BaseModel):
+    """
+    Represents a case with its ID and date.
+    """
+
+    id: UUID = Field(description="The case ID.")
+    case_date: datetime = Field(description="The case date, if any.")

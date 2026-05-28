@@ -484,7 +484,7 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
     def retrieve_similar_cases(
         self,
         cmd: command.RetrieveSimilarCasesCommand,
-    ) -> list[UUID]:
+    ) -> command.RetrieveSimilarCasesReturnValue:
         """Retrieve UUIDs of cases similar to specified case."""
         raise NotImplementedError()
 
