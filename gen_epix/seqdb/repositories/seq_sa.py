@@ -194,10 +194,15 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         self,
         uow: BaseUnitOfWork,
         protocol_id: UUID,
+        profile_ids: list[UUID] | None = None,
     ) -> Iterable[model.SeqDistance]:
         stmt = sa.select(sa_model.SeqDistance).where(
             sa_model.SeqDistance.protocol_id == protocol_id
         )
+        if profile_ids is not None:
+            stmt = stmt.where(
+                sa_model.SeqDistance.seq_profile_id.in_(profile_ids)
+            )
         mapper = self.get_mapper(model.SeqDistance)
         assert isinstance(uow, SAUnitOfWork)
         result_iterator = uow.session.execute(stmt)

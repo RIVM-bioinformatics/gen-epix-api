@@ -159,6 +159,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
                     new_profiles,
                     results,
                     cmd.seq_distance_last_modified_at,
+                    existing_chunk_size=cmd.existing_chunk_size,
                 )
 
     return results
@@ -257,9 +258,26 @@ def seq_service_update_seq_distances(
         missing_profiles,
         results,
         known_existing_profile_ids=list(existing_distance_profile_ids),
+        existing_chunk_size=cmd.existing_chunk_size,
     )
 
     return results
+
+
+def _chunk_profile_ids(
+    ids: list[UUID], chunk_size: int | None
+) -> list[list[UUID]]:
+    """Split *ids* into sub-lists of at most *chunk_size*.
+
+    Returns ``[ids]`` when *chunk_size* is ``None`` (no
+    chunking). Returns ``[]`` when *ids* is empty so
+    callers can skip the loop entirely.
+    """
+    if not ids:
+        return []
+    if chunk_size is None:
+        return [ids]
+    return [ids[i : i + chunk_size] for i in range(0, len(ids), chunk_size)]
 
 
 def _calculate_and_store_distances(
@@ -271,14 +289,21 @@ def _calculate_and_store_distances(
     results: list[model.CalculateSeqDistancesResult],
     seq_distance_last_modified_at: datetime | None = None,
     known_existing_profile_ids: list[UUID] | None = None,
+    existing_chunk_size: int | None = None,
 ) -> None:
     """
     Calculate distances between new_seq_profiles and all
     existing profiles for protocol, then persist updates
     and new records.
 
-    Existing SeqDistances are streamed (not fully
-    materialized) to reduce memory usage.
+    Existing profiles are processed in chunks of
+    ``existing_chunk_size`` (all at once when ``None``).
+    Within each chunk, SeqProfiles and their SeqDistance
+    records are loaded, distances computed, and modified
+    records persisted before moving to the next chunk.
+    New SeqDistance records are created once after all
+    chunks complete, so their maps accumulate contributions
+    from every existing profile.
     """
     max_stored_distance = protocol.max_stored_distance
     assert max_stored_distance is not None
@@ -288,7 +313,7 @@ def _calculate_and_store_distances(
         x.id: {} for x in new_profiles_list  # type: ignore[misc]
     }
 
-    # Collect profile IDs + concurrency
+    # Collect profile IDs + concurrency check
     with service.repository.uow() as uow:
         if seq_distance_last_modified_at is not None:
             max_modified = service.repository.get_max_seq_distance_modified_at(  # type: ignore[attr-defined]
@@ -314,56 +339,76 @@ def _calculate_and_store_distances(
                 )
             )
 
-    # Fetch profiles for distance calculation.
-    # SQL Server caps parameterized queries at 2100 parameters; use the
-    # temp-table join path when the ID list is large enough to exceed that.
+    # Process existing profiles in chunks.
+    # SQL Server caps parameterized queries at 2100 parameters; chunks of
+    # ≤2000 keep READ_SOME safe without optimize_parameter_handling.
+    # When existing_chunk_size is None, one chunk holds all IDs and the
+    # optimize_parameter_handling guard below still applies.
     # TODO: make read_some auto-select optimize_parameter_handling when
     #   len(obj_ids) > 2000 so callers don't need to know about this limit.
-    with service.repository.uow() as uow:
-        existing_profiles_list: list[model.SeqProfile] = (
-            service.repository.crud(  # type: ignore[assignment]
-                uow,
-                user_id,
-                model.SeqProfile,
-                CrudOperation.READ_SOME,
-                obj_ids=existing_profile_ids,
-                # TODO factor out limit to a constant or configuration
-                optimize_parameter_handling=len(existing_profile_ids) > 2000,
-            )
-            if existing_profile_ids
-            else []
-        )
-    existing_profile_map = {x.id: x for x in existing_profiles_list if x.id is not None}
-
-    # Stream SeqDistances and compute
-    modified_existing: list[model.SeqDistance] = []
-    with service.repository.uow() as uow:
-        existing_seq_distances_iterator: Iterable[model.SeqDistance] = (
-            service.repository.iter_seq_distances(uow, protocol.id)  # type: ignore[attr-defined]
-        )
-        for existing_seq_distance in existing_seq_distances_iterator:
-            assert isinstance(existing_seq_distance, model.SeqDistance)
-            profile = existing_profile_map.get(existing_seq_distance.seq_profile_id)
-            if profile is None:
-                continue
-            distance_map = json.loads(existing_seq_distance.content)
-            modified = False
-            for new_profile in new_profiles_list:
-                assert new_profile.id is not None
-                distance = _calculate_profile_distance(
-                    seq_profile_type,
-                    profile,
-                    new_profile,
+    for chunk_ids in _chunk_profile_ids(existing_profile_ids, existing_chunk_size):
+        with service.repository.uow() as uow:
+            existing_profiles_list: list[model.SeqProfile] = (
+                service.repository.crud(  # type: ignore[assignment]
+                    uow,
+                    user_id,
+                    model.SeqProfile,
+                    CrudOperation.READ_SOME,
+                    obj_ids=chunk_ids,
+                    optimize_parameter_handling=len(chunk_ids) > 2000,
                 )
-                if distance <= max_stored_distance:
-                    distance_map[str(new_profile.id)] = distance
-                    new_profile_distance_maps[new_profile.id][
-                        str(profile.id)
-                    ] = distance
-                    modified = True
-            if modified:
-                existing_seq_distance.content = json.dumps(distance_map)
-                modified_existing.append(existing_seq_distance)
+            )
+        existing_profile_map = {
+            x.id: x for x in existing_profiles_list if x.id is not None
+        }
+
+        modified_existing: list[model.SeqDistance] = []
+        with service.repository.uow() as uow:
+            for existing_seq_distance in service.repository.iter_seq_distances(  # type: ignore[attr-defined]
+                uow, protocol.id, profile_ids=chunk_ids
+            ):
+                assert isinstance(existing_seq_distance, model.SeqDistance)
+                profile = existing_profile_map.get(
+                    existing_seq_distance.seq_profile_id
+                )
+                if profile is None:
+                    continue
+                distance_map = json.loads(existing_seq_distance.content)
+                modified = False
+                for new_profile in new_profiles_list:
+                    assert new_profile.id is not None
+                    distance = _calculate_profile_distance(
+                        seq_profile_type,
+                        profile,
+                        new_profile,
+                    )
+                    if distance <= max_stored_distance:
+                        distance_map[str(new_profile.id)] = distance
+                        new_profile_distance_maps[new_profile.id][
+                            str(profile.id)
+                        ] = distance
+                        modified = True
+                if modified:
+                    existing_seq_distance.content = json.dumps(distance_map)
+                    modified_existing.append(existing_seq_distance)
+
+        if modified_existing:
+            with service.repository.uow() as uow:
+                service.repository.crud(
+                    uow,
+                    user_id,
+                    model.SeqDistance,
+                    CrudOperation.UPDATE_SOME,
+                    objs=modified_existing,
+                )
+            results.extend(
+                model.CalculateSeqDistancesResult(
+                    id=sd.id,
+                    status=EtlStatus.UPDATED,
+                    seq_distance_profile_id=(sd.seq_profile_id),
+                )
+                for sd in modified_existing
+            )
 
     # Intra-batch distances (new - new)
     _compute_intra_batch_distances(
@@ -373,26 +418,9 @@ def _calculate_and_store_distances(
         max_stored_distance,
     )
 
-    # Persist updated existing records
-    if modified_existing:
-        with service.repository.uow() as uow:
-            service.repository.crud(
-                uow,
-                user_id,
-                model.SeqDistance,
-                CrudOperation.UPDATE_SOME,
-                objs=modified_existing,
-            )
-        results.extend(
-            model.CalculateSeqDistancesResult(
-                id=sd.id,
-                status=EtlStatus.UPDATED,
-                seq_distance_profile_id=(sd.seq_profile_id),
-            )
-            for sd in modified_existing
-        )
-
-    # Create new SeqDistance records
+    # Create new SeqDistance records once, after all chunks complete.
+    # Each new profile's map has accumulated distances from every existing
+    # profile processed above.
     new_seq_distances: list[model.SeqDistance] = [
         model.SeqDistance(  # type: ignore[call-arg]
             id=cast(UUID, service.generate_id()),

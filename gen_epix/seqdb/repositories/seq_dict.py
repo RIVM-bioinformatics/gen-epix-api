@@ -155,13 +155,20 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         self,
         uow: BaseUnitOfWork,
         protocol_id: UUID,
+        profile_ids: list[UUID] | None = None,
     ) -> Iterable[model.SeqDistance]:
         table: dict[UUID, model.SeqDistance] = self.db[  # type: ignore[assignment]
             model.SeqDistance
         ]
+        profile_ids_set: set[UUID] | None = (
+            set(profile_ids) if profile_ids is not None else None
+        )
         for seq_distance in table.values():
-            if seq_distance.protocol_id == protocol_id:
-                yield seq_distance
+            if seq_distance.protocol_id != protocol_id:
+                continue
+            if profile_ids_set is not None and seq_distance.seq_profile_id not in profile_ids_set:
+                continue
+            yield seq_distance
 
     def iter_seq_distance_profile_ids(
         self,

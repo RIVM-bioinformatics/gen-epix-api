@@ -16,6 +16,7 @@ from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.domain.literal import MLVA_NO_LOCUS_REPEAT_NUMBER
 from gen_epix.seqdb.services.seq.calculate_seq_distance import (
+    _calculate_and_store_distances,
     seq_service_calculate_seq_distances_for_new_profiles,
     seq_service_update_seq_distances,
 )
@@ -200,9 +201,23 @@ def _setup_distance_mocks(
     Set up mocks for iter_seq_distances,
     iter_seq_distance_profile_ids and
     get_max_seq_distance_modified_at consistently.
+
+    iter_seq_distances is mocked with a side_effect so that
+    each call gets a fresh iterator and filters by the
+    ``profile_ids`` kwarg when provided.
     """
+    def _iter_distances(
+        uow: Any,
+        protocol_id: UUID,
+        profile_ids: list[UUID] | None = None,
+    ) -> Iterator[model.SeqDistance]:
+        pid_set = set(profile_ids) if profile_ids is not None else None
+        for d in existing_distances:
+            if pid_set is None or d.seq_profile_id in pid_set:
+                yield d
+
     service_mock.repository.iter_seq_distances = Mock(
-        return_value=_iterable(existing_distances),
+        side_effect=_iter_distances,
     )
     profile_ids = list(
         dict.fromkeys(
@@ -1398,3 +1413,115 @@ class TestUpdateSeqDistances(
             str(self.new_profile_id),
             updated_map,
         )
+
+    def test_chunked_existing_profiles_updates_both_and_maintains_symmetry(
+        self,
+    ) -> None:
+        """With existing_chunk_size=1 and 2 existing profiles,
+        iter_seq_distances is called once per chunk, both
+        existing records are updated, and the new profile's
+        distance map contains both existing profile IDs.
+        """
+        a1, a2, a3 = uuid4(), uuid4(), uuid4()
+        existing_profile_id_2 = UUID("550e8400-e29b-41d4-a716-446655440012")
+        sample_id_3 = UUID("550e8400-e29b-41d4-a716-446655440007")
+        protocol = _make_seq_distance_protocol_for_locus_set(
+            protocol_id=self.protocol_id,
+            locus_set_id=self.locus_set_id,
+            seq_distance_protocol_type=enum.SeqDistanceType.ALLELE_HAMMING,
+            max_stored_distance=100.0,
+        )
+        existing_profile_1 = _make_allele_profile(
+            profile_id=self.existing_profile_id,
+            sample_id=self.sample_id,
+            locus_set_id=self.locus_set_id,
+            protocol_id=self.locus_detection_protocol_id,
+            allele_ids=[a1],
+        )
+        existing_profile_2 = _make_allele_profile(
+            profile_id=existing_profile_id_2,
+            sample_id=sample_id_3,
+            locus_set_id=self.locus_set_id,
+            protocol_id=self.locus_detection_protocol_id,
+            allele_ids=[a2],
+        )
+        new_profile = _make_allele_profile(
+            profile_id=self.new_profile_id,
+            sample_id=self.sample_id2,
+            locus_set_id=self.locus_set_id,
+            protocol_id=self.locus_detection_protocol_id,
+            allele_ids=[a3],
+        )
+        existing_distance_1 = _make_seq_distance(
+            seq_distance_id=uuid4(),
+            protocol_id=self.protocol_id,
+            profile_id=self.existing_profile_id,
+            sample_id=self.sample_id,
+            distances={},
+        )
+        existing_distance_2 = _make_seq_distance(
+            seq_distance_id=uuid4(),
+            protocol_id=self.protocol_id,
+            profile_id=existing_profile_id_2,
+            sample_id=sample_id_3,
+            distances={},
+        )
+
+        _setup_distance_mocks(
+            self.service,
+            [existing_distance_1, existing_distance_2],
+        )
+
+        recorder = _CrudRecorder()
+        profiles_by_id = {
+            self.existing_profile_id: existing_profile_1,
+            existing_profile_id_2: existing_profile_2,
+        }
+
+        def _crud(
+            uow: Any,
+            user_id: Any,
+            model_class: Any,
+            operation: CrudOperation,
+            filter: Any = None,
+            objs: Any = None,
+            obj_ids: Any = None,
+            **kwargs: Any,
+        ) -> Any:
+            if model_class is model.SeqProfile and operation == CrudOperation.READ_SOME:
+                recorder.read_some_calls.append(list(obj_ids))
+                return [profiles_by_id[i] for i in obj_ids if i in profiles_by_id]
+            if model_class is model.SeqDistance and operation == CrudOperation.UPDATE_SOME:
+                recorder.updated.extend(objs)
+                return objs
+            if model_class is model.SeqDistance and operation == CrudOperation.CREATE_SOME:
+                recorder.created.extend(objs)
+                return objs
+            return []
+
+        self.service.repository.crud.side_effect = _crud
+
+        results: list[model.CalculateSeqDistancesResult] = []
+        _calculate_and_store_distances(
+            self.service,
+            None,
+            protocol,
+            enum.SeqProfileType.ALLELE,
+            [new_profile],
+            results,
+            known_existing_profile_ids=[
+                self.existing_profile_id,
+                existing_profile_id_2,
+            ],
+            existing_chunk_size=1,
+        )
+
+        # iter_seq_distances called once per chunk (2 chunks for 2 profiles)
+        self.assertEqual(self.service.repository.iter_seq_distances.call_count, 2)
+        # Both existing records updated, one new record created
+        self.assertEqual(len(recorder.updated), 2)
+        self.assertEqual(len(recorder.created), 1)
+        # New profile's map accumulates distances from both chunks
+        created_map = json.loads(recorder.created[0].content)
+        self.assertIn(str(self.existing_profile_id), created_map)
+        self.assertIn(str(existing_profile_id_2), created_map)

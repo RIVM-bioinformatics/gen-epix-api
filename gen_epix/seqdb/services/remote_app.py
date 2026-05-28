@@ -44,7 +44,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
 
     DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {
         command.UploadSamplesCommand: 45.0,
-        command.UpdateSeqDistancesCommand: 120.0,
+        command.UpdateSeqDistancesCommand: 300.0,
         command.RetrieveSampleIdentifiersByIdCommand: 45.0,
         command.RetrieveSamplesByIdCommand: 45.0,
         command.RetrieveSamplesByQueryCommand: 45.0,

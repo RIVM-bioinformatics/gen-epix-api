@@ -56,6 +56,14 @@ class UploadSamplesCommand(Command, UploadBatchCommandMixin):
             " to prevent concurrent modification conflicts."
         ),
     )
+    existing_chunk_size: int | None = Field(
+        default=None,
+        description=(
+            "If set, existing profiles are processed in chunks of this size "
+            "during distance calculation to limit memory use. When None, all "
+            "existing profiles are loaded in a single pass (original behaviour)."
+        ),
+    )
 
 
 class RetrieveSeqDistanceLastModifiedCommand(Command):
@@ -93,6 +101,14 @@ class CalculateSeqDistancesForNewProfilesCommand(Command):
             "If provided, fail if any SeqDistance was modified after this timestamp."
         ),
     )
+    existing_chunk_size: int | None = Field(
+        default=None,
+        description=(
+            "If set, existing profiles are processed in chunks of this size "
+            "during distance calculation to limit memory use. When None, all "
+            "existing profiles are loaded in a single pass (original behaviour)."
+        ),
+    )
 
 
 class UpdateSeqDistancesCommand(Command):
@@ -113,6 +129,14 @@ class UpdateSeqDistancesCommand(Command):
             "If set, process at most this many missing profiles per call. "
             "Call repeatedly until the result is empty to process all profiles "
             "incrementally."
+        ),
+    )
+    existing_chunk_size: int | None = Field(
+        default=None,
+        description=(
+            "If set, existing profiles are processed in chunks of this size "
+            "to limit memory use. When None, all existing profiles are loaded "
+            "and streamed in a single pass (original behaviour)."
         ),
     )
 

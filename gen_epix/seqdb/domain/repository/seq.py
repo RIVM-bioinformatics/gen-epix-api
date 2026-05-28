@@ -56,8 +56,14 @@ class BaseSeqRepository(BaseRepository):
         self,
         uow: BaseUnitOfWork,
         protocol_id: UUID,
+        profile_ids: list[UUID] | None = None,
     ) -> Iterable[model.SeqDistance]:
-        """Iterate over sequence distance records for protocol."""
+        """Iterate over SeqDistance records for a protocol.
+
+        When ``profile_ids`` is given, only records whose
+        ``seq_profile_id`` is in that list are yielded.
+        When ``None``, all records for the protocol are yielded
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
