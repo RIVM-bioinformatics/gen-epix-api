@@ -300,11 +300,12 @@ class SeqFormat(IntEnumWithJsonSchemaMixin, IntEnum):
     HASH_ONLY = 1  # Only the hash code of the sequence is known or stored
     STR_DNA = 2  # String of IUPAC DNA characters without gaps
     STR_DNA_INCL_GAP = 3  # String of IUPAC DNA characters including gaps
+    NEXTCLADE = 4
 
 
 class SeqProfileFormat(IntEnumWithJsonSchemaMixin, IntEnum):
     LOCUS_PROFILE_FORMAT1 = 1
-    REF_ALN_SEQ = 2
+    NEXTCLADE = 2
     ORDERED_ALLELE_IDS = 3
     ORDERED_REPEAT_NUMBERS = 4
     KMER_FREQUENCY_MAP = 5

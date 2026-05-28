@@ -320,6 +320,24 @@ class Protocol(Model):
             return str(value)
         return value
 
+    def get_seq_profile_type_for_distance_protocol(
+        self,
+    ) -> SeqProfileType:
+        """Given a distance protocol, return the SeqProfileType it applies to."""
+        if self.protocol_type not in ProtocolTypeSet.IS_SEQ_DISTANCE.value:
+            raise ValueError(
+                f"Protocol type {self.protocol_type} is not a sequence distance protocol, cannot determine SeqProfileType."
+            )
+        for (
+            profile_type,
+            seq_distance_type_set,
+        ) in self.SEQ_PROFILE_DISTANCE_TYPE_MAP.items():
+            if self.seq_distance_type in seq_distance_type_set.value:
+                return profile_type
+        raise ValueError(
+            f"Unable to determine SeqProfileType for SeqDistanceType {self.seq_distance_type}"
+        )
+
 
 class HasProtocolMixin:
     """Mixin for models that have an associated Protocol. Provides a protocol_id field
