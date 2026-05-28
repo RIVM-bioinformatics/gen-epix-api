@@ -434,18 +434,34 @@ def _calculate_and_store_distances(
     max_stored_distance = protocol.max_stored_distance
     assert max_stored_distance is not None
 
+    # Filter out any profiles that somehow arrived without a persisted ID.
+    # In practice all profiles should have IDs at this point, but the type
+    # allows None and skipping them is safer than an assertion crash.
     new_profiles = [x for x in new_seq_profiles if x.id is not None]
+
+    # Accumulator for each new profile's distance map. Keyed by new profile
+    # ID; values grow incrementally as the chunk loop processes existing
+    # profiles. The final maps are written to SeqDistance.content in step 6.
     new_profile_distance_maps: dict[UUID, dict[str, float]] = {
         x.id: {} for x in new_profiles  # type: ignore[misc]
     }
-    # Pre-decode new profiles once (step 3). These decoded representations
-    # are reused for every existing profile in every chunk, reducing the
-    # decode call count from N×M to N+M total.
+
+    # Step 3 — Pre-decode new profiles once.
+    # Each comparison would otherwise call get_allele_id_bytes() /
+    # get_repeat_numbers() / _parse_nextclade_profile() on the new profile,
+    # paying the decode cost N times (once per existing profile). Decoding
+    # upfront reduces that to M (once per new profile), so total decode
+    # calls drop from N×M to N+M across the whole chunk loop.
     new_profiles_decoded: list[Any] = [
         _decode_profile(seq_profile_type, p) for p in new_profiles
     ]
 
-    # Step 1: concurrency guard (uses caller's uow — read-only).
+    # Step 1 — Concurrency guard (uses caller's uow — read-only).
+    # Only active when the caller passes seq_distance_last_modified_at, which
+    # is the timestamp the caller read before starting this operation. If
+    # another process has written a newer SeqDistance record in the meantime
+    # we abort rather than risk a lost-update: our distance maps would be
+    # based on a stale view of who is already close to whom.
     if seq_distance_last_modified_at is not None:
         max_modified = service.repository.get_max_seq_distance_modified_at(  # type: ignore[attr-defined]
             uow, protocol.id
@@ -457,7 +473,12 @@ def _calculate_and_store_distances(
                 "seq_distance_last_modified_at timestamp.",
             )
 
-    # Step 2: collect existing profile IDs (uses caller's uow — read-only).
+    # Step 2 — Collect existing profile IDs (uses caller's uow — read-only).
+    # UpdateSeqDistancesCommand supplies known_existing_profile_ids directly
+    # (it already has the set of profiles-with-records from the caller), so
+    # we avoid a redundant query in that path. Otherwise we query the DB.
+    # dict.fromkeys preserves iteration order while deduplicating — the DB
+    # can return duplicate profile IDs if the index is non-unique.
     existing_profile_ids: list[UUID]
     if known_existing_profile_ids is not None:
         existing_profile_ids = known_existing_profile_ids
@@ -470,13 +491,24 @@ def _calculate_and_store_distances(
             )
         )
 
-    # Steps 4a-4d: process existing profiles in chunks.
-    # Each chunk uses its own unit of work so reads and writes are bounded
-    # and committed independently, avoiding large in-memory accumulation.
-    # SQL Server caps parameterized IN() at 2100 tokens; chunks of ≤2000
-    # keep READ_SOME safe without triggering optimize_parameter_handling.
+    # Steps 4a-4d — Process existing profiles in chunks.
+    # Without chunking the original algorithm loaded all N SeqProfile objects
+    # and all N SeqDistance records simultaneously, causing OOM crashes for
+    # large datasets. Chunking bounds peak memory to chunk_size profiles and
+    # their distance records at a time.
+    # Each chunk opens its own unit of work so it can be committed
+    # independently — see the TODO below for the atomicity trade-off.
+    # SQL Server caps parameterised IN() at 2100 tokens; chunks of ≤2000
+    # keep READ_SOME within that limit without optimize_parameter_handling.
     for chunk_ids in _chunk_profile_ids(existing_profile_ids, existing_chunk_size):
-        # Step 4a: fetch SeqProfile objects for this chunk only.
+
+        # Step 4a — Fetch SeqProfile objects for this chunk only.
+        # TODO: chunk_uow is a separate unit of work from the caller's uow,
+        #   which means each chunk runs in its own transaction. This is
+        #   intentional — it keeps READ_SOME, iter_seq_distances, and
+        #   UPDATE_SOME bounded per chunk — but it means the chunked writes
+        #   are not atomic with the final CREATE_SOME. Unclear if there is a
+        #   better alternative without materialising all chunks first.
         with service.repository.uow() as chunk_uow:
             existing_profiles_list: list[model.SeqProfile] = (
                 service.repository.crud(  # type: ignore[assignment]
@@ -488,13 +520,20 @@ def _calculate_and_store_distances(
                     optimize_parameter_handling=len(chunk_ids) > 2000,
                 )
             )
+
+        # Build an O(1) lookup map for use in the SeqDistance loop below.
+        # Profiles with no ID are excluded (same defensive filter as above).
         existing_profile_map = {
             x.id: x for x in existing_profiles_list if x.id is not None
         }
 
-        # Step 4b-4c: stream SeqDistance records for this chunk and compute.
-        # iter_seq_distances uses a temp-table JOIN on mssql (profile_ids
-        # filter) so only chunk_size rows are read — not the full table.
+        # Step 4b-4c — Stream SeqDistance records for this chunk and compute.
+        # iter_seq_distances filters to profile_ids=chunk_ids, which on mssql
+        # uses a temp-table JOIN instead of IN() — avoiding the SQL Server
+        # ODBC 07002 error that IN() on uniqueidentifier FK columns triggers
+        # regardless of list size. This is the fix that replaced the earlier
+        # workaround of passing profile_ids=None and filtering in Python,
+        # which caused a full-table scan on every chunk (O(N×chunks) reads).
         modified_existing: list[model.SeqDistance] = []
         with service.repository.uow() as chunk_uow:
             for existing_seq_distance in service.repository.iter_seq_distances(  # type: ignore[attr-defined]
@@ -504,14 +543,23 @@ def _calculate_and_store_distances(
                 profile = existing_profile_map.get(
                     existing_seq_distance.seq_profile_id
                 )
+                # Should not happen with a correct chunk filter, but the DB
+                # could return a record whose profile was deleted between the
+                # READ_SOME and this query — skip it rather than crash.
                 if profile is None:
                     continue
 
-                # Decode the existing profile once per SeqDistance record
-                # (not once per new profile comparison).
+                # Decode the existing profile's content once per SeqDistance
+                # record, not once per new-profile comparison. Together with
+                # new_profiles_decoded (decoded before the loop) this reduces
+                # total decode calls from N×M to N+M per call.
                 existing_decoded = _decode_profile(seq_profile_type, profile)
 
-                # Compare against every new profile using pre-decoded data.
+                # Compare this existing profile against every new profile.
+                # Collect matching pairs in `updates` before touching
+                # existing_seq_distance.content — this lets us skip
+                # json.loads entirely for the common case where no new
+                # profile is close enough to record (see below).
                 updates: dict[str, float] = {}
                 for new_profile, new_decoded in zip(new_profiles, new_profiles_decoded):
                     assert new_profile.id is not None
@@ -522,24 +570,30 @@ def _calculate_and_store_distances(
                     )
                     if distance <= max_stored_distance:
                         updates[str(new_profile.id)] = distance
-                        # Symmetry: also record the reverse entry so that
-                        # when the new profile's SeqDistance is created
-                        # at step 6 it contains this existing profile.
+                        # Symmetry invariant: if A's map records distance to
+                        # B, then B's map must also record it. Write the
+                        # reverse entry into new_profile_distance_maps now;
+                        # it will be serialised into the new SeqDistance
+                        # record at step 6 after all chunks complete.
                         new_profile_distance_maps[new_profile.id][
                             str(profile.id)
                         ] = distance
 
-                # Deferred json.loads: only parse the content blob when at
-                # least one new profile is close enough to record. With a
-                # tight max_stored_distance (e.g. 20 on cgMLST), most
-                # existing records produce no updates and are skipped here.
+                # Deferred json.loads — only parse the content blob when at
+                # least one new profile is close enough to warrant an update.
+                # With a tight max_stored_distance (e.g. 20 on cgMLST with
+                # thousands of loci) the vast majority of existing records
+                # produce no updates, so this skips almost all JSON parsing.
                 if updates:
                     distance_map = json.loads(existing_seq_distance.content)
                     distance_map.update(updates)
                     existing_seq_distance.content = json.dumps(distance_map)
                     modified_existing.append(existing_seq_distance)
 
-        # Step 4d: flush modified records for this chunk.
+        # Step 4d — Flush modified records for this chunk before moving on.
+        # Committing per chunk bounds the UPDATE_SOME write-batch size and
+        # releases the modified SeqDistance objects from memory, keeping
+        # peak RSS proportional to chunk_size rather than to N.
         if modified_existing:
             with service.repository.uow() as chunk_uow:
                 service.repository.crud(
