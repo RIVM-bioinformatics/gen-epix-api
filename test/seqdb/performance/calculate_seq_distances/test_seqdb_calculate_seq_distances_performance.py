@@ -8,6 +8,7 @@ from test.seqdb.performance.calculate_seq_distances.base import (
 )
 from test.seqdb.performance.calculate_seq_distances.generate_seqdb_models import (
     generate_demo_seqdb_models,
+    generate_scale_test_db,
 )
 from test.seqdb.performance.common import (
     create_dict_repository,
@@ -39,6 +40,14 @@ SEQ_SETTINGS = SeqGenerationSettings(n_loci=3000, locus_length=500)
 SNP_SEQ_LENGTH = 100
 SNP_SEED = 99
 
+# Scale test: N_EXISTING_COUNTS existing profiles all in one protocol,
+# N_NEW_PROFILES_SCALE new profiles uploaded per measurement point.
+# max_stored_distance=1e9 in generate_scale_test_db ensures every pair
+# is written, exercising the full json.loads / UPDATE_SOME path.
+N_EXISTING_COUNTS: list[int] = [100, 500, 1000, 5000]
+N_NEW_PROFILES_SCALE = 10
+EXISTING_CHUNK_SIZE_SCALE = 1000
+
 SEQDB_APP_CFGS = get_app_cfgs(
     AppType.SEQDB,
     enum.ServiceType,
@@ -64,12 +73,14 @@ def _build_upload_command(
     env: Env,
     settings: SeqGenerationSettings,
     seed: int | None = None,
+    n_seqs: int | None = None,
+    existing_chunk_size: int | None = None,
 ) -> command.UploadSamplesCommand:
     """
-    Given a created dict dataset, build a UploadSamplesCommand
-    The id's from the db are extracted and used in generate_random_sequences()
-    to create correctly linked objects for upload.
-    db_index is used to select which set of objects to use for the command from the db.
+    Given a created dict dataset, build a UploadSamplesCommand.
+    db_index selects which locus-set / protocol set to use from the db.
+    n_seqs overrides N_SEQS_PER_BATCH; existing_chunk_size is forwarded
+    to UploadSamplesCommand for chunked distance calculation.
     """
     protocols = list(db[model.Protocol].values())
     assembly_protocol_id = [
@@ -91,7 +102,7 @@ def _build_upload_command(
         settings if seed is None else settings.model_copy(update={"seed": seed})
     )
     sample_batch = env.generate_random_sequences(
-        n_seqs=N_SEQS_PER_BATCH,
+        n_seqs=n_seqs if n_seqs is not None else N_SEQS_PER_BATCH,
         settings=effective_settings,
         assembly_protocol_id=assembly_protocol_id,
         locus_set_id=locus_set_id,
@@ -102,6 +113,7 @@ def _build_upload_command(
     return command.UploadSamplesCommand(
         sample_batch=sample_batch,
         user=env.get_root_user(),
+        existing_chunk_size=existing_chunk_size,
     )
 
 
@@ -275,3 +287,75 @@ class TestSampleBatchUploader:
 
         profiler.stop()
         profiler.write_html("./test/output/profile_calculate_seq_distances.html")
+
+
+@pytest.mark.scenario_ids("TC-PERF-10-02")
+class TestCalculateSeqDistancesScale:
+    """Scale test for _calculate_and_store_distances.
+
+    All N_EXISTING_COUNTS profiles share a single locus set and distance
+    protocol. Uploading N_NEW_PROFILES_SCALE new profiles triggers one
+    _calculate_and_store_distances call against all existing profiles.
+    max_stored_distance=1e9 in the generator ensures every pair is stored
+    (worst case: all json.loads + UPDATE_SOME fired per chunk).
+    """
+
+    dbs: list[dict[type, dict[UUID, Any]]]
+    repositories: list[SeqDictRepository]
+
+    @pytest.fixture(scope="module", autouse=True)
+    def setup(self, env: Env) -> None:
+        user: model.User = env.retrieve_user_by_key("root1_1@org1.org")
+        user.name = "root1_1"
+        env.set_obj(user)
+        env.set_obj(
+            env.read_one_by_property("root1_1", model.Organization, "name", "org1")
+        )
+
+        entities = env.app.domain.get_dag_sorted_entities(
+            service_type=enum.ServiceType.SEQ,
+            persistable=True,
+        )
+
+        type(self).dbs = [
+            generate_scale_test_db(
+                n_loci=SEQ_SETTINGS.n_loci,
+                n_existing=n_existing,
+            )
+            for n_existing in N_EXISTING_COUNTS
+        ]
+        type(self).repositories = [
+            create_dict_repository(pickle_file=None, db=db, entities=entities)
+            for db in type(self).dbs
+        ]
+
+    @pytest.mark.parametrize(
+        "dataset_idx", range(len(N_EXISTING_COUNTS)), ids=N_EXISTING_COUNTS
+    )
+    def test_upload_new_profiles_against_existing(
+        self, env: Env, dataset_idx: int
+    ) -> None:
+        set_service_repository(env, self.repositories[dataset_idx])
+
+        cmd = _build_upload_command(
+            self.dbs[dataset_idx],
+            0,
+            env,
+            SEQ_SETTINGS,
+            seed=dataset_idx,
+            n_seqs=N_NEW_PROFILES_SCALE,
+            existing_chunk_size=EXISTING_CHUNK_SIZE_SCALE,
+        )
+
+        n_existing = N_EXISTING_COUNTS[dataset_idx]
+        start = perf_counter()
+        result: model.SampleBatchUploadResult = env.app.handle(cmd)
+        duration = perf_counter() - start
+
+        assert result.get_status_count()[EtlStatus.FAILED] == 0
+        assert result.get_status_count()[EtlStatus.PENDING] == 0
+
+        print(f"\nn_existing={n_existing}")
+        print(f"n_new={N_NEW_PROFILES_SCALE}")
+        print(f"existing_chunk_size={EXISTING_CHUNK_SIZE_SCALE}")
+        print(f"duration={duration:.4f}s")
