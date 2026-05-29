@@ -1,4 +1,5 @@
 import json
+import time
 from datetime import datetime
 from functools import lru_cache
 from typing import Any, cast
@@ -207,8 +208,19 @@ def seq_service_update_seq_distances(
     record, compute the missing distances and create the records while maintaining the
     symmetry invariant.
     """
+    log = self.logger
     user_id = cmd.user.id if cmd.user else None
     results: list[model.CalculateSeqDistancesResult] = []
+
+    t0 = time.perf_counter()
+    if log:
+        log.debug(
+            "UpdateSeqDistances start: protocol_id=%s chunk_size=%s"
+            " max_new=%s",
+            cmd.protocol_id,
+            cmd.existing_chunk_size,
+            cmd.max_new_profiles,
+        )
 
     # Get the distance protocol
     with self.repository.uow() as uow:
@@ -228,6 +240,13 @@ def seq_service_update_seq_distances(
                 uow, seq_distance_protocol.id
             )
         )
+        if log:
+            log.debug(
+                "UpdateSeqDistances: %d profiles already have SeqDistance"
+                " records (%.3fs)",
+                len(existing_distance_profile_ids),
+                time.perf_counter() - t0,
+            )
 
         # Get SeqProfile protocols that match the distance protocol's subset criteria.
         seq_profile_type = (
@@ -269,12 +288,27 @@ def seq_service_update_seq_distances(
             for x in all_profiles
             if x.id is not None and x.id not in existing_distance_profile_ids
         ]
+        if log:
+            log.debug(
+                "UpdateSeqDistances: %d total profiles, %d missing"
+                " distances (%.3fs)",
+                len(all_profiles),
+                len(missing_profiles),
+                time.perf_counter() - t0,
+            )
         if not missing_profiles:
             return results
         # max_new_profiles caps the work per call so lsp-data can loop
         # incrementally rather than timing out on a single giant request.
         if cmd.max_new_profiles is not None:
             missing_profiles = missing_profiles[: cmd.max_new_profiles]
+        if log:
+            log.debug(
+                "UpdateSeqDistances: processing %d new profiles"
+                " (after max_new_profiles cap) (%.3fs)",
+                len(missing_profiles),
+                time.perf_counter() - t0,
+            )
 
         _calculate_and_store_distances(
             self,
@@ -429,6 +463,8 @@ def _calculate_and_store_distances(
     Per-chunk READ_SOME / iter_seq_distances / UPDATE_SOME each open their
     own unit of work so they can be committed independently.
     """
+    log = service.logger
+    t_fn = time.perf_counter()
     max_stored_distance = protocol.max_stored_distance
     assert max_stored_distance is not None
 
@@ -489,6 +525,19 @@ def _calculate_and_store_distances(
             )
         )
 
+    chunks = _chunk_profile_ids(existing_profile_ids, existing_chunk_size)
+    n_chunks = len(chunks)
+    if log:
+        log.debug(
+            "_calculate_and_store_distances: n_new=%d n_existing=%d"
+            " n_chunks=%d chunk_size=%s (%.3fs)",
+            len(new_profiles),
+            len(existing_profile_ids),
+            n_chunks,
+            existing_chunk_size,
+            time.perf_counter() - t_fn,
+        )
+
     # Steps 4a-4d — Process existing profiles in chunks.
     # Without chunking the original algorithm loaded all N SeqProfile objects
     # and all N SeqDistance records simultaneously, causing OOM crashes for
@@ -501,7 +550,9 @@ def _calculate_and_store_distances(
     # columns via pyodbc raises ODBC 07002 regardless of list size.
     # On other dialects (SQLite) _select_with_id_join falls back to IN()
     # so this flag is safe to set unconditionally.
-    for chunk_ids in _chunk_profile_ids(existing_profile_ids, existing_chunk_size):
+    for chunk_no, chunk_ids in enumerate(chunks, start=1):
+
+        t_chunk = time.perf_counter()
 
         # Step 4a — Fetch SeqProfile objects for this chunk only.
         # TODO: chunk_uow is a separate unit of work from the caller's uow,
@@ -521,6 +572,13 @@ def _calculate_and_store_distances(
                     optimize_parameter_handling=True,
                 )
             )
+        t_read = time.perf_counter()
+        if log:
+            log.debug(
+                "  chunk %d/%d: READ_SOME %d profiles (%.3fs)",
+                chunk_no, n_chunks, len(existing_profiles_list),
+                t_read - t_chunk,
+            )
 
         # Build an O(1) lookup map for use in the SeqDistance loop below.
         # Profiles with no ID are excluded (same defensive filter as above).
@@ -536,11 +594,13 @@ def _calculate_and_store_distances(
         # workaround of passing profile_ids=None and filtering in Python,
         # which caused a full-table scan on every chunk (O(N×chunks) reads).
         modified_existing: list[model.SeqDistance] = []
+        n_distances_seen = 0
         with service.repository.uow() as chunk_uow:
             for existing_seq_distance in service.repository.iter_seq_distances(  # type: ignore[attr-defined]
                 chunk_uow, protocol.id, profile_ids=chunk_ids
             ):
                 assert isinstance(existing_seq_distance, model.SeqDistance)
+                n_distances_seen += 1
                 profile = existing_profile_map.get(existing_seq_distance.seq_profile_id)
                 # Should not happen with a correct chunk filter, but the DB
                 # could return a record whose profile was deleted between the
@@ -589,6 +649,15 @@ def _calculate_and_store_distances(
                     existing_seq_distance.content = json.dumps(distance_map)
                     modified_existing.append(existing_seq_distance)
 
+        t_iter = time.perf_counter()
+        if log:
+            log.debug(
+                "  chunk %d/%d: iter+compute %d distances,"
+                " %d modified (%.3fs)",
+                chunk_no, n_chunks, n_distances_seen, len(modified_existing),
+                t_iter - t_read,
+            )
+
         # TODO: update all the existing ones only at the end after processing all chunks,
         # rather than once per chunk.
         # Step 4d — Flush modified records for this chunk before moving on.
@@ -605,6 +674,12 @@ def _calculate_and_store_distances(
                     objs=modified_existing,
                     optimize_parameter_handling=True,
                 )
+            if log:
+                log.debug(
+                    "  chunk %d/%d: UPDATE_SOME %d records (%.3fs)",
+                    chunk_no, n_chunks, len(modified_existing),
+                    time.perf_counter() - t_iter,
+                )
             results.extend(
                 model.CalculateSeqDistancesResult(
                     id=sd.id,
@@ -615,16 +690,23 @@ def _calculate_and_store_distances(
             )
 
     # Step 5: intra-batch distances (new-new pairs).
+    t_step5 = time.perf_counter()
     _calculate_pairwise_profile_distances(
         seq_profile_type,
         new_profiles,
         new_profile_distance_maps,
         max_stored_distance,
     )
+    if log:
+        log.debug(
+            "_calculate_and_store_distances step 5 (pairwise new-new): %.3fs",
+            time.perf_counter() - t_step5,
+        )
 
     # Step 6: create new SeqDistance records once, after all chunks complete.
     # Each new profile's distance map has now accumulated contributions from
     # every existing profile processed in the chunk loop above.
+    t_step6 = time.perf_counter()
     new_seq_distances: list[model.SeqDistance] = [
         model.SeqDistance(  # type: ignore[call-arg]
             id=cast(UUID, service.generate_id()),
@@ -651,6 +733,14 @@ def _calculate_and_store_distances(
                 status=EtlStatus.CREATED,
                 seq_distance_profile_id=(created_seq_distance.seq_profile_id),
             )
+        )
+    if log:
+        log.debug(
+            "_calculate_and_store_distances step 6 (CREATE_SOME %d): %.3fs"
+            " — total: %.3fs",
+            len(created_seq_distances),
+            time.perf_counter() - t_step6,
+            time.perf_counter() - t_fn,
         )
 
 
