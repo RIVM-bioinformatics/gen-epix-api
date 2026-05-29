@@ -684,13 +684,8 @@ def _calculate_and_store_distances(
     # every existing profile processed in the chunk loop above.
     t_step6 = time.perf_counter()
     if all_modified_existing:
-        service.repository.crud(
-            uow,
-            user_id,
-            model.SeqDistance,
-            CrudOperation.UPDATE_SOME,
-            objs=all_modified_existing,
-            optimize_parameter_handling=True,
+        service.repository.bulk_update_seq_distance_content(  # type: ignore[attr-defined]
+            uow, user_id, all_modified_existing
         )
         results.extend(
             model.CalculateSeqDistancesResult(

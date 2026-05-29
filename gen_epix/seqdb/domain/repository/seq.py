@@ -138,6 +138,30 @@ class BaseSeqRepository(BaseRepository):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def bulk_update_seq_distance_content(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID | None,
+        objs: list[model.SeqDistance],
+    ) -> None:
+        """Update only the content field of SeqDistance records in bulk.
+
+        Exists as a domain-specific method rather than relying on the
+        framework's UPDATE_SOME because UPDATE_SOME issues one ORM flush
+        per row (474 round trips for a typical production call). This
+        method issues a single Core executemany statement instead.
+
+        Option B — modifying the framework's update_some to use bulk
+        updates — was deliberately not chosen: update_some does a
+        read-then-write cycle (fetch ORM rows → apply mapper → flush)
+        that handles modified_at via onupdate and modified_by via the
+        mapper. A bulk Core UPDATE bypasses both, so it cannot be a
+        transparent drop-in without risking silent side-effect omissions
+        for other callers across all four services.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def filter_seq_profiles_by_quality(
         self,
         uow: BaseUnitOfWork,

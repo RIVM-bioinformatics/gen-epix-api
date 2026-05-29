@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.repositories import DictRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import enum, exc, model
@@ -202,6 +203,20 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
                 ):
                     maximum_modified_timestamp = seq_distance.modified_at
         return maximum_modified_timestamp
+
+    def bulk_update_seq_distance_content(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID | None,
+        objs: list[model.SeqDistance],
+    ) -> None:
+        # In-memory backend — objects are mutated by reference so content is
+        # already updated. Delegate to UPDATE_SOME to keep modified_at and
+        # modified_by consistent with what the SA backend writes.
+        if objs:
+            self.crud(
+                uow, user_id, model.SeqDistance, CrudOperation.UPDATE_SOME, objs=objs
+            )
 
     def get_profiles_by_protocol_ids(
         self,

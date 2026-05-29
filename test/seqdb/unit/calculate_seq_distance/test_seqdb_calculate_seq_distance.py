@@ -218,6 +218,7 @@ def _iterable(items: list[model.SeqDistance]) -> Iterator[model.SeqDistance]:
 def _setup_distance_mocks(
     service_mock: Mock,
     existing_distances: list[model.SeqDistance],
+    recorder: "_CrudRecorder | None" = None,
 ) -> None:
     """
     Set up mocks for iter_seq_distances,
@@ -227,6 +228,9 @@ def _setup_distance_mocks(
     iter_seq_distances is mocked with a side_effect so that
     each call gets a fresh iterator and filters by the
     ``profile_ids`` kwarg when provided.
+
+    Pass recorder to also mock bulk_update_seq_distance_content
+    so that bulk-updated objects are captured in recorder.updated.
     """
     def _iter_distances(
         uow: Any,
@@ -252,6 +256,14 @@ def _setup_distance_mocks(
     service_mock.repository.get_max_seq_distance_modified_at = Mock(
         return_value=None,
     )
+    if recorder is not None:
+        def _bulk_update(
+            uow: Any, user_id: Any, objs: list[model.SeqDistance]
+        ) -> None:
+            recorder.updated.extend(objs)
+        service_mock.repository.bulk_update_seq_distance_content = Mock(
+            side_effect=_bulk_update,
+        )
 
 
 class _CrudRecorder:
@@ -512,7 +524,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             protocols=[protocol],
             existing_profiles_by_model={model.SeqProfile: [existing_profile]},
         )
-        _setup_distance_mocks(self.service, [existing_seq_distance])
+        _setup_distance_mocks(self.service, [existing_seq_distance], recorder=recorder)
 
         results: list[model.CalculateSeqDistancesResult] = (
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
@@ -647,7 +659,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             protocols=[protocol],
             existing_profiles_by_model={model.SeqProfile: [existing_profile]},
         )
-        _setup_distance_mocks(self.service, [existing_seq_distance])
+        _setup_distance_mocks(self.service, [existing_seq_distance], recorder=recorder)
 
         results: list[model.CalculateSeqDistancesResult] = (
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
@@ -1076,7 +1088,7 @@ class TestCalculateSeqDistancesBatchInvariant(BaseCalculateSeqDistanceTestCase):
             protocols=[protocol],
             existing_profiles_by_model={model.SeqProfile: existing_profiles},  # type: ignore[dict-item]
         )
-        _setup_distance_mocks(self.service, existing_seq_distances)
+        _setup_distance_mocks(self.service, existing_seq_distances, recorder=recorder)
 
         cmd = command.CalculateSeqDistancesForNewProfilesCommand(
             user=self.user,
@@ -1481,12 +1493,8 @@ class TestUpdateSeqDistances(
             distances={},
         )
         # Only existing profile has a distance record
-        _setup_distance_mocks(
-            self.service,
-            [existing_distance],
-        )
-
         recorder = _CrudRecorder()
+        _setup_distance_mocks(self.service, [existing_distance], recorder=recorder)
 
         def _crud(
             uow: Any,
@@ -1505,12 +1513,6 @@ class TestUpdateSeqDistances(
             if model_class is model.SeqProfile and operation == CrudOperation.READ_SOME:
                 recorder.read_some_calls.append(obj_ids)
                 return [existing_profile]
-            if (
-                model_class is model.SeqDistance
-                and operation == CrudOperation.UPDATE_SOME
-            ):
-                recorder.updated.extend(objs)
-                return objs
             if (
                 model_class is model.SeqDistance
                 and operation == CrudOperation.CREATE_SOME
@@ -1616,12 +1618,13 @@ class TestUpdateSeqDistances(
             distances={},
         )
 
+        recorder = _CrudRecorder()
         _setup_distance_mocks(
             self.service,
             [existing_distance_1, existing_distance_2],
+            recorder=recorder,
         )
 
-        recorder = _CrudRecorder()
         profiles_by_id = {
             self.existing_profile_id: existing_profile_1,
             existing_profile_id_2: existing_profile_2,
@@ -1640,9 +1643,6 @@ class TestUpdateSeqDistances(
             if model_class is model.SeqProfile and operation == CrudOperation.READ_SOME:
                 recorder.read_some_calls.append(list(obj_ids))
                 return [profiles_by_id[i] for i in obj_ids if i in profiles_by_id]
-            if model_class is model.SeqDistance and operation == CrudOperation.UPDATE_SOME:
-                recorder.updated.extend(objs)
-                return objs
             if model_class is model.SeqDistance and operation == CrudOperation.CREATE_SOME:
                 recorder.created.extend(objs)
                 return objs

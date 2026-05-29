@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 import gen_epix.seqdb.repositories.sa_model as sa_model
 from gen_epix.fastapp import BaseUnitOfWork
 from gen_epix.fastapp.repositories import SARepository, SAUnitOfWork
+from gen_epix.fastapp.repositories.sa import ServerUtcCurrentTime
 from gen_epix.seqdb.domain import enum, exc, model
 from gen_epix.seqdb.domain.repository import BaseSeqRepository
 
@@ -288,6 +289,50 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         )
         assert isinstance(uow, SAUnitOfWork)
         return uow.session.execute(stmt).scalar()
+
+    def bulk_update_seq_distance_content(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID | None,
+        objs: list[model.SeqDistance],
+    ) -> None:
+        if not objs:
+            return
+        assert isinstance(uow, SAUnitOfWork)
+        # Single Core executemany: one UPDATE per row via the DBAPI batch,
+        # avoiding the ORM read-then-flush overhead of UPDATE_SOME.
+        # modified_at must be set explicitly here because the ORM onupdate
+        # hook does not fire for Core UPDATE statements.
+        # Use the Core Table (not the ORM class) to issue a plain executemany
+        # UPDATE, bypassing SQLAlchemy 2.x's ORM bulk-update-by-PK pathway
+        # which requires session-tracked objects.
+        # Explicit type_= on bindparams ensures UUIDType.process_bind_param is
+        # applied — without it, UUID objects are stored as plain strings which
+        # breaks UUIDType(binary=True) on read-back.
+        tbl = sa_model.SeqDistance.__table__
+        stmt = (
+            tbl.update()
+            .where(tbl.c.id == sa.bindparam("b_id", type_=tbl.c.id.type))
+            .values(
+                content=sa.bindparam("b_content"),
+                # Pass modified_by as raw bytes: UUIDType.process_bind_param is
+                # not reliably invoked for bindparams in Core executemany, so
+                # pre-convert here to guarantee binary storage on SQLite/mssql.
+                modified_by=sa.bindparam("b_modified_by"),
+                modified_at=ServerUtcCurrentTime(),
+            )
+        )
+        uow.session.execute(
+            stmt,
+            [
+                {
+                    "b_id": sd.id,
+                    "b_content": sd.content,
+                    "b_modified_by": user_id.bytes if user_id is not None else None,
+                }
+                for sd in objs
+            ],
+        )
 
     def get_profiles_by_protocol_ids(
         self,
