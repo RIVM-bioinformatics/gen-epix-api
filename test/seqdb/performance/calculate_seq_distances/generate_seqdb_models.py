@@ -239,6 +239,7 @@ def generate_scale_test_db(
     n_loci: int,
     n_existing: int,
     max_stored_distance: float = 1e9,
+    seed: int | None = None,
 ) -> dict[type, dict[UUID, Any]]:
     """Single locus-set / protocol with n_existing pre-seeded profiles.
 
@@ -247,6 +248,10 @@ def generate_scale_test_db(
     against these n_existing to measure _calculate_and_store_distances
     at scale. max_stored_distance defaults to 1e9 so every pair is written,
     exercising the full json.loads / UPDATE_SOME path.
+
+    When seed is provided, all UUID and random generation is deterministic,
+    so the resulting db has stable IDs that match a previously persisted
+    SQLite file generated with the same arguments.
     """
     model_types = [
         model.Protocol,
@@ -261,10 +266,17 @@ def generate_scale_test_db(
     ]
     db: dict[type, dict[UUID, Any]] = {x: {} for x in model_types}
 
-    hex_string = secrets.token_hex(4)
+    rng = random.Random(seed)
+
+    def _uuid() -> UUID:
+        return UUID(int=rng.getrandbits(128)) if seed is not None else uuid.uuid4()
+
+    hex_string = (
+        format(rng.getrandbits(16), "04x") if seed is not None else secrets.token_hex(4)
+    )
 
     assembly_protocol = model.Protocol(  # type: ignore[call-arg]
-        id=uuid.uuid4(),
+        id=_uuid(),
         code=f"assembly_protocol_scale_{hex_string}",
         name=f"Assembly Protocol Scale {hex_string}",
         protocol_type=enum.ProtocolType.ASSEMBLY,
@@ -272,7 +284,7 @@ def generate_scale_test_db(
 
     loci = [
         model.Locus(
-            id=uuid.uuid4(),
+            id=_uuid(),
             code=f"locus_scale_{hex_string}_{j}",
             name=f"Locus Scale {hex_string} {j}",
             locus_type=enum.LocusType.OTHER,
@@ -282,20 +294,20 @@ def generate_scale_test_db(
     locus_ids = [locus.id for locus in loci if locus.id is not None]
 
     locus_set = model.LocusSet(
-        id=uuid.uuid4(),
+        id=_uuid(),
         code=f"locus_set_scale_{hex_string}",
         name=f"Locus Set Scale {hex_string}",
         locus_ids=locus_ids,
     )
 
     locus_code_map = model.LocusCodeMap(
-        id=uuid.uuid4(),
+        id=_uuid(),
         code=f"locus_code_map_scale_{hex_string}",
         code_map={locus.code: locus.id for locus in loci if locus.id is not None},
     )
 
     allele_detection_protocol = model.Protocol(  # type: ignore[call-arg]
-        id=uuid.uuid4(),
+        id=_uuid(),
         code=f"allele_protocol_scale_{hex_string}",
         name=f"Allele Protocol Scale {hex_string}",
         protocol_type=enum.ProtocolType.SEQ_PROFILE,
@@ -304,7 +316,7 @@ def generate_scale_test_db(
     )
 
     distance_protocol = model.Protocol(  # type: ignore[call-arg]
-        id=uuid.uuid4(),
+        id=_uuid(),
         code=f"distance_protocol_scale_{hex_string}",
         name=f"Distance Protocol Scale {hex_string}",
         protocol_type=enum.ProtocolType.SEQ_DISTANCE,
@@ -331,14 +343,14 @@ def generate_scale_test_db(
     # max_stored_distance=1e9 every pair is stored anyway, exercising the
     # full json.loads / UPDATE_SOME path on every chunk.
     for _ in range(n_existing):
-        allele_ids = [uuid.uuid4() for _ in locus_ids]
+        allele_ids = [_uuid() for _ in locus_ids]
 
         sample = model.Sample(  # type: ignore[call-arg]
-            id=uuid.uuid4(),
-            created_in_data_collection_id=uuid.uuid4(),
+            id=_uuid(),
+            created_in_data_collection_id=_uuid(),
         )
         seq_profile = model.SeqProfile(
-            id=uuid.uuid4(),
+            id=_uuid(),
             seq_profile_type=enum.SeqProfileType.ALLELE,
             protocol_id=allele_detection_protocol.id,
             locus_set_id=locus_set.id,
@@ -353,7 +365,7 @@ def generate_scale_test_db(
             sample_id=sample.id,
         )
         seq_distance = model.SeqDistance(  # type: ignore[call-arg]
-            id=uuid.uuid4(),
+            id=_uuid(),
             protocol_id=distance_protocol.id,
             seq_profile_id=seq_profile.id,
             format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,

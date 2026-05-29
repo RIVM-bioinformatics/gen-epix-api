@@ -79,7 +79,9 @@ def fill_empty_sqlite_repository(
             )
 
 
-def set_service_repository(env: Env, repository: SeqDictRepository) -> None:
+def set_service_repository(
+    env: Env, repository: SeqDictRepository | SeqSARepository
+) -> None:
     """Point the live SEQ service at the given repository."""
     app = env.app.impl.services[enum.ServiceType.SEQ].app
     app.impl.services[enum.ServiceType.SEQ].repository = repository

@@ -12,6 +12,8 @@ from test.seqdb.performance.calculate_seq_distances.generate_seqdb_models import
 )
 from test.seqdb.performance.common import (
     create_dict_repository,
+    create_sqlite_repository,
+    fill_empty_sqlite_repository,
     set_service_repository,
     write_db_to_pickle,
 )
@@ -21,13 +23,13 @@ from time import perf_counter
 from typing import Any
 from uuid import UUID
 
-import pyinstrument
 import pytest
 
 from gen_epix.commondb.domain.enum import AppType, EtlStatus
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.repositories.seq_dict import SeqDictRepository
+from gen_epix.seqdb.repositories.seq_sa import SeqSARepository
 
 # Set to True to regenerate demo data, False to load from existing pickle file
 CREATE_DEMO_DATA = True
@@ -45,7 +47,7 @@ SNP_SEED = 99
 # max_stored_distance=1e9 in generate_scale_test_db ensures every pair
 # is written, exercising the full json.loads / UPDATE_SOME path.
 N_EXISTING_COUNTS: list[int] = [100, 500, 1000, 5000]
-N_NEW_PROFILES_SCALE = 10
+N_NEW_COUNTS_SCALE: list[int] = [1, 5, 10, 25, 50]
 EXISTING_CHUNK_SIZE_SCALE = 1000
 
 SEQDB_APP_CFGS = get_app_cfgs(
@@ -153,6 +155,7 @@ def _build_snp_upload_command(
     )
 
 
+@pytest.mark.performance
 @pytest.mark.scenario_ids("TC-PERF-10-01")
 class TestSampleBatchUploader:
 
@@ -171,9 +174,10 @@ class TestSampleBatchUploader:
         # Configure root user
         user: model.User = env.retrieve_user_by_key("root1_1@org1.org")
         user.name = "root1_1"
-        env.set_obj(user)
+        env.set_obj(user, update=True)
         env.set_obj(
-            env.read_one_by_property("root1_1", model.Organization, "name", "org1")
+            env.read_one_by_property("root1_1", model.Organization, "name", "org1"),
+            update=True,
         )
 
         entities = env.app.domain.get_dag_sorted_entities(
@@ -213,8 +217,8 @@ class TestSampleBatchUploader:
 
         set_service_repository(env, self.repositories[dataset_idx])
 
-        profiler = pyinstrument.Profiler(async_mode="enabled")
-        profiler.start()
+        # profiler = pyinstrument.Profiler(async_mode="enabled")
+        # profiler.start()
 
         n_entries = len(self.dbs[dataset_idx][model.LocusSet])
         commands_to_upload: list[command.UploadSamplesCommand] = [
@@ -285,31 +289,49 @@ class TestSampleBatchUploader:
         print(f"total_time={total:.4f}s")
         print(f"avg_time_per_upload={avg:.4f}s\n")
 
-        profiler.stop()
-        profiler.write_html("./test/output/profile_calculate_seq_distances.html")
+        # profiler.stop()
+        # profiler.write_html("./test/output/profile_calculate_seq_distances.html")
 
 
+_SCALE_PARAMS = [
+    (i, rt, n_new)
+    for i in range(len(N_EXISTING_COUNTS))
+    for rt in (enum.RepositoryType.DICT, enum.RepositoryType.SA_SQLITE)
+    for n_new in N_NEW_COUNTS_SCALE
+]
+_SCALE_IDS = [
+    f"{N_EXISTING_COUNTS[i]}-{rt.value}-n{n_new}" for i, rt, n_new in _SCALE_PARAMS
+]
+
+
+@pytest.mark.performance
 @pytest.mark.scenario_ids("TC-PERF-10-02")
 class TestCalculateSeqDistancesScale:
-    """Scale test for _calculate_and_store_distances.
+    """Scale test for _calculate_and_store_distances — DICT and SA_SQLITE.
 
     All N_EXISTING_COUNTS profiles share a single locus set and distance
     protocol. Uploading N_NEW_PROFILES_SCALE new profiles triggers one
     _calculate_and_store_distances call against all existing profiles.
-    max_stored_distance=1e9 in the generator ensures every pair is stored
-    (worst case: all json.loads + UPDATE_SOME fired per chunk).
+    max_stored_distance=1e9 ensures every pair is stored (worst case:
+    full json.loads + UPDATE_SOME path fires on every chunk).
+
+    Both repository types are tested so the SQLAlchemy code path
+    (SA reads/writes, iter_seq_distances with IN() on SQLite) is covered
+    alongside the in-memory DICT path.
     """
 
     dbs: list[dict[type, dict[UUID, Any]]]
-    repositories: list[SeqDictRepository]
+    dict_repositories: list[SeqDictRepository]
+    sqlite_repositories: list[SeqSARepository]
 
     @pytest.fixture(scope="module", autouse=True)
     def setup(self, env: Env) -> None:
         user: model.User = env.retrieve_user_by_key("root1_1@org1.org")
         user.name = "root1_1"
-        env.set_obj(user)
+        env.set_obj(user, update=True)
         env.set_obj(
-            env.read_one_by_property("root1_1", model.Organization, "name", "org1")
+            env.read_one_by_property("root1_1", model.Organization, "name", "org1"),
+            update=True,
         )
 
         entities = env.app.domain.get_dag_sorted_entities(
@@ -317,25 +339,58 @@ class TestCalculateSeqDistancesScale:
             persistable=True,
         )
 
+        # seed=n_existing makes UUID generation deterministic so SQLite files
+        # produced in a previous run can be reused as-is.
         type(self).dbs = [
             generate_scale_test_db(
                 n_loci=SEQ_SETTINGS.n_loci,
                 n_existing=n_existing,
+                seed=n_existing,
             )
             for n_existing in N_EXISTING_COUNTS
         ]
-        type(self).repositories = [
+        type(self).dict_repositories = [
             create_dict_repository(pickle_file=None, db=db, entities=entities)
             for db in type(self).dbs
         ]
 
+        # Build matching SQLite repos. When the file already exists it is
+        # reused directly (deterministic seeds ensure IDs still match); only
+        # recreate and fill when the file is absent or empty.
+        sqlite_dir = Path(__file__).parent
+        type(self).sqlite_repositories = []
+        for db, n_existing, dict_repo in zip(
+            type(self).dbs,
+            N_EXISTING_COUNTS,
+            type(self).dict_repositories,
+        ):
+            sqlite_path = sqlite_dir / f"scale_test_{n_existing}.sqlite"
+            reuse = sqlite_path.exists() and sqlite_path.stat().st_size > 0
+            sa_repo = create_sqlite_repository(
+                sqlite_path, entities, recreate_sqlite_file=not reuse
+            )
+            if not reuse:
+                fill_empty_sqlite_repository(
+                    dict_repo, sa_repo, entities, env.get_root_user().id  # type: ignore[arg-type]
+                )
+            type(self).sqlite_repositories.append(sa_repo)
+
     @pytest.mark.parametrize(
-        "dataset_idx", range(len(N_EXISTING_COUNTS)), ids=N_EXISTING_COUNTS
+        "dataset_idx,repository_type,n_new", _SCALE_PARAMS, ids=_SCALE_IDS
     )
     def test_upload_new_profiles_against_existing(
-        self, env: Env, dataset_idx: int
+        self,
+        env: Env,
+        dataset_idx: int,
+        repository_type: enum.RepositoryType,
+        n_new: int,
     ) -> None:
-        set_service_repository(env, self.repositories[dataset_idx])
+        repo = (
+            self.dict_repositories[dataset_idx]
+            if repository_type == enum.RepositoryType.DICT
+            else self.sqlite_repositories[dataset_idx]
+        )
+        set_service_repository(env, repo)
 
         cmd = _build_upload_command(
             self.dbs[dataset_idx],
@@ -343,7 +398,7 @@ class TestCalculateSeqDistancesScale:
             env,
             SEQ_SETTINGS,
             seed=dataset_idx,
-            n_seqs=N_NEW_PROFILES_SCALE,
+            n_seqs=n_new,
             existing_chunk_size=EXISTING_CHUNK_SIZE_SCALE,
         )
 
@@ -355,7 +410,7 @@ class TestCalculateSeqDistancesScale:
         assert result.get_status_count()[EtlStatus.FAILED] == 0
         assert result.get_status_count()[EtlStatus.PENDING] == 0
 
-        print(f"\nn_existing={n_existing}")
-        print(f"n_new={N_NEW_PROFILES_SCALE}")
+        print(f"\nn_existing={n_existing} repo={repository_type.value}")
+        print(f"n_new={n_new}")
         print(f"existing_chunk_size={EXISTING_CHUNK_SIZE_SCALE}")
         print(f"duration={duration:.4f}s")
