@@ -1,5 +1,17 @@
 import logging
 from pathlib import Path
+from time import perf_counter
+from typing import Any
+from uuid import UUID
+
+import pyinstrument as pyinstrument
+import pytest
+
+from gen_epix.commondb.domain.enum import AppType, EtlStatus
+from gen_epix.commondb.domain.util import get_app_cfgs
+from gen_epix.seqdb.domain import command, enum, model
+from gen_epix.seqdb.repositories.seq_dict import SeqDictRepository
+from gen_epix.seqdb.repositories.seq_sa import SeqSARepository
 from test.seqdb.performance.calculate_seq_distances.base import (
     DEV_REPOSITORY_CONFIG,
     SKIP_ENDPOINTS,
@@ -19,17 +31,6 @@ from test.seqdb.performance.common import (
 )
 from test.seqdb.seqdb_test_client import SeqdbTestClient as Env
 from test.seqdb.seqdb_test_client import SeqGenerationSettings
-from time import perf_counter
-from typing import Any
-from uuid import UUID
-
-import pytest
-
-from gen_epix.commondb.domain.enum import AppType, EtlStatus
-from gen_epix.commondb.domain.util import get_app_cfgs
-from gen_epix.seqdb.domain import command, enum, model
-from gen_epix.seqdb.repositories.seq_dict import SeqDictRepository
-from gen_epix.seqdb.repositories.seq_sa import SeqSARepository
 
 # Set to True to regenerate demo data, False to load from existing pickle file
 CREATE_DEMO_DATA = True
@@ -46,8 +47,8 @@ SNP_SEED = 99
 # N_NEW_PROFILES_SCALE new profiles uploaded per measurement point.
 # max_stored_distance=1e9 in generate_scale_test_db ensures every pair
 # is written, exercising the full json.loads / UPDATE_SOME path.
-N_EXISTING_COUNTS: list[int] = [100, 500, 1000, 5000]
-N_NEW_COUNTS_SCALE: list[int] = [1, 5, 10, 25, 50]
+N_EXISTING_COUNTS: list[int] = [100]  # , 500, 1000, 5000]
+N_NEW_COUNTS_SCALE: list[int] = [10]  # , 25, 50]
 EXISTING_CHUNK_SIZE_SCALE = 1000
 
 SEQDB_APP_CFGS = get_app_cfgs(
@@ -116,6 +117,7 @@ def _build_upload_command(
         sample_batch=sample_batch,
         user=env.get_root_user(),
         existing_chunk_size=existing_chunk_size,
+        calculate_distances=True,
     )
 
 
@@ -217,8 +219,8 @@ class TestSampleBatchUploader:
 
         set_service_repository(env, self.repositories[dataset_idx])
 
-        # profiler = pyinstrument.Profiler(async_mode="enabled")
-        # profiler.start()
+        profiler = pyinstrument.Profiler(async_mode="enabled")
+        profiler.start()
 
         n_entries = len(self.dbs[dataset_idx][model.LocusSet])
         commands_to_upload: list[command.UploadSamplesCommand] = [
@@ -241,8 +243,8 @@ class TestSampleBatchUploader:
         print(f"total_time={total:.4f}s")
         print(f"avg_time_per_upload={avg:.4f}s\n")
 
-        # profiler.stop()
-        # profiler.write_html("./test/output/profile_calculate_seq_distances.html")
+        profiler.stop()
+        profiler.write_html("./test/output/profile_calculate_seq_distances.html")
 
     @pytest.mark.parametrize(
         "dataset_idx", range(len(DB_ENTRY_COUNTS)), ids=DB_ENTRY_COUNTS
@@ -251,8 +253,8 @@ class TestSampleBatchUploader:
 
         set_service_repository(env, self.repositories[dataset_idx])
 
-        # profiler = pyinstrument.Profiler(async_mode="enabled")
-        # profiler.start()
+        profiler = pyinstrument.Profiler(async_mode="enabled")
+        profiler.start()
 
         n_entries = len(
             [
@@ -289,8 +291,8 @@ class TestSampleBatchUploader:
         print(f"total_time={total:.4f}s")
         print(f"avg_time_per_upload={avg:.4f}s\n")
 
-        # profiler.stop()
-        # profiler.write_html("./test/output/profile_calculate_seq_distances.html")
+        profiler.stop()
+        profiler.write_html("./test/output/profile_calculate_seq_distances_snp.html")
 
 
 _SCALE_PARAMS = [

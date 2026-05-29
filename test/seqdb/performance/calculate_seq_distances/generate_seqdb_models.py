@@ -95,9 +95,9 @@ def generate_demo_seqdb_models(
             valid_start_datetime=datetime(1970, 1, 1),
             valid_end_datetime=datetime(9999, 12, 31),
             is_integer_distance=True,
-            max_stored_distance=1000.0,
-            code="seq_distance_protocol_code{hex_string}_{i}",
-            name="seq_distance_protocol_name{hex_string}_{i}",
+            max_stored_distance=3000.0,
+            code=f"seq_distance_protocol_code{hex_string}_{i}",
+            name=f"seq_distance_protocol_name{hex_string}_{i}",
         )
 
         sample = model.Sample(  # type: ignore[call-arg]
@@ -358,9 +358,7 @@ def generate_scale_test_db(
             format=enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
             content_hash=model.SeqProfile.get_allele_profile_hash(allele_ids),
             content=base64.b64encode(
-                b"".join(
-                    NULL_ID.bytes if x is None else x.bytes for x in allele_ids
-                )
+                b"".join(NULL_ID.bytes if x is None else x.bytes for x in allele_ids)
             ).decode("ascii"),
             sample_id=sample.id,
         )

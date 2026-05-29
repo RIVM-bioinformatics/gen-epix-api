@@ -736,6 +736,7 @@ class Run:
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
+            + ["-m performance"]
             + [
                 "test/seqdb/performance/calculate_seq_distances",
             ]
