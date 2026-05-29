@@ -47,8 +47,8 @@ SNP_SEED = 99
 # N_NEW_PROFILES_SCALE new profiles uploaded per measurement point.
 # max_stored_distance=1e9 in generate_scale_test_db ensures every pair
 # is written, exercising the full json.loads / UPDATE_SOME path.
-N_EXISTING_COUNTS: list[int] = [100]  # , 500, 1000, 5000]
-N_NEW_COUNTS_SCALE: list[int] = [10]  # , 25, 50]
+N_EXISTING_COUNTS: list[int] = [5000]  # , 500, 1000, 5000]
+N_NEW_COUNTS_SCALE: list[int] = [50]  # [5, 10, 50, 100]
 EXISTING_CHUNK_SIZE_SCALE = 1000
 
 SEQDB_APP_CFGS = get_app_cfgs(
@@ -219,8 +219,8 @@ class TestSampleBatchUploader:
 
         set_service_repository(env, self.repositories[dataset_idx])
 
-        profiler = pyinstrument.Profiler(async_mode="enabled")
-        profiler.start()
+        # profiler = pyinstrument.Profiler(async_mode="enabled")
+        # profiler.start()
 
         n_entries = len(self.dbs[dataset_idx][model.LocusSet])
         commands_to_upload: list[command.UploadSamplesCommand] = [
@@ -243,8 +243,8 @@ class TestSampleBatchUploader:
         print(f"total_time={total:.4f}s")
         print(f"avg_time_per_upload={avg:.4f}s\n")
 
-        profiler.stop()
-        profiler.write_html("./test/output/profile_calculate_seq_distances.html")
+        # profiler.stop()
+        # profiler.write_html("./test/output/profile_calculate_seq_distances.html")
 
     @pytest.mark.parametrize(
         "dataset_idx", range(len(DB_ENTRY_COUNTS)), ids=DB_ENTRY_COUNTS
@@ -253,8 +253,8 @@ class TestSampleBatchUploader:
 
         set_service_repository(env, self.repositories[dataset_idx])
 
-        profiler = pyinstrument.Profiler(async_mode="enabled")
-        profiler.start()
+        # profiler = pyinstrument.Profiler(async_mode="enabled")
+        # profiler.start()
 
         n_entries = len(
             [
@@ -291,8 +291,8 @@ class TestSampleBatchUploader:
         print(f"total_time={total:.4f}s")
         print(f"avg_time_per_upload={avg:.4f}s\n")
 
-        profiler.stop()
-        profiler.write_html("./test/output/profile_calculate_seq_distances_snp.html")
+        # profiler.stop()
+        # profiler.write_html("./test/output/profile_calculate_seq_distances_snp.html")
 
 
 _SCALE_PARAMS = [
@@ -405,9 +405,23 @@ class TestCalculateSeqDistancesScale:
         )
 
         n_existing = N_EXISTING_COUNTS[dataset_idx]
+        # Profile only the largest SA_SQLITE case to capture the distance
+        # calculation hot path without overwriting the HTML on every iteration.
+        profile_this = (
+            n_existing == max(N_EXISTING_COUNTS)
+            and repository_type == enum.RepositoryType.SA_SQLITE
+        )
+        profiler = pyinstrument.Profiler(async_mode="enabled") if profile_this else None
+        if profiler:
+            profiler.start()
+
         start = perf_counter()
         result: model.SampleBatchUploadResult = env.app.handle(cmd)
         duration = perf_counter() - start
+
+        if profiler:
+            profiler.stop()
+            profiler.write_html("./test/output/profile_calculate_seq_distances.html")
 
         assert result.get_status_count()[EtlStatus.FAILED] == 0
         assert result.get_status_count()[EtlStatus.PENDING] == 0
