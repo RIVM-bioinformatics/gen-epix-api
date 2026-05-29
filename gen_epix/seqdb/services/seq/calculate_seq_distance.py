@@ -442,26 +442,28 @@ def _calculate_and_store_distances(
             blob ONLY NOW (deferred parse avoids cost for non-matching
             records, which are the vast majority when max_stored_distance
             is tight), update the map, mark as modified.
-       d. UPDATE_SOME: flush modified records for this chunk before moving
-          to the next — caps peak memory and write-batch size.
+       d. Accumulate modified records in all_modified_existing (no write
+          yet — all writes are deferred to step 6).
 
     5. Intra-batch: compute pairwise distances among new_profiles themselves.
 
-    6. CREATE_SOME: write all new SeqDistance records once at the end.
-       Deferred until all chunks complete so each new profile's map
-       accumulates contributions from every existing profile.
+    6. Single-transaction write using the caller's uow:
+       - UPDATE_SOME: all modified existing SeqDistance records at once.
+       - CREATE_SOME: all new SeqDistance records at once.
+       Both share the same transaction, ensuring atomicity.
 
     MEMORY BOUNDS (with existing_chunk_size = C)
     ----------------------------------------------
     SeqProfile objects    : ≤ C at a time (freed after each chunk)
-    SeqDistance objects   : ≤ C at a time (freed after each chunk)
+    SeqDistance objects   : up to all modified (held until step 6 write)
     new_profiles_decoded  : M entries, held for the duration of the call
     new_profile_distance_maps : M dicts, grown incrementally across chunks
 
     uow is the caller's unit of work, used for initial reads (concurrency
-    check, profile ID collection) and for the final CREATE_SOME write.
-    Per-chunk READ_SOME / iter_seq_distances / UPDATE_SOME each open their
-    own unit of work so they can be committed independently.
+    check, profile ID collection) and for the step 6 writes.
+    Per-chunk READ_SOME / iter_seq_distances open their own read-only unit
+    of work so reads stay bounded without holding a transaction open across
+    the full chunk loop.
     """
     log = service.logger
     t_fn = time.perf_counter()
@@ -538,13 +540,17 @@ def _calculate_and_store_distances(
             time.perf_counter() - t_fn,
         )
 
+    # all_modified_existing accumulates updated SeqDistance records across
+    # all chunks; the single UPDATE_SOME write happens in step 6 together
+    # with CREATE_SOME, keeping the full write atomic in the caller's uow.
+    all_modified_existing: list[model.SeqDistance] = []
+
     # Steps 4a-4d — Process existing profiles in chunks.
-    # Without chunking the original algorithm loaded all N SeqProfile objects
-    # and all N SeqDistance records simultaneously, causing OOM crashes for
-    # large datasets. Chunking bounds peak memory to chunk_size profiles and
-    # their distance records at a time.
-    # Each chunk opens its own unit of work so it can be committed
-    # independently — see the TODO below for the atomicity trade-off.
+    # Chunking bounds peak memory for reads: each chunk loads at most
+    # chunk_size SeqProfile objects and their SeqDistance records. Modified
+    # objects accumulate in all_modified_existing and are written in step 6.
+    # Per-chunk units of work are read-only; all writes use the caller's
+    # uow in step 6 so the full write is atomic.
     # optimize_parameter_handling=True uses a temp-table JOIN on mssql
     # instead of IN() — required because IN() on UNIQUEIDENTIFIER FK
     # columns via pyodbc raises ODBC 07002 regardless of list size.
@@ -555,12 +561,9 @@ def _calculate_and_store_distances(
         t_chunk = time.perf_counter()
 
         # Step 4a — Fetch SeqProfile objects for this chunk only.
-        # TODO: chunk_uow is a separate unit of work from the caller's uow,
-        #   which means each chunk runs in its own transaction. This is
-        #   intentional — it keeps READ_SOME, iter_seq_distances, and
-        #   UPDATE_SOME bounded per chunk — but it means the chunked writes
-        #   are not atomic with the final CREATE_SOME. Unclear if there is a
-        #   better alternative without materialising all chunks first.
+        # chunk_uow is a short-lived read-only unit of work. Reads stay
+        # bounded per chunk without holding a transaction across the loop;
+        # all writes are deferred to the caller's uow in step 6.
         with service.repository.uow() as chunk_uow:
             existing_profiles_list: list[model.SeqProfile] = (
                 service.repository.crud(  # type: ignore[assignment]
@@ -658,36 +661,8 @@ def _calculate_and_store_distances(
                 t_iter - t_read,
             )
 
-        # TODO: update all the existing ones only at the end after processing all chunks,
-        # rather than once per chunk.
-        # Step 4d — Flush modified records for this chunk before moving on.
-        # Committing per chunk bounds the UPDATE_SOME write-batch size and
-        # releases the modified SeqDistance objects from memory, keeping
-        # peak RSS proportional to chunk_size rather than to N.
-        if modified_existing:
-            with service.repository.uow() as chunk_uow:
-                service.repository.crud(
-                    chunk_uow,
-                    user_id,
-                    model.SeqDistance,
-                    CrudOperation.UPDATE_SOME,
-                    objs=modified_existing,
-                    optimize_parameter_handling=True,
-                )
-            if log:
-                log.debug(
-                    "  chunk %d/%d: UPDATE_SOME %d records (%.3fs)",
-                    chunk_no, n_chunks, len(modified_existing),
-                    time.perf_counter() - t_iter,
-                )
-            results.extend(
-                model.CalculateSeqDistancesResult(
-                    id=sd.id,
-                    status=EtlStatus.UPDATED,
-                    seq_distance_profile_id=(sd.seq_profile_id),
-                )
-                for sd in modified_existing
-            )
+        # Step 4d — Accumulate modified records for the single write in step 6.
+        all_modified_existing.extend(modified_existing)
 
     # Step 5: intra-batch distances (new-new pairs).
     t_step5 = time.perf_counter()
@@ -703,10 +678,28 @@ def _calculate_and_store_distances(
             time.perf_counter() - t_step5,
         )
 
-    # Step 6: create new SeqDistance records once, after all chunks complete.
-    # Each new profile's distance map has now accumulated contributions from
+    # Step 6: single-transaction write — UPDATE_SOME + CREATE_SOME together.
+    # Both operations use the caller's uow so the full write is atomic.
+    # Each new profile's distance map has accumulated contributions from
     # every existing profile processed in the chunk loop above.
     t_step6 = time.perf_counter()
+    if all_modified_existing:
+        service.repository.crud(
+            uow,
+            user_id,
+            model.SeqDistance,
+            CrudOperation.UPDATE_SOME,
+            objs=all_modified_existing,
+            optimize_parameter_handling=True,
+        )
+        results.extend(
+            model.CalculateSeqDistancesResult(
+                id=sd.id,
+                status=EtlStatus.UPDATED,
+                seq_distance_profile_id=sd.seq_profile_id,
+            )
+            for sd in all_modified_existing
+        )
     new_seq_distances: list[model.SeqDistance] = [
         model.SeqDistance(  # type: ignore[call-arg]
             id=cast(UUID, service.generate_id()),
@@ -725,7 +718,6 @@ def _calculate_and_store_distances(
         CrudOperation.CREATE_SOME,
         objs=new_seq_distances,
     )
-
     for created_seq_distance in created_seq_distances:
         results.append(
             model.CalculateSeqDistancesResult(
@@ -734,13 +726,19 @@ def _calculate_and_store_distances(
                 seq_distance_profile_id=(created_seq_distance.seq_profile_id),
             )
         )
+    n_created = len(created_seq_distances)
+    n_updated = len(all_modified_existing)
     if log:
         log.debug(
-            "_calculate_and_store_distances step 6 (CREATE_SOME %d): %.3fs"
-            " — total: %.3fs",
-            len(created_seq_distances),
+            "_calculate_and_store_distances step 6"
+            " (UPDATE_SOME %d, CREATE_SOME %d): %.3fs"
+            " — total: %.3fs | created=%d updated=%d",
+            n_updated,
+            n_created,
             time.perf_counter() - t_step6,
             time.perf_counter() - t_fn,
+            n_created,
+            n_updated,
         )
 
 
