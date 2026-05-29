@@ -60,6 +60,16 @@ where = ["."]
 include = ["gen_epix*"]
 exclude = ["tests", "tests.*", "docs", "docs.*", "data", "data.*", "cert", "cert.*", "cicd", "cicd.*"]
 
+[tool.pytest.ini_options]
+norecursedirs = ["mutants"]
+markers = [
+    "scenario_ids(id): Custom marker for scenario IDs used in test reporting.",
+    "integration: Marker for integration tests.",
+    "performance: Marker for performance/scale tests (skipped by default; use -m performance).",
+]
+addopts = "-v -s"
+filterwarnings = ["ignore:.*shadows an attribute in parent.*"]
+
 [tool.pytest-gremlins]
 paths = ["gen_epix"]
 
