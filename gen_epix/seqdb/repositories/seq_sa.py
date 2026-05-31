@@ -334,6 +334,50 @@ class SeqSARepository(SARepository, BaseSeqRepository):
             ],
         )
 
+    def get_profiles_missing_seq_distances(
+        self,
+        uow: BaseUnitOfWork,
+        distance_protocol_id: UUID,
+        seq_profile_protocol_ids: list[UUID],
+        max_new: int | None = None,
+    ) -> list[model.SeqProfile]:
+        if not seq_profile_protocol_ids:
+            return []
+        assert isinstance(uow, SAUnitOfWork)
+        # Correlated NOT EXISTS: avoids materialising the full profile list
+        # or the full distance-profile-id set in Python — the DB engine
+        # resolves the set difference directly.
+        not_exists = ~sa.exists(
+            sa.select(sa.literal(1))
+            .where(
+                sa_model.SeqDistance.seq_profile_id == sa_model.SeqProfile.id
+            )
+            .where(sa_model.SeqDistance.protocol_id == distance_protocol_id)
+        )
+        stmt = sa.select(sa_model.SeqProfile).where(not_exists)
+        if uow.session.get_bind().dialect.name == "mssql":
+            # IN() on uniqueidentifier FK columns raises ODBC 07002 regardless
+            # of list size — use a temp-table JOIN instead.
+            col_type = sa_model.SeqProfile.__table__.c["protocol_id"].type
+            temp_table = self._create_uuid_filter_temp_table(
+                uow.session, seq_profile_protocol_ids, "protocol_id", col_type
+            )
+            stmt = stmt.join(
+                temp_table,
+                sa_model.SeqProfile.protocol_id == temp_table.c.protocol_id,
+            )
+        else:
+            stmt = stmt.where(
+                sa_model.SeqProfile.protocol_id.in_(seq_profile_protocol_ids)
+            )
+        if max_new is not None:
+            stmt = stmt.limit(max_new)
+        mapper = self.get_mapper(model.SeqProfile)
+        result: list[model.SeqProfile] = []
+        for row in uow.session.execute(stmt):
+            result.append(mapper.load(row[0]))  # type: ignore[arg-type]
+        return result
+
     def get_profiles_by_protocol_ids(
         self,
         uow: BaseUnitOfWork,

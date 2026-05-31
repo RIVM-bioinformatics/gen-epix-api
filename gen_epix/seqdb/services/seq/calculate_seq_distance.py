@@ -234,20 +234,6 @@ def seq_service_update_seq_distances(
         assert seq_distance_protocol.max_stored_distance is not None
         assert seq_distance_protocol.seq_distance_type is not None
 
-        # Get profile IDs that already have SeqDistances
-        existing_distance_profile_ids: set[UUID] = set(
-            self.repository.iter_seq_distance_profile_ids(  # type: ignore[attr-defined]
-                uow, seq_distance_protocol.id
-            )
-        )
-        if log:
-            log.debug(
-                "UpdateSeqDistances: %d profiles already have SeqDistance"
-                " records (%.3fs)",
-                len(existing_distance_profile_ids),
-                time.perf_counter() - t0,
-            )
-
         # Get SeqProfile protocols that match the distance protocol's subset criteria.
         seq_profile_type = (
             seq_distance_protocol.get_seq_profile_type_for_distance_protocol()
@@ -274,41 +260,28 @@ def seq_service_update_seq_distances(
         if not matching_protocol_ids:
             return results
 
-        # Get all profiles for the corresponding protocols
-        all_profiles: list[model.SeqProfile] = (
-            self.repository.get_profiles_by_protocol_ids(  # type: ignore[attr-defined]
+        # Single SQL query: profiles with no SeqDistance record for this
+        # protocol (NOT EXISTS), capped at max_new_profiles via SQL LIMIT /
+        # TOP.  This replaces the previous approach of loading all profiles
+        # and all distance-profile-ids into Python and computing the set
+        # difference there, which timed out as both sets grew large.
+        missing_profiles: list[model.SeqProfile] = (
+            self.repository.get_profiles_missing_seq_distances(  # type: ignore[attr-defined]
                 uow,
-                matching_protocol_ids,
+                distance_protocol_id=seq_distance_protocol.id,
+                seq_profile_protocol_ids=matching_protocol_ids,
+                max_new=cmd.max_new_profiles,
             )
         )
-
-        # Determine profiles that are missing distances
-        missing_profiles: list[model.SeqProfile] = [
-            x
-            for x in all_profiles
-            if x.id is not None and x.id not in existing_distance_profile_ids
-        ]
         if log:
             log.debug(
-                "UpdateSeqDistances: %d total profiles, %d missing"
-                " distances (%.3fs)",
-                len(all_profiles),
+                "UpdateSeqDistances: %d profiles missing distances"
+                " (after max_new_profiles cap) (%.3fs)",
                 len(missing_profiles),
                 time.perf_counter() - t0,
             )
         if not missing_profiles:
             return results
-        # max_new_profiles caps the work per call so lsp-data can loop
-        # incrementally rather than timing out on a single giant request.
-        if cmd.max_new_profiles is not None:
-            missing_profiles = missing_profiles[: cmd.max_new_profiles]
-        if log:
-            log.debug(
-                "UpdateSeqDistances: processing %d new profiles"
-                " (after max_new_profiles cap) (%.3fs)",
-                len(missing_profiles),
-                time.perf_counter() - t0,
-            )
 
         _calculate_and_store_distances(
             self,
@@ -318,7 +291,6 @@ def seq_service_update_seq_distances(
             seq_profile_type,
             missing_profiles,
             results,
-            known_existing_profile_ids=list(existing_distance_profile_ids),
             existing_chunk_size=cmd.existing_chunk_size,
         )
 

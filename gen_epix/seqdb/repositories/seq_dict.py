@@ -218,6 +218,32 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
                 uow, user_id, model.SeqDistance, CrudOperation.UPDATE_SOME, objs=objs
             )
 
+    def get_profiles_missing_seq_distances(
+        self,
+        uow: BaseUnitOfWork,
+        distance_protocol_id: UUID,
+        seq_profile_protocol_ids: list[UUID],
+        max_new: int | None = None,
+    ) -> list[model.SeqProfile]:
+        protocol_id_set = set(seq_profile_protocol_ids)
+        has_distance: set[UUID] = {
+            sd.seq_profile_id
+            for sd in self.db[model.SeqDistance].values()
+            if isinstance(sd, model.SeqDistance)
+            and sd.protocol_id == distance_protocol_id
+        }
+        result = [
+            p
+            for p in self.db[model.SeqProfile].values()
+            if isinstance(p, model.SeqProfile)
+            and p.protocol_id in protocol_id_set
+            and p.id is not None
+            and p.id not in has_distance
+        ]
+        if max_new is not None:
+            result = result[:max_new]
+        return result
+
     def get_profiles_by_protocol_ids(
         self,
         uow: BaseUnitOfWork,

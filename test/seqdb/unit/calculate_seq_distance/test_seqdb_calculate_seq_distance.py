@@ -1435,8 +1435,9 @@ class TestUpdateSeqDistances(
             return []
 
         self.service.repository.crud.side_effect = _crud
-        self.service.repository.get_profiles_by_protocol_ids = Mock(
-            return_value=[existing_profile],
+        # All profiles already have distances — SQL NOT EXISTS returns nothing.
+        self.service.repository.get_profiles_missing_seq_distances = Mock(
+            return_value=[],
         )
 
         cmd = command.UpdateSeqDistancesCommand(
@@ -1522,11 +1523,9 @@ class TestUpdateSeqDistances(
             return []
 
         self.service.repository.crud.side_effect = _crud
-        self.service.repository.get_profiles_by_protocol_ids = Mock(
-            return_value=[
-                existing_profile,
-                missing_profile,
-            ],
+        # SQL NOT EXISTS returns only the profile without a distance record.
+        self.service.repository.get_profiles_missing_seq_distances = Mock(
+            return_value=[missing_profile],
         )
 
         cmd = command.UpdateSeqDistancesCommand(

@@ -103,6 +103,24 @@ class BaseSeqRepository(BaseRepository):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def get_profiles_missing_seq_distances(
+        self,
+        uow: BaseUnitOfWork,
+        distance_protocol_id: UUID,
+        seq_profile_protocol_ids: list[UUID],
+        max_new: int | None = None,
+    ) -> list[model.SeqProfile]:
+        """Return profiles that have no SeqDistance record for
+        distance_protocol_id.
+
+        Pushes the set-difference into SQL (NOT EXISTS subquery) so that
+        neither the full profile list nor the full distance-profile-id set
+        is materialised in Python.  max_new is applied as a SQL LIMIT /
+        TOP so only the required rows are transferred.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def get_sample_ids_modified_in_range(
         self,
         uow: BaseUnitOfWork,
