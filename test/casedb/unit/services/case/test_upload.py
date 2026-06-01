@@ -29,7 +29,9 @@ class TestCaseDateMutability(TestCase):
     def test_case_date_is_mutable_always(self) -> None:
         props = STORED_MODEL_FIELD_PROPS.get(model.Case, {})
         case_date_props = props.get("case_date")
-        self.assertIsNotNone(case_date_props, "case_date missing from STORED_MODEL_FIELD_PROPS")
+        self.assertIsNotNone(
+            case_date_props, "case_date missing from STORED_MODEL_FIELD_PROPS"
+        )
         self.assertTrue(
             case_date_props.is_mutable_always,
             "case_date.is_mutable_always must be True so updates persist",

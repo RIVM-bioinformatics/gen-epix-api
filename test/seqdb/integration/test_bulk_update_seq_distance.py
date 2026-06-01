@@ -3,6 +3,7 @@
 Verifies that bulk_update_seq_distance_content writes content changes
 to a real SA_SQLITE database via SQLAlchemy Core executemany.
 """
+
 import json
 import warnings
 from pathlib import Path
@@ -40,9 +41,7 @@ class TestBulkUpdateSeqDistanceContentSA:
             )
         user_id = UUID("00000000-0000-0000-0000-000000000001")
         db = generate_scale_test_db(n_loci=3, n_existing=3, seed=42)
-        dict_repo = create_dict_repository(
-            pickle_file=None, db=db, entities=entities
-        )
+        dict_repo = create_dict_repository(pickle_file=None, db=db, entities=entities)
         sa_repo = create_sqlite_repository(
             empty_sa_sqlite_file=tmp_path / "test.sqlite",
             entities=entities,
@@ -93,7 +92,9 @@ class TestBulkUpdateSeqDistanceContentSA:
         target = all_records[0]
         partial_id = str(uuid4())
         target.content = json.dumps({partial_id: 1.0})
-        unchanged_content = {sd.id: sd.content for sd in all_records if sd.id != target.id}
+        unchanged_content = {
+            sd.id: sd.content for sd in all_records if sd.id != target.id
+        }
         with sa_repo.uow() as uow:
             sa_repo.bulk_update_seq_distance_content(uow, user_id, [target])
 

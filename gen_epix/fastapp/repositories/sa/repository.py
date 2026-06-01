@@ -635,7 +635,10 @@ class SARepository(BaseRepository):
         def _execute(session: Session) -> list[Model]:
             obj_ids = [mapper.get_id(x) for x in objs]
             rows, row_ids = SARepository._in_session_read_some(
-                mapper, session, row_class, obj_ids,
+                mapper,
+                session,
+                row_class,
+                obj_ids,
                 optimize_parameter_handling=optimize_parameter_handling,
             )
             map_rows = dict(zip(row_ids, rows))

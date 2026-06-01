@@ -1,17 +1,5 @@
 import logging
 from pathlib import Path
-from time import perf_counter
-from typing import Any
-from uuid import UUID
-
-import pyinstrument as pyinstrument
-import pytest
-
-from gen_epix.commondb.domain.enum import AppType, EtlStatus
-from gen_epix.commondb.domain.util import get_app_cfgs
-from gen_epix.seqdb.domain import command, enum, model
-from gen_epix.seqdb.repositories.seq_dict import SeqDictRepository
-from gen_epix.seqdb.repositories.seq_sa import SeqSARepository
 from test.seqdb.performance.calculate_seq_distances.base import (
     DEV_REPOSITORY_CONFIG,
     SKIP_ENDPOINTS,
@@ -33,6 +21,18 @@ from test.seqdb.performance.common import (
 )
 from test.seqdb.seqdb_test_client import SeqdbTestClient as Env
 from test.seqdb.seqdb_test_client import SeqGenerationSettings
+from time import perf_counter
+from typing import Any
+from uuid import UUID
+
+import pyinstrument as pyinstrument
+import pytest
+
+from gen_epix.commondb.domain.enum import AppType, EtlStatus
+from gen_epix.commondb.domain.util import get_app_cfgs
+from gen_epix.seqdb.domain import command, enum, model
+from gen_epix.seqdb.repositories.seq_dict import SeqDictRepository
+from gen_epix.seqdb.repositories.seq_sa import SeqSARepository
 
 # Set this env var to a full mssql+pyodbc SQLAlchemy URL to run the SQL Server
 # performance tests.  If unset, TestCalculateSeqDistancesScaleMssql is skipped.

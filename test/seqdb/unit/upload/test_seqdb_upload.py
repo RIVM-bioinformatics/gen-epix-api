@@ -1292,7 +1292,9 @@ class TestConcurrentModificationError(BaseUploadTestCase):
 class TestVerifyBatchSeqClassifications(BaseUploadTestCase):
     """Tests for _verify_children_seq_classifications primary_category_id validation."""
 
-    def _run(self, sc: model.SeqClassificationForUpload) -> tuple[bool, model.SampleBatchUploadResult]:
+    def _run(
+        self, sc: model.SeqClassificationForUpload
+    ) -> tuple[bool, model.SampleBatchUploadResult]:
         sample = self.create_sample_for_upload(
             sample_id=None,
             seq_classifications=[sc],

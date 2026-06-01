@@ -167,7 +167,10 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         for seq_distance in table.values():
             if seq_distance.protocol_id != protocol_id:
                 continue
-            if profile_ids_set is not None and seq_distance.seq_profile_id not in profile_ids_set:
+            if (
+                profile_ids_set is not None
+                and seq_distance.seq_profile_id not in profile_ids_set
+            ):
                 continue
             yield seq_distance
 

@@ -204,9 +204,7 @@ def _verify_children_seq_classifications(
             user_id,
             model.SeqClassification,
             ["sample_id", "seq_id", "protocol_id", "id"],
-            filter=UuidSetFilter(
-                key="sample_id", members=all_sc_sample_ids
-            ),
+            filter=UuidSetFilter(key="sample_id", members=all_sc_sample_ids),
         )
         for sc_sample_id, sc_seq_id, sc_protocol_id, sc_id in result_iter:
             if sc_seq_id is None:

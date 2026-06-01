@@ -221,9 +221,7 @@ class SeqSARepository(SARepository, BaseSeqRepository):
             sa_model.SeqDistance.metadata,
             sa.Column(col_name, col_type),
         )
-        session.execute(
-            sa.text(f"CREATE TABLE {temp_name} ({col_name} {col_sql})")
-        )
+        session.execute(sa.text(f"CREATE TABLE {temp_name} ({col_name} {col_sql})"))
         batch_size = 1000
         for i in range(0, len(ids), batch_size):
             values = [{col_name: pid} for pid in ids[i : i + batch_size]]
@@ -251,13 +249,10 @@ class SeqSARepository(SARepository, BaseSeqRepository):
                 )
                 stmt = stmt.join(
                     temp_table,
-                    sa_model.SeqDistance.seq_profile_id
-                    == temp_table.c.seq_profile_id,
+                    sa_model.SeqDistance.seq_profile_id == temp_table.c.seq_profile_id,
                 )
             else:
-                stmt = stmt.where(
-                    sa_model.SeqDistance.seq_profile_id.in_(profile_ids)
-                )
+                stmt = stmt.where(sa_model.SeqDistance.seq_profile_id.in_(profile_ids))
         mapper = self.get_mapper(model.SeqDistance)
         result_iterator = uow.session.execute(stmt)
         for row in result_iterator:
@@ -349,9 +344,7 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         # resolves the set difference directly.
         not_exists = ~sa.exists(
             sa.select(sa.literal(1))
-            .where(
-                sa_model.SeqDistance.seq_profile_id == sa_model.SeqProfile.id
-            )
+            .where(sa_model.SeqDistance.seq_profile_id == sa_model.SeqProfile.id)
             .where(sa_model.SeqDistance.protocol_id == distance_protocol_id)
         )
         stmt = sa.select(sa_model.SeqProfile).where(not_exists)

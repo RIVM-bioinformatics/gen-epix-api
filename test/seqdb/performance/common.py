@@ -115,6 +115,7 @@ def count_seq_profiles(repo: SeqSARepository) -> int:
     """Return the current number of SeqProfile rows in the SA repository."""
     with repo.uow() as uow:
         assert isinstance(uow, SAUnitOfWork)
-        return uow.session.scalar(
-            sa.select(sa.func.count(sa_model_module.SeqProfile.id))
-        ) or 0
+        return (
+            uow.session.scalar(sa.select(sa.func.count(sa_model_module.SeqProfile.id)))
+            or 0
+        )

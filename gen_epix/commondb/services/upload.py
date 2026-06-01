@@ -616,9 +616,7 @@ class BatchUploader:
             # Presence in the result means the child exists; absence means new.
             # Duplicate-nulled entries (None) are excluded from the query and
             # correctly map to children_exist=False via the `in` check below.
-            actual_child_ids = frozenset(
-                x for x in child_ids if not self.is_null(x)
-            )
+            actual_child_ids = frozenset(x for x in child_ids if not self.is_null(x))
             child_parent_id_map: dict[UUID, UUID] = {}
             if actual_child_ids:
                 result_iter = self.service.repository.read_fields(
@@ -633,8 +631,7 @@ class BatchUploader:
                 )
                 child_parent_id_map = {x[0]: x[1] for x in result_iter}
             children_exist = [
-                not self.is_null(x) and x in child_parent_id_map
-                for x in child_ids
+                not self.is_null(x) and x in child_parent_id_map for x in child_ids
             ]
 
             # Process all children (both with and without IDs)

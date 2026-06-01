@@ -124,7 +124,9 @@ class Seq(Base, RowMetadataMixin, CodeMixin, QualityMixin):
 
     __tablename__, __table_args__ = create_table_args(model.Seq)
 
-    sample_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "sample_id", index=True)
+    sample_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Seq, "sample_id", index=True
+    )
     uri: Mapped[str] = create_mapped_column(DOMAIN, model.Seq, "uri")
     file_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "file_id")
     file_format: Mapped[enum.SeqFileFormat] = create_mapped_column(

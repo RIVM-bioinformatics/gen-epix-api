@@ -1080,7 +1080,9 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
             [existing_identifier],
         ]
         self.service.repository.crud.side_effect = [
-            [existing_specimen_db],  # READ_SOME: existing specimen for update comparison
+            [
+                existing_specimen_db
+            ],  # READ_SOME: existing specimen for update comparison
         ]
         self.service.repository.read_fields.side_effect = [
             [(existing_specimen_id, existing_person_id)],
@@ -1122,7 +1124,9 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
             [existing_identifier],
         ]
         self.service.repository.crud.side_effect = [
-            [existing_specimen_db],  # READ_SOME: existing specimen for update comparison
+            [
+                existing_specimen_db
+            ],  # READ_SOME: existing specimen for update comparison
         ]
         self.service.repository.read_fields.side_effect = [
             [(existing_specimen_id, existing_person_id)],
@@ -1257,7 +1261,9 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
             [created_identifier_id],  # Created Identifier IDs
         ]
         self.service.repository.crud.side_effect = [
-            [existing_specimen_db],  # READ_SOME: existing specimen for update comparison
+            [
+                existing_specimen_db
+            ],  # READ_SOME: existing specimen for update comparison
         ]
         self.service.repository.read_fields.side_effect = [
             [(existing_specimen_id, existing_person_id)],

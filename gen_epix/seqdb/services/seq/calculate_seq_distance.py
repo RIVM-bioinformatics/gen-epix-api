@@ -215,8 +215,7 @@ def seq_service_update_seq_distances(
     t0 = time.perf_counter()
     if log:
         log.debug(
-            "UpdateSeqDistances start: protocol_id=%s chunk_size=%s"
-            " max_new=%s",
+            "UpdateSeqDistances start: protocol_id=%s chunk_size=%s" " max_new=%s",
             cmd.protocol_id,
             cmd.existing_chunk_size,
             cmd.max_new_profiles,
@@ -551,7 +550,9 @@ def _calculate_and_store_distances(
         if log:
             log.debug(
                 "  chunk %d/%d: READ_SOME %d profiles (%.3fs)",
-                chunk_no, n_chunks, len(existing_profiles_list),
+                chunk_no,
+                n_chunks,
+                len(existing_profiles_list),
                 t_read - t_chunk,
             )
 
@@ -627,9 +628,11 @@ def _calculate_and_store_distances(
         t_iter = time.perf_counter()
         if log:
             log.debug(
-                "  chunk %d/%d: iter+compute %d distances,"
-                " %d modified (%.3fs)",
-                chunk_no, n_chunks, n_distances_seen, len(modified_existing),
+                "  chunk %d/%d: iter+compute %d distances," " %d modified (%.3fs)",
+                chunk_no,
+                n_chunks,
+                n_distances_seen,
+                len(modified_existing),
                 t_iter - t_read,
             )
 

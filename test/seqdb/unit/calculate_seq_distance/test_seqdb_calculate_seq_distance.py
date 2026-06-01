@@ -232,6 +232,7 @@ def _setup_distance_mocks(
     Pass recorder to also mock bulk_update_seq_distance_content
     so that bulk-updated objects are captured in recorder.updated.
     """
+
     def _iter_distances(
         uow: Any,
         protocol_id: UUID,
@@ -257,10 +258,10 @@ def _setup_distance_mocks(
         return_value=None,
     )
     if recorder is not None:
-        def _bulk_update(
-            uow: Any, user_id: Any, objs: list[model.SeqDistance]
-        ) -> None:
+
+        def _bulk_update(uow: Any, user_id: Any, objs: list[model.SeqDistance]) -> None:
             recorder.updated.extend(objs)
+
         service_mock.repository.bulk_update_seq_distance_content = Mock(
             side_effect=_bulk_update,
         )
@@ -1642,7 +1643,10 @@ class TestUpdateSeqDistances(
             if model_class is model.SeqProfile and operation == CrudOperation.READ_SOME:
                 recorder.read_some_calls.append(list(obj_ids))
                 return [profiles_by_id[i] for i in obj_ids if i in profiles_by_id]
-            if model_class is model.SeqDistance and operation == CrudOperation.CREATE_SOME:
+            if (
+                model_class is model.SeqDistance
+                and operation == CrudOperation.CREATE_SOME
+            ):
                 recorder.created.extend(objs)
                 return objs
             return []
