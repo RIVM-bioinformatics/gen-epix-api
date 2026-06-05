@@ -51,7 +51,7 @@ class CaseBatchUploader(BatchUploader):
             # collection; fall back to all cols for the case type. The
             # DataCollection existence is still enforced by DB constraints.
             case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
-            if case_abac is None or not case_abac.is_full_access:
+            if case_abac is None and not case_abac.is_full_access:
                 raise exc.UnauthorizedAuthError(
                     "d8c05dc7",
                     f"User {None if cmd.user is None else cmd.user.id} is not allowed to access cases in the given data collection",
