@@ -554,7 +554,7 @@ class TestModelSeqForUpload(TestCase):
 
 
 @pytest.mark.scenario_ids("TC-RBAC-04-11", "TC-SEC-31-01")
-class TestModelAlleleProfileForUpload(TestCase):
+class TestModelSeqProfileForUpload(TestCase):
 
     def test_json_serialization(self) -> None:
         """Test JSON serialization of AlleleProfileForUpload."""
@@ -729,7 +729,7 @@ class TestModelAlleleProfileForUpload(TestCase):
         """Test valid AlleleProfileForUpload without locus_code_map when using allele_ids."""
         # Test using allele_ids to avoid locus_code_map requirement
         allele_id1, allele_id2 = uuid4(), uuid4()
-        allele_profile = TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
+        allele_profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
             [allele_id1, allele_id2]
         )
         self.assertIsNone(allele_profile.locus_code_map_code)
@@ -739,7 +739,7 @@ class TestModelAlleleProfileForUpload(TestCase):
     def test_quality_mixin_inheritance(self) -> None:
         """Test that AlleleProfileForUpload inherits QualityMixin properties."""
         allele_id = uuid4()
-        allele_profile = TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
+        allele_profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
             [allele_id], qc_score=0.95
         )
         self.assertEqual(allele_profile.qc_score, 0.95)
@@ -783,7 +783,7 @@ class TestModelSampleForUpload(TestCase):
         """Test valid SampleForUpload with sample_id."""
         sample_id = uuid4()
         allele_id = uuid4()
-        allele_profile = TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
+        allele_profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
             [allele_id]
         )
         sample = model.SampleForUpload(
@@ -802,7 +802,7 @@ class TestModelSampleForUpload(TestCase):
             external_id="SAMPLE123",
         )
         allele_id = uuid4()
-        allele_profile = TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
+        allele_profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
             [allele_id]
         )
         sample = model.SampleForUpload(
@@ -820,7 +820,7 @@ class TestModelSampleForUpload(TestCase):
             identifier_issuer_code="ISSUER123", external_id="SAMPLE123"
         )
         allele_id = uuid4()
-        allele_profile = TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
+        allele_profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
             [allele_id]
         )
         sample = model.SampleForUpload(
@@ -843,7 +843,7 @@ class TestModelSampleForUpload(TestCase):
             ),
         ]
         allele_id = uuid4()
-        allele_profile = TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
+        allele_profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
             [allele_id]
         )
         sample_for_upload = model.SampleForUpload(
@@ -857,7 +857,7 @@ class TestModelSampleForUpload(TestCase):
         """Test valid SampleForUpload with optional fields."""
         data_collection_id = uuid4()
         allele_id = uuid4()
-        allele_profile = TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
+        allele_profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
             [allele_id]
         )
         sample_for_upload = model.SampleForUpload(
@@ -871,7 +871,7 @@ class TestModelSampleForUpload(TestCase):
     def test_invalid_missing_sample_identification(self) -> None:
         """Test that SampleForUpload works without sample_id or Identifiers (they are optional)."""
         allele_id = uuid4()
-        allele_profile = TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
+        allele_profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
             [allele_id]
         )
         # This should not raise ValidationError since both fields are optional
@@ -885,7 +885,7 @@ class TestModelSampleForUpload(TestCase):
     def test_invalid_empty_sample_ids(self) -> None:
         """Test that SampleForUpload accepts empty Identifiers list."""
         allele_id = uuid4()
-        allele_profile = TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
+        allele_profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
             [allele_id]
         )
         # This should not raise ValidationError since empty list is valid
@@ -902,7 +902,7 @@ class TestModelSampleForUpload(TestCase):
         seq_upload = self._create_sample_seq_for_upload(sample_id=NULL_ID)
 
         allele_id = uuid4()
-        allele_profile = TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
+        allele_profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
             [allele_id]
         )
 
@@ -926,7 +926,7 @@ class TestModelSampleForUpload(TestCase):
         seq3 = self._create_sample_seq_for_upload(sample_id=NULL_ID, code="seq_003")
 
         allele_id = uuid4()
-        allele_profile = TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
+        allele_profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
             [allele_id]
         )
 
@@ -951,7 +951,7 @@ class TestModelSampleForUpload(TestCase):
         """Test SampleForUpload with empty seqs list."""
         sample_id = uuid4()
         allele_id = uuid4()
-        allele_profile = TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
+        allele_profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
             [allele_id]
         )
 
@@ -975,7 +975,7 @@ class TestModelSampleForUpload(TestCase):
         seq_upload = self._create_sample_seq_for_upload(sample_id=NULL_ID)
 
         allele_id = uuid4()
-        allele_profile = TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
+        allele_profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
             [allele_id]
         )
 
@@ -1020,7 +1020,7 @@ class TestModelSampleForUpload(TestCase):
         )
 
         allele_id = uuid4()
-        allele_profile = TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
+        allele_profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
             [allele_id]
         )
 
@@ -1053,7 +1053,7 @@ class TestModelSampleForUpload(TestCase):
         seq_upload = self._create_sample_seq_for_upload(sample_id=NULL_ID)
 
         allele_id = uuid4()
-        allele_profile = TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
+        allele_profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
             [allele_id]
         )
 
@@ -1089,7 +1089,7 @@ class TestModelSampleForUpload(TestCase):
         )
 
         allele_id = uuid4()
-        allele_profile = TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
+        allele_profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
             [allele_id]
         )
 
@@ -1114,7 +1114,7 @@ class TestModelSampleForUpload(TestCase):
         seq2 = self._create_sample_seq_for_upload(sample_id=NULL_ID, code="seq_002")
 
         allele_id = uuid4()
-        allele_profile = TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
+        allele_profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
             [allele_id]
         )
 
@@ -1171,7 +1171,7 @@ class TestModelSampleBatchForUpload(TestCase):
         ]
 
         allele_id = uuid4()
-        allele_profile = TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
+        allele_profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
             [allele_id]
         )
 
@@ -1246,7 +1246,7 @@ class TestModelSampleBatchForUpload(TestCase):
             id=uuid4(),
             sample=model.Sample(created_in_data_collection_id=uuid4()),
             seq_profiles=[
-                TestModelAlleleProfileForUpload._get_allele_profile_for_ids([allele_id])
+                TestModelSeqProfileForUpload._get_allele_profile_for_ids([allele_id])
             ],
         )
         sample_set = model.SampleBatchForUpload(samples=[sample])
@@ -1261,7 +1261,7 @@ class TestModelSampleBatchForUpload(TestCase):
             id=uuid4(),
             sample=model.Sample(created_in_data_collection_id=uuid4()),
             seq_profiles=[
-                TestModelAlleleProfileForUpload._get_allele_profile_for_ids([allele_id])
+                TestModelSeqProfileForUpload._get_allele_profile_for_ids([allele_id])
             ],
         )
         sample_set = model.SampleBatchForUpload(samples=[sample], alleles=[allele])
@@ -1279,9 +1279,7 @@ class TestModelSampleBatchForUpload(TestCase):
             id=uuid4(),
             sample=model.Sample(created_in_data_collection_id=uuid4()),
             seq_profiles=[
-                TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
-                    [allele_id2]
-                )
+                TestModelSeqProfileForUpload._get_allele_profile_for_ids([allele_id2])
             ],
         )
 
@@ -1387,7 +1385,7 @@ class TestModelSampleBatchForUpload(TestCase):
             id=uuid4(),
             sample=model.Sample(created_in_data_collection_id=uuid4()),
             seq_profiles=[
-                TestModelAlleleProfileForUpload._get_allele_profile_for_ids([allele_id])
+                TestModelSeqProfileForUpload._get_allele_profile_for_ids([allele_id])
             ],
         )
 
@@ -1436,7 +1434,7 @@ class TestModelSampleBatchForUpload(TestCase):
                 id=uuid4(),
                 sample=model.Sample(created_in_data_collection_id=uuid4()),
                 seq_profiles=[
-                    TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
+                    TestModelSeqProfileForUpload._get_allele_profile_for_ids(
                         [allele_id1]
                     )
                 ],
@@ -1445,7 +1443,7 @@ class TestModelSampleBatchForUpload(TestCase):
                 id=uuid4(),
                 sample=model.Sample(created_in_data_collection_id=uuid4()),
                 seq_profiles=[
-                    TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
+                    TestModelSeqProfileForUpload._get_allele_profile_for_ids(
                         [allele_id2]
                     )
                 ],
@@ -1462,7 +1460,7 @@ class TestModelSampleBatchForUpload(TestCase):
             id=uuid4(),
             seqs=[],  # Empty list
             seq_profiles=[
-                TestModelAlleleProfileForUpload._get_allele_profile_for_ids([uuid4()])
+                TestModelSeqProfileForUpload._get_allele_profile_for_ids([uuid4()])
             ],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
@@ -1481,7 +1479,7 @@ class TestModelSampleBatchForUpload(TestCase):
             id=sample_id,
             seqs=[seq_with_null_sample_id],
             seq_profiles=[
-                TestModelAlleleProfileForUpload._get_allele_profile_for_ids([uuid4()])
+                TestModelSeqProfileForUpload._get_allele_profile_for_ids([uuid4()])
             ],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
@@ -1496,7 +1494,7 @@ class TestModelSampleBatchForUpload(TestCase):
             id=NULL_ID,
             seqs=[seq_with_own_sample_id],
             seq_profiles=[
-                TestModelAlleleProfileForUpload._get_allele_profile_for_ids([uuid4()])
+                TestModelSeqProfileForUpload._get_allele_profile_for_ids([uuid4()])
             ],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )

@@ -612,13 +612,13 @@ class BatchUploader:
                             f"entries in the batch (parents: {parent_ids_str}).",
                         )
 
-            children_exist = self.objects_exist(
-                uow, user_id, child_model_class, child_ids
-            )
-
-            # Get (id, parent_id) for all existing ids
+            # Single read_fields replaces the old EXISTS_SOME + read_fields pair.
+            # Presence in the result means the child exists; absence means new.
+            # Duplicate-nulled entries (None) are excluded from the query and
+            # correctly map to children_exist=False via the `in` check below.
+            actual_child_ids = frozenset(x for x in child_ids if not self.is_null(x))
             child_parent_id_map: dict[UUID, UUID] = {}
-            if any(children_exist):
+            if actual_child_ids:
                 result_iter = self.service.repository.read_fields(
                     uow,
                     user_id,
@@ -626,12 +626,11 @@ class BatchUploader:
                     [child_id_field_name, child_parent_id_field_name],
                     filter=UuidSetFilter(
                         key=child_id_field_name,
-                        members=frozenset(
-                            [x for x, y in zip(child_ids, children_exist) if y]
-                        ),
+                        members=actual_child_ids,
                     ),
                 )
                 child_parent_id_map = {x[0]: x[1] for x in result_iter}
+            children_exist = [x in child_parent_id_map for x in child_ids]
 
             # Process all children (both with and without IDs)
             for (
@@ -1333,7 +1332,7 @@ class BatchUploader:
                 for y in getattr(x, child_field_name) or []
             }
         )
-        ids = {x[0] for x in id_code_tuples if x[0] is not None and x[0] != NULL_ID}
+        ids = {x[0] for x in id_code_tuples if not self.is_null(x[0])}
         codes = {x[1] for x in id_code_tuples if x[1] is not None}
         id_code_map: dict[UUID, str] = {}
         code_id_map: dict[str, UUID] = {}
@@ -1487,6 +1486,59 @@ class BatchUploader:
                         pass
         return success
 
+    def retrieve_parent_id_by_intra_parent_linked_child_id(
+        self,
+        uow: BaseUnitOfWork,
+        cmd: command.UploadBatchCommandMixin,
+        from_child_class: type[Model],
+        from_child_link_id_field_name: str,
+        to_child_class: type[Model],
+    ) -> dict[UUID, UUID]:
+        """
+        Retrieve a dict[to_child_id, parent_id] containing all existing (to_child_id,
+        parent_id) pairs for children referred to by the from_child_link_id_field_name
+        field on from_child_class instances in the upload, where parent_id is the ID of
+        the parent of the child with ID to_child_id
+        """
+        # Get all to_child_ids referred to by from_child_link_id_field_name fields on from_child_class instances in the upload
+        to_child_ids: list[UUID] = []
+        for parent_for_upload in self.get_parents_for_upload(cmd):
+            children_for_upload: list[Model] = (
+                getattr(
+                    parent_for_upload,
+                    self.child_children_field_name_map[from_child_class],
+                )
+                or []
+            )
+            for child_for_upload in children_for_upload:
+                child_link_id = getattr(child_for_upload, from_child_link_id_field_name)
+                if not self.is_null(child_link_id):
+                    to_child_ids.append(cast(UUID, child_link_id))
+
+        # Retrieve parent IDs for these child IDs
+        existing_parent_id_by_child_id: dict[UUID, UUID] = {}
+        if to_child_ids:
+            to_child_id_field_name = self.child_id_field_name_map[to_child_class]
+            to_child_parent_id_field_name = self.child_parent_id_field_name_map[
+                to_child_class
+            ]
+            user: model.User | None = getattr(cmd, "user")
+            result_iter = self.service.repository.read_fields(
+                uow,
+                user.id if user else None,
+                to_child_class,
+                [
+                    to_child_id_field_name,
+                    to_child_parent_id_field_name,
+                ],
+                filter=UuidSetFilter(
+                    key=to_child_id_field_name, members=frozenset(to_child_ids)
+                ),
+            )
+            for x in result_iter:
+                existing_parent_id_by_child_id[x[0]] = x[1]
+        return existing_parent_id_by_child_id
+
     def objects_exist(
         self,
         uow: BaseUnitOfWork,
@@ -1497,9 +1549,7 @@ class BatchUploader:
         # Initialise output
         objs_exist = [False] * len(obj_ids)
         # Determine which indices are actually IDs
-        is_id_indices = [
-            i for i, x in enumerate(obj_ids) if x is not None and x != NULL_ID
-        ]
+        is_id_indices = [i for i, x in enumerate(obj_ids) if not self.is_null(x)]
         if len(is_id_indices) == 0:
             return objs_exist
         # Retrieve which of the actual IDs also exists
@@ -1655,11 +1705,7 @@ class BatchUploader:
                     # field added) is fine and requires no action for this field.
                     # None or NULL_ID means "not specified" — treat as a no-op for
                     # immutable fields so that partial-update payloads don't fail.
-                    if (
-                        new_value is not None
-                        and new_value != NULL_ID
-                        and new_value != existing_value
-                    ):
+                    if not self.is_null(new_value) and new_value != existing_value:
                         obj_result.add_error(
                             "f5e09001",
                             f"Field {field_name} with existing value {existing_value} may not be updated to {new_value}.",

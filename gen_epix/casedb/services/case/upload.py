@@ -51,7 +51,7 @@ class CaseBatchUploader(BatchUploader):
             # collection; fall back to all cols for the case type. The
             # DataCollection existence is still enforced by DB constraints.
             case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
-            if case_abac is None or not case_abac.is_full_access:
+            if case_abac is None and not case_abac.is_full_access:
                 raise exc.UnauthorizedAuthError(
                     "d8c05dc7",
                     f"User {None if cmd.user is None else cmd.user.id} is not allowed to access cases in the given data collection",
@@ -285,7 +285,12 @@ class CaseBatchUploader(BatchUploader):
                 result.status = seqdb_result.status
                 result.add_logs(seqdb_result.logs)
                 assert case.read_sets is not None
-                case_content[case.read_sets[child_index].col_id] = str(seqdb_result.id)
+                # only update content if there is an ID, otherwise a unknown value appears in the content,
+                # causing a data validation issue in the case upload
+                if seqdb_result.id is not None:
+                    case_content[case.read_sets[child_index].col_id] = str(
+                        seqdb_result.id
+                    )
             # Map seqs back to cases
             for i, seqdb_result in enumerate(sample_result.seqs or []):
                 case_index, child_index = sample_case_index_map[
@@ -299,7 +304,8 @@ class CaseBatchUploader(BatchUploader):
                 result.status = seqdb_result.status
                 result.add_logs(seqdb_result.logs)
                 assert case.seqs is not None
-                case_content[case.seqs[child_index].col_id] = str(seqdb_result.id)
+                if seqdb_result.id is not None:
+                    case_content[case.seqs[child_index].col_id] = str(seqdb_result.id)
 
         return success
 
