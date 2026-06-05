@@ -2,10 +2,9 @@ from collections.abc import Iterable
 from collections.abc import Set as AbstractSet
 from datetime import datetime
 from typing import Any, cast
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import sqlalchemy as sa
-from sqlalchemy.orm import Session
 
 import gen_epix.seqdb.repositories.sa_model as sa_model
 from gen_epix.fastapp import BaseUnitOfWork
@@ -175,8 +174,12 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         ).where(seq_distance_model.protocol_id == protocol_id)
         if uow.session.get_bind().dialect.name == "mssql":
             col_type = sa_model.SeqDistance.__table__.c["seq_profile_id"].type
-            temp_table = self._create_uuid_filter_temp_table(
-                uow.session, profile_ids, "seq_profile_id", col_type
+            temp_table = self.create_unique_values_temp_table(
+                uow.session,
+                sa_model.SeqDistance.metadata,
+                "seq_profile_id",
+                col_type,
+                profile_ids,
             )
             stmt = stmt.join(
                 temp_table,
@@ -200,35 +203,6 @@ class SeqSARepository(SARepository, BaseSeqRepository):
 
         return list(matching_profile_ids - set(profile_ids))
 
-    @staticmethod
-    def _create_uuid_filter_temp_table(
-        session: Session,
-        ids: list[UUID],
-        col_name: str,
-        col_type: sa.types.TypeEngine,
-    ) -> sa.Table:
-        """Create a temp table for filtering on a UUID FK column.
-
-        IN() on uniqueidentifier FK columns via pyodbc raises ODBC 07002
-        regardless of list size; a temp-table JOIN avoids the parameter
-        binding entirely. Only called on mssql dialects.
-        """
-        temp_name = f"#filter_{uuid4().hex}"
-        dialect = session.get_bind().dialect
-        col_sql = col_type.compile(dialect=dialect)
-        temp_table = sa.Table(
-            temp_name,
-            sa_model.SeqDistance.metadata,
-            sa.Column(col_name, col_type),
-        )
-        session.execute(sa.text(f"CREATE TABLE {temp_name} ({col_name} {col_sql})"))
-        batch_size = 1000
-        for i in range(0, len(ids), batch_size):
-            values = [{col_name: pid} for pid in ids[i : i + batch_size]]
-            session.execute(sa.insert(temp_table), values)
-            session.flush()
-        return temp_table
-
     def iter_seq_distances(
         self,
         uow: BaseUnitOfWork,
@@ -244,8 +218,12 @@ class SeqSARepository(SARepository, BaseSeqRepository):
                 return  # IN() with empty list is invalid SQL Server syntax
             if uow.session.get_bind().dialect.name == "mssql":
                 col_type = sa_model.SeqDistance.__table__.c["seq_profile_id"].type
-                temp_table = self._create_uuid_filter_temp_table(
-                    uow.session, profile_ids, "seq_profile_id", col_type
+                temp_table = self.create_unique_values_temp_table(
+                    uow.session,
+                    sa_model.SeqDistance.metadata,
+                    "seq_profile_id",
+                    col_type,
+                    profile_ids,
                 )
                 stmt = stmt.join(
                     temp_table,
@@ -285,7 +263,7 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         assert isinstance(uow, SAUnitOfWork)
         return uow.session.execute(stmt).scalar()
 
-    def bulk_update_seq_distance_content(
+    def update_some_seq_distance_content(
         self,
         uow: BaseUnitOfWork,
         user_id: UUID | None,
@@ -321,20 +299,20 @@ class SeqSARepository(SARepository, BaseSeqRepository):
             stmt,
             [
                 {
-                    "b_id": sd.id,
-                    "b_content": sd.content,
+                    "b_id": x.id,
+                    "b_content": x.content,
                     "b_modified_by": user_id.bytes if user_id is not None else None,
                 }
-                for sd in objs
+                for x in objs
             ],
         )
 
-    def get_profiles_missing_seq_distances(
+    def get_profiles_without_seq_distance(
         self,
         uow: BaseUnitOfWork,
         distance_protocol_id: UUID,
         seq_profile_protocol_ids: list[UUID],
-        max_new: int | None = None,
+        limit: int | None = None,
     ) -> list[model.SeqProfile]:
         if not seq_profile_protocol_ids:
             return []
@@ -352,8 +330,12 @@ class SeqSARepository(SARepository, BaseSeqRepository):
             # IN() on uniqueidentifier FK columns raises ODBC 07002 regardless
             # of list size — use a temp-table JOIN instead.
             col_type = sa_model.SeqProfile.__table__.c["protocol_id"].type
-            temp_table = self._create_uuid_filter_temp_table(
-                uow.session, seq_profile_protocol_ids, "protocol_id", col_type
+            temp_table = self.create_unique_values_temp_table(
+                uow.session,
+                sa_model.SeqProfile.metadata,
+                "protocol_id",
+                col_type,
+                seq_profile_protocol_ids,
             )
             stmt = stmt.join(
                 temp_table,
@@ -363,8 +345,8 @@ class SeqSARepository(SARepository, BaseSeqRepository):
             stmt = stmt.where(
                 sa_model.SeqProfile.protocol_id.in_(seq_profile_protocol_ids)
             )
-        if max_new is not None:
-            stmt = stmt.limit(max_new)
+        if limit is not None:
+            stmt = stmt.limit(limit)
         mapper = self.get_mapper(model.SeqProfile)
         result: list[model.SeqProfile] = []
         for row in uow.session.execute(stmt):
@@ -382,8 +364,12 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         stmt = sa.select(sa_model.SeqProfile)
         if uow.session.get_bind().dialect.name == "mssql":
             col_type = sa_model.SeqProfile.__table__.c["protocol_id"].type
-            temp_table = self._create_uuid_filter_temp_table(
-                uow.session, protocol_ids, "protocol_id", col_type
+            temp_table = self.create_unique_values_temp_table(
+                uow.session,
+                sa_model.SeqProfile.metadata,
+                "protocol_id",
+                col_type,
+                protocol_ids,
             )
             stmt = stmt.join(
                 temp_table,

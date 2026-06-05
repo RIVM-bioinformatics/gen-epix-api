@@ -123,7 +123,7 @@ class UpdateSeqDistancesCommand(Command):
     protocol_id: UUID = Field(
         description=("The ID of the seq distance protocol to update distances for."),
     )
-    max_new_profiles: int | None = Field(
+    limit: int | None = Field(
         default=None,
         description=(
             "If set, process at most this many missing profiles per call. "

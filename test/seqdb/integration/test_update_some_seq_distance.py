@@ -1,12 +1,11 @@
-"""Integration test for SeqSARepository.bulk_update_seq_distance_content.
+"""Integration test for SeqSARepository.update_some_seq_distance_content.
 
-Verifies that bulk_update_seq_distance_content writes content changes
+Verifies that update_some_seq_distance_content writes content changes
 to a real SA_SQLITE database via SQLAlchemy Core executemany.
 """
 
 import json
 import warnings
-from pathlib import Path
 from test.seqdb.performance.calculate_seq_distances.generate_seqdb_models import (
     generate_scale_test_db,
 )
@@ -28,11 +27,11 @@ from gen_epix.seqdb.domain import model
 
 @pytest.mark.scenario_ids("TC-11-13-01")
 class TestBulkUpdateSeqDistanceContentSA:
-    """Verify bulk_update_seq_distance_content against a real SA_SQLITE database."""
+    """Verify update_some_seq_distance_content against a real SA_SQLITE database."""
 
     @pytest.fixture(scope="class")
     def sa_repo_with_data(self, tmp_path_factory: pytest.TempPathFactory):  # type: ignore[type-arg]
-        tmp_path = tmp_path_factory.mktemp("bulk_update_seq_distance")
+        tmp_path = tmp_path_factory.mktemp("update_some_seq_distance")
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             entities: list[Entity] = DOMAIN.get_dag_sorted_entities(
@@ -66,7 +65,7 @@ class TestBulkUpdateSeqDistanceContentSA:
             sd.content = new_content
 
         with sa_repo.uow() as uow:
-            sa_repo.bulk_update_seq_distance_content(uow, user_id, existing)
+            sa_repo.update_some_seq_distance_content(uow, user_id, existing)
 
         with sa_repo.uow() as uow:
             read_back: list[model.SeqDistance] = sa_repo.crud(
@@ -96,7 +95,7 @@ class TestBulkUpdateSeqDistanceContentSA:
             sd.id: sd.content for sd in all_records if sd.id != target.id
         }
         with sa_repo.uow() as uow:
-            sa_repo.bulk_update_seq_distance_content(uow, user_id, [target])
+            sa_repo.update_some_seq_distance_content(uow, user_id, [target])
 
         with sa_repo.uow() as uow:
             read_back: list[model.SeqDistance] = sa_repo.crud(

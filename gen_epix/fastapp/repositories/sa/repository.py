@@ -47,6 +47,7 @@ from gen_epix.filter import (
 
 class SARepository(BaseRepository):
     DEFAULT_MAX_INSERT_BATCH_SIZE = 2000
+    DEFAULT_MAX_PARAMETERS_IN_CLAUSE = 1000
 
     @classmethod
     def _process_repository_params(
@@ -187,7 +188,7 @@ class SARepository(BaseRepository):
 
     def __init__(self, engine: Engine, **kwargs: Any):
         # TODO: 2953 remove register_mappers argument
-        register_mappers = kwargs.pop("register_mappers", True)
+        register_mappers: bool = kwargs.pop("register_mappers", True)
         sa_mapper_factory: BaseSAMapperFactory | None = kwargs.pop(
             "sa_mapper_factory", None
         )
@@ -195,6 +196,14 @@ class SARepository(BaseRepository):
         self._id: str = kwargs.get("id", str(uuid.uuid4()))
         self._name: str = kwargs.get("name", self._id)
         self._engine = engine
+        self._max_insert_batch_size: int = int(
+            kwargs.get("max_insert_batch_size", self.DEFAULT_MAX_INSERT_BATCH_SIZE)
+        )
+        self._max_parameters_in_clause: int = int(
+            kwargs.get(
+                "max_parameter_batch_size", self.DEFAULT_MAX_PARAMETERS_IN_CLAUSE
+            )
+        )
 
         # Create a session maker per isolation level
         self._default_isolation_level: IsolationLevel = IsolationLevel.SERIALIZABLE
@@ -462,9 +471,7 @@ class SARepository(BaseRepository):
         session: Session = kwargs.get("session")  # type: ignore[assignment]
         return_id: bool = kwargs.get("return_id", False)  # type: ignore[assignment]
         flush = kwargs.get("flush", True)
-        max_batch_size = int(
-            kwargs.get("max_batch_size", self.DEFAULT_MAX_INSERT_BATCH_SIZE)
-        )
+        max_batch_size = self._max_insert_batch_size
         objs = objs if isinstance(objs, list) else list(objs)
         if not objs:
             return []
@@ -528,7 +535,12 @@ class SARepository(BaseRepository):
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
             rows, row_ids = SARepository._in_session_read_some(
-                mapper, session, row_class, obj_ids, optimize_parameter_handling
+                mapper,
+                session,
+                row_class,
+                obj_ids,
+                optimize_parameter_handling=optimize_parameter_handling,
+                max_ids_in_clause=self._max_parameters_in_clause,
             )
 
             # Reorder objs to guarantee same order as obj_ids and at the
@@ -640,6 +652,7 @@ class SARepository(BaseRepository):
                 row_class,
                 obj_ids,
                 optimize_parameter_handling=optimize_parameter_handling,
+                max_ids_in_clause=self._max_parameters_in_clause,
             )
             map_rows = dict(zip(row_ids, rows))
             for obj in objs:
@@ -670,9 +683,10 @@ class SARepository(BaseRepository):
         session: Session = kwargs.get("session")  # type: ignore[assignment]
         return_id: bool = kwargs.get("return_id", False)  # type: ignore[assignment]
         flush = kwargs.get("flush", True)
-        max_batch_size = int(
-            kwargs.get("max_batch_size", self.DEFAULT_MAX_INSERT_BATCH_SIZE)
+        optimize_parameter_handling: bool = bool(
+            kwargs.get("optimize_parameter_handling", False)
         )
+        max_batch_size = self._max_insert_batch_size
 
         if not all(isinstance(x, model_class) for x in objs):
             raise ValueError(f"Not all objs are of type {model_class.__name__}")
@@ -719,7 +733,12 @@ class SARepository(BaseRepository):
                         chunk_start : chunk_start + max_batch_size
                     ]
                     chunk_rows, chunk_row_ids = SARepository._in_session_read_some(
-                        mapper, session, row_class, chunk_ids
+                        mapper,
+                        session,
+                        row_class,
+                        chunk_ids,
+                        optimize_parameter_handling=optimize_parameter_handling,
+                        max_ids_in_clause=self._max_parameters_in_clause,
                     )
                     all_rows.extend(chunk_rows)
                     all_row_ids.extend(chunk_row_ids)
@@ -1099,7 +1118,8 @@ class SARepository(BaseRepository):
                 session,
                 link_mapper.row_class,
                 list(uq_link_ids),
-                optimize_parameter_handling,
+                optimize_parameter_handling=optimize_parameter_handling,
+                max_ids_in_clause=self._max_parameters_in_clause,
             )
             uq_link_objs = self.from_sql(link.link_model_class, uq_link_rows)
             # Map link objs to ids and set in objs
@@ -1153,11 +1173,57 @@ class SARepository(BaseRepository):
                 ) from e
 
     @staticmethod
+    def create_unique_values_temp_table(
+        session: Session,
+        metadata: sa.MetaData,
+        col_name: str,
+        col_type: sa.types.TypeEngine,
+        values: list[uuid.UUID],
+        max_insert_batch_size: int = DEFAULT_MAX_INSERT_BATCH_SIZE,
+        table_name: str | None = None,
+    ) -> sa.Table:
+        """
+        Create an SQL temp table with a single columns with unique values. This can be
+        used e.g. to optimize queries with filters on many values or where otherwise a
+        size limit would be exceeded.
+
+        IN() on uniqueidentifier FK columns via pyodbc raises ODBC 07002
+        regardless of list size; a temp-table JOIN avoids the parameter
+        binding entirely.
+
+        The table_name parameter can be used to specify a name for the temp table and
+        must not contain a "#" prefix. If not provided, a random name will be generated.
+        """
+        if not table_name:
+            temp_table_name = f"#{uuid.uuid4().hex}"
+        elif isinstance(table_name, str):
+            if table_name.startswith("#"):
+                raise ValueError("table_name must not contain a '#' prefix")
+            temp_table_name = f"#{table_name}"
+        dialect = session.get_bind().dialect
+        col_sql = col_type.compile(dialect=dialect)
+        temp_table = sa.Table(
+            temp_table_name,
+            metadata,
+            sa.Column(col_name, col_type),
+        )
+        session.execute(
+            sa.text(f"CREATE TABLE {temp_table_name} ({col_name} {col_sql})")
+        )
+        batch_size = max_insert_batch_size
+        for i in range(0, len(values), batch_size):
+            insert_values = [{col_name: x} for x in values[i : i + batch_size]]
+            session.execute(sa.insert(temp_table), insert_values)
+            session.flush()
+        return temp_table
+
+    @staticmethod
     def _select_with_id_join(
         session: Session,
         get_row_id: Callable[[type], sa.Column],
         row_class: type,
         obj_ids: list[Hashable],
+        max_ids_in_clause: int = DEFAULT_MAX_PARAMETERS_IN_CLAUSE,
     ) -> sa.sql.Select:
         """
         Implement a SELECT statement with an INNER JOIN to restrict to the obj_ids passed
@@ -1167,41 +1233,39 @@ class SARepository(BaseRepository):
         """
 
         dialect = session.get_bind().dialect
-        if dialect.name == "mssql":
-            # TODO: check if temp table exists and take a different name in that case
-            temp_table_name = f"#temp_{str(uuid.uuid4()).replace('-','_')}"
-            id_col_name = get_row_id(row_class).name
-            id_datatype = row_class.__table__.c[id_col_name].type
-            id_datatype_sql = id_datatype.compile(dialect=dialect)
-            # TODO: finalize this part
-            # Create the temp table
-            # we might think to introspect after CREATE TABLE, but that opens us up to session/database sync and lock issues...
-            # which we did experience in testing
-            temp_table_obj = sa.Table(
-                temp_table_name, row_class.metadata, sa.Column(id_col_name, id_datatype)
-            )
-            session.execute(
-                sa.text(
-                    f"CREATE TABLE {temp_table_name} ({id_col_name} {id_datatype_sql})"
-                )
-            )
-            # session.flush()  # need to be able to introspect!
-            # temp_table_obj = sa.Table(temp_table_name, row_class.metadata, autoload_with=session.get_bind().engine)
-            # hard-coded batch size; MS SQL Server limit is 2,100; we just use something reasonable
-            # no urgent need to turn hard-coding into a parameter as this is dialect-specific issues
-            # handled in dialect-specific code
-            batch_size = 1000
-            for i in range(0, len(obj_ids), batch_size):
-                oid_batch = obj_ids[i : i + batch_size]
-                values = [{id_col_name: x} for x in oid_batch]
-                session.execute(sa.insert(temp_table_obj), values)
-                session.flush()
-        else:
+        if dialect.name != "mssql":
             # Non-mssql dialects (e.g. SQLite) don't have the ODBC 07002
             # IN() / UNIQUEIDENTIFIER bind issue — fall back to a plain
             # IN() filter so optimize_parameter_handling=True is safe in
             # tests and on other backends.
             return select(row_class).where(get_row_id(row_class).in_(obj_ids))
+
+        # TODO: check if temp table exists and take a different name in that case
+        temp_table_name = f"#temp_{str(uuid.uuid4()).replace('-','_')}"
+        id_col_name = get_row_id(row_class).name
+        id_datatype = row_class.__table__.c[id_col_name].type
+        id_datatype_sql = id_datatype.compile(dialect=dialect)
+        # TODO: finalize this part
+        # Create the temp table
+        # we might think to introspect after CREATE TABLE, but that opens us up to session/database sync and lock issues...
+        # which we did experience in testing
+        temp_table_obj = sa.Table(
+            temp_table_name, row_class.metadata, sa.Column(id_col_name, id_datatype)
+        )
+        session.execute(
+            sa.text(f"CREATE TABLE {temp_table_name} ({id_col_name} {id_datatype_sql})")
+        )
+        # session.flush()  # need to be able to introspect!
+        # temp_table_obj = sa.Table(temp_table_name, row_class.metadata, autoload_with=session.get_bind().engine)
+        # hard-coded batch size; MS SQL Server limit is 2,100; we just use something reasonable
+        # no urgent need to turn hard-coding into a parameter as this is dialect-specific issues
+        # handled in dialect-specific code
+        batch_size = max_ids_in_clause
+        for i in range(0, len(obj_ids), batch_size):
+            oid_batch = obj_ids[i : i + batch_size]
+            values = [{id_col_name: x} for x in oid_batch]
+            session.execute(sa.insert(temp_table_obj), values)
+            session.flush()
 
         # Select with join to restrict to ids passed (mssql temp-table path)
         sql_select = select(row_class).join(
@@ -1217,6 +1281,7 @@ class SARepository(BaseRepository):
         row_class: type,
         obj_ids: list[Hashable],
         optimize_parameter_handling: bool = False,
+        max_ids_in_clause: int = DEFAULT_MAX_PARAMETERS_IN_CLAUSE,
     ) -> tuple[list[Any], list[Hashable]]:
         """
         :param optimize_parameter_handling: if True, avoid parameterized query that using SQL's IN that is
@@ -1246,7 +1311,11 @@ class SARepository(BaseRepository):
 
             # Or.... the temporary table method
             sql_select = SARepository._select_with_id_join(
-                session, get_row_id, row_class, obj_ids
+                session,
+                get_row_id,
+                row_class,
+                obj_ids,
+                max_ids_in_clause=max_ids_in_clause,
             )
         else:
             sql_select = select(row_class).where(get_row_id(row_class).in_(obj_ids))

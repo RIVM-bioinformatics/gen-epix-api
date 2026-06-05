@@ -1,6 +1,6 @@
 import datetime
 import uuid
-from typing import Callable, ClassVar, Self
+from typing import Any, Callable, ClassVar, Self
 from uuid import UUID
 
 from pydantic import BaseModel as PydanticBaseModel
@@ -237,6 +237,12 @@ class ParentForUpload(Model, IdentifiersMixin):
     # Mapping from child model classes to the names of the fields in the child models that refer back to the parent ID
     CHILD_PARENT_ID_FIELD_NAME_MAP: ClassVar[dict[type[Model], str]] = {}
 
+    # Must be set in child class
+    # Mapping from child model classes to any intra-parent links (from_field_name, to_child_model_class)
+    CHILD_INTRA_PARENT_LINKS_MAP: ClassVar[
+        dict[type[Model], list[tuple[str, type[Model]]]]
+    ] = {}
+
     id: UUID | None = Field(
         default=None,
         description="The unique identifier for the Parent object. If NULL_ID is provided, it will be set to None. The id must match that of the contained Parent model, if provided, and be consistent with the parent ID in the child models, if provided. The contained Parent model may have a different ID field than 'id', but this class uses 'id' instead.",
@@ -349,6 +355,46 @@ class ParentForUpload(Model, IdentifiersMixin):
         Get the list of identifiers for upload, or an empty list if none are set.
         """
         return self.identifiers
+
+    def replace_child_id(self, child_for_upload: Model, new_id: UUID) -> None:
+        """
+        Replace the ID of a child model assumed to be in this ParentForUpload, for a
+        given child model class and old ID to be replaced by a new ID. Any children that
+        linked to this child will have their references updated as well. This can be
+        used to replace temporary IDs by actual existing IDs after verification.
+        """
+        # Replace the child ID
+        child_model_class = type(child_for_upload)
+        # CHILD_INTRA_PARENT_LINKS_MAP uses domain model classes as link targets,
+        # while callers pass upload-model instances. Match both representations.
+        target_child_classes = {child_model_class}
+        for (
+            domain_child_class,
+            upload_child_class,
+        ) in self.CHILD_FOR_UPLOAD_CLASS_MAP.items():
+            if upload_child_class == child_model_class:
+                target_child_classes.add(domain_child_class)
+        old_id = getattr(child_for_upload, child_model_class.ENTITY.get_id_field_name())
+        setattr(child_for_upload, child_model_class.ENTITY.get_id_field_name(), new_id)
+        # Replace any references to the child ID in intra-parent links
+        for (
+            from_child_model_class,
+            intra_parent_links,
+        ) in self.CHILD_INTRA_PARENT_LINKS_MAP.items():
+            children_for_upload: list[Model] | None = None
+            for from_field_name, to_child_model_class in intra_parent_links:
+                if to_child_model_class not in target_child_classes:
+                    continue
+                if children_for_upload is None:
+                    children_field_name = self.CHILDREN_FIELD_NAME_MAP[
+                        from_child_model_class
+                    ]
+                    children_for_upload = getattr(self, children_field_name, None) or []
+                assert children_for_upload is not None
+                for from_child_for_upload in children_for_upload:
+                    from_field_value = getattr(from_child_for_upload, from_field_name)
+                    if from_field_value == old_id:
+                        setattr(from_child_for_upload, from_field_name, new_id)
 
 
 class ParentUploadResult(UploadResultWithIdentifiers):
@@ -494,7 +540,9 @@ class BaseBatchForUpload(Model):
     )
 
     @field_serializer("*_id", "id", mode="wrap", check_fields=False)
-    def _serialize_id_fields(self, value: UUID, serializer: Callable) -> str:
+    def _serialize_id_fields(
+        self, value: UUID | None, serializer: Callable[[Any], str]
+    ) -> str:
         """Generic UUID field serializer for the id field and all *_id fields."""
         if isinstance(value, UUID):
             return str(value)
@@ -520,7 +568,7 @@ class BaseBatchForUpload(Model):
                 f"Duplicate parent IDs found in batch: {duplicate_ids_str}"
             )
         # Verify duplicate parent identifiers
-        seen_parent_identifiers = set()
+        seen_parent_identifiers: set[IdentifierForUpload] = set()
         for parent_for_upload in parents_for_upload:
             if not parent_for_upload.identifiers:
                 continue
@@ -529,8 +577,16 @@ class BaseBatchForUpload(Model):
                 seen_parent_identifiers.update(parent_identifiers)
             else:
                 raise ValueError("Duplicate parent identifiers found in batch.")
+        return self
+
+    @model_validator(mode="after")
+    def _validate_child_ids(self) -> Self:
+        """
+        Validate that all children for upload in the batch have unique IDs and other
+        identifiers.
+        """
         # Verify duplicate child IDs and identifiers across all types of children
-        seen_child_ids = set()
+        seen_child_ids: set[UUID] = set()
         for (
             child_model_class,
             children_field_name,
@@ -539,11 +595,11 @@ class BaseBatchForUpload(Model):
             child_id_field_name = child_model_class.ENTITY.get_id_field_name()
             children_for_upload: list[Model] = [
                 y
-                for x in parents_for_upload
+                for x in self.get_parents_for_upload()
                 for y in (getattr(x, children_field_name) or [])
             ]
             # Add all IDs and identifiers
-            seen_child_identifiers = set()
+            seen_child_identifiers: set[IdentifierForUpload] = set()
             has_identifiers = issubclass(child_model_class, IdentifiersMixin)
             for child_for_upload in children_for_upload:
                 child_id = getattr(child_for_upload, child_id_field_name)
@@ -573,6 +629,73 @@ class BaseBatchForUpload(Model):
                     )
         return self
 
+    @model_validator(mode="after")
+    def _validate_intra_parent_links(self) -> Self:
+        """
+        Validate that all links between children are within the same parent.
+        """
+        children_for_upload: list[Model]
+        # Get all child model classes that have intra-parent links to them
+        to_child_model_classes: set[type[Model]] = set()
+        for (
+            intra_parent_links
+        ) in self.PARENT_FOR_UPLOAD_CLASS.CHILD_INTRA_PARENT_LINKS_MAP.values():
+            to_child_model_classes.update(x[1] for x in intra_parent_links)
+
+        # Get a dict[to_child_model_class, dict[child_id, parent_index]]] for all to child model classes, where parent_index is the index of the parent in the parents_for_upload list that the child belongs to.
+        parent_map: dict[type[Model], dict[UUID, int]] = {}
+        parents_for_upload = self.get_parents_for_upload()
+        for to_child_model_class in to_child_model_classes:
+            parent_map[to_child_model_class] = {}
+            child_id_field_name = (
+                self.PARENT_FOR_UPLOAD_CLASS.CHILD_FOR_UPLOAD_CLASS_MAP[
+                    to_child_model_class
+                ].ENTITY.get_id_field_name()
+            )
+            children_field_name = self.PARENT_FOR_UPLOAD_CLASS.CHILDREN_FIELD_NAME_MAP[
+                to_child_model_class
+            ]
+            for i, parent_for_upload in enumerate(parents_for_upload):
+                children_for_upload = [
+                    x for x in (getattr(parent_for_upload, children_field_name) or [])
+                ]
+                for child_for_upload in children_for_upload:
+                    child_id: UUID | None = getattr(
+                        child_for_upload, child_id_field_name
+                    )
+                    if child_id is None or child_id == NULL_ID:
+                        continue
+                    parent_map[to_child_model_class][child_id] = i
+
+        # Verify that all intra-parent links are indeed within the same parent
+        for (
+            child_model_class,
+            intra_parent_links,
+        ) in self.PARENT_FOR_UPLOAD_CLASS.CHILD_INTRA_PARENT_LINKS_MAP.items():
+            children_field_name = self.PARENT_FOR_UPLOAD_CLASS.CHILDREN_FIELD_NAME_MAP[
+                child_model_class
+            ]
+            for i, parent_for_upload in enumerate(parents_for_upload):
+                children_for_upload = [
+                    x for x in (getattr(parent_for_upload, children_field_name) or [])
+                ]
+                for child_for_upload in children_for_upload:
+                    for from_field_name, to_child_model_class in intra_parent_links:
+                        linked_child_id = getattr(child_for_upload, from_field_name)
+                        if linked_child_id is None or linked_child_id == NULL_ID:
+                            continue
+                        if linked_child_id not in parent_map[to_child_model_class]:
+                            # Linked child not found, assumed to be to an already existing child rather than one in the batch -> nothing to do
+                            continue
+                        linked_child_parent_index = parent_map[to_child_model_class][
+                            linked_child_id
+                        ]
+                        if linked_child_parent_index != i:
+                            raise ValueError(
+                                f"Inconsistent intra-parent link in batch: {child_model_class.__name__}.{from_field_name}={linked_child_id} in parent index {i} links to a {to_child_model_class.__name__} in parent {linked_child_parent_index}."
+                            )
+        return self
+
     def get_parents_for_upload(self) -> list[ParentForUpload]:
         """
         Get the list of objects to be uploaded in this batch.
@@ -583,7 +706,26 @@ class BaseBatchForUpload(Model):
         return parents_for_upload
 
     def get_n_parents(self) -> int:
+        """Get the number of parent objects in this batch."""
         return len(self.get_parents_for_upload())
+
+    def get_all_children_for_upload(
+        self, child_model_class: type[Model]
+    ) -> list[Model]:
+        """
+        Get a list of all children for upload in this batch for a particular child model
+        class, across all parents.
+        """
+        all_children = []
+        children_field_name = self.PARENT_FOR_UPLOAD_CLASS.CHILDREN_FIELD_NAME_MAP[
+            child_model_class
+        ]
+        for parent_for_upload in self.get_parents_for_upload():
+            children_for_upload = (
+                getattr(parent_for_upload, children_field_name, None) or []
+            )
+            all_children.extend(children_for_upload)
+        return all_children
 
     @classmethod
     def get_parent_class(cls) -> type[ParentForUpload]:

@@ -11,7 +11,7 @@ import pytest
 from gen_epix.commondb.domain.enum import EtlStatus, Role
 from gen_epix.commondb.domain.model.organization import User
 from gen_epix.fastapp.enum import CrudOperation
-from gen_epix.fastapp.exc import ConcurrentModificationError
+from gen_epix.fastapp.exc import ConcurrentModificationError, InvalidArgumentsError
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.domain.literal import MLVA_NO_LOCUS_REPEAT_NUMBER
@@ -229,7 +229,7 @@ def _setup_distance_mocks(
     each call gets a fresh iterator and filters by the
     ``profile_ids`` kwarg when provided.
 
-    Pass recorder to also mock bulk_update_seq_distance_content
+    Pass recorder to also mock update_some_seq_distance_content
     so that bulk-updated objects are captured in recorder.updated.
     """
 
@@ -259,11 +259,11 @@ def _setup_distance_mocks(
     )
     if recorder is not None:
 
-        def _bulk_update(uow: Any, user_id: Any, objs: list[model.SeqDistance]) -> None:
+        def _update_some(uow: Any, user_id: Any, objs: list[model.SeqDistance]) -> None:
             recorder.updated.extend(objs)
 
-        service_mock.repository.bulk_update_seq_distance_content = Mock(
-            side_effect=_bulk_update,
+        service_mock.repository.update_some_seq_distance_content = Mock(
+            side_effect=_update_some,
         )
 
 
@@ -937,11 +937,8 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
                 _make_nextclade_content(alignment_end=4),
             )
 
-    def test_new_profile_without_id_is_processed(self) -> None:
-        # A profile with id=None is silently filtered out by the service
-        # (new_profiles_list excludes None-id entries).  No SeqDistance is
-        # created and no result is returned.  The caller is responsible for
-        # providing profiles with valid IDs before calling this function.
+    def test_new_profile_without_id_raises(self) -> None:
+        # Profiles without IDs are invalid input for distance calculation.
         existing_profile: model.SeqProfile = _make_allele_profile(
             profile_id=self.existing_profile_id,
             sample_id=self.sample_id,
@@ -985,13 +982,11 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         )
         _setup_distance_mocks(self.service, [existing_seq_distance])
 
-        # Should not raise; the None-id profile is filtered out and skipped
-        results: list[model.CalculateSeqDistancesResult] = (
+        with self.assertRaises(InvalidArgumentsError) as ctx:
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
-        )
 
-        self.assertEqual(len(results), 0)
-        self.assertEqual(len(recorder.created), 0)
+        self.assertEqual(ctx.exception.args[0], "fbb3c9e7")
+        self.assertIn("All new profiles must have an ID", str(ctx.exception))
 
 
 @pytest.mark.scenario_ids("TC-11-13-01")
@@ -1437,7 +1432,7 @@ class TestUpdateSeqDistances(
 
         self.service.repository.crud.side_effect = _crud
         # All profiles already have distances — SQL NOT EXISTS returns nothing.
-        self.service.repository.get_profiles_missing_seq_distances = Mock(
+        self.service.repository.get_profiles_without_seq_distance = Mock(
             return_value=[],
         )
 
@@ -1525,7 +1520,7 @@ class TestUpdateSeqDistances(
 
         self.service.repository.crud.side_effect = _crud
         # SQL NOT EXISTS returns only the profile without a distance record.
-        self.service.repository.get_profiles_missing_seq_distances = Mock(
+        self.service.repository.get_profiles_without_seq_distance = Mock(
             return_value=[missing_profile],
         )
 

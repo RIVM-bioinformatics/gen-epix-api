@@ -35,7 +35,10 @@ def seq_service_crud_seq_profile(
         # May only change the representation format, not the profile itself
         raise NotImplementedError(_get_not_implemented_message(cmd))
     elif cmd.is_delete():
-        # NOTE: changed in order to get the seqdb uploads to PROD working
+        # TODO: 3428 Delete all distances for these allele profiles as well
+        # NotImplementedError commented out in order to get the seqdb uploads to PROD working, but should be implemented properly.
+        # # Delete all distances for these allele profiles as well
+        # raise NotImplementedError(_get_not_implemented_message(cmd))
         pass
     else:
         raise AssertionError(f"Unsupported operation type: {cmd.operation.value}")

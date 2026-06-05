@@ -413,6 +413,12 @@ class SampleForUpload(ParentForUpload):
     CHILD_PARENT_ID_FIELD_NAME_MAP: ClassVar = {
         x: "sample_id" for x in CHILD_FOR_UPLOAD_CLASS_MAP.keys()
     }
+    CHILD_INTRA_PARENT_LINKS_MAP: ClassVar = {
+        Seq: [("read_set_id", ReadSet), ("read_set2_id", ReadSet)],
+        SeqClassification: [("seq_id", Seq)],
+        SeqProfile: [("seq_id", Seq)],
+        SeqTaxonomy: [("seq_id", Seq)],
+    }
 
     # Parent
     sample: Sample | None = Field(

@@ -65,6 +65,7 @@ class App:
         id: str | None = None,
         name: str | None = None,
         timestamp_factory: Callable[[], datetime] = datetime.now,
+        log_cmd_object_on_error: bool = True,
         feature_flags: dict[Hashable, bool] | None = None,
         **kwargs: Any,
     ):
@@ -90,7 +91,7 @@ class App:
             EventTiming, dict[type[Command], list[Callable[[Command, Any], None]]]
         ] = {x: {} for x in EventTiming}
         self._command_stack: list[Command] = []
-        self._log_cmd_object_on_error: bool = True
+        self._log_cmd_object_on_error: bool = log_cmd_object_on_error
         self._init_log_settings()
 
         # Log start

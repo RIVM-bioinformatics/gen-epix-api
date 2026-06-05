@@ -19,7 +19,9 @@ from gen_epix.seqdb.domain.literal import (
     NEXTCLADE_POSITION_RANGE_PATTERN,
     NEXTCLADE_SUBSTITUTION_PATTERN,
 )
+from gen_epix.seqdb.domain.repository.seq import BaseSeqRepository
 from gen_epix.seqdb.domain.service import BaseSeqService
+from gen_epix.util import chunk_list
 
 
 class _ParsedNextcladeProfile(BaseModel):
@@ -208,6 +210,7 @@ def seq_service_update_seq_distances(
     record, compute the missing distances and create the records while maintaining the
     symmetry invariant.
     """
+    repository: BaseSeqRepository = self.repository  # type: ignore[assignment]
     log = self.logger
     user_id = cmd.user.id if cmd.user else None
     results: list[model.CalculateSeqDistancesResult] = []
@@ -215,15 +218,15 @@ def seq_service_update_seq_distances(
     t0 = time.perf_counter()
     if log:
         log.debug(
-            "UpdateSeqDistances start: protocol_id=%s chunk_size=%s" " max_new=%s",
+            "UpdateSeqDistances start: protocol_id=%s chunk_size=%s limit=%s",
             cmd.protocol_id,
             cmd.existing_chunk_size,
-            cmd.max_new_profiles,
+            cmd.limit,
         )
 
     # Get the distance protocol
-    with self.repository.uow() as uow:
-        seq_distance_protocol: model.Protocol = self.repository.crud(  # type: ignore[assignment]
+    with repository.uow() as uow:
+        seq_distance_protocol: model.Protocol = repository.crud(  # type: ignore[assignment]
             uow,
             user_id,
             model.Protocol,
@@ -237,7 +240,7 @@ def seq_service_update_seq_distances(
         seq_profile_type = (
             seq_distance_protocol.get_seq_profile_type_for_distance_protocol()
         )
-        seq_profile_protocols: list[model.Protocol] = self.repository.crud(  # type: ignore[assignment]
+        seq_profile_protocols: list[model.Protocol] = repository.crud(  # type: ignore[assignment]
             uow,
             user_id,
             model.Protocol,
@@ -260,22 +263,21 @@ def seq_service_update_seq_distances(
             return results
 
         # Single SQL query: profiles with no SeqDistance record for this
-        # protocol (NOT EXISTS), capped at max_new_profiles via SQL LIMIT /
+        # protocol (NOT EXISTS), capped at limit via SQL LIMIT /
         # TOP.  This replaces the previous approach of loading all profiles
         # and all distance-profile-ids into Python and computing the set
         # difference there, which timed out as both sets grew large.
         missing_profiles: list[model.SeqProfile] = (
-            self.repository.get_profiles_missing_seq_distances(  # type: ignore[attr-defined]
+            repository.get_profiles_without_seq_distance(
                 uow,
-                distance_protocol_id=seq_distance_protocol.id,
+                distance_protocol_id=cast(UUID, seq_distance_protocol.id),
                 seq_profile_protocol_ids=matching_protocol_ids,
-                max_new=cmd.max_new_profiles,
+                limit=cmd.limit,
             )
         )
         if log:
             log.debug(
-                "UpdateSeqDistances: %d profiles missing distances"
-                " (after max_new_profiles cap) (%.3fs)",
+                "UpdateSeqDistances: %d profiles missing distances (after limit cap) (%.3fs)",
                 len(missing_profiles),
                 time.perf_counter() - t0,
             )
@@ -294,20 +296,6 @@ def seq_service_update_seq_distances(
         )
 
     return results
-
-
-def _chunk_profile_ids(ids: list[UUID], chunk_size: int | None) -> list[list[UUID]]:
-    """Split *ids* into sub-lists of at most *chunk_size*.
-
-    Returns ``[ids]`` when *chunk_size* is ``None`` (no
-    chunking). Returns ``[]`` when *ids* is empty so
-    callers can skip the loop entirely.
-    """
-    if not ids:
-        return []
-    if chunk_size is None:
-        return [ids]
-    return [ids[i : i + chunk_size] for i in range(0, len(ids), chunk_size)]
 
 
 def _decode_profile(
@@ -338,7 +326,7 @@ def _decode_profile(
     )
 
 
-def _distance_from_decoded(
+def _calculate_distance_for_decoded_profile_pair(
     seq_profile_type: enum.SeqProfileType,
     data1: Any,
     data2: Any,
@@ -349,7 +337,7 @@ def _distance_from_decoded(
     repeated b64decode / json.loads inside tight comparison loops.
 
     Performance note: with N existing profiles and M new profiles per
-    chunk, using _decode_profile + _distance_from_decoded reduces
+    chunk, using _decode_profile + _calculate_distance_for_decoded_profile_pair reduces
     decode calls from N×M to N+M.
     """
     if seq_profile_type == enum.SeqProfileType.ALLELE:
@@ -436,32 +424,26 @@ def _calculate_and_store_distances(
     of work so reads stay bounded without holding a transaction open across
     the full chunk loop.
     """
-    log = service.logger
+    logger = service.logger
+    repository: BaseSeqRepository = service.repository  # type: ignore[assignment]
     t_fn = time.perf_counter()
     max_stored_distance = protocol.max_stored_distance
     assert max_stored_distance is not None
 
-    # Filter out any profiles that somehow arrived without a persisted ID.
-    # In practice all profiles should have IDs at this point, but the type
-    # allows None and skipping them is safer than an assertion crash.
-    new_profiles = [x for x in new_seq_profiles if x.id is not None]
+    # Check if any profiles do not have an ID.
+    if not all(x.id is not None for x in new_seq_profiles):
+        if logger:
+            logger.error("_calculate_and_store_distances: some new profiles have no ID")
+        raise exc.InvalidArgumentsError(
+            "fbb3c9e7", "All new profiles must have an ID before distance calculation"
+        )
 
     # Accumulator for each new profile's distance map. Keyed by new profile
     # ID; values grow incrementally as the chunk loop processes existing
     # profiles. The final maps are written to SeqDistance.content in step 6.
     new_profile_distance_maps: dict[UUID, dict[str, float]] = {
-        x.id: {} for x in new_profiles  # type: ignore[misc]
+        x.id: {} for x in new_seq_profiles  # type: ignore[misc]
     }
-
-    # Step 3 — Pre-decode new profiles once.
-    # Each comparison would otherwise call get_allele_id_bytes() /
-    # get_repeat_numbers() / _parse_nextclade_profile() on the new profile,
-    # paying the decode cost N times (once per existing profile). Decoding
-    # upfront reduces that to M (once per new profile), so total decode
-    # calls drop from N×M to N+M across the whole chunk loop.
-    new_profiles_decoded: list[Any] = [
-        _decode_profile(seq_profile_type, p) for p in new_profiles
-    ]
 
     # Step 1 — Concurrency guard (uses caller's uow — read-only).
     # Only active when the caller passes seq_distance_last_modified_at, which
@@ -470,8 +452,8 @@ def _calculate_and_store_distances(
     # we abort rather than risk a lost-update: our distance maps would be
     # based on a stale view of who is already close to whom.
     if seq_distance_last_modified_at is not None:
-        max_modified = service.repository.get_max_seq_distance_modified_at(  # type: ignore[attr-defined]
-            uow, protocol.id
+        max_modified = repository.get_max_seq_distance_modified_at(
+            uow, cast(UUID, protocol.id)
         )
         if max_modified is not None and max_modified > seq_distance_last_modified_at:
             raise ConcurrentModificationError(
@@ -492,24 +474,31 @@ def _calculate_and_store_distances(
     else:
         existing_profile_ids = list(
             dict.fromkeys(
-                service.repository.iter_seq_distance_profile_ids(  # type: ignore[attr-defined]
-                    uow, protocol.id
-                )
+                repository.iter_seq_distance_profile_ids(uow, cast(UUID, protocol.id))
             )
         )
 
-    chunks = _chunk_profile_ids(existing_profile_ids, existing_chunk_size)
+    chunks = chunk_list(existing_profile_ids, existing_chunk_size)
     n_chunks = len(chunks)
-    if log:
-        log.debug(
-            "_calculate_and_store_distances: n_new=%d n_existing=%d"
-            " n_chunks=%d chunk_size=%s (%.3fs)",
-            len(new_profiles),
+    if logger:
+        logger.debug(
+            "_calculate_and_store_distances: n_new=%d n_existing=%d n_chunks=%d chunk_size=%s (%.3fs)",
+            len(new_seq_profiles),
             len(existing_profile_ids),
             n_chunks,
             existing_chunk_size,
             time.perf_counter() - t_fn,
         )
+
+    # Step 3 — Pre-decode new profiles once.
+    # Each comparison would otherwise call get_allele_id_bytes() /
+    # get_repeat_numbers() / _parse_nextclade_profile() on the new profile,
+    # paying the decode cost N times (once per existing profile). Decoding
+    # upfront reduces that to M (once per new profile), so total decode
+    # calls drop from N×M to N+M across the whole chunk loop.
+    decoded_new_profiles: list[Any] = [
+        _decode_profile(seq_profile_type, p) for p in new_seq_profiles
+    ]
 
     # all_modified_existing accumulates updated SeqDistance records across
     # all chunks; the single UPDATE_SOME write happens in step 6 together
@@ -535,9 +524,9 @@ def _calculate_and_store_distances(
         # chunk_uow is a short-lived read-only unit of work. Reads stay
         # bounded per chunk without holding a transaction across the loop;
         # all writes are deferred to the caller's uow in step 6.
-        with service.repository.uow() as chunk_uow:
+        with repository.uow() as chunk_uow:
             existing_profiles_list: list[model.SeqProfile] = (
-                service.repository.crud(  # type: ignore[assignment]
+                repository.crud(  # type: ignore[assignment]
                     chunk_uow,
                     user_id,
                     model.SeqProfile,
@@ -547,8 +536,8 @@ def _calculate_and_store_distances(
                 )
             )
         t_read = time.perf_counter()
-        if log:
-            log.debug(
+        if logger:
+            logger.debug(
                 "  chunk %d/%d: READ_SOME %d profiles (%.3fs)",
                 chunk_no,
                 n_chunks,
@@ -571,24 +560,28 @@ def _calculate_and_store_distances(
         # which caused a full-table scan on every chunk (O(N×chunks) reads).
         modified_existing: list[model.SeqDistance] = []
         n_distances_seen = 0
-        with service.repository.uow() as chunk_uow:
-            for existing_seq_distance in service.repository.iter_seq_distances(  # type: ignore[attr-defined]
-                chunk_uow, protocol.id, profile_ids=chunk_ids
+        with repository.uow() as chunk_uow:
+            for existing_seq_distance in repository.iter_seq_distances(
+                chunk_uow, cast(UUID, protocol.id), profile_ids=chunk_ids
             ):
                 assert isinstance(existing_seq_distance, model.SeqDistance)
                 n_distances_seen += 1
-                profile = existing_profile_map.get(existing_seq_distance.seq_profile_id)
+                existing_profile = existing_profile_map.get(
+                    existing_seq_distance.seq_profile_id
+                )
                 # Should not happen with a correct chunk filter, but the DB
                 # could return a record whose profile was deleted between the
                 # READ_SOME and this query — skip it rather than crash.
-                if profile is None:
+                if existing_profile is None:
                     continue
 
                 # Decode the existing profile's content once per SeqDistance
                 # record, not once per new-profile comparison. Together with
                 # new_profiles_decoded (decoded before the loop) this reduces
                 # total decode calls from N×M to N+M per call.
-                existing_decoded = _decode_profile(seq_profile_type, profile)
+                decoded_existing_profile = _decode_profile(
+                    seq_profile_type, existing_profile
+                )
 
                 # Compare this existing profile against every new profile.
                 # Collect matching pairs in `updates` before touching
@@ -596,12 +589,14 @@ def _calculate_and_store_distances(
                 # json.loads entirely for the common case where no new
                 # profile is close enough to record (see below).
                 updates: dict[str, float] = {}
-                for new_profile, new_decoded in zip(new_profiles, new_profiles_decoded):
+                for new_profile, decoded_new_profile in zip(
+                    new_seq_profiles, decoded_new_profiles
+                ):
                     assert new_profile.id is not None
-                    distance = _distance_from_decoded(
+                    distance = _calculate_distance_for_decoded_profile_pair(
                         seq_profile_type,
-                        existing_decoded,
-                        new_decoded,
+                        decoded_existing_profile,
+                        decoded_new_profile,
                     )
                     if distance <= max_stored_distance:
                         updates[str(new_profile.id)] = distance
@@ -611,7 +606,7 @@ def _calculate_and_store_distances(
                         # it will be serialised into the new SeqDistance
                         # record at step 6 after all chunks complete.
                         new_profile_distance_maps[new_profile.id][
-                            str(profile.id)
+                            str(existing_profile.id)
                         ] = distance
 
                 # Deferred json.loads — only parse the content blob when at
@@ -626,9 +621,9 @@ def _calculate_and_store_distances(
                     modified_existing.append(existing_seq_distance)
 
         t_iter = time.perf_counter()
-        if log:
-            log.debug(
-                "  chunk %d/%d: iter+compute %d distances," " %d modified (%.3fs)",
+        if logger:
+            logger.debug(
+                "  chunk %d/%d: iter+compute %d distances, %d modified (%.3fs)",
                 chunk_no,
                 n_chunks,
                 n_distances_seen,
@@ -643,12 +638,12 @@ def _calculate_and_store_distances(
     t_step5 = time.perf_counter()
     _calculate_pairwise_profile_distances(
         seq_profile_type,
-        new_profiles,
+        new_seq_profiles,
         new_profile_distance_maps,
         max_stored_distance,
     )
-    if log:
-        log.debug(
+    if logger:
+        logger.debug(
             "_calculate_and_store_distances step 5 (pairwise new-new): %.3fs",
             time.perf_counter() - t_step5,
         )
@@ -659,11 +654,9 @@ def _calculate_and_store_distances(
     # every existing profile processed in the chunk loop above.
     t_step6 = time.perf_counter()
     if all_modified_existing:
-        service.repository.bulk_update_seq_distance_content(  # type: ignore[attr-defined]
-            uow, user_id, all_modified_existing
-        )
+        repository.update_some_seq_distance_content(uow, user_id, all_modified_existing)
         results.extend(
-            model.CalculateSeqDistancesResult(
+            model.CalculateSeqDistancesResult.model_construct(
                 id=sd.id,
                 status=EtlStatus.UPDATED,
                 seq_distance_profile_id=sd.seq_profile_id,
@@ -679,9 +672,9 @@ def _calculate_and_store_distances(
             format=(enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP),  # type: ignore[arg-type]
             content=json.dumps(new_profile_distance_maps[cast(UUID, x.id)]),  # type: ignore[arg-type]
         )
-        for x in new_profiles
+        for x in new_seq_profiles
     ]
-    created_seq_distances: list[model.SeqDistance] = service.repository.crud(  # type: ignore[assignment]
+    created_seq_distances: list[model.SeqDistance] = repository.crud(  # type: ignore[assignment]
         uow,
         user_id,
         model.SeqDistance,
@@ -690,7 +683,7 @@ def _calculate_and_store_distances(
     )
     for created_seq_distance in created_seq_distances:
         results.append(
-            model.CalculateSeqDistancesResult(
+            model.CalculateSeqDistancesResult.model_construct(
                 id=created_seq_distance.id,
                 status=EtlStatus.CREATED,
                 seq_distance_profile_id=(created_seq_distance.seq_profile_id),
@@ -698,11 +691,9 @@ def _calculate_and_store_distances(
         )
     n_created = len(created_seq_distances)
     n_updated = len(all_modified_existing)
-    if log:
-        log.debug(
-            "_calculate_and_store_distances step 6"
-            " (UPDATE_SOME %d, CREATE_SOME %d): %.3fs"
-            " — total: %.3fs | created=%d updated=%d",
+    if logger:
+        logger.debug(
+            "_calculate_and_store_distances step 6 (UPDATE_SOME %d, CREATE_SOME %d): %.3fs — total: %.3fs | created=%d updated=%d",
             n_updated,
             n_created,
             time.perf_counter() - t_step6,
@@ -726,19 +717,25 @@ def _calculate_pairwise_profile_distances(
     loop calls ``_distance_from_decoded`` on pre-decoded data — avoiding
     repeated b64decode / json.loads across the N² comparisons.
     """
-    decoded = [_decode_profile(seq_profile_type, p) for p in profiles]
+    decoded_profiles = [_decode_profile(seq_profile_type, p) for p in profiles]
+    profile_ids = [cast(UUID, x.id) for x in profiles]
+    str_profile_ids = [str(x) for x in profile_ids]
     for i in range(len(profiles)):
+        id1 = profile_ids[i]
+        str_id1 = str_profile_ids[i]
+        decoded_profile1 = decoded_profiles[i]
         for j in range(i + 1, len(profiles)):
-            p_i = profiles[i]
-            p_j = profiles[j]
-            distance = _distance_from_decoded(
+            id2 = profile_ids[j]
+            str_id2 = str_profile_ids[j]
+            decoded_profile2 = decoded_profiles[j]
+            distance = _calculate_distance_for_decoded_profile_pair(
                 seq_profile_type,
-                decoded[i],
-                decoded[j],
+                decoded_profile1,
+                decoded_profile2,
             )
             if distance <= max_stored_distance:
-                distance_maps[p_i.id][str(p_j.id)] = distance  # type: ignore[index]
-                distance_maps[p_j.id][str(p_i.id)] = distance  # type: ignore[index]
+                distance_maps[id1][str_id2] = distance
+                distance_maps[id2][str_id1] = distance
 
 
 def _get_matching_seq_profile_protocol_ids(

@@ -46,11 +46,9 @@ class RemoteApp(App):
         add_generated_crud_route_handlers: bool = True,
         ssl_cert_file: Path | str | None = None,
         disable_ssl_verification: bool = False,
-        log_cmd_object_on_error: bool = True,
         **kwargs: Any,
     ) -> None:
         super().__init__(domain, **kwargs)
-        self._log_cmd_object_on_error = log_cmd_object_on_error
         self._host = host
         self._port = port
         self._protocol = protocol

@@ -1,7 +1,7 @@
 from collections.abc import Iterable
 from collections.abc import Set as AbstractSet
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from gen_epix.fastapp.enum import CrudOperation
@@ -207,7 +207,7 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
                     maximum_modified_timestamp = seq_distance.modified_at
         return maximum_modified_timestamp
 
-    def bulk_update_seq_distance_content(
+    def update_some_seq_distance_content(
         self,
         uow: BaseUnitOfWork,
         user_id: UUID | None,
@@ -221,30 +221,30 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
                 uow, user_id, model.SeqDistance, CrudOperation.UPDATE_SOME, objs=objs
             )
 
-    def get_profiles_missing_seq_distances(
+    def get_profiles_without_seq_distance(
         self,
         uow: BaseUnitOfWork,
         distance_protocol_id: UUID,
         seq_profile_protocol_ids: list[UUID],
-        max_new: int | None = None,
+        limit: int | None = None,
     ) -> list[model.SeqProfile]:
         protocol_id_set = set(seq_profile_protocol_ids)
         has_distance: set[UUID] = {
-            sd.seq_profile_id
-            for sd in self.db[model.SeqDistance].values()
-            if isinstance(sd, model.SeqDistance)
-            and sd.protocol_id == distance_protocol_id
+            x.seq_profile_id
+            for x in cast(
+                Iterable[model.SeqDistance], self.db[model.SeqDistance].values()
+            )
+            if x.protocol_id == distance_protocol_id
         }
         result = [
-            p
-            for p in self.db[model.SeqProfile].values()
-            if isinstance(p, model.SeqProfile)
-            and p.protocol_id in protocol_id_set
-            and p.id is not None
-            and p.id not in has_distance
+            x
+            for x in cast(
+                Iterable[model.SeqProfile], self.db[model.SeqProfile].values()
+            )
+            if x.protocol_id in protocol_id_set and cast(UUID, x.id) not in has_distance
         ]
-        if max_new is not None:
-            result = result[:max_new]
+        if limit is not None:
+            result = result[:limit]
         return result
 
     def get_profiles_by_protocol_ids(
