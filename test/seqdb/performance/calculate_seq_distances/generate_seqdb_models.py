@@ -1,4 +1,6 @@
 import base64
+import json
+import random
 import secrets
 import uuid
 from datetime import datetime
@@ -8,10 +10,22 @@ from uuid import UUID
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.seqdb.domain import enum, model
 
+_DNA_BASES = "ACGT"
+_AMBIGUOUS_DNA_BASES = ("R", "Y", "S", "W", "K", "M", "N")
+
 
 def generate_demo_seqdb_models(
-    n_loci: int, n_to_create: int
+    n_loci: int,
+    n_to_create: int,
+    snp_seq_length: int = 0,
 ) -> dict[type, dict[UUID, Any]]:
+    """Generate demo seqdb models.
+
+    When snp_seq_length > 0, SNP-specific
+    reference data (Taxon, RefSeq, SNP profile
+    protocol, SNP distance protocol) is also
+    generated for each entry.
+    """
 
     model_types = [
         model.Protocol,
@@ -21,6 +35,8 @@ def generate_demo_seqdb_models(
         model.SeqProfile,
         model.SeqDistance,
         model.Sample,
+        model.Taxon,
+        model.RefSeq,
     ]
 
     db: dict[type, dict[UUID, Any]] = {x: {} for x in model_types}
@@ -79,9 +95,9 @@ def generate_demo_seqdb_models(
             valid_start_datetime=datetime(1970, 1, 1),
             valid_end_datetime=datetime(9999, 12, 31),
             is_integer_distance=True,
-            max_stored_distance=1000.0,
-            code="seq_distance_protocol_code{hex_string}_{i}",
-            name="seq_distance_protocol_name{hex_string}_{i}",
+            max_stored_distance=3000.0,
+            code=f"seq_distance_protocol_code{hex_string}_{i}",
+            name=f"seq_distance_protocol_name{hex_string}_{i}",
         )
 
         sample = model.Sample(  # type: ignore[call-arg]
@@ -127,7 +143,324 @@ def generate_demo_seqdb_models(
             seq_distance,
             sample,
         ]
+
+        # SNP reference data
+        if snp_seq_length > 0:
+            snp_objects = _generate_snp_objects(
+                hex_string,
+                i,
+                snp_seq_length,
+                sample,
+            )
+            new_objects.extend(snp_objects)
+
         for obj in new_objects:
             db[type(obj)][obj.id] = obj
 
     return db
+
+
+def build_random_nextclade_fields(
+    ref_seq: str,
+    rng: random.Random,
+) -> dict[str, Any]:
+    seq_length = len(ref_seq)
+    all_positions = list(range(1, seq_length + 1))
+    available_positions = all_positions.copy()
+    rng.shuffle(available_positions)
+
+    def _take_positions(min_count: int, max_count: int) -> list[int]:
+        if max_count < min_count:
+            max_count = min_count
+        max_available = len(available_positions)
+        if max_available == 0:
+            sample_size = min(max_count, max(1, seq_length))
+            return sorted(rng.sample(all_positions, k=sample_size))
+        count = min(max_available, rng.randint(min_count, max_count))
+        if count == 0:
+            count = 1
+        positions = sorted(available_positions[:count])
+        del available_positions[:count]
+        return positions
+
+    def _positions_to_ranges(positions: list[int]) -> str:
+        if not positions:
+            return ""
+        ranges: list[str] = []
+        start = positions[0]
+        end = positions[0]
+        for position in positions[1:]:
+            if position == end + 1:
+                end = position
+                continue
+            ranges.append(f"{start}-{end}" if start != end else str(start))
+            start = position
+            end = position
+        ranges.append(f"{start}-{end}" if start != end else str(start))
+        return ",".join(ranges)
+
+    substitutions_positions = _take_positions(3, max(3, min(8, seq_length // 8 or 3)))
+    deletion_positions = _take_positions(1, max(1, min(4, seq_length // 20 or 1)))
+    missing_positions = _take_positions(1, max(1, min(4, seq_length // 20 or 1)))
+    non_acgtn_positions = _take_positions(1, max(1, min(4, seq_length // 20 or 1)))
+    insertion_positions = sorted(
+        rng.sample(
+            all_positions,
+            k=min(max(1, min(3, seq_length // 25 or 1)), len(all_positions)),
+        )
+    )
+
+    substitutions = ",".join(
+        f"{ref_seq[position - 1]}{position}"
+        f"{rng.choice([base for base in _DNA_BASES if base != ref_seq[position - 1]])}"
+        for position in substitutions_positions
+    )
+    insertions = ",".join(
+        f"{position}:{''.join(rng.choice(_DNA_BASES) for _ in range(rng.randint(1, 3)))}"
+        for position in insertion_positions
+    )
+    non_acgtns = ",".join(
+        f"{rng.choice(_AMBIGUOUS_DNA_BASES)}:{position}"
+        for position in non_acgtn_positions
+    )
+
+    return {
+        "substitutions": substitutions,
+        "deletions": _positions_to_ranges(deletion_positions),
+        "insertions": insertions,
+        "missings": _positions_to_ranges(missing_positions),
+        "non_acgtns": non_acgtns,
+        "alignment_start": 1,
+        "alignment_end": seq_length,
+    }
+
+
+def generate_scale_test_db(
+    n_loci: int,
+    n_existing: int,
+    max_stored_distance: float = 1e9,
+    seed: int | None = None,
+) -> dict[type, dict[UUID, Any]]:
+    """Single locus-set / protocol with n_existing pre-seeded profiles.
+
+    All profiles share one allele detection protocol and one locus set.
+    SeqDistance records start empty (content="{}"). Upload N new profiles
+    against these n_existing to measure _calculate_and_store_distances
+    at scale. max_stored_distance defaults to 1e9 so every pair is written,
+    exercising the full json.loads / UPDATE_SOME path.
+
+    When seed is provided, all UUID and random generation is deterministic,
+    so the resulting db has stable IDs that match a previously persisted
+    SQLite file generated with the same arguments.
+    """
+    model_types = [
+        model.Protocol,
+        model.Locus,
+        model.LocusSet,
+        model.LocusCodeMap,
+        model.SeqProfile,
+        model.SeqDistance,
+        model.Sample,
+        model.Taxon,
+        model.RefSeq,
+    ]
+    db: dict[type, dict[UUID, Any]] = {x: {} for x in model_types}
+
+    rng = random.Random(seed)
+
+    def _uuid() -> UUID:
+        return UUID(int=rng.getrandbits(128)) if seed is not None else uuid.uuid4()
+
+    hex_string = (
+        format(rng.getrandbits(16), "04x") if seed is not None else secrets.token_hex(4)
+    )
+
+    assembly_protocol = model.Protocol(  # type: ignore[call-arg]
+        id=_uuid(),
+        code=f"assembly_protocol_scale_{hex_string}",
+        name=f"Assembly Protocol Scale {hex_string}",
+        protocol_type=enum.ProtocolType.ASSEMBLY,
+    )
+
+    loci = [
+        model.Locus(
+            id=_uuid(),
+            code=f"locus_scale_{hex_string}_{j}",
+            name=f"Locus Scale {hex_string} {j}",
+            locus_type=enum.LocusType.OTHER,
+        )
+        for j in range(1, n_loci + 1)
+    ]
+    locus_ids = [locus.id for locus in loci if locus.id is not None]
+
+    locus_set = model.LocusSet(
+        id=_uuid(),
+        code=f"locus_set_scale_{hex_string}",
+        name=f"Locus Set Scale {hex_string}",
+        locus_ids=locus_ids,
+    )
+
+    locus_code_map = model.LocusCodeMap(
+        id=_uuid(),
+        code=f"locus_code_map_scale_{hex_string}",
+        code_map={locus.code: locus.id for locus in loci if locus.id is not None},
+    )
+
+    allele_detection_protocol = model.Protocol(  # type: ignore[call-arg]
+        id=_uuid(),
+        code=f"allele_protocol_scale_{hex_string}",
+        name=f"Allele Protocol Scale {hex_string}",
+        protocol_type=enum.ProtocolType.SEQ_PROFILE,
+        seq_profile_type=enum.SeqProfileType.ALLELE,
+        locus_set_id=locus_set.id,
+    )
+
+    distance_protocol = model.Protocol(  # type: ignore[call-arg]
+        id=_uuid(),
+        code=f"distance_protocol_scale_{hex_string}",
+        name=f"Distance Protocol Scale {hex_string}",
+        protocol_type=enum.ProtocolType.SEQ_DISTANCE,
+        seq_distance_type=enum.SeqDistanceType.ALLELE_HAMMING,
+        locus_set_id=locus_set.id,
+        valid_start_datetime=datetime(1970, 1, 1),
+        valid_end_datetime=datetime(9999, 12, 31),
+        is_integer_distance=True,
+        max_stored_distance=max_stored_distance,
+    )
+
+    for obj in [
+        assembly_protocol,
+        allele_detection_protocol,
+        distance_protocol,
+        locus_set,
+        locus_code_map,
+        *loci,
+    ]:
+        db[type(obj)][obj.id] = obj
+
+    # Pre-seed n_existing profiles all sharing the same protocol/locus set.
+    # All allele IDs are random (so pairwise distance ≈ n_loci), but with
+    # max_stored_distance=1e9 every pair is stored anyway, exercising the
+    # full json.loads / UPDATE_SOME path on every chunk.
+    for _ in range(n_existing):
+        allele_ids = [_uuid() for _ in locus_ids]
+
+        sample = model.Sample(  # type: ignore[call-arg]
+            id=_uuid(),
+            created_in_data_collection_id=_uuid(),
+        )
+        seq_profile = model.SeqProfile(
+            id=_uuid(),
+            seq_profile_type=enum.SeqProfileType.ALLELE,
+            protocol_id=allele_detection_protocol.id,
+            locus_set_id=locus_set.id,
+            n_loci=n_loci,
+            format=enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
+            content_hash=model.SeqProfile.get_allele_profile_hash(allele_ids),
+            content=base64.b64encode(
+                b"".join(NULL_ID.bytes if x is None else x.bytes for x in allele_ids)
+            ).decode("ascii"),
+            sample_id=sample.id,
+        )
+        seq_distance = model.SeqDistance(  # type: ignore[call-arg]
+            id=_uuid(),
+            protocol_id=distance_protocol.id,
+            seq_profile_id=seq_profile.id,
+            format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
+            content="{}",
+            sample_id=sample.id,
+        )
+
+        db[model.Sample][sample.id] = sample
+        db[model.SeqProfile][seq_profile.id] = seq_profile
+        db[model.SeqDistance][seq_distance.id] = seq_distance
+
+    return db
+
+
+def _generate_snp_objects(
+    hex_string: str,
+    index: int,
+    seq_length: int,
+    sample: model.Sample,
+) -> list[Any]:
+    """Generate SNP-specific reference objects.
+
+    Creates: Taxon, RefSeq, SNP profile
+    protocol, SNP distance protocol, one SNP
+    SeqProfile, and one SeqDistance.
+    """
+    rng = random.Random(42 + index)
+    ref_seq_str = "".join(rng.choice("ACGT") for _ in range(seq_length))
+
+    taxon = model.Taxon(
+        id=uuid.uuid4(),
+        code=f"taxon_{hex_string}_{index}",
+        name=f"Taxon {hex_string} {index}",
+        rank=enum.TaxonRank.SPECIES,
+        ancestor_taxon_ids=[],
+    )
+
+    ref_seq = model.RefSeq(
+        code=f"ref_seq_{hex_string}_{index}",
+        name=f"RefSeq {hex_string} {index}",
+        taxon_id=taxon.id,  # type: ignore[arg-type]
+        seq=ref_seq_str,
+        seq_format=enum.SeqFormat.STR_DNA,
+    )
+
+    snp_profile_protocol = model.Protocol(  # type: ignore[call-arg]
+        id=uuid.uuid4(),
+        code=f"snp_protocol_{hex_string}_{index}",
+        name=f"SNP Protocol {hex_string} {index}",
+        protocol_type=enum.ProtocolType.SEQ_PROFILE,
+        seq_profile_type=enum.SeqProfileType.SNP,
+        ref_seq_id=ref_seq.id,
+    )
+
+    snp_distance_protocol = model.Protocol(  # type: ignore[call-arg]
+        id=uuid.uuid4(),
+        code=(f"snp_dist_protocol_{hex_string}" f"_{index}"),
+        name=(f"SNP Distance Protocol" f" {hex_string} {index}"),
+        protocol_type=enum.ProtocolType.SEQ_DISTANCE,
+        seq_distance_type=enum.SeqDistanceType.SNP_HAMMING,
+        ref_seq_id=ref_seq.id,
+        valid_start_datetime=datetime(1970, 1, 1),
+        valid_end_datetime=datetime(9999, 12, 31),
+        is_integer_distance=True,
+        max_stored_distance=1000.0,
+    )
+
+    nextclade_fields = build_random_nextclade_fields(ref_seq_str, rng)
+
+    snp_profile = model.SeqProfile(
+        id=uuid.uuid4(),
+        seq_profile_type=enum.SeqProfileType.SNP,
+        protocol_id=snp_profile_protocol.id,
+        format=enum.SeqProfileFormat.NEXTCLADE,
+        content_hash=model.SeqProfile.get_snp_profile_hash(
+            model.SeqProfile.model_construct(
+                content=json.dumps(nextclade_fields),
+                format=enum.SeqProfileFormat.NEXTCLADE,
+            ).get_snps()
+        ),
+        content=json.dumps(nextclade_fields),
+        sample_id=sample.id,
+    )
+
+    snp_seq_distance = model.SeqDistance(  # type: ignore[call-arg]
+        protocol_id=snp_distance_protocol.id,  # type: ignore[arg-type]
+        seq_profile_id=snp_profile.id,  # type: ignore[arg-type]
+        format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
+        content="{}",
+        sample_id=sample.id,
+    )
+
+    return [
+        taxon,
+        ref_seq,
+        snp_profile_protocol,
+        snp_distance_protocol,
+        snp_profile,
+        snp_seq_distance,
+    ]

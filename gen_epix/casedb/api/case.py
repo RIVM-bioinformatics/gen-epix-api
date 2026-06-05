@@ -61,9 +61,9 @@ class RetrieveCasesByIdsRequestBody(PydanticBaseModel):
     )
 
 
-class RetrieveCaseCohortIdsByCaseTypeRequestBody(PydanticBaseModel):
+class RetrieveCaseCohortLinksByCaseTypeRequestBody(PydanticBaseModel):
     case_type_id: UUID = copy_model_field(
-        command.RetrieveCaseCohortIdsByCaseTypeCommand, "case_type_id"
+        command.RetrieveCaseCohortLinksByCaseTypeCommand, "case_type_id"
     )
 
 
@@ -373,23 +373,23 @@ def create_case_endpoints(
         )
 
     @router.post(
-        "/retrieve/case_cohort_ids_by_case_type",
-        operation_id="retrieve__case_cohort_ids_by_case_type",
+        "/retrieve/case_cohort_links_by_case_type",
+        operation_id="retrieve__case_cohort_links_by_case_type",
         name="Retrieve case cohort IDs by case type",
-        description=command.RetrieveCaseCohortIdsByCaseTypeCommand.__doc__,
+        description=command.RetrieveCaseCohortLinksByCaseTypeCommand.__doc__,
     )
-    async def retrieve__case_cohort_ids_by_case_type(
+    async def retrieve__case_cohort_links_by_case_type(
         user: registered_user_dependency,  # type: ignore
-        request_body: RetrieveCaseCohortIdsByCaseTypeRequestBody,
-    ) -> list[model.CaseCohortIds]:
+        request_body: RetrieveCaseCohortLinksByCaseTypeRequestBody,
+    ) -> list[model.CaseCohortLink]:
         return cast(
-            list[model.CaseCohortIds],
+            list[model.CaseCohortLink],
             handle_command(
                 app=app,
                 user=user,
                 exception_code="b3c912d7",
                 input_handle_exception=handle_exception,
-                input_command=command.RetrieveCaseCohortIdsByCaseTypeCommand(
+                input_command=command.RetrieveCaseCohortLinksByCaseTypeCommand(
                     user=user,
                     case_type_id=request_body.case_type_id,
                 ),

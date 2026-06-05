@@ -7,6 +7,7 @@ from uuid import UUID
 from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
+from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.filter.composite import CompositeFilter
@@ -101,30 +102,44 @@ def case_service_retrieve_cases_by_query(
     )
 
 
-def case_service_retrieve_case_cohort_ids_by_case_type(
+def case_service_retrieve_case_cohort_links_by_case_type(
     self: BaseCaseService,
-    cmd: command.RetrieveCaseCohortIdsByCaseTypeCommand,
-) -> list[model.CaseCohortIds]:
+    cmd: command.RetrieveCaseCohortLinksByCaseTypeCommand,
+) -> list[model.CaseCohortLink]:
     user, repository = self._get_user_and_repository(cmd)
     assert isinstance(user, model.User) and user.id is not None
 
     case_type_filter = UuidSetFilter(
         key="case_type_id", members=frozenset({cmd.case_type_id})
     )
+    case_cohort_links: list[model.CaseCohortLink] = []
     with repository.uow() as uow:
-        rows = list(
+        row_iter = list(
             self.repository.read_fields(
                 uow=uow,
                 user_id=user.id,
                 model_class=model.Case,
-                field_names=["id"],
+                field_names=["id", "cohort"],
                 filter=case_type_filter,
             )
         )
+        for row in row_iter:
+            cohort_dict = row[1]
+            if not cohort_dict:
+                if cmd.include_missing:
+                    cohort_dict = {NULL_ID: NULL_ID}
+                else:
+                    continue
+            case_cohort_links.extend(
+                [
+                    model.CaseCohortLink(
+                        case_id=row[0], cohort_id=x, cohort_definition_id=y
+                    )
+                    for x, y in cohort_dict.items()
+                ]
+            )
 
-    # cohort_id == case_id (identity mapping); in future a case may have
-    # multiple linked cohort IDs stored in a dedicated relation.
-    return [model.CaseCohortIds(case_id=row[0], cohort_ids=[row[0]]) for row in rows]
+    return case_cohort_links
 
 
 def _apply_max_results_limit(

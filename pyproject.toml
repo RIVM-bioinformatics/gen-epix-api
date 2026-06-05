@@ -46,7 +46,7 @@ dependencies = [
     "python-dateutil==2.9.0.post0",
     "types-python-dateutil==2.9.*",
     "types-setuptools==82.0.*",
-    "cryptography==46.0.4",
+    "cryptography==46.0.6",
     "oauthlib==3.3.1",
     "python-multipart==0.0.22",
 ]
@@ -59,6 +59,16 @@ Documentation = "https://rivm-bioinformatics.github.io/gen-epix-api/"
 where = ["."]
 include = ["gen_epix*"]
 exclude = ["tests", "tests.*", "docs", "docs.*", "data", "data.*", "cert", "cert.*", "cicd", "cicd.*"]
+
+[tool.pytest.ini_options]
+norecursedirs = ["mutants"]
+markers = [
+    "scenario_ids(id): Custom marker for scenario IDs used in test reporting.",
+    "integration: Marker for integration tests.",
+    "performance: Marker for performance/scale tests (skipped by default; use -m performance).",
+]
+addopts = "-v -s"
+filterwarnings = ["ignore:.*shadows an attribute in parent.*"]
 
 [tool.pytest-gremlins]
 paths = ["gen_epix"]

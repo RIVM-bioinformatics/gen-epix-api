@@ -483,6 +483,107 @@ class BaseUploadTestCase(TestCase):
             )
 
 
+@pytest.mark.scenario_ids("TC-11-13-01")
+class TestRetrieveParentIdByIntraChildLinkedId(BaseUploadTestCase):
+    """Tests for retrieve_parent_id_by_intra_child_linked_id helper."""
+
+    def test_returns_empty_and_skips_query_when_no_linked_ids(self) -> None:
+        """No non-null linked IDs in upload means no repository read is issued."""
+        child2_for_upload = self.create_child2_for_upload(
+            child_id=NULL_ID,
+            ref2_id=NULL_ID,
+        )
+        parent_for_upload = self.create_parent_for_upload(children2=[child2_for_upload])
+        cmd = self.create_command_for_parents(parent_for_upload)
+
+        result = self.batch_uploader.retrieve_parent_id_by_intra_parent_linked_child_id(
+            self.uow,
+            cmd,
+            from_child_class=Child2,
+            from_child_link_id_field_name="ref2_id",
+            to_child_class=Child2,
+        )
+
+        self.assertEqual(result, {})
+        self.service.repository.read_fields.assert_not_called()
+
+    def test_reads_distinct_ids_and_returns_child_parent_mapping(self) -> None:
+        """Collect linked IDs from upload, query once, and map child IDs to parent IDs."""
+        linked_id_1 = self.random_ids[0]
+        linked_id_2 = self.random_ids[1]
+        linked_id_3 = self.random_ids[3]
+
+        parent_for_upload_1 = self.create_parent_for_upload(
+            children2=[
+                self.create_child2_for_upload(child_id=linked_id_1),
+                self.create_child2_for_upload(child_id=linked_id_2),
+            ]
+        )
+        parent_for_upload_2 = self.create_parent_for_upload(
+            children2=[
+                self.create_child2_for_upload(child_id=linked_id_3),
+                self.create_child2_for_upload(child_id=NULL_ID),
+            ]
+        )
+        cmd = self.create_command_for_parents(
+            [parent_for_upload_1, parent_for_upload_2],
+            validate_command=False,
+        )
+
+        self.service.repository.read_fields.return_value = [
+            (linked_id_1, self.parent_id),
+            (linked_id_2, self.random_ids[2]),
+        ]
+
+        result = self.batch_uploader.retrieve_parent_id_by_intra_parent_linked_child_id(
+            self.uow,
+            cmd,
+            from_child_class=Child2,
+            from_child_link_id_field_name="child2_id",
+            to_child_class=Child2,
+        )
+
+        self.assertEqual(
+            result,
+            {
+                linked_id_1: self.parent_id,
+                linked_id_2: self.random_ids[2],
+            },
+        )
+        self.service.repository.read_fields.assert_called_once()
+        _, _, _, fields, *_ = self.service.repository.read_fields.call_args.args
+        self.assertEqual(fields, ["child2_id", "parent_id"])
+        query_filter = self.service.repository.read_fields.call_args.kwargs["filter"]
+        self.assertEqual(query_filter.key, "child2_id")
+        self.assertEqual(
+            query_filter.members,
+            frozenset({linked_id_1, linked_id_2, linked_id_3}),
+        )
+
+    def test_uses_none_user_id_when_command_has_no_user(self) -> None:
+        """Repository read should receive user_id=None when cmd.user is None."""
+        linked_id = self.random_ids[0]
+        parent_for_upload = self.create_parent_for_upload(
+            children2=[self.create_child2_for_upload(child_id=linked_id)]
+        )
+        cmd = self.create_command_for_parents(parent_for_upload)
+        cmd = cmd.model_copy(update={"user": None})
+
+        self.service.repository.read_fields.return_value = [
+            (linked_id, self.parent_id),
+        ]
+
+        _ = self.batch_uploader.retrieve_parent_id_by_intra_parent_linked_child_id(
+            self.uow,
+            cmd,
+            from_child_class=Child2,
+            from_child_link_id_field_name="child2_id",
+            to_child_class=Child2,
+        )
+
+        self.assertEqual(self.service.repository.read_fields.call_args.args[1], None)
+
+
 # Test Scenario 1: Existence of parent and/or child objects in the repository
 @pytest.mark.scenario_ids("TC-SEC-30-03")
 class Test1ObjectExistence(BaseUploadTestCase):
@@ -1618,7 +1719,6 @@ class Test9Child2Identifiers(BaseUploadTestCase):
             [existing_identifier],  # The existing Identifiers
         ]
         self.service.repository.crud.side_effect = [
-            [True],  # Child exists
             [created_parent_id],  # Create parent
             [existing_child],  # Existing child for update check
         ]
@@ -1669,7 +1769,6 @@ class Test9Child2Identifiers(BaseUploadTestCase):
             [existing_identifier],  # The existing Identifiers
         ]
         self.service.repository.crud.side_effect = [
-            [True],  # Child exists
             [created_parent_id],  # Create parent
             [existing_child],  # Existing child for update check
         ]
@@ -1811,7 +1910,6 @@ class Test9Child2Identifiers(BaseUploadTestCase):
             self.random_ids[2],  # Spare ID in case another Identifier is created
         ]
         self.service.repository.crud.side_effect = [
-            [True],  # Child exists
             [created_parent_id],  # Create parent
             [existing_child],  # Existing child for update check
         ]
