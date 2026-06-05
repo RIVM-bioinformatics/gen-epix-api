@@ -688,15 +688,42 @@ class TestClient:
     ) -> list[model.Model]:
         """Read all objects of the given model class via the app."""
         user: model.User = self.get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
-        retval: list[model.Model] = self.handle(
+        objs: list[model.Model] = self.handle(
             self.app.domain.get_crud_command_for_model(model_class)(
                 user=user,
                 operation=CrudOperation.READ_ALL,
-                props={"cascade_read": cascade},
             ),
             use_endpoint=False,
         )
-        return retval
+        if cascade:
+            self._add_linked_objs(user, model_class, objs)
+        return objs
+
+    def _add_linked_objs(
+        self,
+        user: model.User,
+        model_class: type[model.Model],
+        objs: list[model.Model],
+    ) -> None:
+        """For each object, read all linked objects and attach them to the object if the corresponding relationship field exists."""
+        for link in model_class.ENTITY.links.values():
+            relationship_field_name = link.relationship_field_name
+            if not relationship_field_name:
+                continue
+            link_field_name = link.link_field_name
+            linked_model_class = link.link_model_class
+            linked_obj_ids = {getattr(x, link_field_name) for x in objs}
+            linked_obj_ids.discard(None)
+            if not linked_obj_ids:
+                continue
+            linked_objs = self.read_some(user, linked_model_class, list(linked_obj_ids))
+            linked_obj_map = {x.get_id(): x for x in linked_objs}
+            for obj in objs:
+                setattr(
+                    obj,
+                    link_field_name,
+                    [linked_obj_map[getattr(obj, link_field_name)]],
+                )
 
     def read_some(
         self,
@@ -716,10 +743,11 @@ class TestClient:
                     if isinstance(obj_ids, set)
                     else obj_ids  # type: ignore[arg-type]
                 ),
-                props={"cascade_read": cascade},
             ),
             use_endpoint=False,
         )
+        if cascade:
+            self._add_linked_objs(user, model_class, retval)
         return retval
 
     def read_some_by_property(

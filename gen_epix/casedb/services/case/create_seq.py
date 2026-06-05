@@ -125,7 +125,7 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
     col_ids: list[UUID],
 ) -> list[model.Case]:
     # Get Col and RefCol data
-    cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
+    cols: list[model.Col] = self.repository.crud(
         uow,
         user_id,
         model.Col,
@@ -136,7 +136,7 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
 
     # Get RefCol data
     ref_col_ids: set[UUID] = {x.ref_col_id for x in cols}
-    ref_cols: list[model.RefCol] = self.repository.crud(  # type: ignore[assignment]
+    ref_cols: list[model.RefCol] = self.repository.crud(
         uow,
         user_id,
         model.RefCol,
@@ -169,7 +169,7 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
         )
 
     # Get Case data
-    cases: list[model.Case] = self.repository.crud(  # type: ignore[assignment]
+    cases: list[model.Case] = self.repository.crud(
         uow,
         user_id,
         model.Case,

@@ -356,6 +356,16 @@ class Run:
             ]
         )
 
+    def test_fastapp_unit_repositories(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/fastapp/unit/repositories",
+            ]
+        )
+
     def test_fastapp_performance(self) -> None:
         import pytest
 
@@ -736,6 +746,7 @@ class Run:
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
+            + ["-m performance"]
             + [
                 "test/seqdb/performance/calculate_seq_distances",
             ]

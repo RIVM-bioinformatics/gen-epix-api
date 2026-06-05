@@ -111,12 +111,23 @@ class CrudEndpointGenerator:
         route: CrudEndpointSet,
         handle_exception_fn: Callable,
     ) -> None:
-        async def endpoint_function(user: route.user_dependency) -> Any:  # type: ignore
+        async def endpoint_function(user: route.user_dependency, limit: int | None = None, offset: int | None = None) -> Any:  # type: ignore
             obj_ids = None
-            cmd = route.crud_command_class(
-                user=user,
-                operation=CrudOperation.READ_ALL,
-            )
+            try:
+                cmd = route.crud_command_class(
+                    user=user,
+                    operation=CrudOperation.READ_ALL,
+                    limit=limit or 0,
+                    offset=offset or 0,
+                )
+            except ValueError as exception:
+                error_code = "6fa3d1c9"
+                handle_exception_fn(
+                    error_code + route.endpoint_basename,
+                    user,
+                    exc.InvalidArgumentsError(error_code, str(exception)),
+                )
+                return None
             try:
                 retval = await run_in_threadpool(route.app.handle, cmd)
                 if route.model_class is not route.read_api_model_class:
@@ -241,6 +252,8 @@ class CrudEndpointGenerator:
                 | TypedNoFilter
                 | TypedCompositeFilter
             ),
+            limit: int | None = None,
+            offset: int | None = None,
         ) -> Any:
             if validate_query_filter and not validate_query_filter(filter):
                 handle_exception_fn(
@@ -248,14 +261,23 @@ class CrudEndpointGenerator:
                     user,
                     exc.InvalidArgumentsError("Invalid filter"),
                 )
-            cmd = route.crud_command_class(
-                user=user,
-                operation=CrudOperation.READ_ALL,
-                query_filter=filter,
-                props={
-                    "return_id": return_id,
-                },
-            )
+            try:
+                cmd = route.crud_command_class(
+                    user=user,
+                    operation=CrudOperation.READ_ALL,
+                    return_id=return_id,
+                    limit=limit or 0,
+                    offset=offset or 0,
+                    query_filter=filter,
+                )
+            except ValueError as exception:
+                error_code = "3bd8a4f1"
+                handle_exception_fn(
+                    error_code + route.endpoint_basename,
+                    user,
+                    exc.InvalidArgumentsError(error_code, str(exception)),
+                )
+                return None
             try:
                 retval = await run_in_threadpool(route.app.handle, cmd)
                 if (
@@ -340,7 +362,7 @@ class CrudEndpointGenerator:
                         if route.model_class is route.create_api_model_class
                         else route.create_api_model_class.to_model(create_obj)
                     ),
-                    props={"return_id": route.post_returns_id},
+                    return_id=route.post_returns_id,
                 )
                 retval = await run_in_threadpool(route.app.handle, cmd)
                 if (
@@ -399,7 +421,7 @@ class CrudEndpointGenerator:
                             for x in create_objs
                         ]
                     ),
-                    props={"return_id": route.post_returns_id},
+                    return_id=route.post_returns_id,
                 )
                 retval = await run_in_threadpool(route.app.handle, cmd)
                 if (
@@ -459,7 +481,7 @@ class CrudEndpointGenerator:
                         if route.model_class is route.create_api_model_class
                         else route.model_class.to_model(update_obj)
                     ),
-                    props={"return_id": route.put_returns_id},
+                    return_id=route.put_returns_id,
                 )
                 retval = await run_in_threadpool(route.app.handle, cmd)
                 if (
@@ -510,7 +532,7 @@ class CrudEndpointGenerator:
                         if route.model_class is route.create_api_model_class
                         else [route.model_class.to_model(x) for x in update_objs]
                     ),
-                    props={"return_id": route.put_returns_id},
+                    return_id=route.put_returns_id,
                 )
                 retval = await run_in_threadpool(route.app.handle, cmd)
                 if (
@@ -583,12 +605,14 @@ class CrudEndpointGenerator:
         route: CrudEndpointSet,
         handle_exception_fn: Callable,
     ) -> None:
-        async def endpoint_function(user: route.user_dependency) -> Any:  # type: ignore
+        async def endpoint_function(user: route.user_dependency, limit: int | None = None, offset: int | None = None) -> Any:  # type: ignore
             obj_ids = None
             cmd = route.crud_command_class(
                 user=user,
                 operation=CrudOperation.DELETE_ALL,
-                props={"return_id": route.delete_all_returns_id},
+                return_id=route.delete_all_returns_id,
+                limit=limit or 0,
+                offset=offset or 0,
             )
             try:
                 retval = await run_in_threadpool(route.app.handle, cmd)
@@ -646,7 +670,7 @@ class CrudEndpointGenerator:
                 user=user,
                 obj_ids=obj_ids,
                 operation=CrudOperation.DELETE_SOME,
-                props={"return_id": route.delete_all_returns_id},
+                return_id=route.delete_all_returns_id,
             )
             try:
                 retval = await run_in_threadpool(route.app.handle, cmd)

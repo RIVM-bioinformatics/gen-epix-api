@@ -112,7 +112,7 @@ def _validate_case_set_deletion(
         )
         # Get all case sets and data collection links
     assert case_set_ids is not None
-    case_sets: list[model.CaseSet] = self.repository.crud(  # type: ignore[assignment]
+    case_sets: list[model.CaseSet] = self.repository.crud(
         uow,
         cmd.user.id,  # type: ignore[union-attr]
         model.CaseSet,

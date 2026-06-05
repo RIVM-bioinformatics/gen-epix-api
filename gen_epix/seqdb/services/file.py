@@ -32,7 +32,7 @@ class FileService(BaseFileService):
         # Store the file
         assert cmd.user is not None and cmd.user.id is not None
         with self.repository.uow() as uow:
-            file_id: UUID = self.repository.crud(  # type: ignore[assignment]
+            file_id: UUID = self.repository.crud(
                 uow,
                 cmd.user.id,
                 model.File,

@@ -239,3 +239,18 @@ def int_to_uuid(value: int) -> UUID:
         .digest()[:16]
         .hex()
     )
+
+
+def chunk_list(values: list, chunk_size: int | None) -> list[list]:
+    """Split *values* into sub-lists of at most *chunk_size*.
+
+    Returns ``[values]`` when *chunk_size* is ``None`` (no
+    chunking). Returns ``[]`` when *values* is empty so
+    callers can skip the loop entirely.
+    """
+    if not values:
+        return []
+    if chunk_size is None:
+        return [values]
+    n = len(values)
+    return [values[i : i + chunk_size] for i in range(0, n, chunk_size)]

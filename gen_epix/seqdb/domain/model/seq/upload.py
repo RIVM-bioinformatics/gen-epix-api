@@ -203,14 +203,17 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
         return self
 
     def _validate_snp_profile_upload(self) -> Self:
-        self._validate_exactly_one_representation(
-            (
-                ("content", self.content != ""),
-                ("aligned_nucleotide_seq", self.aligned_nucleotide_seq is not None),
+        if self.content == "" and self.aligned_nucleotide_seq is None:
+            raise ValueError(
+                "content or aligned_nucleotide_seq must be provided for SNP profiles."
             )
-        )
-        if self.aligned_nucleotide_seq is not None:
-            self.content = self.aligned_nucleotide_seq
+        # TODO: When content is provided, the parent SeqProfile._validate_content validator
+        # has already parsed the JSON, validated required NextClade fields, and
+        # computed/verified the hash. Nothing more to do here.
+        # When aligned_nucleotide_seq is provided (content == ""), the parent skips
+        # validation and the conversion to content + hash computation will be
+        # implemented here.
+
         return self
 
     def _validate_allele_profile_upload(self) -> Self:
@@ -409,6 +412,12 @@ class SampleForUpload(ParentForUpload):
     }
     CHILD_PARENT_ID_FIELD_NAME_MAP: ClassVar = {
         x: "sample_id" for x in CHILD_FOR_UPLOAD_CLASS_MAP.keys()
+    }
+    CHILD_INTRA_PARENT_LINKS_MAP: ClassVar = {
+        Seq: [("read_set_id", ReadSet), ("read_set2_id", ReadSet)],
+        SeqClassification: [("seq_id", Seq)],
+        SeqProfile: [("seq_id", Seq)],
+        SeqTaxonomy: [("seq_id", Seq)],
     }
 
     # Parent

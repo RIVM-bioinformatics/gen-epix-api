@@ -42,7 +42,7 @@ def create_ontology_endpoints(
                 user=user,
                 obj_id1=disease_id,
                 association_objs=request_body.etiologies,
-                props={"return_id": False},
+                return_id=False,
             )
             retval: list[model.Etiology] = await run_in_threadpool(app.handle, cmd)
         except Exception as exception:

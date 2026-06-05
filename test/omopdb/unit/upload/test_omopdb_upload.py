@@ -1064,13 +1064,25 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
         person_for_upload = self.create_person_for_upload(
             person_id=existing_person_id, person=None, specimens=[existing_specimen]
         )
+        # Build a DB-side Specimen that matches what update_children will compare
+        # against: same field values as existing_specimen but with the resolved IDs.
+        # verify_children now uses read_fields instead of EXISTS_SOME (no crud call
+        # there), so the only crud call is READ_SOME inside _update_objs_batch.
+        existing_specimen_db = Specimen(
+            **{
+                **existing_specimen.model_dump(),
+                "specimen_id": existing_specimen_id,
+                "person_id": existing_person_id,
+            }
+        )
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],
             [existing_identifier],
         ]
         self.service.repository.crud.side_effect = [
-            [True],  # Person exists
-            [existing_specimen],  # Existing specimen
+            [
+                existing_specimen_db
+            ],  # READ_SOME: existing specimen for update comparison
         ]
         self.service.repository.read_fields.side_effect = [
             [(existing_specimen_id, existing_person_id)],
@@ -1100,13 +1112,21 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
         person_for_upload = self.create_person_for_upload(
             person_id=existing_person_id, person=None, specimens=[existing_specimen]
         )
+        existing_specimen_db = Specimen(
+            **{
+                **existing_specimen.model_dump(),
+                "specimen_id": existing_specimen_id,
+                "person_id": existing_person_id,
+            }
+        )
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],
             [existing_identifier],
         ]
         self.service.repository.crud.side_effect = [
-            [True],  # Person exists
-            [existing_specimen],  # Existing specimen
+            [
+                existing_specimen_db
+            ],  # READ_SOME: existing specimen for update comparison
         ]
         self.service.repository.read_fields.side_effect = [
             [(existing_specimen_id, existing_person_id)],
@@ -1228,14 +1248,22 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
         person_for_upload = self.create_person_for_upload(
             person_id=existing_person_id, person=None, specimens=[existing_specimen]
         )
+        existing_specimen_db = Specimen(
+            **{
+                **existing_specimen.model_dump(),
+                "specimen_id": existing_specimen_id,
+                "person_id": existing_person_id,
+            }
+        )
         self.service.app.handle.side_effect = [
             [self.identifier_issuer, self.identifier_issuer2],
             [existing_identifier],  # Existing Identifiers
             [created_identifier_id],  # Created Identifier IDs
         ]
         self.service.repository.crud.side_effect = [
-            [True],  # Person exists
-            [existing_specimen],  # Existing specimen
+            [
+                existing_specimen_db
+            ],  # READ_SOME: existing specimen for update comparison
         ]
         self.service.repository.read_fields.side_effect = [
             [(existing_specimen_id, existing_person_id)],

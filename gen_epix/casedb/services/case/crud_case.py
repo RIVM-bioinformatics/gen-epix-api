@@ -70,7 +70,7 @@ def _crud_case_with_abac(
             )
         # Get all cases and data collection links
         assert case_ids is not None
-        cases: list[model.Case] = self.repository.crud(  # type: ignore[assignment]
+        cases: list[model.Case] = self.repository.crud(
             uow,
             cmd.user.id,
             model.Case,

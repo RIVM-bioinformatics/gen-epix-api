@@ -124,7 +124,9 @@ class Seq(Base, RowMetadataMixin, CodeMixin, QualityMixin):
 
     __tablename__, __table_args__ = create_table_args(model.Seq)
 
-    sample_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "sample_id")
+    sample_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Seq, "sample_id", index=True
+    )
     uri: Mapped[str] = create_mapped_column(DOMAIN, model.Seq, "uri")
     file_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "file_id")
     file_format: Mapped[enum.SeqFileFormat] = create_mapped_column(
@@ -252,10 +254,10 @@ class SeqClassification(
     __tablename__, __table_args__ = create_table_args(model.SeqClassification)
 
     sample_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SeqClassification, "sample_id"
+        DOMAIN, model.SeqClassification, "sample_id", index=True
     )
     seq_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.SeqClassification, "seq_id"
+        DOMAIN, model.SeqClassification, "seq_id", index=True
     )
     protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqClassification, "protocol_id"
@@ -282,10 +284,10 @@ class SeqTaxonomy(
     __tablename__, __table_args__ = create_table_args(model.SeqTaxonomy)
 
     sample_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SeqTaxonomy, "sample_id"
+        DOMAIN, model.SeqTaxonomy, "sample_id", index=True
     )
     seq_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.SeqTaxonomy, "seq_id"
+        DOMAIN, model.SeqTaxonomy, "seq_id", index=True
     )
     protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqTaxonomy, "protocol_id"
@@ -310,7 +312,7 @@ class SeqProfile(Base, RowMetadataMixin, ContentMixin, QualityMixin):
     __tablename__, __table_args__ = create_table_args(model.SeqProfile)
 
     sample_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SeqProfile, "sample_id"
+        DOMAIN, model.SeqProfile, "sample_id", index=True
     )
     seq_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.SeqProfile, "seq_id"
@@ -350,13 +352,13 @@ class SeqDistance(Base, RowMetadataMixin, ContentMixin[enum.SeqDistanceFormat]):
     __tablename__, __table_args__ = create_table_args(model.SeqDistance)
 
     sample_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SeqDistance, "sample_id"
+        DOMAIN, model.SeqDistance, "sample_id", index=True
     )
     protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SeqDistance, "protocol_id"
+        DOMAIN, model.SeqDistance, "protocol_id", index=True
     )
     seq_profile_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SeqDistance, "seq_profile_id"
+        DOMAIN, model.SeqDistance, "seq_profile_id", index=True
     )
 
     sample: Mapped[Sample] = relationship("Sample", foreign_keys=[sample_id])

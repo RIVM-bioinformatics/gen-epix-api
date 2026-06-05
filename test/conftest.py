@@ -133,6 +133,17 @@ def _remove_timezone_from_datetime(test: list[dict[str, Any]]) -> None:
         test["datetime"] = datetime_obj.replace(tzinfo=None)  # type: ignore[call-overload]
 
 
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: list[pytest.Item]
+) -> None:
+    """Skip performance tests unless -m performance (or a superset) is requested."""
+    if "performance" not in (config.getoption("-m", default="") or ""):
+        skip = pytest.mark.skip(reason="use -m performance to run")
+        for item in items:
+            if item.get_closest_marker("performance"):
+                item.add_marker(skip)
+
+
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
     """custom pytest hook to perform actions at the end of the test session."""
     # Mutation runs execute pytest repeatedly; skip XLSX generation to avoid heavy I/O.

@@ -500,12 +500,6 @@ def _valid_args_for_operation(op: CrudOperation) -> tuple[type[Model], Any, Any]
         return model_class, None, ["ID1", "ID2"]
     if op == CrudOperation.UNDELETE_ALL:
         return model_class, None, None
-    if op == CrudOperation.RESTORE_ONE:
-        return model_class, None, "ID1"
-    if op == CrudOperation.RESTORE_SOME:
-        return model_class, None, ["ID1", "ID2"]
-    if op == CrudOperation.RESTORE_ALL:
-        return model_class, None, None
     if op == CrudOperation.EXISTS_ONE:
         return model_class, None, "ID1"
     if op == CrudOperation.EXISTS_SOME:
