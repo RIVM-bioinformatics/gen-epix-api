@@ -782,6 +782,7 @@ class SeqdbTestClient(TestClient):
                 content_hash=model.SeqProfile.get_allele_profile_hash(allele_ids),
             )
             seq_for_upload = model.SeqForUpload(
+                id=seq_id,
                 contigs=[
                     model.Contig(
                         seq="".join(x for x in seq if x != "-"),
@@ -1055,6 +1056,7 @@ class SeqdbTestClient(TestClient):
             seq_for_upload = model.SeqForUpload(
                 contigs=[
                     model.Contig(
+                        id=uuid.uuid4(),
                         seq=serialized_nextclade,
                         seq_format=enum.SeqFormat.NEXTCLADE,
                     )

@@ -8,9 +8,14 @@ from test.seqdb.performance.calculate_seq_distances.base import (
 )
 from test.seqdb.performance.calculate_seq_distances.generate_seqdb_models import (
     generate_demo_seqdb_models,
+    generate_scale_test_db,
 )
 from test.seqdb.performance.common import (
+    count_seq_profiles,
     create_dict_repository,
+    create_mssql_repository,
+    create_sqlite_repository,
+    fill_empty_sqlite_repository,
     set_service_repository,
     write_db_to_pickle,
 )
@@ -20,23 +25,53 @@ from time import perf_counter
 from typing import Any
 from uuid import UUID
 
+import pyinstrument as pyinstrument
 import pytest
 
 from gen_epix.commondb.domain.enum import AppType, EtlStatus
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.repositories.seq_dict import SeqDictRepository
+from gen_epix.seqdb.repositories.seq_sa import SeqSARepository
+
+# Set this env var to a full mssql+pyodbc SQLAlchemy URL to run the SQL Server
+# performance tests.  If unset, TestCalculateSeqDistancesScaleMssql is skipped.
+#
+# Start a local SQL Server container once (stays up between test runs):
+#
+#   docker run -d --name seqdb-perf-mssql \
+#     -e ACCEPT_EULA=Y -e MSSQL_SA_PASSWORD=PerfTest1234 \
+#     -p 1433:1433 mcr.microsoft.com/mssql/server:2022-latest
+#
+# Then export the URL (adjust driver name if needed):
+#
+#   export SEQDB_MSSQL_TEST_URL="mssql+pyodbc://sa:PerfTest1234@localhost:1433/master\
+#     ?driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=yes"
+#
+# On first run the database is seeded (~3,000 loci + n_existing profiles).
+# Subsequent runs reuse the existing data and add n_new new profiles, so the
+# "existing" count grows — which is intentional: you can observe how cost
+# scales as the database fills up.
+MSSQL_URL_ENV = "SEQDB_MSSQL_TEST_URL"
 
 # Set to True to regenerate demo data, False to load from existing pickle file
 CREATE_DEMO_DATA = True
 
-N_SEQS_PER_BATCH = 100
+N_SEQS_PER_BATCH = 5
 DB_ENTRY_COUNTS: list[int] = [1, 2, 5]
 
-SEQ_SETTINGS = SeqGenerationSettings(n_loci=1000, locus_length=100)
+SEQ_SETTINGS = SeqGenerationSettings(n_loci=3000, locus_length=500)
 
 SNP_SEQ_LENGTH = 100
 SNP_SEED = 99
+
+# Scale test: N_EXISTING_COUNTS existing profiles all in one protocol,
+# N_NEW_PROFILES_SCALE new profiles uploaded per measurement point.
+# max_stored_distance=1e9 in generate_scale_test_db ensures every pair
+# is written, exercising the full json.loads / UPDATE_SOME path.
+N_EXISTING_COUNTS: list[int] = [5000]  # , 500, 1000, 5000]
+N_NEW_COUNTS_SCALE: list[int] = [50]  # [5, 10, 50, 100]
+EXISTING_CHUNK_SIZE_SCALE = 1000
 
 SEQDB_APP_CFGS = get_app_cfgs(
     AppType.SEQDB,
@@ -63,12 +98,14 @@ def _build_upload_command(
     env: Env,
     settings: SeqGenerationSettings,
     seed: int | None = None,
+    n_seqs: int | None = None,
+    existing_chunk_size: int | None = None,
 ) -> command.UploadSamplesCommand:
     """
-    Given a created dict dataset, build a UploadSamplesCommand
-    The id's from the db are extracted and used in generate_random_sequences()
-    to create correctly linked objects for upload.
-    db_index is used to select which set of objects to use for the command from the db.
+    Given a created dict dataset, build a UploadSamplesCommand.
+    db_index selects which locus-set / protocol set to use from the db.
+    n_seqs overrides N_SEQS_PER_BATCH; existing_chunk_size is forwarded
+    to UploadSamplesCommand for chunked distance calculation.
     """
     protocols = list(db[model.Protocol].values())
     assembly_protocol_id = [
@@ -90,7 +127,7 @@ def _build_upload_command(
         settings if seed is None else settings.model_copy(update={"seed": seed})
     )
     sample_batch = env.generate_random_sequences(
-        n_seqs=N_SEQS_PER_BATCH,
+        n_seqs=n_seqs if n_seqs is not None else N_SEQS_PER_BATCH,
         settings=effective_settings,
         assembly_protocol_id=assembly_protocol_id,
         locus_set_id=locus_set_id,
@@ -101,6 +138,8 @@ def _build_upload_command(
     return command.UploadSamplesCommand(
         sample_batch=sample_batch,
         user=env.get_root_user(),
+        existing_chunk_size=existing_chunk_size,
+        calculate_distances=True,
     )
 
 
@@ -140,6 +179,7 @@ def _build_snp_upload_command(
     )
 
 
+@pytest.mark.performance
 @pytest.mark.scenario_ids("TC-PERF-10-01")
 class TestSampleBatchUploader:
 
@@ -158,9 +198,10 @@ class TestSampleBatchUploader:
         # Configure root user
         user: model.User = env.retrieve_user_by_key("root1_1@org1.org")
         user.name = "root1_1"
-        env.set_obj(user)
+        env.set_obj(user, update=True)
         env.set_obj(
-            env.read_one_by_property("root1_1", model.Organization, "name", "org1")
+            env.read_one_by_property("root1_1", model.Organization, "name", "org1"),
+            update=True,
         )
 
         entities = env.app.domain.get_dag_sorted_entities(
@@ -273,4 +314,283 @@ class TestSampleBatchUploader:
         print(f"avg_time_per_upload={avg:.4f}s\n")
 
         # profiler.stop()
-        # profiler.write_html("./test/output/profile_calculate_seq_distances.html")
+        # profiler.write_html("./test/output/profile_calculate_seq_distances_snp.html")
+
+
+_SCALE_PARAMS = [
+    (i, rt, n_new)
+    for i in range(len(N_EXISTING_COUNTS))
+    for rt in (enum.RepositoryType.DICT, enum.RepositoryType.SA_SQLITE)
+    for n_new in N_NEW_COUNTS_SCALE
+]
+_SCALE_IDS = [
+    f"{N_EXISTING_COUNTS[i]}-{rt.value}-n{n_new}" for i, rt, n_new in _SCALE_PARAMS
+]
+
+
+@pytest.mark.performance
+@pytest.mark.scenario_ids("TC-PERF-10-02")
+class TestCalculateSeqDistancesScale:
+    """Scale test for _calculate_and_store_distances — DICT and SA_SQLITE.
+
+    All N_EXISTING_COUNTS profiles share a single locus set and distance
+    protocol. Uploading N_NEW_PROFILES_SCALE new profiles triggers one
+    _calculate_and_store_distances call against all existing profiles.
+    max_stored_distance=1e9 ensures every pair is stored (worst case:
+    full json.loads + UPDATE_SOME path fires on every chunk).
+
+    Both repository types are tested so the SQLAlchemy code path
+    (SA reads/writes, iter_seq_distances with IN() on SQLite) is covered
+    alongside the in-memory DICT path.
+    """
+
+    dbs: list[dict[type, dict[UUID, Any]]]
+    dict_repositories: list[SeqDictRepository]
+    sqlite_repositories: list[SeqSARepository]
+
+    @pytest.fixture(scope="module", autouse=True)
+    def setup(self, env: Env) -> None:
+        user: model.User = env.retrieve_user_by_key("root1_1@org1.org")
+        user.name = "root1_1"
+        env.set_obj(user, update=True)
+        env.set_obj(
+            env.read_one_by_property("root1_1", model.Organization, "name", "org1"),
+            update=True,
+        )
+
+        entities = env.app.domain.get_dag_sorted_entities(
+            service_type=enum.ServiceType.SEQ,
+            persistable=True,
+        )
+
+        # seed=n_existing makes UUID generation deterministic so SQLite files
+        # produced in a previous run can be reused as-is.
+        type(self).dbs = [
+            generate_scale_test_db(
+                n_loci=SEQ_SETTINGS.n_loci,
+                n_existing=n_existing,
+                seed=n_existing,
+            )
+            for n_existing in N_EXISTING_COUNTS
+        ]
+        type(self).dict_repositories = [
+            create_dict_repository(pickle_file=None, db=db, entities=entities)
+            for db in type(self).dbs
+        ]
+
+        # Build matching SQLite repos. When the file already exists it is
+        # reused directly (deterministic seeds ensure IDs still match); only
+        # recreate and fill when the file is absent or empty.
+        sqlite_dir = Path(__file__).parent
+        type(self).sqlite_repositories = []
+        for db, n_existing, dict_repo in zip(
+            type(self).dbs,
+            N_EXISTING_COUNTS,
+            type(self).dict_repositories,
+        ):
+            sqlite_path = sqlite_dir / f"scale_test_{n_existing}.sqlite"
+            reuse = sqlite_path.exists() and sqlite_path.stat().st_size > 0
+            sa_repo = create_sqlite_repository(
+                sqlite_path, entities, recreate_sqlite_file=not reuse
+            )
+            if not reuse:
+                fill_empty_sqlite_repository(
+                    dict_repo, sa_repo, entities, env.get_root_user().id  # type: ignore[arg-type]
+                )
+            type(self).sqlite_repositories.append(sa_repo)
+
+    @pytest.mark.parametrize(
+        "dataset_idx,repository_type,n_new", _SCALE_PARAMS, ids=_SCALE_IDS
+    )
+    def test_upload_new_profiles_against_existing(
+        self,
+        env: Env,
+        dataset_idx: int,
+        repository_type: enum.RepositoryType,
+        n_new: int,
+    ) -> None:
+        repo = (
+            self.dict_repositories[dataset_idx]
+            if repository_type == enum.RepositoryType.DICT
+            else self.sqlite_repositories[dataset_idx]
+        )
+        set_service_repository(env, repo)
+
+        cmd = _build_upload_command(
+            self.dbs[dataset_idx],
+            0,
+            env,
+            SEQ_SETTINGS,
+            seed=dataset_idx,
+            n_seqs=n_new,
+            existing_chunk_size=EXISTING_CHUNK_SIZE_SCALE,
+        )
+
+        n_existing = N_EXISTING_COUNTS[dataset_idx]
+        # Profile only the largest SA_SQLITE case to capture the distance
+        # calculation hot path without overwriting the HTML on every iteration.
+        profile_this = (
+            n_existing == max(N_EXISTING_COUNTS)
+            and repository_type == enum.RepositoryType.SA_SQLITE
+        )
+        profiler = pyinstrument.Profiler(async_mode="enabled") if profile_this else None
+        if profiler:
+            profiler.start()
+
+        start = perf_counter()
+        result: model.SampleBatchUploadResult = env.app.handle(cmd)
+        duration = perf_counter() - start
+
+        if profiler:
+            profiler.stop()
+            profiler.write_html("./test/output/profile_calculate_seq_distances.html")
+
+        assert result.get_status_count()[EtlStatus.FAILED] == 0
+        assert result.get_status_count()[EtlStatus.PENDING] == 0
+
+        print(f"\nn_existing={n_existing} repo={repository_type.value}")
+        print(f"n_new={n_new}")
+        print(f"existing_chunk_size={EXISTING_CHUNK_SIZE_SCALE}")
+        print(f"duration={duration:.4f}s")
+
+
+_MSSQL_SCALE_PARAMS = [
+    (i, n_new) for i in range(len(N_EXISTING_COUNTS)) for n_new in N_NEW_COUNTS_SCALE
+]
+_MSSQL_SCALE_IDS = [
+    f"{N_EXISTING_COUNTS[i]}-mssql-n{n_new}" for i, n_new in _MSSQL_SCALE_PARAMS
+]
+
+
+@pytest.mark.performance
+@pytest.mark.mssql
+@pytest.mark.scenario_ids("TC-PERF-10-03")
+class TestCalculateSeqDistancesScaleMssql:
+    """Scale test for _calculate_and_store_distances against a real SQL Server.
+
+    Requires a running SQL Server accessible via the SEQDB_MSSQL_TEST_URL
+    environment variable (see comment at the top of this file for the docker
+    run command and URL format).  The test is skipped when the variable is
+    not set.
+
+    On the first run the database is seeded with N_EXISTING_COUNTS profiles.
+    Subsequent runs reuse the existing data and each add n_new new profiles,
+    so the "existing" count grows across runs.  The actual count is printed
+    before and after each measurement so you can track it.
+    """
+
+    dbs: list[dict[type, dict[UUID, Any]]]
+    dict_repositories: list[SeqDictRepository]
+    mssql_repositories: list[SeqSARepository]
+
+    @pytest.fixture(scope="module", autouse=True)
+    def setup(self, env: Env) -> None:
+        import os
+
+        mssql_url = os.environ.get(MSSQL_URL_ENV)
+        if not mssql_url:
+            pytest.skip(
+                f"{MSSQL_URL_ENV} not set — start a SQL Server container and "
+                f"export the connection URL to run this test."
+            )
+
+        user: model.User = env.retrieve_user_by_key("root1_1@org1.org")
+        user.name = "root1_1"
+        env.set_obj(user, update=True)
+        env.set_obj(
+            env.read_one_by_property("root1_1", model.Organization, "name", "org1"),
+            update=True,
+        )
+
+        entities = env.app.domain.get_dag_sorted_entities(
+            service_type=enum.ServiceType.SEQ,
+            persistable=True,
+        )
+
+        type(self).dbs = [
+            generate_scale_test_db(
+                n_loci=SEQ_SETTINGS.n_loci,
+                n_existing=n_existing,
+                seed=n_existing,
+            )
+            for n_existing in N_EXISTING_COUNTS
+        ]
+        type(self).dict_repositories = [
+            create_dict_repository(pickle_file=None, db=db, entities=entities)
+            for db in type(self).dbs
+        ]
+
+        # Create SQL Server repositories. Tables are created idempotently.
+        # Seed on first run (empty DB); reuse on subsequent runs so the
+        # container can stay up between test sessions.
+        type(self).mssql_repositories = []
+        for db, n_existing, dict_repo in zip(
+            type(self).dbs,
+            N_EXISTING_COUNTS,
+            type(self).dict_repositories,
+        ):
+            mssql_repo = create_mssql_repository(mssql_url, entities)
+            n_profiles = count_seq_profiles(mssql_repo)
+            if n_profiles == 0:
+                print(
+                    f"\n  Seeding SQL Server with {n_existing} profiles "
+                    f"(first run) — this may take several minutes."
+                )
+                fill_empty_sqlite_repository(
+                    dict_repo, mssql_repo, entities, env.get_root_user().id  # type: ignore[arg-type]
+                )
+            else:
+                print(
+                    f"\n  Reusing existing SQL Server database "
+                    f"({n_profiles} profiles already present)."
+                )
+            type(self).mssql_repositories.append(mssql_repo)
+
+    @pytest.mark.parametrize(
+        "dataset_idx,n_new", _MSSQL_SCALE_PARAMS, ids=_MSSQL_SCALE_IDS
+    )
+    def test_upload_new_profiles_against_existing(
+        self,
+        env: Env,
+        dataset_idx: int,
+        n_new: int,
+    ) -> None:
+        repo = self.mssql_repositories[dataset_idx]
+        set_service_repository(env, repo)
+
+        n_before = count_seq_profiles(repo)
+        cmd = _build_upload_command(
+            self.dbs[dataset_idx],
+            0,
+            env,
+            SEQ_SETTINGS,
+            seed=n_before,  # vary seed so each run adds distinct profiles
+            n_seqs=n_new,
+            existing_chunk_size=None,
+        )
+
+        from datetime import datetime
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        profile_dir = Path(
+            f"./test/output/{timestamp}_MSSQL_CALCULATE_DISTANCES_PERFORMANCE"
+        )
+        profile_dir.mkdir(parents=True, exist_ok=True)
+
+        profiler = pyinstrument.Profiler(async_mode="enabled")
+        profiler.start()
+
+        start = perf_counter()
+        result: model.SampleBatchUploadResult = env.app.handle(cmd)
+        duration = perf_counter() - start
+
+        profiler.stop()
+        profiler.write_html(str(profile_dir / f"profile_n{n_before}.html"))
+
+        assert result.get_status_count()[EtlStatus.FAILED] == 0
+        assert result.get_status_count()[EtlStatus.PENDING] == 0
+
+        print(f"\nn_existing_before={n_before} repo=SA_SQL")
+        print(f"n_new={n_new}")
+        print("existing_chunk_size=None")
+        print(f"duration={duration:.4f}s")

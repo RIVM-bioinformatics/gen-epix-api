@@ -41,11 +41,27 @@ class UploadSamplesCommand(Command, UploadBatchCommandMixin):
     sample_batch: model.SampleBatchForUpload = Field(
         description="Samples to upload, along with any associated data.",
     )
+    calculate_distances: bool = Field(
+        default=True,
+        description=(
+            "If False, skip distance calculation for newly uploaded profiles. "
+            "Callers uploading many batches in bulk should set this to False and call "
+            "UpdateSeqDistancesCommand once at the end."
+        ),
+    )
     seq_distance_last_modified_at: datetime.datetime | None = Field(
         default=None,
         description=(
             "If provided, the upload will fail if any SeqDistance was modified after this timestamp, "
             " to prevent concurrent modification conflicts."
+        ),
+    )
+    existing_chunk_size: int | None = Field(
+        default=None,
+        description=(
+            "If set, existing profiles are processed in chunks of this size "
+            "during distance calculation to limit memory use. When None, all "
+            "existing profiles are loaded in a single pass (original behaviour)."
         ),
     )
 
@@ -85,6 +101,14 @@ class CalculateSeqDistancesForNewProfilesCommand(Command):
             "If provided, fail if any SeqDistance was modified after this timestamp."
         ),
     )
+    existing_chunk_size: int | None = Field(
+        default=None,
+        description=(
+            "If set, existing profiles are processed in chunks of this size "
+            "during distance calculation to limit memory use. When None, all "
+            "existing profiles are loaded in a single pass (original behaviour)."
+        ),
+    )
 
 
 class UpdateSeqDistancesCommand(Command):
@@ -98,6 +122,22 @@ class UpdateSeqDistancesCommand(Command):
 
     protocol_id: UUID = Field(
         description=("The ID of the seq distance protocol to update distances for."),
+    )
+    limit: int | None = Field(
+        default=None,
+        description=(
+            "If set, process at most this many missing profiles per call. "
+            "Call repeatedly until the result is empty to process all profiles "
+            "incrementally."
+        ),
+    )
+    existing_chunk_size: int | None = Field(
+        default=None,
+        description=(
+            "If set, existing profiles are processed in chunks of this size "
+            "to limit memory use. When None, all existing profiles are loaded "
+            "and streamed in a single pass (original behaviour)."
+        ),
     )
 
 
