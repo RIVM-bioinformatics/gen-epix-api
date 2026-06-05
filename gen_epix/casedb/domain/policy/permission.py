@@ -56,7 +56,7 @@ class RoleGenerator(CommonRoleGenerator):
             ),
             # retrieve
             (
-                command.RetrieveCaseCohortIdsByCaseTypeCommand,
+                command.RetrieveCaseCohortLinksByCaseTypeCommand,
                 PermissionTypeSet.E,
             ),
             # abac
