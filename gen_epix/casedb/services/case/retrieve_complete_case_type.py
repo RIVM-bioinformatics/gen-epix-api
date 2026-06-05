@@ -22,7 +22,7 @@ def case_service_retrieve_complete_case_type(
     with repository.uow() as uow:
         # Get CaseType
         case_type_id = cmd.case_type_id
-        case_type: model.CaseType = self.repository.crud(  # type: ignore[assignment]
+        case_type: model.CaseType = self.repository.crud(
             uow,
             user_id,
             model.CaseType,
@@ -53,7 +53,7 @@ def case_service_retrieve_complete_case_type(
             # TODO: consider if it should be limited to the union of all the
             # organization rights instead. A root user e.g. may then still have
             # full access by using the CRUD methods
-            abac_col_ids = repository.crud(  # type: ignore[assignment]
+            abac_col_ids = repository.crud(
                 uow,
                 user_id,
                 model.Col,
@@ -69,7 +69,7 @@ def case_service_retrieve_complete_case_type(
                 command.DataCollectionCrudCommand(
                     user=user,
                     operation=CrudOperation.READ_ALL,
-                    props={"return_id": True},
+                    return_id=True,
                 )
             )
             case_type_access_abacs = {
@@ -138,7 +138,7 @@ def case_service_retrieve_complete_case_type(
 
         # Get allowed Cols
         col_ids = list(abac_col_ids)
-        cols: list[model.Col] = repository.crud(  # type: ignore[assignment]
+        cols: list[model.Col] = repository.crud(
             uow,
             user_id,
             model.Col,
@@ -149,7 +149,7 @@ def case_service_retrieve_complete_case_type(
 
         # Get allowed Dims as the Dims used by the allowed Cols
         dim_ids: list[UUID] = list({x.dim_id for x in cols})
-        dims: list[model.Dim] = repository.crud(  # type: ignore[assignment]
+        dims: list[model.Dim] = repository.crud(
             uow,
             user_id,
             model.Dim,
@@ -160,7 +160,7 @@ def case_service_retrieve_complete_case_type(
 
         # Get cols
         ref_col_ids = list({x.ref_col_id for x in cols})
-        ref_cols: list[model.RefCol] = repository.crud(  # type: ignore[assignment]
+        ref_cols: list[model.RefCol] = repository.crud(
             uow,
             user_id,
             model.RefCol,
@@ -171,7 +171,7 @@ def case_service_retrieve_complete_case_type(
 
         # Get dims
         ref_dim_ids = list({x.ref_dim_id for x in ref_cols})
-        ref_dims: list[model.RefDim] = repository.crud(  # type: ignore[assignment]
+        ref_dims: list[model.RefDim] = repository.crud(
             uow,
             user_id,
             model.RefDim,

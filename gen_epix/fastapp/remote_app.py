@@ -295,7 +295,7 @@ class RemoteApp(App):
             match cmd.operation:
                 case CrudOperation.READ_ALL:
                     if cmd.query_filter:
-                        if cmd.props.get("return_id", False):
+                        if cmd.return_id:
                             query_suffix = query_route_suffix.rstrip("/")
                             ids_suffix = (
                                 ids_route_suffix

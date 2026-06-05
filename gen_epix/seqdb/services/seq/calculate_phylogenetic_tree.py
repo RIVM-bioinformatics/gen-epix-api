@@ -54,7 +54,7 @@ def seq_service_calculate_phylogenetic_tree(
         # )
 
         # Retrieve genetic distance protocol
-        protocol: model.Protocol = repository.crud(  # type: ignore[assignment]
+        protocol: model.Protocol = repository.crud(
             uow,
             user_id,
             model.Protocol,
@@ -75,7 +75,7 @@ def seq_service_calculate_phylogenetic_tree(
 
         # Retrieve distance matrix
         if tree_algorithm in enum.TreeAlgorithmSet.DISTANCE_BASED.value:
-            seq_distances = repository.crud(  # type: ignore[assignment]
+            seq_distances = repository.crud(
                 uow,
                 user_id,
                 model.SeqDistance,

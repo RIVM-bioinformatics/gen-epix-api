@@ -43,7 +43,7 @@ def seq_service_retrieve_seq_distance_last_modified(
 ) -> datetime | None:
 
     with self.repository.uow() as uow:
-        seq_distance_protocol: model.Protocol = self.repository.crud(  # type: ignore[assignment]
+        seq_distance_protocol: model.Protocol = self.repository.crud(
             uow,
             cmd.user.id if cmd.user else None,
             model.Protocol,
@@ -79,7 +79,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
     seq_profile_types = list(set(x.seq_profile_type for x in seq_profiles))
     with self.repository.uow() as uow:
         # Retrieve relevant seq profile protocols
-        seq_profile_protocols: list[model.Protocol] = self.repository.crud(  # type: ignore[assignment]
+        seq_profile_protocols: list[model.Protocol] = self.repository.crud(
             uow,
             user_id,
             model.Protocol,
@@ -104,7 +104,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
                 ]
             )
         )
-        seq_distance_protocols: list[model.Protocol] = self.repository.crud(  # type: ignore[assignment]
+        seq_distance_protocols: list[model.Protocol] = self.repository.crud(
             uow,
             user_id,
             model.Protocol,
@@ -226,7 +226,7 @@ def seq_service_update_seq_distances(
 
     # Get the distance protocol
     with repository.uow() as uow:
-        seq_distance_protocol: model.Protocol = repository.crud(  # type: ignore[assignment]
+        seq_distance_protocol: model.Protocol = repository.crud(
             uow,
             user_id,
             model.Protocol,
@@ -240,7 +240,7 @@ def seq_service_update_seq_distances(
         seq_profile_type = (
             seq_distance_protocol.get_seq_profile_type_for_distance_protocol()
         )
-        seq_profile_protocols: list[model.Protocol] = repository.crud(  # type: ignore[assignment]
+        seq_profile_protocols: list[model.Protocol] = repository.crud(
             uow,
             user_id,
             model.Protocol,
@@ -525,15 +525,13 @@ def _calculate_and_store_distances(
         # bounded per chunk without holding a transaction across the loop;
         # all writes are deferred to the caller's uow in step 6.
         with repository.uow() as chunk_uow:
-            existing_profiles_list: list[model.SeqProfile] = (
-                repository.crud(  # type: ignore[assignment]
-                    chunk_uow,
-                    user_id,
-                    model.SeqProfile,
-                    CrudOperation.READ_SOME,
-                    obj_ids=chunk_ids,
-                    optimize_parameter_handling=True,
-                )
+            existing_profiles_list: list[model.SeqProfile] = repository.crud(
+                chunk_uow,
+                user_id,
+                model.SeqProfile,
+                CrudOperation.READ_SOME,
+                obj_ids=chunk_ids,
+                optimize_parameter_handling=True,
             )
         t_read = time.perf_counter()
         if logger:
@@ -674,7 +672,7 @@ def _calculate_and_store_distances(
         )
         for x in new_seq_profiles
     ]
-    created_seq_distances: list[model.SeqDistance] = repository.crud(  # type: ignore[assignment]
+    created_seq_distances: list[model.SeqDistance] = repository.crud(
         uow,
         user_id,
         model.SeqDistance,

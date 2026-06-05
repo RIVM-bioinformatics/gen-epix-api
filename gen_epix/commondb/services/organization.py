@@ -114,7 +114,7 @@ class OrganizationService(BaseOrganizationService):
                         "7ca0dc91", "User already exists"
                     )
 
-            is_existing_organization = self.repository.crud(
+            is_existing_organization: bool = self.repository.crud(
                 uow,
                 user.id,
                 model.Organization,
@@ -141,7 +141,7 @@ class OrganizationService(BaseOrganizationService):
                     user.id,
                     self.user_invitation_class,
                     CrudOperation.READ_ALL,
-                )  # type: ignore
+                )
                 user_invitations = [x for x in user_invitations if x.key == key]
                 if user_invitations:
                     self.repository.crud(
@@ -168,7 +168,7 @@ class OrganizationService(BaseOrganizationService):
                     )
                 ),
             )
-            user_invitation_in_db: model.UserInvitation = self.repository.crud(  # type: ignore[assignment]
+            user_invitation_in_db: model.UserInvitation = self.repository.crud(
                 uow,
                 user.id,
                 self.user_invitation_class,
@@ -201,7 +201,7 @@ class OrganizationService(BaseOrganizationService):
 
         with self.repository.uow() as uow:
             # Get possible user invitations
-            user_invitations: list[model.UserInvitation] = self.repository.crud(  # type: ignore[assignment]
+            user_invitations: list[model.UserInvitation] = self.repository.crud(
                 uow,
                 None,
                 self.user_invitation_class,
@@ -294,7 +294,7 @@ class OrganizationService(BaseOrganizationService):
         if cmd.roles is not None and len(cmd.roles) == 0:
             raise exc.InvalidArgumentsError("8ac5ab63", "Roles cannot be empty")
         with self.repository.uow() as uow:
-            tgt_user: model.User = self.repository.crud(  # type: ignore[assignment]
+            tgt_user: model.User = self.repository.crud(
                 uow,
                 cmd.user.id,
                 self.user_class,
@@ -331,7 +331,7 @@ class OrganizationService(BaseOrganizationService):
 
             if tgt_user.created_at is None:
                 tgt_user.created_at = tgt_user.modified_at
-            updated_tgt_user: model.User = self.repository.crud(  # type: ignore[assignment]
+            updated_tgt_user: model.User = self.repository.crud(
                 uow,
                 cmd.user.id,
                 self.user_class,
@@ -352,7 +352,7 @@ class OrganizationService(BaseOrganizationService):
         sites: list[model.Site]
         contacts: list[model.Contact]
         with repository.uow() as uow:
-            organization: model.Organization = repository.crud(  # type: ignore[assignment]
+            organization: model.Organization = repository.crud(
                 uow,
                 user.id,
                 model.Organization,
@@ -360,13 +360,13 @@ class OrganizationService(BaseOrganizationService):
                 obj_ids=cmd.organization_id,
             )
 
-            sites = repository.crud(  # type: ignore[assignment]
+            sites = repository.crud(
                 uow,
                 user.id,
                 model.Site,
                 CrudOperation.READ_ALL,
             )
-            contacts = repository.crud(  # type: ignore[assignment]
+            contacts = repository.crud(
                 uow,
                 user.id,
                 model.Contact,

@@ -49,7 +49,7 @@ def _verify_batch_refdata_allele_profiles(
 
     # Retrieve all protocols
     uq_protocol_ids = {x.protocol_id for x in profiles}
-    protocols: list[model.Protocol] = self.service.repository.crud(  # type: ignore[assignment]
+    protocols: list[model.Protocol] = self.service.repository.crud(
         uow,
         user_id,
         model.Protocol,
@@ -64,7 +64,7 @@ def _verify_batch_refdata_allele_profiles(
         for x in profiles
         if x.locus_code_map_id is not None and x.locus_code_map_id != NULL_ID
     }
-    locus_sets: list[model.LocusSet] = self.service.repository.crud(  # type: ignore[assignment]
+    locus_sets: list[model.LocusSet] = self.service.repository.crud(
         uow,
         user_id,
         model.LocusSet,
@@ -79,7 +79,7 @@ def _verify_batch_refdata_allele_profiles(
         for x in profiles
         if x.locus_code_map_id is not None and x.locus_code_map_id != NULL_ID
     }
-    locus_code_maps: list[model.LocusCodeMap] = self.service.repository.crud(  # type: ignore[assignment]
+    locus_code_maps: list[model.LocusCodeMap] = self.service.repository.crud(
         uow,
         user_id,
         model.LocusCodeMap,
@@ -156,7 +156,7 @@ def _verify_batch_refdata_allele_profiles(
         curr_allele_ids = uq_allele_ids_list[
             i : min(i + chunk_size, len(uq_allele_ids_list))
         ]
-        is_existing: list[bool] = self.service.repository.crud(  # type: ignore[assignment]
+        is_existing: list[bool] = self.service.repository.crud(
             uow,
             user_id,
             model.Allele,
@@ -345,7 +345,7 @@ def _verify_batch_refdata_mlva_profiles(
         return success
 
     protocol_ids = {profile.protocol_id for profile in profiles}
-    protocols: list[model.Protocol] = self.service.repository.crud(  # type: ignore[assignment]
+    protocols: list[model.Protocol] = self.service.repository.crud(
         uow,
         user_id,
         model.Protocol,
@@ -360,7 +360,7 @@ def _verify_batch_refdata_mlva_profiles(
         if profile.locus_code_map_id is not None
         and profile.locus_code_map_id != NULL_ID
     }
-    locus_sets: list[model.LocusSet] = self.service.repository.crud(  # type: ignore[assignment]
+    locus_sets: list[model.LocusSet] = self.service.repository.crud(
         uow,
         user_id,
         model.LocusSet,
@@ -375,7 +375,7 @@ def _verify_batch_refdata_mlva_profiles(
         if profile.locus_code_map_id is not None
         and profile.locus_code_map_id != NULL_ID
     }
-    locus_code_maps: list[model.LocusCodeMap] = self.service.repository.crud(  # type: ignore[assignment]
+    locus_code_maps: list[model.LocusCodeMap] = self.service.repository.crud(
         uow,
         user_id,
         model.LocusCodeMap,

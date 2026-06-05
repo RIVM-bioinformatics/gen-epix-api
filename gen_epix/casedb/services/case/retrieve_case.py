@@ -149,7 +149,7 @@ def _apply_max_results_limit(
     uow: BaseUnitOfWork,
     cases: list[model.Case],
 ) -> tuple[list[model.Case], bool]:
-    case_types: list[model.CaseType] = self.repository.crud(  # type: ignore
+    case_types: list[model.CaseType] = self.repository.crud(
         uow,
         user.id,
         model.CaseType,
@@ -245,7 +245,7 @@ def case_service_retrieve_cases_by_id(
         if not cases:
             return []
 
-        case_types: list[model.CaseType] = self.repository.crud(  # type: ignore
+        case_types: list[model.CaseType] = self.repository.crud(
             uow,
             user.id,
             model.CaseType,
@@ -416,7 +416,7 @@ def _verify_case_filter(
 ) -> list[model.RefCol]:
     # Retrieve Cols corresponding to filter keys
     filter_col_ids = composite_filter.get_keys()
-    filter_cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
+    filter_cols: list[model.Col] = self.repository.crud(
         uow,
         user.id,
         model.Col,
@@ -424,7 +424,7 @@ def _verify_case_filter(
         obj_ids=filter_col_ids,
     )
     # Retrieve cols for Cols
-    ref_cols: list[model.RefCol] = self.repository.crud(  # type: ignore[assignment]
+    ref_cols: list[model.RefCol] = self.repository.crud(
         uow,
         user.id,
         model.RefCol,

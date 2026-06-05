@@ -53,13 +53,14 @@ class TestManual:
     def get_user(cls, env: Env, user_id: UUID) -> model.User:
         assert env.services[enum.ServiceType.AUTH].repository
         with env.services[enum.ServiceType.AUTH].repository.uow() as uow:
-            return env.services[enum.ServiceType.AUTH].repository.crud(
+            retval: model.User = env.services[enum.ServiceType.AUTH].repository.crud(
                 uow,
                 TestManual.ROOT_USER_ID,
                 model.User,
                 CrudOperation.READ_ONE,
                 obj_ids=user_id,
             )
+        return retval
 
     # TODO: add to test_build_db
     @pytest.mark.skip(reason="manual test")

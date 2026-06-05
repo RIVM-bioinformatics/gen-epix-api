@@ -26,7 +26,7 @@ def case_service_retrieve_similar_cases(
 
     with repository.uow() as uow:
         # Get distance column data
-        dist_col: model.Col = repository.crud(  # type: ignore[assignment]
+        dist_col: model.Col = repository.crud(
             uow,
             user.id,
             model.Col,
@@ -38,7 +38,7 @@ def case_service_retrieve_similar_cases(
                 "331bf264",
                 f"Col {dist_col_id} does not belong to CaseType {case_type_id}",
             )
-        dist_ref_col: model.RefCol = repository.crud(  # type: ignore[assignment]
+        dist_ref_col: model.RefCol = repository.crud(
             uow,
             user.id,
             model.RefCol,
@@ -52,14 +52,12 @@ def case_service_retrieve_similar_cases(
             )
 
         # Get genetic distance protocol
-        genetic_distance_protocol: model.GeneticDistanceProtocol = (
-            self.repository.crud(  # type: ignore[assignment]
-                uow,
-                user.id,
-                model.GeneticDistanceProtocol,
-                CrudOperation.READ_ONE,
-                obj_ids=dist_ref_col.genetic_distance_protocol_id,
-            )
+        genetic_distance_protocol: model.GeneticDistanceProtocol = self.repository.crud(
+            uow,
+            user.id,
+            model.GeneticDistanceProtocol,
+            CrudOperation.READ_ONE,
+            obj_ids=dist_ref_col.genetic_distance_protocol_id,
         )
         seqdb_seq_distance_protocol_id = (
             genetic_distance_protocol.seqdb_seq_distance_protocol_id

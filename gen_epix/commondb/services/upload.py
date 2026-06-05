@@ -1554,14 +1554,12 @@ class BatchUploader:
             return objs_exist
         # Retrieve which of the actual IDs also exists
         is_id_obj_ids: list[UUID] = [obj_ids[i] for i in is_id_indices]
-        is_id_objs_exist: list[bool] = (
-            self.service.repository.crud(  # type: ignore[assignment]
-                uow,
-                user_id,
-                model_class,
-                CrudOperation.EXISTS_SOME,
-                obj_ids=is_id_obj_ids,
-            )
+        is_id_objs_exist: list[bool] = self.service.repository.crud(
+            uow,
+            user_id,
+            model_class,
+            CrudOperation.EXISTS_SOME,
+            obj_ids=is_id_obj_ids,
         )
         # Finalise output
         for i, obj_exists in zip(is_id_indices, is_id_objs_exist):
@@ -1595,15 +1593,13 @@ class BatchUploader:
                 setattr(obj, obj_id_field_name, obj_id)  # type: ignore[assignment]
         try:
             if is_same_service:
-                created_obj_ids: list[UUID] = (
-                    self.service.repository.crud(  # type: ignore[assignment]
-                        uow,
-                        user_id,
-                        model_class,
-                        CrudOperation.CREATE_SOME,
-                        objs=to_create_objs,
-                        return_id=True,  # Avoid returning the whole object list again
-                    )
+                created_obj_ids: list[UUID] = self.service.repository.crud(
+                    uow,
+                    user_id,
+                    model_class,
+                    CrudOperation.CREATE_SOME,
+                    objs=to_create_objs,
+                    return_id=True,  # Avoid returning the whole object list again
                 )
             else:
                 crud_command_class = self.service.app.domain.get_crud_command_for_model(
@@ -1614,9 +1610,7 @@ class BatchUploader:
                         user=user,
                         operation=CrudOperation.CREATE_SOME,
                         objs=to_create_objs,
-                        props={
-                            "return_id": True
-                        },  # Avoid returning the whole object list again
+                        return_id=True,  # Avoid returning the whole object list again
                     )
                 )
         except DuplicateIdsError as exc_:
@@ -1678,14 +1672,12 @@ class BatchUploader:
             return success
 
         # Retrieve existing objects (aligned with valid_pairs / obj_ids)
-        existing_objs: list[Model] = (
-            self.service.repository.crud(  # type: ignore[assignment]
-                uow,
-                user_id,
-                model_class,
-                CrudOperation.READ_SOME,
-                obj_ids=obj_ids,
-            )
+        existing_objs: list[Model] = self.service.repository.crud(
+            uow,
+            user_id,
+            model_class,
+            CrudOperation.READ_SOME,
+            obj_ids=obj_ids,
         )
 
         # Determine which objects actually need to be updated instead of having identical data
@@ -1744,7 +1736,7 @@ class BatchUploader:
         # Update the objects whose data are different
         if not to_update_objs:
             return success
-        _: list[UUID] = self.service.repository.crud(  # type: ignore[assignment]
+        _: list[UUID] = self.service.repository.crud(
             uow,
             user_id,
             model_class,

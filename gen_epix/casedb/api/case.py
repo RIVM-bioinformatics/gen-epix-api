@@ -192,7 +192,7 @@ def create_case_endpoints(
                     user=user,
                     obj_id1=case_type_set_id,
                     association_objs=request_body.case_type_set_members,
-                    props={"return_id": False},
+                    return_id=False,
                 ),
             ),
         )
@@ -219,7 +219,7 @@ def create_case_endpoints(
                     user=user,
                     obj_id1=col_set_id,
                     association_objs=request_body.col_set_members,
-                    props={"return_id": False},
+                    return_id=False,
                 ),
             ),
         )
