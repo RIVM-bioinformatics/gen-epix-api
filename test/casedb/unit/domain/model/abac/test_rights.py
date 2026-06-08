@@ -248,8 +248,8 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         cols = abac.get_cols_with_any_rights()
         self.assertEqual(cols, {self.col1, self.col2, self.col3})
 
-    def test_get_cols_with_any_rights_filtered_includes_all(self) -> None:
-        # Due to implementation, filtered path still aggregates all CaseTypes.
+    def test_get_cols_with_any_rights_filtered_by_case_type(self) -> None:
+        # When case_type_id is specified, only cols for that case type are returned.
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
             self.case_type_id_1: {
                 self.dc1: self.make_access(self.dc1, read_cols={self.col1})
@@ -275,8 +275,9 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_access_abacs=access_map,
             case_type_share_abacs={},
         )
+        # Only col1 belongs to case_type_id_1; col2 must not leak in.
         cols = abac.get_cols_with_any_rights(self.case_type_id_1)
-        self.assertEqual(cols, {self.col1, self.col2})
+        self.assertEqual(cols, {self.col1})
 
     def test_get_cols_with_access_rights_read_filtered(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
@@ -693,6 +694,37 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         self.assertTrue(rights.can_delete)
         self.assertEqual(rights.shared_in_data_collection_ids, {self.dc2})
 
+    def test_get_case_rights_col_ids_not_leaked_from_absent_data_collection(
+        self,
+    ) -> None:
+        # The case is only in dc1 (no col rights there). The user has read/write
+        # col rights in dc2, but the case is NOT in dc2. No col rights should
+        # be returned.
+        access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
+            self.case_type_id_1: {
+                self.dc1: self.make_access(self.dc1, is_private=True),
+                self.dc2: self.make_access(
+                    self.dc2,
+                    read_cols={self.col1},
+                    write_cols={self.col3},
+                ),
+            }
+        }
+        abac: CaseAbac = CaseAbac(
+            is_full_access=False,
+            case_type_access_abacs=access_map,
+            case_type_share_abacs={},
+        )
+        case_id: UUID = uuid4()
+        rights = abac.get_case_rights(
+            case_id=case_id,
+            case_type_id=self.case_type_id_1,
+            created_in_data_collection_id=self.dc1,
+            data_collection_ids={self.dc1},  # case is only in dc1, not dc2
+        )
+        self.assertEqual(rights.read_col_ids, set())
+        self.assertEqual(rights.write_col_ids, set())
+
     def test_get_case_set_rights_non_full_access(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
             self.case_type_id_1: {
@@ -730,6 +762,58 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         self.assertTrue(rights.write_case_set)
         self.assertTrue(rights.can_delete)
         self.assertEqual(rights.shared_in_data_collection_ids, {self.dc2})
+
+    def test_get_case_set_rights_not_leaked_from_absent_data_collection(
+        self,
+    ) -> None:
+        # Case set is only in dc1. dc2 grants read/write_case_set but the case
+        # set is NOT in dc2 — those rights must not appear.
+        access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
+            self.case_type_id_1: {
+                self.dc1: self.make_access(self.dc1, is_private=True),
+                self.dc2: self.make_access(
+                    self.dc2, read_case_set=True, write_case_set=True
+                ),
+            }
+        }
+        abac: CaseAbac = CaseAbac(
+            is_full_access=False,
+            case_type_access_abacs=access_map,
+            case_type_share_abacs={},
+        )
+        rights = abac.get_case_set_rights(
+            case_set_id=uuid4(),
+            case_type_id=self.case_type_id_1,
+            created_in_data_collection_id=self.dc1,
+            data_collection_ids={self.dc1},  # case set is only in dc1, not dc2
+        )
+        self.assertFalse(rights.read_case_set)
+        self.assertFalse(rights.write_case_set)
+
+    def test_is_allowed_add_does_not_mutate_caller_set(self) -> None:
+        # Bug C: _is_add_allowed was mutating the caller's current_data_collection_ids
+        access_map = {
+            self.case_type_id_1: {
+                self.dc1: self.make_access(self.dc1, is_private=True),
+                self.dc2: self.make_access(self.dc2, is_private=False, add_case=True),
+            }
+        }
+        abac: CaseAbac = CaseAbac(
+            is_full_access=False,
+            case_type_access_abacs=access_map,
+            case_type_share_abacs={},
+        )
+        original: set[UUID] = {self.dc2}
+        caller_set = set(original)
+        abac.is_allowed(
+            case_type_id=self.case_type_id_1,
+            created_in_data_collection_id=self.dc1,
+            right=CaseRight.ADD_CASE,
+            is_create_or_delete=False,
+            current_data_collection_ids=caller_set,
+            tgt_data_collection_ids={self.dc2},
+        )
+        self.assertEqual(caller_set, original)
 
     def test_get_case_rights_full_access(self) -> None:
         abac: CaseAbac = CaseAbac(
