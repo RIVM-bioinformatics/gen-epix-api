@@ -23,20 +23,44 @@ def create_table_args(
     assert model_class.ENTITY is not None
     entity: Entity = model_class.ENTITY
     uq_constraints = []
-    for field_names in entity.get_keys_field_names():
+    for key in entity.keys.values():
+        resolved = tuple(entity._fields[y]["alias"] for y in key.field_names)  # type: ignore[index]
         sa_field_names = (
-            [field_name_map.get(x, x) for x in field_names]
+            [field_name_map.get(x, x) for x in resolved]
             if field_name_map
-            else field_names
+            else list(resolved)
         )
         sa_field_name_str = "_".join(sa_field_names)
-        uq_constraints.append(
-            sa.UniqueConstraint(
-                *sa_field_names,
-                name=f"uq_{entity.table_name}_{sa_field_name_str}",
-                **kwargs,
+        constraint_name = f"uq_{entity.table_name}_{sa_field_name_str}"
+        if key.where_not_null:
+            w_resolved = tuple(
+                entity._fields[y]["alias"] for y in key.where_not_null  # type: ignore[index]
             )
-        )
+            w_sa = (
+                [field_name_map.get(x, x) for x in w_resolved]
+                if field_name_map
+                else list(w_resolved)
+            )
+            where_clause = sa.text(
+                " AND ".join(f"{f} IS NOT NULL" for f in w_sa)
+            )
+            uq_constraints.append(
+                sa.Index(
+                    constraint_name,
+                    *sa_field_names,
+                    unique=True,
+                    mssql_where=where_clause,
+                    sqlite_where=where_clause,
+                )
+            )
+        else:
+            uq_constraints.append(
+                sa.UniqueConstraint(
+                    *sa_field_names,
+                    name=constraint_name,
+                    **kwargs,
+                )
+            )
     if entity.schema_name:
         return entity.table_name, tuple(
             [*uq_constraints, {"schema": entity.schema_name}]
