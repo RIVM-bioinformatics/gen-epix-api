@@ -470,6 +470,14 @@ class UpdateAssociationCommand(Command):
         default_factory=list,
         description="The association objects, linking the first (field LINK_FIELD_NAME1) to the second (field LINK_FIELD_NAME2) instance.",
     )
+    verify_same_service_links: bool = Field(
+        default=True,
+        description="Whether to verify that the links between the association objects and other objects within the same service are valid.",
+    )
+    verify_other_service_links: bool = Field(
+        default=False,
+        description="Whether to verify that the links between the association objects and other objects in other services are valid.",
+    )
     props: dict[str, Any] = {}
 
     @model_validator(mode="after")

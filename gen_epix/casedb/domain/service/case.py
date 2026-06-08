@@ -100,9 +100,14 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         f(command.CaseTypeSetCategoryCrudCommand, self.crud_case_type_set_category)
         f(command.CaseTypeSetCrudCommand, self.crud_case_type_set)
         f(command.CaseTypeSetMemberCrudCommand, self.crud_case_type_set_member)
+        f(
+            command.CaseTypeSetCaseTypeUpdateAssociationCommand,
+            self.update_association,
+        )
         f(command.ColCrudCommand, self.crud_col)
         f(command.ColSetCrudCommand, self.crud_col_set)
         f(command.ColSetMemberCrudCommand, self.crud_col_set_member)
+        f(command.ColSetColUpdateAssociationCommand, self.update_association)
         f(command.DimCrudCommand, self.crud_dim)
         f(
             command.GeneticDistanceProtocolCrudCommand,
