@@ -49,9 +49,9 @@ class CaseBatchUploader(BatchUploader):
         if case_type_access_abac is None:
             # Full-access users (ROOT / APP_ADMIN) can upload to any data
             # collection; fall back to all cols for the case type. The
-            # DataCollection existence is still enforced by DB constraints.
+            # DataCollection existence is still enforced by DB constraints.``
             case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
-            if case_abac is None and not case_abac.is_full_access:
+            if case_abac is None or not case_abac.is_full_access:
                 raise exc.UnauthorizedAuthError(
                     "d8c05dc7",
                     f"User {None if cmd.user is None else cmd.user.id} is not allowed to access cases in the given data collection",
@@ -174,7 +174,7 @@ class CaseBatchUploader(BatchUploader):
                 x.id for x in cases_for_validation  # type: ignore[misc]
             ]
             existing_content_by_id: dict[UUID, dict] = {
-                row[0]: row[1]
+                row[0]: {UUID(x): y for x, y in row[1].items()}
                 for row in self.service.repository.read_fields(
                     uow,
                     None if cmd.user is None else cmd.user.id,
