@@ -252,7 +252,7 @@ class CaseAbac(BaseModel):
                 col_ids.update(access_abac.read_col_ids)
                 col_ids.update(access_abac.write_col_ids)
             return col_ids
-        for ct_id, data in self.case_type_access_abacs.items():
+        for data in self.case_type_access_abacs.values():
             for access_abac in data.values():
                 col_ids.update(access_abac.read_col_ids)
                 col_ids.update(access_abac.write_col_ids)
@@ -737,14 +737,10 @@ class CaseAbac(BaseModel):
             # Read/write rights - only in data collections where the case set
             # is actually present
             read_case_set = any(
-                x.read_case_set
-                for dc_id, x in access.items()
-                if dc_id in data_collection_ids
+                y.read_case_set for x, y in access.items() if x in data_collection_ids
             )
             write_case_set = any(
-                x.write_case_set
-                for dc_id, x in access.items()
-                if dc_id in data_collection_ids
+                y.write_case_set for x, y in access.items() if x in data_collection_ids
             )
             return CaseSetRights(
                 case_set_id=case_or_set_id,
@@ -762,16 +758,16 @@ class CaseAbac(BaseModel):
         # Cols that can be read/written - only in data collections where the case
         # is actually present
         read_col_ids: set[UUID] = {
-            col_id
-            for dc_id, x in access.items()
-            if dc_id in data_collection_ids
-            for col_id in x.read_col_ids
+            z
+            for x, y in access.items()
+            if x in data_collection_ids
+            for z in y.read_col_ids
         }
         write_col_ids: set[UUID] = {
-            col_id
-            for dc_id, x in access.items()
-            if dc_id in data_collection_ids
-            for col_id in x.write_col_ids
+            z
+            for x, y in access.items()
+            if x in data_collection_ids
+            for z in y.write_col_ids
         }
         return CaseRights(
             case_id=case_or_set_id,
