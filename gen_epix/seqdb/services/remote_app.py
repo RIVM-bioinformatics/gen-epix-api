@@ -38,8 +38,6 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         command.RetrieveSampleIdentifiersByIdCommand: "/retrieve/sample_identifiers_by_ids",
         command.RetrieveSamplesByIdCommand: "/retrieve/samples_by_ids",
         command.RetrieveSamplesByQueryCommand: "/retrieve/sample_ids_by_query",
-        command.RetrieveBestSeqPerSampleCommand: "/retrieve/best_seq_per_sample",
-        command.RetrieveBestSeqProfilePerSampleCommand: "/retrieve/best_seq_profile_per_sample",
     }
 
     DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {
@@ -50,6 +48,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         command.RetrieveSamplesByQueryCommand: 45.0,
         command.RetrieveBestSeqPerSampleCommand: 15.0,
         command.RetrieveBestSeqProfilePerSampleCommand: 15.0,
+        command.CalculatePhylogeneticTreeCommand: 45.0,
     }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
