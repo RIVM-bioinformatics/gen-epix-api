@@ -49,6 +49,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         command.RetrieveBestSeqPerSampleCommand: 15.0,
         command.RetrieveBestSeqProfilePerSampleCommand: 15.0,
         command.CalculatePhylogeneticTreeCommand: 45.0,
+        command.RetrieveSimilarProfilesCommand: 45.0,
     }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
