@@ -11,10 +11,12 @@ class Key:
         self,
         field_names: str | tuple[str, ...],
         key_generator: Callable[[BaseModel], str] | None = None,
+        where_not_null: tuple[str, ...] | None = None,
     ):
         self._field_names: tuple[str, ...] = (
             (field_names,) if isinstance(field_names, str) else field_names
         )
+        self._where_not_null = where_not_null
 
         def _key_generator(field_names: tuple[str, ...], obj: BaseModel) -> str:
             return Key.DEFAULT_KEY_GENERATOR_SEPARATOR.join(
@@ -30,6 +32,12 @@ class Key:
     @property
     def field_names(self) -> tuple[str, ...]:
         return self._field_names
+
+    @property
+    def where_not_null(self) -> tuple[str, ...] | None:
+        """Field names whose corresponding column must be NOT NULL for the
+        unique index to fire. None means an unconditional unique constraint."""
+        return self._where_not_null
 
     @property
     def key_generator(self) -> Callable[[BaseModel], str]:
