@@ -251,7 +251,8 @@ class CaseAbac(BaseModel):
             for access_abac in data.values():
                 col_ids.update(access_abac.read_col_ids)
                 col_ids.update(access_abac.write_col_ids)
-        for case_type_id, data in self.case_type_access_abacs.items():
+            return col_ids
+        for ct_id, data in self.case_type_access_abacs.items():
             for access_abac in data.values():
                 col_ids.update(access_abac.read_col_ids)
                 col_ids.update(access_abac.write_col_ids)
@@ -584,7 +585,9 @@ class CaseAbac(BaseModel):
             remaining_data_collection_ids = (
                 remaining_data_collection_ids - current_data_collection_ids
             )
-        current_data_collection_ids.add(created_in_data_collection_id)
+        # Use a local copy to avoid mutating the caller's set
+        effective_current = set(current_data_collection_ids)
+        effective_current.add(created_in_data_collection_id)
 
         for data_collection_id in remaining_data_collection_ids:
             if not self._check_access_or_share(
@@ -592,7 +595,7 @@ class CaseAbac(BaseModel):
                 data_collection_id,
                 access_abac,
                 share_abac,
-                current_data_collection_ids,
+                effective_current,
             ):
                 return False
         return True
@@ -731,9 +734,18 @@ class CaseAbac(BaseModel):
         can_delete = set(data_collection_ids).issubset(set(remove_data_collection_ids))
 
         if is_case_set:
-            # Read/write rights
-            read_case_set = any(x.read_case_set for x in access.values())
-            write_case_set = any(x.write_case_set for x in access.values())
+            # Read/write rights - only in data collections where the case set
+            # is actually present
+            read_case_set = any(
+                x.read_case_set
+                for dc_id, x in access.items()
+                if dc_id in data_collection_ids
+            )
+            write_case_set = any(
+                x.write_case_set
+                for dc_id, x in access.items()
+                if dc_id in data_collection_ids
+            )
             return CaseSetRights(
                 case_set_id=case_or_set_id,
                 case_type_id=case_type_id,
@@ -747,12 +759,19 @@ class CaseAbac(BaseModel):
                 can_delete=can_delete,
                 shared_in_data_collection_ids=shared_in_data_collection_ids,
             )
-        # Cols that can be read/written
+        # Cols that can be read/written - only in data collections where the case
+        # is actually present
         read_col_ids: set[UUID] = {
-            col_id for x in access.values() for col_id in x.read_col_ids
+            col_id
+            for dc_id, x in access.items()
+            if dc_id in data_collection_ids
+            for col_id in x.read_col_ids
         }
         write_col_ids: set[UUID] = {
-            col_id for x in access.values() for col_id in x.write_col_ids
+            col_id
+            for dc_id, x in access.items()
+            if dc_id in data_collection_ids
+            for col_id in x.write_col_ids
         }
         return CaseRights(
             case_id=case_or_set_id,
