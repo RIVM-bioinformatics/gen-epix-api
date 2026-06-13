@@ -5,7 +5,7 @@ from pydantic import Field, model_validator
 
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model
-from gen_epix.fastapp.domain import Entity, Key, create_keys, create_links
+from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.seq.base import ContentMixin, QualityMixin
 from gen_epix.seqdb.domain.model.seq.category import SeqCategory
@@ -27,9 +27,7 @@ class SeqClassification(
         snake_case_plural_name="seq_classifications",
         table_name="seq_classification",
         persistable=True,
-        keys=create_keys(
-            {1: Key(("seq_id", "protocol_id"), where_not_null=("seq_id",))}
-        ),
+        keys=create_keys({1: ("seq_id", "protocol_id")}),
         links=create_links(
             {
                 1: ("sample_id", Sample, "sample"),
@@ -66,9 +64,7 @@ class AstPrediction(
         snake_case_plural_name="ast_predictions",
         table_name="ast_prediction",
         persistable=True,
-        keys=create_keys(
-            {1: Key(("seq_id", "protocol_id"), where_not_null=("seq_id",))}
-        ),
+        keys=create_keys({1: ("seq_id", "protocol_id")}),
         links=create_links(
             {
                 1: ("sample_id", Sample, "sample"),
