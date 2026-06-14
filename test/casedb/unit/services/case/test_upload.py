@@ -74,7 +74,11 @@ class TestUpsertBatchCaseDate(TestCase):
         )
         batch_result = model.CaseBatchUploadResult(cases=[case_result])
 
-        service.repository.read_fields.return_value = [(case_id, dict(content))]
+        # read_fields returns rows with JSON-serialised (string-keyed) content dicts,
+        # mirroring what the actual repository layer produces.
+        service.repository.read_fields.return_value = [
+            (case_id, {str(k): v for k, v in content.items()})
+        ]
 
         mock_validator = Mock()
 
@@ -92,7 +96,6 @@ class TestUpsertBatchCaseDate(TestCase):
                 "gen_epix.commondb.services.upload.BatchUploader.upsert_batch",
                 return_value=True,
             ),
-            patch.object(uploader, "has_samples", return_value=False),
         ):
             uploader.upsert_batch(cmd, batch_result, Mock())
 

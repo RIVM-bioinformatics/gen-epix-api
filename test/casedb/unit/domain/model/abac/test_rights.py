@@ -252,11 +252,9 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         # Due to implementation, filtered path still aggregates all CaseTypes.
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
             self.case_type_id_1: {
-                self.dc1: self.make_access(self.dc1, read_cols={self.col1})
-            },
-            self.case_type_id_2: {
+                self.dc1: self.make_access(self.dc1, read_cols={self.col1}),
                 self.dc2: CaseTypeAccessAbac(
-                    case_type_id=self.case_type_id_2,
+                    case_type_id=self.case_type_id_1,
                     data_collection_id=self.dc2,
                     is_private=False,
                     add_case=False,

@@ -163,6 +163,9 @@ class CaseUploadSetup:
             )
 
 
+@pytest.mark.skip(
+    "Test is no longer valid, replaced by corresponding unit test. Code kept for now."
+)
 @pytest.mark.scenario_ids(
     "TC-RBAC-02-01",
     "TC-RBAC-04-01",
@@ -499,7 +502,7 @@ class TestCaseUpload(CaseUploadSetup):
                 user=user,
                 case_type_id=case_type_id,
                 created_in_data_collection_id=created_in_data_collection_id,
-                verify_only=True,  # type:ignore[call-arg]
+                verify_only=True,  # type: ignore[call-arg]
                 case_batch=case_batch,
             )
             # Execute command
