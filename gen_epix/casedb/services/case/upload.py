@@ -79,6 +79,9 @@ class CaseBatchUploader(BatchUploader):
         # are needed to retrieve the cases.
         success &= super().verify_batch(cmd, batch_result, uow)
 
+        # Set default created_in_data_collection_id where relevant
+        success &= self.set_default_created_in_data_collection_id(cmd, batch_result)
+
         # Verify ABAC rights
         success &= self.verify_abac_rights(cmd, batch_result, uow)
 
@@ -264,6 +267,71 @@ class CaseBatchUploader(BatchUploader):
                 if seqdb_result.id is not None:
                     case_content[case.seqs[child_index].col_id] = str(seqdb_result.id)
 
+        return success
+
+    def set_default_created_in_data_collection_id(
+        self,
+        cmd: command.UploadCasesCommand,
+        batch_result: model.CaseBatchUploadResult,
+    ) -> bool:
+        """
+        Set the created_in_data_collection_id for each new case to the default value
+        if not provided.
+
+        This does not check that created_in_data_collection_id for an existing case
+        would be altered: this is assumed to have been checked through immutability
+        of fields. It also does not replace any
+        created_in_data_collection_id=NULL_ID of an existing case with the actual
+        created_in_data_collection_id.
+        """
+        success = True
+
+        # Verify default created_in_data_collection_id, if provided, is a valid data collection ID
+        has_default_created_in_data_collection_id = not self.is_null(
+            cmd.default_created_in_data_collection_id
+        )
+        if has_default_created_in_data_collection_id:
+            is_existing = self.service.app.handle(
+                command.DataCollectionCrudCommand(
+                    user=cmd.user,
+                    operation=CrudOperation.EXISTS_ONE,
+                    obj_ids=[cmd.default_created_in_data_collection_id],
+                )
+            )
+            if not is_existing:
+                batch_result.add_error(
+                    "d1f9e8c3",
+                    f"Default created_in_data_collection_id {cmd.default_created_in_data_collection_id} does not exist.",
+                )
+                success = False
+
+        # Set default created_in_data_collection_id where relevant
+        for case_for_upload, case_result in zip(
+            cmd.case_batch.cases, batch_result.cases
+        ):
+            if not case_result.is_new:
+                # Existing case: nothing to do
+                continue
+            case = case_for_upload.case
+            assert case is not None
+            if not self.is_null(case.created_in_data_collection_id):
+                # created_in_data_collection_id provided at case level: nothing to do
+                continue
+            if has_default_created_in_data_collection_id:
+                # Set default created_in_data_collection_id at case level
+                case.created_in_data_collection_id = (
+                    cmd.default_created_in_data_collection_id
+                )
+                case_result.add_info(
+                    "d2a7b9f4",
+                    f"created_in_data_collection_id set to default value {cmd.default_created_in_data_collection_id}.",
+                )
+            else:
+                case_result.add_error(
+                    "c1f8e9d4",
+                    "created_in_data_collection_id not provided and no default available.",
+                )
+                success = False
         return success
 
     def verify_abac_rights(
@@ -564,7 +632,7 @@ class CaseBatchUploader(BatchUploader):
                 id=sample_for_upload_id,
                 sample=seqdb_model.Sample(
                     id=sample_for_upload_id,
-                    created_in_data_collection_id=cmd.created_in_data_collection_id,
+                    created_in_data_collection_id=cmd.default_created_in_data_collection_id,
                 ),
                 identifiers=[external_sample_id] if has_external_id else [],  # type: ignore[call-arg]
                 read_sets=[],

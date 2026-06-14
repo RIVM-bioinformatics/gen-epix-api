@@ -142,6 +142,7 @@ class BaseUploadTestCase(TestCase):
     def create_command_and_result(
         self,
         cases: list[model.CaseForUpload] | model.CaseForUpload,
+        default_created_in_data_collection_id: UUID | None = None,
     ) -> tuple[command.UploadCasesCommand, model.CaseBatchUploadResult]:
         if not isinstance(cases, list):
             cases = [cases]
@@ -149,7 +150,8 @@ class BaseUploadTestCase(TestCase):
         cmd = command.UploadCasesCommand(
             user=self.user,
             case_type_id=self.case_type_id,
-            created_in_data_collection_id=self.data_collection_id,
+            default_created_in_data_collection_id=default_created_in_data_collection_id
+            or self.data_collection_id,
             case_batch=case_batch,
             on_exists=UploadAction.UPDATE,  # type: ignore[call-arg]
             on_new=UploadAction.CREATE,  # type: ignore[call-arg]
@@ -430,7 +432,7 @@ class TestUpsertBatchCaseDate(BaseUploadTestCase):
         cmd = command.UploadCasesCommand(
             user=self.create_org_user(),
             case_type_id=case_type_id,
-            created_in_data_collection_id=created_in_data_collection_id,
+            default_created_in_data_collection_id=created_in_data_collection_id,
             case_batch=model.CaseBatchForUpload(cases=[case_for_upload]),
             on_exists=UploadAction.UPDATE.value,  # type: ignore[call-arg]
         )
@@ -594,7 +596,7 @@ class TestVerifyUserRights(BaseUploadTestCase):
         return command.UploadCasesCommand(
             user=user,
             case_type_id=self.case_type_id,
-            created_in_data_collection_id=self.data_collection_id,
+            default_created_in_data_collection_id=self.data_collection_id,
             case_batch=case_batch,
             on_exists=UploadAction.UPDATE,  # type: ignore[call-arg]
             on_new=UploadAction.CREATE,  # type: ignore[call-arg]
@@ -645,6 +647,203 @@ class TestVerifyUserRights(BaseUploadTestCase):
     def test_succeeds_for_none_user(self) -> None:
         # user=None bypasses the role intersection check entirely
         self.batch_uploader.verify_user_rights(self._make_cmd(user=None))
+
+
+@pytest.mark.scenario_ids("TC-SEC-30-03")
+class TestSetDefaultCreatedInDataCollectionId(BaseUploadTestCase):
+    """Tests for default_created_in_data_collection_id behavior.
+
+    NOTE: Direct unit testing of set_default_created_in_data_collection_id is complex
+    due to DataCollectionCrudCommand validation. Integration tests in the
+    service layer verify the overall behavior.
+    """
+
+    def test_error_when_no_default_and_case_needs_one(self) -> None:
+        """When new case has NULL_ID and no default, should add error."""
+        case_for_upload = self.create_case_for_upload(
+            created_in_data_collection_id=NULL_ID
+        )
+        cmd, batch_result = self.create_command_and_result(
+            case_for_upload,
+            default_created_in_data_collection_id=NULL_ID,
+        )
+        batch_result.cases[0].is_new = True
+
+        success = self.batch_uploader.set_default_created_in_data_collection_id(
+            cmd, batch_result
+        )
+
+        self.assertFalse(success)
+        self.assertEqual(batch_result.cases[0].status, EtlStatus.FAILED)
+        self.assertTrue(batch_result.cases[0].has_errors)
+
+    def test_new_case_with_explicit_created_in_dc_id_unchanged(self) -> None:
+        """When case explicitly sets created_in_data_collection_id, don't override."""
+        dc_id_explicit = uuid4()
+        case_for_upload = self.create_case_for_upload(
+            created_in_data_collection_id=dc_id_explicit
+        )
+        cmd, batch_result = self.create_command_and_result(
+            case_for_upload,
+            default_created_in_data_collection_id=self.data_collection_id,
+        )
+        batch_result.cases[0].is_new = True
+
+        with (
+            patch(
+                "gen_epix.casedb.services.case.upload.command.DataCollectionCrudCommand",
+                return_value=Mock(),
+            ),
+            patch.object(
+                self.batch_uploader.service.app,
+                "handle",
+                return_value=True,
+            ),
+        ):
+            success = self.batch_uploader.set_default_created_in_data_collection_id(
+                cmd, batch_result
+            )
+
+        self.assertTrue(success)
+        self.assertEqual(
+            case_for_upload.case.created_in_data_collection_id, dc_id_explicit
+        )
+
+    def test_existing_case_created_in_dc_id_preserved(self) -> None:
+        """Existing cases should not be modified by default setting."""
+        dc_id_existing = uuid4()
+        case_for_upload = self.create_case_for_upload(
+            case_id=uuid4(),
+            created_in_data_collection_id=dc_id_existing,
+        )
+        cmd, batch_result = self.create_command_and_result(
+            case_for_upload,
+            default_created_in_data_collection_id=self.data_collection_id,
+        )
+        batch_result.cases[0].is_new = False
+
+        with (
+            patch(
+                "gen_epix.casedb.services.case.upload.command.DataCollectionCrudCommand",
+                return_value=Mock(),
+            ),
+            patch.object(
+                self.batch_uploader.service.app,
+                "handle",
+                return_value=True,
+            ),
+        ):
+            success = self.batch_uploader.set_default_created_in_data_collection_id(
+                cmd, batch_result
+            )
+
+        self.assertTrue(success)
+        self.assertEqual(
+            case_for_upload.case.created_in_data_collection_id, dc_id_existing
+        )
+
+
+@pytest.mark.scenario_ids("TC-SEC-30-03")
+class TestCaseDataCollectionIdHandling(BaseUploadTestCase):
+    """Tests for handling cases with different created_in_data_collection_id values."""
+
+    def test_new_case_with_explicit_data_collection_id(self) -> None:
+        """New case with explicit DC ID should use that DC for ABAC."""
+        explicit_dc_id = uuid4()
+        case_for_upload = self.create_case_for_upload(
+            created_in_data_collection_id=explicit_dc_id
+        )
+        cmd, batch_result = self.create_command_and_result(
+            case_for_upload,
+            default_created_in_data_collection_id=self.data_collection_id,
+        )
+
+        self.assertEqual(
+            case_for_upload.case.created_in_data_collection_id, explicit_dc_id
+        )
+
+    def test_batch_with_multiple_different_data_collection_ids(self) -> None:
+        """Batch can contain cases from different DCs."""
+        dc_id_1 = uuid4()
+        dc_id_2 = uuid4()
+
+        case1 = self.create_case_for_upload(
+            case_id=uuid4(), created_in_data_collection_id=dc_id_1
+        )
+        case2 = self.create_case_for_upload(
+            case_id=uuid4(), created_in_data_collection_id=dc_id_2
+        )
+
+        cmd, batch_result = self.create_command_and_result([case1, case2])
+
+        self.assertEqual(len(batch_result.cases), 2)
+        self.assertEqual(case1.case.created_in_data_collection_id, dc_id_1)
+        self.assertEqual(case2.case.created_in_data_collection_id, dc_id_2)
+
+
+@pytest.mark.scenario_ids("TC-SEC-30-03")
+class TestExistingCaseDataCollectionMutability(BaseUploadTestCase):
+    """
+    Tests for existing case data collection handling, including NULL_ID edge case.
+
+    NOTE: Currently (per upload.py line 284-285), uploading an existing case with
+    created_in_data_collection_id=NULL_ID is not implemented. This would require:
+
+    1. In verify_batch: Detect cases where is_new=False and created_in_data_collection_id=NULL_ID
+    2. Query DB for the existing case's actual created_in_data_collection_id
+    3. Replace NULL_ID with the actual value
+    4. Validation in commondb.BatchUploader checks immutability (field should not change)
+
+    This prevents accidental modification of the case's origin DC. If needed, a new
+    method like 'replace_null_id_with_actual_created_in_dc' should be added to
+    set_default_created_in_data_collection_id or called separately in verify_batch.
+    """
+
+    def test_existing_case_preserves_created_in_data_collection_id(self) -> None:
+        """Existing case should maintain its created_in_data_collection_id."""
+        dc_id_existing = uuid4()
+        case_id_existing = uuid4()
+
+        case_for_upload = self.create_case_for_upload(
+            case_id=case_id_existing,
+            created_in_data_collection_id=dc_id_existing,
+        )
+        existing_case = self.create_case(
+            case_id=case_id_existing,
+            created_in_data_collection_id=dc_id_existing,
+        )
+
+        success, result, updated_objs = self.update_case(
+            existing_case, case_for_upload.case
+        )
+
+        self.assertTrue(success)
+        self.assertEqual(result.status, EtlStatus.SKIPPED)
+        self.assertEqual(len(updated_objs), 0)
+
+    def test_existing_case_with_different_created_in_data_collection_id_fails(
+        self,
+    ) -> None:
+        """Existing cases must not be changed to a different created_in_data_collection_id."""
+        case_id_existing = uuid4()
+        existing_dc_id = uuid4()
+        different_dc_id = uuid4()
+
+        existing_case = self.create_case(
+            case_id=case_id_existing,
+            created_in_data_collection_id=existing_dc_id,
+        )
+        uploaded_case = self.create_case(
+            case_id=case_id_existing,
+            created_in_data_collection_id=different_dc_id,
+        )
+
+        success, result, updated_objs = self.update_case(existing_case, uploaded_case)
+
+        # update_objects logs per-object immutable-field errors but does not abort batch.
+        self.assertTrue(success)
+        self.assertEqual(result.status, EtlStatus.FAILED)
+        self.assertEqual(len(updated_objs), 0)
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")

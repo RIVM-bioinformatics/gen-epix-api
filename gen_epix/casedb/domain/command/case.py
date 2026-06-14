@@ -3,6 +3,7 @@ from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
 
+from gen_epix.commondb.domain.literal import NULL_ID
 import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain import enum
 from gen_epix.commondb.domain.command import (
@@ -86,8 +87,9 @@ class UploadCasesCommand(Command, UploadBatchCommandMixin):
     case_type_id: UUID = Field(
         description="The CaseType ID that all the cases must belong to. All cases in the case set must have this CaseType ID."
     )
-    created_in_data_collection_id: UUID = Field(
-        description="The created in data collection ID that all the cases must belong to. All cases in the case set must have this created in data collection ID."
+    default_created_in_data_collection_id: UUID = Field(
+        default=NULL_ID,
+        description="The default data collection to associate with the cases if not specified at the case level AND the case does not exist yet.",
     )
     case_batch: model.CaseBatchForUpload = Field(
         description="The unique cases to validate."
@@ -99,13 +101,6 @@ class UploadCasesCommand(Command, UploadBatchCommandMixin):
         cases = [x.case for x in cases_for_upload if x.case is not None]
         if any(x.case_type_id != self.case_type_id for x in cases):
             raise ValueError("All cases must belong to the given CaseType ID.")
-        if any(
-            x.created_in_data_collection_id != self.created_in_data_collection_id
-            for x in cases
-        ):
-            raise ValueError(
-                "All cases must belong to the given created_in_data_collection_id."
-            )
         return self
 
 
