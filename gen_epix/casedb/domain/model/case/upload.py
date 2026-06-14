@@ -208,8 +208,8 @@ class CaseForUpload(ParentForUpload, IdentifiersMixin):
 
     def _validate_no_col_id_overlap(self) -> None:
         """Verify that col_ids in read_sets and seqs do not overlap."""
-        read_set_col_ids = set(x.col_id for x in self.read_sets or [])
-        seq_col_ids = set(x.col_id for x in self.seqs or [])
+        read_set_col_ids = {x.col_id for x in self.read_sets or []}
+        seq_col_ids = {x.col_id for x in self.seqs or []}
         overlap = read_set_col_ids & seq_col_ids
         if overlap:
             overlap_str = ", ".join(str(x) for x in sorted(overlap))

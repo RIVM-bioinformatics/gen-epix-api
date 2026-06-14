@@ -395,9 +395,9 @@ class CaseBatchUploader(BatchUploader):
             )
             content_col_ids = set(content.keys()) if content is not None else set()
             col_ids = (
-                set(content_col_ids)
-                | set(x.col_id for x in case_for_upload.read_sets or [])
-                | set(x.col_id for x in case_for_upload.seqs or [])
+                content_col_ids
+                | {x.col_id for x in case_for_upload.read_sets or []}
+                | {x.col_id for x in case_for_upload.seqs or []}
             )
 
             # Retrieve readable_col_ids, writeable_col_ids for this combination of data_collection_ids, or calculate and cache if not seen before
