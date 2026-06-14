@@ -163,11 +163,13 @@ class CaseForUpload(ParentForUpload, IdentifiersMixin):
     @model_validator(mode="after")
     def _validate_case_for_upload(self) -> Self:
         """
-        Verify that read_sets and seqs contain no duplicate col_id and no
-        inconsistent other_sample_identifier to sample ID mappings
+        Verify that read_sets and seqs contain no duplicate col_id, no overlapping
+        col_ids across read_sets and seqs, and no inconsistent
+        other_sample_identifier to sample ID mappings
         """
         self._validate_read_sets_or_seqs(self.read_sets)
         self._validate_read_sets_or_seqs(self.seqs)
+        self._validate_no_col_id_overlap()
         return self
 
     def _validate_read_sets_or_seqs(
@@ -203,6 +205,17 @@ class CaseForUpload(ParentForUpload, IdentifiersMixin):
                         )
                 else:
                     sample_id_map[other_sample_identifier] = sample_id
+
+    def _validate_no_col_id_overlap(self) -> None:
+        """Verify that col_ids in read_sets and seqs do not overlap."""
+        read_set_col_ids = set(x.col_id for x in self.read_sets or [])
+        seq_col_ids = set(x.col_id for x in self.seqs or [])
+        overlap = read_set_col_ids & seq_col_ids
+        if overlap:
+            overlap_str = ", ".join(str(x) for x in sorted(overlap))
+            raise ValueError(
+                f"col_id must not appear in both read_sets and seqs. Overlapping col_ids: {overlap_str}"
+            )
 
 
 class CaseDataIssue(DataIssue):
@@ -269,6 +282,17 @@ class CaseBatchForUpload(BaseBatchForUpload):
     def has_seqs(self) -> bool:
         """Indicates whether there are any sequences in the cases."""
         return any(len(x.seqs or []) > 0 for x in self.cases)
+
+    def has_samples(self) -> bool:
+        """
+        Determine if there are any seqdb samples in the cases to be uploaded.
+        """
+        has_samples = False
+        for case_for_upload in self.cases:
+            if case_for_upload.read_sets or case_for_upload.seqs:
+                has_samples = True
+                break
+        return has_samples
 
 
 class CaseBatchUploadResult(BaseBatchUploadResult):

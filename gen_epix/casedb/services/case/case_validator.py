@@ -123,7 +123,9 @@ class CaseValidator:
         self._init_metadata()
 
     def validate_and_transform(
-        self, cmd: command.UploadCasesCommand, batch_result: model.CaseBatchUploadResult
+        self,
+        cmd: command.UploadCasesCommand,
+        batch_result: model.CaseBatchUploadResult,
     ) -> model.CaseBatchUploadResult:
         """
         Validate and transform the content of the cases in batch upload command.
@@ -178,23 +180,23 @@ class CaseValidator:
         contents: list[dict[UUID, str | None] | None],
         data_issues_list: list[list[model.CaseDataIssue] | None],
     ) -> None:
-        """Handle any unknown Cols and add appropriate data issues."""
+        """Validate if any unknown columns are present in contents."""
         for content, data_issues in zip(contents, data_issues_list):
             if content is None:
                 continue
             assert data_issues is not None
-            for col_id in content.keys():
-                if col_id in self.complete_case_type.cols:
-                    continue
-                # Unknown Col, add data issue and ignore value
+            invalid_col_ids = set(content.keys()) - set(
+                self.complete_case_type.cols.keys()
+            )
+            for col_id in invalid_col_ids:
                 data_issues.append(
                     model.CaseDataIssue(
-                        col_id=col_id,
                         original_value=content[col_id],
                         updated_value=None,
-                        data_issue_type=DataIssueType.UNAUTHORIZED,
-                        code="a7b3f9d2",
-                        message="Unknown Col",
+                        data_issue_type=DataIssueType.INVALID,
+                        code="ef8e4d6d",
+                        message=f"Unknown column: {col_id}",
+                        col_id=col_id,
                     )
                 )
 

@@ -7,11 +7,18 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.casedb.domain import command, enum, model
+from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.model import STORED_MODEL_FIELD_PROPS
+from gen_epix.casedb.domain.model.abac.rights import CaseTypeAccessAbac
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.upload import CaseBatchUploader
-from gen_epix.commondb.domain.enum import EtlStatus, UploadAction
+from gen_epix.commondb.domain.enum import (
+    DataIssueType,
+    EtlStatus,
+    RoleSet,
+    UploadAction,
+)
+from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import IdentifierForUpload, User
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.app import App
@@ -24,6 +31,11 @@ def _mock_uow() -> Mock:
     uow.__enter__ = Mock(return_value=uow)
     uow.__exit__ = Mock(return_value=None)
     return uow
+
+
+def _to_casedb_role_set(role_set: RoleSet) -> set[str]:
+    """Map commondb role enums to casedb role strings with CASEDB_ prefix."""
+    return {f"CASEDB_{x.name}" for x in role_set.value}
 
 
 class BaseUploadTestCase(TestCase):
@@ -55,6 +67,9 @@ class BaseUploadTestCase(TestCase):
         self.service.generate_id = Mock(side_effect=uuid4)
         self.service.repository = Mock()
         self.service.app = Mock(spec=App)
+        self.service.role_set_map = {
+            RoleSet.GE_ORG_USER: _to_casedb_role_set(RoleSet.GE_ORG_USER)
+        }
 
         self.uow = _mock_uow()
         self.service.repository.uow.return_value = self.uow
@@ -83,7 +98,7 @@ class BaseUploadTestCase(TestCase):
             content=content,
         )
         return model.CaseForUpload(
-            id=self.case_id,
+            id=case_id or self.case_id,
             case=case,
             read_sets=read_sets,
             seqs=seqs,
@@ -155,6 +170,9 @@ class BaseUploadTestCase(TestCase):
     def create_uploader(self) -> tuple[CaseBatchUploader, Mock]:
         service = Mock(spec=BaseCaseService)
         service.repository = Mock()
+        service.role_set_map = {
+            RoleSet.GE_ORG_USER: _to_casedb_role_set(RoleSet.GE_ORG_USER)
+        }
         uploader = CaseBatchUploader(service)
         return uploader, service
 
@@ -222,11 +240,14 @@ class TestCaseUploadSeqdbBridge(BaseUploadTestCase):
         case_for_upload = self.create_case_for_upload(read_sets=[], seqs=[])
         cmd, batch_result = self.create_command_and_result(case_for_upload)
 
-        upload_samples_cmd, child_map = self.batch_uploader._get_upload_samples_command(
-            cmd,
-            batch_result,
+        success, upload_samples_cmd, child_map = (
+            self.batch_uploader._get_upload_samples_command(
+                cmd,
+                batch_result,
+            )
         )
 
+        self.assertTrue(success)
         self.assertIsNone(upload_samples_cmd)
         self.assertEqual(dict(child_map), {})
 
@@ -237,11 +258,14 @@ class TestCaseUploadSeqdbBridge(BaseUploadTestCase):
         )
         cmd, batch_result = self.create_command_and_result(case_for_upload)
 
-        upload_samples_cmd, child_map = self.batch_uploader._get_upload_samples_command(
-            cmd,
-            batch_result,
+        success, upload_samples_cmd, child_map = (
+            self.batch_uploader._get_upload_samples_command(
+                cmd,
+                batch_result,
+            )
         )
 
+        self.assertTrue(success)
         self.assertIsNotNone(upload_samples_cmd)
         assert upload_samples_cmd is not None
         self.assertEqual(len(upload_samples_cmd.sample_batch.samples), 1)
@@ -349,11 +373,14 @@ class TestCaseUploadSeqdbBridge(BaseUploadTestCase):
         )
         cmd, batch_result = self.create_command_and_result(case_for_upload)
 
-        upload_samples_cmd, child_map = self.batch_uploader._get_upload_samples_command(
-            cmd,
-            batch_result,
+        success, upload_samples_cmd, child_map = (
+            self.batch_uploader._get_upload_samples_command(
+                cmd,
+                batch_result,
+            )
         )
 
+        self.assertTrue(success)
         self.assertIsNotNone(upload_samples_cmd)
         assert upload_samples_cmd is not None
         self.assertEqual(len(upload_samples_cmd.sample_batch.samples), 1)
@@ -409,7 +436,11 @@ class TestUpsertBatchCaseDate(BaseUploadTestCase):
         )
         batch_result = model.CaseBatchUploadResult(cases=[case_result])
 
-        service.repository.read_fields.return_value = [(case_id, dict(content))]
+        # read_fields returns rows with JSON-serialised (string-keyed) content,
+        # mirroring what the actual repository layer produces.
+        service.repository.read_fields.return_value = [
+            (case_id, {str(x): y for x, y in content.items()})
+        ]
 
         mock_validator = Mock()
 
@@ -427,7 +458,6 @@ class TestUpsertBatchCaseDate(BaseUploadTestCase):
                 "gen_epix.commondb.services.upload.BatchUploader.upsert_batch",
                 return_value=True,
             ),
-            patch.object(uploader, "has_samples", return_value=False),
         ):
             uploader.upsert_batch(cmd, batch_result, Mock())
 
@@ -550,3 +580,485 @@ class TestCaseContentUploadUpdates(BaseUploadTestCase):
         self.assertEqual(result.status, EtlStatus.UPDATED)
         self.assertEqual(len(updated_objs), 1)
         self.assertEqual(updated_objs[0].content, {})
+
+
+@pytest.mark.scenario_ids("TC-SEC-30-03")
+class TestVerifyUserRights(BaseUploadTestCase):
+    """Tests for RBAC verification in CaseBatchUploader.verify_user_rights."""
+
+    def _make_cmd(self, user: User | None = None) -> command.UploadCasesCommand:
+        case_batch = model.CaseBatchForUpload(
+            batch_id=self.batch_id,  # type: ignore[call-arg]
+            cases=[self.create_case_for_upload()],
+        )
+        return command.UploadCasesCommand(
+            user=user,
+            case_type_id=self.case_type_id,
+            created_in_data_collection_id=self.data_collection_id,
+            case_batch=case_batch,
+            on_exists=UploadAction.UPDATE,  # type: ignore[call-arg]
+            on_new=UploadAction.CREATE,  # type: ignore[call-arg]
+        )
+
+    def test_raises_for_invalid_command_type(self) -> None:
+        with self.assertRaises(exc.InvalidArgumentsError):
+            self.batch_uploader.verify_user_rights(Mock())
+
+    def test_raises_for_user_with_only_guest_role(self) -> None:
+        # GUEST is not in GE_ORG_USER (ROOT, APP_ADMIN, ORG_ADMIN, ORG_USER)
+        guest_user = User(
+            id=uuid4(),
+            key="guest@example.com",
+            email="guest@example.com",
+            roles={enum.Role.GUEST.value},
+            organization_id=uuid4(),
+            is_active=True,
+        )
+        cmd = self._make_cmd(user=guest_user)
+        with self.assertRaises(exc.UnauthorizedAuthError):
+            self.batch_uploader.verify_user_rights(cmd)
+
+    def test_succeeds_for_org_user_role(self) -> None:
+        org_user = User(
+            id=uuid4(),
+            key="org@example.com",
+            email="org@example.com",
+            roles={enum.Role.ORG_USER.value},
+            organization_id=uuid4(),
+            is_active=True,
+        )
+        # should not raise
+        self.batch_uploader.verify_user_rights(self._make_cmd(user=org_user))
+
+    def test_succeeds_for_app_admin_role(self) -> None:
+        # APP_ADMIN is in GE_ORG_USER
+        app_admin_user = User(
+            id=uuid4(),
+            key="admin@example.com",
+            email="admin@example.com",
+            roles={enum.Role.APP_ADMIN.value},
+            organization_id=uuid4(),
+            is_active=True,
+        )
+        self.batch_uploader.verify_user_rights(self._make_cmd(user=app_admin_user))
+
+    def test_succeeds_for_none_user(self) -> None:
+        # user=None bypasses the role intersection check entirely
+        self.batch_uploader.verify_user_rights(self._make_cmd(user=None))
+
+
+@pytest.mark.scenario_ids("TC-SEC-30-03")
+class TestVerifyAbacRights(BaseUploadTestCase):
+    """Tests for ABAC column and creation-right verification in verify_abac_rights."""
+
+    def _make_abac(
+        self,
+        data_collection_id: UUID,
+        is_private: bool = True,
+        add_case: bool = True,
+        read_col_ids: set[UUID] | None = None,
+        write_col_ids: set[UUID] | None = None,
+    ) -> CaseTypeAccessAbac:
+        return CaseTypeAccessAbac(
+            case_type_id=self.case_type_id,
+            data_collection_id=data_collection_id,
+            is_private=is_private,
+            add_case=add_case,
+            remove_case=False,
+            add_case_set=False,
+            remove_case_set=False,
+            read_col_ids=read_col_ids or set(),
+            write_col_ids=write_col_ids or set(),
+            read_case_set=False,
+            write_case_set=False,
+        )
+
+    def _call(
+        self,
+        cmd: command.UploadCasesCommand,
+        batch_result: model.CaseBatchUploadResult,
+        case_type_access_abacs: dict[UUID, CaseTypeAccessAbac],
+        case_data_collections: list[frozenset[UUID]] | None = None,
+    ) -> bool:
+        mock_cct = Mock()
+        mock_cct.case_type_access_abacs = case_type_access_abacs
+        if case_data_collections is None:
+            case_data_collections = [
+                frozenset({self.data_collection_id}) for _ in cmd.case_batch.cases
+            ]
+        with (
+            patch.object(
+                self.batch_uploader, "_get_complete_case_type", return_value=mock_cct
+            ),
+            patch.object(
+                self.batch_uploader,
+                "_get_case_data_collections",
+                return_value=case_data_collections,
+            ),
+        ):
+            return self.batch_uploader.verify_abac_rights(cmd, batch_result, self.uow)
+
+    # --- new-case creation rights ---
+
+    def test_new_case_in_allowed_private_dc_succeeds(self) -> None:
+        col_id = uuid4()
+        cmd, batch_result = self.create_command_and_result(
+            self.create_case_for_upload(content={col_id: "v"})
+        )
+        batch_result.cases[0].is_new = True
+        abac = self._make_abac(
+            self.data_collection_id,
+            is_private=True,
+            add_case=True,
+            write_col_ids={col_id},
+        )
+        result = self._call(cmd, batch_result, {self.data_collection_id: abac})
+
+        self.assertTrue(result)
+        self.assertEqual(batch_result.cases[0].status, EtlStatus.PENDING)
+        self.assertEqual(len(batch_result.cases[0].data_issues), 0)
+
+    def test_new_case_in_dc_without_add_case_fails(self) -> None:
+        cmd, batch_result = self.create_command_and_result(
+            self.create_case_for_upload(content={})
+        )
+        batch_result.cases[0].is_new = True
+        abac = self._make_abac(self.data_collection_id, is_private=True, add_case=False)
+        result = self._call(cmd, batch_result, {self.data_collection_id: abac})
+
+        self.assertFalse(result)
+        self.assertEqual(batch_result.cases[0].status, EtlStatus.FAILED)
+
+    def test_new_case_in_non_private_dc_fails(self) -> None:
+        # is_private=False → DC never enters allowed_created_data_collection_ids
+        cmd, batch_result = self.create_command_and_result(
+            self.create_case_for_upload(content={})
+        )
+        batch_result.cases[0].is_new = True
+        abac = self._make_abac(self.data_collection_id, is_private=False, add_case=True)
+        result = self._call(cmd, batch_result, {self.data_collection_id: abac})
+
+        self.assertFalse(result)
+
+    def test_existing_case_skips_creation_check(self) -> None:
+        # is_new=False → creation check is skipped even when add_case=False
+        cmd, batch_result = self.create_command_and_result(
+            self.create_case_for_upload(content={})
+        )
+        batch_result.cases[0].is_new = False
+        abac = self._make_abac(self.data_collection_id, is_private=True, add_case=False)
+        result = self._call(cmd, batch_result, {self.data_collection_id: abac})
+
+        self.assertTrue(result)
+
+    # --- column access ---
+
+    def test_writeable_col_causes_no_data_issue(self) -> None:
+        col_id = uuid4()
+        cmd, batch_result = self.create_command_and_result(
+            self.create_case_for_upload(content={col_id: "value"})
+        )
+        abac = self._make_abac(self.data_collection_id, write_col_ids={col_id})
+        self._call(cmd, batch_result, {self.data_collection_id: abac})
+
+        self.assertEqual(len(batch_result.cases[0].data_issues), 0)
+        # col is still in content
+        self.assertIn(col_id, cmd.case_batch.cases[0].case.content)  # type: ignore[union-attr]
+
+    def test_read_only_col_adds_unauthorized_issue_and_removes_from_content(
+        self,
+    ) -> None:
+        col_id = uuid4()
+        cmd, batch_result = self.create_command_and_result(
+            self.create_case_for_upload(content={col_id: "value"})
+        )
+        abac = self._make_abac(
+            self.data_collection_id,
+            read_col_ids={col_id},
+            write_col_ids=set(),
+        )
+        self._call(cmd, batch_result, {self.data_collection_id: abac})
+
+        issues = batch_result.cases[0].data_issues
+        self.assertEqual(len(issues), 1)
+        self.assertEqual(issues[0].data_issue_type, DataIssueType.UNAUTHORIZED)
+        self.assertEqual(issues[0].code, "3e7c1a9f")
+        self.assertEqual(issues[0].original_value, "value")
+        self.assertNotIn(col_id, cmd.case_batch.cases[0].case.content)  # type: ignore[union-attr]
+
+    def test_inaccessible_col_adds_unknown_col_issue_and_removes_from_content(
+        self,
+    ) -> None:
+        col_id = uuid4()
+        cmd, batch_result = self.create_command_and_result(
+            self.create_case_for_upload(content={col_id: "secret"})
+        )
+        abac = self._make_abac(
+            self.data_collection_id,
+            read_col_ids=set(),
+            write_col_ids=set(),
+        )
+        self._call(cmd, batch_result, {self.data_collection_id: abac})
+
+        issues = batch_result.cases[0].data_issues
+        self.assertEqual(len(issues), 1)
+        self.assertEqual(issues[0].data_issue_type, DataIssueType.UNAUTHORIZED)
+        self.assertEqual(issues[0].code, "a7b3f9d2")
+        self.assertNotIn(col_id, cmd.case_batch.cases[0].case.content)  # type: ignore[union-attr]
+
+    def test_unauthorized_read_set_col_adds_issue_with_none_orig_value(
+        self,
+    ) -> None:
+        # col_id comes from a read_set (not content) → original_value must be None
+        cmd, batch_result = self.create_command_and_result(
+            self.create_case_for_upload(
+                content={}, read_sets=[self.create_read_set_for_upload()]
+            )
+        )
+        abac = self._make_abac(self.data_collection_id, write_col_ids=set())
+        self._call(cmd, batch_result, {self.data_collection_id: abac})
+
+        issues = batch_result.cases[0].data_issues
+        self.assertEqual(len(issues), 1)
+        self.assertEqual(issues[0].col_id, self.reads_col_id)
+        self.assertIsNone(issues[0].original_value)
+
+    def test_unauthorized_seq_col_adds_issue_with_none_orig_value(self) -> None:
+        cmd, batch_result = self.create_command_and_result(
+            self.create_case_for_upload(content={}, seqs=[self.create_seq_for_upload()])
+        )
+        abac = self._make_abac(self.data_collection_id, write_col_ids=set())
+        self._call(cmd, batch_result, {self.data_collection_id: abac})
+
+        issues = batch_result.cases[0].data_issues
+        self.assertEqual(len(issues), 1)
+        self.assertEqual(issues[0].col_id, self.seq_col_id)
+        self.assertIsNone(issues[0].original_value)
+
+    def test_dc_absent_from_abacs_denies_all_col_access(self) -> None:
+        col_id = uuid4()
+        cmd, batch_result = self.create_command_and_result(
+            self.create_case_for_upload(content={col_id: "v"})
+        )
+        # empty dict → DC not found → no write access
+        self._call(cmd, batch_result, {})
+
+        self.assertEqual(len(batch_result.cases[0].data_issues), 1)
+
+    def test_col_access_cached_for_repeated_data_collection(self) -> None:
+        col_id = uuid4()
+        case1 = self.create_case_for_upload(case_id=uuid4(), content={col_id: "v1"})
+        case2 = self.create_case_for_upload(case_id=uuid4(), content={col_id: "v2"})
+        cmd, batch_result = self.create_command_and_result([case1, case2])
+
+        abac = self._make_abac(self.data_collection_id, write_col_ids={col_id})
+        result = self._call(
+            cmd,
+            batch_result,
+            {self.data_collection_id: abac},
+            case_data_collections=[
+                frozenset({self.data_collection_id}),
+                frozenset({self.data_collection_id}),
+            ],
+        )
+
+        self.assertTrue(result)
+        self.assertEqual(len(batch_result.cases[0].data_issues), 0)
+        self.assertEqual(len(batch_result.cases[1].data_issues), 0)
+
+    def test_write_access_is_union_across_multiple_data_collections(self) -> None:
+        col1_id, col2_id = uuid4(), uuid4()
+        dc2_id = uuid4()
+        cmd, batch_result = self.create_command_and_result(
+            self.create_case_for_upload(content={col1_id: "a", col2_id: "b"})
+        )
+        abac1 = self._make_abac(self.data_collection_id, write_col_ids={col1_id})
+        abac2 = self._make_abac(dc2_id, write_col_ids={col2_id})
+        result = self._call(
+            cmd,
+            batch_result,
+            {self.data_collection_id: abac1, dc2_id: abac2},
+            case_data_collections=[frozenset({self.data_collection_id, dc2_id})],
+        )
+
+        self.assertTrue(result)
+        self.assertEqual(len(batch_result.cases[0].data_issues), 0)
+
+
+@pytest.mark.scenario_ids("TC-SEC-30-03")
+class TestGetUploadSamplesCommandNoCaseGuard(BaseUploadTestCase):
+    """Tests for the has_case guard added to _get_upload_samples_command."""
+
+    def test_read_set_without_case_returns_failure_and_marks_result_failed(
+        self,
+    ) -> None:
+        case_for_upload = model.CaseForUpload(
+            id=self.case_id,
+            case=None,
+            read_sets=[self.create_read_set_for_upload()],
+        )
+        cmd, batch_result = self.create_command_and_result(case_for_upload)
+
+        success, upload_samples_cmd, _ = (
+            self.batch_uploader._get_upload_samples_command(cmd, batch_result)
+        )
+
+        self.assertFalse(success)
+        # Command is still built (contains the sample) but upload_samples will abort
+        self.assertIsNotNone(upload_samples_cmd)
+        self.assertEqual(batch_result.cases[0].read_sets[0].status, EtlStatus.FAILED)  # type: ignore[index]
+
+    def test_seq_without_case_returns_failure_and_marks_result_failed(self) -> None:
+        case_for_upload = model.CaseForUpload(
+            id=self.case_id,
+            case=None,
+            seqs=[self.create_seq_for_upload()],
+        )
+        cmd, batch_result = self.create_command_and_result(case_for_upload)
+
+        success, upload_samples_cmd, _ = (
+            self.batch_uploader._get_upload_samples_command(cmd, batch_result)
+        )
+
+        self.assertFalse(success)
+        self.assertIsNotNone(upload_samples_cmd)
+        self.assertEqual(batch_result.cases[0].seqs[0].status, EtlStatus.FAILED)  # type: ignore[index]
+
+    def test_upload_samples_aborts_early_when_no_case(self) -> None:
+        # upload_samples should return False immediately without calling seqdb
+        case_for_upload = model.CaseForUpload(
+            id=self.case_id,
+            case=None,
+            read_sets=[self.create_read_set_for_upload()],
+        )
+        cmd, batch_result = self.create_command_and_result(case_for_upload)
+
+        success = self.batch_uploader.upload_samples(
+            cmd, batch_result, verify_only=True
+        )
+
+        self.assertFalse(success)
+        self.service.app.handle.assert_not_called()
+
+
+@pytest.mark.scenario_ids("TC-SEC-30-03")
+class TestCaseBatchHasSamples(BaseUploadTestCase):
+    """Tests for CaseBatchForUpload.has_samples (the pure predicate on the batch model)."""
+
+    def test_has_samples_false_when_no_children_fields_set(self) -> None:
+        cmd, _ = self.create_command_and_result(self.create_case_for_upload())
+        self.assertFalse(cmd.case_batch.has_samples())
+
+    def test_has_samples_false_with_empty_read_sets_and_seqs(self) -> None:
+        cmd, _ = self.create_command_and_result(
+            self.create_case_for_upload(read_sets=[], seqs=[])
+        )
+        self.assertFalse(cmd.case_batch.has_samples())
+
+    def test_has_samples_true_when_case_has_read_sets(self) -> None:
+        cmd, _ = self.create_command_and_result(
+            self.create_case_for_upload(read_sets=[self.create_read_set_for_upload()])
+        )
+        self.assertTrue(cmd.case_batch.has_samples())
+
+    def test_has_samples_true_when_case_has_seqs(self) -> None:
+        cmd, _ = self.create_command_and_result(
+            self.create_case_for_upload(seqs=[self.create_seq_for_upload()])
+        )
+        self.assertTrue(cmd.case_batch.has_samples())
+
+    def test_upsert_batch_skips_seqdb_upload_when_no_samples(self) -> None:
+        # When has_samples() is False, upload_samples must never be called
+        cmd, batch_result = self.create_command_and_result(
+            self.create_case_for_upload(content={})
+        )
+        with (
+            patch.object(
+                self.batch_uploader, "_get_complete_case_type", return_value=Mock()
+            ),
+            patch.object(
+                self.batch_uploader, "_get_case_validator", return_value=Mock()
+            ),
+            patch(
+                "gen_epix.commondb.services.upload.BatchUploader.upsert_batch",
+                return_value=True,
+            ),
+            patch.object(self.batch_uploader, "upload_samples") as mock_upload_samples,
+        ):
+            self.batch_uploader.upsert_batch(cmd, batch_result, self.uow)
+
+        mock_upload_samples.assert_not_called()
+
+
+@pytest.mark.scenario_ids("TC-SEC-30-03")
+class TestGetCaseDataCollections(BaseUploadTestCase):
+    """Tests for _get_case_data_collections in CaseBatchUploader."""
+
+    def test_new_case_uses_only_created_in_dc_and_skips_db_query(self) -> None:
+        cmd, batch_result = self.create_command_and_result(
+            self.create_case_for_upload()
+        )
+        batch_result.cases[0].is_new = True  # is_existing = False → no DB query
+
+        result = self.batch_uploader._get_case_data_collections(
+            cmd, batch_result, self.uow
+        )
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0], frozenset({self.data_collection_id}))
+        self.service.repository.crud.assert_not_called()
+
+    def test_existing_case_includes_dc_links_from_db(self) -> None:
+        cmd, batch_result = self.create_command_and_result(
+            self.create_case_for_upload()
+        )
+        batch_result.cases[0].is_new = False  # is_existing = True → DB queried
+
+        extra_dc_id = uuid4()
+        link = model.CaseDataCollectionLink.model_construct(
+            case_id=self.case_id, data_collection_id=extra_dc_id
+        )
+        self.service.repository.crud.return_value = [link]
+
+        result = self.batch_uploader._get_case_data_collections(
+            cmd, batch_result, self.uow
+        )
+
+        self.assertEqual(len(result), 1)
+        self.assertIn(self.data_collection_id, result[0])
+        self.assertIn(extra_dc_id, result[0])
+
+    def test_case_without_case_object_falls_back_to_null_id(self) -> None:
+        case_for_upload = model.CaseForUpload(id=self.case_id, case=None)
+        cmd, batch_result = self.create_command_and_result(case_for_upload)
+        batch_result.cases[0].is_new = True
+
+        result = self.batch_uploader._get_case_data_collections(
+            cmd, batch_result, self.uow
+        )
+
+        self.assertEqual(len(result), 1)
+        self.assertIn(NULL_ID, result[0])
+
+    def test_mixed_batch_queries_db_only_for_existing_cases(self) -> None:
+        new_id = uuid4()
+        existing_id = uuid4()
+        new_case = self.create_case_for_upload(case_id=new_id)
+        existing_case = self.create_case_for_upload(case_id=existing_id)
+        cmd, batch_result = self.create_command_and_result([new_case, existing_case])
+        batch_result.cases[0].is_new = True  # new_case
+        batch_result.cases[1].is_new = False  # existing_case
+
+        self.service.repository.crud.return_value = []
+
+        result = self.batch_uploader._get_case_data_collections(
+            cmd, batch_result, self.uow
+        )
+
+        self.assertEqual(len(result), 2)
+        self.service.repository.crud.assert_called_once()
+        # Only existing_id should appear in the filter
+        call_kwargs = self.service.repository.crud.call_args
+        members = call_kwargs.kwargs["filter"].members
+        self.assertIn(existing_id, members)
+        self.assertNotIn(new_id, members)

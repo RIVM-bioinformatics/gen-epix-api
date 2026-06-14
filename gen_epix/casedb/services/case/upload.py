@@ -1,5 +1,6 @@
 from collections import defaultdict
 from hashlib import sha256
+from typing import cast
 from uuid import UUID
 
 import gen_epix.casedb.domain.command as command
@@ -7,15 +8,15 @@ import gen_epix.casedb.domain.model as model
 import gen_epix.seqdb.domain.command as seqdb_command
 import gen_epix.seqdb.domain.model as seqdb_model
 from gen_epix.casedb.domain import exc
-from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.case_validator import CaseValidator
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
-from gen_epix.commondb.domain.enum import EtlStatus
+from gen_epix.commondb.domain.enum import DataIssueType, EtlStatus, RoleSet
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import IdentifierForUpload
 from gen_epix.commondb.domain.model.upload import BaseBatchUploadResult
 from gen_epix.commondb.services.upload import BatchUploader
+from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.service import BaseService
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.filter.uuid_set import UuidSetFilter
@@ -34,61 +35,23 @@ class CaseBatchUploader(BatchUploader):
 
     def verify_user_rights(self, cmd: UploadBatchCommandMixin) -> None:
         """
-        Implements user rights verification for uploading cases. Only ABAC rights are
-        verified: the user must have write access to all Cols contained in
-        the uploaded cases for the created in data collection.
+        Implements user RBAC rights verification for uploading cases.
+        ABAC rights are not verified here since this requires knowing per case whether
+        it already exists in the database and what data collection(s) it belongs to,
+        which is only determined during batch verification. ABAC rights are therefore
+        verified during batch verification.
         """
         # Verify command type
         if not isinstance(cmd, command.UploadCasesCommand):
             raise exc.InvalidArgumentsError("510ea98a", "Invalid command type")
-        # Determine Cols with write access
-        complete_case_type = self._get_complete_case_type(cmd)
-        case_type_access_abac = complete_case_type.case_type_access_abacs.get(
-            cmd.created_in_data_collection_id
-        )
-        if case_type_access_abac is None:
-            # Full-access users (ROOT / APP_ADMIN) can upload to any data
-            # collection; fall back to all cols for the case type. The
-            # DataCollection existence is still enforced by DB constraints.``
-            case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
-            if case_abac is None or not case_abac.is_full_access:
-                raise exc.UnauthorizedAuthError(
-                    "d8c05dc7",
-                    f"User {None if cmd.user is None else cmd.user.id} is not allowed to access cases in the given data collection",
-                )
-            write_col_ids = set(complete_case_type.cols.keys())
-        else:
-            write_col_ids = case_type_access_abac.write_col_ids
-        if not write_col_ids:
-            raise exc.UnauthorizedAuthError(
-                "96851164",
-                f"User {None if cmd.user is None else cmd.user.id} is not allowed to write any Cols for cases in the given data collection",
-            )
 
-        # Determine if uploaded cases only contain writable columns
-        unauthorized_cols = set()
-        for case_for_upload in cmd.case_batch.cases:
-            case = case_for_upload.case
-            if case is None:
-                continue
-            content = case.content
-            if not content:
-                continue
-            # Determine unauthorized columns in case content
-            unauthorized_cols.update(set(content.keys()) - write_col_ids)
-            # Determine unauthorized columns in read sets
-            unauthorized_cols.update(
-                set(x.col_id for x in case_for_upload.read_sets or []) - write_col_ids
-            )
-            # Determine unauthorized columns in seqs
-            unauthorized_cols.update(
-                set(x.col_id for x in case_for_upload.seqs or []) - write_col_ids
-            )
-        if unauthorized_cols:
-            unauthorized_cols_str = ", ".join(str(x) for x in sorted(unauthorized_cols))
+        # Verify user has at least one role that may manipulate case data
+        if cmd.user is not None and not cmd.user.roles.intersection(
+            self.service.role_set_map[RoleSet.GE_ORG_USER]
+        ):
             raise exc.UnauthorizedAuthError(
-                "ec85ffb9",
-                f"User {None if cmd.user is None else cmd.user.id} is not allowed to write columns {unauthorized_cols_str} contained in the batch case, for the given data collection",
+                "d8c05dc7",
+                f"User {None if cmd.user is None else cmd.user.id} is not allowed to manipulate case data",
             )
 
     def verify_batch(
@@ -115,6 +78,9 @@ class CaseBatchUploader(BatchUploader):
         # case is being updated, since the merged content is validated and the IDs
         # are needed to retrieve the cases.
         success &= super().verify_batch(cmd, batch_result, uow)
+
+        # Verify ABAC rights
+        success &= self.verify_abac_rights(cmd, batch_result, uow)
 
         # Verify case content. Derived values and data issues are also added in the
         # form of ValidatedCaseForUpload objects in the result.
@@ -154,16 +120,16 @@ class CaseBatchUploader(BatchUploader):
             new_case_for_upload.read_sets = None
             new_case_for_upload.seqs = None
             cases_only_cmd.case_batch.cases[i] = new_case_for_upload
-            case_for_upload = new_case_for_upload.case
-            if case_for_upload is None:
+            case = new_case_for_upload.case
+            if case is None:
                 continue
-            if case_for_upload.content != case_result.validated_content:
+            if case.content != case_result.validated_content:
                 # Set case content to validated content. Since the case is a reference
                 # shared with the original cmd, it will be updated there as well
-                case_for_upload.content = case_result.validated_content
-            if case_for_upload.id is not None and case_for_upload.content:
+                case.content = case_result.validated_content
+            if not self.is_null(case.id) and case.content:
                 # Case and its content will be updated and has to be validated again
-                cases_for_validation.append(case_for_upload)
+                cases_for_validation.append(case)
 
         # Merge case content with that already in the database for updates, and
         # validate the merged content again so that there are no inconsistencies
@@ -185,14 +151,12 @@ class CaseBatchUploader(BatchUploader):
                 if row[1] is not None
             }
             # Merge new content into existing
-            for case_for_upload in cases_for_validation:
-                existing_content = existing_content_by_id.get(case_for_upload.id)  # type: ignore[arg-type]
+            for case in cases_for_validation:
+                existing_content = existing_content_by_id.get(case.id)  # type: ignore[arg-type]
                 if existing_content is None:
                     continue
-                BatchUploader.update_sub_field_dict(
-                    existing_content, case_for_upload.content
-                )
-                case_for_upload.content = existing_content
+                BatchUploader.update_sub_field_dict(existing_content, case.content)
+                case.content = existing_content
             # Validate cases again, this time with a complete CaseType that includes
             # all columns, i.e. with no ABAC applied
             complete_case_type = self._get_complete_case_type(cmd, ignore_abac=True)
@@ -200,20 +164,15 @@ class CaseBatchUploader(BatchUploader):
                 complete_case_type, cmd.user.id if cmd.user and cmd.user.id else NULL_ID
             )
             case_validator.validate_and_transform(cmd, batch_result)
-            # # Reset case_date on existing cases after re-validation so that
-            # # the immutability check in _upsert_existing_objs treats it as
-            # # "not specified" (None) rather than an attempt to overwrite the
-            # # stored value. The stored case_date is preserved unchanged.
-            # # TODO LSP-3356: case date should be able to update
-            # for case in cases_for_validation:
-            #     case.case_date = None
 
         # Use the general parent method for upserting the cases
+        is_pending_before_cases_only_upsert = [
+            x.status == EtlStatus.PENDING for x in batch_result.cases
+        ]
         success &= super().upsert_batch(cases_only_cmd, batch_result, uow)
 
-        # Determine if there are samples to be created
-        has_samples = self.has_samples(cmd, batch_result)
-        if not has_samples:
+        # Determine if there are samples to be created or updated
+        if not cmd.case_batch.has_samples():
             return success
 
         # Upsert samples via seqdb service, again through full upload including verification
@@ -231,22 +190,16 @@ class CaseBatchUploader(BatchUploader):
                     )
                     assert case_only_for_upload.case is not None
                     case_only_for_upload.case.content = case_for_upload.case.content
+                # Reset case_result status to pending for cases that were pending before the cases only, since the content update may have fixed the issues that caused them to be failed, and they should be retried in the next batch upload attempt. Cases that were not pending before should keep their status since they may have other issues that need to be fixed.
+                for case_result, was_pending in zip(
+                    batch_result.cases, is_pending_before_cases_only_upsert
+                ):
+                    if was_pending:
+                        case_result.status = EtlStatus.PENDING
                 success &= super().upsert_batch(cases_only_cmd, batch_result, uow)
         success &= curr_success
 
         return success
-
-    def has_samples(
-        self,
-        cmd: command.UploadCasesCommand,
-        batch_result: model.CaseBatchUploadResult,
-    ) -> bool:
-        """
-        Determine if there are any samples to be created in seqdb from the cases to
-        be uploaded.
-        """
-        upload_samples_cmd, _ = self._get_upload_samples_command(cmd, batch_result)
-        return upload_samples_cmd is not None
 
     def upload_samples(
         self,
@@ -256,9 +209,13 @@ class CaseBatchUploader(BatchUploader):
     ) -> bool:
         success = True
         # Get UploadSamplesCommand for any samples to be created
-        upload_samples_cmd, sample_case_index_map = self._get_upload_samples_command(
-            cmd, batch_result
+        curr_success, upload_samples_cmd, sample_case_index_map = (
+            self._get_upload_samples_command(cmd, batch_result)
         )
+        success &= curr_success
+        if not success:
+            # There were issues with the samples to be uploaded that should prevent the upload from being attempted, such as missing case for read sets or seqs.
+            return success
         if upload_samples_cmd is None:
             # No samples to verify
             return success
@@ -306,6 +263,129 @@ class CaseBatchUploader(BatchUploader):
                 assert case.seqs is not None
                 if seqdb_result.id is not None:
                     case_content[case.seqs[child_index].col_id] = str(seqdb_result.id)
+
+        return success
+
+    def verify_abac_rights(
+        self,
+        cmd: command.UploadCasesCommand,
+        batch_result: model.CaseBatchUploadResult,
+        uow: BaseUnitOfWork,
+    ) -> bool:
+        """
+        Verify ABAC rights for the cases to be uploaded. This requires knowing per case
+        whether it already exists in the database and what data collection(s) it
+        belongs to, since ABAC rights are based on data collection membership. This
+        information is only determined during batch verification, so ABAC rights are
+        verified here rather than in verify_user_rights.
+
+        This method assumes that the cases have already been verified to be valid in
+        terms of existence of parents and children, and filling in
+        case.created_in_data_collection_id.
+        """
+        success = True
+        # Get complete CaseType with no ABAC applied to get all columns for validation
+        complete_case_type = self._get_complete_case_type(cmd, ignore_abac=True)
+
+        # Get private data collections in which the user may create new cases
+        allowed_created_data_collection_ids = set()
+        for (
+            data_collection_id,
+            access_abac,
+        ) in complete_case_type.case_type_access_abacs.items():
+            if access_abac.is_private and access_abac.add_case:
+                allowed_created_data_collection_ids.add(data_collection_id)
+
+        # Get data collection IDs for each case
+        case_data_collections = self._get_case_data_collections(cmd, batch_result, uow)
+
+        # Get readable and writeable columns for each unique combination of data collection IDs
+        uq_col_access: dict[frozenset[UUID], tuple[set[UUID], set[UUID]]] = {}
+        for case_for_upload, case_result, data_collection_ids in zip(
+            cmd.case_batch.cases, batch_result.cases, case_data_collections
+        ):
+            # Determine if the case, if new, may be created by this user
+            if case_result.is_new:
+                case = case_for_upload.case
+                assert case is not None
+                if (
+                    case.created_in_data_collection_id
+                    not in allowed_created_data_collection_ids
+                ):
+                    # Case would be created in a data collection in which the user has no create access
+                    case_result.add_error(
+                        "c1f8e9d4",
+                        f"Not allowed to create cases in data collection {case.created_in_data_collection_id}",
+                    )
+                    success = False
+
+            # Get all column IDs that would be written, including those from the case content, read sets and seqs
+            content: dict[UUID, str | None] | None = (
+                case_for_upload.case.content
+                if case_for_upload.case is not None
+                else None
+            )
+            content_col_ids = set(content.keys()) if content is not None else set()
+            col_ids = (
+                set(content_col_ids)
+                | set(x.col_id for x in case_for_upload.read_sets or [])
+                | set(x.col_id for x in case_for_upload.seqs or [])
+            )
+
+            # Retrieve readable_col_ids, writeable_col_ids for this combination of data_collection_ids, or calculate and cache if not seen before
+            readable_col_ids, writeable_col_ids = uq_col_access.get(
+                data_collection_ids, (None, None)
+            )
+            if readable_col_ids is None or writeable_col_ids is None:
+                readable_col_ids = set()
+                writeable_col_ids = set()
+                for data_collection_id in data_collection_ids:
+                    if (
+                        data_collection_id
+                        not in complete_case_type.case_type_access_abacs
+                    ):
+                        # Case data collection not found in CaseType access ABACs for this user -> no access to any columns for this data collection
+                        continue
+                    access_abac = complete_case_type.case_type_access_abacs[
+                        data_collection_id
+                    ]
+                    readable_col_ids.update(access_abac.read_col_ids)
+                    writeable_col_ids.update(access_abac.write_col_ids)
+                uq_col_access[data_collection_ids] = (
+                    readable_col_ids,
+                    writeable_col_ids,
+                )
+            # Check if all provided columns are writeable
+            no_write_access_col_ids = col_ids - writeable_col_ids
+            if not no_write_access_col_ids:
+                # All columns are writeable -> no ABAC issues
+                continue
+            # Go over columns with no write access -> remove value and add data issue
+            for col_id in no_write_access_col_ids:
+                if content is not None and col_id in content:
+                    orig_value = content[col_id]
+                    del content[col_id]
+                else:
+                    # Column is not in content, so it must be from a read set or seq. These are not included in the content and therefore no value can be removed, but a data issue should still be added if there is no write access.
+                    orig_value = None
+                if col_id in readable_col_ids:
+                    # Read access but no write access -> not authorized but informative message since the user can see the column but not update it
+                    code = "3e7c1a9f"
+                    message = "No write access, only read access"
+                else:
+                    # No access to this col_id, whether it actually exists or not -> treat as unauthorized since the user should not know the difference
+                    code = "a7b3f9d2"
+                    message = "Unknown Col"
+                case_result.data_issues.append(
+                    model.CaseDataIssue(
+                        col_id=col_id,
+                        original_value=orig_value,
+                        updated_value=None,
+                        data_issue_type=DataIssueType.UNAUTHORIZED,
+                        code=code,
+                        message=message,
+                    )
+                )
 
         return success
 
@@ -359,6 +439,73 @@ class CaseBatchUploader(BatchUploader):
         )
         return complete_case_type
 
+    def _get_case_data_collections(
+        self,
+        cmd: command.UploadCasesCommand,
+        batch_result: model.CaseBatchUploadResult,
+        uow: BaseUnitOfWork,
+    ) -> list[frozenset[UUID]]:
+        """
+        Get the data collection IDs associated with each case ID from the cases to be
+        uploaded, including both the created in data collection ID and any data
+        collection IDs from CaseDataCollectionLink if the case already exists.
+        """
+        # Get case IDs, their created in data collection IDs and whether the case is existing
+        case_id_created_in_data_collection_ids = []
+        for x, y in zip(cmd.case_batch.cases, batch_result.cases):
+            case_id = cast(UUID, x.id)
+            created_in_data_collection_id = (
+                x.case.created_in_data_collection_id if x.case is not None else NULL_ID
+            )
+            is_existing = not y.is_new
+            case_id_created_in_data_collection_ids.append(
+                (
+                    case_id,
+                    created_in_data_collection_id,
+                    is_existing,
+                    {created_in_data_collection_id},
+                )
+            )
+
+        # Get CaseDataCollectionLink objects for existing cases
+        case_data_collection_links: list[model.CaseDataCollectionLink] = []
+        if any(
+            x[2] for x in case_id_created_in_data_collection_ids
+        ):  # Only query for links if there are any existing cases, since links can only exist for existing cases:
+            case_data_collection_links = self.service.repository.crud(
+                uow,
+                None if cmd.user is None else cmd.user.id,
+                model.CaseDataCollectionLink,
+                CrudOperation.READ_ALL,
+                filter=UuidSetFilter(
+                    key="case_id",
+                    members=frozenset(
+                        [x[0] for x in case_id_created_in_data_collection_ids if x[2]]
+                    ),
+                ),
+            )
+            # Add data collection IDs from links to the sets in case_id_created_in_data_collection_ids. Optimised by sorting both lists by case ID and iterating through them in a single pass, relying on the fact that the links for each case are grouped together since they have the same case ID.
+            case_id_to_idx = {
+                x[0]: i for i, x in enumerate(case_id_created_in_data_collection_ids)
+            }
+            case_data_collection_links.sort(key=lambda x: x.case_id)
+            curr_case_id: UUID = NULL_ID
+            curr_set: set[UUID] = set()
+            case_idx = -1
+            for link in case_data_collection_links:
+                if link.case_id != curr_case_id:
+                    curr_case_id = link.case_id
+                    case_idx = case_id_to_idx[curr_case_id]
+                    curr_set = case_id_created_in_data_collection_ids[case_idx][3]
+                curr_set.add(link.data_collection_id)
+
+        # Create output as list of frozenset
+        case_data_collections = [
+            frozenset(x[3]) for x in case_id_created_in_data_collection_ids
+        ]
+
+        return case_data_collections
+
     def _get_case_validator(
         self, complete_case_type: model.CompleteCaseType, user_id: UUID
     ) -> CaseValidator:
@@ -370,6 +517,7 @@ class CaseBatchUploader(BatchUploader):
         cmd: UploadBatchCommandMixin,
         batch_result: BaseBatchUploadResult,
     ) -> tuple[
+        bool,
         seqdb_command.UploadSamplesCommand | None,
         dict[type[model.Model], dict[tuple[int, int], tuple[int, int]]],
     ]:
@@ -379,6 +527,7 @@ class CaseBatchUploader(BatchUploader):
         the first 16 bytes of sha256 hash of the ID of the UploadCasesCommand, so that
         the link can be made between the two batches.
         """
+        success = True
         if not isinstance(cmd, command.UploadCasesCommand):
             raise exc.InvalidArgumentsError("7b5a31ae", "Invalid command type")
         if not isinstance(batch_result, model.CaseBatchUploadResult):
@@ -399,7 +548,7 @@ class CaseBatchUploader(BatchUploader):
             sample_id: UUID | None,
             external_sample_id: IdentifierForUpload | None,
         ) -> int:
-            has_id = sample_id is not None and sample_id != NULL_ID
+            has_id = not self.is_null(sample_id)
             has_external_id = external_sample_id is not None
             if has_id and sample_id in sample_id_to_index_map:
                 assert sample_id is not None
@@ -425,8 +574,10 @@ class CaseBatchUploader(BatchUploader):
             sample_index = len(samples_for_upload)
             samples_for_upload.append(sample_for_upload)
             if has_id:
+                assert sample_id is not None
                 sample_id_to_index_map[sample_id] = sample_index
             if has_external_id:
+                assert external_sample_id is not None
                 sample_external_id_to_index_map[external_sample_id] = sample_index
             sample_case_index_map[sample_index] = case_index
             return sample_index
@@ -435,6 +586,7 @@ class CaseBatchUploader(BatchUploader):
         for case_index, (case_for_upload, case_result) in enumerate(
             zip(cmd.case_batch.cases, batch_result.cases)
         ):
+            has_case = case_for_upload.case is not None
             # Add read sets
             for i, read_set_for_upload in enumerate(case_for_upload.read_sets or []):
                 sample_index = _get_or_create_sample_for_upload(
@@ -455,6 +607,15 @@ class CaseBatchUploader(BatchUploader):
                     case_index,
                     i,
                 )
+                if not has_case:
+                    # Case is required for read sets, so if there is no case, the read set cannot be uploaded and should be marked as failed with an appropriate message
+                    success = False
+                    curr_result = case_result.read_sets[i]  # type: ignore[index]
+                    curr_result.status = EtlStatus.FAILED
+                    curr_result.add_error(
+                        "cea1cae9",
+                        "Case must be provided for read sets to be uploaded",
+                    )
             # Add seqs
             for i, seq_for_upload in enumerate(case_for_upload.seqs or []):
                 sample_index = _get_or_create_sample_for_upload(
@@ -475,10 +636,19 @@ class CaseBatchUploader(BatchUploader):
                     case_index,
                     i,
                 )
-
+                if not has_case:
+                    # Case is required for seqs, so if there is no case, the seq cannot be uploaded and should be marked as failed with an appropriate message
+                    success = False
+                    assert case_result.seqs is not None
+                    curr_result = case_result.seqs[i]  # type: ignore[index]
+                    curr_result.status = EtlStatus.FAILED
+                    curr_result.add_error(
+                        "1f1c3c29",
+                        "Case must be provided for seqs to be uploaded",
+                    )
         # Create command if any samples for upload were found
         if not samples_for_upload:
-            return None, child_index_map
+            return True, None, child_index_map
         batch_id = UUID(sha256(cmd.id.bytes).digest()[:16].hex())
         upload_samples_cmd = seqdb_command.UploadSamplesCommand(
             user=cmd.user,
@@ -486,13 +656,13 @@ class CaseBatchUploader(BatchUploader):
                 id=batch_id, samples=samples_for_upload
             ),
         )
-        return upload_samples_cmd, child_index_map
+        return success, upload_samples_cmd, child_index_map
 
 
 def case_service_upload_cases(
     self: BaseCaseService, cmd: command.UploadCasesCommand
 ) -> model.CaseBatchUploadResult:
-    batch_uploader = CaseBatchUploader(self)
+    batch_uploader = CaseBatchUploader(cast(BaseService, self))
 
     batch_result: model.CaseBatchUploadResult = batch_uploader.upload_batch(cmd)  # type: ignore[assignment]
     return batch_result
