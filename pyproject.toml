@@ -48,7 +48,7 @@ dependencies = [
     "types-setuptools==82.0.*",
     "cryptography==46.0.6",
     "oauthlib==3.3.1",
-    "python-multipart==0.0.22",
+    "python-multipart==0.0.31",
 ]
 
 [project.urls]
