@@ -199,6 +199,9 @@ class CaseBatchUploader(BatchUploader):
                 ):
                     if was_pending:
                         case_result.status = EtlStatus.PENDING
+                        case_result.is_new = (
+                            False  # TODO: Check if this fixes the actual bug
+                        )
                 success &= super().upsert_batch(cases_only_cmd, batch_result, uow)
         success &= curr_success
 
@@ -718,11 +721,13 @@ class CaseBatchUploader(BatchUploader):
         if not samples_for_upload:
             return True, None, child_index_map
         batch_id = UUID(sha256(cmd.id.bytes).digest()[:16].hex())
-        upload_samples_cmd = seqdb_command.UploadSamplesCommand(
+        upload_samples_cmd = seqdb_command.UploadSamplesCommand(  # type: ignore[call-arg]
             user=cmd.user,
             sample_batch=seqdb_model.SampleBatchForUpload(
                 id=batch_id, samples=samples_for_upload
             ),
+            on_exists=cmd.on_exists,
+            on_new=cmd.on_new,
         )
         return success, upload_samples_cmd, child_index_map
 

@@ -217,7 +217,10 @@ class BatchUploader:
             identifier_results = (
                 None
                 if identifiers is None
-                else [UploadResultWithIdentifiers(status=EtlStatus.PENDING) for _ in identifiers]
+                else [
+                    UploadResultWithIdentifiers(status=EtlStatus.PENDING)
+                    for _ in identifiers
+                ]
             )
             parent_result.identifiers = identifier_results
             # Initialize child results
@@ -1754,9 +1757,12 @@ class BatchUploader:
                         setattr(existing_obj, field_name, new_value)
                 elif field_props.is_sub_field_dict:
                     # Field content is a dict: update keys individually
-                    is_updated |= BatchUploader.update_sub_field_dict(
-                        existing_value, new_value
-                    )
+                    if existing_value == new_value:
+                        is_updated = False
+                    else:
+                        is_updated |= BatchUploader.update_sub_field_dict(
+                            existing_value, new_value
+                        )
                 else:
                     # Field content is a single value: compare directly
                     if new_value != existing_value:
