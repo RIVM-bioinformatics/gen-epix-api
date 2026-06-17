@@ -399,6 +399,7 @@ class CaseValidator:
                         code="b2c3d4e5",
                         message="Case date updated based on TIME dimension column",
                     )
+                break  # cols are sorted by descending resolution; stop at the first (highest-resolution) non-None value
 
     def _transform_geo_value_pairs(
         self,
