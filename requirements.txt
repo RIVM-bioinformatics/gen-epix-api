@@ -5,7 +5,7 @@ fastapi[standard]==0.135.2
 gunicorn==25.3.*
 starlette==1.0.*
 httpx==0.28.1
-urllib3==2.6.3
+urllib3==2.7.0
 pyjwt==2.12.1
 
 #database handling

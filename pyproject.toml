@@ -30,7 +30,7 @@ dependencies = [
     "pyjwt==2.12.1",
     "cryptography==46.0.6",
     "oauthlib==3.3.1",
-    "urllib3==2.6.3",
+    "urllib3==2.7.0",
     "sqlalchemy==2.0.48",
     "sqlalchemy_utils==0.42.1",
     "pydantic==2.12.5",
