@@ -78,17 +78,36 @@ class OmopDictRepository(DictRepository, BaseOmopRepository):
         db: dict[model.Model, dict[UUID, list[model.Model]]] = {  # type: ignore[assignment]
             x: {y: [] for y in person_ids} for x in model_classes  # type: ignore[misc]
         }
+        # Group DATA_CLASSES and PersonIdentifier using their direct person_id / internal_id
+        # fields, which both equal the person's UUID. IDENTIFIER_CLASSES that link via a
+        # DATA_CLASS entity (e.g. SpecimenIdentifier → Specimen) need a reverse lookup
+        # because their internal_id is the intermediate entity's ID, not the person's ID.
+        directly_grouped = set(model.FullPerson.DATA_CLASSES) | {model.PersonIdentifier}
         for model_class in model_classes:
+            if model_class not in directly_grouped:
+                continue
             objs_by_person = db[model_class]  # type: ignore[index]
             id_field_name = (
-                "person_id"
-                if model_class in model.FullPerson.DATA_CLASSES
-                else "internal_id"
+                "person_id" if model_class in model.FullPerson.DATA_CLASSES else "internal_id"
             )
             for obj in self.db[model_class].values():
                 person_id: UUID = getattr(obj, id_field_name)  # type: ignore[assignment]
                 if person_id in person_id_set:  # type: ignore[union-attr]
                     objs_by_person[person_id].append(obj)  # type: ignore[arg-type]
+
+        # SpecimenIdentifier.internal_id is the specimen_id, not the person_id.
+        # Build a reverse index from specimen_id → person_id using the already-grouped
+        # Specimen objects, then use it to associate SpecimenIdentifiers with persons.
+        specimen_id_to_person: dict[UUID, UUID] = {
+            spec.specimen_id: pid  # type: ignore[union-attr]
+            for pid, specs in db[model.Specimen].items()  # type: ignore[index]
+            for spec in specs
+            if spec.specimen_id is not None  # type: ignore[union-attr]
+        }
+        for obj in self.db[model.SpecimenIdentifier].values():
+            pid = specimen_id_to_person.get(obj.internal_id)  # type: ignore[union-attr]
+            if pid is not None:
+                db[model.SpecimenIdentifier][pid].append(obj)  # type: ignore[index,arg-type]
 
         # Create FullPersons
         full_persons: list[model.FullPerson] = []
