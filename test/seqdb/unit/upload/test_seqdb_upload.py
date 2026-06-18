@@ -1519,6 +1519,102 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
         self.assertTrue(seq_profile_result.has_errors())
         self.assertTrue(seq_profile_result.has_log_code("c4d8a2f7"))
 
+    def test_null_id_content_hash_with_seq_id_skips_mismatch_error(self) -> None:
+        """locus_allele_id_map profile (content_hash=NULL_ID) with seq_id set
+        does not trigger a mismatch error when the stored hash differs.
+
+        The client cannot compute the hash without the locus code map, so
+        NULL_ID means "unknown" — the upsert phase resolves it later.
+        """
+        existing_seq_profile_id = self.random_ids[0]
+        existing_hash = self.random_ids[2]
+        seq_profile = self.create_seq_profile_for_upload(
+            sample_id=self.sample_id,
+            seq_id=self.seq_id,
+            locus_allele_id_map={"locus1": self.allele_id},
+        )
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
+            seq_profiles=[seq_profile],
+        )
+        seq_profile_for_upload = self.get_only_allele_profile(sample)
+        cmd, retval = self.create_command_and_result_for_samples(sample)
+        retval.samples[0].is_new = False
+
+        self.mock_existing_seq_profile_lookup(
+            seq_profile_for_upload,
+            [
+                (
+                    self.sample_id,
+                    seq_profile_for_upload.protocol_id,
+                    self.seq_id,
+                    existing_hash,
+                    existing_seq_profile_id,
+                )
+            ],
+        )
+
+        success = _verify_children_seq_profiles(
+            self.batch_uploader, cmd, retval, self.uow
+        )
+
+        seq_profile_result = self.get_only_allele_profile_result(retval)
+        self.assertTrue(success)
+        self.assertFalse(seq_profile_result.has_errors())
+        self.assertFalse(seq_profile_result.has_log_code("c4d8a2f7"))
+        self.assertFalse(seq_profile_result.has_log_code("1d7c9b53"))
+        self.assertFalse(seq_profile_result.is_new)
+        self.assertEqual(seq_profile_result.id, existing_seq_profile_id)
+
+    def test_null_id_content_hash_without_seq_id_skips_mismatch_error(
+        self,
+    ) -> None:
+        """locus_allele_id_map profile (content_hash=NULL_ID) without seq_id
+        does not trigger a mismatch error when the stored hash differs.
+
+        Before the fix, comparing NULL_ID against the real stored hash
+        incorrectly triggered error 6b2f8e10.
+        """
+        existing_seq_profile_id = self.random_ids[0]
+        existing_hash = self.random_ids[2]
+        seq_profile = self.create_seq_profile_for_upload(
+            sample_id=self.sample_id,
+            seq_id=None,
+            locus_allele_id_map={"locus1": self.allele_id},
+        )
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
+            seq_profiles=[seq_profile],
+        )
+        seq_profile_for_upload = self.get_only_allele_profile(sample)
+        cmd, retval = self.create_command_and_result_for_samples(sample)
+        retval.samples[0].is_new = False
+
+        self.mock_existing_seq_profile_lookup(
+            seq_profile_for_upload,
+            [
+                (
+                    self.sample_id,
+                    seq_profile_for_upload.protocol_id,
+                    None,
+                    existing_hash,
+                    existing_seq_profile_id,
+                )
+            ],
+        )
+
+        success = _verify_children_seq_profiles(
+            self.batch_uploader, cmd, retval, self.uow
+        )
+
+        seq_profile_result = self.get_only_allele_profile_result(retval)
+        self.assertTrue(success)
+        self.assertFalse(seq_profile_result.has_errors())
+        self.assertFalse(seq_profile_result.has_log_code("6b2f8e10"))
+        self.assertFalse(seq_profile_result.has_log_code("1d7c9b53"))
+        self.assertFalse(seq_profile_result.is_new)
+        self.assertEqual(seq_profile_result.id, existing_seq_profile_id)
+
     def test_fallback_from_none_seq_id_can_resolve_existing_seq_profile(
         self,
     ) -> None:
