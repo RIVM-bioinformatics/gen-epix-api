@@ -1757,9 +1757,7 @@ class BatchUploader:
                         setattr(existing_obj, field_name, new_value)
                 elif field_props.is_sub_field_dict:
                     # Field content is a dict: update keys individually
-                    if existing_value == new_value:
-                        is_updated = False
-                    else:
+                    if existing_value != new_value:
                         is_updated |= BatchUploader.update_sub_field_dict(
                             existing_value, new_value
                         )

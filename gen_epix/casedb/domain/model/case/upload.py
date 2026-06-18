@@ -87,7 +87,7 @@ class SeqForUpload(Model):
 
     case_id: UUID = Field(
         default=NULL_ID,
-        description="The UUID of the case that the read set is associated with. If not available, the null ID is put.",
+        description="The UUID of the case that the sequence is associated with. If not available, the null ID is put.",
     )
     col_id: UUID = Field(
         description="The ID of the column that the sequence is or will be associated with."

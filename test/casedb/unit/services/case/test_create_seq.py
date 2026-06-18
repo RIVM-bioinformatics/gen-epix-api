@@ -407,6 +407,13 @@ class TestCasedbCaseCreateSeq:
             cmd.is_fwd = True
             cmd.file_format = seqdb_enum.ReadsFileFormat.FASTQ
             cmd.file_compression = seqdb_enum.FileCompression.NONE
+            cmd.file_content = b"test content"
+            cmd.fwd_reads_hash = UUID(
+                hashlib.sha256(cmd.file_content).digest()[:16].hex()
+            )
+            cmd.rev_reads_hash = UUID(
+                hashlib.sha256(b"other content").digest()[:16].hex()
+            )
             cmd._policies = []
 
             mock_case = Mock(spec=model.Case)
@@ -414,6 +421,12 @@ class TestCasedbCaseCreateSeq:
 
             mock_read_set = Mock(spec=model.ReadSetForUpload)
             mock_read_set.fwd_file_id = uuid4()  # Already has file
+            mock_read_set.fwd_reads_hash = UUID(
+                hashlib.sha256(b"other content1").digest()[:16].hex()
+            )
+            mock_read_set.rev_reads_hash = UUID(
+                hashlib.sha256(b"other content2").digest()[:16].hex()
+            )
 
             with patch(
                 "gen_epix.casedb.services.case.create_seq.BaseCaseAbacPolicy.get_case_abac_from_command"
@@ -440,6 +453,8 @@ class TestCasedbCaseCreateSeq:
             cmd.col_id = uuid4()
             cmd.file_format = seqdb_enum.SeqFileFormat.FASTA
             cmd.file_compression = seqdb_enum.FileCompression.NONE
+            cmd.file_content = b"test content"
+            cmd.seq_hash = UUID(hashlib.sha256(cmd.file_content).digest()[:16].hex())
             cmd._policies = []
 
             mock_case = Mock(spec=model.Case)
@@ -447,6 +462,9 @@ class TestCasedbCaseCreateSeq:
 
             mock_seq = Mock(spec=model.SeqForUpload)
             mock_seq.file_id = uuid4()  # Already has file
+            mock_seq.file_hash = UUID(
+                hashlib.sha256(b"other content1").digest()[:16].hex()
+            )
 
             with patch(
                 "gen_epix.casedb.services.case.create_seq.BaseCaseAbacPolicy.get_case_abac_from_command"
