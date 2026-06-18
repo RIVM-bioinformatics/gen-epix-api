@@ -88,7 +88,9 @@ class OmopDictRepository(DictRepository, BaseOmopRepository):
                 continue
             objs_by_person = db[model_class]  # type: ignore[index]
             id_field_name = (
-                "person_id" if model_class in model.FullPerson.DATA_CLASSES else "internal_id"
+                "person_id"
+                if model_class in model.FullPerson.DATA_CLASSES
+                else "internal_id"
             )
             for obj in self.db[model_class].values():
                 person_id: UUID = getattr(obj, id_field_name)  # type: ignore[assignment]
