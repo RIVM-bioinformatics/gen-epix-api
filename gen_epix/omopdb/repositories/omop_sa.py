@@ -124,30 +124,30 @@ class OmopSARepository(SARepository, BaseOmopRepository):
                 data_class = identifier_to_data_class.get(id_class)  # type: ignore[arg-type]
                 if data_class is None:
                     continue
-                entity_id_field: str = data_class.ENTITY.id_field_name  # type: ignore[union-attr]
+                entity_id_field: str = data_class.ENTITY.id_field_name  # type: ignore[union-attr,assignment]
                 # Reverse map: entity_id → person_id from already-fetched data class objects
-                entity_id_to_person: dict[UUID, UUID] = {}
-                for pid, entities in db[data_class].items():  # type: ignore[index]
+                entity_id_to_person_id: dict[UUID, UUID] = {}
+                for person_id, entities in db[data_class].items():  # type: ignore[index]
                     for entity in entities:
-                        eid: UUID | None = getattr(entity, entity_id_field, None)
-                        if eid is not None:
-                            entity_id_to_person[eid] = pid
-                if not entity_id_to_person:
+                        entity_id: UUID | None = getattr(entity, entity_id_field, None)
+                        if entity_id is not None:
+                            entity_id_to_person_id[entity_id] = person_id
+                if not entity_id_to_person_id:
                     continue
                 sa_id_class: Any = sa_model.SA_MODELS_BY_SERVICE_TYPE[
                     enum.ServiceType.OMOP
                 ][id_class]
                 stmt = sa.select(sa_id_class).where(
-                    sa_id_class.internal_id.in_(entity_id_to_person.keys())
+                    sa_id_class.internal_id.in_(entity_id_to_person_id.keys())
                 )
                 mapper = self.get_mapper(id_class)  # type: ignore[arg-type]
                 objs_by_person = db[id_class]  # type: ignore[index]
                 for row in uow.session.execute(stmt):
                     obj = cast(model.Model, mapper.load(row[0]))
-                    eid = cast(UUID, obj.internal_id)  # type: ignore[union-attr]
-                    pid = entity_id_to_person.get(eid)
-                    if pid is not None:
-                        objs_by_person[pid].append(obj)
+                    entity_id = cast(UUID, obj.internal_id)  # type: ignore[union-attr,attr-defined]
+                    person_id = entity_id_to_person_id.get(entity_id)  # type: ignore[assignment]
+                    if person_id is not None:
+                        objs_by_person[person_id].append(obj)
 
             # Create FullPersons
             class_field_map = (

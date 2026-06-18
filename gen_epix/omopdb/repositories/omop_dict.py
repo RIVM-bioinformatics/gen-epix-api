@@ -100,16 +100,16 @@ class OmopDictRepository(DictRepository, BaseOmopRepository):
         # SpecimenIdentifier.internal_id is the specimen_id, not the person_id.
         # Build a reverse index from specimen_id → person_id using the already-grouped
         # Specimen objects, then use it to associate SpecimenIdentifiers with persons.
-        specimen_id_to_person: dict[UUID, UUID] = {
-            spec.specimen_id: pid  # type: ignore[union-attr]
-            for pid, specs in db[model.Specimen].items()  # type: ignore[index]
+        specimen_id_to_person_id: dict[UUID, UUID] = {
+            spec.specimen_id: person_id  # type: ignore[union-attr,attr-defined]
+            for person_id, specs in db[model.Specimen].items()  # type: ignore[index]
             for spec in specs
-            if spec.specimen_id is not None  # type: ignore[union-attr]
+            if spec.specimen_id is not None  # type: ignore[union-attr,attr-defined]
         }
         for obj in self.db[model.SpecimenIdentifier].values():
-            pid = specimen_id_to_person.get(obj.internal_id)  # type: ignore[union-attr]
-            if pid is not None:
-                db[model.SpecimenIdentifier][pid].append(obj)  # type: ignore[index,arg-type]
+            person_id = specimen_id_to_person_id.get(obj.internal_id)  # type: ignore[union-attr,attr-defined,assignment]
+            if person_id is not None:
+                db[model.SpecimenIdentifier][person_id].append(obj)  # type: ignore[index,arg-type]
 
         # Create FullPersons
         full_persons: list[model.FullPerson] = []
