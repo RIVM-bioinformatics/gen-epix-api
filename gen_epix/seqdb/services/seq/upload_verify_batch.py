@@ -632,7 +632,10 @@ def _verify_children_seq_profiles(
                     # No existing seq classification for this (protocol_id, seq_id)
                     continue
             assert existing_seq_profile_id is not None
-            if seq_profile_for_upload.content_hash != NULL_ID and existing_content_hash != seq_profile_for_upload.content_hash:
+            if (
+                seq_profile_for_upload.content_hash != NULL_ID
+                and existing_content_hash != seq_profile_for_upload.content_hash
+            ):
                 # New and corresponding existing seq classification have different, known content_hash -> error since the same protocol and seq_id should yield the same classification
                 success = False
                 if seq_profile_for_upload.seq_id is None:
