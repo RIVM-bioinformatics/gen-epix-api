@@ -979,6 +979,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.fastapp.unit.repositories",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_fastapp_unit_repositories"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.fastapp.performance.repository",
             "type": "debugpy",
             "request": "launch",

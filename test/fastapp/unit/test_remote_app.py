@@ -499,7 +499,7 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
             cmd = DummyCrud(
                 operation=CrudOperation.READ_ALL,
                 query_filter=qf,
-                props={"return_id": False},
+                return_id=False,
             )
             retval = handler(cmd)
             self.assertEqual([DummyModel(**payload[0])], retval)  # type: ignore[arg-type]
@@ -515,7 +515,7 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
             cmd = DummyCrud(
                 operation=CrudOperation.READ_ALL,
                 query_filter=qf,
-                props={"return_id": True},
+                return_id=True,
             )
             retval = handler(cmd)
             self.assertEqual([DummyModel(**payload[0])], retval)  # type: ignore[arg-type]

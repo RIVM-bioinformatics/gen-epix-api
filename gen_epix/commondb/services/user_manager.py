@@ -101,7 +101,7 @@ class UserManager(BaseUserManager):
         with self._organization_service.repository.uow() as uow:
             # Create root organization if necessary
             cfg_root_organization: model.Organization = self._root_organization
-            is_existing_organization = self._organization_service.repository.crud(
+            is_existing_organization: bool = self._organization_service.repository.crud(
                 uow,
                 None,
                 model.Organization,
@@ -143,14 +143,12 @@ class UserManager(BaseUserManager):
             root_user.id = cast(UUID, self._organization_service.generate_id())
             root_user.email = get_email_from_claims(claims)
             root_user.name = self.get_user_name_from_claims(claims)
-            user: model.User = (
-                self._organization_service.repository.crud(  # type: ignore[assignment]
-                    uow,
-                    root_user.id,
-                    self._user_class,
-                    CrudOperation.CREATE_ONE,
-                    objs=root_user,
-                )
+            user: model.User = self._organization_service.repository.crud(
+                uow,
+                root_user.id,
+                self._user_class,
+                CrudOperation.CREATE_ONE,
+                objs=root_user,
             )
 
         return user
@@ -162,7 +160,7 @@ class UserManager(BaseUserManager):
         organization_id = self._auto_created_user_cfg["organization_id"]
         with self._organization_service.repository.uow() as uow:
             # Verify if organization exists
-            is_existing_organization = self._organization_service.repository.crud(
+            is_existing_organization: bool = self._organization_service.repository.crud(
                 uow,
                 None,
                 model.Organization,
@@ -193,14 +191,12 @@ class UserManager(BaseUserManager):
                     f"Unable to auto-create user with key {claims.get(self._key_claim)} from claims",
                 )
             claims_user.id = self.generate_id()
-            user: model.User = (
-                self._organization_service.repository.crud(  # type: ignore[assignment]
-                    uow,
-                    claims_user.id,
-                    self._user_class,
-                    CrudOperation.CREATE_ONE,
-                    objs=claims_user,
-                )
+            user: model.User = self._organization_service.repository.crud(
+                uow,
+                claims_user.id,
+                self._user_class,
+                CrudOperation.CREATE_ONE,
+                objs=claims_user,
             )
 
             # TODO: this should be removed, does not belong in commondb since specific for casedb, and the case policies in question should not be added to the user at this stage
@@ -226,7 +222,7 @@ class UserManager(BaseUserManager):
 
         with self._organization_service.repository.uow() as uow:
             # Verify if create_by_user exists and is active
-            is_existing_user = self._organization_service.repository.crud(
+            is_existing_user: bool = self._organization_service.repository.crud(
                 uow,
                 None,
                 self._user_class,
@@ -245,7 +241,7 @@ class UserManager(BaseUserManager):
 
             # Verify if create_by_user made an invitation for this user that is valid
             user_invitations: list[model.UserInvitation] = (
-                self._organization_service.repository.crud(  # type: ignore[assignment]
+                self._organization_service.repository.crud(
                     uow,
                     created_by_user_id,
                     self._user_invitation_class,
@@ -274,7 +270,7 @@ class UserManager(BaseUserManager):
                 raise exc.UnauthorizedAuthError("edc14ebd", "Invitation does not exist")
 
             # Verify if organization exists
-            is_existing_organization = self._organization_service.repository.crud(
+            is_existing_organization: bool = self._organization_service.repository.crud(
                 uow,
                 None,
                 model.Organization,
@@ -291,16 +287,14 @@ class UserManager(BaseUserManager):
                 raise exc.UnauthorizedAuthError("00133e20", "User already exists")
 
             try:
-                created_user: model.User = (
-                    self._organization_service.repository.crud(  # type: ignore[assignment]
-                        uow,
-                        created_by_user_id,
-                        self._user_class,
-                        CrudOperation.CREATE_ONE,
-                        objs=self._user_class(
-                            **(user.model_dump() | {"id": self.generate_id()})
-                        ),
-                    )
+                created_user: model.User = self._organization_service.repository.crud(
+                    uow,
+                    created_by_user_id,
+                    self._user_class,
+                    CrudOperation.CREATE_ONE,
+                    objs=self._user_class(
+                        **(user.model_dump() | {"id": self.generate_id()})
+                    ),
                 )
             except Exception:
                 raise exc.UnauthorizedAuthError("28217e8d", "Unable to create user")
@@ -319,14 +313,12 @@ class UserManager(BaseUserManager):
 
     def retrieve_user_by_id(self, user_id: UUID) -> model.User:  # type: ignore[override]
         with self._organization_service.repository.uow() as uow:
-            user: model.User = (
-                self._organization_service.repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user_id,
-                    self._user_class,
-                    CrudOperation.READ_ONE,
-                    obj_ids=user_id,
-                )
+            user: model.User = self._organization_service.repository.crud(
+                uow,
+                user_id,
+                self._user_class,
+                CrudOperation.READ_ONE,
+                obj_ids=user_id,
             )
         return user
 
@@ -337,14 +329,12 @@ class UserManager(BaseUserManager):
             return user
         user.name = new_name
         with self._organization_service.repository.uow() as uow:
-            updated_user: model.User = (
-                self._organization_service.repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user.id,
-                    self._user_class,
-                    CrudOperation.UPDATE_ONE,
-                    objs=user,
-                )
+            updated_user: model.User = self._organization_service.repository.crud(
+                uow,
+                user.id,
+                self._user_class,
+                CrudOperation.UPDATE_ONE,
+                objs=user,
             )
         return updated_user
 

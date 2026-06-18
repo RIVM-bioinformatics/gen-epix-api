@@ -101,6 +101,11 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         f(command.CaseTypeSetCrudCommand, self.crud_case_type_set)
         f(command.CaseTypeSetMemberCrudCommand, self.crud_case_type_set_member)
         f(command.ColCrudCommand, self.crud_col)
+        f(
+            command.CaseTypeSetCaseTypeUpdateAssociationCommand,
+            self.update_association,
+        )
+        f(command.ColSetColUpdateAssociationCommand, self.update_association)
         f(command.ColSetCrudCommand, self.crud_col_set)
         f(command.ColSetMemberCrudCommand, self.crud_col_set_member)
         f(command.DimCrudCommand, self.crud_dim)
@@ -118,8 +123,8 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         f(command.RetrieveCaseStatsCommand, self.retrieve_case_stats)
         f(command.RetrieveCasesByQueryCommand, self.retrieve_cases_by_query)
         f(
-            command.RetrieveCaseCohortIdsByCaseTypeCommand,
-            self.retrieve_case_cohort_ids_by_case_type,
+            command.RetrieveCaseCohortLinksByCaseTypeCommand,
+            self.retrieve_case_cohort_links_by_case_type,
         )
         f(command.RetrieveCasesByIdCommand, self.retrieve_cases_by_id)
         f(command.RetrieveCaseRightsCommand, self.retrieve_case_or_set_rights)
@@ -451,10 +456,10 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def retrieve_case_cohort_ids_by_case_type(
-        self, cmd: command.RetrieveCaseCohortIdsByCaseTypeCommand
-    ) -> list[model.CaseCohortIds]:
-        """Retrieve all (case_id, cohort_ids) pairs for a CaseType."""
+    def retrieve_case_cohort_links_by_case_type(
+        self, cmd: command.RetrieveCaseCohortLinksByCaseTypeCommand
+    ) -> list[model.CaseCohortLink]:
+        """Retrieve all CaseCohortLinks for a CaseType."""
         raise NotImplementedError()
 
     @abc.abstractmethod

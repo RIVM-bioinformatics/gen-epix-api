@@ -438,6 +438,7 @@ class CasedbTestClient(TestClient):
         set_dummy_concept_set: bool = False,
         set_dummy_region_set: bool = False,
         set_dummy_genetic_distance_protocol: bool = False,
+        verify_other_service_links: bool = False,
     ) -> model.RefCol:
         user: model.User = self.get_obj(
             model.User, user_or_str
@@ -489,6 +490,7 @@ class CasedbTestClient(TestClient):
             command.RefColCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
+                verify_other_service_links=verify_other_service_links,
                 objs=model.RefCol(
                     code=code,
                     label=code,
@@ -591,6 +593,7 @@ class CasedbTestClient(TestClient):
         etiological_agent: str | model.EtiologicalAgent | None,
         set_dummy_disease: bool = False,
         set_dummy_etiological_agent: bool = False,
+        verify_other_service_links: bool = False,
     ) -> model.CaseType:
         user: model.User = self.get_obj(
             model.User, user_or_str
@@ -599,6 +602,7 @@ class CasedbTestClient(TestClient):
             command.CaseTypeCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
+                verify_other_service_links=verify_other_service_links,
                 objs=model.CaseType(
                     name=case_type_or_str,
                     disease_id=(

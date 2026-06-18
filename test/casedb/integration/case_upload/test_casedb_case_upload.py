@@ -23,7 +23,7 @@ from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.domain.service.organization import BaseOrganizationService
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.commondb.env import App
-from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.fastapp.enum import CrudOperation, OnException
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
@@ -128,7 +128,7 @@ class CaseUploadSetup:
         # Get identifier issuers
         with casedb_organization_service.repository.uow() as uow:
             identifier_issuers: list[model.IdentifierIssuer] = (
-                casedb_organization_service.repository.crud(  # type: ignore[assignment]
+                casedb_organization_service.repository.crud(
                     uow,
                     None,
                     model.IdentifierIssuer,
@@ -248,7 +248,7 @@ class TestCaseUpload(CaseUploadSetup):
                     user=user,
                     operation=CrudOperation.CREATE_ONE,
                     objs=self._create_case(row),
-                    props={"id_present": "keep"},
+                    on_id_set=OnException.IGNORE,
                 )
             elif row_operation == "READ":
                 cmd = command.CaseCrudCommand(
@@ -290,7 +290,7 @@ class TestCaseUpload(CaseUploadSetup):
                             )
                         ]  # type: ignore[arg-type]
                     ),
-                    props={"id_present": "keep"},
+                    on_id_set=OnException.IGNORE,
                 )
             elif row_operation == "RETRIEVE_CASES_BY_ID":
                 cmd = command.RetrieveCasesByIdCommand(

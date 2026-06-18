@@ -1,5 +1,5 @@
 import io
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Optional, cast
 from unittest.mock import MagicMock, Mock
 from uuid import UUID, uuid4
 
@@ -390,13 +390,9 @@ def test_read_all_variants(pc_repo: DictRepository, parent_id: UUID) -> None:
     # Return IDs
     ids = pc_repo.read_all(ParentModel, filter=None, return_id=True)
     assert ids == [parent_id]
-    # Cascade read on Child
-    children = pc_repo.read_all(ChildModel, filter=None, cascade_read=True)
-    assert children[0].parent is not None  # type: ignore[attr-defined]
-    assert children[0].parent.id == parent_id  # type: ignore[attr-defined]
     # No copy
     children_no_copy = pc_repo.read_all(
-        ChildModel, filter=None, return_id=False, cascade_read=False, return_copy=False
+        ChildModel, filter=None, return_id=False, return_copy=False
     )
     assert children_no_copy[0] is pc_repo.db[ChildModel][children_no_copy[0].id]  # type: ignore[attr-defined]
 
@@ -417,9 +413,9 @@ def test_read_one_and_some(parent_repo: DictRepository, parent_id: UUID) -> None
     assert isinstance(obj, ParentModel)
     objs = parent_repo.read_some(ParentModel, [parent_id])
     assert len(objs) == 1
-    # return_id True invalid id
+    # invalid id
     with pytest.raises(exc.InvalidIdsError):
-        parent_repo.read_some(ParentModel, [uuid4()], return_id=True)
+        parent_repo.read_some(ParentModel, [uuid4()])
     # duplicate ids not allowed
     with pytest.raises(exc.DuplicateIdsError):
         parent_repo.read_some(
@@ -429,10 +425,11 @@ def test_read_one_and_some(parent_repo: DictRepository, parent_id: UUID) -> None
             allow_duplicate_ids=False,
         )
     # allow duplicates
-    ids = parent_repo.read_some(
-        ParentModel, [parent_id, parent_id], return_id=True, allow_duplicate_ids=True
+    objs_dup = parent_repo.read_some(
+        ParentModel, [parent_id, parent_id], allow_duplicate_ids=True
     )
-    assert ids == [parent_id, parent_id]
+    assert len(objs_dup) == 2
+    assert all(cast(ParentModel, x).id == parent_id for x in objs_dup)
     # No copy
     objs_nc = parent_repo.read_some(
         ParentModel,
@@ -451,14 +448,14 @@ def test_read_one_and_some(parent_repo: DictRepository, parent_id: UUID) -> None
 def test_upsert_create_and_update(parent_repo: DictRepository, parent_id: UUID) -> None:
     # Create new
     new_obj = ParentModel(id=uuid4(), value="new")
-    created = parent_repo.upsert_some(
+    created = parent_repo.upsert_one(
         None, ParentModel, new_obj, raise_on_present=True, raise_on_missing=False
     )
     assert isinstance(created, ParentModel)
     assert created.value == "new"
     # Update existing
     upd_obj = ParentModel(id=parent_id, value="updated")
-    updated = parent_repo.upsert_some(
+    updated = parent_repo.upsert_one(
         None, ParentModel, upd_obj, raise_on_present=False, raise_on_missing=True
     )
     assert isinstance(updated, ParentModel)
@@ -478,13 +475,13 @@ def test_upsert_errors(parent_repo: DictRepository, parent_id: UUID) -> None:
     # Invalid type ids
     wrong = ChildModel(id=uuid4(), value="x")
     with pytest.raises(exc.InvalidModelIdsError):
-        parent_repo.upsert_some(
+        parent_repo.upsert_one(
             None, ParentModel, wrong, raise_on_present=False, raise_on_missing=False
         )
     # raise_on_present True on existing
     obj_existing = ParentModel(id=parent_id, value="v")
     with pytest.raises(exc.AlreadyExistingIdsError):
-        parent_repo.upsert_some(
+        parent_repo.upsert_one(
             None,
             ParentModel,
             obj_existing,
@@ -494,7 +491,7 @@ def test_upsert_errors(parent_repo: DictRepository, parent_id: UUID) -> None:
     # raise_on_missing True on missing
     missing_obj = ParentModel(id=uuid4(), value="m")
     with pytest.raises(exc.InvalidIdsError):
-        parent_repo.upsert_some(
+        parent_repo.upsert_one(
             None,
             ParentModel,
             missing_obj,
@@ -527,7 +524,7 @@ def test_upsert_unique_keys_against_df(
     # Existing parent has value "p1", new obj with same key should fail
     obj = ParentModel(id=uuid4(), value="p1")
     with pytest.raises(exc.UniqueConstraintViolationError):
-        parent_repo.upsert_some(
+        parent_repo.upsert_one(
             None, ParentModel, obj, raise_on_present=False, raise_on_missing=False
         )
 
@@ -542,7 +539,7 @@ def test_upsert_links(pc_repo: DictRepository, parent_id: UUID) -> None:
         parent_id=parent_id,
         parent=ParentModel(id=parent_id, value="p1"),
     )
-    pc_repo.upsert_some(
+    pc_repo.upsert_one(
         None, ChildModel, initial_child, raise_on_present=False, raise_on_missing=False
     )
 
@@ -552,7 +549,7 @@ def test_upsert_links(pc_repo: DictRepository, parent_id: UUID) -> None:
         id=ch_id, value="v2", parent_id=bad_parent_id, parent=None
     )
     with pytest.raises(exc.InvalidIdsError):
-        pc_repo.upsert_some(
+        pc_repo.upsert_one(
             None,
             ChildModel,
             update_bad_link_child,
@@ -568,7 +565,7 @@ def test_upsert_links(pc_repo: DictRepository, parent_id: UUID) -> None:
         parent=ParentModel(id=uuid4(), value="px"),
     )
     with pytest.raises(exc.InvalidLinkIdsError):
-        pc_repo.upsert_some(
+        pc_repo.upsert_one(
             None,
             ChildModel,
             mismatch_child_update,
@@ -578,7 +575,7 @@ def test_upsert_links(pc_repo: DictRepository, parent_id: UUID) -> None:
 
     # Null link sets both fields to None on update
     null_link_child = ChildModel(id=ch_id, value="v4", parent_id=None, parent=None)
-    pc_repo.upsert_some(
+    pc_repo.upsert_one(
         None, ChildModel, null_link_child, raise_on_present=False, raise_on_missing=True
     )
     stored = pc_repo.db[ChildModel][ch_id]
@@ -589,7 +586,7 @@ def test_upsert_links(pc_repo: DictRepository, parent_id: UUID) -> None:
 @pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_upsert_return_id_and_no_copy(parent_repo: DictRepository) -> None:
     obj = ParentModel(id=uuid4(), value="x")
-    ids = parent_repo.upsert_some(
+    ids = parent_repo.upsert_one(
         None,
         ParentModel,
         obj,
@@ -598,7 +595,7 @@ def test_upsert_return_id_and_no_copy(parent_repo: DictRepository) -> None:
         return_id=True,
     )
     assert ids == obj.id
-    objs = parent_repo.upsert_some(
+    objs = parent_repo.upsert_one(
         None,
         ParentModel,
         obj,
@@ -617,7 +614,7 @@ def test_upsert_return_id_and_no_copy(parent_repo: DictRepository) -> None:
 def test_delete_some_link_conflict(pc_repo: DictRepository, parent_id: UUID) -> None:
     # Child references parent_id; deleting parent should fail
     with pytest.raises(exc.LinkConstraintViolationError):
-        pc_repo.delete_some(ParentModel, parent_id)
+        pc_repo.delete_one(ParentModel, parent_id)
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-03")
@@ -643,7 +640,7 @@ def test_delete_all_with_filter(parent_repo: DictRepository, parent_id: UUID) ->
     filter_: Filter = Mock(spec=Filter)
     # One item True, rest False
     filter_.match_rows.return_value = [True]  # type: ignore[attr-defined]
-    deleted = parent_repo.delete_all(ParentModel, filter_)
+    deleted = parent_repo.delete_all(ParentModel, return_id=True, filter=filter_)
     assert deleted == [parent_id]
     assert parent_repo.db[ParentModel] == {}
 
@@ -651,7 +648,7 @@ def test_delete_all_with_filter(parent_repo: DictRepository, parent_id: UUID) ->
 @pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_delete_all_no_filter(pc_repo: DictRepository) -> None:
     # Delete all children
-    deleted = pc_repo.delete_all(ChildModel, None)
+    deleted = pc_repo.delete_all(ChildModel, return_id=True, filter=None)
     # All ids removed
     assert isinstance(deleted, list)
     assert len(deleted) == 1
@@ -761,7 +758,13 @@ def test_crud_dispatch_all_ops(parent_repo: DictRepository, parent_id: UUID) -> 
     )
     assert isinstance(res_exists, bool)
     # DELETE_ALL
-    res_delete_all = parent_repo.crud(uow, None, ParentModel, CrudOperation.DELETE_ALL)
+    res_delete_all = parent_repo.crud(
+        uow,
+        None,
+        ParentModel,
+        CrudOperation.DELETE_ALL,
+        return_id=True,
+    )
     assert isinstance(res_delete_all, list)
     # EXISTS_SOME
     res_exists_some = parent_repo.crud(

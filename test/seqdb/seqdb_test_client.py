@@ -1,5 +1,6 @@
 import gzip
 import hashlib
+import json
 import logging
 import random
 import uuid
@@ -781,6 +782,7 @@ class SeqdbTestClient(TestClient):
                 content_hash=model.SeqProfile.get_allele_profile_hash(allele_ids),
             )
             seq_for_upload = model.SeqForUpload(
+                id=seq_id,
                 contigs=[
                     model.Contig(
                         seq="".join(x for x in seq if x != "-"),
@@ -989,3 +991,198 @@ class SeqdbTestClient(TestClient):
             obj_ids=[x.id for x in allele_profiles if x.id is not None],
             matrix=distance_matrix,
         )
+
+    @staticmethod
+    def generate_random_nextclade_snp_batch(
+        n_seqs: int,
+        seq_length: int,
+        snp_protocol_id: UUID,
+        assembly_protocol_id: UUID | None = None,
+        seed: int = 42,
+        p_substitution: float = 0.05,
+        p_deletion: float = 0.01,
+    ) -> model.SampleBatchForUpload:
+        """Generate a random upload batch with Nextclade SNP profiles and seqs."""
+        rng = random.Random(seed)
+        assembly_protocol_id = (
+            assembly_protocol_id if assembly_protocol_id is not None else uuid.uuid4()
+        )
+        nucleotides = "ACGT"
+        root = [rng.choice(nucleotides) for _ in range(seq_length)]
+        ref_seq = "".join(root)
+
+        class SnpNode:
+            __slots__ = ("seq",)
+
+            def __init__(self, seq: list[str]):
+                self.seq = seq
+
+        children: list[SnpNode] = [SnpNode(root)]
+        while len(children) < n_seqs:
+            parent = children.pop(0)
+            for _ in range(2):
+                seq = parent.seq.copy()
+                for i in range(seq_length):
+                    r = rng.random()
+                    if r <= p_deletion:
+                        seq[i] = "-"
+                    elif r <= p_deletion + p_substitution:
+                        orig = seq[i]
+                        if orig != "-":
+                            seq[i] = rng.choice([n for n in nucleotides if n != orig])
+                children.append(SnpNode(seq))
+
+        samples: list[model.SampleForUpload] = []
+        for sample_index, node in enumerate(children):
+            aln_seq = "".join(node.seq)
+            nextclade_fields = SeqdbTestClient._build_nextclade_fields_from_alignment(
+                ref_seq=ref_seq,
+                aligned_seq=aln_seq,
+                rng=random.Random(seed * 1000 + sample_index),
+            )
+            serialized_nextclade = json.dumps(nextclade_fields)
+            profile = model.SeqProfileForUpload(  # type: ignore[call-arg]
+                protocol_id=snp_protocol_id,
+                seq_profile_type=(enum.SeqProfileType.SNP),
+                content=serialized_nextclade,
+                format=enum.SeqProfileFormat.NEXTCLADE,
+                content_hash=model.SeqProfile.get_snp_profile_hash(
+                    model.SeqProfile.model_construct(
+                        content=serialized_nextclade,
+                        format=enum.SeqProfileFormat.NEXTCLADE,
+                    ).get_snps()
+                ),
+            )
+            seq_for_upload = model.SeqForUpload(
+                contigs=[
+                    model.Contig(
+                        id=uuid.uuid4(),
+                        seq=serialized_nextclade,
+                        seq_format=enum.SeqFormat.NEXTCLADE,
+                    )
+                ],
+                protocol_id=assembly_protocol_id,
+            )
+            samples.append(
+                model.SampleForUpload(
+                    seqs=[seq_for_upload],
+                    seq_profiles=[profile],
+                    sample=model.Sample(
+                        created_in_data_collection_id=(uuid.uuid4()),
+                    ),
+                )
+            )
+        return model.SampleBatchForUpload(
+            samples=samples,
+            alleles=[],
+        )
+
+    @staticmethod
+    def _build_nextclade_fields_from_alignment(
+        ref_seq: str,
+        aligned_seq: str,
+        rng: random.Random,
+    ) -> dict[str, Any]:
+        nucleotides = "ACGT"
+        all_positions = list(range(1, len(ref_seq) + 1))
+        substitution_map: dict[int, str] = {}
+        deletion_positions: set[int] = set()
+
+        for position, (ref_base, aligned_base) in enumerate(
+            zip(ref_seq, aligned_seq, strict=False),
+            start=1,
+        ):
+            if aligned_base == "-":
+                deletion_positions.add(position)
+            elif aligned_base != ref_base:
+                substitution_map[position] = aligned_base
+
+        reserved_positions = set(substitution_map) | deletion_positions
+        available_positions = [
+            position for position in all_positions if position not in reserved_positions
+        ]
+        rng.shuffle(available_positions)
+
+        def _take_unique_positions(min_count: int, max_count: int) -> list[int]:
+            count = min(
+                len(available_positions),
+                max(min_count, rng.randint(min_count, max_count)),
+            )
+            positions = sorted(available_positions[:count])
+            del available_positions[:count]
+            return positions
+
+        while len(substitution_map) < min(3, len(ref_seq)):
+            position = (
+                available_positions.pop(0) if available_positions else all_positions[0]
+            )
+            ref_base = ref_seq[position - 1]
+            substitution_map[position] = rng.choice(
+                [base for base in nucleotides if base != ref_base]
+            )
+            reserved_positions.add(position)
+
+        if not deletion_positions:
+            position = (
+                available_positions.pop(0) if available_positions else all_positions[-1]
+            )
+            deletion_positions.add(position)
+            reserved_positions.add(position)
+
+        missing_positions = _take_unique_positions(
+            1, max(1, min(4, len(ref_seq) // 20 or 1))
+        )
+        non_acgtn_positions = _take_unique_positions(
+            1,
+            max(1, min(4, len(ref_seq) // 20 or 1)),
+        )
+        insertion_positions = sorted(
+            rng.sample(
+                all_positions,
+                k=min(max(1, min(3, len(ref_seq) // 25 or 1)), len(all_positions)),
+            )
+        )
+
+        substitutions = ",".join(
+            f"{ref_seq[position - 1]}{position}{substitution_map[position]}"
+            for position in sorted(substitution_map)
+        )
+        insertions = ",".join(
+            f"{position}:{''.join(rng.choice(nucleotides) for _ in range(rng.randint(1, 3)))}"
+            for position in insertion_positions
+        )
+        non_acgtns = ",".join(
+            f"{rng.choice(['R', 'Y', 'S', 'W', 'K', 'M', 'N'])}:{position}"
+            for position in non_acgtn_positions
+        )
+
+        return {
+            "substitutions": substitutions,
+            "deletions": SeqdbTestClient._positions_to_nextclade_ranges(
+                sorted(deletion_positions)
+            ),
+            "insertions": insertions,
+            "missings": SeqdbTestClient._positions_to_nextclade_ranges(
+                missing_positions
+            ),
+            "non_acgtns": non_acgtns,
+            "alignment_start": 1,
+            "alignment_end": len(ref_seq),
+        }
+
+    @staticmethod
+    def _positions_to_nextclade_ranges(positions: list[int]) -> str:
+        if not positions:
+            return ""
+        ranges: list[str] = []
+        start = positions[0]
+        end = positions[0]
+        for position in positions[1:]:
+            if position == end + 1:
+                end = position
+                continue
+            ranges.append(f"{start}-{end}" if start != end else str(start))
+            start = position
+            end = position
+        ranges.append(f"{start}-{end}" if start != end else str(start))
+        return ",".join(ranges)

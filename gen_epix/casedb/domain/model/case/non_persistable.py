@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field, model_validator
 
 from gen_epix import fastapp
+from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import Model
 from gen_epix.fastapp.domain import Entity
 from gen_epix.filter import TypedCompositeFilter, TypedDatetimeRangeFilter
@@ -174,16 +175,25 @@ class CaseQueryResult(Model):
     )
 
 
-class CaseCohortIds(Model):
+class CaseCohortLink(Model):
     ENTITY: ClassVar = Entity(
-        snake_case_plural_name="case_cohort_ids",
+        snake_case_plural_name="case_cohort_links",
         persistable=False,
     )
     case_id: UUID = Field(description="The ID of the case.")
-    cohort_ids: list[UUID] = Field(
-        default_factory=list,
-        description="The IDs of the omopdb cohorts linked to this case.",
+    cohort_id: UUID = Field(
+        description="The ID of the omopdb cohort linked to this case.",
     )
+    cohort_definition_id: UUID = Field(
+        description="The ID of the omopdb cohort definition linked to this case.",
+    )
+
+    def is_null(self) -> bool:
+        """
+        Whether the link is a null link, i.e. the case has no linked cohort. This is
+        indicated by NULL_ID as the cohort_id and cohort_definition_id.
+        """
+        return self.cohort_id == NULL_ID and self.cohort_definition_id == NULL_ID
 
 
 class RefDataAccess(Model):

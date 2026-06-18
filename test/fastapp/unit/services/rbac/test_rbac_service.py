@@ -137,7 +137,7 @@ class RBACTestClient(ServiceTestClient):
         obj = list(self.df[model_class].values())[0]
         instance_read = self.app.handle(
             crud_command_class(
-                user=user, obj_ids=obj.id, operation=CrudOperation.READ_ONE
+                user=user, obj_ids=obj.get_id(), operation=CrudOperation.READ_ONE
             )
         )
         return instance_read

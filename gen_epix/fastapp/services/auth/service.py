@@ -679,7 +679,8 @@ class AuthService(BaseAuthService):
                 )
 
             raise exc.UnauthorizedAuthError(
-                "f14da79c", f"User ({user_key}) does not exist and auto-creation is disabled"
+                "f14da79c",
+                f"User ({user_key}) does not exist and auto-creation is disabled",
             )
 
     def _auto_create_new_user(

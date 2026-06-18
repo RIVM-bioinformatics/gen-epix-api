@@ -6,25 +6,13 @@ from unittest import TestCase
 from uuid import uuid4
 
 import pytest
+import sqlalchemy as sa
 
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import FieldType, FieldTypeSet
 from gen_epix.fastapp.exc import RepositoryServiceError
 from gen_epix.fastapp.model import Model
 from gen_epix.fastapp.repositories.sa.mapper import BaseSAMapper, SAMapper
-
-
-class _TableColumns:
-    def __init__(self, names: Iterable[str]):
-        self._names: list[str] = list(names)
-
-    def keys(self) -> list[str]:
-        return list(self._names)
-
-
-class _Table:
-    def __init__(self, column_names: Iterable[str]):
-        self.columns: _TableColumns = _TableColumns(column_names)
 
 
 class _RowBase:
@@ -59,11 +47,25 @@ def _make_row_class(
     schema: str | None = None,
     class_attrs: dict[str, Any] | None = None,
 ) -> type[_RowBase]:
+    column_names = list(columns)
+    if not column_names:
+        column_names = ["id"]
+
+    metadata = sa.MetaData()
+    table = sa.Table(
+        "test_table",
+        metadata,
+        *(sa.Column(col_name, sa.String()) for col_name in column_names),
+        schema=schema,
+    )
+
     attrs: dict[str, Any] = {
         "__tablename__": "test_table",
-        "__table__": _Table(columns),
+        "__table__": table,
         "__table_args__": ({"schema": schema},) if schema else tuple(),
     }
+    for col_name in column_names:
+        attrs[col_name] = table.c[col_name]
     if class_attrs:
         attrs.update(class_attrs)
     return type("Row", (_RowBase,), attrs)
@@ -151,6 +153,9 @@ class _DummyMapper(BaseSAMapper):
 
     def get_row_id(self, row: Any) -> Hashable:
         return getattr(row, "id_col")  # type: ignore[no-any-return]
+
+    def get_row_id_column(self):
+        return self.row_class.__table__.c.id_col
 
     def generate_service_metadata(
         self, obj: Model, user_id: Hashable
@@ -321,7 +326,7 @@ class TestSAMapper(BaseMapperTestCase):
         assert mapper.get_mapped_field_name("link_col", reverse=True) == "link"
         # None link should be excluded from dump; others present
         assert hasattr(row_obj, "id_col") and getattr(row_obj, "id_col") == 10
-        assert not hasattr(row_obj, "link_col")
+        assert "link_col" not in row_obj.__dict__
         assert getattr(row_obj, "value_col") == "keep"
         assert (
             isinstance(loaded_obj, _Model)

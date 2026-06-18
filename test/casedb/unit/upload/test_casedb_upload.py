@@ -13,6 +13,7 @@ from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.upload import CaseBatchUploader
 from gen_epix.commondb.domain.enum import EtlStatus, UploadAction
 from gen_epix.commondb.domain.model.organization import IdentifierForUpload, User
+from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import model as seqdb_model
@@ -46,6 +47,9 @@ class BaseUploadTestCase(TestCase):
         self.protocol_id = UUID("550e8400-e29b-41d4-a716-446655440006")
         self.reads_col_id = UUID("550e8400-e29b-41d4-a716-446655440007")
         self.seq_col_id = UUID("550e8400-e29b-41d4-a716-446655440008")
+        self.cohort_id = UUID("550e8400-e29b-41d4-a716-446655440009")
+        self.cohort_definition_id = UUID("550e8400-e29b-41d4-a716-446655440010")
+        self.case_date = datetime.datetime(2026, 1, 1)
 
         self.service = Mock(spec=BaseCaseService)
         self.service.generate_id = Mock(side_effect=uuid4)
@@ -61,14 +65,22 @@ class BaseUploadTestCase(TestCase):
 
     def create_case_for_upload(
         self,
+        case_id: UUID | None = None,
+        case_type_id: UUID | None = None,
+        created_in_data_collection_id: UUID | None = None,
+        cohort: dict[UUID, UUID | None] | None = None,
+        case_date: datetime.datetime | None = None,
+        content: dict[UUID, str] | None = None,
         read_sets: list[model.ReadSetForUpload] | None = None,
         seqs: list[model.SeqForUpload] | None = None,
     ) -> model.CaseForUpload:
-        case = model.Case(
-            id=self.case_id,
-            case_type_id=self.case_type_id,
-            created_in_data_collection_id=self.data_collection_id,
-            content={},
+        case = self.create_case(
+            case_id=case_id,
+            case_type_id=case_type_id,
+            created_in_data_collection_id=created_in_data_collection_id,
+            cohort=cohort,
+            case_date=case_date,
+            content=content,
         )
         return model.CaseForUpload(
             id=self.case_id,
@@ -129,6 +141,77 @@ class BaseUploadTestCase(TestCase):
         )
         batch_result: model.CaseBatchUploadResult = self.batch_uploader.init_batch_upload_result(cmd)  # type: ignore[assignment]
         return cmd, batch_result
+
+    def create_org_user(self) -> User:
+        return User(
+            id=uuid4(),
+            key="test@example.com",
+            email="test@example.com",
+            roles={enum.Role.ORG_USER.value},
+            organization_id=uuid4(),
+            is_active=True,
+        )
+
+    def create_uploader(self) -> tuple[CaseBatchUploader, Mock]:
+        service = Mock(spec=BaseCaseService)
+        service.repository = Mock()
+        uploader = CaseBatchUploader(service)
+        return uploader, service
+
+    def create_case(
+        self,
+        case_id: UUID | None = None,
+        case_type_id: UUID | None = None,
+        created_in_data_collection_id: UUID | None = None,
+        cohort: dict[UUID, UUID | None] | None = None,
+        case_date: datetime.datetime | None = None,
+        content: dict[UUID, str] | None = None,
+    ) -> model.Case:
+        return model.Case(
+            id=case_id or self.case_id,
+            case_type_id=case_type_id or self.case_type_id,
+            created_in_data_collection_id=created_in_data_collection_id
+            or self.data_collection_id,
+            cohort=cohort or {},
+            case_date=case_date or self.case_date,
+            content=content or {},
+        )
+
+    def update_case(
+        self,
+        existing_case: model.Case,
+        uploaded_case: model.Case,
+    ) -> tuple[bool, model.UploadResult, list[model.Case]]:
+        uploader, service = self.create_uploader()
+        uow = Mock()
+        result = model.UploadResult(status=EtlStatus.PENDING)
+        updated_objs: list[model.Case] = []
+
+        def _crud_side_effect(
+            _uow: Mock,
+            _user_id: UUID | None,
+            _model_class: type[model.Model],
+            operation: CrudOperation,
+            **kwargs: object,
+        ) -> list[model.Case] | list[UUID]:
+            if operation == CrudOperation.READ_SOME:
+                return [existing_case]
+            if operation == CrudOperation.UPDATE_SOME:
+                objs = kwargs.get("objs")
+                assert isinstance(objs, list)
+                updated_objs.extend(objs)
+                return [existing_case.id]
+            raise AssertionError(f"Unexpected operation: {operation}")
+
+        service.repository.crud.side_effect = _crud_side_effect
+
+        success = uploader.update_objects(
+            uow,
+            None,
+            model.Case,
+            [(uploaded_case, result)],
+        )
+        return success, result, updated_objs
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
@@ -282,18 +365,8 @@ class TestCaseUploadSeqdbBridge(BaseUploadTestCase):
         self.assertIn((0, 0), child_map[seqdb_model.ReadSetForUpload])
 
 
-def _make_org_user() -> User:
-    return User(
-        id=uuid4(),
-        key="test@example.com",
-        email="test@example.com",
-        roles={enum.Role.ORG_USER.value},
-        organization_id=uuid4(),
-        is_active=True,
-    )
-
-
-class TestCaseDateMutability(TestCase):
+@pytest.mark.scenario_ids("TC-SEC-30-03")
+class TestCaseDateMutability(BaseUploadTestCase):
     def test_case_date_is_mutable_always(self) -> None:
         props = STORED_MODEL_FIELD_PROPS.get(model.Case, {})
         case_date_props = props.get("case_date")
@@ -307,18 +380,13 @@ class TestCaseDateMutability(TestCase):
         )
 
 
-class TestUpsertBatchCaseDate(TestCase):
-    def _make_uploader(self) -> tuple[CaseBatchUploader, Mock]:
-        service = Mock(spec=BaseCaseService)
-        service.repository = Mock()
-        uploader = CaseBatchUploader(service)
-        return uploader, service
-
+@pytest.mark.scenario_ids("TC-SEC-30-03")
+class TestUpsertBatchCaseDate(BaseUploadTestCase):
     def test_calculated_case_date_preserved_for_existing_case(self) -> None:
-        uploader, service = self._make_uploader()
+        uploader, service = self.create_uploader()
 
         case_type_id = uuid4()
-        data_collection_id = uuid4()
+        created_in_data_collection_id = uuid4()
         case_id = uuid4()
         sampling_col_id = uuid4()
         content: dict = {sampling_col_id: "2024-03-15"}
@@ -327,17 +395,17 @@ class TestUpsertBatchCaseDate(TestCase):
         case = model.Case(
             id=case_id,
             case_type_id=case_type_id,
-            created_in_data_collection_id=data_collection_id,
+            created_in_data_collection_id=created_in_data_collection_id,
             content=dict(content),
         )
         case_for_upload = model.CaseForUpload(case=case)
         case_result = model.CaseUploadResult(validated_content=dict(content))
         cmd = command.UploadCasesCommand(
-            user=_make_org_user(),
+            user=self.create_org_user(),
             case_type_id=case_type_id,
-            created_in_data_collection_id=data_collection_id,
+            created_in_data_collection_id=created_in_data_collection_id,
             case_batch=model.CaseBatchForUpload(cases=[case_for_upload]),
-            on_exists=UploadAction.UPDATE.value,
+            on_exists=UploadAction.UPDATE.value,  # type: ignore[call-arg]
         )
         batch_result = model.CaseBatchUploadResult(cases=[case_result])
 
@@ -364,3 +432,169 @@ class TestUpsertBatchCaseDate(TestCase):
             uploader.upsert_batch(cmd, batch_result, Mock())
 
         self.assertEqual(case.case_date, expected_date)
+
+
+@pytest.mark.scenario_ids("TC-SEC-30-03")
+class TestCaseCohortUploadUpdates(BaseUploadTestCase):
+    def test_upload_case_cohort_adds_new_mapping(self) -> None:
+        cohort_id = UUID("550e8400-e29b-41d4-a716-446655440009")
+        cohort_definition_id = UUID("550e8400-e29b-41d4-a716-446655440010")
+
+        existing_case = self.create_case(
+            cohort={},
+        )
+        uploaded_case = self.create_case(
+            cohort={cohort_id: cohort_definition_id},
+        )
+
+        success, result, updated_objs = self.update_case(existing_case, uploaded_case)
+
+        self.assertTrue(success)
+        self.assertEqual(result.status, EtlStatus.UPDATED)
+        self.assertEqual(len(updated_objs), 1)
+        self.assertEqual(updated_objs[0].cohort, {cohort_id: cohort_definition_id})
+
+    def test_upload_case_cohort_updates_existing_mapping(self) -> None:
+        cohort_id = UUID("550e8400-e29b-41d4-a716-446655440009")
+        old_definition_id = UUID("550e8400-e29b-41d4-a716-446655440010")
+        new_definition_id = UUID("550e8400-e29b-41d4-a716-446655440011")
+
+        existing_case = self.create_case(
+            cohort={cohort_id: old_definition_id},
+        )
+        uploaded_case = self.create_case(
+            cohort={cohort_id: new_definition_id},
+        )
+
+        success, result, updated_objs = self.update_case(existing_case, uploaded_case)
+
+        self.assertTrue(success)
+        self.assertEqual(result.status, EtlStatus.UPDATED)
+        self.assertEqual(len(updated_objs), 1)
+        self.assertEqual(updated_objs[0].cohort, {cohort_id: new_definition_id})
+
+    def test_upload_case_cohort_deletes_mapping_with_none(self) -> None:
+        cohort_id = UUID("550e8400-e29b-41d4-a716-446655440009")
+        cohort_definition_id = UUID("550e8400-e29b-41d4-a716-446655440010")
+
+        existing_case = self.create_case(
+            cohort={cohort_id: cohort_definition_id},
+        )
+        uploaded_case = self.create_case(
+            cohort={cohort_id: cohort_definition_id},
+        )
+        uploaded_case.cohort = {cohort_id: None}
+
+        success, result, updated_objs = self.update_case(existing_case, uploaded_case)
+
+        self.assertTrue(success)
+        self.assertEqual(result.status, EtlStatus.UPDATED)
+        self.assertEqual(len(updated_objs), 1)
+        self.assertEqual(updated_objs[0].cohort, {})
+
+
+@pytest.mark.scenario_ids("TC-SEC-30-03")
+class TestExistingContentKeyNormalization(BaseUploadTestCase):
+    """read_fields row[1] keys may be UUID objects (DICT) or strings (SQL);
+    both must be normalised to UUID before content merging."""
+
+    def _run_upsert_with_existing_key(self, existing_key: UUID | str) -> dict:
+        uploader, service = self.create_uploader()
+        col_id = self.reads_col_id
+        case = model.Case(
+            id=self.case_id,
+            case_type_id=self.case_type_id,
+            created_in_data_collection_id=self.data_collection_id,
+            content={col_id: "new"},
+        )
+        case_result = model.CaseUploadResult(validated_content={col_id: "new"})
+        cmd = command.UploadCasesCommand(
+            user=self.create_org_user(),
+            case_type_id=self.case_type_id,
+            created_in_data_collection_id=self.data_collection_id,
+            case_batch=model.CaseBatchForUpload(cases=[model.CaseForUpload(case=case)]),
+            on_exists=UploadAction.UPDATE.value,  # type: ignore[call-arg]
+        )
+        batch_result = model.CaseBatchUploadResult(cases=[case_result])
+        service.repository.read_fields.return_value = [
+            (self.case_id, {existing_key: "old"})
+        ]
+        with (
+            patch.object(uploader, "_get_complete_case_type", return_value=Mock()),
+            patch.object(uploader, "_get_case_validator", return_value=Mock()),
+            patch(
+                "gen_epix.commondb.services.upload.BatchUploader.upsert_batch",
+                return_value=True,
+            ),
+            patch.object(uploader, "has_samples", return_value=False),
+        ):
+            uploader.upsert_batch(cmd, batch_result, Mock())
+        return case.content
+
+    def test_uuid_keys_from_dict_repo_are_accepted(self) -> None:
+        # Pre-fix: UUID(uuid_obj) raised AttributeError; must not raise now
+        content = self._run_upsert_with_existing_key(self.reads_col_id)
+        self.assertIn(self.reads_col_id, content)
+
+    def test_string_keys_from_sql_repo_are_converted_to_uuid(self) -> None:
+        content = self._run_upsert_with_existing_key(str(self.reads_col_id))
+        self.assertIn(self.reads_col_id, content)
+
+
+@pytest.mark.scenario_ids("TC-SEC-30-03")
+class TestCaseContentUploadUpdates(BaseUploadTestCase):
+    def test_upload_case_content_adds_new_mapping(self) -> None:
+        col_id = self.reads_col_id
+        col_value = "new-value"
+
+        existing_case = self.create_case(
+            content={},
+        )
+        uploaded_case = self.create_case(
+            content={col_id: col_value},
+        )
+
+        success, result, updated_objs = self.update_case(existing_case, uploaded_case)
+
+        self.assertTrue(success)
+        self.assertEqual(result.status, EtlStatus.UPDATED)
+        self.assertEqual(len(updated_objs), 1)
+        self.assertEqual(updated_objs[0].content, {col_id: col_value})
+
+    def test_upload_case_content_updates_existing_mapping(self) -> None:
+        col_id = self.reads_col_id
+        old_value = "old-value"
+        new_value = "new-value"
+
+        existing_case = self.create_case(
+            content={col_id: old_value},
+        )
+        uploaded_case = self.create_case(
+            content={col_id: new_value},
+        )
+
+        success, result, updated_objs = self.update_case(existing_case, uploaded_case)
+
+        self.assertTrue(success)
+        self.assertEqual(result.status, EtlStatus.UPDATED)
+        self.assertEqual(len(updated_objs), 1)
+        self.assertEqual(updated_objs[0].content, {col_id: new_value})
+
+    def test_upload_case_content_deletes_mapping_with_none(self) -> None:
+        col_id = self.reads_col_id
+        col_value = "old-value"
+
+        existing_case = self.create_case(
+            content={col_id: col_value},
+        )
+        uploaded_case = self.create_case(
+            content={col_id: col_value},
+        )
+        uploaded_case.content = {col_id: None}
+
+        success, result, updated_objs = self.update_case(existing_case, uploaded_case)
+
+        self.assertTrue(success)
+        self.assertEqual(result.status, EtlStatus.UPDATED)
+        self.assertEqual(len(updated_objs), 1)
+        self.assertEqual(updated_objs[0].content, {})

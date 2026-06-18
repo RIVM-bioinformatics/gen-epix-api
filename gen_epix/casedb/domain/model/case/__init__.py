@@ -17,7 +17,7 @@ from gen_epix.casedb.domain.model.case.non_persistable import (
     BaseCaseRights as BaseCaseRights,
 )
 from gen_epix.casedb.domain.model.case.non_persistable import (
-    CaseCohortIds as CaseCohortIds,
+    CaseCohortLink as CaseCohortLink,
 )
 from gen_epix.casedb.domain.model.case.non_persistable import (
     CaseIdAndDate as CaseIdAndDate,

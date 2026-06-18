@@ -102,7 +102,8 @@ class PolicyDecisionPoint:
             for policy in policies:
                 if not policy.is_allowed(cmd):
                     raise policy.get_is_denied_exception()(
-                        f"Policy {policy.__class__.__name__} denied {cmd.__class__.__name__} command {cmd}"
+                        f"Policy {policy.__class__.__name__} denied"
+                        f" {cmd.__class__.__name__} command {cmd.id}"
                     )
             return None
         elif timing == EventTiming.DURING:

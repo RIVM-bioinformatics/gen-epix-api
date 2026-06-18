@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, FastAPI
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.fastapp import App
@@ -33,7 +33,24 @@ class RetrieveSimilarProfilesRequestBody(PydanticBaseModel):
 
 
 class UpdateSeqDistancesRequestBody(PydanticBaseModel):
-    protocol_id: UUID
+    protocol_id: UUID = copy_model_field(
+        command.UpdateSeqDistancesCommand, "protocol_id"
+    )
+    # TODO: remove max_new_profiles usage and replace by limit
+    max_new_profiles: int | None = copy_model_field(
+        command.UpdateSeqDistancesCommand, "limit"
+    )
+    limit: int | None = copy_model_field(command.UpdateSeqDistancesCommand, "limit")
+    existing_chunk_size: int | None = copy_model_field(
+        command.UpdateSeqDistancesCommand, "existing_chunk_size"
+    )
+
+    # TODO: remove max_new_profiles usage and replace by limit
+    @model_validator(mode="after")
+    def validate_limit(cls, values):
+        if values.get("limit") is None:
+            values["limit"] = values.get("max_new_profiles")
+        return values
 
 
 class RetrieveSamplesByIdsRequestBody(PydanticBaseModel):
@@ -260,6 +277,8 @@ def create_seq_endpoints(
                 command.UpdateSeqDistancesCommand(
                     user=user,
                     protocol_id=request_body.protocol_id,
+                    limit=request_body.limit,
+                    existing_chunk_size=request_body.existing_chunk_size,
                 )
             )
         except Exception as exception:
