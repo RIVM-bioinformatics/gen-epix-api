@@ -174,7 +174,9 @@ class CaseBatchUploader(BatchUploader):
                 x.id for x in cases_for_validation  # type: ignore[misc]
             ]
             existing_content_by_id: dict[UUID, dict] = {
-                row[0]: {UUID(x): y for x, y in row[1].items()}
+                row[0]: {
+                    x if isinstance(x, UUID) else UUID(x): y for x, y in row[1].items()
+                }
                 for row in self.service.repository.read_fields(
                     uow,
                     None if cmd.user is None else cmd.user.id,
