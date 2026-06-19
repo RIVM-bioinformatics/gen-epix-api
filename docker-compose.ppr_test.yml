@@ -41,7 +41,7 @@ services:
   seqdb:
     build:
       context: .
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile.ppr_test
     volumes:
       - ../lsp-data:/lsp-data:ro
       - ./docker-entrypoint.sh:/app/docker-entrypoint.sh:ro
