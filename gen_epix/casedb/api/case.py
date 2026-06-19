@@ -87,15 +87,19 @@ class RetrieveSimilarCasesRequestBody(PydanticBaseModel):
     case_type_id: UUID = copy_model_field(
         command.RetrieveSimilarCasesCommand, "case_type_id"
     )
-    max_distance: float = copy_model_field(
-        command.RetrieveSimilarCasesCommand, "max_distance"
-    )
     case_ids: list[UUID] = copy_model_field(
         command.RetrieveSimilarCasesCommand, "case_ids"
     )
     genetic_distance_col_id: UUID = copy_model_field(
         command.RetrieveSimilarCasesCommand, "genetic_distance_col_id"
     )
+    max_distance: float = copy_model_field(
+        command.RetrieveSimilarCasesCommand, "max_distance"
+    )
+
+
+class RetrieveSimilarCasesResponseBody(command.RetrieveSimilarCasesReturnValue):
+    pass
 
 
 class RetrieveCaseTypeStatsRequestBody(PydanticBaseModel):
@@ -504,9 +508,9 @@ def create_case_endpoints(
     )
     async def retrieve__similar_cases(
         user: registered_user_dependency, request_body: RetrieveSimilarCasesRequestBody  # type: ignore
-    ) -> list[UUID]:
+    ) -> RetrieveSimilarCasesResponseBody:
         return cast(
-            list[UUID],
+            RetrieveSimilarCasesResponseBody,
             handle_command(
                 app=app,
                 user=user,
@@ -515,9 +519,9 @@ def create_case_endpoints(
                 input_command=command.RetrieveSimilarCasesCommand(
                     user=user,
                     case_type_id=request_body.case_type_id,
-                    max_distance=request_body.max_distance,
                     case_ids=request_body.case_ids,
                     genetic_distance_col_id=request_body.genetic_distance_col_id,
+                    max_distance=request_body.max_distance,
                 ),
             ),
         )

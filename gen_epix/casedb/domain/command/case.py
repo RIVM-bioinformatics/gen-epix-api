@@ -1,9 +1,8 @@
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
-from gen_epix.commondb.domain.literal import NULL_ID
 import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain import enum
 from gen_epix.commondb.domain.command import (
@@ -12,6 +11,7 @@ from gen_epix.commondb.domain.command import (
     UpdateAssociationCommand,
 )
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
+from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
 
@@ -264,13 +264,21 @@ class RetrieveSimilarCasesCommand(Command):
 
     max_distance: float = Field(
         description="The maximum genetic distance for cases to be considered similar.",
-        default=5,
+        ge=0,
+    )
+    genetic_distance_col_id: UUID = Field(
+        description="The Col ID to use for determining the genetic distance between cases."
     )
     case_ids: list[UUID] = Field(
         description="The IDs of cases to get the similar cases for.",
     )
-    genetic_distance_col_id: UUID = Field(
-        description="The Col ID to use for determining the genetic distance between cases."
+
+
+class RetrieveSimilarCasesReturnValue(BaseModel):
+    """The return value for the RetrieveSimilarCasesCommand."""
+
+    cases: list[model.CaseIdAndDate] = Field(
+        description="The similar cases that were found, limited to their IDs and case dates."
     )
 
 

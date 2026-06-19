@@ -247,15 +247,18 @@ def test_casedb_seqdb_connection(
                     )
                 )
                 is_phylogenetic_tree_retrieved = True
-                similar_case_ids: list[UUID] = casedb_app.handle(
-                    command.RetrieveSimilarCasesCommand(
-                        user=root_user,
-                        case_type_id=col.case_type_id,
-                        genetic_distance_col_id=col.id,
-                        case_ids=case_ids[0:5],
-                        max_distance=5,
+                similar_cases: command.RetrieveSimilarCasesReturnValue = (
+                    casedb_app.handle(
+                        command.RetrieveSimilarCasesCommand(
+                            user=root_user,
+                            case_type_id=col.case_type_id,
+                            genetic_distance_col_id=col.id,
+                            case_ids=case_ids[0:5],
+                            max_distance=5,
+                        )
                     )
                 )
+                similar_case_ids = [x.id for x in similar_cases.cases]
                 if len(similar_case_ids) > 0:
                     is_similar_cases_retrieved = True
                 break

@@ -1,0 +1,61 @@
+services:
+  mock-oidc:
+    build:
+      context: .
+      dockerfile: Dockerfile.ppr_test
+    volumes:
+      - ../lsp-data:/lsp-data:ro
+    working_dir: /lsp-data
+    command: python test/mock_auth_server/mock_auth_server.py
+    ports:
+      - "9000:9000"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "-k", "https://mock-oidc:9000/.well-known/openid-configuration"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  casedb:
+    build:
+      context: .
+      dockerfile: Dockerfile.ppr_test
+    volumes:
+      - ../lsp-data:/lsp-data:ro
+      - ./docker-entrypoint.sh:/app/docker-entrypoint.sh:ro
+    entrypoint: ["/app/docker-entrypoint.sh"]
+    environment:
+      - APP_TYPE=CASEDB
+    ports:
+      - "8000:8000"
+    depends_on:
+      mock-oidc:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "https://localhost:8000/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  seqdb:
+    build:
+      context: .
+      dockerfile: Dockerfile.ppr_test
+    volumes:
+      - ../lsp-data:/lsp-data:ro
+      - ./docker-entrypoint.sh:/app/docker-entrypoint.sh:ro
+    entrypoint: ["/app/docker-entrypoint.sh"]
+    environment:
+      - APP_TYPE=SEQDB
+    ports:
+      - "8001:8001"
+    depends_on:
+      mock-oidc:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "https://localhost:8001/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s

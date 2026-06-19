@@ -140,10 +140,11 @@ class TestInputValidation(BaseSimilarCasesTestCase):
         # (already configured in setUp)
 
         # 3. Execute
-        profile_ids = case_service_retrieve_similar_cases(self.service, cmd)
+        similar_cases = case_service_retrieve_similar_cases(self.service, cmd)
+        similar_case_ids = [x.id for x in similar_cases.cases]
 
         # 4. Verify
-        assert profile_ids == []
+        assert similar_case_ids == []
         self.repository.crud.assert_not_called()
         self.service._retrieve_cases_with_content_right.assert_not_called()  # type: ignore[attr-defined]
 
@@ -247,17 +248,24 @@ class TestHappyPath(BaseSimilarCasesTestCase):
             self.create_case(other_case_id, other_profile_id),
             self.create_case(uuid4(), None),  # No profile for this case
         ]
-        self.service._retrieve_cases_with_content_right.return_value = all_cases  # type: ignore[attr-defined]
+        similar_cases_with_dates: list[model.Case] = [
+            self.create_case(other_case_id, other_profile_id)
+        ]
+        self.service._retrieve_cases_with_content_right.side_effect = [  # type: ignore[attr-defined]
+            all_cases,
+            similar_cases_with_dates,
+        ]
 
         # Cross-service call returns a similar profile (as string) to include
         self.service.app.handle.return_value = [str(other_profile_id)]  # type: ignore[attr-defined]
 
         # 3. Execute
-        result: list[UUID] = case_service_retrieve_similar_cases(self.service, cmd)
+        similar_cases = case_service_retrieve_similar_cases(self.service, cmd)
+        similar_case_ids = [x.id for x in similar_cases.cases]
 
         # 4. Verify
         # Result must exclude the two seeds and the other case
-        assert set(result) == {other_case_id}
+        assert set(similar_case_ids) == {other_case_id}
 
         # Verify repository interactions
         assert self.repository.crud.mock_calls == [
@@ -284,8 +292,15 @@ class TestHappyPath(BaseSimilarCasesTestCase):
             ),
         ]
 
-        # Verify _retrieve_cases_with_content_right called with correct args
-        self.service._retrieve_cases_with_content_right.assert_called_once()  # type: ignore[attr-defined]
+        # Verify _retrieve_cases_with_content_right called twice with expected
+        # filtering behavior.
+        assert self.service._retrieve_cases_with_content_right.call_count == 2  # type: ignore[attr-defined]
+        first_call = self.service._retrieve_cases_with_content_right.mock_calls[0]  # type: ignore[attr-defined]
+        second_call = self.service._retrieve_cases_with_content_right.mock_calls[1]  # type: ignore[attr-defined]
+        assert first_call.kwargs["case_ids"] is None
+        assert first_call.kwargs["calculate_case_date"] is False
+        assert second_call.kwargs["case_ids"] == [other_case_id]
+        assert second_call.kwargs["calculate_case_date"] is True
 
         # Verify cross-service command construction and call
         self.service.app.handle.assert_called_once()  # type: ignore[attr-defined]
@@ -312,13 +327,17 @@ class TestHappyPath(BaseSimilarCasesTestCase):
 
         # Seed case does not have a profile ID in content
         all_cases: list[model.Case] = [self.create_case(seed_case_id, None)]
-        self.service._retrieve_cases_with_content_right.return_value = all_cases  # type: ignore[attr-defined]
+        self.service._retrieve_cases_with_content_right.side_effect = [  # type: ignore[attr-defined]
+            all_cases,
+            [],
+        ]
 
         # 3. Execute
-        result: list[UUID] = case_service_retrieve_similar_cases(self.service, cmd)
+        similar_cases = case_service_retrieve_similar_cases(self.service, cmd)
+        similar_case_ids = [x.id for x in similar_cases.cases]
 
         # 4. Verify
-        assert result == []
+        assert similar_case_ids == []
         self.service.app.handle.assert_called_once()  # type: ignore[attr-defined]
         seq_cmd: seqdb_command.RetrieveSimilarProfilesCommand = self.service.app.handle.call_args[0][0]  # type: ignore[attr-defined]
         assert seq_cmd.profile_ids == []
