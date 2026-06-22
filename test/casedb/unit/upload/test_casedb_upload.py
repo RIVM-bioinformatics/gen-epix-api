@@ -494,6 +494,54 @@ class TestCaseCohortUploadUpdates(BaseUploadTestCase):
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
+class TestExistingContentKeyNormalization(BaseUploadTestCase):
+    """read_fields row[1] keys may be UUID objects (DICT) or strings (SQL);
+    both must be normalised to UUID before content merging."""
+
+    def _run_upsert_with_existing_key(self, existing_key: UUID | str) -> dict:
+        uploader, service = self.create_uploader()
+        col_id = self.reads_col_id
+        case = model.Case(
+            id=self.case_id,
+            case_type_id=self.case_type_id,
+            created_in_data_collection_id=self.data_collection_id,
+            content={col_id: "new"},
+        )
+        case_result = model.CaseUploadResult(validated_content={col_id: "new"})
+        cmd = command.UploadCasesCommand(
+            user=self.create_org_user(),
+            case_type_id=self.case_type_id,
+            created_in_data_collection_id=self.data_collection_id,
+            case_batch=model.CaseBatchForUpload(cases=[model.CaseForUpload(case=case)]),
+            on_exists=UploadAction.UPDATE.value,  # type: ignore[call-arg]
+        )
+        batch_result = model.CaseBatchUploadResult(cases=[case_result])
+        service.repository.read_fields.return_value = [
+            (self.case_id, {existing_key: "old"})
+        ]
+        with (
+            patch.object(uploader, "_get_complete_case_type", return_value=Mock()),
+            patch.object(uploader, "_get_case_validator", return_value=Mock()),
+            patch(
+                "gen_epix.commondb.services.upload.BatchUploader.upsert_batch",
+                return_value=True,
+            ),
+            patch.object(uploader, "has_samples", return_value=False),
+        ):
+            uploader.upsert_batch(cmd, batch_result, Mock())
+        return case.content
+
+    def test_uuid_keys_from_dict_repo_are_accepted(self) -> None:
+        # Pre-fix: UUID(uuid_obj) raised AttributeError; must not raise now
+        content = self._run_upsert_with_existing_key(self.reads_col_id)
+        self.assertIn(self.reads_col_id, content)
+
+    def test_string_keys_from_sql_repo_are_converted_to_uuid(self) -> None:
+        content = self._run_upsert_with_existing_key(str(self.reads_col_id))
+        self.assertIn(self.reads_col_id, content)
+
+
+@pytest.mark.scenario_ids("TC-SEC-30-03")
 class TestCaseContentUploadUpdates(BaseUploadTestCase):
     def test_upload_case_content_adds_new_mapping(self) -> None:
         col_id = self.reads_col_id

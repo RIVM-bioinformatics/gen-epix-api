@@ -7,6 +7,7 @@ public methods, with strict isolation via mocking.
 
 from __future__ import annotations
 
+import datetime
 from unittest import TestCase
 from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
@@ -770,6 +771,21 @@ class TestCalculateCaseDate(BaseCaseValidatorTestCase):
             cmd, [retval.cases[0].validated_content], [retval.cases[0].data_issues]
         )
         assert len(retval.cases[0].data_issues) == 0
+
+    def test_uses_highest_resolution_col_when_multiple_time_cols_present(self) -> None:
+        validator = self._create_validator()
+        cmd, retval = self._make_cmd_and_result([{}])
+        # Both day and week present; day (higher resolution) must win
+        updated_contents: list[dict[UUID, str | None] | None] = [
+            {
+                self.time_day_col_id: "2024-03-15",
+                self.time_week_col_id: "2024-W01",  # would give 2024-01-01 if used
+            }
+        ]
+        validator.calculate_case_date(cmd, retval, updated_contents)
+        case = cmd.case_batch.cases[0].case
+        assert case is not None
+        assert case.case_date == datetime.datetime(2024, 3, 15)
 
     def test_case_date_updated_and_invalid_iso_raises(self) -> None:
         validator = self._create_validator()

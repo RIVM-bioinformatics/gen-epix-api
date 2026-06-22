@@ -170,3 +170,4 @@ def case_service_calculate_case_date(
             if iso_datetime_value is None:
                 continue
             case.case_date = mapper(iso_datetime_value)
+            break  # cols are ordered by descending resolution; stop at the first (highest-resolution) non-None value
