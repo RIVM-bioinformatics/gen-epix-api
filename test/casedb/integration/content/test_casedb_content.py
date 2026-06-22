@@ -312,6 +312,7 @@ class TestContent:
                 if complete_case_type.ref_cols[x.ref_col_id].col_type
                 == enum.ColType.GENETIC_DISTANCE
             ]
+            similar_cases_retval = command.RetrieveSimilarCasesReturnValue(cases=[])
             for dist_col in dist_cols:
                 assert dist_col is not None
                 assert dist_col.id is not None
@@ -334,7 +335,7 @@ class TestContent:
                         raise ValueError("Leaf IDs should be a subset of the case IDs")
 
                     # retrieve similar cases
-                    similar_case_ids: list[UUID] = app.handle(
+                    similar_cases_retval = app.handle(
                         command.RetrieveSimilarCasesCommand(
                             user=org_user,
                             case_type_id=complete_case_type.id,
@@ -343,15 +344,15 @@ class TestContent:
                             max_distance=20,
                         )
                     )
-                    if len(similar_case_ids) > 0:
+                    if len(similar_cases_retval.cases) > 0:
                         found_similar_cases = True
 
             if found_similar_cases:
                 found_some_similar_cases = True
                 assert len(dist_cols) >= 1
                 # assert that any item in similar_case_ids is a UUID
-                for similar_case_id in similar_case_ids:
-                    assert isinstance(similar_case_id, UUID)
+                for case_id_and_date in similar_cases_retval.cases:
+                    assert isinstance(case_id_and_date.case_id, UUID)
 
             # Retrieve genetic sequence
             genetic_sequence_cols = [

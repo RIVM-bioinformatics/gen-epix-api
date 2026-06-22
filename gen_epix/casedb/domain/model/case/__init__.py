@@ -19,6 +19,9 @@ from gen_epix.casedb.domain.model.case.non_persistable import (
 from gen_epix.casedb.domain.model.case.non_persistable import (
     CaseCohortLink as CaseCohortLink,
 )
+from gen_epix.casedb.domain.model.case.non_persistable import (
+    CaseIdAndDate as CaseIdAndDate,
+)
 from gen_epix.casedb.domain.model.case.non_persistable import CaseQuery as CaseQuery
 from gen_epix.casedb.domain.model.case.non_persistable import (
     CaseQueryResult as CaseQueryResult,

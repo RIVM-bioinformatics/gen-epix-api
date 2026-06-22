@@ -478,7 +478,7 @@ class UpdateAssociationCommand(Command):
     verify_other_service_links: bool = Field(
         default=False,
         description="Whether to verify that the links between the association objects and other objects in other services are valid.",
-    )    
+    )
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:

@@ -108,6 +108,9 @@ from gen_epix.casedb.domain.command.case import (
     RetrieveSimilarCasesCommand as RetrieveSimilarCasesCommand,
 )
 from gen_epix.casedb.domain.command.case import (
+    RetrieveSimilarCasesReturnValue as RetrieveSimilarCasesReturnValue,
+)
+from gen_epix.casedb.domain.command.case import (
     TreeAlgorithmClassCrudCommand as TreeAlgorithmClassCrudCommand,
 )
 from gen_epix.casedb.domain.command.case import (
