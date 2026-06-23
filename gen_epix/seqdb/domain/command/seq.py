@@ -81,7 +81,7 @@ class UploadSamplesCommand(Command, UploadBatchCommandMixin):
         default=False,
         description=(
             "If True, compare all new profiles against each existing in a single "
-            "numpy broadcast; implies use_numpy_allele."
+            "numpy broadcast; requires use_numpy_allele=True."
         ),
     )
 
@@ -146,7 +146,7 @@ class CalculateSeqDistancesForNewProfilesCommand(Command):
         default=False,
         description=(
             "If True, compare all new profiles against each existing in a single "
-            "numpy broadcast; implies use_numpy_allele."
+            "numpy broadcast; requires use_numpy_allele=True."
         ),
     )
 
@@ -196,7 +196,7 @@ class UpdateSeqDistancesCommand(Command):
         default=False,
         description=(
             "If True, compare all new profiles against each existing in a single "
-            "numpy broadcast; implies use_numpy_allele."
+            "numpy broadcast; requires use_numpy_allele=True."
         ),
     )
 
@@ -453,6 +453,10 @@ class SeqCategorySetCrudCommand(CrudCommand):
 
 class SeqDistanceCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.SeqDistance
+
+
+class SeqDistancePairCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.SeqDistancePair
 
 
 class SeqIdentifierCrudCommand(CrudCommand):

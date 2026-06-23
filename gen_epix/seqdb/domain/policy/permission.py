@@ -75,6 +75,7 @@ class RoleGenerator(CommonRoleGenerator):
             (command.SeqCrudCommand, PermissionTypeSet.CRUD),
             (command.SeqIdentifierCrudCommand, PermissionTypeSet.CRUD),
             (command.SeqDistanceCrudCommand, PermissionTypeSet.CRUD),
+            (command.SeqDistancePairCrudCommand, PermissionTypeSet.CRUD),
             (command.SeqTaxonomyCrudCommand, PermissionTypeSet.CRUD),
             (command.TaxonCrudCommand, PermissionTypeSet.R),
             (command.TaxonSetCrudCommand, PermissionTypeSet.R),

@@ -491,6 +491,20 @@ class SeqService(BaseSeqService):
     ):
         return seq_service_crud_seq_distance(self, cmd)
 
+    def crud_seq_distance_pair(
+        self,
+        cmd: command.SeqDistancePairCrudCommand,
+    ) -> (
+        model.SeqDistancePair
+        | list[model.SeqDistancePair]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        return self.crud(cmd)  # type: ignore[return-value]
+
     def crud_seq_identifier(
         self,
         cmd: command.SeqIdentifierCrudCommand,

@@ -163,6 +163,9 @@ from gen_epix.seqdb.domain.command.seq import (
     SeqDistanceCrudCommand as SeqDistanceCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
+    SeqDistancePairCrudCommand as SeqDistancePairCrudCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
     SeqIdentifierCrudCommand as SeqIdentifierCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
@@ -233,6 +236,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         SeqClassificationCrudCommand,
         SeqCrudCommand,
         SeqDistanceCrudCommand,
+        SeqDistancePairCrudCommand,
         SeqIdentifierCrudCommand,
         SeqProfileCrudCommand,
         SeqProfileIdentifierCrudCommand,

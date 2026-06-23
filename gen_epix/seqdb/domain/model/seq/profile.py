@@ -246,6 +246,32 @@ class SeqProfile(
             "Unable to parse allele IDs for this allele profile format"
         )
 
+    def get_allele_array(self) -> "np.ndarray":
+        """
+        Return allele IDs as a (n_loci,) numpy array for vectorized Hamming.
+
+        Numpy has no uint128 type, but each allele UUID is exactly 16 bytes.
+        dtype='S16' (fixed-length 16-byte byte string) lets frombuffer
+        reinterpret the raw b64-decoded bytes as opaque 16-byte tokens.
+        Byte-wise equality (!=) on S16 elements is equivalent to UUID identity
+        — no numeric arithmetic is needed. The array is read-only (frombuffer
+        view); mutating it raises ValueError by design.
+
+        Shape is (n_loci,): bacteria are haploid (one allele per locus).
+        All-zero elements (b'\\x00' * 16) represent NULL_ID (missing locus),
+        matching the None sentinel returned by get_allele_id_bytes().
+        """
+        import numpy as np  # lazy; numpy is not a domain-layer hard dependency
+
+        if self.seq_profile_type != enum.SeqProfileType.ALLELE:
+            raise ValueError("Allele array can only be retrieved for allele profiles")
+        if self.format != enum.SeqProfileFormat.ORDERED_ALLELE_IDS:
+            raise NotImplementedError(
+                "Allele array only supported for ORDERED_ALLELE_IDS format"
+            )
+        allele_bytes = base64.b64decode(self.content)
+        return np.frombuffer(allele_bytes, dtype="S16")
+
     def get_allele_ids(self, **kwargs: Any) -> list[UUID | None]:
         """
         Parse and return the allele IDs from the allele profile based on its format.

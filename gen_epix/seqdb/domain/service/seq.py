@@ -154,6 +154,10 @@ class BaseSeqService(BaseService):
             self.crud_seq_distance,
         )
         f(
+            command.SeqDistancePairCrudCommand,
+            self.crud_seq_distance_pair,
+        )
+        f(
             command.SeqIdentifierCrudCommand,
             self.crud_seq_identifier,
         )
@@ -622,6 +626,22 @@ class BaseSeqService(BaseService):
         | None
     ):
         """Handle CRUD operations for SeqDistance entities."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def crud_seq_distance_pair(
+        self,
+        cmd: command.SeqDistancePairCrudCommand,
+    ) -> (
+        model.SeqDistancePair
+        | list[model.SeqDistancePair]
+        | UUID
+        | list[UUID]
+        | bool
+        | list[bool]
+        | None
+    ):
+        """Handle CRUD operations for SeqDistancePair entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
