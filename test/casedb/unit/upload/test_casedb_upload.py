@@ -558,7 +558,6 @@ class TestExistingContentKeyNormalization(BaseUploadTestCase):
                 "gen_epix.commondb.services.upload.BatchUploader.upsert_batch",
                 return_value=True,
             ),
-            patch.object(uploader, "has_samples", return_value=False),
         ):
             uploader.upsert_batch(cmd, batch_result, Mock())
         return case.content
