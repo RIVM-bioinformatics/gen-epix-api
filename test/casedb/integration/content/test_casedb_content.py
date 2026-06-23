@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.test_client.enum import (
     EnumTestType as EnumTestType,  # to avoid PyTest warning
@@ -14,6 +15,7 @@ from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain.enum import AppType, DevRepositoryConfig
 from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.domain.util import get_app_cfgs
+from gen_epix.commondb.test.util import set_log_level
 from gen_epix.fastapp import CrudOperation, PermissionType
 from gen_epix.fastapp.model import Permission
 from gen_epix.filter import LogicalOperator, TypedCompositeFilter, TypedStringSetFilter
@@ -44,6 +46,9 @@ CASEDB_APP_CFGS = get_app_cfgs(
 
 @pytest.fixture(scope="module", name="env")
 def get_test_client() -> Env:
+    # explicitly set log level for seqdb
+    set_log_level("seqdb", logging.ERROR)
+
     return Env.get_test_client(  # type: ignore[return-value]
         test_type=TEST_TYPE.value,
         app_cfg=CASEDB_APP_CFGS[f"{TEST_TYPE.value}__{DEV_REPOSITORY_CONFIG.value}"],
@@ -352,7 +357,8 @@ class TestContent:
                 assert len(dist_cols) >= 1
                 # assert that any item in similar_case_ids is a UUID
                 for case_id_and_date in similar_cases_retval.cases:
-                    assert isinstance(case_id_and_date.case_id, UUID)
+                    assert isinstance(case_id_and_date.id, UUID)
+                    assert isinstance(case_id_and_date.case_date, datetime)
 
             # Retrieve genetic sequence
             genetic_sequence_cols = [
