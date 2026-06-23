@@ -632,8 +632,11 @@ def _verify_children_seq_profiles(
                     # No existing seq classification for this (protocol_id, seq_id)
                     continue
             assert existing_seq_profile_id is not None
-            if existing_content_hash != seq_profile_for_upload.content_hash:
-                # New and corresponding existing seq classification have different content_hash -> error since the same protocol and seq_id should yield the same classification
+            if (
+                seq_profile_for_upload.content_hash != NULL_ID
+                and existing_content_hash != seq_profile_for_upload.content_hash
+            ):
+                # New and corresponding existing seq classification have different, known content_hash -> error since the same protocol and seq_id should yield the same classification
                 success = False
                 if seq_profile_for_upload.seq_id is None:
                     # New and existing SeqProfile both do not have seq_id set -> error since it cannot be verified if the actual seq_ids were indeed identical (in which case a different seq classification is an error)
@@ -648,11 +651,15 @@ def _verify_children_seq_profiles(
                         f"SeqProfile with same protocol_id ({seq_profile_for_upload.protocol_id}) and seq_id ({seq_profile_for_upload.seq_id}) already exists with a different content_hash ({existing_content_hash}) and ID {existing_seq_profile_id}",
                     )
                 continue
-            else:
+            elif seq_profile_for_upload.content_hash != NULL_ID:
+                # Hashes are known and equal
                 seq_profile_result.add_info(
                     "1d7c9b53",
                     f"Existing SeqProfile with same protocol_id ({seq_profile_for_upload.protocol_id}) and content_hash ({seq_profile_for_upload.content_hash}) will have seq_id set from None to ({seq_profile_for_upload.seq_id})",
                 )
+            # else: content_hash == NULL_ID — computed server-side from locus_allele_id_map
+            # (requires the locus code map). Treat as matching natural key; the upsert
+            # phase will compute the hash and verify or update.
 
             # At this point, an existing SeqProfile with the same natural key and content_hash has been found
             seq_profile_result.is_new = False
