@@ -352,7 +352,7 @@ class TestContent:
                 assert len(dist_cols) >= 1
                 # assert that any item in similar_case_ids is a UUID
                 for case_id_and_date in similar_cases_retval.cases:
-                    assert isinstance(case_id_and_date.case_id, UUID)
+                    assert isinstance(case_id_and_date.id, UUID)
 
             # Retrieve genetic sequence
             genetic_sequence_cols = [

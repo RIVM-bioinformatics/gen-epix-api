@@ -246,6 +246,31 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         ]
         return [x for x in df.values() if x.protocol_id in unique_protocol_ids]
 
+    def retrieve_similar_profiles_from_pairs(
+        self,
+        uow: BaseUnitOfWork,
+        protocol_id: UUID,
+        profile_ids: list[UUID],
+        max_distance: float,
+        **kwargs: Any,
+    ) -> list[UUID]:
+        if not profile_ids:
+            return []
+        profile_id_set = set(profile_ids)
+        table: dict[UUID, model.SeqDistancePair] = self.db.get(  # type: ignore[assignment]
+            model.SeqDistancePair, {}
+        )
+        matching: set[UUID] = set()
+        for pair in table.values():
+            if pair.protocol_id != protocol_id:
+                continue
+            if pair.profile_id_a not in profile_id_set:
+                continue
+            if pair.distance > max_distance:
+                continue
+            matching.add(pair.profile_id_b)
+        return [x for x in matching if x not in profile_id_set]
+
     def filter_seq_profiles_by_quality(
         self,
         uow: BaseUnitOfWork,

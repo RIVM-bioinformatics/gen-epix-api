@@ -82,7 +82,11 @@ def _update_profile_distances(
                     user=user,
                     # TODO: the models current being passed here are ForUpload models rather than regular models. They should be converted first.
                     seq_profiles=seq_profiles,
-                    seq_distance_last_modified_at=(cmd.seq_distance_last_modified_at),
+                    seq_distance_last_modified_at=cmd.seq_distance_last_modified_at,
+                    existing_chunk_size=cmd.existing_chunk_size,
+                    use_row_per_pair=cmd.use_row_per_pair,
+                    use_numpy_allele=cmd.use_numpy_allele,
+                    use_batch_new_profiles=cmd.use_batch_new_profiles,
                 )
             )
         )

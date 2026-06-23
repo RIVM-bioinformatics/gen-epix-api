@@ -26,6 +26,9 @@ from gen_epix.seqdb.repositories.sa_model.seq.operational_data import (
     SeqDistance as SeqDistance,
 )
 from gen_epix.seqdb.repositories.sa_model.seq.operational_data import (
+    SeqDistancePair as SeqDistancePair,
+)
+from gen_epix.seqdb.repositories.sa_model.seq.operational_data import (
     SeqIdentifier as SeqIdentifier,
 )
 from gen_epix.seqdb.repositories.sa_model.seq.operational_data import (

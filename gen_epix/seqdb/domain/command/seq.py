@@ -64,6 +64,26 @@ class UploadSamplesCommand(Command, UploadBatchCommandMixin):
             "existing profiles are loaded in a single pass (original behaviour)."
         ),
     )
+    use_row_per_pair: bool = Field(
+        default=False,
+        description=(
+            "If True, write distances to seq_distance_pair table and skip all "
+            "reads/updates of existing SeqDistance content blobs."
+        ),
+    )
+    use_numpy_allele: bool = Field(
+        default=False,
+        description=(
+            "If True, use numpy-vectorized ALLELE Hamming (S16 frombuffer decode)."
+        ),
+    )
+    use_batch_new_profiles: bool = Field(
+        default=False,
+        description=(
+            "If True, compare all new profiles against each existing in a single "
+            "numpy broadcast; implies use_numpy_allele."
+        ),
+    )
 
 
 class RetrieveSeqDistanceLastModifiedCommand(Command):
@@ -109,6 +129,26 @@ class CalculateSeqDistancesForNewProfilesCommand(Command):
             "existing profiles are loaded in a single pass (original behaviour)."
         ),
     )
+    use_row_per_pair: bool = Field(
+        default=False,
+        description=(
+            "If True, write distances to seq_distance_pair table and skip all "
+            "reads/updates of existing SeqDistance content blobs."
+        ),
+    )
+    use_numpy_allele: bool = Field(
+        default=False,
+        description=(
+            "If True, use numpy-vectorized ALLELE Hamming (S16 frombuffer decode)."
+        ),
+    )
+    use_batch_new_profiles: bool = Field(
+        default=False,
+        description=(
+            "If True, compare all new profiles against each existing in a single "
+            "numpy broadcast; implies use_numpy_allele."
+        ),
+    )
 
 
 class UpdateSeqDistancesCommand(Command):
@@ -137,6 +177,26 @@ class UpdateSeqDistancesCommand(Command):
             "If set, existing profiles are processed in chunks of this size "
             "to limit memory use. When None, all existing profiles are loaded "
             "and streamed in a single pass (original behaviour)."
+        ),
+    )
+    use_row_per_pair: bool = Field(
+        default=False,
+        description=(
+            "If True, write distances to seq_distance_pair table and skip all "
+            "reads/updates of existing SeqDistance content blobs."
+        ),
+    )
+    use_numpy_allele: bool = Field(
+        default=False,
+        description=(
+            "If True, use numpy-vectorized ALLELE Hamming (S16 frombuffer decode)."
+        ),
+    )
+    use_batch_new_profiles: bool = Field(
+        default=False,
+        description=(
+            "If True, compare all new profiles against each existing in a single "
+            "numpy broadcast; implies use_numpy_allele."
         ),
     )
 
@@ -255,6 +315,12 @@ class RetrieveSimilarProfilesCommand(Command):
     )
     max_distance: float = Field(
         description="Maximum distance threshold for considering profiles as similar.",
+    )
+    use_row_per_pair: bool = Field(
+        default=False,
+        description=(
+            "If True, query seq_distance_pair instead of the SeqDistance blobs."
+        ),
     )
 
 

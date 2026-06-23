@@ -15,6 +15,7 @@ from gen_epix.seqdb.domain.model.seq.classification import (
 )
 from gen_epix.seqdb.domain.model.seq.classification import SeqTaxonomy as SeqTaxonomy
 from gen_epix.seqdb.domain.model.seq.distance import SeqDistance as SeqDistance
+from gen_epix.seqdb.domain.model.seq.distance import SeqDistancePair as SeqDistancePair
 from gen_epix.seqdb.domain.model.seq.locus import Allele as Allele
 from gen_epix.seqdb.domain.model.seq.locus import Locus as Locus
 from gen_epix.seqdb.domain.model.seq.locus import LocusCodeMap as LocusCodeMap

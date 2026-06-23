@@ -363,6 +363,42 @@ class SeqSARepository(SARepository, BaseSeqRepository):
             result.append(mapper.load(row[0]))  # type: ignore[arg-type]
         return result
 
+    def retrieve_similar_profiles_from_pairs(
+        self,
+        uow: BaseUnitOfWork,
+        protocol_id: UUID,
+        profile_ids: list[UUID],
+        max_distance: float,
+        **kwargs: Any,
+    ) -> list[UUID]:
+        if not profile_ids:
+            return []
+        assert isinstance(uow, SAUnitOfWork)
+        tbl = sa_model.SeqDistancePair.__table__
+        stmt = (
+            sa.select(tbl.c.profile_id_b)
+            .where(tbl.c.protocol_id == protocol_id)
+            .where(tbl.c.distance <= max_distance)
+            .distinct()
+        )
+        if uow.session.get_bind().dialect.name == "mssql":
+            col_type = tbl.c.profile_id_a.type
+            temp_table = self.create_unique_values_temp_table(
+                uow.session,
+                sa_model.SeqDistancePair.metadata,
+                "profile_id_a",
+                col_type,
+                profile_ids,
+            )
+            stmt = stmt.join(
+                temp_table, tbl.c.profile_id_a == temp_table.c.profile_id_a
+            )
+        else:
+            stmt = stmt.where(tbl.c.profile_id_a.in_(profile_ids))
+        rows = uow.session.execute(stmt).fetchall()
+        profile_id_set = set(profile_ids)
+        return [row[0] for row in rows if row[0] not in profile_id_set]
+
     def filter_seq_profiles_by_quality(
         self,
         uow: BaseUnitOfWork,

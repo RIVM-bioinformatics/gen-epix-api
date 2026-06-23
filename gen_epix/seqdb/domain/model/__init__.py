@@ -86,6 +86,7 @@ from gen_epix.seqdb.domain.model.seq import (
     SeqClassificationForUpload as SeqClassificationForUpload,
 )
 from gen_epix.seqdb.domain.model.seq import SeqDistance as SeqDistance
+from gen_epix.seqdb.domain.model.seq import SeqDistancePair as SeqDistancePair
 from gen_epix.seqdb.domain.model.seq import SeqForUpload as SeqForUpload
 from gen_epix.seqdb.domain.model.seq import SeqIdentifier as SeqIdentifier
 from gen_epix.seqdb.domain.model.seq import SeqProfile as SeqProfile
@@ -156,6 +157,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             SeqClassification,
             SeqClassificationForUpload,
             SeqDistance,
+            SeqDistancePair,
             SeqTaxonomy,
             PhylogeneticTree,
             ReadSetForUpload,

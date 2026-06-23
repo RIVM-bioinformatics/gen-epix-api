@@ -78,3 +78,35 @@ class SeqDistance(
             raise ValueError(f"Unsupported format: {self.format}")
         content_dict = json.loads(self.content)
         return {UUID(x): y for x, y in content_dict.items()}
+
+
+class SeqDistancePair(Model, HasProtocolMixin):
+    """One row per ordered pair (profile_a → profile_b) in seq_distance_pair.
+
+    Both directions are stored explicitly, so retrieval only needs a single
+    WHERE profile_id_a IN (...) query without a UNION. The seq_distance_pair
+    table coexists with seq_distance while both paths are benchmarked; existing
+    SeqDistance records are not modified when use_row_per_pair is active.
+    """
+
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="seq_distance_pairs",
+        table_name="seq_distance_pair",
+        persistable=True,
+        keys=create_keys({1: ("protocol_id", "profile_id_a", "profile_id_b")}),
+        links=create_links(
+            {
+                1: ("protocol_id", Protocol, "protocol"),
+                2: ("profile_id_a", SeqProfile, "profile_a"),
+                3: ("profile_id_b", SeqProfile, "profile_b"),
+            }
+        ),
+    )
+
+    profile_id_a: UUID = Field(description="Source profile of the directed pair.")
+    profile_a: SeqProfile | None = Field(default=None)
+
+    profile_id_b: UUID = Field(description="Target profile of the directed pair.")
+    profile_b: SeqProfile | None = Field(default=None)
+
+    distance: float = Field(description="Hamming distance between the two profiles.")

@@ -140,8 +140,17 @@ class SeqService(BaseSeqService):
         # Special case: zero query profile ids
         if not cmd.profile_ids:
             return []
-        # Use dedicated repository method to retrieve similar profiles, which allows for more efficient retrieval of distances and distance formats
         with self.repository.uow() as uow:
+            if cmd.use_row_per_pair:
+                return self.repository.retrieve_similar_profiles_from_pairs(
+                    uow,
+                    cmd.protocol_id,
+                    cmd.profile_ids,
+                    cmd.max_distance,
+                )
+            # Use dedicated repository method to retrieve similar profiles,
+            # which allows for more efficient retrieval of distances and
+            # distance formats
             similar_profile_ids: list[UUID] = self.repository.retrieve_similar_profiles(
                 uow,
                 cmd.protocol_id,

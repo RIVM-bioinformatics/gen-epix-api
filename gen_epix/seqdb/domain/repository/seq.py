@@ -169,6 +169,19 @@ class BaseSeqRepository(BaseRepository):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def retrieve_similar_profiles_from_pairs(
+        self,
+        uow: BaseUnitOfWork,
+        protocol_id: UUID,
+        profile_ids: list[UUID],
+        max_distance: float,
+        **kwargs: Any,
+    ) -> list[UUID]:
+        """Query seq_distance_pair for profiles within max_distance of any of
+        profile_ids. Returns matching profile IDs excluding the input IDs."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def filter_seq_profiles_by_quality(
         self,
         uow: BaseUnitOfWork,

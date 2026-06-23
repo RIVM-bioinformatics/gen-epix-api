@@ -248,8 +248,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         cols = abac.get_cols_with_any_rights()
         self.assertEqual(cols, {self.col1, self.col2, self.col3})
 
-    def test_get_cols_with_any_rights_filtered_includes_all(self) -> None:
-        # Due to implementation, filtered path still aggregates all CaseTypes.
+    def test_get_cols_with_any_rights_filtered_excludes_other_case_types(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
             self.case_type_id_1: {
                 self.dc1: self.make_access(self.dc1, read_cols={self.col1})
@@ -276,7 +275,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_share_abacs={},
         )
         cols = abac.get_cols_with_any_rights(self.case_type_id_1)
-        self.assertEqual(cols, {self.col1, self.col2})
+        self.assertEqual(cols, {self.col1})
 
     def test_get_cols_with_access_rights_read_filtered(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {

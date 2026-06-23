@@ -366,3 +366,35 @@ class SeqDistance(Base, RowMetadataMixin, ContentMixin[enum.SeqDistanceFormat]):
         "SeqProfile", foreign_keys=[seq_profile_id]
     )
     protocol: Mapped[Protocol] = relationship("Protocol", foreign_keys=[protocol_id])
+
+
+class SeqDistancePair(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+
+    Both FK columns point to SeqProfile, so SQLAlchemy requires explicit
+    foreign_keys= on each relationship to disambiguate the join condition.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.SeqDistancePair)
+
+    protocol_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SeqDistancePair, "protocol_id", index=True
+    )
+    profile_id_a: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SeqDistancePair, "profile_id_a", index=True
+    )
+    profile_id_b: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SeqDistancePair, "profile_id_b", index=True
+    )
+    distance: Mapped[float] = create_mapped_column(
+        DOMAIN, model.SeqDistancePair, "distance"
+    )
+
+    protocol: Mapped[Protocol] = relationship("Protocol", foreign_keys=[protocol_id])
+    profile_a: Mapped[SeqProfile] = relationship(
+        "SeqProfile", foreign_keys=[profile_id_a]
+    )
+    profile_b: Mapped[SeqProfile] = relationship(
+        "SeqProfile", foreign_keys=[profile_id_b]
+    )
