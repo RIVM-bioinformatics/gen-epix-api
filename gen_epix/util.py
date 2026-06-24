@@ -1,15 +1,18 @@
+import datetime
 import hashlib
+import inspect
 import tomllib
 import uuid
 from collections import defaultdict
 from collections.abc import Hashable, Iterable
-from functools import lru_cache
+from functools import lru_cache, wraps
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 from uuid import UUID
 
 import ulid
 from pydantic import BaseModel, Field
+from pyinstrument import Profiler
 
 
 def generate_ulid() -> uuid.UUID:
@@ -254,3 +257,58 @@ def chunk_list(values: list, chunk_size: int | None) -> list[list]:
         return [values]
     n = len(values)
     return [values[i : i + chunk_size] for i in range(0, n, chunk_size)]
+
+
+def profile_method() -> Callable:
+    """Decorator method to profile a method using Pyinstrument.
+    The profiling output is written to a file named after the method and the current timestamp.
+    The decorator automatically determines whether the method is synchronous or asynchronous.
+    """
+
+    def decorator(method: Callable) -> Callable:
+
+        if inspect.iscoroutinefunction(method):
+
+            @wraps(method)
+            async def async_wrapper(*args, **kwargs):
+                profiler = Profiler(async_mode="enabled")
+
+                profiler.start()
+                try:
+                    return await method(*args, **kwargs)
+                finally:
+                    profiler.stop()
+
+                    filename = (
+                        f"{method.__name__}-"
+                        f"{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}-"
+                        f"{uuid.uuid4()}.log"
+                    )
+
+                    with open(filename, "w", encoding="utf-8") as f:
+                        profiler.print(file=f, color=False)
+
+            return async_wrapper
+
+        @wraps(method)
+        def sync_wrapper(*args, **kwargs):
+            profiler = Profiler(async_mode="disabled")
+
+            profiler.start()
+            try:
+                return method(*args, **kwargs)
+            finally:
+                profiler.stop()
+
+                filename = (
+                    f"{method.__name__}-"
+                    f"{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}-"
+                    f"{uuid.uuid4()}.log"
+                )
+
+                with open(filename, "w", encoding="utf-8") as f:
+                    profiler.print(file=f, color=False)
+
+        return sync_wrapper
+
+    return decorator
