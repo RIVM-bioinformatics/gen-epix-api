@@ -7,6 +7,8 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+import numpy as np
+
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.seqdb.domain import enum, model
 
@@ -240,14 +242,22 @@ def generate_scale_test_db(
     n_existing: int,
     max_stored_distance: float = 1e9,
     seed: int | None = None,
+    locus_probs: np.ndarray | None = None,
+    reference_allele_ids: list[UUID] | None = None,
+    null_probability: float = 0.005,
 ) -> dict[type, dict[UUID, Any]]:
     """Single locus-set / protocol with n_existing pre-seeded profiles.
 
     All profiles share one allele detection protocol and one locus set.
     SeqDistance records start empty (content="{}"). Upload N new profiles
-    against these n_existing to measure _calculate_and_store_distances
-    at scale. max_stored_distance defaults to 1e9 so every pair is written,
-    exercising the full json.loads / UPDATE_SOME path.
+    against these n_existing to measure _calculate_and_store_distances at
+    scale.
+
+    When locus_probs and reference_allele_ids are supplied, each profile is
+    a realistic mutation of the reference (colleague's ColdSampleGenerator
+    approach): locus i mutates with probability locus_probs[i], else the
+    reference allele is kept. max_stored_distance should be set to the real
+    production threshold (e.g. 20.0) in this case.
 
     When seed is provided, all UUID and random generation is deterministic,
     so the resulting db has stable IDs that match a previously persisted
@@ -267,6 +277,7 @@ def generate_scale_test_db(
     db: dict[type, dict[UUID, Any]] = {x: {} for x in model_types}
 
     rng = random.Random(seed)
+    np_rng = np.random.default_rng(seed) if locus_probs is not None else None
 
     def _uuid() -> UUID:
         return UUID(int=rng.getrandbits(128)) if seed is not None else uuid.uuid4()
@@ -339,11 +350,18 @@ def generate_scale_test_db(
         db[type(obj)][obj.id] = obj
 
     # Pre-seed n_existing profiles all sharing the same protocol/locus set.
-    # All allele IDs are random (so pairwise distance ≈ n_loci), but with
-    # max_stored_distance=1e9 every pair is stored anyway, exercising the
-    # full json.loads / UPDATE_SOME path on every chunk.
     for _ in range(n_existing):
-        allele_ids = [_uuid() for _ in locus_ids]
+        if locus_probs is not None and reference_allele_ids is not None:
+            assert np_rng is not None
+            allele_ids = list(reference_allele_ids)
+            mutate_mask = np_rng.random(n_loci) < locus_probs
+            null_mask = np_rng.random(n_loci) < null_probability
+            for j in np.where(mutate_mask)[0]:
+                allele_ids[j] = _uuid()
+            for j in np.where(null_mask)[0]:
+                allele_ids[j] = NULL_ID
+        else:
+            allele_ids = [_uuid() for _ in locus_ids]
 
         sample = model.Sample(  # type: ignore[call-arg]
             id=_uuid(),

@@ -1,13 +1,21 @@
 """
-Benchmark comparing six distance-calculation variants for LSP-3477.
+Benchmark comparing blob_numpy_batch vs pair_numpy_batch for LSP-3477.
 
-Six flag combinations (blob vs row-per-pair, Python vs numpy, scalar numpy vs
-batched numpy) are timed on DICT and SA_SQLITE repositories at two scales.
-Each variant runs on a FRESH copy of the repository so results are comparable.
+Both variants use numpy vectorisation and batched new-profile comparison.
+They are timed on DICT and SA_SQLITE repositories at multiple scales. Each
+variant runs on a FRESH copy of the repository so results are comparable.
 
-Large SQLite base files are stored in BENCHMARK_DATA_DIR (D: drive). A
-per-variant temp file is created by copying the base, populated with n_new
-fresh profiles, used for the timed run, then deleted.
+Profiles are generated with realistic distance distributions (colleague's
+ColdSampleGenerator approach): per-locus mutation probabilities sampled from
+Uniform(0, _LOCUS_MAX_MUTATION_PROB). This means most pairs exceed
+max_stored_distance=20 (cross-strain), while same-strain pairs cluster within
+the threshold — matching the production distance distribution.
+
+Large SQLite base files are stored in BENCHMARK_DATA_DIR (D: drive). The
+filename includes _BENCH_VERSION so changing generation parameters
+automatically invalidates old cached files. Old files can be deleted manually.
+
+Each test cell saves a pyinstrument HTML flame graph to RUN_DIR/profiles/.
 
 Run with:
     pytest test/seqdb/performance/calculate_seq_distances/ \\
@@ -22,6 +30,7 @@ import json
 import logging
 import os
 import shutil
+from datetime import datetime
 from pathlib import Path
 from time import perf_counter
 from typing import Any, cast
@@ -75,23 +84,43 @@ MSSQL_URL_ENV = "SEQDB_MSSQL_TEST_URL"
 # existing_chunk_size for _calculate_and_store_distances (match prod default)
 EXISTING_CHUNK_SIZE = 1000
 
-# max_distance used for the retrieve sub-benchmark; set high so results are
-# returned across all variants (avoids no-op queries skewing the timing).
-RETRIEVE_MAX_DISTANCE = 1e9
+# Production retrieve threshold: ~50 near-neighbours per case.
+RETRIEVE_MAX_DISTANCE = 5
+
+# Version tag baked into SQLite filenames. Bump when changing profile
+# generation parameters so old cached files are never reused silently.
+_BENCH_VERSION = "v2"
+
+# max_stored_distance passed to generate_scale_test_db (mirrors prod value).
+_MAX_STORED_DISTANCE = 20.0
+
+# Colleague's ColdSampleGenerator approach: per-locus mutation probability
+# sampled from Uniform(0, _LOCUS_MAX_MUTATION_PROB). 0.003 → expected
+# within-strain pairwise distance ~9, so most pairs fall within 20 loci.
+_LOCUS_MAX_MUTATION_PROB = 0.003
+_NULL_PROB = 0.005
+_PROFILE_GEN_SEED = 42
 
 N_EXISTING = [100, 1000, 5000]
 N_NEW = [10, 50, 100]
 N_LOCI = 3000
 
+# Only numpy_batch variants are benchmarked here. The other four variants
+# were confirmed slower in a previous full run; a final all-variant run can
+# be done once all optimisations are exhausted.
 VARIANTS = [
-    {"name": "blob_baseline",    "pair": False, "numpy": False, "batch": False},
-    {"name": "blob_numpy",       "pair": False, "numpy": True,  "batch": False},
-    {"name": "blob_numpy_batch", "pair": False, "numpy": True,  "batch": True},
-    {"name": "pair_baseline",    "pair": True,  "numpy": False, "batch": False},
-    {"name": "pair_numpy",       "pair": True,  "numpy": True,  "batch": False},
-    {"name": "pair_numpy_batch", "pair": True,  "numpy": True,  "batch": True},
+    {"name": "blob_numpy_batch", "pair": False, "numpy": True, "batch": True},
+    {"name": "pair_numpy_batch", "pair": True,  "numpy": True, "batch": True},
 ]
 REPO_TYPES = [enum.RepositoryType.DICT, enum.RepositoryType.SA_SQLITE]
+
+# ── Per-run output directory ─────────────────────────────────────────────────
+# Created once at import time so every cell in the session lands in the same
+# directory. Charts and JSON summary are written here; flame graphs go in
+# profiles/ subdirectory (one HTML per cell).
+RUN_DIR = Path("test/output") / (
+    datetime.now().strftime("%Y%m%d_%H%M%S") + "_seq_distance_optimisation"
+)
 
 _RESULTS: list[dict[str, Any]] = []
 
@@ -116,32 +145,59 @@ def get_test_client() -> Env:
     )
 
 
-# ── Profile generation helpers ───────────────────────────────────────────────
+# ── Realistic profile generation helpers ─────────────────────────────────────
 
 
-def _generate_new_profiles(
-    n_new: int,
+def _init_profile_generator(
+    n_loci: int,
+) -> tuple[np.ndarray, list[UUID]]:
+    """Return (locus_probs, reference_allele_ids) for realistic profiles.
+
+    Replicates the ColdSampleGenerator approach from lsp-data: each locus
+    gets a fixed mutation probability sampled from
+    Uniform(0, _LOCUS_MAX_MUTATION_PROB). Profiles generated from the same
+    reference will have realistic Hamming distances (~9 on average with
+    _LOCUS_MAX_MUTATION_PROB=0.003).
+    """
+    rng = np.random.default_rng(_PROFILE_GEN_SEED)
+    locus_probs = rng.uniform(0.0, _LOCUS_MAX_MUTATION_PROB, size=n_loci)
+    raw = rng.integers(0, 256, size=(n_loci, 16), dtype=np.uint8)
+    reference_allele_ids = [UUID(bytes=bytes(row)) for row in raw]
+    return locus_probs, reference_allele_ids
+
+
+def _make_realistic_profiles(
+    n: int,
     allele_protocol_id: UUID,
     locus_set_id: UUID,
     n_loci: int,
-    seed: int = 999,
+    reference_allele_ids: list[UUID],
+    locus_probs: np.ndarray,
+    seed: int = 0,
 ) -> tuple[list[model.SeqProfile], list[model.Sample]]:
-    """Generate n_new SeqProfile + Sample pairs with random allele IDs.
+    """Generate n realistic SeqProfile + Sample pairs.
 
-    No SeqDistance record is created; the caller inserts these directly into a
-    fresh repo before running the timed distance-calculation step.
+    Each profile mutates loci independently with probability locus_probs[i].
+    No SeqDistance record is created; the caller inserts these directly.
     """
     import random as _rnd
 
-    rng = _rnd.Random(seed)
+    id_rng = _rnd.Random(seed)
+    np_rng = np.random.default_rng(seed)
 
     def _uuid() -> UUID:
-        return UUID(int=rng.getrandbits(128))
+        return UUID(int=id_rng.getrandbits(128))
 
     profiles: list[model.SeqProfile] = []
     samples: list[model.Sample] = []
-    for _ in range(n_new):
-        allele_ids = [_uuid() for _ in range(n_loci)]
+    for _ in range(n):
+        alleles = list(reference_allele_ids)
+        mutate_mask = np_rng.random(n_loci) < locus_probs
+        null_mask = np_rng.random(n_loci) < _NULL_PROB
+        for j in np.where(mutate_mask)[0]:
+            alleles[j] = _uuid()
+        for j in np.where(null_mask)[0]:
+            alleles[j] = NULL_ID
         sample = model.Sample(
             id=_uuid(),
             created_in_data_collection_id=_uuid(),
@@ -153,9 +209,9 @@ def _generate_new_profiles(
             locus_set_id=locus_set_id,
             n_loci=n_loci,
             format=enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
-            content_hash=model.SeqProfile.get_allele_profile_hash(allele_ids),  # type: ignore[arg-type]
+            content_hash=model.SeqProfile.get_allele_profile_hash(alleles),  # type: ignore[arg-type]
             content=base64.b64encode(
-                b"".join(NULL_ID.bytes if x is None else x.bytes for x in allele_ids)
+                b"".join(x.bytes for x in alleles)
             ).decode("ascii"),
             sample_id=sample.id,
         )
@@ -499,15 +555,14 @@ def generate_benchmark_charts() -> Any:
     yield
     if not _RESULTS:
         return
-    output_dir = Path("test/output")
-    output_dir.mkdir(exist_ok=True)
-    with open(output_dir / "benchmark_lsp3477_results.json", "w") as fh:
+    (RUN_DIR / "charts").mkdir(parents=True, exist_ok=True)
+    with open(RUN_DIR / "results.json", "w") as fh:
         json.dump(_RESULTS, fh, indent=2)
     if _HAS_MATPLOTLIB:
-        _plot_total_duration(_RESULTS, output_dir / "benchmark_lsp3477_total.png")
-        _plot_per_profile(_RESULTS, output_dir / "benchmark_lsp3477_per_profile.png")
-        _plot_segments(_RESULTS, output_dir / "benchmark_lsp3477_segments.png")
-        _plot_retrieve(_RESULTS, output_dir / "benchmark_lsp3477_retrieve.png")
+        _plot_total_duration(_RESULTS, RUN_DIR / "charts" / "total_duration.png")
+        _plot_per_profile(_RESULTS, RUN_DIR / "charts" / "per_profile.png")
+        _plot_segments(_RESULTS, RUN_DIR / "charts" / "segments.png")
+        _plot_retrieve(_RESULTS, RUN_DIR / "charts" / "retrieve.png")
 
 
 # ── Parametrization ───────────────────────────────────────────────────────────
@@ -544,6 +599,8 @@ class TestDistanceOptimizationBenchmark:
     dist_protocols: dict[int, model.Protocol]
     new_profiles: dict[tuple[int, int], tuple[list[model.SeqProfile], list[model.Sample]]]
     base_sqlite_paths: dict[int, Path]
+    locus_probs: np.ndarray
+    reference_allele_ids: list[UUID]
 
     @pytest.fixture(scope="module", autouse=True)
     def setup(self, env: Env) -> None:
@@ -555,6 +612,12 @@ class TestDistanceOptimizationBenchmark:
         )
         type(self).entities = entities
 
+        # Generate shared locus probs and reference once; all scales and new
+        # profiles use the same reference so near-neighbours exist.
+        locus_probs, reference_allele_ids = _init_profile_generator(N_LOCI)
+        type(self).locus_probs = locus_probs
+        type(self).reference_allele_ids = reference_allele_ids
+
         type(self).base_dbs = {}
         type(self).dist_protocols = {}
         type(self).new_profiles = {}
@@ -562,7 +625,12 @@ class TestDistanceOptimizationBenchmark:
 
         for n_ex in N_EXISTING:
             db = generate_scale_test_db(
-                n_loci=N_LOCI, n_existing=n_ex, seed=n_ex
+                n_loci=N_LOCI,
+                n_existing=n_ex,
+                max_stored_distance=_MAX_STORED_DISTANCE,
+                seed=n_ex,
+                locus_probs=locus_probs,
+                reference_allele_ids=reference_allele_ids,
             )
             dist_proto, allele_proto_id, locus_set_id, n_loci = _extract_protocol_info(db)
 
@@ -571,17 +639,24 @@ class TestDistanceOptimizationBenchmark:
 
             # Pre-generate new profiles for each n_new (deterministic seeds)
             for n_new in N_NEW:
-                profs, samps = _generate_new_profiles(
-                    n_new, allele_proto_id, locus_set_id, n_loci, seed=n_ex + n_new
+                profs, samps = _make_realistic_profiles(
+                    n_new,
+                    allele_proto_id,
+                    locus_set_id,
+                    n_loci,
+                    reference_allele_ids,
+                    locus_probs,
+                    seed=n_ex + n_new,
                 )
                 type(self).new_profiles[(n_ex, n_new)] = (profs, samps)
 
-            # Base SQLite — created once, reused across benchmark runs.
-            # Guard against a partially-written file: if a previous run created
-            # the schema but the fill transaction was never committed (e.g. the
-            # process was killed), the file exists and has non-zero size but
-            # contains no rows.  In that case we delete it and start fresh.
-            sqlite_path = BENCHMARK_DATA_DIR / f"bench_base_{n_ex}.sqlite"
+            # Base SQLite — versioned filename so parameter changes invalidate
+            # old cached files automatically. Guard against partially-written
+            # files: if the schema was created but the fill transaction was
+            # never committed, the file has non-zero size but zero rows.
+            sqlite_path = (
+                BENCHMARK_DATA_DIR / f"bench_{_BENCH_VERSION}_base_{n_ex}.sqlite"
+            )
             reuse = sqlite_path.exists() and sqlite_path.stat().st_size > 0
             base_sa_repo = create_sqlite_repository(
                 sqlite_path, entities, recreate_sqlite_file=not reuse
@@ -665,6 +740,13 @@ class TestDistanceOptimizationBenchmark:
             wall_s = perf_counter() - t0
             profiler.stop()
 
+            (RUN_DIR / "profiles").mkdir(parents=True, exist_ok=True)
+            html_path = (
+                RUN_DIR / "profiles"
+                / f"{variant['name']}_{repo_type.value}_n{n_existing}_m{n_new}.html"
+            )
+            html_path.write_text(profiler.output_html())
+
             frame_data = json.loads(profiler.output(renderer=JSONRenderer()))
             segments = _extract_segments(frame_data)
 
@@ -727,6 +809,8 @@ class TestDistanceOptimizationBenchmarkMssql:
     new_profiles: dict[tuple[str, int], tuple[list[model.SeqProfile], list[model.Sample]]]
     mssql_repo: Any
     base_db: dict
+    locus_probs: np.ndarray
+    reference_allele_ids: list[UUID]
 
     _N_EXISTING_MSSQL = 5000
 
@@ -743,7 +827,18 @@ class TestDistanceOptimizationBenchmarkMssql:
         )
         type(self).entities = entities
 
-        db = generate_scale_test_db(n_loci=N_LOCI, n_existing=n_ex, seed=n_ex)
+        locus_probs, reference_allele_ids = _init_profile_generator(N_LOCI)
+        type(self).locus_probs = locus_probs
+        type(self).reference_allele_ids = reference_allele_ids
+
+        db = generate_scale_test_db(
+            n_loci=N_LOCI,
+            n_existing=n_ex,
+            max_stored_distance=_MAX_STORED_DISTANCE,
+            seed=n_ex,
+            locus_probs=locus_probs,
+            reference_allele_ids=reference_allele_ids,
+        )
         dist_proto, allele_proto_id, locus_set_id, n_loci = _extract_protocol_info(db)
         type(self).base_db = db
         type(self).dist_protocol = dist_proto
@@ -751,8 +846,13 @@ class TestDistanceOptimizationBenchmarkMssql:
         type(self).new_profiles = {}
         for v_idx, variant in enumerate(VARIANTS):
             for n_new in N_NEW:
-                profs, samps = _generate_new_profiles(
-                    n_new, allele_proto_id, locus_set_id, n_loci,
+                profs, samps = _make_realistic_profiles(
+                    n_new,
+                    allele_proto_id,
+                    locus_set_id,
+                    n_loci,
+                    reference_allele_ids,
+                    locus_probs,
                     seed=n_ex + n_new + v_idx * 10_000,
                 )
                 type(self).new_profiles[(variant["name"], n_new)] = (profs, samps)
@@ -800,6 +900,13 @@ class TestDistanceOptimizationBenchmarkMssql:
             env.app.handle(cmd)
             wall_s = perf_counter() - t0
             profiler.stop()
+
+            (RUN_DIR / "profiles").mkdir(parents=True, exist_ok=True)
+            html_path = (
+                RUN_DIR / "profiles"
+                / f"{variant['name']}_SA_SQL_n{n_ex}_m{n_new}.html"
+            )
+            html_path.write_text(profiler.output_html())
 
             frame_data = json.loads(profiler.output(renderer=JSONRenderer()))
             segments = _extract_segments(frame_data)
