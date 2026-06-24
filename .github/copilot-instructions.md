@@ -6,7 +6,7 @@ format, planning style, and detailed workflow guidance.
 ## Source of Truth
 
 - Docs guide; code decides.
-- If docs and code conflict, report both: "Docs say X, code shows Y."
+- If task-relevant docs and code conflict, report both: "Docs say X, code shows Y."
   Recommend whether docs or code should change.
 - Treat doc creation dates only as hints for which docs to inspect first.
   Verify claims in code or config before relying on them.
@@ -14,7 +14,7 @@ format, planning style, and detailed workflow guidance.
   domain rules, or replacements for missing symbols.
 - If a referenced path, symbol, config key, endpoint, role, or command is
   missing, use targeted search and report it under
-  `### Suspected Stale Documentation` with the search evidence.
+  `### Suspected Stale Documentation` with concise search evidence.
 
 ## Architecture
 
@@ -36,8 +36,8 @@ Layer ownership:
 
 Policies run in the command lifecycle: BEFORE, DURING, or AFTER.
 
-When changing behavior, identify the command involved and state any role,
-RBAC/ABAC, and BEFORE/DURING/AFTER impact.
+When changing behavior, identify the command involved. State role, RBAC/ABAC,
+and BEFORE/DURING/AFTER impact only when changed or when a risk exists.
 
 ## Security
 
@@ -89,5 +89,6 @@ RBAC/ABAC, and BEFORE/DURING/AFTER impact.
 - Avoid broad workspace scans when file, symbol, or path searches suffice.
 - Keep diffs focused and avoid unrelated refactors.
 - Use targeted tests before full suites when appropriate.
-- When reporting command failures, include the command, exit code, first error
-  block, and last relevant lines instead of full logs.
+- When a command failure blocks or materially affects the result, report the
+  command, exit code, first error block, and last relevant lines instead of
+  full logs.
