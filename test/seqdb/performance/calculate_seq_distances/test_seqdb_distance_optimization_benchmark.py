@@ -117,9 +117,11 @@ N_LOCI = 3000
 # were confirmed slower in a previous full run; a final all-variant run can
 # be done once all optimisations are exhausted.
 VARIANTS = [
-    {"name": "blob_numpy_batch",      "pair": False, "numpy": True, "batch": True, "bulk": False},
-    {"name": "pair_numpy_batch",      "pair": True,  "numpy": True, "batch": True, "bulk": False},
-    {"name": "pair_numpy_batch_bulk", "pair": True,  "numpy": True, "batch": True, "bulk": True},
+    {"name": "blob_numpy_batch",      "pair": False, "numpy": True, "batch": True,  "bulk": False, "int32_vocab": False},
+    {"name": "pair_numpy_batch",      "pair": True,  "numpy": True, "batch": True,  "bulk": False, "int32_vocab": False},
+    {"name": "pair_numpy_batch_bulk", "pair": True,  "numpy": True, "batch": True,  "bulk": True,  "int32_vocab": False},
+    {"name": "blob_int32_vocab",      "pair": False, "numpy": True, "batch": False, "bulk": False, "int32_vocab": True},
+    {"name": "pair_int32_vocab",      "pair": True,  "numpy": True, "batch": False, "bulk": False, "int32_vocab": True},
 ]
 REPO_TYPES = [enum.RepositoryType.SA_SQLITE]
 
@@ -774,6 +776,7 @@ class TestDistanceOptimizationBenchmark:
                 use_numpy_allele=variant["numpy"],
                 use_batch_new_profiles=variant["batch"],
                 use_bulk_insert=variant["bulk"],
+                use_int32_vocab=variant["int32_vocab"],
             )
 
             profiler = pyinstrument.Profiler()
@@ -934,6 +937,7 @@ class TestDistanceOptimizationBenchmarkMssql:
                 use_numpy_allele=variant["numpy"],
                 use_batch_new_profiles=variant["batch"],
                 use_bulk_insert=variant["bulk"],
+                use_int32_vocab=variant["int32_vocab"],
             )
 
             profiler = pyinstrument.Profiler()

@@ -149,6 +149,15 @@ class CalculateSeqDistancesForNewProfilesCommand(Command):
             "numpy broadcast; requires use_numpy_allele=True."
         ),
     )
+    use_int32_vocab: bool = Field(
+        default=False,
+        description=(
+            "If True, encode allele profiles to int32 via a per-chunk vocabulary "
+            "before comparison. Reduces matrix memory by 4x (16-byte S16 → 4-byte "
+            "int32). Requires use_numpy_allele=True; mutually exclusive with "
+            "use_batch_new_profiles."
+        ),
+    )
     use_bulk_insert: bool = Field(
         default=False,
         description=(
@@ -205,6 +214,15 @@ class UpdateSeqDistancesCommand(Command):
         description=(
             "If True, compare all new profiles against each existing in a single "
             "numpy broadcast; requires use_numpy_allele=True."
+        ),
+    )
+    use_int32_vocab: bool = Field(
+        default=False,
+        description=(
+            "If True, encode allele profiles to int32 via a per-chunk vocabulary "
+            "before comparison. Reduces matrix memory by 4x (16-byte S16 → 4-byte "
+            "int32). Requires use_numpy_allele=True; mutually exclusive with "
+            "use_batch_new_profiles."
         ),
     )
 
