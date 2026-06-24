@@ -75,8 +75,11 @@ from test.seqdb.performance.common import (
 from test.seqdb.seqdb_test_client import SeqdbTestClient as Env
 
 # ── Data storage ────────────────────────────────────────────────────────────
-# Large SQLite base files live here so the repo tree stays clean.
-BENCHMARK_DATA_DIR = Path("/mnt/d/data/rivm/lsp-3477-benchmark")
+# Keep SQLite base files on the native WSL2 filesystem to avoid the 9P
+# cross-filesystem overhead of /mnt/d (Windows drive). That overhead
+# benchmarked at ~21 MB/s (3s per 1000-profile chunk × 5 chunks = 15s
+# untracked "rest") and masked the real algorithmic differences.
+BENCHMARK_DATA_DIR = Path("/home/paulessers/data/lsp-3477-benchmark")
 
 # ── Benchmark parameters ────────────────────────────────────────────────────
 MSSQL_URL_ENV = "SEQDB_MSSQL_TEST_URL"
@@ -89,7 +92,7 @@ RETRIEVE_MAX_DISTANCE = 5
 
 # Version tag baked into SQLite filenames. Bump when changing profile
 # generation parameters so old cached files are never reused silently.
-_BENCH_VERSION = "v2"
+_BENCH_VERSION = "v4"
 
 # max_stored_distance passed to generate_scale_test_db (mirrors prod value).
 _MAX_STORED_DISTANCE = 20.0
@@ -101,18 +104,24 @@ _LOCUS_MAX_MUTATION_PROB = 0.003
 _NULL_PROB = 0.005
 _PROFILE_GEN_SEED = 42
 
-N_EXISTING = [100, 1000, 5000]
-N_NEW = [10, 50, 100]
+# Target within-cluster size: each new profile has ~_CLUSTER_SIZE stored
+# neighbours. n_clusters = max(1, n_existing // _CLUSTER_SIZE) is derived
+# per scale so the stored pair count stays ~constant as n_existing grows.
+_CLUSTER_SIZE = 50
+
+N_EXISTING = [5000] # [100, 1000, 5000]
+N_NEW = [10, 50, 100, 500]
 N_LOCI = 3000
 
 # Only numpy_batch variants are benchmarked here. The other four variants
 # were confirmed slower in a previous full run; a final all-variant run can
 # be done once all optimisations are exhausted.
 VARIANTS = [
-    {"name": "blob_numpy_batch", "pair": False, "numpy": True, "batch": True},
-    {"name": "pair_numpy_batch", "pair": True,  "numpy": True, "batch": True},
+    {"name": "blob_numpy_batch",      "pair": False, "numpy": True, "batch": True, "bulk": False},
+    {"name": "pair_numpy_batch",      "pair": True,  "numpy": True, "batch": True, "bulk": False},
+    {"name": "pair_numpy_batch_bulk", "pair": True,  "numpy": True, "batch": True, "bulk": True},
 ]
-REPO_TYPES = [enum.RepositoryType.DICT, enum.RepositoryType.SA_SQLITE]
+REPO_TYPES = [enum.RepositoryType.SA_SQLITE]
 
 # ── Per-run output directory ─────────────────────────────────────────────────
 # Created once at import time so every cell in the session lands in the same
@@ -150,20 +159,25 @@ def get_test_client() -> Env:
 
 def _init_profile_generator(
     n_loci: int,
-) -> tuple[np.ndarray, list[UUID]]:
-    """Return (locus_probs, reference_allele_ids) for realistic profiles.
+    n_clusters: int,
+) -> tuple[np.ndarray, list[list[UUID]]]:
+    """Return (locus_probs, cluster_refs) for multi-cluster realistic profiles.
 
-    Replicates the ColdSampleGenerator approach from lsp-data: each locus
-    gets a fixed mutation probability sampled from
-    Uniform(0, _LOCUS_MAX_MUTATION_PROB). Profiles generated from the same
-    reference will have realistic Hamming distances (~9 on average with
-    _LOCUS_MAX_MUTATION_PROB=0.003).
+    locus_probs[i] is the per-locus mutation probability (shared across all
+    clusters). cluster_refs[k] is the reference allele list for cluster k;
+    cluster references are fully independent (random UUIDs) so cross-cluster
+    pairs always exceed max_stored_distance.
+
+    Within-cluster expected pairwise distance ≈ 9 loci with
+    _LOCUS_MAX_MUTATION_PROB=0.003. Cross-cluster distance ≈ n_loci (3000).
     """
     rng = np.random.default_rng(_PROFILE_GEN_SEED)
     locus_probs = rng.uniform(0.0, _LOCUS_MAX_MUTATION_PROB, size=n_loci)
-    raw = rng.integers(0, 256, size=(n_loci, 16), dtype=np.uint8)
-    reference_allele_ids = [UUID(bytes=bytes(row)) for row in raw]
-    return locus_probs, reference_allele_ids
+    cluster_refs: list[list[UUID]] = []
+    for _ in range(n_clusters):
+        raw = rng.integers(0, 256, size=(n_loci, 16), dtype=np.uint8)
+        cluster_refs.append([UUID(bytes=bytes(row)) for row in raw])
+    return locus_probs, cluster_refs
 
 
 def _make_realistic_profiles(
@@ -171,26 +185,30 @@ def _make_realistic_profiles(
     allele_protocol_id: UUID,
     locus_set_id: UUID,
     n_loci: int,
-    reference_allele_ids: list[UUID],
+    cluster_refs: list[list[UUID]],
     locus_probs: np.ndarray,
     seed: int = 0,
 ) -> tuple[list[model.SeqProfile], list[model.Sample]]:
-    """Generate n realistic SeqProfile + Sample pairs.
+    """Generate n realistic SeqProfile + Sample pairs across clusters.
 
-    Each profile mutates loci independently with probability locus_probs[i].
-    No SeqDistance record is created; the caller inserts these directly.
+    Profiles are assigned round-robin to clusters so each cluster gets an
+    equal share. Within a cluster, each locus mutates with probability
+    locus_probs[i]. Cross-cluster pairs exceed max_stored_distance and are
+    never stored.
     """
     import random as _rnd
 
     id_rng = _rnd.Random(seed)
     np_rng = np.random.default_rng(seed)
+    n_clusters = len(cluster_refs)
 
     def _uuid() -> UUID:
         return UUID(int=id_rng.getrandbits(128))
 
     profiles: list[model.SeqProfile] = []
     samples: list[model.Sample] = []
-    for _ in range(n):
+    for i in range(n):
+        reference_allele_ids = cluster_refs[i % n_clusters]
         alleles = list(reference_allele_ids)
         mutate_mask = np_rng.random(n_loci) < locus_probs
         null_mask = np_rng.random(n_loci) < _NULL_PROB
@@ -242,7 +260,10 @@ def _extract_protocol_info(
 
 # Function-name sets used to bucket profiler time into segments. Names must
 # match the actual function names in calculate_seq_distance.py.
+# SeqDistance blob reads (blob path). Profile reads (step 4a) are tracked
+# separately under profile_read_s via _PROFILE_READ_FNS.
 _READ_FNS = frozenset({"iter_seq_distances", "iter_seq_distance_essentials"})
+_PROFILE_READ_FNS = frozenset({"read_some"})
 _DECODE_FNS = frozenset(
     {
         "_decode_profile",
@@ -259,19 +280,34 @@ _COMPARE_FNS = frozenset(
     }
 )
 _WRITE_FNS = frozenset(
-    {"bulk_update_seq_distance_content", "bulk_insert_seq_distance_pairs"}
+    {
+        "bulk_update_seq_distance_content",  # blob UPDATE existing SeqDistance
+        "bulk_insert_seq_distance_pairs",    # pair Core executemany path
+        "create_some",                       # pair ORM path + blob CREATE new
+    }
 )
 
 
 def _extract_segments(frame_data: dict[str, Any]) -> dict[str, float]:
-    """Walk pyinstrument JSON frame tree; accumulate time by function role."""
-    totals: dict[str, float] = {k: 0.0 for k in ("read", "decode", "compare", "write")}
+    """Walk pyinstrument JSON/HTML frame tree; accumulate time by function role.
+
+    The HTML renderer uses {identifier, time, children} nodes; the JSON
+    renderer uses {function, time, children}. Both are handled here.
+    """
+    totals: dict[str, float] = {
+        k: 0.0 for k in ("read", "profile_read", "decode", "compare", "write")
+    }
 
     def _walk(frame: dict[str, Any]) -> None:
-        fn = frame.get("function", "")
+        # HTML renderer stores "function_name /path lineN" in 'identifier';
+        # JSON renderer stores the bare name in 'function'.
+        raw_id = frame.get("identifier") or frame.get("function") or ""
+        fn = raw_id.split(" ")[0]  # take just the function name
         t = frame.get("time", 0.0)
         if fn in _READ_FNS:
             totals["read"] += t
+        elif fn in _PROFILE_READ_FNS:
+            totals["profile_read"] += t
         elif fn in _DECODE_FNS:
             totals["decode"] += t
         elif fn in _COMPARE_FNS:
@@ -281,14 +317,21 @@ def _extract_segments(frame_data: dict[str, Any]) -> dict[str, float]:
         for child in frame.get("children") or []:
             _walk(child)
 
-    _walk(frame_data.get("root_frame", {}))
+    # HTML renderer wraps data in {"session": ..., "frame_tree": ...};
+    # JSON renderer wraps it in {"root_frame": ...}.
+    root = (
+        frame_data.get("frame_tree")
+        or frame_data.get("root_frame")
+        or {}
+    )
+    _walk(root)
     return {f"{k}_s": v for k, v in totals.items()}
 
 
 # ── Chart helpers ─────────────────────────────────────────────────────────────
 
 _VARIANT_NAMES = [v["name"] for v in VARIANTS]
-_CHART_COLORS = ["#4878D0", "#EE854A", "#6ACC65", "#D65F5F"]
+_CHART_COLORS = ["#4878D0", "#956CB4", "#EE854A", "#6ACC65", "#D65F5F", "#BBBBBB"]
 # Colors for n_existing groups (used across all simple bar charts)
 _N_EX_COLORS = ["#4878D0", "#EE854A", "#6ACC65", "#D65F5F", "#956CB4"]
 
@@ -436,8 +479,11 @@ def _plot_segments(results: list[dict], out: Path) -> None:
         return
     repos = sorted({r["repo"] for r in results})
     n_new = max(r["n_new"] for r in results)
-    seg_keys = ["read_s", "decode_s", "compare_s", "write_s"]
-    seg_labels = ["read", "decode", "compare", "write"]
+    # profile_read_s = read_some calls for existing SeqProfile objects
+    seg_keys = [
+        "read_s", "profile_read_s", "decode_s", "compare_s", "write_s", "rest_s"
+    ]
+    seg_labels = ["read (dist)", "profile_read", "decode", "compare", "write", "rest"]
 
     # One column per (repo, n_existing) combination
     cols = [(repo, n_ex) for repo in repos for n_ex in _n_ex_for_repo(results, repo)]
@@ -599,8 +645,6 @@ class TestDistanceOptimizationBenchmark:
     dist_protocols: dict[int, model.Protocol]
     new_profiles: dict[tuple[int, int], tuple[list[model.SeqProfile], list[model.Sample]]]
     base_sqlite_paths: dict[int, Path]
-    locus_probs: np.ndarray
-    reference_allele_ids: list[UUID]
 
     @pytest.fixture(scope="module", autouse=True)
     def setup(self, env: Env) -> None:
@@ -612,25 +656,23 @@ class TestDistanceOptimizationBenchmark:
         )
         type(self).entities = entities
 
-        # Generate shared locus probs and reference once; all scales and new
-        # profiles use the same reference so near-neighbours exist.
-        locus_probs, reference_allele_ids = _init_profile_generator(N_LOCI)
-        type(self).locus_probs = locus_probs
-        type(self).reference_allele_ids = reference_allele_ids
-
         type(self).base_dbs = {}
         type(self).dist_protocols = {}
         type(self).new_profiles = {}
         type(self).base_sqlite_paths = {}
 
         for n_ex in N_EXISTING:
+            # n_clusters derived per scale so stored pairs stay ~constant.
+            n_clusters = max(1, n_ex // _CLUSTER_SIZE)
+            locus_probs, cluster_refs = _init_profile_generator(N_LOCI, n_clusters)
+
             db = generate_scale_test_db(
                 n_loci=N_LOCI,
                 n_existing=n_ex,
                 max_stored_distance=_MAX_STORED_DISTANCE,
                 seed=n_ex,
                 locus_probs=locus_probs,
-                reference_allele_ids=reference_allele_ids,
+                cluster_refs=cluster_refs,
             )
             dist_proto, allele_proto_id, locus_set_id, n_loci = _extract_protocol_info(db)
 
@@ -644,7 +686,7 @@ class TestDistanceOptimizationBenchmark:
                     allele_proto_id,
                     locus_set_id,
                     n_loci,
-                    reference_allele_ids,
+                    cluster_refs,
                     locus_probs,
                     seed=n_ex + n_new,
                 )
@@ -731,6 +773,7 @@ class TestDistanceOptimizationBenchmark:
                 use_row_per_pair=variant["pair"],
                 use_numpy_allele=variant["numpy"],
                 use_batch_new_profiles=variant["batch"],
+                use_bulk_insert=variant["bulk"],
             )
 
             profiler = pyinstrument.Profiler()
@@ -779,6 +822,7 @@ class TestDistanceOptimizationBenchmark:
                 "per_profile_s": wall_s / max(n_new, 1),
                 "retrieve_wall_s": retrieve_wall_s,
                 **segments,
+                "rest_s": max(0.0, wall_s - sum(segments.values())),
             }
         )
         print(
@@ -809,8 +853,6 @@ class TestDistanceOptimizationBenchmarkMssql:
     new_profiles: dict[tuple[str, int], tuple[list[model.SeqProfile], list[model.Sample]]]
     mssql_repo: Any
     base_db: dict
-    locus_probs: np.ndarray
-    reference_allele_ids: list[UUID]
 
     _N_EXISTING_MSSQL = 5000
 
@@ -827,9 +869,8 @@ class TestDistanceOptimizationBenchmarkMssql:
         )
         type(self).entities = entities
 
-        locus_probs, reference_allele_ids = _init_profile_generator(N_LOCI)
-        type(self).locus_probs = locus_probs
-        type(self).reference_allele_ids = reference_allele_ids
+        n_clusters = max(1, n_ex // _CLUSTER_SIZE)
+        locus_probs, cluster_refs = _init_profile_generator(N_LOCI, n_clusters)
 
         db = generate_scale_test_db(
             n_loci=N_LOCI,
@@ -837,7 +878,7 @@ class TestDistanceOptimizationBenchmarkMssql:
             max_stored_distance=_MAX_STORED_DISTANCE,
             seed=n_ex,
             locus_probs=locus_probs,
-            reference_allele_ids=reference_allele_ids,
+            cluster_refs=cluster_refs,
         )
         dist_proto, allele_proto_id, locus_set_id, n_loci = _extract_protocol_info(db)
         type(self).base_db = db
@@ -851,7 +892,7 @@ class TestDistanceOptimizationBenchmarkMssql:
                     allele_proto_id,
                     locus_set_id,
                     n_loci,
-                    reference_allele_ids,
+                    cluster_refs,
                     locus_probs,
                     seed=n_ex + n_new + v_idx * 10_000,
                 )
@@ -892,6 +933,7 @@ class TestDistanceOptimizationBenchmarkMssql:
                 use_row_per_pair=variant["pair"],
                 use_numpy_allele=variant["numpy"],
                 use_batch_new_profiles=variant["batch"],
+                use_bulk_insert=variant["bulk"],
             )
 
             profiler = pyinstrument.Profiler()
@@ -980,6 +1022,7 @@ class TestDistanceOptimizationBenchmarkMssql:
                 "per_profile_s": wall_s / max(n_new, 1),
                 "retrieve_wall_s": retrieve_wall_s,
                 **segments,
+                "rest_s": max(0.0, wall_s - sum(segments.values())),
             }
         )
         print(

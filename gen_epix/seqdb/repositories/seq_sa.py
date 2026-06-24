@@ -1,8 +1,8 @@
 from collections.abc import Iterable
 from collections.abc import Set as AbstractSet
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, cast
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import sqlalchemy as sa
 
@@ -286,6 +286,48 @@ class SeqSARepository(SARepository, BaseSeqRepository):
                 for x in objs
             ],
         )
+
+    def bulk_insert_seq_distance_pairs(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID | None,
+        pairs: list[tuple[UUID, UUID, float]],
+        protocol_id: UUID,
+    ) -> None:
+        """Insert SeqDistancePair rows via a single Core executemany call.
+
+        UUID columns are pre-converted to bytes so UUIDType.process_bind_param
+        is guaranteed to produce binary storage on both SQLite (binary=True)
+        and SQL Server — the same workaround used in update_some_seq_distance_content.
+        created_at/modified_at are set in Python (utcnow) rather than relying on
+        server_default so the values are visible within the same transaction.
+
+        No manual batching: SQLAlchemy 2.x's insertmanyvalues mode chunks the
+        list automatically per-dialect to respect parameter limits (e.g. SQL
+        Server's 2100-param ceiling). Manual chunking into 500-row loops adds
+        Python call overhead without benefit here.
+        """
+        if not pairs:
+            return
+        assert isinstance(uow, SAUnitOfWork)
+        tbl = sa_model.SeqDistancePair.__table__
+        now = datetime.now(timezone.utc)
+        proto_bytes = protocol_id.bytes
+        mod_bytes = user_id.bytes if user_id is not None else None
+        rows = [
+            {
+                "id": uuid4().bytes,
+                "protocol_id": proto_bytes,
+                "profile_id_a": a.bytes,
+                "profile_id_b": b.bytes,
+                "distance": d,
+                "created_at": now,
+                "modified_at": now,
+                "modified_by": mod_bytes,
+            }
+            for a, b, d in pairs
+        ]
+        uow.session.execute(tbl.insert(), rows)
 
     def get_profiles_without_seq_distance(
         self,

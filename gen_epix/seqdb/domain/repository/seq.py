@@ -168,6 +168,22 @@ class BaseSeqRepository(BaseRepository):
         """
         raise NotImplementedError()
 
+    def bulk_insert_seq_distance_pairs(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID | None,
+        pairs: list[tuple[UUID, UUID, float]],
+        protocol_id: UUID,
+    ) -> None:
+        """Insert SeqDistancePair rows via Core executemany, batched at 500.
+
+        Bypasses ORM object construction and session tracking for a
+        significant speedup when inserting large numbers of pairs. Falls
+        back to NotImplementedError for non-SA repositories (DICT path
+        keeps using the ORM crud route).
+        """
+        raise NotImplementedError()
+
     @abc.abstractmethod
     def retrieve_similar_profiles_from_pairs(
         self,

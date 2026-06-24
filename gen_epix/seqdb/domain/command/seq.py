@@ -149,6 +149,14 @@ class CalculateSeqDistancesForNewProfilesCommand(Command):
             "numpy broadcast; requires use_numpy_allele=True."
         ),
     )
+    use_bulk_insert: bool = Field(
+        default=False,
+        description=(
+            "If True and use_row_per_pair=True, write SeqDistancePair rows via "
+            "SQLAlchemy Core executemany instead of ORM session.add_all(). "
+            "No-op for DICT repositories or when use_row_per_pair=False."
+        ),
+    )
 
 
 class UpdateSeqDistancesCommand(Command):

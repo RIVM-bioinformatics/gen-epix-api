@@ -246,6 +246,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
                         use_row_per_pair=cmd.use_row_per_pair,
                         use_numpy_allele=cmd.use_numpy_allele,
                         use_batch_new_profiles=cmd.use_batch_new_profiles,
+                        use_bulk_insert=cmd.use_bulk_insert,
                     )
 
     return results
@@ -430,6 +431,7 @@ def _calculate_and_store_distances(
     use_row_per_pair: bool = False,
     use_numpy_allele: bool = False,
     use_batch_new_profiles: bool = False,
+    use_bulk_insert: bool = False,
 ) -> None:
     """
     Calculate pairwise distances between new_seq_profiles and all existing
@@ -761,6 +763,7 @@ def _calculate_and_store_distances(
             new_seq_profiles,
             new_profile_distance_maps,
             max_stored_distance,
+            decoded_profiles=decoded_new_profiles,
         )
     if logger:
         logger.debug(
@@ -771,29 +774,40 @@ def _calculate_and_store_distances(
     # Step 6: single-transaction write using the caller's uow (atomic).
     t_step6 = time.perf_counter()
     if use_row_per_pair:
-        # Materialise raw tuples into SeqDistancePair objects here, keeping
-        # uuid4() calls and Pydantic validation out of the inner loop.
-        # model_construct bypasses validation — values are internally computed
-        # so no external input is present; profile_a/profile_b default to None.
         proto_id = cast(UUID, protocol.id)
-        pair_objects: list[model.SeqDistancePair] = [
-            model.SeqDistancePair.model_construct(
-                id=cast(UUID, service.generate_id()),
-                protocol_id=proto_id,
-                profile_id_a=a,
-                profile_id_b=b,
-                distance=d,
-            )
-            for a, b, d in all_new_pairs
-        ]
-        if pair_objects:
-            repository.crud(
-                uow,
-                user_id,
-                model.SeqDistancePair,
-                CrudOperation.CREATE_SOME,
-                objs=pair_objects,
-            )
+        if use_bulk_insert:
+            # Core executemany path: bypasses Pydantic construction and ORM
+            # session tracking. Falls back to NotImplementedError on DICT repos
+            # (caught below and re-raised), so only SA repos benefit.
+            try:
+                repository.bulk_insert_seq_distance_pairs(
+                    uow, user_id, all_new_pairs, proto_id
+                )
+            except NotImplementedError:
+                # DICT repository: fall through to ORM path below.
+                use_bulk_insert = False
+        if not use_bulk_insert:
+            # ORM path: model_construct bypasses validation — values are
+            # internally computed so no external input is present;
+            # profile_a/profile_b default to None.
+            pair_objects: list[model.SeqDistancePair] = [
+                model.SeqDistancePair.model_construct(
+                    id=cast(UUID, service.generate_id()),
+                    protocol_id=proto_id,
+                    profile_id_a=a,
+                    profile_id_b=b,
+                    distance=d,
+                )
+                for a, b, d in all_new_pairs
+            ]
+            if pair_objects:
+                repository.crud(
+                    uow,
+                    user_id,
+                    model.SeqDistancePair,
+                    CrudOperation.CREATE_SOME,
+                    objs=pair_objects,
+                )
         # Coverage markers: SeqDistance rows with empty content so that
         # get_profiles_without_seq_distance (NOT EXISTS on seq_distance) still
         # correctly identifies unprocessed profiles on subsequent calls.
@@ -883,16 +897,19 @@ def _calculate_pairwise_profile_distances(
     profiles: list[model.SeqProfile],
     distance_maps: dict[UUID, dict[str, float]],
     max_stored_distance: float,
+    decoded_profiles: list[Any] | None = None,
 ) -> None:
     """
     Compute pairwise distances between profiles within a single batch and
     populate *distance_maps* (upper-triangle only; both directions stored).
 
-    Profiles are decoded once into a ``decoded`` list, then the O(N²/2)
-    loop calls ``_distance_from_decoded`` on pre-decoded data — avoiding
-    repeated b64decode / json.loads across the N² comparisons.
+    decoded_profiles may be supplied from step 3 (already decoded with
+    use_numpy_allele=True) to avoid redundant decoding and to keep numpy
+    arrays in use, which hits _hamming_allele_numpy instead of the slow
+    Python fallback in _calculate_distance_for_decoded_profile_pair.
     """
-    decoded_profiles = [_decode_profile(seq_profile_type, p) for p in profiles]
+    if decoded_profiles is None:
+        decoded_profiles = [_decode_profile(seq_profile_type, p) for p in profiles]
     profile_ids = [cast(UUID, x.id) for x in profiles]
     str_profile_ids = [str(x) for x in profile_ids]
     for i in range(len(profiles)):

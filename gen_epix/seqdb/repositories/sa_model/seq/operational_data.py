@@ -1,5 +1,6 @@
 from uuid import UUID
 
+import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, relationship
 
 from gen_epix.commondb.repositories.sa_model import (
@@ -377,6 +378,19 @@ class SeqDistancePair(Base, RowMetadataMixin):
     """
 
     __tablename__, __table_args__ = create_table_args(model.SeqDistancePair)
+    # Composite index for the retrieval query: WHERE protocol_id = :p AND
+    # profile_id_a IN (...). Avoids full-table scan when filtering by both
+    # columns simultaneously; single-column indexes are kept for other uses.
+    # The schema dict must remain the last element of __table_args__.
+    __table_args__ = (
+        *__table_args__[:-1],
+        sa.Index(
+            "ix_seq_distance_pair_protocol_profile_a",
+            "protocol_id",
+            "profile_id_a",
+        ),
+        __table_args__[-1],
+    )
 
     protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqDistancePair, "protocol_id", index=True
