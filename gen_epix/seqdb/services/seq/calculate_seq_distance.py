@@ -42,6 +42,11 @@ class _ParsedNextcladeProfile(BaseModel):
 # gives correct UUID identity — see SeqProfile.get_allele_array() for details.
 _NULL_ALLELE = b"\x00" * 16
 
+# Lightweight accumulator for the row-per-pair path: (profile_id_a, profile_id_b,
+# distance). SeqDistancePair objects are materialised in bulk at step 6, keeping
+# Pydantic validation and uuid4() calls out of the inner comparison loop.
+_RawPair = tuple[UUID, UUID, float]
+
 
 def _hamming_allele_numpy(arr1: np.ndarray, arr2: np.ndarray) -> float:
     """
@@ -581,11 +586,12 @@ def _calculate_and_store_distances(
         null_new = new_matrix == _NULL_ALLELE
 
     # all_modified_existing accumulates updated SeqDistance records across
-    # all chunks (blob path only). all_new_pairs accumulates SeqDistancePair
-    # objects across all chunks (row-per-pair path only). Both are written
+    # all chunks (blob path only). all_new_pairs accumulates raw (_RawPair)
+    # tuples across all chunks (row-per-pair path only); SeqDistancePair
+    # objects are materialised from them in step 6. Both are written
     # atomically in step 6 using the caller's uow.
     all_modified_existing: list[model.SeqDistance] = []
-    all_new_pairs: list[model.SeqDistancePair] = []
+    all_new_pairs: list[_RawPair] = []
 
     # Steps 4a-4d — Process existing profiles in chunks.
     # Chunking bounds peak memory for reads: each chunk loads at most
@@ -628,31 +634,19 @@ def _calculate_and_store_distances(
                 decoded_existing = _decode_profile(
                     seq_profile_type, existing_profile, use_numpy_allele
                 )
-                pid_b = cast(UUID, existing_profile.id)
+                pid_b = existing_profile.id  # narrowed by `is None` check above
                 proto_id = cast(UUID, protocol.id)
                 if new_matrix is not None and null_new is not None:
                     distances_arr = _hamming_allele_numpy_batch(
                         decoded_existing, new_matrix, null_new
                     )
-                    for new_profile, dist in zip(new_seq_profiles, distances_arr):
-                        if float(dist) <= max_stored_distance:
-                            pid_a = cast(UUID, new_profile.id)
-                            all_new_pairs.extend([
-                                model.SeqDistancePair(
-                                    id=cast(UUID, service.generate_id()),
-                                    protocol_id=proto_id,
-                                    profile_id_a=pid_a,
-                                    profile_id_b=pid_b,
-                                    distance=float(dist),
-                                ),
-                                model.SeqDistancePair(
-                                    id=cast(UUID, service.generate_id()),
-                                    protocol_id=proto_id,
-                                    profile_id_a=pid_b,
-                                    profile_id_b=pid_a,
-                                    distance=float(dist),
-                                ),
-                            ])
+                    # np.where avoids a per-pair Python if-check; beneficial
+                    # when few pairs pass the max_stored_distance filter.
+                    for i in np.where(distances_arr <= max_stored_distance)[0]:
+                        pid_a = cast(UUID, new_seq_profiles[i].id)
+                        d = float(distances_arr[i])
+                        all_new_pairs.append((pid_a, pid_b, d))
+                        all_new_pairs.append((pid_b, pid_a, d))
                 else:
                     for new_profile, decoded_new in zip(
                         new_seq_profiles, decoded_new_profiles
@@ -662,23 +656,9 @@ def _calculate_and_store_distances(
                             seq_profile_type, decoded_existing, decoded_new
                         )
                         if distance <= max_stored_distance:
-                            pid_a = cast(UUID, new_profile.id)
-                            all_new_pairs.extend([
-                                model.SeqDistancePair(
-                                    id=cast(UUID, service.generate_id()),
-                                    protocol_id=proto_id,
-                                    profile_id_a=pid_a,
-                                    profile_id_b=pid_b,
-                                    distance=distance,
-                                ),
-                                model.SeqDistancePair(
-                                    id=cast(UUID, service.generate_id()),
-                                    protocol_id=proto_id,
-                                    profile_id_a=pid_b,
-                                    profile_id_b=pid_a,
-                                    distance=distance,
-                                ),
-                            ])
+                            pid_a = new_profile.id  # narrowed by assert above
+                            all_new_pairs.append((pid_a, pid_b, distance))
+                            all_new_pairs.append((pid_b, pid_a, distance))
         else:
             # Blob path: read SeqDistance records and update content.
             # Build an O(1) lookup map for use in the SeqDistance loop below.
@@ -772,9 +752,7 @@ def _calculate_and_store_distances(
             seq_profile_type,
             new_seq_profiles,
             decoded_new_profiles,
-            protocol,
             max_stored_distance,
-            service,
             all_new_pairs,
         )
     else:
@@ -793,15 +771,28 @@ def _calculate_and_store_distances(
     # Step 6: single-transaction write using the caller's uow (atomic).
     t_step6 = time.perf_counter()
     if use_row_per_pair:
-        # Bulk-insert all SeqDistancePair rows collected across chunk loop
-        # and the intra-batch step above.
-        if all_new_pairs:
+        # Materialise raw tuples into SeqDistancePair objects here, keeping
+        # uuid4() calls and Pydantic validation out of the inner loop.
+        # model_construct bypasses validation — values are internally computed
+        # so no external input is present; profile_a/profile_b default to None.
+        proto_id = cast(UUID, protocol.id)
+        pair_objects: list[model.SeqDistancePair] = [
+            model.SeqDistancePair.model_construct(
+                id=cast(UUID, service.generate_id()),
+                protocol_id=proto_id,
+                profile_id_a=a,
+                profile_id_b=b,
+                distance=d,
+            )
+            for a, b, d in all_new_pairs
+        ]
+        if pair_objects:
             repository.crud(
                 uow,
                 user_id,
                 model.SeqDistancePair,
                 CrudOperation.CREATE_SOME,
-                objs=all_new_pairs,
+                objs=pair_objects,
             )
         # Coverage markers: SeqDistance rows with empty content so that
         # get_profiles_without_seq_distance (NOT EXISTS on seq_distance) still
@@ -926,20 +917,18 @@ def _calculate_pairwise_profile_distances_to_pairs(
     seq_profile_type: enum.SeqProfileType,
     profiles: list[model.SeqProfile],
     decoded_profiles: list[Any],
-    protocol: model.Protocol,
     max_stored_distance: float,
-    service: BaseSeqService,
-    pairs_out: list[model.SeqDistancePair],
+    pairs_out: list[_RawPair],
 ) -> None:
     """
     Compute intra-batch pairwise distances for the row-per-pair path and
-    append SeqDistancePair objects (both directions) to pairs_out.
+    append raw _RawPair tuples (both directions) to pairs_out.
 
     decoded_profiles must be pre-decoded with the same use_numpy_allele
     setting that was used for the chunk loop, so numpy arrays are handled
     correctly by _calculate_distance_for_decoded_profile_pair.
+    SeqDistancePair objects are materialised from raw tuples in step 6.
     """
-    proto_id = cast(UUID, protocol.id)
     profile_ids = [cast(UUID, x.id) for x in profiles]
     for i in range(len(profiles)):
         for j in range(i + 1, len(profiles)):
@@ -947,22 +936,8 @@ def _calculate_pairwise_profile_distances_to_pairs(
                 seq_profile_type, decoded_profiles[i], decoded_profiles[j]
             )
             if distance <= max_stored_distance:
-                pairs_out.extend([
-                    model.SeqDistancePair(
-                        id=cast(UUID, service.generate_id()),
-                        protocol_id=proto_id,
-                        profile_id_a=profile_ids[i],
-                        profile_id_b=profile_ids[j],
-                        distance=distance,
-                    ),
-                    model.SeqDistancePair(
-                        id=cast(UUID, service.generate_id()),
-                        protocol_id=proto_id,
-                        profile_id_a=profile_ids[j],
-                        profile_id_b=profile_ids[i],
-                        distance=distance,
-                    ),
-                ])
+                pairs_out.append((profile_ids[i], profile_ids[j], distance))
+                pairs_out.append((profile_ids[j], profile_ids[i], distance))
 
 
 def _get_matching_seq_profile_protocol_ids(
