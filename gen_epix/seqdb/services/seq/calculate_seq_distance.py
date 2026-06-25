@@ -300,6 +300,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
                         use_batch_new_profiles=cmd.use_batch_new_profiles,
                         use_bulk_insert=cmd.use_bulk_insert,
                         use_int32_vocab=cmd.use_int32_vocab,
+                        use_flipped_loop=cmd.use_flipped_loop,
                     )
 
     return results
@@ -487,6 +488,7 @@ def _calculate_and_store_distances(
     use_batch_new_profiles: bool = False,
     use_bulk_insert: bool = False,
     use_int32_vocab: bool = False,
+    use_flipped_loop: bool = False,
 ) -> None:
     """
     Calculate pairwise distances between new_seq_profiles and all existing
@@ -696,6 +698,9 @@ def _calculate_and_store_distances(
         # the chunk is non-empty; otherwise the existing paths (S16 batch or Python
         # loop) are used unchanged.
         new_int32: np.ndarray | None = None
+        chunk_int32_matrix: np.ndarray | None = None  # (C, n_loci) int32
+        null_chunk_matrix: np.ndarray | None = None   # (C, n_loci) bool
+        chunk_ids_int32: list[UUID] = []
         profile_int32_map: dict[UUID, tuple[np.ndarray, np.ndarray]] = {}
         if (
             use_int32_vocab
@@ -708,56 +713,82 @@ def _calculate_and_store_distances(
                 chunk_s16 = np.stack([p.get_allele_array() for p in valid_for_int32])
                 null_chunk = chunk_s16 == _NULL_ALLELE  # (C, n_loci) bool
                 new_int32, chunk_int32 = _encode_to_int32(new_matrix, chunk_s16)
+                chunk_int32_matrix = chunk_int32
+                null_chunk_matrix = null_chunk
+                chunk_ids_int32 = [cast(UUID, p.id) for p in valid_for_int32]
                 profile_int32_map = {
                     p.id: (chunk_int32[i], null_chunk[i])
                     for i, p in enumerate(valid_for_int32)
                 }
 
         if use_row_per_pair:
-            # Row-per-pair path: compute distances and collect SeqDistancePair
-            # objects; no SeqDistance blobs are read or written this chunk.
-            for existing_profile in existing_profiles_list:
-                if existing_profile.id is None:
-                    continue
-                pid_b = existing_profile.id  # narrowed by `is None` check above
-                int32_entry = profile_int32_map.get(pid_b)
-                if new_int32 is not None and null_new is not None and int32_entry is not None:
-                    int32_row, null_existing_row = int32_entry
+            # Row-per-pair path: compute distances and collect raw pairs.
+            # No SeqDistance blobs are read or written this chunk.
+            if (
+                use_flipped_loop
+                and chunk_int32_matrix is not None
+                and null_chunk_matrix is not None
+                and new_int32 is not None
+                and null_new is not None
+            ):
+                # Flipped loop: M new-profile iterations × C-wide int32 comparison.
+                # Reduces Python loop overhead from C to M — beneficial when M << C,
+                # which is the typical production case (small batch, large existing DB).
+                # Both matrices are already materialised above by _encode_to_int32.
+                for i, new_profile in enumerate(new_seq_profiles):
+                    assert new_profile.id is not None
+                    pid_a = new_profile.id
                     distances_arr = _hamming_allele_int32_batch(
-                        int32_row, new_int32, null_existing_row, null_new
+                        new_int32[i], chunk_int32_matrix, null_new[i], null_chunk_matrix
                     )
-                    for i in np.where(distances_arr <= max_stored_distance)[0]:
-                        pid_a = cast(UUID, new_seq_profiles[i].id)
-                        d = float(distances_arr[i])
+                    for j in np.where(distances_arr <= max_stored_distance)[0]:
+                        pid_b = chunk_ids_int32[j]
+                        d = float(distances_arr[j])
                         all_new_pairs.append((pid_a, pid_b, d))
                         all_new_pairs.append((pid_b, pid_a, d))
-                else:
-                    decoded_existing = _decode_profile(
-                        seq_profile_type, existing_profile, use_numpy_allele
-                    )
-                    if new_matrix is not None and null_new is not None:
-                        distances_arr = _hamming_allele_numpy_batch(
-                            decoded_existing, new_matrix, null_new
+            else:
+                # C-iteration: one existing profile at a time. Handles int32
+                # (when use_flipped_loop=False), S16 batch, and Python fallback.
+                for existing_profile in existing_profiles_list:
+                    if existing_profile.id is None:
+                        continue
+                    pid_b = existing_profile.id
+                    int32_entry = profile_int32_map.get(pid_b)
+                    if new_int32 is not None and null_new is not None and int32_entry is not None:
+                        int32_row, null_existing_row = int32_entry
+                        distances_arr = _hamming_allele_int32_batch(
+                            int32_row, new_int32, null_existing_row, null_new
                         )
-                        # np.where avoids a per-pair Python if-check; beneficial
-                        # when few pairs pass the max_stored_distance filter.
                         for i in np.where(distances_arr <= max_stored_distance)[0]:
                             pid_a = cast(UUID, new_seq_profiles[i].id)
                             d = float(distances_arr[i])
                             all_new_pairs.append((pid_a, pid_b, d))
                             all_new_pairs.append((pid_b, pid_a, d))
                     else:
-                        for new_profile, decoded_new in zip(
-                            new_seq_profiles, decoded_new_profiles
-                        ):
-                            assert new_profile.id is not None
-                            distance = _calculate_distance_for_decoded_profile_pair(
-                                seq_profile_type, decoded_existing, decoded_new
+                        decoded_existing = _decode_profile(
+                            seq_profile_type, existing_profile, use_numpy_allele
+                        )
+                        if new_matrix is not None and null_new is not None:
+                            distances_arr = _hamming_allele_numpy_batch(
+                                decoded_existing, new_matrix, null_new
                             )
-                            if distance <= max_stored_distance:
-                                pid_a = new_profile.id  # narrowed by assert above
-                                all_new_pairs.append((pid_a, pid_b, distance))
-                                all_new_pairs.append((pid_b, pid_a, distance))
+                            for i in np.where(distances_arr <= max_stored_distance)[0]:
+                                pid_a = cast(UUID, new_seq_profiles[i].id)
+                                d = float(distances_arr[i])
+                                all_new_pairs.append((pid_a, pid_b, d))
+                                all_new_pairs.append((pid_b, pid_a, d))
+                        else:
+                            for new_profile, decoded_new in zip(
+                                new_seq_profiles, decoded_new_profiles
+                            ):
+                                assert new_profile.id is not None
+                                distance = _calculate_distance_for_decoded_profile_pair(
+                                    seq_profile_type, decoded_existing, decoded_new
+                                )
+                                if distance <= max_stored_distance:
+                                    pid_a = new_profile.id
+                                    all_new_pairs.append((pid_a, pid_b, distance))
+                                    all_new_pairs.append((pid_b, pid_a, distance))
         else:
             # Blob path: read SeqDistance records and update content.
             # Build an O(1) lookup map for use in the SeqDistance loop below.

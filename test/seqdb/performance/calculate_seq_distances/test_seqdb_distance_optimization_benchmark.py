@@ -56,6 +56,7 @@ from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import command, enum, model
+from gen_epix.util import chunk_list
 from test.seqdb.performance.calculate_seq_distances.base import (
     DEV_REPOSITORY_CONFIG,
     TEST_TYPE,
@@ -87,6 +88,10 @@ MSSQL_URL_ENV = "SEQDB_MSSQL_TEST_URL"
 # existing_chunk_size for _calculate_and_store_distances (match prod default)
 EXISTING_CHUNK_SIZE = 1000
 
+# pyodbc raises ODBC 07002 when a single parameterized query has more than
+# ~2100 bound parameters. Chunk DELETE_SOME calls to stay well under that.
+_DELETE_CHUNK_SIZE = 500
+
 # Production retrieve threshold: ~50 near-neighbours per case.
 RETRIEVE_MAX_DISTANCE = 5
 
@@ -109,19 +114,17 @@ _PROFILE_GEN_SEED = 42
 # per scale so the stored pair count stays ~constant as n_existing grows.
 _CLUSTER_SIZE = 50
 
-N_EXISTING = [5000] # [100, 1000, 5000]
+N_EXISTING = [1000, 5000]
 N_NEW = [10, 50, 100, 500]
 N_LOCI = 3000
 
-# Only numpy_batch variants are benchmarked here. The other four variants
-# were confirmed slower in a previous full run; a final all-variant run can
-# be done once all optimisations are exhausted.
 VARIANTS = [
-    {"name": "blob_numpy_batch",      "pair": False, "numpy": True, "batch": True,  "bulk": False, "int32_vocab": False},
-    {"name": "pair_numpy_batch",      "pair": True,  "numpy": True, "batch": True,  "bulk": False, "int32_vocab": False},
-    {"name": "pair_numpy_batch_bulk", "pair": True,  "numpy": True, "batch": True,  "bulk": True,  "int32_vocab": False},
-    {"name": "blob_int32_vocab",      "pair": False, "numpy": True, "batch": False, "bulk": False, "int32_vocab": True},
-    {"name": "pair_int32_vocab",      "pair": True,  "numpy": True, "batch": False, "bulk": False, "int32_vocab": True},
+    {"name": "blob_original",                "pair": False, "numpy": False, "batch": False, "bulk": False, "int32_vocab": False, "flipped": False},
+    {"name": "blob_numpy_batch",             "pair": False, "numpy": True, "batch": True,  "bulk": False, "int32_vocab": False, "flipped": False},
+    {"name": "blob_int32_vocab",             "pair": False, "numpy": True, "batch": False, "bulk": False, "int32_vocab": True,  "flipped": False},
+    # {"name": "pair_numpy_batch_bulk",        "pair": True,  "numpy": True, "batch": True,  "bulk": True,  "int32_vocab": False, "flipped": False},
+    # {"name": "pair_int32_vocab_bulk",        "pair": True,  "numpy": True, "batch": False, "bulk": True,  "int32_vocab": True,  "flipped": False},
+    # {"name": "pair_int32_vocab_bulk_flipped","pair": True,  "numpy": True, "batch": False, "bulk": True,  "int32_vocab": True,  "flipped": True},
 ]
 REPO_TYPES = [enum.RepositoryType.SA_SQLITE]
 
@@ -264,7 +267,13 @@ def _extract_protocol_info(
 # match the actual function names in calculate_seq_distance.py.
 # SeqDistance blob reads (blob path). Profile reads (step 4a) are tracked
 # separately under profile_read_s via _PROFILE_READ_FNS.
-_READ_FNS = frozenset({"iter_seq_distances", "iter_seq_distance_essentials"})
+_READ_FNS = frozenset(
+    {
+        "iter_seq_distances",
+        "iter_seq_distance_essentials",
+        "iter_seq_distance_profile_ids",  # blob path: load existing profile ID set
+    }
+)
 _PROFILE_READ_FNS = frozenset({"read_some"})
 _DECODE_FNS = frozenset(
     {
@@ -279,11 +288,13 @@ _COMPARE_FNS = frozenset(
         "_calculate_distance_for_decoded_profile_pair",
         "_hamming_allele_numpy",
         "_hamming_allele_numpy_batch",
+        "_hamming_allele_int32_batch",
+        "_encode_to_int32",
     }
 )
 _WRITE_FNS = frozenset(
     {
-        "bulk_update_seq_distance_content",  # blob UPDATE existing SeqDistance
+        "update_some_seq_distance_content",  # blob UPDATE existing SeqDistance
         "bulk_insert_seq_distance_pairs",    # pair Core executemany path
         "create_some",                       # pair ORM path + blob CREATE new
     }
@@ -476,27 +487,52 @@ def _plot_per_profile(results: list[dict], out: Path) -> None:  # pragma: no cov
 
 
 def _plot_segments(results: list[dict], out: Path) -> None:
-    """Stacked bar: read / decode / compare / write per variant per repo × n_existing."""
+    """Stacked bar: read / decode / compare / write per variant.
+
+    Rows = n_new values (all present in results), columns = (repo, n_existing).
+    """
     if not _HAS_MATPLOTLIB:  # pragma: no cover
         return
     repos = sorted({r["repo"] for r in results})
-    n_new = max(r["n_new"] for r in results)
-    # profile_read_s = read_some calls for existing SeqProfile objects
+    n_new_values = sorted({r["n_new"] for r in results})
     seg_keys = [
         "read_s", "profile_read_s", "decode_s", "compare_s", "write_s", "rest_s"
     ]
     seg_labels = ["read (dist)", "profile_read", "decode", "compare", "write", "rest"]
 
-    # One column per (repo, n_existing) combination
     cols = [(repo, n_ex) for repo in repos for n_ex in _n_ex_for_repo(results, repo)]
-    fig, axes = plt.subplots(1, len(cols), figsize=(7 * len(cols), 5), sharey=True)
-    if len(cols) == 1:
-        axes = [axes]
-    for ax, (repo, n_ex) in zip(axes, cols):
-        bottoms = np.zeros(len(_VARIANT_NAMES))
-        for seg, label, color in zip(seg_keys, seg_labels, _CHART_COLORS):
-            heights = []
-            for vname in _VARIANT_NAMES:
+    n_rows = len(n_new_values)
+    n_cols = len(cols)
+    fig, axes = plt.subplots(
+        n_rows, n_cols,
+        figsize=(7 * n_cols, 5 * n_rows),
+        sharey="row",
+        squeeze=False,
+    )
+    for row_idx, n_new in enumerate(n_new_values):
+        for col_idx, (repo, n_ex) in enumerate(cols):
+            ax = axes[row_idx][col_idx]
+            bottoms = np.zeros(len(_VARIANT_NAMES))
+            for seg, label, color in zip(seg_keys, seg_labels, _CHART_COLORS):
+                heights = []
+                for vname in _VARIANT_NAMES:
+                    row = next(
+                        (
+                            r
+                            for r in results
+                            if r["variant"] == vname
+                            and r["repo"] == repo
+                            and r["n_existing"] == n_ex
+                            and r["n_new"] == n_new
+                        ),
+                        None,
+                    )
+                    heights.append(row[seg] if row else 0.0)
+                ax.bar(
+                    _VARIANT_NAMES, heights, bottom=bottoms, label=label, color=color
+                )
+                bottoms += np.array(heights)
+            for x_pos, vname in enumerate(_VARIANT_NAMES):
                 row = next(
                     (
                         r
@@ -508,33 +544,17 @@ def _plot_segments(results: list[dict], out: Path) -> None:
                     ),
                     None,
                 )
-                heights.append(row[seg] if row else 0.0)
-            ax.bar(
-                _VARIANT_NAMES, heights, bottom=bottoms, label=label, color=color
-            )
-            bottoms += np.array(heights)
-        totals = []
-        for vname in _VARIANT_NAMES:
-            row = next(
-                (
-                    r
-                    for r in results
-                    if r["variant"] == vname
-                    and r["repo"] == repo
-                    and r["n_existing"] == n_ex
-                    and r["n_new"] == n_new
-                ),
-                None,
-            )
-            totals.append(row["wall_s"] if row else 0.0)
-        for x_pos, total in enumerate(totals):
-            ax.text(x_pos, bottoms[x_pos] + 0.01 * max(bottoms), _fmt_s(total),
-                    ha="center", va="bottom", fontsize=7)
-        ax.set_title(f"{repo} ex={n_ex} n_new={n_new}")
-        ax.set_ylabel("seconds")
-        ax.set_xticks(range(len(_VARIANT_NAMES)))
-        ax.set_xticklabels(_VARIANT_NAMES, rotation=30, ha="right")
-        ax.legend()
+                total = row["wall_s"] if row else 0.0
+                ax.text(
+                    x_pos, bottoms[x_pos] + 0.01 * max(bottoms),
+                    _fmt_s(total), ha="center", va="bottom", fontsize=7,
+                )
+            ax.set_title(f"{repo} ex={n_ex} n_new={n_new}")
+            ax.set_ylabel("seconds")
+            ax.set_xticks(range(len(_VARIANT_NAMES)))
+            ax.set_xticklabels(_VARIANT_NAMES, rotation=30, ha="right")
+            if col_idx == 0:
+                ax.legend(fontsize=7)
     fig.suptitle("Time breakdown by segment")
     fig.tight_layout()
     fig.savefig(out, dpi=150)
@@ -595,6 +615,136 @@ def _plot_retrieve(results: list[dict], out: Path) -> None:  # pragma: no cover
     plt.close(fig)
 
 
+def _plot_lines_per_variant(results: list[dict], out: Path) -> None:  # pragma: no cover
+    """Line chart: one subplot per variant, one line per n_existing, x = n_new."""
+    if not _HAS_MATPLOTLIB:
+        return
+    repos = sorted({r["repo"] for r in results})
+    n_new_values = sorted({r["n_new"] for r in results})
+    fig, axes = plt.subplots(
+        len(repos), len(_VARIANT_NAMES),
+        figsize=(5 * len(_VARIANT_NAMES), 4 * len(repos)),
+        sharey="row", squeeze=False,
+    )
+    for row_idx, repo in enumerate(repos):
+        n_ex_values = _n_ex_for_repo(results, repo)
+        for col_idx, vname in enumerate(_VARIANT_NAMES):
+            ax = axes[row_idx][col_idx]
+            for ex_idx, n_ex in enumerate(n_ex_values):
+                ys = [
+                    next(
+                        (r["wall_s"] for r in results
+                         if r["variant"] == vname and r["repo"] == repo
+                         and r["n_existing"] == n_ex and r["n_new"] == n_new),
+                        None,
+                    )
+                    for n_new in n_new_values
+                ]
+                xs = [x for x, y in zip(n_new_values, ys) if y is not None]
+                ys = [y for y in ys if y is not None]
+                if xs:
+                    ax.plot(xs, ys, marker="o",
+                            color=_N_EX_COLORS[ex_idx % len(_N_EX_COLORS)],
+                            label=f"n_ex={n_ex}")
+            ax.set_yscale("log")
+            ax.set_title(f"{vname}\n({repo})", fontsize=8)
+            ax.set_xlabel("n_new")
+            ax.set_ylabel("wall_s (log)")
+            ax.legend(fontsize=7)
+    fig.suptitle("Scaling with n_new — one subplot per variant")
+    fig.tight_layout()
+    fig.savefig(out, dpi=150)
+    plt.close(fig)
+
+
+def _plot_lines_per_n_existing(results: list[dict], out: Path) -> None:  # pragma: no cover
+    """Line chart: one subplot per (repo, n_existing), one line per variant, x = n_new."""
+    if not _HAS_MATPLOTLIB:
+        return
+    repos = sorted({r["repo"] for r in results})
+    n_new_values = sorted({r["n_new"] for r in results})
+    cols = [(repo, n_ex) for repo in repos for n_ex in _n_ex_for_repo(results, repo)]
+    fig, axes = plt.subplots(
+        1, len(cols), figsize=(5 * len(cols), 4), sharey=False, squeeze=False
+    )
+    variant_colors = {v: _CHART_COLORS[i % len(_CHART_COLORS)]
+                      for i, v in enumerate(_VARIANT_NAMES)}
+    for col_idx, (repo, n_ex) in enumerate(cols):
+        ax = axes[0][col_idx]
+        for vname in _VARIANT_NAMES:
+            ys = [
+                next(
+                    (r["wall_s"] for r in results
+                     if r["variant"] == vname and r["repo"] == repo
+                     and r["n_existing"] == n_ex and r["n_new"] == n_new),
+                    None,
+                )
+                for n_new in n_new_values
+            ]
+            xs = [x for x, y in zip(n_new_values, ys) if y is not None]
+            ys = [y for y in ys if y is not None]
+            if xs:
+                ax.plot(xs, ys, marker="o",
+                        color=variant_colors[vname], label=vname)
+        ax.set_yscale("log")
+        ax.set_title(f"{repo}  n_ex={n_ex}")
+        ax.set_xlabel("n_new")
+        ax.set_ylabel("wall_s (log)")
+        ax.legend(fontsize=7)
+    fig.suptitle("Scaling with n_new — one subplot per n_existing")
+    fig.tight_layout()
+    fig.savefig(out, dpi=150)
+    plt.close(fig)
+
+
+def _plot_lines_all(results: list[dict], out: Path) -> None:  # pragma: no cover
+    """Line chart: single plot, one line per (variant, n_existing) combination."""
+    if not _HAS_MATPLOTLIB:
+        return
+    repos = sorted({r["repo"] for r in results})
+    n_new_values = sorted({r["n_new"] for r in results})
+    variant_markers = ["o", "s", "^", "D", "v", "P"]
+    fig, axes = plt.subplots(
+        1, len(repos), figsize=(8 * len(repos), 5), squeeze=False
+    )
+    for col_idx, repo in enumerate(repos):
+        ax = axes[0][col_idx]
+        n_ex_values = _n_ex_for_repo(results, repo)
+        line_idx = 0
+        for vname in _VARIANT_NAMES:
+            v_idx = _VARIANT_NAMES.index(vname)
+            for ex_idx, n_ex in enumerate(n_ex_values):
+                ys = [
+                    next(
+                        (r["wall_s"] for r in results
+                         if r["variant"] == vname and r["repo"] == repo
+                         and r["n_existing"] == n_ex and r["n_new"] == n_new),
+                        None,
+                    )
+                    for n_new in n_new_values
+                ]
+                xs = [x for x, y in zip(n_new_values, ys) if y is not None]
+                ys = [y for y in ys if y is not None]
+                if xs:
+                    ax.plot(
+                        xs, ys,
+                        marker=variant_markers[v_idx % len(variant_markers)],
+                        color=_N_EX_COLORS[ex_idx % len(_N_EX_COLORS)],
+                        linestyle=["-", "--", ":", "-."][ex_idx % 4],
+                        label=f"{vname} ex={n_ex}",
+                    )
+                line_idx += 1
+        ax.set_yscale("log")
+        ax.set_title(repo)
+        ax.set_xlabel("n_new")
+        ax.set_ylabel("wall_s (log)")
+        ax.legend(fontsize=6, ncol=2)
+    fig.suptitle("Scaling with n_new — all variants and n_existing")
+    fig.tight_layout()
+    fig.savefig(out, dpi=150)
+    plt.close(fig)
+
+
 # ── Session fixture: generate charts after all tests finish ──────────────────
 
 
@@ -611,6 +761,13 @@ def generate_benchmark_charts() -> Any:
         _plot_per_profile(_RESULTS, RUN_DIR / "charts" / "per_profile.png")
         _plot_segments(_RESULTS, RUN_DIR / "charts" / "segments.png")
         _plot_retrieve(_RESULTS, RUN_DIR / "charts" / "retrieve.png")
+        _plot_lines_per_variant(
+            _RESULTS, RUN_DIR / "charts" / "lines_per_variant.png"
+        )
+        _plot_lines_per_n_existing(
+            _RESULTS, RUN_DIR / "charts" / "lines_per_n_existing.png"
+        )
+        _plot_lines_all(_RESULTS, RUN_DIR / "charts" / "lines_all.png")
 
 
 # ── Parametrization ───────────────────────────────────────────────────────────
@@ -777,14 +934,17 @@ class TestDistanceOptimizationBenchmark:
                 use_batch_new_profiles=variant["batch"],
                 use_bulk_insert=variant["bulk"],
                 use_int32_vocab=variant["int32_vocab"],
+                use_flipped_loop=variant["flipped"],
             )
 
             profiler = pyinstrument.Profiler()
             profiler.start()
-            t0 = perf_counter()
-            env.app.handle(cmd)
-            wall_s = perf_counter() - t0
-            profiler.stop()
+            try:
+                t0 = perf_counter()
+                env.app.handle(cmd)
+                wall_s = perf_counter() - t0
+            finally:
+                profiler.stop()
 
             (RUN_DIR / "profiles").mkdir(parents=True, exist_ok=True)
             html_path = (
@@ -836,19 +996,30 @@ class TestDistanceOptimizationBenchmark:
 
 # ── MSSQL variant (optional) ──────────────────────────────────────────────────
 
-
 _MSSQL_PARAMS = [(v, n_new) for v in VARIANTS for n_new in N_NEW]
 _MSSQL_IDS = [f"{v['name']}-mssql-n{n}" for v, n in _MSSQL_PARAMS]
 
 
-@pytest.mark.performance
-@pytest.mark.mssql
-class TestDistanceOptimizationBenchmarkMssql:
-    """Same six variants against a SQL Server container.
+def _wipe_seqdb_data(mssql_repo: Any, user_id: UUID, entities: list) -> None:
+    """Delete all seqdb rows in FK-safe (reverse DAG) order.
 
-    Set SEQDB_MSSQL_TEST_URL to enable (see the existing scale test file
-    for the docker run command and URL format). Only tested at n_existing=5000.
-    Results are appended to _RESULTS with repo="SA_SQL".
+    Called before reseeding with a different n_existing so that the DB is
+    in a known-empty state for `fill_empty_sqlite_repository`.
+    """
+    with mssql_repo.uow() as uow:
+        for entity in reversed(entities):
+            mssql_repo.crud(
+                uow, user_id, entity.model_class, CrudOperation.DELETE_ALL
+            )
+
+
+class _MssqlBenchmarkBase:
+    """Shared setup/teardown and test body for MSSQL n_existing classes.
+
+    Each concrete subclass sets `_N_EXISTING_MSSQL` and is collected as its
+    own pytest class. Alphabetical ordering (1000 < 5000) ensures the smaller
+    DB runs first; the larger class wipes and reseeds automatically when the
+    existing profile count does not match.
     """
 
     entities: list
@@ -857,9 +1028,9 @@ class TestDistanceOptimizationBenchmarkMssql:
     mssql_repo: Any
     base_db: dict
 
-    _N_EXISTING_MSSQL = 5000
+    _N_EXISTING_MSSQL: int  # set by subclasses
 
-    @pytest.fixture(scope="module", autouse=True)
+    @pytest.fixture(scope="class", autouse=True)
     def setup(self, env: Env) -> None:
         mssql_url = os.environ.get(MSSQL_URL_ENV)
         if not mssql_url:
@@ -902,18 +1073,102 @@ class TestDistanceOptimizationBenchmarkMssql:
                 type(self).new_profiles[(variant["name"], n_new)] = (profs, samps)
 
         mssql_repo = create_mssql_repository(mssql_url, entities)
-        if count_seq_profiles(mssql_repo) == 0:
+        current_count = count_seq_profiles(mssql_repo)
+        if current_count != n_ex:
+            if current_count > 0:
+                _wipe_seqdb_data(mssql_repo, user_id, entities)
             dict_repo = create_dict_repository(
                 pickle_file=None, db=db, entities=entities
             )
             fill_empty_sqlite_repository(dict_repo, mssql_repo, entities, user_id)
         type(self).mssql_repo = mssql_repo
 
+    def _cleanup_variant_data(
+        self,
+        user_id: UUID,
+        new_profs: list[model.SeqProfile],
+        new_samps: list[model.Sample],
+        is_pair: bool,
+    ) -> None:
+        """Delete any leftover rows for new_profs/new_samps (FK-safe order).
+
+        For distances/pairs we must look up IDs first (no delete-by-FK API).
+        Profile/sample existence is checked with EXISTS_SOME before deleting
+        because DELETE_SOME raises InvalidIdsError for missing IDs.
+        """
+        new_prof_ids = [cast(UUID, p.id) for p in new_profs]
+        new_samp_ids = [cast(UUID, s.id) for s in new_samps]
+        new_prof_id_set = set(new_prof_ids)
+        with self.mssql_repo.uow() as uow:
+            if is_pair:
+                all_pairs = self.mssql_repo.crud(
+                    uow, user_id, model.SeqDistancePair,
+                    CrudOperation.READ_ALL, return_copy=False,
+                )
+                pair_ids = [
+                    cast(UUID, r.id) for r in all_pairs
+                    if r.profile_id_a in new_prof_id_set
+                    or r.profile_id_b in new_prof_id_set
+                ]
+                # DELETE_SOME uses IN() on the PK; pyodbc raises ODBC 07002
+                # when a single query has >~2100 bound parameters, so delete
+                # in chunks of _DELETE_CHUNK_SIZE to stay safely under that.
+                for chunk in chunk_list(pair_ids, _DELETE_CHUNK_SIZE):
+                    self.mssql_repo.crud(
+                        uow, user_id, model.SeqDistancePair,
+                        CrudOperation.DELETE_SOME, obj_ids=chunk,
+                    )
+            # Always delete SeqDistance rows: row-per-pair mode still writes
+            # coverage-marker SeqDistance rows (content="{}") so that
+            # get_profiles_without_seq_distance works correctly. These must be
+            # removed before deleting profiles or the FK on seq_profile_id
+            # raises a REFERENCE constraint violation (SQL Server error 547).
+            all_dists = self.mssql_repo.crud(
+                uow, user_id, model.SeqDistance,
+                CrudOperation.READ_ALL, return_copy=False,
+            )
+            dist_ids = [
+                cast(UUID, r.id) for r in all_dists
+                if r.seq_profile_id in new_prof_id_set
+            ]
+            for chunk in chunk_list(dist_ids, _DELETE_CHUNK_SIZE):
+                self.mssql_repo.crud(
+                    uow, user_id, model.SeqDistance,
+                    CrudOperation.DELETE_SOME, obj_ids=chunk,
+                )
+            existing_flags = self.mssql_repo.crud(
+                uow, user_id, model.SeqProfile,
+                CrudOperation.EXISTS_SOME, obj_ids=new_prof_ids,
+            )
+            existing_prof_ids = [
+                pid for pid, ex in zip(new_prof_ids, existing_flags) if ex
+            ]
+            if existing_prof_ids:
+                self.mssql_repo.crud(
+                    uow, user_id, model.SeqProfile,
+                    CrudOperation.DELETE_SOME, obj_ids=existing_prof_ids,
+                )
+            existing_samp_flags = self.mssql_repo.crud(
+                uow, user_id, model.Sample,
+                CrudOperation.EXISTS_SOME, obj_ids=new_samp_ids,
+            )
+            existing_samp_ids = [
+                sid for sid, ex in zip(new_samp_ids, existing_samp_flags) if ex
+            ]
+            if existing_samp_ids:
+                self.mssql_repo.crud(
+                    uow, user_id, model.Sample,
+                    CrudOperation.DELETE_SOME, obj_ids=existing_samp_ids,
+                )
+
     @pytest.mark.parametrize("variant,n_new", _MSSQL_PARAMS, ids=_MSSQL_IDS)
     def test_variant(self, env: Env, variant: dict, n_new: int) -> None:
         n_ex = self._N_EXISTING_MSSQL
         new_profs, new_samps = self.new_profiles[(variant["name"], n_new)]
         user_id = env.get_root_user().id
+
+        # Pre-cleanup: wipe any stale rows left by a previously interrupted run.
+        self._cleanup_variant_data(user_id, new_profs, new_samps, variant["pair"])
 
         # Insert new profiles for this variant, then clean up afterwards so
         # every variant runs against the same n_existing baseline and re-runs
@@ -938,14 +1193,17 @@ class TestDistanceOptimizationBenchmarkMssql:
                 use_batch_new_profiles=variant["batch"],
                 use_bulk_insert=variant["bulk"],
                 use_int32_vocab=variant["int32_vocab"],
+                use_flipped_loop=variant["flipped"],
             )
 
             profiler = pyinstrument.Profiler()
             profiler.start()
-            t0 = perf_counter()
-            env.app.handle(cmd)
-            wall_s = perf_counter() - t0
-            profiler.stop()
+            try:
+                t0 = perf_counter()
+                env.app.handle(cmd)
+                wall_s = perf_counter() - t0
+            finally:
+                profiler.stop()
 
             (RUN_DIR / "profiles").mkdir(parents=True, exist_ok=True)
             html_path = (
@@ -972,49 +1230,7 @@ class TestDistanceOptimizationBenchmarkMssql:
             retrieve_wall_s = perf_counter() - t_r
 
         finally:
-            # Delete in FK-safe order:
-            #   SeqDistance / SeqDistancePair → SeqProfile → Sample
-            new_prof_ids = [cast(UUID, p.id) for p in new_profs]
-            new_samp_ids = [cast(UUID, s.id) for s in new_samps]
-            new_prof_id_set = set(new_prof_ids)
-            with self.mssql_repo.uow() as uow:
-                if variant["pair"]:
-                    all_pairs = self.mssql_repo.crud(
-                        uow, user_id, model.SeqDistancePair,
-                        CrudOperation.READ_ALL, return_copy=False,
-                    )
-                    pair_ids = [
-                        cast(UUID, r.id) for r in all_pairs
-                        if r.profile_id_a in new_prof_id_set
-                        or r.profile_id_b in new_prof_id_set
-                    ]
-                    if pair_ids:
-                        self.mssql_repo.crud(
-                            uow, user_id, model.SeqDistancePair,
-                            CrudOperation.DELETE_SOME, obj_ids=pair_ids,
-                        )
-                else:
-                    all_dists = self.mssql_repo.crud(
-                        uow, user_id, model.SeqDistance,
-                        CrudOperation.READ_ALL, return_copy=False,
-                    )
-                    dist_ids = [
-                        cast(UUID, r.id) for r in all_dists
-                        if r.seq_profile_id in new_prof_id_set
-                    ]
-                    if dist_ids:
-                        self.mssql_repo.crud(
-                            uow, user_id, model.SeqDistance,
-                            CrudOperation.DELETE_SOME, obj_ids=dist_ids,
-                        )
-                self.mssql_repo.crud(
-                    uow, user_id, model.SeqProfile,
-                    CrudOperation.DELETE_SOME, obj_ids=new_prof_ids,
-                )
-                self.mssql_repo.crud(
-                    uow, user_id, model.Sample,
-                    CrudOperation.DELETE_SOME, obj_ids=new_samp_ids,
-                )
+            self._cleanup_variant_data(user_id, new_profs, new_samps, variant["pair"])
 
         _RESULTS.append(
             {
@@ -1033,3 +1249,31 @@ class TestDistanceOptimizationBenchmarkMssql:
             f"\n{variant['name']} SA_SQL ex={n_ex} n={n_new}: "
             f"{wall_s:.2f}s  ({wall_s / max(n_new, 1):.3f}s/profile)"
         )
+
+
+@pytest.mark.performance
+@pytest.mark.mssql
+class TestDistanceOptimizationBenchmarkMssql1000(_MssqlBenchmarkBase):
+    """MSSQL benchmark at n_existing=1000.
+
+    Runs before Mssql5000 (alphabetical order) so the DB is seeded small
+    first; Mssql5000.setup wipes and reseeds to 5000 automatically.
+    """
+
+    _N_EXISTING_MSSQL = 1000
+
+
+@pytest.mark.performance
+@pytest.mark.mssql
+class TestDistanceOptimizationBenchmarkMssql5000(_MssqlBenchmarkBase):
+    """MSSQL benchmark at n_existing=5000."""
+
+    _N_EXISTING_MSSQL = 5000
+
+
+@pytest.mark.performance
+@pytest.mark.mssql
+class TestDistanceOptimizationBenchmarkMssql10000(_MssqlBenchmarkBase):
+    """MSSQL benchmark at n_existing=10000."""
+
+    _N_EXISTING_MSSQL = 10000

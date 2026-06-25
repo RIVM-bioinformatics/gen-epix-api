@@ -166,6 +166,15 @@ class CalculateSeqDistancesForNewProfilesCommand(Command):
             "No-op for DICT repositories or when use_row_per_pair=False."
         ),
     )
+    use_flipped_loop: bool = Field(
+        default=False,
+        description=(
+            "If True and use_row_per_pair=True and use_int32_vocab=True, iterate "
+            "over M new profiles (not C existing) in the chunk comparison loop. "
+            "Reduces Python overhead from C to M iterations — beneficial when "
+            "M << C (small batch, large existing DB). No-op otherwise."
+        ),
+    )
 
 
 class UpdateSeqDistancesCommand(Command):

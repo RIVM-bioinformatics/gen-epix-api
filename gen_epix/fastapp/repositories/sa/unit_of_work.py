@@ -78,7 +78,7 @@ class SAUnitOfWork(BaseUnitOfWork):
                     "f8368798",
                     f"Not null constraint violation: {orig_msg}",
                 ) from None
-            elif "FOREIGN KEY" in exc_upper:
+            elif "FOREIGN KEY" in exc_upper or "REFERENCE CONSTRAINT" in exc_upper:
                 raise exc.LinkConstraintViolationError(
                     "eba3198a",
                     f"Foreign key constraint violation: {orig_msg}",
