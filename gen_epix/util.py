@@ -259,11 +259,23 @@ def chunk_list(values: list, chunk_size: int | None) -> list[list]:
     return [values[i : i + chunk_size] for i in range(0, n, chunk_size)]
 
 
-def profile_method() -> Callable:
+def profile_method(path: str | None = None) -> Callable:
     """Decorator method to profile a method using Pyinstrument.
     The profiling output is written to a file named after the method and the current timestamp.
     The decorator automatically determines whether the method is synchronous or asynchronous.
     """
+
+    file_path = Path(path) if path else get_package_root()
+
+    def _write_profile(profiler: Profiler, method_name: str) -> None:
+        """Write profiler output to a timestamped log file."""
+        filename = (
+            f"{method_name}-"
+            f"{datetime.datetime.now(tz=datetime.timezone.utc):%Y-%m-%d_%H-%M-%S}-"
+            f"{uuid.uuid4()}.log"
+        )
+        with open(file_path / filename, "w", encoding="utf-8") as f:
+            profiler.print(file=f, color=False)
 
     def decorator(method: Callable) -> Callable:
 
@@ -278,15 +290,7 @@ def profile_method() -> Callable:
                     return await method(*args, **kwargs)
                 finally:
                     profiler.stop()
-
-                    filename = (
-                        f"{method.__name__}-"
-                        f"{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}-"
-                        f"{uuid.uuid4()}.log"
-                    )
-
-                    with open(filename, "w", encoding="utf-8") as f:
-                        profiler.print(file=f, color=False)
+                    _write_profile(profiler, method.__name__)
 
             return async_wrapper
 
@@ -299,15 +303,7 @@ def profile_method() -> Callable:
                 return method(*args, **kwargs)
             finally:
                 profiler.stop()
-
-                filename = (
-                    f"{method.__name__}-"
-                    f"{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}-"
-                    f"{uuid.uuid4()}.log"
-                )
-
-                with open(filename, "w", encoding="utf-8") as f:
-                    profiler.print(file=f, color=False)
+                _write_profile(profiler, method.__name__)
 
         return sync_wrapper
 
