@@ -445,6 +445,12 @@ class BatchUploader:
         ):
             if parent_result.status == EtlStatus.FAILED:
                 continue
+            # TODO: parents resolved in verify_children (child-inferred parent ID)
+            # also land here and get existence-checked + on_exists/on_new applied a
+            # second time. Detected cases: SKIPPED (guard above misses it), and
+            # PENDING parents where verify_children set parent_result.id or
+            # parent_result.is_new. Consequence is redundant DB calls and duplicate
+            # info log messages; final state is identical so no correctness bug.
             parent_id = parent_for_upload.id
             parent = parent_for_upload.get_parent()
             if parent is None:
