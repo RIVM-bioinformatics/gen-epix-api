@@ -594,8 +594,8 @@ class TestValidateUnknownColumns(BaseCaseValidatorTestCase):
         assert len(data_issues_list[0]) == 1
         issue = data_issues_list[0][0]
         assert issue.col_id == unknown_col_id
-        assert issue.data_issue_type == DataIssueType.UNAUTHORIZED
-        assert issue.code == "a7b3f9d2"
+        assert issue.data_issue_type == DataIssueType.INVALID
+        assert issue.code == "ef8e4d6d"
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")

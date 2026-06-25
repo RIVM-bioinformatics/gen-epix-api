@@ -2280,6 +2280,134 @@ class TestCombinedScenarios(BaseUploadTestCase):
 
 
 @pytest.mark.scenario_ids("TC-11-13-01")
+class TestUploadEdgeCases(BaseUploadTestCase):
+    """Focused edge-case tests for upload consistency and null semantics."""
+
+    def test_existing_identifiers_with_different_internal_ids_fail(self) -> None:
+        """Multiple existing identifiers for one parent must resolve to one internal ID."""
+        identifier1 = self.create_identifier_for_upload(
+            identifier_issuer_id=self.identifier_issuer_id,
+            identifier_issuer_code=self.identifier_issuer_code,
+            external_id="ext_id_1",
+        )
+        identifier2 = self.create_identifier_for_upload(
+            identifier_issuer_id=self.identifier_issuer_id2,
+            identifier_issuer_code=self.identifier_issuer_code2,
+            external_id="ext_id_2",
+        )
+        parent_for_upload = self.create_parent_for_upload(
+            identifiers=[identifier1, identifier2]
+        )
+        existing_identifier1 = self.get_parent_identifier_from_for_upload(
+            identifier1,
+            internal_id=self.random_ids[0],
+        )
+        existing_identifier2 = self.get_parent_identifier_from_for_upload(
+            identifier2,
+            internal_id=self.random_ids[1],
+        )
+
+        self.service.app.handle.side_effect = [
+            [self.identifier_issuer, self.identifier_issuer2],
+            [existing_identifier1, existing_identifier2],
+        ]
+        self.service.repository.crud.side_effect = [
+            [True],
+        ]
+
+        batch_result = self.upload_batch(parent_for_upload)
+
+        self.assertBatchFailed(batch_result)
+        identifier_results = batch_result.parents[0].identifiers or []
+        self.assertEqual(len(identifier_results), 2)
+        self.assertTrue(identifier_results[1].has_log_code("0561ecd7"))
+
+    def test_verify_link_id_same_service_allows_none_user(self) -> None:
+        """Same-service link verification should support user=None without crashing."""
+        ref1 = self.create_ref1(self.ref1_id, "ref1_code")
+        child1_for_upload = self.create_child1_for_upload(
+            ref1_id=NULL_ID, ref1_code=ref1.code
+        )
+        parent_for_upload = self.create_parent_for_upload(children1=[child1_for_upload])
+        cmd = self.create_command_for_parents(parent_for_upload)
+        cmd = cmd.model_copy(update={"user": None})
+        batch_result = self.batch_uploader.init_batch_upload_result(cmd)
+
+        self.service.repository.read_fields.return_value = [(ref1.id, ref1.code)]
+
+        success = self.batch_uploader.verify_link_id(
+            list(self.batch_uploader.parent_result_items(cmd, batch_result)),
+            self.uow,
+            cmd.user,
+            "children1",
+            "ref1_id",
+            "ref1_code",
+            Ref1,
+            is_same_service=True,
+            is_frozen=False,
+        )
+
+        self.assertTrue(success)
+        self.assertEqual(self.service.repository.read_fields.call_args.args[1], None)
+
+    def test_inconsistent_child_parent_ids_fail(self) -> None:
+        """Different non-null parent IDs across children in one parent should fail."""
+        child1_a = self.create_child1_for_upload(
+            parent_id=self.random_ids[0],
+            ref1_id=self.ref1_id,
+            ref1_code=None,
+        )
+        child1_b = self.create_child1_for_upload(
+            parent_id=self.random_ids[1],
+            ref1_id=self.ref1_id,
+            ref1_code=None,
+        )
+        parent_for_upload = self.create_parent_for_upload(
+            parent_id=None,
+            children1=[child1_a, child1_b],
+        )
+        cmd = self.create_command_for_parents(parent_for_upload)
+        cmd = cmd.model_copy(update={"verify_only": True})
+
+        self.service.repository.read_fields.return_value = [
+            (self.ref1_id, "ref1_code"),
+        ]
+        self.service.repository.crud.return_value = [True]
+
+        batch_result = self.batch_uploader.upload_batch(cmd)
+
+        child_results = batch_result.parents[0].children1 or []
+        self.assertEqual(len(child_results), 2)
+        self.assertEqual(child_results[1].status, EtlStatus.FAILED)
+        self.assertTrue(child_results[1].has_log_code("13ba4246"))
+
+    def test_create_identifiers_skips_null_id_internal_id(self) -> None:
+        """NULL_ID internal_id should be treated as unresolved and skipped."""
+        identifier = self.create_identifier_for_upload(
+            identifier_issuer_id=self.identifier_issuer_id,
+            identifier_issuer_code=self.identifier_issuer_code,
+            external_id="ext_null_id",
+        )
+        identifier_result = UploadResult(status=EtlStatus.PENDING, is_new=True)
+
+        success = self.batch_uploader.create_identifiers(
+            self.uow,
+            self.user,
+            ParentIdentifier,
+            [
+                (
+                    NULL_ID,
+                    [identifier],
+                    [identifier_result],
+                )
+            ],
+        )
+
+        self.assertTrue(success)
+        self.service.app.handle.assert_not_called()
+
+
+@pytest.mark.scenario_ids("TC-11-13-01")
 class TestDuplicateIds(BaseUploadTestCase):
     """Duplicate-ID detection converts per-item hard failures into soft FAILED results."""
 

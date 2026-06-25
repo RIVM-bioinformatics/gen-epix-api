@@ -163,6 +163,9 @@ class CaseUploadSetup:
             )
 
 
+@pytest.mark.skip(
+    "Test is no longer valid, replaced by corresponding unit test. Code kept for now."
+)
 @pytest.mark.scenario_ids(
     "TC-RBAC-02-01",
     "TC-RBAC-04-01",
@@ -216,7 +219,7 @@ class TestCaseUpload(CaseUploadSetup):
                 operation=CrudOperation.READ_ALL,
             )
         )
-        ref_col_map: dict[UUID, model.RefCol] = {x.id: x for x in ref_cols}
+        ref_col_map: dict[UUID, model.RefCol] = {cast(UUID, x.id): x for x in ref_cols}
         cols: list[model.Col] = env.app.handle(  # type: ignore[assignment]
             command.ColCrudCommand(
                 user=root_user,
@@ -290,7 +293,6 @@ class TestCaseUpload(CaseUploadSetup):
                             )
                         ]  # type: ignore[arg-type]
                     ),
-                    on_id_set=OnException.IGNORE,
                 )
             elif row_operation == "RETRIEVE_CASES_BY_ID":
                 cmd = command.RetrieveCasesByIdCommand(
@@ -500,7 +502,7 @@ class TestCaseUpload(CaseUploadSetup):
                 user=user,
                 case_type_id=case_type_id,
                 created_in_data_collection_id=created_in_data_collection_id,
-                verify_only=True,
+                verify_only=True,  # type: ignore[call-arg]
                 case_batch=case_batch,
             )
             # Execute command
@@ -668,7 +670,7 @@ class TestCaseUpload(CaseUploadSetup):
                 seqs.append(
                     model.SeqForUpload(  # type: ignore[call-arg]
                         col_id=col_id,
-                        external_sample_id=identifier_for_upload,
+                        other_sample_identifier=identifier_for_upload,
                         protocol_id=assembly_protocol_id,  # type: ignore[arg-type]
                     )
                 )
@@ -681,9 +683,9 @@ class TestCaseUpload(CaseUploadSetup):
             content=case_content,
         )
         if for_upload:
-            return model.CaseForUpload(  # type: ignore[call-arg]
+            return model.CaseForUpload(
                 id=case.id,
-                identifiers=(
+                identifiers=(  # type: ignore[call-arg]
                     None if identifier_for_upload is None else [identifier_for_upload]
                 ),
                 case=case,

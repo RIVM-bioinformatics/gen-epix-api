@@ -219,7 +219,7 @@ class CaseService(BaseCaseService):
                 case_or_set.id,
                 case_or_set.case_type_id,
                 case_or_set.created_in_data_collection_id,
-                case_or_set_data_collections.get(case_or_set.id, set()),
+                data_collection_ids,
             )
             retval.append(case_abac.get_case_set_rights(*args) if is_case_set else case_abac.get_case_rights(*args))  # type: ignore[arg-type]
 
