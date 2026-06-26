@@ -42,14 +42,10 @@ jobs:
           path: ~/.venv
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt', '**/dev-requirements.txt') }}
       - name: Install dependencies
+        if: steps.cache-pip.outputs.cache-hit != 'true'
         run: |
-
-          if [[ ! -f ~/.venv/bin/activate ]]; then # Somehow there is sometimes a cached venv already at the start of the workflow
-            echo "Creating virtual environment"
-            python -m venv ~/.venv
-          else
-            echo "Using cached virtual environment"
-          fi
+          rm -rf ~/.venv
+          python -m venv ~/.venv
           source ~/.venv/bin/activate
           pip install -r requirements.txt
           pip install -r dev-requirements.txt
