@@ -1472,7 +1472,10 @@ class SARepository(BaseRepository):
                     )
 
         else:
-            engine = EngineFactory.create_engine(connection_string, echo)
+            connect_args = kwargs.pop("connect_args", None)
+            engine = EngineFactory.create_engine(
+                connection_string, echo, connect_args=connect_args
+            )
 
             # Create schemas if not exists
             for schema_name in schema_names:
