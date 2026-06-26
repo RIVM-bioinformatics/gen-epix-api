@@ -3,9 +3,10 @@ from collections.abc import Callable, Iterator
 from datetime import datetime, timezone
 from typing import Any
 from unittest import TestCase
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
 
+import numpy as np
 import pytest
 
 from gen_epix.commondb.domain.enum import EtlStatus, Role
@@ -16,7 +17,16 @@ from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.domain.literal import MLVA_NO_LOCUS_REPEAT_NUMBER
 from gen_epix.seqdb.services.seq.calculate_seq_distance import (
+    _INT32_VOCAB_GATE,
+    _NULL_ALLELE,
     _calculate_and_store_distances,
+    _calculate_distance_for_decoded_profile_pair,
+    _calculate_pairwise_profile_distances,
+    _decode_profile,
+    _encode_to_int32,
+    _hamming_allele_int32_batch,
+    _hamming_allele_numpy,
+    _hamming_allele_numpy_batch,
     seq_service_calculate_seq_distances_for_new_profiles,
     seq_service_update_seq_distances,
 )
@@ -1673,3 +1683,406 @@ class TestUpdateSeqDistances(
         created_map = json.loads(recorder.created[0].content)
         self.assertIn(str(self.existing_profile_id), created_map)
         self.assertIn(str(existing_profile_id_2), created_map)
+
+
+# ── Numpy allele compute helpers ─────────────────────────────────────────────
+
+
+def _s16(byte_val: int, n_loci: int = 5) -> np.ndarray:
+    """Return an (n_loci,) S16 array where every locus has the same UUID byte."""
+    return np.array([bytes([byte_val] * 16)] * n_loci, dtype="S16")
+
+
+class TestNumpyAlleleKernels(TestCase):
+    def test_hamming_allele_numpy_identity_mismatch_null(self) -> None:
+        a = np.array([b"\x01" * 16, b"\x02" * 16, b"\x03" * 16], dtype="S16")
+        b = np.array([b"\x01" * 16, b"\x99" * 16, b"\x03" * 16], dtype="S16")
+        c = np.array([_NULL_ALLELE, b"\x02" * 16, b"\x03" * 16], dtype="S16")
+        self.assertEqual(_hamming_allele_numpy(a, a), 0.0)   # identity
+        self.assertEqual(_hamming_allele_numpy(a, b), 1.0)   # one mismatch
+        self.assertEqual(_hamming_allele_numpy(a, c), 0.0)   # null excluded
+
+    def test_hamming_allele_numpy_batch_matches_per_pair(self) -> None:
+        n_loci = 4
+        existing = np.array([b"\x01" * 16, b"\x02" * 16, b"\x03" * 16, b"\x04" * 16], dtype="S16")
+        new_matrix = np.array([
+            [b"\x01" * 16, b"\x02" * 16, b"\x03" * 16, b"\x04" * 16],  # identical
+            [b"\x01" * 16, b"\x99" * 16, b"\x03" * 16, b"\x04" * 16],  # 1 diff
+            [_NULL_ALLELE, b"\x02" * 16, b"\xAA" * 16, b"\x04" * 16],  # null + 1 diff
+        ], dtype="S16")
+        null_new = new_matrix == _NULL_ALLELE
+        result = _hamming_allele_numpy_batch(existing, new_matrix, null_new)
+        for i in range(3):
+            self.assertEqual(result[i], _hamming_allele_numpy(existing, new_matrix[i]))
+
+    def test_encode_to_int32_shared_token_gets_same_code(self) -> None:
+        # Token \x01 appears in both new and chunk at column 0; must get same int32 code.
+        new_s16 = np.array([[b"\x01" * 16, b"\x02" * 16]], dtype="S16")
+        chunk_s16 = np.array([[b"\x01" * 16, b"\x03" * 16]], dtype="S16")
+        new_int32, chunk_int32 = _encode_to_int32(new_s16, chunk_s16)
+        self.assertEqual(new_int32[0, 0], chunk_int32[0, 0])   # shared \x01 token
+        self.assertNotEqual(new_int32[0, 1], chunk_int32[0, 1])  # \x02 vs \x03
+
+    def test_hamming_allele_int32_batch_matches_numpy_batch(self) -> None:
+        rng = np.random.default_rng(0)
+        n_loci, m = 10, 3
+        allele_pool = [bytes([v] * 16) for v in range(1, 6)]
+        new_s16 = np.array(
+            [[allele_pool[rng.integers(0, 5)] for _ in range(n_loci)] for _ in range(m)],
+            dtype="S16",
+        )
+        existing_s16 = np.array(
+            [allele_pool[rng.integers(0, 5)] for _ in range(n_loci)], dtype="S16"
+        )
+        null_new = new_s16 == _NULL_ALLELE
+        ref = _hamming_allele_numpy_batch(existing_s16, new_s16, null_new)
+
+        new_int32, chunk_int32 = _encode_to_int32(new_s16, existing_s16[None, :])
+        null_existing = existing_s16 == _NULL_ALLELE
+        result = _hamming_allele_int32_batch(
+            chunk_int32[0], new_int32, null_existing, null_new
+        )
+        for i in range(m):
+            self.assertEqual(float(result[i]), ref[i])
+
+    def test_int32_and_numpy_batch_produce_same_distances_as_python_loop(self) -> None:
+        # Parity test: all three paths must agree on the same 5-locus, 4-profile case.
+        alleles = [b"\x01" * 16, b"\x02" * 16, b"\x03" * 16, _NULL_ALLELE]
+        existing_s16 = np.array([alleles[0], alleles[1], alleles[2], alleles[3], alleles[0]], dtype="S16")
+        new_s16 = np.array([
+            [alleles[0], alleles[1], alleles[2], alleles[3], alleles[1]],  # 1 diff (pos 4), null excl
+            [alleles[2], alleles[1], alleles[0], alleles[3], alleles[0]],  # 2 diffs, null excl
+        ], dtype="S16")
+        null_new = new_s16 == _NULL_ALLELE
+        null_existing = existing_s16 == _NULL_ALLELE
+
+        # Python reference
+        def _py(ex: np.ndarray, nw: np.ndarray) -> float:
+            return float(sum(
+                1 for e, n in zip(ex, nw)
+                if e != n and e != _NULL_ALLELE and n != _NULL_ALLELE
+            ))
+        ref = [_py(existing_s16, new_s16[i]) for i in range(2)]
+
+        # numpy_batch
+        batch = _hamming_allele_numpy_batch(existing_s16, new_s16, null_new)
+        # int32_vocab
+        new_int32, chunk_int32 = _encode_to_int32(new_s16, existing_s16[None, :])
+        int32_res = _hamming_allele_int32_batch(
+            chunk_int32[0], new_int32, null_existing, null_new
+        )
+        for i in range(2):
+            self.assertEqual(batch[i], ref[i])
+            self.assertEqual(float(int32_res[i]), ref[i])
+
+
+# ── Numpy allele integration tests ────────────────────────────────────────────
+
+
+@pytest.mark.scenario_ids("TC-11-13-01")
+class TestNumpyAlleleIntegration:
+    """Unit tests for all new numpy ALLELE distance code paths (LSP-3529)."""
+
+    @pytest.fixture(autouse=True)
+    def _setup(self) -> None:
+        self.user = _make_user()
+        self.protocol_id = UUID("550e8400-e29b-41d4-a716-446655440001")
+        self.locus_set_id = UUID("550e8400-e29b-41d4-a716-446655440004")
+        self.sample_id = UUID("550e8400-e29b-41d4-a716-446655440005")
+        self.sample_id2 = UUID("550e8400-e29b-41d4-a716-446655440006")
+        svc: Mock = Mock()
+        svc.generate_id = Mock(side_effect=uuid4)
+        svc.repository = Mock()
+        svc.repository.uow.return_value = _mock_uow()
+        self.service = svc
+
+    def _allele_protocol(self, max_stored_distance: float = 100.0) -> model.Protocol:
+        return _make_seq_distance_protocol_for_locus_set(
+            protocol_id=self.protocol_id,
+            locus_set_id=self.locus_set_id,
+            seq_distance_protocol_type=enum.SeqDistanceType.ALLELE_HAMMING,
+            max_stored_distance=max_stored_distance,
+        )
+
+    def _run_allele_numpy_calc(
+        self,
+        *,
+        existing_allele_ids_list: list[list[UUID | None]],
+        new_allele_ids_list: list[list[UUID | None]],
+        max_stored_distance: float = 100.0,
+        use_batch_new_profiles: bool = False,
+        use_int32_vocab: bool = False,
+    ) -> tuple[_CrudRecorder, list[UUID], list[UUID]]:
+        """Run _calculate_and_store_distances directly for ALLELE profiles.
+        Returns (recorder, existing_ids, new_ids)."""
+        e_ids = [uuid4() for _ in existing_allele_ids_list]
+        n_ids = [uuid4() for _ in new_allele_ids_list]
+        existing_profiles = [
+            _make_allele_profile(
+                profile_id=e_ids[i],
+                sample_id=self.sample_id,
+                locus_set_id=self.locus_set_id,
+                protocol_id=self.protocol_id,
+                allele_ids=existing_allele_ids_list[i],
+            )
+            for i in range(len(e_ids))
+        ]
+        new_profiles = [
+            _make_allele_profile(
+                profile_id=n_ids[i],
+                sample_id=self.sample_id2,
+                locus_set_id=self.locus_set_id,
+                protocol_id=self.protocol_id,
+                allele_ids=new_allele_ids_list[i],
+            )
+            for i in range(len(n_ids))
+        ]
+        protocol = self._allele_protocol(max_stored_distance)
+        existing_distances = [
+            _make_seq_distance(
+                seq_distance_id=uuid4(),
+                protocol_id=self.protocol_id,
+                profile_id=e_ids[i],
+                sample_id=self.sample_id,
+                distances={},
+            )
+            for i in range(len(e_ids))
+        ]
+        recorder = _CrudRecorder()
+        _setup_distance_mocks(self.service, existing_distances, recorder=recorder)
+        profiles_by_id = {e_ids[i]: existing_profiles[i] for i in range(len(e_ids))}
+
+        def _crud(
+            uow: Any,
+            user_id: Any,
+            model_class: type,
+            operation: CrudOperation,
+            filter: Any = None,
+            objs: Any = None,
+            obj_ids: Any = None,
+            **kwargs: Any,
+        ) -> Any:
+            if model_class is model.SeqProfile and operation == CrudOperation.READ_SOME:
+                return [profiles_by_id[i] for i in obj_ids if i in profiles_by_id]
+            if model_class is model.SeqDistance and operation == CrudOperation.CREATE_SOME:
+                recorder.created.extend(objs)
+                return objs
+            return []
+
+        self.service.repository.crud.side_effect = _crud
+        results: list[model.CalculateSeqDistancesResult] = []
+        _calculate_and_store_distances(
+            self.service,
+            Mock(),
+            None,
+            protocol,
+            enum.SeqProfileType.ALLELE,
+            new_profiles,
+            results,
+            known_existing_profile_ids=e_ids,
+            use_numpy_allele=True,
+            use_batch_new_profiles=use_batch_new_profiles,
+            use_int32_vocab=use_int32_vocab,
+        )
+        return recorder, e_ids, n_ids
+
+    def test_decode_profile_numpy_returns_s16_array(self) -> None:
+        """_decode_profile with use_numpy_allele=True returns (n_loci,) S16 array;
+        null loci are encoded as _NULL_ALLELE."""
+        a1, a2 = uuid4(), uuid4()
+        profile = _make_allele_profile(
+            profile_id=uuid4(),
+            sample_id=self.sample_id,
+            locus_set_id=self.locus_set_id,
+            protocol_id=self.protocol_id,
+            allele_ids=[a1, None, a2],
+        )
+        result = _decode_profile(enum.SeqProfileType.ALLELE, profile, use_numpy_allele=True)
+        assert isinstance(result, np.ndarray)
+        assert result.dtype == np.dtype("S16")
+        assert result.shape == (3,)
+        # numpy strips trailing null bytes on scalar access, so compare via array equality
+        null_mask = result == _NULL_ALLELE
+        assert not null_mask[0]   # a1 is non-null
+        assert null_mask[1]       # None → encoded as _NULL_ALLELE
+        assert not null_mask[2]   # a2 is non-null
+
+    def test_calculate_distance_pair_numpy_branch(self) -> None:
+        """The isinstance(np.ndarray) branch in _calculate_distance_for_decoded_profile_pair
+        delegates to _hamming_allele_numpy and returns the correct float distance."""
+        a = np.array([b"\x01" * 16, b"\x02" * 16, b"\x03" * 16], dtype="S16")
+        b = np.array([b"\x01" * 16, b"\x99" * 16, b"\x03" * 16], dtype="S16")
+        result = _calculate_distance_for_decoded_profile_pair(
+            enum.SeqProfileType.ALLELE, a, b
+        )
+        assert isinstance(result, float)
+        assert result == 1.0
+
+    @pytest.mark.parametrize(
+        "flags",
+        [
+            {"use_numpy_allele": False, "use_batch_new_profiles": True},
+            {"use_numpy_allele": False, "use_int32_vocab": True},
+            {
+                "use_numpy_allele": True,
+                "use_batch_new_profiles": True,
+                "use_int32_vocab": True,
+            },
+        ],
+    )
+    def test_flag_validation_error(self, flags: dict) -> None:
+        """Each invalid variant-flag combination raises ValueError."""
+        protocol = self._allele_protocol()
+        with pytest.raises(ValueError):
+            _calculate_and_store_distances(
+                self.service,
+                Mock(),
+                None,
+                protocol,
+                enum.SeqProfileType.ALLELE,
+                [],
+                [],
+                **flags,
+            )
+
+    def test_calculate_and_store_distances_numpy_batch(self) -> None:
+        """numpy_batch path stores correct cross and intra-batch distances."""
+        a1 = UUID("aaaaaaaa-0000-0000-0000-000000000001")
+        a2 = UUID("aaaaaaaa-0000-0000-0000-000000000002")
+        # existing [a1,a2]; n1 [a1,a1] → 1 diff; n2 [a2,a2] → 1 diff; n1 vs n2 → 2
+        recorder, e_ids, n_ids = self._run_allele_numpy_calc(
+            existing_allele_ids_list=[[a1, a2]],
+            new_allele_ids_list=[[a1, a1], [a2, a2]],
+            use_batch_new_profiles=True,
+        )
+        e1_id, n1_id, n2_id = e_ids[0], n_ids[0], n_ids[1]
+        n1_map = json.loads(
+            next(c for c in recorder.created if c.seq_profile_id == n1_id).content
+        )
+        n2_map = json.loads(
+            next(c for c in recorder.created if c.seq_profile_id == n2_id).content
+        )
+        updated_map = json.loads(recorder.updated[0].content)
+
+        assert len(recorder.created) == 2
+        assert len(recorder.updated) == 1
+        assert n1_map[str(e1_id)] == 1.0
+        assert n2_map[str(e1_id)] == 1.0
+        assert updated_map[str(n1_id)] == 1.0
+        assert updated_map[str(n2_id)] == 1.0
+        assert n1_map[str(n2_id)] == 2.0
+        assert n2_map[str(n1_id)] == 2.0
+
+    def test_calculate_and_store_distances_int32_vocab(self) -> None:
+        """int32_vocab path produces identical distances to numpy_batch."""
+        a1 = UUID("aaaaaaaa-0000-0000-0000-000000000001")
+        a2 = UUID("aaaaaaaa-0000-0000-0000-000000000002")
+        recorder, e_ids, n_ids = self._run_allele_numpy_calc(
+            existing_allele_ids_list=[[a1, a2]],
+            new_allele_ids_list=[[a1, a1], [a2, a2]],
+            use_int32_vocab=True,
+        )
+        e1_id, n1_id, n2_id = e_ids[0], n_ids[0], n_ids[1]
+        n1_map = json.loads(
+            next(c for c in recorder.created if c.seq_profile_id == n1_id).content
+        )
+        n2_map = json.loads(
+            next(c for c in recorder.created if c.seq_profile_id == n2_id).content
+        )
+        updated_map = json.loads(recorder.updated[0].content)
+
+        assert len(recorder.created) == 2
+        assert len(recorder.updated) == 1
+        assert n1_map[str(e1_id)] == 1.0
+        assert n2_map[str(e1_id)] == 1.0
+        assert updated_map[str(n1_id)] == 1.0
+        assert updated_map[str(n2_id)] == 1.0
+        assert n1_map[str(n2_id)] == 2.0
+        assert n2_map[str(n1_id)] == 2.0
+
+    def test_pairwise_reuses_decoded_profiles_no_redecode(self) -> None:
+        """When decoded_profiles is supplied, _calculate_pairwise_profile_distances
+        uses them directly and does not call _decode_profile."""
+        a1 = UUID("aaaaaaaa-0000-0000-0000-000000000001")
+        a2 = UUID("aaaaaaaa-0000-0000-0000-000000000002")
+        p1_id, p2_id = uuid4(), uuid4()
+        p1 = _make_allele_profile(
+            profile_id=p1_id,
+            sample_id=self.sample_id,
+            locus_set_id=self.locus_set_id,
+            protocol_id=self.protocol_id,
+            allele_ids=[a1, a2],
+        )
+        p2 = _make_allele_profile(
+            profile_id=p2_id,
+            sample_id=self.sample_id2,
+            locus_set_id=self.locus_set_id,
+            protocol_id=self.protocol_id,
+            allele_ids=[a2, a2],  # 1 diff at locus 0
+        )
+        decoded_p1 = _decode_profile(enum.SeqProfileType.ALLELE, p1, use_numpy_allele=True)
+        decoded_p2 = _decode_profile(enum.SeqProfileType.ALLELE, p2, use_numpy_allele=True)
+        distance_maps: dict[UUID, dict[str, float]] = {p1_id: {}, p2_id: {}}
+
+        with patch(
+            "gen_epix.seqdb.services.seq.calculate_seq_distance._decode_profile"
+        ) as mock_decode:
+            _calculate_pairwise_profile_distances(
+                enum.SeqProfileType.ALLELE,
+                [p1, p2],
+                distance_maps,
+                max_stored_distance=100.0,
+                decoded_profiles=[decoded_p1, decoded_p2],
+            )
+        mock_decode.assert_not_called()
+        assert distance_maps[p1_id][str(p2_id)] == 1.0
+        assert distance_maps[p2_id][str(p1_id)] == 1.0
+
+    @pytest.mark.parametrize(
+        "n_new,exp_batch,exp_int32",
+        [
+            (2, True, False),   # below gate → numpy_batch
+            (3, False, True),   # at gate → int32_vocab
+        ],
+    )
+    def test_gate_selects_variant_by_n_new(
+        self, n_new: int, exp_batch: bool, exp_int32: bool
+    ) -> None:
+        """Gate chooses use_batch_new_profiles below _INT32_VOCAB_GATE and
+        use_int32_vocab at or above it."""
+        protocol = self._allele_protocol()
+        self.service.repository.crud.side_effect = _make_crud_side_effect(
+            recorder=_CrudRecorder(), protocols=[protocol]
+        )
+        a1 = uuid4()
+        profiles = [
+            _make_allele_profile(
+                profile_id=uuid4(),
+                sample_id=self.sample_id2,
+                locus_set_id=self.locus_set_id,
+                protocol_id=self.protocol_id,
+                allele_ids=[a1],
+            )
+            for _ in range(n_new)
+        ]
+        cmd = command.CalculateSeqDistancesForNewProfilesCommand(
+            user=self.user,
+            seq_profiles=profiles,
+            use_numpy_allele_distance=True,
+        )
+        with (
+            patch(
+                "gen_epix.seqdb.services.seq.calculate_seq_distance._INT32_VOCAB_GATE",
+                3,
+            ),
+            patch(
+                "gen_epix.seqdb.services.seq.calculate_seq_distance._calculate_and_store_distances"
+            ) as mock_calc,
+        ):
+            seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
+
+        mock_calc.assert_called_once()
+        kw = mock_calc.call_args.kwargs
+        assert kw["use_batch_new_profiles"] == exp_batch
+        assert kw["use_int32_vocab"] == exp_int32
+        assert kw["use_numpy_allele"]

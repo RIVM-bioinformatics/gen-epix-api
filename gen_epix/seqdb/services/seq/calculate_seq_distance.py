@@ -37,6 +37,103 @@ class _ParsedNextcladeProfile(BaseModel):
     alignment_end: int
 
 
+# Numpy has no uint128 type; allele UUIDs are stored as S16 (16-byte byte
+# strings). All-zero bytes = NULL_ID (missing locus). S16 byte-wise equality
+# gives correct UUID identity — see SeqProfile.get_allele_array() for details.
+_NULL_ALLELE = b"\x00" * 16
+
+# n_new threshold: use int32_vocab at or above this, numpy_batch below.
+# Based on benchmarks at n_existing=10 000: crossover at ~150; 200 gives margin.
+_INT32_VOCAB_GATE = 200
+
+
+def _hamming_allele_numpy(arr1: np.ndarray, arr2: np.ndarray) -> float:
+    """
+    Hamming distance between two (n_loci,) S16 allele arrays.
+
+    S16 is a no-uint128 workaround (see SeqProfile.get_allele_array). Elements
+    equal to _NULL_ALLELE are missing loci; pairs where either side is missing
+    are excluded, matching the Python fallback.
+    """
+    null1 = arr1 == _NULL_ALLELE
+    null2 = arr2 == _NULL_ALLELE
+    return float(np.sum((arr1 != arr2) & ~null1 & ~null2))
+
+
+def _hamming_allele_numpy_batch(
+    existing_arr: np.ndarray,
+    new_matrix: np.ndarray,
+    null_new: np.ndarray,
+) -> np.ndarray:
+    """
+    Hamming distances from one existing S16 profile to all M new profiles.
+
+    existing_arr: (n_loci,) S16 — one existing profile.
+    new_matrix:   (M, n_loci) S16 — all M new profiles stacked.
+    null_new:     (M, n_loci) bool — precomputed missing-locus mask for new.
+    Returns:      (M,) float array of distances.
+
+    Broadcasting replaces M Python-loop calls to _hamming_allele_numpy.
+    null_new is precomputed before the chunk loop so it is not recomputed
+    for every existing profile.
+    """
+    null_existing = existing_arr == _NULL_ALLELE
+    diff = new_matrix != existing_arr[None, :]
+    missing = null_new | null_existing[None, :]
+    return np.sum(diff & ~missing, axis=1).astype(float)
+
+
+def _encode_to_int32(
+    new_s16: np.ndarray,
+    chunk_s16: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Build a shared vocabulary from new + chunk S16 matrices and encode both to int32.
+
+    new_s16:   (M, n_loci) S16 — pre-stacked new profiles.
+    chunk_s16: (C, n_loci) S16 — all existing profiles in this chunk, stacked.
+    Returns:   (new_int32, chunk_int32), shapes (M, n_loci) and (C, n_loci) int32.
+
+    np.unique collects the sorted set of distinct S16 allele tokens across both
+    matrices; np.searchsorted maps every cell to its position in that sorted list
+    (a vectorised dict lookup). This reduces each cell from 16 bytes (S16) to 4 bytes
+    (int32), cutting matrix memory by 4x and replacing 16-byte byte-string comparisons
+    with 4-byte integer comparisons in the Hamming step.
+
+    The vocabulary is rebuilt per chunk so codes are consistent within one
+    _hamming_allele_int32_batch call but not comparable across chunks.
+    """
+    combined = np.concatenate([new_s16, chunk_s16])
+    unique_vals = np.unique(combined)
+    new_int32 = np.searchsorted(unique_vals, new_s16).astype(np.int32)
+    chunk_int32 = np.searchsorted(unique_vals, chunk_s16).astype(np.int32)
+    return new_int32, chunk_int32
+
+
+def _hamming_allele_int32_batch(
+    existing_row: np.ndarray,
+    new_matrix: np.ndarray,
+    null_existing: np.ndarray,
+    null_new: np.ndarray,
+) -> np.ndarray:
+    """
+    Hamming distances from one existing int32 profile to all M new int32 profiles.
+
+    existing_row:  (n_loci,) int32 — one row from chunk_int32 from _encode_to_int32.
+    new_matrix:    (M, n_loci) int32 — new profiles encoded with the same vocab.
+    null_existing: (n_loci,) bool — True where existing allele is NULL_ID.
+    null_new:      (M, n_loci) bool — True where new allele is NULL_ID; derived from
+                   the S16 stage before encoding, stable across chunks.
+    Returns:       (M,) int32 — mismatch count per new profile.
+
+    Null masks are derived from the S16 stage because the null allele maps to
+    whichever integer the per-chunk vocab assigns it, not a fixed sentinel.
+    """
+    diff = new_matrix != existing_row[None, :]
+    missing = null_new | null_existing[None, :]
+    return np.sum(diff & ~missing, axis=1, dtype=np.int32)
+
+
 def seq_service_retrieve_seq_distance_last_modified(
     self: BaseSeqService,
     cmd: command.RetrieveSeqDistanceLastModifiedCommand,
@@ -186,6 +283,9 @@ def seq_service_calculate_seq_distances_for_new_profiles(
             ) in seq_distance_protocols_by_subset.items():
                 new_profiles = new_seq_profiles_by_subset[subset_id]
                 for protocol in protocols_for_subset:
+                    _is_allele = seq_profile_type == enum.SeqProfileType.ALLELE
+                    _use_numpy = cmd.use_numpy_allele_distance and _is_allele
+                    _use_int32 = _use_numpy and len(new_profiles) >= _INT32_VOCAB_GATE
                     _calculate_and_store_distances(
                         self,
                         uow,
@@ -196,6 +296,9 @@ def seq_service_calculate_seq_distances_for_new_profiles(
                         results,
                         cmd.seq_distance_last_modified_at,
                         existing_chunk_size=cmd.existing_chunk_size,
+                        use_numpy_allele=_use_numpy,
+                        use_batch_new_profiles=_use_numpy and not _use_int32,
+                        use_int32_vocab=_use_int32,
                     )
 
     return results
@@ -284,6 +387,9 @@ def seq_service_update_seq_distances(
         if not missing_profiles:
             return results
 
+        _is_allele = seq_profile_type == enum.SeqProfileType.ALLELE
+        _use_numpy = cmd.use_numpy_allele_distance and _is_allele
+        _use_int32 = _use_numpy and len(missing_profiles) >= _INT32_VOCAB_GATE
         _calculate_and_store_distances(
             self,
             uow,
@@ -293,6 +399,9 @@ def seq_service_update_seq_distances(
             missing_profiles,
             results,
             existing_chunk_size=cmd.existing_chunk_size,
+            use_numpy_allele=_use_numpy,
+            use_batch_new_profiles=_use_numpy and not _use_int32,
+            use_int32_vocab=_use_int32,
         )
 
     return results
@@ -301,6 +410,7 @@ def seq_service_update_seq_distances(
 def _decode_profile(
     seq_profile_type: enum.SeqProfileType,
     profile: model.SeqProfile,
+    use_numpy_allele: bool = False,
 ) -> Any:
     """Return pre-decoded profile data for distance computation.
 
@@ -309,11 +419,14 @@ def _decode_profile(
     every pair.
 
     Return types by profile type:
-      ALLELE  → list[bytes | None]  (16-byte UUID chunks, one per locus)
+      ALLELE  → np.ndarray (S16, shape (n_loci,)) if use_numpy_allele,
+                else list[bytes | None] (16-byte UUID chunks, one per locus)
       MLVA    → list[int]           (repeat numbers)
       SNP     → _ParsedNextcladeProfile (only NEXTCLADE format supported)
     """
     if seq_profile_type == enum.SeqProfileType.ALLELE:
+        if use_numpy_allele:
+            return profile.get_allele_array()
         return profile.get_allele_id_bytes()
     if seq_profile_type == enum.SeqProfileType.MLVA:
         return profile.get_repeat_numbers()
@@ -341,6 +454,8 @@ def _calculate_distance_for_decoded_profile_pair(
     decode calls from N×M to N+M.
     """
     if seq_profile_type == enum.SeqProfileType.ALLELE:
+        if isinstance(data1, np.ndarray):
+            return _hamming_allele_numpy(data1, data2)
         return float(
             sum(
                 1
@@ -368,6 +483,11 @@ def _calculate_and_store_distances(
     seq_distance_last_modified_at: datetime | None = None,
     known_existing_profile_ids: list[UUID] | None = None,
     existing_chunk_size: int | None = None,
+    # Variant flags — set by the service gate or overridden directly in benchmarks.
+    # Default False = Python loop fallback (original behaviour, safe for all repos).
+    use_numpy_allele: bool = False,
+    use_batch_new_profiles: bool = False,
+    use_int32_vocab: bool = False,
 ) -> None:
     """
     Calculate pairwise distances between new_seq_profiles and all existing
@@ -429,6 +549,15 @@ def _calculate_and_store_distances(
     t_fn = time.perf_counter()
     max_stored_distance = protocol.max_stored_distance
     assert max_stored_distance is not None
+
+    if use_batch_new_profiles and not use_numpy_allele:
+        raise ValueError("use_batch_new_profiles requires use_numpy_allele=True")
+    if use_int32_vocab and not use_numpy_allele:
+        raise ValueError("use_int32_vocab requires use_numpy_allele=True")
+    if use_int32_vocab and use_batch_new_profiles:
+        raise ValueError(
+            "use_int32_vocab and use_batch_new_profiles are mutually exclusive"
+        )
 
     # Check if any profiles do not have an ID.
     if not all(x.id is not None for x in new_seq_profiles):
@@ -497,8 +626,25 @@ def _calculate_and_store_distances(
     # upfront reduces that to M (once per new profile), so total decode
     # calls drop from N×M to N+M across the whole chunk loop.
     decoded_new_profiles: list[Any] = [
-        _decode_profile(seq_profile_type, p) for p in new_seq_profiles
+        _decode_profile(seq_profile_type, p, use_numpy_allele=use_numpy_allele)
+        for p in new_seq_profiles
     ]
+
+    # Pre-stack for batch / int32 mode (ALLELE + numpy only).
+    # new_matrix: (M, n_loci) S16; null_new: (M, n_loci) bool.
+    # Precomputed once so the chunk loop does not reallocate per iteration.
+    # use_int32_vocab also needs new_matrix (S16) to build per-chunk vocabs.
+    new_matrix: np.ndarray | None = None
+    null_new: np.ndarray | None = None
+    if (
+        (use_batch_new_profiles or use_int32_vocab)
+        and seq_profile_type == enum.SeqProfileType.ALLELE
+        and decoded_new_profiles
+        and isinstance(decoded_new_profiles[0], np.ndarray)
+    ):
+        new_matrix = np.stack(decoded_new_profiles)
+        # null_new derived from S16 bytes before encoding — stable across chunks.
+        null_new = new_matrix == _NULL_ALLELE
 
     # all_modified_existing accumulates updated SeqDistance records across
     # all chunks; the single UPDATE_SOME write happens in step 6 together
@@ -543,6 +689,27 @@ def _calculate_and_store_distances(
                 t_read - t_chunk,
             )
 
+        # int32 vocab path: build a per-chunk shared vocab from new + chunk S16
+        # matrices and encode both to int32. Only populated when use_int32_vocab
+        # is True, new_matrix is available, and the chunk is non-empty.
+        new_int32: np.ndarray | None = None
+        profile_int32_map: dict[UUID, tuple[np.ndarray, np.ndarray]] = {}
+        if (
+            use_int32_vocab
+            and new_matrix is not None
+            and null_new is not None
+            and seq_profile_type == enum.SeqProfileType.ALLELE
+        ):
+            valid_for_int32 = [p for p in existing_profiles_list if p.id is not None]
+            if valid_for_int32:
+                chunk_s16 = np.stack([p.get_allele_array() for p in valid_for_int32])
+                null_chunk = chunk_s16 == _NULL_ALLELE
+                new_int32, chunk_int32 = _encode_to_int32(new_matrix, chunk_s16)
+                profile_int32_map = {
+                    cast(UUID, p.id): (chunk_int32[i], null_chunk[i])
+                    for i, p in enumerate(valid_for_int32)
+                }
+
         # Build an O(1) lookup map for use in the SeqDistance loop below.
         # Profiles with no ID are excluded (same defensive filter as above).
         existing_profile_map = {
@@ -573,39 +740,60 @@ def _calculate_and_store_distances(
                 if existing_profile is None:
                     continue
 
-                # Decode the existing profile's content once per SeqDistance
-                # record, not once per new-profile comparison. Together with
-                # new_profiles_decoded (decoded before the loop) this reduces
-                # total decode calls from N×M to N+M per call.
-                decoded_existing_profile = _decode_profile(
-                    seq_profile_type, existing_profile
-                )
-
                 # Compare this existing profile against every new profile.
-                # Collect matching pairs in `updates` before touching
-                # existing_seq_distance.content — this lets us skip
-                # json.loads entirely for the common case where no new
-                # profile is close enough to record (see below).
+                # Three paths in priority order:
+                #   1. int32_vocab  — 4-byte comparison, best for large n_new
+                #   2. numpy_batch  — S16 broadcast, best for small n_new
+                #   3. Python loop  — fallback for non-ALLELE types
                 updates: dict[str, float] = {}
-                for new_profile, decoded_new_profile in zip(
-                    new_seq_profiles, decoded_new_profiles
-                ):
-                    assert new_profile.id is not None
-                    distance = _calculate_distance_for_decoded_profile_pair(
-                        seq_profile_type,
-                        decoded_existing_profile,
-                        decoded_new_profile,
+                int32_entry = profile_int32_map.get(existing_seq_distance.seq_profile_id)
+                if new_int32 is not None and null_new is not None and int32_entry is not None:
+                    # int32_vocab path
+                    int32_row, null_existing_row = int32_entry
+                    distances_arr = _hamming_allele_int32_batch(
+                        int32_row, new_int32, null_existing_row, null_new
                     )
-                    if distance <= max_stored_distance:
-                        updates[str(new_profile.id)] = distance
-                        # Symmetry invariant: if A's map records distance to
-                        # B, then B's map must also record it. Write the
-                        # reverse entry into new_profile_distance_maps now;
-                        # it will be serialised into the new SeqDistance
-                        # record at step 6 after all chunks complete.
-                        new_profile_distance_maps[new_profile.id][
-                            str(existing_profile.id)
-                        ] = distance
+                    for new_profile, dist in zip(new_seq_profiles, distances_arr):
+                        assert new_profile.id is not None
+                        if float(dist) <= max_stored_distance:
+                            updates[str(new_profile.id)] = float(dist)
+                            new_profile_distance_maps[new_profile.id][
+                                str(existing_profile.id)
+                            ] = float(dist)
+                else:
+                    decoded_existing_profile = _decode_profile(
+                        seq_profile_type, existing_profile, use_numpy_allele
+                    )
+                    if new_matrix is not None and null_new is not None:
+                        # numpy_batch path
+                        distances_arr = _hamming_allele_numpy_batch(
+                            decoded_existing_profile, new_matrix, null_new
+                        )
+                        for new_profile, dist in zip(new_seq_profiles, distances_arr):
+                            assert new_profile.id is not None
+                            if float(dist) <= max_stored_distance:
+                                updates[str(new_profile.id)] = float(dist)
+                                # Symmetry: reverse entry written now, serialised
+                                # into the new SeqDistance record at step 6.
+                                new_profile_distance_maps[new_profile.id][
+                                    str(existing_profile.id)
+                                ] = float(dist)
+                    else:
+                        # Python loop fallback
+                        for new_profile, decoded_new_profile in zip(
+                            new_seq_profiles, decoded_new_profiles
+                        ):
+                            assert new_profile.id is not None
+                            distance = _calculate_distance_for_decoded_profile_pair(
+                                seq_profile_type,
+                                decoded_existing_profile,
+                                decoded_new_profile,
+                            )
+                            if distance <= max_stored_distance:
+                                updates[str(new_profile.id)] = distance
+                                new_profile_distance_maps[new_profile.id][
+                                    str(existing_profile.id)
+                                ] = distance
 
                 # Deferred json.loads — only parse the content blob when at
                 # least one new profile is close enough to warrant an update.
@@ -639,6 +827,7 @@ def _calculate_and_store_distances(
         new_seq_profiles,
         new_profile_distance_maps,
         max_stored_distance,
+        decoded_profiles=decoded_new_profiles,
     )
     if logger:
         logger.debug(
@@ -706,16 +895,17 @@ def _calculate_pairwise_profile_distances(
     profiles: list[model.SeqProfile],
     distance_maps: dict[UUID, dict[str, float]],
     max_stored_distance: float,
+    decoded_profiles: list[Any] | None = None,
 ) -> None:
     """
     Compute pairwise distances between profiles within a single batch and
     populate *distance_maps* (upper-triangle only; both directions stored).
 
-    Profiles are decoded once into a ``decoded`` list, then the O(N²/2)
-    loop calls ``_distance_from_decoded`` on pre-decoded data — avoiding
-    repeated b64decode / json.loads across the N² comparisons.
+    decoded_profiles may be supplied from step 3 to reuse already-decoded
+    numpy arrays and avoid re-decoding. When None, profiles are decoded here.
     """
-    decoded_profiles = [_decode_profile(seq_profile_type, p) for p in profiles]
+    if decoded_profiles is None:
+        decoded_profiles = [_decode_profile(seq_profile_type, p) for p in profiles]
     profile_ids = [cast(UUID, x.id) for x in profiles]
     str_profile_ids = [str(x) for x in profile_ids]
     for i in range(len(profiles)):
