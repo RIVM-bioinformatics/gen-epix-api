@@ -263,7 +263,7 @@ class SARepository(BaseRepository):
             last_uow: SAUnitOfWork = self._uow_context_stack[-1]  # type: ignore[assignment]
             return SAUnitOfWork(
                 last_uow.session,
-                context_stack=self._uow_context_stack,
+                context_stack=self._uow_context_stack_local.value,
             )
         isolation_level: IsolationLevel = kwargs.pop(
             "isolation_level", self._default_isolation_level

@@ -91,6 +91,7 @@ class App:
         self._command_listeners: dict[
             EventTiming, dict[type[Command], list[Callable[[Command, Any], None]]]
         ] = {x: {} for x in EventTiming}
+        self._command_stack_local = threading.local()
         self._command_stack: list[Command] = []
         self._log_cmd_object_on_error: bool = log_cmd_object_on_error
         self._init_log_settings()

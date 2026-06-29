@@ -2,7 +2,6 @@ from collections.abc import Callable
 from typing import Any, NoReturn
 
 from fastapi import APIRouter, FastAPI
-from fastapi.concurrency import run_in_threadpool
 
 from gen_epix.casedb.domain import enum
 from gen_epix.commondb.api.abac import (
