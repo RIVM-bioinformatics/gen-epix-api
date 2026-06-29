@@ -2352,6 +2352,67 @@ class TestVerifyReferenceData(BaseUploadTestCase):
         # Verify
         self.assertTrue(success)
 
+    def test_locus_allele_id_map_encoded_in_locus_set_order(self) -> None:
+        """Alleles must be encoded in locus_ids order, not locus_allele_id_map dict order.
+
+        Dict has code2 (→ locus2 → a2) first; locus_ids has locus1 first.
+        A bug that iterates the dict produces [a2, a1]. Correct code produces [a1, a2].
+        """
+        a1, a2 = uuid4(), uuid4()
+        locus1_id, locus2_id = uuid4(), uuid4()
+
+        allele_profile = self.create_seq_profile_for_upload(
+            sample_id=self.sample_id,
+            locus_allele_id_map={"code2": a2, "code1": a1},  # reversed vs locus_ids
+        )
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id, seq_profiles=[allele_profile]
+        )
+        cmd, retval = self.create_command_and_result_for_samples(sample)
+
+        mock_locus_set = Mock()
+        mock_locus_set.id = self.locus_set_id
+        mock_locus_set.locus_ids = [locus1_id, locus2_id]  # locus1 first
+
+        mock_locus_code_map = Mock()
+        mock_locus_code_map.id = self.locus_code_map_id
+        mock_locus_code_map.code_map = {"code1": locus1_id, "code2": locus2_id}
+
+        mock_protocol = Mock()
+        mock_protocol.id = self.locus_detection_protocol_id
+        mock_protocol.locus_set_id = self.locus_set_id
+
+        def mock_crud(
+            uow: Any,
+            user_id: Any,
+            model_class: type,
+            operation: Any,
+            filter: Any = None,
+            objs: Any = None,
+            obj_ids: Any = None,
+            **kwargs: Any,
+        ) -> Any:
+            if model_class.__name__ == "Protocol":
+                return [mock_protocol]
+            if model_class.__name__ == "LocusSet":
+                return [mock_locus_set]
+            if model_class.__name__ == "LocusCodeMap":
+                return [mock_locus_code_map]
+            if model_class.__name__ == "Allele" and obj_ids is not None:
+                return [True for _ in obj_ids]  # all alleles already exist
+            return []
+
+        self.service.repository.crud.side_effect = mock_crud
+
+        success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
+
+        self.assertTrue(success)
+        encoded = cmd.sample_batch.samples[0].seq_profiles[0]
+        self.assertNotEqual(encoded.content, "")
+        content_bytes = base64.b64decode(encoded.content)
+        self.assertEqual(content_bytes[0:16], a1.bytes)   # locus1 is first → a1
+        self.assertEqual(content_bytes[16:32], a2.bytes)  # locus2 is second → a2
+
     def test_verify_refdata_assertion_error_no_allele_data(self) -> None:
         """Test assertion error when no allele data is provided."""
         # Skip this test since pydantic validates fields before we get to the assertion

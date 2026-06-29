@@ -2086,3 +2086,145 @@ class TestNumpyAlleleIntegration:
         assert kw["use_batch_new_profiles"] == exp_batch
         assert kw["use_int32_vocab"] == exp_int32
         assert kw["use_numpy_allele"]
+
+    def test_all_three_paths_produce_identical_distance_maps(self) -> None:
+        """Python loop, numpy_batch, and int32_vocab must produce identical
+        distance maps for the same input profiles.
+
+        n3=[a2,a1,a3] is a locus-swap of e1=[a1,a2,a3], giving distance 2
+        (not 0). This confirms that locus position is preserved across both
+        get_allele_id_bytes() and get_allele_array(), and that no shuffling
+        occurs during encoding.
+        """
+        a1 = UUID("aaaaaaaa-0000-0000-0000-000000000001")
+        a2 = UUID("aaaaaaaa-0000-0000-0000-000000000002")
+        a3 = UUID("aaaaaaaa-0000-0000-0000-000000000003")
+        e1_id = UUID("eeeeeeee-0000-0000-0000-000000000001")
+        e2_id = UUID("eeeeeeee-0000-0000-0000-000000000002")
+        n1_id = UUID("bbbbbbbb-0000-0000-0000-000000000001")
+        n2_id = UUID("bbbbbbbb-0000-0000-0000-000000000002")
+        n3_id = UUID("bbbbbbbb-0000-0000-0000-000000000003")
+
+        existing_profiles = [
+            _make_allele_profile(
+                profile_id=e1_id,
+                sample_id=self.sample_id,
+                locus_set_id=self.locus_set_id,
+                protocol_id=self.protocol_id,
+                allele_ids=[a1, a2, a3],
+            ),
+            _make_allele_profile(
+                profile_id=e2_id,
+                sample_id=self.sample_id,
+                locus_set_id=self.locus_set_id,
+                protocol_id=self.protocol_id,
+                allele_ids=[a2, a2, a3],
+            ),
+        ]
+        new_profiles = [
+            _make_allele_profile(
+                profile_id=n1_id,
+                sample_id=self.sample_id2,
+                locus_set_id=self.locus_set_id,
+                protocol_id=self.protocol_id,
+                allele_ids=[a1, a2, a3],   # identical to e1 → 0, vs e2 → 1
+            ),
+            _make_allele_profile(
+                profile_id=n2_id,
+                sample_id=self.sample_id2,
+                locus_set_id=self.locus_set_id,
+                protocol_id=self.protocol_id,
+                allele_ids=[a2, a2, a3],   # vs e1 → 1 (locus 0), vs e2 → 0
+            ),
+            _make_allele_profile(
+                profile_id=n3_id,
+                sample_id=self.sample_id2,
+                locus_set_id=self.locus_set_id,
+                protocol_id=self.protocol_id,
+                # Loci 0 and 1 swapped vs e1 → 2 diffs, NOT 0.
+                # Catches any bug where locus position is ignored.
+                allele_ids=[a2, a1, a3],   # vs e1 → 2, vs e2 → 1 (locus 1)
+            ),
+        ]
+        protocol = self._allele_protocol(max_stored_distance=100.0)
+        profiles_by_id = {e1_id: existing_profiles[0], e2_id: existing_profiles[1]}
+
+        def _run(
+            use_numpy_allele: bool,
+            use_batch: bool,
+            use_int32: bool,
+        ) -> dict[UUID, dict[str, float]]:
+            # Fresh distance objects so mutations from a prior run don't carry over.
+            existing_distances = [
+                _make_seq_distance(
+                    seq_distance_id=uuid4(),
+                    protocol_id=self.protocol_id,
+                    profile_id=e_id,
+                    sample_id=self.sample_id,
+                    distances={},
+                )
+                for e_id in [e1_id, e2_id]
+            ]
+            recorder = _CrudRecorder()
+            _setup_distance_mocks(self.service, existing_distances, recorder=recorder)
+
+            def _crud(
+                uow: Any,
+                user_id: Any,
+                model_class: type,
+                operation: CrudOperation,
+                filter: Any = None,
+                objs: Any = None,
+                obj_ids: Any = None,
+                **kwargs: Any,
+            ) -> Any:
+                if (
+                    model_class is model.SeqProfile
+                    and operation == CrudOperation.READ_SOME
+                ):
+                    return [profiles_by_id[i] for i in obj_ids if i in profiles_by_id]
+                if (
+                    model_class is model.SeqDistance
+                    and operation == CrudOperation.CREATE_SOME
+                ):
+                    recorder.created.extend(objs)
+                    return objs
+                return []
+
+            self.service.repository.crud.side_effect = _crud
+            results: list[model.CalculateSeqDistancesResult] = []
+            _calculate_and_store_distances(
+                self.service,
+                Mock(),
+                None,
+                protocol,
+                enum.SeqProfileType.ALLELE,
+                new_profiles,
+                results,
+                known_existing_profile_ids=[e1_id, e2_id],
+                use_numpy_allele=use_numpy_allele,
+                use_batch_new_profiles=use_batch,
+                use_int32_vocab=use_int32,
+            )
+            return {c.seq_profile_id: json.loads(c.content) for c in recorder.created}
+
+        py_maps = _run(False, False, False)
+        nb_maps = _run(True, True, False)
+        i32_maps = _run(True, False, True)
+
+        for n_id in [n1_id, n2_id, n3_id]:
+            assert py_maps[n_id] == nb_maps[n_id], (
+                f"numpy_batch mismatch at profile {n_id}"
+            )
+            assert py_maps[n_id] == i32_maps[n_id], (
+                f"int32_vocab mismatch at profile {n_id}"
+            )
+
+        # Explicit locus-position checks on the Python reference path.
+        assert py_maps[n1_id][str(e1_id)] == 0.0   # identical
+        assert py_maps[n1_id][str(e2_id)] == 1.0   # locus 0 differs
+        assert py_maps[n2_id][str(e1_id)] == 1.0   # locus 0 differs
+        assert py_maps[n2_id][str(e2_id)] == 0.0   # identical
+        # Locus-swap: distance must be 2, not 0.
+        assert py_maps[n3_id][str(e1_id)] == 2.0
+        assert py_maps[n3_id][str(e2_id)] == 1.0   # locus 1 differs (a1 vs a2)
