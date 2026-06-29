@@ -66,7 +66,8 @@ class OrganizationService(BaseOrganizationService):
                 )
             if raise_error:
                 raise exc.UnauthorizedAuthError(
-                    f"Root user may not delete {'self' if is_delete_user else 'own organization'}"
+                    "4fc118ef",
+                    f"Root user may not delete {'self' if is_delete_user else 'own organization'}",
                 )
 
         retval = super().crud(cmd)
@@ -86,9 +87,9 @@ class OrganizationService(BaseOrganizationService):
     ) -> model.UserInvitation:
         user = cmd.user
         if user is None:
-            raise exc.UnauthorizedAuthError("Command has no user")
+            raise exc.UnauthorizedAuthError("97e65b72", "Command has no user")
         if user.id is None:
-            raise exc.UnauthorizedAuthError("User has no ID")
+            raise exc.UnauthorizedAuthError("bc8feeed", "User has no ID")
         key = cmd.key
         description = cmd.description
         initial_roles = cmd.roles
@@ -109,9 +110,11 @@ class OrganizationService(BaseOrganizationService):
                                 f"User {key} already exists",
                             )
                         )
-                    raise exc.UserAlreadyExistsAuthError("User already exists")
+                    raise exc.UserAlreadyExistsAuthError(
+                        "7ca0dc91", "User already exists"
+                    )
 
-            is_existing_organization = self.repository.crud(
+            is_existing_organization: bool = self.repository.crud(
                 uow,
                 user.id,
                 model.Organization,
@@ -126,7 +129,7 @@ class OrganizationService(BaseOrganizationService):
                             f"Organization id {organization_id} does not exist",
                         )
                     )
-                raise exc.InvalidIdsError("Organization does not exist")
+                raise exc.InvalidIdsError("639bd55b", "Organization does not exist")
 
             # Verify if invitation(s) already exist for this key, and delete those.
             # Only applicable when key is provided; keyless invitations are not deduplicated.
@@ -138,7 +141,7 @@ class OrganizationService(BaseOrganizationService):
                     user.id,
                     self.user_invitation_class,
                     CrudOperation.READ_ALL,
-                )  # type: ignore
+                )
                 user_invitations = [x for x in user_invitations if x.key == key]
                 if user_invitations:
                     self.repository.crud(
@@ -165,7 +168,7 @@ class OrganizationService(BaseOrganizationService):
                     )
                 ),
             )
-            user_invitation_in_db: model.UserInvitation = self.repository.crud(  # type: ignore[assignment]
+            user_invitation_in_db: model.UserInvitation = self.repository.crud(
                 uow,
                 user.id,
                 self.user_invitation_class,
@@ -194,11 +197,11 @@ class OrganizationService(BaseOrganizationService):
             # Should not happen
             raise AssertionError("Command has no user")
         if not self.app.user_manager:
-            raise exc.InvalidArgumentsError("User manager not set")
+            raise exc.InvalidArgumentsError("20c89b79", "User manager not set")
 
         with self.repository.uow() as uow:
             # Get possible user invitations
-            user_invitations: list[model.UserInvitation] = self.repository.crud(  # type: ignore[assignment]
+            user_invitations: list[model.UserInvitation] = self.repository.crud(
                 uow,
                 None,
                 self.user_invitation_class,
@@ -223,7 +226,8 @@ class OrganizationService(BaseOrganizationService):
                         if selected_user_invitation:
                             # Should not happen: multiple open invites with same token
                             raise exc.ServiceException(
-                                f"Multiple open invitations found for token {cmd.token}"
+                                "c6348285",
+                                f"Multiple open invitations found for token {cmd.token}",
                             )
                         # Token matches, so this is a candidate invitation
                         if user_invitation.key is None:
@@ -248,6 +252,7 @@ class OrganizationService(BaseOrganizationService):
             # Handle case where no valid invitation is found
             if not selected_user_invitation:
                 raise exc.UnauthorizedAuthError(
+                    "349c4bc0",
                     f"No valid invitations found for user {new_user.key} and token {cmd.token}",
                 )
 
@@ -287,9 +292,9 @@ class OrganizationService(BaseOrganizationService):
     ) -> model.User:
         assert cmd.user
         if cmd.roles is not None and len(cmd.roles) == 0:
-            raise exc.InvalidArgumentsError("Roles cannot be empty")
+            raise exc.InvalidArgumentsError("8ac5ab63", "Roles cannot be empty")
         with self.repository.uow() as uow:
-            tgt_user: model.User = self.repository.crud(  # type: ignore[assignment]
+            tgt_user: model.User = self.repository.crud(
                 uow,
                 cmd.user.id,
                 self.user_class,
@@ -326,7 +331,7 @@ class OrganizationService(BaseOrganizationService):
 
             if tgt_user.created_at is None:
                 tgt_user.created_at = tgt_user.modified_at
-            updated_tgt_user: model.User = self.repository.crud(  # type: ignore[assignment]
+            updated_tgt_user: model.User = self.repository.crud(
                 uow,
                 cmd.user.id,
                 self.user_class,
@@ -347,7 +352,7 @@ class OrganizationService(BaseOrganizationService):
         sites: list[model.Site]
         contacts: list[model.Contact]
         with repository.uow() as uow:
-            organization: model.Organization = repository.crud(  # type: ignore[assignment]
+            organization: model.Organization = repository.crud(
                 uow,
                 user.id,
                 model.Organization,
@@ -355,13 +360,13 @@ class OrganizationService(BaseOrganizationService):
                 obj_ids=cmd.organization_id,
             )
 
-            sites = repository.crud(  # type: ignore[assignment]
+            sites = repository.crud(
                 uow,
                 user.id,
                 model.Site,
                 CrudOperation.READ_ALL,
             )
-            contacts = repository.crud(  # type: ignore[assignment]
+            contacts = repository.crud(
                 uow,
                 user.id,
                 model.Contact,

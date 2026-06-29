@@ -1,15 +1,11 @@
 {
     "editor.formatOnSave": true,
-    "editor.rulers": [88],
     "editor.codeActionsOnSave": {
         "source.organizeImports": "explicit"
     },
     "[python]": {
         "editor.defaultFormatter": "ms-python.black-formatter",
-        "editor.formatOnType": false,
-        "editor.formatOnSave": true,
         "editor.codeActionsOnSave": {
-            "source.organizeImports": "explicit",
             "source.unusedImports": "explicit",
             "source.organizeImports.isort": "always",
         }
@@ -28,10 +24,6 @@
         {
             "text": "Use conventional commit format: type: description"
         },
-        {
-            "text": "Use imperative mood: 'Add feature' not 'Added feature'"
-        },
-        // { "text": "Keep subject line under 50 characters" },
         {
             "text": "Capitalize the first letter of the subject line"
         },
@@ -75,17 +67,10 @@
             "text": "Use types: feat, fix, docs, style, refactor, perf, test, chore, ci"
         },
         {
-            "text": "Include scope when relevant (e.g., casedb, omopdb, seqdb)"
-        },
-        {
             "text": "Reference issue numbers with # prefix"
         }
     ],
-    "python.testing.pytestArgs": [],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "chat.agent.maxRequests": 50,
-    "diffEditor.wordWrap": "off",
-    "python-envs.defaultEnvManager": "ms-python.python:conda",
-    "python-envs.defaultPackageManager": "ms-python.python:conda",
 }

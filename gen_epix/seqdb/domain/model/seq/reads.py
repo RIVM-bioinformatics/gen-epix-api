@@ -10,12 +10,9 @@ from pydantic import (
 )
 
 from gen_epix.commondb.domain.model import Model
-from gen_epix.commondb.domain.model.base import (
-    Model,
-    validate_int_enum_value_or_none,
-)
+from gen_epix.commondb.domain.model.base import Model, validate_int_enum_value_or_none
 from gen_epix.commondb.domain.model.organization import BaseIdentifier
-from gen_epix.fastapp.domain import Entity, create_keys, create_links
+from gen_epix.fastapp.domain import Entity, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.file import File
 from gen_epix.seqdb.domain.model.seq.base import CodeMixin, QualityMixin
@@ -38,7 +35,6 @@ class ReadSet(Model, HasSampleMixin, CodeMixin, HasProtocolMixin, QualityMixin):
         snake_case_plural_name="read_sets",
         table_name="read_set",
         persistable=True,
-        keys=create_keys({1: "code"}),
         links=create_links(
             {
                 1: ("sample_id", Sample, "sample"),

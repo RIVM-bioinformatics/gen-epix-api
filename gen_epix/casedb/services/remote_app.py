@@ -1,8 +1,6 @@
 import json
 from typing import Any
 
-import httpx
-
 from gen_epix.casedb.domain import DOMAIN, command, model
 from gen_epix.commondb.services import CommondbRemoteApp as CommondbRemoteApp
 from gen_epix.fastapp.model import Command
@@ -16,20 +14,68 @@ class CasedbRemoteApp(CommondbRemoteApp):
 
     ROUTE_MAP: dict[type[Command], str] = {
         command.UploadCasesCommand: "/upload/cases",
+        command.RetrieveCasesByQueryCommand: "/retrieve/case_ids_by_query",
+        command.RetrieveCaseCohortLinksByCaseTypeCommand: "/retrieve/case_cohort_links_by_case_type",
+    }
+
+    DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {
+        command.UploadCasesCommand: 45.0,
+        command.RetrieveCasesByIdCommand: 45.0,
+        command.RetrieveCasesByQueryCommand: 45.0,
     }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(DOMAIN, *args, **kwargs)
 
-        # Register routes and handlers
-        self.register_route(
-            command.UploadCasesCommand,
-            self.ROUTE_MAP[command.UploadCasesCommand],
-        )
+        # Register routes
+        for cmd_class, route in self.ROUTE_MAP.items():
+            self.register_route(cmd_class, route)
+        # Register handlers
         self.register_handler(
             command.UploadCasesCommand,
             self.upload_cases,
         )
+        self.register_handler(
+            command.RetrieveCasesByQueryCommand,
+            self.retrieve_cases_by_query,
+        )
+        self.register_handler(
+            command.RetrieveCaseCohortLinksByCaseTypeCommand,
+            self.retrieve_case_cohort_links_by_case_type,
+        )
+
+    def retrieve_case_cohort_links_by_case_type(
+        self,
+        cmd: command.RetrieveCaseCohortLinksByCaseTypeCommand,
+    ) -> list[model.CaseCohortLink]:
+        headers = self.get_headers(cmd)
+        route = self.get_route(cmd)
+        with self.get_client(cmd) as client:
+            response = client.post(
+                route,
+                json={"case_type_id": str(cmd.case_type_id)},
+                headers=headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+        return [model.CaseCohortLink(**item) for item in data]
+
+    def retrieve_cases_by_query(
+        self,
+        cmd: command.RetrieveCasesByQueryCommand,
+    ) -> model.CaseQueryResult:
+        headers = self.get_headers(cmd)
+        route = self.get_route(cmd)
+        request_body = cmd.case_query
+        with self.get_client(cmd) as client:
+            response = client.post(
+                route,
+                json=json.loads(request_body.model_dump_json()),
+                headers=headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+        return model.CaseQueryResult(**data)
 
     def upload_cases(
         self,
@@ -37,10 +83,8 @@ class CasedbRemoteApp(CommondbRemoteApp):
     ) -> model.CaseBatchUploadResult:
         headers = self.get_headers(cmd)
         route = self.get_route(cmd)
-
         request_body = cmd
-
-        with httpx.Client(verify=self.ssl_context) as client:
+        with self.get_client(cmd) as client:
             response = client.post(
                 route,
                 json=json.loads(request_body.model_dump_json()),

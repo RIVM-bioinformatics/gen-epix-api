@@ -1,5 +1,6 @@
 import datetime
 import uuid
+from enum import IntEnum
 from test.filter.unit import util
 
 import numpy as np
@@ -65,6 +66,29 @@ class TestFilterMatch:
             util.validate_filter_behavior(
                 filter, rows, [True, True, False, False, False]
             )
+
+    def test_string_set_match_with_enum(self) -> None:
+        class Color(IntEnum):
+            RED = 1
+            GREEN = 2
+            BLUE = 3
+
+        # case_sensitive=True: enum .name must be in members
+        f = StringSetFilter(
+            key="a", members=frozenset({"RED", "GREEN"}), case_sensitive=True
+        )
+        rows = [{"a": x} for x in [Color.RED, Color.GREEN, Color.BLUE, None]]
+        util.validate_filter_behavior(f, rows, [True, True, False, False])
+
+        # case_sensitive=False: .name compared case-insensitively
+        f = StringSetFilter(key="a", members=frozenset({"red"}), case_sensitive=False)
+        rows = [{"a": x} for x in [Color.RED, Color.GREEN, "RED", None]]
+        util.validate_filter_behavior(f, rows, [True, False, True, False])
+
+        # plain strings still work unchanged
+        f = StringSetFilter(key="a", members=frozenset({"x"}), case_sensitive=True)
+        rows = [{"a": x} for x in ["x", "y", None]]
+        util.validate_filter_behavior(f, rows, [True, False, False])
 
     def test_number_range_match(self) -> None:
         fixed_args = {

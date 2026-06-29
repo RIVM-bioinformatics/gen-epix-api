@@ -23,11 +23,13 @@ from gen_epix.casedb.domain.model.case import CaseBatchForUpload as CaseBatchFor
 from gen_epix.casedb.domain.model.case import (
     CaseBatchUploadResult as CaseBatchUploadResult,
 )
+from gen_epix.casedb.domain.model.case import CaseCohortLink as CaseCohortLink
 from gen_epix.casedb.domain.model.case import (
     CaseDataCollectionLink as CaseDataCollectionLink,
 )
 from gen_epix.casedb.domain.model.case import CaseDataIssue as CaseDataIssue
 from gen_epix.casedb.domain.model.case import CaseForUpload as CaseForUpload
+from gen_epix.casedb.domain.model.case import CaseIdAndDate as CaseIdAndDate
 from gen_epix.casedb.domain.model.case import CaseIdentifier as CaseIdentifier
 from gen_epix.casedb.domain.model.case import CaseQuery as CaseQuery
 from gen_epix.casedb.domain.model.case import CaseQueryResult as CaseQueryResult
@@ -202,7 +204,10 @@ COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
 # Additional field properties for models that have already been stored (persisted)
 STORED_MODEL_FIELD_PROPS: dict[type[fastapp.Model], dict[str, ModelFieldProps]] = {
     Case: {
-        "content": ModelFieldProps(is_mutable_always=True, is_sub_field_dict=False),
+        "cohort": ModelFieldProps(is_mutable_always=True, is_sub_field_dict=True),
+        "content": ModelFieldProps(is_mutable_always=True, is_sub_field_dict=True),
+        "created_in_data_collection_id": ModelFieldProps(),
+        "case_date": ModelFieldProps(is_mutable_always=True),
     },
 }
 complete_stored_model_field_props(

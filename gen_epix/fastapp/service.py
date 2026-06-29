@@ -9,7 +9,12 @@ from typing import Any
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.domain.link import Link
-from gen_epix.fastapp.enum import CrudOperation, CrudOperationSet, EventTiming
+from gen_epix.fastapp.enum import (
+    CrudOperation,
+    CrudOperationSet,
+    EventTiming,
+    OnException,
+)
 from gen_epix.fastapp.model import (
     Command,
     CrudCommand,
@@ -107,7 +112,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
     @property
     def repository(self) -> Repository:
         if not self._repository:
-            raise exc.ServiceException("Repository not set")
+            raise exc.ServiceException("529122a8", "Repository not set")
         return self._repository
 
     @repository.setter
@@ -120,6 +125,12 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
 
     @abc.abstractmethod
     def register_handlers(self) -> None:
+        """
+        Register command handlers for this service. This method is normally called
+        during service initialization, and should be used to register handlers for
+        commands that this service should handle. The app.register_handler method can be
+        used to register a handler for a specific command class.
+        """
         raise NotImplementedError()
 
     def register_default_crud_handlers(
@@ -181,9 +192,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
             raise ValueError(f"Listener not registered for {key}")
         self._crud_listeners[key].remove(listener)
 
-    def crud(
-        self, cmd: CrudCommand
-    ) -> Hashable | list[Hashable] | Model | list[Model] | bool | list[bool] | None:
+    def crud(self, cmd: CrudCommand) -> Any:
         assert cmd.MODEL_CLASS.ENTITY is not None
         id_field_name = cmd.MODEL_CLASS.ENTITY.id_field_name
         if self._logger and self._logger.level <= logging.DEBUG:
@@ -196,27 +205,24 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
                 )
             )
         if not self.repository:
-            raise exc.ServiceException("Repository not set")
+            raise exc.ServiceException("334086fe", "Repository not set")
         # Call BEFORE listeners
         for listener in self._crud_listeners.get((type(cmd), EventTiming.BEFORE), []):
             cmd, _ = listener(self, cmd, None)
         # Set object ids for CREATE operations
         if cmd.is_create():
-            id_present = cmd.props.get("id_present", "keep")
             if cmd.objs is None:
                 raise exc.InvalidArgumentsError(
-                    f"No object provided for operation {cmd.operation}"
+                    "645674fa", f"No object provided for operation {cmd.operation}"
                 )
             assert id_field_name is not None
             if isinstance(cmd.objs, list):
                 for obj in cmd.objs:
-                    self.set_object_id(obj, id_field_name, id_present)
+                    self.set_object_id(obj, id_field_name, cmd.on_id_set)
             else:
-                self.set_object_id(cmd.objs, id_field_name, id_present)
-        # Prepare for cascaded read if necessary: determine which links
-        # are handled by this service and which by other services
-        cascade_read = cmd.props.get("cascade_read", False)
-        if cascade_read or cmd.is_write():
+                self.set_object_id(cmd.objs, id_field_name, cmd.on_id_set)
+        # Determine which links are handled by this service and which by other services
+        if cmd.is_write():
             same_service_links, other_service_links = self._get_model_links(cmd)
         else:
             same_service_links = {}
@@ -227,7 +233,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
             if cmd.is_write():
                 if cmd.objs is None:
                     raise exc.InvalidArgumentsError(
-                        f"No object provided for operation {cmd.operation}"
+                        "2bd2ca33", f"No object provided for operation {cmd.operation}"
                     )
                 objs = cmd.objs if isinstance(cmd.objs, list) else [cmd.objs]
                 # TODO: verifying links from the same service should be the responsibility
@@ -238,45 +244,6 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
             # Call repository CRUD operation
             retval = self.crud_repository(uow, cmd, links=same_service_links)
 
-            # Cascade read objects handled by other services
-            if cascade_read and len(other_service_links) and cmd.is_read():
-                if issubclass(type(retval), Model):
-                    objs = [retval]  # type: ignore
-                else:
-                    objs = retval  # type: ignore
-                for link in other_service_links.values():
-                    if link.relationship_field_name is None:
-                        continue
-                    # Read in unique linked objects for this relationship_field_name
-                    link_map: dict = {}
-                    for i, obj in enumerate(objs):
-                        link_obj_id = getattr(obj, link.link_field_name)
-                        if link_obj_id:
-                            idxs = link_map.get(link_obj_id, [])
-                            if not idxs:
-                                link_map[link_obj_id] = idxs
-                            idxs.append(i)
-                    link_map_ids = list(link_map.keys())
-                    if not link_map_ids:
-                        continue
-                    cmd = self._app.domain.get_crud_command_for_model(
-                        link.link_model_class
-                    )(
-                        user=cmd.user,
-                        objs=None,
-                        obj_ids=link_map_ids,
-                        operation=CrudOperation.READ_SOME,
-                        **{
-                            x: y
-                            for x, y in cmd.props.items()
-                            if x not in {"cascade_read"}
-                        },
-                    )
-                    linked_objects = self._app.handle(cmd)
-                    # Add linked objects to their parent(s)
-                    for link_obj_id, linked_obj in zip(link_map_ids, linked_objects):
-                        for idx in link_map[link_obj_id]:
-                            setattr(objs[idx], link.relationship_field_name, linked_obj)
         # Call AFTER listeners
         for listener in self._crud_listeners.get((type(cmd), EventTiming.AFTER), []):
             _, retval = listener(self, cmd, retval)
@@ -300,7 +267,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         uow: BaseUnitOfWork,
         cmd: CrudCommand,
         links: dict[int, Link] | None = None,
-    ) -> Hashable | list[Hashable] | Model | list[Model] | bool | list[bool] | None:
+    ) -> Any:
         # Get filters depending on the operation
         if cmd.operation in CrudOperationSet.ANY_ALL.value:
             # Query filter is applied, access filter is added to query filter
@@ -331,7 +298,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
                 # Delete/exists one or some (delete all is not possible since there is
                 # an access filter) -> check if the ids match the access filter
                 assert cmd.user is not None
-                objs: list[Model] = self.repository.crud(  # type: ignore[assignment]
+                objs: list[Model] = self.repository.crud(
                     uow,
                     cmd.user.id,
                     cmd.MODEL_CLASS,
@@ -341,7 +308,9 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
             if objs is not None and not all(
                 cmd.access_filter.match_rows(objs, is_model=True)
             ):
-                raise exc.UnauthorizedAuthError(f"Unauthorized access to objects")
+                raise exc.UnauthorizedAuthError(
+                    "914fc9af", f"Unauthorized access to objects"
+                )
 
         # Split query_filter into repository and service filters
         repository_query_filter, service_query_filter = self.repository.split_filter(
@@ -350,7 +319,6 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
 
         # Call repository CRUD operation
         reserved_arg_names = {"filter", "obj_filter", "links"}
-        props = {x: y for x, y in cmd.props.items() if x not in reserved_arg_names}
         retval = self.repository.crud(
             uow,
             cmd.user.id if cmd.user else None,
@@ -358,10 +326,12 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
             cmd.operation,
             objs=cmd.objs,
             obj_ids=cmd.obj_ids,
+            return_id=cmd.return_id,
             filter=repository_query_filter,
+            limit=cmd.limit,
+            offset=cmd.offset,
             obj_filter=service_query_filter,
             links=links,
-            **props,
         )
 
         return retval
@@ -378,7 +348,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
                 )
             )
         if not self.repository:
-            raise exc.ServiceException("Repository not set")
+            raise exc.ServiceException("ca36f8e8", "Repository not set")
 
         same_service_links, other_service_links = self._get_model_links(cmd)
         id_field_name = cmd.ASSOCIATION_CLASS.ENTITY.id_field_name
@@ -416,18 +386,22 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
             )
         return retval
 
-    def set_object_id(self, obj: Model, id_field_name: str, id_present: str) -> None:
+    def set_object_id(
+        self, obj: Model, id_field_name: str, on_id_set: OnException = OnException.RAISE
+    ) -> None:
         if getattr(obj, id_field_name):
-            if id_present == "raise":
-                raise exc.InvalidArgumentsError("Object already has id filled in")
-            if id_present == "ignore":
+            if on_id_set == OnException.RAISE:
+                raise exc.InvalidArgumentsError(
+                    "679f8bd9", "Object already has id filled in"
+                )
+            if on_id_set == OnException.REPLACE:
                 # Assign new id
                 setattr(obj, id_field_name, self.generate_id())
-            elif id_present == "keep":
+            elif on_id_set == OnException.IGNORE:
                 # Keep id
                 pass
             else:
-                raise ValueError(f"Invalid id_present: {id_present}")
+                raise ValueError(f"Invalid on_id_set: {on_id_set}")
         else:
             # Assign id
             setattr(obj, id_field_name, self.generate_id())
@@ -473,9 +447,9 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
     def _get_user_and_repository(self, cmd: Command) -> tuple[User, BaseRepository]:
         user = cmd.user
         if user is None:
-            raise exc.UnauthorizedAuthError("No user provided")
+            raise exc.UnauthorizedAuthError("a621f6fc", "No user provided")
         if self.repository is None:
-            raise exc.InitializationServiceError("No repository provided")
+            raise exc.InitializationServiceError("04eaee6a", "No repository provided")
         return user, self.repository
 
     def _verify_other_service_links(
@@ -484,8 +458,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         objs: Iterable[Model],
         other_service_links: dict[int, Link],
     ) -> None:
-        verify_other_service_links = cmd.props.get("verify_other_service_links", True)
-        if not verify_other_service_links or not other_service_links:
+        if not cmd.verify_other_service_links or not other_service_links:
             return
         for link in other_service_links.values():
             link_obj_ids = list(
@@ -508,7 +481,8 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
                     _ = self._app.handle(link_cmd)
                 except exc.InvalidIdsError:
                     raise exc.InvalidLinkIdsError(
-                        f"Invalid {link.link_model_class.__name__} id(s) among input"
+                        "2141a205",
+                        f"Invalid {link.link_model_class.__name__} id(s) among input",
                     )
 
     def _verify_same_service_links(
@@ -518,10 +492,9 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         objs: Iterable[Model],
         same_service_links: dict[int, Link],
     ) -> None:
-        verify_same_service_links = cmd.props.get("verify_same_service_links", True)
         if not self.repository:
-            raise exc.ServiceException("Repository not set")
-        if not verify_same_service_links or not same_service_links:
+            raise exc.ServiceException("63baf129", "Repository not set")
+        if not cmd.verify_same_service_links or not same_service_links:
             return
         for link in same_service_links.values():
             link_obj_ids = list(
@@ -542,11 +515,12 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
                     )
                 except exc.InvalidIdsError:
                     raise exc.InvalidLinkIdsError(
-                        f"Invalid {link.link_model_class.__name__} id(s) among input"
+                        "1f342acf",
+                        f"Invalid {link.link_model_class.__name__} id(s) among input",
                     )
 
     def __del__(self) -> None:
-        if self._setup_logger:
+        if getattr(self, "_setup_logger", None):
             self._setup_logger.info(
                 self.create_log_message("d84f9d21", "STOPPING_SERVICE")
             )

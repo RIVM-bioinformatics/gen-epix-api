@@ -19,22 +19,26 @@ class BaseSystemService(BaseService[BaseSystemRepository]):
 
     @abc.abstractmethod
     def register_policies(self) -> None:
-        raise NotImplementedError
+        """Register system policies."""
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def retrieve_outages(
         self, cmd: command.RetrieveOutagesCommand
     ) -> list[model.Outage]:
-        raise NotImplementedError
+        """Retrieve system outages."""
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def retrieve_licenses(
         self, cmd: command.RetrieveLicensesCommand
     ) -> list[model.PackageMetadata]:
-        raise NotImplementedError
+        """Retrieve package licenses."""
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def retrieve_feature_flags(
         self, cmd: command.RetrieveFeatureFlagsCommand
     ) -> dict[Hashable, bool]:
-        raise NotImplementedError
+        """Retrieve feature flags configuration."""
+        raise NotImplementedError()

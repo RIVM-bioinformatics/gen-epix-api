@@ -251,7 +251,8 @@ class CaseAbac(BaseModel):
             for access_abac in data.values():
                 col_ids.update(access_abac.read_col_ids)
                 col_ids.update(access_abac.write_col_ids)
-        for case_type_id, data in self.case_type_access_abacs.items():
+            return col_ids
+        for ct_id, data in self.case_type_access_abacs.items():
             for access_abac in data.values():
                 col_ids.update(access_abac.read_col_ids)
                 col_ids.update(access_abac.write_col_ids)
@@ -332,7 +333,7 @@ class CaseAbac(BaseModel):
             }
         else:
             raise exc.InvalidArgumentsError(
-                f"Right {right.value} is invalid for Col access"
+                "a9f6e99f", f"Right {right.value} is invalid for Col access"
             )
 
     def get_removable_data_collections_ids(
@@ -445,7 +446,7 @@ class CaseAbac(BaseModel):
                 current_data_collection_ids,
                 tgt_data_collection_ids,
             )
-        raise exc.InvalidArgumentsError(f"Right {right.value} is invalid")
+        raise exc.InvalidArgumentsError("c5677e5d", f"Right {right.value} is invalid")
 
     def is_content_allowed(
         self,
@@ -461,11 +462,12 @@ class CaseAbac(BaseModel):
         """
         if is_create_or_delete:
             raise exc.InvalidArgumentsError(
-                f"is_create_or_delete must be False for right {right.value}"
+                "0b4675c7", f"is_create_or_delete must be False for right {right.value}"
             )
         if tgt_data_collection_ids:
             raise exc.InvalidArgumentsError(
-                f"tgt_data_collection_ids must be empty for right {right.value}"
+                "19f50bc8",
+                f"tgt_data_collection_ids must be empty for right {right.value}",
             )
 
         has_right_fn = self._get_has_right_function(right)
@@ -488,7 +490,7 @@ class CaseAbac(BaseModel):
                 retval.update(access_abac.write_col_ids)
             else:
                 raise exc.InvalidArgumentsError(
-                    f"Right {right.value} is invalid for Col access"
+                    "96a14ce1", f"Right {right.value} is invalid for Col access"
                 )
         return retval
 
@@ -504,7 +506,8 @@ class CaseAbac(BaseModel):
         """
         if created_in_data_collection_id is None:
             raise exc.InvalidArgumentsError(
-                f"created_in_data_collection_id must be provided for right {right.value}"
+                "04dbd654",
+                f"created_in_data_collection_id must be provided for right {right.value}",
             )
 
         if created_in_data_collection_id not in access_abac:
@@ -571,7 +574,8 @@ class CaseAbac(BaseModel):
                 return False
             if current_data_collection_ids:
                 raise exc.InvalidArgumentsError(
-                    f"current_data_collection_ids must be empty for right {right.value} if is_create_or_delete=True"
+                    "72f9de30",
+                    f"current_data_collection_ids must be empty for right {right.value} if is_create_or_delete=True",
                 )
         remaining_data_collection_ids = (
             set() if tgt_data_collection_ids is None else set(tgt_data_collection_ids)
@@ -581,7 +585,9 @@ class CaseAbac(BaseModel):
             remaining_data_collection_ids = (
                 remaining_data_collection_ids - current_data_collection_ids
             )
-        current_data_collection_ids.add(created_in_data_collection_id)
+        # Use a local copy to avoid mutating the caller's set
+        effective_current = set(current_data_collection_ids)
+        effective_current.add(created_in_data_collection_id)
 
         for data_collection_id in remaining_data_collection_ids:
             if not self._check_access_or_share(
@@ -589,7 +595,7 @@ class CaseAbac(BaseModel):
                 data_collection_id,
                 access_abac,
                 share_abac,
-                current_data_collection_ids,
+                effective_current,
             ):
                 return False
         return True
@@ -612,12 +618,14 @@ class CaseAbac(BaseModel):
                 return False
             if tgt_data_collection_ids:
                 raise exc.InvalidArgumentsError(
-                    f"tgt_data_collection_ids must be empty for right {right.value} if is_create_or_delete=True"
+                    "25eccb30",
+                    f"tgt_data_collection_ids must be empty for right {right.value} if is_create_or_delete=True",
                 )
             tgt_data_collection_ids = current_data_collection_ids
         if not tgt_data_collection_ids.issubset(current_data_collection_ids):
             raise exc.InvalidArgumentsError(
-                f"tgt_data_collection_ids must be a subset of current_data_collection_ids for right {right.value}"
+                "cec81d55",
+                f"tgt_data_collection_ids must be a subset of current_data_collection_ids for right {right.value}",
             )
         # Check for each of the remaining target data collections if the user has
         # the right to remove cases or case sets from it
@@ -726,9 +734,18 @@ class CaseAbac(BaseModel):
         can_delete = set(data_collection_ids).issubset(set(remove_data_collection_ids))
 
         if is_case_set:
-            # Read/write rights
-            read_case_set = any(x.read_case_set for x in access.values())
-            write_case_set = any(x.write_case_set for x in access.values())
+            # Read/write rights - only in data collections where the case set
+            # is actually present
+            read_case_set = any(
+                x.read_case_set
+                for dc_id, x in access.items()
+                if dc_id in data_collection_ids
+            )
+            write_case_set = any(
+                x.write_case_set
+                for dc_id, x in access.items()
+                if dc_id in data_collection_ids
+            )
             return CaseSetRights(
                 case_set_id=case_or_set_id,
                 case_type_id=case_type_id,
@@ -742,12 +759,19 @@ class CaseAbac(BaseModel):
                 can_delete=can_delete,
                 shared_in_data_collection_ids=shared_in_data_collection_ids,
             )
-        # Cols that can be read/written
+        # Cols that can be read/written - only in data collections where the case
+        # is actually present
         read_col_ids: set[UUID] = {
-            col_id for x in access.values() for col_id in x.read_col_ids
+            col_id
+            for dc_id, x in access.items()
+            if dc_id in data_collection_ids
+            for col_id in x.read_col_ids
         }
         write_col_ids: set[UUID] = {
-            col_id for x in access.values() for col_id in x.write_col_ids
+            col_id
+            for dc_id, x in access.items()
+            if dc_id in data_collection_ids
+            for col_id in x.write_col_ids
         }
         return CaseRights(
             case_id=case_or_set_id,

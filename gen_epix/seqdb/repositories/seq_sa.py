@@ -9,6 +9,7 @@ import sqlalchemy as sa
 import gen_epix.seqdb.repositories.sa_model as sa_model
 from gen_epix.fastapp import BaseUnitOfWork
 from gen_epix.fastapp.repositories import SARepository, SAUnitOfWork
+from gen_epix.fastapp.repositories.sa import ServerUtcCurrentTime
 from gen_epix.seqdb.domain import enum, exc, model
 from gen_epix.seqdb.domain.repository import BaseSeqRepository
 
@@ -125,7 +126,8 @@ class SeqSARepository(SARepository, BaseSeqRepository):
             for contig in seq.contigs:
                 if contig.seq_format != enum.SeqFormat.STR_DNA:
                     raise exc.InitializationServiceError(
-                        f"FASTA export not supported for {contig.seq_format.value} format"
+                        "6672c6dd",
+                        f"FASTA export not supported for {contig.seq_format.value} format",
                     )
                 assert contig.id is not None
                 contig_list.append((contig.id, contig.seq))
@@ -142,17 +144,29 @@ class SeqSARepository(SARepository, BaseSeqRepository):
     ) -> list[UUID]:
         if not profile_ids:
             return []
+        assert isinstance(uow, SAUnitOfWork)
         seq_distance_model: Any = sa_model.SeqDistance
         stmt = sa.select(
             seq_distance_model.id,
             seq_distance_model.format,
             seq_distance_model.content,
             seq_distance_model.content2,
-        ).where(
-            (seq_distance_model.protocol_id == protocol_id)
-            & seq_distance_model.seq_profile_id.in_(profile_ids)
-        )
-        assert isinstance(uow, SAUnitOfWork)
+        ).where(seq_distance_model.protocol_id == protocol_id)
+        if uow.session.get_bind().dialect.name == "mssql":
+            col_type = sa_model.SeqDistance.__table__.c["seq_profile_id"].type
+            temp_table = self.create_unique_values_temp_table(
+                uow.session,
+                sa_model.SeqDistance.metadata,
+                "seq_profile_id",
+                col_type,
+                profile_ids,
+            )
+            stmt = stmt.join(
+                temp_table,
+                seq_distance_model.seq_profile_id == temp_table.c.seq_profile_id,
+            )
+        else:
+            stmt = stmt.where(seq_distance_model.seq_profile_id.in_(profile_ids))
         result_iterator = uow.session.execute(stmt)
         matching_profile_ids: set[UUID] = set()
         for row in result_iterator:
@@ -173,12 +187,31 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         self,
         uow: BaseUnitOfWork,
         protocol_id: UUID,
+        profile_ids: list[UUID] | None = None,
     ) -> Iterable[model.SeqDistance]:
+        assert isinstance(uow, SAUnitOfWork)
         stmt = sa.select(sa_model.SeqDistance).where(
             sa_model.SeqDistance.protocol_id == protocol_id
         )
+        if profile_ids is not None:
+            if not profile_ids:
+                return  # IN() with empty list is invalid SQL Server syntax
+            if uow.session.get_bind().dialect.name == "mssql":
+                col_type = sa_model.SeqDistance.__table__.c["seq_profile_id"].type
+                temp_table = self.create_unique_values_temp_table(
+                    uow.session,
+                    sa_model.SeqDistance.metadata,
+                    "seq_profile_id",
+                    col_type,
+                    profile_ids,
+                )
+                stmt = stmt.join(
+                    temp_table,
+                    sa_model.SeqDistance.seq_profile_id == temp_table.c.seq_profile_id,
+                )
+            else:
+                stmt = stmt.where(sa_model.SeqDistance.seq_profile_id.in_(profile_ids))
         mapper = self.get_mapper(model.SeqDistance)
-        assert isinstance(uow, SAUnitOfWork)
         result_iterator = uow.session.execute(stmt)
         for row in result_iterator:
             sa_seq_distance: sa_model.SeqDistance = row[0]
@@ -190,8 +223,10 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         uow: BaseUnitOfWork,
         protocol_id: UUID,
     ) -> Iterable[UUID]:
-        stmt = sa.select(sa.func.distinct(sa_model.SeqDistance.seq_profile_id)).where(
-            sa_model.SeqDistance.protocol_id == protocol_id
+        stmt = (
+            sa.select(sa_model.SeqDistance.seq_profile_id)
+            .distinct()
+            .where(sa_model.SeqDistance.protocol_id == protocol_id)
         )
         assert isinstance(uow, SAUnitOfWork)
         for row in uow.session.execute(stmt):
@@ -208,16 +243,121 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         assert isinstance(uow, SAUnitOfWork)
         return uow.session.execute(stmt).scalar()
 
+    def update_some_seq_distance_content(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID | None,
+        objs: list[model.SeqDistance],
+    ) -> None:
+        if not objs:
+            return
+        assert isinstance(uow, SAUnitOfWork)
+        # Single Core executemany: one UPDATE per row via the DBAPI batch,
+        # avoiding the ORM read-then-flush overhead of UPDATE_SOME.
+        # modified_at must be set explicitly here because the ORM onupdate
+        # hook does not fire for Core UPDATE statements.
+        # Use the Core Table (not the ORM class) to issue a plain executemany
+        # UPDATE, bypassing SQLAlchemy 2.x's ORM bulk-update-by-PK pathway
+        # which requires session-tracked objects.
+        # Explicit type_= on bindparams ensures UUIDType.process_bind_param is
+        # applied — without it, UUID objects are stored as plain strings which
+        # breaks UUIDType(binary=True) on read-back.
+        tbl = sa_model.SeqDistance.__table__
+        stmt = (
+            tbl.update()
+            .where(tbl.c.id == sa.bindparam("b_id", type_=tbl.c.id.type))
+            .values(
+                content=sa.bindparam("b_content"),
+                # Pass modified_by as raw bytes: UUIDType.process_bind_param is
+                # not reliably invoked for bindparams in Core executemany, so
+                # pre-convert here to guarantee binary storage on SQLite/mssql.
+                modified_by=sa.bindparam("b_modified_by"),
+                modified_at=ServerUtcCurrentTime(),
+            )
+        )
+        uow.session.execute(
+            stmt,
+            [
+                {
+                    "b_id": x.id,
+                    "b_content": x.content,
+                    "b_modified_by": user_id.bytes if user_id is not None else None,
+                }
+                for x in objs
+            ],
+        )
+
+    def get_profiles_without_seq_distance(
+        self,
+        uow: BaseUnitOfWork,
+        distance_protocol_id: UUID,
+        seq_profile_protocol_ids: list[UUID],
+        limit: int | None = None,
+    ) -> list[model.SeqProfile]:
+        if not seq_profile_protocol_ids:
+            return []
+        assert isinstance(uow, SAUnitOfWork)
+        # Correlated NOT EXISTS: avoids materialising the full profile list
+        # or the full distance-profile-id set in Python — the DB engine
+        # resolves the set difference directly.
+        not_exists = ~sa.exists(
+            sa.select(sa.literal(1))
+            .where(sa_model.SeqDistance.seq_profile_id == sa_model.SeqProfile.id)
+            .where(sa_model.SeqDistance.protocol_id == distance_protocol_id)
+        )
+        stmt = sa.select(sa_model.SeqProfile).where(not_exists)
+        if uow.session.get_bind().dialect.name == "mssql":
+            # IN() on uniqueidentifier FK columns raises ODBC 07002 regardless
+            # of list size — use a temp-table JOIN instead.
+            col_type = sa_model.SeqProfile.__table__.c["protocol_id"].type
+            temp_table = self.create_unique_values_temp_table(
+                uow.session,
+                sa_model.SeqProfile.metadata,
+                "protocol_id",
+                col_type,
+                seq_profile_protocol_ids,
+            )
+            stmt = stmt.join(
+                temp_table,
+                sa_model.SeqProfile.protocol_id == temp_table.c.protocol_id,
+            )
+        else:
+            stmt = stmt.where(
+                sa_model.SeqProfile.protocol_id.in_(seq_profile_protocol_ids)
+            )
+        if limit is not None:
+            stmt = stmt.limit(limit)
+        mapper = self.get_mapper(model.SeqProfile)
+        result: list[model.SeqProfile] = []
+        for row in uow.session.execute(stmt):
+            result.append(mapper.load(row[0]))  # type: ignore[arg-type]
+        return result
+
     def get_profiles_by_protocol_ids(
         self,
         uow: BaseUnitOfWork,
         protocol_ids: list[UUID],
     ) -> list[model.SeqProfile]:
-        stmt = sa.select(sa_model.SeqProfile).where(
-            sa_model.SeqProfile.protocol_id.in_(protocol_ids)
-        )
-        mapper = self.get_mapper(model.SeqProfile)
+        if not protocol_ids:
+            return []
         assert isinstance(uow, SAUnitOfWork)
+        stmt = sa.select(sa_model.SeqProfile)
+        if uow.session.get_bind().dialect.name == "mssql":
+            col_type = sa_model.SeqProfile.__table__.c["protocol_id"].type
+            temp_table = self.create_unique_values_temp_table(
+                uow.session,
+                sa_model.SeqProfile.metadata,
+                "protocol_id",
+                col_type,
+                protocol_ids,
+            )
+            stmt = stmt.join(
+                temp_table,
+                sa_model.SeqProfile.protocol_id == temp_table.c.protocol_id,
+            )
+        else:
+            stmt = stmt.where(sa_model.SeqProfile.protocol_id.in_(protocol_ids))
+        mapper = self.get_mapper(model.SeqProfile)
         result: list[model.SeqProfile] = []
         for row in uow.session.execute(stmt):
             result.append(mapper.load(row[0]))  # type: ignore[arg-type]
@@ -231,6 +371,7 @@ class SeqSARepository(SARepository, BaseSeqRepository):
             enum.QualityControlResult
         ] = enum.QualityControlResultSet.USABLE.value,
     ) -> list[UUID]:
+
         if not seq_profile_ids or not allowed_qc_results:
             return []
         stmt = sa.select(sa_model.SeqProfile.id).where(
@@ -239,5 +380,4 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         )
         assert isinstance(uow, SAUnitOfWork)
         retval: list[UUID] = uow.session.execute(stmt).scalars().all()  # type: ignore[assignment]
-        return retval
         return retval

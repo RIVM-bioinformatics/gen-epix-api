@@ -202,6 +202,16 @@ class QualityControlResult(IntEnumWithJsonSchemaMixin, IntEnum):
     def is_usable(self) -> bool:
         return self in {QualityControlResult.PASS, QualityControlResult.WARN}
 
+    def get_sort_key(self) -> int:
+        """
+        Return a sort key for sorting instances of QualityControlResult by the quality
+        level they represent. This is equal to the enum value, but provided as a method
+        for better readability and to encapsulate the logic. Higher values represent
+        better quality, while PENDING has the lowest quality as it is intended as a
+        temporary state.
+        """
+        return self.value
+
 
 class QualityControlResultSet(Enum):
     USABLE = frozenset(
@@ -290,11 +300,12 @@ class SeqFormat(IntEnumWithJsonSchemaMixin, IntEnum):
     HASH_ONLY = 1  # Only the hash code of the sequence is known or stored
     STR_DNA = 2  # String of IUPAC DNA characters without gaps
     STR_DNA_INCL_GAP = 3  # String of IUPAC DNA characters including gaps
+    NEXTCLADE = 4
 
 
 class SeqProfileFormat(IntEnumWithJsonSchemaMixin, IntEnum):
     LOCUS_PROFILE_FORMAT1 = 1
-    REF_ALN_SEQ = 2
+    NEXTCLADE = 2
     ORDERED_ALLELE_IDS = 3
     ORDERED_REPEAT_NUMBERS = 4
     KMER_FREQUENCY_MAP = 5
@@ -456,3 +467,11 @@ class FileFormat(IntEnumWithJsonSchemaMixin, IntEnum):
 class FileCompression(IntEnumWithJsonSchemaMixin, IntEnum):
     NONE = 1
     GZIP = 2
+
+
+class SeqRankingStrategy(Enum):
+    QC_RESULT_THEN_SCORE_THEN_CREATED = "QC_RESULT_THEN_SCORE_THEN_CREATED"
+
+
+class SeqProfileRankingStrategy(Enum):
+    QC_RESULT_THEN_SCORE_THEN_CREATED = "QC_RESULT_THEN_SCORE_THEN_CREATED"

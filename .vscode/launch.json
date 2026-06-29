@@ -462,6 +462,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.casedb.unit.upload",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_casedb_unit_upload"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.casedb.integration",
             "type": "debugpy",
             "request": "launch",
@@ -968,6 +979,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.fastapp.unit.repositories",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_fastapp_unit_repositories"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.fastapp.performance.repository",
             "type": "debugpy",
             "request": "launch",
@@ -1063,6 +1085,17 @@
             "args": [
                 "other_general_generate_uuids",
                 "1000",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "other.general.generate_hex_strings",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "other_general_generate_hex_strings",
             ],
             "console": "integratedTerminal",
             "justMyCode": true

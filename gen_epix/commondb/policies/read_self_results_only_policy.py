@@ -23,7 +23,7 @@ class ReadSelfResultsOnlyPolicy(BaseReadSelfResultsOnlyPolicy):
 
     def filter(self, cmd: Command, retval: Any) -> Any:
         if not cmd.user or not cmd.user.id:
-            raise exc.ServiceException("Command has no user")
+            raise exc.ServiceException("84aa512b", "Command has no user")
         # TODO: replace filter for AFTER with injecting a filter DURING for efficiency
         if not isinstance(cmd, command.CrudCommand):
             raise NotImplementedError
@@ -54,7 +54,7 @@ class ReadSelfResultsOnlyPolicy(BaseReadSelfResultsOnlyPolicy):
         if is_read_all:
             retval = [x for x in retval if getattr(x, id_attr) == user_id]
         if is_read_one and getattr(retval, id_attr) != user_id:
-            raise exc.UnauthorizedAuthError(msg)
+            raise exc.UnauthorizedAuthError("bcba2f7d", msg)
         if not is_read_one and any(getattr(x, id_attr) != user_id for x in retval):
-            raise exc.UnauthorizedAuthError(msg)
+            raise exc.UnauthorizedAuthError("49f667f6", msg)
         return retval

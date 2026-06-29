@@ -280,7 +280,7 @@ def _retrieve_user_by_key_from_repo(
 ) -> commondb_model.User:
     user = repo.get_user_by_key(key)
     if user is None:
-        raise exc.NoResultsError(f"User with key '{key}' not found")
+        raise exc.NoResultsError("8c95c4db", f"User with key '{key}' not found")
     return user
 
 

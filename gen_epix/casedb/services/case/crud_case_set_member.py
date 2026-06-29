@@ -85,7 +85,8 @@ def _crud_case_set_member_with_abac(
     # Delete all not allowed due to potential large number of case set members
     if cmd.is_delete_all() or cmd.is_update():
         raise exc.UnauthorizedAuthError(
-            f"Operation {cmd.operation.value} not allowed for case set members for this user"
+            "a60ea3a9",
+            f"Operation {cmd.operation.value} not allowed for case set members for this user",
         )
 
     # For now, delegate to the main crud method with extensive logic

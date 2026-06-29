@@ -35,6 +35,6 @@ def seq_service_crud_protocol_set(
         pass
 
     else:
-        raise NotImplementedError(f"Unsupported operation type: {cmd.operation.value}")
+        raise AssertionError(f"Unsupported operation type: {cmd.operation.value}")
 
     return self.crud(cmd)  # type: ignore[return-value]

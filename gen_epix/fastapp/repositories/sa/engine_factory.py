@@ -3,7 +3,10 @@ import threading
 import sqlalchemy as sa
 from sqlalchemy import Engine
 
-DEFAULT_POOL_RECYCLE = 1800
+# TODO [LSP-3358] make this POOL_RECYCLE configurable via environment variable or configuration file
+# Setting should be lower than any Firewall in the network path; recycle
+# connections before that to avoid stale-connection errors on pool checkout.
+DEFAULT_POOL_RECYCLE = 230
 
 
 class EngineFactory:
@@ -40,7 +43,10 @@ class EngineFactory:
         with cls._LOCK:
             if key not in cls._ENGINE_MAP:
                 engine = sa.create_engine(
-                    connection_string, echo=echo, pool_recycle=pool_recycle
+                    connection_string,
+                    echo=echo,
+                    pool_recycle=pool_recycle,
+                    pool_pre_ping=True,
                 )
                 cls._ENGINE_MAP[key] = engine
             return cls._ENGINE_MAP[key]

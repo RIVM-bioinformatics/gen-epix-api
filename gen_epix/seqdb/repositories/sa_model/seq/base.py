@@ -43,11 +43,11 @@ class QualityMixin:
     SQLAlchemy model mixin for adding a number of standard fields.
     """
 
-    qc_score: Mapped[float] = get_mixin_mapped_column(
-        model.QualityMixin, "qc_score", sa.Float
-    )
     qc_result: Mapped[enum.QualityControlResult] = get_mixin_mapped_column(
         model.QualityMixin, "qc_result", sa.String
+    )
+    qc_score: Mapped[float] = get_mixin_mapped_column(
+        model.QualityMixin, "qc_score", sa.Float
     )
     qc_report: Mapped[Json | None] = get_mixin_mapped_column(
         model.QualityMixin, "qc_report", sa.JSON, nullable=True

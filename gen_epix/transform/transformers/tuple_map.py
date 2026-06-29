@@ -178,14 +178,23 @@ class TupleMapTransformer(Transformer):
             obj.set(field, value)
         return obj
 
-    def transform_dict(self, row: dict) -> dict:
+    def transform_row(self, row: dict) -> dict:
         """
-        Same as the transform method, but specifically for dicts instead of
-        ObjectAdapters.
+        Same as the transform method, but specifically for dicts (rows with keyed
+        values) instead of ObjectAdapters.
         """
         # The ObjectAdapter already wraps dicts transparently, extra computation is minimal
         self.transform(ObjectAdapter(row))
         return row
+
+    def get_row_key(self, row: dict) -> dict:
+        """
+        Get the source fields and values from the provided row as a dict. This is useful
+        for looking up the mapping key for a given row without having to know the
+        specific field names used in the mapping, and can be used for debugging or
+        logging purposes.
+        """
+        return {x: row[x] for x in self._row_src_fields}
 
     def _normalize_key(self, key: tuple) -> tuple:
         if self._case_sensitive:

@@ -25,7 +25,6 @@ class Sample(Model, CodeMixin):
         snake_case_plural_name="samples",
         table_name="sample",
         persistable=True,
-        keys=create_keys({1: "code"}),
         links=create_links(
             {
                 1: (

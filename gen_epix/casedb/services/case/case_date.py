@@ -69,7 +69,7 @@ def case_service_get_case_date_col_mappers(
     years to the first day of the year. As such, it is not possible to create a date in
     the future.
     """
-    dims: list[model.Dim] = self.repository.crud(  # type: ignore[assignment]
+    dims: list[model.Dim] = self.repository.crud(
         uow,
         user_id,
         model.Dim,
@@ -87,7 +87,7 @@ def case_service_get_case_date_col_mappers(
         return {}
     dim: model.Dim = dims[0]
 
-    ref_dim: model.RefDim = self.repository.crud(  # type: ignore[assignment]
+    ref_dim: model.RefDim = self.repository.crud(
         uow,
         user_id,
         model.RefDim,
@@ -99,7 +99,7 @@ def case_service_get_case_date_col_mappers(
             f"Dim {dim.id} is not of time DimType, but of {ref_dim.dim_type}"
         )
 
-    cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
+    cols: list[model.Col] = self.repository.crud(
         uow,
         user_id,
         model.Col,
@@ -112,7 +112,7 @@ def case_service_get_case_date_col_mappers(
 
     # Verify Cols are of time col_type
     ref_col_ids = list({x.ref_col_id for x in cols})
-    ref_cols: list[model.RefCol] = self.repository.crud(  # type: ignore[assignment]
+    ref_cols: list[model.RefCol] = self.repository.crud(
         uow,
         user_id,
         model.RefCol,
@@ -170,3 +170,4 @@ def case_service_calculate_case_date(
             if iso_datetime_value is None:
                 continue
             case.case_date = mapper(iso_datetime_value)
+            break  # cols are ordered by descending resolution; stop at the first (highest-resolution) non-None value

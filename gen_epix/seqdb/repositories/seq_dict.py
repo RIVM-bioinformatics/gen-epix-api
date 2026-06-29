@@ -1,9 +1,10 @@
 from collections.abc import Iterable
 from collections.abc import Set as AbstractSet
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
+from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.repositories import DictRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import enum, exc, model
@@ -100,7 +101,8 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
             for contig in seq.contigs:
                 if contig.seq_format != enum.SeqFormat.STR_DNA:
                     raise exc.InitializationServiceError(
-                        f"FASTA export not supported for {contig.seq_format.value} format"
+                        "37fd4cf1",
+                        f"FASTA export not supported for {contig.seq_format.value} format",
                     )
                 assert contig.id is not None
                 contig_list.append((contig.id, contig.seq))
@@ -142,13 +144,23 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         self,
         uow: BaseUnitOfWork,
         protocol_id: UUID,
+        profile_ids: list[UUID] | None = None,
     ) -> Iterable[model.SeqDistance]:
         table: dict[UUID, model.SeqDistance] = self.db[  # type: ignore[assignment]
             model.SeqDistance
         ]
+        profile_ids_set: set[UUID] | None = (
+            set(profile_ids) if profile_ids is not None else None
+        )
         for seq_distance in table.values():
-            if seq_distance.protocol_id == protocol_id:
-                yield seq_distance
+            if seq_distance.protocol_id != protocol_id:
+                continue
+            if (
+                profile_ids_set is not None
+                and seq_distance.seq_profile_id not in profile_ids_set
+            ):
+                continue
+            yield seq_distance
 
     def iter_seq_distance_profile_ids(
         self,
@@ -183,6 +195,46 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
                     maximum_modified_timestamp = seq_distance.modified_at
         return maximum_modified_timestamp
 
+    def update_some_seq_distance_content(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID | None,
+        objs: list[model.SeqDistance],
+    ) -> None:
+        # In-memory backend — objects are mutated by reference so content is
+        # already updated. Delegate to UPDATE_SOME to keep modified_at and
+        # modified_by consistent with what the SA backend writes.
+        if objs:
+            self.crud(
+                uow, user_id, model.SeqDistance, CrudOperation.UPDATE_SOME, objs=objs
+            )
+
+    def get_profiles_without_seq_distance(
+        self,
+        uow: BaseUnitOfWork,
+        distance_protocol_id: UUID,
+        seq_profile_protocol_ids: list[UUID],
+        limit: int | None = None,
+    ) -> list[model.SeqProfile]:
+        protocol_id_set = set(seq_profile_protocol_ids)
+        has_distance: set[UUID] = {
+            x.seq_profile_id
+            for x in cast(
+                Iterable[model.SeqDistance], self.db[model.SeqDistance].values()
+            )
+            if x.protocol_id == distance_protocol_id
+        }
+        result = [
+            x
+            for x in cast(
+                Iterable[model.SeqProfile], self.db[model.SeqProfile].values()
+            )
+            if x.protocol_id in protocol_id_set and cast(UUID, x.id) not in has_distance
+        ]
+        if limit is not None:
+            result = result[:limit]
+        return result
+
     def get_profiles_by_protocol_ids(
         self,
         uow: BaseUnitOfWork,
@@ -206,7 +258,8 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         df: dict[UUID, model.SeqProfile] = self.db[  # type: ignore[assignment]
             model.SeqProfile
         ]
-        return [
+
+        retval = [
             x.id
             for x in df.values()
             if x.id is not None
@@ -214,3 +267,4 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
             and x.qc_result is not None
             and x.qc_result in allowed_qc_results
         ]
+        return retval

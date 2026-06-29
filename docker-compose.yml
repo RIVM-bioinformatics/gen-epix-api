@@ -1,0 +1,49 @@
+# Local dev/testing compose stack.
+# Starts CASEDB (8000), SEQDB (8001), OMOPDB (8002) with no auth (NONE mode).
+# CASEDB runs SEQDB in-process (LOCAL mode).
+# All endpoints are accessible without a token — suitable for inspecting
+# behaviour and logs during client development.
+
+services:
+
+  seqdb:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: python run.py api SEQDB NONE DICT_EMPTY --noreload
+    ports:
+      - "8001:8001"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8001/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  omopdb:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: python run.py api OMOPDB NONE DICT_EMPTY --noreload
+    ports:
+      - "8002:8002"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8002/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  casedb:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: python run.py api CASEDB NONE DICT_EMPTY --noreload
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8000/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s

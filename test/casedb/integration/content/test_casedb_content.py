@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.test_client.enum import (
     EnumTestType as EnumTestType,  # to avoid PyTest warning
@@ -14,6 +15,7 @@ from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain.enum import AppType, DevRepositoryConfig
 from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.domain.util import get_app_cfgs
+from gen_epix.commondb.test.util import set_log_level
 from gen_epix.fastapp import CrudOperation, PermissionType
 from gen_epix.fastapp.model import Permission
 from gen_epix.filter import LogicalOperator, TypedCompositeFilter, TypedStringSetFilter
@@ -44,6 +46,9 @@ CASEDB_APP_CFGS = get_app_cfgs(
 
 @pytest.fixture(scope="module", name="env")
 def get_test_client() -> Env:
+    # explicitly set log level for seqdb
+    set_log_level("seqdb", logging.ERROR)
+
     return Env.get_test_client(  # type: ignore[return-value]
         test_type=TEST_TYPE.value,
         app_cfg=CASEDB_APP_CFGS[f"{TEST_TYPE.value}__{DEV_REPOSITORY_CONFIG.value}"],
@@ -312,6 +317,7 @@ class TestContent:
                 if complete_case_type.ref_cols[x.ref_col_id].col_type
                 == enum.ColType.GENETIC_DISTANCE
             ]
+            similar_cases_retval = command.RetrieveSimilarCasesReturnValue(cases=[])
             for dist_col in dist_cols:
                 assert dist_col is not None
                 assert dist_col.id is not None
@@ -334,7 +340,7 @@ class TestContent:
                         raise ValueError("Leaf IDs should be a subset of the case IDs")
 
                     # retrieve similar cases
-                    similar_case_ids: list[UUID] = app.handle(
+                    similar_cases_retval = app.handle(
                         command.RetrieveSimilarCasesCommand(
                             user=org_user,
                             case_type_id=complete_case_type.id,
@@ -343,15 +349,16 @@ class TestContent:
                             max_distance=20,
                         )
                     )
-                    if len(similar_case_ids) > 0:
+                    if len(similar_cases_retval.cases) > 0:
                         found_similar_cases = True
 
             if found_similar_cases:
                 found_some_similar_cases = True
                 assert len(dist_cols) >= 1
                 # assert that any item in similar_case_ids is a UUID
-                for similar_case_id in similar_case_ids:
-                    assert isinstance(similar_case_id, UUID)
+                for case_id_and_date in similar_cases_retval.cases:
+                    assert isinstance(case_id_and_date.id, UUID)
+                    assert isinstance(case_id_and_date.case_date, datetime)
 
             # Retrieve genetic sequence
             genetic_sequence_cols = [

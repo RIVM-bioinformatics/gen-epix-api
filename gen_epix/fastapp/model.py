@@ -21,6 +21,7 @@ from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import (
     CrudOperation,
     CrudOperationSet,
+    OnException,
     PermissionType,
     PermissionTypeSet,
 )
@@ -53,7 +54,7 @@ class Model(PydanticBaseModel):
         """Get the Entity associated with this model."""
         if cls.ENTITY is None:
             raise exc.InitializationServiceError(
-                f"Entity not set for model {cls.__name__}"
+                "dd866d20", f"Entity not set for model {cls.__name__}"
             )
         return cls.ENTITY
 
@@ -62,7 +63,7 @@ class Model(PydanticBaseModel):
         """Get the name of the model."""
         if cls.NAME is None:
             raise exc.InitializationServiceError(
-                f"Name not set for model {cls.__name__}"
+                "1cea00dc", f"Name not set for model {cls.__name__}"
             )
         return cls.NAME
 
@@ -89,7 +90,7 @@ class Model(PydanticBaseModel):
         id_: Hashable | None = getattr(self, self.ENTITY.get_id_field_name())
         if id_ is None and raise_on_missing:
             raise exc.InvalidIdsError(
-                f"ID not set for model instance {self.__class__.__name__}"
+                "132d74f2", f"ID not set for model instance {self.__class__.__name__}"
             )
         return id_
 
@@ -189,19 +190,19 @@ class Policy(abc.ABC):
 
     # Not an abstract method since it is not always needed
     def is_allowed(self, cmd: Command) -> bool:
-        raise NotImplementedError
+        raise NotImplementedError("Method is not implemented for this policy")
 
     # Not an abstract method since it is not always needed
     def get_content(self, cmd: Command) -> Any:
-        raise NotImplementedError
+        raise NotImplementedError("Method is not implemented for this policy")
 
     # Not an abstract method since it is not always needed
     def get_content_return_type(self, cmd: Command) -> type:
-        raise NotImplementedError
+        raise NotImplementedError("Method is not implemented for this policy")
 
     # Not an abstract method since it is not always needed
     def filter(self, cmd: Command, retval: Any) -> Any:
-        raise NotImplementedError
+        raise NotImplementedError("Method is not implemented for this policy")
 
 
 class Command(PydanticBaseModel):
@@ -249,6 +250,10 @@ class CrudCommand(Command):
         default=None,
         description="The object(s) to operate on. Must be set to a single object for create or update one operations, and to a list of objects for create or update some operations. Otherwise must be None.",
     )
+    return_id: bool = Field(
+        default=False,
+        description="Whether to return only the ID(s) of the affected object(s). Only used for create, update, read all and delete all operations.",
+    )
     query_filter: Filter | None = Field(
         default=None,
         description="Optional filter to apply to the results of a read or delete all operation, thereby effectively applying a query instead of reading or deleting all. Must be None for all other operations.",
@@ -257,9 +262,29 @@ class CrudCommand(Command):
         default=None,
         description="Optional filter to apply object-level access control. For a read or delete all operation, it filters the results just as the query_filter does and when both are provided only object that match both filters will be returned or deleted. For any other operation, an unauthorized exception is raised if the provided objects do not match the filter.",
     )
-    props: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Additional properties to pass to the command and which can be used by custom implementations.",
+    limit: int = Field(
+        default=0,
+        description="Limit to the number of objects to return for a read all operation. Ignored for other operations. Not applied when equal to zero.",
+        ge=0,
+    )
+    offset: int = Field(
+        default=0,
+        description="Offset for the results of a read all operation. Ignored for other operations. Used in combination with limit.",
+        ge=0,
+    )
+    verify_same_service_links: bool = Field(
+        default=True,
+        description="Whether to verify that the links between the objects in the command and other objects within the same service are valid. Only used for create and update operations.",
+    )
+    verify_other_service_links: bool = Field(
+        default=False,
+        description="Whether to verify that the links between the objects in the command and other objects in other services are valid. Only used for create and update operations.",
+    )
+    on_id_set: Literal[OnException.RAISE, OnException.REPLACE, OnException.IGNORE] = (
+        Field(
+            default=OnException.IGNORE,
+            description="Specifies the behavior when an ID is set. Only applies to create operations. Options are RAISE, REPLACE (replace the ID with another one generated by the system), or IGNORE (keep the provided ID).",
+        )
     )
 
     @model_validator(mode="after")
@@ -305,6 +330,13 @@ class CrudCommand(Command):
                 raise ValueError(
                     f"Invalid operation for query_filter not None: {operation.value}"
                 )
+        if (
+            self.return_id
+            and operation not in CrudOperationSet.WRITE_OR_READ_ALL_OR_DELETE_ALL.value
+        ):
+            raise ValueError(f"Invalid operation for return_id=True: {operation.value}")
+        if self.limit and operation != CrudOperation.READ_ALL:
+            raise ValueError(f"Invalid operation for limit: {operation.value}")
         return self
 
     def get_obj_ids(
@@ -439,6 +471,14 @@ class UpdateAssociationCommand(Command):
         description="The association objects, linking the first (field LINK_FIELD_NAME1) to the second (field LINK_FIELD_NAME2) instance.",
     )
     props: dict[str, Any] = {}
+    verify_same_service_links: bool = Field(
+        default=True,
+        description="Whether to verify that the links between the association objects and other objects within the same service are valid.",
+    )
+    verify_other_service_links: bool = Field(
+        default=False,
+        description="Whether to verify that the links between the association objects and other objects in other services are valid.",
+    )
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
@@ -447,25 +487,28 @@ class UpdateAssociationCommand(Command):
         association_objs = self.association_objs
         if obj_id1 and obj_id2:
             raise exc.DomainException(
-                f"Invalid state: obj_id1 and obj_id2 are both present"
+                "0a32d30f", f"Invalid state: obj_id1 and obj_id2 are both present"
             )
         if association_objs:
             if obj_id1 and not all(
                 getattr(x, self.LINK_FIELD_NAME1) == obj_id1 for x in association_objs
             ):
                 raise exc.DomainException(
-                    f"Invalid state: obj_id1 and association_objs not matching"
+                    "452a83cd",
+                    f"Invalid state: obj_id1 and association_objs not matching",
                 )
             if obj_id2 and not all(
                 getattr(x, self.LINK_FIELD_NAME2) == obj_id2 for x in association_objs
             ):
                 raise exc.DomainException(
-                    f"Invalid state: obj_id2 and association_objs not matching"
+                    "39d1a376",
+                    f"Invalid state: obj_id2 and association_objs not matching",
                 )
         else:
             if not obj_id1 and not obj_id2:
                 raise exc.DomainException(
-                    f"Invalid state: association_objs, obj_id1 and obj_id2 all empty"
+                    "448b90b2",
+                    f"Invalid state: association_objs, obj_id1 and obj_id2 all empty",
                 )
         return self
 

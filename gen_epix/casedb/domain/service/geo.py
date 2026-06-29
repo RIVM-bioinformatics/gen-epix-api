@@ -17,5 +17,4 @@ class BaseGeoService(BaseService[BaseGeoRepository]):
     @abc.abstractmethod
     def retrieve_containing_region(
         self, cmd: command.RetrieveContainingRegionCommand
-    ) -> list[model.Region | None]:
-        raise NotImplementedError()
+    ) -> list[model.Region | None]: ...

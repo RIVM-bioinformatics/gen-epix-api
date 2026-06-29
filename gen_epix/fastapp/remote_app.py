@@ -1,6 +1,7 @@
 import json
 import ssl
 from collections.abc import Callable
+from decimal import Decimal
 from functools import partial
 from pathlib import Path
 from typing import Any, cast
@@ -17,13 +18,19 @@ from gen_epix.fastapp.enum import CrudOperation, EventTiming, HttpProtocol, Stri
 from gen_epix.fastapp.exc import ServiceException
 from gen_epix.fastapp.model import Command, CrudCommand, Policy
 from gen_epix.fastapp.util import create_ssl_context
+from gen_epix.filter import (
+    FilterType,
+    TypedNumberSetFilter,
+    TypedStringSetFilter,
+    TypedUuidSetFilter,
+)
 
 
 class RemoteApp(App):
 
     DEFAULT_ROUTE_PREFIX = "/"
 
-    DEFAULT_REQUEST_TIMEOUT_SECONDS = 5
+    DEFAULT_REQUEST_TIMEOUT = 5.0
 
     DEFAULT_REQUEST_HEADERS: dict[str, str] = {"Content-Type": "application/json"}
 
@@ -35,22 +42,23 @@ class RemoteApp(App):
         protocol: HttpProtocol | str = HttpProtocol.HTTPS,
         default_route_prefix: str | None = None,
         default_headers: dict[str, str] | None = None,
+        default_request_timeout: int | None = None,
         add_generated_crud_route_handlers: bool = True,
         ssl_cert_file: Path | str | None = None,
         disable_ssl_verification: bool = False,
-        request_timeout_seconds: int | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(domain, **kwargs)
         self._host = host
         self._port = port
         self._protocol = protocol
-        self._request_timeout_seconds = (
-            request_timeout_seconds or self.DEFAULT_REQUEST_TIMEOUT_SECONDS
+        self._default_request_timeout = (
+            default_request_timeout or self.DEFAULT_REQUEST_TIMEOUT
         )
         self._default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
         self._default_headers = default_headers or self.DEFAULT_REQUEST_HEADERS
         self._routes: dict[type[Command], str] = {}
+        self._timeouts: dict[type[Command], float] = {}
 
         # Initialise SSL context
         self._initialize_ssl_context(host, ssl_cert_file, disable_ssl_verification)
@@ -174,7 +182,8 @@ class RemoteApp(App):
             retval = handler(cmd)
         except httpx.RequestError as e:
             raise exc.ServiceException(
-                f"HTTP request error when handling remote command {command_class.NAME}: {e}"
+                "869e34b6",
+                f"HTTP request error when handling remote command {command_class.NAME}: {e}",
             ) from e
         except httpx.HTTPStatusError as e:
             # Handle HTTPStatusError with proper access to response attributes
@@ -184,13 +193,38 @@ class RemoteApp(App):
                 else "unknown"
             )
             raise exc.ServiceException(
-                f"HTTP status {status_code} error when handling remote command {command_class.NAME}: {e}"
+                "b7b0a22c",
+                f"HTTP status {status_code} error when handling remote command {command_class.NAME}: {e}",
             ) from e
         except Exception as e:
             raise exc.ServiceException(
-                f"Error when handling remote command {command_class.NAME}: {e}"
+                "3dd5acdb",
+                f"Error when handling remote command {command_class.NAME}: {e}",
             ) from e
         return retval
+
+    def get_timeout(self, command_class: type[Command]) -> float:
+        """
+        Get the timeout in seconds for a specific command class. Returns the custom timeout if set, otherwise returns the default timeout.
+        """
+        return self._timeouts.get(
+            command_class,
+            self._default_request_timeout,
+        )
+
+    def set_timeout(self, command_class: type[Command], timeout_seconds: float) -> None:
+        """
+        Set a custom timeout for a specific command class. This will be used instead of the default timeout when making requests for that command.
+        """
+        if timeout_seconds <= 0:
+            raise exc.ServiceException("7f3a9c2e", "Timeout must be a positive integer")
+        self._timeouts[command_class] = timeout_seconds
+
+    def get_client(self, cmd: Command, timeout: float | None = None) -> httpx.Client:
+        """Get an httpx.Client instance with the appropriate SSL context and timeout for the given command. This can be used in handlers to make requests to the remote service."""
+        return httpx.Client(
+            verify=self.ssl_context, timeout=timeout or self.get_timeout(type(cmd))
+        )
 
     def register_generated_crud_route(
         self,
@@ -257,13 +291,11 @@ class RemoteApp(App):
         model_class = cmd.MODEL_CLASS
         return_model_class: type = model_class
         is_list = False
-        with httpx.Client(
-            verify=self.ssl_context, timeout=self._request_timeout_seconds
-        ) as client:
+        with self.get_client(cmd) as client:
             match cmd.operation:
                 case CrudOperation.READ_ALL:
                     if cmd.query_filter:
-                        if cmd.props.get("return_id", False):
+                        if cmd.return_id:
                             query_suffix = query_route_suffix.rstrip("/")
                             ids_suffix = (
                                 ids_route_suffix
@@ -294,6 +326,28 @@ class RemoteApp(App):
                     response = client.get(
                         f"{base_route}/{cmd.obj_ids}",
                         headers=headers,
+                    )
+                case CrudOperation.EXISTS_ONE:
+                    assert cmd.obj_ids is not None
+                    return self._exists_some_via_query_ids(
+                        client=client,
+                        headers=headers,
+                        model_class=model_class,
+                        base_route=base_route,
+                        query_route_suffix=query_route_suffix,
+                        ids_route_suffix=ids_route_suffix,
+                        obj_ids=[cmd.obj_ids],
+                    )[0]
+                case CrudOperation.EXISTS_SOME:
+                    assert isinstance(cmd.obj_ids, list)
+                    return self._exists_some_via_query_ids(
+                        client=client,
+                        headers=headers,
+                        model_class=model_class,
+                        base_route=base_route,
+                        query_route_suffix=query_route_suffix,
+                        ids_route_suffix=ids_route_suffix,
+                        obj_ids=cmd.obj_ids,
                     )
                 case CrudOperation.CREATE_ONE:
                     assert isinstance(cmd.objs, model.Model)
@@ -342,10 +396,118 @@ class RemoteApp(App):
                     return_model_class = UUID
                     is_list = True
                 case _:
-                    raise NotImplementedError(f"Unsupported operation: {cmd.operation}")
+                    raise AssertionError(f"Unsupported operation: {cmd.operation}")
             response.raise_for_status()
         retval = self._content_to_obj(response, return_model_class, is_list=is_list)
         return retval
+
+    def _exists_some_via_query_ids(
+        self,
+        base_route: str,
+        query_route_suffix: str,
+        ids_route_suffix: str,
+        model_class: type[model.Model],
+        obj_ids: list[Any],
+        client: httpx.Client,
+        headers: dict[str, str],
+    ) -> list[bool]:
+        if not obj_ids:
+            return []
+
+        id_field_name = model_class.ENTITY.id_field_name
+        if not isinstance(id_field_name, str):
+            raise AssertionError(
+                f"Model {model_class.__name__} does not define a string id_field_name."
+            )
+        query_suffix = query_route_suffix.rstrip("/")
+        ids_suffix = (
+            ids_route_suffix
+            if ids_route_suffix.startswith("/")
+            else ("/" + ids_route_suffix)
+        )
+        query_ids_url = base_route + query_suffix + ids_suffix
+
+        id_type = self._classify_exists_id_type(obj_ids)
+        number_id_types = {"int", "float", "decimal"}
+        query_filter: TypedUuidSetFilter | TypedStringSetFilter | TypedNumberSetFilter
+
+        if id_type == "uuid":
+            query_filter = TypedUuidSetFilter(
+                type=FilterType.UUID_SET.value,
+                key=id_field_name,
+                members=frozenset(obj_ids),
+            )
+        elif id_type == "string":
+            query_filter = TypedStringSetFilter(
+                type=FilterType.STRING_SET.value,
+                key=id_field_name,
+                members=frozenset(obj_ids),
+                case_sensitive=True,
+            )
+        elif id_type in number_id_types:
+            query_filter = TypedNumberSetFilter(
+                type=FilterType.NUMBER_SET.value,
+                key=id_field_name,
+                members=frozenset(obj_ids),
+            )
+        else:
+            return self._exists_some_via_get(
+                base_route=base_route,
+                obj_ids=obj_ids,
+                client=client,
+                headers=headers,
+            )
+
+        response = client.post(
+            query_ids_url,
+            json=json.loads(query_filter.model_dump_json()),
+            headers=headers,
+        )
+        response.raise_for_status()
+        found_ids = json.loads(response.content.decode(response.encoding or "utf-8"))
+        if id_type == "uuid":
+            found_set = {UUID(x) for x in found_ids}
+        else:
+            found_set = set(found_ids)
+        return [obj_id in found_set for obj_id in obj_ids]
+
+    @staticmethod
+    def _classify_exists_id_type(obj_ids: list[Any]) -> str:
+        if not obj_ids:
+            return "mixed"
+
+        first_type = type(obj_ids[0])
+        if not all(type(obj_id) is first_type for obj_id in obj_ids[1:]):
+            return "mixed"
+
+        type_to_id_kind: dict[type, str] = {
+            UUID: "uuid",
+            str: "string",
+            int: "int",
+            float: "float",
+            Decimal: "decimal",
+        }
+        return type_to_id_kind.get(first_type, "mixed")
+
+    @staticmethod
+    def _exists_some_via_get(
+        base_route: str,
+        obj_ids: list[Any],
+        client: httpx.Client,
+        headers: dict[str, str],
+    ) -> list[bool]:
+        is_existing: list[bool] = []
+        for obj_id in obj_ids:
+            response = client.get(
+                f"{base_route}/{obj_id}",
+                headers=headers,
+            )
+            if response.status_code == 404:
+                is_existing.append(False)
+                continue
+            response.raise_for_status()
+            is_existing.append(True)
+        return is_existing
 
     @staticmethod
     def _content_to_obj(

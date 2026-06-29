@@ -16,64 +16,6 @@ from gen_epix.fastapp.model import Command, CrudCommand, Model, Policy
 from gen_epix.fastapp.pdp import PolicyDecisionPoint
 from gen_epix.fastapp.user_manager import BaseUserManager
 
-"""Default settings for command-object log summarization.
-
-Large lists can make log payloads too large for downstream log sinks. The
-summarization behavior is configurable through ``cfg.log.command_object_summarization``
-and falls back to these defaults when config is absent or invalid.
-"""
-_DEFAULT_LOG_SUMMARIZATION_ENABLED: bool = True
-_DEFAULT_MAX_LIST_ITEMS_IN_LOG: int = 10
-_DEFAULT_SAMPLE_ITEMS_IN_LOG: int = 3
-
-# Backward-compatible alias used as default argument in tests and helper calls.
-_MAX_LIST_ITEMS_IN_LOG: int = _DEFAULT_MAX_LIST_ITEMS_IN_LOG
-
-
-def _coerce_bool(value: Any, default: bool) -> bool:
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        lowered = value.strip().lower()
-        if lowered in {"1", "true", "yes", "on"}:
-            return True
-        if lowered in {"0", "false", "no", "off"}:
-            return False
-    return default
-
-
-def _coerce_int(value: Any, default: int, minimum: int = 0) -> int:
-    try:
-        parsed = int(value)
-    except (TypeError, ValueError):
-        return default
-    return parsed if parsed >= minimum else default
-
-
-def _summarise_command_object(
-    data: dict[str, Any],
-    *,
-    max_items: int = _MAX_LIST_ITEMS_IN_LOG,
-    sample_items: int = _DEFAULT_SAMPLE_ITEMS_IN_LOG,
-) -> dict[str, Any]:
-    """Recursively walk *data* and replace any list longer than *max_items* with
-    a compact ``{"_count": N, "_sample": [...]}`` dict so the serialised log
-    payload stays within downstream log-sink size constraints."""
-
-    def _walk(obj: Any) -> Any:
-        if isinstance(obj, dict):
-            return {x: _walk(y) for x, y in obj.items()}
-        if isinstance(obj, list):
-            if len(obj) > max_items:
-                return {
-                    "_count": len(obj),
-                    "_sample": [_walk(x) for x in obj[:sample_items]],
-                }
-            return [_walk(x) for x in obj]
-        return obj
-
-    return _walk(data)  # type: ignore[return-value]
-
 
 class App:
     """
@@ -104,6 +46,12 @@ class App:
     """
 
     DEFAULT_LOG_ITEM_CLASS = LogItem
+    DEFAULT_LOG_SUMMARIZATION_ENABLED: bool = True
+    DEFAULT_LOG_MAX_LIST_ITEMS: int = 3
+    DEFAULT_LOG_MAX_STRING_LENGTH: int = 100
+    DEFAULT_LOG_MAX_DICT_ITEMS: int = 30
+    _CFG_TRUE_VALUES: set[str] = {"1", "true", "yes", "on"}
+    _CFG_FALSE_VALUES: set[str] = {"0", "false", "no", "off"}
 
     def __init__(
         self,
@@ -118,6 +66,7 @@ class App:
         id: str | None = None,
         name: str | None = None,
         timestamp_factory: Callable[[], datetime] = datetime.now,
+        log_cmd_object_on_error: bool = True,
         feature_flags: dict[Hashable, bool] | None = None,
         **kwargs: Any,
     ):
@@ -142,7 +91,9 @@ class App:
         self._command_listeners: dict[
             EventTiming, dict[type[Command], list[Callable[[Command, Any], None]]]
         ] = {x: {} for x in EventTiming}
-        self._command_stack_local = threading.local()
+        self._command_stack: list[Command] = []
+        self._log_cmd_object_on_error: bool = log_cmd_object_on_error
+        self._init_log_settings()
 
         # Log start
         if self._logger:
@@ -173,13 +124,15 @@ class App:
     @property
     def pdp(self) -> PolicyDecisionPoint:
         if self._pdp is None:
-            raise exc.InitializationServiceError("Policy decision point not set")
+            raise exc.InitializationServiceError(
+                "a336efaf", "Policy decision point not set"
+            )
         return self._pdp
 
     @property
     def user_manager(self) -> BaseUserManager:
         if self._user_manager is None:
-            raise exc.InitializationServiceError("User manager not set")
+            raise exc.InitializationServiceError("3a557c34", "User manager not set")
         return self._user_manager
 
     @user_manager.setter
@@ -197,13 +150,17 @@ class App:
     @property
     def cfg(self) -> Any:
         if self._cfg is None:
-            raise exc.InitializationServiceError("Configuration data is not set")
+            raise exc.InitializationServiceError(
+                "67bd528f", "Configuration data is not set"
+            )
         return self._cfg
 
     @property
     def impl(self) -> Any:
         if self._impl is None:
-            raise exc.InitializationServiceError("Implementation details are not set")
+            raise exc.InitializationServiceError(
+                "0fe120d0", "Implementation details are not set"
+            )
         return self._impl
 
     @property
@@ -303,7 +260,8 @@ class App:
         if command_class in listeners:
             if listener in listeners[command_class]:
                 raise exc.InitializationServiceError(
-                    f"Listener already registered for {command_class.__name__}"
+                    "3c93380c",
+                    f"Listener already registered for {command_class.__name__}",
                 )
             listeners[command_class].append(listener)
         else:
@@ -328,7 +286,7 @@ class App:
         listeners = self._command_listeners[timing]
         if command_class not in listeners or listener not in listeners[command_class]:
             raise exc.InitializationServiceError(
-                f"Listener not registered for {command_class}"
+                "ede03a66", f"Listener not registered for {command_class}"
             )
         listeners[command_class].remove(listener)
 
@@ -363,11 +321,13 @@ class App:
             )
         if not issubclass(command_class, Command):
             raise exc.InitializationServiceError(
-                "Handler can only be set for event and command message subclasses"
+                "2d5ea504",
+                "Handler can only be set for event and command message subclasses",
             )
         if command_class in self._command_handler_map and not replace:
             raise exc.InitializationServiceError(
-                f"Command handler already added for {command_class}: {handler_fn}"
+                "3fc33bf3",
+                f"Command handler already added for {command_class}: {handler_fn}",
             )
         self._command_handler_map[command_class] = handler_fn
 
@@ -377,7 +337,7 @@ class App:
             if handler:
                 return handler
         raise exc.InitializationServiceError(
-            f"No handler set for {command_class} or any of its superclasses"
+            "6ce523f9", f"No handler set for {command_class} or any of its superclasses"
         )
 
     def _get_command_stack(self) -> list[Command]:
@@ -455,7 +415,11 @@ class App:
             if self._logger:
                 self._logger.error(
                     self.create_log_message(
-                        "f3c7a1d9", "SERVICE_EXCEPTION", cmd=cmd, exception=exception
+                        "f3c7a1d9",
+                        "SERVICE_EXCEPTION",
+                        add_debug_info=self._log_cmd_object_on_error,
+                        cmd=cmd,
+                        exception=exception,
                     ),
                     exc_info=True,
                 )
@@ -466,7 +430,11 @@ class App:
             if self._logger:
                 self._logger.warning(
                     self.create_log_message(
-                        "e8891b42", "DOMAIN_EXCEPTION", cmd=cmd, exception=exception
+                        "e8891b42",
+                        "DOMAIN_EXCEPTION",
+                        add_debug_info=self._log_cmd_object_on_error,
+                        cmd=cmd,
+                        exception=exception,
                     )
                 )
             self._pop_command_stack()
@@ -476,7 +444,11 @@ class App:
             if self._logger:
                 self._logger.error(
                     self.create_log_message(
-                        "b575040c", "ERROR", cmd=cmd, exception=exception
+                        "b575040c",
+                        "ERROR",
+                        add_debug_info=self._log_cmd_object_on_error,
+                        cmd=cmd,
+                        exception=exception,
                     ),
                     exc_info=True,
                     stack_info=True,
@@ -492,7 +464,11 @@ class App:
             if self._logger:
                 self._logger.error(
                     self.create_log_message(
-                        "ad536c0b", "ERROR", cmd=cmd, exception=exception
+                        "ad536c0b",
+                        "ERROR",
+                        add_debug_info=self._log_cmd_object_on_error,
+                        cmd=cmd,
+                        exception=exception,
                     ),
                     exc_info=True,
                     stack_info=True,
@@ -519,7 +495,11 @@ class App:
             if self._logger:
                 self._logger.error(
                     self.create_log_message(
-                        "abd561ff", "ERROR", cmd=cmd, exception=exception
+                        "abd561ff",
+                        "ERROR",
+                        add_debug_info=self._log_cmd_object_on_error,
+                        cmd=cmd,
+                        exception=exception,
                     ),
                     exc_info=True,
                     stack_info=True,
@@ -531,7 +511,12 @@ class App:
         log_code = "e94cad9b"
         if self._logger.level <= logging.DEBUG:
             self._logger.debug(
-                self.create_log_message(log_code, "STARTED_COMMAND", cmd=cmd)
+                self.create_log_message(
+                    log_code,
+                    "STARTED_COMMAND",
+                    add_debug_info=self._log_cmd_object_on_error,
+                    cmd=cmd,
+                )
             )
         elif is_initial_command:
             self._logger.info(
@@ -547,52 +532,24 @@ class App:
         retval = cast(Any, handler(cmd))
         return retval
 
-    def _get_command_object_summarization_settings(self) -> tuple[bool, int, int]:
-        enabled = _DEFAULT_LOG_SUMMARIZATION_ENABLED
-        max_list_items = _DEFAULT_MAX_LIST_ITEMS_IN_LOG
-        sample_items = _DEFAULT_SAMPLE_ITEMS_IN_LOG
-
-        cfg = self._cfg
-        if cfg is None:
-            return enabled, max_list_items, sample_items
-
-        try:
-            log_cfg = cfg.get("log")  # type: ignore[attr-defined]
-        except Exception:
-            log_cfg = None
-        if log_cfg is None:
-            return enabled, max_list_items, sample_items
-
-        try:
-            summarization_cfg = log_cfg.get("command_object_summarization")  # type: ignore[attr-defined]
-        except Exception:
-            summarization_cfg = None
-        if not summarization_cfg:
-            return enabled, max_list_items, sample_items
-
-        try:
-            enabled = _coerce_bool(
-                summarization_cfg.get("enabled"),  # type: ignore[attr-defined]
-                enabled,
-            )
-            max_list_items = _coerce_int(
-                summarization_cfg.get("max_list_items"),  # type: ignore[attr-defined]
-                max_list_items,
-                minimum=0,
-            )
-            sample_items = _coerce_int(
-                summarization_cfg.get("sample_items"),  # type: ignore[attr-defined]
-                sample_items,
-                minimum=0,
-            )
-        except Exception:
-            return (
-                _DEFAULT_LOG_SUMMARIZATION_ENABLED,
-                _DEFAULT_MAX_LIST_ITEMS_IN_LOG,
-                _DEFAULT_SAMPLE_ITEMS_IN_LOG,
-            )
-
-        return enabled, max_list_items, sample_items
+    def _init_log_settings(self) -> None:
+        self._log_summarization_enabled = self.DEFAULT_LOG_SUMMARIZATION_ENABLED
+        self._log_max_list_items = self.DEFAULT_LOG_MAX_LIST_ITEMS
+        cfg: dict = (
+            (self._cfg or {}).get("log", {}).get("command_object_summarization", {})
+        )
+        self._log_summarization_enabled = App._get_bool_from_cfg_value(
+            cfg.get("enabled", self.DEFAULT_LOG_SUMMARIZATION_ENABLED)
+        )
+        self._log_max_list_items = App._get_int_from_cfg_value(
+            cfg.get("max_list_items", self.DEFAULT_LOG_MAX_LIST_ITEMS)
+        )
+        self._log_max_string_length = App._get_int_from_cfg_value(
+            cfg.get("max_string_length", self.DEFAULT_LOG_MAX_STRING_LENGTH)
+        )
+        self._log_max_dict_items = App._get_int_from_cfg_value(
+            cfg.get("max_dict_items", self.DEFAULT_LOG_MAX_DICT_ITEMS)
+        )
 
     def create_log_message(
         self,
@@ -612,17 +569,8 @@ class App:
                 command_stack = self._get_command_stack()
                 is_initial_command = len(command_stack) < 2
                 cmd_object = json.loads(cmd.model_dump_json(exclude_none=True))
-                (
-                    summarization_enabled,
-                    max_list_items,
-                    sample_items,
-                ) = self._get_command_object_summarization_settings()
-                if summarization_enabled:
-                    cmd_object = _summarise_command_object(
-                        cmd_object,
-                        max_items=max_list_items,
-                        sample_items=sample_items,
-                    )
+                if self._log_summarization_enabled:
+                    cmd_object = self._summarise_command_object_for_log(cmd_object)
                 content["command"] = kwargs.pop("command", {}) | {
                     "class": cmd.__class__.__name__,
                     # Optionally summarize large list fields based on config.
@@ -635,6 +583,8 @@ class App:
                     ),
                 }
             if kwargs:
+                if self._log_summarization_enabled:
+                    kwargs = self._summarise_command_object_for_log(kwargs)
                 content = {**content, **kwargs}
         else:
             content = kwargs
@@ -646,6 +596,42 @@ class App:
                 }
         log_item = self._log_item_class(code=code, msg=msg, **content)
         return log_item.dumps()
+
+    def _summarise_command_object_for_log(
+        self,
+        data: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Recursively walk *data* and replace any list or mapping longer than their
+        respective thresholds with a compact ``{"_count": N, "_sample": ...}`` summary,
+        and truncate any string longer than *max_string_length* to its first N chars
+        with a suffix showing the total length. All three keep the serialised log
+        payload within downstream log-sink size constraints."""
+
+        def _walk(obj: Any) -> Any:
+            if isinstance(obj, Exception):
+                obj = str(obj)
+            if isinstance(obj, dict):
+                if len(obj) > self._log_max_dict_items:
+                    return {
+                        "_count": len(obj),
+                        "_sample": {
+                            x: _walk(y)
+                            for x, y in list(obj.items())[: self._log_max_list_items]
+                        },
+                    }
+                return {x: _walk(y) for x, y in obj.items()}
+            if isinstance(obj, list):
+                if len(obj) > self._log_max_list_items:
+                    return {
+                        "_count": len(obj),
+                        "_sample": [_walk(x) for x in obj[: self._log_max_list_items]],
+                    }
+                return [_walk(x) for x in obj]
+            if isinstance(obj, str) and len(obj) > self._log_max_string_length:
+                return f"{obj[:self._log_max_string_length]}…[{len(obj)} chars]"
+            return obj
+
+        return _walk(data)  # type: ignore[return-value]
 
     @staticmethod
     def create_static_log_message(
@@ -668,3 +654,29 @@ class App:
     def __del__(self) -> None:
         if self._logger:
             self._logger.info(self.create_log_message("aa21c54a", "STOPPING_APP"))
+
+    @staticmethod
+    def _get_bool_from_cfg_value(value: Any) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            lowered = value.strip().lower()
+            if lowered in App._CFG_TRUE_VALUES:
+                return True
+            if lowered in App._CFG_FALSE_VALUES:
+                return False
+        raise exc.InitializationServiceError(
+            "d9c8e1b0",
+            f"Invalid boolean config value: {value}",
+        )
+
+    @staticmethod
+    def _get_int_from_cfg_value(value: Any) -> int:
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError):
+            raise exc.InitializationServiceError(
+                "d9c8e1b1",
+                f"Invalid integer config value: {value}",
+            )
+        return parsed

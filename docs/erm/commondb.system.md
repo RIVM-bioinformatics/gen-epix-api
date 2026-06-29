@@ -1,13 +1,10 @@
 # commondb / SYSTEM — Simplified ERD
 
-Auto-generated.  Service type **SYSTEM** — 2 entities, relationships only.
+Auto-generated.  Service type **SYSTEM** — 1 entities, relationships only.
 
 ```mermaid
 erDiagram
     %% commondb / SYSTEM (simplified)
-
-    PackageMetadata {
-    }
 
     Outage {
     }

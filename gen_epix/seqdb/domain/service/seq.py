@@ -21,6 +21,10 @@ class BaseSeqService(BaseService):
         f(command.RetrieveSamplesByQueryCommand, self.retrieve_samples_by_query)
         f(command.RetrieveSamplesByIdCommand, self.retrieve_samples_by_id)
         f(
+            command.RetrieveSampleIdentifiersByIdCommand,
+            self.retrieve_sample_identifiers_by_id,
+        )
+        f(
             command.RetrieveSeqFastaCommand,
             self.retrieve_seq_fasta,
         )
@@ -43,6 +47,14 @@ class BaseSeqService(BaseService):
         f(
             command.UpdateSeqDistancesCommand,
             self.update_seq_distances,
+        )
+        f(
+            command.RetrieveBestSeqPerSampleCommand,
+            self.retrieve_best_seq_per_sample,
+        )
+        f(
+            command.RetrieveBestSeqProfilePerSampleCommand,
+            self.retrieve_best_seq_profile_per_sample,
         )
         f(
             command.ProtocolCrudCommand,
@@ -174,6 +186,7 @@ class BaseSeqService(BaseService):
     def calculate_phylogenetic_tree(
         self, cmd: command.CalculatePhylogeneticTreeCommand
     ) -> model.PhylogeneticTree | None:
+        """Calculate phylogenetic tree for given parameters."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -181,6 +194,15 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.RetrieveSamplesByIdCommand,
     ) -> list[model.FullSample]:
+        """Retrieve samples by their IDs."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_sample_identifiers_by_id(
+        self,
+        cmd: command.RetrieveSampleIdentifiersByIdCommand,
+    ) -> list[model.SampleIdentifier]:
+        """Retrieve only sample identifiers for the given sample IDs."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -188,10 +210,12 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.RetrieveSamplesByQueryCommand,
     ) -> model.SampleQueryResult:
+        """Retrieve samples matching query criteria."""
         raise NotImplementedError()
 
     @abc.abstractmethod
     def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
+        """Retrieve sequence data in FASTA format."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -199,6 +223,7 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.UploadSamplesCommand,
     ) -> model.SampleBatchUploadResult:
+        """Upload samples in batch."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -206,6 +231,7 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.RetrieveSimilarProfilesCommand,
     ) -> list[UUID]:
+        """Retrieve UUIDs of profiles similar to specified profile."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -213,6 +239,7 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.RetrieveSeqDistanceLastModifiedCommand,
     ) -> datetime.datetime | None:
+        """Retrieve last modification timestamp of sequence distances."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -220,6 +247,7 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.CalculateSeqDistancesForNewProfilesCommand,
     ) -> list[model.CalculateSeqDistancesResult]:
+        """Calculate sequence distances for new profiles."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -227,6 +255,23 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.UpdateSeqDistancesCommand,
     ) -> list[model.CalculateSeqDistancesResult]:
+        """Update sequence distance calculations."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_best_seq_per_sample(
+        self,
+        cmd: command.RetrieveBestSeqPerSampleCommand,
+    ) -> dict[UUID, UUID]:
+        """Retrieve best sequence per sample mapping."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_best_seq_profile_per_sample(
+        self,
+        cmd: command.RetrieveBestSeqProfilePerSampleCommand,
+    ) -> dict[UUID, UUID]:
+        """Retrieve best sequence profile per sample mapping."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -242,6 +287,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for Protocol entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -257,6 +303,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for ProtocolSet entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -272,6 +319,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for ProtocolSetMember entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -281,6 +329,7 @@ class BaseSeqService(BaseService):
     ) -> (
         model.Allele | list[model.Allele] | UUID | list[UUID] | bool | list[bool] | None
     ):
+        """Handle CRUD operations for Allele entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -296,6 +345,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for AstMeasurement entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -311,6 +361,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for AstPrediction entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -318,6 +369,7 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.LocusCrudCommand,
     ) -> model.Locus | list[model.Locus] | UUID | list[UUID] | bool | list[bool] | None:
+        """Handle CRUD operations for Locus entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -333,6 +385,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for LocusCodeMap entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -348,6 +401,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for SeqProfile entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -363,6 +417,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for SeqProfileIdentifier entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -378,6 +433,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for LocusSet entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -393,6 +449,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for PcrMeasurement entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -408,6 +465,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for ReadSet entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -423,6 +481,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for ReadSetIdentifier entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -438,6 +497,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for RefAllele entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -447,6 +507,7 @@ class BaseSeqService(BaseService):
     ) -> (
         model.RefSeq | list[model.RefSeq] | UUID | list[UUID] | bool | list[bool] | None
     ):
+        """Handle CRUD operations for RefSeq entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -456,6 +517,7 @@ class BaseSeqService(BaseService):
     ) -> (
         model.Sample | list[model.Sample] | UUID | list[UUID] | bool | list[bool] | None
     ):
+        """Handle CRUD operations for Sample entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -471,6 +533,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for SampleDataCollectionLink entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -486,6 +549,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for SampleIdentifier entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -493,6 +557,7 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.SeqCrudCommand,
     ) -> model.Seq | list[model.Seq] | UUID | list[UUID] | bool | list[bool] | None:
+        """Handle CRUD operations for Seq entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -508,6 +573,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for SeqCategory entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -523,6 +589,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for SeqCategorySet entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -538,6 +605,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for SeqClassification entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -553,6 +621,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for SeqDistance entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -568,6 +637,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for SeqIdentifier entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -583,6 +653,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for SeqTaxonomy entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -590,6 +661,7 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.TaxonCrudCommand,
     ) -> model.Taxon | list[model.Taxon] | UUID | list[UUID] | bool | list[bool] | None:
+        """Handle CRUD operations for Taxon entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -605,6 +677,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for TaxonSet entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -620,6 +693,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for TaxonSetMember entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -635,6 +709,7 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for TreeAlgorithm entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -650,4 +725,5 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
+        """Handle CRUD operations for TreeAlgorithmClass entities."""
         raise NotImplementedError()

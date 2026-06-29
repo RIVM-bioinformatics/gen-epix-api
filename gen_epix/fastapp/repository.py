@@ -27,6 +27,7 @@ class BaseRepository(abc.ABC):
     @classmethod
     @abc.abstractmethod
     def create_repository(cls, **kwargs: Any) -> "BaseRepository":
+        """Factory method to create a repository instance with the given parameters."""
         raise NotImplementedError()
 
     @classmethod
@@ -34,7 +35,7 @@ class BaseRepository(abc.ABC):
         """
         Remove all contents of the repository.
         """
-        raise NotImplementedError()
+        raise NotImplementedError("Method is not implemented for this repository")
 
     @abc.abstractmethod
     def crud(
@@ -45,9 +46,12 @@ class BaseRepository(abc.ABC):
         operation: CrudOperation,
         objs: Model | Iterable[Model] | None = None,
         obj_ids: Hashable | Iterable[Hashable] | None = None,
+        return_id: bool = False,
         filter: Filter | None = None,
+        limit: int = 0,
+        offset: int = 0,
         **kwargs: Any,
-    ) -> Hashable | list[Hashable] | Model | list[Model] | bool | list[bool] | None:
+    ) -> Any:
         """
         Perform CRUD operations on the repository within a unit of work context. The
         user_id corresponds to the user that executes the operation and can e.g. be
@@ -110,6 +114,11 @@ class BaseRepository(abc.ABC):
         association_objs: Iterable[Model],
         **kwargs: Any,
     ) -> list[Model] | list[Hashable]:
+        """
+        Update association objects of the given model class that represent an
+        association between two other objects (e.g. a user and a role, or a case and a
+        data collection). The association objects are updated to match the provided association_objs, which means that association objects will be created, updated or deleted as needed. The association is determined by the link_field_names and corresponding
+        """
         return_id = kwargs.pop("return_id", False)
         excluded_association_objs: Iterable[Model] = kwargs.pop(
             "excluded_association_objs", []
@@ -212,6 +221,7 @@ class BaseRepository(abc.ABC):
             ]
             if invalid_association_obj_ids:
                 raise exc.InvalidModelIdsError(
+                    "fedcd052",
                     f"Model {model_class.__name__}: association objects contains some excluded ids",
                     ids=invalid_association_obj_ids,
                 )
@@ -219,6 +229,7 @@ class BaseRepository(abc.ABC):
             invalid_id_pairs = [x for x in obj_id_pairs if x in excluded_id_pairs]
             if invalid_id_pairs:
                 raise exc.InvalidModelIdsError(
+                    "cf19eada",
                     f"Model {model_class.__name__}: association object id pairs contains some excluded pairs",
                 )
 
@@ -246,6 +257,7 @@ class BaseRepository(abc.ABC):
                 )
             )
             raise exc.DuplicateIdsError(
+                "1bbcf7dc",
                 f"Model {model_class.__name__}: object id pairs are not unique",
                 ids=invalid_ids,
             )
@@ -268,6 +280,7 @@ class BaseRepository(abc.ABC):
         # Verify that objects to create have an id
         if any([get_association_id(x) is None for x in to_create_objs]):
             raise exc.InvalidModelIdsError(
+                "440b9bd4",
                 f"Model {model_class.__name__}: object(s) to create have no id",
                 ids=[
                     get_association_id(x)
@@ -367,7 +380,8 @@ class BaseRepository(abc.ABC):
         id_field_name = model_class.ENTITY.id_field_name
         if not isinstance(id_field_name, str):
             raise exc.RepositoryServiceError(
-                f"Model {model_class.__name__}: id_field_name other than string not implemented"
+                "29eeb9e2",
+                f"Model {model_class.__name__}: id_field_name other than string not implemented",
             )
         get_association_id: Callable[[Model], Hashable] = lambda x: getattr(
             x, id_field_name
@@ -402,8 +416,9 @@ class BaseRepository(abc.ABC):
         else:
             # Neither obj_id1 nor obj_id2 specified
             raise exc.InvalidArgumentsError(
+                "3969974a",
                 f"Model {model_class.__name__}: update_association requires either "
-                f"obj_id1 ({link_field_name1}) or obj_id2 ({link_field_name2}) to be specified. "
+                f"obj_id1 ({link_field_name1}) or obj_id2 ({link_field_name2}) to be specified. ",
             )
 
         return relevant_existing_objs
@@ -418,10 +433,16 @@ class BaseRepository(abc.ABC):
         verify_exists: bool = True,
         verify_duplicate: bool = True,
     ) -> None:
-        raise NotImplementedError
+        """
+        Verify that the given object ids are valid for the given model class, which
+        means that they exist in the repository if verify_exists is True and that they
+        are not duplicated if verify_duplicate is True.
+        """
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def uow(self, **kwargs: Any) -> BaseUnitOfWork:
+        """Return a unit of work for this repository."""
         raise NotImplementedError()
 
     @staticmethod
@@ -431,6 +452,7 @@ class BaseRepository(abc.ABC):
         if duplicate_ids:
             duplicate_ids_str = ", ".join([f'"{x}"' for x in duplicate_ids])
             raise exc.DuplicateIdsError(
+                "10f81460",
                 f"Object ids are not unique: {duplicate_ids_str}",
                 ids=duplicate_ids,
             )
@@ -446,13 +468,14 @@ class BaseRepository(abc.ABC):
         def _verify_no_objs() -> None:
             if objs is not None:
                 raise exc.InvalidArgumentsError(
-                    "Invalid objs: expected None, " f"got {type(objs)}"
+                    "7aa2d000", "Invalid objs: expected None, " f"got {type(objs)}"
                 )
 
         def _verify_no_obj_ids() -> None:
             if obj_ids is not None:
                 raise exc.InvalidArgumentsError(
-                    "Invalid obj_ids: expected None, " f"got {type(obj_ids)}"
+                    "cde8ce1e",
+                    "Invalid obj_ids: expected None, " f"got {type(obj_ids)}",
                 )
 
         def _verify_no_data() -> None:
@@ -462,7 +485,8 @@ class BaseRepository(abc.ABC):
         def _verify_one_obj() -> None:
             if not isinstance(objs, model_class):
                 raise exc.InvalidArgumentsError(
-                    "Invalid objs: expected single object, " f"got {type(objs)}"
+                    "b8054f11",
+                    "Invalid objs: expected single object, " f"got {type(objs)}",
                 )
             _verify_no_obj_ids()
 
@@ -470,13 +494,15 @@ class BaseRepository(abc.ABC):
             _verify_no_objs()
             if not isinstance(obj_ids, Hashable):
                 raise exc.InvalidArgumentsError(
-                    "Invalid obj_ids: expected single obj_id, " f"got {type(obj_ids)}"
+                    "be5ac373",
+                    "Invalid obj_ids: expected single obj_id, " f"got {type(obj_ids)}",
                 )
 
         def _verify_some_objs() -> None:
             if not isinstance(objs, Iterable) or isinstance(objs, model_class):
                 raise exc.InvalidArgumentsError(
-                    "Invalid objs: expected iterable of objs, " f"got {type(objs)}"
+                    "95cc83b1",
+                    "Invalid objs: expected iterable of objs, " f"got {type(objs)}",
                 )
             _verify_no_obj_ids()
 
@@ -484,8 +510,9 @@ class BaseRepository(abc.ABC):
             _verify_no_objs()
             if not isinstance(obj_ids, Iterable):
                 raise exc.InvalidArgumentsError(
+                    "31d25ea3",
                     "Invalid obj_ids: expected iterable of obj_ids, "
-                    f"got {type(obj_ids)}"
+                    f"got {type(obj_ids)}",
                 )
 
         match operation:
@@ -518,12 +545,6 @@ class BaseRepository(abc.ABC):
             case CrudOperation.UNDELETE_SOME:
                 _verify_some_ids()
             case CrudOperation.UNDELETE_ALL:
-                _verify_no_data()
-            case CrudOperation.RESTORE_ONE:
-                _verify_one_id()
-            case CrudOperation.RESTORE_SOME:
-                _verify_some_ids()
-            case CrudOperation.RESTORE_ALL:
                 _verify_no_data()
             case CrudOperation.EXISTS_ONE:
                 _verify_one_id()

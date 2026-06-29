@@ -186,4 +186,4 @@ class BaseCaseService(DomainBaseCaseService):
     @abstractmethod
     def _compose_id_filter(*key_and_ids: tuple[str, set[UUID]]) -> Filter:
         """Compose filter for ID-based filtering."""
-        pass
+        raise NotImplementedError()

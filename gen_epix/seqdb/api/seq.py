@@ -7,12 +7,13 @@ from fastapi import APIRouter, FastAPI
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
 from gen_epix.seqdb.domain import command, enum, model
+from gen_epix.util import copy_model_field
 
 
 class UploadSamplesRequestBody(command.UploadSamplesCommand):
@@ -33,10 +34,31 @@ class RetrieveSimilarProfilesRequestBody(PydanticBaseModel):
 
 
 class UpdateSeqDistancesRequestBody(PydanticBaseModel):
-    protocol_id: UUID
+    protocol_id: UUID = copy_model_field(
+        command.UpdateSeqDistancesCommand, "protocol_id"
+    )
+    # TODO: remove max_new_profiles usage and replace by limit
+    max_new_profiles: int | None = copy_model_field(
+        command.UpdateSeqDistancesCommand, "limit"
+    )
+    limit: int | None = copy_model_field(command.UpdateSeqDistancesCommand, "limit")
+    existing_chunk_size: int | None = copy_model_field(
+        command.UpdateSeqDistancesCommand, "existing_chunk_size"
+    )
+
+    # TODO: remove max_new_profiles usage and replace by limit
+    @model_validator(mode="after")
+    def validate_limit(cls, values):
+        if values.get("limit") is None:
+            values["limit"] = values.get("max_new_profiles")
+        return values
 
 
 class RetrieveSamplesByIdsRequestBody(PydanticBaseModel):
+    sample_ids: list[UUID]
+
+
+class RetrieveSampleIdentifiersByIdsRequestBody(PydanticBaseModel):
     sample_ids: list[UUID]
 
 
@@ -48,6 +70,26 @@ class RetrieveSeqFastaRequestBody(PydanticBaseModel):
 
     file_name: str = Field(
         description="The desired filename for the FASTA download.",
+    )
+
+
+class RetrieveBestSeqPerSampleRequestBody(PydanticBaseModel):
+
+    protocol_ids: set[UUID] | None = copy_model_field(
+        command.RetrieveBestSeqPerSampleCommand, "protocol_ids"
+    )
+    sample_ids: set[UUID] | None = copy_model_field(
+        command.RetrieveBestSeqPerSampleCommand, "sample_ids"
+    )
+
+
+class RetrieveBestSeqProfilePerSampleRequestBody(PydanticBaseModel):
+
+    protocol_ids: set[UUID] = copy_model_field(
+        command.RetrieveBestSeqProfilePerSampleCommand, "protocol_ids"
+    )
+    sample_ids: set[UUID] | None = copy_model_field(
+        command.RetrieveBestSeqProfilePerSampleCommand, "sample_ids"
     )
 
 
@@ -154,6 +196,27 @@ def create_seq_endpoints(
         return retval
 
     @router.post(
+        "/retrieve/sample_identifiers_by_ids",
+        operation_id="retrieve__sample_identifiers_by_ids",
+        name="RetrieveSampleIdentifiersByIDs",
+        description=command.RetrieveSampleIdentifiersByIdCommand.__doc__,
+    )
+    async def retrieve__sample_identifiers_by_ids(
+        user: registered_user_dependency,  # type: ignore
+        request_body: RetrieveSampleIdentifiersByIdsRequestBody,  # type: ignore
+    ) -> list[model.SampleIdentifier]:
+        try:
+            retval: list[model.SampleIdentifier] = app.handle(
+                command.RetrieveSampleIdentifiersByIdCommand(
+                    user=user,
+                    sample_ids=request_body.sample_ids,
+                )
+            )
+        except Exception as exception:
+            handle_exception("b3f91a2e", user, exception, request_ids=request_body.sample_ids)  # type: ignore
+        return retval
+
+    @router.post(
         "/retrieve/seq_fasta",
         operation_id="retrieve__seq_fasta",
         name="RetrieveSeqFasta",
@@ -218,6 +281,8 @@ def create_seq_endpoints(
                 command.UpdateSeqDistancesCommand(
                     user=user,
                     protocol_id=request_body.protocol_id,
+                    limit=request_body.limit,
+                    existing_chunk_size=request_body.existing_chunk_size,
                 )
             )
         except Exception as exception:
@@ -238,11 +303,11 @@ def create_seq_endpoints(
                 app.handle,
                 command.UploadSamplesCommand(
                     user=user,
-                    **request_body.model_dump(),
+                    **request_body.model_dump(exclude={"user"}),
                 ),
             )
         except Exception as exception:
-            handle_exception("f1d282b4", user, exception, request_ids=request_body.seq_ids)  # type: ignore
+            handle_exception("f1d282b4", user, exception)  # type: ignore
         return retval
 
     # CRUD
@@ -254,3 +319,47 @@ def create_seq_endpoints(
     CrudEndpointGenerator.generate_endpoints(
         router, crud_endpoint_sets, handle_exception
     )
+
+    @router.post(
+        "/retrieve/best_seq_per_sample",
+        operation_id="retrieve__best_seq_per_sample",
+        name="RetrieveBestSeqPerSample",
+        description=command.RetrieveBestSeqPerSampleCommand.__doc__,
+    )
+    async def retrieve__best_seq_per_sample(
+        user: registered_user_dependency,  # type: ignore
+        request_body: RetrieveBestSeqPerSampleRequestBody,  # type: ignore
+    ) -> dict[UUID, UUID]:
+        try:
+            retval: dict[UUID, UUID] = app.handle(
+                command.RetrieveBestSeqPerSampleCommand(
+                    user=user,
+                    protocol_ids=request_body.protocol_ids,
+                    sample_ids=request_body.sample_ids,
+                )
+            )
+        except Exception as exception:
+            handle_exception("c3f7a9e1", user, exception, request_ids=request_body.sample_ids)  # type: ignore
+        return retval
+
+    @router.post(
+        "/retrieve/best_seq_profile_per_sample",
+        operation_id="retrieve__best_seq_profile_per_sample",
+        name="RetrieveBestSeqProfilePerSample",
+        description=command.RetrieveBestSeqProfilePerSampleCommand.__doc__,
+    )
+    async def retrieve__best_seq_profile_per_sample(
+        user: registered_user_dependency,  # type: ignore
+        request_body: RetrieveBestSeqProfilePerSampleRequestBody,  # type: ignore
+    ) -> dict[UUID, UUID]:
+        try:
+            retval: dict[UUID, UUID] = app.handle(
+                command.RetrieveBestSeqProfilePerSampleCommand(
+                    user=user,
+                    protocol_ids=request_body.protocol_ids,
+                    sample_ids=request_body.sample_ids,
+                )
+            )
+        except Exception as exception:
+            handle_exception("e2b4d8f6", user, exception, request_ids=request_body.sample_ids)  # type: ignore
+        return retval

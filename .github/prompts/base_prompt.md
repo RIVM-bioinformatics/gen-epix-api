@@ -66,6 +66,10 @@ If a proposed change violates these, explicitly explain why.
 - Avoid code duplication by creating reusable helper methods inside the test module and reusing fixtures where possible.
 - Avoid hard coding module paths in tests as strings for e.g. the patch function.
 
+**Docstring requirements:**
+- Write concise docstrings that do not contain repetitive information.
+- Look primarily add the comments in the function body for the formulation of the text, but in case of conflict with the code, either prompt or let the code take precedence.
+- Use a max line length of 88 and, in case of more than one line, make the first 3 double quotes of the docstring a separate line and start on the next one.
 ---
 
 **Note:** This prompt is referenced by `.github/copilot-instructions.md`. Both must be applied together for full repo context.

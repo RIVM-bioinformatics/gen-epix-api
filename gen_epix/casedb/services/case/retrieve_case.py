@@ -7,6 +7,7 @@ from uuid import UUID
 from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
+from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.filter.composite import CompositeFilter
@@ -38,7 +39,9 @@ def case_service_retrieve_cases_by_query(
         enum.CaseRight.READ_CASE
     )
     if case_type_id not in has_case_read and not is_full_access:
-        raise exc.UnauthorizedAuthError(f"Unauthorized CaseType: {case_type_id}")
+        raise exc.UnauthorizedAuthError(
+            "e9a598d2", f"Unauthorized CaseType: {case_type_id}"
+        )
 
     with repository.uow() as uow:
         if case_set_ids:
@@ -99,6 +102,46 @@ def case_service_retrieve_cases_by_query(
     )
 
 
+def case_service_retrieve_case_cohort_links_by_case_type(
+    self: BaseCaseService,
+    cmd: command.RetrieveCaseCohortLinksByCaseTypeCommand,
+) -> list[model.CaseCohortLink]:
+    user, repository = self._get_user_and_repository(cmd)
+    assert isinstance(user, model.User) and user.id is not None
+
+    case_type_filter = UuidSetFilter(
+        key="case_type_id", members=frozenset({cmd.case_type_id})
+    )
+    case_cohort_links: list[model.CaseCohortLink] = []
+    with repository.uow() as uow:
+        row_iter = list(
+            self.repository.read_fields(
+                uow=uow,
+                user_id=user.id,
+                model_class=model.Case,
+                field_names=["id", "cohort"],
+                filter=case_type_filter,
+            )
+        )
+        for row in row_iter:
+            cohort_dict = row[1]
+            if not cohort_dict:
+                if cmd.include_missing:
+                    cohort_dict = {NULL_ID: NULL_ID}
+                else:
+                    continue
+            case_cohort_links.extend(
+                [
+                    model.CaseCohortLink(
+                        case_id=row[0], cohort_id=x, cohort_definition_id=y
+                    )
+                    for x, y in cohort_dict.items()
+                ]
+            )
+
+    return case_cohort_links
+
+
 def _apply_max_results_limit(
     self: BaseCaseService,
     user: model.User,
@@ -106,7 +149,7 @@ def _apply_max_results_limit(
     uow: BaseUnitOfWork,
     cases: list[model.Case],
 ) -> tuple[list[model.Case], bool]:
-    case_types: list[model.CaseType] = self.repository.crud(  # type: ignore
+    case_types: list[model.CaseType] = self.repository.crud(
         uow,
         user.id,
         model.CaseType,
@@ -114,7 +157,9 @@ def _apply_max_results_limit(
         obj_ids=[case_type_id],
     )
     if not case_types:
-        raise exc.InvalidArgumentsError(f"Invalid CaseType ID: {case_type_id}")
+        raise exc.InvalidArgumentsError(
+            "f337e785", f"Invalid CaseType ID: {case_type_id}"
+        )
     case_type = case_types[0]
     # Apply max results limit
     is_max_results_exceeded = False
@@ -166,7 +211,7 @@ def _verify_case_set_access(
             [str(x) for x in unauthorized_case_set_ids]
         )
         raise exc.UnauthorizedAuthError(
-            f"Unauthorized case sets: {unauthorized_case_set_ids_str}"
+            "cd11372a", f"Unauthorized case sets: {unauthorized_case_set_ids_str}"
         )
 
 
@@ -200,7 +245,7 @@ def case_service_retrieve_cases_by_id(
         if not cases:
             return []
 
-        case_types: list[model.CaseType] = self.repository.crud(  # type: ignore
+        case_types: list[model.CaseType] = self.repository.crud(
             uow,
             user.id,
             model.CaseType,
@@ -208,7 +253,9 @@ def case_service_retrieve_cases_by_id(
             obj_ids=[case_type_id],
         )
         if not case_types:
-            raise exc.InvalidArgumentsError(f"Invalid CaseType ID: {case_type_id}")
+            raise exc.InvalidArgumentsError(
+                "06f5019f", f"Invalid CaseType ID: {case_type_id}"
+            )
         case_type = case_types[0]
 
         # Apply max results limit
@@ -369,7 +416,7 @@ def _verify_case_filter(
 ) -> list[model.RefCol]:
     # Retrieve Cols corresponding to filter keys
     filter_col_ids = composite_filter.get_keys()
-    filter_cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
+    filter_cols: list[model.Col] = self.repository.crud(
         uow,
         user.id,
         model.Col,
@@ -377,7 +424,7 @@ def _verify_case_filter(
         obj_ids=filter_col_ids,
     )
     # Retrieve cols for Cols
-    ref_cols: list[model.RefCol] = self.repository.crud(  # type: ignore[assignment]
+    ref_cols: list[model.RefCol] = self.repository.crud(
         uow,
         user.id,
         model.RefCol,
@@ -407,7 +454,8 @@ def _verify_case_filter(
                 )
             else:
                 raise exc.InvalidArgumentsError(
-                    f"Column {col.id}: invalid filter type: {composite_filter.__class__.__name__}"
+                    "290ab290",
+                    f"Column {col.id}: invalid filter type: {composite_filter.__class__.__name__}",
                 )
 
     return ref_cols
@@ -447,7 +495,8 @@ def _validate_filter_members(
     if len(invalid_values):
         invalid_values_str = ", ".join(invalid_values)
         raise exc.InvalidArgumentsError(
-            f"Column {col.id}: invalid {stringset_filter.__class__.__name__} filter members: {invalid_values_str}"
+            "b8527ecb",
+            f"Column {col.id}: invalid {stringset_filter.__class__.__name__} filter members: {invalid_values_str}",
         )
 
 
@@ -528,4 +577,6 @@ def _get_map_function_for_col(
     elif ref_col.col_type in enum.ColTypeSet.NUMBER.value - {enum.ColType.DECIMAL_0}:
         map_fns.append(lambda x: Decimal(x) if isinstance(x, str) else x)
     else:
-        raise exc.InvalidArgumentsError(f"Unsupported column type: {ref_col.col_type}")
+        raise exc.InvalidArgumentsError(
+            "ab68605a", f"Unsupported column type: {ref_col.col_type}"
+        )

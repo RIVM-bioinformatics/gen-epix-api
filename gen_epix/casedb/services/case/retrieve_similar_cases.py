@@ -9,11 +9,10 @@ from gen_epix.fastapp.enum import CrudOperation
 
 def case_service_retrieve_similar_cases(
     self: BaseCaseService, cmd: command.RetrieveSimilarCasesCommand
-) -> list[UUID]:
+) -> command.RetrieveSimilarCasesReturnValue:
     case_type_id = cmd.case_type_id
     dist_col_id = cmd.genetic_distance_col_id
     case_ids = cmd.case_ids
-    max_distance = cmd.max_distance
     user: model.User
     user, repository = self._get_user_and_repository(cmd)  # type: ignore[assignment]
     assert isinstance(user, model.User) and user.id is not None
@@ -22,11 +21,11 @@ def case_service_retrieve_similar_cases(
 
     # Special case: zero query cases
     if len(case_ids) == 0:
-        return []
+        return command.RetrieveSimilarCasesReturnValue(cases=[])
 
     with repository.uow() as uow:
         # Get distance column data
-        dist_col: model.Col = repository.crud(  # type: ignore[assignment]
+        dist_col: model.Col = repository.crud(
             uow,
             user.id,
             model.Col,
@@ -35,9 +34,10 @@ def case_service_retrieve_similar_cases(
         )
         if dist_col.case_type_id != case_type_id:
             raise exc.InvalidArgumentsError(
-                f"Col {dist_col_id} does not belong to CaseType {case_type_id}"
+                "331bf264",
+                f"Col {dist_col_id} does not belong to CaseType {case_type_id}",
             )
-        dist_ref_col: model.RefCol = repository.crud(  # type: ignore[assignment]
+        dist_ref_col: model.RefCol = repository.crud(
             uow,
             user.id,
             model.RefCol,
@@ -46,18 +46,17 @@ def case_service_retrieve_similar_cases(
         )
         if dist_ref_col.col_type != enum.ColType.GENETIC_DISTANCE:
             raise exc.InvalidArgumentsError(
-                f"Column {dist_col_id} is not of type {enum.ColType.GENETIC_DISTANCE.value}"
+                "ebf33e88",
+                f"Column {dist_col_id} is not of type {enum.ColType.GENETIC_DISTANCE.value}",
             )
 
         # Get genetic distance protocol
-        genetic_distance_protocol: model.GeneticDistanceProtocol = (
-            self.repository.crud(  # type: ignore[assignment]
-                uow,
-                user.id,
-                model.GeneticDistanceProtocol,
-                CrudOperation.READ_ONE,
-                obj_ids=dist_ref_col.genetic_distance_protocol_id,
-            )
+        genetic_distance_protocol: model.GeneticDistanceProtocol = self.repository.crud(
+            uow,
+            user.id,
+            model.GeneticDistanceProtocol,
+            CrudOperation.READ_ONE,
+            obj_ids=dist_ref_col.genetic_distance_protocol_id,
         )
         seqdb_seq_distance_protocol_id = (
             genetic_distance_protocol.seqdb_seq_distance_protocol_id
@@ -72,11 +71,12 @@ def case_service_retrieve_similar_cases(
             case_type_id,
             case_ids=None,
             filter_content=True,
+            calculate_case_date=False,
             apply_max_n_cases=False,
         )
 
         # Get profile_ids from dist_ref_col
-        case_id_profile_id_map: dict[UUID, str | None] = {
+        case_id_profile_id_map: dict[UUID, str | None] = {  # type: ignore[assignment]
             x.id: x.content.get(dist_col_id) for x in all_cases
         }
         case_ids_set = set(case_ids)
@@ -91,7 +91,7 @@ def case_service_retrieve_similar_cases(
             seqdb_command.RetrieveSimilarProfilesCommand(
                 protocol_id=seqdb_seq_distance_protocol_id,
                 profile_ids=profile_ids,
-                max_distance=max_distance,
+                max_distance=cmd.max_distance,
             )
         )
 
@@ -105,6 +105,29 @@ def case_service_retrieve_similar_cases(
             profile_id_case_id_map[x]
             for x in similar_profile_ids_str
             if x in profile_id_case_id_map
+            if profile_id_case_id_map[x]
+            not in case_ids_set  # Exclude query cases if they appear as similar
         ]
 
-    return similar_case_ids
+        # Retrieve similar cases with ABAC applied to case date
+        similar_cases = self._retrieve_cases_with_content_right(
+            uow,
+            user.id,
+            case_abac,
+            enum.CaseRight.READ_CASE,
+            case_type_id,
+            case_ids=similar_case_ids,
+            filter_content=True,
+            calculate_case_date=True,
+            apply_max_n_cases=False,
+        )
+
+        # Construct return value
+        retval = command.RetrieveSimilarCasesReturnValue(
+            cases=[
+                model.CaseIdAndDate(id=x.id, case_date=x.case_date)
+                for x in similar_cases
+                if x.id is not None
+            ]
+        )
+    return retval

@@ -1,7 +1,7 @@
-from typing import ClassVar
+from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model
@@ -46,6 +46,11 @@ class SeqClassification(
         default=None, description="The primary category."
     )
 
+    @model_validator(mode="after")
+    def _validate_content(self) -> Self:
+        # TODO: implement content hash validation
+        return self
+
 
 class AstPrediction(
     Model,
@@ -68,6 +73,11 @@ class AstPrediction(
             }
         ),
     )
+
+    @model_validator(mode="after")
+    def _validate_content(self) -> Self:
+        # TODO: implement content hash validation
+        return self
 
 
 class SeqTaxonomy(
@@ -100,3 +110,8 @@ class SeqTaxonomy(
         description="The unique identifier for the primary taxon. FOREIGN KEY"
     )
     primary_taxon: Taxon | None = Field(default=None, description="The primary taxon.")
+
+    @model_validator(mode="after")
+    def _validate_content(self) -> Self:
+        # TODO: implement content hash validation
+        return self

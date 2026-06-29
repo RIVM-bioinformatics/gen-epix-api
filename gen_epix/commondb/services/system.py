@@ -56,13 +56,11 @@ class SystemService(BaseSystemService):
         self, cmd: command.RetrieveOutagesCommand
     ) -> list[model.Outage]:
         with self.repository.uow() as uow:
-            outages: list[model.Outage] = (
-                self.repository.crud(  # type: ignore[assignment]
-                    uow,
-                    None,
-                    model.Outage,
-                    CrudOperation.READ_ALL,
-                )
+            outages: list[model.Outage] = self.repository.crud(
+                uow,
+                None,
+                model.Outage,
+                CrudOperation.READ_ALL,
             )
         return outages
 

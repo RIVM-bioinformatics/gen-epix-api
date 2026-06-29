@@ -1,7 +1,7 @@
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain import enum
@@ -11,6 +11,7 @@ from gen_epix.commondb.domain.command import (
     UpdateAssociationCommand,
 )
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
+from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
 
@@ -86,8 +87,9 @@ class UploadCasesCommand(Command, UploadBatchCommandMixin):
     case_type_id: UUID = Field(
         description="The CaseType ID that all the cases must belong to. All cases in the case set must have this CaseType ID."
     )
-    created_in_data_collection_id: UUID = Field(
-        description="The created in data collection ID that all the cases must belong to. All cases in the case set must have this created in data collection ID."
+    default_created_in_data_collection_id: UUID = Field(
+        default=NULL_ID,
+        description="The default data collection to associate with the cases if not specified at the case level AND the case does not exist yet.",
     )
     case_batch: model.CaseBatchForUpload = Field(
         description="The unique cases to validate."
@@ -99,13 +101,6 @@ class UploadCasesCommand(Command, UploadBatchCommandMixin):
         cases = [x.case for x in cases_for_upload if x.case is not None]
         if any(x.case_type_id != self.case_type_id for x in cases):
             raise ValueError("All cases must belong to the given CaseType ID.")
-        if any(
-            x.created_in_data_collection_id != self.created_in_data_collection_id
-            for x in cases
-        ):
-            raise ValueError(
-                "All cases must belong to the given created_in_data_collection_id."
-            )
         return self
 
 
@@ -144,6 +139,19 @@ class RetrieveCasesByQueryCommand(Command):
     """
 
     case_query: model.CaseQuery = Field(description="The query to filter cases by.")
+
+
+class RetrieveCaseCohortLinksByCaseTypeCommand(Command):
+    """
+    Retrieve all (case_id, cohort_ids) pairs for a given CaseType.
+    Returns every case without pagination. Restricted to APP_ADMIN.
+    """
+
+    case_type_id: UUID = Field(description="The CaseType ID to retrieve pairs for.")
+    include_missing: bool = Field(
+        default=False,
+        description="Whether to include cases that have no linked cohorts, with NULL_ID as the cohort_id and cohort_definition_id.",
+    )
 
 
 class RetrieveCasesByIdCommand(Command):
@@ -239,7 +247,7 @@ class RetrievePhylogeneticTreeByCasesCommand(Command):
         description="The IDs of the cases to calculate the phylogenetic tree for."
     )
     allowed_qc_results: set[seqdb_enum.QualityControlResult] = Field(
-        default=set(seqdb_enum.QualityControlResultSet.USABLE.value),
+        default=set(seqdb_enum.QualityControlResultSet.ALL.value),
         description="Set of allowed quality control results for the profiles to consider in the tree. Only profiles whose qc_result is in this set will be included in the tree. This allows excluding low-quality profiles from the tree.",
     )
 
@@ -256,13 +264,21 @@ class RetrieveSimilarCasesCommand(Command):
 
     max_distance: float = Field(
         description="The maximum genetic distance for cases to be considered similar.",
-        default=5,
+        ge=0,
+    )
+    genetic_distance_col_id: UUID = Field(
+        description="The Col ID to use for determining the genetic distance between cases."
     )
     case_ids: list[UUID] = Field(
         description="The IDs of cases to get the similar cases for.",
     )
-    genetic_distance_col_id: UUID = Field(
-        description="The Col ID to use for determining the genetic distance between cases."
+
+
+class RetrieveSimilarCasesReturnValue(BaseModel):
+    """The return value for the RetrieveSimilarCasesCommand."""
+
+    cases: list[model.CaseIdAndDate] = Field(
+        description="The similar cases that were found, limited to their IDs and case dates."
     )
 
 

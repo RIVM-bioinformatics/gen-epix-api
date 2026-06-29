@@ -58,27 +58,27 @@ class TestRepository:
             assert model_instance == model_converted
 
     def test_create_one(self, env: Env) -> None:
-        model1_1 = env.get_model_instance_for_class(Model1_1, set_id=False)
+        model1_1: Model1_1 = env.get_model_instance_for_class(Model1_1, set_id=False)  # type: ignore[assignment]
         model1_1_created = env.app.handle(
             Model1_1CrudCommand(objs=model1_1, operation=CrudOperation.CREATE_ONE)
         )
         assert model1_1 == model1_1_created
 
-        model1_2 = env.get_model_instance_for_class(Model1_2, set_id=False)
+        model1_2: Model1_2 = env.get_model_instance_for_class(Model1_2, set_id=False)  # type: ignore[assignment]
         model1_2.model1_1_id = model1_1_created.id
         model1_2_created = env.app.handle(
             Model1_2CrudCommand(objs=model1_2, operation=CrudOperation.CREATE_ONE)
         )
         assert model1_2 == model1_2_created
 
-        model2_1 = env.get_model_instance_for_class(Model2_1, set_id=False)
+        model2_1: Model2_1 = env.get_model_instance_for_class(Model2_1, set_id=False)  # type: ignore[assignment]
         model2_1.model1_2_id = model1_2_created.id
         model2_1_created = env.app.handle(
             Model2_1CrudCommand(objs=model2_1, operation=CrudOperation.CREATE_ONE)
         )
         assert model2_1 == model2_1_created
 
-        model2_2 = env.get_model_instance_for_class(Model2_2, set_id=False)
+        model2_2: Model2_2 = env.get_model_instance_for_class(Model2_2, set_id=False)  # type: ignore[assignment]
         model2_2.model2_1_id = model2_1_created.id
         model2_2_created = env.app.handle(
             Model2_2CrudCommand(objs=model2_2, operation=CrudOperation.CREATE_ONE)
@@ -90,7 +90,7 @@ class TestRepository:
 
     def test_read(self, env: Env) -> None:
         models1_1, models1_2, models2_1, models2_2 = env.create_all_model_instances()
-        # Read one, read some and read all without cascade
+        # Read one, read some and read all
         # 1_1
         model1_1_read = env.app.handle(
             Model1_1CrudCommand(
@@ -163,93 +163,6 @@ class TestRepository:
         assert all([x == y for x, y in zip(models2_2, models2_2_read)])
         model2_2_read_all = env.app.handle(
             Model2_2CrudCommand(operation=CrudOperation.READ_ALL)
-        )
-        model2_2_read_all = {x.id: x for x in model2_2_read_all}
-        assert all([x == model2_2_read_all[x.id] for x in models2_2])
-
-    def test_read_cascade(self, env: Env) -> None:
-        models1_1, models1_2, models2_1, models2_2 = env.create_all_model_instances(
-            cascade=True
-        )
-        # Read with cascade
-        props = {"cascade_read": True}
-        # 1_1
-        model1_1_read = env.app.handle(
-            Model1_1CrudCommand(
-                operation=CrudOperation.READ_ONE, obj_ids=models1_1[0].id, props=props
-            )
-        )
-        assert models1_1[0] == model1_1_read
-        models1_1_read = env.app.handle(
-            Model1_1CrudCommand(
-                operation=CrudOperation.READ_SOME,
-                obj_ids=[x.id for x in models1_1],
-                props=props,
-            )
-        )
-        assert all([x == y for x, y in zip(models1_1, models1_1_read)])
-        models1_1_read_all = env.app.handle(
-            Model1_1CrudCommand(operation=CrudOperation.READ_ALL, props=props)
-        )
-        models1_1_read_all = {x.id: x for x in models1_1_read_all}
-        assert all([x == models1_1_read_all[x.id] for x in models1_1])
-        # 1_2
-        model1_2_read = env.app.handle(
-            Model1_2CrudCommand(
-                operation=CrudOperation.READ_ONE, obj_ids=models1_2[0].id, props=props
-            )
-        )
-        assert models1_2[0] == model1_2_read
-        models1_2_read = env.app.handle(
-            Model1_2CrudCommand(
-                operation=CrudOperation.READ_SOME,
-                obj_ids=[x.id for x in models1_2],
-                props=props,
-            )
-        )
-        assert all([x == y for x, y in zip(models1_2, models1_2_read)])
-        model1_2_read_all = env.app.handle(
-            Model1_2CrudCommand(operation=CrudOperation.READ_ALL, props=props)
-        )
-        model1_2_read_all = {x.id: x for x in model1_2_read_all}
-        assert all([x == model1_2_read_all[x.id] for x in models1_2])
-        # 2_1
-        model2_1_read = env.app.handle(
-            Model2_1CrudCommand(
-                operation=CrudOperation.READ_ONE, obj_ids=models2_1[0].id, props=props
-            )
-        )
-        assert models2_1[0] == model2_1_read
-        models2_1_read = env.app.handle(
-            Model2_1CrudCommand(
-                operation=CrudOperation.READ_SOME,
-                obj_ids=[x.id for x in models2_1],
-                props=props,
-            )
-        )
-        assert all([x == y for x, y in zip(models2_1, models2_1_read)])
-        model2_1_read_all = env.app.handle(
-            Model2_1CrudCommand(operation=CrudOperation.READ_ALL, props=props)
-        )
-        model2_1_read_all = {x.id: x for x in model2_1_read_all}
-        assert all([x == model2_1_read_all[x.id] for x in models2_1])
-        # 2_2
-        model2_2_read = env.app.handle(
-            Model2_2CrudCommand(
-                operation=CrudOperation.READ_ONE, obj_ids=models2_2[0].id, props=props
-            )
-        )
-        assert models2_2[0] == model2_2_read
-        models2_2_read = env.app.handle(
-            Model2_2CrudCommand(
-                operation=CrudOperation.READ_SOME,
-                obj_ids=[x.id for x in models2_2],
-                props=props,
-            )
-        )
-        assert all([x == y for x, y in zip(models2_2, models2_2_read)])
-        model2_2_read_all = env.app.handle(
-            Model2_2CrudCommand(operation=CrudOperation.READ_ALL, props=props)
         )
         model2_2_read_all = {x.id: x for x in model2_2_read_all}
         assert all([x == model2_2_read_all[x.id] for x in models2_2])

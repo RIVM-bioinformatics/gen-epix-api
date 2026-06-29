@@ -18,6 +18,7 @@ import argparse
 import re
 import types
 import typing
+from enum import Enum
 from pathlib import Path
 from typing import get_args, get_origin
 from uuid import UUID
@@ -351,16 +352,19 @@ class MermaidErmGenerator(ErmGenerator):
     @staticmethod
     def _generate_for_service(domain: Domain, dir: Path) -> None:
         domain_lower = domain.name.lower()
-        for service_type in sorted(domain.get_service_types(), key=lambda s: s.value):
-            model_classes = list(domain.get_models_for_service_type(service_type))
-            if not model_classes:
+        for service_type in sorted(domain.get_service_types(), key=lambda x: x.value):
+            sorted_model_classes = domain.get_dag_sorted_models(
+                service_type=service_type, persistable=True
+            )
+            if not sorted_model_classes:
                 continue
+            assert isinstance(service_type, Enum)
             svc_lower = service_type.value.lower()
             tag = f"{domain_lower}.{svc_lower}"
 
             # Detailed
             diagram_detailed = _build_diagram(
-                model_classes,
+                sorted_model_classes,
                 detailed=True,
                 title_comment=f"{domain.name} / {service_type.value} (detailed)",
             )
@@ -369,14 +373,14 @@ class MermaidErmGenerator(ErmGenerator):
                 title=f"{domain.name} / {service_type.value} — Detailed ERD",
                 description=(
                     f"Auto-generated.  Service type **{service_type.value}** "
-                    f"— {len(model_classes)} entities."
+                    f"— {len(sorted_model_classes)} entities."
                 ),
                 diagram=diagram_detailed,
             )
 
             # Simplified
             diagram_simple = _build_diagram(
-                model_classes,
+                sorted_model_classes,
                 detailed=False,
                 title_comment=f"{domain.name} / {service_type.value} (simplified)",
             )
@@ -385,7 +389,7 @@ class MermaidErmGenerator(ErmGenerator):
                 title=f"{domain.name} / {service_type.value} — Simplified ERD",
                 description=(
                     f"Auto-generated.  Service type **{service_type.value}** "
-                    f"— {len(model_classes)} entities, relationships only."
+                    f"— {len(sorted_model_classes)} entities, relationships only."
                 ),
                 diagram=diagram_simple,
             )

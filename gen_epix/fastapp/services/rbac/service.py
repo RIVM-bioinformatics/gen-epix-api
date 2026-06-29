@@ -67,7 +67,8 @@ class BaseRbacService(BaseService):
         if roles:
             roles_str = ", ".join([str(x) for x in roles])
             raise exc.ServiceException(
-                f"Permission {permission} has some roles registered: {roles_str}"
+                "5cc30b72",
+                f"Permission {permission} has some roles registered: {roles_str}",
             )
         self._permissions_without_rbac.add(permission)
 
@@ -78,7 +79,9 @@ class BaseRbacService(BaseService):
         application.
         """
         if permission not in self._permissions_without_rbac:
-            raise exc.ServiceException(f"Permission {permission} is not registered")
+            raise exc.ServiceException(
+                "3ef251f9", f"Permission {permission} is not registered"
+            )
         self._permissions_without_rbac.remove(permission)
 
     def register_role(
@@ -96,12 +99,15 @@ class BaseRbacService(BaseService):
         if invalid_permissions:
             invalid_permissions_str = ", ".join([str(x) for x in invalid_permissions])
             raise exc.ServiceException(
-                f"Permission(s) {invalid_permissions_str} are not registered"
+                "b10b808e",
+                f"Permission(s) {invalid_permissions_str} are not registered",
             )
         # Add to permissions by role
         if role in self._permissions_by_role:
             if not update_role:
-                raise exc.ServiceException(f"Role {role} is already registered")
+                raise exc.ServiceException(
+                    "595c1fe4", f"Role {role} is already registered"
+                )
             # Remove role from all old permissions
             for permission in self._permissions_by_role[role]:
                 self._roles_by_permission[permission].remove(role)
@@ -173,7 +179,7 @@ class BaseRbacService(BaseService):
         automatically.
         """
         if role not in self._permissions_by_role:
-            raise exc.ServiceException(f"Role {role} is not registered")
+            raise exc.ServiceException("a1c4b120", f"Role {role} is not registered")
         for permission in self._permissions_by_role[role]:
             self._roles_by_permission[permission].remove(role)
         del self._permissions_by_role[role]
@@ -190,7 +196,7 @@ class BaseRbacService(BaseService):
         if missing_permissions:
             missing_permissions_str = ", ".join([str(x) for x in missing_permissions])
             raise exc.ServiceException(
-                f"No roles for permission(s) {missing_permissions_str}"
+                "01bf52ff", f"No roles for permission(s) {missing_permissions_str}"
             )
 
     def get_rbac_permissions_for_command_class(
@@ -245,7 +251,7 @@ class BaseRbacService(BaseService):
         """
         Implement this method to retrieve the roles of a user.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def retrieve_user_is_non_rbac_authorized(self, cmd: Command) -> bool:
         """
@@ -369,7 +375,8 @@ class BaseRbacService(BaseService):
                         [str(x) for x in missing_permissions]
                     )
                     raise exc.InitializationServiceError(
-                        f"Root role {root_role} is missing permissions: {missing_permissions_str}"
+                        "ba2ba818",
+                        f"Root role {root_role} is missing permissions: {missing_permissions_str}",
                     )
                 elif on_missing_root_permissions == "add":
                     # Add all missing permissions
@@ -482,7 +489,8 @@ class BaseRbacService(BaseService):
                 sub_role.value if isinstance(sub_role, Enum) else str(sub_role)
             )
             raise exc.InitializationServiceError(
-                f"Duplicate permissions in role hierarchy for role {role_str} and sub-role {sub_role_str}: {duplicate_permissions_str}"
+                "b9a6b98a",
+                f"Duplicate permissions in role hierarchy for role {role_str} and sub-role {sub_role_str}: {duplicate_permissions_str}",
             )
 
     @staticmethod

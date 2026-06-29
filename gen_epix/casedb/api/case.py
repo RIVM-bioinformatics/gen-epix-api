@@ -62,6 +62,12 @@ class RetrieveCasesByIdsRequestBody(PydanticBaseModel):
     )
 
 
+class RetrieveCaseCohortLinksByCaseTypeRequestBody(PydanticBaseModel):
+    case_type_id: UUID = copy_model_field(
+        command.RetrieveCaseCohortLinksByCaseTypeCommand, "case_type_id"
+    )
+
+
 class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
     case_type_id: UUID = copy_model_field(
         command.RetrievePhylogeneticTreeByCasesCommand, "case_type_id"
@@ -82,15 +88,19 @@ class RetrieveSimilarCasesRequestBody(PydanticBaseModel):
     case_type_id: UUID = copy_model_field(
         command.RetrieveSimilarCasesCommand, "case_type_id"
     )
-    max_distance: float = copy_model_field(
-        command.RetrieveSimilarCasesCommand, "max_distance"
-    )
     case_ids: list[UUID] = copy_model_field(
         command.RetrieveSimilarCasesCommand, "case_ids"
     )
     genetic_distance_col_id: UUID = copy_model_field(
         command.RetrieveSimilarCasesCommand, "genetic_distance_col_id"
     )
+    max_distance: float = copy_model_field(
+        command.RetrieveSimilarCasesCommand, "max_distance"
+    )
+
+
+class RetrieveSimilarCasesResponseBody(command.RetrieveSimilarCasesReturnValue):
+    pass
 
 
 class RetrieveCaseTypeStatsRequestBody(PydanticBaseModel):
@@ -187,7 +197,7 @@ def create_case_endpoints(
                     user=user,
                     obj_id1=case_type_set_id,
                     association_objs=request_body.case_type_set_members,
-                    props={"return_id": False},
+                    return_id=False,
                 ),
             ),
         )
@@ -214,7 +224,7 @@ def create_case_endpoints(
                     user=user,
                     obj_id1=col_set_id,
                     association_objs=request_body.col_set_members,
-                    props={"return_id": False},
+                    return_id=False,
                 ),
             ),
         )
@@ -368,6 +378,30 @@ def create_case_endpoints(
         )
 
     @router.post(
+        "/retrieve/case_cohort_links_by_case_type",
+        operation_id="retrieve__case_cohort_links_by_case_type",
+        name="Retrieve case cohort IDs by case type",
+        description=command.RetrieveCaseCohortLinksByCaseTypeCommand.__doc__,
+    )
+    async def retrieve__case_cohort_links_by_case_type(
+        user: registered_user_dependency,  # type: ignore
+        request_body: RetrieveCaseCohortLinksByCaseTypeRequestBody,
+    ) -> list[model.CaseCohortLink]:
+        return cast(
+            list[model.CaseCohortLink],
+            handle_command(
+                app=app,
+                user=user,
+                exception_code="b3c912d7",
+                input_handle_exception=handle_exception,
+                input_command=command.RetrieveCaseCohortLinksByCaseTypeCommand(
+                    user=user,
+                    case_type_id=request_body.case_type_id,
+                ),
+            ),
+        )
+
+    @router.post(
         "/retrieve/cases_by_ids",
         operation_id="retrieve__cases_by_ids",
         name="Retrieve cases by IDs",
@@ -475,10 +509,10 @@ def create_case_endpoints(
     )
     async def retrieve__similar_cases(
         user: registered_user_dependency, request_body: RetrieveSimilarCasesRequestBody  # type: ignore
-    ) -> list[UUID]:
+    ) -> RetrieveSimilarCasesResponseBody:
         return cast(
-            list[UUID],
-            await handle_command(
+            RetrieveSimilarCasesResponseBody,
+            handle_command(
                 app=app,
                 user=user,
                 exception_code="e4c2e1b2",
@@ -486,9 +520,9 @@ def create_case_endpoints(
                 input_command=command.RetrieveSimilarCasesCommand(
                     user=user,
                     case_type_id=request_body.case_type_id,
-                    max_distance=request_body.max_distance,
                     case_ids=request_body.case_ids,
                     genetic_distance_col_id=request_body.genetic_distance_col_id,
+                    max_distance=request_body.max_distance,
                 ),
             ),
         )
@@ -520,7 +554,7 @@ def create_case_endpoints(
                     case_type_id=case_type_id,
                     genetic_sequence_col_id=(genetic_sequence_col_id),
                     case_ids=case_ids,
-                )
+                ),
             )
         except Exception as exception:
             handle_exception(  # type: ignore[call-arg]

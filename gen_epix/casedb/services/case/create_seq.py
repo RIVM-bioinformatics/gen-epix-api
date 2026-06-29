@@ -25,7 +25,7 @@ def case_service_create_file_for_read_set_or_seq(
     elif isinstance(cmd, command.CreateFileForSeqCommand):
         is_read_set = False
     else:
-        raise exc.InvalidArgumentsError("Invalid command type")
+        raise exc.InvalidArgumentsError("8b764853", "Invalid command type")
 
     # Retrieve case ABAC
     case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
@@ -41,7 +41,7 @@ def case_service_create_file_for_read_set_or_seq(
         # Retrieve ReadSet or Seq ID from case content
         if cmd.col_id not in case.content:
             raise exc.InvalidArgumentsError(
-                "No ReadSet linked to case for the given Col"
+                "b5acc6e9", "No ReadSet linked to case for the given Col"
             )
         read_set_or_seq_id = UUID(case.content[cmd.col_id])
 
@@ -55,16 +55,23 @@ def case_service_create_file_for_read_set_or_seq(
                 obj_ids=read_set_or_seq_id,
             )
         )
+        # Compute file hash before checking existing links to enable
+        # idempotent re-uploads (same content → return existing file_id).
+        file_hash = _get_hash_uuid(cmd.file_content, cmd.file_compression)
         if cmd.is_fwd and read_set.fwd_file_id is not None:
+            if read_set.fwd_reads_hash == file_hash:
+                return read_set.fwd_file_id
             raise exc.InvalidArgumentsError(
-                "The ReadSet already has a forward file linked"
+                "d0a23cd0",
+                "The ReadSet already has a forward file linked with different content",
             )
         if not cmd.is_fwd and read_set.rev_file_id is not None:
+            if read_set.rev_reads_hash == file_hash:
+                return read_set.rev_file_id
             raise exc.InvalidArgumentsError(
-                "The ReadSet already has a reverse file linked"
+                "30150932",
+                "The ReadSet already has a reverse file linked with different content",
             )
-        # Compute file hash then create file
-        file_hash = _get_hash_uuid(cmd.file_content, cmd.file_compression)
         file_id = _create_file(self, cmd)
         # Update ReadSet with file ID and hash
         if cmd.is_fwd:
@@ -73,6 +80,7 @@ def case_service_create_file_for_read_set_or_seq(
         else:
             read_set.rev_file_id = file_id
             read_set.rev_reads_hash = file_hash
+        read_set.file_format = cmd.file_format
         self.app.handle(
             seqdb_command.ReadSetCrudCommand(
                 user=cmd.user,
@@ -90,14 +98,21 @@ def case_service_create_file_for_read_set_or_seq(
                 obj_ids=read_set_or_seq_id,
             )
         )
-        if seq.file_id is not None:
-            raise exc.InvalidArgumentsError("The Seq already has a file linked")
-        # Compute file hash then create file
+        # Compute file hash before checking existing link to enable
+        # idempotent re-uploads (same content → return existing file_id).
         file_hash = _get_hash_uuid(cmd.file_content, cmd.file_compression)
+        if seq.file_id is not None:
+            if seq.file_hash == file_hash:
+                return seq.file_id
+            raise exc.InvalidArgumentsError(
+                "dd752d19",
+                "The Seq already has a file linked with different content",
+            )
         file_id = _create_file(self, cmd)
         # Update Seq with file ID and hash
         seq.file_id = file_id
         seq.file_hash = file_hash
+        seq.file_format = cmd.file_format
         self.app.handle(
             seqdb_command.SeqCrudCommand(
                 user=cmd.user,
@@ -123,7 +138,7 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
     col_ids: list[UUID],
 ) -> list[model.Case]:
     # Get Col and RefCol data
-    cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
+    cols: list[model.Col] = self.repository.crud(
         uow,
         user_id,
         model.Col,
@@ -134,7 +149,7 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
 
     # Get RefCol data
     ref_col_ids: set[UUID] = {x.ref_col_id for x in cols}
-    ref_cols: list[model.RefCol] = self.repository.crud(  # type: ignore[assignment]
+    ref_cols: list[model.RefCol] = self.repository.crud(
         uow,
         user_id,
         model.RefCol,
@@ -153,7 +168,7 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
     elif isinstance(cmd, command.CreateFileForSeqCommand):
         expected_col_type = enum.ColType.GENETIC_SEQUENCE
     else:
-        raise exc.InvalidArgumentsError("Invalid command type")
+        raise exc.InvalidArgumentsError("1c4b839d", "Invalid command type")
     invalid_col_ids = [
         x.ref_col_id
         for x in cols
@@ -162,11 +177,12 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
     if invalid_col_ids:
         invalid_col_ids_str = ", ".join(str(x) for x in invalid_col_ids)
         raise exc.InvalidArgumentsError(
-            f"Some columns are not of type {expected_col_type.name}: {invalid_col_ids_str}"
+            "4f1a5c97",
+            f"Some columns are not of type {expected_col_type.name}: {invalid_col_ids_str}",
         )
 
     # Get Case data
-    cases: list[model.Case] = self.repository.crud(  # type: ignore[assignment]
+    cases: list[model.Case] = self.repository.crud(
         uow,
         user_id,
         model.Case,
@@ -182,7 +198,8 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
     if invalid_col_ids:
         invalid_col_ids_str = ", ".join(str(x) for x in invalid_col_ids)
         raise exc.InvalidArgumentsError(
-            f"Some Col IDs are for a different CaseType than the given cases: {invalid_col_ids_str}"
+            "d258a460",
+            f"Some Col IDs are for a different CaseType than the given cases: {invalid_col_ids_str}",
         )
 
     # @ABAC: Verify write rights to Col for each case
@@ -209,7 +226,8 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
                 writable_data_collections_by_col[col_id]
             ):
                 raise exc.UnauthorizedAuthError(
-                    "User has no WRITE_CASE access to the specified column in any data collection of the case"
+                    "7c74259b",
+                    "User has no WRITE_CASE access to the specified column in any data collection of the case",
                 )
     return cases
 

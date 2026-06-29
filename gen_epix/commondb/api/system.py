@@ -14,6 +14,7 @@ from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.domain.model.system import PackageMetadata
 from gen_epix.fastapp import App, LogLevel
 from gen_epix.fastapp.api import CrudEndpointGenerator
+from gen_epix.fastapp.middleware.limiter import limiter
 
 external_logger_fmap = exc.get_logger_fmap(logging.getLogger("commondb.external"))
 
@@ -23,7 +24,7 @@ class HealthStatus(Enum):
     UNHEALTHY = "UNHEALTHY"
 
 
-class HealthReponseBody(PydanticBaseModel):
+class HealthResponseBody(PydanticBaseModel):
     status: HealthStatus
 
 
@@ -68,12 +69,13 @@ def create_system_endpoints(
         operation_id="health",
         name="Health",
     )
-    async def get__health() -> HealthReponseBody:
+    @limiter.exempt
+    async def get__health() -> HealthResponseBody:
         """
         Returns the health status of the service. If no response is received
         within the timeout period, the service is considered unhealthy.
         """
-        return HealthReponseBody(
+        return HealthResponseBody(
             status=HealthStatus.HEALTHY,
         )
 
@@ -89,7 +91,9 @@ def create_system_endpoints(
         """
         try:
             cmd = command.RetrieveFeatureFlagsCommand(user=None)
-            feature_flags: dict[Hashable, bool] = await run_in_threadpool(app.handle, cmd)
+            feature_flags: dict[Hashable, bool] = await run_in_threadpool(
+                app.handle, cmd
+            )
             retval = {
                 str(x.value) if isinstance(x, Enum) else str(x): y
                 for x, y in feature_flags.items()
@@ -110,7 +114,9 @@ def create_system_endpoints(
     ) -> list[model.PackageMetadata]:
         try:
             cmd = command.RetrieveLicensesCommand(user=None)
-            retval: list[model.PackageMetadata] = await run_in_threadpool(app.handle, cmd)
+            retval: list[model.PackageMetadata] = await run_in_threadpool(
+                app.handle, cmd
+            )
         except Exception as exception:
             handle_exception("6ba2c4ca", None, exception)
         return retval

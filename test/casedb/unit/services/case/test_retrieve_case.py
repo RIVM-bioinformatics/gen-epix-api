@@ -18,6 +18,7 @@ from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.retrieve_case import (
+    case_service_retrieve_case_cohort_links_by_case_type,
     case_service_retrieve_cases_by_id,
     case_service_retrieve_cases_by_query,
 )
@@ -60,6 +61,10 @@ class BaseRetrieveCaseTestCase(TestCase):
         self.case_id2: UUID = UUID("550e8400-e29b-41d4-a716-446655440002")
         self.case_set_id1: UUID = UUID("550e8400-e29b-41d4-a716-446655440101")
         self.case_set_id2: UUID = UUID("550e8400-e29b-41d4-a716-446655440102")
+        self.cohort_id1: UUID = UUID("550e8400-e29b-41d4-a716-446655440201")
+        self.cohort_id2: UUID = UUID("550e8400-e29b-41d4-a716-446655440202")
+        self.cohort_definition_id1: UUID = UUID("550e8400-e29b-41d4-a716-446655440301")
+        self.cohort_definition_id2: UUID = UUID("550e8400-e29b-41d4-a716-446655440302")
         self.data_collection_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440501")
 
         # Service and repository mocks
@@ -700,6 +705,63 @@ class TestRetrieveCasesById(BaseRetrieveCaseTestCase):
 
         # 4. Verify
         assert [x.id for x in result] == [self.case_id1]
+
+
+@pytest.mark.scenario_ids("TC-SEC-29-02")
+class TestRetrieveCaseCohortLinksByCaseType(BaseRetrieveCaseTestCase):
+    """Tests covering case_service_retrieve_case_cohort_links_by_case_type."""
+
+    def test_happy_path_returns_all_with_identity_cohort_mapping(self) -> None:
+        # Only case IDs are fetched (read_fields); no full Case objects loaded.
+        # 1. Input
+        cmd: command.RetrieveCaseCohortLinksByCaseTypeCommand = (
+            command.RetrieveCaseCohortLinksByCaseTypeCommand(
+                user=self.user, case_type_id=self.case_type_id
+            )
+        )
+
+        # 2. Mocks: read_fields returns (id,) tuples — no content fields
+        self.repository.read_fields = Mock(
+            return_value=[
+                (self.case_id1, {self.cohort_id1: self.cohort_definition_id1}),
+                (self.case_id2, {self.cohort_id2: self.cohort_definition_id2}),
+            ]
+        )
+
+        # 3. Execute
+        result: list[model.CaseCohortLink] = (
+            case_service_retrieve_case_cohort_links_by_case_type(self.service, cmd)
+        )
+
+        # 4. Verify: two entries, identity mapping, no full-case or CaseType lookup
+        assert len(result) == 2
+        assert result[0].case_id == self.case_id1
+        assert result[0].cohort_id == self.cohort_id1
+        assert result[0].cohort_definition_id == self.cohort_definition_id1
+        assert result[1].case_id == self.case_id2
+        assert result[1].cohort_id == self.cohort_id2
+        assert result[1].cohort_definition_id == self.cohort_definition_id2
+        assert self.repository.read_fields.call_count == 1
+        assert self.repository.crud.call_count == 0
+
+    def test_empty_cases_returns_empty_list(self) -> None:
+        # 1. Input
+        cmd: command.RetrieveCaseCohortLinksByCaseTypeCommand = (
+            command.RetrieveCaseCohortLinksByCaseTypeCommand(
+                user=self.user, case_type_id=self.case_type_id
+            )
+        )
+
+        # 2. Mocks
+        self.repository.read_fields = Mock(return_value=[])
+
+        # 3. Execute
+        result: list[model.CaseCohortLink] = (
+            case_service_retrieve_case_cohort_links_by_case_type(self.service, cmd)
+        )
+
+        # 4. Verify
+        assert result == []
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")

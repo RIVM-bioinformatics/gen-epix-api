@@ -1,18 +1,18 @@
-from collections.abc import Hashable, Iterable
+from collections.abc import Iterable
 from typing import Any
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.service import BaseSeqdbService
 from gen_epix.commondb.domain.enum import AppType
-from gen_epix.commondb.services import CommondbRemoteApp
-from gen_epix.fastapp import App, Model
+from gen_epix.fastapp import App
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import command as seqdb_command
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.seqdb.domain.model import User as SeqdbUser
 from gen_epix.seqdb.env import AppComposer as SeqdbAppComposer
+from gen_epix.seqdb.services.remote_app import SeqdbRemoteApp
 
 
 class SeqdbService(BaseSeqdbService):
@@ -32,7 +32,7 @@ class SeqdbService(BaseSeqdbService):
         seqdb_local_app_props = kwargs.pop("seqdb_local_app", {})
         seqdb_remote_app_props = kwargs.pop("seqdb_remote_app", {})
         super().__init__(app, **kwargs)
-        seqdb_app, seqdb_user = CommondbRemoteApp.create_local_or_remote_app(
+        seqdb_app, seqdb_user = SeqdbRemoteApp.create_local_or_remote_app(
             AppType.SEQDB,
             app_setup_type=seqdb_app_type,
             local_app_props=seqdb_local_app_props,
@@ -122,9 +122,7 @@ class SeqdbService(BaseSeqdbService):
         cmd.user = user
         return result
 
-    def crud(
-        self, cmd: command.CrudCommand
-    ) -> Hashable | list[Hashable] | Model | list[Model] | bool | list[bool] | None:
+    def crud(self, cmd: command.CrudCommand) -> Any:
         """
         Generic CRUD operation handler that forwards the command to seqdb while
         setting the functional user.

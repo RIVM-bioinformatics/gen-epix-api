@@ -2,9 +2,10 @@ from datetime import datetime
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from gen_epix import fastapp
+from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import Model
 from gen_epix.fastapp.domain import Entity
 from gen_epix.filter import TypedCompositeFilter, TypedDatetimeRangeFilter
@@ -174,6 +175,27 @@ class CaseQueryResult(Model):
     )
 
 
+class CaseCohortLink(Model):
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="case_cohort_links",
+        persistable=False,
+    )
+    case_id: UUID = Field(description="The ID of the case.")
+    cohort_id: UUID = Field(
+        description="The ID of the omopdb cohort linked to this case.",
+    )
+    cohort_definition_id: UUID = Field(
+        description="The ID of the omopdb cohort definition linked to this case.",
+    )
+
+    def is_null(self) -> bool:
+        """
+        Whether the link is a null link, i.e. the case has no linked cohort. This is
+        indicated by NULL_ID as the cohort_id and cohort_definition_id.
+        """
+        return self.cohort_id == NULL_ID and self.cohort_definition_id == NULL_ID
+
+
 class RefDataAccess(Model):
     """
     Describes the reference data that a user has access to. This is a lightweight
@@ -271,3 +293,12 @@ class RefDataAccess(Model):
             key=field_name,
             members=members,
         )
+
+
+class CaseIdAndDate(BaseModel):
+    """
+    Represents a case with its ID and date.
+    """
+
+    id: UUID = Field(description="The case ID.")
+    case_date: datetime = Field(description="The case date, if any.")

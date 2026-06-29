@@ -71,7 +71,7 @@ def oauth_server() -> Generator[ServerManager, None, None]:
     """Start OAuth server and create CASEDB_FOR_SEQDB client."""
     with ServerManager(
         service=ServerType.OAUTH,
-        port=9000,
+        port=5443,
         ssl_keyfile=SSL_KEYFILE,
         ssl_certfile=SSL_CERTFILE,
     ) as server:
@@ -154,7 +154,7 @@ def test_casedb_seqdb_connection(
 
     try:
         with httpx.Client(timeout=5.0, verify=SSL_CERTFILE) as client:
-            response = client.get(f"{protocol}://localhost:9000/health")
+            response = client.get(f"{protocol}://localhost:5443/health")
             assert response.status_code == 200
             logging.info("✅ OAuth server is accessible")
     except Exception as e:
@@ -173,7 +173,7 @@ def test_casedb_seqdb_connection(
     try:
         with httpx.Client(timeout=5.0, verify=SSL_CERTFILE) as client:
             response = client.get(
-                f"{protocol}://localhost:9000/.well-known/openid-configuration"
+                f"{protocol}://localhost:5443/.well-known/openid-configuration"
             )
             assert response.status_code == 200
             discovery_data = response.json()
@@ -247,15 +247,18 @@ def test_casedb_seqdb_connection(
                     )
                 )
                 is_phylogenetic_tree_retrieved = True
-                similar_case_ids: list[UUID] = casedb_app.handle(
-                    command.RetrieveSimilarCasesCommand(
-                        user=root_user,
-                        case_type_id=col.case_type_id,
-                        genetic_distance_col_id=col.id,
-                        case_ids=case_ids[0:5],
-                        max_distance=5,
+                similar_cases: command.RetrieveSimilarCasesReturnValue = (
+                    casedb_app.handle(
+                        command.RetrieveSimilarCasesCommand(
+                            user=root_user,
+                            case_type_id=col.case_type_id,
+                            genetic_distance_col_id=col.id,
+                            case_ids=case_ids[0:5],
+                            max_distance=5,
+                        )
                     )
                 )
+                similar_case_ids = [x.id for x in similar_cases.cases]
                 if len(similar_case_ids) > 0:
                     is_similar_cases_retrieved = True
                 break

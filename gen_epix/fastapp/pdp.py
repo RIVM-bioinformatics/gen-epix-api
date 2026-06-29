@@ -36,7 +36,8 @@ class PolicyDecisionPoint:
             self._policies[command_class][timing] = []
         if policy in self._policies[command_class][timing]:
             raise exc.InitializationServiceError(
-                f"Policy {policy} already registered for command class {command_class} and timing {timing}"
+                "96738faa",
+                f"Policy {policy} already registered for command class {command_class} and timing {timing}",
             )
         self._policies[command_class][timing].append(policy)
 
@@ -51,16 +52,18 @@ class PolicyDecisionPoint:
         """
         if command_class not in self._policies:
             raise exc.InitializationServiceError(
-                f"No policies registered for command class {command_class}"
+                "380afa27", f"No policies registered for command class {command_class}"
             )
         if timing is not None:
             if timing not in self._policies[command_class]:
                 raise exc.InitializationServiceError(
-                    f"No policies registered for command class {command_class} and timing {timing}"
+                    "9ca24301",
+                    f"No policies registered for command class {command_class} and timing {timing}",
                 )
             if policy not in self._policies[command_class][timing]:
                 raise exc.InitializationServiceError(
-                    f"Policy {policy} not registered for command class {command_class} and timing {timing}"
+                    "52274845",
+                    f"Policy {policy} not registered for command class {command_class} and timing {timing}",
                 )
             self._policies[command_class][timing].remove(policy)
         else:
@@ -71,7 +74,8 @@ class PolicyDecisionPoint:
                     self._policies[command_class][timing].remove(policy)
             if not has_policy:
                 raise exc.InitializationServiceError(
-                    f"Policy {policy} not registered for command class {command_class}, any timing"
+                    "8674aea7",
+                    f"Policy {policy} not registered for command class {command_class}, any timing",
                 )
 
     def get_policies(
@@ -98,7 +102,8 @@ class PolicyDecisionPoint:
             for policy in policies:
                 if not policy.is_allowed(cmd):
                     raise policy.get_is_denied_exception()(
-                        f"Policy {policy.__class__.__name__} denied {cmd.__class__.__name__} command {cmd}"
+                        f"Policy {policy.__class__.__name__} denied"
+                        f" {cmd.__class__.__name__} command {cmd.id}"
                     )
             return None
         elif timing == EventTiming.DURING:

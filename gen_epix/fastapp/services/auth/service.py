@@ -111,7 +111,7 @@ class AuthService(BaseAuthService):
                 except exc.UnauthorizedAuthError:
                     continue
         # No valid user found for any of the IDP clients
-        raise exc.UnauthorizedAuthError()
+        raise exc.UnauthorizedAuthError("665ae487")
 
     def create_user_dependencies(
         self,
@@ -139,8 +139,8 @@ class AuthService(BaseAuthService):
                 f"maximum supported number ({self._MAX_N_IDP_CLIENTS})"
             )
             if self._logger:
-                self._logger.error(self.create_log_message("d6f4ede7", msg))
-            raise exc.InitializationServiceError(msg)
+                self._logger.error(self.create_log_message("ba1e6d14", msg))
+            raise exc.InitializationServiceError("194759ad", msg)
         idp_client_list = self._idp_clients + (
             [None] * (self._MAX_N_IDP_CLIENTS - n_idp_clients)
         )
@@ -153,7 +153,7 @@ class AuthService(BaseAuthService):
             if claims_0:
                 return await self.get_existing_user_from_claims(claims_0)
             self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError()
+            raise exc.UnauthorizedAuthError("93e20d00")
 
         async def get_new_user1(
             request: Request,
@@ -163,7 +163,7 @@ class AuthService(BaseAuthService):
             if claims_0:
                 return await self.get_new_user_from_claims(claims_0)
             self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError()
+            raise exc.UnauthorizedAuthError("0bc81b09")
 
         async def get_idp_user1(
             request: Request,
@@ -173,7 +173,7 @@ class AuthService(BaseAuthService):
             if claims_0:
                 return await self.get_idp_user_from_claims(claims_0)
             self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError()
+            raise exc.UnauthorizedAuthError("94254114")
 
         async def get_current_user2(
             request: Request,
@@ -186,7 +186,7 @@ class AuthService(BaseAuthService):
             if claims_1:
                 return await self.get_existing_user_from_claims(claims_1)
             self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError()
+            raise exc.UnauthorizedAuthError("45a21268")
 
         async def get_new_user2(
             request: Request,
@@ -199,7 +199,7 @@ class AuthService(BaseAuthService):
             if claims_1:
                 return await self.get_new_user_from_claims(claims_1)
             self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError()
+            raise exc.UnauthorizedAuthError("55fcd25b")
 
         async def get_idp_user2(
             request: Request,
@@ -212,7 +212,7 @@ class AuthService(BaseAuthService):
             if claims_1:
                 return await self.get_idp_user_from_claims(claims_1)
             self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError()
+            raise exc.UnauthorizedAuthError("6f9e825f")
 
         async def get_current_user3(
             request: Request,
@@ -228,7 +228,7 @@ class AuthService(BaseAuthService):
             if claims_2:
                 return await self.get_existing_user_from_claims(claims_2)
             self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError()
+            raise exc.UnauthorizedAuthError("5c471bf9")
 
         async def get_new_user3(
             request: Request,
@@ -244,7 +244,7 @@ class AuthService(BaseAuthService):
             if claims_2:
                 return await self.get_new_user_from_claims(claims_2)
             self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError()
+            raise exc.UnauthorizedAuthError("2cc43625")
 
         async def get_idp_user3(
             request: Request,
@@ -260,7 +260,7 @@ class AuthService(BaseAuthService):
             if claims_2:
                 return await self.get_idp_user_from_claims(claims_2)
             self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError()
+            raise exc.UnauthorizedAuthError("5b18f27e")
 
         async def get_current_user4(
             request: Request,
@@ -279,7 +279,7 @@ class AuthService(BaseAuthService):
             if claims_3:
                 return await self.get_existing_user_from_claims(claims_3)
             self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError()
+            raise exc.UnauthorizedAuthError("ee9803d2")
 
         async def get_new_user4(
             request: Request,
@@ -298,7 +298,7 @@ class AuthService(BaseAuthService):
             if claims_3:
                 return await self.get_new_user_from_claims(claims_3)
             self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError()
+            raise exc.UnauthorizedAuthError("8bcef011")
 
         async def get_idp_user4(
             request: Request,
@@ -317,7 +317,7 @@ class AuthService(BaseAuthService):
             if claims_3:
                 return await self.get_idp_user_from_claims(claims_3)
             self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError()
+            raise exc.UnauthorizedAuthError("4c7b18ec")
 
         async def get_current_user5(
             request: Request,
@@ -339,7 +339,7 @@ class AuthService(BaseAuthService):
             if claims_4:
                 return await self.get_existing_user_from_claims(claims_4)
             self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError()
+            raise exc.UnauthorizedAuthError("af2370e8")
 
         async def get_new_user5(
             request: Request,
@@ -361,7 +361,7 @@ class AuthService(BaseAuthService):
             if claims_4:
                 return await self.get_new_user_from_claims(claims_4)
             self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError()
+            raise exc.UnauthorizedAuthError("d4a829df")
 
         async def get_idp_user5(
             request: Request,
@@ -383,7 +383,7 @@ class AuthService(BaseAuthService):
             if claims_4:
                 return await self.get_idp_user_from_claims(claims_4)
             self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError()
+            raise exc.UnauthorizedAuthError("be1b8ad7")
 
         get_idp_user_functions = [
             get_idp_user1,
@@ -419,7 +419,8 @@ class AuthService(BaseAuthService):
         user_manager = self.app.user_manager
         if not user_manager:
             raise exc.InitializationServiceError(
-                "No authentication services configured and no user generator provided"
+                "b44906d1",
+                "No authentication services configured and no user generator provided",
             )
         self._no_auth_user = user_manager.create_root_user_from_claims({})
 
@@ -446,7 +447,7 @@ class AuthService(BaseAuthService):
                 if user:
                     return user
             raise exc.UnauthorizedAuthError(
-                "Unable to create user due to missing header or claims"
+                "05dcbc82", "Unable to create user due to missing header or claims"
             )
 
         registered_user_dependency: model.User = Annotated[  # type: ignore
@@ -488,7 +489,7 @@ class AuthService(BaseAuthService):
             )
             if self._logger:
                 self._logger.error(self.create_log_message("d6f4ede7", msg))
-            raise exc.InitializationServiceError(msg)
+            raise exc.InitializationServiceError("7341942b", msg)
         registered_user_dependency: model.User = Annotated[  # type: ignore
             model.User,
             Security(
@@ -565,7 +566,9 @@ class AuthService(BaseAuthService):
                             claim_keys=sorted(list(claims.claims.keys())),
                         )
                     )
-                raise exc.UnauthorizedAuthError("Unable to create user from claims")
+                raise exc.UnauthorizedAuthError(
+                    "1dabe07d", "Unable to create user from claims"
+                )
         else:
             # No user manager configured, create user obj directly from claims
             new_user = model.User(**claims.claims)  # type: ignore
@@ -602,7 +605,8 @@ class AuthService(BaseAuthService):
                 )
             )
         raise exc.UnauthorizedAuthError(
-            f"Root tokens must have a lifetime of less than {self._root_token_time_to_live} seconds"
+            "bb487982",
+            f"Root tokens must have a lifetime of less than {self._root_token_time_to_live} seconds",
         )
 
     async def get_existing_user_from_claims(
@@ -675,7 +679,8 @@ class AuthService(BaseAuthService):
                 )
 
             raise exc.UnauthorizedAuthError(
-                "User does not exist and auto-creation is disabled"
+                "f14da79c",
+                f"User ({user_key}) does not exist and auto-creation is disabled",
             )
 
     def _auto_create_new_user(
@@ -690,7 +695,7 @@ class AuthService(BaseAuthService):
             user = user_manager.auto_create_new_user(claims.claims)
             if user is None:
                 raise exc.UnauthorizedAuthError(
-                    "Failed to auto-create user from claims"
+                    "61a09279", f"Failed to auto-create user ({user_key}) from claims"
                 )
             if self._logger:
                 self._logger.info(
@@ -715,7 +720,9 @@ class AuthService(BaseAuthService):
                         exception=exception,
                     )
                 )
-            raise exc.UnauthorizedAuthError("Failed to auto-create user from claims")
+            raise exc.UnauthorizedAuthError(
+                "daa7920f", f"Failed to auto-create user ({user_key}) from claims"
+            )
 
     def _generate_user_key_from_claims(
         self,
@@ -726,7 +733,7 @@ class AuthService(BaseAuthService):
     ) -> str:
         if not user_manager:
             # No user generator configured
-            raise exc.UnauthorizedAuthError()
+            raise exc.UnauthorizedAuthError("cd3d76d6")
 
         user_key = user_manager.get_user_key_from_claims(claims.claims)
         if not user_key and request_userinfo:
@@ -746,7 +753,7 @@ class AuthService(BaseAuthService):
                         user_key=user_key,
                     )
                 )
-            raise exc.UnauthorizedAuthError()
+            raise exc.UnauthorizedAuthError("fd116007")
         return user_key
 
     def _init_idp_client(
@@ -856,7 +863,7 @@ class AuthService(BaseAuthService):
                 msg = f"Authentication services do not have unique {key}: {duplicate_values_str}"
                 if app.logger:
                     app.logger.error(app.create_log_message("d4e8f3b1", msg))
-                raise exc.InitializationServiceError(msg)
+                raise exc.InitializationServiceError("85447b4a", msg)
 
     def _retry_pending_idp_clients(self) -> None:
         with self._pending_idp_clients_lock:

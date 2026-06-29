@@ -43,7 +43,7 @@ def case_service_crud_ref_col(
         with self.repository.uow() as uow:
             # Get dims
             ref_dim_ids = list({x.ref_dim_id for x in ref_cols})
-            ref_dims: list[model.RefDim] = self.repository.crud(  # type: ignore[assignment]
+            ref_dims: list[model.RefDim] = self.repository.crud(
                 uow,
                 cmd.user.id,
                 model.RefDim,
@@ -68,6 +68,7 @@ def case_service_crud_ref_col(
                     x.id for x in invalid_ref_col_ids if x.id is not None
                 ]
                 raise exc.InvalidArgumentsError(
+                    "f3ddee46",
                     "col_type must correspond to RefDim.dim_type",
                     ids=invalid_ref_col_ids,
                 )
@@ -75,7 +76,7 @@ def case_service_crud_ref_col(
 
     if cmd.is_update():
         with self.repository.uow() as uow:
-            existing_ref_cols: list[model.RefCol] = self.repository.crud(  # type: ignore[assignment]
+            existing_ref_cols: list[model.RefCol] = self.repository.crud(
                 uow,
                 cmd.user.id,
                 model.RefCol,
@@ -92,6 +93,7 @@ def case_service_crud_ref_col(
                     if x.ref_dim_id != y.ref_dim_id
                 ]
                 raise exc.InvalidArgumentsError(
+                    "d0bfffff",
                     "ref_dim_id is immutable and cannot be updated",
                     ids=invalid_ref_col_ids,
                 )
@@ -104,9 +106,12 @@ def case_service_crud_ref_col(
                     if x.col_type != y.col_type
                 ]
                 raise exc.InvalidArgumentsError(
+                    "e9033c17",
                     "col_type is immutable and cannot be updated",
                     ids=invalid_ref_col_ids,
                 )
         return self.crud(cmd)  # type: ignore[return-value]
 
-    raise exc.InvalidArgumentsError(f"Unsupported operation: {cmd.operation}")
+    raise exc.InvalidArgumentsError(
+        "d4d29edb", f"Unsupported operation: {cmd.operation}"
+    )

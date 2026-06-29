@@ -7,6 +7,7 @@ public methods, with strict isolation via mocking.
 
 from __future__ import annotations
 
+import datetime
 from unittest import TestCase
 from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
@@ -541,7 +542,7 @@ class BaseCaseValidatorTestCase(TestCase):
         case_contents: list[dict[UUID, str | None]],
     ) -> tuple[command.UploadCasesCommand, model.CaseBatchUploadResult]:
         # Use a single created_in_data_collection_id across all cases and the command
-        created_in_dc_id: UUID = uuid4()
+        created_in_data_collection_id: UUID = uuid4()
         cases_for_upload: list[model.CaseForUpload] = []
         case_results: list[model.CaseUploadResult] = []
         for content in case_contents:
@@ -549,7 +550,7 @@ class BaseCaseValidatorTestCase(TestCase):
                 id=uuid4(),
                 code=None,
                 case_type_id=self.case_type_id,
-                created_in_data_collection_id=created_in_dc_id,
+                created_in_data_collection_id=created_in_data_collection_id,
                 content=content,
             )
             cases_for_upload.append(model.CaseForUpload(case=c))
@@ -563,7 +564,7 @@ class BaseCaseValidatorTestCase(TestCase):
         batch = model.CaseBatchForUpload(cases=cases_for_upload)
         cmd = command.UploadCasesCommand(
             case_type_id=self.case_type_id,
-            created_in_data_collection_id=created_in_dc_id,
+            created_in_data_collection_id=created_in_data_collection_id,
             case_batch=batch,
         )
         retval = model.CaseBatchUploadResult(cases=case_results)
@@ -593,8 +594,8 @@ class TestValidateUnknownColumns(BaseCaseValidatorTestCase):
         assert len(data_issues_list[0]) == 1
         issue = data_issues_list[0][0]
         assert issue.col_id == unknown_col_id
-        assert issue.data_issue_type == DataIssueType.UNAUTHORIZED
-        assert issue.code == "a7b3f9d2"
+        assert issue.data_issue_type == DataIssueType.INVALID
+        assert issue.code == "ef8e4d6d"
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")
@@ -770,6 +771,21 @@ class TestCalculateCaseDate(BaseCaseValidatorTestCase):
             cmd, [retval.cases[0].validated_content], [retval.cases[0].data_issues]
         )
         assert len(retval.cases[0].data_issues) == 0
+
+    def test_uses_highest_resolution_col_when_multiple_time_cols_present(self) -> None:
+        validator = self._create_validator()
+        cmd, retval = self._make_cmd_and_result([{}])
+        # Both day and week present; day (higher resolution) must win
+        updated_contents: list[dict[UUID, str | None] | None] = [
+            {
+                self.time_day_col_id: "2024-03-15",
+                self.time_week_col_id: "2024-W01",  # would give 2024-01-01 if used
+            }
+        ]
+        validator.calculate_case_date(cmd, retval, updated_contents)
+        case = cmd.case_batch.cases[0].case
+        assert case is not None
+        assert case.case_date == datetime.datetime(2024, 3, 15)
 
     def test_case_date_updated_and_invalid_iso_raises(self) -> None:
         validator = self._create_validator()

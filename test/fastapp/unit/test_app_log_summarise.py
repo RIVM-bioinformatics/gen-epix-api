@@ -6,7 +6,7 @@ size limits.
 Fix index:
   7. Commands with large list fields (e.g. hundreds of case_ids in a
      RetrieveCasesByIdCommand) are summarised before being merged into the log
-     payload. Lists longer than _MAX_LIST_ITEMS_IN_LOG are replaced with
+     payload. Lists longer than App.DEFAULT_LOG_MAX_LIST_ITEMS are replaced with
      {"_count": N, "_sample": [first_n_items]} at every level of nesting.
 """
 
@@ -17,7 +17,7 @@ from uuid import UUID
 
 import pytest
 
-from gen_epix.fastapp.app import _summarise_command_object
+from gen_epix.fastapp.app import App
 from gen_epix.fastapp.log import LogItem
 from gen_epix.fastapp.model import Command, User
 
@@ -44,48 +44,60 @@ def _make_user() -> User:
 
 @pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_short_list_is_logged_verbatim() -> None:
-    """Lists with <= _MAX_LIST_ITEMS_IN_LOG items pass through unchanged."""
+    """Lists with <= App.DEFAULT_LOG_MAX_LIST_ITEMS items pass through unchanged."""
+    app = App(logger=None, log_item_class=LogItem)
     data = {"ids": ["a", "b", "c"]}
-    result = _summarise_command_object(data)
+    result = app._summarise_command_object_for_log(data)
     assert result == data
 
 
 @pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_long_list_is_summarised() -> None:
-    """Lists with > _MAX_LIST_ITEMS_IN_LOG items are replaced with a count+sample dict."""
+    """Lists with > App.DEFAULT_LOG_MAX_LIST_ITEMS items are replaced with a count+sample dict."""
+    app = App(logger=None, log_item_class=LogItem)
     long_list = [str(uuid.uuid4()) for _ in range(500)]
     data = {"case_ids": long_list}
 
-    result = _summarise_command_object(data)
+    result = app._summarise_command_object_for_log(data)
 
     summary = result["case_ids"]
     assert isinstance(summary, dict), "Long list must be replaced by a dict summary"
     assert summary["_count"] == 500
-    assert summary["_sample"] == long_list[:3]
+    assert summary["_sample"] == long_list[: App.DEFAULT_LOG_MAX_LIST_ITEMS]
 
 
 @pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_nested_long_list_is_summarised() -> None:
     """Long lists nested inside a dict field are also summarised."""
+    app = App(logger=None, log_item_class=LogItem)
     long_list = [str(uuid.uuid4()) for _ in range(200)]
     data = {"command": {"class": "SomeCommand", "object": {"ids": long_list}}}
 
-    result = _summarise_command_object(data)
+    result = app._summarise_command_object_for_log(data)
 
     summary = result["command"]["object"]["ids"]
     assert isinstance(summary, dict)
     assert summary["_count"] == 200
-    assert len(summary["_sample"]) == 3
+    assert len(summary["_sample"]) == App.DEFAULT_LOG_MAX_LIST_ITEMS
 
 
 @pytest.mark.scenario_ids("TC-LOG-01-01")
-def test_long_list_respects_configured_sample_items() -> None:
-    """Configured sample_items controls the number of sampled list elements."""
+def test_long_list_respects_configured_max_list_items() -> None:
+    """Configured max_list_items controls the summarization threshold and sample size."""
+    app = App(
+        logger=None,
+        log_item_class=LogItem,
+        cfg={
+            "log": {
+                "command_object_summarization": {"enabled": True, "max_list_items": 5}
+            }
+        },
+    )
     long_list = [str(uuid.uuid4()) for _ in range(50)]
-    result = _summarise_command_object({"ids": long_list}, max_items=5, sample_items=1)
+    result = app._summarise_command_object_for_log({"ids": long_list})
     summary = result["ids"]
     assert summary["_count"] == 50
-    assert summary["_sample"] == long_list[:1]
+    assert summary["_sample"] == long_list[:5]
 
 
 @pytest.mark.scenario_ids("TC-LOG-01-01")
@@ -122,7 +134,6 @@ def test_create_log_message_uses_configured_threshold_and_sample_size() -> None:
                 "command_object_summarization": {
                     "enabled": True,
                     "max_list_items": 2,
-                    "sample_items": 1,
                 }
             }
         },
@@ -135,36 +146,102 @@ def test_create_log_message_uses_configured_threshold_and_sample_size() -> None:
     parsed = json.loads(app.create_log_message("test1234", "STARTED_COMMAND", cmd=cmd))
     summary = parsed["command"]["object"]["case_ids"]
     assert summary["_count"] == 3
-    assert len(summary["_sample"]) == 1
+    assert len(summary["_sample"]) == 2
 
 
 @pytest.mark.scenario_ids("TC-LOG-01-01")
-def test_create_log_message_invalid_config_falls_back_to_defaults() -> None:
-    """Invalid config values fall back to default summarization settings."""
-    from gen_epix.fastapp.app import App
+def test_large_dict_is_summarised() -> None:
+    """Dicts with more than DEFAULT_LOG_MAX_DICT_ITEMS entries (e.g. locus_allele_id_map)
+    are replaced with a _count/_sample summary, even when individual values are short.
+    """
+    app = App(logger=None, log_item_class=LogItem)
+    large_map = {f"LOCUS_{i:04d}": str(uuid.uuid4()) for i in range(500)}
+    result = app._summarise_command_object_for_log({"locus_allele_id_map": large_map})
+    summary = result["locus_allele_id_map"]
+    assert isinstance(summary, dict)
+    assert summary["_count"] == 500
+    assert len(summary["_sample"]) == App.DEFAULT_LOG_MAX_LIST_ITEMS
+    assert "_count" not in summary["_sample"]
 
+
+@pytest.mark.scenario_ids("TC-LOG-01-01")
+def test_small_dict_passes_through() -> None:
+    """Dicts at or below DEFAULT_LOG_MAX_DICT_ITEMS entries are not modified."""
+    app = App(logger=None, log_item_class=LogItem)
+    small_map = {
+        f"k{i}": str(uuid.uuid4()) for i in range(App.DEFAULT_LOG_MAX_DICT_ITEMS)
+    }
+    result = app._summarise_command_object_for_log({"mapping": small_map})
+    assert result["mapping"] == small_map
+
+
+@pytest.mark.scenario_ids("TC-LOG-01-01")
+def test_long_string_is_truncated() -> None:
+    """Strings longer than DEFAULT_LOG_MAX_STRING_LENGTH are shortened to a
+    prefix with a suffix showing the total character count; they are NOT
+    replaced by the _count/_sample dict pattern used for lists."""
+    app = App(logger=None, log_item_class=LogItem)
+    long_str = "x" * 500
+    result = app._summarise_command_object_for_log({"content": long_str})
+    truncated = result["content"]
+    assert isinstance(
+        truncated, str
+    ), "Truncated string must remain a string, not a dict"
+    assert len(truncated) < len(long_str)
+    assert truncated.startswith("x" * App.DEFAULT_LOG_MAX_STRING_LENGTH)
+    assert "[500 chars]" in truncated
+
+
+@pytest.mark.scenario_ids("TC-LOG-01-01")
+def test_short_string_passes_through() -> None:
+    """Strings at or below DEFAULT_LOG_MAX_STRING_LENGTH are not modified."""
+    app = App(logger=None, log_item_class=LogItem)
+    short_str = "x" * App.DEFAULT_LOG_MAX_STRING_LENGTH
+    result = app._summarise_command_object_for_log({"content": short_str})
+    assert result["content"] == short_str
+
+
+@pytest.mark.scenario_ids("TC-LOG-01-01")
+def test_long_string_respects_configured_max_string_length() -> None:
+    """Config key max_string_length controls both the truncation threshold and
+    the length of the preserved prefix."""
     app = App(
         logger=None,
         log_item_class=LogItem,
         cfg={
             "log": {
                 "command_object_summarization": {
-                    "enabled": "not-a-bool",
-                    "max_list_items": "not-an-int",
-                    "sample_items": -7,
+                    "enabled": True,
+                    "max_string_length": 20,
                 }
             }
         },
     )
-    cmd = _LargeListCommand(
-        case_ids=[uuid.uuid4() for _ in range(11)],
-        user=_make_user(),
-    )
+    long_str = "a" * 200
+    result = app._summarise_command_object_for_log({"seq": long_str})
+    truncated = result["seq"]
+    assert truncated.startswith("a" * 20)
+    assert "[200 chars]" in truncated
+    assert len(truncated) < len(long_str)
 
-    parsed = json.loads(app.create_log_message("test1234", "STARTED_COMMAND", cmd=cmd))
-    summary = parsed["command"]["object"]["case_ids"]
-    assert summary["_count"] == 11
-    assert len(summary["_sample"]) == 3
+
+@pytest.mark.scenario_ids("TC-LOG-01-01")
+def test_create_log_message_invalid_bool_config_raises() -> None:
+    """Invalid boolean config value raises InitializationServiceError."""
+    from gen_epix.fastapp.exc import InitializationServiceError
+
+    with pytest.raises(InitializationServiceError):
+        App(
+            logger=None,
+            log_item_class=LogItem,
+            cfg={
+                "log": {
+                    "command_object_summarization": {
+                        "enabled": "not-a-bool",
+                    }
+                }
+            },
+        )
 
 
 @pytest.mark.scenario_ids("TC-LOG-01-01")

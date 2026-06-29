@@ -1,7 +1,6 @@
 import json
 import sys
 from typing import Any, cast
-from uuid import UUID
 
 import numpy as np
 import scipy  # type: ignore[import-untyped]
@@ -29,13 +28,12 @@ def seq_service_calculate_phylogenetic_tree(
 
     # profiler = pyinstrument.Profiler(async_mode="enabled")
     # profiler.start()
-
     user_id = cmd.user.id if cmd.user else None
     seq_profile_ids = cmd.seq_profile_ids
     tree_algorithm = cmd.tree_algorithm
     protocol_id = cmd.protocol_id
     if len(set(seq_profile_ids)) != len(seq_profile_ids):
-        raise exc.InvalidArgumentsError("profile_ids must be unique")
+        raise exc.InvalidArgumentsError("f6ec74d0", "profile_ids must be unique")
     leaf_names = cmd.leaf_names if cmd.leaf_names else [str(x) for x in seq_profile_ids]
 
     # Handle transaction
@@ -43,16 +41,20 @@ def seq_service_calculate_phylogenetic_tree(
     seq_distances: list[model.SeqDistance]
     with repository.uow() as uow:
         # Filter provided seq_profile_ids by quality control result
-        seq_profile_ids: list[UUID] = (  # type: ignore[no-redef]
-            repository.filter_seq_profiles_by_quality(
-                uow,
-                seq_profile_ids=seq_profile_ids,
-                allowed_qc_results=cast(Any, cmd).allowed_qc_results,
-            )
-        )
+        # TODO: Fix filtering for sa_sql quality mixin enum conversion
+        # SA.QualityMixin.qc_result has Sa.String instead of sa.Integer.
+        # Even with sa.Integer it is stored as string.
+        # Sa.ContentMixin has a patermerized type (FormatType), which is handled differently. The issue may be here
+        # seq_profile_ids: list[UUID] = (  # type: ignore[no-redef]
+        #     repository.filter_seq_profiles_by_quality(
+        #         uow,
+        #         seq_profile_ids=seq_profile_ids,
+        #         allowed_qc_results=cast(Any, cmd).allowed_qc_results,
+        #     )
+        # )
 
         # Retrieve genetic distance protocol
-        protocol: model.Protocol = repository.crud(  # type: ignore[assignment]
+        protocol: model.Protocol = repository.crud(
             uow,
             user_id,
             model.Protocol,
@@ -73,7 +75,7 @@ def seq_service_calculate_phylogenetic_tree(
 
         # Retrieve distance matrix
         if tree_algorithm in enum.TreeAlgorithmSet.DISTANCE_BASED.value:
-            seq_distances = repository.crud(  # type: ignore[assignment]
+            seq_distances = repository.crud(
                 uow,
                 user_id,
                 model.SeqDistance,
@@ -93,7 +95,7 @@ def seq_service_calculate_phylogenetic_tree(
             )
         else:
             raise exc.InvalidArgumentsError(
-                f"{tree_algorithm.value} tree algorithm not yet implemented"
+                "1165f060", f"{tree_algorithm.value} tree algorithm not yet implemented"
             )
 
     # Stop transaction here, releasing resources, since the rest of the operations are in-memory and do not require database access. This also allows for better parallelisation if the tree calculation would be made asynchronous in the future, without the need to keep the transaction open for the entire duration of the tree calculation.
@@ -141,7 +143,8 @@ def seq_service_calculate_phylogenetic_tree(
                     condensed_distance_matrix[k] = distance
             else:
                 raise exc.InvalidArgumentsError(
-                    f"Distance format {seq_distance.format.name} is not supported"
+                    "6c579865",
+                    f"Distance format {seq_distance.format.name} is not supported",
                 )
 
         # Handle sequences with no stored distances
@@ -196,14 +199,15 @@ def seq_service_calculate_phylogenetic_tree(
                 newick_repr = tree.format("newick")
             else:
                 raise exc.InvalidArgumentsError(
-                    f"{tree_algorithm.value} tree algorithm not yet implemented"
+                    "adca965a",
+                    f"{tree_algorithm.value} tree algorithm not yet implemented",
                 )
         finally:
             # Always set recursion limit back to allow for larger trees
             sys.setrecursionlimit(sys_recursion_limit)
     else:
         raise exc.InvalidArgumentsError(
-            f"{tree_algorithm.value} tree algorithm not yet implemented"
+            "c6bcda1e", f"{tree_algorithm.value} tree algorithm not yet implemented"
         )
     phylogenetic_tree = model.PhylogeneticTree(
         id=self.generate_id(),  # type: ignore[arg-type]

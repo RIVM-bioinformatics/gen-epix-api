@@ -13,10 +13,18 @@ class BaseUnitOfWork(abc.ABC):
 
     @abc.abstractmethod
     def commit(self) -> None:
+        """
+        Commit the current transaction. This method should be implemented by subclasses
+        to define the specific behavior for committing a transaction.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
     def rollback(self) -> None:
+        """
+        Rollback the current transaction. This method should be implemented by subclasses
+        to define the specific behavior for rolling back a transaction.
+        """
         raise NotImplementedError()
 
     def flush(self) -> None:
@@ -37,4 +45,4 @@ class BaseUnitOfWork(abc.ABC):
             self.commit()
         else:
             self.rollback()
-            raise exception_class(exception_value).with_traceback(traceback)
+            raise exception_value.with_traceback(traceback)

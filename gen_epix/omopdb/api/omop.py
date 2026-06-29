@@ -19,6 +19,15 @@ class RetrievePersonsByIdsRequestBody(PydanticBaseModel):
     )
 
 
+class RetrieveSpecimenIdsByCohortIdsRequestBody(PydanticBaseModel):
+    cohort_definition_id: UUID = copy_model_field(
+        command.RetrieveSpecimenIdsByCohortIdsCommand, "cohort_definition_id"
+    )
+    cohort_ids: list[UUID] = copy_model_field(
+        command.RetrieveSpecimenIdsByCohortIdsCommand, "cohort_ids"
+    )
+
+
 def create_omop_endpoints(
     router: APIRouter | FastAPI,
     app: App,
@@ -95,6 +104,31 @@ def create_omop_endpoints(
                 input_command=command.RetrievePersonsByIdCommand(
                     user=user,
                     person_ids=request_body.person_ids,
+                ),
+            ),
+        )
+
+    @router.post(
+        "/retrieve/specimen_ids_by_cohort_ids",
+        operation_id="retrieve__specimen_ids_by_cohort_ids",
+        name="Retrieve specimen IDs by cohort IDs",
+        description=command.RetrieveSpecimenIdsByCohortIdsCommand.__doc__,
+    )
+    async def retrieve__specimen_ids_by_cohort_ids(
+        user: registered_user_dependency,  # type: ignore
+        request_body: RetrieveSpecimenIdsByCohortIdsRequestBody,
+    ) -> model.SpecimenIdsByCohortResult:
+        return cast(
+            model.SpecimenIdsByCohortResult,
+            handle_command(
+                app=app,
+                user=user,
+                exception_code="fac4d7a7",
+                input_handle_exception=handle_exception,
+                input_command=command.RetrieveSpecimenIdsByCohortIdsCommand(
+                    user=user,
+                    cohort_definition_id=request_body.cohort_definition_id,
+                    cohort_ids=request_body.cohort_ids,
                 ),
             ),
         )

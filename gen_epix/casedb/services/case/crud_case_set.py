@@ -107,11 +107,12 @@ def _validate_case_set_deletion(
     if is_delete_all:
         # Delete all not allowed due to potential large number of case sets
         raise exc.UnauthorizedAuthError(
-            f"Operation {cmd.operation.value} not allowed for case sets for this user"
+            "b5a9806f",
+            f"Operation {cmd.operation.value} not allowed for case sets for this user",
         )
         # Get all case sets and data collection links
     assert case_set_ids is not None
-    case_sets: list[model.CaseSet] = self.repository.crud(  # type: ignore[assignment]
+    case_sets: list[model.CaseSet] = self.repository.crud(
         uow,
         cmd.user.id,  # type: ignore[union-attr]
         model.CaseSet,
@@ -141,5 +142,6 @@ def _validate_case_set_deletion(
         )
         if not is_allowed:
             raise exc.UnauthorizedAuthError(
-                f"User {cmd.user.id} is not allowed to delete case set {case_set.id}"  # type: ignore[union-attr]
+                "020c35a9",
+                f"User {cmd.user.id} is not allowed to delete case set {case_set.id}",  # type: ignore[union-attr]
             )

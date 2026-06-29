@@ -72,7 +72,7 @@ def _validate_cols(
 
         # Get Dims
         dim_ids = list({x.dim_id for x in cols})
-        dims: list[model.Dim] = self.repository.crud(  # type: ignore[assignment]
+        dims: list[model.Dim] = self.repository.crud(
             uow,
             user.id,
             model.Dim,
@@ -85,7 +85,7 @@ def _validate_cols(
 
         # Get RefCols
         ref_col_ids: list[UUID] = list({x.ref_col_id for x in cols})
-        ref_cols: list[model.RefCol] = self.repository.crud(  # type: ignore[assignment]
+        ref_cols: list[model.RefCol] = self.repository.crud(
             uow,
             user.id,
             model.RefCol,
@@ -102,11 +102,13 @@ def _validate_cols(
             ref_col = ref_col_map[col.ref_col_id]
             if col.case_type_id != dim.case_type_id:
                 raise exc.InvalidArgumentsError(
+                    "0b7ce2a3",
                     "case_type_id must match case_type_id of Dim",
                     ids=[col.dim_id],
                 )
             if ref_col.ref_dim_id != dim.ref_dim_id:
                 raise exc.InvalidArgumentsError(
+                    "6636b283",
                     "ref_col.ref_dim_id must match ref_dim_id of Dim",
                     ids=[col.ref_col_id],
                 )  # type: ignore[return-value]

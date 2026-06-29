@@ -35,72 +35,64 @@ class BaseUserManager(abc.ABC):
     def construct_user_instance_from_claims(
         self, claims: dict[str, Any]
     ) -> model.User | None:
-        raise NotImplementedError
+        """Construct user instance from identity claims."""
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def create_root_user_from_claims(self, claims: dict[str, Any]) -> model.User:
-        raise NotImplementedError
+        """Create root user from identity claims."""
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def is_root_user_claims(self, claims: dict[str, Any]) -> bool:
-        raise NotImplementedError
+        """Check if claims belong to root user."""
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def is_root_user(self, user: model.User) -> bool:
-        raise NotImplementedError
+        """Check if user is root user."""
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def auto_create_new_user(self, claims: dict[str, Any]) -> model.User | None:
-        raise NotImplementedError
+        """Automatically create new user from claims."""
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def create_new_user_from_token(
         self, user: model.User, token: str, **kwargs: Any
     ) -> model.User:
-        raise NotImplementedError
+        """Create new user from token."""
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def is_existing_user_by_key(
         self, user_key: str | None, uow: BaseUnitOfWork
     ) -> bool:
-        """
-        Check if a user exists by their key.
-        """
+        """Check if a user exists by their key."""
         raise NotImplementedError()
 
     @abc.abstractmethod
     def retrieve_user_by_key(self, user_key: str) -> model.User:
-        """
-        Retrieve an existing user by their key.
-        """
+        """Retrieve an existing user by their key."""
         raise NotImplementedError()
 
     @abc.abstractmethod
     def retrieve_user_by_id(self, user_id: Hashable) -> model.User:
-        """
-        Retrieve an existing user by their id.
-        """
+        """Retrieve an existing user by their id."""
         raise NotImplementedError()
 
     @abc.abstractmethod
     def retrieve_user_permissions(self, user: model.User) -> set[model.Permission]:
-        """
-        Retrieve the permissions for a user instance.
-        """
+        """Retrieve the permissions for a user instance."""
         raise NotImplementedError()
 
     @abc.abstractmethod
     def get_user_name_from_claims(self, claims: dict[str, Any]) -> str | None:
-        """
-        Extract a user-friendly display name from raw claims (dict),
-        mirroring the AuthService.get_name_from_claims priority and handling
-        """
+        """Extract user-friendly display name from identity claims."""
         raise NotImplementedError()
 
     @abc.abstractmethod
     def update_user_name(self, user: model.User, new_name: str) -> model.User | None:
-        """
-        Update the user's name in the user manager.
-        This method should be implemented to update the user's name in the user manager.
-        """
+        """Update the user's name in the user manager."""
         raise NotImplementedError()

@@ -2,12 +2,16 @@
 name = "mock"
 label = "MOCK"
 protocol = "OIDC"
-discovery_url = "https://127.0.0.1:9000/.well-known/openid-configuration"
-client_id = "CASEDB_FOR_SEQDB"
-client_secret = "CASEDB_FOR_SEQDB_CLIENT_SECRET"
-scope = "openid profile"
-audience = "SEQDB"
+discovery_url = "https://127.0.0.1:5443/.well-known/openid-configuration"
+client_id = "mock"
+client_secret = "mock"
+scope = "openid profile email"
 public = true
+enable_introspection = false
+introspection_interval_seconds = 300
+introspection_timeout_seconds = 2
+introspection_auth_method = "client_secret_basic"
+ssl_context = false
 
 [service.auth.props.idps_cfg.claim_map]
 __key__ = "sub"
