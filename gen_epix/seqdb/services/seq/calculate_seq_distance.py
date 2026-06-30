@@ -12,7 +12,7 @@ from gen_epix.commondb.domain.enum import EtlStatus
 from gen_epix.fastapp import BaseUnitOfWork
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.exc import ConcurrentModificationError
-from gen_epix.filter import StringSetFilter
+from gen_epix.filter import NumberSetFilter
 from gen_epix.seqdb.domain import command, enum, exc, model
 from gen_epix.seqdb.domain.literal import (
     NEXTCLADE_NON_ACGTN_PATTERN,
@@ -181,11 +181,9 @@ def seq_service_calculate_seq_distances_for_new_profiles(
             user_id,
             model.Protocol,
             CrudOperation.READ_ALL,
-            # TODO: this should be an enum set filter
-            filter=StringSetFilter(
+            filter=NumberSetFilter(
                 key="seq_profile_type",
-                members=frozenset({x.name for x in seq_profile_types}),
-                case_sensitive=True,
+                members=frozenset({x.value for x in seq_profile_types}),
             ),
         )
         seq_profile_protocol_map = {
@@ -207,10 +205,9 @@ def seq_service_calculate_seq_distances_for_new_profiles(
             model.Protocol,
             CrudOperation.READ_ALL,
             # TODO: this should be an enum set filter
-            filter=StringSetFilter(
+            filter=NumberSetFilter(
                 key="seq_distance_type",
-                members=frozenset({x.name for x in seq_distance_types}),
-                case_sensitive=True,
+                members=frozenset({x.value for x in seq_distance_types}),
             ),
         )
 
@@ -348,11 +345,9 @@ def seq_service_update_seq_distances(
             user_id,
             model.Protocol,
             CrudOperation.READ_ALL,
-            # TODO: this should be an enum set filter
-            filter=StringSetFilter(
+            filter=NumberSetFilter(
                 key="seq_profile_type",
-                members=frozenset({seq_profile_type.name}),
-                case_sensitive=True,
+                members=frozenset({seq_profile_type.value}),
             ),
         )
 
@@ -746,8 +741,14 @@ def _calculate_and_store_distances(
                 #   2. numpy_batch  — S16 broadcast, best for small n_new
                 #   3. Python loop  — fallback for non-ALLELE types
                 updates: dict[str, float] = {}
-                int32_entry = profile_int32_map.get(existing_seq_distance.seq_profile_id)
-                if new_int32 is not None and null_new is not None and int32_entry is not None:
+                int32_entry = profile_int32_map.get(
+                    existing_seq_distance.seq_profile_id
+                )
+                if (
+                    new_int32 is not None
+                    and null_new is not None
+                    and int32_entry is not None
+                ):
                     # int32_vocab path
                     int32_row, null_existing_row = int32_entry
                     distances_arr = _hamming_allele_int32_batch(
