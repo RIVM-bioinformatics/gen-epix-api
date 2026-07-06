@@ -1501,7 +1501,7 @@ class SARepository(BaseRepository):
             metadata_set.add(cast(sa.MetaData, getattr(db_model_class, "metadata")))
 
         for metadata in metadata_set:
-            metadata.create_all(engine)
+            metadata.create_all(engine, checkfirst=True)
 
         # Create repository
         repository = cls(
