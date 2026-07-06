@@ -299,7 +299,7 @@ class CaseBatchUploader(BatchUploader):
             is_existing = self.service.app.handle(
                 command.DataCollectionCrudCommand(
                     user=cmd.user,
-                    operation=CrudOperation.EXISTS_ONE,
+                    operation=CrudOperation.EXISTS_SOME,
                     obj_ids=[cmd.default_created_in_data_collection_id],
                 )
             )
