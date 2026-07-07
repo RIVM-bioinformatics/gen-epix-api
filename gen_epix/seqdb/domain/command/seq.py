@@ -64,6 +64,14 @@ class UploadSamplesCommand(Command, UploadBatchCommandMixin):
             "existing profiles are loaded in a single pass (original behaviour)."
         ),
     )
+    use_numpy_allele_distance: bool = Field(
+        default=False,
+        description=(
+            "If True, use numpy-vectorised ALLELE Hamming with an automatic "
+            "variant gate: numpy_batch for n_new < 200, int32_vocab for "
+            "n_new >= 200. No effect on non-ALLELE profile types."
+        ),
+    )
 
 
 class RetrieveSeqDistanceLastModifiedCommand(Command):
@@ -109,6 +117,14 @@ class CalculateSeqDistancesForNewProfilesCommand(Command):
             "existing profiles are loaded in a single pass (original behaviour)."
         ),
     )
+    use_numpy_allele_distance: bool = Field(
+        default=False,
+        description=(
+            "If True, use numpy-vectorised ALLELE Hamming with an automatic "
+            "variant gate: numpy_batch for n_new < 200, int32_vocab for "
+            "n_new >= 200. No effect on non-ALLELE profile types."
+        ),
+    )
 
 
 class UpdateSeqDistancesCommand(Command):
@@ -137,6 +153,14 @@ class UpdateSeqDistancesCommand(Command):
             "If set, existing profiles are processed in chunks of this size "
             "to limit memory use. When None, all existing profiles are loaded "
             "and streamed in a single pass (original behaviour)."
+        ),
+    )
+    use_numpy_allele_distance: bool = Field(
+        default=False,
+        description=(
+            "If True, use numpy-vectorised ALLELE Hamming with an automatic "
+            "variant gate: numpy_batch for n_new < 200, int32_vocab for "
+            "n_new >= 200. No effect on non-ALLELE profile types."
         ),
     )
 
