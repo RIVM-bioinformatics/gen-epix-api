@@ -44,6 +44,22 @@ def _crud_dim_without_abac(
     return retval  # type: ignore[return-value]
 
 
+def _group_dims_by_key(
+    dims: list[model.Dim],
+) -> dict[tuple[UUID, UUID], list[model.Dim]]:
+    """Group Dims by (case_type_id, ref_dim_id).
+
+    Each group holds all Dims sharing that composite key in insertion
+    order. Used by _crud_create_dim so existing dims are loaded and the
+    group sorted only once per key instead of once per dim.
+    """
+    groups: dict[tuple[UUID, UUID], list[model.Dim]] = {}
+    for dim in dims:
+        key = (dim.case_type_id, dim.ref_dim_id)
+        groups.setdefault(key, []).append(dim)
+    return groups
+
+
 def _crud_create_dim(
     dims: list[model.Dim],
     cmd: command.DimCrudCommand,
@@ -57,10 +73,25 @@ def _crud_create_dim(
         and that the linked RefDim is of correct type
     - Check if another Dim for the same CaseType has
         is_time_stats_dim or is_geo_stats_dim set to True
+
+    Occurrence assignment is O(n log n): dims are pre-grouped by
+    (case_type_id, ref_dim_id), existing dims are loaded once per group,
+    each group is sorted once, and occurrences are assigned in a single
+    pass.
     """
+    groups = _group_dims_by_key(dims)
+    for group_dims in groups.values():
+        # Load persisted dims once per (case_type_id, ref_dim_id) group
+        existing_dims = _load_existing_dims(self, cmd, uow, group_dims[0])
+        max_persisted = max((x.occurrence for x in existing_dims), default=0)
+        # Sort group once; deterministic ordering mirrors _set_dim_occurrence
+        sorted_group = sorted(
+            group_dims, key=lambda x: str(x.id) if x.id is not None else ""
+        )
+        for position, dim in enumerate(sorted_group):
+            dim.occurrence = max_persisted + position + 1
+
     for dim in dims:
-        existing_dims = _load_existing_dims(self, cmd, uow, dim)
-        _set_dim_occurrence(dim, existing_dims, dims)
         # Dimension type check for case date Dim
         if dim.is_case_date_dim:
             _validate_case_date_dim(self, cmd, uow, dim)
@@ -130,6 +161,7 @@ def _validate_case_date_dim(
         )
 
 
+# TODO: Remove method _set_dim_occurrence and refactor/remove the corresponding tests
 def _set_dim_occurrence(
     dim: model.Dim, existing_dims: list[model.Dim], batch_dims: list[model.Dim]
 ) -> None:
@@ -160,10 +192,12 @@ def _set_dim_occurrence(
         max_persisted = 0
 
     # Sort batch dims by id for deterministic ordering
-    sorted_matching_batch = sorted(matching_batch_dims, key=lambda x: str(x.id))
+    sorted_matching_batch = sorted(
+        matching_batch_dims, key=lambda x: str(x.id) if x.id is not None else ""
+    )
 
     # Find position of current dim in sorted list (0-indexed)
-    position = next(i for i, x in enumerate(sorted_matching_batch) if x.id == dim.id)
+    position = next(i for i, x in enumerate(sorted_matching_batch) if x is dim)
 
     # Assign occurrence: max_persisted + position + 1
     dim.occurrence = max_persisted + position + 1
