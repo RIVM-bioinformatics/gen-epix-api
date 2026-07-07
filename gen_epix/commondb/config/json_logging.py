@@ -33,8 +33,9 @@ Fix index:
  12. Actor aliases `user_id` and `organization_id` are promoted from nested
      command payloads when present.
  13. Exception messages longer than max_exception_message_length are truncated
-     before serialisation to prevent large SQL payloads or stringified objects
-     from making error log lines unreadable.
+     from the middle (prefix …[N chars omitted]… suffix) before serialisation,
+     preserving both the echoed SQL/context at the start and the driver's
+     actual error text at the end, e.g. for FK/unique constraint violations.
 """
 
 import json
@@ -72,7 +73,19 @@ _UVICORN_ACCESS_RE = re.compile(
 )
 
 _DEFAULT_MAX_STACKTRACE_LENGTH = 8000  # empirical value keeping typical stacktraces not too long for e.g. a log monitoring platform
-_DEFAULT_MAX_EXCEPTION_MSG_LENGTH = 500  # prevents huge SQL payloads in exception messages from drowning out the error context
+_DEFAULT_MAX_EXCEPTION_MSG_LENGTH = 2000  # prevents huge SQL payloads in exception messages from drowning out the error context
+
+
+def _truncate_middle(text: str, max_length: int) -> str:
+    """Truncate *text* to *max_length* chars, keeping a prefix and a suffix.
+    DB driver errors (e.g. FK/unique constraint violations) often echo the
+    full SQL statement first and put the actual error message at the end, so
+    a head-only cut would hide it."""
+    if len(text) <= max_length:
+        return text
+    half = max_length // 2
+    omitted = len(text) - max_length
+    return f"{text[:half]}…[{omitted} chars omitted]…{text[-half:]}"
 
 
 def _utc_iso(ts: float) -> str:
@@ -483,13 +496,8 @@ class JsonFormatter(logging.Formatter):
                     stacktrace[: self.max_stacktrace_length] + "\u2026[truncated]"
                 )
             exc_msg = str(record.exc_info[1])
-            if (
-                self.max_exception_message_length is not None
-                and len(exc_msg) > self.max_exception_message_length
-            ):
-                exc_msg = (
-                    exc_msg[: self.max_exception_message_length] + "\u2026[truncated]"
-                )
+            if self.max_exception_message_length is not None:
+                exc_msg = _truncate_middle(exc_msg, self.max_exception_message_length)
             base["exception"] = {
                 "type": getattr(record.exc_info[0], "__name__", "Exception"),
                 "message": exc_msg,

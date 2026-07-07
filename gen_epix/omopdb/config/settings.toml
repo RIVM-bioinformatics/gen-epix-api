@@ -50,6 +50,8 @@ level = "INFO"
 [log.command_object_summarization]
 enabled = true
 max_list_items = 3
+max_string_length = 500
+max_exception_message_length = 2000
 
 
 [service]
