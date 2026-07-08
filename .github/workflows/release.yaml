@@ -30,7 +30,7 @@ jobs:
           manifest-file: .release-please-manifest.json
           target-branch: main
 
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -85,7 +85,7 @@ jobs:
         if: ${{ (steps.release.outputs.prs_created == 'true') && (steps.version_bump.outputs.version_changed == 'true') }}
 
       - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.14"
         if: ${{ (steps.release.outputs.release_created == 'true') }}
