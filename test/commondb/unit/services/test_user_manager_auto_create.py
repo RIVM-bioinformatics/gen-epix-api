@@ -239,8 +239,7 @@ class TestAutoCreateNewUserRegressions:
         root_org: model.Organization,
         root_org_id: UUID,
     ) -> None:
-        """Raises ServiceException when construct_user_instance_from_claims
-        returns None."""
+        """Raises CredentialsAuthError when required key claim is missing."""
         auto_cfg = {
             "organization_id": str(root_org_id),
             "roles": {"COMMONDB_GUEST"},
