@@ -1472,7 +1472,10 @@ class SARepository(BaseRepository):
                     )
 
         else:
-            engine = EngineFactory.create_engine(connection_string, echo)
+            connect_args = kwargs.pop("connect_args", None)
+            engine = EngineFactory.create_engine(
+                connection_string, echo, connect_args=connect_args
+            )
 
             # Create schemas if not exists
             for schema_name in schema_names:
@@ -1501,7 +1504,7 @@ class SARepository(BaseRepository):
             metadata_set.add(cast(sa.MetaData, getattr(db_model_class, "metadata")))
 
         for metadata in metadata_set:
-            metadata.create_all(engine)
+            metadata.create_all(engine, checkfirst=True)
 
         # Create repository
         repository = cls(

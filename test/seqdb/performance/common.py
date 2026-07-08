@@ -95,19 +95,22 @@ def set_service_repository(
 def create_mssql_repository(
     connection_string: str,
     entities: list[Entity],
+    login_timeout: int = 60,
 ) -> SeqSARepository:
     """Create an SA repository backed by SQL Server.
 
     The connection string must be a full SQLAlchemy mssql+pyodbc URL, e.g.:
-      mssql+pyodbc://sa:Password@localhost:1433/master
-        ?driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=yes
+      mssql+pyodbc://sa:Password@localhost:1433/seqdb
+        ?driver=ODBC+Driver+17+for+SQL+Server
 
     Tables are created idempotently (create_all with checkfirst).  Pass the
     same entities list as you would for create_sqlite_repository.
+    login_timeout sets the pyodbc connection establishment timeout in seconds.
     """
     return SeqSARepository.create_repository(  # type: ignore[return-value]
         entities=entities,
         connection_string=connection_string,
+        connect_args={"timeout": login_timeout},
     )
 
 
