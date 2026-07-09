@@ -18,19 +18,6 @@ def str_uuid4() -> str:
     return str(uuid.uuid4())
 
 
-# TODO r[LSP-3497]: The CodeMixin class should be removed as it is replaced by general Identifier concept
-class CodeMixin:
-    """
-    Mixin class to add a code field to a model.
-    """
-
-    code: str = Field(
-        default="",
-        description="A code that should be unique within the context of the application. The code can be used as an alternative identifier for the instance, and can be more human-readable than the UUID.",
-        max_length=255,
-    )
-
-
 class ContentMixin[FormatType: IntEnum]:
     """
     Mixin class to add content-related fields to a model.

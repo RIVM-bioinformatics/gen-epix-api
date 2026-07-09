@@ -3,10 +3,9 @@ import hashlib
 import json
 import struct
 from typing import Any, ClassVar, Self
-
-import numpy as np
 from uuid import UUID
 
+import numpy as np
 from pydantic import Field, field_serializer, field_validator, model_validator
 
 from gen_epix.commondb.domain.literal import NULL_ID
