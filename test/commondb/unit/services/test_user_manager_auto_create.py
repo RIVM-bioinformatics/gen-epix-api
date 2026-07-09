@@ -480,15 +480,10 @@ class TestAutoCreateNewUserRootOrgFeature:
             return_value=False
         )
 
-        call_count = [0]
-
         def crud_side_effect(*args: Any, **kwargs: Any) -> Any:
             operation = args[3]
             if operation == CrudOperation.EXISTS_ONE:
-                # First call: organization doesn't exist
-                result = False
-                call_count[0] += 1
-                return result
+                return False
             elif operation == CrudOperation.CREATE_ONE:
                 # CREATE_ONE for organization
                 if "objs" in kwargs and isinstance(kwargs["objs"], model.Organization):
