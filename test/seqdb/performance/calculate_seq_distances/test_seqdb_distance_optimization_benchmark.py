@@ -33,34 +33,6 @@ import os
 import shutil
 from datetime import datetime
 from pathlib import Path
-from time import perf_counter
-from typing import Any, cast
-from uuid import UUID
-
-try:
-    import matplotlib
-
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-
-    _HAS_MATPLOTLIB = True
-except ImportError:
-    _HAS_MATPLOTLIB = False
-
-import numpy as np
-import pyinstrument
-import pytest
-from pyinstrument.renderers import JSONRenderer
-
-from gen_epix.commondb.domain.enum import AppType
-from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.util import get_app_cfgs
-from gen_epix.fastapp.enum import CrudOperation
-from gen_epix.seqdb.domain import command, enum, model
-from gen_epix.seqdb.services.seq.calculate_seq_distance import (
-    _calculate_and_store_distances,
-)
-from gen_epix.util import chunk_list
 from test.seqdb.performance.calculate_seq_distances.base import (
     DEV_REPOSITORY_CONFIG,
     TEST_TYPE,
@@ -78,6 +50,35 @@ from test.seqdb.performance.common import (
     set_service_repository,
 )
 from test.seqdb.seqdb_test_client import SeqdbTestClient as Env
+from time import perf_counter
+from typing import Any, cast
+from uuid import UUID
+
+import numpy as np
+import pyinstrument
+import pytest
+from pyinstrument.renderers import JSONRenderer
+
+from gen_epix.commondb.domain.enum import AppType
+from gen_epix.commondb.domain.literal import NULL_ID
+from gen_epix.commondb.domain.util import get_app_cfgs
+from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.seqdb.domain import command, enum, model
+from gen_epix.seqdb.services.seq.calculate_seq_distance import (
+    _calculate_and_store_distances,
+)
+from gen_epix.util import chunk_list
+
+try:
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    _HAS_MATPLOTLIB = True
+except ImportError:
+    _HAS_MATPLOTLIB = False
+
 
 # ── Data storage ─────────────────────────────────────────────────────────────
 # SQLite base files sit next to this file (gitignored via test/**/bench_*.sqlite).
@@ -117,7 +118,7 @@ _CLUSTER_SIZE = 50
 
 # Number of profiles that are in the database when we run the test.
 # In the production situation we should reach ~8000 (June 2026, Salmonella)
-N_EXISTING = [100] # [1000, 5000] 
+N_EXISTING = [100]  # [1000, 5000]
 # number of new profiles to calculate distances for
 N_NEW = [10, 50, 100, 500]
 # number of loci in the cgMLST profile. 3000 matches Salmonella.
@@ -253,9 +254,9 @@ def _make_realistic_profiles(
             n_loci=n_loci,
             format=enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
             content_hash=model.SeqProfile.get_allele_profile_hash(alleles),  # type: ignore[arg-type]
-            content=base64.b64encode(
-                b"".join(x.bytes for x in alleles)
-            ).decode("ascii"),
+            content=base64.b64encode(b"".join(x.bytes for x in alleles)).decode(
+                "ascii"
+            ),
             sample_id=sample.id,
         )
         samples.append(sample)
@@ -339,11 +340,7 @@ def _extract_segments(frame_data: dict[str, Any]) -> dict[str, float]:
         for child in frame.get("children") or []:
             _walk(child)
 
-    root = (
-        frame_data.get("frame_tree")
-        or frame_data.get("root_frame")
-        or {}
-    )
+    root = frame_data.get("frame_tree") or frame_data.get("root_frame") or {}
     _walk(root)
     return {f"{k}_s": v for k, v in totals.items()}
 
@@ -404,12 +401,15 @@ def _grouped_bars(
     for ex_idx, n_ex in enumerate(n_ex_values):
         vals = _filter(results, repo, n_ex, n_new)
         bars = ax.bar(
-            x + offsets[ex_idx], vals, width,
+            x + offsets[ex_idx],
+            vals,
+            width,
             color=_N_EX_COLORS[ex_idx % len(_N_EX_COLORS)],
             label=f"n_ex={n_ex}",
         )
-        ax.bar_label(bars, labels=[_fmt_s(v) for v in vals],
-                     padding=2, fontsize=6, rotation=90)
+        ax.bar_label(
+            bars, labels=[_fmt_s(v) for v in vals], padding=2, fontsize=6, rotation=90
+        )
     ax.set_xticks(x)
     ax.set_xticklabels(_VARIANT_NAMES, rotation=30, ha="right")
     ax.legend(fontsize=7)
@@ -421,8 +421,10 @@ def _plot_total_duration(results: list[dict], out: Path) -> None:  # pragma: no 
     repos = sorted({r["repo"] for r in results})
     n_new_values = sorted({r["n_new"] for r in results})
     fig, axes = plt.subplots(
-        len(n_new_values), len(repos),
-        figsize=(7 * len(repos), 5 * len(n_new_values)), sharey="row"
+        len(n_new_values),
+        len(repos),
+        figsize=(7 * len(repos), 5 * len(n_new_values)),
+        sharey="row",
     )
     if len(n_new_values) == 1:
         axes = [axes]
@@ -447,8 +449,10 @@ def _plot_per_profile(results: list[dict], out: Path) -> None:  # pragma: no cov
     repos = sorted({r["repo"] for r in results})
     n_new_values = sorted({r["n_new"] for r in results})
     fig, axes = plt.subplots(
-        len(n_new_values), len(repos),
-        figsize=(7 * len(repos), 5 * len(n_new_values)), sharey="row"
+        len(n_new_values),
+        len(repos),
+        figsize=(7 * len(repos), 5 * len(n_new_values)),
+        sharey="row",
     )
     if len(n_new_values) == 1:
         axes = [axes]
@@ -465,12 +469,19 @@ def _plot_per_profile(results: list[dict], out: Path) -> None:  # pragma: no cov
             for ex_idx, n_ex in enumerate(n_ex_values):
                 vals = [v / max(n_new, 1) for v in _filter(results, repo, n_ex, n_new)]
                 bars = ax.bar(
-                    x + offsets[ex_idx], vals, width,
+                    x + offsets[ex_idx],
+                    vals,
+                    width,
                     color=_N_EX_COLORS[ex_idx % len(_N_EX_COLORS)],
                     label=f"n_ex={n_ex}",
                 )
-                ax.bar_label(bars, labels=[_fmt_s(v) for v in vals],
-                             padding=2, fontsize=6, rotation=90)
+                ax.bar_label(
+                    bars,
+                    labels=[_fmt_s(v) for v in vals],
+                    padding=2,
+                    fontsize=6,
+                    rotation=90,
+                )
             ax.set_title(f"{repo} n_new={n_new}")
             ax.set_ylabel("seconds / profile")
             ax.set_xticks(x)
@@ -489,7 +500,12 @@ def _plot_segments(results: list[dict], out: Path) -> None:
     repos = sorted({r["repo"] for r in results})
     n_new_values = sorted({r["n_new"] for r in results})
     seg_keys = [
-        "read_s", "profile_read_s", "decode_s", "compare_s", "write_s", "rest_s"
+        "read_s",
+        "profile_read_s",
+        "decode_s",
+        "compare_s",
+        "write_s",
+        "rest_s",
     ]
     seg_labels = ["read (dist)", "profile_read", "decode", "compare", "write", "rest"]
 
@@ -497,7 +513,8 @@ def _plot_segments(results: list[dict], out: Path) -> None:
     n_rows = len(n_new_values)
     n_cols = len(cols)
     fig, axes = plt.subplots(
-        n_rows, n_cols,
+        n_rows,
+        n_cols,
         figsize=(7 * n_cols, 5 * n_rows),
         sharey="row",
         squeeze=False,
@@ -539,8 +556,12 @@ def _plot_segments(results: list[dict], out: Path) -> None:
                 )
                 total = row["wall_s"] if row else 0.0
                 ax.text(
-                    x_pos, bottoms[x_pos] + 0.01 * max(bottoms),
-                    _fmt_s(total), ha="center", va="bottom", fontsize=7,
+                    x_pos,
+                    bottoms[x_pos] + 0.01 * max(bottoms),
+                    _fmt_s(total),
+                    ha="center",
+                    va="bottom",
+                    fontsize=7,
                 )
             ax.set_title(f"{repo} ex={n_ex} n_new={n_new}")
             ax.set_ylabel("seconds")
@@ -560,8 +581,10 @@ def _plot_retrieve(results: list[dict], out: Path) -> None:  # pragma: no cover
     repos = sorted({r["repo"] for r in results})
     n_new_values = sorted({r["n_new"] for r in results})
     fig, axes = plt.subplots(
-        len(n_new_values), len(repos),
-        figsize=(7 * len(repos), 5 * len(n_new_values)), sharey="row"
+        len(n_new_values),
+        len(repos),
+        figsize=(7 * len(repos), 5 * len(n_new_values)),
+        sharey="row",
     )
     if len(n_new_values) == 1:
         axes = [axes]
@@ -591,12 +614,19 @@ def _plot_retrieve(results: list[dict], out: Path) -> None:  # pragma: no cover
                     )
                     vals.append(row["retrieve_wall_s"] if row else 0.0)
                 bars = ax.bar(
-                    x + offsets[ex_idx], vals, width,
+                    x + offsets[ex_idx],
+                    vals,
+                    width,
                     color=_N_EX_COLORS[ex_idx % len(_N_EX_COLORS)],
                     label=f"n_ex={n_ex}",
                 )
-                ax.bar_label(bars, labels=[_fmt_s(v) for v in vals],
-                             padding=2, fontsize=6, rotation=90)
+                ax.bar_label(
+                    bars,
+                    labels=[_fmt_s(v) for v in vals],
+                    padding=2,
+                    fontsize=6,
+                    rotation=90,
+                )
             ax.set_title(f"{repo} n_new={n_new}")
             ax.set_ylabel("seconds")
             ax.set_xticks(x)
@@ -615,9 +645,11 @@ def _plot_lines_per_variant(results: list[dict], out: Path) -> None:  # pragma: 
     repos = sorted({r["repo"] for r in results})
     n_new_values = sorted({r["n_new"] for r in results})
     fig, axes = plt.subplots(
-        len(repos), len(_VARIANT_NAMES),
+        len(repos),
+        len(_VARIANT_NAMES),
         figsize=(5 * len(_VARIANT_NAMES), 4 * len(repos)),
-        sharey="row", squeeze=False,
+        sharey="row",
+        squeeze=False,
     )
     for row_idx, repo in enumerate(repos):
         n_ex_values = _n_ex_for_repo(results, repo)
@@ -626,9 +658,14 @@ def _plot_lines_per_variant(results: list[dict], out: Path) -> None:  # pragma: 
             for ex_idx, n_ex in enumerate(n_ex_values):
                 ys = [
                     next(
-                        (r["wall_s"] for r in results
-                         if r["variant"] == vname and r["repo"] == repo
-                         and r["n_existing"] == n_ex and r["n_new"] == n_new),
+                        (
+                            r["wall_s"]
+                            for r in results
+                            if r["variant"] == vname
+                            and r["repo"] == repo
+                            and r["n_existing"] == n_ex
+                            and r["n_new"] == n_new
+                        ),
                         None,
                     )
                     for n_new in n_new_values
@@ -636,9 +673,13 @@ def _plot_lines_per_variant(results: list[dict], out: Path) -> None:  # pragma: 
                 xs = [x for x, y in zip(n_new_values, ys) if y is not None]
                 ys = [y for y in ys if y is not None]
                 if xs:
-                    ax.plot(xs, ys, marker="o",
-                            color=_N_EX_COLORS[ex_idx % len(_N_EX_COLORS)],
-                            label=f"n_ex={n_ex}")
+                    ax.plot(
+                        xs,
+                        ys,
+                        marker="o",
+                        color=_N_EX_COLORS[ex_idx % len(_N_EX_COLORS)],
+                        label=f"n_ex={n_ex}",
+                    )
             ax.set_yscale("log")
             ax.set_title(f"{vname}\n({repo})", fontsize=8)
             ax.set_xlabel("n_new")
@@ -662,16 +703,22 @@ def _plot_lines_per_n_existing(
     fig, axes = plt.subplots(
         1, len(cols), figsize=(5 * len(cols), 4), sharey=False, squeeze=False
     )
-    variant_colors = {v: _CHART_COLORS[i % len(_CHART_COLORS)]
-                      for i, v in enumerate(_VARIANT_NAMES)}
+    variant_colors = {
+        v: _CHART_COLORS[i % len(_CHART_COLORS)] for i, v in enumerate(_VARIANT_NAMES)
+    }
     for col_idx, (repo, n_ex) in enumerate(cols):
         ax = axes[0][col_idx]
         for vname in _VARIANT_NAMES:
             ys = [
                 next(
-                    (r["wall_s"] for r in results
-                     if r["variant"] == vname and r["repo"] == repo
-                     and r["n_existing"] == n_ex and r["n_new"] == n_new),
+                    (
+                        r["wall_s"]
+                        for r in results
+                        if r["variant"] == vname
+                        and r["repo"] == repo
+                        and r["n_existing"] == n_ex
+                        and r["n_new"] == n_new
+                    ),
                     None,
                 )
                 for n_new in n_new_values
@@ -679,8 +726,7 @@ def _plot_lines_per_n_existing(
             xs = [x for x, y in zip(n_new_values, ys) if y is not None]
             ys = [y for y in ys if y is not None]
             if xs:
-                ax.plot(xs, ys, marker="o",
-                        color=variant_colors[vname], label=vname)
+                ax.plot(xs, ys, marker="o", color=variant_colors[vname], label=vname)
         ax.set_yscale("log")
         ax.set_title(f"{repo}  n_ex={n_ex}")
         ax.set_xlabel("n_new")
@@ -699,9 +745,7 @@ def _plot_lines_all(results: list[dict], out: Path) -> None:  # pragma: no cover
     repos = sorted({r["repo"] for r in results})
     n_new_values = sorted({r["n_new"] for r in results})
     variant_markers = ["o", "s", "^", "D", "v", "P"]
-    fig, axes = plt.subplots(
-        1, len(repos), figsize=(8 * len(repos), 5), squeeze=False
-    )
+    fig, axes = plt.subplots(1, len(repos), figsize=(8 * len(repos), 5), squeeze=False)
     for col_idx, repo in enumerate(repos):
         ax = axes[0][col_idx]
         n_ex_values = _n_ex_for_repo(results, repo)
@@ -710,9 +754,14 @@ def _plot_lines_all(results: list[dict], out: Path) -> None:  # pragma: no cover
             for ex_idx, n_ex in enumerate(n_ex_values):
                 ys = [
                     next(
-                        (r["wall_s"] for r in results
-                         if r["variant"] == vname and r["repo"] == repo
-                         and r["n_existing"] == n_ex and r["n_new"] == n_new),
+                        (
+                            r["wall_s"]
+                            for r in results
+                            if r["variant"] == vname
+                            and r["repo"] == repo
+                            and r["n_existing"] == n_ex
+                            and r["n_new"] == n_new
+                        ),
                         None,
                     )
                     for n_new in n_new_values
@@ -721,7 +770,8 @@ def _plot_lines_all(results: list[dict], out: Path) -> None:  # pragma: no cover
                 ys = [y for y in ys if y is not None]
                 if xs:
                     ax.plot(
-                        xs, ys,
+                        xs,
+                        ys,
                         marker=variant_markers[v_idx % len(variant_markers)],
                         color=_N_EX_COLORS[ex_idx % len(_N_EX_COLORS)],
                         linestyle=["-", "--", ":", "-."][ex_idx % 4],
@@ -754,9 +804,7 @@ def generate_benchmark_charts() -> Any:
         _plot_per_profile(_RESULTS, RUN_DIR / "charts" / "per_profile.png")
         _plot_segments(_RESULTS, RUN_DIR / "charts" / "segments.png")
         _plot_retrieve(_RESULTS, RUN_DIR / "charts" / "retrieve.png")
-        _plot_lines_per_variant(
-            _RESULTS, RUN_DIR / "charts" / "lines_per_variant.png"
-        )
+        _plot_lines_per_variant(_RESULTS, RUN_DIR / "charts" / "lines_per_variant.png")
         _plot_lines_per_n_existing(
             _RESULTS, RUN_DIR / "charts" / "lines_per_n_existing.png"
         )
@@ -772,10 +820,7 @@ _PARAMS = [
     for n_ex in N_EXISTING
     for n_new in N_NEW
 ]
-_IDS = [
-    f"{v['name']}-{rt.value}-ex{n_ex}-n{n_new}"
-    for v, rt, n_ex, n_new in _PARAMS
-]
+_IDS = [f"{v['name']}-{rt.value}-ex{n_ex}-n{n_new}" for v, rt, n_ex, n_new in _PARAMS]
 
 
 # ── Main benchmark class (DICT + SA_SQLITE) ───────────────────────────────────
@@ -799,7 +844,9 @@ class TestDistanceOptimizationBenchmark:
     entities: list
     base_dbs: dict[int, dict]
     dist_protocols: dict[int, model.Protocol]
-    new_profiles: dict[tuple[int, int], tuple[list[model.SeqProfile], list[model.Sample]]]
+    new_profiles: dict[
+        tuple[int, int], tuple[list[model.SeqProfile], list[model.Sample]]
+    ]
     base_sqlite_paths: dict[int, Path]
 
     @pytest.fixture(scope="module", autouse=True)
@@ -904,11 +951,17 @@ class TestDistanceOptimizationBenchmark:
             )
             with repo.uow() as uow:
                 repo.crud(
-                    uow, user_id, model.Sample, CrudOperation.CREATE_SOME,
+                    uow,
+                    user_id,
+                    model.Sample,
+                    CrudOperation.CREATE_SOME,
                     objs=new_samps,
                 )
                 repo.crud(
-                    uow, user_id, model.SeqProfile, CrudOperation.CREATE_SOME,
+                    uow,
+                    user_id,
+                    model.SeqProfile,
+                    CrudOperation.CREATE_SOME,
                     objs=new_profs,
                 )
 
@@ -944,7 +997,8 @@ class TestDistanceOptimizationBenchmark:
 
             (RUN_DIR / "profiles").mkdir(parents=True, exist_ok=True)
             html_path = (
-                RUN_DIR / "profiles"
+                RUN_DIR
+                / "profiles"
                 / f"{variant['name']}_{repo_type.value}_n{n_existing}_m{n_new}.html"
             )
             html_path.write_text(profiler.output_html())
@@ -1000,9 +1054,7 @@ def _wipe_seqdb_data(mssql_repo: Any, user_id: UUID, entities: list) -> None:
     """Delete all seqdb rows in FK-safe (reverse DAG) order."""
     with mssql_repo.uow() as uow:
         for entity in reversed(entities):
-            mssql_repo.crud(
-                uow, user_id, entity.model_class, CrudOperation.DELETE_ALL
-            )
+            mssql_repo.crud(uow, user_id, entity.model_class, CrudOperation.DELETE_ALL)
 
 
 class _MssqlBenchmarkBase:
@@ -1015,7 +1067,9 @@ class _MssqlBenchmarkBase:
 
     entities: list
     dist_protocol: model.Protocol
-    new_profiles: dict[tuple[str, int], tuple[list[model.SeqProfile], list[model.Sample]]]
+    new_profiles: dict[
+        tuple[str, int], tuple[list[model.SeqProfile], list[model.Sample]]
+    ]
     mssql_repo: Any
     base_db: dict
 
@@ -1086,41 +1140,60 @@ class _MssqlBenchmarkBase:
         new_prof_id_set = set(new_prof_ids)
         with self.mssql_repo.uow() as uow:
             all_dists = self.mssql_repo.crud(
-                uow, user_id, model.SeqDistance,
-                CrudOperation.READ_ALL, return_copy=False,
+                uow,
+                user_id,
+                model.SeqDistance,
+                CrudOperation.READ_ALL,
+                return_copy=False,
             )
             dist_ids = [
-                cast(UUID, r.id) for r in all_dists
+                cast(UUID, r.id)
+                for r in all_dists
                 if r.seq_profile_id in new_prof_id_set
             ]
             for chunk in chunk_list(dist_ids, _DELETE_CHUNK_SIZE):
                 self.mssql_repo.crud(
-                    uow, user_id, model.SeqDistance,
-                    CrudOperation.DELETE_SOME, obj_ids=chunk,
+                    uow,
+                    user_id,
+                    model.SeqDistance,
+                    CrudOperation.DELETE_SOME,
+                    obj_ids=chunk,
                 )
             existing_flags = self.mssql_repo.crud(
-                uow, user_id, model.SeqProfile,
-                CrudOperation.EXISTS_SOME, obj_ids=new_prof_ids,
+                uow,
+                user_id,
+                model.SeqProfile,
+                CrudOperation.EXISTS_SOME,
+                obj_ids=new_prof_ids,
             )
             existing_prof_ids = [
                 pid for pid, ex in zip(new_prof_ids, existing_flags) if ex
             ]
             if existing_prof_ids:
                 self.mssql_repo.crud(
-                    uow, user_id, model.SeqProfile,
-                    CrudOperation.DELETE_SOME, obj_ids=existing_prof_ids,
+                    uow,
+                    user_id,
+                    model.SeqProfile,
+                    CrudOperation.DELETE_SOME,
+                    obj_ids=existing_prof_ids,
                 )
             existing_samp_flags = self.mssql_repo.crud(
-                uow, user_id, model.Sample,
-                CrudOperation.EXISTS_SOME, obj_ids=new_samp_ids,
+                uow,
+                user_id,
+                model.Sample,
+                CrudOperation.EXISTS_SOME,
+                obj_ids=new_samp_ids,
             )
             existing_samp_ids = [
                 sid for sid, ex in zip(new_samp_ids, existing_samp_flags) if ex
             ]
             if existing_samp_ids:
                 self.mssql_repo.crud(
-                    uow, user_id, model.Sample,
-                    CrudOperation.DELETE_SOME, obj_ids=existing_samp_ids,
+                    uow,
+                    user_id,
+                    model.Sample,
+                    CrudOperation.DELETE_SOME,
+                    obj_ids=existing_samp_ids,
                 )
 
     @pytest.mark.parametrize("variant,n_new", _MSSQL_PARAMS, ids=_MSSQL_IDS)
@@ -1138,7 +1211,10 @@ class _MssqlBenchmarkBase:
                 uow, user_id, model.Sample, CrudOperation.CREATE_SOME, objs=new_samps
             )
             self.mssql_repo.crud(
-                uow, user_id, model.SeqProfile, CrudOperation.CREATE_SOME,
+                uow,
+                user_id,
+                model.SeqProfile,
+                CrudOperation.CREATE_SOME,
                 objs=new_profs,
             )
 
@@ -1171,8 +1247,7 @@ class _MssqlBenchmarkBase:
 
             (RUN_DIR / "profiles").mkdir(parents=True, exist_ok=True)
             html_path = (
-                RUN_DIR / "profiles"
-                / f"{variant['name']}_SA_SQL_n{n_ex}_m{n_new}.html"
+                RUN_DIR / "profiles" / f"{variant['name']}_SA_SQL_n{n_ex}_m{n_new}.html"
             )
             html_path.write_text(profiler.output_html())
 

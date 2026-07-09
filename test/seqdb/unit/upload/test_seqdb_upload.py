@@ -2410,7 +2410,7 @@ class TestVerifyReferenceData(BaseUploadTestCase):
         encoded = cmd.sample_batch.samples[0].seq_profiles[0]
         self.assertNotEqual(encoded.content, "")
         content_bytes = base64.b64decode(encoded.content)
-        self.assertEqual(content_bytes[0:16], a1.bytes)   # locus1 is first → a1
+        self.assertEqual(content_bytes[0:16], a1.bytes)  # locus1 is first → a1
         self.assertEqual(content_bytes[16:32], a2.bytes)  # locus2 is second → a2
 
     def test_verify_refdata_assertion_error_no_allele_data(self) -> None:

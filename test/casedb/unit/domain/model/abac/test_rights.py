@@ -265,7 +265,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
                     write_col_ids=set(),
                     read_case_set=False,
                     write_case_set=False,
-                )
+                ),
             },
         }
         abac: CaseAbac = CaseAbac(

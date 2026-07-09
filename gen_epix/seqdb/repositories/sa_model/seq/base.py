@@ -11,14 +11,6 @@ from gen_epix.commondb.repositories.sa_model.util import create_mapped_column
 from gen_epix.seqdb.domain import DOMAIN, enum, model
 
 
-class CodeMixin:
-    """
-    SQLAlchemy model mixin for adding a number of standard fields.
-    """
-
-    code: Mapped[str] = get_mixin_mapped_column(model.CodeMixin, "code", sa.String)
-
-
 class ContentMixin[FormatType: IntEnum]:
     """
     SQLAlchemy model mixin for adding content-related fields to a model.
