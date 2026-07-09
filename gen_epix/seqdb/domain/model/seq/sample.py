@@ -8,10 +8,9 @@ from gen_epix.commondb.domain.model.base import Model
 from gen_epix.commondb.domain.model.organization import BaseIdentifier, DataCollection
 from gen_epix.fastapp.domain import Entity, create_keys
 from gen_epix.fastapp.domain.util import create_links
-from gen_epix.seqdb.domain.model.seq.base import CodeMixin
 
 
-class Sample(Model, CodeMixin):
+class Sample(Model):
     """
     The original physical sample (specimen) on which all measurements were performed
     either directly or through some derived samples. Derived samples such as cultures
@@ -41,6 +40,7 @@ class Sample(Model, CodeMixin):
     created_in_data_collection: DataCollection | None = Field(
         default=None, description="The data collection where the sample was created"
     )
+    code: str | None = Field(default=None, max_length=255, description="")
     props: dict[str, str | int | float | None] = Field(
         default_factory=dict, description="The properties of the sample."
     )

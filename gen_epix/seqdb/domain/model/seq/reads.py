@@ -15,12 +15,12 @@ from gen_epix.commondb.domain.model.organization import BaseIdentifier
 from gen_epix.fastapp.domain import Entity, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.file import File
-from gen_epix.seqdb.domain.model.seq.base import CodeMixin, QualityMixin
+from gen_epix.seqdb.domain.model.seq.base import QualityMixin
 from gen_epix.seqdb.domain.model.seq.protocol import HasProtocolMixin, Protocol
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 
 
-class ReadSet(Model, HasSampleMixin, CodeMixin, HasProtocolMixin, QualityMixin):
+class ReadSet(Model, HasSampleMixin, HasProtocolMixin, QualityMixin):
     """
     A set of sequencing reads, either single-end or paired-end, that is the result
     of sequencing a sample using a protocol. The reads data itself are
@@ -86,6 +86,7 @@ class ReadSet(Model, HasSampleMixin, CodeMixin, HasProtocolMixin, QualityMixin):
     sequencing_run_code: str | None = Field(
         description="The code of the sequencing run.", max_length=255, default=None
     )
+    code: str | None = Field(default=None, max_length=255, description="")
 
     @computed_field(  # type: ignore[prop-decorator]
         description="Whether the read set has any linked reads data available, either via URIs or file links."
