@@ -1,6 +1,6 @@
 import io
+from test.util.mock_compat import MagicMock, Mock
 from typing import Any, Iterable, Optional, cast
-from unittest.mock import MagicMock, Mock
 from uuid import UUID, uuid4
 
 import pytest

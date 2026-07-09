@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import Hashable, Iterable
 from typing import Any, Callable, ClassVar
-from unittest import TestCase
 from uuid import uuid4
 
 import pytest
@@ -88,10 +87,10 @@ def _make_mapper(
     return mapper, row_class
 
 
-class BaseMapperTestCase(TestCase):
+class BaseMapperTestCase:
     """Base fixtures and helpers for mapper tests."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         self.entity: Entity = _make_entity()
         self.model_class: type[_Model] = type(
             "TModel", (_Model,), {"ENTITY": self.entity}

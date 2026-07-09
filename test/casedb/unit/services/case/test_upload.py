@@ -1,8 +1,7 @@
 """Unit tests for CaseBatchUploader (LSP-3356: case_date mutability)."""
 
 import datetime
-from unittest import TestCase
-from unittest.mock import Mock, patch
+from test.util.mock_compat import Mock, patch
 from uuid import uuid4
 
 import gen_epix.casedb.domain.command as command
@@ -25,20 +24,19 @@ def _make_user() -> User:
     )
 
 
-class TestCaseDateMutability(TestCase):
+class TestCaseDateMutability:
     def test_case_date_is_mutable_always(self) -> None:
         props = STORED_MODEL_FIELD_PROPS.get(model.Case, {})
         case_date_props = props.get("case_date")
-        self.assertIsNotNone(
-            case_date_props, "case_date missing from STORED_MODEL_FIELD_PROPS"
-        )
-        self.assertTrue(
-            case_date_props.is_mutable_always,
-            "case_date.is_mutable_always must be True so updates persist",
-        )
+        assert (
+            case_date_props is not None
+        ), "case_date missing from STORED_MODEL_FIELD_PROPS"
+        assert (
+            case_date_props.is_mutable_always
+        ), "case_date.is_mutable_always must be True so updates persist"
 
 
-class TestUpsertBatchCaseDate(TestCase):
+class TestUpsertBatchCaseDate:
     def _make_uploader(self) -> tuple[CaseBatchUploader, Mock]:
         service = Mock(spec=BaseCaseService)
         service.repository = Mock()
@@ -99,4 +97,4 @@ class TestUpsertBatchCaseDate(TestCase):
         ):
             uploader.upsert_batch(cmd, batch_result, Mock())
 
-        self.assertEqual(case.case_date, expected_date)
+        assert case.case_date == expected_date

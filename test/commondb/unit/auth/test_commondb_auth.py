@@ -8,8 +8,8 @@ import datetime
 from contextlib import contextmanager
 from test.fastapp.enum import ServiceType
 from test.fastapp.unit.auth.mock_jwk_and_token import MockJWKAndToken
+from test.util.mock_compat import Mock, patch
 from typing import Any, Generator
-from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
 
 import jwt

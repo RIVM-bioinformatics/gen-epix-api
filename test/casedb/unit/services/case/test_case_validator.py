@@ -8,8 +8,7 @@ public methods, with strict isolation via mocking.
 from __future__ import annotations
 
 import datetime
-from unittest import TestCase
-from unittest.mock import Mock, patch
+from test.util.mock_compat import Mock, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -23,10 +22,10 @@ from gen_epix.commondb.domain.enum import DataIssueType
 from gen_epix.commondb.domain.model.organization import Organization
 
 
-class BaseCaseValidatorTestCase(TestCase):
+class BaseCaseValidatorTestCase:
     """Base test case with common fixtures and helpers for CaseValidator tests."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         # Common and reference dimension IDs
         self.user_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440000")
         self.case_type_id: UUID = UUID("550e8400-e29b-41d4-a716-4466554400aa")

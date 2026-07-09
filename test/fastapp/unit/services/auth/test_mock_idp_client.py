@@ -9,8 +9,8 @@ Tests cover all public methods and branches, including:
 """
 
 import asyncio
+from test.util.mock_compat import Mock, patch
 from typing import Any, Dict, Tuple
-from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
 
 import pytest

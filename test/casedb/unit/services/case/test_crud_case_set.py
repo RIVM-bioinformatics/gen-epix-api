@@ -1,5 +1,5 @@
 from test.casedb.unit.services.case.base import BaseCrudTestCase
-from unittest.mock import Mock, patch
+from test.util.mock_compat import Mock, patch
 from uuid import UUID, uuid4
 
 import pytest
