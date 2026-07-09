@@ -132,7 +132,11 @@ class Seq(Model, HasSampleMixin, QualityMixin):
         default=NULL_ID,
         description="The first 128 bits of the SHA256 hash of the sorted contig seq hashes concatenated together. If the sequence has no contigs, the null UUID is returned.",
     )
-    code: str | None = Field(default=None, max_length=255, description="")
+    code: str | None = Field(
+        default=None,
+        max_length=255,
+        description="A code for the seq for further reference",
+    )
 
     @computed_field(  # type: ignore[prop-decorator]
         description="Whether the sequence has its contigs processed and available."

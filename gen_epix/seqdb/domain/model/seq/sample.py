@@ -40,7 +40,11 @@ class Sample(Model):
     created_in_data_collection: DataCollection | None = Field(
         default=None, description="The data collection where the sample was created"
     )
-    code: str | None = Field(default=None, max_length=255, description="")
+    code: str | None = Field(
+        default=None,
+        max_length=255,
+        description="A code for the sample for further reference",
+    )
     props: dict[str, str | int | float | None] = Field(
         default_factory=dict, description="The properties of the sample."
     )

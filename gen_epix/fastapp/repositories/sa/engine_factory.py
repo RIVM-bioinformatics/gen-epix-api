@@ -44,7 +44,9 @@ class EngineFactory:
             Engine: The SQLAlchemy engine obj.
         """
         key = cls._compose_key(
-            connection_string, echo=echo, pool_recycle=pool_recycle,
+            connection_string,
+            echo=echo,
+            pool_recycle=pool_recycle,
             connect_args=connect_args,
         )
         with cls._LOCK:

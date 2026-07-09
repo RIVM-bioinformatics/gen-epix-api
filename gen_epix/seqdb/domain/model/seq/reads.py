@@ -86,7 +86,11 @@ class ReadSet(Model, HasSampleMixin, HasProtocolMixin, QualityMixin):
     sequencing_run_code: str | None = Field(
         description="The code of the sequencing run.", max_length=255, default=None
     )
-    code: str | None = Field(default=None, max_length=255, description="")
+    code: str | None = Field(
+        default=None,
+        max_length=255,
+        description="A code for the read set for further reference",
+    )
 
     @computed_field(  # type: ignore[prop-decorator]
         description="Whether the read set has any linked reads data available, either via URIs or file links."

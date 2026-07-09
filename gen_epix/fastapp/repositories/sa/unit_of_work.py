@@ -68,7 +68,11 @@ class SAUnitOfWork(BaseUnitOfWork):
             # Suppress context for the same reason.
             exc_upper = str(exception_value).upper()
             orig_msg = str(getattr(exception_value, "orig", exception_value))
-            if "UNIQUE" in exc_upper or "DUPLICATE KEY" in exc_upper or "PRIMARY KEY" in exc_upper:
+            if (
+                "UNIQUE" in exc_upper
+                or "DUPLICATE KEY" in exc_upper
+                or "PRIMARY KEY" in exc_upper
+            ):
                 raise exc.UniqueConstraintViolationError(
                     "e2cabb6c",
                     f"Unique constraint violation: {orig_msg}",
