@@ -122,6 +122,10 @@ def case_service_retrieve_similar_cases(
             apply_max_n_cases=False,
         )
 
+        # early return if there are now no similar cases after ABAC filtering
+        if len(similar_cases) == 0:
+            return command.RetrieveSimilarCasesReturnValue(cases=[])
+
         case_type_access_abacs = case_abac.case_type_access_abacs.get(case_type_id, {})
         private_data_collection_ids = {
             x.data_collection_id
