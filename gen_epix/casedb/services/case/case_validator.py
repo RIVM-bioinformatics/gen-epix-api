@@ -613,6 +613,9 @@ class CaseValidator:
             if to_interval_id is None:
                 continue
 
+            if updated_content.get(col_pair[1]) is not None:
+                continue
+
             self._set_derived_value(
                 content,
                 updated_content,
@@ -694,6 +697,9 @@ class CaseValidator:
                 # Skip if transformation fails
                 continue
             if to_interval_id is None:
+                continue
+
+            if updated_content.get(col_pair[1]) is not None:
                 continue
 
             self._set_derived_value(
