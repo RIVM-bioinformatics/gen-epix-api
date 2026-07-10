@@ -297,7 +297,7 @@ class RefDataAccess(Model):
 
 class SimilarCase(BaseModel):
     """
-    Represents a case with its ID and date.
+    Represents a "similar case" search result with its ID, date, and ownership flag.
     """
 
     id: UUID = Field(description="The case ID.")
