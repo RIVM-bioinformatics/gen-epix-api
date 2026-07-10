@@ -297,12 +297,12 @@ class RefDataAccess(Model):
 
 class SimilarCase(BaseModel):
     """
-    Represents a case with its ID and date.
+    Represents a "similar case" search result with its ID, date, and ownership flag.
     """
 
     id: UUID = Field(description="The case ID.")
     case_date: datetime = Field(description="The case date, if any.")
     is_own_case: bool | None = Field(
         default=None,
-        description="Whether the case is an own case. I.e., whether the case is part of the data collections that the user has access to.",
+        description="Whether the case belongs to at least one private data collection the requesting user has access to. None means not computed.",
     )
