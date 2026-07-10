@@ -29,7 +29,6 @@ from gen_epix.casedb.domain.model.case import (
 )
 from gen_epix.casedb.domain.model.case import CaseDataIssue as CaseDataIssue
 from gen_epix.casedb.domain.model.case import CaseForUpload as CaseForUpload
-from gen_epix.casedb.domain.model.case import CaseIdAndDate as CaseIdAndDate
 from gen_epix.casedb.domain.model.case import CaseIdentifier as CaseIdentifier
 from gen_epix.casedb.domain.model.case import CaseQuery as CaseQuery
 from gen_epix.casedb.domain.model.case import CaseQueryResult as CaseQueryResult
@@ -62,6 +61,7 @@ from gen_epix.casedb.domain.model.case import RefCol as RefCol
 from gen_epix.casedb.domain.model.case import RefDataAccess as RefDataAccess
 from gen_epix.casedb.domain.model.case import RefDim as RefDim
 from gen_epix.casedb.domain.model.case import SeqForUpload as SeqForUpload
+from gen_epix.casedb.domain.model.case import SimilarCase as SimilarCase
 from gen_epix.casedb.domain.model.case import TreeAlgorithm as TreeAlgorithm
 from gen_epix.casedb.domain.model.case import TreeAlgorithmClass as TreeAlgorithmClass
 from gen_epix.casedb.domain.model.case.complete_case_type import (

@@ -122,10 +122,30 @@ def case_service_retrieve_similar_cases(
             apply_max_n_cases=False,
         )
 
+        case_type_access_abacs = case_abac.case_type_access_abacs.get(case_type_id, {})
+        private_data_collection_ids = {
+            x.data_collection_id
+            for x in case_type_access_abacs.values()
+            if x.is_private
+        }
+        case_data_collections_map = self._retrieve_case_data_collections_map(
+            uow, user.id, case_ids=similar_case_ids
+        )
+
         # Construct return value
         retval = command.RetrieveSimilarCasesReturnValue(
             cases=[
-                model.CaseIdAndDate(id=x.id, case_date=x.case_date)
+                model.SimilarCase(
+                    id=x.id,
+                    case_date=x.case_date,
+                    is_own_case=bool(
+                        (
+                            case_data_collections_map.get(x.id, set())
+                            | {x.created_in_data_collection_id}
+                        )
+                        & private_data_collection_ids
+                    ),
+                )
                 for x in similar_cases
                 if x.id is not None
             ]

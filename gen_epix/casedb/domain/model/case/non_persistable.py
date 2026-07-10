@@ -295,10 +295,14 @@ class RefDataAccess(Model):
         )
 
 
-class CaseIdAndDate(BaseModel):
+class SimilarCase(BaseModel):
     """
     Represents a case with its ID and date.
     """
 
     id: UUID = Field(description="The case ID.")
     case_date: datetime = Field(description="The case date, if any.")
+    is_own_case: bool | None = Field(
+        default=None,
+        description="Whether the case is an own case. I.e., whether the case is part of the data collections that the user has access to.",
+    )

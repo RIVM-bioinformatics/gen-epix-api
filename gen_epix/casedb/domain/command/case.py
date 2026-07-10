@@ -277,7 +277,7 @@ class RetrieveSimilarCasesCommand(Command):
 class RetrieveSimilarCasesReturnValue(BaseModel):
     """The return value for the RetrieveSimilarCasesCommand."""
 
-    cases: list[model.CaseIdAndDate] = Field(
+    cases: list[model.SimilarCase] = Field(
         description="The similar cases that were found, limited to their IDs and case dates."
     )
 
