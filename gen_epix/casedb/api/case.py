@@ -670,6 +670,30 @@ def create_case_endpoints(
             ),
         )
 
+    @router.post(
+        "/retrieve/is_own_cases",
+        operation_id="retrieve__is_own_cases",
+        name="Retrieve whether the user owns the cases",
+        description=command.RetrieveIsOwnCasesCommand.__doc__,
+    )
+    async def retrieve__is_own_cases(
+        user: registered_user_dependency, request_body: RetrieveCasesByIdsRequestBody
+    ) -> dict[UUID, bool]:
+        return cast(
+            dict[UUID, bool],
+            handle_command(
+                app=app,
+                user=user,
+                exception_code="d4e5f6g7",
+                input_handle_exception=handle_exception,
+                input_command=command.RetrieveIsOwnCasesCommand(
+                    user=user,
+                    case_ids=request_body.case_ids,
+                    case_type_id=request_body.case_type_id,
+                ),
+            ),
+        )
+
     @router.get(
         "/" + model.RefCol.ENTITY.snake_case_plural_name + "/validation_rules",
         operation_id=model.RefCol.ENTITY.snake_case_plural_name + "__validation_rules",

@@ -353,6 +353,20 @@ class RetrieveProtocolsCommand(Command):
     )
 
 
+class RetrieveIsOwnCasesCommand(Command):
+    """
+    Given a list of case IDs, check which of the cases are owned by the user or the user has access to.
+    Returns a list of case IDs that the user owns or has access to.
+    """
+
+    case_type_id: UUID = Field(
+        description="The CaseType ID that all the cases must belong to."
+    )
+    case_ids: list[UUID] = Field(
+        description="The IDs of the cases to check ownership for."
+    )
+
+
 # CRUD
 
 
