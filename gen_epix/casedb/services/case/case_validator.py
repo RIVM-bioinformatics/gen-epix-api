@@ -32,7 +32,7 @@ from gen_epix.filter import UuidSetFilter
 from gen_epix.filter.composite import CompositeFilter
 from gen_epix.filter.enum import LogicalOperator
 from gen_epix.transform.adapter import ObjectAdapter
-from gen_epix.transform.enum import TimeUnit, TimeUnitTransformStrategy
+from gen_epix.transform.enum import IntervalTransformStrategy, TimeUnit, TimeUnitTransformStrategy
 from gen_epix.transform.transformers import IntervalTransformer
 from gen_epix.transform.transformers.interval import IntervalToIntervalTransformer
 from gen_epix.transform.transformers.iso_time import IsoTimeTransformer
@@ -664,8 +664,8 @@ class CaseValidator:
                 src_upper_bound_is_inclusive=src_transformer._upper_bound_is_inclusive,
                 tgt_lower_bound_is_inclusive=tgt_transformer._lower_bound_is_inclusive,
                 tgt_upper_bound_is_inclusive=tgt_transformer._upper_bound_is_inclusive,
-                overlap_strategy="largest_overlap",
                 on_no_match=OnException.SET_NONE,
+                transform_strategy=IntervalTransformStrategy.CONTAINS_ONLY,
             )
         except Exception:
             # Skip if transformer creation fails

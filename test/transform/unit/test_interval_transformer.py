@@ -8,6 +8,7 @@ import pytest
 
 from gen_epix.fastapp.enum import OnException
 from gen_epix.transform.adapter import ObjectAdapter
+from gen_epix.transform.enum import IntervalTransformStrategy
 from gen_epix.transform.transformers.interval import (
     IntervalToIntervalTransformer,
     IntervalTransformer,
@@ -142,7 +143,7 @@ class TestIntervalToIntervalTransformer:
             tgt_interval_names=["young", "middle", "senior"],
             tgt_lower_bounds=[18, 30, 50],
             tgt_upper_bounds=[30, 50, 70],
-            overlap_strategy="largest_overlap",
+            transform_strategy=IntervalTransformStrategy.LARGEST_OVERLAP,
         )
 
         # Test cases: (input_interval, expected_interval)
@@ -166,7 +167,7 @@ class TestIntervalToIntervalTransformer:
                 result.get("detailed_age") == expected
             ), f"Input {input_interval} should map to {expected}"
 
-    def test_exact_fit_strategy(self) -> None:
+    def test_skip_strategy(self) -> None:
         """Test exact fit strategy - only maps if completely contained."""
         transformer = IntervalToIntervalTransformer(
             src_field="src_interval",
@@ -176,7 +177,7 @@ class TestIntervalToIntervalTransformer:
             tgt_interval_names=["small", "large"],
             tgt_lower_bounds=[0, 25],
             tgt_upper_bounds=[25, 50],
-            overlap_strategy="exact_fit",
+            transform_strategy=IntervalTransformStrategy.CONTAINS_ONLY,
         )
 
         test_cases = [
@@ -198,14 +199,14 @@ class TestIntervalToIntervalTransformer:
             tgt_interval_names=["small", "large"],
             tgt_lower_bounds=[0, 25],
             tgt_upper_bounds=[25, 50],
-            overlap_strategy="exact_fit",
+            transform_strategy=IntervalTransformStrategy.CONTAINS_ONLY,
         )
 
         adapter = ObjectAdapter(
             {"src_interval": "spanning"}
         )  # 20-30 spans both intervals
         with pytest.raises(
-            ValueError, match="cannot be mapped to target categorization"
+            ValueError, match="does not exist in the mapping"
         ):
             transformer_strict.transform(adapter)
 
@@ -241,7 +242,7 @@ class TestIntervalToIntervalTransformer:
 
         adapter = ObjectAdapter({"interval": "unmappable"})
         with pytest.raises(
-            ValueError, match="cannot be mapped to target categorization"
+            ValueError, match="does not exist in the mapping"
         ):
             transformer_raise.transform(adapter)
 
@@ -308,7 +309,7 @@ class TestIntervalToIntervalTransformer:
             tgt_upper_bounds=[30, 50],
             src_upper_bound_is_inclusive=True,
             tgt_lower_bound_is_inclusive=True,
-            overlap_strategy="largest_overlap",
+            transform_strategy=IntervalTransformStrategy.LARGEST_OVERLAP,
         )
 
         # Source interval [20,30] should map to "left" [10,30] with larger overlap
@@ -343,7 +344,7 @@ class TestIntervalToIntervalTransformer:
             tgt_interval_names=["youth", "adult", "middle_age"],
             tgt_lower_bounds=[10, 25, 35],
             tgt_upper_bounds=[25, 35, 55],
-            overlap_strategy="largest_overlap",
+            transform_strategy=IntervalTransformStrategy.LARGEST_OVERLAP,
         )
 
         test_cases = [
