@@ -205,9 +205,7 @@ class TestIntervalToIntervalTransformer:
         adapter = ObjectAdapter(
             {"src_interval": "spanning"}
         )  # 20-30 spans both intervals
-        with pytest.raises(
-            ValueError, match="does not exist in the mapping"
-        ):
+        with pytest.raises(ValueError, match="does not exist in the mapping"):
             transformer_strict.transform(adapter)
 
     def test_none_values_interval_to_interval(self) -> None:
@@ -241,9 +239,7 @@ class TestIntervalToIntervalTransformer:
         )
 
         adapter = ObjectAdapter({"interval": "unmappable"})
-        with pytest.raises(
-            ValueError, match="does not exist in the mapping"
-        ):
+        with pytest.raises(ValueError, match="does not exist in the mapping"):
             transformer_raise.transform(adapter)
 
         # Test SET_NONE

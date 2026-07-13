@@ -32,7 +32,11 @@ from gen_epix.filter import UuidSetFilter
 from gen_epix.filter.composite import CompositeFilter
 from gen_epix.filter.enum import LogicalOperator
 from gen_epix.transform.adapter import ObjectAdapter
-from gen_epix.transform.enum import IntervalTransformStrategy, TimeUnit, TimeUnitTransformStrategy
+from gen_epix.transform.enum import (
+    IntervalTransformStrategy,
+    TimeUnit,
+    TimeUnitTransformStrategy,
+)
 from gen_epix.transform.transformers import IntervalTransformer
 from gen_epix.transform.transformers.interval import IntervalToIntervalTransformer
 from gen_epix.transform.transformers.iso_time import IsoTimeTransformer
