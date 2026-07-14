@@ -38,17 +38,10 @@ def generate_uuids(n_rows: int = 1000, n_cols: int = 100) -> None:
     )
 
 
-def generate_hex_strings(
-    n_rows: int = 1000, n_cols: int = 100, length: int = 8
-) -> None:
-    hex_data = {
-        f"hex_string{i}": [f'"{secrets.token_hex(length // 2)}"' for j in range(n_rows)]
-        for i in range(n_cols)
-    }
-
-    df = pd.DataFrame.from_dict(hex_data)
-    xls_file = Path(__file__).parent.parent / "output" / "generated_hex_strings.xlsx"
-    df.to_excel(xls_file, sheet_name="hex_string", index=False)
+def generate_hex_strings(n_rows: int = 1000, length: int = 8) -> None:
+    hex_strings = [secrets.token_hex(length // 2) for _ in range(n_rows)]
+    txt_file = Path(__file__).parent.parent / "output" / "generated_hex_strings.txt"
+    txt_file.write_text("\n".join(hex_strings) + "\n", encoding="utf-8")
     print(
-        f"Total of {n_rows} hex strings times {df.shape[1]} columns generated and written to file {str(xls_file)}"
+        f"Total of {n_rows} hex strings generated and written to file {str(txt_file)}"
     )

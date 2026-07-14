@@ -49,7 +49,6 @@ from gen_epix.seqdb.domain.model.seq import BaseSeq as BaseSeq
 from gen_epix.seqdb.domain.model.seq import (
     CalculateSeqDistancesResult as CalculateSeqDistancesResult,
 )
-from gen_epix.seqdb.domain.model.seq import CodeMixin as CodeMixin
 from gen_epix.seqdb.domain.model.seq import ContentMixin as ContentMixin
 from gen_epix.seqdb.domain.model.seq import Contig as Contig
 from gen_epix.seqdb.domain.model.seq import FullSample as FullSample
