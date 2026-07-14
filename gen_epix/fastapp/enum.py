@@ -394,6 +394,7 @@ class OnException(Enum):
     REPLACE = "REPLACE"
     SET_DEFAULT = "SET_DEFAULT"
     SET_NONE = "SET_NONE"
+    SET_NO_RETURN = "SET_NO_RETURN"
 
 
 class FileExtension(Enum):

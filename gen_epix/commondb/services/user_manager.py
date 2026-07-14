@@ -168,9 +168,19 @@ class UserManager(BaseUserManager):
                 obj_ids=organization_id,
             )
             if not is_existing_organization:
-                raise exc.InitializationServiceError(
-                    "26baf193", "Auto-created new user organization does not exist"
-                )
+                if organization_id == self._root_organization.id:
+                    # auto create the organization for the root user if it does not exist
+                    self._organization_service.repository.crud(
+                        uow,
+                        None,
+                        model.Organization,
+                        CrudOperation.CREATE_ONE,
+                        objs=self._root_organization,
+                    )
+                else:
+                    raise exc.InitializationServiceError(
+                        "26baf193", "Auto-created new user organization does not exist"
+                    )
 
             # Verify if user exists and add if not
             # TODO: refactor this to add a separate method for a potential existing user

@@ -1698,18 +1698,28 @@ class TestNumpyAlleleKernels(TestCase):
         a = np.array([b"\x01" * 16, b"\x02" * 16, b"\x03" * 16], dtype="S16")
         b = np.array([b"\x01" * 16, b"\x99" * 16, b"\x03" * 16], dtype="S16")
         c = np.array([_NULL_ALLELE, b"\x02" * 16, b"\x03" * 16], dtype="S16")
-        self.assertEqual(_hamming_allele_numpy(a, a), 0.0)   # identity
-        self.assertEqual(_hamming_allele_numpy(a, b), 1.0)   # one mismatch
-        self.assertEqual(_hamming_allele_numpy(a, c), 0.0)   # null excluded
+        self.assertEqual(_hamming_allele_numpy(a, a), 0.0)  # identity
+        self.assertEqual(_hamming_allele_numpy(a, b), 1.0)  # one mismatch
+        self.assertEqual(_hamming_allele_numpy(a, c), 0.0)  # null excluded
 
     def test_hamming_allele_numpy_batch_matches_per_pair(self) -> None:
         n_loci = 4
-        existing = np.array([b"\x01" * 16, b"\x02" * 16, b"\x03" * 16, b"\x04" * 16], dtype="S16")
-        new_matrix = np.array([
-            [b"\x01" * 16, b"\x02" * 16, b"\x03" * 16, b"\x04" * 16],  # identical
-            [b"\x01" * 16, b"\x99" * 16, b"\x03" * 16, b"\x04" * 16],  # 1 diff
-            [_NULL_ALLELE, b"\x02" * 16, b"\xAA" * 16, b"\x04" * 16],  # null + 1 diff
-        ], dtype="S16")
+        existing = np.array(
+            [b"\x01" * 16, b"\x02" * 16, b"\x03" * 16, b"\x04" * 16], dtype="S16"
+        )
+        new_matrix = np.array(
+            [
+                [b"\x01" * 16, b"\x02" * 16, b"\x03" * 16, b"\x04" * 16],  # identical
+                [b"\x01" * 16, b"\x99" * 16, b"\x03" * 16, b"\x04" * 16],  # 1 diff
+                [
+                    _NULL_ALLELE,
+                    b"\x02" * 16,
+                    b"\xaa" * 16,
+                    b"\x04" * 16,
+                ],  # null + 1 diff
+            ],
+            dtype="S16",
+        )
         null_new = new_matrix == _NULL_ALLELE
         result = _hamming_allele_numpy_batch(existing, new_matrix, null_new)
         for i in range(3):
@@ -1720,7 +1730,7 @@ class TestNumpyAlleleKernels(TestCase):
         new_s16 = np.array([[b"\x01" * 16, b"\x02" * 16]], dtype="S16")
         chunk_s16 = np.array([[b"\x01" * 16, b"\x03" * 16]], dtype="S16")
         new_int32, chunk_int32 = _encode_to_int32(new_s16, chunk_s16)
-        self.assertEqual(new_int32[0, 0], chunk_int32[0, 0])   # shared \x01 token
+        self.assertEqual(new_int32[0, 0], chunk_int32[0, 0])  # shared \x01 token
         self.assertNotEqual(new_int32[0, 1], chunk_int32[0, 1])  # \x02 vs \x03
 
     def test_hamming_allele_int32_batch_matches_numpy_batch(self) -> None:
@@ -1728,7 +1738,10 @@ class TestNumpyAlleleKernels(TestCase):
         n_loci, m = 10, 3
         allele_pool = [bytes([v] * 16) for v in range(1, 6)]
         new_s16 = np.array(
-            [[allele_pool[rng.integers(0, 5)] for _ in range(n_loci)] for _ in range(m)],
+            [
+                [allele_pool[rng.integers(0, 5)] for _ in range(n_loci)]
+                for _ in range(m)
+            ],
             dtype="S16",
         )
         existing_s16 = np.array(
@@ -1748,20 +1761,41 @@ class TestNumpyAlleleKernels(TestCase):
     def test_int32_and_numpy_batch_produce_same_distances_as_python_loop(self) -> None:
         # Parity test: all three paths must agree on the same 5-locus, 4-profile case.
         alleles = [b"\x01" * 16, b"\x02" * 16, b"\x03" * 16, _NULL_ALLELE]
-        existing_s16 = np.array([alleles[0], alleles[1], alleles[2], alleles[3], alleles[0]], dtype="S16")
-        new_s16 = np.array([
-            [alleles[0], alleles[1], alleles[2], alleles[3], alleles[1]],  # 1 diff (pos 4), null excl
-            [alleles[2], alleles[1], alleles[0], alleles[3], alleles[0]],  # 2 diffs, null excl
-        ], dtype="S16")
+        existing_s16 = np.array(
+            [alleles[0], alleles[1], alleles[2], alleles[3], alleles[0]], dtype="S16"
+        )
+        new_s16 = np.array(
+            [
+                [
+                    alleles[0],
+                    alleles[1],
+                    alleles[2],
+                    alleles[3],
+                    alleles[1],
+                ],  # 1 diff (pos 4), null excl
+                [
+                    alleles[2],
+                    alleles[1],
+                    alleles[0],
+                    alleles[3],
+                    alleles[0],
+                ],  # 2 diffs, null excl
+            ],
+            dtype="S16",
+        )
         null_new = new_s16 == _NULL_ALLELE
         null_existing = existing_s16 == _NULL_ALLELE
 
         # Python reference
         def _py(ex: np.ndarray, nw: np.ndarray) -> float:
-            return float(sum(
-                1 for e, n in zip(ex, nw)
-                if e != n and e != _NULL_ALLELE and n != _NULL_ALLELE
-            ))
+            return float(
+                sum(
+                    1
+                    for e, n in zip(ex, nw)
+                    if e != n and e != _NULL_ALLELE and n != _NULL_ALLELE
+                )
+            )
+
         ref = [_py(existing_s16, new_s16[i]) for i in range(2)]
 
         # numpy_batch
@@ -1864,7 +1898,10 @@ class TestNumpyAlleleIntegration:
         ) -> Any:
             if model_class is model.SeqProfile and operation == CrudOperation.READ_SOME:
                 return [profiles_by_id[i] for i in obj_ids if i in profiles_by_id]
-            if model_class is model.SeqDistance and operation == CrudOperation.CREATE_SOME:
+            if (
+                model_class is model.SeqDistance
+                and operation == CrudOperation.CREATE_SOME
+            ):
                 recorder.created.extend(objs)
                 return objs
             return []
@@ -1897,15 +1934,17 @@ class TestNumpyAlleleIntegration:
             protocol_id=self.protocol_id,
             allele_ids=[a1, None, a2],
         )
-        result = _decode_profile(enum.SeqProfileType.ALLELE, profile, use_numpy_allele=True)
+        result = _decode_profile(
+            enum.SeqProfileType.ALLELE, profile, use_numpy_allele=True
+        )
         assert isinstance(result, np.ndarray)
         assert result.dtype == np.dtype("S16")
         assert result.shape == (3,)
         # numpy strips trailing null bytes on scalar access, so compare via array equality
         null_mask = result == _NULL_ALLELE
-        assert not null_mask[0]   # a1 is non-null
-        assert null_mask[1]       # None → encoded as _NULL_ALLELE
-        assert not null_mask[2]   # a2 is non-null
+        assert not null_mask[0]  # a1 is non-null
+        assert null_mask[1]  # None → encoded as _NULL_ALLELE
+        assert not null_mask[2]  # a2 is non-null
 
     def test_calculate_distance_pair_numpy_branch(self) -> None:
         """The isinstance(np.ndarray) branch in _calculate_distance_for_decoded_profile_pair
@@ -2020,8 +2059,12 @@ class TestNumpyAlleleIntegration:
             protocol_id=self.protocol_id,
             allele_ids=[a2, a2],  # 1 diff at locus 0
         )
-        decoded_p1 = _decode_profile(enum.SeqProfileType.ALLELE, p1, use_numpy_allele=True)
-        decoded_p2 = _decode_profile(enum.SeqProfileType.ALLELE, p2, use_numpy_allele=True)
+        decoded_p1 = _decode_profile(
+            enum.SeqProfileType.ALLELE, p1, use_numpy_allele=True
+        )
+        decoded_p2 = _decode_profile(
+            enum.SeqProfileType.ALLELE, p2, use_numpy_allele=True
+        )
         distance_maps: dict[UUID, dict[str, float]] = {p1_id: {}, p2_id: {}}
 
         with patch(
@@ -2041,8 +2084,8 @@ class TestNumpyAlleleIntegration:
     @pytest.mark.parametrize(
         "n_new,exp_batch,exp_int32",
         [
-            (2, True, False),   # below gate → numpy_batch
-            (3, False, True),   # at gate → int32_vocab
+            (2, True, False),  # below gate → numpy_batch
+            (3, False, True),  # at gate → int32_vocab
         ],
     )
     def test_gate_selects_variant_by_n_new(
@@ -2127,14 +2170,14 @@ class TestNumpyAlleleIntegration:
                 sample_id=self.sample_id2,
                 locus_set_id=self.locus_set_id,
                 protocol_id=self.protocol_id,
-                allele_ids=[a1, a2, a3],   # identical to e1 → 0, vs e2 → 1
+                allele_ids=[a1, a2, a3],  # identical to e1 → 0, vs e2 → 1
             ),
             _make_allele_profile(
                 profile_id=n2_id,
                 sample_id=self.sample_id2,
                 locus_set_id=self.locus_set_id,
                 protocol_id=self.protocol_id,
-                allele_ids=[a2, a2, a3],   # vs e1 → 1 (locus 0), vs e2 → 0
+                allele_ids=[a2, a2, a3],  # vs e1 → 1 (locus 0), vs e2 → 0
             ),
             _make_allele_profile(
                 profile_id=n3_id,
@@ -2143,7 +2186,7 @@ class TestNumpyAlleleIntegration:
                 protocol_id=self.protocol_id,
                 # Loci 0 and 1 swapped vs e1 → 2 diffs, NOT 0.
                 # Catches any bug where locus position is ignored.
-                allele_ids=[a2, a1, a3],   # vs e1 → 2, vs e2 → 1 (locus 1)
+                allele_ids=[a2, a1, a3],  # vs e1 → 2, vs e2 → 1 (locus 1)
             ),
         ]
         protocol = self._allele_protocol(max_stored_distance=100.0)
@@ -2213,18 +2256,18 @@ class TestNumpyAlleleIntegration:
         i32_maps = _run(True, False, True)
 
         for n_id in [n1_id, n2_id, n3_id]:
-            assert py_maps[n_id] == nb_maps[n_id], (
-                f"numpy_batch mismatch at profile {n_id}"
-            )
-            assert py_maps[n_id] == i32_maps[n_id], (
-                f"int32_vocab mismatch at profile {n_id}"
-            )
+            assert (
+                py_maps[n_id] == nb_maps[n_id]
+            ), f"numpy_batch mismatch at profile {n_id}"
+            assert (
+                py_maps[n_id] == i32_maps[n_id]
+            ), f"int32_vocab mismatch at profile {n_id}"
 
         # Explicit locus-position checks on the Python reference path.
-        assert py_maps[n1_id][str(e1_id)] == 0.0   # identical
-        assert py_maps[n1_id][str(e2_id)] == 1.0   # locus 0 differs
-        assert py_maps[n2_id][str(e1_id)] == 1.0   # locus 0 differs
-        assert py_maps[n2_id][str(e2_id)] == 0.0   # identical
+        assert py_maps[n1_id][str(e1_id)] == 0.0  # identical
+        assert py_maps[n1_id][str(e2_id)] == 1.0  # locus 0 differs
+        assert py_maps[n2_id][str(e1_id)] == 1.0  # locus 0 differs
+        assert py_maps[n2_id][str(e2_id)] == 0.0  # identical
         # Locus-swap: distance must be 2, not 0.
         assert py_maps[n3_id][str(e1_id)] == 2.0
-        assert py_maps[n3_id][str(e2_id)] == 1.0   # locus 1 differs (a1 vs a2)
+        assert py_maps[n3_id][str(e2_id)] == 1.0  # locus 1 differs (a1 vs a2)

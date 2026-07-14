@@ -905,11 +905,11 @@ class Run:
         generate_uuids(n_rows=n_rows, n_cols=n_cols)
 
     def other_general_generate_hex_strings(
-        self, n_rows: int = 1000, n_cols: int = 100, length: int = 8
+        self, n_rows: int = 1000, length: int = 8
     ) -> None:
         from test.test_client.util import generate_hex_strings
 
-        generate_hex_strings(n_rows=n_rows, n_cols=n_cols, length=length)
+        generate_hex_strings(n_rows=n_rows, length=length)
 
     def other_general_run_linters(self) -> None:
         from test.test_client.linter import Linter
