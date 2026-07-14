@@ -1314,7 +1314,7 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
         self.expectBatchFailed(batch_result)
         self.expectStatusCount(batch_result, n_failed=1, n_skipped=1, n_pending=2)
         assert batch_result.persons[0].specimens[0].id == existing_specimen_id
-        assert batch_result.persons[0].specimens[0].identifiers[1].id == None
+        assert batch_result.persons[0].specimens[0].identifiers[1].id is None
 
     def test_8_2_3_2_multiple_identifiers_all_new_same_issuer(self) -> None:
         """Test 8.2.3.2: Multiple Identifiers all new but same issuer - should fail."""
