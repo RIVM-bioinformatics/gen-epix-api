@@ -690,8 +690,13 @@ class App:
         rather than just the head. DB driver error strings (e.g. FK/unique
         constraint violations) often echo the full SQL statement first and put
         the actual error message at the end, so a head-only cut hides it."""
+        if max_length <= 0:
+            return f"…[{len(text)} chars omitted]…"
         if len(text) <= max_length:
             return text
-        half = max_length // 2
+        prefix_len = max_length // 2
+        suffix_len = max_length - prefix_len
         omitted = len(text) - max_length
-        return f"{text[:half]}…[{omitted} chars omitted]…{text[-half:]}"
+        prefix = text[:prefix_len] if prefix_len else ""
+        suffix = text[-suffix_len:] if suffix_len else ""
+        return f"{prefix}…[{omitted} chars omitted]…{suffix}"
