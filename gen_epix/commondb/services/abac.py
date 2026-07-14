@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, ClassVar
 from uuid import UUID
 
 from cachetools import TTLCache, cached
@@ -27,6 +27,7 @@ from gen_epix.filter import (
 class AbacService(BaseAbacService):
 
     CACHE_INVALIDATION_COMMANDS: tuple[type[Command], ...] = tuple()
+    _GET_USER_BY_ID_CACHE: ClassVar[TTLCache] = TTLCache(maxsize=1024, ttl=300)
 
     def __init__(
         self,
@@ -72,7 +73,7 @@ class AbacService(BaseAbacService):
         retval = super().crud(cmd)
         # Invalidate cache
         if issubclass(type(cmd), AbacService.CACHE_INVALIDATION_COMMANDS):
-            self._get_user_by_id_cached.cache_clear()
+            AbacService._GET_USER_BY_ID_CACHE.clear()
         return retval
 
     def register_policies(
@@ -258,10 +259,10 @@ class AbacService(BaseAbacService):
 
         # Invalidate cache
         # TODO: develop general system for caching and cache invalidation
-        self._get_user_by_id_cached.cache_clear()
+        AbacService._GET_USER_BY_ID_CACHE.clear()
         return user
 
-    @cached(cache=TTLCache(maxsize=1024, ttl=300))
+    @cached(cache=_GET_USER_BY_ID_CACHE)
     def _get_user_by_id_cached(self, user_id: UUID) -> model.User:
         user: model.User = self.app.handle(
             self.user_crud_command_class(
