@@ -263,12 +263,12 @@ erDiagram
     }
 
     Sample {
-        string code
         timestamp created_at
         timestamp modified_at
         UUID modified_by
         UUID id PK
         UUID created_in_data_collection_id FK
+        string code
         dict[string, string | int | float] props
     }
 
@@ -454,7 +454,6 @@ erDiagram
         float qc_score
         Json qc_report
         UUID protocol_id FK
-        string code
         UUID sample_id FK
         timestamp created_at
         timestamp modified_at
@@ -469,6 +468,7 @@ erDiagram
         UUID fwd_reads_hash
         UUID rev_reads_hash
         string sequencing_run_code
+        string code
         any is_available
     }
 
@@ -518,7 +518,6 @@ erDiagram
         enum qc_result
         float qc_score
         Json qc_report
-        string code
         UUID sample_id FK
         timestamp created_at
         timestamp modified_at
@@ -534,6 +533,7 @@ erDiagram
         UUID protocol_id FK
         list[Contig] contigs
         UUID seq_hash
+        string code
         any is_available
         any n_contigs
         any length
