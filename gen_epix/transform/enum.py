@@ -14,6 +14,11 @@ class TimeUnitTransformStrategy(Enum):
     LARGEST_OVERLAP = "LARGEST_OVERLAP"
 
 
+class IntervalTransformStrategy(Enum):
+    CONTAINS_ONLY = "CONTAINS_ONLY"
+    LARGEST_OVERLAP = "LARGEST_OVERLAP"
+
+
 class TransformType(Enum):
     BASE = "BASE"
 
