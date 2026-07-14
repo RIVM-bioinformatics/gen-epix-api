@@ -2,8 +2,8 @@ import base64
 from datetime import datetime, timedelta, timezone
 from math import floor
 from test.fastapp.auth_test_client import AuthTestClient
+from test.util.mock_compat import MagicMock, Mock, patch
 from typing import Any
-from unittest.mock import MagicMock, Mock, patch
 
 import httpx
 import pytest

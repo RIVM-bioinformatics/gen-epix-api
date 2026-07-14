@@ -1,6 +1,5 @@
+from test.util.mock_compat import Mock
 from typing import Any, cast
-from unittest import TestCase
-from unittest.mock import Mock
 from uuid import UUID, uuid4
 
 import pytest
@@ -18,10 +17,10 @@ from gen_epix.fastapp.services.rbac.service import (
 from gen_epix.fastapp.user_manager import BaseUserManager as FastBaseUserManager
 
 
-class BasePolicyTestCase(TestCase):
+class BasePolicyTestCase:
     """Base test case with common fixtures and utilities for policy tests."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         """Set up test fixtures."""
         # User and organizations
         self.org_id: UUID = uuid4()
@@ -170,7 +169,7 @@ class TestPassThroughAndErrors(BasePolicyTestCase):
         )
         retval: list[model.OrganizationAdminPolicy] = []
 
-        # 2) Mocks already set in setUp
+        # 2) Mocks already set in setup_method
 
         # 3) Execute
         with pytest.raises(exc.ServiceException) as e:
@@ -370,8 +369,8 @@ class TestOrganizationIdFiltering(BasePolicyTestCase):
 class TestUserIdFiltering(BasePolicyTestCase):
     """Test scenarios related to user_id attribute filtering (monkeypatched)."""
 
-    def setUp(self) -> None:
-        super().setUp()
+    def setup_method(self) -> None:
+        super().setup_method()
         # Monkeypatch policy to drive execution into user_id branch
         self.policy.has_organization_id_attr_command_classes = set()
         self.policy.has_user_id_attr_command_classes = {command.UserCrudCommand}

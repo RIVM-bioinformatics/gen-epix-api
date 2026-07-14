@@ -1,6 +1,5 @@
+from test.util.mock_compat import MagicMock, Mock, call
 from types import SimpleNamespace
-from unittest import TestCase
-from unittest.mock import MagicMock, Mock, call
 from uuid import UUID, uuid4
 
 import pytest
@@ -17,10 +16,10 @@ from gen_epix.seqdb.domain import command as seqdb_command
 from gen_epix.seqdb.domain import enum as seqdb_enum
 
 
-class BaseSimilarCasesTestCase(TestCase):
+class BaseSimilarCasesTestCase:
     """Base test case with common fixtures and utilities for similar cases."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         """Set up test fixtures."""
         # Test user
         self.user: model.User = model.User(
@@ -67,7 +66,7 @@ class BaseSimilarCasesTestCase(TestCase):
             return_value=SimpleNamespace()
         )
 
-    def tearDown(self) -> None:
+    def teardown_method(self) -> None:
         BaseCaseAbacPolicy.get_case_abac_from_command = self._orig_get_case_abac  # type: ignore[method-assign]
 
     # Helpers
@@ -137,7 +136,7 @@ class TestInputValidation(BaseSimilarCasesTestCase):
         cmd: command.RetrieveSimilarCasesCommand = self.create_command(case_ids=[])
 
         # 2. Mocks
-        # (already configured in setUp)
+        # (already configured in setup_method)
 
         # 3. Execute
         similar_cases = case_service_retrieve_similar_cases(self.service, cmd)

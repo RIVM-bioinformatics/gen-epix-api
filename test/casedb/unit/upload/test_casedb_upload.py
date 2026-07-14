@@ -1,8 +1,7 @@
 """Unit tests for casedb case upload functionality."""
 
 import datetime
-from unittest import TestCase
-from unittest.mock import Mock, patch
+from test.util.mock_compat import Mock, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -38,10 +37,10 @@ def _to_casedb_role_set(role_set: RoleSet) -> set[str]:
     return {f"CASEDB_{x.name}" for x in role_set.value}
 
 
-class BaseUploadTestCase(TestCase):
+class BaseUploadTestCase:
     """Base test case with common fixtures and utility methods."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         self.user = User(
             id=uuid4(),
             key="test@example.com",
@@ -249,9 +248,9 @@ class TestCaseUploadSeqdbBridge(BaseUploadTestCase):
             )
         )
 
-        self.assertTrue(success)
-        self.assertIsNone(upload_samples_cmd)
-        self.assertEqual(dict(child_map), {})
+        assert success
+        assert upload_samples_cmd is None
+        assert dict(child_map) == {}
 
     def test_get_upload_samples_command_builds_seqdb_batch(self) -> None:
         case_for_upload = self.create_case_for_upload(
@@ -267,16 +266,16 @@ class TestCaseUploadSeqdbBridge(BaseUploadTestCase):
             )
         )
 
-        self.assertTrue(success)
-        self.assertIsNotNone(upload_samples_cmd)
+        assert success
         assert upload_samples_cmd is not None
-        self.assertEqual(len(upload_samples_cmd.sample_batch.samples), 1)
+        assert upload_samples_cmd is not None
+        assert len(upload_samples_cmd.sample_batch.samples) == 1
         sample = upload_samples_cmd.sample_batch.samples[0]
-        self.assertEqual(len(sample.read_sets or []), 1)
-        self.assertEqual(len(sample.seqs or []), 1)
-        self.assertEqual(upload_samples_cmd.user, self.user)
-        self.assertIn((0, 0), child_map[seqdb_model.ReadSetForUpload])
-        self.assertIn((0, 0), child_map[seqdb_model.SeqForUpload])
+        assert len(sample.read_sets or []) == 1
+        assert len(sample.seqs or []) == 1
+        assert upload_samples_cmd.user == self.user
+        assert (0, 0) in child_map[seqdb_model.ReadSetForUpload]
+        assert (0, 0) in child_map[seqdb_model.SeqForUpload]
 
     def test_upload_samples_maps_results_to_case_and_upload_result(self) -> None:
         case_for_upload = self.create_case_for_upload(
@@ -321,19 +320,15 @@ class TestCaseUploadSeqdbBridge(BaseUploadTestCase):
             cmd, batch_result, verify_only=True
         )
 
-        self.assertTrue(success)
+        assert success
         handled_cmd = self.service.app.handle.call_args[0][0]
-        self.assertTrue(handled_cmd.verify_only)
-        self.assertEqual(
-            case_for_upload.case.content[self.reads_col_id],
-            str(created_read_set_id),
+        assert handled_cmd.verify_only
+        assert case_for_upload.case.content[self.reads_col_id] == str(
+            created_read_set_id
         )
-        self.assertEqual(
-            case_for_upload.case.content[self.seq_col_id],
-            str(created_seq_id),
-        )
-        self.assertEqual(batch_result.cases[0].read_sets[0].id, created_read_set_id)
-        self.assertEqual(batch_result.cases[0].seqs[0].id, created_seq_id)
+        assert case_for_upload.case.content[self.seq_col_id] == str(created_seq_id)
+        assert batch_result.cases[0].read_sets[0].id == created_read_set_id
+        assert batch_result.cases[0].seqs[0].id == created_seq_id
 
     def test_upload_samples_returns_false_when_seqdb_result_has_failures(self) -> None:
         case_for_upload = self.create_case_for_upload(
@@ -364,7 +359,7 @@ class TestCaseUploadSeqdbBridge(BaseUploadTestCase):
             cmd, batch_result, verify_only=False
         )
 
-        self.assertFalse(success)
+        assert not success
 
     def test_get_upload_samples_command_accepts_sample_id_without_external_id(
         self,
@@ -382,16 +377,16 @@ class TestCaseUploadSeqdbBridge(BaseUploadTestCase):
             )
         )
 
-        self.assertTrue(success)
-        self.assertIsNotNone(upload_samples_cmd)
+        assert success
         assert upload_samples_cmd is not None
-        self.assertEqual(len(upload_samples_cmd.sample_batch.samples), 1)
+        assert upload_samples_cmd is not None
+        assert len(upload_samples_cmd.sample_batch.samples) == 1
         sample = upload_samples_cmd.sample_batch.samples[0]
-        self.assertEqual(sample.id, self.sample_id)
-        self.assertEqual(sample.sample.id, self.sample_id)
-        self.assertEqual(sample.identifiers, [])
-        self.assertEqual(len(sample.read_sets or []), 1)
-        self.assertIn((0, 0), child_map[seqdb_model.ReadSetForUpload])
+        assert sample.id == self.sample_id
+        assert sample.sample.id == self.sample_id
+        assert sample.identifiers == []
+        assert len(sample.read_sets or []) == 1
+        assert (0, 0) in child_map[seqdb_model.ReadSetForUpload]
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
@@ -399,14 +394,12 @@ class TestCaseDateMutability(BaseUploadTestCase):
     def test_case_date_is_mutable_always(self) -> None:
         props = STORED_MODEL_FIELD_PROPS.get(model.Case, {})
         case_date_props = props.get("case_date")
-        self.assertIsNotNone(
-            case_date_props,
-            "case_date missing from STORED_MODEL_FIELD_PROPS",
-        )
-        self.assertTrue(
-            case_date_props.is_mutable_always,
-            "case_date.is_mutable_always must be True so updates persist",
-        )
+        assert (
+            case_date_props is not None
+        ), "case_date missing from STORED_MODEL_FIELD_PROPS"
+        assert (
+            case_date_props.is_mutable_always
+        ), "case_date.is_mutable_always must be True so updates persist"
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
@@ -463,7 +456,7 @@ class TestUpsertBatchCaseDate(BaseUploadTestCase):
         ):
             uploader.upsert_batch(cmd, batch_result, Mock())
 
-        self.assertEqual(case.case_date, expected_date)
+        assert case.case_date == expected_date
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
@@ -481,10 +474,10 @@ class TestCaseCohortUploadUpdates(BaseUploadTestCase):
 
         success, result, updated_objs = self.update_case(existing_case, uploaded_case)
 
-        self.assertTrue(success)
-        self.assertEqual(result.status, EtlStatus.UPDATED)
-        self.assertEqual(len(updated_objs), 1)
-        self.assertEqual(updated_objs[0].cohort, {cohort_id: cohort_definition_id})
+        assert success
+        assert result.status == EtlStatus.UPDATED
+        assert len(updated_objs) == 1
+        assert updated_objs[0].cohort == {cohort_id: cohort_definition_id}
 
     def test_upload_case_cohort_updates_existing_mapping(self) -> None:
         cohort_id = UUID("550e8400-e29b-41d4-a716-446655440009")
@@ -500,10 +493,10 @@ class TestCaseCohortUploadUpdates(BaseUploadTestCase):
 
         success, result, updated_objs = self.update_case(existing_case, uploaded_case)
 
-        self.assertTrue(success)
-        self.assertEqual(result.status, EtlStatus.UPDATED)
-        self.assertEqual(len(updated_objs), 1)
-        self.assertEqual(updated_objs[0].cohort, {cohort_id: new_definition_id})
+        assert success
+        assert result.status == EtlStatus.UPDATED
+        assert len(updated_objs) == 1
+        assert updated_objs[0].cohort == {cohort_id: new_definition_id}
 
     def test_upload_case_cohort_deletes_mapping_with_none(self) -> None:
         cohort_id = UUID("550e8400-e29b-41d4-a716-446655440009")
@@ -519,10 +512,10 @@ class TestCaseCohortUploadUpdates(BaseUploadTestCase):
 
         success, result, updated_objs = self.update_case(existing_case, uploaded_case)
 
-        self.assertTrue(success)
-        self.assertEqual(result.status, EtlStatus.UPDATED)
-        self.assertEqual(len(updated_objs), 1)
-        self.assertEqual(updated_objs[0].cohort, {})
+        assert success
+        assert result.status == EtlStatus.UPDATED
+        assert len(updated_objs) == 1
+        assert updated_objs[0].cohort == {}
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
@@ -565,11 +558,11 @@ class TestExistingContentKeyNormalization(BaseUploadTestCase):
     def test_uuid_keys_from_dict_repo_are_accepted(self) -> None:
         # Pre-fix: UUID(uuid_obj) raised AttributeError; must not raise now
         content = self._run_upsert_with_existing_key(self.reads_col_id)
-        self.assertIn(self.reads_col_id, content)
+        assert self.reads_col_id in content
 
     def test_string_keys_from_sql_repo_are_converted_to_uuid(self) -> None:
         content = self._run_upsert_with_existing_key(str(self.reads_col_id))
-        self.assertIn(self.reads_col_id, content)
+        assert self.reads_col_id in content
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
@@ -587,10 +580,10 @@ class TestCaseContentUploadUpdates(BaseUploadTestCase):
 
         success, result, updated_objs = self.update_case(existing_case, uploaded_case)
 
-        self.assertTrue(success)
-        self.assertEqual(result.status, EtlStatus.UPDATED)
-        self.assertEqual(len(updated_objs), 1)
-        self.assertEqual(updated_objs[0].content, {col_id: col_value})
+        assert success
+        assert result.status == EtlStatus.UPDATED
+        assert len(updated_objs) == 1
+        assert updated_objs[0].content == {col_id: col_value}
 
     def test_upload_case_content_updates_existing_mapping(self) -> None:
         col_id = self.reads_col_id
@@ -606,10 +599,10 @@ class TestCaseContentUploadUpdates(BaseUploadTestCase):
 
         success, result, updated_objs = self.update_case(existing_case, uploaded_case)
 
-        self.assertTrue(success)
-        self.assertEqual(result.status, EtlStatus.UPDATED)
-        self.assertEqual(len(updated_objs), 1)
-        self.assertEqual(updated_objs[0].content, {col_id: new_value})
+        assert success
+        assert result.status == EtlStatus.UPDATED
+        assert len(updated_objs) == 1
+        assert updated_objs[0].content == {col_id: new_value}
 
     def test_upload_case_content_deletes_mapping_with_none(self) -> None:
         col_id = self.reads_col_id
@@ -625,10 +618,10 @@ class TestCaseContentUploadUpdates(BaseUploadTestCase):
 
         success, result, updated_objs = self.update_case(existing_case, uploaded_case)
 
-        self.assertTrue(success)
-        self.assertEqual(result.status, EtlStatus.UPDATED)
-        self.assertEqual(len(updated_objs), 1)
-        self.assertEqual(updated_objs[0].content, {})
+        assert success
+        assert result.status == EtlStatus.UPDATED
+        assert len(updated_objs) == 1
+        assert updated_objs[0].content == {}
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
@@ -650,7 +643,7 @@ class TestVerifyUserRights(BaseUploadTestCase):
         )
 
     def test_raises_for_invalid_command_type(self) -> None:
-        with self.assertRaises(exc.InvalidArgumentsError):
+        with pytest.raises(exc.InvalidArgumentsError):
             self.batch_uploader.verify_user_rights(Mock())
 
     def test_raises_for_user_with_only_guest_role(self) -> None:
@@ -664,7 +657,7 @@ class TestVerifyUserRights(BaseUploadTestCase):
             is_active=True,
         )
         cmd = self._make_cmd(user=guest_user)
-        with self.assertRaises(exc.UnauthorizedAuthError):
+        with pytest.raises(exc.UnauthorizedAuthError):
             self.batch_uploader.verify_user_rights(cmd)
 
     def test_succeeds_for_org_user_role(self) -> None:
@@ -720,9 +713,9 @@ class TestSetDefaultCreatedInDataCollectionId(BaseUploadTestCase):
             cmd, batch_result
         )
 
-        self.assertFalse(success)
-        self.assertEqual(batch_result.cases[0].status, EtlStatus.FAILED)
-        self.assertTrue(batch_result.cases[0].has_errors)
+        assert not success
+        assert batch_result.cases[0].status == EtlStatus.FAILED
+        assert batch_result.cases[0].has_errors
 
     def test_new_case_with_explicit_created_in_dc_id_unchanged(self) -> None:
         """When case explicitly sets created_in_data_collection_id, don't override."""
@@ -751,10 +744,8 @@ class TestSetDefaultCreatedInDataCollectionId(BaseUploadTestCase):
                 cmd, batch_result
             )
 
-        self.assertTrue(success)
-        self.assertEqual(
-            case_for_upload.case.created_in_data_collection_id, dc_id_explicit
-        )
+        assert success
+        assert case_for_upload.case.created_in_data_collection_id == dc_id_explicit
 
     def test_existing_case_created_in_dc_id_preserved(self) -> None:
         """Existing cases should not be modified by default setting."""
@@ -784,10 +775,8 @@ class TestSetDefaultCreatedInDataCollectionId(BaseUploadTestCase):
                 cmd, batch_result
             )
 
-        self.assertTrue(success)
-        self.assertEqual(
-            case_for_upload.case.created_in_data_collection_id, dc_id_existing
-        )
+        assert success
+        assert case_for_upload.case.created_in_data_collection_id == dc_id_existing
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
@@ -805,9 +794,7 @@ class TestCaseDataCollectionIdHandling(BaseUploadTestCase):
             default_created_in_data_collection_id=self.data_collection_id,
         )
 
-        self.assertEqual(
-            case_for_upload.case.created_in_data_collection_id, explicit_dc_id
-        )
+        assert case_for_upload.case.created_in_data_collection_id == explicit_dc_id
 
     def test_batch_with_multiple_different_data_collection_ids(self) -> None:
         """Batch can contain cases from different DCs."""
@@ -823,9 +810,9 @@ class TestCaseDataCollectionIdHandling(BaseUploadTestCase):
 
         cmd, batch_result = self.create_command_and_result([case1, case2])
 
-        self.assertEqual(len(batch_result.cases), 2)
-        self.assertEqual(case1.case.created_in_data_collection_id, dc_id_1)
-        self.assertEqual(case2.case.created_in_data_collection_id, dc_id_2)
+        assert len(batch_result.cases) == 2
+        assert case1.case.created_in_data_collection_id == dc_id_1
+        assert case2.case.created_in_data_collection_id == dc_id_2
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
@@ -864,9 +851,9 @@ class TestExistingCaseDataCollectionMutability(BaseUploadTestCase):
             existing_case, case_for_upload.case
         )
 
-        self.assertTrue(success)
-        self.assertEqual(result.status, EtlStatus.SKIPPED)
-        self.assertEqual(len(updated_objs), 0)
+        assert success
+        assert result.status == EtlStatus.SKIPPED
+        assert len(updated_objs) == 0
 
     def test_existing_case_with_different_created_in_data_collection_id_fails(
         self,
@@ -888,9 +875,9 @@ class TestExistingCaseDataCollectionMutability(BaseUploadTestCase):
         success, result, updated_objs = self.update_case(existing_case, uploaded_case)
 
         # update_objects logs per-object immutable-field errors but does not abort batch.
-        self.assertTrue(success)
-        self.assertEqual(result.status, EtlStatus.FAILED)
-        self.assertEqual(len(updated_objs), 0)
+        assert success
+        assert result.status == EtlStatus.FAILED
+        assert len(updated_objs) == 0
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
@@ -960,9 +947,9 @@ class TestVerifyAbacRights(BaseUploadTestCase):
         )
         result = self._call(cmd, batch_result, {self.data_collection_id: abac})
 
-        self.assertTrue(result)
-        self.assertEqual(batch_result.cases[0].status, EtlStatus.PENDING)
-        self.assertEqual(len(batch_result.cases[0].data_issues), 0)
+        assert result
+        assert batch_result.cases[0].status == EtlStatus.PENDING
+        assert len(batch_result.cases[0].data_issues) == 0
 
     def test_new_case_in_dc_without_add_case_fails(self) -> None:
         cmd, batch_result = self.create_command_and_result(
@@ -972,8 +959,8 @@ class TestVerifyAbacRights(BaseUploadTestCase):
         abac = self._make_abac(self.data_collection_id, is_private=True, add_case=False)
         result = self._call(cmd, batch_result, {self.data_collection_id: abac})
 
-        self.assertFalse(result)
-        self.assertEqual(batch_result.cases[0].status, EtlStatus.FAILED)
+        assert not result
+        assert batch_result.cases[0].status == EtlStatus.FAILED
 
     def test_new_case_in_non_private_dc_fails(self) -> None:
         # is_private=False → DC never enters allowed_created_data_collection_ids
@@ -984,7 +971,7 @@ class TestVerifyAbacRights(BaseUploadTestCase):
         abac = self._make_abac(self.data_collection_id, is_private=False, add_case=True)
         result = self._call(cmd, batch_result, {self.data_collection_id: abac})
 
-        self.assertFalse(result)
+        assert not result
 
     def test_existing_case_skips_creation_check(self) -> None:
         # is_new=False → creation check is skipped even when add_case=False
@@ -995,7 +982,7 @@ class TestVerifyAbacRights(BaseUploadTestCase):
         abac = self._make_abac(self.data_collection_id, is_private=True, add_case=False)
         result = self._call(cmd, batch_result, {self.data_collection_id: abac})
 
-        self.assertTrue(result)
+        assert result
 
     # --- column access ---
 
@@ -1007,9 +994,9 @@ class TestVerifyAbacRights(BaseUploadTestCase):
         abac = self._make_abac(self.data_collection_id, write_col_ids={col_id})
         self._call(cmd, batch_result, {self.data_collection_id: abac})
 
-        self.assertEqual(len(batch_result.cases[0].data_issues), 0)
+        assert len(batch_result.cases[0].data_issues) == 0
         # col is still in content
-        self.assertIn(col_id, cmd.case_batch.cases[0].case.content)  # type: ignore[union-attr]
+        assert col_id in cmd.case_batch.cases[0].case.content  # type: ignore[union-attr]
 
     def test_read_only_col_adds_unauthorized_issue_and_removes_from_content(
         self,
@@ -1026,11 +1013,11 @@ class TestVerifyAbacRights(BaseUploadTestCase):
         self._call(cmd, batch_result, {self.data_collection_id: abac})
 
         issues = batch_result.cases[0].data_issues
-        self.assertEqual(len(issues), 1)
-        self.assertEqual(issues[0].data_issue_type, DataIssueType.UNAUTHORIZED)
-        self.assertEqual(issues[0].code, "3e7c1a9f")
-        self.assertEqual(issues[0].original_value, "value")
-        self.assertNotIn(col_id, cmd.case_batch.cases[0].case.content)  # type: ignore[union-attr]
+        assert len(issues) == 1
+        assert issues[0].data_issue_type == DataIssueType.UNAUTHORIZED
+        assert issues[0].code == "3e7c1a9f"
+        assert issues[0].original_value == "value"
+        assert col_id not in cmd.case_batch.cases[0].case.content  # type: ignore[union-attr]
 
     def test_inaccessible_col_adds_unknown_col_issue_and_removes_from_content(
         self,
@@ -1047,10 +1034,10 @@ class TestVerifyAbacRights(BaseUploadTestCase):
         self._call(cmd, batch_result, {self.data_collection_id: abac})
 
         issues = batch_result.cases[0].data_issues
-        self.assertEqual(len(issues), 1)
-        self.assertEqual(issues[0].data_issue_type, DataIssueType.UNAUTHORIZED)
-        self.assertEqual(issues[0].code, "a7b3f9d2")
-        self.assertNotIn(col_id, cmd.case_batch.cases[0].case.content)  # type: ignore[union-attr]
+        assert len(issues) == 1
+        assert issues[0].data_issue_type == DataIssueType.UNAUTHORIZED
+        assert issues[0].code == "a7b3f9d2"
+        assert col_id not in cmd.case_batch.cases[0].case.content  # type: ignore[union-attr]
 
     def test_unauthorized_read_set_col_adds_issue_with_none_orig_value(
         self,
@@ -1065,9 +1052,9 @@ class TestVerifyAbacRights(BaseUploadTestCase):
         self._call(cmd, batch_result, {self.data_collection_id: abac})
 
         issues = batch_result.cases[0].data_issues
-        self.assertEqual(len(issues), 1)
-        self.assertEqual(issues[0].col_id, self.reads_col_id)
-        self.assertIsNone(issues[0].original_value)
+        assert len(issues) == 1
+        assert issues[0].col_id == self.reads_col_id
+        assert issues[0].original_value is None
 
     def test_unauthorized_seq_col_adds_issue_with_none_orig_value(self) -> None:
         cmd, batch_result = self.create_command_and_result(
@@ -1077,9 +1064,9 @@ class TestVerifyAbacRights(BaseUploadTestCase):
         self._call(cmd, batch_result, {self.data_collection_id: abac})
 
         issues = batch_result.cases[0].data_issues
-        self.assertEqual(len(issues), 1)
-        self.assertEqual(issues[0].col_id, self.seq_col_id)
-        self.assertIsNone(issues[0].original_value)
+        assert len(issues) == 1
+        assert issues[0].col_id == self.seq_col_id
+        assert issues[0].original_value is None
 
     def test_dc_absent_from_abacs_denies_all_col_access(self) -> None:
         col_id = uuid4()
@@ -1089,7 +1076,7 @@ class TestVerifyAbacRights(BaseUploadTestCase):
         # empty dict → DC not found → no write access
         self._call(cmd, batch_result, {})
 
-        self.assertEqual(len(batch_result.cases[0].data_issues), 1)
+        assert len(batch_result.cases[0].data_issues) == 1
 
     def test_col_access_cached_for_repeated_data_collection(self) -> None:
         col_id = uuid4()
@@ -1108,9 +1095,9 @@ class TestVerifyAbacRights(BaseUploadTestCase):
             ],
         )
 
-        self.assertTrue(result)
-        self.assertEqual(len(batch_result.cases[0].data_issues), 0)
-        self.assertEqual(len(batch_result.cases[1].data_issues), 0)
+        assert result
+        assert len(batch_result.cases[0].data_issues) == 0
+        assert len(batch_result.cases[1].data_issues) == 0
 
     def test_write_access_is_union_across_multiple_data_collections(self) -> None:
         col1_id, col2_id = uuid4(), uuid4()
@@ -1127,8 +1114,8 @@ class TestVerifyAbacRights(BaseUploadTestCase):
             case_data_collections=[frozenset({self.data_collection_id, dc2_id})],
         )
 
-        self.assertTrue(result)
-        self.assertEqual(len(batch_result.cases[0].data_issues), 0)
+        assert result
+        assert len(batch_result.cases[0].data_issues) == 0
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
@@ -1149,10 +1136,10 @@ class TestGetUploadSamplesCommandNoCaseGuard(BaseUploadTestCase):
             self.batch_uploader._get_upload_samples_command(cmd, batch_result)
         )
 
-        self.assertFalse(success)
+        assert not success
         # Command is still built (contains the sample) but upload_samples will abort
-        self.assertIsNotNone(upload_samples_cmd)
-        self.assertEqual(batch_result.cases[0].read_sets[0].status, EtlStatus.FAILED)  # type: ignore[index]
+        assert upload_samples_cmd is not None
+        assert batch_result.cases[0].read_sets[0].status == EtlStatus.FAILED  # type: ignore[index]
 
     def test_seq_without_case_returns_failure_and_marks_result_failed(self) -> None:
         case_for_upload = model.CaseForUpload(
@@ -1166,9 +1153,9 @@ class TestGetUploadSamplesCommandNoCaseGuard(BaseUploadTestCase):
             self.batch_uploader._get_upload_samples_command(cmd, batch_result)
         )
 
-        self.assertFalse(success)
-        self.assertIsNotNone(upload_samples_cmd)
-        self.assertEqual(batch_result.cases[0].seqs[0].status, EtlStatus.FAILED)  # type: ignore[index]
+        assert not success
+        assert upload_samples_cmd is not None
+        assert batch_result.cases[0].seqs[0].status == EtlStatus.FAILED  # type: ignore[index]
 
     def test_upload_samples_aborts_early_when_no_case(self) -> None:
         # upload_samples should return False immediately without calling seqdb
@@ -1183,7 +1170,7 @@ class TestGetUploadSamplesCommandNoCaseGuard(BaseUploadTestCase):
             cmd, batch_result, verify_only=True
         )
 
-        self.assertFalse(success)
+        assert not success
         self.service.app.handle.assert_not_called()
 
 
@@ -1193,25 +1180,25 @@ class TestCaseBatchHasSamples(BaseUploadTestCase):
 
     def test_has_samples_false_when_no_children_fields_set(self) -> None:
         cmd, _ = self.create_command_and_result(self.create_case_for_upload())
-        self.assertFalse(cmd.case_batch.has_samples())
+        assert not cmd.case_batch.has_samples()
 
     def test_has_samples_false_with_empty_read_sets_and_seqs(self) -> None:
         cmd, _ = self.create_command_and_result(
             self.create_case_for_upload(read_sets=[], seqs=[])
         )
-        self.assertFalse(cmd.case_batch.has_samples())
+        assert not cmd.case_batch.has_samples()
 
     def test_has_samples_true_when_case_has_read_sets(self) -> None:
         cmd, _ = self.create_command_and_result(
             self.create_case_for_upload(read_sets=[self.create_read_set_for_upload()])
         )
-        self.assertTrue(cmd.case_batch.has_samples())
+        assert cmd.case_batch.has_samples()
 
     def test_has_samples_true_when_case_has_seqs(self) -> None:
         cmd, _ = self.create_command_and_result(
             self.create_case_for_upload(seqs=[self.create_seq_for_upload()])
         )
-        self.assertTrue(cmd.case_batch.has_samples())
+        assert cmd.case_batch.has_samples()
 
     def test_upsert_batch_skips_seqdb_upload_when_no_samples(self) -> None:
         # When has_samples() is False, upload_samples must never be called
@@ -1250,8 +1237,8 @@ class TestGetCaseDataCollections(BaseUploadTestCase):
             cmd, batch_result, self.uow
         )
 
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0], frozenset({self.data_collection_id}))
+        assert len(result) == 1
+        assert result[0] == frozenset({self.data_collection_id})
         self.service.repository.crud.assert_not_called()
 
     def test_existing_case_includes_dc_links_from_db(self) -> None:
@@ -1270,9 +1257,9 @@ class TestGetCaseDataCollections(BaseUploadTestCase):
             cmd, batch_result, self.uow
         )
 
-        self.assertEqual(len(result), 1)
-        self.assertIn(self.data_collection_id, result[0])
-        self.assertIn(extra_dc_id, result[0])
+        assert len(result) == 1
+        assert self.data_collection_id in result[0]
+        assert extra_dc_id in result[0]
 
     def test_case_without_case_object_falls_back_to_null_id(self) -> None:
         case_for_upload = model.CaseForUpload(id=self.case_id, case=None)
@@ -1283,8 +1270,8 @@ class TestGetCaseDataCollections(BaseUploadTestCase):
             cmd, batch_result, self.uow
         )
 
-        self.assertEqual(len(result), 1)
-        self.assertIn(NULL_ID, result[0])
+        assert len(result) == 1
+        assert NULL_ID in result[0]
 
     def test_mixed_batch_queries_db_only_for_existing_cases(self) -> None:
         new_id = uuid4()
@@ -1301,10 +1288,10 @@ class TestGetCaseDataCollections(BaseUploadTestCase):
             cmd, batch_result, self.uow
         )
 
-        self.assertEqual(len(result), 2)
+        assert len(result) == 2
         self.service.repository.crud.assert_called_once()
         # Only existing_id should appear in the filter
         call_kwargs = self.service.repository.crud.call_args
         members = call_kwargs.kwargs["filter"].members
-        self.assertIn(existing_id, members)
-        self.assertNotIn(new_id, members)
+        assert existing_id in members
+        assert new_id not in members

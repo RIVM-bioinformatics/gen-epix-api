@@ -1,7 +1,6 @@
 import asyncio
+from test.util.mock_compat import AsyncMock, MagicMock, Mock, patch
 from typing import Any
-from unittest import TestCase
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -14,10 +13,10 @@ from gen_epix.fastapp.services.auth.service import AuthService
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-05")
-class BaseAuthServiceTestCase(TestCase):
+class BaseAuthServiceTestCase:
     """Base test case with common fixtures and utilities."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         """Set up test fixtures."""
         # Logger and App
         self.logger: Mock = Mock()
@@ -114,8 +113,8 @@ class TestIdpClientsProperty(BaseAuthServiceTestCase):
         clients_copy = self.service.idp_clients
         clients_copy.append(self.make_idp_client(uuid4()))
         # Verify
-        self.assertEqual(len(self.service._idp_clients), 2)
-        self.assertEqual(len(clients_copy), 3)
+        assert len(self.service._idp_clients) == 2
+        assert len(clients_copy) == 3
 
 
 # get_existing_user_from_token
@@ -142,7 +141,7 @@ class TestGetExistingUserFromToken(BaseAuthServiceTestCase):
             # Execute
             user = self.run_async(self.service.get_existing_user_from_token(token))
         # Verify
-        self.assertIs(user, self.user)
+        assert user is self.user
         idp_client1.get_claims_from_jwt.assert_awaited_once_with(token)
         idp_client2.get_claims_from_jwt.assert_awaited_once_with(token)
 
@@ -157,7 +156,7 @@ class TestGetExistingUserFromToken(BaseAuthServiceTestCase):
         idp_client1.get_claims_from_jwt.return_value = None
         idp_client2.get_claims_from_jwt.return_value = None
         # Execute/Verify
-        with self.assertRaises(exc.UnauthorizedAuthError):
+        with pytest.raises(exc.UnauthorizedAuthError):
             self.run_async(self.service.get_existing_user_from_token(token))
         idp_client1.get_claims_from_jwt.assert_awaited_once_with(token)
         idp_client2.get_claims_from_jwt.assert_awaited_once_with(token)
@@ -187,22 +186,22 @@ class TestCreateUserDependenciesNoIdp(BaseAuthServiceTestCase):
         # Execute
         registered_dep, new_dep, idp_user_dep = self.service.create_user_dependencies()
         # Verify side-effects
-        self.assertIs(self.service._no_auth_user, self.root_user)
+        assert self.service._no_auth_user is self.root_user
         # Call registered user dependency -> returns existing user
         registered_func = self.extract_security_callable(registered_dep)
         user1 = self.run_async(registered_func(request, scopes))
-        self.assertIs(user1, self.user)
+        assert user1 is self.user
         # Next call -> fallback to no-auth user
         user2 = self.run_async(registered_func(request, scopes))
-        self.assertIs(user2, self.root_user)
+        assert user2 is self.root_user
         # Call new user dependency -> returns new user
         new_func = self.extract_security_callable(new_dep)
         new_user = self.run_async(new_func(request, scopes))
-        self.assertIs(new_user, self.other_user)
+        assert new_user is self.other_user
         # IDP user dependency returns a new user in no-IDP mode (same callable)
         idp_func = self.extract_security_callable(idp_user_dep)
         idp_user = self.run_async(idp_func(request, scopes))
-        self.assertIs(idp_user, self.other_user)
+        assert idp_user is self.other_user
 
     def test_dependencies_no_idp_missing_claims_raises(self) -> None:
         """Dummy new-user dep raises when claims missing."""
@@ -216,7 +215,7 @@ class TestCreateUserDependenciesNoIdp(BaseAuthServiceTestCase):
         _, new_dep, _ = self.service.create_user_dependencies()
         new_func = self.extract_security_callable(new_dep)
         # Verify
-        with self.assertRaises(exc.UnauthorizedAuthError):
+        with pytest.raises(exc.UnauthorizedAuthError):
             self.run_async(new_func(request, scopes))
 
 
@@ -250,15 +249,15 @@ class TestCreateUserDependenciesWithIdps(BaseAuthServiceTestCase):
         idp_user_func = self.extract_security_callable(idp_user_dep)
         # Verify: first claims path
         user1 = self.run_async(registered_func(request, scopes, claims_0=claims1))
-        self.assertIs(user1, self.user)
+        assert user1 is self.user
         # Verify: fallback to second claims path
         user2 = self.run_async(
             registered_func(request, scopes, claims_0=None, claims_1=claims2)
         )
-        self.assertIs(user2, self.other_user)
+        assert user2 is self.other_user
         # Verify: idp user from claims
         idp_user = self.run_async(idp_user_func(request, scopes, claims_0=claims1))
-        self.assertIsInstance(idp_user, IDPUser)
+        assert isinstance(idp_user, IDPUser)
 
     def test_dependencies_multiple_idps_unauthorized(self) -> None:
         """No claims provided -> UnauthorizedAuthError."""
@@ -272,7 +271,7 @@ class TestCreateUserDependenciesWithIdps(BaseAuthServiceTestCase):
         registered_dep, _, _ = self.service.create_user_dependencies()
         registered_func = self.extract_security_callable(registered_dep)
         # Verify
-        with self.assertRaises(exc.UnauthorizedAuthError):
+        with pytest.raises(exc.UnauthorizedAuthError):
             self.run_async(registered_func(request, scopes, claims_0=None))
 
 
@@ -308,8 +307,8 @@ class TestGetIdentityProviders(BaseAuthServiceTestCase):
             public_only = self.service.get_identity_providers(cmd_public)
             all_ids = self.service.get_identity_providers(cmd_all)
         # Verify
-        self.assertEqual(public_only, [provider_public])
-        self.assertEqual(all_ids, [provider_public, provider_private])
+        assert public_only == [provider_public]
+        assert all_ids == [provider_public, provider_private]
 
     def test_identity_providers_retry_initializes_pending_clients(self) -> None:
         """Retry initializes a pending client and adds it to service."""
@@ -327,9 +326,9 @@ class TestGetIdentityProviders(BaseAuthServiceTestCase):
             )
             _ = self.service.get_identity_providers(cmd)
         # Verify
-        self.assertIn(new_client, self.service._idp_clients)
-        self.assertIn(new_client.id, self.service._idp_client_by_id)
-        self.assertEqual(len(self.service._pending_idp_client_cfgs), 0)
+        assert new_client in self.service._idp_clients
+        assert new_client.id in self.service._idp_client_by_id
+        assert len(self.service._pending_idp_client_cfgs) == 0
 
 
 # get_idp_user_from_claims
@@ -345,8 +344,8 @@ class TestGetIdpUserFromClaims(BaseAuthServiceTestCase):
             self.service.get_idp_user_from_claims(claims)
         )
         # Verify
-        self.assertEqual(idp_user.issuer, self.claims_dict["iss"])
-        self.assertEqual(idp_user.sub, self.claims_dict["sub"])
+        assert idp_user.issuer == self.claims_dict["iss"]
+        assert idp_user.sub == self.claims_dict["sub"]
 
 
 # get_new_user_from_claims
@@ -365,7 +364,7 @@ class TestGetNewUserFromClaims(BaseAuthServiceTestCase):
         # Execute
         new_user = self.run_async(self.service.get_new_user_from_claims(claims))
         # Verify
-        self.assertIs(new_user, self.user)
+        assert new_user is self.user
         idp_client.get_claims_from_userinfo.assert_called_once_with(self.claims_token)
         self.user_manager.construct_user_instance_from_claims.assert_called_once()
 
@@ -381,7 +380,7 @@ class TestGetNewUserFromClaims(BaseAuthServiceTestCase):
         )  # ensure dict for update()
         self.user_manager.construct_user_instance_from_claims.return_value = None
         # Execute/Verify
-        with self.assertRaises(exc.UnauthorizedAuthError):
+        with pytest.raises(exc.UnauthorizedAuthError):
             self.run_async(self.service.get_new_user_from_claims(claims))
 
     def test_get_new_user_from_claims_no_user_manager_constructs_user(self) -> None:
@@ -396,7 +395,7 @@ class TestGetNewUserFromClaims(BaseAuthServiceTestCase):
                 self.service.get_new_user_from_claims(claims, request_userinfo=False)
             )
         # Verify
-        self.assertIs(new_user, self.user)
+        assert new_user is self.user
 
 
 # get_existing_user_from_claims
@@ -410,7 +409,7 @@ class TestGetExistingUserFromClaims(BaseAuthServiceTestCase):
         # Set up mocks
         self.app.user_manager = None
         # Execute/Verify
-        with self.assertRaises(exc.UnauthorizedAuthError):
+        with pytest.raises(exc.UnauthorizedAuthError):
             self.run_async(self.service.get_existing_user_from_claims(claims))
 
     def test_get_existing_user_found_updates_name(self) -> None:
@@ -426,7 +425,7 @@ class TestGetExistingUserFromClaims(BaseAuthServiceTestCase):
         # Execute
         retval = self.run_async(self.service.get_existing_user_from_claims(claims))
         # Verify
-        self.assertIs(retval, self.updated_user)
+        assert retval is self.updated_user
         self.user_manager.update_user_name.assert_called_once_with(
             self.user, "New Name"
         )
@@ -445,7 +444,7 @@ class TestGetExistingUserFromClaims(BaseAuthServiceTestCase):
         # Execute
         retval = self.run_async(self.service.get_existing_user_from_claims(claims))
         # Verify
-        self.assertIs(retval, self.user)
+        assert retval is self.user
 
     def test_get_existing_user_key_from_userinfo_then_found(self) -> None:
         """No user key initially; after userinfo, key resolves -> returns user."""
@@ -461,7 +460,7 @@ class TestGetExistingUserFromClaims(BaseAuthServiceTestCase):
         # Execute
         retval = self.run_async(self.service.get_existing_user_from_claims(claims))
         # Verify
-        self.assertIs(retval, self.user)
+        assert retval is self.user
         idp_client.get_claims_from_userinfo.assert_called_once_with(self.claims_token)
 
     def test_get_existing_user_no_results_root_user(self) -> None:
@@ -478,7 +477,7 @@ class TestGetExistingUserFromClaims(BaseAuthServiceTestCase):
         # Execute
         retval = self.run_async(self.service.get_existing_user_from_claims(claims))
         # Verify
-        self.assertIs(retval, self.root_user)
+        assert retval is self.root_user
 
     def test_get_existing_user_no_results_auto_create_success(self) -> None:
         """User not found; auto-create -> success."""
@@ -495,7 +494,7 @@ class TestGetExistingUserFromClaims(BaseAuthServiceTestCase):
         self.service._auto_create_new_users = True
         retval = self.run_async(self.service.get_existing_user_from_claims(claims))
         # Verify
-        self.assertIs(retval, self.created_user)
+        assert retval is self.created_user
 
     def test_get_existing_user_no_results_auto_create_failure(self) -> None:
         """User not found; auto-create returns None -> Unauthorized."""
@@ -510,7 +509,7 @@ class TestGetExistingUserFromClaims(BaseAuthServiceTestCase):
         self.user_manager.create_user_from_claims.return_value = None
         self.service._auto_create_new_users = False
         # Execute/Verify
-        with self.assertRaises(exc.UnauthorizedAuthError):
+        with pytest.raises(exc.UnauthorizedAuthError):
             self.run_async(self.service.get_existing_user_from_claims(claims))
 
 
@@ -549,7 +548,7 @@ class TestRootUserTokenTimeToLive(BaseAuthServiceTestCase):
         with patch(
             "gen_epix.fastapp.services.auth.service.time.time", return_value=now
         ):
-            with self.assertRaises(exc.UnauthorizedAuthError):
+            with pytest.raises(exc.UnauthorizedAuthError):
                 self.service._verify_root_user_for_token_time_to_live(
                     claims, self.root_user
                 )
@@ -568,7 +567,7 @@ class TestInitializationValidation(BaseAuthServiceTestCase):
         ]
         # Set up mocks
         # Execute/Verify
-        with self.assertRaises(exc.InitializationServiceError):
+        with pytest.raises(exc.InitializationServiceError):
             AuthService(
                 app=self.app, logger=self.logger, idps_cfg=idps_cfg, ssl_context=False
             )
@@ -586,4 +585,4 @@ class TestInitializationValidation(BaseAuthServiceTestCase):
                 app=self.app, logger=self.logger, idps_cfg=idps_cfg, ssl_context=False
             )
         # Verify
-        self.assertEqual(len(svc._pending_idp_client_cfgs), 1)
+        assert len(svc._pending_idp_client_cfgs) == 1

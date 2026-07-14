@@ -6,9 +6,8 @@ Follows the reference test style for structure and clarity.
 
 import asyncio
 import ssl
+from test.util.mock_compat import Mock
 from typing import Any
-from unittest import TestCase
-from unittest.mock import Mock
 from uuid import UUID, uuid4
 
 import pytest
@@ -42,7 +41,7 @@ class DummyIdpClient(IdpClient):
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-05")
-class TestIdpClientInitialization(TestCase):
+class TestIdpClientInitialization:
     """Test initialization and public attributes of IdpClient."""
 
     def test_default_initialization_sets_expected_values(self) -> None:
@@ -59,10 +58,10 @@ class TestIdpClientInitialization(TestCase):
             client: DummyIdpClient = DummyIdpClient(scheme_name=scheme_name)
 
         # 4. Verify
-        self.assertEqual(client.scheme_name, scheme_name)
-        self.assertEqual(client.token_name, IdpClient.DEFAULT_TOKEN)
-        self.assertEqual(client.id, fixed_id)
-        self.assertTrue(client.ssl_context is True)
+        assert client.scheme_name == scheme_name
+        assert client.token_name == IdpClient.DEFAULT_TOKEN
+        assert client.id == fixed_id
+        assert client.ssl_context is True
 
     def test_initialization_with_overrides(self) -> None:
         # 1. Create input data
@@ -82,10 +81,10 @@ class TestIdpClientInitialization(TestCase):
         )
 
         # 4. Verify
-        self.assertEqual(client.scheme_name, scheme_name)
-        self.assertEqual(client.token_name, token_name)
-        self.assertEqual(client.id, provided_id)
-        self.assertIs(client.ssl_context, context)
+        assert client.scheme_name == scheme_name
+        assert client.token_name == token_name
+        assert client.id == provided_id
+        assert client.ssl_context is context
 
     def test_ssl_context_boolean_values(self) -> None:
         # 1. Create input data
@@ -102,15 +101,15 @@ class TestIdpClientInitialization(TestCase):
         )
 
         # 4. Verify
-        self.assertTrue(client_true.ssl_context is True)
-        self.assertFalse(client_false.ssl_context is True)
+        assert client_true.ssl_context is True
+        assert not (client_false.ssl_context is True)
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-05")
-class TestIdpClientAbstractMethods(TestCase):
+class TestIdpClientAbstractMethods:
     """Test abstract method behavior exposed via base class."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         self.client: DummyIdpClient = DummyIdpClient(scheme_name="bearer")
 
     def test_get_identity_provider_raises_not_implemented(self) -> None:
@@ -119,7 +118,7 @@ class TestIdpClientAbstractMethods(TestCase):
         # 2. Set up mocks - none
 
         # 3. Execute & 4. Verify
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             _ = self.client.get_identity_provider()
 
     def test_get_claims_from_jwt_raises_not_implemented(self) -> None:
@@ -129,7 +128,7 @@ class TestIdpClientAbstractMethods(TestCase):
         # 2. Set up mocks - none
 
         # 3. Execute & 4. Verify
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             asyncio.run(self.client.get_claims_from_jwt(token))
 
     def test_get_claims_from_userinfo_raises_not_implemented(self) -> None:
@@ -139,7 +138,7 @@ class TestIdpClientAbstractMethods(TestCase):
         # 2. Set up mocks - none
 
         # 3. Execute & 4. Verify
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             _ = self.client.get_claims_from_userinfo(access_token)
 
     def test___call___raises_not_implemented(self) -> None:
@@ -149,5 +148,5 @@ class TestIdpClientAbstractMethods(TestCase):
         # 2. Set up mocks - none
 
         # 3. Execute & 4. Verify
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             asyncio.run(self.client(request))

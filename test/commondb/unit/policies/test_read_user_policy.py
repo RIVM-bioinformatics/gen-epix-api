@@ -11,10 +11,9 @@ The tests cover all branches in ReadUserPolicy.filter:
 Each test verifies the return values, exceptions, and interactions with app.handle and get_mapped_class.
 """
 
+from test.util.mock_compat import Mock
 from types import SimpleNamespace
 from typing import Any, Iterable, List, Tuple
-from unittest import TestCase
-from unittest.mock import Mock
 from uuid import UUID, uuid4
 
 import pytest
@@ -26,10 +25,10 @@ from gen_epix.commondb.policies.read_user_policy import ReadUserPolicy
 from gen_epix.fastapp.enum import CrudOperation
 
 
-class BaseReadUserPolicyTestCase(TestCase):
+class BaseReadUserPolicyTestCase:
     """Base test case with common fixtures and utilities."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         """Set up test fixtures."""
         # Mock ABAC service and app impl
         self.abac_service = Mock()
