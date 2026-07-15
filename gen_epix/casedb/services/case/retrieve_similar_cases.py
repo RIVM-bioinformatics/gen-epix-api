@@ -109,6 +109,9 @@ def case_service_retrieve_similar_cases(
             not in case_ids_set  # Exclude query cases if they appear as similar
         ]
 
+        if not similar_case_ids:
+            return command.RetrieveSimilarCasesReturnValue(cases=[])
+
         # Retrieve similar cases with ABAC applied to case date
         similar_cases = self._retrieve_cases_with_content_right(
             uow,
