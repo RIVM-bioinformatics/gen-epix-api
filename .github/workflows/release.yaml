@@ -3,10 +3,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    types: [opened, synchronize]
-    branches:
-      - main
 
 permissions:
   contents: write
@@ -31,58 +27,27 @@ jobs:
           target-branch: main
 
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        if: ${{ steps.release.outputs.release_created == 'true' }}
         with:
+          ref: ${{ steps.release.outputs.tag_name }}
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Switch to release-please branch
+      - name: Verify package version
         run: |
-          # Look for release-please branches
-          BRANCH_NAME=$(git branch -r | grep 'origin/release-please--' | head -1 | sed 's/.*origin\///' || echo "")
+          expected_version="${{ steps.release.outputs.tag_name }}"
+          expected_version="${expected_version#v}"
+          actual_version=$(python - <<'PY'
+          import tomllib
 
-          if [ -n "$BRANCH_NAME" ]; then
-            echo "Switching to branch: $BRANCH_NAME"
-            git checkout "$BRANCH_NAME"
-          else
-            echo "Could not find release-please branch, staying on current branch"
-          fi
-        if: ${{ (steps.release.outputs.prs_created == 'true') }}
-
-      - name: Bump version in pyproject.toml
-        id: version_bump
-        run: |
-          # Extract version from the release-please manifest or PR title
-          if [ -n "${{ steps.release.outputs.version }}" ]; then
-            VERSION=${{ steps.release.outputs.version }}
-          elif [ -n "${{ steps.release.outputs['--version'] }}" ]; then
-            VERSION=${{ steps.release.outputs['--version'] }}
-          else
-            # Fallback: extract from manifest file
-            VERSION=$(jq -r '."."' .release-please-manifest.json)
-          fi
-
-          echo "Target version: $VERSION"
-          CURRENT_VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
-          echo "Current version: $CURRENT_VERSION"
-
-          if [ "$CURRENT_VERSION" != "$VERSION" ]; then
-            echo "Bumping version from $CURRENT_VERSION to $VERSION"
-            sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" pyproject.toml
-            echo "version_changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "Version is already at $VERSION, no bump needed"
-            echo "version_changed=false" >> $GITHUB_OUTPUT
-          fi
-          echo "target_version=$VERSION" >> $GITHUB_OUTPUT
-        if: ${{ (steps.release.outputs.prs_created == 'true') }}
-
-      - name: Commit version bump
-        uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d # v7
-        with:
-          commit_message: "chore: bump version in pyproject.toml to ${{ steps.version_bump.outputs.target_version }}"
-          commit_options: "--no-verify --signoff"
-          push_options: "--force"
-        if: ${{ (steps.release.outputs.prs_created == 'true') && (steps.version_bump.outputs.version_changed == 'true') }}
+          with open("pyproject.toml", "rb") as file:
+              print(tomllib.load(file)["project"]["version"])
+          PY
+          )
+          echo "Release tag version: $expected_version"
+          echo "Package version: $actual_version"
+          test "$actual_version" = "$expected_version"
+        if: ${{ steps.release.outputs.release_created == 'true' }}
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
