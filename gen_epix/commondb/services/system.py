@@ -4,7 +4,7 @@ import re
 import string
 import tomllib
 from collections.abc import Hashable
-from typing import Any
+from typing import Any, ClassVar
 
 from cachetools import TTLCache, cached
 
@@ -21,6 +21,9 @@ from gen_epix.util import get_package_root
 
 class SystemService(BaseSystemService):
     REQUIREMENTS_FILE_NAME = "pyproject.toml"
+    _PARSE_AND_GET_PACKAGE_METADATA_CACHE: ClassVar[TTLCache] = TTLCache(
+        maxsize=1000, ttl=60
+    )
 
     def __init__(self, app: App, **kwargs: Any) -> None:
         super().__init__(app, **kwargs)
@@ -76,7 +79,7 @@ class SystemService(BaseSystemService):
         return packages
 
     @staticmethod
-    @cached(cache=TTLCache(maxsize=1000, ttl=60))
+    @cached(cache=_PARSE_AND_GET_PACKAGE_METADATA_CACHE)
     def _parse_and_get_package_metadata() -> list[model.PackageMetadata]:
         """
         Parse pyproject.toml, extract package names, and get their metadata.

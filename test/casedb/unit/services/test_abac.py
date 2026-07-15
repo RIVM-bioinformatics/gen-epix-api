@@ -14,7 +14,7 @@ The tests handle the following scenarios:
 
 from __future__ import annotations
 
-from test.util.mock_compat import Mock
+from test.util.mock_compat import MagicMock, Mock, patch
 from types import SimpleNamespace
 from typing import Any
 from uuid import UUID, uuid4
@@ -413,17 +413,21 @@ class TestTempUpdateUserOrganization(BaseAbacTestCase):
         """When target org is same and not new user, returns early without side effects."""
         user = self.UserModelStub(self.user_id, self.org_id, {"ORG_USER"})
         cmd = self.create_update_user_cmd(user, self.org_id, is_new_user=False)
-        # Attach fake cache_clear targets to assert no calls
-        self.service._get_user_by_id_cached = SimpleNamespace(cache_clear=Mock())  # type: ignore[assignment]
-        self.service._get_case_abac_cached = SimpleNamespace(cache_clear=Mock())  # type: ignore[assignment]
-
-        retval = self.service.update_user_own_organization(cmd)
+        with (
+            patch.object(
+                AbacService, "_GET_USER_BY_ID_CACHE", new=MagicMock()
+            ) as user_cache,
+            patch.object(
+                AbacService, "_GET_CASE_ABAC_CACHE", new=MagicMock()
+            ) as case_abac_cache,
+        ):
+            retval = self.service.update_user_own_organization(cmd)
 
         assert retval is user
         self.repository.uow.assert_not_called()
         self.service.app.handle.assert_not_called()  # type: ignore[attr-defined]
-        self.service._get_user_by_id_cached.cache_clear.assert_not_called()  # type: ignore[attr-defined]
-        self.service._get_case_abac_cached.cache_clear.assert_not_called()  # type: ignore[attr-defined]
+        user_cache.clear.assert_not_called()
+        case_abac_cache.clear.assert_not_called()
 
     def test_happy_path_transfers_policies_and_updates_user(self) -> None:
         """Transfers policies to new org, deletes old user policies, creates new, updates user, and clears caches."""
@@ -487,10 +491,15 @@ class TestTempUpdateUserOrganization(BaseAbacTestCase):
             ),
         ]
 
-        self.service._get_user_by_id_cached = SimpleNamespace(cache_clear=Mock())  # type: ignore[assignment]
-        self.service._get_case_abac_cached = SimpleNamespace(cache_clear=Mock())  # type: ignore[assignment]
-
-        updated_user = self.service.update_user_own_organization(cmd)
+        with (
+            patch.object(
+                AbacService, "_GET_USER_BY_ID_CACHE", new=MagicMock()
+            ) as user_cache,
+            patch.object(
+                AbacService, "_GET_CASE_ABAC_CACHE", new=MagicMock()
+            ) as case_abac_cache,
+        ):
+            updated_user = self.service.update_user_own_organization(cmd)
 
         assert updated_user.organization_id == self.new_org_id
         assert self.service.app.handle.call_count == 9  # type: ignore[attr-defined]
@@ -498,5 +507,5 @@ class TestTempUpdateUserOrganization(BaseAbacTestCase):
         delete_usp_call = self.service.app.handle.call_args_list[5][0][0]  # type: ignore[attr-defined]
         assert delete_uap_call is not None
         assert delete_usp_call is not None
-        self.service._get_user_by_id_cached.cache_clear.assert_called_once()  # type: ignore[attr-defined]
-        self.service._get_case_abac_cached.cache_clear.assert_called_once()  # type: ignore[attr-defined]
+        user_cache.clear.assert_called_once()
+        case_abac_cache.clear.assert_called_once()

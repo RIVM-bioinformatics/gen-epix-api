@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, ClassVar
 from uuid import UUID
 
 from cachetools import TTLCache, cached
@@ -21,6 +21,7 @@ class OrganizationService(BaseOrganizationService):
         command.UserCrudCommand,
         command.UpdateUserCommand,
     )
+    _RETRIEVE_USER_BY_KEY_CACHE: ClassVar[TTLCache] = TTLCache(maxsize=1000, ttl=60)
 
     def __init__(
         self,
@@ -73,10 +74,10 @@ class OrganizationService(BaseOrganizationService):
         retval = super().crud(cmd)
         # Invalidate cache
         if issubclass(type(cmd), OrganizationService.CACHE_INVALIDATION_COMMANDS):
-            self.retrieve_user_by_key.cache_clear()  # type: ignore[attr-defined]
+            OrganizationService._RETRIEVE_USER_BY_KEY_CACHE.clear()
         return retval
 
-    @cached(cache=TTLCache(maxsize=1000, ttl=60))
+    @cached(cache=_RETRIEVE_USER_BY_KEY_CACHE)
     def retrieve_user_by_key(self, user_key: str) -> model.User:
         with self.repository.uow() as uow:
             return self.repository.retrieve_user_by_key(uow, user_key)
@@ -340,7 +341,7 @@ class OrganizationService(BaseOrganizationService):
             )
 
         # Invalidate cache for the user
-        self.retrieve_user_by_key.cache_clear()
+        OrganizationService._RETRIEVE_USER_BY_KEY_CACHE.clear()
         return updated_tgt_user
 
     def retrieve_organization_contacts(
