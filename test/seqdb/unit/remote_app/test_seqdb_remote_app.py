@@ -1,8 +1,8 @@
 """Unit tests for SeqdbRemoteApp create_calculate_phylogenetic_tree_handler function."""
 
 import json
+from test.util.mock_compat import MagicMock, Mock, patch
 from typing import Any
-from unittest.mock import MagicMock, Mock, patch
 from uuid import uuid4
 
 import httpx

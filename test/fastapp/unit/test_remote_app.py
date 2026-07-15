@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import json
 from decimal import Decimal
+from test.util.mock_compat import Mock, patch
 from typing import Any, Callable, ClassVar, cast
-from unittest import TestCase
-from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
 
 import httpx
@@ -173,8 +172,8 @@ def set_fake_response(payload: Any, status_code: int = 200) -> None:
     FakeClient.last_request = None
 
 
-class BaseRemoteAppTestCase(TestCase):
-    def setUp(self) -> None:
+class BaseRemoteAppTestCase:
+    def setup_method(self) -> None:
         # Patch App.__init__ to avoid side-effects and set required attributes
         def _fake_app_init(self: Any, domain: Domain, **kwargs: Any) -> None:
             setattr(self, "_domain", domain)
@@ -184,14 +183,12 @@ class BaseRemoteAppTestCase(TestCase):
             "gen_epix.fastapp.remote_app.App.__init__", _fake_app_init
         )
         self._app_init_patcher.start()
-        self.addCleanup(self._app_init_patcher.stop)
 
         # Patch create_ssl_context to predictable value
         self._ssl_patcher = patch(
             "gen_epix.fastapp.remote_app.create_ssl_context", return_value="SSLCTX"
         )
         self._ssl_patcher.start()
-        self.addCleanup(self._ssl_patcher.stop)
 
         # Domain stub
         self.domain: Domain = cast(Domain, Mock(spec=Domain))
@@ -207,6 +204,10 @@ class BaseRemoteAppTestCase(TestCase):
             default_headers={"Content-Type": "application/json", "X-Test": "1"},
             add_generated_crud_route_handlers=False,
         )
+
+    def teardown_method(self) -> None:
+        self._app_init_patcher.stop()
+        self._ssl_patcher.stop()
 
     # Utilities
     def register_route_for(
@@ -227,7 +228,7 @@ class TestInitAndProperties(BaseRemoteAppTestCase):
             protocol=HttpProtocol.HTTPS,
             add_generated_crud_route_handlers=False,
         )
-        self.assertEqual(app_enum.protocol, HttpProtocol.HTTPS)
+        assert app_enum.protocol == HttpProtocol.HTTPS
 
         # Protocol as string (lowercase)
         app_str = RemoteApp(
@@ -237,11 +238,11 @@ class TestInitAndProperties(BaseRemoteAppTestCase):
             protocol="https",
             add_generated_crud_route_handlers=False,
         )
-        self.assertEqual(app_str.protocol, HttpProtocol.HTTPS)
+        assert app_str.protocol == HttpProtocol.HTTPS
 
     def test_properties_and_host_url(self) -> None:
         # Create input
-        # ... already created in setUp ...
+        # ... already created in setup_method ...
 
         # Set up mocks: none
 
@@ -253,11 +254,11 @@ class TestInitAndProperties(BaseRemoteAppTestCase):
         ssl_context: Any = self.app.ssl_context
 
         # Verify
-        self.assertEqual(host, "example.org")
-        self.assertEqual(port, 8000)
-        self.assertEqual(protocol, HttpProtocol.HTTP)
-        self.assertEqual(host_url, "http://example.org:8000")
-        self.assertEqual(ssl_context, False)
+        assert host == "example.org"
+        assert port == 8000
+        assert protocol == HttpProtocol.HTTP
+        assert host_url == "http://example.org:8000"
+        assert ssl_context == False
 
         # With no port
         other = RemoteApp(
@@ -267,7 +268,7 @@ class TestInitAndProperties(BaseRemoteAppTestCase):
             protocol=HttpProtocol.HTTPS,
             add_generated_crud_route_handlers=False,
         )
-        self.assertEqual(other.host_url, "https://example.org")
+        assert other.host_url == "https://example.org"
 
     def test_register_policy_and_unregister_policy_raise(self) -> None:
         # Create input
@@ -276,9 +277,9 @@ class TestInitAndProperties(BaseRemoteAppTestCase):
         # Set up mocks: none
 
         # Execute/Verify
-        with self.assertRaises(ServiceException):
+        with pytest.raises(ServiceException):
             self.app.register_policy(DummyCmd, policy, timing=EventTiming.BEFORE)
-        with self.assertRaises(ServiceException):
+        with pytest.raises(ServiceException):
             self.app.unregister_policy(DummyCmd, policy, timing=EventTiming.BEFORE)
 
 
@@ -294,9 +295,9 @@ class TestRouteRegistration(BaseRemoteAppTestCase):
         route: str = self.register_route_for(DummyCmd, "endpoint")
 
         # Verify
-        self.assertEqual(route, "http://example.org:8000/endpoint")
+        assert route == "http://example.org:8000/endpoint"
         got = self.app.get_route(cmd)
-        self.assertEqual(got, route)
+        assert got == route
 
     def test_register_route_without_host_or_prefix(self) -> None:
         # Create input
@@ -308,8 +309,8 @@ class TestRouteRegistration(BaseRemoteAppTestCase):
         )
 
         # Verify
-        self.assertEqual(route, "/endpoint")
-        self.assertEqual(self.app.get_route(DummyCmd()), "/endpoint")
+        assert route == "/endpoint"
+        assert self.app.get_route(DummyCmd()) == "/endpoint"
 
     def test_register_route_duplicate_raises(self) -> None:
         # Create input
@@ -318,7 +319,7 @@ class TestRouteRegistration(BaseRemoteAppTestCase):
         # Set up mocks: none
 
         # Execute/Verify
-        with self.assertRaises(ServiceException):
+        with pytest.raises(ServiceException):
             self.register_route_for(DummyCmd, "endpoint2")
 
     def test_unregister_route_and_missing(self) -> None:
@@ -326,7 +327,7 @@ class TestRouteRegistration(BaseRemoteAppTestCase):
         # Set up mocks: none
 
         # Execute/Verify missing
-        with self.assertRaises(ServiceException):
+        with pytest.raises(ServiceException):
             self.app.unregister_route(DummyCmd)
 
         # Execute present
@@ -334,7 +335,7 @@ class TestRouteRegistration(BaseRemoteAppTestCase):
         self.app.unregister_route(DummyCmd)
 
         # Verify removed
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             self.app.get_route(DummyCmd())
 
     def test_get_route_not_registered_raises(self) -> None:
@@ -344,7 +345,7 @@ class TestRouteRegistration(BaseRemoteAppTestCase):
         # Set up mocks: none
 
         # Execute/Verify
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             self.app.get_route(cmd)
 
 
@@ -360,7 +361,7 @@ class TestHeadersAndApplyHandler(BaseRemoteAppTestCase):
         headers = self.app.get_headers(cmd)
 
         # Verify
-        self.assertEqual(headers, {"Content-Type": "application/json", "X-Test": "1"})
+        assert headers == {"Content-Type": "application/json", "X-Test": "1"}
 
     def test_apply_handler_no_route_raises(self) -> None:
         # Create input
@@ -369,7 +370,7 @@ class TestHeadersAndApplyHandler(BaseRemoteAppTestCase):
         # Set up mocks: none
 
         # Execute/Verify
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             self.app.apply_handler(cmd, lambda c: None)
 
     def test_apply_handler_success(self) -> None:
@@ -384,7 +385,7 @@ class TestHeadersAndApplyHandler(BaseRemoteAppTestCase):
         retval = self.app.apply_handler(cmd, handler)
 
         # Verify
-        self.assertEqual(retval, "ok")
+        assert retval == "ok"
 
     def test_apply_handler_wraps_request_error(self) -> None:
         # Create input
@@ -396,10 +397,10 @@ class TestHeadersAndApplyHandler(BaseRemoteAppTestCase):
             raise httpx.RequestError("boom", request=Mock())
 
         # Execute/Verify
-        with self.assertRaises(ServiceException) as e:
+        with pytest.raises(ServiceException) as e:
             self.app.apply_handler(cmd, _raise)
-        self.assertIn(
-            "HTTP request error when handling remote command DummyCmd", str(e.exception)
+        assert "HTTP request error when handling remote command DummyCmd" in str(
+            e.value
         )
 
     def test_apply_handler_wraps_http_status_error_with_status(self) -> None:
@@ -414,11 +415,10 @@ class TestHeadersAndApplyHandler(BaseRemoteAppTestCase):
             )
 
         # Execute/Verify
-        with self.assertRaises(ServiceException) as e:
+        with pytest.raises(ServiceException) as e:
             self.app.apply_handler(cmd, _raise)
-        self.assertIn(
-            "HTTP status 418 error when handling remote command DummyCmd",
-            str(e.exception),
+        assert "HTTP status 418 error when handling remote command DummyCmd" in str(
+            e.value
         )
 
     def test_apply_handler_wraps_http_status_error_without_response(self) -> None:
@@ -435,11 +435,10 @@ class TestHeadersAndApplyHandler(BaseRemoteAppTestCase):
             raise err
 
         # Execute/Verify
-        with self.assertRaises(ServiceException) as e:
+        with pytest.raises(ServiceException) as e:
             self.app.apply_handler(cmd, _raise)
-        self.assertIn(
-            "HTTP status unknown error when handling remote command DummyCmd",
-            str(e.exception),
+        assert "HTTP status unknown error when handling remote command DummyCmd" in str(
+            e.value
         )
 
     def test_apply_handler_wraps_generic_exception(self) -> None:
@@ -452,9 +451,9 @@ class TestHeadersAndApplyHandler(BaseRemoteAppTestCase):
             raise RuntimeError("oops")
 
         # Execute/Verify
-        with self.assertRaises(ServiceException) as e:
+        with pytest.raises(ServiceException) as e:
             self.app.apply_handler(cmd, _raise)
-        self.assertIn("Error when handling remote command DummyCmd", str(e.exception))
+        assert "Error when handling remote command DummyCmd" in str(e.value)
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-06")
@@ -467,7 +466,7 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
         route = self.app.register_generated_crud_route(DummyCrud)
 
         # Verify
-        self.assertEqual(route, "http://example.org:8000/dummy_models")
+        assert route == "http://example.org:8000/dummy_models"
 
     def test_create_generated_crud_handler_all_operations(self) -> None:
         # Create input
@@ -480,17 +479,14 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
             set_fake_response(payload=[], status_code=200)
             cmd = DummyCrud(operation=CrudOperation.READ_ALL)
             retval = handler(cmd)
-            self.assertIsInstance(retval, list)
-            self.assertEqual(
-                FakeClient.last_request,
-                {
-                    "method": "GET",
-                    "url": base_route,
-                    "headers": self.app.get_headers(cmd),
-                    "params": None,
-                },
-            )
-            self.assertEqual(FakeClient.last_verify, self.app.ssl_context)
+            assert isinstance(retval, list)
+            assert FakeClient.last_request == {
+                "method": "GET",
+                "url": base_route,
+                "headers": self.app.get_headers(cmd),
+                "params": None,
+            }
+            assert FakeClient.last_verify == self.app.ssl_context
 
             # READ_ALL with query filter (without ids)
             qf = DummyQueryFilter(q="x")
@@ -502,12 +498,10 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
                 return_id=False,
             )
             retval = handler(cmd)
-            self.assertEqual([DummyModel(**payload[0])], retval)  # type: ignore[arg-type]
-            self.assertEqual(FakeClient.last_request["method"], "POST")  # type: ignore[index]
-            self.assertTrue(FakeClient.last_request["url"].endswith("/query"))  # type: ignore[index]
-            self.assertEqual(
-                FakeClient.last_request["headers"], self.app.get_headers(cmd)  # type: ignore[index]
-            )
+            assert [DummyModel(**payload[0])] == retval  # type: ignore[arg-type]
+            assert FakeClient.last_request["method"] == "POST"  # type: ignore[index]
+            assert FakeClient.last_request["url"].endswith("/query")  # type: ignore[index]
+            assert FakeClient.last_request["headers"] == self.app.get_headers(cmd)
 
             # READ_ALL with query filter and ids suffix (still returns models for test purposes)
             payload = [{"id": str(uuid4()), "name": "b"}]
@@ -518,8 +512,8 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
                 return_id=True,
             )
             retval = handler(cmd)
-            self.assertEqual([DummyModel(**payload[0])], retval)  # type: ignore[arg-type]
-            self.assertTrue(FakeClient.last_request["url"].endswith("/query/ids"))  # type: ignore[index]
+            assert [DummyModel(**payload[0])] == retval  # type: ignore[arg-type]
+            assert FakeClient.last_request["url"].endswith("/query/ids")  # type: ignore[index]
 
             # READ_SOME
             ids = [uuid4(), uuid4()]
@@ -530,16 +524,13 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
             set_fake_response(payload=payload, status_code=200)
             cmd = DummyCrud(operation=CrudOperation.READ_SOME, obj_ids=ids)
             retval = handler(cmd)
-            self.assertEqual(
-                [DummyModel(**payload[0]), DummyModel(**payload[1])], retval  # type: ignore[arg-type]
-            )
-            self.assertEqual(FakeClient.last_request["method"], "GET")  # type: ignore[index]
-            self.assertTrue(FakeClient.last_request["url"].endswith("/batch"))  # type: ignore[index]
-            self.assertIn("ids", FakeClient.last_request["params"])  # type: ignore[index]
-            self.assertEqual(
-                json.loads(FakeClient.last_request["params"]["ids"]),  # type: ignore[index]
-                [str(x) for x in ids],
-            )
+            assert [DummyModel(**payload[0]), DummyModel(**payload[1])] == retval
+            assert FakeClient.last_request["method"] == "GET"  # type: ignore[index]
+            assert FakeClient.last_request["url"].endswith("/batch")  # type: ignore[index]
+            assert "ids" in FakeClient.last_request["params"]  # type: ignore[index]
+            assert json.loads(FakeClient.last_request["params"]["ids"]) == [
+                str(x) for x in ids
+            ]  # type: ignore[index]
 
             # READ_ONE
             one_id = uuid4()
@@ -547,9 +538,9 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
             set_fake_response(payload=payload, status_code=200)
             cmd = DummyCrud(operation=CrudOperation.READ_ONE, obj_ids=one_id)
             retval = handler(cmd)
-            self.assertEqual(DummyModel(**payload), retval)  # type: ignore[arg-type]
-            self.assertEqual(FakeClient.last_request["method"], "GET")  # type: ignore[index]
-            self.assertTrue(FakeClient.last_request["url"].endswith(f"/{one_id}"))  # type: ignore[index]
+            assert DummyModel(**payload) == retval  # type: ignore[arg-type]
+            assert FakeClient.last_request["method"] == "GET"  # type: ignore[index]
+            assert FakeClient.last_request["url"].endswith(f"/{one_id}")  # type: ignore[index]
 
             # CREATE_ONE
             new_obj = DummyModel(id=uuid4(), name="n1")
@@ -558,11 +549,11 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
             )
             cmd = DummyCrud(operation=CrudOperation.CREATE_ONE, objs=new_obj)
             retval = handler(cmd)
-            self.assertEqual(new_obj, retval)
-            self.assertEqual(FakeClient.last_request["method"], "POST")  # type: ignore[index]
-            self.assertEqual(FakeClient.last_request["url"], base_route)  # type: ignore[index]
-            self.assertEqual(
-                FakeClient.last_request["json"], json.loads(new_obj.model_dump_json())  # type: ignore[index]
+            assert new_obj == retval
+            assert FakeClient.last_request["method"] == "POST"  # type: ignore[index]
+            assert FakeClient.last_request["url"] == base_route  # type: ignore[index]
+            assert FakeClient.last_request["json"] == json.loads(
+                new_obj.model_dump_json()
             )
 
             # CREATE_SOME
@@ -576,9 +567,9 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
             )
             cmd = DummyCrud(operation=CrudOperation.CREATE_SOME, objs=new_objs)
             retval = handler(cmd)
-            self.assertEqual(new_objs, retval)
-            self.assertEqual(FakeClient.last_request["method"], "POST")  # type: ignore[index]
-            self.assertTrue(FakeClient.last_request["url"].endswith("/batch"))  # type: ignore[index]
+            assert new_objs == retval
+            assert FakeClient.last_request["method"] == "POST"  # type: ignore[index]
+            assert FakeClient.last_request["url"].endswith("/batch")  # type: ignore[index]
 
             # UPDATE_ONE
             upd = DummyModel(id=uuid4(), name="u1")
@@ -587,9 +578,9 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
             )
             cmd = DummyCrud(operation=CrudOperation.UPDATE_ONE, objs=upd)
             retval = handler(cmd)
-            self.assertEqual(upd, retval)
-            self.assertEqual(FakeClient.last_request["method"], "PUT")  # type: ignore[index]
-            self.assertTrue(FakeClient.last_request["url"].endswith(f"/{upd.id}"))  # type: ignore[index]
+            assert upd == retval
+            assert FakeClient.last_request["method"] == "PUT"  # type: ignore[index]
+            assert FakeClient.last_request["url"].endswith(f"/{upd.id}")  # type: ignore[index]
 
             # UPDATE_SOME
             upds = [
@@ -601,38 +592,37 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
             )
             cmd = DummyCrud(operation=CrudOperation.UPDATE_SOME, objs=upds)
             retval = handler(cmd)
-            self.assertEqual(upds, retval)
-            self.assertEqual(FakeClient.last_request["method"], "PUT")  # type: ignore[index]
-            self.assertEqual(FakeClient.last_request["url"], f"{base_route}/batch")  # type: ignore[index]
+            assert upds == retval
+            assert FakeClient.last_request["method"] == "PUT"  # type: ignore[index]
+            assert FakeClient.last_request["url"] == f"{base_route}/batch"  # type: ignore[index]
 
             # DELETE_ONE
             del_id = uuid4()
             set_fake_response(payload=str(del_id), status_code=200)
             cmd = DummyCrud(operation=CrudOperation.DELETE_ONE, obj_ids=del_id)
             retval = handler(cmd)
-            self.assertEqual(del_id, retval)
-            self.assertEqual(FakeClient.last_request["method"], "DELETE")  # type: ignore[index]
-            self.assertTrue(FakeClient.last_request["url"].endswith(f"/{del_id}"))  # type: ignore[index]
+            assert del_id == retval
+            assert FakeClient.last_request["method"] == "DELETE"  # type: ignore[index]
+            assert FakeClient.last_request["url"].endswith(f"/{del_id}")  # type: ignore[index]
 
             # DELETE_SOME
             del_ids = [uuid4(), uuid4()]
             set_fake_response(payload=[str(x) for x in del_ids], status_code=200)
             cmd = DummyCrud(operation=CrudOperation.DELETE_SOME, obj_ids=del_ids)
             retval = handler(cmd)
-            self.assertEqual(del_ids, retval)
-            self.assertEqual(FakeClient.last_request["method"], "DELETE")  # type: ignore[index]
-            self.assertTrue(FakeClient.last_request["url"].endswith("/batch"))  # type: ignore[index]
-            self.assertIn("ids", FakeClient.last_request["params"])  # type: ignore[index]
-            self.assertEqual(
-                json.loads(FakeClient.last_request["params"]["ids"]),  # type: ignore[index]
-                [str(x) for x in del_ids],
-            )
+            assert del_ids == retval
+            assert FakeClient.last_request["method"] == "DELETE"  # type: ignore[index]
+            assert FakeClient.last_request["url"].endswith("/batch")  # type: ignore[index]
+            assert "ids" in FakeClient.last_request["params"]  # type: ignore[index]
+            assert json.loads(FakeClient.last_request["params"]["ids"]) == [
+                str(x) for x in del_ids
+            ]  # type: ignore[index]
 
             # Non-200/201 status returns None
             set_fake_response(payload={"ignored": True}, status_code=204)
             cmd = DummyCrud(operation=CrudOperation.READ_ONE, obj_ids=uuid4())
             retval = handler(cmd)
-            self.assertIsNone(retval)
+            assert retval is None
 
     def test_create_generated_crud_handler_exists_operations(self) -> None:
         # Create input
@@ -650,17 +640,17 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
             retval = handler(cmd)
 
             # Verify
-            self.assertEqual(retval, [True, False, True])
-            self.assertEqual(FakeClient.last_request["method"], "POST")  # type: ignore[index]
-            self.assertTrue(FakeClient.last_request["url"].endswith("/query/ids"))  # type: ignore[index]
-            self.assertEqual(FakeClient.last_request["json"]["type"], "UUID_SET")  # type: ignore[index]
-            self.assertEqual(FakeClient.last_request["json"]["key"], "id")  # type: ignore[index]
+            assert retval == [True, False, True]
+            assert FakeClient.last_request["method"] == "POST"  # type: ignore[index]
+            assert FakeClient.last_request["url"].endswith("/query/ids")  # type: ignore[index]
+            assert FakeClient.last_request["json"]["type"] == "UUID_SET"  # type: ignore[index]
+            assert FakeClient.last_request["json"]["key"] == "id"  # type: ignore[index]
 
             # EXISTS_ONE
             set_fake_response(payload=[str(obj_ids[1])], status_code=200)
             cmd = DummyCrud(operation=CrudOperation.EXISTS_ONE, obj_ids=obj_ids[1])
             retval = handler(cmd)
-            self.assertTrue(retval)
+            assert retval
 
     def test_exists_some_falls_back_to_get_for_mixed_id_types(self) -> None:
         # Create input
@@ -680,19 +670,17 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
             retval = handler(cmd)
 
         # Verify
-        self.assertEqual(retval, [True, True])
-        self.assertEqual(FakeClient.last_request["method"], "GET")  # type: ignore[index]
-        self.assertTrue(FakeClient.last_request["url"].endswith("/legacy-id"))  # type: ignore[index]
+        assert retval == [True, True]
+        assert FakeClient.last_request["method"] == "GET"  # type: ignore[index]
+        assert FakeClient.last_request["url"].endswith("/legacy-id")  # type: ignore[index]
 
     def test_classify_exists_id_type(self) -> None:
-        self.assertEqual(RemoteApp._classify_exists_id_type([uuid4()]), "uuid")
-        self.assertEqual(RemoteApp._classify_exists_id_type(["x"]), "string")
-        self.assertEqual(RemoteApp._classify_exists_id_type([1]), "int")
-        self.assertEqual(RemoteApp._classify_exists_id_type([1.1]), "float")
-        self.assertEqual(
-            RemoteApp._classify_exists_id_type([Decimal("1.1")]), "decimal"
-        )
-        self.assertEqual(RemoteApp._classify_exists_id_type([1, 2.0]), "mixed")
+        assert RemoteApp._classify_exists_id_type([uuid4()]) == "uuid"
+        assert RemoteApp._classify_exists_id_type(["x"]) == "string"
+        assert RemoteApp._classify_exists_id_type([1]) == "int"
+        assert RemoteApp._classify_exists_id_type([1.1]) == "float"
+        assert RemoteApp._classify_exists_id_type([Decimal("1.1")]) == "decimal"
+        assert RemoteApp._classify_exists_id_type([1, 2.0]) == "mixed"
 
     def test_generated_handler_unsupported_return_type_raises(self) -> None:
         # Create input
@@ -707,7 +695,7 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
             cmd = UnsupportedCrud(operation=CrudOperation.READ_ONE, obj_ids=uuid4())
 
             # Execute/Verify
-            with self.assertRaises(NotImplementedError):
+            with pytest.raises(NotImplementedError):
                 handler(cmd)
 
 
@@ -739,9 +727,9 @@ class TestAutoRegistration(BaseRemoteAppTestCase):
 
         # Verify
         reg_route.assert_called_once_with(DummyCrud)
-        self.assertEqual(reg_handler.call_count, 1)
+        assert reg_handler.call_count == 1
         args, kwargs = reg_handler.call_args
-        self.assertIs(args[0], DummyCrud)
-        self.assertTrue(callable(args[1]))
+        assert args[0] is DummyCrud
+        assert callable(args[1])
         # Also verify host_url constructed
-        self.assertEqual(app.host_url, "http://example.org:8000")
+        assert app.host_url == "http://example.org:8000"

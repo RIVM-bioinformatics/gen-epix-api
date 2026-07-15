@@ -12,9 +12,8 @@ subclass and its domain-specific initialization.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from test.util.mock_compat import Mock, patch
 from typing import Any, cast
-from unittest import TestCase
-from unittest.mock import Mock, patch
 
 import jwt
 import pytest
@@ -53,10 +52,10 @@ class DerivedRemoteApp(CommondbRemoteApp):
 # ============================================================================
 
 
-class BaseCommondbRemoteAppTestCase(TestCase):
+class BaseCommondbRemoteAppTestCase:
     """Base test case with common fixtures and setup for CommondbRemoteApp."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         """Set up test fixtures by mocking dependencies to avoid side effects."""
 
         # Patch App.__init__ to avoid side-effects and set required attributes
@@ -68,20 +67,18 @@ class BaseCommondbRemoteAppTestCase(TestCase):
             "gen_epix.fastapp.remote_app.App.__init__", _fake_app_init
         )
         self._app_init_patcher.start()
-        self.addCleanup(self._app_init_patcher.stop)
 
         # Patch create_ssl_context to return predictable value
         self._ssl_patcher = patch(
             "gen_epix.fastapp.remote_app.create_ssl_context", return_value="SSLCTX"
         )
         self._ssl_patcher.start()
-        self.addCleanup(self._ssl_patcher.stop)
 
         # Domain stub
         self.domain: Domain = cast(Domain, Mock(spec=Domain))
         self.domain.crud_commands = []  # type: ignore[assignment,misc]
 
-    def tearDown(self) -> None:
+    def teardown_method(self) -> None:
         """Clean up patches."""
         self._app_init_patcher.stop()
         self._ssl_patcher.stop()

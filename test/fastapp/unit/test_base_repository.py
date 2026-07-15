@@ -11,9 +11,8 @@ invoking the base definitions when appropriate to ensure coverage.
 """
 
 from collections.abc import Hashable, Iterable
+from test.util.mock_compat import Mock
 from typing import Any, Callable, ClassVar, cast
-from unittest import TestCase
-from unittest.mock import Mock
 from uuid import uuid4
 
 import pytest
@@ -109,14 +108,14 @@ class DummyRepository(BaseRepository):
         return cast(BaseUnitOfWork, Mock(spec=BaseUnitOfWork))
 
 
-class BaseRepositoryTestCase(TestCase):
+class BaseRepositoryTestCase:
     """Base test case with common fixtures and utilities."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         self.repo = DummyRepository()
         self.uow: BaseUnitOfWork = cast(BaseUnitOfWork, Mock(spec=BaseUnitOfWork))
 
-    def assertCrudCalled(
+    def expectCrudCalled(
         self,
         operation: CrudOperation,
         call_index: int | None = None,
@@ -169,7 +168,7 @@ class TestUpdateAssociation(BaseRepositoryTestCase):
 
         # 4. Verify
         assert retval == []
-        self.assertCrudCalled(CrudOperation.READ_ALL)
+        self.expectCrudCalled(CrudOperation.READ_ALL)
 
         def _assert_delete(
             _uow: Any,
@@ -184,7 +183,7 @@ class TestUpdateAssociation(BaseRepositoryTestCase):
         ) -> None:
             assert sorted(obj_ids) == ["A1"]
 
-        self.assertCrudCalled(CrudOperation.DELETE_SOME, assert_args=_assert_delete)
+        self.expectCrudCalled(CrudOperation.DELETE_SOME, assert_args=_assert_delete)
 
     def test_delete_all_by_obj_id2_with_exclusions(self) -> None:
         # 1. Input
@@ -213,7 +212,7 @@ class TestUpdateAssociation(BaseRepositoryTestCase):
         )
 
         # 4. Verify
-        self.assertCrudCalled(CrudOperation.READ_ALL)
+        self.expectCrudCalled(CrudOperation.READ_ALL)
 
         def _assert_delete(
             _uow: Any,
@@ -228,7 +227,7 @@ class TestUpdateAssociation(BaseRepositoryTestCase):
         ) -> None:
             assert sorted(obj_ids) == ["A1"]
 
-        self.assertCrudCalled(CrudOperation.DELETE_SOME, assert_args=_assert_delete)
+        self.expectCrudCalled(CrudOperation.DELETE_SOME, assert_args=_assert_delete)
 
     def test_duplicate_pairs_raise(self) -> None:
         # 1. Input
@@ -355,9 +354,9 @@ class TestUpdateAssociation(BaseRepositoryTestCase):
         # IDs are set on update objs
         assert u1.id == "E11"
         # Calls
-        self.assertCrudCalled(CrudOperation.CREATE_SOME)
-        self.assertCrudCalled(CrudOperation.UPDATE_SOME)
-        self.assertCrudCalled(CrudOperation.DELETE_SOME)
+        self.expectCrudCalled(CrudOperation.CREATE_SOME)
+        self.expectCrudCalled(CrudOperation.UPDATE_SOME)
+        self.expectCrudCalled(CrudOperation.DELETE_SOME)
         # Return order corresponds to objs after mutation
         assert retval == ["E11", "NEW1"]
 

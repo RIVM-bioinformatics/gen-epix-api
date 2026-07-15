@@ -1,8 +1,7 @@
 """Shared base test case for CRUD unit tests under ``casedb.services.case``."""
 
+from test.util.mock_compat import Mock
 from typing import Any, Iterable
-from unittest import TestCase
-from unittest.mock import Mock
 from uuid import UUID, uuid4
 
 from gen_epix.casedb.domain import model as case_model
@@ -13,7 +12,7 @@ from gen_epix.fastapp.enum import CrudOperationSet
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 
-class BaseCrudTestCase(TestCase):
+class BaseCrudTestCase:
     """Base test case providing common service and UOW fixtures for CRUD tests.
 
     Provides
@@ -32,7 +31,7 @@ class BaseCrudTestCase(TestCase):
         Factory for creating mocked command objects usable across all CRUD tests.
     """
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         self.uow: BaseUnitOfWork = self._make_uow()
         self.service: Mock = Mock()
         self.service.repository = Mock()

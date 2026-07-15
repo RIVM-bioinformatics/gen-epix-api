@@ -49,6 +49,7 @@ class BaseAbacService(CommonAbacService):
         command.RetrieveCompleteCaseTypeCommand,
         command.RetrieveCasesByQueryCommand,
         command.RetrieveCasesByIdCommand,
+        command.RetrieveIsOwnCasesCommand,
         command.RetrieveCaseRightsCommand,
         command.RetrieveCaseSetRightsCommand,
         command.RetrieveCaseStatsCommand,

@@ -277,7 +277,7 @@ class RetrieveSimilarCasesCommand(Command):
 class RetrieveSimilarCasesReturnValue(BaseModel):
     """The return value for the RetrieveSimilarCasesCommand."""
 
-    cases: list[model.CaseIdAndDate] = Field(
+    cases: list[model.SimilarCase] = Field(
         description="The similar cases that were found, limited to their IDs and case dates."
     )
 
@@ -350,6 +350,20 @@ class RetrieveProtocolsCommand(Command):
 
     protocol_type: seqdb_enum.ProtocolType = Field(
         description="The type of protocols to retrieve."
+    )
+
+
+class RetrieveIsOwnCasesCommand(Command):
+    """
+    Given a list of case IDs, check which of the cases are owned by the user or the user has access to.
+    Returns a list of case IDs that the user owns or has access to.
+    """
+
+    case_type_id: UUID = Field(
+        description="The CaseType ID that all the cases must belong to."
+    )
+    case_ids: list[UUID] = Field(
+        description="The IDs of the cases to check ownership for."
     )
 
 

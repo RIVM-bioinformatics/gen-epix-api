@@ -1,4 +1,5 @@
 import time
+from typing import ClassVar
 
 from cachetools import TTLCache, cached
 
@@ -8,6 +9,9 @@ from gen_epix.fastapp import Command, CrudOperation
 
 
 class HasSystemOutagePolicy(BaseHasSystemOutagePolicy):
+    _IS_PERMITTED_CACHE: ClassVar[TTLCache] = TTLCache(maxsize=100, ttl=100)
+    _IS_ALLOWED_CACHE: ClassVar[TTLCache] = TTLCache(maxsize=10, ttl=10)
+
     def is_allowed(self, cmd: Command) -> bool:
         if isinstance(cmd, command.OutageCrudCommand):
             return True
@@ -21,16 +25,14 @@ class HasSystemOutagePolicy(BaseHasSystemOutagePolicy):
     def get_is_denied_exception(self) -> type[Exception]:
         return exc.ServiceUnavailableError
 
-    @cached(
-        cache=TTLCache(maxsize=100, ttl=100), key=lambda self, tgt_user: tgt_user.id
-    )
+    @cached(cache=_IS_PERMITTED_CACHE, key=lambda self, tgt_user: tgt_user.id)
     def _is_permitted(self, tgt_user: model.User) -> bool:
         return (
             self.outage_update_permission
             in self.system_service.app.user_manager.retrieve_user_permissions(tgt_user)
         )
 
-    @cached(cache=TTLCache(maxsize=10, ttl=10))
+    @cached(cache=_IS_ALLOWED_CACHE)
     def _is_allowed(self) -> bool:
         outages: list[model.Outage] = self.system_service.crud(  # type: ignore[assignment]
             command.OutageCrudCommand(

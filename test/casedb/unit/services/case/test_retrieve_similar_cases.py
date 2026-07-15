@@ -1,6 +1,5 @@
+from test.util.mock_compat import MagicMock, Mock, call
 from types import SimpleNamespace
-from unittest import TestCase
-from unittest.mock import MagicMock, Mock, call
 from uuid import UUID, uuid4
 
 import pytest
@@ -17,10 +16,10 @@ from gen_epix.seqdb.domain import command as seqdb_command
 from gen_epix.seqdb.domain import enum as seqdb_enum
 
 
-class BaseSimilarCasesTestCase(TestCase):
+class BaseSimilarCasesTestCase:
     """Base test case with common fixtures and utilities for similar cases."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         """Set up test fixtures."""
         # Test user
         self.user: model.User = model.User(
@@ -67,7 +66,7 @@ class BaseSimilarCasesTestCase(TestCase):
             return_value=SimpleNamespace()
         )
 
-    def tearDown(self) -> None:
+    def teardown_method(self) -> None:
         BaseCaseAbacPolicy.get_case_abac_from_command = self._orig_get_case_abac  # type: ignore[method-assign]
 
     # Helpers
@@ -137,7 +136,7 @@ class TestInputValidation(BaseSimilarCasesTestCase):
         cmd: command.RetrieveSimilarCasesCommand = self.create_command(case_ids=[])
 
         # 2. Mocks
-        # (already configured in setUp)
+        # (already configured in setup_method)
 
         # 3. Execute
         similar_cases = case_service_retrieve_similar_cases(self.service, cmd)
@@ -341,3 +340,33 @@ class TestHappyPath(BaseSimilarCasesTestCase):
         self.service.app.handle.assert_called_once()  # type: ignore[attr-defined]
         seq_cmd: seqdb_command.RetrieveSimilarProfilesCommand = self.service.app.handle.call_args[0][0]  # type: ignore[attr-defined]
         assert seq_cmd.profile_ids == []
+
+    def test_no_accessible_similar_case_ids_returns_empty(self) -> None:
+        # 1. Input
+        seed_case_id: UUID = uuid4()
+        inaccessible_profile_id: UUID = uuid4()
+        cmd: command.RetrieveSimilarCasesCommand = self.create_command(
+            case_ids=[seed_case_id]
+        )
+
+        # 2. Mocks
+        dist_col: model.Col = self.create_col(case_type_id=self.case_type_id)
+        dist_ref_col: model.RefCol = self.create_ref_col(
+            col_type=enum.ColType.GENETIC_DISTANCE,
+            protocol_id=self.protocol_id,
+        )
+        protocol: model.GeneticDistanceProtocol = self.create_protocol()
+        self.repository.crud.side_effect = [dist_col, dist_ref_col, protocol]
+        self.service._retrieve_cases_with_content_right.return_value = [  # type: ignore[attr-defined]
+            self.create_case(seed_case_id, uuid4())
+        ]
+        self.service.app.handle.return_value = [  # type: ignore[attr-defined]
+            str(inaccessible_profile_id)
+        ]
+
+        # 3. Execute
+        similar_cases = case_service_retrieve_similar_cases(self.service, cmd)
+
+        # 4. Verify
+        assert similar_cases.cases == []
+        assert self.service._retrieve_cases_with_content_right.call_count == 1  # type: ignore[attr-defined]

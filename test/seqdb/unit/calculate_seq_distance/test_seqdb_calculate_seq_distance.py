@@ -1,9 +1,8 @@
 import json
 from collections.abc import Callable, Iterator
 from datetime import datetime, timezone
+from test.util.mock_compat import Mock, patch
 from typing import Any
-from unittest import TestCase
-from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
 
 import numpy as np
@@ -17,7 +16,6 @@ from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.domain.literal import MLVA_NO_LOCUS_REPEAT_NUMBER
 from gen_epix.seqdb.services.seq.calculate_seq_distance import (
-    _INT32_VOCAB_GATE,
     _NULL_ALLELE,
     _calculate_and_store_distances,
     _calculate_distance_for_decoded_profile_pair,
@@ -333,10 +331,10 @@ def _make_crud_side_effect(
     return _crud
 
 
-class BaseCalculateSeqDistanceTestCase(TestCase):
+class BaseCalculateSeqDistanceTestCase:
     """Base test case with common fixtures and utilities."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         self.user: User = _make_user()
 
         self.protocol_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440001")
@@ -394,10 +392,10 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
         )
 
-        self.assertEqual(results, [])
+        assert results == []
         self.service.repository.iter_seq_distances.assert_not_called()
-        self.assertEqual(len(recorder.created), 0)
-        self.assertEqual(len(recorder.updated), 0)
+        assert len(recorder.created) == 0
+        assert len(recorder.updated) == 0
 
     def test_kmer_profiles_raises_not_implemented(self) -> None:
         kmer_profile = model.SeqProfile.model_construct(
@@ -423,7 +421,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             protocols=[],
         )
 
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
 
     def test_protocol_not_applicable_skips_distance_calculation(self) -> None:
@@ -486,7 +484,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
         )
 
-        self.assertEqual(results, [])
+        assert results == []
 
     def test_snp_profiles_updates_existing_and_creates_new_seq_distances(self) -> None:
         existing_profile: model.SeqProfile = _make_snp_profile_for_upload(
@@ -541,27 +539,27 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
         )
 
-        self.assertEqual(len(results), 2)
-        self.assertEqual(results[1].seq_distance_profile_id, self.new_profile_id)
-        self.assertEqual(results[0].status, EtlStatus.UPDATED)
-        self.assertEqual(results[1].status, EtlStatus.CREATED)
+        assert len(results) == 2
+        assert results[1].seq_distance_profile_id == self.new_profile_id
+        assert results[0].status == EtlStatus.UPDATED
+        assert results[1].status == EtlStatus.CREATED
 
-        self.assertEqual(len(recorder.updated), 1)
+        assert len(recorder.updated) == 1
         updated_distances: dict[str, float] = json.loads(recorder.updated[0].content)
-        self.assertIn(str(self.new_profile_id), updated_distances)
+        assert str(self.new_profile_id) in updated_distances
 
-        self.assertEqual(len(recorder.created), 1)
+        assert len(recorder.created) == 1
         created: model.SeqDistance = recorder.created[0]
-        self.assertEqual(created.protocol_id, self.protocol_id)
-        self.assertEqual(created.seq_profile_id, self.new_profile_id)
-        self.assertEqual(created.sample_id, self.sample_id2)
+        assert created.protocol_id == self.protocol_id
+        assert created.seq_profile_id == self.new_profile_id
+        assert created.sample_id == self.sample_id2
         created_map: dict[str, float] = json.loads(created.content)
-        self.assertIn(str(self.existing_profile_id), created_map)
+        assert str(self.existing_profile_id) in created_map
 
         expected_distance = 2.0
 
-        self.assertEqual(updated_distances[str(self.new_profile_id)], expected_distance)
-        self.assertEqual(created_map[str(self.existing_profile_id)], expected_distance)
+        assert updated_distances[str(self.new_profile_id)] == expected_distance
+        assert created_map[str(self.existing_profile_id)] == expected_distance
 
     def test_allele_profiles_distance_over_threshold_creates_new_with_empty_map(
         self,
@@ -617,14 +615,14 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
         )
 
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0].seq_distance_profile_id, self.new_profile_id)
-        self.assertEqual(results[0].status, EtlStatus.CREATED)
+        assert len(results) == 1
+        assert results[0].seq_distance_profile_id == self.new_profile_id
+        assert results[0].status == EtlStatus.CREATED
 
-        self.assertEqual(len(recorder.updated), 0)
-        self.assertEqual(len(recorder.created), 1)
+        assert len(recorder.updated) == 0
+        assert len(recorder.created) == 1
         created_map: dict[str, float] = json.loads(recorder.created[0].content)
-        self.assertEqual(created_map, {})
+        assert created_map == {}
 
     def test_mlva_profiles_distance_ignores_missing_loci_and_stores_distance(
         self,
@@ -676,17 +674,17 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
         )
 
-        self.assertEqual(len(results), 2)
-        self.assertEqual(results[0].status, EtlStatus.UPDATED)
-        self.assertEqual(results[1].status, EtlStatus.CREATED)
+        assert len(results) == 2
+        assert results[0].status == EtlStatus.UPDATED
+        assert results[1].status == EtlStatus.CREATED
 
-        self.assertEqual(len(recorder.updated), 1)
+        assert len(recorder.updated) == 1
         updated_map: dict[str, float] = json.loads(recorder.updated[0].content)
-        self.assertIn(str(self.new_profile_id), updated_map)
+        assert str(self.new_profile_id) in updated_map
 
-        self.assertEqual(len(recorder.created), 1)
+        assert len(recorder.created) == 1
         created_map: dict[str, float] = json.loads(recorder.created[0].content)
-        self.assertIn(str(self.existing_profile_id), created_map)
+        assert str(self.existing_profile_id) in created_map
 
         expected: float = float(
             sum(
@@ -700,8 +698,8 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
                 and y != MLVA_NO_LOCUS_REPEAT_NUMBER
             )
         )
-        self.assertEqual(updated_map[str(self.new_profile_id)], expected)
-        self.assertEqual(created_map[str(self.existing_profile_id)], expected)
+        assert updated_map[str(self.new_profile_id)] == expected
+        assert created_map[str(self.existing_profile_id)] == expected
 
     def test_mlva_profiles_unsupported_existing_profile_format_raises(self) -> None:
         existing_profile: model.SeqProfile = model.SeqProfile.model_construct(
@@ -753,7 +751,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         )
         _setup_distance_mocks(self.service, [existing_seq_distance])
 
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
 
     def test_mlva_profiles_unsupported_new_profile_format_raises(self) -> None:
@@ -804,7 +802,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         )
         _setup_distance_mocks(self.service, [existing_seq_distance])
 
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
 
     def test_existing_seq_distances_empty_skips_read_some_and_creates_new(self) -> None:
@@ -839,11 +837,11 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
         )
 
-        self.assertEqual(len(results), 1)
-        self.assertEqual(len(recorder.read_some_calls), 0)
-        self.assertEqual(len(recorder.updated), 0)
-        self.assertEqual(len(recorder.created), 1)
-        self.assertEqual(json.loads(recorder.created[0].content), {})
+        assert len(results) == 1
+        assert len(recorder.read_some_calls) == 0
+        assert len(recorder.updated) == 0
+        assert len(recorder.created) == 1
+        assert json.loads(recorder.created[0].content) == {}
 
     def _run_snp_distance(
         self,
@@ -906,19 +904,19 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             _make_nextclade_content(alignment_end=4),
             _make_nextclade_content(alignment_end=4),
         )
-        self.assertEqual(len(results), 2)
-        self.assertEqual(
-            json.loads(recorder.created[0].content)[str(self.existing_profile_id)],
-            0.0,
+        assert len(results) == 2
+        assert (
+            json.loads(recorder.created[0].content)[str(self.existing_profile_id)]
+            == 0.0
         )
 
         recorder, results = self._run_snp_distance(
             _make_nextclade_content(alignment_end=4),
             _make_nextclade_content(substitutions="A2T", alignment_end=4),
         )
-        self.assertEqual(
-            json.loads(recorder.created[0].content)[str(self.existing_profile_id)],
-            1.0,
+        assert (
+            json.loads(recorder.created[0].content)[str(self.existing_profile_id)]
+            == 1.0
         )
 
         recorder, results = self._run_snp_distance(
@@ -933,15 +931,15 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
                 alignment_end=5,
             ),
         )
-        self.assertEqual(
-            json.loads(recorder.created[0].content)[str(self.existing_profile_id)],
-            4.0,
+        assert (
+            json.loads(recorder.created[0].content)[str(self.existing_profile_id)]
+            == 4.0
         )
 
     def test_snp_mismatched_length_raises(
         self,
     ) -> None:
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             self._run_snp_distance(
                 _make_nextclade_content(substitutions="bad", alignment_end=4),
                 _make_nextclade_content(alignment_end=4),
@@ -992,11 +990,11 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         )
         _setup_distance_mocks(self.service, [existing_seq_distance])
 
-        with self.assertRaises(InvalidArgumentsError) as ctx:
+        with pytest.raises(InvalidArgumentsError) as ctx:
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
 
-        self.assertEqual(ctx.exception.args[0], "fbb3c9e7")
-        self.assertIn("All new profiles must have an ID", str(ctx.exception))
+        assert ctx.value.args[0] == "fbb3c9e7"
+        assert "All new profiles must have an ID" in str(ctx.value)
 
 
 @pytest.mark.scenario_ids("TC-11-13-01")
@@ -1105,16 +1103,14 @@ class TestCalculateSeqDistancesBatchInvariant(BaseCalculateSeqDistanceTestCase):
         )
 
         # Correct number of results
-        self.assertEqual(len(results), 5)
+        assert len(results) == 5
         result_ids = {
             x.seq_distance_profile_id for x in results if x.status == EtlStatus.CREATED
         }
-        self.assertEqual(result_ids, {n1_id, n2_id, n3_id})
+        assert result_ids == {n1_id, n2_id, n3_id}
 
         # Build {profile_id: distances_dict} from created records
-        self.assertEqual(
-            len(recorder.created), 3, "Expected one SeqDistance per new profile"
-        )
+        assert len(recorder.created) == 3, "Expected one SeqDistance per new profile"
         created_maps: dict[UUID, dict[str, float]] = {
             x.seq_profile_id: json.loads(x.content) for x in recorder.created
         }
@@ -1122,31 +1118,23 @@ class TestCalculateSeqDistancesBatchInvariant(BaseCalculateSeqDistanceTestCase):
         # Every inter-batch pair must be present in BOTH directions
         intra_batch_pairs = [(n1_id, n2_id), (n1_id, n3_id), (n2_id, n3_id)]
         for id_a, id_b in intra_batch_pairs:
-            self.assertIn(
-                str(id_b),
-                created_maps[id_a],
-                f"distance({id_a},{id_b}) missing from {id_a}'s map",
-            )
-            self.assertIn(
-                str(id_a),
-                created_maps[id_b],
-                f"distance({id_b},{id_a}) missing from {id_b}'s map",
-            )
+            assert (
+                str(id_b) in created_maps[id_a]
+            ), f"distance({id_a},{id_b}) missing from {id_a}'s map"
+            assert (
+                str(id_a) in created_maps[id_b]
+            ), f"distance({id_b},{id_a}) missing from {id_b}'s map"
             # Symmetry: both values must be equal
-            self.assertEqual(
-                created_maps[id_a][str(id_b)],
-                created_maps[id_b][str(id_a)],
-                f"Asymmetric distance for pair ({id_a},{id_b})",
-            )
+            assert (
+                created_maps[id_a][str(id_b)] == created_maps[id_b][str(id_a)]
+            ), f"Asymmetric distance for pair ({id_a},{id_b})"
 
         # Cross pairs must still be present
         for n_id in [n1_id, n2_id, n3_id]:
             for e_id in existing_ids:
-                self.assertIn(
-                    str(e_id),
-                    created_maps[n_id],
-                    f"N×E distance missing: new={n_id}, existing={e_id}",
-                )
+                assert (
+                    str(e_id) in created_maps[n_id]
+                ), f"N×E distance missing: new={n_id}, existing={e_id}"
 
     def test_batch_upload_intra_batch_pair_over_threshold_not_stored(self) -> None:
         """Inter-batch pairs whose distance exceeds max_stored_distance are omitted."""
@@ -1192,11 +1180,9 @@ class TestCalculateSeqDistancesBatchInvariant(BaseCalculateSeqDistanceTestCase):
         }
         # All maps must be empty — nothing was within threshold
         for n_id in [n1_id, n2_id, n3_id]:
-            self.assertEqual(
-                created_maps[n_id],
-                {},
-                f"Expected empty map for {n_id} but got {created_maps[n_id]}",
-            )
+            assert (
+                created_maps[n_id] == {}
+            ), f"Expected empty map for {n_id} but got {created_maps[n_id]}"
 
     def test_single_new_profile_skips_intra_batch_loop(self) -> None:
         locus_set_id = self.locus_set_id
@@ -1233,9 +1219,9 @@ class TestCalculateSeqDistancesBatchInvariant(BaseCalculateSeqDistanceTestCase):
             self.service, cmd
         )
 
-        self.assertEqual(len(results), 1)
-        self.assertEqual(len(recorder.created), 1)
-        self.assertEqual(json.loads(recorder.created[0].content), {})
+        assert len(results) == 1
+        assert len(recorder.created) == 1
+        assert json.loads(recorder.created[0].content) == {}
 
 
 @pytest.mark.scenario_ids("TC-11-13-01")
@@ -1286,7 +1272,7 @@ class TestConcurrentModificationCheck(
             ),
         )
 
-        with self.assertRaises(ConcurrentModificationError):
+        with pytest.raises(ConcurrentModificationError):
             seq_service_calculate_seq_distances_for_new_profiles(
                 self.service,
                 cmd,
@@ -1339,11 +1325,8 @@ class TestConcurrentModificationCheck(
             self.service,
             cmd,
         )
-        self.assertEqual(len(results), 1)
-        self.assertEqual(
-            results[0].status,
-            EtlStatus.CREATED,
-        )
+        assert len(results) == 1
+        assert results[0].status == EtlStatus.CREATED
 
     def test_none_timestamp_skips_check(self) -> None:
         """When no timestamp is provided, proceed without
@@ -1376,7 +1359,7 @@ class TestConcurrentModificationCheck(
             self.service,
             cmd,
         )
-        self.assertEqual(len(results), 1)
+        assert len(results) == 1
         (self.service.repository.get_max_seq_distance_modified_at.assert_not_called())
 
 
@@ -1454,7 +1437,7 @@ class TestUpdateSeqDistances(
             self.service,
             cmd,
         )
-        self.assertEqual(results, [])
+        assert results == []
 
     def test_missing_profile_creates_distance(
         self,
@@ -1544,31 +1527,25 @@ class TestUpdateSeqDistances(
         )
 
         # One update (existing) + one create (missing)
-        self.assertEqual(len(results), 2)
+        assert len(results) == 2
         created_ids = {
             r.seq_distance_profile_id for r in results if r.status == EtlStatus.CREATED
         }
-        self.assertIn(self.new_profile_id, created_ids)
+        assert self.new_profile_id in created_ids
 
         # Symmetry: existing distance updated with
         # new profile's distance AND new distance
         # contains existing profile's distance
-        self.assertEqual(len(recorder.created), 1)
+        assert len(recorder.created) == 1
         created_map = json.loads(
             recorder.created[0].content,
         )
-        self.assertIn(
-            str(self.existing_profile_id),
-            created_map,
-        )
-        self.assertEqual(len(recorder.updated), 1)
+        assert str(self.existing_profile_id) in created_map
+        assert len(recorder.updated) == 1
         updated_map = json.loads(
             recorder.updated[0].content,
         )
-        self.assertIn(
-            str(self.new_profile_id),
-            updated_map,
-        )
+        assert str(self.new_profile_id) in updated_map
 
     def test_chunked_existing_profiles_updates_both_and_maintains_symmetry(
         self,
@@ -1675,14 +1652,14 @@ class TestUpdateSeqDistances(
         )
 
         # iter_seq_distances called once per chunk (2 chunks for 2 profiles)
-        self.assertEqual(self.service.repository.iter_seq_distances.call_count, 2)
+        assert self.service.repository.iter_seq_distances.call_count == 2
         # Both existing records updated, one new record created
-        self.assertEqual(len(recorder.updated), 2)
-        self.assertEqual(len(recorder.created), 1)
+        assert len(recorder.updated) == 2
+        assert len(recorder.created) == 1
         # New profile's map accumulates distances from both chunks
         created_map = json.loads(recorder.created[0].content)
-        self.assertIn(str(self.existing_profile_id), created_map)
-        self.assertIn(str(existing_profile_id_2), created_map)
+        assert str(self.existing_profile_id) in created_map
+        assert str(existing_profile_id_2) in created_map
 
 
 # ── Numpy allele compute helpers ─────────────────────────────────────────────
@@ -1693,14 +1670,14 @@ def _s16(byte_val: int, n_loci: int = 5) -> np.ndarray:
     return np.array([bytes([byte_val] * 16)] * n_loci, dtype="S16")
 
 
-class TestNumpyAlleleKernels(TestCase):
+class TestNumpyAlleleKernels:
     def test_hamming_allele_numpy_identity_mismatch_null(self) -> None:
         a = np.array([b"\x01" * 16, b"\x02" * 16, b"\x03" * 16], dtype="S16")
         b = np.array([b"\x01" * 16, b"\x99" * 16, b"\x03" * 16], dtype="S16")
         c = np.array([_NULL_ALLELE, b"\x02" * 16, b"\x03" * 16], dtype="S16")
-        self.assertEqual(_hamming_allele_numpy(a, a), 0.0)  # identity
-        self.assertEqual(_hamming_allele_numpy(a, b), 1.0)  # one mismatch
-        self.assertEqual(_hamming_allele_numpy(a, c), 0.0)  # null excluded
+        assert _hamming_allele_numpy(a, a) == 0.0  # identity
+        assert _hamming_allele_numpy(a, b) == 1.0  # one mismatch
+        assert _hamming_allele_numpy(a, c) == 0.0  # null excluded
 
     def test_hamming_allele_numpy_batch_matches_per_pair(self) -> None:
         n_loci = 4
@@ -1723,15 +1700,15 @@ class TestNumpyAlleleKernels(TestCase):
         null_new = new_matrix == _NULL_ALLELE
         result = _hamming_allele_numpy_batch(existing, new_matrix, null_new)
         for i in range(3):
-            self.assertEqual(result[i], _hamming_allele_numpy(existing, new_matrix[i]))
+            assert result[i] == _hamming_allele_numpy(existing, new_matrix[i])
 
     def test_encode_to_int32_shared_token_gets_same_code(self) -> None:
         # Token \x01 appears in both new and chunk at column 0; must get same int32 code.
         new_s16 = np.array([[b"\x01" * 16, b"\x02" * 16]], dtype="S16")
         chunk_s16 = np.array([[b"\x01" * 16, b"\x03" * 16]], dtype="S16")
         new_int32, chunk_int32 = _encode_to_int32(new_s16, chunk_s16)
-        self.assertEqual(new_int32[0, 0], chunk_int32[0, 0])  # shared \x01 token
-        self.assertNotEqual(new_int32[0, 1], chunk_int32[0, 1])  # \x02 vs \x03
+        assert new_int32[0, 0] == chunk_int32[0, 0]  # shared \x01 token
+        assert new_int32[0, 1] != chunk_int32[0, 1]  # \x02 vs \x03
 
     def test_hamming_allele_int32_batch_matches_numpy_batch(self) -> None:
         rng = np.random.default_rng(0)
@@ -1756,7 +1733,7 @@ class TestNumpyAlleleKernels(TestCase):
             chunk_int32[0], new_int32, null_existing, null_new
         )
         for i in range(m):
-            self.assertEqual(float(result[i]), ref[i])
+            assert float(result[i]) == ref[i]
 
     def test_int32_and_numpy_batch_produce_same_distances_as_python_loop(self) -> None:
         # Parity test: all three paths must agree on the same 5-locus, 4-profile case.
@@ -1806,8 +1783,8 @@ class TestNumpyAlleleKernels(TestCase):
             chunk_int32[0], new_int32, null_existing, null_new
         )
         for i in range(2):
-            self.assertEqual(batch[i], ref[i])
-            self.assertEqual(float(int32_res[i]), ref[i])
+            assert batch[i] == ref[i]
+            assert float(int32_res[i]) == ref[i]
 
 
 # ── Numpy allele integration tests ────────────────────────────────────────────

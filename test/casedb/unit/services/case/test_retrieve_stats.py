@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta, timezone
+from test.util.mock_compat import Mock, patch
 from typing import Any
-from unittest import TestCase
-from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -19,8 +18,8 @@ from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
 from gen_epix.filter.enum import FilterType
 
 
-class BaseRetrieveStatsTestCase(TestCase):
-    def setUp(self) -> None:
+class BaseRetrieveStatsTestCase:
+    def setup_method(self) -> None:
         self.user = User(
             id=uuid4(),
             key="test@example.com",
@@ -234,38 +233,36 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
             )
 
         # Verify
-        self.assertEqual(len(result), 2)
+        assert len(result) == 2
         result_by_id: dict[UUID, case_model.CaseStats] = {
             x.case_type_id: x for x in result
         }
-        self.assertEqual(result_by_id[self.case_type_id1].n_cases, 4)
-        self.assertEqual(
-            result_by_id[self.case_type_id1].first_case_date,
-            datetime(2024, 1, 1, 12, 0, 0),
+        assert result_by_id[self.case_type_id1].n_cases == 4
+        assert result_by_id[self.case_type_id1].first_case_date == datetime(
+            2024, 1, 1, 12, 0, 0
         )
-        self.assertEqual(
-            result_by_id[self.case_type_id1].last_case_date,
-            datetime(2024, 1, 1, 12, 0, 0),
+        assert result_by_id[self.case_type_id1].last_case_date == datetime(
+            2024, 1, 1, 12, 0, 0
         )
-        self.assertEqual(result_by_id[self.case_type_id2].n_cases, 0)
-        self.assertIsNone(result_by_id[self.case_type_id2].first_case_date)
-        self.assertIsNone(result_by_id[self.case_type_id2].last_case_date)
+        assert result_by_id[self.case_type_id2].n_cases == 0
+        assert result_by_id[self.case_type_id2].first_case_date is None
+        assert result_by_id[self.case_type_id2].last_case_date is None
 
         get_abac.assert_called_once_with(cmd)
         self.repository.uow.assert_called()
         self.repository.crud.assert_called_once()
         # Assert repository.crud called with expected parameters
         _, _, model_class, operation = self.repository.crud.call_args[0][:6]
-        self.assertIs(model_class, case_model.CaseType)
-        self.assertEqual(operation, CrudOperation.READ_ALL)
+        assert model_class is case_model.CaseType
+        assert operation == CrudOperation.READ_ALL
 
         # Assert retrieve_complete_case_type interactions
         retrieve_calls = self.service.retrieve_complete_case_type.call_args_list
-        self.assertEqual(len(retrieve_calls), 2)
+        assert len(retrieve_calls) == 2
 
         # Assert repository.retrieve_case_stats interactions
         stats_calls = self.repository.retrieve_case_stats.call_args_list
-        self.assertEqual(len(stats_calls), 2)
+        assert len(stats_calls) == 2
 
     def test_no_case_type_ids_restricted_access_uses_abac_ids(self) -> None:
         readable_ids = {self.case_type_id1, self.case_type_id2}
@@ -309,10 +306,10 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
             )
 
         # Verify stats aggregated for both readable IDs
-        self.assertEqual({x.case_type_id for x in result}, readable_ids)
+        assert {x.case_type_id for x in result} == readable_ids
         by_id = {x.case_type_id: x for x in result}
-        self.assertEqual(by_id[self.case_type_id1].n_cases, 1)
-        self.assertEqual(by_id[self.case_type_id2].n_cases, 2)
+        assert by_id[self.case_type_id1].n_cases == 1
+        assert by_id[self.case_type_id2].n_cases == 2
 
         # repository.crud not called in restricted path without full access
         self.repository.crud.assert_not_called()
@@ -329,7 +326,7 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
             return_value=abac,
         ):
             cmd = self.case_stats_cmd(case_type_ids=requested_ids)
-            with self.assertRaisesRegex(Exception, "READ_CASE right for CaseTypes"):
+            with pytest.raises(Exception, match="READ_CASE right for CaseTypes"):
                 case_service_retrieve_case_stats(self.service, cmd)
 
         self.repository.crud.assert_not_called()
@@ -367,12 +364,12 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
                 self.service, cmd
             )
 
-        self.assertEqual(len(result), 1)
+        assert len(result) == 1
         stat = result[0]
-        self.assertEqual(stat.case_type_id, self.case_type_id1)
-        self.assertEqual(stat.n_cases, 6)
-        self.assertEqual(stat.first_case_date, datetime(2022, 5, 1, 0, 0, 0))
-        self.assertEqual(stat.last_case_date, datetime(2022, 6, 1, 0, 0, 0))
+        assert stat.case_type_id == self.case_type_id1
+        assert stat.n_cases == 6
+        assert stat.first_case_date == datetime(2022, 5, 1, 0, 0, 0)
+        assert stat.last_case_date == datetime(2022, 6, 1, 0, 0, 0)
 
     def test_missing_abac_policy_raises_assertion(self) -> None:
         with patch.object(
@@ -381,7 +378,7 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
             return_value=None,
         ):
             cmd = self.case_stats_cmd(case_type_ids={self.case_type_id1})
-            with self.assertRaises(AssertionError):
+            with pytest.raises(AssertionError):
                 case_service_retrieve_case_stats(self.service, cmd)
 
 
@@ -465,17 +462,17 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
             )
 
         # Verify result for both case sets
-        self.assertEqual(len(result), 2)
+        assert len(result) == 2
         by_id: dict[UUID, case_model.CaseStats] = {x.case_set_id: x for x in result}
-        self.assertEqual(by_id[self.case_set_id1].n_cases, 2)
-        self.assertEqual(by_id[self.case_set_id1].n_own_cases, 1)
-        self.assertEqual(by_id[self.case_set_id1].first_case_date, datetime(2024, 1, 1))
-        self.assertEqual(by_id[self.case_set_id1].last_case_date, datetime(2024, 1, 2))
+        assert by_id[self.case_set_id1].n_cases == 2
+        assert by_id[self.case_set_id1].n_own_cases == 1
+        assert by_id[self.case_set_id1].first_case_date == datetime(2024, 1, 1)
+        assert by_id[self.case_set_id1].last_case_date == datetime(2024, 1, 2)
 
-        self.assertEqual(by_id[self.case_set_id2].n_cases, 2)
-        self.assertEqual(by_id[self.case_set_id2].n_own_cases, 1)
-        self.assertEqual(by_id[self.case_set_id2].first_case_date, datetime(2024, 1, 2))
-        self.assertEqual(by_id[self.case_set_id2].last_case_date, datetime(2024, 1, 3))
+        assert by_id[self.case_set_id2].n_cases == 2
+        assert by_id[self.case_set_id2].n_own_cases == 1
+        assert by_id[self.case_set_id2].first_case_date == datetime(2024, 1, 2)
+        assert by_id[self.case_set_id2].last_case_date == datetime(2024, 1, 3)
 
     def test_no_case_sets_initially_sets_ids_from_members_and_returns_empty(
         self,
@@ -498,7 +495,7 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
 
         # When no case_set_ids provided and no case_type_ids, should return empty
         # as case_type_ids will be set() after processing
-        self.assertEqual(result, [])
+        assert result == []
 
     def test_special_case_case_set_with_no_members(self) -> None:
         cs = self.create_case_set(
@@ -552,10 +549,10 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
                 self.service, cmd
             )
 
-        self.assertEqual(len(result), 1)
+        assert len(result) == 1
         stat = result[0]
-        self.assertEqual(stat.case_set_id, self.case_set_id1)
-        self.assertEqual(stat.n_cases, 0)
-        self.assertEqual(stat.n_own_cases, 0)
-        self.assertIsNone(stat.first_case_date)
-        self.assertIsNone(stat.last_case_date)
+        assert stat.case_set_id == self.case_set_id1
+        assert stat.n_cases == 0
+        assert stat.n_own_cases == 0
+        assert stat.first_case_date is None
+        assert stat.last_case_date is None
