@@ -1,5 +1,38 @@
 # CHANGELOG
 
+## [9.0.0](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v8.1.0...v9.0.0) (2026-07-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* Lsp 3474 make upload work end to end ([#536](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/536))
+
+### Features
+
+* Add profiling decorator for methods ([#547](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/547)) ([27e0ff6](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/27e0ff6f7cd2633f90cf1d6664abee417e44d8a5))
+* auto-create root organization in user auto-creation flow ([#557](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/557)) ([6173881](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/61738815d758f2abf206ba40af4d91f55e5ebc08))
+* **caches:** add app-level cache invalidator registry (LSP-1829) ([#576](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/576)) ([2fe65c3](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/2fe65c3d188c0913c3c58a1c8329284eea185fe4))
+* Lsp 3474 make upload work end to end ([#536](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/536)) ([c0f26f3](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/c0f26f3913317669017f883f3e649fe793036af1))
+* **LSP-911:** Implement new endpoint to check is_own_cases for multiple case_ids ([#567](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/567)) ([4e87c54](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/4e87c54baea378eb3fe8aebe481e7b2237b47c7d))
+
+
+### Bug Fixes
+
+* **casedb:** prevent derived values from being overwritten during age-category update (LSP-3417) ([#566](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/566)) ([3f9acc7](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/3f9acc7c3ed8924c82455874fff6289756dbcf9b))
+* **casedb:** use highest-resolution date available for case_date ([#545](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/545)) ([d3a969b](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/d3a969bcc5feecc33e6f64c2b2ec417cd07ea4ed))
+* **ci:** always start from a clean venv on cache miss ([#549](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/549)) ([eae0550](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/eae0550ad5f10b3452ee30d951d75a102dbda02e))
+* **deps:** remove outdated cryptography dependency ([8ddac28](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/8ddac28c6306f9cded890e960f971f444f219fff))
+* **deps:** update dependency cryptography to v48 [security] ([#542](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/542)) ([ca6a29f](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/ca6a29f712156f1481c5d2ac9eb8d13102c0639f))
+* **deps:** update dependency pyjwt to v2.13.0 [security] ([#539](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/539)) ([dde6d19](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/dde6d1983b76ca951871f28b80d98315c38652c2))
+* **deps:** update dependency python-multipart to v0.0.31 [security] ([#538](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/538)) ([4c3b7d1](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/4c3b7d17fffbe4e9125965e3b4dfeff4adbe1fac))
+* **deps:** update dependency starlette to ==1.3.* [security] ([#540](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/540)) ([f220e8f](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/f220e8fd03ac4dc26a2dde38573bddc5af40f086))
+* **deps:** update dependency urllib3 to v2.7.0 [security] ([#541](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/541)) ([d695b02](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/d695b024ce7057ac603203dc95ca3cfaca07e321))
+* Resolved error in phylogenetic tree construction ([#565](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/565)) ([2df76f4](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/2df76f4c6ecd9e31255fde389c8547efdfaee7aa))
+* **seqdb:** skip content_hash check when hash is server-computed (NULL_ID) ([#546](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/546)) ([c4fcbc3](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/c4fcbc34303673b061a7d3f8b858624cc8b857e8))
+* Update operation type for data collection check ([feb6222](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/feb6222c8eb07a07691ad612561e9bd1f4f2f717))
+* use checkfirst=True in SARepository.create_all ([8daad11](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/8daad119e824b48c0f587919cb265aee15ec1d60))
+* use checkfirst=True in SARepository.create_all ([#556](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/556)) ([6433445](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/6433445b7425e8dbd98b6ad3b4c2fd4d7331749e))
+
 ## [8.1.0](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v8.0.0...v8.1.0) (2026-06-15)
 
 
