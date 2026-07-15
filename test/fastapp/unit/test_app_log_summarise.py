@@ -181,7 +181,7 @@ def test_long_string_is_truncated() -> None:
     prefix with a suffix showing the total character count; they are NOT
     replaced by the _count/_sample dict pattern used for lists."""
     app = App(logger=None, log_item_class=LogItem)
-    long_str = "x" * 500
+    long_str = "x" * 1000
     result = app._summarise_command_object_for_log({"content": long_str})
     truncated = result["content"]
     assert isinstance(
@@ -189,7 +189,7 @@ def test_long_string_is_truncated() -> None:
     ), "Truncated string must remain a string, not a dict"
     assert len(truncated) < len(long_str)
     assert truncated.startswith("x" * App.DEFAULT_LOG_MAX_STRING_LENGTH)
-    assert "[500 chars]" in truncated
+    assert "[1000 chars]" in truncated
 
 
 @pytest.mark.scenario_ids("TC-LOG-01-01")
@@ -223,6 +223,40 @@ def test_long_string_respects_configured_max_string_length() -> None:
     assert truncated.startswith("a" * 20)
     assert "[200 chars]" in truncated
     assert len(truncated) < len(long_str)
+
+
+@pytest.mark.scenario_ids("TC-LOG-01-01")
+def test_long_exception_message_is_truncated_from_the_middle() -> None:
+    """Exceptions get their own, longer budget than plain strings, and are
+    truncated from the middle: DB driver errors (e.g. FK constraint
+    violations) often echo the full SQL statement first and put the actual
+    error message at the end, so a head-only cut would hide it."""
+    app = App(
+        logger=None,
+        log_item_class=LogItem,
+        cfg={
+            "log": {
+                "command_object_summarization": {
+                    "max_exception_message_length": 50,
+                }
+            }
+        },
+    )
+    long_msg = "a" * 500 + "b" * 500
+    result = app._summarise_command_object_for_log(
+        {"exception": RuntimeError(long_msg)}
+    )
+    truncated = result["exception"]
+    assert truncated.startswith("a" * 25)
+    assert truncated.endswith("b" * 25)
+    assert "[950 chars omitted]" in truncated
+
+
+@pytest.mark.scenario_ids("TC-LOG-01-01")
+def test_short_exception_message_passes_through() -> None:
+    app = App(logger=None, log_item_class=LogItem)
+    result = app._summarise_command_object_for_log({"exception": RuntimeError("boom")})
+    assert result["exception"] == "boom"
 
 
 @pytest.mark.scenario_ids("TC-LOG-01-01")

@@ -47,8 +47,12 @@ class App:
     DEFAULT_LOG_ITEM_CLASS = LogItem
     DEFAULT_LOG_SUMMARIZATION_ENABLED: bool = True
     DEFAULT_LOG_MAX_LIST_ITEMS: int = 3
-    DEFAULT_LOG_MAX_STRING_LENGTH: int = 100
+    DEFAULT_LOG_MAX_STRING_LENGTH: int = 500
     DEFAULT_LOG_MAX_DICT_ITEMS: int = 30
+    # Exceptions (e.g. DB integrity errors) get a longer, separate budget than
+    # ordinary strings: their useful content (the driver's actual error) is
+    # often at the very end, after a long echoed SQL statement.
+    DEFAULT_LOG_MAX_EXCEPTION_MESSAGE_LENGTH: int = 2000
     _CFG_TRUE_VALUES: set[str] = {"1", "true", "yes", "on"}
     _CFG_FALSE_VALUES: set[str] = {"0", "false", "no", "off"}
 
@@ -583,6 +587,12 @@ class App:
         self._log_max_dict_items = App._get_int_from_cfg_value(
             cfg.get("max_dict_items", self.DEFAULT_LOG_MAX_DICT_ITEMS)
         )
+        self._log_max_exception_message_length = App._get_int_from_cfg_value(
+            cfg.get(
+                "max_exception_message_length",
+                self.DEFAULT_LOG_MAX_EXCEPTION_MESSAGE_LENGTH,
+            )
+        )
 
     def create_log_message(
         self,
@@ -638,12 +648,18 @@ class App:
         """Recursively walk *data* and replace any list or mapping longer than their
         respective thresholds with a compact ``{"_count": N, "_sample": ...}`` summary,
         and truncate any string longer than *max_string_length* to its first N chars
-        with a suffix showing the total length. All three keep the serialised log
-        payload within downstream log-sink size constraints."""
+        with a suffix showing the total length. Exceptions get their own, longer
+        budget (*max_exception_message_length*) and are truncated from the middle
+        rather than the end, since DB driver errors often echo the full SQL
+        statement first and put the actual error message at the very end. All of
+        this keeps the serialised log payload within downstream log-sink size
+        constraints."""
 
         def _walk(obj: Any) -> Any:
             if isinstance(obj, Exception):
-                obj = str(obj)
+                return App._truncate_middle(
+                    str(obj), self._log_max_exception_message_length
+                )
             if isinstance(obj, dict):
                 if len(obj) > self._log_max_dict_items:
                     return {
@@ -714,3 +730,20 @@ class App:
                 f"Invalid integer config value: {value}",
             )
         return parsed
+
+    @staticmethod
+    def _truncate_middle(text: str, max_length: int) -> str:
+        """Truncate *text* to *max_length* chars, keeping a prefix and a suffix
+        rather than just the head. DB driver error strings (e.g. FK/unique
+        constraint violations) often echo the full SQL statement first and put
+        the actual error message at the end, so a head-only cut hides it."""
+        if max_length <= 0:
+            return f"…[{len(text)} chars omitted]…"
+        if len(text) <= max_length:
+            return text
+        prefix_len = max_length // 2
+        suffix_len = max_length - prefix_len
+        omitted = len(text) - max_length
+        prefix = text[:prefix_len] if prefix_len else ""
+        suffix = text[-suffix_len:] if suffix_len else ""
+        return f"{prefix}…[{omitted} chars omitted]…{suffix}"
