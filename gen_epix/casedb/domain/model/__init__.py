@@ -61,6 +61,7 @@ from gen_epix.casedb.domain.model.case import RefCol as RefCol
 from gen_epix.casedb.domain.model.case import RefDataAccess as RefDataAccess
 from gen_epix.casedb.domain.model.case import RefDim as RefDim
 from gen_epix.casedb.domain.model.case import SeqForUpload as SeqForUpload
+from gen_epix.casedb.domain.model.case import SimilarCase as SimilarCase
 from gen_epix.casedb.domain.model.case import TreeAlgorithm as TreeAlgorithm
 from gen_epix.casedb.domain.model.case import TreeAlgorithmClass as TreeAlgorithmClass
 from gen_epix.casedb.domain.model.case.complete_case_type import (

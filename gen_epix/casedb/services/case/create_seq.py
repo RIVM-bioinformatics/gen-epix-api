@@ -55,16 +55,23 @@ def case_service_create_file_for_read_set_or_seq(
                 obj_ids=read_set_or_seq_id,
             )
         )
+        # Compute file hash before checking existing links to enable
+        # idempotent re-uploads (same content → return existing file_id).
+        file_hash = _get_hash_uuid(cmd.file_content, cmd.file_compression)
         if cmd.is_fwd and read_set.fwd_file_id is not None:
+            if read_set.fwd_reads_hash == file_hash:
+                return read_set.fwd_file_id
             raise exc.InvalidArgumentsError(
-                "d0a23cd0", "The ReadSet already has a forward file linked"
+                "d0a23cd0",
+                "The ReadSet already has a forward file linked with different content",
             )
         if not cmd.is_fwd and read_set.rev_file_id is not None:
+            if read_set.rev_reads_hash == file_hash:
+                return read_set.rev_file_id
             raise exc.InvalidArgumentsError(
-                "30150932", "The ReadSet already has a reverse file linked"
+                "30150932",
+                "The ReadSet already has a reverse file linked with different content",
             )
-        # Compute file hash then create file
-        file_hash = _get_hash_uuid(cmd.file_content, cmd.file_compression)
         file_id = _create_file(self, cmd)
         # Update ReadSet with file ID and hash
         if cmd.is_fwd:
@@ -73,6 +80,7 @@ def case_service_create_file_for_read_set_or_seq(
         else:
             read_set.rev_file_id = file_id
             read_set.rev_reads_hash = file_hash
+        read_set.file_format = cmd.file_format
         self.app.handle(
             seqdb_command.ReadSetCrudCommand(
                 user=cmd.user,
@@ -90,16 +98,21 @@ def case_service_create_file_for_read_set_or_seq(
                 obj_ids=read_set_or_seq_id,
             )
         )
-        if seq.file_id is not None:
-            raise exc.InvalidArgumentsError(
-                "dd752d19", "The Seq already has a file linked"
-            )
-        # Compute file hash then create file
+        # Compute file hash before checking existing link to enable
+        # idempotent re-uploads (same content → return existing file_id).
         file_hash = _get_hash_uuid(cmd.file_content, cmd.file_compression)
+        if seq.file_id is not None:
+            if seq.file_hash == file_hash:
+                return seq.file_id
+            raise exc.InvalidArgumentsError(
+                "dd752d19",
+                "The Seq already has a file linked with different content",
+            )
         file_id = _create_file(self, cmd)
         # Update Seq with file ID and hash
         seq.file_id = file_id
         seq.file_hash = file_hash
+        seq.file_format = cmd.file_format
         self.app.handle(
             seqdb_command.SeqCrudCommand(
                 user=cmd.user,

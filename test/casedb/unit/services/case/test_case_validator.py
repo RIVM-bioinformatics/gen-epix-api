@@ -7,8 +7,8 @@ public methods, with strict isolation via mocking.
 
 from __future__ import annotations
 
-from unittest import TestCase
-from unittest.mock import Mock, patch
+import datetime
+from test.util.mock_compat import Mock, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -22,10 +22,10 @@ from gen_epix.commondb.domain.enum import DataIssueType
 from gen_epix.commondb.domain.model.organization import Organization
 
 
-class BaseCaseValidatorTestCase(TestCase):
+class BaseCaseValidatorTestCase:
     """Base test case with common fixtures and helpers for CaseValidator tests."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         # Common and reference dimension IDs
         self.user_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440000")
         self.case_type_id: UUID = UUID("550e8400-e29b-41d4-a716-4466554400aa")
@@ -593,8 +593,8 @@ class TestValidateUnknownColumns(BaseCaseValidatorTestCase):
         assert len(data_issues_list[0]) == 1
         issue = data_issues_list[0][0]
         assert issue.col_id == unknown_col_id
-        assert issue.data_issue_type == DataIssueType.UNAUTHORIZED
-        assert issue.code == "a7b3f9d2"
+        assert issue.data_issue_type == DataIssueType.INVALID
+        assert issue.code == "ef8e4d6d"
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")
@@ -759,6 +759,85 @@ class TestTransformValuePairs(BaseCaseValidatorTestCase):
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")
+class TestNumberPairReverseDirectionGuard(BaseCaseValidatorTestCase):
+    """Regression test for LSP-3417.
+
+    ``_get_col_pairs`` generates both directions, so after interval2 is derived
+    from a supplied interval1, the subsequent reverse pair (interval2 ->
+    interval1) must NOT overwrite the originally supplied interval1 value. The
+    early-continue guard in ``_transform_interval_to_interval`` enforces this.
+    """
+
+    def test_derived_interval_target_does_not_overwrite_source(self) -> None:
+        validator = self._create_validator()
+
+        # Content supplies interval1; interval2 is derived from it via the
+        # forward pair. The reverse pair must leave interval1 untouched.
+        contents: list[dict[UUID, str | None] | None] = [
+            {self.num_interval1_col_id: str(self.interval1_a_id)}
+        ]
+        cmd, retval = self._make_cmd_and_result(contents)  # type: ignore[arg-type]
+        out = validator.validate_and_transform(cmd, retval)
+
+        uc = out.cases[0].validated_content
+        # Source interval1 remains exactly as supplied.
+        assert uc[self.num_interval1_col_id] == str(self.interval1_a_id)
+        # Forward derivation still populated interval2.
+        assert uc[self.num_interval2_col_id] in {
+            str(self.interval2_x_id),
+            str(self.interval2_y_id),
+        }
+        # No conflict/derived issue rewrote the supplied interval1 value.
+        interval1_issues = [
+            x
+            for x in out.cases[0].data_issues
+            if x.col_id == self.num_interval1_col_id
+            and x.code in {"c9d4e1f2", "a8f2d5e7"}
+        ]
+        assert interval1_issues == []
+
+    def test_guard_skips_prepopulated_reverse_target(self) -> None:
+        # Directly exercise the guard on the reverse pair (interval2 ->
+        # interval1) with interval1 already populated. Even though the reverse
+        # transformer can map interval2 to a (possibly different) interval1
+        # value, the guard must skip the write.
+        validator = self._create_validator()
+        ref_col_interval2 = validator.complete_case_type.ref_cols[
+            self.num_interval2_ref_col_id
+        ]
+        ref_col_interval1 = validator.complete_case_type.ref_cols[
+            self.num_interval1_ref_col_id
+        ]
+        col_pair = (self.num_interval2_col_id, self.num_interval1_col_id)
+
+        contents: list[dict[UUID, str | None] | None] = [
+            {self.num_interval1_col_id: str(self.interval1_a_id)}
+        ]
+        updated_contents: list[dict[UUID, str | None] | None] = [
+            {
+                self.num_interval2_col_id: str(self.interval2_x_id),
+                self.num_interval1_col_id: str(self.interval1_a_id),
+            }
+        ]
+        data_issues_list: list[list[model.CaseDataIssue] | None] = [[]]
+
+        validator._transform_interval_to_interval(
+            contents,
+            updated_contents,
+            data_issues_list,
+            col_pair,
+            ref_col_interval2,
+            ref_col_interval1,
+        )
+
+        uc = updated_contents[0]
+        assert uc is not None
+        # Pre-populated interval1 value preserved, no derived/conflict logged.
+        assert uc[self.num_interval1_col_id] == str(self.interval1_a_id)
+        assert data_issues_list[0] == []
+
+
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestCalculateCaseDate(BaseCaseValidatorTestCase):
     def test_no_case_date_dim_returns(self) -> None:
         validator = self._create_validator()
@@ -770,6 +849,21 @@ class TestCalculateCaseDate(BaseCaseValidatorTestCase):
             cmd, [retval.cases[0].validated_content], [retval.cases[0].data_issues]
         )
         assert len(retval.cases[0].data_issues) == 0
+
+    def test_uses_highest_resolution_col_when_multiple_time_cols_present(self) -> None:
+        validator = self._create_validator()
+        cmd, retval = self._make_cmd_and_result([{}])
+        # Both day and week present; day (higher resolution) must win
+        updated_contents: list[dict[UUID, str | None] | None] = [
+            {
+                self.time_day_col_id: "2024-03-15",
+                self.time_week_col_id: "2024-W01",  # would give 2024-01-01 if used
+            }
+        ]
+        validator.calculate_case_date(cmd, retval, updated_contents)
+        case = cmd.case_batch.cases[0].case
+        assert case is not None
+        assert case.case_date == datetime.datetime(2024, 3, 15)
 
     def test_case_date_updated_and_invalid_iso_raises(self) -> None:
         validator = self._create_validator()

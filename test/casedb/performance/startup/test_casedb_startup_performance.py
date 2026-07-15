@@ -72,11 +72,11 @@ class TestStartup:
             parse_stats(PERFORMANCE_DF, stats, repository_type=repository_type.value)
 
     def test_tear_down(self) -> None:
-        # TODO: tearDownClass should be called by the test framework instead
-        TestStartup.tearDownClass()
+        # TODO: finalize_outputs should be called by the test framework instead
+        TestStartup.finalize_outputs()
 
     @classmethod
-    def tearDownClass(cls) -> None:
+    def finalize_outputs(cls) -> None:
         test_dir = get_test_root_output_dir()
         with open(
             Path(test_dir) / f"{cls.__name__}.casedb.performance.startup.html", "w"

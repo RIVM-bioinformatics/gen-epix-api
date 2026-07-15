@@ -87,15 +87,19 @@ class RetrieveSimilarCasesRequestBody(PydanticBaseModel):
     case_type_id: UUID = copy_model_field(
         command.RetrieveSimilarCasesCommand, "case_type_id"
     )
-    max_distance: float = copy_model_field(
-        command.RetrieveSimilarCasesCommand, "max_distance"
-    )
     case_ids: list[UUID] = copy_model_field(
         command.RetrieveSimilarCasesCommand, "case_ids"
     )
     genetic_distance_col_id: UUID = copy_model_field(
         command.RetrieveSimilarCasesCommand, "genetic_distance_col_id"
     )
+    max_distance: float = copy_model_field(
+        command.RetrieveSimilarCasesCommand, "max_distance"
+    )
+
+
+class RetrieveSimilarCasesResponseBody(command.RetrieveSimilarCasesReturnValue):
+    pass
 
 
 class RetrieveCaseTypeStatsRequestBody(PydanticBaseModel):
@@ -504,9 +508,9 @@ def create_case_endpoints(
     )
     async def retrieve__similar_cases(
         user: registered_user_dependency, request_body: RetrieveSimilarCasesRequestBody  # type: ignore
-    ) -> list[UUID]:
+    ) -> RetrieveSimilarCasesResponseBody:
         return cast(
-            list[UUID],
+            RetrieveSimilarCasesResponseBody,
             handle_command(
                 app=app,
                 user=user,
@@ -515,9 +519,9 @@ def create_case_endpoints(
                 input_command=command.RetrieveSimilarCasesCommand(
                     user=user,
                     case_type_id=request_body.case_type_id,
-                    max_distance=request_body.max_distance,
                     case_ids=request_body.case_ids,
                     genetic_distance_col_id=request_body.genetic_distance_col_id,
+                    max_distance=request_body.max_distance,
                 ),
             ),
         )
@@ -662,6 +666,30 @@ def create_case_endpoints(
                 input_command=command.RetrieveProtocolsCommand(
                     user=user,
                     protocol_type=seqdb_enum.ProtocolType.ASSEMBLY,
+                ),
+            ),
+        )
+
+    @router.post(
+        "/retrieve/is_own_cases",
+        operation_id="retrieve__is_own_cases",
+        name="Retrieve whether the user owns the cases",
+        description=command.RetrieveIsOwnCasesCommand.__doc__,
+    )
+    async def retrieve__is_own_cases(
+        user: registered_user_dependency, request_body: RetrieveCasesByIdsRequestBody
+    ) -> dict[UUID, bool]:
+        return cast(
+            dict[UUID, bool],
+            handle_command(
+                app=app,
+                user=user,
+                exception_code="d4e5f6g7",
+                input_handle_exception=handle_exception,
+                input_command=command.RetrieveIsOwnCasesCommand(
+                    user=user,
+                    case_ids=request_body.case_ids,
+                    case_type_id=request_body.case_type_id,
                 ),
             ),
         )

@@ -20,7 +20,7 @@ from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.file import File
-from gen_epix.seqdb.domain.model.seq.base import BaseSeq, CodeMixin, QualityMixin
+from gen_epix.seqdb.domain.model.seq.base import BaseSeq, QualityMixin
 from gen_epix.seqdb.domain.model.seq.protocol import Protocol
 from gen_epix.seqdb.domain.model.seq.reads import ReadSet
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
@@ -48,7 +48,7 @@ class Contig(BaseSeq, QualityMixin):
         return value
 
 
-class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
+class Seq(Model, HasSampleMixin, QualityMixin):
     """
     A DNA sequence, typically representing an assembled genome or a part thereof. A
     sequence consists of one or more contiguous sequences (contigs).
@@ -76,8 +76,7 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
         persistable=True,
         keys=create_keys(
             {
-                1: "code",
-                2: ("sample_id", "read_set_id", "read_set2_id", "protocol_id"),
+                1: ("sample_id", "read_set_id", "read_set2_id", "protocol_id"),
             }
         ),
         links=create_links(
@@ -132,6 +131,11 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
     seq_hash: UUID = Field(
         default=NULL_ID,
         description="The first 128 bits of the SHA256 hash of the sorted contig seq hashes concatenated together. If the sequence has no contigs, the null UUID is returned.",
+    )
+    code: str | None = Field(
+        default=None,
+        max_length=255,
+        description="A code for the seq for further reference",
     )
 
     @computed_field(  # type: ignore[prop-decorator]

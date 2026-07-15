@@ -68,8 +68,7 @@ the OMOP person domain:
 """
 
 from datetime import date, datetime, timezone
-from unittest import TestCase
-from unittest.mock import Mock
+from test.util.mock_compat import Mock
 from uuid import UUID, uuid4
 
 import pytest
@@ -107,10 +106,10 @@ from gen_epix.omopdb.services.omop.upload import PersonBatchUploader
 # ---------------------------------------------------------------------------
 
 
-class BasePersonUploadTestCase(TestCase):
+class BasePersonUploadTestCase:
     """Base test case with common fixtures and utilities for person upload tests."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         """Set up test fixtures."""
         # Test user
         self.user = User(
@@ -463,19 +462,19 @@ class BasePersonUploadTestCase(TestCase):
 
     # -- Assertion helpers ---------------------------------------------------
 
-    def assertBatchProcessed(self, upload_result: UploadResult) -> None:
+    def expectBatchProcessed(self, upload_result: UploadResult) -> None:
         if upload_result.status not in UploadStatusSet.PROCESSED.value:
-            self.fail(
+            pytest.fail(
                 f"Upload was not processed, status: {upload_result.status.value}",
             )
 
-    def assertBatchFailed(self, upload_result: UploadResult) -> None:
+    def expectBatchFailed(self, upload_result: UploadResult) -> None:
         if upload_result.status not in UploadStatusSet.FAILED.value:
-            self.fail(
+            pytest.fail(
                 f"Upload did not fail, status: {upload_result.status.value}",
             )
 
-    def assertStatusCount(
+    def expectStatusCount(
         self,
         upload_result: ParentUploadResult,
         n_skipped: int = 0,
@@ -512,7 +511,7 @@ class BasePersonUploadTestCase(TestCase):
             different_status_count_str = ", ".join(
                 f"{x[0].value} ({x[1]}/{x[2]})" for x in different_status_count
             )
-            self.fail(
+            pytest.fail(
                 f"Status count mismatch (expected/actual): {different_status_count_str}"
             )
 
@@ -534,9 +533,9 @@ class Test1PersonExistence(BasePersonUploadTestCase):
             [created_person_id],  # Create persons returned IDs
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=1)
-        self.assertEqual(batch_result.persons[0].id, created_person_id)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=1)
+        assert batch_result.persons[0].id == created_person_id
 
     def test_1_2_person_id_provided_as_new_id_succeeds(self) -> None:
         """Test 1.2: ID provided by batch creator (new_id); person does not exist yet - should be created with that ID."""
@@ -546,9 +545,9 @@ class Test1PersonExistence(BasePersonUploadTestCase):
             [person_for_upload.id],  # Create persons returned IDs
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=1)
-        self.assertEqual(batch_result.persons[0].id, person_for_upload.id)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=1)
+        assert batch_result.persons[0].id == person_for_upload.id
 
 
 # ---------------------------------------------------------------------------
@@ -568,9 +567,9 @@ class Test2ChildObjectProvision(BasePersonUploadTestCase):
             [created_person_id],  # Create persons returned IDs
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=1)
-        self.assertEqual(batch_result.persons[0].id, created_person_id)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=1)
+        assert batch_result.persons[0].id == created_person_id
 
     def test_2_2_person_with_measurements_only(self) -> None:
         """Test 2.2: Person with measurements only."""
@@ -583,10 +582,10 @@ class Test2ChildObjectProvision(BasePersonUploadTestCase):
             [created_measurement_id],  # Create measurements returned IDs
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=2)
-        self.assertEqual(batch_result.persons[0].id, created_person_id)
-        self.assertEqual(batch_result.persons[0].measurements[0].id, created_measurement_id)  # type: ignore[index]
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=2)
+        assert batch_result.persons[0].id == created_person_id
+        assert batch_result.persons[0].measurements[0].id == created_measurement_id  # type: ignore[index]
 
     def test_2_3_person_with_observations_only(self) -> None:
         """Test 2.3: Person with observations only."""
@@ -599,10 +598,10 @@ class Test2ChildObjectProvision(BasePersonUploadTestCase):
             [created_observation_id],  # Create observations returned IDs
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=2)
-        self.assertEqual(batch_result.persons[0].id, created_person_id)
-        self.assertEqual(batch_result.persons[0].observations[0].id, created_observation_id)  # type: ignore[index]
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=2)
+        assert batch_result.persons[0].id == created_person_id
+        assert batch_result.persons[0].observations[0].id == created_observation_id  # type: ignore[index]
 
     def test_2_4_person_with_specimens_only(self) -> None:
         """Test 2.4: Person with specimens only."""
@@ -615,10 +614,10 @@ class Test2ChildObjectProvision(BasePersonUploadTestCase):
             [created_specimen_id],  # Create specimens returned IDs
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=2)
-        self.assertEqual(batch_result.persons[0].id, created_person_id)
-        self.assertEqual(batch_result.persons[0].specimens[0].id, created_specimen_id)  # type: ignore[index]
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=2)
+        assert batch_result.persons[0].id == created_person_id
+        assert batch_result.persons[0].specimens[0].id == created_specimen_id  # type: ignore[index]
 
     def test_2_5_person_with_all_child_types(self) -> None:
         """Test 2.5: Person with measurement relations only."""
@@ -633,13 +632,13 @@ class Test2ChildObjectProvision(BasePersonUploadTestCase):
             [created_measurement_relation_id],  # Create measurement relations IDs
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=2)
-        self.assertEqual(batch_result.persons[0].id, created_person_id)
-        self.assertEqual(
-            batch_result.persons[0].measurement_relations[0].id,  # type: ignore[index]
-            created_measurement_relation_id,
-        )
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=2)
+        assert batch_result.persons[0].id == created_person_id
+        assert (
+            batch_result.persons[0].measurement_relations[0].id
+            == created_measurement_relation_id
+        )  # type: ignore[index]
 
     def test_2_6_person_with_all_child_types(self) -> None:
         """Test 2.6: Person with measurements, observations, specimens, relations."""
@@ -666,16 +665,16 @@ class Test2ChildObjectProvision(BasePersonUploadTestCase):
             [created_measurement_relation_id],  # Create measurement relations IDs
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=5)
-        self.assertEqual(batch_result.persons[0].id, created_person_id)
-        self.assertEqual(batch_result.persons[0].measurements[0].id, created_measurement_id)  # type: ignore[index]
-        self.assertEqual(batch_result.persons[0].observations[0].id, created_observation_id)  # type: ignore[index]
-        self.assertEqual(batch_result.persons[0].specimens[0].id, created_specimen_id)  # type: ignore[index]
-        self.assertEqual(
-            batch_result.persons[0].measurement_relations[0].id,  # type: ignore[index]
-            created_measurement_relation_id,
-        )
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=5)
+        assert batch_result.persons[0].id == created_person_id
+        assert batch_result.persons[0].measurements[0].id == created_measurement_id  # type: ignore[index]
+        assert batch_result.persons[0].observations[0].id == created_observation_id  # type: ignore[index]
+        assert batch_result.persons[0].specimens[0].id == created_specimen_id  # type: ignore[index]
+        assert (
+            batch_result.persons[0].measurement_relations[0].id
+            == created_measurement_relation_id
+        )  # type: ignore[index]
 
 
 # ---------------------------------------------------------------------------
@@ -713,10 +712,10 @@ class Test4PersonLinks(BasePersonUploadTestCase):
             [created_measurement_relation_id],  # Create measurement relations IDs
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=3)
-        self.assertEqual(measurement.person_id, created_person_id)
-        self.assertEqual(measurement_relation.person_id, created_person_id)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=3)
+        assert measurement.person_id == created_person_id
+        assert measurement_relation.person_id == created_person_id
 
     def test_4_2_1_child_person_id_mismatch_fails(self) -> None:
         """Test 4.2.1: Child person_id does not match parent - should fail."""
@@ -730,8 +729,8 @@ class Test4PersonLinks(BasePersonUploadTestCase):
             [False],  # Person does not exist
         ]
         batch_result = self.upload_batch(person_for_upload, validate_command=False)
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_pending=1, n_failed=1)
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_pending=1, n_failed=1)
 
     def test_4_2_2_child_person_id_matches_succeeds(self) -> None:
         """Test 4.2.2: Child person_id matches parent - should succeed."""
@@ -748,9 +747,9 @@ class Test4PersonLinks(BasePersonUploadTestCase):
             [created_measurement_id],  # Create measurements returned IDs
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_skipped=1, n_created=1)
-        self.assertEqual(batch_result.persons[0].measurements[0].id, created_measurement_id)  # type: ignore[index]
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_skipped=1, n_created=1)
+        assert batch_result.persons[0].measurements[0].id == created_measurement_id  # type: ignore[index]
 
 
 # ---------------------------------------------------------------------------
@@ -781,9 +780,9 @@ class Test5FieldMutability(BasePersonUploadTestCase):
             [self.person_id],  # UPDATE_SOME: update returns ID
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_updated=1)
-        self.assertEqual(existing_person.person_source_value, new_value)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_updated=1)
+        assert existing_person.person_source_value == new_value
 
     def test_5_2_1_mutable_if_empty_stored_empty_updated(self) -> None:
         """Test 5.2.1: Mutable if empty field - stored value is empty, should succeed."""
@@ -815,8 +814,8 @@ class Test6Identifiers(BasePersonUploadTestCase):
             [created_person_id],  # Create persons returned IDs
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=1)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=1)
 
     def test_6_2_existing_identifier_resolves_person(self) -> None:
         """Test 6.2: Existing Identifier resolves person ID."""
@@ -847,9 +846,9 @@ class Test6Identifiers(BasePersonUploadTestCase):
             [existing_person],  # Existing persons
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_skipped=2)
-        self.assertEqual(batch_result.persons[0].id, existing_person_id)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_skipped=2)
+        assert batch_result.persons[0].id == existing_person_id
 
     def test_6_3_new_identifier_created_on_upload(self) -> None:
         """Test 6.3: New Identifier created on upload."""
@@ -874,13 +873,12 @@ class Test6Identifiers(BasePersonUploadTestCase):
             [created_person_id],  # Create persons returned IDs
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=2)
-        self.assertEqual(batch_result.persons[0].id, created_person_id)
-        self.assertEqual(
-            batch_result.persons[0].identifiers[0].id,  # type: ignore[index]
-            created_identifier_id,
-        )
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=2)
+        assert batch_result.persons[0].id == created_person_id
+        assert (
+            batch_result.persons[0].identifiers[0].id == created_identifier_id
+        )  # type: ignore[index]
 
 
 # ---------------------------------------------------------------------------
@@ -901,8 +899,8 @@ class Test7OnExistsAndOnNewActions(BasePersonUploadTestCase):
         batch_result = self.upload_batch(
             person_for_upload, on_exists=UploadAction.ERROR
         )
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1)
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_failed=1)
 
     def test_7_2_on_exists_skip_with_existing_person_skips(self) -> None:
         """Test 7.2: on_exists=SKIP with existing person - should skip."""
@@ -911,8 +909,8 @@ class Test7OnExistsAndOnNewActions(BasePersonUploadTestCase):
             [True],  # EXISTS_SOME: person exists
         ]
         batch_result = self.upload_batch(person_for_upload, on_exists=UploadAction.SKIP)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_skipped=1)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_skipped=1)
 
     def test_7_3_on_exists_update_with_existing_person_updates(self) -> None:
         """Test 7.3: on_exists=UPDATE with existing person - should update."""
@@ -933,8 +931,8 @@ class Test7OnExistsAndOnNewActions(BasePersonUploadTestCase):
         batch_result = self.upload_batch(
             person_for_upload, on_exists=UploadAction.UPDATE
         )
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_updated=1)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_updated=1)
 
     def test_7_4_on_new_create_with_new_id_creates(self) -> None:
         """Test 7.4: on_new=CREATE with new person having provided ID - should create."""
@@ -944,8 +942,8 @@ class Test7OnExistsAndOnNewActions(BasePersonUploadTestCase):
             [self.person_id],  # CREATE_SOME: create returns provided ID
         ]
         batch_result = self.upload_batch(person_for_upload, on_new=UploadAction.CREATE)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=1)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=1)
 
     def test_7_5_on_new_skip_with_new_id_skips(self) -> None:
         """Test 7.5: on_new=SKIP with new person having provided ID - should skip."""
@@ -954,8 +952,8 @@ class Test7OnExistsAndOnNewActions(BasePersonUploadTestCase):
             [False],  # EXISTS_SOME: person does not exist
         ]
         batch_result = self.upload_batch(person_for_upload, on_new=UploadAction.SKIP)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_skipped=1)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_skipped=1)
 
     def test_7_6_on_new_error_with_new_id_fails(self) -> None:
         """Test 7.6: on_new=ERROR with new person having provided ID - should fail."""
@@ -964,8 +962,8 @@ class Test7OnExistsAndOnNewActions(BasePersonUploadTestCase):
             [False],  # EXISTS_SOME: person does not exist
         ]
         batch_result = self.upload_batch(person_for_upload, on_new=UploadAction.ERROR)
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1)
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_failed=1)
 
 
 # ---------------------------------------------------------------------------
@@ -980,45 +978,43 @@ class Test8ParametrizedBatchSizes(BasePersonUploadTestCase):
     def test_8_batch_of_n_new_persons(self) -> None:
         """Test 8: Upload batch of n new persons."""
         for n_persons in [1, 3, 5]:
-            with self.subTest(n_persons=n_persons):
-                self.setUp()  # Reset mocks for each subtest
-                persons_for_upload = [
-                    self.create_person_for_upload() for _ in range(n_persons)
-                ]
-                created_ids = self.random_ids[:n_persons]
-                self.service.repository.crud.side_effect = [
-                    created_ids,  # Create persons returned IDs
-                ]
-                batch_result = self.upload_batch(persons_for_upload)
-                self.assertBatchProcessed(batch_result)
-                self.assertStatusCount(batch_result, n_created=n_persons)
-                for i, created_id in enumerate(created_ids):
-                    self.assertEqual(batch_result.persons[i].id, created_id)
+            self.setup_method()  # Reset mocks for each iteration
+            persons_for_upload = [
+                self.create_person_for_upload() for _ in range(n_persons)
+            ]
+            created_ids = self.random_ids[:n_persons]
+            self.service.repository.crud.side_effect = [
+                created_ids,  # Create persons returned IDs
+            ]
+            batch_result = self.upload_batch(persons_for_upload)
+            self.expectBatchProcessed(batch_result)
+            self.expectStatusCount(batch_result, n_created=n_persons)
+            for i, created_id in enumerate(created_ids):
+                assert batch_result.persons[i].id == created_id
 
     def test_8_person_with_n_measurements(self) -> None:
         """Test 8: Upload person with varying number of measurements."""
         for n_children in [0, 1, 3]:
-            with self.subTest(n_children=n_children):
-                self.setUp()  # Reset mocks for each subtest
-                measurements = [
-                    self.create_measurement_for_upload() for _ in range(n_children)
-                ]
-                person_for_upload = self.create_person_for_upload(
-                    measurements=measurements if measurements else None,
-                )
-                created_person_id = self.random_ids[0]
-                created_measurement_ids = self.random_ids[1 : 1 + n_children]
-                side_effects: list[list[UUID]] = [
-                    [created_person_id],  # Create persons returned IDs
-                ]
-                if n_children > 0:
-                    side_effects.append(
-                        created_measurement_ids
-                    )  # Create measurements returned IDs
-                self.service.repository.crud.side_effect = side_effects
-                batch_result = self.upload_batch(person_for_upload)
-                self.assertBatchProcessed(batch_result)
-                self.assertStatusCount(batch_result, n_created=1 + n_children)
+            self.setup_method()  # Reset mocks for each iteration
+            measurements = [
+                self.create_measurement_for_upload() for _ in range(n_children)
+            ]
+            person_for_upload = self.create_person_for_upload(
+                measurements=measurements if measurements else None,
+            )
+            created_person_id = self.random_ids[0]
+            created_measurement_ids = self.random_ids[1 : 1 + n_children]
+            side_effects: list[list[UUID]] = [
+                [created_person_id],  # Create persons returned IDs
+            ]
+            if n_children > 0:
+                side_effects.append(
+                    created_measurement_ids
+                )  # Create measurements returned IDs
+            self.service.repository.crud.side_effect = side_effects
+            batch_result = self.upload_batch(person_for_upload)
+            self.expectBatchProcessed(batch_result)
+            self.expectStatusCount(batch_result, n_created=1 + n_children)
 
 
 # ---------------------------------------------------------------------------
@@ -1043,8 +1039,8 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
             [created_specimen_id],  # Created specimen ID
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=1, n_skipped=1)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=1, n_skipped=1)
 
     def test_8_2_1_1_existing_identifier_null_specimen_sets_id(self) -> None:
         """Test 8.2.1.1: Existing Identifier with NULL specimen ID - should set specimen ID."""
@@ -1088,11 +1084,9 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
             [(existing_specimen_id, existing_person_id)],
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=0, n_updated=0, n_skipped=3)
-        self.assertEqual(
-            batch_result.persons[0].specimens[0].id, existing_specimen_id  # type: ignore[index]
-        )
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=0, n_updated=0, n_skipped=3)
+        assert batch_result.persons[0].specimens[0].id == existing_specimen_id
 
     def test_8_2_1_2_1_existing_identifier_same_specimen_succeeds(self) -> None:
         """Test 8.2.1.2.1: Existing Identifier with same specimen ID - should succeed."""
@@ -1132,11 +1126,9 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
             [(existing_specimen_id, existing_person_id)],
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=0, n_updated=0, n_skipped=3)
-        self.assertEqual(
-            batch_result.persons[0].specimens[0].id, existing_specimen_id  # type: ignore[index]
-        )
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=0, n_updated=0, n_skipped=3)
+        assert batch_result.persons[0].specimens[0].id == existing_specimen_id
 
     def test_8_2_1_2_2_existing_identifier_different_specimen_fails(self) -> None:
         """Test 8.2.1.2.2: Existing Identifier with different specimen ID - should fail."""
@@ -1169,11 +1161,9 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
             [(existing_specimen_id, existing_person_id)],
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_pending=1, n_failed=1, n_skipped=1)
-        self.assertEqual(
-            batch_result.persons[0].specimens[0].id, existing_specimen_id  # type: ignore[index]
-        )
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_pending=1, n_failed=1, n_skipped=1)
+        assert batch_result.persons[0].specimens[0].id == existing_specimen_id
 
     def test_8_2_2_new_identifier_new_specimen(self) -> None:
         """Test 8.2.2: New Identifier for new specimen - should succeed."""
@@ -1210,13 +1200,12 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
             [(created_specimen_id, existing_person_id)],
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=2, n_updated=0, n_skipped=1)
-        self.assertEqual(
-            batch_result.persons[0].specimens[0].id, created_specimen_id  # type: ignore[index]
-        )
-        self.assertEqual(
-            batch_result.persons[0].specimens[0].identifiers[0].id, created_identifier_id  # type: ignore[index]
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=2, n_updated=0, n_skipped=1)
+        assert batch_result.persons[0].specimens[0].id == created_specimen_id
+        assert (
+            batch_result.persons[0].specimens[0].identifiers[0].id
+            == created_identifier_id
         )
 
     def test_8_2_3_1_multiple_identifiers_some_existing_same_specimen(self) -> None:
@@ -1269,13 +1258,12 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
             [(existing_specimen_id, existing_person_id)],
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=1, n_updated=0, n_skipped=3)
-        self.assertEqual(
-            batch_result.persons[0].specimens[0].id, existing_specimen_id  # type: ignore[index]
-        )
-        self.assertEqual(
-            batch_result.persons[0].specimens[0].identifiers[1].id, created_identifier_id  # type: ignore[index]
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=1, n_updated=0, n_skipped=3)
+        assert batch_result.persons[0].specimens[0].id == existing_specimen_id
+        assert (
+            batch_result.persons[0].specimens[0].identifiers[1].id
+            == created_identifier_id
         )
 
     def test_8_2_3_1_multiple_identifiers_some_existing_different_specimen(
@@ -1323,14 +1311,10 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
             [(existing_specimen_id, existing_person_id)],
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1, n_skipped=1, n_pending=2)
-        self.assertEqual(
-            batch_result.persons[0].specimens[0].id, existing_specimen_id  # type: ignore[index]
-        )
-        self.assertEqual(
-            batch_result.persons[0].specimens[0].identifiers[1].id, None  # type: ignore[index]
-        )
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_failed=1, n_skipped=1, n_pending=2)
+        assert batch_result.persons[0].specimens[0].id == existing_specimen_id
+        assert batch_result.persons[0].specimens[0].identifiers[1].id is None
 
     def test_8_2_3_2_multiple_identifiers_all_new_same_issuer(self) -> None:
         """Test 8.2.3.2: Multiple Identifiers all new but same issuer - should fail."""
@@ -1381,8 +1365,8 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
             ],  # Created Identifier IDs
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=4)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=4)
 
     def test_8_3_1_identifier_issuer_id_not_found(self) -> None:
         """Test 8.3.1: Identifier issuer ID (any except NULL_ID) provided and not found - should fail."""
@@ -1400,8 +1384,8 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
             [],
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1, n_pending=2)
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_failed=1, n_pending=2)
 
     def test_8_3_2_identifier_issuer_code_not_found(self) -> None:
         """Test 8.3.2: Identifier issuer code provided and not found - should fail."""
@@ -1419,8 +1403,8 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
             [],
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1, n_pending=2)
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_failed=1, n_pending=2)
 
     def test_8_3_3_identifier_issuer_id_and_code_mismatch(self) -> None:
         """Test 8.3.3: Both identifier issuer ID and code provided but do not match - should fail."""
@@ -1439,8 +1423,8 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
             [],
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1, n_pending=2)
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_failed=1, n_pending=2)
 
 
 # ---------------------------------------------------------------------------
@@ -1492,9 +1476,9 @@ class TestCombinedScenarios(BasePersonUploadTestCase):
             [created_measurement_relation_id],  # Create measurement relation
         ]
         batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=6)
-        self.assertEqual(batch_result.persons[0].id, created_person_id)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=6)
+        assert batch_result.persons[0].id == created_person_id
 
     def test_multiple_persons_mixed_child_types(self) -> None:
         """Test batch with multiple persons having different child type combinations."""
@@ -1527,10 +1511,10 @@ class TestCombinedScenarios(BasePersonUploadTestCase):
         batch_result = self.upload_batch(
             [person1_for_upload, person2_for_upload, person3_for_upload]
         )
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=7)
-        self.assertStatusCount(batch_result, n_created=7)
-        self.assertStatusCount(batch_result, n_created=7)
-        self.assertStatusCount(batch_result, n_created=7)
-        self.assertStatusCount(batch_result, n_created=7)
-        self.assertStatusCount(batch_result, n_created=7)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=7)
+        self.expectStatusCount(batch_result, n_created=7)
+        self.expectStatusCount(batch_result, n_created=7)
+        self.expectStatusCount(batch_result, n_created=7)
+        self.expectStatusCount(batch_result, n_created=7)
+        self.expectStatusCount(batch_result, n_created=7)

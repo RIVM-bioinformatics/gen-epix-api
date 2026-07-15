@@ -18,18 +18,6 @@ def str_uuid4() -> str:
     return str(uuid.uuid4())
 
 
-class CodeMixin:
-    """
-    Mixin class to add a code field to a model.
-    """
-
-    code: str = Field(
-        default_factory=str_uuid4,
-        description="A unique code for the instance, e.g. for external reference. Defaults to a UUID4.",
-        max_length=255,
-    )
-
-
 class ContentMixin[FormatType: IntEnum]:
     """
     Mixin class to add content-related fields to a model.

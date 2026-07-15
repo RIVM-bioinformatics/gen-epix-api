@@ -485,6 +485,7 @@ erDiagram
         string code
         UUID case_type_id FK
         UUID created_in_data_collection_id FK
+        dict[UUID, UUID] cohort
         int count
         timestamp case_date
         dict[UUID, string] content

@@ -34,6 +34,7 @@ from gen_epix.casedb.domain.model.case.non_persistable import CaseStats as CaseS
 from gen_epix.casedb.domain.model.case.non_persistable import (
     RefDataAccess as RefDataAccess,
 )
+from gen_epix.casedb.domain.model.case.non_persistable import SimilarCase as SimilarCase
 from gen_epix.casedb.domain.model.case.ref_data import (
     CaseSetCategory as CaseSetCategory,
 )

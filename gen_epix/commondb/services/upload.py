@@ -298,9 +298,10 @@ class BatchUploader:
         success &= self.verify_parents_identifiers(cmd, batch_result, uow)
         # Verify Identifiers for child models to fill in any missing child IDs
         success &= self.verify_children_identifiers(cmd, batch_result, uow)
-        # Verify parents and children next with any IDs derived Identifiers already filled in
-        success &= self.verify_parents(cmd, batch_result, uow)
+        # Verify children before parents. Child parent links may resolve missing
+        # parent IDs, so parent existence/newness must be evaluated afterwards.
         success &= self.verify_children(cmd, batch_result, uow)
+        success &= self.verify_parents(cmd, batch_result, uow)
         # Verify reference data last since it may depend on parent and children verification
         success &= self.verify_refdata(cmd, batch_result, uow)
         return success
@@ -442,6 +443,14 @@ class BatchUploader:
         for i, (parent_for_upload, parent_result) in enumerate(
             self.parent_result_items(cmd, batch_result)
         ):
+            if parent_result.status == EtlStatus.FAILED:
+                continue
+            # TODO: parents resolved in verify_children (child-inferred parent ID)
+            # also land here and get existence-checked + on_exists/on_new applied a
+            # second time. Detected cases: SKIPPED (guard above misses it), and
+            # PENDING parents where verify_children set parent_result.id or
+            # parent_result.is_new. Consequence is redundant DB calls and duplicate
+            # info log messages; final state is identical so no correctness bug.
             parent_id = parent_for_upload.id
             parent = parent_for_upload.get_parent()
             if parent is None:
@@ -677,16 +686,58 @@ class BatchUploader:
                 else:
                     # Parent ID not given
                     if has_child_parent_id:
-                        # Parent ID not given: fill in from child
-                        setattr(
-                            parent_for_upload,
-                            self.parent_id_field_name,
-                            child_parent_id,
-                        )
+                        # Parent ID not given: infer from child and re-apply
+                        # on_exists/on_new semantics for the resolved parent ID.
+                        parent_for_upload.id = child_parent_id
+                        parent = parent_for_upload.get_parent()
+                        if parent is not None:
+                            setattr(parent, self.parent_id_field_name, child_parent_id)
+                        parent_exists = self.objects_exist(
+                            uow,
+                            user_id,
+                            self.parent_class,
+                            [child_parent_id],
+                        )[0]
+                        if parent_exists:
+                            parent_result.id = child_parent_id
+                            parent_result.is_new = False
+                            if cmd.on_exists == UploadAction.ERROR:
+                                success = False
+                                parent_result.add_error(
+                                    "f2a13b7c",
+                                    f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
+                                )
+                            elif cmd.on_exists == UploadAction.SKIP:
+                                parent_result.status = EtlStatus.SKIPPED
+                                parent_result.add_info(
+                                    "9f43d602",
+                                    f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
+                                )
+                        else:
+                            parent_result.is_new = True
+                            if cmd.on_new == UploadAction.ERROR:
+                                success = False
+                                parent_result.add_error(
+                                    "1ca29f8e",
+                                    f"{self.parent_class.NAME} does not exist and on_new={cmd.on_new.value}.",
+                                )
+                            elif cmd.on_new == UploadAction.SKIP:
+                                parent_result.status = EtlStatus.SKIPPED
+                                parent_result.add_info(
+                                    "6e8ab14d",
+                                    f"{self.parent_class.NAME} does not exist and on_new={cmd.on_new.value}.",
+                                )
+                            elif cmd.on_new == UploadAction.CREATE:
+                                parent_result.add_info(
+                                    "3b9d87f4",
+                                    f"{self.parent_class.NAME} will be created with provided ID",
+                                )
                     else:
                         # Neither parent ID nor child parent ID given
                         pass
                 # Child ID given
+                # Apply on_exists/on_new based on existence determined from storage,
+                # not just on whether a child ID value is present in the payload.
                 if child_exists:
                     # Child already exists
                     if cmd.on_exists == UploadAction.ERROR:
@@ -1082,11 +1133,11 @@ class BatchUploader:
         # Verify Identifiers for each object
         obj_id_field_name = model_class.ENTITY.get_id_field_name()
         for obj_for_upload, obj_result in obj_result_pairs:
-            obj_id = getattr(obj_for_upload, obj_id_field_name)
             for identifier_for_upload, identifier_result in zip(
                 obj_for_upload.identifiers or [],
                 obj_result.identifiers or [],
             ):
+                obj_id = getattr(obj_for_upload, obj_id_field_name)
                 if identifier_result.status != EtlStatus.PENDING:
                     # Not pending (likely skipped or failed), no need to check existence
                     continue
@@ -1248,7 +1299,7 @@ class BatchUploader:
             identifiers_for_upload,
             identifier_results,
         ) in identifier_tuples:
-            if internal_id is None:
+            if self.is_null(internal_id):
                 # Parent was skipped or failed and was never assigned a real ID;
                 # no identifiers can be created for it.
                 continue
@@ -1345,7 +1396,7 @@ class BatchUploader:
             # Same service: use repository directly
             result_iter = self.service.repository.read_fields(
                 uow,
-                user.id,
+                user.id if user else None,
                 linked_model_class,
                 [linked_model_id_field_name, linked_model_code_field_name],
                 filter=CompositeFilter(
@@ -1712,9 +1763,10 @@ class BatchUploader:
                         setattr(existing_obj, field_name, new_value)
                 elif field_props.is_sub_field_dict:
                     # Field content is a dict: update keys individually
-                    is_updated |= BatchUploader.update_sub_field_dict(
-                        existing_value, new_value
-                    )
+                    if existing_value != new_value:
+                        is_updated |= BatchUploader.update_sub_field_dict(
+                            existing_value, new_value
+                        )
                 else:
                     # Field content is a single value: compare directly
                     if new_value != existing_value:
@@ -1784,8 +1836,15 @@ class BatchUploader:
         obj_class = obj.__class__
         if obj_class is self.parent_for_upload_class:
             return self.parent_id_field_name
-        else:
-            return self.child_parent_id_field_name_map[obj_class]
+        if obj_class in self.child_id_field_name_map:
+            return self.child_id_field_name_map[obj_class]
+        for (
+            child_model_class,
+            child_for_upload_class,
+        ) in self.child_for_upload_class_map.items():
+            if obj_class is child_for_upload_class:
+                return self.child_id_field_name_map[child_model_class]
+        raise KeyError(f"Could not determine ID field for {obj_class.__name__}")
 
     @staticmethod
     def update_sub_field_dict(content: dict, updates: dict | None) -> bool:

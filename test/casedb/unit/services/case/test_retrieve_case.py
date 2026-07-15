@@ -7,9 +7,8 @@ using typed variables, explicit mocking, and clear structure.
 
 from datetime import date, datetime, timezone
 from decimal import Decimal
+from test.util.mock_compat import Mock
 from typing import Any, Callable
-from unittest import TestCase
-from unittest.mock import Mock
 from uuid import UUID, uuid4
 
 import pytest
@@ -41,10 +40,10 @@ class _FakeCaseAbacPolicy(BaseCaseAbacPolicy):
         return self._abac
 
 
-class BaseRetrieveCaseTestCase(TestCase):
+class BaseRetrieveCaseTestCase:
     """Base test case with common fixtures and utilities."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         # Test user
         self.user: model.User = model.User(
             id=uuid4(),
@@ -252,7 +251,7 @@ class BaseRetrieveCaseTestCase(TestCase):
 
     # Assertions
 
-    def assertQueryResult(
+    def expectQueryResult(
         self,
         result: model.CaseQueryResult,
         expected_ids: list[UUID],
@@ -544,7 +543,7 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
         )
 
         # 4. Verify results (truncated to first case)
-        self.assertQueryResult(result, [self.case_id1], True)
+        self.expectQueryResult(result, [self.case_id1], True)
 
     def test_happy_path_without_filters_or_case_sets(self) -> None:
         # 1. Input: simple query
@@ -574,7 +573,7 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
         )
 
         # 4. Verify
-        self.assertQueryResult(result, [self.case_id1, self.case_id2], False)
+        self.expectQueryResult(result, [self.case_id1, self.case_id2], False)
 
 
 # Tests for ID-based retrieval
@@ -768,7 +767,7 @@ class TestRetrieveCaseCohortLinksByCaseType(BaseRetrieveCaseTestCase):
 def test_mapping_branches_decimal_col_type() -> None:
     # 1. Setup minimal class instance
     base: BaseRetrieveCaseTestCase = BaseRetrieveCaseTestCase()
-    base.setUp()
+    base.setup_method()
 
     col_type: enum.ColType = enum.ColType.DECIMAL_1
     filter_factory: Callable[[BaseRetrieveCaseTestCase, UUID], Any] = (
@@ -813,14 +812,14 @@ def test_mapping_branches_decimal_col_type() -> None:
     )
 
     # 4. Verify
-    base.assertQueryResult(result, [base.case_id1], False)
+    base.expectQueryResult(result, [base.case_id1], False)
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")
 def test_mapping_branches_text_col_type() -> None:
     # 1. Setup minimal class instance
     base: BaseRetrieveCaseTestCase = BaseRetrieveCaseTestCase()
-    base.setUp()
+    base.setup_method()
 
     col_type: enum.ColType = enum.ColType.TEXT
     filter_factory: Callable[[BaseRetrieveCaseTestCase, UUID], Any] = (
@@ -865,4 +864,4 @@ def test_mapping_branches_text_col_type() -> None:
     )
 
     # 4. Verify
-    base.assertQueryResult(result, [base.case_id1], False)
+    base.expectQueryResult(result, [base.case_id1], False)

@@ -1,4 +1,3 @@
-from unittest import TestCase
 from uuid import UUID, uuid4
 
 import pytest
@@ -12,10 +11,10 @@ from gen_epix.casedb.domain.model.abac.rights import (
 from gen_epix.fastapp import exc
 
 
-class BaseCaseAbacTestCase(TestCase):
+class BaseCaseAbacTestCase:
     """Base test case with common fixtures for ABAC rights."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         # IDs
         self.case_type_id_1: UUID = UUID("11111111-1111-1111-1111-111111111111")
         self.case_type_id_2: UUID = UUID("22222222-2222-2222-2222-222222222222")
@@ -89,30 +88,30 @@ class TestCaseTypeAccessAbac(BaseCaseAbacTestCase):
             read_case_set=False,
             write_case_set=False,
         )
-        self.assertFalse(access.has_any_rights())
+        assert not access.has_any_rights()
 
     def test_has_any_rights_true_by_flag(self) -> None:
         access: CaseTypeAccessAbac = self.make_access(self.dc1, add_case=True)
-        self.assertTrue(access.has_any_rights())
+        assert access.has_any_rights()
 
     def test_has_any_rights_true_by_cols(self) -> None:
         access: CaseTypeAccessAbac = self.make_access(self.dc1, read_cols={self.col1})
-        self.assertTrue(access.has_any_rights())
+        assert access.has_any_rights()
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-01")
 class TestCaseTypeShareAbac(BaseCaseAbacTestCase):
     def test_has_any_rights_false(self) -> None:
         share: CaseTypeShareAbac = self.make_share(self.dc1)
-        self.assertFalse(share.has_any_rights())
+        assert not share.has_any_rights()
 
     def test_has_any_rights_true_by_add(self) -> None:
         share: CaseTypeShareAbac = self.make_share(self.dc2, add_from={self.dc1})
-        self.assertTrue(share.has_any_rights())
+        assert share.has_any_rights()
 
     def test_has_any_rights_true_by_remove_set(self) -> None:
         share: CaseTypeShareAbac = self.make_share(self.dc3, remove_set_from={self.dc1})
-        self.assertTrue(share.has_any_rights())
+        assert share.has_any_rights()
 
 
 @pytest.mark.scenario_ids("TC-RBAC-01-02", "TC-SEC-29-01")
@@ -135,8 +134,8 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_share_abacs=share_map,
         )
         combos = abac.get_combinations_with_any_rights()
-        self.assertIn(self.case_type_id_1, combos)
-        self.assertEqual(combos[self.case_type_id_1], {self.dc2, self.dc3})
+        assert self.case_type_id_1 in combos
+        assert combos[self.case_type_id_1] == {self.dc2, self.dc3}
 
     def test_get_case_types_with_any_rights(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
@@ -166,7 +165,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_share_abacs=share_map,
         )
         case_types = abac.get_case_types_with_any_rights()
-        self.assertEqual(case_types, {self.case_type_id_2})
+        assert case_types == {self.case_type_id_2}
 
     def test_get_combinations_with_access_right(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
@@ -182,11 +181,11 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_share_abacs={},
         )
         add_combos = abac.get_combinations_with_access_right(CaseRight.ADD_CASE)
-        self.assertEqual(add_combos[self.case_type_id_1], {self.dc2})
+        assert add_combos[self.case_type_id_1] == {self.dc2}
         read_combos = abac.get_combinations_with_access_right(CaseRight.READ_CASE)
-        self.assertEqual(read_combos[self.case_type_id_1], {self.dc1})
+        assert read_combos[self.case_type_id_1] == {self.dc1}
         write_combos = abac.get_combinations_with_access_right(CaseRight.WRITE_CASE)
-        self.assertEqual(write_combos[self.case_type_id_1], {self.dc3})
+        assert write_combos[self.case_type_id_1] == {self.dc3}
 
     def test_get_case_types_with_access_right(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
@@ -215,7 +214,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_share_abacs={},
         )
         case_types = abac.get_case_types_with_access_right(CaseRight.READ_CASE)
-        self.assertEqual(case_types, {self.case_type_id_2})
+        assert case_types == {self.case_type_id_2}
 
     def test_get_cols_with_any_rights_unfiltered(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
@@ -246,17 +245,15 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_share_abacs={},
         )
         cols = abac.get_cols_with_any_rights()
-        self.assertEqual(cols, {self.col1, self.col2, self.col3})
+        assert cols == {self.col1, self.col2, self.col3}
 
     def test_get_cols_with_any_rights_filtered_includes_all(self) -> None:
         # Due to implementation, filtered path still aggregates all CaseTypes.
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
             self.case_type_id_1: {
-                self.dc1: self.make_access(self.dc1, read_cols={self.col1})
-            },
-            self.case_type_id_2: {
+                self.dc1: self.make_access(self.dc1, read_cols={self.col1}),
                 self.dc2: CaseTypeAccessAbac(
-                    case_type_id=self.case_type_id_2,
+                    case_type_id=self.case_type_id_1,
                     data_collection_id=self.dc2,
                     is_private=False,
                     add_case=False,
@@ -267,7 +264,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
                     write_col_ids=set(),
                     read_case_set=False,
                     write_case_set=False,
-                )
+                ),
             },
         }
         abac: CaseAbac = CaseAbac(
@@ -276,7 +273,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_share_abacs={},
         )
         cols = abac.get_cols_with_any_rights(self.case_type_id_1)
-        self.assertEqual(cols, {self.col1, self.col2})
+        assert cols == {self.col1, self.col2}
 
     def test_get_cols_with_access_rights_read_filtered(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
@@ -293,12 +290,12 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         cols_read = abac.get_cols_with_access_rights(
             CaseRight.READ_CASE, case_type_id=self.case_type_id_1
         )
-        self.assertEqual(cols_read, {self.col1})
+        assert cols_read == {self.col1}
         cols_write = abac.get_cols_with_access_rights(
             CaseRight.WRITE_CASE, case_type_id=self.case_type_id_1
         )
-        self.assertEqual(cols_write, {self.col2})
-        with self.assertRaises(exc.InvalidArgumentsError):
+        assert cols_write == {self.col2}
+        with pytest.raises(exc.InvalidArgumentsError):
             abac.get_cols_with_access_rights(
                 CaseRight.ADD_CASE, case_type_id=self.case_type_id_1
             )
@@ -323,7 +320,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_share_abacs=share_map,
         )
         dcs = abac.get_data_collections_with_any_rights()
-        self.assertEqual(dcs, {self.dc1, self.dc2, self.dc3})
+        assert dcs == {self.dc1, self.dc2, self.dc3}
 
     def test_get_data_collections_with_access_right_for_col(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
@@ -355,12 +352,12 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         read_dcs = abac.get_data_collections_with_access_right_for_col(
             self.col1, CaseRight.READ_CASE
         )
-        self.assertEqual(read_dcs, {self.dc1, self.dc3})
+        assert read_dcs == {self.dc1, self.dc3}
         write_dcs = abac.get_data_collections_with_access_right_for_col(
             self.col1, CaseRight.WRITE_CASE
         )
-        self.assertEqual(write_dcs, {self.dc2})
-        with self.assertRaises(exc.InvalidArgumentsError):
+        assert write_dcs == {self.dc2}
+        with pytest.raises(exc.InvalidArgumentsError):
             abac.get_data_collections_with_access_right_for_col(
                 self.col1, CaseRight.ADD_CASE
             )
@@ -377,7 +374,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             current_data_collection_ids={self.dc1},
             tgt_data_collection_ids={self.dc2},
         )
-        self.assertTrue(allowed)
+        assert allowed
 
     def test_is_allowed_add_create_not_in_access_returns_false(self) -> None:
         abac: CaseAbac = CaseAbac(
@@ -389,7 +386,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             right=CaseRight.ADD_CASE,
             is_create_or_delete=True,
         )
-        self.assertFalse(allowed)
+        assert not allowed
 
     def test_is_allowed_add_create_not_private_returns_false(self) -> None:
         access_map = {
@@ -408,7 +405,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             right=CaseRight.ADD_CASE,
             is_create_or_delete=True,
         )
-        self.assertFalse(allowed)
+        assert not allowed
 
     def test_is_allowed_add_create_current_non_empty_raises(self) -> None:
         access_map = {
@@ -419,7 +416,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_access_abacs=access_map,
             case_type_share_abacs={},
         )
-        with self.assertRaises(exc.InvalidArgumentsError):
+        with pytest.raises(exc.InvalidArgumentsError):
             abac.is_allowed(
                 case_type_id=self.case_type_id_1,
                 created_in_data_collection_id=self.dc1,
@@ -429,17 +426,13 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             )
 
         # set is_create_or_delete to False to other path
-        self.assertFalse(
-            abac.is_allowed(
-                case_type_id=self.case_type_id_1,
-                created_in_data_collection_id=self.dc1,
-                right=CaseRight.ADD_CASE,
-                is_create_or_delete=False,
-                current_data_collection_ids={self.dc1},
-                tgt_data_collection_ids={
-                    self.dc3
-                },  # Add tgt to not get a no-operation add
-            )
+        assert not abac.is_allowed(
+            case_type_id=self.case_type_id_1,
+            created_in_data_collection_id=self.dc1,
+            right=CaseRight.ADD_CASE,
+            is_create_or_delete=False,
+            current_data_collection_ids={self.dc1},
+            tgt_data_collection_ids={self.dc3},  # Add tgt to not get a no-operation add
         )
 
     def test_is_allowed_add_remaining_target_no_access_no_share_false(self) -> None:
@@ -461,7 +454,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             is_create_or_delete=False,
             tgt_data_collection_ids={self.dc2},
         )
-        self.assertFalse(allowed)
+        assert not allowed
 
     def test_is_allowed_add_with_share_true(self) -> None:
         access_map = {
@@ -487,7 +480,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             is_create_or_delete=True,
             tgt_data_collection_ids={self.dc2},
         )
-        self.assertTrue(allowed)
+        assert allowed
 
     def test_is_allowed_add_to_private_target_false(self) -> None:
         access_map = {
@@ -513,7 +506,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             is_create_or_delete=True,
             tgt_data_collection_ids={self.dc2},
         )
-        self.assertFalse(allowed)
+        assert not allowed
 
     def test_is_allowed_remove_delete_not_in_access_false(self) -> None:
         abac: CaseAbac = CaseAbac(
@@ -525,7 +518,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             right=CaseRight.REMOVE_CASE,
             is_create_or_delete=True,
         )
-        self.assertFalse(allowed)
+        assert not allowed
 
     def test_is_allowed_remove_delete_not_private_false(self) -> None:
         access_map = {
@@ -544,7 +537,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             right=CaseRight.REMOVE_CASE,
             is_create_or_delete=True,
         )
-        self.assertFalse(allowed)
+        assert not allowed
 
     def test_is_allowed_remove_delete_tgt_not_empty_raises(self) -> None:
         access_map = {
@@ -555,7 +548,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_access_abacs=access_map,
             case_type_share_abacs={},
         )
-        with self.assertRaises(exc.InvalidArgumentsError):
+        with pytest.raises(exc.InvalidArgumentsError):
             abac.is_allowed(
                 case_type_id=self.case_type_id_1,
                 created_in_data_collection_id=self.dc1,
@@ -573,7 +566,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_access_abacs=access_map,
             case_type_share_abacs={},
         )
-        with self.assertRaises(exc.InvalidArgumentsError):
+        with pytest.raises(exc.InvalidArgumentsError):
             abac.is_allowed(
                 case_type_id=self.case_type_id_1,
                 created_in_data_collection_id=self.dc1,
@@ -608,7 +601,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             current_data_collection_ids={self.dc1, self.dc2},
             tgt_data_collection_ids={self.dc2},
         )
-        self.assertTrue(allowed)
+        assert allowed
 
     def test_is_allowed_content_read_true(self) -> None:
         access_map = {
@@ -628,7 +621,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             is_create_or_delete=False,
             current_data_collection_ids={self.dc2},
         )
-        self.assertTrue(allowed)
+        assert allowed
 
     def test_is_allowed_content_read_false(self) -> None:
         """
@@ -648,7 +641,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             right=CaseRight.READ_CASE,
             is_create_or_delete=False,
         )
-        self.assertFalse(allowed)
+        assert not allowed
 
     def test_get_case_rights_non_full_access(self) -> None:
         # Access: created_in is private; remove rights on dc1, dc2; add rights on dc3; share add to dc4 from dc2
@@ -684,14 +677,14 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             created_in_data_collection_id=self.dc1,
             data_collection_ids=set({self.dc1, self.dc2}),
         )
-        self.assertFalse(rights.is_full_access)
-        self.assertEqual(rights.case_id, case_id)
-        self.assertEqual(rights.add_data_collection_ids, {self.dc3, self.dc4})
-        self.assertEqual(rights.remove_data_collection_ids, {self.dc1, self.dc2})
-        self.assertEqual(rights.read_col_ids, {self.col1, self.col2})
-        self.assertEqual(rights.write_col_ids, {self.col3})
-        self.assertTrue(rights.can_delete)
-        self.assertEqual(rights.shared_in_data_collection_ids, {self.dc2})
+        assert not rights.is_full_access
+        assert rights.case_id == case_id
+        assert rights.add_data_collection_ids == {self.dc3, self.dc4}
+        assert rights.remove_data_collection_ids == {self.dc1, self.dc2}
+        assert rights.read_col_ids == {self.col1, self.col2}
+        assert rights.write_col_ids == {self.col3}
+        assert rights.can_delete
+        assert rights.shared_in_data_collection_ids == {self.dc2}
 
     def test_get_case_set_rights_non_full_access(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
@@ -722,14 +715,14 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             created_in_data_collection_id=self.dc1,
             data_collection_ids=set({self.dc1, self.dc2}),
         )
-        self.assertFalse(rights.is_full_access)
-        self.assertEqual(rights.case_set_id, case_set_id)
-        self.assertEqual(rights.add_data_collection_ids, {self.dc3, self.dc4})
-        self.assertEqual(rights.remove_data_collection_ids, {self.dc1, self.dc2})
-        self.assertTrue(rights.read_case_set)
-        self.assertTrue(rights.write_case_set)
-        self.assertTrue(rights.can_delete)
-        self.assertEqual(rights.shared_in_data_collection_ids, {self.dc2})
+        assert not rights.is_full_access
+        assert rights.case_set_id == case_set_id
+        assert rights.add_data_collection_ids == {self.dc3, self.dc4}
+        assert rights.remove_data_collection_ids == {self.dc1, self.dc2}
+        assert rights.read_case_set
+        assert rights.write_case_set
+        assert rights.can_delete
+        assert rights.shared_in_data_collection_ids == {self.dc2}
 
     def test_get_case_rights_full_access(self) -> None:
         abac: CaseAbac = CaseAbac(
@@ -742,13 +735,13 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             created_in_data_collection_id=self.dc1,
             data_collection_ids=set({self.dc1, self.dc2}),
         )
-        self.assertTrue(rights.is_full_access)
-        self.assertEqual(rights.add_data_collection_ids, set())
-        self.assertEqual(rights.remove_data_collection_ids, set())
-        self.assertTrue(rights.can_delete)
-        self.assertEqual(rights.read_col_ids, set())
-        self.assertEqual(rights.write_col_ids, set())
-        self.assertEqual(rights.shared_in_data_collection_ids, {self.dc2})
+        assert rights.is_full_access
+        assert rights.add_data_collection_ids == set()
+        assert rights.remove_data_collection_ids == set()
+        assert rights.can_delete
+        assert rights.read_col_ids == set()
+        assert rights.write_col_ids == set()
+        assert rights.shared_in_data_collection_ids == {self.dc2}
 
     def test_get_case_set_rights_full_access(self) -> None:
         abac: CaseAbac = CaseAbac(
@@ -761,13 +754,13 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             created_in_data_collection_id=self.dc1,
             data_collection_ids=set({self.dc1, self.dc2}),
         )
-        self.assertTrue(rights.is_full_access)
-        self.assertEqual(rights.add_data_collection_ids, set())
-        self.assertEqual(rights.remove_data_collection_ids, set())
-        self.assertTrue(rights.can_delete)
-        self.assertTrue(rights.read_case_set)
-        self.assertTrue(rights.write_case_set)
-        self.assertEqual(rights.shared_in_data_collection_ids, {self.dc2})
+        assert rights.is_full_access
+        assert rights.add_data_collection_ids == set()
+        assert rights.remove_data_collection_ids == set()
+        assert rights.can_delete
+        assert rights.read_case_set
+        assert rights.write_case_set
+        assert rights.shared_in_data_collection_ids == {self.dc2}
 
     def test_get_combinations_with_any_rights_share_only(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {}
@@ -782,7 +775,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_share_abacs=share_map,
         )
         combos = abac.get_combinations_with_any_rights()
-        self.assertEqual(combos, {self.case_type_id_1: {self.dc3}})
+        assert combos == {self.case_type_id_1: {self.dc3}}
 
     def test_get_case_types_with_any_rights_share_only(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {}
@@ -797,7 +790,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_share_abacs=share_map,
         )
         case_types = abac.get_case_types_with_any_rights()
-        self.assertEqual(case_types, {self.case_type_id_2})
+        assert case_types == {self.case_type_id_2}
 
     def test_get_cols_with_any_rights_filtered_missing_case_type_returns_empty(
         self,
@@ -813,7 +806,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_share_abacs={},
         )
         cols = abac.get_cols_with_any_rights(self.case_type_id_2)
-        self.assertEqual(cols, set())
+        assert cols == set()
 
     def test_get_cols_with_access_rights_unfiltered_invalid_right_raises(
         self,
@@ -829,7 +822,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_access_abacs=access_map,
             case_type_share_abacs={},
         )
-        with self.assertRaises(exc.InvalidArgumentsError):
+        with pytest.raises(exc.InvalidArgumentsError):
             abac.get_cols_with_access_rights(CaseRight.ADD_CASE)
 
     def test_get_cols_with_access_rights_unfiltered(self) -> None:
@@ -847,14 +840,11 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_access_abacs=access_map,
             case_type_share_abacs={},
         )
-        self.assertEqual(
-            abac.get_cols_with_access_rights(CaseRight.READ_CASE),
-            {self.col1, self.col3},
-        )
-        self.assertEqual(
-            abac.get_cols_with_access_rights(CaseRight.WRITE_CASE),
-            {self.col2},
-        )
+        assert abac.get_cols_with_access_rights(CaseRight.READ_CASE) == {
+            self.col1,
+            self.col3,
+        }
+        assert abac.get_cols_with_access_rights(CaseRight.WRITE_CASE) == {self.col2}
 
     def test_get_data_collections_with_any_rights_share_no_rights_ignored(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
@@ -871,7 +861,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_share_abacs=share_map,
         )
         dcs = abac.get_data_collections_with_any_rights()
-        self.assertEqual(dcs, {self.dc1})
+        assert dcs == {self.dc1}
 
     def test_is_allowed_add_direct_access_true(self) -> None:
         access_map = {
@@ -892,7 +882,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             is_create_or_delete=True,
             tgt_data_collection_ids={self.dc2},
         )
-        self.assertTrue(allowed)
+        assert allowed
 
     def test_is_allowed_remove_direct_access_true(self) -> None:
         access_map = {
@@ -916,7 +906,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             current_data_collection_ids={self.dc1, self.dc2},
             tgt_data_collection_ids={self.dc2},
         )
-        self.assertTrue(allowed)
+        assert allowed
 
     def test_is_allowed_content_write_true(self) -> None:
         access_map = {
@@ -936,7 +926,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             is_create_or_delete=False,
             current_data_collection_ids={self.dc2},
         )
-        self.assertTrue(allowed)
+        assert allowed
 
     def test_get_case_rights_not_own_private_share_only_can_delete_false(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
@@ -963,9 +953,9 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             created_in_data_collection_id=self.dc1,
             data_collection_ids=set({self.dc1, self.dc2}),
         )
-        self.assertEqual(rights.add_data_collection_ids, {self.dc3})
-        self.assertEqual(rights.remove_data_collection_ids, {self.dc2})
-        self.assertFalse(rights.can_delete)
+        assert rights.add_data_collection_ids == {self.dc3}
+        assert rights.remove_data_collection_ids == {self.dc2}
+        assert not rights.can_delete
 
     def test_get_case_set_rights_can_delete_false(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
@@ -990,8 +980,8 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             created_in_data_collection_id=self.dc1,
             data_collection_ids=set({self.dc1, self.dc2}),
         )
-        self.assertEqual(rights.remove_data_collection_ids, {self.dc1})
-        self.assertFalse(rights.can_delete)
+        assert rights.remove_data_collection_ids == {self.dc1}
+        assert not rights.can_delete
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-01")
@@ -1009,37 +999,25 @@ class TestHelperFunctions(BaseCaseAbacTestCase):
             write_case_set=True,
         )
         # ADD_CASE
-        self.assertTrue(CaseAbac._get_has_right_function(CaseRight.ADD_CASE)(access))
+        assert CaseAbac._get_has_right_function(CaseRight.ADD_CASE)(access)
         # REMOVE_CASE
-        self.assertTrue(CaseAbac._get_has_right_function(CaseRight.REMOVE_CASE)(access))
+        assert CaseAbac._get_has_right_function(CaseRight.REMOVE_CASE)(access)
         # READ_CASE
-        self.assertTrue(CaseAbac._get_has_right_function(CaseRight.READ_CASE)(access))
+        assert CaseAbac._get_has_right_function(CaseRight.READ_CASE)(access)
         # WRITE_CASE
-        self.assertTrue(CaseAbac._get_has_right_function(CaseRight.WRITE_CASE)(access))
+        assert CaseAbac._get_has_right_function(CaseRight.WRITE_CASE)(access)
         # ADD_CASE_SET
-        self.assertTrue(
-            CaseAbac._get_has_right_function(CaseRight.ADD_CASE_SET)(access)
-        )
+        assert CaseAbac._get_has_right_function(CaseRight.ADD_CASE_SET)(access)
         # REMOVE_CASE_SET
-        self.assertTrue(
-            CaseAbac._get_has_right_function(CaseRight.REMOVE_CASE_SET)(access)
-        )
+        assert CaseAbac._get_has_right_function(CaseRight.REMOVE_CASE_SET)(access)
         # READ_CASE_SET
-        self.assertTrue(
-            CaseAbac._get_has_right_function(CaseRight.READ_CASE_SET)(access)
-        )
+        assert CaseAbac._get_has_right_function(CaseRight.READ_CASE_SET)(access)
         # WRITE_CASE_SET
-        self.assertTrue(
-            CaseAbac._get_has_right_function(CaseRight.WRITE_CASE_SET)(access)
-        )
+        assert CaseAbac._get_has_right_function(CaseRight.WRITE_CASE_SET)(access)
         # Negative checks for read/write case
         access_empty: CaseTypeAccessAbac = self.make_access(self.dc2)
-        self.assertFalse(
-            CaseAbac._get_has_right_function(CaseRight.READ_CASE)(access_empty)
-        )
-        self.assertFalse(
-            CaseAbac._get_has_right_function(CaseRight.WRITE_CASE)(access_empty)
-        )
+        assert not CaseAbac._get_has_right_function(CaseRight.READ_CASE)(access_empty)
+        assert not CaseAbac._get_has_right_function(CaseRight.WRITE_CASE)(access_empty)
 
     def test_get_get_share_from_data_collections_function_branches(self) -> None:
         share: CaseTypeShareAbac = self.make_share(
@@ -1049,30 +1027,18 @@ class TestHelperFunctions(BaseCaseAbacTestCase):
             add_set_from={self.dc4},
             remove_set_from={self.dc1},
         )
-        self.assertEqual(
-            CaseAbac._get_get_share_from_data_collections_function(CaseRight.ADD_CASE)(
-                share
-            ),
-            {self.dc2},
-        )
-        self.assertEqual(
-            CaseAbac._get_get_share_from_data_collections_function(
-                CaseRight.REMOVE_CASE
-            )(share),
-            {self.dc3},
-        )
-        self.assertEqual(
-            CaseAbac._get_get_share_from_data_collections_function(
-                CaseRight.ADD_CASE_SET
-            )(share),
-            {self.dc4},
-        )
-        self.assertEqual(
-            CaseAbac._get_get_share_from_data_collections_function(
-                CaseRight.REMOVE_CASE_SET
-            )(share),
-            {self.dc1},
-        )
+        assert CaseAbac._get_get_share_from_data_collections_function(
+            CaseRight.ADD_CASE
+        )(share) == {self.dc2}
+        assert CaseAbac._get_get_share_from_data_collections_function(
+            CaseRight.REMOVE_CASE
+        )(share) == {self.dc3}
+        assert CaseAbac._get_get_share_from_data_collections_function(
+            CaseRight.ADD_CASE_SET
+        )(share) == {self.dc4}
+        assert CaseAbac._get_get_share_from_data_collections_function(
+            CaseRight.REMOVE_CASE_SET
+        )(share) == {self.dc1}
 
     def test_get_from_data_collections_for_right_function_branches(self) -> None:
         share: CaseTypeShareAbac = self.make_share(
@@ -1082,27 +1048,15 @@ class TestHelperFunctions(BaseCaseAbacTestCase):
             add_set_from={self.dc3},
             remove_set_from={self.dc4},
         )
-        self.assertEqual(
-            CaseAbac._get_from_data_collections_for_right_function(CaseRight.ADD_CASE)(
-                share
-            ),
-            {self.dc1},
-        )
-        self.assertEqual(
-            CaseAbac._get_from_data_collections_for_right_function(
-                CaseRight.REMOVE_CASE
-            )(share),
-            {self.dc2},
-        )
-        self.assertEqual(
-            CaseAbac._get_from_data_collections_for_right_function(
-                CaseRight.ADD_CASE_SET
-            )(share),
-            {self.dc3},
-        )
-        self.assertEqual(
-            CaseAbac._get_from_data_collections_for_right_function(
-                CaseRight.REMOVE_CASE_SET
-            )(share),
-            {self.dc4},
-        )
+        assert CaseAbac._get_from_data_collections_for_right_function(
+            CaseRight.ADD_CASE
+        )(share) == {self.dc1}
+        assert CaseAbac._get_from_data_collections_for_right_function(
+            CaseRight.REMOVE_CASE
+        )(share) == {self.dc2}
+        assert CaseAbac._get_from_data_collections_for_right_function(
+            CaseRight.ADD_CASE_SET
+        )(share) == {self.dc3}
+        assert CaseAbac._get_from_data_collections_for_right_function(
+            CaseRight.REMOVE_CASE_SET
+        )(share) == {self.dc4}

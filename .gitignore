@@ -61,6 +61,8 @@ db.sqlite3
 db.sqlite3-journal
 test/**/scale_test*.sqlite
 test/**/scale_test*.sqlite-journal
+test/**/bench_*.sqlite
+test/**/bench_*.sqlite-journal
 test/**/test_sample_upload.pkl
 
 # Flask stuff:

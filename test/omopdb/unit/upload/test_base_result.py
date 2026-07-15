@@ -9,8 +9,6 @@ Verifies that:
 - UploadResult.add_logs sets FAILED when any item is an error.
 """
 
-from unittest import TestCase
-
 import pytest
 
 from gen_epix.commondb.domain.enum import EtlStatus
@@ -39,19 +37,19 @@ class _ConcreteResult(BaseEtlResult):
 
 
 @pytest.mark.scenario_ids("TC-SEC-31-02")
-class TestResultLogItem(TestCase):
+class TestResultLogItem:
     def test_has_required_fields(self) -> None:
         item = EtlLogItem(
             code="E001", message="Something broke", severity=LogLevel.ERROR
         )
-        self.assertEqual(item.code, "E001")
-        self.assertEqual(item.message, "Something broke")
-        self.assertEqual(item.severity, LogLevel.ERROR)
-        self.assertIsNotNone(item.timestamp)
+        assert item.code == "E001"
+        assert item.message == "Something broke"
+        assert item.severity == LogLevel.ERROR
+        assert item.timestamp is not None
 
     def test_upload_log_item_is_result_log_item(self) -> None:
         """UploadLogItem must be the same class as ResultLogItem (alias)."""
-        self.assertIs(UploadLogItem, EtlLogItem)
+        assert UploadLogItem is EtlLogItem
 
 
 # ---------------------------------------------------------------------------
@@ -60,93 +58,93 @@ class TestResultLogItem(TestCase):
 
 
 @pytest.mark.scenario_ids("TC-SEC-31-02")
-class TestBaseResult(TestCase):
-    def setUp(self) -> None:
+class TestBaseResult:
+    def setup_method(self) -> None:
         self.result = _ConcreteResult()
 
     # -- add_error ------------------------------------------------------------
 
     def test_add_error_appends_error_log(self) -> None:
         self.result.add_error("E001", "an error")
-        self.assertEqual(len(self.result.logs), 1)
-        self.assertEqual(self.result.logs[0].severity, LogLevel.ERROR)
-        self.assertEqual(self.result.logs[0].code, "E001")
-        self.assertEqual(self.result.logs[0].message, "an error")
+        assert len(self.result.logs) == 1
+        assert self.result.logs[0].severity == LogLevel.ERROR
+        assert self.result.logs[0].code == "E001"
+        assert self.result.logs[0].message == "an error"
 
     def test_add_error_calls_set_error_status(self) -> None:
         self.result.add_error("E001", "an error")
-        self.assertEqual(self.result.status, EtlStatus.ERROR)
+        assert self.result.status == EtlStatus.ERROR
 
     # -- add_warning ----------------------------------------------------------
 
     def test_add_warning_appends_warn_log(self) -> None:
         self.result.add_warning("W001", "a warning")
-        self.assertEqual(len(self.result.logs), 1)
-        self.assertEqual(self.result.logs[0].severity, LogLevel.WARN)
+        assert len(self.result.logs) == 1
+        assert self.result.logs[0].severity == LogLevel.WARN
 
     def test_add_warning_does_not_change_status(self) -> None:
         self.result.add_warning("W001", "a warning")
-        self.assertEqual(self.result.status, EtlStatus.INITIALIZED)
+        assert self.result.status == EtlStatus.INITIALIZED
 
     # -- add_info -------------------------------------------------------------
 
     def test_add_info_appends_info_log(self) -> None:
         self.result.add_info("I001", "some info")
-        self.assertEqual(len(self.result.logs), 1)
-        self.assertEqual(self.result.logs[0].severity, LogLevel.INFO)
+        assert len(self.result.logs) == 1
+        assert self.result.logs[0].severity == LogLevel.INFO
 
     def test_add_info_does_not_change_status(self) -> None:
         self.result.add_info("I001", "some info")
-        self.assertEqual(self.result.status, EtlStatus.INITIALIZED)
+        assert self.result.status == EtlStatus.INITIALIZED
 
     # -- has_errors / has_warnings / has_infos --------------------------------
 
     def test_has_errors_false_when_no_logs(self) -> None:
-        self.assertFalse(self.result.has_errors())
+        assert not self.result.has_errors()
 
     def test_has_errors_false_when_only_warnings(self) -> None:
         self.result.add_warning("W001", "warn")
-        self.assertFalse(self.result.has_errors())
+        assert not self.result.has_errors()
 
     def test_has_errors_true_after_add_error(self) -> None:
         self.result.add_error("E001", "err")
-        self.assertTrue(self.result.has_errors())
+        assert self.result.has_errors()
 
     def test_has_warnings_false_when_no_logs(self) -> None:
-        self.assertFalse(self.result.has_warnings())
+        assert not self.result.has_warnings()
 
     def test_has_warnings_true_after_add_warning(self) -> None:
         self.result.add_warning("W001", "warn")
-        self.assertTrue(self.result.has_warnings())
+        assert self.result.has_warnings()
 
     def test_has_warnings_false_when_only_errors(self) -> None:
         self.result.add_error("E001", "err")
-        self.assertFalse(self.result.has_warnings())
+        assert not self.result.has_warnings()
 
     def test_has_infos_false_when_no_logs(self) -> None:
-        self.assertFalse(self.result.has_infos())
+        assert not self.result.has_infos()
 
     def test_has_infos_true_after_add_info(self) -> None:
         self.result.add_info("I001", "info")
-        self.assertTrue(self.result.has_infos())
+        assert self.result.has_infos()
 
     # -- has_log_code ---------------------------------------------------------
 
     def test_has_log_code_false_when_no_logs(self) -> None:
-        self.assertFalse(self.result.has_log_code("E001"))
+        assert not self.result.has_log_code("E001")
 
     def test_has_log_code_true_when_code_present(self) -> None:
         self.result.add_error("E001", "err")
-        self.assertTrue(self.result.has_log_code("E001"))
+        assert self.result.has_log_code("E001")
 
     def test_has_log_code_false_when_different_code(self) -> None:
         self.result.add_error("E001", "err")
-        self.assertFalse(self.result.has_log_code("E002"))
+        assert not self.result.has_log_code("E002")
 
     def test_has_log_code_matches_across_severities(self) -> None:
         self.result.add_warning("SHARED_CODE", "warn")
         self.result.add_info("SHARED_CODE", "info")
-        self.assertTrue(self.result.has_log_code("SHARED_CODE"))
+        assert self.result.has_log_code("SHARED_CODE")
 
     # -- multiple log items ---------------------------------------------------
 
@@ -154,10 +152,10 @@ class TestBaseResult(TestCase):
         self.result.add_info("I001", "info")
         self.result.add_warning("W001", "warn")
         self.result.add_error("E001", "err")
-        self.assertEqual(len(self.result.logs), 3)
-        self.assertTrue(self.result.has_errors())
-        self.assertTrue(self.result.has_warnings())
-        self.assertTrue(self.result.has_infos())
+        assert len(self.result.logs) == 3
+        assert self.result.has_errors()
+        assert self.result.has_warnings()
+        assert self.result.has_infos()
 
 
 # ---------------------------------------------------------------------------
@@ -176,24 +174,24 @@ def _make_pending_upload_result() -> UploadResult:
 
 
 @pytest.mark.scenario_ids("TC-SEC-31-02")
-class TestUploadResult(TestCase):
-    def setUp(self) -> None:
+class TestUploadResult:
+    def setup_method(self) -> None:
         self.result = _make_pending_upload_result()
 
     def test_add_error_sets_upload_status_failed(self) -> None:
         self.result.add_error("E001", "upload broke")
-        self.assertEqual(self.result.status, EtlStatus.FAILED)
-        self.assertTrue(self.result.has_errors())
+        assert self.result.status == EtlStatus.FAILED
+        assert self.result.has_errors()
 
     def test_add_warning_does_not_change_status(self) -> None:
         self.result.add_warning("W001", "soft warning")
-        self.assertEqual(self.result.status, EtlStatus.PENDING)
-        self.assertTrue(self.result.has_warnings())
+        assert self.result.status == EtlStatus.PENDING
+        assert self.result.has_warnings()
 
     def test_add_info_does_not_change_status(self) -> None:
         self.result.add_info("I001", "fyi")
-        self.assertEqual(self.result.status, EtlStatus.PENDING)
-        self.assertTrue(self.result.has_infos())
+        assert self.result.status == EtlStatus.PENDING
+        assert self.result.has_infos()
 
     def test_add_logs_list_with_error_sets_failed(self) -> None:
         items = [
@@ -201,8 +199,8 @@ class TestUploadResult(TestCase):
             EtlLogItem(code="E001", message="err", severity=LogLevel.ERROR),
         ]
         self.result.add_logs(items)
-        self.assertEqual(self.result.status, EtlStatus.FAILED)
-        self.assertEqual(len(self.result.logs), 2)
+        assert self.result.status == EtlStatus.FAILED
+        assert len(self.result.logs) == 2
 
     def test_add_logs_list_without_error_keeps_status(self) -> None:
         items = [
@@ -210,19 +208,19 @@ class TestUploadResult(TestCase):
             EtlLogItem(code="W001", message="warn", severity=LogLevel.WARN),
         ]
         self.result.add_logs(items)
-        self.assertEqual(self.result.status, EtlStatus.PENDING)
+        assert self.result.status == EtlStatus.PENDING
 
     def test_add_logs_single_error_item_sets_failed(self) -> None:
         item = EtlLogItem(code="E001", message="err", severity=LogLevel.ERROR)
         self.result.add_logs(item)
-        self.assertEqual(self.result.status, EtlStatus.FAILED)
+        assert self.result.status == EtlStatus.FAILED
 
     def test_add_logs_single_non_error_item_keeps_status(self) -> None:
         item = EtlLogItem(code="W001", message="warn", severity=LogLevel.WARN)
         self.result.add_logs(item)
-        self.assertEqual(self.result.status, EtlStatus.PENDING)
+        assert self.result.status == EtlStatus.PENDING
 
     def test_has_log_code_works_on_upload_result(self) -> None:
         self.result.add_warning("SPECIFIC_CODE", "msg")
-        self.assertTrue(self.result.has_log_code("SPECIFIC_CODE"))
-        self.assertFalse(self.result.has_log_code("OTHER_CODE"))
+        assert self.result.has_log_code("SPECIFIC_CODE")
+        assert not self.result.has_log_code("OTHER_CODE")

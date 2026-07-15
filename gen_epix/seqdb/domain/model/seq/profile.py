@@ -5,6 +5,7 @@ import struct
 from typing import Any, ClassVar, Self
 from uuid import UUID
 
+import numpy as np
 from pydantic import Field, field_serializer, field_validator, model_validator
 
 from gen_epix.commondb.domain.literal import NULL_ID
@@ -244,6 +245,21 @@ class SeqProfile(
             return result
         raise NotImplementedError(
             "Unable to parse allele IDs for this allele profile format"
+        )
+
+    def get_allele_array(self) -> np.ndarray:
+        """Return allele IDs as an (n_loci,) S16 numpy array.
+
+        Each element is a 16-byte UUID; missing loci (null UUID) appear as
+        b"\\x00" * 16 matching the _NULL_ALLELE sentinel in distance kernels.
+        Zero-copy frombuffer view of the decoded base64 blob.
+        """
+        if self.seq_profile_type != enum.SeqProfileType.ALLELE:
+            raise ValueError("Allele array can only be computed for allele profiles")
+        if self.format == enum.SeqProfileFormat.ORDERED_ALLELE_IDS:
+            return np.frombuffer(base64.b64decode(self.content), dtype="S16")
+        raise NotImplementedError(
+            "Unable to compute allele array for this allele profile format"
         )
 
     def get_allele_ids(self, **kwargs: Any) -> list[UUID | None]:

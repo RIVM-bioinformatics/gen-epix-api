@@ -14,10 +14,9 @@ The tests handle the following scenarios:
 
 from __future__ import annotations
 
+from test.util.mock_compat import MagicMock, Mock, patch
 from types import SimpleNamespace
 from typing import Any
-from unittest import TestCase
-from unittest.mock import Mock
 from uuid import UUID, uuid4
 
 import pytest
@@ -31,10 +30,10 @@ from gen_epix.commondb.domain.model.organization import User as OrgUser
 from gen_epix.fastapp import EventTiming
 
 
-class BaseAbacTestCase(TestCase):
+class BaseAbacTestCase:
     """Base test case with common fixtures and utilities."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         """Set up test fixtures."""
         self.user_id = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
         self.org_id = UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
@@ -87,6 +86,8 @@ class BaseAbacTestCase(TestCase):
             domain=domain,
             register_handler=Mock(),
             register_policy=Mock(),
+            register_cache_invalidator=Mock(),
+            set_auto_invalidate_cache=Mock(),
             handle=Mock(),
             generate_id=Mock(return_value="svc-id"),
             generate_timestamp=Mock(return_value=0),
@@ -200,13 +201,13 @@ class TestRegisterPolicies(BaseAbacTestCase):
             and call[0][2] == EventTiming.DURING
         ]
 
-        self.assertEqual(len(case_abac_calls), len(BaseAbacService.CASE_ABAC_COMMANDS))
+        assert len(case_abac_calls) == len(BaseAbacService.CASE_ABAC_COMMANDS)
 
         for call in case_abac_calls:
             args = call[0]
-            self.assertIsNotNone(args[0])  # command_class
-            self.assertIsNotNone(args[1])  # policy instance
-            self.assertEqual(args[2], EventTiming.DURING)
+            assert args[0] is not None  # command_class
+            assert args[1] is not None  # policy instance
+            assert args[2] == EventTiming.DURING
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02", "TC-RBAC-05-02")
@@ -217,7 +218,7 @@ class TestGetCaseAbac(BaseAbacTestCase):
         """get_case_abac raises UnauthorizedAuthError when cmd.user is None."""
         cmd = SimpleNamespace(user=None)
 
-        with self.assertRaises(exc.UnauthorizedAuthError):
+        with pytest.raises(exc.UnauthorizedAuthError):
             _ = self.service.get_case_abac(cmd)
 
         self.repository.uow.assert_not_called()
@@ -226,7 +227,7 @@ class TestGetCaseAbac(BaseAbacTestCase):
         """get_case_abac raises UnauthorizedAuthError when cmd.user.id is None."""
         cmd = self.create_cmd_with_user(None)
 
-        with self.assertRaises(exc.UnauthorizedAuthError):
+        with pytest.raises(exc.UnauthorizedAuthError):
             _ = self.service.get_case_abac(cmd)
 
         self.repository.uow.assert_not_called()
@@ -239,9 +240,9 @@ class TestGetCaseAbac(BaseAbacTestCase):
         self.service._get_user_by_id_cached = Mock(return_value=user)
 
         abac = self.service.get_case_abac(cmd)
-        self.assertTrue(abac.is_full_access)
-        self.assertEqual(abac.case_type_access_abacs, {})
-        self.assertEqual(abac.case_type_share_abacs, {})
+        assert abac.is_full_access
+        assert abac.case_type_access_abacs == {}
+        assert abac.case_type_share_abacs == {}
         self.service._get_user_by_id_cached.assert_called_once_with(self.user_id)
         self.repository.uow.assert_not_called()
         self.service.app.handle.assert_not_called()  # type: ignore[attr-defined]
@@ -279,11 +280,11 @@ class TestGetCaseAbac(BaseAbacTestCase):
 
         abac = self.service.get_case_abac(cmd)
 
-        self.assertFalse(abac.is_full_access)
-        self.assertEqual(abac.case_type_access_abacs, {})
-        self.assertEqual(abac.case_type_share_abacs, {})
-        self.assertEqual(self.repository.crud.call_count, 4)
-        self.assertEqual(self.service.app.handle.call_count, 3)  # type: ignore[attr-defined]
+        assert not abac.is_full_access
+        assert abac.case_type_access_abacs == {}
+        assert abac.case_type_share_abacs == {}
+        assert self.repository.crud.call_count == 4
+        assert self.service.app.handle.call_count == 3  # type: ignore[attr-defined]
 
     def test_get_case_abac_with_policies_builds_intersection(self) -> None:
         """Intersection across org/user policies and ColSets is computed correctly."""
@@ -384,35 +385,25 @@ class TestGetCaseAbac(BaseAbacTestCase):
 
         abac = self.service.get_case_abac(cmd)
 
-        self.assertFalse(abac.is_full_access)
-        self.assertIn(self.case_type_id, abac.case_type_access_abacs)
+        assert not abac.is_full_access
+        assert self.case_type_id in abac.case_type_access_abacs
         access_for_ct = abac.case_type_access_abacs[self.case_type_id]
-        self.assertIn(self.data_collection_id, access_for_ct)
+        assert self.data_collection_id in access_for_ct
         access = access_for_ct[self.data_collection_id]
-        self.assertTrue(access.add_case)
-        self.assertFalse(access.remove_case)  # AND of True and False -> False
+        assert access.add_case
+        assert not access.remove_case  # AND of True and False -> False
         # read/write Col ids are intersection across Col map and set members AND across org/user dicts
-        self.assertSetEqual(
-            access.read_col_ids,
-            {self.col_id_1, self.col_id_2},
-        )
-        self.assertSetEqual(
-            access.write_col_ids,
-            {self.col_id_2, self.col_id_3},
-        )
-        self.assertTrue(access.read_case_set)
-        self.assertFalse(access.write_case_set)
+        assert access.read_col_ids == {self.col_id_1, self.col_id_2}
+        assert access.write_col_ids == {self.col_id_2, self.col_id_3}
+        assert access.read_case_set
+        assert not access.write_case_set
         # Share ABAC
-        self.assertIn(self.case_type_id, abac.case_type_share_abacs)
+        assert self.case_type_id in abac.case_type_share_abacs
         share_for_ct = abac.case_type_share_abacs[self.case_type_id]
-        self.assertIn(self.data_collection_id, share_for_ct)
+        assert self.data_collection_id in share_for_ct
         share = share_for_ct[self.data_collection_id]
-        self.assertSetEqual(
-            share.add_case_from_data_collection_ids, {self.from_data_collection_id}
-        )
-        self.assertSetEqual(
-            share.remove_case_from_data_collection_ids, set()
-        )  # AND -> empty
+        assert share.add_case_from_data_collection_ids == {self.from_data_collection_id}
+        assert share.remove_case_from_data_collection_ids == set()  # AND -> empty
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02", "TC-RBAC-05-02")
@@ -424,17 +415,21 @@ class TestTempUpdateUserOrganization(BaseAbacTestCase):
         """When target org is same and not new user, returns early without side effects."""
         user = self.UserModelStub(self.user_id, self.org_id, {"ORG_USER"})
         cmd = self.create_update_user_cmd(user, self.org_id, is_new_user=False)
-        # Attach fake cache_clear targets to assert no calls
-        self.service._get_user_by_id_cached = SimpleNamespace(cache_clear=Mock())  # type: ignore[assignment]
-        self.service._get_case_abac_cached = SimpleNamespace(cache_clear=Mock())  # type: ignore[assignment]
+        with (
+            patch.object(
+                AbacService, "_GET_USER_BY_ID_CACHE", new=MagicMock()
+            ) as user_cache,
+            patch.object(
+                AbacService, "_GET_CASE_ABAC_CACHE", new=MagicMock()
+            ) as case_abac_cache,
+        ):
+            retval = self.service.update_user_own_organization(cmd)
 
-        retval = self.service.update_user_own_organization(cmd)
-
-        self.assertIs(retval, user)
+        assert retval is user
         self.repository.uow.assert_not_called()
         self.service.app.handle.assert_not_called()  # type: ignore[attr-defined]
-        self.service._get_user_by_id_cached.cache_clear.assert_not_called()  # type: ignore[attr-defined]
-        self.service._get_case_abac_cached.cache_clear.assert_not_called()  # type: ignore[attr-defined]
+        user_cache.clear.assert_not_called()
+        case_abac_cache.clear.assert_not_called()
 
     def test_happy_path_transfers_policies_and_updates_user(self) -> None:
         """Transfers policies to new org, deletes old user policies, creates new, updates user, and clears caches."""
@@ -498,16 +493,26 @@ class TestTempUpdateUserOrganization(BaseAbacTestCase):
             ),
         ]
 
-        self.service._get_user_by_id_cached = SimpleNamespace(cache_clear=Mock())  # type: ignore[assignment]
-        self.service._get_case_abac_cached = SimpleNamespace(cache_clear=Mock())  # type: ignore[assignment]
+        with (
+            patch.object(
+                AbacService._get_user_by_id_cached, "cache_clear"
+            ) as user_cache_clear,
+            patch.object(
+                AbacService._get_case_abac_cached, "cache_clear"
+            ) as case_abac_cache_clear,
+            patch.object(
+                AbacService._get_ref_data_access_cached, "cache_clear"
+            ) as ref_data_access_cache_clear,
+        ):
+            updated_user = self.service.update_user_own_organization(cmd)
+            self.service._invalidate_cache(cmd)
 
-        updated_user = self.service.update_user_own_organization(cmd)
-
-        self.assertEqual(updated_user.organization_id, self.new_org_id)
-        self.assertEqual(self.service.app.handle.call_count, 9)  # type: ignore[attr-defined]
+        assert updated_user.organization_id == self.new_org_id
+        assert self.service.app.handle.call_count == 9  # type: ignore[attr-defined]
         delete_uap_call = self.service.app.handle.call_args_list[4][0][0]  # type: ignore[attr-defined]
         delete_usp_call = self.service.app.handle.call_args_list[5][0][0]  # type: ignore[attr-defined]
-        self.assertIsNotNone(delete_uap_call)
-        self.assertIsNotNone(delete_usp_call)
-        self.service._get_user_by_id_cached.cache_clear.assert_called_once()  # type: ignore[attr-defined]
-        self.service._get_case_abac_cached.cache_clear.assert_called_once()  # type: ignore[attr-defined]
+        assert delete_uap_call is not None
+        assert delete_usp_call is not None
+        user_cache_clear.assert_called_once()
+        case_abac_cache_clear.assert_called_once()
+        ref_data_access_cache_clear.assert_called_once()

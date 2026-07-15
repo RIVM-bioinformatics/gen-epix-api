@@ -317,7 +317,7 @@ async def token_endpoint(request: Request) -> JSONResponse:
 
     # Create access token
     access_token_payload = {
-        "iss": f"{request.url.scheme}://{request.url.netloc}",
+        "iss": _ISSUER or f"{request.url.scheme}://{request.url.netloc}",
         "sub": client.client_id,
         "aud": client.audience or client.client_id,  # Use client's audience if set
         "iat": int(now.timestamp()),
