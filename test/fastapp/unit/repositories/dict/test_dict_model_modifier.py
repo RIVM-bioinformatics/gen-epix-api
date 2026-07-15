@@ -8,7 +8,6 @@ Verifies that:
 """
 
 from typing import Any
-from unittest import TestCase
 from uuid import uuid4
 
 import pytest
@@ -32,7 +31,7 @@ class _ConcreteModifier(BaseDictModelModifier):
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-03")
-class TestBaseDictModelModifier(TestCase):
+class TestBaseDictModelModifier:
     def test_cannot_instantiate_abstract_class(self) -> None:
         # 1. Input / 2. Mocks (none)
 

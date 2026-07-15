@@ -1,7 +1,7 @@
 import gzip
 import hashlib
+from test.util.mock_compat import Mock, patch
 from typing import Any
-from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
 
 import pytest

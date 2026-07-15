@@ -6,7 +6,7 @@ and layout conventions of the reference test file in commondb.
 """
 
 from test.casedb.unit.services.case.base import BaseCrudTestCase
-from unittest.mock import Mock, patch
+from test.util.mock_compat import Mock, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -75,7 +75,7 @@ class TestGetCaseAbacFromCommand(BaseCrudTestCase):
             retval: object | None = crud_common.get_case_abac_from_command(cmd)
 
             # 4. Verify
-            self.assertIs(retval, expected)
+            assert retval is expected
             fun.assert_called_once_with(cmd)
 
     def test_returns_none(self) -> None:
@@ -91,7 +91,7 @@ class TestGetCaseAbacFromCommand(BaseCrudTestCase):
             retval: object | None = crud_common.get_case_abac_from_command(cmd)
 
             # 4. Verify
-            self.assertIsNone(retval)
+            assert retval is None
             fun.assert_called_once_with(cmd)
 
 
@@ -99,8 +99,8 @@ class TestGetCaseAbacFromCommand(BaseCrudTestCase):
 class TestRoleChecks(BaseCrudTestCase):
     """Tests for role-based checks."""
 
-    def setUp(self) -> None:
-        super().setUp()
+    def setup_method(self) -> None:
+        super().setup_method()
         # Provide role_set_map with string values to match user roles for intersection logic
         self.service.role_set_map = {
             CommonRoleSet.GE_REFDATA_ADMIN: {
@@ -116,39 +116,39 @@ class TestRoleChecks(BaseCrudTestCase):
         user: Mock = Mock()
         user.roles = {"COMMONDB_REFDATA_ADMIN"}
 
-        # 2. Mocks: already set in setUp
+        # 2. Mocks: already set in setup_method
 
         # 3. Execute
         retval: bool = crud_common.is_refdata_admin_or_above(self.service, user)
 
         # 4. Verify
-        self.assertTrue(retval)
+        assert retval
 
     def test_is_refdata_admin_or_above_false(self) -> None:
         # 1. Input
         user: Mock = Mock()
         user.roles = {"COMMONDB_ORG_USER"}
 
-        # 2. Mocks: already set in setUp
+        # 2. Mocks: already set in setup_method
 
         # 3. Execute
         retval: bool = crud_common.is_refdata_admin_or_above(self.service, user)
 
         # 4. Verify
-        self.assertFalse(retval)
+        assert not retval
 
     def test_is_app_admin_or_above_true(self) -> None:
         # 1. Input
         user: Mock = Mock()
         user.roles = {"COMMONDB_APP_ADMIN"}
 
-        # 2. Mocks: already set in setUp
+        # 2. Mocks: already set in setup_method
 
         # 3. Execute
         retval: bool = crud_common.is_app_admin_or_above(self.service, user)
 
         # 4. Verify
-        self.assertTrue(retval)
+        assert retval
 
     def test_is_app_admin_or_above_false(self) -> None:
         # 1. Input
@@ -159,7 +159,7 @@ class TestRoleChecks(BaseCrudTestCase):
         retval: bool = crud_common.is_app_admin_or_above(self.service, user)
 
         # 3. Verify
-        self.assertFalse(retval)
+        assert not retval
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")
@@ -193,8 +193,8 @@ class TestCommandCategoryChecks(BaseCrudTestCase):
             new={TestCommandCategoryChecks.NoAbacCmd},
         ):
             # 3. Execute + Verify
-            self.assertTrue(crud_common.is_no_abac_command(no_abac_cmd))  # type: ignore[arg-type]
-            self.assertFalse(crud_common.is_no_abac_command(other_cmd))  # type: ignore[arg-type]
+            assert crud_common.is_no_abac_command(no_abac_cmd)  # type: ignore[arg-type]
+            assert not crud_common.is_no_abac_command(other_cmd)  # type: ignore[arg-type]
 
     def test_is_metadata_command_true_false(self) -> None:
         # 1. Input
@@ -211,8 +211,8 @@ class TestCommandCategoryChecks(BaseCrudTestCase):
             new={TestCommandCategoryChecks.MetaCmd},
         ):
             # 3. Execute + Verify
-            self.assertTrue(crud_common.is_metadata_command(meta_cmd))  # type: ignore[arg-type]
-            self.assertFalse(crud_common.is_metadata_command(other_cmd))  # type: ignore[arg-type]
+            assert crud_common.is_metadata_command(meta_cmd)  # type: ignore[arg-type]
+            assert not crud_common.is_metadata_command(other_cmd)  # type: ignore[arg-type]
 
     def test_is_data_command_true_false(self) -> None:
         # 1. Input
@@ -229,16 +229,16 @@ class TestCommandCategoryChecks(BaseCrudTestCase):
             new={TestCommandCategoryChecks.DataCmd},
         ):
             # 3. Execute + Verify
-            self.assertTrue(crud_common.is_data_command(data_cmd))  # type: ignore[arg-type]
-            self.assertFalse(crud_common.is_data_command(other_cmd))  # type: ignore[arg-type]
+            assert crud_common.is_data_command(data_cmd)  # type: ignore[arg-type]
+            assert not crud_common.is_data_command(other_cmd)  # type: ignore[arg-type]
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestCrudWithAccessFilter(BaseCrudTestCase):
     """Tests for crud_with_access_filter including cascade delete behavior."""
 
-    def setUp(self) -> None:
-        super().setUp()
+    def setup_method(self) -> None:
+        super().setup_method()
         self.service._compose_id_filter = Mock(
             side_effect=lambda key_and_ids: EqualsStringFilter(
                 key=key_and_ids[0][0], value=""
@@ -277,12 +277,12 @@ class TestCrudWithAccessFilter(BaseCrudTestCase):
         )
 
         # 4. Verify
-        self.assertEqual(retval, ["ok"])
-        self.assertIs(cmd.access_filter, orig_filter)
-        self.assertIsInstance(captured["during"], CompositeFilter)
+        assert retval == ["ok"]
+        assert cmd.access_filter is orig_filter
+        assert isinstance(captured["during"], CompositeFilter)
         composite: CompositeFilter = captured["during"]  # type: ignore[assignment]
-        self.assertEqual(composite.operator, LogicalOperator.AND)
-        self.assertEqual(len(composite.filters), 2)
+        assert composite.operator == LogicalOperator.AND
+        assert len(composite.filters) == 2
         self.service.crud.assert_called_once()
         self.service.repository.crud.assert_not_called()
 
@@ -315,9 +315,9 @@ class TestCrudWithAccessFilter(BaseCrudTestCase):
         )
 
         # 4. Verify
-        self.assertEqual(retval, ["ok"])
-        self.assertIsNone(cmd.access_filter)
-        self.assertIs(captured["during"], extra_filter)
+        assert retval == ["ok"]
+        assert cmd.access_filter is None
+        assert captured["during"] is extra_filter
         self.service.repository.crud.assert_not_called()
 
     def test_no_access_filter_provided_keeps_original(self) -> None:
@@ -345,9 +345,9 @@ class TestCrudWithAccessFilter(BaseCrudTestCase):
         )
 
         # 4. Verify
-        self.assertEqual(retval, ["ok"])  # type: ignore[arg-type]
-        self.assertIs(cmd.access_filter, orig_filter)
-        self.assertIs(captured["during"], orig_filter)
+        assert retval == ["ok"]  # type: ignore[arg-type]
+        assert cmd.access_filter is orig_filter
+        assert captured["during"] is orig_filter
         self.service.repository.crud.assert_not_called()
 
     def test_cascade_not_invoked_when_not_delete(self) -> None:
@@ -379,10 +379,8 @@ class TestCrudWithAccessFilter(BaseCrudTestCase):
         )
 
         # 3. Verify
-        self.assertIn(cmd.MODEL_CLASS, self.service.CASCADE_DELETE_MODEL_CLASSES)
-        self.assertEqual(
-            self.service.CASCADE_DELETE_MODEL_CLASSES[cmd.MODEL_CLASS], tuple()
-        )
+        assert cmd.MODEL_CLASS in self.service.CASCADE_DELETE_MODEL_CLASSES
+        assert self.service.CASCADE_DELETE_MODEL_CLASSES[cmd.MODEL_CLASS] == tuple()
         self.service.repository.crud.assert_not_called()
 
     def test_cascade_with_non_matching_links_does_nothing(self) -> None:
@@ -440,11 +438,11 @@ class TestCrudWithAccessFilter(BaseCrudTestCase):
         # 3. Verify
         self.service.repository.crud.assert_called_once()
         args = self.service.repository.crud.call_args[0]
-        self.assertEqual(args[0], self.uow)
-        self.assertEqual(args[1], cmd.user.id)
-        self.assertIs(args[2], link_model_class)
-        self.assertEqual(args[3], CrudOperation.DELETE_ALL)
-        self.assertIsNone(self.service.repository.crud.call_args.kwargs.get("filter"))
+        assert args[0] == self.uow
+        assert args[1] == cmd.user.id
+        assert args[2] is link_model_class
+        assert args[3] == CrudOperation.DELETE_ALL
+        assert self.service.repository.crud.call_args.kwargs.get("filter") is None
 
     def test_cascade_with_matching_link_and_obj_ids_uses_compose_filter(self) -> None:
         # 1. Input
@@ -473,8 +471,8 @@ class TestCrudWithAccessFilter(BaseCrudTestCase):
         # 3. Verify
         self.service.repository.crud.assert_called_once()
         kwargs = self.service.repository.crud.call_args.kwargs
-        self.assertIn("filter", kwargs)
-        self.assertIsInstance(kwargs["filter"], Filter)
+        assert "filter" in kwargs
+        assert isinstance(kwargs["filter"], Filter)
 
     def test_cascade_with_base_class_mapping_populates_subclass(self) -> None:
         # 1. Input
@@ -506,5 +504,5 @@ class TestCrudWithAccessFilter(BaseCrudTestCase):
         )
 
         # 3. Verify
-        self.assertIn(subclass_model_class, self.service.CASCADE_DELETE_MODEL_CLASSES)
+        assert subclass_model_class in self.service.CASCADE_DELETE_MODEL_CLASSES
         self.service.repository.crud.assert_called_once()

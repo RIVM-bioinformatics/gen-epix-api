@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
+from test.util.mock_compat import MagicMock, Mock, patch
 from types import SimpleNamespace
-from unittest.mock import MagicMock, Mock, patch
 from uuid import UUID
 
 from gen_epix.fastapp.enum import AuthProtocol

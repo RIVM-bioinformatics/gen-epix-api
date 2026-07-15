@@ -6,8 +6,8 @@ ensuring strict isolation and full coverage of the public entry point.
 """
 
 from test.casedb.unit.services.case.base import BaseCrudTestCase
+from test.util.mock_compat import Mock, patch
 from typing import Any, List
-from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -47,8 +47,8 @@ class RefDimLike:
 
 
 class BaseDimTestCase(BaseCrudTestCase):
-    def setUp(self) -> None:
-        super().setUp()
+    def setup_method(self) -> None:
+        super().setup_method()
         self.service._compose_id_filter = Mock(side_effect=lambda *pairs: (pairs))
 
         # IDs
@@ -60,11 +60,11 @@ class BaseDimTestCase(BaseCrudTestCase):
         self.other_ctd_id = UUID("550e8400-e29b-41d4-a716-446655440005")
 
     # Assertions
-    def assertRepoCalled(self) -> None:
-        self.assertTrue(self.service.repository.crud.called)
+    def expectRepoCalled(self) -> None:
+        assert self.service.repository.crud.called
 
-    def assertList(self, retval: Any) -> None:
-        self.assertIsInstance(retval, list)
+    def expectList(self, retval: Any) -> None:
+        assert isinstance(retval, list)
 
 
 # Admin path tests
@@ -117,9 +117,9 @@ class TestAdminCreate(BaseDimTestCase):
 
             # 4. Verify
             cascade_delete.assert_called_once()
-            self.assertRepoCalled()
-            self.assertEqual(ctd.occurrence, 1)
-            self.assertEqual(retval, expected_retval)
+            self.expectRepoCalled()
+            assert ctd.occurrence == 1
+            assert retval == expected_retval
 
     def test_create_sets_occurrence_max_plus_one_and_unsets_other_case_date(
         self,
@@ -183,9 +183,9 @@ class TestAdminCreate(BaseDimTestCase):
             retval = case_service_crud_dim(self.service, cmd)
 
             # 4. Verify
-            self.assertEqual(new_ctd.occurrence, 3)
+            assert new_ctd.occurrence == 3
             # Ensure other case_date_dim is unset and updated
-            self.assertFalse(other_for_same_case_type.is_case_date_dim)
+            assert not other_for_same_case_type.is_case_date_dim
             self.service.repository.crud.assert_any_call(
                 self.uow,
                 self.user_id,
@@ -193,7 +193,7 @@ class TestAdminCreate(BaseDimTestCase):
                 CrudOperation.UPDATE_ONE,
                 objs=other_for_same_case_type,
             )
-            self.assertIsInstance(retval, list)
+            assert isinstance(retval, list)
 
     def test_create_case_date_with_non_time_dim_raises(self) -> None:
         # 1. Input
@@ -362,7 +362,7 @@ class TestAdminUpdate(BaseDimTestCase):
             retval = case_service_crud_dim(self.service, cmd)
 
             # 4. Verify
-            self.assertFalse(other_time_true.is_case_date_dim)
+            assert not other_time_true.is_case_date_dim
             self.service.repository.crud.assert_any_call(
                 self.uow,
                 self.user_id,
@@ -370,7 +370,7 @@ class TestAdminUpdate(BaseDimTestCase):
                 CrudOperation.UPDATE_ONE,
                 objs=other_time_true,
             )
-            self.assertIsInstance(retval, list)
+            assert isinstance(retval, list)
 
 
 # ABAC path tests
@@ -400,7 +400,7 @@ class TestAbacReadAndWrite(BaseDimTestCase):
             retval = case_service_crud_dim(self.service, cmd)
 
             # 4. Verify
-            self.assertEqual(retval, expected)
+            assert retval == expected
             self.service.crud.assert_called_once_with(cmd)
 
     def test_abac_non_read_operation_raises_assertion(self) -> None:
@@ -459,14 +459,14 @@ class TestAbacReadAndWrite(BaseDimTestCase):
             retval = case_service_crud_dim(self.service, cmd)
 
             # 4. Verify
-            self.assertEqual(retval, expected)
+            assert retval == expected
             ref_data_access.get_dim_filter.assert_called_once_with("id")
             caf.assert_called_once()
             called_args = caf.call_args[0]
-            self.assertIs(called_args[0], self.service)
-            self.assertIs(called_args[1], self.uow)
-            self.assertIs(called_args[2], cmd)
-            self.assertIs(called_args[3], access_filter)
+            assert called_args[0] is self.service
+            assert called_args[1] is self.uow
+            assert called_args[2] is cmd
+            assert called_args[3] is access_filter
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")
@@ -524,7 +524,7 @@ class TestSetDimOccurrence(BaseDimTestCase):
         _set_dim_occurrence(new_dim, [], [new_dim])
 
         # 3. Verify
-        self.assertEqual(new_dim.occurrence, 1)
+        assert new_dim.occurrence == 1
 
     def test_one_existing_dim_assigns_occurrence_2(self) -> None:
         """When one persisted dimension exists, next dim gets occurrence 2."""
@@ -547,7 +547,7 @@ class TestSetDimOccurrence(BaseDimTestCase):
         _set_dim_occurrence(new_dim, [existing_dim], [new_dim])
 
         # 3. Verify
-        self.assertEqual(new_dim.occurrence, 2)
+        assert new_dim.occurrence == 2
 
     def test_multiple_existing_dims_assigns_max_plus_one(self) -> None:
         """When multiple persisted dims exist, next dim gets max + 1."""
@@ -576,7 +576,7 @@ class TestSetDimOccurrence(BaseDimTestCase):
         _set_dim_occurrence(new_dim, [existing_dim1, existing_dim2], [new_dim])
 
         # 3. Verify
-        self.assertEqual(new_dim.occurrence, 3)
+        assert new_dim.occurrence == 3
 
     def test_existing_dims_with_gaps_assigns_max_plus_one(self) -> None:
         """
@@ -612,7 +612,7 @@ class TestSetDimOccurrence(BaseDimTestCase):
         _set_dim_occurrence(new_dim, [existing_dim1, existing_dim2], [new_dim])
 
         # 3. Verify
-        self.assertEqual(new_dim.occurrence, 4)
+        assert new_dim.occurrence == 4
 
     def test_two_new_dims_same_batch_get_sequential_occurrences(self) -> None:
         """
@@ -639,8 +639,8 @@ class TestSetDimOccurrence(BaseDimTestCase):
         _set_dim_occurrence(new_dim2, [], batch)
 
         # 3. Verify
-        self.assertEqual(new_dim1.occurrence, 1)
-        self.assertEqual(new_dim2.occurrence, 2)
+        assert new_dim1.occurrence == 1
+        assert new_dim2.occurrence == 2
 
     def test_two_new_dims_deterministic_regardless_of_initial_values(self) -> None:
         """
@@ -690,10 +690,10 @@ class TestSetDimOccurrence(BaseDimTestCase):
         _set_dim_occurrence(new_dim2b, [], batch_b)
 
         # 3. Verify - both scenarios yield identical results
-        self.assertEqual(new_dim1a.occurrence, new_dim1b.occurrence)
-        self.assertEqual(new_dim2a.occurrence, new_dim2b.occurrence)
-        self.assertEqual(new_dim1a.occurrence, 1)
-        self.assertEqual(new_dim2a.occurrence, 2)
+        assert new_dim1a.occurrence == new_dim1b.occurrence
+        assert new_dim2a.occurrence == new_dim2b.occurrence
+        assert new_dim1a.occurrence == 1
+        assert new_dim2a.occurrence == 2
 
     def test_two_new_dims_deterministic_regardless_of_processing_order(
         self,
@@ -747,11 +747,11 @@ class TestSetDimOccurrence(BaseDimTestCase):
         _set_dim_occurrence(new_dim1b, [], batch_b)
 
         # 3. Verify - both scenarios yield identical results per dim
-        self.assertEqual(new_dim1a.occurrence, new_dim1b.occurrence)
-        self.assertEqual(new_dim2a.occurrence, new_dim2b.occurrence)
+        assert new_dim1a.occurrence == new_dim1b.occurrence
+        assert new_dim2a.occurrence == new_dim2b.occurrence
         # By ID sort: dim1 (lower ID) is first → occurrence 1
-        self.assertEqual(new_dim1a.occurrence, 1)
-        self.assertEqual(new_dim2a.occurrence, 2)
+        assert new_dim1a.occurrence == 1
+        assert new_dim2a.occurrence == 2
 
     def test_three_new_dims_same_batch_get_sequential_occurrences(self) -> None:
         """Three new dims in same batch get sequential occurrences 1, 2, 3."""
@@ -781,9 +781,9 @@ class TestSetDimOccurrence(BaseDimTestCase):
         _set_dim_occurrence(new_dim3, [], batch)
 
         # 3. Verify
-        self.assertEqual(new_dim1.occurrence, 1)
-        self.assertEqual(new_dim2.occurrence, 2)
-        self.assertEqual(new_dim3.occurrence, 3)
+        assert new_dim1.occurrence == 1
+        assert new_dim2.occurrence == 2
+        assert new_dim3.occurrence == 3
 
     def test_new_dims_with_existing_dims_get_correct_sequence(self) -> None:
         """
@@ -822,8 +822,8 @@ class TestSetDimOccurrence(BaseDimTestCase):
         _set_dim_occurrence(new_dim2, [existing_dim1, existing_dim2], batch)
 
         # 3. Verify
-        self.assertEqual(new_dim1.occurrence, 3)
-        self.assertEqual(new_dim2.occurrence, 4)
+        assert new_dim1.occurrence == 3
+        assert new_dim2.occurrence == 4
 
     def test_different_case_types_not_included_in_calculation(self) -> None:
         """
@@ -854,7 +854,7 @@ class TestSetDimOccurrence(BaseDimTestCase):
         _set_dim_occurrence(new_dim, [], batch)
 
         # 3. Verify - occurrence should be 1 (batch dim is filtered by case_type)
-        self.assertEqual(new_dim.occurrence, 1)
+        assert new_dim.occurrence == 1
 
     def test_different_ref_dims_not_included_in_calculation(self) -> None:
         """
@@ -885,7 +885,7 @@ class TestSetDimOccurrence(BaseDimTestCase):
         _set_dim_occurrence(new_dim, [], batch)
 
         # 3. Verify - occurrence should be 1 (batch dim is filtered by ref_dim)
-        self.assertEqual(new_dim.occurrence, 1)
+        assert new_dim.occurrence == 1
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")
@@ -895,7 +895,7 @@ class TestGroupDimsByKey(BaseDimTestCase):
     def test_empty_list_returns_empty_dict(self) -> None:
         from gen_epix.casedb.services.case.crud_dim import _group_dims_by_key
 
-        self.assertEqual(_group_dims_by_key([]), {})
+        assert _group_dims_by_key([]) == {}
 
     def test_single_dim_produces_one_group(self) -> None:
         dim = DimLike(
@@ -904,9 +904,9 @@ class TestGroupDimsByKey(BaseDimTestCase):
         from gen_epix.casedb.services.case.crud_dim import _group_dims_by_key
 
         groups = _group_dims_by_key([dim])
-        self.assertEqual(len(groups), 1)
-        self.assertIn((self.case_type_id, self.ref_dim_id), groups)
-        self.assertIs(groups[(self.case_type_id, self.ref_dim_id)][0], dim)
+        assert len(groups) == 1
+        assert (self.case_type_id, self.ref_dim_id) in groups
+        assert groups[(self.case_type_id, self.ref_dim_id)][0] is dim
 
     def test_same_key_dims_grouped_together(self) -> None:
         dim1 = DimLike(
@@ -918,10 +918,10 @@ class TestGroupDimsByKey(BaseDimTestCase):
         from gen_epix.casedb.services.case.crud_dim import _group_dims_by_key
 
         groups = _group_dims_by_key([dim1, dim2])
-        self.assertEqual(len(groups), 1)
+        assert len(groups) == 1
         group = groups[(self.case_type_id, self.ref_dim_id)]
-        self.assertIn(dim1, group)
-        self.assertIn(dim2, group)
+        assert dim1 in group
+        assert dim2 in group
 
     def test_different_keys_produce_separate_groups(self) -> None:
         other_ref = UUID("550e8400-e29b-41d4-a716-446655440099")
@@ -934,9 +934,9 @@ class TestGroupDimsByKey(BaseDimTestCase):
         from gen_epix.casedb.services.case.crud_dim import _group_dims_by_key
 
         groups = _group_dims_by_key([dim_a, dim_b])
-        self.assertEqual(len(groups), 2)
-        self.assertEqual(groups[(self.case_type_id, self.ref_dim_id)], [dim_a])
-        self.assertEqual(groups[(self.case_type_id, other_ref)], [dim_b])
+        assert len(groups) == 2
+        assert groups[(self.case_type_id, self.ref_dim_id)] == [dim_a]
+        assert groups[(self.case_type_id, other_ref)] == [dim_b]
 
     def test_insertion_order_preserved_within_group(self) -> None:
         dims = [
@@ -949,7 +949,7 @@ class TestGroupDimsByKey(BaseDimTestCase):
 
         groups = _group_dims_by_key(dims)
         group = groups[(self.case_type_id, self.ref_dim_id)]
-        self.assertEqual(group, dims)
+        assert group == dims
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")
@@ -986,7 +986,7 @@ class TestCrudCreateDimBatch(BaseDimTestCase):
         _crud_create_dim(dims, cmd, self.service, self.uow)
 
         occurrences = sorted(d.occurrence for d in dims)
-        self.assertEqual(occurrences, list(range(1, n + 1)))
+        assert occurrences == list(range(1, n + 1))
 
     def test_large_batch_matches_pre_refactor_set_dim_occurrence(self) -> None:
         """
@@ -1024,7 +1024,7 @@ class TestCrudCreateDimBatch(BaseDimTestCase):
         # Both must produce identical occurrences for each dim by id
         new_by_id = {d.id: d.occurrence for d in dims_new}
         old_by_id = {d.id: d.occurrence for d in dims_old}
-        self.assertEqual(new_by_id, old_by_id)
+        assert new_by_id == old_by_id
 
     def test_two_groups_independent_occurrence_sequences(self) -> None:
         """
@@ -1052,5 +1052,5 @@ class TestCrudCreateDimBatch(BaseDimTestCase):
 
         occs_a = sorted(d.occurrence for d in group_a)
         occs_b = sorted(d.occurrence for d in group_b)
-        self.assertEqual(occs_a, [1, 2, 3])
-        self.assertEqual(occs_b, [1, 2, 3])
+        assert occs_a == [1, 2, 3]
+        assert occs_b == [1, 2, 3]

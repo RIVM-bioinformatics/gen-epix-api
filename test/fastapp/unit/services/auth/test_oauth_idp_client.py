@@ -2,9 +2,8 @@ import asyncio
 import json
 import logging
 import time
+from test.util.mock_compat import MagicMock, Mock, patch
 from typing import Any
-from unittest import TestCase
-from unittest.mock import MagicMock, Mock, patch
 from uuid import UUID
 
 import jwt
@@ -19,10 +18,10 @@ from gen_epix.fastapp.services.auth.token_introspection_manager import (
 )
 
 
-class BaseOauthIdpClientTestCase(TestCase):
+class BaseOauthIdpClientTestCase:
     """Base test case with common fixtures and utilities for OauthIdpClient."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         # Logger
         self.logger: Mock = Mock(spec=logging.Logger)
         self.logger.level = logging.DEBUG

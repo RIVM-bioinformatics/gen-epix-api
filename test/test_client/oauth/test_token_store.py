@@ -15,8 +15,8 @@ import os
 import sys
 from datetime import datetime, timedelta, timezone
 from test.test_client.oauth.token_store import Token, TokenStore
+from test.util.mock_compat import patch
 from typing import Any
-from unittest.mock import patch
 
 import pytest
 

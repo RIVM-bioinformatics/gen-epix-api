@@ -1,5 +1,4 @@
 from enum import Enum
-from unittest import TestCase
 from uuid import UUID
 
 import pytest
@@ -124,8 +123,8 @@ class CrudY(CrudCommand):
     PERMISSION_TYPE_SET = PermissionTypeSet.CRUD
 
 
-class BaseDomainTestCase(TestCase):
-    def setUp(self) -> None:
+class BaseDomainTestCase:
+    def setup_method(self) -> None:
         # Domain under test
         self.domain = Domain(name="TEST", description="desc")
 
@@ -169,7 +168,7 @@ class BaseDomainTestCase(TestCase):
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-02")
-class TestStaticUtilities(TestCase):
+class TestStaticUtilities:
     def test_get_service_name_variants(self) -> None:
         # Create input
         # Set up mocks
@@ -177,9 +176,9 @@ class TestStaticUtilities(TestCase):
         name_from_str: str = Domain.get_service_name("SVC")
         name_from_enum: str = Domain.get_service_name(ServiceType.SVC1)
         # Verify
-        self.assertEqual(name_from_str, "SVC")
-        self.assertEqual(name_from_enum, "SVC1")
-        with self.assertRaises(exc.DomainException):
+        assert name_from_str == "SVC"
+        assert name_from_enum == "SVC1"
+        with pytest.raises(exc.DomainException):
             Domain.get_service_name(None)
 
     def test_get_command_and_model_name_and_permissions(self) -> None:
@@ -198,11 +197,9 @@ class TestStaticUtilities(TestCase):
         model_name: str = Domain.get_model_name(XModel)
         permissions = Domain.get_command_permissions(XCmd)
         # Verify
-        self.assertEqual(cmd_name, "XCmd")
-        self.assertEqual(model_name, "XModel")
-        self.assertTrue(
-            any(x.permission_type == PermissionType.EXECUTE for x in permissions)
-        )
+        assert cmd_name == "XCmd"
+        assert model_name == "XModel"
+        assert any(x.permission_type == PermissionType.EXECUTE for x in permissions)
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-02")
@@ -212,21 +209,21 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
         # Set up mocks
         # Execute
         # Verify
-        self.assertEqual(self.domain.name, "TEST")
-        self.assertEqual(self.domain.description, "desc")
-        self.assertIn(self.svc1, self.domain.service_types)
-        self.assertIn(self.svc2, self.domain.service_types)
+        assert self.domain.name == "TEST"
+        assert self.domain.description == "desc"
+        assert self.svc1 in self.domain.service_types
+        assert self.svc2 in self.domain.service_types
         # service_names mapping not populated by Domain; ensure property works
-        self.assertIsInstance(self.domain.service_names, frozenset)
-        self.assertEqual(len(self.domain.entities), 2)
-        self.assertEqual(len(self.domain.models), 2)
-        self.assertIn(CrudA, self.domain.crud_commands)
-        self.assertIn(CrudB, self.domain.crud_commands)
-        self.assertIn(DummyNonCrud, self.domain.commands)
-        self.assertIn("CrudA", self.domain.command_names)
-        self.assertIn("CrudB", self.domain.command_names)
-        self.assertIn("DummyNonCrud", self.domain.command_names)
-        self.assertGreaterEqual(len(self.domain.permissions), 1)
+        assert isinstance(self.domain.service_names, frozenset)
+        assert len(self.domain.entities) == 2
+        assert len(self.domain.models) == 2
+        assert CrudA in self.domain.crud_commands
+        assert CrudB in self.domain.crud_commands
+        assert DummyNonCrud in self.domain.commands
+        assert "CrudA" in self.domain.command_names
+        assert "CrudB" in self.domain.command_names
+        assert "DummyNonCrud" in self.domain.command_names
+        assert len(self.domain.permissions) >= 1
 
     def test_get_commands_include_crud_toggle(self) -> None:
         # Create input
@@ -237,16 +234,16 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
         no_crud_no_frozen = self.domain.get_commands(include_crud=False, frozen=False)
         all_cmds_no_frozen = self.domain.get_commands(include_crud=True, frozen=False)
         # Verify
-        self.assertIn(DummyNonCrud, no_crud)
-        self.assertNotIn(CrudA, no_crud)
-        self.assertNotIn(CrudB, no_crud)
-        self.assertIn(CrudA, all_cmds)
-        self.assertIn(CrudB, all_cmds)
-        self.assertIn(DummyNonCrud, all_cmds)
-        self.assertIsInstance(no_crud, frozenset)
-        self.assertIsInstance(all_cmds, frozenset)
-        self.assertIsInstance(no_crud_no_frozen, set)
-        self.assertIsInstance(all_cmds_no_frozen, set)
+        assert DummyNonCrud in no_crud
+        assert CrudA not in no_crud
+        assert CrudB not in no_crud
+        assert CrudA in all_cmds
+        assert CrudB in all_cmds
+        assert DummyNonCrud in all_cmds
+        assert isinstance(no_crud, frozenset)
+        assert isinstance(all_cmds, frozenset)
+        assert isinstance(no_crud_no_frozen, set)
+        assert isinstance(all_cmds_no_frozen, set)
 
     def test_service_type_entity_and_model_mappings(self) -> None:
         # Create input
@@ -265,14 +262,14 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
         models_svc1 = self.domain.get_models_for_service_type(self.svc1, frozen=True)
         models_svc2 = self.domain.get_models_for_service_type(self.svc2, frozen=False)
         # Verify
-        self.assertEqual(svc_for_ent_a, self.svc1)
-        self.assertEqual(svc_for_ent_b, self.svc2)
-        self.assertIn(self.entity_a, ents_svc1)  # type: ignore[arg-type]
-        self.assertIn(self.entity_b, ents_svc2)  # type: ignore[arg-type]
-        self.assertEqual(svc_for_model_a, self.svc1)
-        self.assertEqual(svc_for_model_b, self.svc2)
-        self.assertIn(ModelA, models_svc1)
-        self.assertIn(ModelB, models_svc2)
+        assert svc_for_ent_a == self.svc1
+        assert svc_for_ent_b == self.svc2
+        assert self.entity_a in ents_svc1  # type: ignore[arg-type]
+        assert self.entity_b in ents_svc2  # type: ignore[arg-type]
+        assert svc_for_model_a == self.svc1
+        assert svc_for_model_b == self.svc2
+        assert ModelA in models_svc1
+        assert ModelB in models_svc2
 
     def test_command_and_permission_mappings(self) -> None:
         # Create input
@@ -318,31 +315,31 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
         )
 
         # Verify
-        self.assertEqual(svc_for_cmd_crud_a, self.svc1)
-        self.assertEqual(svc_for_cmd_non_crud, self.svc1)
-        self.assertIn(CrudA, cmds_svc1)
-        self.assertIn(DummyNonCrud, cmds_svc1)
-        self.assertIn(CrudB, cmds_svc2)
-        self.assertIn(CrudA, crud_cmds_svc1)
-        self.assertIn(CrudB, crud_cmds_svc2)
-        self.assertIs(cmd_by_name, CrudA)
-        self.assertTrue(perms_svc1.issubset(perms_domain))
-        self.assertTrue(set(perms_for_model_a).issubset(perms_svc1))
-        self.assertTrue(
-            any(x.permission_type == PermissionType.READ for x in perms_for_cmd_a_all)
+        assert svc_for_cmd_crud_a == self.svc1
+        assert svc_for_cmd_non_crud == self.svc1
+        assert CrudA in cmds_svc1
+        assert DummyNonCrud in cmds_svc1
+        assert CrudB in cmds_svc2
+        assert CrudA in crud_cmds_svc1
+        assert CrudB in crud_cmds_svc2
+        assert cmd_by_name is CrudA
+        assert perms_svc1.issubset(perms_domain)
+        assert set(perms_for_model_a).issubset(perms_svc1)
+        assert any(
+            x.permission_type == PermissionType.READ for x in perms_for_cmd_a_all
         )
-        self.assertEqual(
-            {x.permission_type for x in perms_for_cmd_a_read}, {PermissionType.READ}
-        )
+        assert {x.permission_type for x in perms_for_cmd_a_read} == {
+            PermissionType.READ
+        }
         # Verify base-class filtering results
-        self.assertIn(CrudA, cmds_svc1_cmd_base)
-        self.assertIn(DummyNonCrud, cmds_svc1_cmd_base)
-        self.assertIn(CrudA, cmds_svc1_crud_base)
-        self.assertNotIn(DummyNonCrud, cmds_svc1_crud_base)
-        self.assertEqual(cmds_svc2_crud_base, frozenset({CrudB}))
-        self.assertEqual(crud_cmds_svc1_base, frozenset({CrudA}))
-        self.assertIn(CrudB, crud_cmds_svc2_base_nf)
-        self.assertNotIn(CrudA, crud_cmds_svc2_base_nf)
+        assert CrudA in cmds_svc1_cmd_base
+        assert DummyNonCrud in cmds_svc1_cmd_base
+        assert CrudA in cmds_svc1_crud_base
+        assert DummyNonCrud not in cmds_svc1_crud_base
+        assert cmds_svc2_crud_base == frozenset({CrudB})
+        assert crud_cmds_svc1_base == frozenset({CrudA})
+        assert CrudB in crud_cmds_svc2_base_nf
+        assert CrudA not in crud_cmds_svc2_base_nf
 
     def test_model_entity_crud_command_cross_mappings(self) -> None:
         # Create input
@@ -355,12 +352,12 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
         crud_for_model_a = self.domain.get_crud_command_for_model(ModelA)
         model_for_crud_a = self.domain.get_model_for_crud_command(CrudA)
         # Verify
-        self.assertEqual(entity_for_model_a, self.entity_a)
-        self.assertEqual(model_for_entity_a, ModelA)
-        self.assertEqual(entity_for_crud_a, self.entity_a)
-        self.assertEqual(crud_for_entity_a, CrudA)
-        self.assertEqual(crud_for_model_a, CrudA)
-        self.assertEqual(model_for_crud_a, ModelA)
+        assert entity_for_model_a == self.entity_a
+        assert model_for_entity_a == ModelA
+        assert entity_for_crud_a == self.entity_a
+        assert crud_for_entity_a == CrudA
+        assert crud_for_model_a == CrudA
+        assert model_for_crud_a == ModelA
 
     def test_permission_lookups(self) -> None:
         # Create input
@@ -380,13 +377,13 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
         perm_by_tuple_class = self.domain.get_permission(CrudA, PermissionType.READ)
         perm_by_tuple_name = self.domain.get_permission("CrudA", PermissionType.READ)
         # Verify
-        self.assertEqual(svc_for_perm_read, self.svc1)
-        self.assertEqual(model_for_perm_read, ModelA)
-        self.assertEqual(entity_for_perm_read, self.entity_a)
-        self.assertIs(cmd_for_perm_read, CrudA)
-        self.assertIs(cmd_for_perm_exec, DummyNonCrud)
-        self.assertEqual(perm_by_tuple_class, perm_read)
-        self.assertEqual(perm_by_tuple_name, perm_read)
+        assert svc_for_perm_read == self.svc1
+        assert model_for_perm_read == ModelA
+        assert entity_for_perm_read == self.entity_a
+        assert cmd_for_perm_read is CrudA
+        assert cmd_for_perm_exec is DummyNonCrud
+        assert perm_by_tuple_class == perm_read
+        assert perm_by_tuple_name == perm_read
 
     def test_get_permission_for_command_instance(self) -> None:
         # Create input
@@ -400,8 +397,8 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
             non_crud_instance
         )
         # Verify
-        self.assertEqual(perm_crud.permission_type, PermissionType.UPDATE)
-        self.assertEqual(perm_non_crud.permission_type, PermissionType.EXECUTE)
+        assert perm_crud.permission_type == PermissionType.UPDATE
+        assert perm_non_crud.permission_type == PermissionType.EXECUTE
 
     def test_model_links_and_filters(self) -> None:
         # Create input
@@ -423,10 +420,10 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
             ModelA, as_tuple=False, url_name="b", invert=True
         )
         # Verify
-        self.assertEqual(links_same_service, {})
-        self.assertIn(1, links_diff_service)
-        self.assertIn(1, links_url_match)
-        self.assertEqual(links_url_invert, {})
+        assert links_same_service == {}
+        assert 1 in links_diff_service
+        assert 1 in links_url_match
+        assert links_url_invert == {}
 
     def test_dag_sorted_entities_and_models_filters(self) -> None:
         # Create input
@@ -442,15 +439,13 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
         models_all = self.domain.get_dag_sorted_models()
         models_svc2 = self.domain.get_dag_sorted_models(service_type=self.svc2)
         # Verify
-        self.assertEqual(
-            all_ents, [self.entity_b, self.entity_a]
-        )  # registration order B then A
-        self.assertEqual(rev_ents, [self.entity_a, self.entity_b])
-        self.assertEqual(ents_svc1, [self.entity_a])
-        self.assertEqual(ents_not_svc1, [self.entity_b])
-        self.assertEqual(ents_url_a, [self.entity_a])
-        self.assertEqual(models_all, [ModelB, ModelA])
-        self.assertEqual(models_svc2, [ModelB])
+        assert all_ents == [self.entity_b, self.entity_a]  # registration order B then A
+        assert rev_ents == [self.entity_a, self.entity_b]
+        assert ents_svc1 == [self.entity_a]
+        assert ents_not_svc1 == [self.entity_b]
+        assert ents_url_a == [self.entity_a]
+        assert models_all == [ModelB, ModelA]
+        assert models_svc2 == [ModelB]
 
     def test_model_excluded_permissions_none_when_full_crud(self) -> None:
         # Create input
@@ -458,7 +453,7 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
         # Execute
         excluded = self.domain.get_model_excluded_permissions()
         # Verify
-        self.assertEqual(excluded, {})
+        assert excluded == {}
 
     def test_register_service_type_and_entity_cycle_handling(self) -> None:
         # Create input
@@ -474,7 +469,7 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
         )
         # Set up mocks
         # Execute + Verify on_cycle default (raise): model_class must differ from link target
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.register_entity(
                 entity_c, service_type=ServiceType.SVC3, model_class=ModelD
             )
@@ -496,11 +491,11 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
                 return hash(self.id)
 
         broken_entity = BrokenEntity(persistable=True)
-        with self.assertRaises(exc.InitializationServiceError):
+        with pytest.raises(exc.InitializationServiceError):
             self.domain.register_entity(broken_entity, service_type=ServiceType.SVC3)
 
         dup_entity = Entity(persistable=True)
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.register_entity(
                 dup_entity, service_type=ServiceType.SVC3, model_class=ModelA
             )
@@ -509,22 +504,22 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
         # Create input
         # Set up mocks
         # 1) Crud without MODEL_CLASS
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.register_command(BadCrudNoModel, service_type=self.svc1)
 
         # Change NAME to assert a already registered with different name
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             BadCrudNoModel.NAME = "BadCrudNoModelWrong"  # type: ignore[assignment]
             self.domain.register_command(BadCrudNoModel, service_type=self.svc1)
 
         # Change MODEL_CLASS to assert a subclass of Crud with no MODEL_CLASS
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             BadCrudNoModel.NAME = None  # Restore
             BadCrudNoModel.MODEL_CLASS = None
             self.domain.register_command(BadCrudNoModel, service_type=self.svc1)
 
         # With not registered Crud class with no MODEL_CLASS
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             BadCrudNoModel2.MODEL_CLASS = None
             self.domain.register_command(BadCrudNoModel2, service_type=self.svc1)
 
@@ -534,7 +529,7 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
             ENTITY = None
 
         BadCrudNoEntity.MODEL_CLASS = TmpModel
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.register_command(BadCrudNoEntity, service_type=self.svc1)
         # 3) Crud with non-persistable entity
         non_persist_entity = Entity(persistable=False)
@@ -545,14 +540,14 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
             MODEL_CLASS: type[Model] | None = NonPersistModel  # type: ignore[assignment, misc]
             PERMISSION_TYPE_SET = PermissionTypeSet.CRUD
 
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.register_command(NonPersistCrud, service_type=self.svc1)
         # 4) Re-register existing command with different service type
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.register_command(CrudA, service_type=self.svc2)
         # 5) Re-register existing CrudA after changing MODEL_CLASS
         CrudA.MODEL_CLASS = ModelB
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.register_command(CrudA, service_type=self.svc1)
         # Restore for other tests (defensive)
         CrudA.MODEL_CLASS = ModelA
@@ -574,49 +569,49 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
         )
         # Set up mocks
         # Execute + Verify
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.get_service_type_for_entity(unk_entity, verify=True)
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.get_entities_for_service_type(ServiceType.SVC3, verify=True)
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.get_service_type_for_model(UnkModel, verify=True)
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.get_models_for_service_type(ServiceType.SVC3)
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.get_service_type_for_command(UnkCmd)
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.get_commands_for_service_type(ServiceType.SVC3)
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.get_crud_commands_for_service_type(ServiceType.SVC3)
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.get_command_for_name("UnknownCmd")
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.get_permissions_for_service_type(ServiceType.SVC3)
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.get_service_type_for_permission(unk_perm)
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.get_entity_for_model(UnkModel)
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.get_model_for_entity(unk_entity)
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.get_entity_for_crud_command(CrudCommand)
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.get_crud_command_for_entity(unk_entity)
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.get_entity_for_permission(unk_perm)
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.get_permissions_for_entity(unk_entity)
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.get_crud_command_for_model(UnkModel)
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.get_model_for_crud_command(CrudCommand)
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.get_model_for_permission(unk_perm)
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.get_permissions_for_model(UnkModel)
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.get_permissions_for_command(UnkCmd)
-        with self.assertRaises(exc.DomainException):
+        with pytest.raises(exc.DomainException):
             self.domain.get_permission(UnkCmd, PermissionType.READ)
 
     def test_get_permissions_filtered_and_frozen_flags(self) -> None:
@@ -629,11 +624,11 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
             ModelA, frozen=False, permission_type_set=PermissionTypeSet.R
         )
         # Verify
-        self.assertIsInstance(perms_frozen, frozenset)
-        self.assertIsInstance(perms_mutable, set)
-        self.assertEqual(
-            {x.permission_type for x in perms_model_filtered}, {PermissionType.READ}
-        )
+        assert isinstance(perms_frozen, frozenset)
+        assert isinstance(perms_mutable, set)
+        assert {x.permission_type for x in perms_model_filtered} == {
+            PermissionType.READ
+        }
 
     def test_get_service_types(self) -> None:
         # Create input
@@ -641,10 +636,10 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
         # Execute
         service_types = self.domain.get_service_types()
         # Verify
-        self.assertIsInstance(service_types, set)
-        self.assertIn(self.svc1, service_types)
-        self.assertIn(self.svc2, service_types)
-        self.assertEqual(len(service_types), 2)
+        assert isinstance(service_types, set)
+        assert self.svc1 in service_types
+        assert self.svc2 in service_types
+        assert len(service_types) == 2
 
     def test_register_service_type_idempotency(self) -> None:
         # Create input
@@ -654,9 +649,9 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
         result1 = self.domain.register_service_type(svc3)
         result2 = self.domain.register_service_type(svc3)
         # Verify - idempotent: calling twice should return same type
-        self.assertEqual(result1, svc3)
-        self.assertEqual(result2, svc3)
-        self.assertIn(svc3, self.domain.service_types)
+        assert result1 == svc3
+        assert result2 == svc3
+        assert svc3 in self.domain.service_types
 
     def test_get_dag_sorted_service_types(self) -> None:
         # Create input
@@ -665,23 +660,23 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
         sorted_types = self.domain.get_dag_sorted_service_types(reverse=False)
         sorted_types_rev = self.domain.get_dag_sorted_service_types(reverse=True)
         # Verify
-        self.assertIsInstance(sorted_types, list)
-        self.assertIsInstance(sorted_types_rev, list)
+        assert isinstance(sorted_types, list)
+        assert isinstance(sorted_types_rev, list)
         # With A->B link, B should come before A in default order,
         # so svc2 (B) before svc1 (A)
-        self.assertEqual(len(sorted_types), 2)
-        self.assertEqual(sorted_types[0], self.svc2)
-        self.assertEqual(sorted_types[1], self.svc1)
+        assert len(sorted_types) == 2
+        assert sorted_types[0] == self.svc2
+        assert sorted_types[1] == self.svc1
         # Reversed order
-        self.assertEqual(sorted_types_rev[0], self.svc1)
-        self.assertEqual(sorted_types_rev[1], self.svc2)
+        assert sorted_types_rev[0] == self.svc1
+        assert sorted_types_rev[1] == self.svc2
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-02")
-class TestDAGAndCycleBehavior(TestCase):
+class TestDAGAndCycleBehavior:
     """Test topological sorting behavior with on_cycle parameter."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         # Domain under test
         self.domain = Domain(name="TEST_DAG", description="desc")
         self.svc_main = ServiceType.SVC1
@@ -724,8 +719,8 @@ class TestDAGAndCycleBehavior(TestCase):
         sorted_backward = self.domain.get_dag_sorted_entities(reverse=True)
 
         # Verify - with A->B link, B should come first in forward order
-        self.assertEqual(sorted_forward, [self.entity_b_dag, self.entity_a_dag])
-        self.assertEqual(sorted_backward, [self.entity_a_dag, self.entity_b_dag])
+        assert sorted_forward == [self.entity_b_dag, self.entity_a_dag]
+        assert sorted_backward == [self.entity_a_dag, self.entity_b_dag]
 
     def test_get_dag_sorted_entities_on_cycle_parameter_accepted(self) -> None:
         # Create input
@@ -736,12 +731,12 @@ class TestDAGAndCycleBehavior(TestCase):
         result_ignore = self.domain.get_dag_sorted_entities(on_cycle=OnException.IGNORE)
 
         # Verify - both return valid results with no cycles
-        self.assertEqual(result_raise, [self.entity_b_dag, self.entity_a_dag])
-        self.assertEqual(result_ignore, [self.entity_b_dag, self.entity_a_dag])
+        assert result_raise == [self.entity_b_dag, self.entity_a_dag]
+        assert result_ignore == [self.entity_b_dag, self.entity_a_dag]
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-02")
-class TestServiceTypeDagSorting(TestCase):
+class TestServiceTypeDagSorting:
     def test_get_dag_sorted_service_types_handles_non_contiguous_service_blocks(
         self,
     ) -> None:
@@ -826,10 +821,7 @@ class TestServiceTypeDagSorting(TestCase):
         domain.register_command(CrudLeafS1, service_type=ServiceType.SVC1)
 
         sorted_types = domain.get_dag_sorted_service_types(on_cycle=OnException.RAISE)
-        self.assertEqual(
-            sorted_types,
-            [ServiceType.SVC2, ServiceType.SVC3, ServiceType.SVC1],
-        )
+        assert sorted_types == [ServiceType.SVC2, ServiceType.SVC3, ServiceType.SVC1]
 
     def test_get_dag_sorted_service_types_raises_on_real_service_cycle(self) -> None:
         class AnchorS1(Model):
@@ -911,6 +903,6 @@ class TestServiceTypeDagSorting(TestCase):
         domain.register_command(CrudDepS1OnS2, service_type=ServiceType.SVC1)
         domain.register_command(CrudDepS2OnS1, service_type=ServiceType.SVC2)
 
-        with self.assertRaises(exc.DomainException) as context:
+        with pytest.raises(exc.DomainException) as context:
             domain.get_dag_sorted_service_types(on_cycle=OnException.RAISE)
-        self.assertEqual(context.exception.args[0], "f8b2c94d")
+        assert context.value.args[0] == "f8b2c94d"
