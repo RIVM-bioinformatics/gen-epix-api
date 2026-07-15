@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [9.0.2](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v9.0.1...v9.0.2) (2026-07-15)
+
+
+### Bug Fixes
+
+* **ci:** publish packages from matching release tags ([98c9054](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/98c905451dda2fd3c5f5633b6a7f1e8211d1705b))
+
 ## [9.0.1](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v9.0.0...v9.0.1) (2026-07-15)
 
 
