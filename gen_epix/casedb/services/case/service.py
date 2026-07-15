@@ -73,6 +73,9 @@ from gen_epix.casedb.services.case.retrieve_case import (
 from gen_epix.casedb.services.case.retrieve_complete_case_type import (
     case_service_retrieve_complete_case_type,
 )
+from gen_epix.casedb.services.case.retrieve_is_own_cases import (
+    case_service_retrieve_is_own_cases,
+)
 from gen_epix.casedb.services.case.retrieve_seq import (
     case_service_retrieve_genetic_sequence_fasta_by_case,
     case_service_retrieve_phylogenetic_tree,
@@ -888,6 +891,13 @@ class CaseService(BaseCaseService):
                 "3e11edd5",
                 f"Case set members invalid, case set and case must have the same CaseType: {invalid_case_set_member_ids_str}",
             )
+
+    def retrieve_is_own_cases(
+        self,
+        cmd: command.RetrieveIsOwnCasesCommand,
+    ) -> dict[UUID, bool]:
+        """Retrieve whether the user owns the specified cases."""
+        return case_service_retrieve_is_own_cases(self, cmd)
 
     # CRUD method implementations
     def crud_case(
