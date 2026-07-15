@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [9.0.1](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v9.0.0...v9.0.1) (2026-07-15)
+
+
+### Bug Fixes
+
+* **deps:** update dependency slowapi to v0.1.10 ([#572](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/572)) ([b1b16eb](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/b1b16eb2105d2c3050c773a591315a487556a228))
+
 ## [9.0.0](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v8.1.0...v9.0.0) (2026-07-15)
 
 
