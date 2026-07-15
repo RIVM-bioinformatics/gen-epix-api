@@ -243,7 +243,9 @@ def test_long_exception_message_is_truncated_from_the_middle() -> None:
         },
     )
     long_msg = "a" * 500 + "b" * 500
-    result = app._summarise_command_object_for_log({"exception": RuntimeError(long_msg)})
+    result = app._summarise_command_object_for_log(
+        {"exception": RuntimeError(long_msg)}
+    )
     truncated = result["exception"]
     assert truncated.startswith("a" * 25)
     assert truncated.endswith("b" * 25)

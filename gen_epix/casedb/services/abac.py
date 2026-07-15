@@ -28,9 +28,15 @@ class AbacService(BaseAbacService):
         command.UserShareCasePolicyCrudCommand,
         command.OrganizationAccessCasePolicyCrudCommand,
         command.OrganizationShareCasePolicyCrudCommand,
+        command.UpdateUserOwnOrganizationCommand,
     )
     _GET_CASE_ABAC_CACHE: ClassVar[TTLCache] = TTLCache(maxsize=1024, ttl=300)
     _GET_REF_DATA_ACCESS_CACHE: ClassVar[TTLCache] = TTLCache(maxsize=1024, ttl=300)
+
+    def _invalidate_cache(self, _cmd: Command) -> None:
+        super()._invalidate_cache(_cmd)
+        self._get_case_abac_cached.cache_clear()
+        self._get_ref_data_access_cached.cache_clear()
 
     def register_policies(
         self,
@@ -206,12 +212,6 @@ class AbacService(BaseAbacService):
                     operation=CrudOperation.UPDATE_ONE,
                 )
             )
-
-        # Invalidate cache
-        # TODO: develop general system for caching and cache invalidation
-        AbacService._GET_USER_BY_ID_CACHE.clear()
-        AbacService._GET_CASE_ABAC_CACHE.clear()
-        AbacService._GET_REF_DATA_ACCESS_CACHE.clear()
 
         return user
 

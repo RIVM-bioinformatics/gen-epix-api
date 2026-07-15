@@ -95,6 +95,10 @@ class App:
             EventTiming, dict[type[Command], list[Callable[[Command, Any], None]]]
         ] = {x: {} for x in EventTiming}
         self._command_stack: list[Command] = []
+        self._cache_invalidator_map: dict[
+            type[Command], list[Callable[[Command], None]]
+        ] = {}
+        self._auto_invalidate_cache_set: set[type[Command]] = set()
         self._log_cmd_object_on_error: bool = log_cmd_object_on_error
         self._init_log_settings()
 
@@ -270,6 +274,47 @@ class App:
         else:
             listeners[command_class] = [listener]
 
+    def register_cache_invalidator(
+        self,
+        command_class: type[Command],
+        invalidator_fn: Callable[[Command], None],
+    ) -> None:
+        """Register a callback to invalidate caches for a command type."""
+        if self._logger and self._logger.level <= logging.DEBUG:
+            self._logger.debug(
+                self.create_log_message(
+                    "66a90fdb",
+                    "REGISTERING_CACHE_INVALIDATOR",
+                    command={"class": command_class.__name__},
+                    invalidator_fn={
+                        "name": getattr(invalidator_fn, "__name__", str(invalidator_fn))
+                    },
+                ),
+            )
+        invalidators = self._cache_invalidator_map.setdefault(command_class, [])
+        if invalidator_fn in invalidators:
+            raise exc.InitializationServiceError(
+                "a252c748",
+                f"Cache invalidator already registered for {command_class.__name__}",
+            )
+        invalidators.append(invalidator_fn)
+
+    def invalidate_cache(self, cmd: Command) -> None:
+        """Execute cache invalidators registered for the exact command type."""
+        for invalidator_fn in self._cache_invalidator_map.get(type(cmd), []):
+            invalidator_fn(cmd)
+
+    def set_auto_invalidate_cache(
+        self,
+        command_class: type[Command],
+        enabled: bool,
+    ) -> None:
+        """Enable or disable automatic cache invalidation for a command type."""
+        if enabled:
+            self._auto_invalidate_cache_set.add(command_class)
+        else:
+            self._auto_invalidate_cache_set.discard(command_class)
+
     def unregister_listener(
         self,
         command_class: type[Command],
@@ -400,6 +445,8 @@ class App:
                 type(cmd), []
             ):
                 listener(cmd, retval)
+            if type(cmd) in self._auto_invalidate_cache_set:
+                self.invalidate_cache(cmd)
         except exc.ServiceException as exception:
             # Service errors should always capture the stack trace to aid diagnosis.
             if self._logger:

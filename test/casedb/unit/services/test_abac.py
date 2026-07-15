@@ -86,6 +86,8 @@ class BaseAbacTestCase:
             domain=domain,
             register_handler=Mock(),
             register_policy=Mock(),
+            register_cache_invalidator=Mock(),
+            set_auto_invalidate_cache=Mock(),
             handle=Mock(),
             generate_id=Mock(return_value="svc-id"),
             generate_timestamp=Mock(return_value=0),
@@ -493,13 +495,17 @@ class TestTempUpdateUserOrganization(BaseAbacTestCase):
 
         with (
             patch.object(
-                AbacService, "_GET_USER_BY_ID_CACHE", new=MagicMock()
-            ) as user_cache,
+                AbacService._get_user_by_id_cached, "cache_clear"
+            ) as user_cache_clear,
             patch.object(
-                AbacService, "_GET_CASE_ABAC_CACHE", new=MagicMock()
-            ) as case_abac_cache,
+                AbacService._get_case_abac_cached, "cache_clear"
+            ) as case_abac_cache_clear,
+            patch.object(
+                AbacService._get_ref_data_access_cached, "cache_clear"
+            ) as ref_data_access_cache_clear,
         ):
             updated_user = self.service.update_user_own_organization(cmd)
+            self.service._invalidate_cache(cmd)
 
         assert updated_user.organization_id == self.new_org_id
         assert self.service.app.handle.call_count == 9  # type: ignore[attr-defined]
@@ -507,5 +513,6 @@ class TestTempUpdateUserOrganization(BaseAbacTestCase):
         delete_usp_call = self.service.app.handle.call_args_list[5][0][0]  # type: ignore[attr-defined]
         assert delete_uap_call is not None
         assert delete_usp_call is not None
-        user_cache.clear.assert_called_once()
-        case_abac_cache.clear.assert_called_once()
+        user_cache_clear.assert_called_once()
+        case_abac_cache_clear.assert_called_once()
+        ref_data_access_cache_clear.assert_called_once()

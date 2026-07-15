@@ -29,6 +29,11 @@ class OrganizationService(BaseOrganizationService):
         **kwargs: Any,
     ) -> None:
         super().__init__(app, **kwargs)
+
+        for command_class in self.CACHE_INVALIDATION_COMMANDS:
+            app.register_cache_invalidator(command_class, self._invalidate_cache)
+            app.set_auto_invalidate_cache(command_class, True)
+
         app_impl: AppImplDetails = app.impl
         self.user_class: type[model.User] = app_impl.get_mapped_class(model.User)
         self.user_invitation_class: type[model.UserInvitation] = (
@@ -71,11 +76,10 @@ class OrganizationService(BaseOrganizationService):
                     f"Root user may not delete {'self' if is_delete_user else 'own organization'}",
                 )
 
-        retval = super().crud(cmd)
-        # Invalidate cache
-        if issubclass(type(cmd), OrganizationService.CACHE_INVALIDATION_COMMANDS):
-            OrganizationService._RETRIEVE_USER_BY_KEY_CACHE.clear()
-        return retval
+        return super().crud(cmd)
+
+    def _invalidate_cache(self, _cmd: Command) -> None:
+        self.retrieve_user_by_key.cache_clear()
 
     @cached(cache=_RETRIEVE_USER_BY_KEY_CACHE)
     def retrieve_user_by_key(self, user_key: str) -> model.User:
@@ -340,8 +344,6 @@ class OrganizationService(BaseOrganizationService):
                 objs=tgt_user,
             )
 
-        # Invalidate cache for the user
-        OrganizationService._RETRIEVE_USER_BY_KEY_CACHE.clear()
         return updated_tgt_user
 
     def retrieve_organization_contacts(
