@@ -161,7 +161,7 @@ class IntervalTransformer(Transformer):
         """Map number to interval."""
         tgt_value = self._map_to_interval(
             value, self._on_no_match
-        )  # type:ignore[arg-type]
+        )  # type: ignore[arg-type]
         return tgt_value
 
     def is_transformable(self, value: float | int | Decimal | None) -> bool:
