@@ -66,6 +66,7 @@ markers = [
     "scenario_ids(id): Custom marker for scenario IDs used in test reporting.",
     "integration: Marker for integration tests.",
     "performance: Marker for performance/scale tests (skipped by default; use -m performance).",
+    "e2e: Marker for end-to-end tests requiring live servers.",
 ]
 addopts = "-v -s"
 filterwarnings = ["ignore:.*shadows an attribute in parent.*"]
