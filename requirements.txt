@@ -20,7 +20,7 @@ ulid-py==1.1.0
 fire==0.7.1
 dynaconf==3.2.13
 PyYAML==6.0.3
-python-multipart==0.0.31
+python-multipart==0.0.32
 
 # calculation
 scipy==1.17.1
