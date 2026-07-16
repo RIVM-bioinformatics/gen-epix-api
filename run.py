@@ -189,7 +189,6 @@ class Run:
             "test/omopdb/unit",
             "test/omopdb/integration",
             "test/general/docs",
-            "test/end_to_end",
             "test/util",
             # Not normally included, uncomment if needed
             # "test/casedb/performance",
@@ -211,7 +210,7 @@ class Run:
                 "pytest",
             ]
             + pytest_args,
-            check=False,
+            check=True,
         )
         # Generate HTML report
         subprocess.run(

@@ -24,6 +24,8 @@ from gen_epix.seqdb.api.router import create_routers as seqdb_create_routers
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.env import AppComposer as SeqdbAppComposer
 
+pytestmark = pytest.mark.e2e
+
 SSL_CERTFILE = Path("cert/cert.pem").absolute().as_posix()
 SSL_KEYFILE = Path("cert/key.pem").absolute().as_posix()
 
