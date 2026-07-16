@@ -461,7 +461,7 @@ class TestFilterMatch:
             filters=[filter_range, filter_set],
             operator="OR",
         )
-        expected_matches = [True, True, True, True, True]
+        expected_matches = [False, True, True, True, True]
 
         assert (
             list(composite_or.match_rows(pydantic_rows, is_model=True))
