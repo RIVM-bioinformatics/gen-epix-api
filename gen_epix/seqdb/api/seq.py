@@ -1,6 +1,6 @@
 from collections.abc import Callable, Iterable
 from datetime import datetime
-from typing import Any, NoReturn
+from typing import Any, NoReturn, Self
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
@@ -44,13 +44,16 @@ class UpdateSeqDistancesRequestBody(PydanticBaseModel):
     existing_chunk_size: int | None = copy_model_field(
         command.UpdateSeqDistancesCommand, "existing_chunk_size"
     )
+    use_numpy_allele_distance: bool = copy_model_field(
+        command.UpdateSeqDistancesCommand, "use_numpy_allele_distance"
+    )
 
     # TODO: remove max_new_profiles usage and replace by limit
     @model_validator(mode="after")
-    def validate_limit(cls, values):
-        if values.get("limit") is None:
-            values["limit"] = values.get("max_new_profiles")
-        return values
+    def validate_limit(self) -> Self:
+        if self.limit is None:
+            self.limit = self.max_new_profiles
+        return self
 
 
 class RetrieveSamplesByIdsRequestBody(PydanticBaseModel):
@@ -279,6 +282,7 @@ def create_seq_endpoints(
                     protocol_id=request_body.protocol_id,
                     limit=request_body.limit,
                     existing_chunk_size=request_body.existing_chunk_size,
+                    use_numpy_allele_distance=request_body.use_numpy_allele_distance,
                 )
             )
         except Exception as exception:

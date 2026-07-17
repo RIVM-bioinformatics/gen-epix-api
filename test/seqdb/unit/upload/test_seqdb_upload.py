@@ -5,9 +5,8 @@ Tests the seq_service_upload_samples function and its component steps.
 """
 
 import base64
+from test.util.mock_compat import Mock
 from typing import Any, Sequence, cast
-from unittest import TestCase
-from unittest.mock import Mock
 from uuid import UUID, uuid4
 
 import pytest
@@ -38,10 +37,10 @@ def create_allele_profile_base64(num_alleles: int = 4) -> str:
     return base64.b64encode(concatenated_bytes).decode("ascii")
 
 
-class BaseUploadTestCase(TestCase):
+class BaseUploadTestCase:
     """Base test case with common fixtures and utilities."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         """Set up test fixtures."""
         # Test user
         self.user = User(
@@ -113,13 +112,13 @@ class BaseUploadTestCase(TestCase):
 
     def assertBatchProcessed(self, upload_result: UploadResult) -> None:
         if upload_result.status not in UploadStatusSet.PROCESSED.value:
-            self.fail(
+            pytest.fail(
                 f"Upload was not processed, status: {upload_result.status.value}",
             )
 
     def assertBatchFailed(self, upload_result: UploadResult) -> None:
         if upload_result.status not in UploadStatusSet.FAILED.value:
-            self.fail(
+            pytest.fail(
                 f"Upload did not fail, status: {upload_result.status.value}",
             )
 
@@ -132,8 +131,8 @@ class BaseUploadTestCase(TestCase):
         if missing_codes:
             missing_codes_str = ", ".join(missing_codes)
             if len(missing_codes) == 1:
-                self.fail(f"Log missing for code {missing_codes_str}")
-            self.fail(f"Logs missing for codes {missing_codes_str}")
+                pytest.fail(f"Log missing for code {missing_codes_str}")
+            pytest.fail(f"Logs missing for codes {missing_codes_str}")
 
     def assertStatusCount(
         self,
@@ -173,7 +172,7 @@ class BaseUploadTestCase(TestCase):
             different_status_count_str = ", ".join(
                 f"{x[0].value} ({x[1]}/{x[2]})" for x in different_status_count
             )
-            self.fail(
+            pytest.fail(
                 f"Status count mismatch (expected/actual): {different_status_count_str}"
             )
 
@@ -340,42 +339,42 @@ class BaseUploadTestCase(TestCase):
 
     def get_only_seq(self, sample: model.SampleForUpload) -> model.SeqForUpload:
         seqs = sample.seqs or []
-        self.assertEqual(len(seqs), 1)
+        assert len(seqs) == 1
         return seqs[0]
 
     def get_only_seq_result(
         self, upload_result: model.SampleBatchUploadResult
     ) -> UploadResult:
         seq_results = upload_result.samples[0].seqs or []
-        self.assertEqual(len(seq_results), 1)
+        assert len(seq_results) == 1
         return seq_results[0]
 
     def get_only_allele_profile(
         self, sample: model.SampleForUpload
     ) -> model.SeqProfileForUpload:
         seq_profiles = sample.seq_profiles or []
-        self.assertEqual(len(seq_profiles), 1)
+        assert len(seq_profiles) == 1
         return seq_profiles[0]
 
     def get_only_allele_profile_result(
         self, upload_result: model.SampleBatchUploadResult
     ) -> UploadResult:
         seq_profile_results = upload_result.samples[0].seq_profiles or []
-        self.assertEqual(len(seq_profile_results), 1)
+        assert len(seq_profile_results) == 1
         return seq_profile_results[0]
 
     def get_only_seq_classification(
         self, sample: model.SampleForUpload
     ) -> model.SeqClassificationForUpload:
         seq_classifications = sample.seq_classifications or []
-        self.assertEqual(len(seq_classifications), 1)
+        assert len(seq_classifications) == 1
         return seq_classifications[0]
 
     def get_only_seq_classification_result(
         self, upload_result: model.SampleBatchUploadResult
     ) -> UploadResult:
         seq_classification_results = upload_result.samples[0].seq_classifications or []
-        self.assertEqual(len(seq_classification_results), 1)
+        assert len(seq_classification_results) == 1
         return seq_classification_results[0]
 
     def mock_existing_seq_lookup(
@@ -477,7 +476,7 @@ class TestVerifyProtocol(BaseUploadTestCase):
             self.batch_uploader, cmd, retval, self.uow, model.Seq
         )
 
-        self.assertFalse(success)
+        assert not success
         self.service.repository.crud.assert_not_called()
 
     def test_valid_seq_protocol_type_succeeds_without_errors(self) -> None:
@@ -495,8 +494,8 @@ class TestVerifyProtocol(BaseUploadTestCase):
             self.batch_uploader, cmd, retval, self.uow, model.Seq
         )
 
-        self.assertTrue(success)
-        self.assertFalse(seq_result.has_errors())
+        assert success
+        assert not seq_result.has_errors()
 
     def test_invalid_seq_protocol_type_adds_error(self) -> None:
         """A non-ASSEMBLY protocol for Seq should be flagged with code a4c9e18b."""
@@ -513,9 +512,9 @@ class TestVerifyProtocol(BaseUploadTestCase):
             self.batch_uploader, cmd, retval, self.uow, model.Seq
         )
 
-        self.assertFalse(success)
-        self.assertTrue(seq_result.has_errors())
-        self.assertTrue(seq_result.has_log_code("a4c9e18b"))
+        assert not success
+        assert seq_result.has_errors()
+        assert seq_result.has_log_code("a4c9e18b")
 
     def test_invalid_type_on_skipped_child_does_not_add_child_error(self) -> None:
         """Skipped children are ignored for per-child error annotation."""
@@ -533,8 +532,8 @@ class TestVerifyProtocol(BaseUploadTestCase):
             self.batch_uploader, cmd, retval, self.uow, model.Seq
         )
 
-        self.assertFalse(success)
-        self.assertFalse(seq_result.has_errors())
+        assert not success
+        assert not seq_result.has_errors()
 
     def test_user_none_is_forwarded_to_protocol_read(self) -> None:
         """Protocol lookup should use user_id=None when command user is None."""
@@ -551,8 +550,8 @@ class TestVerifyProtocol(BaseUploadTestCase):
             self.batch_uploader, cmd, retval, self.uow, model.Seq
         )
 
-        self.assertTrue(success)
-        self.assertEqual(self.service.repository.crud.call_args.args[1], None)
+        assert success
+        assert self.service.repository.crud.call_args.args[1] == None
 
     def test_unsupported_child_model_class_raises_not_implemented(self) -> None:
         """Mapped but unsupported child classes should raise NotImplementedError."""
@@ -565,7 +564,7 @@ class TestVerifyProtocol(BaseUploadTestCase):
             Mock(return_value=[Mock(protocol_id=self.protocol_id)]),
         )
         cast(Any, self.batch_uploader).verify_link_id = Mock(return_value=True)
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             _verify_protocol(
                 self.batch_uploader,
                 cmd,
@@ -607,8 +606,8 @@ class TestVerifyChildrenSeqs(BaseUploadTestCase):
         success = _verify_children_seqs(self.batch_uploader, cmd, retval, self.uow)
 
         seq_result = self.get_only_seq_result(retval)
-        self.assertTrue(success)
-        self.assertFalse(seq_result.has_errors())
+        assert success
+        assert not seq_result.has_errors()
 
     def test_no_existing_seqs_for_sample_is_noop(self) -> None:
         """No matching seq rows means function leaves the seq untouched."""
@@ -626,8 +625,8 @@ class TestVerifyChildrenSeqs(BaseUploadTestCase):
         success = _verify_children_seqs(self.batch_uploader, cmd, retval, self.uow)
 
         seq_result = self.get_only_seq_result(retval)
-        self.assertTrue(success)
-        self.assertFalse(seq_result.has_errors())
+        assert success
+        assert not seq_result.has_errors()
 
     def test_skipped_seq_result_is_ignored(self) -> None:
         """A pre-skipped seq result should not be re-validated."""
@@ -658,8 +657,8 @@ class TestVerifyChildrenSeqs(BaseUploadTestCase):
 
         success = _verify_children_seqs(self.batch_uploader, cmd, retval, self.uow)
 
-        self.assertTrue(success)
-        self.assertFalse(seq_result.has_errors())
+        assert success
+        assert not seq_result.has_errors()
 
     def test_hash_mismatch_without_read_sets_adds_unknown_read_set_error(self) -> None:
         """Hash mismatch with read sets absent should emit 7c1e9ab4."""
@@ -690,9 +689,9 @@ class TestVerifyChildrenSeqs(BaseUploadTestCase):
         success = _verify_children_seqs(self.batch_uploader, cmd, retval, self.uow)
 
         seq_result = self.get_only_seq_result(retval)
-        self.assertFalse(success)
-        self.assertTrue(seq_result.has_errors())
-        self.assertTrue(seq_result.has_log_code("7c1e9ab4"))
+        assert not success
+        assert seq_result.has_errors()
+        assert seq_result.has_log_code("7c1e9ab4")
 
     def test_hash_mismatch_with_read_sets_adds_natural_key_error(self) -> None:
         """Hash mismatch with read sets present should emit 9d3a4f1b."""
@@ -723,9 +722,9 @@ class TestVerifyChildrenSeqs(BaseUploadTestCase):
         success = _verify_children_seqs(self.batch_uploader, cmd, retval, self.uow)
 
         seq_result = self.get_only_seq_result(retval)
-        self.assertFalse(success)
-        self.assertTrue(seq_result.has_errors())
-        self.assertTrue(seq_result.has_log_code("9d3a4f1b"))
+        assert not success
+        assert seq_result.has_errors()
+        assert seq_result.has_log_code("9d3a4f1b")
 
     def test_fallback_from_none_read_sets_can_resolve_existing_seq(self) -> None:
         """Fallback key (protocol, None, None) resolves identical seq."""
@@ -758,11 +757,11 @@ class TestVerifyChildrenSeqs(BaseUploadTestCase):
         success = _verify_children_seqs(self.batch_uploader, cmd, retval, self.uow)
 
         seq_result = self.get_only_seq_result(retval)
-        self.assertTrue(success)
-        self.assertEqual(seq_for_upload.id, existing_seq_id)
-        self.assertFalse(seq_result.is_new)
-        self.assertEqual(seq_result.id, existing_seq_id)
-        self.assertTrue(seq_result.has_log_code("b6e14c9f"))
+        assert success
+        assert seq_for_upload.id == existing_seq_id
+        assert not seq_result.is_new
+        assert seq_result.id == existing_seq_id
+        assert seq_result.has_log_code("b6e14c9f")
 
     def test_temporary_seq_id_is_replaced_and_child_links_are_rewritten(self) -> None:
         """Temporary seq IDs are replaced with DB IDs across child links."""
@@ -820,17 +819,17 @@ class TestVerifyChildrenSeqs(BaseUploadTestCase):
         success = _verify_children_seqs(self.batch_uploader, cmd, retval, self.uow)
 
         seq_result = self.get_only_seq_result(retval)
-        self.assertTrue(success)
-        self.assertEqual(seq_for_upload.id, existing_seq_id)
+        assert success
+        assert seq_for_upload.id == existing_seq_id
         seq_classifications = sample.seq_classifications or []
         seq_taxonomies = sample.seq_taxonomies or []
         seq_profiles = sample.seq_profiles or []
-        self.assertEqual(seq_classifications[0].seq_id, existing_seq_id)
-        self.assertEqual(seq_taxonomies[0].seq_id, existing_seq_id)
-        self.assertEqual(seq_profiles[0].seq_id, existing_seq_id)
-        self.assertFalse(seq_result.is_new)
-        self.assertEqual(seq_result.id, existing_seq_id)
-        self.assertTrue(seq_result.has_log_code("4fa2d87c"))
+        assert seq_classifications[0].seq_id == existing_seq_id
+        assert seq_taxonomies[0].seq_id == existing_seq_id
+        assert seq_profiles[0].seq_id == existing_seq_id
+        assert not seq_result.is_new
+        assert seq_result.id == existing_seq_id
+        assert seq_result.has_log_code("4fa2d87c")
 
     def test_read_set_linked_to_other_sample_adds_error(self) -> None:
         """A read_set_id tied to another sample should fail validation."""
@@ -852,9 +851,9 @@ class TestVerifyChildrenSeqs(BaseUploadTestCase):
         success = _verify_children_seqs(self.batch_uploader, cmd, retval, self.uow)
 
         seq_result = self.get_only_seq_result(retval)
-        self.assertFalse(success)
-        self.assertTrue(seq_result.has_errors())
-        self.assertTrue(seq_result.has_log_code("e5a19c72"))
+        assert not success
+        assert seq_result.has_errors()
+        assert seq_result.has_log_code("e5a19c72")
 
     def test_existing_id_is_kept_when_already_matching(self) -> None:
         """When seq.id already matches DB id, no replacement info is logged."""
@@ -887,15 +886,15 @@ class TestVerifyChildrenSeqs(BaseUploadTestCase):
         success = _verify_children_seqs(self.batch_uploader, cmd, retval, self.uow)
 
         seq_result = self.get_only_seq_result(retval)
-        self.assertTrue(success)
-        self.assertEqual(seq_for_upload.id, existing_seq_id)
-        self.assertFalse(seq_result.is_new)
-        self.assertEqual(seq_result.id, existing_seq_id)
-        self.assertFalse(seq_result.has_log_code("4fa2d87c"))
+        assert success
+        assert seq_for_upload.id == existing_seq_id
+        assert not seq_result.is_new
+        assert seq_result.id == existing_seq_id
+        assert not seq_result.has_log_code("4fa2d87c")
 
     def test_read_set2_only_does_not_use_fallback(self) -> None:
         """Model validation now forbids read_set2_id without read_set_id."""
-        self.skipTest(
+        pytest.skip(
             "read_set2_id without read_set_id is no longer a valid SeqForUpload"
         )
 
@@ -936,8 +935,8 @@ class TestVerifyChildrenSeqClassifications(BaseUploadTestCase):
         )
 
         seq_classification_result = self.get_only_seq_classification_result(retval)
-        self.assertTrue(success)
-        self.assertFalse(seq_classification_result.has_errors())
+        assert success
+        assert not seq_classification_result.has_errors()
 
     def test_no_existing_seq_classifications_for_sample_is_noop(self) -> None:
         """No existing rows means function leaves the item untouched."""
@@ -960,9 +959,9 @@ class TestVerifyChildrenSeqClassifications(BaseUploadTestCase):
         )
 
         seq_classification_result = self.get_only_seq_classification_result(retval)
-        self.assertTrue(success)
-        self.assertIsNone(seq_classification_result.id)
-        self.assertFalse(seq_classification_result.has_errors())
+        assert success
+        assert seq_classification_result.id is None
+        assert not seq_classification_result.has_errors()
 
     def test_skipped_seq_classification_result_is_ignored(self) -> None:
         """A pre-skipped result should not be re-validated."""
@@ -997,8 +996,8 @@ class TestVerifyChildrenSeqClassifications(BaseUploadTestCase):
             self.batch_uploader, cmd, retval, self.uow
         )
 
-        self.assertTrue(success)
-        self.assertFalse(seq_classification_result.has_errors())
+        assert success
+        assert not seq_classification_result.has_errors()
 
     def test_seq_id_linked_to_other_sample_adds_error(self) -> None:
         """A seq_id tied to another sample should fail validation."""
@@ -1025,9 +1024,9 @@ class TestVerifyChildrenSeqClassifications(BaseUploadTestCase):
         )
 
         seq_classification_result = self.get_only_seq_classification_result(retval)
-        self.assertFalse(success)
-        self.assertTrue(seq_classification_result.has_errors())
-        self.assertTrue(seq_classification_result.has_log_code("c1d72e8a"))
+        assert not success
+        assert seq_classification_result.has_errors()
+        assert seq_classification_result.has_log_code("c1d72e8a")
 
     def test_primary_category_mismatch_without_seq_id_adds_unknown_seq_error(
         self,
@@ -1064,9 +1063,9 @@ class TestVerifyChildrenSeqClassifications(BaseUploadTestCase):
         )
 
         seq_classification_result = self.get_only_seq_classification_result(retval)
-        self.assertFalse(success)
-        self.assertTrue(seq_classification_result.has_errors())
-        self.assertTrue(seq_classification_result.has_log_code("f2a84c91"))
+        assert not success
+        assert seq_classification_result.has_errors()
+        assert seq_classification_result.has_log_code("f2a84c91")
 
     def test_primary_category_mismatch_with_seq_id_adds_natural_key_error(self) -> None:
         """Primary category mismatch with seq_id should emit 9d3a4f1b."""
@@ -1101,9 +1100,9 @@ class TestVerifyChildrenSeqClassifications(BaseUploadTestCase):
         )
 
         seq_classification_result = self.get_only_seq_classification_result(retval)
-        self.assertFalse(success)
-        self.assertTrue(seq_classification_result.has_errors())
-        self.assertTrue(seq_classification_result.has_log_code("9d3a4f1b"))
+        assert not success
+        assert seq_classification_result.has_errors()
+        assert seq_classification_result.has_log_code("9d3a4f1b")
 
     def test_fallback_from_none_seq_id_can_resolve_existing_seq_classification(
         self,
@@ -1141,14 +1140,11 @@ class TestVerifyChildrenSeqClassifications(BaseUploadTestCase):
         )
 
         seq_classification_result = self.get_only_seq_classification_result(retval)
-        self.assertTrue(success)
-        self.assertEqual(
-            seq_classification_for_upload.id,
-            existing_seq_classification_id,
-        )
-        self.assertFalse(seq_classification_result.is_new)
-        self.assertEqual(seq_classification_result.id, existing_seq_classification_id)
-        self.assertTrue(seq_classification_result.has_log_code("8be3f4a1"))
+        assert success
+        assert seq_classification_for_upload.id == existing_seq_classification_id
+        assert not seq_classification_result.is_new
+        assert seq_classification_result.id == existing_seq_classification_id
+        assert seq_classification_result.has_log_code("8be3f4a1")
 
     def test_temporary_seq_classification_id_is_replaced(
         self,
@@ -1188,13 +1184,11 @@ class TestVerifyChildrenSeqClassifications(BaseUploadTestCase):
         )
 
         seq_classification_result = self.get_only_seq_classification_result(retval)
-        self.assertTrue(success)
-        self.assertEqual(
-            seq_classification_for_upload.id, existing_seq_classification_id
-        )
-        self.assertFalse(seq_classification_result.is_new)
-        self.assertEqual(seq_classification_result.id, existing_seq_classification_id)
-        self.assertTrue(seq_classification_result.has_log_code("d91a7c4e"))
+        assert success
+        assert seq_classification_for_upload.id == existing_seq_classification_id
+        assert not seq_classification_result.is_new
+        assert seq_classification_result.id == existing_seq_classification_id
+        assert seq_classification_result.has_log_code("d91a7c4e")
 
     def test_null_id_seq_id_with_primary_category_mismatch_adds_error(self) -> None:
         """With seq_id=NULL_ID, mismatch is treated as keyed mismatch (9d3a4f1b)."""
@@ -1229,9 +1223,9 @@ class TestVerifyChildrenSeqClassifications(BaseUploadTestCase):
         )
 
         seq_classification_result = self.get_only_seq_classification_result(retval)
-        self.assertFalse(success)
-        self.assertTrue(seq_classification_result.has_errors())
-        self.assertTrue(seq_classification_result.has_log_code("9d3a4f1b"))
+        assert not success
+        assert seq_classification_result.has_errors()
+        assert seq_classification_result.has_log_code("9d3a4f1b")
 
     def test_existing_id_is_kept_when_already_matching(self) -> None:
         """When id already matches DB id, no replacement info is logged."""
@@ -1268,14 +1262,11 @@ class TestVerifyChildrenSeqClassifications(BaseUploadTestCase):
         )
 
         seq_classification_result = self.get_only_seq_classification_result(retval)
-        self.assertTrue(success)
-        self.assertEqual(
-            seq_classification_for_upload.id,
-            existing_seq_classification_id,
-        )
-        self.assertFalse(seq_classification_result.is_new)
-        self.assertEqual(seq_classification_result.id, existing_seq_classification_id)
-        self.assertFalse(seq_classification_result.has_log_code("d91a7c4e"))
+        assert success
+        assert seq_classification_for_upload.id == existing_seq_classification_id
+        assert not seq_classification_result.is_new
+        assert seq_classification_result.id == existing_seq_classification_id
+        assert not seq_classification_result.has_log_code("d91a7c4e")
 
     def test_null_id_seq_id_does_not_use_fallback(self) -> None:
         """Current behavior: fallback is gated by seq_id != NULL_ID."""
@@ -1310,10 +1301,10 @@ class TestVerifyChildrenSeqClassifications(BaseUploadTestCase):
         )
 
         seq_classification_result = self.get_only_seq_classification_result(retval)
-        self.assertTrue(success)
-        self.assertIsNone(seq_classification_result.id)
-        self.assertIsNone(seq_classification_result.id)
-        self.assertEqual(seq_classification_for_upload.seq_id, NULL_ID)
+        assert success
+        assert seq_classification_result.id is None
+        assert seq_classification_result.id is None
+        assert seq_classification_for_upload.seq_id == NULL_ID
 
 
 @pytest.mark.scenario_ids("TC-11-13-01")
@@ -1352,8 +1343,8 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
         )
 
         seq_profile_result = self.get_only_allele_profile_result(retval)
-        self.assertTrue(success)
-        self.assertFalse(seq_profile_result.has_errors())
+        assert success
+        assert not seq_profile_result.has_errors()
 
     def test_no_existing_seq_profiles_for_sample_is_noop(self) -> None:
         """No existing rows means the profile is left untouched."""
@@ -1376,9 +1367,9 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
         )
 
         seq_profile_result = self.get_only_allele_profile_result(retval)
-        self.assertTrue(success)
-        self.assertIsNone(seq_profile_result.id)
-        self.assertFalse(seq_profile_result.has_errors())
+        assert success
+        assert seq_profile_result.id is None
+        assert not seq_profile_result.has_errors()
 
     def test_skipped_seq_profile_result_is_ignored(self) -> None:
         """A pre-skipped result should not be re-validated."""
@@ -1413,8 +1404,8 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
             self.batch_uploader, cmd, retval, self.uow
         )
 
-        self.assertTrue(success)
-        self.assertFalse(seq_profile_result.has_errors())
+        assert success
+        assert not seq_profile_result.has_errors()
 
     def test_seq_id_linked_to_other_sample_adds_error(self) -> None:
         """A seq_id tied to another sample should fail validation."""
@@ -1441,9 +1432,9 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
         )
 
         seq_profile_result = self.get_only_allele_profile_result(retval)
-        self.assertFalse(success)
-        self.assertTrue(seq_profile_result.has_errors())
-        self.assertTrue(seq_profile_result.has_log_code("0f4a9c3d"))
+        assert not success
+        assert seq_profile_result.has_errors()
+        assert seq_profile_result.has_log_code("0f4a9c3d")
 
     def test_content_hash_mismatch_without_seq_id_adds_unknown_seq_error(
         self,
@@ -1479,9 +1470,9 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
         )
 
         seq_profile_result = self.get_only_allele_profile_result(retval)
-        self.assertFalse(success)
-        self.assertTrue(seq_profile_result.has_errors())
-        self.assertTrue(seq_profile_result.has_log_code("6b2f8e10"))
+        assert not success
+        assert seq_profile_result.has_errors()
+        assert seq_profile_result.has_log_code("6b2f8e10")
 
     def test_content_hash_mismatch_with_seq_id_adds_natural_key_error(self) -> None:
         """Mismatch with seq_id should emit c4d8a2f7."""
@@ -1515,9 +1506,9 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
         )
 
         seq_profile_result = self.get_only_allele_profile_result(retval)
-        self.assertFalse(success)
-        self.assertTrue(seq_profile_result.has_errors())
-        self.assertTrue(seq_profile_result.has_log_code("c4d8a2f7"))
+        assert not success
+        assert seq_profile_result.has_errors()
+        assert seq_profile_result.has_log_code("c4d8a2f7")
 
     def test_null_id_content_hash_with_seq_id_skips_mismatch_error(self) -> None:
         """locus_allele_id_map profile (content_hash=NULL_ID) with seq_id set
@@ -1559,12 +1550,12 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
         )
 
         seq_profile_result = self.get_only_allele_profile_result(retval)
-        self.assertTrue(success)
-        self.assertFalse(seq_profile_result.has_errors())
-        self.assertFalse(seq_profile_result.has_log_code("c4d8a2f7"))
-        self.assertFalse(seq_profile_result.has_log_code("1d7c9b53"))
-        self.assertFalse(seq_profile_result.is_new)
-        self.assertEqual(seq_profile_result.id, existing_seq_profile_id)
+        assert success
+        assert not seq_profile_result.has_errors()
+        assert not seq_profile_result.has_log_code("c4d8a2f7")
+        assert not seq_profile_result.has_log_code("1d7c9b53")
+        assert not seq_profile_result.is_new
+        assert seq_profile_result.id == existing_seq_profile_id
 
     def test_null_id_content_hash_without_seq_id_skips_mismatch_error(
         self,
@@ -1608,12 +1599,12 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
         )
 
         seq_profile_result = self.get_only_allele_profile_result(retval)
-        self.assertTrue(success)
-        self.assertFalse(seq_profile_result.has_errors())
-        self.assertFalse(seq_profile_result.has_log_code("6b2f8e10"))
-        self.assertFalse(seq_profile_result.has_log_code("1d7c9b53"))
-        self.assertFalse(seq_profile_result.is_new)
-        self.assertEqual(seq_profile_result.id, existing_seq_profile_id)
+        assert success
+        assert not seq_profile_result.has_errors()
+        assert not seq_profile_result.has_log_code("6b2f8e10")
+        assert not seq_profile_result.has_log_code("1d7c9b53")
+        assert not seq_profile_result.is_new
+        assert seq_profile_result.id == existing_seq_profile_id
 
     def test_fallback_from_none_seq_id_can_resolve_existing_seq_profile(
         self,
@@ -1650,11 +1641,11 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
         )
 
         seq_profile_result = self.get_only_allele_profile_result(retval)
-        self.assertTrue(success)
-        self.assertEqual(seq_profile_for_upload.id, existing_seq_profile_id)
-        self.assertFalse(seq_profile_result.is_new)
-        self.assertEqual(seq_profile_result.id, existing_seq_profile_id)
-        self.assertTrue(seq_profile_result.has_log_code("1d7c9b53"))
+        assert success
+        assert seq_profile_for_upload.id == existing_seq_profile_id
+        assert not seq_profile_result.is_new
+        assert seq_profile_result.id == existing_seq_profile_id
+        assert seq_profile_result.has_log_code("1d7c9b53")
 
     def test_null_id_seq_id_does_not_use_fallback(self) -> None:
         """Current behavior: fallback is gated by seq_id != NULL_ID."""
@@ -1688,9 +1679,9 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
         )
 
         seq_profile_result = self.get_only_allele_profile_result(retval)
-        self.assertTrue(success)
-        self.assertIsNone(seq_profile_result.id)
-        self.assertEqual(seq_profile_for_upload.seq_id, NULL_ID)
+        assert success
+        assert seq_profile_result.id is None
+        assert seq_profile_for_upload.seq_id == NULL_ID
 
     def test_temporary_seq_profile_id_is_replaced(self) -> None:
         """Temporary SeqProfile IDs are replaced by existing DB IDs."""
@@ -1727,11 +1718,11 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
         )
 
         seq_profile_result = self.get_only_allele_profile_result(retval)
-        self.assertTrue(success)
-        self.assertEqual(seq_profile_for_upload.id, existing_seq_profile_id)
-        self.assertFalse(seq_profile_result.is_new)
-        self.assertEqual(seq_profile_result.id, existing_seq_profile_id)
-        self.assertTrue(seq_profile_result.has_log_code("a7f1c6d8"))
+        assert success
+        assert seq_profile_for_upload.id == existing_seq_profile_id
+        assert not seq_profile_result.is_new
+        assert seq_profile_result.id == existing_seq_profile_id
+        assert seq_profile_result.has_log_code("a7f1c6d8")
 
     def test_existing_id_is_kept_when_already_matching(self) -> None:
         """When id already matches DB id, no replacement info is logged."""
@@ -1767,11 +1758,11 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
         )
 
         seq_profile_result = self.get_only_allele_profile_result(retval)
-        self.assertTrue(success)
-        self.assertEqual(seq_profile_for_upload.id, existing_seq_profile_id)
-        self.assertFalse(seq_profile_result.is_new)
-        self.assertEqual(seq_profile_result.id, existing_seq_profile_id)
-        self.assertFalse(seq_profile_result.has_log_code("a7f1c6d8"))
+        assert success
+        assert seq_profile_for_upload.id == existing_seq_profile_id
+        assert not seq_profile_result.is_new
+        assert seq_profile_result.id == existing_seq_profile_id
+        assert not seq_profile_result.has_log_code("a7f1c6d8")
 
     def test_locus_detection_protocol_id_does_not_exist(self) -> None:
         """Error is raised when locus detection protocol ID does not exist."""
@@ -1789,9 +1780,9 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
         )
 
         seq_profile_result = self.get_only_allele_profile_result(retval)
-        self.assertFalse(success)
-        self.assertTrue(seq_profile_result.has_errors())
-        self.assertTrue(seq_profile_result.has_log_code("dec840ca"))
+        assert not success
+        assert seq_profile_result.has_errors()
+        assert seq_profile_result.has_log_code("dec840ca")
 
     def test_locus_detection_protocol_code_does_not_exist(self) -> None:
         """Error is raised when locus detection protocol code does not exist."""
@@ -1813,9 +1804,9 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
         )
 
         seq_profile_result = self.get_only_allele_profile_result(retval)
-        self.assertFalse(success)
-        self.assertTrue(seq_profile_result.has_errors())
-        self.assertTrue(seq_profile_result.has_log_code("ff4ff6db"))
+        assert not success
+        assert seq_profile_result.has_errors()
+        assert seq_profile_result.has_log_code("ff4ff6db")
 
     def test_locus_detection_protocol_id_code_mismatch(self) -> None:
         """Error is raised when locus detection protocol ID and code mismatch."""
@@ -1840,9 +1831,9 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
         )
 
         seq_profile_result = self.get_only_allele_profile_result(retval)
-        self.assertFalse(success)
-        self.assertTrue(seq_profile_result.has_errors())
-        self.assertTrue(seq_profile_result.has_log_code("95558de7"))
+        assert not success
+        assert seq_profile_result.has_errors()
+        assert seq_profile_result.has_log_code("95558de7")
 
     def test_allele_profiles_exist_with_error_on_exists(self) -> None:
         """Existing identical profile resolves to existing ID for on_exists=ERROR."""
@@ -1879,11 +1870,11 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
         )
 
         seq_profile_result = self.get_only_allele_profile_result(retval)
-        self.assertTrue(success)
-        self.assertFalse(seq_profile_result.has_warnings())
-        self.assertFalse(seq_profile_result.has_errors())
-        self.assertFalse(seq_profile_result.is_new)
-        self.assertIsNotNone(seq_profile_result.id)
+        assert success
+        assert not seq_profile_result.has_warnings()
+        assert not seq_profile_result.has_errors()
+        assert not seq_profile_result.is_new
+        assert seq_profile_result.id is not None
 
     def test_locus_code_map_id_does_not_exist(self) -> None:
         """Error is raised when locus code map ID does not exist."""
@@ -1905,9 +1896,9 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
         )
 
         seq_profile_result = self.get_only_allele_profile_result(retval)
-        self.assertFalse(success)
-        self.assertTrue(seq_profile_result.has_errors())
-        self.assertTrue(seq_profile_result.has_log_code("dec840ca"))
+        assert not success
+        assert seq_profile_result.has_errors()
+        assert seq_profile_result.has_log_code("dec840ca")
 
     def test_locus_code_map_code_does_not_exist(self) -> None:
         """Error is raised when locus code map code does not exist."""
@@ -1933,9 +1924,9 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
         )
 
         seq_profile_result = self.get_only_allele_profile_result(retval)
-        self.assertFalse(success)
-        self.assertTrue(seq_profile_result.has_errors())
-        self.assertTrue(seq_profile_result.has_log_code("dec840ca"))
+        assert not success
+        assert seq_profile_result.has_errors()
+        assert seq_profile_result.has_log_code("dec840ca")
 
     def test_locus_code_map_id_code_mismatch(self) -> None:
         """Error is raised when locus code map ID/code mismatch."""
@@ -1964,9 +1955,9 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
         )
 
         seq_profile_result = self.get_only_allele_profile_result(retval)
-        self.assertFalse(success)
-        self.assertTrue(seq_profile_result.has_errors())
-        self.assertTrue(seq_profile_result.has_log_code("79de83f2"))
+        assert not success
+        assert seq_profile_result.has_errors()
+        assert seq_profile_result.has_log_code("79de83f2")
 
     def test_locus_code_map_code_sets_id(self) -> None:
         """Supplying only locus code map code resolves and sets locus_code_map_id."""
@@ -1993,11 +1984,8 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
             self.batch_uploader, cmd, retval, self.uow
         )
 
-        self.assertTrue(success)
-        self.assertEqual(
-            seq_profile_for_upload.locus_code_map_id,
-            self.locus_code_map_id,
-        )
+        assert success
+        assert seq_profile_for_upload.locus_code_map_id == self.locus_code_map_id
 
 
 @pytest.mark.scenario_ids("TC-11-13-01")
@@ -2018,7 +2006,7 @@ class TestVerifyReferenceData(BaseUploadTestCase):
         success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
         # Verify
-        self.assertTrue(success)
+        assert success
 
     def test_verify_refdata_no_allele_profiles(self) -> None:
         """Test that _verify_batch_sample_refdata succeeds with samples that have no allele profiles."""
@@ -2033,7 +2021,7 @@ class TestVerifyReferenceData(BaseUploadTestCase):
         success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
         # Verify
-        self.assertTrue(success)
+        assert success
 
     def test_verify_refdata_successful_allele_profiles(self) -> None:
         """Test successful verification when no allele profiles are provided."""
@@ -2067,7 +2055,7 @@ class TestVerifyReferenceData(BaseUploadTestCase):
 
         success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
-        self.assertTrue(success)
+        assert success
         # Note: crud may not be called if no allele profiles to verify
 
     def test_verify_refdata_missing_new_alleles(self) -> None:
@@ -2131,10 +2119,10 @@ class TestVerifyReferenceData(BaseUploadTestCase):
 
         success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
-        self.assertFalse(success)
+        assert not success
         # The error should be detected (success=False) when new alleles are missing
-        self.assertTrue(retval.has_errors())
-        self.assertTrue(retval.has_log_code("7eeced9e"))
+        assert retval.has_errors()
+        assert retval.has_log_code("7eeced9e")
 
     def test_verify_refdata_extra_alleles_warning(self) -> None:
         """Test that _verify_refdata gives warning for superfluous alleles in batch."""
@@ -2204,8 +2192,8 @@ class TestVerifyReferenceData(BaseUploadTestCase):
 
         # All profile alleles exist → else-branch clears provided_alleles; extra_allele
         # is dropped silently so _create_sample_refdata skips the wasteful UPSERT_SOME.
-        self.assertTrue(success)
-        self.assertEqual(cmd.sample_batch.alleles, [])
+        assert success
+        assert cmd.sample_batch.alleles == []
 
     def test_verify_refdata_skipped_samples_ignored(self) -> None:
         """Test that _verify_refdata ignores samples with FAILED/SKIPPED status."""
@@ -2227,7 +2215,7 @@ class TestVerifyReferenceData(BaseUploadTestCase):
 
         success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
-        self.assertTrue(success)  # Should succeed because skipped items are ignored
+        assert success  # Should succeed because skipped items are ignored
         # Verify no repository calls were made (nothing to verify)
         self.service.repository.crud.assert_not_called()
 
@@ -2291,21 +2279,21 @@ class TestVerifyReferenceData(BaseUploadTestCase):
         # Execute
         success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
-        self.assertFalse(success)
+        assert not success
         # Verify error was added to result
-        self.assertEqual(len(retval.samples), 1)
-        self.assertIsNotNone(retval.samples[0].seq_profiles)
+        assert len(retval.samples) == 1
+        assert retval.samples[0].seq_profiles is not None
         allele_profile_result = self.get_only_allele_profile_result(retval)
-        self.assertEqual(allele_profile_result.status, EtlStatus.FAILED)
-        self.assertTrue(allele_profile_result.has_errors())
+        assert allele_profile_result.status == EtlStatus.FAILED
+        assert allele_profile_result.has_errors()
         # TODO: replace with actual log code rather than log message
-        self.assertTrue(allele_profile_result.has_log_code("b29dcaf6"))
+        assert allele_profile_result.has_log_code("b29dcaf6")
 
     def test_verify_refdata_allele_profile_format_not_implemented(self) -> None:
         """Test error when allele profile format is not implemented."""
         # Skip this test since only SORTED_ALLELE_IDS is implemented
         # and pydantic validates the enum before we get to the NotImplementedError
-        self.skipTest("Cannot test NotImplementedError due to pydantic enum validation")
+        pytest.skip("Cannot test NotImplementedError due to pydantic enum validation")
 
     def test_verify_refdata_with_empty_allele_profiles_list(self) -> None:
         """Test that _verify_refdata succeeds with empty allele profiles list."""
@@ -2319,7 +2307,7 @@ class TestVerifyReferenceData(BaseUploadTestCase):
         success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
         # Verify
-        self.assertTrue(success)
+        assert success
 
     def test_verify_refdata_multiple_samples_no_profiles(self) -> None:
         """Test that _verify_refdata succeeds with multiple samples that have no allele profiles."""
@@ -2340,7 +2328,7 @@ class TestVerifyReferenceData(BaseUploadTestCase):
         success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
         # Verify
-        self.assertTrue(success)
+        assert success
 
     def test_verify_refdata_empty_batch_alternative(self) -> None:
         """Test that _verify_refdata succeeds with truly empty sample batch (alternative pattern)."""
@@ -2350,7 +2338,7 @@ class TestVerifyReferenceData(BaseUploadTestCase):
         success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
         # Verify
-        self.assertTrue(success)
+        assert success
 
     def test_locus_allele_id_map_encoded_in_locus_set_order(self) -> None:
         """Alleles must be encoded in locus_ids order, not locus_allele_id_map dict order.
@@ -2406,17 +2394,17 @@ class TestVerifyReferenceData(BaseUploadTestCase):
 
         success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
-        self.assertTrue(success)
+        assert success
         encoded = cmd.sample_batch.samples[0].seq_profiles[0]
-        self.assertNotEqual(encoded.content, "")
+        assert encoded.content != ""
         content_bytes = base64.b64decode(encoded.content)
-        self.assertEqual(content_bytes[0:16], a1.bytes)  # locus1 is first → a1
-        self.assertEqual(content_bytes[16:32], a2.bytes)  # locus2 is second → a2
+        assert content_bytes[0:16] == a1.bytes  # locus1 is first → a1
+        assert content_bytes[16:32] == a2.bytes  # locus2 is second → a2
 
     def test_verify_refdata_assertion_error_no_allele_data(self) -> None:
         """Test assertion error when no allele data is provided."""
         # Skip this test since pydantic validates fields before we get to the assertion
-        self.skipTest("Cannot test AssertionError due to pydantic validation")
+        pytest.skip("Cannot test AssertionError due to pydantic validation")
 
 
 @pytest.mark.scenario_ids("TC-11-13-01")
@@ -2453,11 +2441,11 @@ class TestConcurrentModificationError(BaseUploadTestCase):
         )
 
         # No exception should escape; batch_result.seq_distances stays None.
-        self.assertTrue(success)
-        self.assertIsNone(batch_result.seq_distances)
-        self.assertTrue(batch_result.has_log_code("b3e1f49a"))
+        assert success
+        assert batch_result.seq_distances is None
+        assert batch_result.has_log_code("b3e1f49a")
         # Sample result must not be FAILED.
-        self.assertNotEqual(profile_result.status, EtlStatus.FAILED)
+        assert profile_result.status != EtlStatus.FAILED
 
     def test_calculate_distances_false_skips_distance_calculation(self) -> None:
         """When calculate_distances=False, _update_profile_distances returns early
@@ -2482,8 +2470,8 @@ class TestConcurrentModificationError(BaseUploadTestCase):
             self.batch_uploader, cmd, batch_result, self.uow
         )
 
-        self.assertTrue(success)
-        self.assertIsNone(batch_result.seq_distances)
+        assert success
+        assert batch_result.seq_distances is None
         self.service.app.handle.assert_not_called()
 
 
@@ -2515,8 +2503,8 @@ class TestVerifyBatchSeqClassifications(BaseUploadTestCase):
 
         seq_classification_results = retval.samples[0].seq_classifications or []
         sc_result = seq_classification_results[0]
-        self.assertFalse(success)
-        self.assertFalse(sc_result.has_log_code("d91a7c4e"))
+        assert not success
+        assert not sc_result.has_log_code("d91a7c4e")
 
     def test_primary_category_code_not_found(self) -> None:
         """Function returns failure when primary-category code cannot be resolved."""
@@ -2529,8 +2517,8 @@ class TestVerifyBatchSeqClassifications(BaseUploadTestCase):
 
         seq_classification_results = retval.samples[0].seq_classifications or []
         sc_result = seq_classification_results[0]
-        self.assertFalse(success)
-        self.assertFalse(sc_result.has_log_code("d91a7c4e"))
+        assert not success
+        assert not sc_result.has_log_code("d91a7c4e")
 
     def test_primary_category_code_resolves_to_id(self) -> None:
         """Function succeeds when both protocol and primary-category links verify."""
@@ -2541,5 +2529,5 @@ class TestVerifyBatchSeqClassifications(BaseUploadTestCase):
 
         success, retval = self._run(sc)
 
-        self.assertTrue(success)
-        self.assertFalse(retval.has_errors())
+        assert success
+        assert not retval.has_errors()

@@ -173,32 +173,37 @@ class Run:
         )
 
     ## test
-    def test_all(self) -> None:
+    def test_all(self, include_e2e: bool = True) -> None:
         import subprocess
 
-        pytest_args = Run.DEFAULT_PYTEST_ARGS + [
-            "test/filter/unit",
-            "test/transform/unit",
-            "test/fastapp/unit",
-            "test/commondb/unit",
-            "test/commondb/integration",
-            "test/casedb/unit",
-            "test/casedb/integration",
-            "test/seqdb/unit",
-            "test/seqdb/integration",
-            "test/omopdb/unit",
-            "test/omopdb/integration",
-            "test/general/docs",
-            "test/end_to_end",
-            "test/util",
-            # Not normally included, uncomment if needed
-            # "test/casedb/performance",
-            # "test/seqdb/performance",
-            # "test/omopdb/performance",
-            # "test/commondb/performance",
-            # "test/fastapp/performance",
-            # "test/general/code",
-        ]
+        pytest_args = (
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/filter/unit",
+                "test/transform/unit",
+                "test/fastapp/unit",
+                "test/commondb/unit",
+                "test/commondb/integration",
+                "test/casedb/unit",
+                "test/casedb/integration",
+                "test/seqdb/unit",
+                "test/seqdb/integration",
+                "test/omopdb/unit",
+                "test/omopdb/integration",
+                "test/general/docs",
+            ]
+            + (["test/end_to_end"] if include_e2e else [])
+            + [
+                "test/util",
+                # Not normally included, uncomment if needed
+                # "test/casedb/performance",
+                # "test/seqdb/performance",
+                # "test/omopdb/performance",
+                # "test/commondb/performance",
+                # "test/fastapp/performance",
+                # "test/general/code",
+            ]
+        )
 
         subprocess.run(
             [
@@ -211,7 +216,7 @@ class Run:
                 "pytest",
             ]
             + pytest_args,
-            check=False,
+            check=True,
         )
         # Generate HTML report
         subprocess.run(

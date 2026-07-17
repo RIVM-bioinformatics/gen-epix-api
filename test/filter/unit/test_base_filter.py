@@ -1,5 +1,4 @@
 from typing import Any, Iterable, Iterator, List, Set, Tuple
-from unittest import TestCase
 
 import pytest
 from pydantic import BaseModel
@@ -45,10 +44,10 @@ class RowModel(BaseModel):
     b: Any | None = None
 
 
-class BaseFilterTestCase(TestCase):
+class BaseFilterTestCase:
     """Base test case with common fixtures and utilities for Filter tests."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         self.true_filter = AlwaysTrueFilter()
         self.eq_filter = EqualsFilter(expected="x")
         self.composite_filter = CompositeFilter()

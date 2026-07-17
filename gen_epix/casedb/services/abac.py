@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import ClassVar
 from uuid import UUID
 
 from cachetools import TTLCache, cached
@@ -27,7 +28,15 @@ class AbacService(BaseAbacService):
         command.UserShareCasePolicyCrudCommand,
         command.OrganizationAccessCasePolicyCrudCommand,
         command.OrganizationShareCasePolicyCrudCommand,
+        command.UpdateUserOwnOrganizationCommand,
     )
+    _GET_CASE_ABAC_CACHE: ClassVar[TTLCache] = TTLCache(maxsize=1024, ttl=300)
+    _GET_REF_DATA_ACCESS_CACHE: ClassVar[TTLCache] = TTLCache(maxsize=1024, ttl=300)
+
+    def _invalidate_cache(self, _cmd: Command) -> None:
+        super()._invalidate_cache(_cmd)
+        self._get_case_abac_cached.cache_clear()
+        self._get_ref_data_access_cached.cache_clear()
 
     def register_policies(
         self,
@@ -204,15 +213,9 @@ class AbacService(BaseAbacService):
                 )
             )
 
-        # Invalidate cache
-        # TODO: develop general system for caching and cache invalidation
-        self._get_user_by_id_cached.cache_clear()  # type: ignore[attr-defined]
-        self._get_case_abac_cached.cache_clear()  # type: ignore[attr-defined]
-        self._get_ref_data_access_cached.cache_clear()  # type: ignore[attr-defined]
-
         return user
 
-    @cached(cache=TTLCache(maxsize=1024, ttl=300))
+    @cached(cache=_GET_CASE_ABAC_CACHE)
     def _get_case_abac_cached(
         self,
         user_id: UUID,
@@ -603,7 +606,7 @@ class AbacService(BaseAbacService):
             )
         return self._get_ref_data_access_cached(user)
 
-    @cached(cache=TTLCache(maxsize=1024, ttl=300), key=lambda self, user: user.id)
+    @cached(cache=_GET_REF_DATA_ACCESS_CACHE, key=lambda self, user: user.id)
     def _get_ref_data_access_cached(self, user: model.User) -> model.RefDataAccess:
 
         if not self.role_set_map[CommonRoleSet.GE_REFDATA_ADMIN].isdisjoint(user.roles):

@@ -140,6 +140,7 @@ class RoleGenerator(CommonRoleGenerator):
             (command.RetrieveCaseSetRightsCommand, PermissionTypeSet.E),
             (command.RetrieveCaseStatsCommand, PermissionTypeSet.E),
             (command.RetrieveCasesByIdCommand, PermissionTypeSet.E),
+            (command.RetrieveIsOwnCasesCommand, PermissionTypeSet.E),
             (command.RetrieveCasesByQueryCommand, PermissionTypeSet.E),
             (command.RetrieveCompleteCaseTypeCommand, PermissionTypeSet.E),
             (command.TreeAlgorithmClassCrudCommand, PermissionTypeSet.R),

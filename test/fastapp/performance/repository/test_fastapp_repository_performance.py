@@ -103,11 +103,11 @@ class TestRepository:
                     PERFORMANCE_HTML[key] = profiler.output_html()
 
     def test_tear_down(self, env: Env) -> None:
-        # TODO: tearDownClass should be called by the test framework instead
-        TestRepository.tearDownClass(env)
+        # TODO: finalize_outputs should be called by the test framework instead
+        TestRepository.finalize_outputs(env)
 
     @classmethod
-    def tearDownClass(cls, env):
+    def finalize_outputs(cls, env):
         if env.repository_type != get_test_clients()[-1].repository_type:
             # Only execute for the last repository class
             return

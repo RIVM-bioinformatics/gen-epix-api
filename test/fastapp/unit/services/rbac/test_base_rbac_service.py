@@ -18,9 +18,8 @@ The tests handle all of the following scenarios:
 
 from collections.abc import Hashable
 from enum import Enum
+from test.util.mock_compat import Mock
 from typing import Any
-from unittest import TestCase
-from unittest.mock import Mock
 from uuid import UUID, uuid4
 
 import pytest
@@ -105,10 +104,10 @@ class ConcreteRbacService(BaseRbacService):
         return cmd.user.id in self._non_rbac_authorized_users
 
 
-class BaseRbacServiceTestCase(TestCase):
+class BaseRbacServiceTestCase:
     """Base test case with common fixtures and utilities."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         """Set up test fixtures."""
         # Test user
         self.user_id = uuid4()
@@ -222,13 +221,11 @@ class TestServiceInitialization(BaseRbacServiceTestCase):
         service = ConcreteRbacService(self.mock_app)
 
         # Verify
-        self.assertEqual(len(service.permissions_without_rbac), 0)
-        self.assertEqual(len(service.permissions_by_role), 0)
-        self.assertEqual(
-            len(service.roles_by_permission), 4
-        )  # One entry per domain permission
+        assert len(service.permissions_without_rbac) == 0
+        assert len(service.permissions_by_role) == 0
+        assert len(service.roles_by_permission) == 4  # One entry per domain permission
         for permission in self.mock_domain.permissions:
-            self.assertEqual(len(service.roles_by_permission[permission]), 0)
+            assert len(service.roles_by_permission[permission]) == 0
 
     def test_properties_return_correct_collections(self) -> None:
         """Test that properties return the correct internal collections."""
@@ -238,16 +235,12 @@ class TestServiceInitialization(BaseRbacServiceTestCase):
         self.service._roles_by_permission[self.permission2] = {_TestRole.USER}
 
         # Execute & Verify
-        self.assertIs(
-            self.service.permissions_without_rbac,
-            self.service._permissions_without_rbac,
+        assert (
+            self.service.permissions_without_rbac
+            is self.service._permissions_without_rbac
         )
-        self.assertIs(
-            self.service.permissions_by_role, self.service._permissions_by_role
-        )
-        self.assertIs(
-            self.service.roles_by_permission, self.service._roles_by_permission
-        )
+        assert self.service.permissions_by_role is self.service._permissions_by_role
+        assert self.service.roles_by_permission is self.service._roles_by_permission
 
     def test_register_handlers_does_nothing_in_base_implementation(self) -> None:
         """Test that register_handlers does nothing in base implementation."""
@@ -268,7 +261,7 @@ class TestPermissionRegistration(BaseRbacServiceTestCase):
         self.service.register_permission_without_rbac(self.permission1)
 
         # Verify
-        self.assertIn(self.permission1, self.service.permissions_without_rbac)
+        assert self.permission1 in self.service.permissions_without_rbac
 
     def test_register_permission_without_rbac_with_existing_roles_fails(self) -> None:
         """Test registering permission without RBAC fails when roles exist."""
@@ -276,9 +269,9 @@ class TestPermissionRegistration(BaseRbacServiceTestCase):
         self.service._roles_by_permission[self.permission1].add(_TestRole.USER)
 
         # Execute & Verify
-        with self.assertRaises(exc.ServiceException) as cm:
+        with pytest.raises(exc.ServiceException) as cm:
             self.service.register_permission_without_rbac(self.permission1)
-        self.assertIn("has some roles registered", str(cm.exception))
+        assert "has some roles registered" in str(cm.value)
 
     def test_unregister_permission_without_rbac_succeeds(self) -> None:
         """Test unregistering a permission without RBAC."""
@@ -289,14 +282,14 @@ class TestPermissionRegistration(BaseRbacServiceTestCase):
         self.service.unregister_permission_without_rbac(self.permission1)
 
         # Verify
-        self.assertNotIn(self.permission1, self.service.permissions_without_rbac)
+        assert self.permission1 not in self.service.permissions_without_rbac
 
     def test_unregister_permission_without_rbac_not_registered_fails(self) -> None:
         """Test unregistering non-registered permission fails."""
         # Execute & Verify
-        with self.assertRaises(exc.ServiceException) as cm:
+        with pytest.raises(exc.ServiceException) as cm:
             self.service.unregister_permission_without_rbac(self.permission1)
-        self.assertIn("is not registered", str(cm.exception))
+        assert "is not registered" in str(cm.value)
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-05")
@@ -312,9 +305,9 @@ class TestRoleRegistration(BaseRbacServiceTestCase):
         self.service.register_role(_TestRole.USER, permissions)
 
         # Verify
-        self.assertEqual(self.service.permissions_by_role[_TestRole.USER], permissions)
+        assert self.service.permissions_by_role[_TestRole.USER] == permissions
         for permission in permissions:
-            self.assertIn(_TestRole.USER, self.service.roles_by_permission[permission])
+            assert _TestRole.USER in self.service.roles_by_permission[permission]
 
     def test_register_role_invalid_permissions_fails(self) -> None:
         """Test registering role with invalid permissions fails."""
@@ -325,9 +318,9 @@ class TestRoleRegistration(BaseRbacServiceTestCase):
         permissions = {self.permission1, invalid_permission}
 
         # Execute & Verify
-        with self.assertRaises(exc.ServiceException) as cm:
+        with pytest.raises(exc.ServiceException) as cm:
             self.service.register_role(_TestRole.USER, permissions)
-        self.assertIn("are not registered", str(cm.exception))
+        assert "are not registered" in str(cm.value)
 
     def test_register_role_existing_role_without_update_fails(self) -> None:
         """Test registering existing role without update fails."""
@@ -336,9 +329,9 @@ class TestRoleRegistration(BaseRbacServiceTestCase):
         self.service.register_role(_TestRole.USER, permissions)
 
         # Execute & Verify
-        with self.assertRaises(exc.ServiceException) as cm:
+        with pytest.raises(exc.ServiceException) as cm:
             self.service.register_role(_TestRole.USER, permissions, update_role=False)
-        self.assertIn("is already registered", str(cm.exception))
+        assert "is already registered" in str(cm.value)
 
     def test_register_role_existing_role_with_update_succeeds(self) -> None:
         """Test updating existing role succeeds."""
@@ -351,18 +344,10 @@ class TestRoleRegistration(BaseRbacServiceTestCase):
         self.service.register_role(_TestRole.USER, new_permissions, update_role=True)
 
         # Verify
-        self.assertEqual(
-            self.service.permissions_by_role[_TestRole.USER], new_permissions
-        )
-        self.assertNotIn(
-            _TestRole.USER, self.service.roles_by_permission[self.permission1]
-        )
-        self.assertIn(
-            _TestRole.USER, self.service.roles_by_permission[self.permission2]
-        )
-        self.assertIn(
-            _TestRole.USER, self.service.roles_by_permission[self.permission3]
-        )
+        assert self.service.permissions_by_role[_TestRole.USER] == new_permissions
+        assert _TestRole.USER not in self.service.roles_by_permission[self.permission1]
+        assert _TestRole.USER in self.service.roles_by_permission[self.permission2]
+        assert _TestRole.USER in self.service.roles_by_permission[self.permission3]
 
     def test_register_roles_multiple_roles_succeeds(self) -> None:
         """Test registering multiple roles at once."""
@@ -379,13 +364,11 @@ class TestRoleRegistration(BaseRbacServiceTestCase):
         self.service.register_roles(role_permissions)
 
         # Verify
-        self.assertEqual(
-            self.service.permissions_by_role[_TestRole.USER], {self.permission1}
-        )
-        self.assertEqual(
-            self.service.permissions_by_role[_TestRole.ADMIN],
-            {self.permission1, self.permission2},
-        )
+        assert self.service.permissions_by_role[_TestRole.USER] == {self.permission1}
+        assert self.service.permissions_by_role[_TestRole.ADMIN] == {
+            self.permission1,
+            self.permission2,
+        }
 
     def test_register_roles_with_root_role_adds_missing_permissions(self) -> None:
         """Test registering roles with root role adds all missing permissions."""
@@ -399,9 +382,9 @@ class TestRoleRegistration(BaseRbacServiceTestCase):
         self.service.register_roles(role_permissions, root_role=_TestRole.ROOT)
 
         # Verify
-        self.assertEqual(
-            self.service.permissions_by_role[_TestRole.ROOT],
-            self.mock_domain.permissions,
+        assert (
+            self.service.permissions_by_role[_TestRole.ROOT]
+            == self.mock_domain.permissions
         )
 
     def test_register_roles_with_root_role_missing_permissions_raises(self) -> None:
@@ -412,13 +395,13 @@ class TestRoleRegistration(BaseRbacServiceTestCase):
         }
 
         # Execute & Verify
-        with self.assertRaises(exc.InitializationServiceError) as cm:
+        with pytest.raises(exc.InitializationServiceError) as cm:
             self.service.register_roles(
                 role_permissions,
                 root_role=_TestRole.ROOT,
                 on_missing_root_permissions="raise",
             )
-        self.assertIn("is missing permissions", str(cm.exception))
+        assert "is missing permissions" in str(cm.value)
 
     def test_unregister_role_existing_role_succeeds(self) -> None:
         """Test unregistering existing role succeeds."""
@@ -430,18 +413,16 @@ class TestRoleRegistration(BaseRbacServiceTestCase):
         self.service.unregister_role(_TestRole.USER)
 
         # Verify
-        self.assertNotIn(_TestRole.USER, self.service.permissions_by_role)
+        assert _TestRole.USER not in self.service.permissions_by_role
         for permission in permissions:
-            self.assertNotIn(
-                _TestRole.USER, self.service.roles_by_permission[permission]
-            )
+            assert _TestRole.USER not in self.service.roles_by_permission[permission]
 
     def test_unregister_role_non_existing_role_fails(self) -> None:
         """Test unregistering non-existing role fails."""
         # Execute & Verify
-        with self.assertRaises(exc.ServiceException) as cm:
+        with pytest.raises(exc.ServiceException) as cm:
             self.service.unregister_role(_TestRole.USER)
-        self.assertIn("is not registered", str(cm.exception))
+        assert "is not registered" in str(cm.value)
 
     def test_verify_roles_exist_for_all_permission_succeeds_when_all_covered(
         self,
@@ -465,9 +446,9 @@ class TestRoleRegistration(BaseRbacServiceTestCase):
         # permission3 and permission4 have no roles
 
         # Execute & Verify
-        with self.assertRaises(exc.ServiceException) as cm:
+        with pytest.raises(exc.ServiceException) as cm:
             self.service.verify_roles_exist_for_all_permission()
-        self.assertIn("No roles for permission(s)", str(cm.exception))
+        assert "No roles for permission(s)" in str(cm.value)
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-05")
@@ -494,12 +475,10 @@ class TestRoleHierarchy(BaseRbacServiceTestCase):
         guest_sub_roles = self.service.get_sub_roles(_TestRole.GUEST)
 
         # Verify
-        self.assertEqual(
-            root_sub_roles, {_TestRole.ADMIN, _TestRole.USER, _TestRole.GUEST}
-        )
-        self.assertEqual(admin_sub_roles, {_TestRole.USER, _TestRole.GUEST})
-        self.assertEqual(user_sub_roles, {_TestRole.GUEST})
-        self.assertEqual(guest_sub_roles, set())
+        assert root_sub_roles == {_TestRole.ADMIN, _TestRole.USER, _TestRole.GUEST}
+        assert admin_sub_roles == {_TestRole.USER, _TestRole.GUEST}
+        assert user_sub_roles == {_TestRole.GUEST}
+        assert guest_sub_roles == set()
 
     def test_get_sub_roles_caches_results(self) -> None:
         """Test that sub-role calculations are cached."""
@@ -515,7 +494,7 @@ class TestRoleHierarchy(BaseRbacServiceTestCase):
         sub_roles2 = self.service.get_sub_roles(_TestRole.ADMIN)
 
         # Verify
-        self.assertIs(sub_roles1, sub_roles2)  # Same object reference (cached)
+        assert sub_roles1 is sub_roles2  # Same object reference (cached)
 
     def test_get_sub_roles_cache_cleared_on_role_update(self) -> None:
         """Test that sub-role cache is cleared when roles are updated."""
@@ -532,7 +511,7 @@ class TestRoleHierarchy(BaseRbacServiceTestCase):
         )
 
         # Verify cache was cleared by checking internal state
-        self.assertNotIn(_TestRole.ADMIN, self.service._sub_roles_by_role)
+        assert _TestRole.ADMIN not in self.service._sub_roles_by_role
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-05")
@@ -550,9 +529,7 @@ class TestUserPermissions(BaseRbacServiceTestCase):
         permissions = self.service.retrieve_user_permissions(self.user)
 
         # Verify
-        self.assertEqual(
-            permissions, {self.permission1, self.permission2, self.permission3}
-        )
+        assert permissions == {self.permission1, self.permission2, self.permission3}
 
     def test_retrieve_user_permissions_empty_roles_returns_empty_set(self) -> None:
         """Test that user with no roles has no permissions."""
@@ -563,7 +540,7 @@ class TestUserPermissions(BaseRbacServiceTestCase):
         permissions = self.service.retrieve_user_permissions(self.user)
 
         # Verify
-        self.assertEqual(permissions, set())
+        assert permissions == set()
 
     def test_retrieve_user_has_all_rbac_permissions_true_when_has_all(self) -> None:
         """Test that user has all RBAC permissions when they actually do."""
@@ -580,7 +557,7 @@ class TestUserPermissions(BaseRbacServiceTestCase):
         has_all = self.service.retrieve_user_has_all_rbac_permissions(self.user)
 
         # Verify
-        self.assertTrue(has_all)
+        assert has_all
 
     def test_retrieve_user_has_all_rbac_permissions_false_when_missing(self) -> None:
         """Test that user doesn't have all RBAC permissions when missing some."""
@@ -593,7 +570,7 @@ class TestUserPermissions(BaseRbacServiceTestCase):
         has_all = self.service.retrieve_user_has_all_rbac_permissions(self.user)
 
         # Verify
-        self.assertFalse(has_all)
+        assert not has_all
 
     def test_retrieve_user_has_more_permissions_with_user_target(self) -> None:
         """Test checking if user has more permissions than another user."""
@@ -611,7 +588,7 @@ class TestUserPermissions(BaseRbacServiceTestCase):
         )
 
         # Verify
-        self.assertTrue(has_more)
+        assert has_more
 
     def test_retrieve_user_has_more_permissions_with_roles_target(self) -> None:
         """Test checking if user has more permissions than a set of roles."""
@@ -628,7 +605,7 @@ class TestUserPermissions(BaseRbacServiceTestCase):
         )
 
         # Verify
-        self.assertTrue(has_more)
+        assert has_more
 
     def test_retrieve_user_has_more_permissions_false_when_subset(self) -> None:
         """Test that user doesn't have more permissions when they're a subset."""
@@ -645,7 +622,7 @@ class TestUserPermissions(BaseRbacServiceTestCase):
         )
 
         # Verify
-        self.assertFalse(has_more)
+        assert not has_more
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-05")
@@ -663,7 +640,7 @@ class TestCommandPermissions(BaseRbacServiceTestCase):
         )
 
         # Verify
-        self.assertEqual(rbac_permissions, {self.permission1})  # permission2 excluded
+        assert rbac_permissions == {self.permission1}  # permission2 excluded
 
     def test_get_command_classes_with_rbac_returns_correct_classes(self) -> None:
         """Test getting command classes that have RBAC permissions."""
@@ -675,7 +652,7 @@ class TestCommandPermissions(BaseRbacServiceTestCase):
         command_classes = self.service.get_command_classes_with_rbac()
 
         # Verify
-        self.assertEqual(command_classes, {_TestCommand})  # TestCommand2 excluded
+        assert command_classes == {_TestCommand}  # TestCommand2 excluded
 
     def test_get_root_permissions_returns_all_domain_permissions(self) -> None:
         """Test that get_root_permissions returns all domain permissions."""
@@ -683,7 +660,7 @@ class TestCommandPermissions(BaseRbacServiceTestCase):
         root_permissions = self.service.get_root_permissions()
 
         # Verify
-        self.assertEqual(root_permissions, self.mock_domain.permissions)
+        assert root_permissions == self.mock_domain.permissions
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-05")
@@ -702,9 +679,9 @@ class TestRbacPolicyRegistration(BaseRbacServiceTestCase):
         # Verify
         self.mock_app.register_policy.assert_called_once()
         call_args = self.mock_app.register_policy.call_args
-        self.assertEqual(call_args[0][0], _TestCommand)  # Command class
-        self.assertIsInstance(call_args[0][1], RbacPolicy)  # Policy instance
-        self.assertEqual(call_args[0][2], EventTiming.BEFORE)  # Timing
+        assert call_args[0][0] == _TestCommand  # Command class
+        assert isinstance(call_args[0][1], RbacPolicy)  # Policy instance
+        assert call_args[0][2] == EventTiming.BEFORE  # Timing
 
     def test_register_rbac_policies_with_custom_functions(self) -> None:
         """Test registering RBAC policies with custom override functions."""
@@ -750,32 +727,21 @@ class TestHierarchicalRolePermissions(BaseRbacServiceTestCase):
         )
 
         # Verify
-        self.assertEqual(
-            expanded[_TestRole.GUEST], {(_TestCommand, PermissionType.READ)}
-        )
-        self.assertEqual(
-            expanded[_TestRole.USER],
-            {
-                (_TestCommand, PermissionType.READ),
-                (_TestCommand, PermissionType.UPDATE),
-            },
-        )
-        self.assertEqual(
-            expanded[_TestRole.ADMIN],
-            {
-                (_TestCommand, PermissionType.READ),
-                (_TestCommand, PermissionType.UPDATE),
-                (_TestCommand2, PermissionType.READ),
-            },
-        )
-        self.assertEqual(
-            expanded[_TestRole.ROOT],
-            {
-                (_TestCommand, PermissionType.READ),
-                (_TestCommand, PermissionType.UPDATE),
-                (_TestCommand2, PermissionType.READ),
-            },
-        )
+        assert expanded[_TestRole.GUEST] == {(_TestCommand, PermissionType.READ)}
+        assert expanded[_TestRole.USER] == {
+            (_TestCommand, PermissionType.READ),
+            (_TestCommand, PermissionType.UPDATE),
+        }
+        assert expanded[_TestRole.ADMIN] == {
+            (_TestCommand, PermissionType.READ),
+            (_TestCommand, PermissionType.UPDATE),
+            (_TestCommand2, PermissionType.READ),
+        }
+        assert expanded[_TestRole.ROOT] == {
+            (_TestCommand, PermissionType.READ),
+            (_TestCommand, PermissionType.UPDATE),
+            (_TestCommand2, PermissionType.READ),
+        }
 
     def test_expand_hierarchical_role_permissions_detects_redundant_permissions(
         self,
@@ -794,11 +760,11 @@ class TestHierarchicalRolePermissions(BaseRbacServiceTestCase):
         }
 
         # Execute & Verify
-        with self.assertRaises(exc.InitializationServiceError) as cm:
+        with pytest.raises(exc.InitializationServiceError) as cm:
             BaseRbacService.expand_hierarchical_role_permissions(
                 role_hierarchy, role_permission_sets, verify_redundant_permissions=True
             )
-        self.assertIn("Duplicate permissions", str(cm.exception))
+        assert "Duplicate permissions" in str(cm.value)
 
     def test_expand_hierarchical_role_permissions_allows_redundant_when_disabled(
         self,
@@ -822,9 +788,7 @@ class TestHierarchicalRolePermissions(BaseRbacServiceTestCase):
         )
 
         # Verify
-        self.assertEqual(
-            expanded[_TestRole.ADMIN], {(_TestCommand, PermissionType.READ)}
-        )
+        assert expanded[_TestRole.ADMIN] == {(_TestCommand, PermissionType.READ)}
 
     def test_expand_hierarchical_role_permissions_handles_permission_type_sets(
         self,
@@ -849,13 +813,10 @@ class TestHierarchicalRolePermissions(BaseRbacServiceTestCase):
         )
 
         # Verify
-        self.assertEqual(
-            expanded[_TestRole.USER],
-            {
-                (_TestCommand, PermissionType.READ),
-                (_TestCommand, PermissionType.UPDATE),
-            },
-        )
+        assert expanded[_TestRole.USER] == {
+            (_TestCommand, PermissionType.READ),
+            (_TestCommand, PermissionType.UPDATE),
+        }
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-05")
@@ -868,7 +829,7 @@ class TestUserAuthorizationBehavior(BaseRbacServiceTestCase):
         is_root = self.service.retrieve_user_is_root(self.user)
 
         # Verify
-        self.assertFalse(is_root)
+        assert not is_root
 
     def test_retrieve_user_is_root_can_be_overridden(self) -> None:
         """Test that retrieve_user_is_root can be overridden in concrete implementation."""
@@ -879,7 +840,7 @@ class TestUserAuthorizationBehavior(BaseRbacServiceTestCase):
         is_root = self.service.retrieve_user_is_root(self.user)
 
         # Verify
-        self.assertTrue(is_root)
+        assert is_root
 
     def test_retrieve_user_is_non_rbac_authorized_returns_false_by_default(
         self,
@@ -892,7 +853,7 @@ class TestUserAuthorizationBehavior(BaseRbacServiceTestCase):
         is_authorized = self.service.retrieve_user_is_non_rbac_authorized(cmd)
 
         # Verify
-        self.assertFalse(is_authorized)
+        assert not is_authorized
 
     def test_retrieve_user_is_non_rbac_authorized_can_be_overridden(self) -> None:
         """Test that retrieve_user_is_non_rbac_authorized can be overridden."""
@@ -904,7 +865,7 @@ class TestUserAuthorizationBehavior(BaseRbacServiceTestCase):
         is_authorized = self.service.retrieve_user_is_non_rbac_authorized(cmd)
 
         # Verify
-        self.assertFalse(is_authorized)
+        assert not is_authorized
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-05")
@@ -919,15 +880,13 @@ class TestEdgeCasesAndErrorConditions(BaseRbacServiceTestCase):
         role_permissions = {_TestRole.ROOT: set()}
 
         # Execute & Verify
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError) as cm:
             self.service.register_roles(
                 role_permissions,
                 root_role=_TestRole.ROOT,
                 on_missing_root_permissions="invalid",
             )
-        self.assertIn(
-            "Invalid value for on_missing_root_permissions", str(cm.exception)
-        )
+        assert "Invalid value for on_missing_root_permissions" in str(cm.value)
 
     def test_register_roles_creates_root_role_when_missing(self) -> None:
         """Test that root role is created when missing from role_permissions."""
@@ -938,9 +897,9 @@ class TestEdgeCasesAndErrorConditions(BaseRbacServiceTestCase):
         self.service.register_roles(role_permissions, root_role=_TestRole.ROOT)
 
         # Verify
-        self.assertEqual(
-            self.service.permissions_by_role[_TestRole.ROOT],
-            self.mock_domain.permissions,
+        assert (
+            self.service.permissions_by_role[_TestRole.ROOT]
+            == self.mock_domain.permissions
         )
 
     def test_empty_role_hierarchy_handled_gracefully(self) -> None:
@@ -949,7 +908,7 @@ class TestEdgeCasesAndErrorConditions(BaseRbacServiceTestCase):
         expanded = BaseRbacService.expand_hierarchical_role_permissions({}, {})
 
         # Verify
-        self.assertEqual(expanded, {})
+        assert expanded == {}
 
     def test_role_with_no_sub_roles_returns_empty_set(self) -> None:
         """Test that role with no sub-roles returns empty set."""
@@ -960,4 +919,4 @@ class TestEdgeCasesAndErrorConditions(BaseRbacServiceTestCase):
         sub_roles = self.service.get_sub_roles(_TestRole.USER)
 
         # Verify
-        self.assertEqual(sub_roles, set())
+        assert sub_roles == set()

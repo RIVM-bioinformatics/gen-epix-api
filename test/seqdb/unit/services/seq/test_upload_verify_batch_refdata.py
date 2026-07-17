@@ -5,9 +5,8 @@ Tests validate the SNP batch validation logic in
 upload_verify_batch_refdata.py.
 """
 
+from test.util.mock_compat import Mock
 from typing import Any
-from unittest import TestCase
-from unittest.mock import Mock
 from uuid import UUID, uuid4
 
 import pytest
@@ -27,10 +26,10 @@ from gen_epix.seqdb.services.seq.upload_verify_batch_refdata import (
 )
 
 
-class BaseSnpUploadTestCase(TestCase):
+class BaseSnpUploadTestCase:
     """Base test case for SNP upload validation."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         """Set up test fixtures."""
         self.user = User(
             id=uuid4(),
@@ -174,17 +173,17 @@ class BaseSnpUploadTestCase(TestCase):
         """Get profile result at given indices."""
         return batch_result.samples[sample_idx].seq_profiles[profile_idx]
 
-    def assertBatchProcessed(self, upload_result: UploadResult) -> None:
+    def expectBatchProcessed(self, upload_result: UploadResult) -> None:
         if upload_result.status not in UploadStatusSet.PROCESSED.value:
-            self.fail(
+            pytest.fail(
                 "Upload was not processed," f" status: {upload_result.status.value}"
             )
 
-    def assertBatchFailed(self, upload_result: UploadResult) -> None:
+    def expectBatchFailed(self, upload_result: UploadResult) -> None:
         if upload_result.status not in UploadStatusSet.FAILED.value:
-            self.fail("Upload did not fail," f" status: {upload_result.status.value}")
+            pytest.fail("Upload did not fail," f" status: {upload_result.status.value}")
 
-    def assertHasLogCode(
+    def expectHasLogCode(
         self,
         upload_result: UploadResult,
         code: list[str] | str,
@@ -194,7 +193,7 @@ class BaseSnpUploadTestCase(TestCase):
         missing_codes = [x for x in code if not upload_result.has_log_code(x)]
         if missing_codes:
             missing_str = ", ".join(missing_codes)
-            self.fail(f"Log missing for code {missing_str}")
+            pytest.fail(f"Log missing for code {missing_str}")
 
 
 @pytest.mark.scenario_ids("TC-11-13-01")
@@ -236,7 +235,7 @@ class TestSnpNoProfiles(BaseSnpUploadTestCase):
             self.uow,
         )
 
-        self.assertTrue(success)
+        assert success
         self.service.repository.crud.assert_not_called()
 
 
@@ -261,13 +260,10 @@ class TestSnpValidCases(BaseSnpUploadTestCase):
             self.uow,
         )
 
-        self.assertTrue(success)
-        self.assertEqual(
-            profile.format,
-            enum.SeqProfileFormat.NEXTCLADE,
-        )
+        assert success
+        assert profile.format == enum.SeqProfileFormat.NEXTCLADE
         pr = self.get_profile_result(retval)
-        self.assertFalse(pr.has_errors())
+        assert not pr.has_errors()
 
     def test_matching_ref_seq_accepted(self) -> None:
         """Existing ref_seq passes validation."""
@@ -283,15 +279,12 @@ class TestSnpValidCases(BaseSnpUploadTestCase):
             self.uow,
         )
 
-        self.assertTrue(success)
+        assert success
         # Verify EXISTS_SOME was called for RefSeq
         crud_calls = self.service.repository.crud.call_args_list
-        self.assertEqual(len(crud_calls), 2)
-        self.assertEqual(crud_calls[1].args[2], model.RefSeq)
-        self.assertEqual(
-            crud_calls[1].args[3],
-            CrudOperation.EXISTS_SOME,
-        )
+        assert len(crud_calls) == 2
+        assert crud_calls[1].args[2] == model.RefSeq
+        assert crud_calls[1].args[3] == CrudOperation.EXISTS_SOME
 
     def test_two_profiles_same_ref_seq_same_length(
         self,
@@ -311,15 +304,9 @@ class TestSnpValidCases(BaseSnpUploadTestCase):
             self.uow,
         )
 
-        self.assertTrue(success)
-        self.assertEqual(
-            p1.format,
-            enum.SeqProfileFormat.NEXTCLADE,
-        )
-        self.assertEqual(
-            p2.format,
-            enum.SeqProfileFormat.NEXTCLADE,
-        )
+        assert success
+        assert p1.format == enum.SeqProfileFormat.NEXTCLADE
+        assert p2.format == enum.SeqProfileFormat.NEXTCLADE
 
 
 @pytest.mark.scenario_ids("TC-11-13-01")
@@ -340,10 +327,10 @@ class TestSnpInvalidCases(BaseSnpUploadTestCase):
             self.uow,
         )
 
-        self.assertFalse(success)
+        assert not success
         pr = self.get_profile_result(retval)
-        self.assertTrue(pr.has_errors())
-        self.assertHasLogCode(pr, "d3e2f1a0")
+        assert pr.has_errors()
+        self.expectHasLogCode(pr, "d3e2f1a0")
 
     def test_missing_ref_seq_fails(self) -> None:
         """Non-existent ref_seq → b7c6d5e4 on
@@ -360,11 +347,11 @@ class TestSnpInvalidCases(BaseSnpUploadTestCase):
             self.uow,
         )
 
-        self.assertFalse(success)
+        assert not success
         # Error is on the batch result, not
         # the profile result
-        self.assertTrue(retval.has_errors())
-        self.assertHasLogCode(retval, "b7c6d5e4")
+        assert retval.has_errors()
+        self.expectHasLogCode(retval, "b7c6d5e4")
 
     def test_protocol_no_ref_seq_id_fails(
         self,
@@ -384,10 +371,10 @@ class TestSnpInvalidCases(BaseSnpUploadTestCase):
             self.uow,
         )
 
-        self.assertFalse(success)
+        assert not success
         pr = self.get_profile_result(retval)
-        self.assertTrue(pr.has_errors())
-        self.assertHasLogCode(pr, "a6b5c4d3")
+        assert pr.has_errors()
+        self.expectHasLogCode(pr, "a6b5c4d3")
 
     def test_any_valid_json_passes_structural_only(
         self,
@@ -408,9 +395,9 @@ class TestSnpInvalidCases(BaseSnpUploadTestCase):
             self.uow,
         )
 
-        self.assertTrue(success)
+        assert success
         pr = self.get_profile_result(retval)
-        self.assertFalse(pr.has_errors())
+        assert not pr.has_errors()
 
 
 @pytest.mark.scenario_ids("TC-11-13-01")
@@ -434,7 +421,7 @@ class TestSnpBehavior(BaseSnpUploadTestCase):
 
         # Skipped profile is not collected, so
         # early return with no profiles
-        self.assertTrue(success)
+        assert success
         self.service.repository.crud.assert_not_called()
 
     def test_non_snp_profile_ignored(self) -> None:
@@ -452,7 +439,7 @@ class TestSnpBehavior(BaseSnpUploadTestCase):
             self.uow,
         )
 
-        self.assertTrue(success)
+        assert success
         self.service.repository.crud.assert_not_called()
 
     def test_batch_validation_idempotent(
@@ -482,5 +469,5 @@ class TestSnpBehavior(BaseSnpUploadTestCase):
             self.uow,
         )
 
-        self.assertTrue(r1)
-        self.assertTrue(r2)
+        assert r1
+        assert r2

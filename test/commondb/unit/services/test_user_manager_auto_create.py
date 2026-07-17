@@ -7,8 +7,8 @@ Tests verify that the refactored implementation:
 - Follows proper exception semantics and ordering
 """
 
+from test.util.mock_compat import Mock
 from typing import Any
-from unittest.mock import Mock
 from uuid import UUID, uuid4
 
 import pytest

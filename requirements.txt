@@ -9,7 +9,7 @@ urllib3==2.7.0
 pyjwt==2.13.0
 
 #database handling
-sqlalchemy==2.0.48
+sqlalchemy==2.0.51
 sqlalchemy_utils==0.42.1
 
 # Data models/handling
@@ -20,7 +20,7 @@ ulid-py==1.1.0
 fire==0.7.1
 dynaconf==3.2.13
 PyYAML==6.0.3
-python-multipart==0.0.31
+python-multipart==0.0.32
 
 # calculation
 scipy==1.17.1
@@ -29,7 +29,7 @@ biopython==1.87
 
 # other
 cachetools==7.0.5
-slowapi==0.1.9
+slowapi==0.1.10
 python-dateutil==2.9.0.post0
 types-python-dateutil==2.9.*
 types-setuptools==82.0.*
