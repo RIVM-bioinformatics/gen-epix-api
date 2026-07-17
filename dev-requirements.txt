@@ -9,7 +9,7 @@ pytest-xdist
 pytest-mock==3.15.*
 pytest-dependency==0.6.*
 isort==8.0.*
-black==26.3.*
+black==26.5.*
 pylint==4.0.*
 mypy==1.19.*
 oauthlib==3.3.1
