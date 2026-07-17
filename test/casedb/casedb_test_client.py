@@ -790,6 +790,7 @@ class CasedbTestClient(TestClient):
         code: str,
         genetic_sequence_col_id: UUID | None = None,
         tree_algorithm_codes: set[enum.TreeAlgorithmType] | None = None,
+        ref_col: str | None = None,
         set_dummy_case_type: bool = False,
         set_dummy_dim: bool = False,
         set_dummy_ref_col: bool = False,
@@ -802,7 +803,7 @@ class CasedbTestClient(TestClient):
             raise ValueError(f"Invalid code {code}")
         case_type_str = "case_type" + m.group(2)
         dim_str = "dim" + m.group(2) + "_" + m.group(3) + "_" + m.group(4)
-        ref_col_str = "ref_col" + m.group(3) + "_" + m.group(5)
+        ref_col_str = ref_col or ("ref_col" + m.group(3) + "_" + m.group(5))
         if set_dummy_case_type:
             case_type_id = self.generate_id()
         else:
