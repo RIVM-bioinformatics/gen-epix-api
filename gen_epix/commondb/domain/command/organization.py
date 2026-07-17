@@ -163,6 +163,17 @@ class RetrieveOrganizationAdminNameEmailsCommand(Command):
     pass
 
 
+class ForgetUserCommand(Command):
+    """
+    Forgets (anonymizes) the current user's data from the system.
+
+    This command is used to comply with data privacy regulations by removing
+    all personal data associated with the user.
+    """
+
+    pass
+
+
 # CRUD commands
 
 

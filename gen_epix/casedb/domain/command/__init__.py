@@ -179,6 +179,7 @@ from gen_epix.commondb.domain.command import (
 from gen_epix.commondb.domain.command import (
     DataCollectionSetMemberCrudCommand as DataCollectionSetMemberCrudCommand,
 )
+from gen_epix.commondb.domain.command import ForgetUserCommand as ForgetUserCommand
 from gen_epix.commondb.domain.command import (
     GetIdentityProvidersCommand as GetIdentityProvidersCommand,
 )

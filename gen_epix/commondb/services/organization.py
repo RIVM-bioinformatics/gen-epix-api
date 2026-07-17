@@ -385,3 +385,35 @@ class OrganizationService(BaseOrganizationService):
             sites=sites,
             contacts=contacts,
         )
+
+    def forget_user(self, cmd: command.ForgetUserCommand) -> model.User:
+        """Forget user information."""
+        user, repository = self._get_user_and_repository(cmd)
+
+        with repository.uow() as uow:
+            organization: model.Organization = repository.crud(
+                uow,
+                user.id,
+                model.Organization,
+                CrudOperation.READ_ONE,
+                obj_ids=cmd.user.organization_id,
+            )
+            # use the organization name to create a new user key for the forgotten user
+            organization_name = organization.name.replace(" ", "_").lower()
+            # include the user_id to ensure uniqueness of the new user key
+            new_user_key = f"forgotten_user_{organization_name}_{user.id}"
+            user.key = new_user_key
+            user.name = "Forgotten User"
+            user.email = new_user_key
+            user.description = None
+            user.is_active = False
+
+            forgotten_user: model.User = repository.crud(
+                uow,
+                user.id,
+                self.user_class,
+                CrudOperation.UPDATE_ONE,
+                objs=user,
+            )
+
+        return forgotten_user

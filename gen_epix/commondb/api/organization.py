@@ -256,6 +256,23 @@ def create_organization_endpoints(
             handle_exception("a7f3b8e2", user, exception)
         return retval
 
+    @router.post(
+        "/user/forget",
+        operation_id="user__forget",
+        name="ForgetUser",
+        description=command.ForgetUserCommand.__doc__,
+    )
+    async def user__forget(
+        user: registered_user_dependency,  # type: ignore
+    ) -> None:
+        try:
+            cmd = command.ForgetUserCommand(user=user)
+            retval = app.handle(cmd)
+        except Exception as exception:
+            handle_exception("c8fd634f", user, exception)
+
+        return retval
+
     @router.put(
         "/update_user/{object_id}",
         operation_id="update_user",

@@ -30,6 +30,7 @@ class BaseOrganizationService(BaseService[BaseOrganizationRepository]):
         )
         f(command.RegisterInvitedUserCommand, self.register_invited_user)
         f(command.UpdateUserCommand, self.update_user)
+        f(command.ForgetUserCommand, self.forget_user)
 
     @abc.abstractmethod
     def retrieve_organization_contacts(
@@ -75,4 +76,9 @@ class BaseOrganizationService(BaseService[BaseOrganizationRepository]):
         cmd: command.UpdateUserCommand,
     ) -> model.User:
         """Update user information."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def forget_user(self, cmd: command.ForgetUserCommand) -> model.User:
+        """Forget user information."""
         raise NotImplementedError()

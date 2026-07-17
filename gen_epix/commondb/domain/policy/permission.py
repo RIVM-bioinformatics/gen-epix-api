@@ -98,6 +98,7 @@ class RoleGenerator:
             (command.RetrieveOrganizationAdminNameEmailsCommand, PermissionTypeSet.E),
             (command.RetrieveOrganizationContactsCommand, PermissionTypeSet.E),
             (command.UpdateUserOwnOrganizationCommand, PermissionTypeSet.E),
+            (command.ForgetUserCommand, PermissionTypeSet.E),
             (
                 command.OrganizationIdentifierIssuerLinkCrudCommand,
                 PermissionTypeSet.R,

@@ -570,6 +570,17 @@ class TestClient:
         )
         return self.set_obj(updated_tgt_user, update=True)  # type: ignore[return-value]
 
+    def forget_user(self, user_or_str: str | model.User) -> model.User:
+        """Forget a user's personal information and update the local object store."""
+        user: model.User = self.get_obj(
+            self.user_class, user_or_str
+        )  # type: ignore[assignment]
+        previous_key = self._get_key_for_obj(user)
+        forgotten_user: model.User = self.handle(command.ForgetUserCommand(user=user))
+        table = self.db[self.user_class]
+        table.pop(previous_key, None)
+        return self.set_obj(forgotten_user, update=True)  # type: ignore[return-value]
+
     def get_root_user(self, user_key: str | None = None) -> model.User:
         """Retrieve the root user from the app's user manager."""
         if user_key is None:
