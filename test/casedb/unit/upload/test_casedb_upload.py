@@ -10,7 +10,10 @@ from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.model import STORED_MODEL_FIELD_PROPS
 from gen_epix.casedb.domain.model.abac.rights import CaseTypeAccessAbac
 from gen_epix.casedb.services.case.base import BaseCaseService
-from gen_epix.casedb.services.case.upload import CaseBatchUploader
+from gen_epix.casedb.services.case.upload import (
+    CaseBatchUploader,
+    case_service_upload_cases,
+)
 from gen_epix.commondb.domain.enum import (
     DataIssueType,
     EtlStatus,
@@ -231,6 +234,36 @@ class BaseUploadTestCase:
             [(uploaded_case, result)],
         )
         return success, result, updated_objs
+
+
+@pytest.mark.scenario_ids("TC-SEC-30-03")
+class TestCaseServiceUploadCasesFeatureFlag(BaseUploadTestCase):
+    def test_upload_cases_raises_when_upload_feature_disabled(self) -> None:
+        case_for_upload = self.create_case_for_upload()
+        cmd, _ = self.create_command_and_result(case_for_upload)
+        self.service.app.get_feature_flag.return_value = False
+
+        with pytest.raises(exc.FeatureDisabledServiceError):
+            case_service_upload_cases(self.service, cmd)
+
+        self.service.app.get_feature_flag.assert_called_once_with("upload_enabled")
+
+    def test_upload_cases_delegates_when_upload_feature_enabled(self) -> None:
+        case_for_upload = self.create_case_for_upload()
+        cmd, batch_result = self.create_command_and_result(case_for_upload)
+        self.service.app.get_feature_flag.return_value = True
+        batch_uploader = Mock()
+        batch_uploader.upload_batch.return_value = batch_result
+
+        with patch(
+            "gen_epix.casedb.services.case.upload.CaseBatchUploader",
+            return_value=batch_uploader,
+        ) as batch_uploader_cls:
+            result = case_service_upload_cases(self.service, cmd)
+
+        assert result is batch_result
+        batch_uploader_cls.assert_called_once_with(self.service)
+        batch_uploader.upload_batch.assert_called_once_with(cmd)
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
@@ -709,7 +742,7 @@ class TestSetDefaultCreatedInDataCollectionId(BaseUploadTestCase):
         )
         batch_result.cases[0].is_new = True
 
-        success = self.batch_uploader.set_default_created_in_data_collection_id(
+        success = self.batch_uploader._set_default_created_in_data_collection_id(
             cmd, batch_result
         )
 
@@ -740,7 +773,7 @@ class TestSetDefaultCreatedInDataCollectionId(BaseUploadTestCase):
                 return_value=True,
             ),
         ):
-            success = self.batch_uploader.set_default_created_in_data_collection_id(
+            success = self.batch_uploader._set_default_created_in_data_collection_id(
                 cmd, batch_result
             )
 
@@ -771,7 +804,7 @@ class TestSetDefaultCreatedInDataCollectionId(BaseUploadTestCase):
                 return_value=True,
             ),
         ):
-            success = self.batch_uploader.set_default_created_in_data_collection_id(
+            success = self.batch_uploader._set_default_created_in_data_collection_id(
                 cmd, batch_result
             )
 
@@ -929,7 +962,7 @@ class TestVerifyAbacRights(BaseUploadTestCase):
                 return_value=case_data_collections,
             ),
         ):
-            return self.batch_uploader.verify_abac_rights(cmd, batch_result, self.uow)
+            return self.batch_uploader._verify_abac_rights(cmd, batch_result, self.uow)
 
     # --- new-case creation rights ---
 

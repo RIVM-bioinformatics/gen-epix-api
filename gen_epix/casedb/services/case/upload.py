@@ -80,14 +80,14 @@ class CaseBatchUploader(BatchUploader):
         success &= super().verify_batch(cmd, batch_result, uow)
 
         # Set default created_in_data_collection_id where relevant
-        success &= self.set_default_created_in_data_collection_id(cmd, batch_result)
+        success &= self._set_default_created_in_data_collection_id(cmd, batch_result)
 
         # Verify ABAC rights
-        success &= self.verify_abac_rights(cmd, batch_result, uow)
+        success &= self._verify_abac_rights(cmd, batch_result, uow)
 
         # Verify case content. Derived values and data issues are also added in the
         # form of ValidatedCaseForUpload objects in the result.
-        success &= self.verify_case_content(cmd, batch_result)
+        success &= self._verify_case_content(cmd, batch_result)
 
         return success
 
@@ -274,7 +274,7 @@ class CaseBatchUploader(BatchUploader):
 
         return success
 
-    def set_default_created_in_data_collection_id(
+    def _set_default_created_in_data_collection_id(
         self,
         cmd: command.UploadCasesCommand,
         batch_result: model.CaseBatchUploadResult,
@@ -339,7 +339,7 @@ class CaseBatchUploader(BatchUploader):
                 success = False
         return success
 
-    def verify_abac_rights(
+    def _verify_abac_rights(
         self,
         cmd: command.UploadCasesCommand,
         batch_result: model.CaseBatchUploadResult,
@@ -462,7 +462,7 @@ class CaseBatchUploader(BatchUploader):
 
         return success
 
-    def verify_case_content(
+    def _verify_case_content(
         self,
         cmd: command.UploadCasesCommand,
         batch_result: model.CaseBatchUploadResult,
@@ -737,6 +737,10 @@ class CaseBatchUploader(BatchUploader):
 def case_service_upload_cases(
     self: BaseCaseService, cmd: command.UploadCasesCommand
 ) -> model.CaseBatchUploadResult:
+    if not self.app.get_feature_flag("upload_enabled"):
+        raise exc.FeatureDisabledServiceError(
+            "a756246d", "Upload is disabled"
+        )
     batch_uploader = CaseBatchUploader(cast(BaseService, self))
 
     batch_result: model.CaseBatchUploadResult = batch_uploader.upload_batch(cmd)  # type: ignore[assignment]
