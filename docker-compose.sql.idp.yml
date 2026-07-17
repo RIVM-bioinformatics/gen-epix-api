@@ -28,7 +28,7 @@
 services:
 
   lsp_sql:
-    image: mcr.microsoft.com/mssql/server:2022-latest@sha256:e07b9699a2b749969f19d86563ceeea22bd3a69f7f1db85a8d1ac4bdaf0c6f56
+    image: mcr.microsoft.com/mssql/server:2022-latest@sha256:ba4c8329f48fb8f02e1416be6a930ebfd71268caee78aa985f3af4315e457c89
     user: root
     environment:
       MSSQL_SA_PASSWORD: "Your_password123"
@@ -54,7 +54,7 @@ services:
   # One-shot container: creates the three databases then exits.
   # create_sa_repository() handles schemas + tables on app startup.
   init-db:
-    image: mcr.microsoft.com/mssql/server:2022-latest@sha256:e07b9699a2b749969f19d86563ceeea22bd3a69f7f1db85a8d1ac4bdaf0c6f56
+    image: mcr.microsoft.com/mssql/server:2022-latest@sha256:ba4c8329f48fb8f02e1416be6a930ebfd71268caee78aa985f3af4315e457c89
     depends_on:
       lsp_sql:
         condition: service_healthy
