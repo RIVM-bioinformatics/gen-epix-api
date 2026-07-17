@@ -4,7 +4,7 @@ pandas==3.0.3
 polars==1.42.1
 xlsxwriter==3.2.9
 pytest
-pytest-gremlins==1.8.0
+pytest-gremlins==1.9.0
 pytest-xdist
 pytest-mock==3.15.*
 pytest-dependency==0.6.*
