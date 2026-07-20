@@ -13,7 +13,7 @@ sqlalchemy==2.0.51
 sqlalchemy_utils==0.42.1
 
 # Data models/handling
-pydantic==2.12.5
+pydantic==2.13.4
 ulid-py==1.1.0
 
 # configuration handling
@@ -24,7 +24,7 @@ python-multipart==0.0.32
 
 # calculation
 scipy==1.17.1
-numpy==2.4.4
+numpy==2.5.1
 biopython==1.87
 
 # other
