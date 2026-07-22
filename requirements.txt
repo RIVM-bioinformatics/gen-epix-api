@@ -23,7 +23,7 @@ PyYAML==6.0.3
 python-multipart==0.0.32
 
 # calculation
-scipy==1.17.1
+scipy==1.18.0
 numpy==2.5.1
 biopython==1.87
 
