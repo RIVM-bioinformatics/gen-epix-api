@@ -859,6 +859,17 @@ class Run:
             ]
         )
 
+    def test_general_code_test_error_code_unicity(self) -> None:
+
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/general/code/test_error_code_unicity.py",
+            ]
+        )
+
     def test_end_to_end(self) -> None:
         import pytest
 
