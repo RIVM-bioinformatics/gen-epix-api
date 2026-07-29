@@ -513,7 +513,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
                         link_obj_ids,
                         verify_duplicate=False,
                     )
-                except exc.InvalidIdsError:
+                except exc.InvalidIdsError as e:
                     raise exc.InvalidLinkIdsError(
                         "1f342acf",
                         f"Invalid {link.link_model_class.__name__} id(s) among input",

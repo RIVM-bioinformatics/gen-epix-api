@@ -7,7 +7,7 @@ import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.model as model
 import gen_epix.seqdb.domain.command as seqdb_command
 import gen_epix.seqdb.domain.model as seqdb_model
-from gen_epix.casedb.domain import exc
+from gen_epix.casedb.domain import enum, exc
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.case_validator import CaseValidator
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
@@ -80,14 +80,14 @@ class CaseBatchUploader(BatchUploader):
         success &= super().verify_batch(cmd, batch_result, uow)
 
         # Set default created_in_data_collection_id where relevant
-        success &= self.set_default_created_in_data_collection_id(cmd, batch_result)
+        success &= self._set_default_created_in_data_collection_id(cmd, batch_result)
 
         # Verify ABAC rights
-        success &= self.verify_abac_rights(cmd, batch_result, uow)
+        success &= self._verify_abac_rights(cmd, batch_result, uow)
 
         # Verify case content. Derived values and data issues are also added in the
         # form of ValidatedCaseForUpload objects in the result.
-        success &= self.verify_case_content(cmd, batch_result)
+        success &= self._verify_case_content(cmd, batch_result)
 
         return success
 
@@ -274,7 +274,7 @@ class CaseBatchUploader(BatchUploader):
 
         return success
 
-    def set_default_created_in_data_collection_id(
+    def _set_default_created_in_data_collection_id(
         self,
         cmd: command.UploadCasesCommand,
         batch_result: model.CaseBatchUploadResult,
@@ -339,7 +339,7 @@ class CaseBatchUploader(BatchUploader):
                 success = False
         return success
 
-    def verify_abac_rights(
+    def _verify_abac_rights(
         self,
         cmd: command.UploadCasesCommand,
         batch_result: model.CaseBatchUploadResult,
@@ -387,7 +387,7 @@ class CaseBatchUploader(BatchUploader):
                 ):
                     # Case would be created in a data collection in which the user has no create access
                     case_result.add_error(
-                        "c1f8e9d4",
+                        "29e256f1",
                         f"Not allowed to create cases in data collection {case.created_in_data_collection_id}",
                     )
                     success = False
@@ -462,7 +462,7 @@ class CaseBatchUploader(BatchUploader):
 
         return success
 
-    def verify_case_content(
+    def _verify_case_content(
         self,
         cmd: command.UploadCasesCommand,
         batch_result: model.CaseBatchUploadResult,
@@ -737,6 +737,10 @@ class CaseBatchUploader(BatchUploader):
 def case_service_upload_cases(
     self: BaseCaseService, cmd: command.UploadCasesCommand
 ) -> model.CaseBatchUploadResult:
+    if self.app.get_feature_flag(enum.FeatureFlag.DISABLE_UPLOAD.value):
+        raise exc.FeatureDisabledServiceError(
+            "a756246d", "Upload is disabled"
+        )
     batch_uploader = CaseBatchUploader(cast(BaseService, self))
 
     batch_result: model.CaseBatchUploadResult = batch_uploader.upload_batch(cmd)  # type: ignore[assignment]

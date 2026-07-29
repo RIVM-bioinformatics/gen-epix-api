@@ -275,7 +275,7 @@ def _verify_children_seqs(
                 else:
                     # Existing Seq has different hash -> error since the same protocol and ReadSets should yield the same sequence
                     seq_result.add_error(
-                        "9d3a4f1b",
+                        "7da16146",
                         f"Seq with same protocol_id ({seq_for_upload.protocol_id}), read_set_id ({seq_for_upload.read_set_id}) and read_set2_id ({seq_for_upload.read_set2_id}) already exists with a different hash ({existing_seq_hash}) and ID {existing_seq_id}",
                     )
                 continue
