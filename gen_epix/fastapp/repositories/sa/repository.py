@@ -1039,8 +1039,9 @@ class SARepository(BaseRepository):
             or isinstance(filter, UuidSetFilter)
         ):
             members = filter.members
-            enum_class = getattr(column.type, "enum_class", None)
 
+            # Handle Enum types by converting the members to the corresponding Enum values
+            enum_class = getattr(column.type, "enum_class", None)
             if enum_class is not None:
                 members = frozenset(enum_class(value) for value in members)
 

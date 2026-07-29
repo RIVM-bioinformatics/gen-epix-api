@@ -40,4 +40,4 @@ class StringSetFilter(Filter):
 
 
 class TypedStringSetFilter(StringSetFilter):
-    type: Literal[FilterType.STRING_SET.value]
+    type: Literal[FilterType.STRING_SET.value]  # type: ignore[name-defined]

@@ -23,4 +23,4 @@ class UuidSetFilter(Filter):
 
 
 class TypedUuidSetFilter(UuidSetFilter):
-    type: Literal[FilterType.UUID_SET.value]
+    type: Literal[FilterType.UUID_SET.value]  # type: ignore[name-defined]

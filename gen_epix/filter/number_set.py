@@ -14,4 +14,4 @@ class NumberSetFilter(Filter):
 
 
 class TypedNumberSetFilter(NumberSetFilter):
-    type: Literal[FilterType.NUMBER_SET.value]
+    type: Literal[FilterType.NUMBER_SET.value]  # type: ignore[name-defined]

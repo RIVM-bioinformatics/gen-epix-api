@@ -23,4 +23,4 @@ class RegexFilter(Filter):
 
 
 class TypedRegexFilter(RegexFilter):
-    type: Literal[FilterType.REGEX.value]
+    type: Literal[FilterType.REGEX.value]  # type: ignore[name-defined]

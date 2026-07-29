@@ -65,4 +65,4 @@ class NoFilter(Filter):
 
 
 class TypedNoFilter(NoFilter):
-    type: Literal[FilterType.NO_FILTER.value]
+    type: Literal[FilterType.NO_FILTER.value]  # type: ignore[name-defined]
