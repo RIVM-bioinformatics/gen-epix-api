@@ -228,7 +228,7 @@ class TestUpdate:
         user_id = user.id
         assert user_id is not None
 
-        forgotten_user = env.forget_user(user)
+        forgotten_user = env.anonymize_user(user)
 
         assert forgotten_user.key == f"forgotten_user_org1_{user_id}"
         assert forgotten_user.name == "Forgotten User"

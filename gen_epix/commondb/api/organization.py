@@ -257,16 +257,17 @@ def create_organization_endpoints(
         return retval
 
     @router.post(
-        "/user/forget",
-        operation_id="user__forget",
-        name="ForgetUser",
-        description=command.ForgetUserCommand.__doc__,
+        "/user/{user_id}/anonymize",
+        operation_id="anonymize_user",
+        name="AnonymizeUser",
+        description=command.AnonymizeUserCommand.__doc__,
     )
-    async def user__forget(
+    async def anonymize_user(
         user: registered_user_dependency,  # type: ignore
+        user_id: UUID,
     ) -> None:
         try:
-            cmd = command.ForgetUserCommand(user=user)
+            cmd = command.AnonymizeUserCommand(user=user, tgt_user_id=user_id)
             retval = app.handle(cmd)
         except Exception as exception:
             handle_exception("c8fd634f", user, exception)

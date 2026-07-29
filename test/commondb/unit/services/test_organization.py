@@ -1,7 +1,7 @@
 """
-Unit tests for OrganizationService.forget_user().
+Unit tests for OrganizationService.anonymize_user().
 
-The tests verify that forgetting a user anonymizes personal information while
+The tests verify that anonymizing a user anonymizes personal information while
 preserving a deterministic, organization-scoped user key.
 """
 
@@ -17,15 +17,30 @@ from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 
 @pytest.mark.scenario_ids("TC-COMMONDB-ORGANIZATION-FORGET-USER")
-class TestForgetUser:
-    """Verify anonymization of the current user."""
+class TestAnonymizeUser:
+    """Verify anonymization of the target user."""
 
     def setup_method(self) -> None:
         """Set up test fixtures."""
-        self.user_id = UUID("550e8400-e29b-41d4-a716-446655440001")
-        self.organization_id = UUID("550e8400-e29b-41d4-a716-446655440002")
-        self.user = model.User(
-            id=self.user_id,
+        self.admin_user_id = UUID("550e8400-e29b-41d4-a716-446655440000")
+        self.tgt_user_id = UUID("550e8400-e29b-41d4-a716-446655440001")
+        self.organization_id = UUID("550e8400-e29b-41d4-a716-446655440003")
+
+        # Admin user performing the anonymization
+        self.admin_user = model.User(
+            id=self.admin_user_id,
+            key="admin@example.com",
+            email="admin@example.com",
+            name="Admin User",
+            description="Admin description",
+            roles={"COMMONDB_ADMIN"},
+            organization_id=self.organization_id,
+            is_active=True,
+        )
+
+        # Target user to be anonymized
+        self.tgt_user = model.User(
+            id=self.tgt_user_id,
             key="person@example.com",
             email="person@example.com",
             name="Person Example",
@@ -45,75 +60,86 @@ class TestForgetUser:
         self.uow.__enter__ = Mock(return_value=self.uow)
         self.uow.__exit__ = Mock(return_value=None)
         self.repository.uow.return_value = self.uow
-        self.repository.crud.side_effect = [self.organization, self.user]
 
         self.service = OrganizationService.__new__(OrganizationService)
         self.service._repository = self.repository
         self.service.user_class = model.User
 
-    def test_forget_personal_user_information(self) -> None:
-        """Anonymize personal fields and deactivate the forgotten user."""
-        cmd = command.ForgetUserCommand(user=self.user)
-
-        forgotten_user = self.service.forget_user(cmd)
-
-        assert forgotten_user is self.user
-        assert (
-            forgotten_user.key == f"forgotten_user_example_organization_{self.user_id}"
+    def test_anonymize_user_information(self) -> None:
+        """Anonymize personal fields and deactivate the anonymized user."""
+        # Setup mock side_effect for 2 crud calls: READ user, UPDATE user
+        self.repository.crud.side_effect = [
+            self.tgt_user,
+            self.tgt_user,
+        ]
+        cmd = command.AnonymizeUserCommand(
+            user=self.admin_user, tgt_user_id=self.tgt_user_id
         )
-        assert (
-            forgotten_user.email
-            == f"forgotten_user_example_organization_{self.user_id}"
-        )
-        assert (
-            forgotten_user.name,
-            forgotten_user.description,
-            forgotten_user.is_active,
-        ) == ("Forgotten User", None, False)
+
+        anonymized_user = self.service.anonymize_user(cmd)
+
+        assert anonymized_user is self.tgt_user
+        assert anonymized_user.key == str(self.admin_user_id)
+        assert anonymized_user.email is None
+        assert anonymized_user.name is None
+        assert anonymized_user.description is None
+        assert anonymized_user.is_active is False
         assert self.repository.crud.call_count == 2
         assert self.repository.crud.call_args_list[0].args[3] == CrudOperation.READ_ONE
         assert (
             self.repository.crud.call_args_list[1].args[3] == CrudOperation.UPDATE_ONE
         )
 
-    def test_forget_normalizes_organization_name_in_user_key(self) -> None:
-        """Build the anonymized key from a lowercase, space-normalized organization name."""
-        self.organization.name = "Example Public Health Organization"
+    def test_anonymize_normalizes_organization_name_in_user_key(self) -> None:
+        """Anonymize personal fields and deactivate the anonymized user."""
+        # Setup mock side_effect for 2 crud calls: READ user, UPDATE user
+        self.repository.crud.side_effect = [
+            self.tgt_user,
+            self.tgt_user,
+        ]
 
-        forgotten_user = self.service.forget_user(
-            command.ForgetUserCommand(user=self.user)
+        anonymized_user = self.service.anonymize_user(
+            command.AnonymizeUserCommand(
+                user=self.admin_user,
+                tgt_user_id=self.tgt_user_id,
+            )
         )
 
-        expected_key = (
-            f"forgotten_user_example_public_health_organization_{self.user_id}"
-        )
-        assert forgotten_user.key == expected_key
-        assert forgotten_user.email == expected_key
+        assert anonymized_user.key == str(self.admin_user_id)
+        assert anonymized_user.email is None
+        assert anonymized_user.is_active is False
 
-    def test_forget_keeps_keys_unique_for_users_in_same_organization(self) -> None:
+    def test_anonymize_keeps_keys_unique_for_users_in_same_organization(self) -> None:
         """Include each user ID so forgotten users in one organization remain unique."""
-        second_user_id = UUID("550e8400-e29b-41d4-a716-446655440003")
-        second_user = self.user.model_copy(
+        second_user_id = UUID("550e8400-e29b-41d4-a716-446655440004")
+        second_user = self.tgt_user.model_copy(
             update={
                 "id": second_user_id,
                 "key": "second.person@example.com",
                 "email": "second.person@example.com",
             }
         )
+        # Setup mock side_effect for 4 crud calls:
+        # First anonymization: READ user, UPDATE user
+        # Second anonymization: READ user, UPDATE user
         self.repository.crud.side_effect = [
-            self.organization,
-            self.user,
-            self.organization,
+            self.tgt_user,
+            self.tgt_user,
+            second_user,
             second_user,
         ]
 
-        first_forgotten_user = self.service.forget_user(
-            command.ForgetUserCommand(user=self.user)
+        first_anonymized_user = self.service.anonymize_user(
+            command.AnonymizeUserCommand(
+                user=self.admin_user, tgt_user_id=self.tgt_user_id
+            )
         )
-        second_forgotten_user = self.service.forget_user(
-            command.ForgetUserCommand(user=second_user)
+        second_anonymized_user = self.service.anonymize_user(
+            command.AnonymizeUserCommand(
+                user=self.admin_user, tgt_user_id=second_user_id
+            )
         )
 
-        assert first_forgotten_user.key != second_forgotten_user.key
-        assert str(self.user_id) in first_forgotten_user.key
-        assert str(second_user_id) in second_forgotten_user.key
+        # Both should have the same key (the admin user's ID)
+        assert first_anonymized_user.key == str(self.admin_user_id)
+        assert second_anonymized_user.key == str(self.admin_user_id)

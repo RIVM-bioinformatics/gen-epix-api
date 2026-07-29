@@ -163,15 +163,15 @@ class RetrieveOrganizationAdminNameEmailsCommand(Command):
     pass
 
 
-class ForgetUserCommand(Command):
+class AnonymizeUserCommand(Command):
     """
-    Forgets (anonymizes) the current user's data from the system.
-
-    This command is used to comply with data privacy regulations by removing
-    all personal data associated with the user.
+    Anonymizes, in the sense of the EU General Data Protection Regulation (GDPR), the
+    target user by removing the name and replacing the key by the user ID (a random
+    UUID), so that they can no longer be identified directly. Because the key is
+    altered, the user will no longer be able to log in either.
     """
 
-    pass
+    tgt_user_id: UUID = Field(description="The ID of the user to anonymize")
 
 
 # CRUD commands

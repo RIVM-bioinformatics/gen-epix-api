@@ -386,34 +386,36 @@ class OrganizationService(BaseOrganizationService):
             contacts=contacts,
         )
 
-    def forget_user(self, cmd: command.ForgetUserCommand) -> model.User:
+    def anonymize_user(self, cmd: command.AnonymizeUserCommand) -> model.User:
         """Forget user information."""
         user, repository = self._get_user_and_repository(cmd)
+        assert isinstance(user, model.User)
+        if user.id == cmd.tgt_user_id:
+            raise exc.UnauthorizedAuthError(
+                "f3c1e2d0", "User may not anonymize themselves"
+            )
 
         with repository.uow() as uow:
-            organization: model.Organization = repository.crud(
+            tgt_user: model.User = repository.crud(
                 uow,
                 user.id,
-                model.Organization,
+                self.user_class,
                 CrudOperation.READ_ONE,
-                obj_ids=cmd.user.organization_id,
+                obj_ids=cmd.tgt_user_id,
             )
-            # use the organization name to create a new user key for the forgotten user
-            organization_name = organization.name.replace(" ", "_").lower()
-            # include the user_id to ensure uniqueness of the new user key
-            new_user_key = f"forgotten_user_{organization_name}_{user.id}"
-            user.key = new_user_key
-            user.name = "Forgotten User"
-            user.email = new_user_key
-            user.description = None
-            user.is_active = False
+            # Set the key to the user_id and the rest to None
+            tgt_user.key = f"{user.id}"
+            tgt_user.name = None
+            tgt_user.email = None
+            tgt_user.description = None
+            tgt_user.is_active = False
 
-            forgotten_user: model.User = repository.crud(
+            anonymized_user: model.User = repository.crud(
                 uow,
                 user.id,
                 self.user_class,
                 CrudOperation.UPDATE_ONE,
-                objs=user,
+                objs=tgt_user,
             )
 
-        return forgotten_user
+        return anonymized_user
