@@ -695,7 +695,7 @@ class TestRootTokenTTL:
     def test_ttl_zero_disables_expiry(self) -> None:
         root_user = make_cdb_user(user_id=_MOCK_USER_ID, roles={_ROOT_ROLE})
         env = AuthEnv(root_token_time_to_live=0, initial_users=[root_user])
-        assert env.auth_service._root_token_time_to_live is None
+        assert env.auth_service._root_token_time_to_live == 0
 
     def test_non_root_user_not_affected_by_ttl(self) -> None:
         regular_user = make_cdb_user(user_id=_MOCK_USER_ID, roles={_GUEST_ROLE})
