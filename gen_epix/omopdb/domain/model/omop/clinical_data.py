@@ -900,6 +900,7 @@ class Measurement(Model, DataLineageMixin):
                 10: ("measurement_source_concept_id", Concept, None),
                 11: ("unit_source_concept_id", Concept, None),
                 12: ("meas_event_field_concept_id", Concept, None),
+                # TODO: add derived_from_specimen_id link
             }
         ),
     )
