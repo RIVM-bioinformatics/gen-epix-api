@@ -17,6 +17,7 @@ class FilterType(Enum):
     REGEX = "REGEX"
     NUMBER_SET = "NUMBER_SET"
     STRING_SET = "STRING_SET"
+    ENUM_SET = "ENUM_SET"
     UUID_SET = "UUID_SET"
     VALUE_SET = "VALUE_SET"
     NO_FILTER = "NO_FILTER"

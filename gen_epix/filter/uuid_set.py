@@ -8,9 +8,7 @@ from gen_epix.filter.enum import FilterType
 
 
 class UuidSetFilter(Filter):
-    members: frozenset[UUID] = Field(
-        default=None, description="The UUIDs to match.", frozen=True
-    )
+    members: frozenset[UUID] = Field(description="The UUIDs to match.", frozen=True)
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:

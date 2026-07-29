@@ -3,13 +3,13 @@ from typing import Literal
 
 from pydantic import Field
 
+from gen_epix.filter.base import Filter
 from gen_epix.filter.enum import FilterType
-from gen_epix.filter.hashable_set import HashableSetFilter
 
 
-class NumberSetFilter(HashableSetFilter):
+class NumberSetFilter(Filter):
     members: frozenset[int | float | Decimal] = Field(
-        default=None, description="The numbers to match.", frozen=True
+        description="The numbers to match.", frozen=True
     )
 
 
