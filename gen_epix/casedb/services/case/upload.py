@@ -387,7 +387,7 @@ class CaseBatchUploader(BatchUploader):
                 ):
                     # Case would be created in a data collection in which the user has no create access
                     case_result.add_error(
-                        "c1f8e9d4",
+                        "29e256f1",
                         f"Not allowed to create cases in data collection {case.created_in_data_collection_id}",
                     )
                     success = False

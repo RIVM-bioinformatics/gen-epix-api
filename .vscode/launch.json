@@ -127,6 +127,19 @@
             "justMyCode": true
         },
         {
+            "name": "api.seqdb.local.idps.sa_sql_demo",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "api",
+                "SEQDB",
+                "IDPS",
+                "SA_SQL"
+            ],
+            "justMyCode": true
+        },
+        {
             "name": "api.seqdb.local.mock.dict_demo",
             "type": "debugpy",
             "request": "launch",
@@ -1062,6 +1075,17 @@
             "program": "run.py",
             "args": [
                 "test_general_code_test_model_field_properties"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.general.code.test.error.code.unicity",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_general_code_test_error_code_unicity"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

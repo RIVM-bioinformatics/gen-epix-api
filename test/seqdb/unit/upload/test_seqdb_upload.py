@@ -694,7 +694,7 @@ class TestVerifyChildrenSeqs(BaseUploadTestCase):
         assert seq_result.has_log_code("7c1e9ab4")
 
     def test_hash_mismatch_with_read_sets_adds_natural_key_error(self) -> None:
-        """Hash mismatch with read sets present should emit 9d3a4f1b."""
+        """Hash mismatch with read sets present should emit 7da16146."""
         seq = self.create_seq_for_upload(
             sample_id=self.sample_id,
             read_set_id=self.read_set_id,
@@ -724,7 +724,7 @@ class TestVerifyChildrenSeqs(BaseUploadTestCase):
         seq_result = self.get_only_seq_result(retval)
         assert not success
         assert seq_result.has_errors()
-        assert seq_result.has_log_code("9d3a4f1b")
+        assert seq_result.has_log_code("7da16146")
 
     def test_fallback_from_none_read_sets_can_resolve_existing_seq(self) -> None:
         """Fallback key (protocol, None, None) resolves identical seq."""
