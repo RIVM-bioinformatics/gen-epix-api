@@ -1,3 +1,3 @@
 [feature_flags]
 update_own_organization = false
-upload_enabled = true
+disable_upload = false

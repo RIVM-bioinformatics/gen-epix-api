@@ -7,7 +7,7 @@ import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.model as model
 import gen_epix.seqdb.domain.command as seqdb_command
 import gen_epix.seqdb.domain.model as seqdb_model
-from gen_epix.casedb.domain import exc
+from gen_epix.casedb.domain import enum, exc
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.case_validator import CaseValidator
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
@@ -737,7 +737,7 @@ class CaseBatchUploader(BatchUploader):
 def case_service_upload_cases(
     self: BaseCaseService, cmd: command.UploadCasesCommand
 ) -> model.CaseBatchUploadResult:
-    if not self.app.get_feature_flag("upload_enabled"):
+    if self.app.get_feature_flag(enum.FeatureFlag.DISABLE_UPLOAD.value):
         raise exc.FeatureDisabledServiceError(
             "a756246d", "Upload is disabled"
         )
