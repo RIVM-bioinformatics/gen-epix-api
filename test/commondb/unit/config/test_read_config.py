@@ -109,7 +109,10 @@ def _assert_default_import_payload(payload: dict, app_name: str) -> None:
         is spec["default_auto_create_new_users"]
     )
     assert payload["feature_flag_update_own_organization"] is False
-    assert payload["service_root_token_time_to_live"] == None
+    assert (
+        payload["service_root_token_time_to_live"]
+        == payload["cfg_root_token_time_to_live"]
+    )
     assert payload["service_idp_client_count"] == 0
 
 

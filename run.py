@@ -205,7 +205,7 @@ class Run:
             ]
         )
 
-        subprocess.run(
+        test_run = subprocess.run(
             [
                 sys.executable,
                 "-m",
@@ -216,10 +216,10 @@ class Run:
                 "pytest",
             ]
             + pytest_args,
-            check=True,
+            check=False,
         )
         # Generate HTML report
-        subprocess.run(
+        html_report = subprocess.run(
             [
                 sys.executable,
                 "-m",
@@ -228,13 +228,32 @@ class Run:
                 "-d",
                 "test/output/coverage.html",
             ],
-            check=True,
+            check=False,
         )
         # Generate XML report
-        subprocess.run(
+        xml_report = subprocess.run(
             [sys.executable, "-m", "coverage", "xml", "-o", "test/output/coverage.xml"],
-            check=True,
+            check=False,
         )
+
+        failures: list[str] = []
+        if test_run.returncode != 0:
+            failures.append(
+                "pytest run failed (non-zero exit status) while running test_all: "
+                f"{test_run.returncode}"
+            )
+        if html_report.returncode != 0:
+            failures.append(
+                "coverage html report generation failed with exit status "
+                f"{html_report.returncode}"
+            )
+        if xml_report.returncode != 0:
+            failures.append(
+                "coverage xml report generation failed with exit status "
+                f"{xml_report.returncode}"
+            )
+        if failures:
+            raise RuntimeError("; ".join(failures))
 
     def test_all_incl_performance(self) -> None:
         import pytest

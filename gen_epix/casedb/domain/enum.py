@@ -3,7 +3,6 @@
 
 from enum import Enum
 
-
 from gen_epix.commondb.domain.enum import RoleSet as RoleSet
 
 
@@ -379,6 +378,7 @@ class ColTypeOrder(Enum):
         ColType.TIME_QUARTER: 4,
         ColType.TIME_YEAR: 5,
     }
+
 
 class FeatureFlag(Enum):
     UPDATE_OWN_ORGANIZATION = "UPDATE_OWN_ORGANIZATION"
