@@ -239,8 +239,7 @@ class Run:
         failures: list[str] = []
         if test_run.returncode != 0:
             failures.append(
-                "pytest run failed (non-zero exit status) while running test_all: "
-                f"{test_run.returncode}"
+                "pytest test all failed likely due to test failures or errors"
             )
         if html_report.returncode != 0:
             failures.append(
