@@ -170,4 +170,4 @@ class PartialDateRangeFilter(RangeFilter):
 
 
 class TypedPartialDateRangeFilter(PartialDateRangeFilter):
-    type: Literal[FilterType.PARTIAL_DATE_RANGE.value]
+    type: Literal[FilterType.PARTIAL_DATE_RANGE.value]  # type: ignore[name-defined]

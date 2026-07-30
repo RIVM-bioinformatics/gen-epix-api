@@ -738,9 +738,7 @@ def case_service_upload_cases(
     self: BaseCaseService, cmd: command.UploadCasesCommand
 ) -> model.CaseBatchUploadResult:
     if self.app.get_feature_flag(enum.FeatureFlag.DISABLE_UPLOAD.value):
-        raise exc.FeatureDisabledServiceError(
-            "a756246d", "Upload is disabled"
-        )
+        raise exc.FeatureDisabledServiceError("a756246d", "Upload is disabled")
     batch_uploader = CaseBatchUploader(cast(BaseService, self))
 
     batch_result: model.CaseBatchUploadResult = batch_uploader.upload_batch(cmd)  # type: ignore[assignment]

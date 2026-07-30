@@ -27,10 +27,9 @@ from gen_epix.fastapp.user_manager import BaseUserManager
 class AuthService(BaseAuthService):
 
     DEFAULT_IS_PUBLIC_IDP = False  # Security: IDPs are not public by default
-    APP_SETTING_SERVICE_AUTH_PROPS_ROOT_TOKEN_TIME_TO_LIVE = (
-        60
-        * 60  # TODO: Temporarily to 1 hour for testing, should be 15 minutes in production
-    )  # 15 minutes in production, to mitigate risk of leaked root tokens being used by attackers
+    DEFAULT_ROOT_TOKEN_TIME_TO_LIVE = (
+        15 * 60
+    )  # 15 minutes, to mitigate risk of leaked root tokens being used by attackers
 
     _MAX_N_IDP_CLIENTS = 5  # Maximum currently supported number of IDP clients, can be increased if needed but requires code changes
 
@@ -72,18 +71,22 @@ class AuthService(BaseAuthService):
         self.app.set_feature_flag("auto_create_new_users", auto_create_new_users)
 
         # Parse and set root_token_time_to_live
-        # if root_token_time_to_live is not None and root_token_time_to_live <= 0:
-        #     # Root token expiration disabled, log this decision because it has security implications
-        #     self._root_token_time_to_live = None
-        #     if self._logger:
-        #         self._logger.warning(
-        #             self.create_log_message(
-        #                 "d1cbb7e8",
-        #                 "Root token expiration disabled by configuration, ensure this is an intentional decision due to security implications",
-        #             )
-        #         )
-        # else:
-        self._root_token_time_to_live = self.DEFAULT_ROOT_TOKEN_TIME_TO_LIVE
+        if root_token_time_to_live is None:
+            self._root_token_time_to_live = self.DEFAULT_ROOT_TOKEN_TIME_TO_LIVE
+        elif root_token_time_to_live <= 0:
+            # Root token expiration disabled, log this decision because it has security implications
+            self._root_token_time_to_live = (
+                0  # Set to 0 to indicate that root token expiration is disabled
+            )
+            if self._logger:
+                self._logger.warning(
+                    self.create_log_message(
+                        "d1cbb7e8",
+                        "Root token time-to-live disabled through configuration",
+                    )
+                )
+        else:
+            self._root_token_time_to_live = root_token_time_to_live
 
     @property
     def idp_clients(self) -> list[IdpClient]:
@@ -103,9 +106,7 @@ class AuthService(BaseAuthService):
                         idp_client_id=idp_client.id,
                     )
                     user = await self.get_existing_user_from_claims(claims)
-                    # If root token time to live is configured, verify that the token is not too old if the user is a root user, to mitigate risk of leaked root tokens being used by attackers
-                    if self._root_token_time_to_live is not None:
-                        self._verify_root_user_for_token_time_to_live(claims, user)
+                    self._verify_root_user_for_token_time_to_live(claims, user)
                     return user
                 except exc.UnauthorizedAuthError:
                     continue
@@ -581,7 +582,7 @@ class AuthService(BaseAuthService):
         configured root token time to live, to mitigate risk of leaked root tokens
         being used by attackers.
         """
-        if not self._root_token_time_to_live:
+        if self._root_token_time_to_live == 0:
             # No root token time to live configured, no need to verify
             return
         if not self.app.user_manager.is_root_user(user):
