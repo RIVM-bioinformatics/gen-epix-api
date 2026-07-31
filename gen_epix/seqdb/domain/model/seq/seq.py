@@ -1,7 +1,7 @@
 import hashlib
 import json
 from functools import cached_property
-from typing import Any, ClassVar, Self
+from typing import Annotated, Any, ClassVar, Self
 from uuid import UUID
 
 from pydantic import (
@@ -382,8 +382,12 @@ class SeqIdentifier(BaseIdentifier):
 
 
 class HasSeqMixin:
-    seq_id: UUID | None = Field(
-        default=None,
-        description="The unique identifier for the sequence from which these results were obtained. FOREIGN KEY",
-    )
-    seq: Seq | None = Field(default=None, description="The sequence.")
+    # Annotation-only: an assigned Field lingers as class attr -> pydantic shadow warning
+    seq_id: Annotated[
+        UUID | None,
+        Field(
+            default=None,
+            description="The unique identifier for the sequence from which these results were obtained. FOREIGN KEY",
+        ),
+    ]
+    seq: Annotated[Seq | None, Field(default=None, description="The sequence.")]

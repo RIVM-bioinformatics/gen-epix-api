@@ -239,8 +239,11 @@ def get_mixin_mapped_column(
          - nullable: whether the column should be nullable (default is based on whether the field is required)
     """
 
-    field_info: FieldInfo = getattr(model_mixin_class, field_name)
-    annotation = model_mixin_class.__annotations__[field_name]
+    # Mixin fields are annotation-only, so the FieldInfo lives in the annotation
+    field_info: FieldInfo = FieldInfo.from_annotation(
+        model_mixin_class.__annotations__[field_name]
+    )
+    annotation = field_info.annotation
     # Extract SA arguments from mixin class based on sa_type
     kwargs["nullable"] = kwargs.get(  # pyright: ignore[reportArgumentType]
         "nullable", not field_info.is_required()

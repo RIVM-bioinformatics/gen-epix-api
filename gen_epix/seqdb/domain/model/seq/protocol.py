@@ -2,7 +2,7 @@ import json
 import string
 from datetime import datetime, timezone
 from enum import IntEnum
-from typing import Any, ClassVar, Self
+from typing import Annotated, Any, ClassVar, Self
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -344,12 +344,15 @@ class HasProtocolMixin:
     and a method to retrieve the associated Protocol.
     """
 
-    protocol_id: UUID = Field(
-        description="The ID of the associated protocol. FOREIGN KEY."
-    )
-    protocol: Protocol | None = Field(
-        default=None, description="The associated protocol."
-    )
+    # Annotation-only: an assigned Field lingers as class attr -> pydantic shadow warning
+    protocol_id: Annotated[
+        UUID,
+        Field(description="The ID of the associated protocol. FOREIGN KEY."),
+    ]
+    protocol: Annotated[
+        Protocol | None,
+        Field(default=None, description="The associated protocol."),
+    ]
 
 
 class ProtocolSet(Model):
