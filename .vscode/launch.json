@@ -45,7 +45,7 @@
             "justMyCode": true
         },
         {
-            "name": "api.casedb.local.idps.sa_sql_demo",
+            "name": "api.casedb.local.idps.sa_sql",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
@@ -127,7 +127,7 @@
             "justMyCode": true
         },
         {
-            "name": "api.seqdb.local.idps.sa_sql_demo",
+            "name": "api.seqdb.local.idps.sa_sql",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",

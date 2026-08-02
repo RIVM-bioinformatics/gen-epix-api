@@ -3,7 +3,7 @@
 
 import datetime
 from collections.abc import Callable
-from typing import Any, ClassVar
+from typing import Annotated, Any, ClassVar
 from uuid import UUID
 
 from pydantic import Field, field_serializer
@@ -60,18 +60,27 @@ class UploadBatchCommandMixin:
     # The BaseBatchUploadResult child class that will contain the results of the upload
     BATCH_UPLOAD_RESULT_CLASS: ClassVar[type[model.BaseBatchUploadResult]] = None  # type: ignore[assignment]
 
-    verify_only: bool = Field(
-        default=False,
-        description="If true, the upload is only verified but not actually performed.",
-    )
-    on_exists: enum.UploadAction = Field(
-        default=enum.UploadAction.ERROR,
-        description="Action to take if one of the entities in the batch already exists upon upload.",
-    )
-    on_new: enum.UploadAction = Field(
-        default=enum.UploadAction.CREATE,
-        description="Action to take if one of the entities in the batch is new upon upload.",
-    )
+    verify_only: Annotated[
+        bool,
+        Field(
+            default=False,
+            description="If true, the upload is only verified but not actually performed.",
+        ),
+    ]
+    on_exists: Annotated[
+        enum.UploadAction,
+        Field(
+            default=enum.UploadAction.ERROR,
+            description="Action to take if one of the entities in the batch already exists upon upload.",
+        ),
+    ]
+    on_new: Annotated[
+        enum.UploadAction,
+        Field(
+            default=enum.UploadAction.CREATE,
+            description="Action to take if one of the entities in the batch is new upon upload.",
+        ),
+    ]
 
     def get_batch_for_upload(self) -> model.BaseBatchForUpload:
         """Get the batch for upload from the command."""

@@ -1,5 +1,5 @@
 import json
-from typing import ClassVar
+from typing import Annotated, ClassVar
 from uuid import UUID
 
 from pydantic import Field, model_validator
@@ -65,10 +65,14 @@ class Sample(Model):
 
 
 class HasSampleMixin:
-    sample_id: UUID = Field(
-        description="The unique identifier for the sample from which these results were obtained. FOREIGN KEY"
-    )
-    sample: Sample | None = Field(default=None, description="The sample.")
+    # Annotation-only: an assigned Field lingers as class attr -> pydantic shadow warning
+    sample_id: Annotated[
+        UUID,
+        Field(
+            description="The unique identifier for the sample from which these results were obtained. FOREIGN KEY"
+        ),
+    ]
+    sample: Annotated[Sample | None, Field(default=None, description="The sample.")]
 
 
 class SampleDataCollectionLink(Model):
