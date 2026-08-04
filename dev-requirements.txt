@@ -13,7 +13,7 @@ black==26.5.*
 pylint==4.0.*
 mypy==2.3.*
 oauthlib==3.3.1
-coverage==7.15.2
+coverage==7.15.3
 
 
 # stubs
