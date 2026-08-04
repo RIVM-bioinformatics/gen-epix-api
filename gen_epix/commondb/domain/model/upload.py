@@ -1,6 +1,6 @@
 import datetime
 import uuid
-from typing import Any, Callable, ClassVar, Self
+from typing import Annotated, Any, Callable, ClassVar, Self
 from uuid import UUID
 
 from pydantic import BaseModel as PydanticBaseModel
@@ -36,10 +36,14 @@ class IdentifiersMixin:
     # Must be set in child class
     IDENTIFIER_CLASS: ClassVar[type[BaseIdentifier]] = None  # type: ignore[assignment]
 
-    identifiers: list[IdentifierForUpload] | None = Field(
-        default=None,
-        description="Identifiers for the model, if any. Must be a unique values.",
-    )
+    # Annotation-only: an assigned Field lingers as class attr -> pydantic shadow warning
+    identifiers: Annotated[
+        list[IdentifierForUpload] | None,
+        Field(
+            default=None,
+            description="Identifiers for the model, if any. Must be a unique values.",
+        ),
+    ]
 
     @field_validator("identifiers", mode="after")
     @classmethod

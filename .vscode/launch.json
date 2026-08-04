@@ -45,7 +45,7 @@
             "justMyCode": true
         },
         {
-            "name": "api.casedb.local.idps.sa_sql_demo",
+            "name": "api.casedb.local.idps.sa_sql",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
@@ -123,6 +123,19 @@
                 "SEQDB",
                 "MOCK",
                 "SA_SQLITE_EMPTY"
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "api.seqdb.local.idps.sa_sql",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "api",
+                "SEQDB",
+                "IDPS",
+                "SA_SQL"
             ],
             "justMyCode": true
         },
@@ -1062,6 +1075,17 @@
             "program": "run.py",
             "args": [
                 "test_general_code_test_model_field_properties"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.general.code.test.error.code.unicity",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_general_code_test_error_code_unicity"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

@@ -378,3 +378,8 @@ class ColTypeOrder(Enum):
         ColType.TIME_QUARTER: 4,
         ColType.TIME_YEAR: 5,
     }
+
+
+class FeatureFlag(Enum):
+    UPDATE_OWN_ORGANIZATION = "UPDATE_OWN_ORGANIZATION"
+    DISABLE_UPLOAD = "UPLOAD_ENABLED"

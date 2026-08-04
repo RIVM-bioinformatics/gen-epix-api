@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
 from pydantic import Field
@@ -11,10 +11,14 @@ class DataLineageMixin:
     Mixin class to add fields to a model for data lineage tracking.
     """
 
-    provenance_id: UUID | None = Field(default=None, description="Provenance ID")
-    source_traceback: str | None = Field(
-        default=None, description="Source traceback", max_length=255
-    )
+    # Annotation-only: an assigned Field lingers as class attr -> pydantic shadow warning
+    provenance_id: Annotated[
+        UUID | None, Field(default=None, description="Provenance ID")
+    ]
+    source_traceback: Annotated[
+        str | None,
+        Field(default=None, description="Source traceback", max_length=255),
+    ]
 
 
 def validate_str_key_args(data: Any, uuid_field_name: str, str_field_name: str) -> Any:

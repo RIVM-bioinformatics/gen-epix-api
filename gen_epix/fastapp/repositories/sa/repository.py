@@ -1038,11 +1038,14 @@ class SARepository(BaseRepository):
             or isinstance(filter, NumberSetFilter)
             or isinstance(filter, UuidSetFilter)
         ):
-            return (
-                column.in_(filter.members)
-                if not invert
-                else sa.not_(column.in_(filter.members))
-            )
+            members = filter.members
+
+            # Handle Enum types by converting the members to the corresponding Enum values
+            enum_class = getattr(column.type, "enum_class", None)
+            if enum_class is not None:
+                members = frozenset(enum_class(value) for value in members)
+
+            return column.in_(members) if not invert else sa.not_(column.in_(members))
         elif isinstance(filter, ExistsFilter):
             return column != None if not invert else column == None
         elif isinstance(filter, EqualsFilter):

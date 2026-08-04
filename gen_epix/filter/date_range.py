@@ -17,4 +17,4 @@ class DateRangeFilter(RangeFilter):
 
 
 class TypedDateRangeFilter(DateRangeFilter):
-    type: Literal[FilterType.DATE_RANGE.value]
+    type: Literal[FilterType.DATE_RANGE.value]  # type: ignore[name-defined]

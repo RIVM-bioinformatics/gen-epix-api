@@ -25,4 +25,4 @@ class NumberRangeFilter(RangeFilter):
 
 
 class TypedNumberRangeFilter(NumberRangeFilter):
-    type: Literal[FilterType.NUMBER_RANGE.value]
+    type: Literal[FilterType.NUMBER_RANGE.value]  # type: ignore[name-defined]
