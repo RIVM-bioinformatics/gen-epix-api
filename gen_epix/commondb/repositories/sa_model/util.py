@@ -1,3 +1,4 @@
+import typing
 from enum import Enum
 from typing import Any
 
@@ -15,7 +16,7 @@ def create_table_args(
     model_class: type[Model],
     field_name_map: dict[str, str] | None = None,
     **kwargs: Any,
-) -> tuple:
+) -> tuple[str, tuple]:
     """
     Create SQLAlchemy table args for a given model class, including unique constraints
     based on the entity's keys, and optionally applying a field name mapping.
@@ -49,6 +50,7 @@ def create_mapped_column(
     model_class: type[Model],
     field_name: str,
     field_name_map: dict[type[Model], dict[str, str]] | None = None,
+    sql_field_name: str | None = None,
     **kwargs: Any,
 ) -> MappedColumn[Any]:
     """
@@ -104,6 +106,7 @@ def create_mapped_column(
         sa_field_name = field_name
     else:
         sa_field_name = field_name_map[model_class].get(field_name, field_name)
+    sql_field_name = sql_field_name or sa_field_name
     fk_name = kwargs.pop("fk_name", f"fk_{entity.table_name}_{sa_field_name}")
     if link_entity:
         link_model_class = link_entity.model_class
@@ -118,6 +121,7 @@ def create_mapped_column(
             else f"{link_entity.table_name}.{link_sa_id_field_name}"
         )
         return mapped_column(
+            sql_field_name,
             sa_type,
             sa.ForeignKey(
                 ref_column_name, ondelete=ondelete, onupdate=onupdate, name=fk_name
@@ -127,12 +131,35 @@ def create_mapped_column(
             **kwargs,
         )
     return mapped_column(
+        sql_field_name,
         sa_type,
         nullable=nullable,
         primary_key=entity.id_field_name == field_name,
         doc=doc,
         **kwargs,
     )
+
+
+def create_composite_primary_key_mapper_args(
+    model_class: type[Model],
+    field_name_map: dict[type[Model], dict[str, str]] | None = None,
+    mapper_args: dict | None = None,
+) -> dict[str, list[str]]:
+    """
+    Create SQLAlchemy mapper args for a given model class, including composite primary
+    key constraints based on the entity's keys.
+    """
+    assert model_class.ENTITY is not None
+    entity: Entity = model_class.ENTITY
+    field_name_map = field_name_map or {}
+    mapper_args = mapper_args if mapper_args is not None else {}
+    if model_class not in field_name_map:
+        sa_field_names = entity.get_field_names()
+    else:
+        sa_field_names = [
+            field_name_map[model_class].get(x, x) for x in entity.get_field_names()
+        ]
+    return {"primary_key": sa_field_names}
 
 
 def set_entity_repository_model_classes(
@@ -239,11 +266,19 @@ def get_mixin_mapped_column(
          - nullable: whether the column should be nullable (default is based on whether the field is required)
     """
 
-    # Mixin fields are annotation-only, so the FieldInfo lives in the annotation
-    field_info: FieldInfo = FieldInfo.from_annotation(
-        model_mixin_class.__annotations__[field_name]
-    )
-    annotation = field_info.annotation
+    annotation = model_mixin_class.__annotations__[field_name]
+    field_info: FieldInfo
+    if hasattr(model_mixin_class, field_name):
+        # Mixin class has the field as an attribute (should normally not be the case to avoid warnings about shadowing variables), so we can get the FieldInfo directly
+        field_info = getattr(model_mixin_class, field_name)
+    else:
+        if hasattr(model_mixin_class, "__pydantic_fields__"):
+            # Mixin class has the field as an attribute (should normally not be the case to avoid warnings about shadowing variables), so we can get the FieldInfo directly
+            field_info = model_mixin_class.__pydantic_fields__[field_name]
+        else:
+            # Mixin class has the field as an annotation only (normal case)
+            annotation_args = typing.get_args(annotation)
+            field_info = annotation_args[1]
     # Extract SA arguments from mixin class based on sa_type
     kwargs["nullable"] = kwargs.get(  # pyright: ignore[reportArgumentType]
         "nullable", not field_info.is_required()

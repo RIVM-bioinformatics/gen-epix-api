@@ -77,6 +77,9 @@ from gen_epix.commondb.repositories.sa_model.organization import UserMixin as Us
 from gen_epix.commondb.repositories.sa_model.system import Outage as Outage
 from gen_epix.commondb.repositories.sa_model.system import OutageMixin as OutageMixin
 from gen_epix.commondb.repositories.sa_model.util import (
+    create_composite_primary_key_mapper_args as create_composite_primary_key_mapper_args,
+)
+from gen_epix.commondb.repositories.sa_model.util import (
     create_mapped_column as create_mapped_column,
 )
 from gen_epix.commondb.repositories.sa_model.util import (

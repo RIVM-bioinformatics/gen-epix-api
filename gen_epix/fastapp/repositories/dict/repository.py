@@ -6,7 +6,7 @@ import zipfile
 from collections.abc import Callable, Hashable, Iterable
 from functools import partial
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.domain.entity import Entity
@@ -123,11 +123,11 @@ class DictRepository(BaseRepository):
         self,
         entities: Iterable[Entity],
         db: dict[type[Model], dict[Hashable, Model]],
+        extra_data: Literal["ignore", "raise", "drop"] = "ignore",
+        missing_data: Literal["raise", "ignore"] = "raise",
+        timestamp_factory: Callable[[], datetime.datetime] = datetime.datetime.now,
         **kwargs: Any,
     ):
-        extra_data = kwargs.pop("extra_data", "ignore")
-        missing_data = kwargs.pop("missing_data", "raise")
-        timestamp_factory = kwargs.pop("timestamp_factory", datetime.datetime.now)
         if extra_data not in {"ignore", "raise", "drop"}:
             raise ValueError(f"Invalid extra_data: {extra_data}")
         if missing_data not in {"raise", "ignore"}:
@@ -159,7 +159,10 @@ class DictRepository(BaseRepository):
         return self._db
 
     def _init_properties(
-        self, entities: Iterable[Entity], db: dict, missing_data: str
+        self,
+        entities: Iterable[Entity],
+        db: dict,
+        missing_data: Literal["raise", "ignore"],
     ) -> None:
         # Further populate properties
         for entity in entities:
@@ -180,7 +183,7 @@ class DictRepository(BaseRepository):
                 elif missing_data == "raise":
                     raise ValueError(f"No data for model {model_class}")
                 else:
-                    raise NotImplementedError
+                    raise NotImplementedError()
             # Create ID getter
             id_field_name = entity.id_field_name
             if id_field_name is None:
