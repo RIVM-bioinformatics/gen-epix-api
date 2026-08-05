@@ -70,7 +70,7 @@ class BaseIsOwnCasesTestCase(TestCase):
         self.service._get_user_and_repository = Mock(
             return_value=(self.user, self.repository)
         )
-        self.service._retrieve_cases_with_content_right = Mock(return_value=[])
+        self.service._retrieve_cases_with_content_right = Mock(return_value=([], False))
         self.service._retrieve_case_data_collections_map = Mock(return_value={})
 
         # Default ABAC mock: full access, case_type_id in allowed set,
@@ -131,6 +131,17 @@ class BaseIsOwnCasesTestCase(TestCase):
             write_col_ids=set(),
             read_case_set=False,
             write_case_set=False,
+        )
+
+    def set_retrieve_cases_result(
+        self,
+        cases: list[model.Case],
+        is_max_results_exceeded: bool = False,
+    ) -> None:
+        """Set the tuple return value of _retrieve_cases_with_content_right."""
+        self.service._retrieve_cases_with_content_right.return_value = (
+            cases,
+            is_max_results_exceeded,
         )
 
     def attach_abac_policy(self, cmd: command.Command, abac: Any | None = None) -> None:
@@ -226,7 +237,7 @@ class TestRetrieveIsOwnCasesOwnership(BaseIsOwnCasesTestCase):
             self.case_id1,
             created_in_data_collection_id=self.private_data_collection_id,
         )
-        self.service._retrieve_cases_with_content_right.return_value = [case]
+        self.set_retrieve_cases_result([case])
         self.service._retrieve_case_data_collections_map.return_value = {}
 
         # 3. Execute
@@ -255,7 +266,7 @@ class TestRetrieveIsOwnCasesOwnership(BaseIsOwnCasesTestCase):
             self.case_id1,
             created_in_data_collection_id=self.data_collection_id,
         )
-        self.service._retrieve_cases_with_content_right.return_value = [case]
+        self.set_retrieve_cases_result([case])
         # Case is also linked to the private data collection
         self.service._retrieve_case_data_collections_map.return_value = {
             self.case_id1: {self.private_data_collection_id}
@@ -287,7 +298,7 @@ class TestRetrieveIsOwnCasesOwnership(BaseIsOwnCasesTestCase):
             self.case_id1,
             created_in_data_collection_id=self.other_data_collection_id,
         )
-        self.service._retrieve_cases_with_content_right.return_value = [case]
+        self.set_retrieve_cases_result([case])
         self.service._retrieve_case_data_collections_map.return_value = {
             self.case_id1: {self.data_collection_id}
         }
@@ -322,7 +333,7 @@ class TestRetrieveIsOwnCasesOwnership(BaseIsOwnCasesTestCase):
             self.case_id2,
             created_in_data_collection_id=self.other_data_collection_id,
         )
-        self.service._retrieve_cases_with_content_right.return_value = [case1, case2]
+        self.set_retrieve_cases_result([case1, case2])
         self.service._retrieve_case_data_collections_map.return_value = {}
 
         # 3. Execute
@@ -347,7 +358,7 @@ class TestRetrieveIsOwnCasesOwnership(BaseIsOwnCasesTestCase):
         self.attach_abac_policy(cmd)
         case1: model.Case = self.create_case(self.case_id1)
         case2: model.Case = self.create_case(self.case_id2)
-        self.service._retrieve_cases_with_content_right.return_value = [case1, case2]
+        self.set_retrieve_cases_result([case1, case2])
         self.service._retrieve_case_data_collections_map.return_value = {}
 
         # 3. Execute
@@ -367,7 +378,7 @@ class TestRetrieveIsOwnCasesEdgeCases(BaseIsOwnCasesTestCase):
 
         # 2. Mocks: inner retrieval returns nothing
         self.attach_abac_policy(cmd)
-        self.service._retrieve_cases_with_content_right.return_value = []
+        self.set_retrieve_cases_result([])
 
         # 3. Execute
         result: dict[UUID, bool] = case_service_retrieve_is_own_cases(self.service, cmd)
@@ -383,7 +394,7 @@ class TestRetrieveIsOwnCasesEdgeCases(BaseIsOwnCasesTestCase):
 
         # 2. Mocks: repository finds nothing for the requested IDs
         self.attach_abac_policy(cmd)
-        self.service._retrieve_cases_with_content_right.return_value = []
+        self.set_retrieve_cases_result([])
 
         # 3. Execute
         result: dict[UUID, bool] = case_service_retrieve_is_own_cases(self.service, cmd)

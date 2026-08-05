@@ -58,7 +58,7 @@ class BaseSimilarCasesTestCase:
         self.service._get_user_and_repository = Mock(
             return_value=(self.user, self.repository)
         )
-        self.service._retrieve_cases_with_content_right = Mock(return_value=[])
+        self.service._retrieve_cases_with_content_right = Mock(return_value=([], False))
 
         # Patch ABAC policy resolution
         self._orig_get_case_abac = BaseCaseAbacPolicy.get_case_abac_from_command
@@ -127,6 +127,24 @@ class BaseSimilarCasesTestCase:
                 self.dist_col_id: (None if profile_id is None else str(profile_id))
             },
         )
+
+    def set_retrieve_cases_result(
+        self,
+        cases: list[model.Case],
+        is_max_results_exceeded: bool = False,
+    ) -> None:
+        """Set the tuple return value of _retrieve_cases_with_content_right."""
+        self.service._retrieve_cases_with_content_right.return_value = (
+            cases,
+            is_max_results_exceeded,
+        )
+
+    def set_retrieve_cases_side_effect(
+        self,
+        results: list[tuple[list[model.Case], bool]],
+    ) -> None:
+        """Set ordered tuple responses for repeated retrieval calls."""
+        self.service._retrieve_cases_with_content_right.side_effect = results
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")
@@ -250,10 +268,9 @@ class TestHappyPath(BaseSimilarCasesTestCase):
         similar_cases_with_dates: list[model.Case] = [
             self.create_case(other_case_id, other_profile_id)
         ]
-        self.service._retrieve_cases_with_content_right.side_effect = [  # type: ignore[attr-defined]
-            all_cases,
-            similar_cases_with_dates,
-        ]
+        self.set_retrieve_cases_side_effect(
+            [(all_cases, False), (similar_cases_with_dates, False)]
+        )
 
         # Cross-service call returns a similar profile (as string) to include
         self.service.app.handle.return_value = [str(other_profile_id)]  # type: ignore[attr-defined]
@@ -326,10 +343,7 @@ class TestHappyPath(BaseSimilarCasesTestCase):
 
         # Seed case does not have a profile ID in content
         all_cases: list[model.Case] = [self.create_case(seed_case_id, None)]
-        self.service._retrieve_cases_with_content_right.side_effect = [  # type: ignore[attr-defined]
-            all_cases,
-            [],
-        ]
+        self.set_retrieve_cases_side_effect([(all_cases, False), ([], False)])
 
         # 3. Execute
         similar_cases = case_service_retrieve_similar_cases(self.service, cmd)
@@ -357,9 +371,7 @@ class TestHappyPath(BaseSimilarCasesTestCase):
         )
         protocol: model.GeneticDistanceProtocol = self.create_protocol()
         self.repository.crud.side_effect = [dist_col, dist_ref_col, protocol]
-        self.service._retrieve_cases_with_content_right.return_value = [  # type: ignore[attr-defined]
-            self.create_case(seed_case_id, uuid4())
-        ]
+        self.set_retrieve_cases_result([self.create_case(seed_case_id, uuid4())])
         self.service.app.handle.return_value = [  # type: ignore[attr-defined]
             str(inaccessible_profile_id)
         ]
