@@ -1,7 +1,7 @@
 import datetime
 from collections.abc import Callable, Iterable
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, exc, model
@@ -34,16 +34,27 @@ def case_service_retrieve_cases_by_query(
     # @ABAC: get case abac
     case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
     assert case_abac is not None
-    is_full_access = case_abac.is_full_access
     has_case_read = case_abac.get_combinations_with_access_right(
         enum.CaseRight.READ_CASE
     )
-    if case_type_id not in has_case_read and not is_full_access:
+    if case_type_id not in has_case_read and not case_abac.is_full_access:
         raise exc.UnauthorizedAuthError(
             "e9a598d2", f"Unauthorized CaseType: {case_type_id}"
         )
 
     with repository.uow() as uow:
+        case_type: model.CaseType = self.repository.crud(
+            uow,
+            user.id,
+            model.CaseType,
+            CrudOperation.READ_ONE,
+            obj_ids=case_type_id,
+        )
+        max_n_cases = (
+            case_type.props.read_max_n_cases
+            if case_type.props.read_max_n_cases > 0
+            else self._default_props.read_max_n_cases
+        )
         if case_set_ids:
             # @ABAC: Verify any access to all given case sets if applicable
             _verify_case_set_access(
@@ -51,22 +62,25 @@ def case_service_retrieve_cases_by_query(
             )
         if case_query.filter:
             # @ABAC: Verify validity of filter
-            cols = _verify_filter_validity(self, user, case_query, uow)
+            ref_cols = _verify_filter_validity(self, user, case_query, uow)
+        else:
+            ref_cols = []
 
         # @ABAC: Retrieve all cases with read access, and content filtered on Col read access
-        cases = self._retrieve_cases_with_content_right(
+        cases, is_max_results_exceeded = self._retrieve_cases_with_content_right(
             uow,
             user.id,
             case_abac,
             # user_case_access,
             enum.CaseRight.READ_CASE,
-            case_type_id,
+            cast(UUID, case_type.id),
             case_ids=None,
             datetime_range_filter=datetime_range_filter,
             filter_content=True,
-            # Disable the helper's early max results limit, since we need to apply it after filtering by case sets and filters, which happens after retrieving the cases
-            apply_max_n_cases=not case_set_ids and not case_query.filter,
+            # Disable the helper's early max results limit if case_set_ids and filters are applied, since we need to apply it after filtering by case sets and filters, which happens after retrieving the cases
+            apply_max_n_cases=False,
         )
+
         # Filter cases by case sets
         if case_set_ids:
             case_case_sets = self._retrieve_case_case_sets_map(uow, user.id)
@@ -74,11 +88,12 @@ def case_service_retrieve_cases_by_query(
                 x
                 for x in cases
                 if x.id in case_case_sets
-                and case_case_sets[x.id].intersection(case_set_ids)
+                and case_case_sets[cast(UUID, x.id)].intersection(case_set_ids)
             ]
+
         # Filter cases by filters
         if case_query.filter:
-            filter_mapping_functions = _get_map_functions_for_filters(cols)
+            filter_mapping_functions = _get_map_functions_for_filters(ref_cols)
             cases = [
                 x
                 for x, y in zip(
@@ -90,10 +105,10 @@ def case_service_retrieve_cases_by_query(
                 if y
             ]
 
-        # retrieve CaseType to apply max results limit
-        cases, is_max_results_exceeded = _apply_max_results_limit(
-            self, user, case_type_id, uow, cases
-        )
+        # Apply max results limit
+        is_max_results_exceeded = len(cases) > max_n_cases if max_n_cases > 0 else False
+        if is_max_results_exceeded:
+            cases = cases[:max_n_cases]
 
     return model.CaseQueryResult(
         case_query=case_query,
@@ -142,41 +157,13 @@ def case_service_retrieve_case_cohort_links_by_case_type(
     return case_cohort_links
 
 
-def _apply_max_results_limit(
-    self: BaseCaseService,
-    user: model.User,
-    case_type_id: UUID,
-    uow: BaseUnitOfWork,
-    cases: list[model.Case],
-) -> tuple[list[model.Case], bool]:
-    case_types: list[model.CaseType] = self.repository.crud(
-        uow,
-        user.id,
-        model.CaseType,
-        CrudOperation.READ_SOME,
-        obj_ids=[case_type_id],
-    )
-    if not case_types:
-        raise exc.InvalidArgumentsError(
-            "f337e785", f"Invalid CaseType ID: {case_type_id}"
-        )
-    case_type = case_types[0]
-    # Apply max results limit
-    is_max_results_exceeded = False
-    _raw = case_type.props.read_max_n_cases
-    max_n_cases = _raw if _raw > 0 else self._default_props.read_max_n_cases
-    if len(cases) > max_n_cases:
-        is_max_results_exceeded = True
-        cases = cases[:max_n_cases]
-    return cases, is_max_results_exceeded
-
-
 def _verify_filter_validity(
     self: BaseCaseService,
     user: model.User,
     case_query: model.CaseQuery,
     uow: BaseUnitOfWork,
 ) -> list[model.RefCol]:
+    assert case_query.filter is not None
     case_query.filter.set_keys(lambda x: UUID(x) if isinstance(x, str) else x)
     cols = _verify_case_filter(self, uow, user, case_query.filter)
     return cols
@@ -232,7 +219,7 @@ def case_service_retrieve_cases_by_id(
 
     with repository.uow() as uow:
 
-        cases = self._retrieve_cases_with_content_right(
+        cases, is_max_results_exceeded = self._retrieve_cases_with_content_right(
             uow,
             user.id,
             case_abac,
@@ -335,7 +322,7 @@ def case_service_retrieve_cases_by_id(
 
 #         # @ABAC: Retrieve all cases with read access, and content filtered on Col
 #         # read access
-#         cases = self._retrieve_cases_with_content_right(
+#         cases, is_max_results_exceeded = self._retrieve_cases_with_content_right(
 #             uow,
 #             user.id,
 #             case_abac,
@@ -397,7 +384,7 @@ def case_service_retrieve_cases_by_id(
 #     assert case_abac is not None
 
 #     with repository.uow() as uow:
-#         cases = self._retrieve_cases_with_content_right(
+#         cases, is_max_results_exceeded = self._retrieve_cases_with_content_right(
 #             uow,
 #             user.id,
 #             case_abac,
