@@ -46,6 +46,10 @@ from gen_epix.filter import (
 
 
 class SARepository(BaseRepository):
+    """
+    SQLAlchemy-backed repository
+    """
+
     DEFAULT_MAX_INSERT_BATCH_SIZE = 2000
     DEFAULT_MAX_PARAMETERS_IN_CLAUSE = 1000
 
@@ -69,6 +73,10 @@ class SARepository(BaseRepository):
 
     @classmethod
     def create_repository(cls, **kwargs: Any) -> BaseRepository:
+        """
+        Create a repository instance from keyword arguments.
+        Accepts either ``connection_string`` or ``file`` (SQLite path).
+        """
         entities, connection_string, remaining_kwargs = cls._process_repository_params(
             kwargs
         )
@@ -187,6 +195,11 @@ class SARepository(BaseRepository):
                     continue
 
     def __init__(self, engine: Engine, **kwargs: Any):
+        """
+        Initialise the repository with the provided SQLAlchemy engine.
+        Registers mappers for each persistable entity and creates per-
+        isolation-level session factories.
+        """
         # TODO: 2953 remove register_mappers argument
         register_mappers: bool = kwargs.pop("register_mappers", True)
         sa_mapper_factory: BaseSAMapperFactory | None = kwargs.pop(
@@ -230,24 +243,32 @@ class SARepository(BaseRepository):
 
     @property
     def id(self) -> str:
+        """Return the repository's unique identifier."""
         return self._id
 
     @property
     def name(self) -> str:
+        """Return the repository's name."""
         return self._name
 
     @property
     def default_isolation_level(self) -> IsolationLevel:
+        """Return the default isolation level for new sessions."""
         return self._default_isolation_level
 
     @default_isolation_level.setter
     def default_isolation_level(self, value: IsolationLevel) -> None:
+        """Set the default isolation level for new sessions."""
         self._default_isolation_level = value
 
     def uow(
         self,
         **kwargs: Any,
     ) -> BaseUnitOfWork:
+        """
+        Return a unit-of-work context manager backed by an SA session.
+        Nests within the active UoW when already inside a context.
+        """
         if self._uow_context_stack:
             # Nested within another context -> reuse the session of that context
             if kwargs:
@@ -279,6 +300,7 @@ class SARepository(BaseRepository):
         expire_on_commit: bool = False,
         **kwargs: Any,
     ) -> Session:
+        """Create and return a new SA session at the given isolation level."""
         isolation_level = isolation_level or self._default_isolation_level
         session: Session = self._session_maker_by_isolation_level[isolation_level](
             expire_on_commit=expire_on_commit
@@ -347,6 +369,7 @@ class SARepository(BaseRepository):
             self.register_mapper(mapper)
 
     def get_mapper(self, model_class: type[Model]) -> BaseSAMapper:
+        """Return the registered mapper for the given model class."""
         mapper = self._mapper_by_model.get(model_class)
         if not mapper:
             raise exc.RepositoryInitializationServiceError(
@@ -355,6 +378,7 @@ class SARepository(BaseRepository):
         return mapper
 
     def register_mapper(self, mapper: BaseSAMapper) -> Self:
+        """Register a mapper, enforcing uniqueness by row class and table."""
         for current_mapper in self._mapper_by_model.values():
             if current_mapper.row_class == mapper.row_class:
                 raise exc.RepositoryInitializationServiceError(
@@ -378,6 +402,7 @@ class SARepository(BaseRepository):
         obj: Any | Iterable[Any],
         **kwargs: Any,
     ) -> Any | list[Any]:
+        """Convert one or more model instances to their ORM row equivalents."""
         mapper = self._mapper_by_model[model_class]
         if isinstance(obj, model_class):
             return mapper.dump(user_id, obj, **kwargs)
@@ -386,6 +411,7 @@ class SARepository(BaseRepository):
     def from_sql(
         self, model_class: type[Model], row: Any | Iterable[Any], **kwargs: Any
     ) -> Any | list[Any]:
+        """Convert one or more ORM rows back to model instances."""
         mapper = self._mapper_by_model[model_class]
         if isinstance(row, Iterable):
             return [mapper.load(x, **kwargs) for x in row]
@@ -405,6 +431,7 @@ class SARepository(BaseRepository):
         offset: int = 0,
         **kwargs: Any,
     ) -> Any:
+        """Dispatch a CRUD operation to the appropriate concrete method."""
         if not isinstance(uow, SAUnitOfWork):
             raise exc.RepositoryServiceError("ff17823b", f"Invalid UnitOfWork: {uow}")
         session = uow.session
@@ -484,6 +511,7 @@ class SARepository(BaseRepository):
         return_id: bool = False,
         **kwargs: Any,
     ) -> Model | Hashable:
+        """Persist a single model instance and return it (or its id)."""
         return self.create_some(
             model_class, user_id, [obj], return_id=return_id, **kwargs
         )[0]
@@ -496,6 +524,7 @@ class SARepository(BaseRepository):
         return_id: bool = False,
         **kwargs: Any,
     ) -> list[Model] | list[Hashable]:
+        """Persist a batch of model instances, flushing in configurable chunks."""
         # Check arguments
         session: Session = kwargs.get("session")  # type: ignore[assignment]
         flush = kwargs.get("flush", True)
@@ -541,6 +570,7 @@ class SARepository(BaseRepository):
     def read_one(
         self, model_class: type[Model], obj_id: Hashable, **kwargs: Any
     ) -> Model:
+        """Fetch a single model by id."""
         return self.read_some(model_class, [obj_id], **kwargs)[0]
 
     def read_some(
@@ -598,6 +628,10 @@ class SARepository(BaseRepository):
         offset: int = 0,
         **kwargs: Any,
     ) -> list[Model] | list[Hashable]:
+        """
+        Fetch all rows matching an optional filter, with limit/offset support.
+        An ``obj_filter`` kwarg may apply additional Python-side filtering.
+        """
         # Check arguments
         session: Session = kwargs.get("session")  # type: ignore[assignment]
         # Retrieve rows and generate objs
@@ -678,6 +712,7 @@ class SARepository(BaseRepository):
     def update_one(
         self, model_class: type[Model], user_id: Hashable, obj: Model, **kwargs: Any
     ) -> Model | Hashable:
+        """Update a single model instance and return it (or its id)."""
         return self.update_some(model_class, user_id, [obj], **kwargs)[0]
 
     def update_some(
@@ -688,6 +723,7 @@ class SARepository(BaseRepository):
         return_id: bool = False,
         **kwargs: Any,
     ) -> list[Model] | list[Hashable]:
+        """Update existing rows in-place by loading and applying model changes."""
         # Check arguments
         objs = objs if isinstance(objs, list) else list(objs)
         session: Session = kwargs.get("session")  # type: ignore[assignment]
@@ -731,6 +767,7 @@ class SARepository(BaseRepository):
         return_id: bool = False,
         **kwargs: Any,
     ) -> Model | Hashable:
+        """Insert or update a single model instance."""
         return self.upsert_some(
             model_class, user_id, [obj], return_id=return_id, **kwargs
         )[0]
@@ -743,6 +780,10 @@ class SARepository(BaseRepository):
         return_id: bool = False,
         **kwargs: Any,
     ) -> list[Model] | list[Hashable]:
+        """
+        Insert new objects and update existing ones in a single call.
+        Existence is checked in batches to respect SQL Server's parameter limit.
+        """
         objs = objs if isinstance(objs, list) else list(objs)
         if not objs:
             return []
@@ -831,6 +872,7 @@ class SARepository(BaseRepository):
         row_id: Hashable,
         **kwargs: Any,
     ) -> Hashable:
+        """Delete a single row by id and return that id."""
         return self.delete_some(model_class, user_id, [row_id], **kwargs)[0]
 
     def delete_some(
@@ -840,6 +882,7 @@ class SARepository(BaseRepository):
         row_ids: Iterable[Hashable],
         **kwargs: Any,
     ) -> list[Hashable]:
+        """Delete the specified rows after confirming they exist."""
         # Check arguments
         row_ids = row_ids if isinstance(row_ids, list) else list(row_ids)
         session: Session = kwargs.get("session")  # type: ignore[assignment]
@@ -875,6 +918,7 @@ class SARepository(BaseRepository):
         return_id: bool = False,
         **kwargs: Any,
     ) -> list[Hashable] | None:
+        """Delete all rows, optionally filtered, returning ids when requested."""
         # Check arguments
         session: Session = kwargs.get("session")  # type: ignore[assignment]
         # Delete rows
@@ -947,11 +991,13 @@ class SARepository(BaseRepository):
     def exists_one(
         self, model_class: type[Model], obj_id: Hashable, **kwargs: Any
     ) -> bool:
+        """Return True if the row for the given id exists."""
         return self.exists_some(model_class, [obj_id], **kwargs)[0]
 
     def exists_some(
         self, model_class: type[Model], obj_ids: Iterable[Hashable], **kwargs: Any
     ) -> list[bool]:
+        """Return a per-id existence flag list in the same order as obj_ids."""
         session: Session = kwargs.get("session")  # type: ignore[assignment]
 
         mapper = self.get_mapper(model_class)
@@ -979,6 +1025,7 @@ class SARepository(BaseRepository):
         filter: Filter | None = None,
         **kwargs: Any,
     ) -> Iterable[tuple[Any, ...]]:
+        """Read a projection of specific fields, optionally filtered."""
         if not isinstance(uow, SAUnitOfWork):
             raise exc.RepositoryServiceError("4afb32de", f"Invalid UnitOfWork: {uow}")
         mapper = self.get_mapper(model_class)
@@ -1004,14 +1051,21 @@ class SARepository(BaseRepository):
     def split_filter(
         self, model_class: type[Model], filter: Filter | None
     ) -> tuple[Filter | None, Filter | None]:
+        """Split a filter into a SQL where-clause part and a Python remainder."""
         if not filter:
             return None, None
         field_name_map = self.get_mapper(model_class).get_field_name_map()
         return self._split_filter_recursion(field_name_map, filter)
 
     def get_where_clause_from_filter(
-        self, row_class: type, mapper: BaseSAMapper, filter: Filter
+        self,
+        row_class: type,
+        mapper: BaseSAMapper | None,
+        filter: Filter,
+        column_function_map: dict[str, Callable] | None = None,
     ) -> Any:
+        """Recursively convert a Filter tree to a SQLAlchemy where-clause."""
+        column_function_map = column_function_map or {}
         invert = filter.invert
         if isinstance(filter, CompositeFilter):
             args = []
@@ -1026,13 +1080,22 @@ class SARepository(BaseRepository):
             raise exc.InvalidArgumentsError(
                 "8f411a53", f"Unsupported filter operator: {filter.operator.value}"
             )
-        row_field_name = mapper.get_mapped_field_name(str(filter.get_key()))
+
+        # Get row field name
+        filter_key = str(filter.get_key())
+        if mapper is None:
+            # Row field name assumed as filter key
+            row_field_name = filter_key
+        else:
+            row_field_name = mapper.get_mapped_field_name(str(filter.get_key()))
         if row_field_name is None:
             raise exc.InvalidArgumentsError(
                 "320f2bf7",
                 f"Filter key '{filter.get_key()}' cannot be mapped to a row field name",
             )
         column = getattr(row_class, row_field_name)
+        column_function = column_function_map.get(row_field_name)
+        result_column = column_function(column) if column_function else column
         if (
             isinstance(filter, StringSetFilter)
             or isinstance(filter, NumberSetFilter)
@@ -1045,23 +1108,31 @@ class SARepository(BaseRepository):
             if enum_class is not None:
                 members = frozenset(enum_class(value) for value in members)
 
-            return column.in_(members) if not invert else sa.not_(column.in_(members))
+            return (
+                result_column.in_(members)
+                if not invert
+                else sa.not_(result_column.in_(members))
+            )
         elif isinstance(filter, ExistsFilter):
-            return column != None if not invert else column == None
+            return result_column != None if not invert else result_column == None
         elif isinstance(filter, EqualsFilter):
-            return column == filter.value if not invert else column != filter.value
+            return (
+                result_column == filter.value
+                if not invert
+                else result_column != filter.value
+            )
         elif isinstance(filter, RangeFilter):
             args = []
             if filter.lower_bound:
                 if filter.lower_bound_censor == ComparisonOperator.GT:
-                    args.append(column > filter.lower_bound)
+                    args.append(result_column > filter.lower_bound)
                 elif filter.lower_bound_censor == ComparisonOperator.GTE:
-                    args.append(column >= filter.lower_bound)
+                    args.append(result_column >= filter.lower_bound)
             if filter.upper_bound:
                 if filter.upper_bound_censor == ComparisonOperator.ST:
-                    args.append(column < filter.upper_bound)
+                    args.append(result_column < filter.upper_bound)
                 elif filter.upper_bound_censor == ComparisonOperator.STE:
-                    args.append(column <= filter.upper_bound)
+                    args.append(result_column <= filter.upper_bound)
             if len(args) == 1:
                 return args[0] if not invert else sa.not_(args[0])
             return sa.and_(*args) if not invert else sa.not_(sa.and_(*args))
@@ -1072,6 +1143,10 @@ class SARepository(BaseRepository):
     def _split_filter_recursion(
         self, field_name_map: dict[str, str], filter: Filter
     ) -> tuple[Filter | None, Filter | None]:
+        """
+        Recursively partition a filter into a SQL-expressible subtree and
+        a remainder to be evaluated in Python.
+        """
         map_key_only_classes = [
             ExistsFilter,
             EqualsBooleanFilter,
@@ -1181,6 +1256,7 @@ class SARepository(BaseRepository):
         verify_exists: bool = True,
         verify_duplicate: bool = True,
     ) -> None:
+        """Verify that obj_ids are unique and/or exist in the database."""
         # Check arguments
         if not verify_exists and not verify_duplicate:
             return
@@ -1264,7 +1340,10 @@ class SARepository(BaseRepository):
         obj_ids: list[Hashable],
         max_ids_in_clause: int = DEFAULT_MAX_PARAMETERS_IN_CLAUSE,
     ) -> sa.sql.Select:
-        """ """
+        """Build a SELECT restricted to the given ids via a temp-table JOIN.
+        Avoids ODBC 07002 errors on MSSQL for UNIQUEIDENTIFIER IN() queries.
+        Falls back to a plain IN() clause on non-MSSQL dialects.
+        """
 
         row_class = mapper.row_class
         id_col = mapper.get_row_id_column()
@@ -1361,6 +1440,7 @@ class SARepository(BaseRepository):
         return rows, row_ids
 
     def _execute_sa(self, session: Session, execute_fn: Callable, kwargs: dict) -> Any:
+        """Run execute_fn in the given session, or open a fresh UoW session."""
         if session:
             retval = execute_fn(session)
         else:
@@ -1376,6 +1456,7 @@ class SARepository(BaseRepository):
         row_ids: list[Hashable],
         table_name: str | None = None,
     ) -> None:
+        """Raise InvalidIdsError if fewer rows were returned than requested."""
         n = len(obj_ids)
         if len(row_ids) < n:
             not_found_obj_ids = [x for x in obj_ids if x not in row_ids]
@@ -1395,6 +1476,7 @@ class SARepository(BaseRepository):
     def _verify_duplicate_ids(
         model_class: type[Model], obj_ids: Iterable[Hashable]
     ) -> None:
+        """Raise DuplicateIdsError if obj_ids contains duplicates."""
         if not isinstance(obj_ids, list) and not isinstance(obj_ids, set):
             obj_ids = list(obj_ids)
         seen = set()
@@ -1418,6 +1500,9 @@ class SARepository(BaseRepository):
         connection_string: str,
         **kwargs: Any,
     ) -> "SARepository":
+        """
+        Create an SARepository, setting up engine, schemas, and DDL.
+        """
         # Parse arguments
         echo = kwargs.pop("echo", False)
         register_mappers = kwargs.pop("register_mappers", True)
@@ -1522,6 +1607,10 @@ class SARepository(BaseRepository):
         connection_string: str,
         **kwargs: Any,
     ) -> BaseException | None:
+        """
+        Try to open a database connection; return None on success or the
+        exception on failure.
+        """
         try:
             connection = sa.create_engine(
                 connection_string,
