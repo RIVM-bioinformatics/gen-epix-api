@@ -62,14 +62,18 @@ def _row(
     qc_result: enum.QualityControlResult = enum.QualityControlResult.PASS,
     qc_score: float = 1.0,
     created_at: datetime = _DT_OLD,
+    primary_category_id: UUID | None = None,
 ) -> tuple:
-    return (
+    base = (
         entry_id or uuid4(),
         sample_id or uuid4(),
         qc_result,
         qc_score,
         created_at,
     )
+    if primary_category_id is not None:
+        return base + (primary_category_id,)
+    return base
 
 
 def _seq_cmd(**kwargs: Any) -> command.RetrieveBestSeqPerSampleCommand:
@@ -324,6 +328,64 @@ class TestRankingLogic:
         _get_best_id_per_sample(svc, cmd)
         args, _ = svc.repository.read_fields.call_args
         assert args[2] is model.Seq
+
+
+# ---------------------------------------------------------------------------
+# return_primary_category_id behaviour
+# ---------------------------------------------------------------------------
+
+
+class TestReturnPrimaryCategoryId:
+    def test_default_returns_classification_id(self) -> None:
+        sample_id = uuid4()
+        entry_id = uuid4()
+        svc = _mock_service([_row(entry_id=entry_id, sample_id=sample_id)])
+        cmd = _classification_cmd(sample_ids={sample_id})
+        result = _get_best_id_per_sample(svc, cmd)
+        assert result[sample_id] == entry_id
+
+    def test_true_returns_primary_category_id(self) -> None:
+        sample_id = uuid4()
+        category_id = uuid4()
+        svc = _mock_service(
+            [_row(sample_id=sample_id, primary_category_id=category_id)]
+        )
+        cmd = _classification_cmd(
+            sample_ids={sample_id}, return_primary_category_id=True
+        )
+        result = _get_best_id_per_sample(svc, cmd)
+        assert result[sample_id] == category_id
+
+    def test_true_appends_primary_category_id_to_field_names(self) -> None:
+        sample_id = uuid4()
+        svc = _mock_service([_row(sample_id=sample_id, primary_category_id=uuid4())])
+        cmd = _classification_cmd(
+            sample_ids={sample_id}, return_primary_category_id=True
+        )
+        _get_best_id_per_sample(svc, cmd)
+        _, call_kwargs = svc.repository.read_fields.call_args
+        assert "primary_category_id" in call_kwargs["field_names"]
+
+    def test_false_omits_primary_category_id_from_field_names(self) -> None:
+        sample_id = uuid4()
+        svc = _mock_service([_row(sample_id=sample_id)])
+        cmd = _classification_cmd(
+            sample_ids={sample_id}, return_primary_category_id=False
+        )
+        _get_best_id_per_sample(svc, cmd)
+        _, call_kwargs = svc.repository.read_fields.call_args
+        assert "primary_category_id" not in call_kwargs["field_names"]
+
+    def test_return_primary_category_id_ignored_for_seq_profile(self) -> None:
+        # SeqProfile cmd has no return_primary_category_id; row[0] is always used.
+        sample_id = uuid4()
+        entry_id = uuid4()
+        svc = _mock_service([_row(entry_id=entry_id, sample_id=sample_id)])
+        cmd = _profile_cmd(sample_ids={sample_id})
+        result = _get_best_id_per_sample(svc, cmd)
+        assert result[sample_id] == entry_id
+        _, call_kwargs = svc.repository.read_fields.call_args
+        assert "primary_category_id" not in call_kwargs["field_names"]
 
 
 # ---------------------------------------------------------------------------

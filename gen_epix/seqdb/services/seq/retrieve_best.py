@@ -50,16 +50,21 @@ def _get_best_id_per_sample(
     ),
 ) -> dict[UUID, UUID]:
     """
-    Retrieve the best Seq or SeqProfile ID per sample for the given protocol and sample
-    IDs, based on the specified ranking strategy.
+    Retrieve the best Seq, SeqProfile, SeqClassification ID per sample for the given
+    protocol and sample IDs, based on the specified ranking strategy.
+
+    For SeqClassification, if `cmd.return_primary_category_id` is True, the primary
+    category ID will be returned instead of the SeqClassification ID.
     """
     model_class: type[model.Model]
+    return_primary_category_id = False
     if isinstance(cmd, command.RetrieveBestSeqProfilePerSampleCommand):
         model_class = model.SeqProfile
     elif isinstance(cmd, command.RetrieveBestSeqPerSampleCommand):
         model_class = model.Seq
     elif isinstance(cmd, command.RetrieveBestSeqClassificationPerSampleCommand):
         model_class = model.SeqClassification
+        return_primary_category_id = cmd.return_primary_category_id
     else:
         raise NotImplementedError(f"Unsupported command type: {type(cmd).__name__}")
     user_id = cmd.user.id if cmd.user else None
@@ -90,11 +95,14 @@ def _get_best_id_per_sample(
     else:
         filter = sample_filter
     with repository.uow() as uow:
+        field_names = ["id", "sample_id", "qc_result", "qc_score", "created_at"]
+        if return_primary_category_id:
+            field_names.append("primary_category_id")
         iter_fields = repository.read_fields(
             uow,
             user_id,
             model_class,
-            field_names=["id", "sample_id", "qc_result", "qc_score", "created_at"],
+            field_names=field_names,
             filter=filter,
         )
         best_id_per_sample: dict[UUID, UUID] = {}
@@ -111,9 +119,12 @@ def _get_best_id_per_sample(
             sort_fn = lambda x: (x[1], map_qc_result_to_sort_key[x[2]], x[3], x[4])
             sorted_iter = sorted(iter_fields, key=sort_fn)
             prev_sample_id = None
-            for entry_id, sample_id, qc_result, qc_score, created_at in sorted_iter:
+            for row in sorted_iter:
+                sample_id = row[1]
                 if sample_id != prev_sample_id:
-                    best_id_per_sample[sample_id] = entry_id
+                    best_id_per_sample[sample_id] = (
+                        row[5] if return_primary_category_id else row[0]
+                    )
                     prev_sample_id = sample_id
         else:  # pragma: no cover
             raise AssertionError(

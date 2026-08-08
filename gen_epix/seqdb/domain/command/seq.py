@@ -342,6 +342,10 @@ class RetrieveBestSeqClassificationPerSampleCommand(Command):
         default=enum.SeqClassificationRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
         description="The strategy to use for ranking the classifications. This determines how the best classification is selected.",
     )
+    return_primary_category_id: bool = Field(
+        default=False,
+        description="If True, return the primary category ID of the best classification, rather than the ID of the best classification. This facilitates the most frequent use casees where the primary category is the desired output.",
+    )
 
 
 # CRUD commands
