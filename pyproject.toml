@@ -39,7 +39,7 @@ dependencies = [
     "PyYAML==6.0.3",
     "scipy==1.18.0",
     "numpy==2.5.1",
-    "biopython==1.87",
+    "biopython==1.88",
     "cachetools==7.1.7",
     "slowapi==0.1.10",
     "python-dateutil==2.9.0.post0",
