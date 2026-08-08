@@ -139,6 +139,16 @@ class BatchUploader:
                 code="a3f7e9d2",
                 message="Verification ended",
             )
+            if not success:
+                # Record the batch-level failure regardless of verify_only,
+                # so that a dry run reports the same outcome as a real run.
+                batch_result.add_error(
+                    code="02095f22",
+                    message="Verification found errors, upload will not proceed",
+                )
+            for parent_result in batch_result.get_parent_results():
+                parent_result.propagate_child_failures()
+
             if cmd.verify_only:
                 # Stop here if only verification was requested; mark all
                 # still-PENDING individual results as SKIPPED (nothing was stored)
@@ -158,10 +168,6 @@ class BatchUploader:
 
             if not success:
                 # Do not proceed with upsert due to errors
-                batch_result.add_error(
-                    code="02095f22",
-                    message="Verification found errors, upload will not proceed",
-                )
                 return batch_result
 
             # Upsert the batch data
@@ -174,6 +180,8 @@ class BatchUploader:
                 code="f8b12027",
                 message="Upsert ended",
             )
+            for parent_result in batch_result.get_parent_results():
+                parent_result.propagate_child_failures()
             if not success:
                 # Rollback due to errors, but do not raise an exception since those will be reported in batch_result
                 batch_result.add_error(
