@@ -547,23 +547,13 @@ class Run:
             ]
         )
 
-    def test_casedb_unit_upload(self) -> None:
+    def test_casedb_unit_services_case_upload(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/casedb/unit/upload",
-            ]
-        )
-
-    def test_casedb_unit_col_order(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/unit/col_order",
+                "test/casedb/unit/services/case/upload",
             ]
         )
 
@@ -695,33 +685,43 @@ class Run:
             ]
         )
 
-    def test_seqdb_unit_models_for_upload(self) -> None:
+    def test_seqdb_unit_domain_models_for_upload(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/seqdb/unit/models_for_upload",
+                "test/seqdb/unit/domain/models_for_upload",
             ]
         )
 
-    def test_seqdb_unit_upload(self) -> None:
+    def test_seqdb_unit_services_seq_upload(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/seqdb/unit/upload",
+                "test/seqdb/unit/services/seq/upload",
             ]
         )
 
-    def test_seqdb_unit_calculate_seq_distance(self) -> None:
+    def test_seqdb_unit_services_seq_calculate_seq_distance(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/seqdb/unit/calculate_seq_distance",
+                "test/seqdb/unit/services/seq/calculate_seq_distance",
+            ]
+        )
+
+    def test_seqdb_unit_services_seq_retrieve_best(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/seqdb/unit/services/seq/retrieve_best",
             ]
         )
 
@@ -806,13 +806,33 @@ class Run:
             ]
         )
 
-    def test_omopdb_unit_upload(self) -> None:
+    def test_omopdb_unit_services(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/omopdb/unit/upload",
+                "test/omopdb/unit/services",
+            ]
+        )
+
+    def test_omopdb_unit_services_omop(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/omopdb/unit/services/omop",
+            ]
+        )
+
+    def test_omopdb_unit_services_omop_upload(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/omopdb/unit/services/omop/upload",
             ]
         )
 
