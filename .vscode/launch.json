@@ -475,12 +475,12 @@
             "justMyCode": true,
         },
         {
-            "name": "test.casedb.unit.upload",
+            "name": "test.casedb.unit.services.case.upload",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_casedb_unit_upload"
+                "test_casedb_unit_services_case_upload"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -629,34 +629,45 @@
             "justMyCode": true,
         },
         {
-            "name": "test.seqdb.unit.models_for_upload",
+            "name": "test.seqdb.unit.domain.models_for_upload",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_seqdb_unit_models_for_upload"
+                "test_seqdb_unit_domain_models_for_upload"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
         },
         {
-            "name": "test.seqdb.unit.upload",
+            "name": "test.seqdb.unit.services.seq.upload",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_seqdb_unit_upload"
+                "test_seqdb_unit_services_seq_upload"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
         },
         {
-            "name": "test.seqdb.unit_calculate_seq_distance",
+            "name": "test.seqdb.unit.services.seq.calculate_seq_distance",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_seqdb_unit_calculate_seq_distance"
+                "test_seqdb_unit_services_seq_calculate_seq_distance"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.seqdb.unit.services.seq.retrieve_best",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_seqdb_unit_services_seq_retrieve_best"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -750,12 +761,34 @@
             "justMyCode": true
         },
         {
-            "name": "test.omopdb.unit.upload",
+            "name": "test.omopdb.unit.services",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_omopdb_unit_upload"
+                "test_omopdb_unit_services"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "test.omopdb.unit.services.omop",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_omopdb_unit_services_omop"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "test.omopdb.unit.services.omop.upload",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_omopdb_unit_services_omop_upload"
             ],
             "console": "integratedTerminal",
             "justMyCode": true
