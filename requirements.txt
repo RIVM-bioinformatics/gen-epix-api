@@ -3,7 +3,7 @@
 # application server
 fastapi[standard]==0.141.1
 gunicorn==26.0.*
-starlette==1.4.*
+starlette==1.5.*
 httpx==0.28.1
 urllib3==2.7.0
 pyjwt==2.13.0
