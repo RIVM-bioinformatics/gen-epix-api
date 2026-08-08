@@ -119,6 +119,9 @@ from gen_epix.seqdb.domain.command.seq import (
 )
 from gen_epix.seqdb.domain.command.seq import RefSeqCrudCommand as RefSeqCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
+    RetrieveBestSeqClassificationPerSampleCommand as RetrieveBestSeqClassificationPerSampleCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
     RetrieveBestSeqPerSampleCommand as RetrieveBestSeqPerSampleCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
@@ -215,6 +218,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         RefAlleleCrudCommand,
         RefSeqCrudCommand,
         CalculatePhylogeneticTreeCommand,
+        RetrieveBestSeqClassificationPerSampleCommand,
         RetrieveBestSeqPerSampleCommand,
         RetrieveBestSeqProfilePerSampleCommand,
         RetrieveSamplesByQueryCommand,

@@ -1,4 +1,4 @@
-from test.general.docs.test_model_field_descriptions import is_model_class
+from test.general.docs.test_docs_model_field_descriptions import is_model_class
 from typing import Any
 
 import pytest

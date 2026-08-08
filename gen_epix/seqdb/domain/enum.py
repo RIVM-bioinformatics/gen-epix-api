@@ -475,3 +475,7 @@ class SeqRankingStrategy(Enum):
 
 class SeqProfileRankingStrategy(Enum):
     QC_RESULT_THEN_SCORE_THEN_CREATED = "QC_RESULT_THEN_SCORE_THEN_CREATED"
+
+
+class SeqClassificationRankingStrategy(Enum):
+    QC_RESULT_THEN_SCORE_THEN_CREATED = "QC_RESULT_THEN_SCORE_THEN_CREATED"

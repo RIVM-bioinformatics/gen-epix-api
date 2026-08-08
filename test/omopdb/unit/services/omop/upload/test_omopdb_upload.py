@@ -730,7 +730,7 @@ class Test4PersonLinks(BasePersonUploadTestCase):
         ]
         batch_result = self.upload_batch(person_for_upload, validate_command=False)
         self.expectBatchFailed(batch_result)
-        self.expectStatusCount(batch_result, n_pending=1, n_failed=1)
+        self.expectStatusCount(batch_result, n_failed=2)
 
     def test_4_2_2_child_person_id_matches_succeeds(self) -> None:
         """Test 4.2.2: Child person_id matches parent - should succeed."""
@@ -1162,8 +1162,77 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
         ]
         batch_result = self.upload_batch(person_for_upload)
         self.expectBatchFailed(batch_result)
-        self.expectStatusCount(batch_result, n_pending=1, n_failed=1, n_skipped=1)
+        self.expectStatusCount(batch_result, n_failed=3)
         assert batch_result.persons[0].specimens[0].id == existing_specimen_id
+
+    def test_specimen_chain_retry_reusing_identifier_produces_readable_error(
+        self,
+    ) -> None:
+        """
+        A retried derived-specimen chain (e.g. a repeat culture attempt) that
+        carries the same lab identifier as the specimen it supersedes must
+        produce a clear, readable, correctly attributed error at every level
+        (identifier, specimen, person, batch) - and identically so whether
+        run for real or as a verify_only dry run.
+        """
+
+        def make_result(verify_only: bool) -> PersonBatchUploadResult:
+            old_tip_specimen_id = self.random_ids[3]
+            new_tip_specimen_id = self.random_ids[4]
+            lab_identifier = self.create_identifier_for_upload(
+                identifier_issuer_id=self.identifier_issuer_id,
+                external_id="LAB-SAMPLE-001",
+            )
+            # DB state: the lab identifier currently belongs to the previous
+            # attempt in the chain (old_tip_specimen_id).
+            existing_identifier = self.get_specimen_identifier_from_for_upload(
+                lab_identifier, internal_id=old_tip_specimen_id
+            )
+            # Upload payload: a new specimen (the retry), derived from the
+            # previous one, incorrectly carrying the same lab identifier.
+            new_specimen = self.create_specimen_for_upload(
+                specimen_id=new_tip_specimen_id, identifiers=[lab_identifier]
+            )
+            new_specimen.derived_from_specimen_id = old_tip_specimen_id
+            person_for_upload = self.create_person_for_upload(
+                person_id=self.person_id, person=None, specimens=[new_specimen]
+            )
+            self.service.app.handle.side_effect = [
+                [self.identifier_issuer],
+                [existing_identifier],
+            ]
+            self.service.repository.crud.side_effect = [[True]]
+            self.service.repository.read_fields.side_effect = [[]]
+            return self.upload_batch(
+                self.create_command_for_persons(person_for_upload).model_copy(
+                    update={"verify_only": verify_only}
+                )
+            )
+
+        for verify_only in (False, True):
+            batch_result = make_result(verify_only)
+            person_result = batch_result.persons[0]
+            specimen_result = person_result.specimens[0]
+            identifier_result = specimen_result.identifiers[0]
+
+            label = f"verify_only={verify_only}"
+            self.expectBatchFailed(batch_result)
+            assert person_result.status == EtlStatus.FAILED, label
+            assert specimen_result.status == EtlStatus.FAILED, label
+            assert identifier_result.status == EtlStatus.FAILED, label
+
+            # The identifier-level message must be specific and readable: it
+            # names the conflicting specimen IDs, not just a generic code.
+            identifier_message = next(
+                x.message for x in identifier_result.logs if x.code == "0561ecd7"
+            )
+            assert str(self.random_ids[3]) in identifier_message, label  # old tip
+            assert str(self.random_ids[4]) in identifier_message, label  # new tip
+
+            # The specimen and person level messages must point down to
+            # where the real error lives, not just report a bare failure.
+            assert specimen_result.has_log_code("d8f21b6a"), label
+            assert person_result.has_log_code("6a1f3d0c"), label
 
     def test_8_2_2_new_identifier_new_specimen(self) -> None:
         """Test 8.2.2: New Identifier for new specimen - should succeed."""
@@ -1312,7 +1381,7 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
         ]
         batch_result = self.upload_batch(person_for_upload)
         self.expectBatchFailed(batch_result)
-        self.expectStatusCount(batch_result, n_failed=1, n_skipped=1, n_pending=2)
+        self.expectStatusCount(batch_result, n_failed=3, n_pending=1)
         assert batch_result.persons[0].specimens[0].id == existing_specimen_id
         assert batch_result.persons[0].specimens[0].identifiers[1].id is None
 
@@ -1385,7 +1454,7 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
         ]
         batch_result = self.upload_batch(person_for_upload)
         self.expectBatchFailed(batch_result)
-        self.expectStatusCount(batch_result, n_failed=1, n_pending=2)
+        self.expectStatusCount(batch_result, n_failed=3)
 
     def test_8_3_2_identifier_issuer_code_not_found(self) -> None:
         """Test 8.3.2: Identifier issuer code provided and not found - should fail."""
@@ -1404,7 +1473,7 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
         ]
         batch_result = self.upload_batch(person_for_upload)
         self.expectBatchFailed(batch_result)
-        self.expectStatusCount(batch_result, n_failed=1, n_pending=2)
+        self.expectStatusCount(batch_result, n_failed=3)
 
     def test_8_3_3_identifier_issuer_id_and_code_mismatch(self) -> None:
         """Test 8.3.3: Both identifier issuer ID and code provided but do not match - should fail."""
@@ -1424,7 +1493,7 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
         ]
         batch_result = self.upload_batch(person_for_upload)
         self.expectBatchFailed(batch_result)
-        self.expectStatusCount(batch_result, n_failed=1, n_pending=2)
+        self.expectStatusCount(batch_result, n_failed=3)
 
 
 # ---------------------------------------------------------------------------

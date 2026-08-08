@@ -77,6 +77,7 @@ from gen_epix.seqdb.services.seq.crud_tree_algorithm_class import (
     seq_service_crud_tree_algorithm_class,
 )
 from gen_epix.seqdb.services.seq.retrieve_best import (
+    seq_service_retrieve_best_seq_classification_per_sample,
     seq_service_retrieve_best_seq_per_sample,
     seq_service_retrieve_best_seq_profile_per_sample,
 )
@@ -179,6 +180,12 @@ class SeqService(BaseSeqService):
         cmd: command.RetrieveBestSeqProfilePerSampleCommand,
     ) -> dict[UUID, UUID]:
         return seq_service_retrieve_best_seq_profile_per_sample(self, cmd)
+
+    def retrieve_best_seq_classification_per_sample(
+        self,
+        cmd: command.RetrieveBestSeqClassificationPerSampleCommand,
+    ) -> dict[UUID, UUID]:
+        return seq_service_retrieve_best_seq_classification_per_sample(self, cmd)
 
     def crud_protocol(
         self,
