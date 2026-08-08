@@ -25,7 +25,7 @@ python-multipart==0.0.32
 # calculation
 scipy==1.18.0
 numpy==2.5.1
-biopython==1.87
+biopython==1.88
 
 # other
 cachetools==7.1.7
