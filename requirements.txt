@@ -24,7 +24,7 @@ python-multipart==0.0.32
 
 # calculation
 scipy==1.18.0
-numpy==2.5.1
+numpy==2.5.2
 biopython==1.88
 
 # other
