@@ -10,8 +10,8 @@ from enum import Enum
 from locale import getpreferredencoding
 from pathlib import Path
 
-import yaml  # type: ignore[import-untyped]
-from dynaconf import Dynaconf
+import yaml
+from dynaconf import Dynaconf  # type: ignore[import-untyped]
 
 from gen_epix.commondb.config.settings_manager import SettingsManager
 from gen_epix.fastapp import App
@@ -33,6 +33,11 @@ _OWN_LOGGER_SUFFIXES = {
 }
 _LOG_LEVEL_DIAGNOSTIC_CODE = "8d4f29a1"
 
+_NULL_LOGGER = logging.getLogger("null")
+_NULL_LOGGER.addHandler(logging.NullHandler())
+_NULL_LOGGER.setLevel(logging.CRITICAL + 1)  # above all standard levels
+_NULL_LOGGER.propagate = False
+
 
 def _is_descendant_logger(logger_name: str, parent_logger_name: str) -> bool:
     """Return True when logger_name is a child logger of parent_logger_name."""
@@ -43,6 +48,7 @@ class BaseAppCfg(abc.ABC):
     """Abstract base class for application configuration."""
 
     def __init__(self) -> None:
+        """Declare instance attributes; subclasses must assign them in their own __init__."""
         self._name: str | None
         self._app_name: str
         self._service_type_enum: type[Enum]
@@ -56,44 +62,54 @@ class BaseAppCfg(abc.ABC):
 
     @property
     def name(self) -> str:
+        """Identifier for this configuration instance."""
         if self._name is None:
             raise ValueError("name is not set")
         return self._name
 
     @property
     def app_name(self) -> str:
+        """Name of the application (e.g. 'commondb', 'casedb')."""
         return self._app_name
 
     @property
     def service_type_enum(self) -> type[Enum]:
+        """Enum class for the service types of this application."""
         return self._service_type_enum
 
     @property
     def repository_type_enum(self) -> type[Enum]:
+        """Enum class for the repository types of this application."""
         return self._repository_type_enum
 
     @property
     def log_setup(self) -> bool:
+        """Whether logging was configured during initialisation."""
         return self._log_setup
 
     @property
     def cfg(self) -> Dynaconf:
+        """Loaded Dynaconf settings object."""
         return self._cfg
 
     @property
     def setup_logger(self) -> logging.Logger:
+        """Logger used during application setup."""
         return self._setup_logger
 
     @property
     def api_logger(self) -> logging.Logger:
+        """Logger for API layer messages."""
         return self._api_logger
 
     @property
     def app_logger(self) -> logging.Logger:
+        """Logger for application layer messages."""
         return self._app_logger
 
     @property
     def service_logger(self) -> logging.Logger:
+        """Logger for service layer messages."""
         return self._service_logger
 
     @abc.abstractmethod
@@ -136,11 +152,13 @@ class AppCfg(BaseAppCfg):
         app_name_or_enum: Enum | str,
         service_type_enum: type[Enum],
         repository_type_enum: type[Enum],
-        log_setup: bool = True,
         name: str | None = None,
+        envvar_prefix: str | None = None,
+        settings_files: list[str] | None = None,
+        log_any: bool = True,
+        log_setup: bool = True,
         setup_logger_level: str | int | None = None,
         logger_prefix: str | None = None,
-        envvar_prefix: str | None = None,
         log_config_file_envvar: str = "LOG_CONFIG_FILE",
         log_level_envvar: str = "LOG_LEVEL",
     ):
@@ -152,12 +170,15 @@ class AppCfg(BaseAppCfg):
             repository_type_enum: Enum of repository types
             name: optional name for this configuration instance that can e.g. be used
                as a key in collection of configurations
+            envvar_prefix: Prefix for environment variables (defaults to app_name.upper())
+            settings_files: List of settings files to load. No environment variables
+               are used. If None, defaults and environment variables are used. Use this
+               to have complete control over the configuration, e.g. for testing.
+            log_any: Whether to set up any logging at all (if False, loggers are set to NullHandler)
             log_setup: Whether to set up logging
             logger_prefix: Prefix for logger names (defaults to app_name.lower())
-            envvar_prefix: Prefix for environment variables (defaults to app_name.upper())
-            logging_config_file_envvar: Environment variable for logging config file
-            idps_config_file_envvar: Environment variable for identity provider config
-            logging_level_from_secret_envvar: Environment variable to control log level from secrets
+            log_config_file_envvar: Environment variable for logging config file
+            log_level_envvar: Environment variable to control log level
         """
         # Parse input
         if isinstance(app_name_or_enum, Enum):
@@ -171,9 +192,11 @@ class AppCfg(BaseAppCfg):
         self._service_type_enum = service_type_enum
         self._repository_type_enum = repository_type_enum
         self._envvar_prefix = envvar_prefix or f"{app_name.upper()}_"
+        self._settings_files = settings_files
+        self._log_any = log_any
+        self._log_setup = log_setup
         self._logger_prefix = logger_prefix or app_name.lower()
         self._log_config_file_envvar = log_config_file_envvar
-        self._log_setup = log_setup
         self._log_level_envvar = log_level_envvar
         self._setup_logger_level = setup_logger_level
 
@@ -210,6 +233,12 @@ class AppCfg(BaseAppCfg):
         self,
     ) -> None:
         """Configure loggers from logging configuration file."""
+        if not self._log_any:
+            self._setup_logger = _NULL_LOGGER
+            self._api_logger = _NULL_LOGGER
+            self._app_logger = _NULL_LOGGER
+            self._service_logger = _NULL_LOGGER
+            return
         logging_config_file = os.environ[
             f"{self._envvar_prefix}{self._log_config_file_envvar}"
         ]
@@ -235,7 +264,9 @@ class AppCfg(BaseAppCfg):
     def _init_load_settings(self) -> None:
         """Load settings using SettingsManager."""
 
-        settings_manager = SettingsManager(prefix=self._envvar_prefix)
+        settings_manager = SettingsManager(
+            prefix=self._envvar_prefix, settings_files=self._settings_files
+        )
         self._cfg = settings_manager.load_settings()
 
     def _init_validate_settings(self) -> None:
@@ -246,7 +277,7 @@ class AppCfg(BaseAppCfg):
             TimestampFactory,
         )
 
-        defaults_cfg = self._cfg["service"]["defaults"]["props"]
+        defaults_cfg = self._cfg["service"]["defaults"]["props"]  # type: ignore[index]
         timestamp_factory = getattr(
             TimestampFactory,
             defaults_cfg["timestamp_factory"],
@@ -256,16 +287,17 @@ class AppCfg(BaseAppCfg):
         defaults_cfg["id_factory"] = id_factory
 
         # Map default repository type
-        repository_type = getattr(
-            self._repository_type_enum, self._cfg["repository"]["defaults"]["type"]
-        )
-        self._cfg["repository"]["defaults"]["type"] = repository_type
+        repo_defaults = self._cfg["repository"]["defaults"]  # type: ignore[index]
+        repository_type = getattr(self._repository_type_enum, repo_defaults["type"])
+        repo_defaults["type"] = repository_type
 
         # Get class for and apply defaults to each service and repository
         for service_type in self._service_type_enum:
             service_type_str = service_type.value.lower()
             if service_type_str not in self._cfg["service"]:
-                self._cfg["service"].update({service_type_str: {}})
+                self._cfg["service"].update(  # type: ignore[union-attr]
+                    {service_type_str: {}}
+                )
             service_cfg = self._cfg["service"][service_type_str]
 
             # Get class for service
@@ -277,7 +309,7 @@ class AppCfg(BaseAppCfg):
 
             # Apply defaults to service
             orig_cfg = copy.deepcopy(service_cfg)
-            service_cfg.update(self._cfg["service"]["defaults"])
+            service_cfg.update(self._cfg["service"]["defaults"])  # type: ignore[index]
             service_cfg.update(orig_cfg)
 
             # Skip if the service does not have a repository
@@ -294,7 +326,9 @@ class AppCfg(BaseAppCfg):
 
             # Apply defaults to repository, if the service has a repository
             orig_cfg = copy.deepcopy(repository_cfg)
-            repository_cfg.update(self._cfg["repository"]["defaults"])
+            repository_cfg.update(
+                self._cfg["repository"]["defaults"]  # type: ignore[index]
+            )
             repository_cfg.update(orig_cfg)
 
     def copy_repository_files(
@@ -328,6 +362,7 @@ class AppCfg(BaseAppCfg):
     def _copy_single_repository_file(
         self, service_type: Enum, tgt_dir: Path | str, on_exist: str
     ) -> None:
+        """Copy the repository file for one service type to tgt_dir."""
         service_type_str = service_type.value.lower()
         if service_type_str not in self._cfg["repository"]:
             return
@@ -343,6 +378,7 @@ class AppCfg(BaseAppCfg):
         cfg["file"] = str(tgt_dir_path / curr_path.name)
 
     def _handle_file_copy(self, curr_path: Path, new_path: Path, on_exist: str) -> None:
+        """Copy curr_path to new_path, respecting the on_exist policy."""
         if not curr_path.exists():
             raise FileNotFoundError(f"Source file not found: {curr_path}")
         if new_path.exists():
@@ -369,7 +405,7 @@ class AppCfg(BaseAppCfg):
         settings_value: str | int | None = None
         if hasattr(self, "_cfg"):
             try:
-                settings_value = self._cfg["log"]["level"]
+                settings_value = self._cfg["log"]["level"]  # type: ignore[index]
             except (KeyError, TypeError):
                 settings_value = None
 
@@ -425,6 +461,7 @@ class AppCfg(BaseAppCfg):
         env_var_value: str | None,
         settings_value: str | int | None,
     ) -> None:
+        """Emit a structured info log describing the active log level and its source."""
         if not self._log_setup:
             return
         self.setup_logger.info(
@@ -443,6 +480,8 @@ class AppCfg(BaseAppCfg):
         self, log_level: str | int | None = None, emit_diagnostic: bool = True
     ) -> None:
         """Set log level for all loggers."""
+        if not self._log_any:
+            return
         (
             resolved_level,
             source,
@@ -464,7 +503,7 @@ class AppCfg(BaseAppCfg):
 
         # Set new log level for all in settings as well
         if hasattr(self, "_cfg"):
-            self._cfg["log"]["level"] = resolved_level
+            self._cfg["log"]["level"] = resolved_level  # type: ignore[index]
         self._set_known_handlers_to_notset()
         self._setup_logger.setLevel(resolved_level)
         logger_names = set(_THIRD_PARTY_LOGGER_NAMES)

@@ -1,8 +1,9 @@
 from gen_epix import fastapp as fastapp
 from gen_epix import filter as filter
 from gen_epix import util as util
+from gen_epix.casedb import services as casedb_services
 from gen_epix.casedb.domain import command as casedb_command
-from gen_epix.casedb.domain import enum as enum
+from gen_epix.casedb.domain import enum as casedb_enum
 from gen_epix.casedb.domain import model as casedb_model
 from gen_epix.casedb.domain import policy as casedb_policy
 from gen_epix.casedb.domain import service as casedb_service
@@ -19,12 +20,14 @@ from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.seqdb.domain import policy as seqdb_policy
 from gen_epix.seqdb.domain import service as seqdb_service
 
+# TODO: consider removing _policy and _service since they need not necessarily be part of the public API
 __all__ = [
     "casedb_command",
-    "enum",
+    "casedb_enum",
     "casedb_model",
     "casedb_policy",
     "casedb_service",
+    "casedb_services",
     "fastapp",
     "filter",
     "omopdb_command",

@@ -51,6 +51,7 @@ def _read_config(
         app_name,
         enum_module.ServiceType,
         enum_module.RepositoryType,
+        log_any=False,
     )
     app_composer: AppComposer = app_composer_module.AppComposer(app_cfg)
 
