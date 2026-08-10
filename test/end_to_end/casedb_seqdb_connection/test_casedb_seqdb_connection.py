@@ -5,7 +5,9 @@ from collections.abc import Generator
 from pathlib import Path
 from test.end_to_end.casedb_seqdb_connection.envvar import set_envvar
 from test.test_client.enum import ServerType
+from test.test_client.oauth.server import LOGGER as OAUTH_LOGGER
 from test.test_client.server_manager import ServerManager
+from typing import cast
 from uuid import UUID
 
 import pytest
@@ -25,6 +27,8 @@ from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.env import AppComposer as SeqdbAppComposer
 
 pytestmark = pytest.mark.e2e
+
+VERBOSE = False  # Use for debugging
 
 SSL_CERTFILE = Path("cert/cert.pem").absolute().as_posix()
 SSL_KEYFILE = Path("cert/key.pem").absolute().as_posix()
@@ -71,6 +75,9 @@ def test_logging_config_contract_includes_uvicorn_json_loggers() -> None:
 @pytest.fixture(scope="function")
 def oauth_server() -> Generator[ServerManager, None, None]:
     """Start OAuth server and create CASEDB_FOR_SEQDB client."""
+
+    orig_level = OAUTH_LOGGER.level
+    OAUTH_LOGGER.setLevel(logging.DEBUG if VERBOSE else logging.FATAL)
     with ServerManager(
         service=ServerType.OAUTH,
         port=5443,
@@ -88,9 +95,25 @@ def oauth_server() -> Generator[ServerManager, None, None]:
             scopes=["openid", "profile", "aud"],
         )
         if not success:
+            OAUTH_LOGGER.setLevel(orig_level)
             pytest.fail("Failed to add CASEDB_FOR_SEQDB client")
 
         yield server
+    OAUTH_LOGGER.setLevel(orig_level)
+
+
+@pytest.fixture(scope="function", autouse=True)
+def suppress_logs_when_not_verbose() -> Generator[None, None, None]:
+    """Suppress log output for this module unless VERBOSE is explicitly enabled."""
+    if VERBOSE:
+        yield
+        return
+    previous_disable = logging.root.manager.disable
+    logging.disable(logging.CRITICAL)
+    try:
+        yield
+    finally:
+        logging.disable(previous_disable)
 
 
 @pytest.fixture(scope="function")
@@ -106,17 +129,17 @@ def seqdb_server(
         AppType.SEQDB,
         seqdb_enum.ServiceType,
         seqdb_enum.RepositoryType,
-        log_setup=True,
+        log_any=VERBOSE,
     )
-    seqdb_app_composer = SeqdbAppComposer(seqdb_app_cfg, log_setup=True)
+    seqdb_app_composer = SeqdbAppComposer(seqdb_app_cfg, log_setup=VERBOSE)
     seqdb_app = seqdb_app_composer.app
     seqdb_fastapi_app = create_fast_api(
         app=seqdb_app,
         create_routers_fn=seqdb_create_routers,
         app_id=seqdb_app_composer.app.generate_id(),
-        setup_logger=seqdb_app_cfg.setup_logger,
-        api_logger=seqdb_app_cfg.api_logger,
-        debug=True,
+        setup_logger=seqdb_app_cfg.setup_logger if VERBOSE else None,
+        api_logger=seqdb_app_cfg.api_logger if VERBOSE else None,
+        debug=VERBOSE,
     )
 
     with ServerManager(
@@ -146,9 +169,11 @@ def test_casedb_seqdb_connection(
         AppType.CASEDB,
         enum.ServiceType,
         enum.RepositoryType,
-        log_setup=False,
+        log_any=VERBOSE,
     )
-    casedb_app_composer = CasedbAppComposer(casedb_app_cfg, log_setup=False)
+    casedb_app_composer = CasedbAppComposer(
+        casedb_app_cfg, log_any=VERBOSE, log_setup=VERBOSE
+    )
     casedb_app = casedb_app_composer.app
 
     # Test that the OAuth server is accessible
@@ -158,7 +183,8 @@ def test_casedb_seqdb_connection(
         with httpx.Client(timeout=5.0, verify=SSL_CERTFILE) as client:
             response = client.get(f"{protocol}://localhost:5443/health")
             assert response.status_code == 200
-            logging.info("✅ OAuth server is accessible")
+            if VERBOSE:
+                logging.info("OAuth server is accessible")
     except Exception as e:
         pytest.fail(f"OAuth server health check failed: {e}")
 
@@ -167,7 +193,8 @@ def test_casedb_seqdb_connection(
         with httpx.Client(timeout=5.0, verify=SSL_CERTFILE) as client:
             response = client.get(f"{protocol}://127.0.0.1:8003/v1/health")
             assert response.status_code == 200
-            logging.info("✅ seqdb server is accessible")
+            if VERBOSE:
+                logging.info("seqdb server is accessible")
     except Exception as e:
         pytest.fail(f"seqdb server health check failed: {e}")
 
@@ -180,7 +207,8 @@ def test_casedb_seqdb_connection(
             assert response.status_code == 200
             discovery_data = response.json()
             assert "token_endpoint" in discovery_data
-            logging.info("✅ OAuth discovery endpoint is accessible")
+            if VERBOSE:
+                logging.info("OAuth discovery endpoint is accessible")
     except Exception as e:
         pytest.fail(f"OAuth discovery endpoint failed: {e}")
 
@@ -223,6 +251,8 @@ def test_casedb_seqdb_connection(
         for x in cols.values()
         if ref_cols[x.ref_col_id].col_type == enum.ColType.GENETIC_DISTANCE
     ]
+    phylogenetic_tree: model.PhylogeneticTree | None = None
+    similar_case_ids: list[UUID] = []
     for col_id in genetic_distance_col_ids:
         col = cols[col_id]
         assert col.genetic_sequence_col_id is not None
@@ -231,7 +261,7 @@ def test_casedb_seqdb_connection(
             col.genetic_sequence_col_id  # type: ignore[assignment]
         )
         case_ids: list[UUID] = [
-            x.id for x in cases if x.content.get(genetic_sequence_col_id)
+            cast(UUID, x.id) for x in cases if x.content.get(genetic_sequence_col_id)
         ]
         if len(case_ids) < 2:
             continue

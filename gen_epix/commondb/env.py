@@ -63,11 +63,14 @@ class AppComposer(BaseAppComposer):
         policy_class_map: (
             dict[type[fastapp.Policy], type[fastapp.Policy]] | None
         ) = None,
+        log_any: bool = True,
         log_setup: bool = True,
         **kwargs: Any,
     ):
         """Initialise the composer, parse configuration, and compose the application."""
         # Parse input
+        if log_setup and not log_any:
+            raise ValueError("log_setup can only be True if log_any is True")
         self._app_cfg = app_cfg
         self._cfg = app_cfg.cfg
         self._domain = domain or DOMAIN
@@ -78,6 +81,7 @@ class AppComposer(BaseAppComposer):
         self._model_class_map = model_class_map or {}
         self._command_class_map = command_class_map or {}
         self._policy_class_map = policy_class_map or {}
+        self._log_any = log_any
         self._log_setup = log_setup
 
         # Parse config to test presence of expected values and to convert any values as necessary, such as feature flags
@@ -99,7 +103,7 @@ class AppComposer(BaseAppComposer):
         self._new_user_dependency: Callable = data["new_user_dependency"]
         self._idp_user_dependency: Callable = data["idp_user_dependency"]
 
-    def compose_application(self) -> dict[str, Any]:
+    def compose_application(self, **kwargs: Any) -> dict[str, Any]:
         """
         Create the App instance, initialise all services and repositories, and register
         policies.

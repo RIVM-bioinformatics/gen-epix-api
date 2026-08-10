@@ -12,11 +12,13 @@ class AppComposer(CommonAppComposer):
     def __init__(
         self,
         app_cfg: AppCfg,
+        log_any: bool = True,
         log_setup: bool = True,
         **kwargs: Any,
     ):
         super().__init__(
             app_cfg,
+            log_any=log_any,
             log_setup=log_setup,
             domain=DOMAIN,
             sorted_service_types=model.SORTED_SERVICE_TYPES,
