@@ -78,6 +78,7 @@ class BaseRetrieveCaseTestCase:
         self.service._get_user_and_repository = Mock(
             return_value=(self.user, self.repository)
         )
+        self.service._retrieve_cases_with_content_right = Mock(return_value=([], False))
 
         # Default repository behaviors
         self.repository.crud.return_value = []
@@ -190,6 +191,16 @@ class BaseRetrieveCaseTestCase:
             type=FilterType.NUMBER_SET.value, key=str(key), members=frozenset(members)
         )
 
+    def set_retrieve_cases_result(
+        self,
+        cases: list[model.Case],
+        is_max_results_exceeded: bool = False,
+    ) -> None:
+        """Set the tuple return value of _retrieve_cases_with_content_right."""
+        self.service._retrieve_cases_with_content_right = Mock(
+            return_value=(cases, is_max_results_exceeded)
+        )
+
     # NoFilter not used due to composite key semantics
 
     def create_composite_filter(
@@ -211,11 +222,15 @@ class BaseRetrieveCaseTestCase:
             _operation: Any,
             _filter: Any = None,
             _objs: Any = None,
-            obj_ids: list[UUID] | None = None,
+            obj_ids: Any = None,
             **kwargs: Any,
-        ) -> list[Any]:
-            if cls is model.CaseType and obj_ids == [self.case_type_id]:
-                return [self._repo_case_type] if self._repo_case_type else []
+        ) -> Any:
+            if cls is model.CaseType and self._repo_case_type is not None:
+                if obj_ids == self.case_type_id:
+                    return self._repo_case_type
+                if obj_ids == [self.case_type_id]:
+                    return [self._repo_case_type]
+                return []
             if cls is model.Col:
                 if not obj_ids or self._repo_cols is None:
                     return []
@@ -342,6 +357,7 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
         self.service._retrieve_case_sets_with_content_right = Mock(
             side_effect=[[authorized_case_set], []]
         )
+        self.set_repository_case_type(self.create_case_type(read_max_n_cases=5))
 
         # 3. Execute
         with pytest.raises(exc.UnauthorizedAuthError):
@@ -375,10 +391,11 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
         # 2. Mocks
         self.attach_abac_policy(cmd)
         self.set_repository_cols_and_ref_cols([col], [ref_col])
+        self.set_repository_case_type(self.create_case_type(read_max_n_cases=5))
         # No concept IDs returned → invalid
         self.service.app.handle = Mock(return_value=[])
         # Provide minimal cases to reach filter validation
-        self.service._retrieve_cases_with_content_right = Mock(return_value=[])
+        self.set_retrieve_cases_result([])
 
         # 3. Execute
         with pytest.raises(exc.InvalidArgumentsError):
@@ -408,7 +425,8 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
         # 2. Mocks
         self.attach_abac_policy(cmd)
         self.set_repository_cols_and_ref_cols([col], [ref_col])
-        self.service._retrieve_cases_with_content_right = Mock(return_value=[])
+        self.set_repository_case_type(self.create_case_type(read_max_n_cases=5))
+        self.set_retrieve_cases_result([])
 
         # 3. Execute
         with pytest.raises(exc.InvalidArgumentsError):
@@ -526,7 +544,7 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
             self.create_case(self.case_id1, case1_content),
             self.create_case(self.case_id2, case2_content),
         ]
-        self.service._retrieve_cases_with_content_right = Mock(return_value=cases)
+        self.set_retrieve_cases_result(cases)
         # Case sets mapping → both cases in requested set
         self.service._retrieve_case_case_sets_map = Mock(
             return_value={
@@ -564,7 +582,7 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
             self.create_case(self.case_id1, {}),
             self.create_case(self.case_id2, {}),
         ]
-        self.service._retrieve_cases_with_content_right = Mock(return_value=cases)
+        self.set_retrieve_cases_result(cases)
         self.set_repository_case_type(self.create_case_type(read_max_n_cases=10))
 
         # 3. Execute
@@ -606,7 +624,7 @@ class TestRetrieveCasesById(BaseRetrieveCaseTestCase):
 
         # 2. Mocks
         self.attach_abac_policy(cmd)
-        self.service._retrieve_cases_with_content_right = Mock(return_value=[])
+        self.set_retrieve_cases_result([])
 
         # 3. Execute
         result: list[model.Case] = case_service_retrieve_cases_by_id(self.service, cmd)
@@ -624,9 +642,7 @@ class TestRetrieveCasesById(BaseRetrieveCaseTestCase):
 
         # 2. Mocks
         self.attach_abac_policy(cmd)
-        self.service._retrieve_cases_with_content_right = Mock(
-            return_value=[self.create_case(self.case_id1, {})]
-        )
+        self.set_retrieve_cases_result([self.create_case(self.case_id1, {})])
         # CaseType not found
         self.repository.crud.return_value = []
 
@@ -648,7 +664,7 @@ class TestRetrieveCasesById(BaseRetrieveCaseTestCase):
             self.create_case(self.case_id1, {}),
             self.create_case(self.case_id2, {}),
         ]
-        self.service._retrieve_cases_with_content_right = Mock(return_value=cases)
+        self.set_retrieve_cases_result(cases)
         self.set_repository_case_type(self.create_case_type(read_max_n_cases=1))
 
         # 3. Execute
@@ -673,7 +689,7 @@ class TestRetrieveCasesById(BaseRetrieveCaseTestCase):
             self.create_case(self.case_id1, {}),
             self.create_case(self.case_id2, {}),
         ]
-        self.service._retrieve_cases_with_content_right = Mock(return_value=cases)
+        self.set_retrieve_cases_result(cases)
         # CaseType has 0 → service default of 1 should be applied
         self.set_repository_case_type(self.create_case_type(read_max_n_cases=0))
         self.service._default_props = model.CaseTypeProps(read_max_n_cases=1)
@@ -694,9 +710,10 @@ class TestRetrieveCasesById(BaseRetrieveCaseTestCase):
 
         # 2. Mocks
         self.attach_abac_policy(cmd)
-        self.service._retrieve_cases_with_content_right.return_value = [
-            self.create_case(self.case_id1, {})
-        ]
+        self.service._retrieve_cases_with_content_right.return_value = (
+            [self.create_case(self.case_id1, {})],
+            False,
+        )
         self.set_repository_case_type(self.create_case_type(read_max_n_cases=10))
 
         # 3. Execute
@@ -801,9 +818,7 @@ def test_mapping_branches_decimal_col_type() -> None:
     base.attach_abac_policy(cmd)
     base.set_repository_cols_and_ref_cols([col], [ref_col])
     case_content: dict[UUID, str | None] = {col_id: value_factory()}
-    base.service._retrieve_cases_with_content_right = Mock(
-        return_value=[base.create_case(base.case_id1, case_content)]
-    )
+    base.set_retrieve_cases_result([base.create_case(base.case_id1, case_content)])
     base.set_repository_case_type(base.create_case_type(read_max_n_cases=5))
 
     # 3. Execute
@@ -853,9 +868,7 @@ def test_mapping_branches_text_col_type() -> None:
     base.attach_abac_policy(cmd)
     base.set_repository_cols_and_ref_cols([col], [ref_col])
     case_content: dict[UUID, str | None] = {col_id: value_factory()}
-    base.service._retrieve_cases_with_content_right = Mock(
-        return_value=[base.create_case(base.case_id1, case_content)]
-    )
+    base.set_retrieve_cases_result([base.create_case(base.case_id1, case_content)])
     base.set_repository_case_type(base.create_case_type(read_max_n_cases=5))
 
     # 3. Execute

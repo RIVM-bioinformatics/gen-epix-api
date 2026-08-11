@@ -25,7 +25,7 @@ def case_service_retrieve_is_own_cases(
                 "b4c3caa5", f"Unauthorized CaseType: {case_type_id}"
             )
 
-        all_cases = self._retrieve_cases_with_content_right(
+        all_cases, is_max_results_exceeded = self._retrieve_cases_with_content_right(
             uow,
             user.id,
             case_abac,
