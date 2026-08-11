@@ -3,7 +3,7 @@
 # application server
 fastapi[standard]==0.141.1
 gunicorn==26.0.*
-starlette==1.4.*
+starlette==1.6.*
 httpx==0.28.1
 urllib3==2.7.0
 pyjwt==2.13.0
@@ -24,8 +24,8 @@ python-multipart==0.0.32
 
 # calculation
 scipy==1.18.0
-numpy==2.5.1
-biopython==1.87
+numpy==2.5.2
+biopython==1.88
 
 # other
 cachetools==7.1.7
