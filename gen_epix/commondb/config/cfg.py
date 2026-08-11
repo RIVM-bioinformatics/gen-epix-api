@@ -245,20 +245,20 @@ class AppCfg(BaseAppCfg):
             TimestampFactory,
         )
 
-        # 1. Map timestamp and id factory strings to factory objects
+        # Map timestamp and id factory strings to factory objects
         defaults_cfg = self._cfg["service"]["defaults"]["props"]
         defaults_cfg["timestamp_factory"] = getattr(
             TimestampFactory, defaults_cfg["timestamp_factory"]
         )
         defaults_cfg["id_factory"] = getattr(IdFactory, defaults_cfg["id_factory"])
 
-        # 2. Map default repository type string to enum member
+        # Map default repository type string to enum member
         repository_type = getattr(
             self._repository_type_enum, self._cfg["repository"]["defaults"]["type"]
         )
         self._cfg["repository"]["defaults"]["type"] = repository_type
 
-        # 3. Apply defaults and dynamically import classes
+        # Apply defaults and dynamically import classes
         for service_type in self._service_type_enum:
             service_type_str = service_type.value.lower()
 
