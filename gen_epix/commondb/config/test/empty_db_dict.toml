@@ -43,9 +43,8 @@ X-XSS-Protection = "1; mode=block"
 [api.route]
 v1 = "/v1"
 
-
 [log]
-level = "INFO"
+level = "WARNING"
 
 [log.command_object_summarization]
 enabled = true
@@ -65,64 +64,54 @@ props.timestamp_factory = "DATETIME_NOW"
 props.id_factory = "ULID"
 
 [service.abac]
-module = "gen_epix.casedb.services"
+module = "gen_epix.commondb.services"
 class_name = "AbacService"
 
 [service.auth]
-module = "gen_epix.casedb.services"
+module = "gen_epix.commondb.services"
 class_name = "AuthService"
 
+[service.auth.props]
+auto_create_new_users = false
+root_token_time_to_live = 0
+
+[service.auth.props.root.organization]
+id = "018d074d-ea0c-e942-07db-a3cc0ba1d653"
+code = "DUMMY"
+name = "DUMMY"
+
+[service.auth.props.root.user]
+key = "root@dummy.org"
+
 [service.organization]
-module = "gen_epix.casedb.services"
+module = "gen_epix.commondb.services"
 class_name = "OrganizationService"
 
 [service.rbac]
-module = "gen_epix.casedb.services"
+module = "gen_epix.commondb.services"
 class_name = "RbacService"
 props.user_invitation_time_to_live = 604800 # One week in seconds: 60 * 60 * 24 * 7
 
 [service.system]
-module = "gen_epix.casedb.services"
+module = "gen_epix.commondb.services"
 class_name = "SystemService"
 
-[service.case]
-module = "gen_epix.casedb.services"
-class_name = "CaseService"
-
-[service.geo]
-module = "gen_epix.casedb.services"
-class_name = "GeoService"
-
-[service.ontology]
-module = "gen_epix.casedb.services"
-class_name = "OntologyService"
-
-[service.seqdb]
-module = "gen_epix.casedb.services"
-class_name = "SeqdbService"
-
-
 [repository]
+
 [repository.defaults]
-type = "SA_SQLITE"
+type = "DICT"
 
 [repository.defaults.props]
-dir="./data/casedb/demo"
+dir = "./data/commondb/demo"
 
-[repository.abac.props]
-connection_string=sqlite:///:memory:
+[repository.abac]
+module = "gen_epix.commondb.repositories"
+class_name = "AbacDictRepository"
 
-[repository.organization.props]
-connection_string=sqlite:///:memory:
+[repository.organization]
+module = "gen_epix.commondb.repositories"
+class_name = "OrganizationDictRepository"
 
-[repository.system.props]
-connection_string=sqlite:///:memory:
-
-[repository.case.props]
-connection_string=sqlite:///:memory:
-
-[repository.geo.props]
-connection_string=sqlite:///:memory:
-
-[repository.ontology.props]
-connection_string=sqlite:///:memory:
+[repository.system]
+module = "gen_epix.commondb.repositories"
+class_name = "SystemDictRepository"

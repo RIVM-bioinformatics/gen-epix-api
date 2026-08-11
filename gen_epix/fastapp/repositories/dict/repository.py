@@ -21,15 +21,30 @@ from gen_epix.filter import CompositeFilter, Filter, LogicalOperator
 
 class DictRepository(BaseRepository):
 
+    @staticmethod
+    def _create_empty_db_for_entities(
+        entities: Iterable[Entity],
+    ) -> dict[type[Model], dict[Hashable, Model]]:
+        """Create an empty db map with one entry per persistable model class."""
+        db: dict[type[Model], dict[Hashable, Model]] = {}
+        for entity in entities:
+            if not entity.persistable:
+                continue
+            model_class = entity.model_class
+            assert issubclass(model_class, Model)
+            db[model_class] = {}
+        return db
+
     @classmethod
     def create_repository(cls, **kwargs: Any) -> BaseRepository:
         entities = kwargs.pop("entities", [])
         file = kwargs.pop("file", None)
         file_type = kwargs.pop("file_type", None)
         if file is None:
-            raise exc.RepositoryInitializationServiceError(
-                "aedae059", "No file provided"
-            )
+            db = DictRepository._create_empty_db_for_entities(entities)
+            repository = cls(entities=entities, db=db, missing_data="ignore", **kwargs)
+            assert isinstance(repository, DictRepository)
+            return repository
         if file_type is None:
             path = Path(file)
             suffixes = [x.lower() for x in path.suffixes]

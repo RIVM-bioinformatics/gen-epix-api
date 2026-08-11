@@ -1,0 +1,145 @@
+[app]
+host = "0.0.0.0"
+port = 8000
+debug = false
+
+
+[api]
+default_route = "/openapi.json"
+gzip_response_minimum_size = 1024
+
+[api.http_header]
+
+[api.http_header.general]
+CacheControl = "no-cache, no-store"
+Content-Security-Policy = "default-src 'none'; frame-ancestors 'none'; sandbox"
+Content-Security-Policy-Report-Only = "default-src 'none'; frame-ancestors 'none'; sandbox"
+Cross-Origin-Opener-Policy = "same-origin"
+Expires ="0"
+Pragma = "no-cache"
+Referrer-Policy = "strict-origin-when-cross-origin"
+Strict-Transport-Security = "max-age=63072000; includeSubDomains"
+X-Content-Type-Options = "nosniff"
+X-Frame-Options = "DENY"
+X-XSS-Protection = "1; mode=block"
+[api.http_header.openapi]
+CacheControl = "no-cache, no-store"
+Expires = "0"
+Pragma = "no-cache"
+Referrer-Policy = "strict-origin-when-cross-origin"
+Strict-Transport-Security = "max-age=63072000; includeSubDomains"
+X-Content-Type-Options = "nosniff"
+X-Frame-Options = "DENY"
+X-XSS-Protection = "1; mode=block"
+[api.http_header.auth]
+CacheControl = "no-cache, no-store"
+Expires = "0"
+Pragma = "no-cache"
+Strict-Transport-Security = "max-age=63072000; includeSubDomains"
+X-Content-Type-Options = "nosniff"
+X-Frame-Options = "DENY"
+X-XSS-Protection = "1; mode=block"
+
+[api.route]
+v1 = "/v1"
+
+[log]
+level = "WARNING"
+
+[log.command_object_summarization]
+enabled = true
+max_list_items = 3
+max_string_length = 500
+max_exception_message_length = 2000
+
+[feature_flags]
+update_own_organization = false
+disable_upload = false
+
+
+[service]
+
+[service.defaults]
+props.timestamp_factory = "DATETIME_NOW"
+props.id_factory = "ULID"
+
+[service.abac]
+module = "gen_epix.casedb.services"
+class_name = "AbacService"
+
+[service.auth]
+module = "gen_epix.casedb.services"
+class_name = "AuthService"
+
+[service.organization]
+module = "gen_epix.casedb.services"
+class_name = "OrganizationService"
+
+[service.rbac]
+module = "gen_epix.casedb.services"
+class_name = "RbacService"
+props.user_invitation_time_to_live = 604800 # One week in seconds: 60 * 60 * 24 * 7
+
+[service.system]
+module = "gen_epix.casedb.services"
+class_name = "SystemService"
+
+[service.case]
+module = "gen_epix.casedb.services"
+class_name = "CaseService"
+
+[service.geo]
+module = "gen_epix.casedb.services"
+class_name = "GeoService"
+
+[service.ontology]
+module = "gen_epix.casedb.services"
+class_name = "OntologyService"
+
+[service.seqdb]
+module = "gen_epix.casedb.services"
+class_name = "SeqdbService"
+
+
+[repository]
+
+[repository.defaults]
+type = "SA_SQLITE"
+[repository.defaults.props]
+dir="./data/casedb/demo"
+
+[repository.abac]
+module = "gen_epix.casedb.repositories"
+class_name = "AbacSARepository"
+[repository.abac.props]
+connection_string = "sqlite:///"file:ABAC?mode=memory&cache=shared""
+
+[repository.organization]
+module = "gen_epix.casedb.repositories"
+class_name = "OrganizationSARepository"
+[repository.organization.props]
+connection_string = "sqlite:///"file:ORGANIZATION?mode=memory&cache=shared""
+
+[repository.system]
+module = "gen_epix.casedb.repositories"
+class_name = "SystemSARepository"
+[repository.system.props]
+connection_string = "sqlite:///"file:SYSTEM?mode=memory&cache=shared""
+
+[repository.case]
+module = "gen_epix.casedb.repositories"
+class_name = "CaseSARepository"
+[repository.case.props]
+connection_string = "sqlite:///"file:CASE?mode=memory&cache=shared""
+
+[repository.geo]
+module = "gen_epix.casedb.repositories"
+class_name = "GeoSARepository"
+[repository.geo.props]
+connection_string = "sqlite:///"file:GEO?mode=memory&cache=shared""
+
+[repository.ontology]
+module = "gen_epix.casedb.repositories"
+class_name = "OntologySARepository"
+[repository.ontology.props]
+connection_string = "sqlite:///"file:ONTOLOGY?mode=memory&cache=shared""

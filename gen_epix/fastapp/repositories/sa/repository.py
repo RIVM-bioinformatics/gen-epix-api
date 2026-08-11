@@ -1511,21 +1511,35 @@ class SARepository(BaseRepository):
 
         is_sqlite = str(connection_string).lower().startswith("sqlite:///")
         if is_sqlite:
-            sqlite_file = Path(
-                re.sub(".*sqlite:///", "", connection_string, flags=re.IGNORECASE)
+            sqlite_target = re.sub(
+                ".*sqlite:///", "", connection_string, flags=re.IGNORECASE
             )
-            if recreate_sqlite_file:
-                # Remove existing file
-                if sqlite_file.is_file():
-                    sqlite_file.unlink()
-                # Create the file by creating a connection
-                engine = sa.create_engine(
-                    f"sqlite:///{sqlite_file.as_posix()}", echo=echo
-                )
-                conn = engine.connect()
-                conn.close()
-            elif not sqlite_file.is_file():
-                raise ValueError("Unable to derive file from connection string")
+            sqlite_target_lower = sqlite_target.lower()
+            is_memory_target = sqlite_target_lower == ":memory:" or (
+                sqlite_target_lower.startswith("file:")
+                and "mode=memory" in sqlite_target_lower
+            )
+
+            engine_kwargs: dict[str, Any] = {"echo": echo}
+            sqlite_file: Path | None = None
+            if is_memory_target:
+                if sqlite_target_lower.startswith("file:"):
+                    # sqlite:///file:name?mode=memory&cache=shared requires URI mode.
+                    engine_kwargs["connect_args"] = {"uri": True}
+            else:
+                sqlite_file = Path(sqlite_target)
+                if recreate_sqlite_file:
+                    # Remove existing file
+                    if sqlite_file.is_file():
+                        sqlite_file.unlink()
+                    # Create the file by creating a connection
+                    engine = sa.create_engine(
+                        f"sqlite:///{sqlite_file.as_posix()}", echo=echo
+                    )
+                    conn = engine.connect()
+                    conn.close()
+                elif not sqlite_file.is_file():
+                    raise ValueError("Unable to derive file from connection string")
 
             # Filter some warnings
             warnings.filterwarnings(
@@ -1534,8 +1548,8 @@ class SARepository(BaseRepository):
                 SAWarning,
             )
 
-            # Create engine, creating the sqlite file(s) if needed
-            engine = sa.create_engine("sqlite:///:memory:", echo=echo)
+            # Create engine, using URI mode when targeting shared in-memory dbs.
+            engine = sa.create_engine(connection_string, **engine_kwargs)
 
             # Make sure foreign key constraints are enforced,
             # which is not the default for sqlite
@@ -1549,14 +1563,25 @@ class SARepository(BaseRepository):
 
             # Add each schema as a separate database, as sqlite does not support schemas
             with engine.connect() as conn:
-                if len(schema_names) > 1:
-                    valid_schema_names = [x for x in schema_names if x is not None]
-                    raise NotImplementedError(
-                        "Multiple schemas: " + ", ".join(sorted(valid_schema_names))
-                    )
                 for schema_name in schema_names:
+                    if not schema_name:
+                        continue
+                    if schema_name == "main":
+                        continue
+                    if is_memory_target:
+                        # For in-memory sqlite, give each schema its own shared-memory db.
+                        attach_target = (
+                            sqlite_target
+                            if len(schema_names) == 1 and sqlite_target
+                            else f"file:{schema_name}?mode=memory&cache=shared"
+                        )
+                    else:
+                        assert sqlite_file is not None
+                        attach_target = sqlite_file.as_posix()
                     conn.execute(
-                        sa.text(f"attach database '{sqlite_file}' as '{schema_name}';")
+                        sa.text(
+                            f"attach database '{attach_target}' as '{schema_name}';"
+                        )
                     )
 
         else:
