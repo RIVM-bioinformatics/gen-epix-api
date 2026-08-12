@@ -585,6 +585,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.casedb.performance.retrieve_stats",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_casedb_performance_retrieve_stats"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.casedb.custom",
             "type": "debugpy",
             "request": "launch",
