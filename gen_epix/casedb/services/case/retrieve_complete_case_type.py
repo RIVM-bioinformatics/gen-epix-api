@@ -113,16 +113,18 @@ def case_service_retrieve_complete_case_type(
                 command.EtiologyCrudCommand(
                     user=user,
                     operation=CrudOperation.READ_ALL,
-                    query_filter=UuidSetFilter(
-                        key="disease_id",
-                        members=frozenset({case_type.disease_id}),
-                    ),
+                    # TODO: performance improvement, commented out for now to preserve baseline
+                    # query_filter=UuidSetFilter(
+                    #     key="disease_id",
+                    #     members=frozenset({case_type.disease_id}),
+                    # ),
                 )
             )
-            # etiologies = {
-            #     x.id: x for x in etiologies if x.disease_id == case_type.disease_id
-            # }
-            etiologies = {x.id: x for x in etiologies}
+            etiologies = {
+                x.id: x for x in etiologies if x.disease_id == case_type.disease_id
+            }
+            # TODO: performance improvement, commented out for now to preserve baseline
+            # etiologies = {x.id: x for x in etiologies}
         else:
             etiologies = {}
 
@@ -211,16 +213,18 @@ def case_service_retrieve_complete_case_type(
             command.TreeAlgorithmCrudCommand(
                 user=user,
                 operation=CrudOperation.READ_ALL,
-                query_filter=StringSetFilter(
-                    key="code",
-                    members=frozenset(tree_algorithm_codes),
-                ),
+                # TODO: performance improvement, commented out for now to preserve baseline
+                # query_filter=StringSetFilter(
+                #    key="code",
+                #    members=frozenset(tree_algorithm_codes),
+                # ),
             )
         )
-        # tree_algorithms = {
-        #     x.code: x for x in tree_algorithms if x.code in tree_algorithm_codes
-        # }
-        tree_algorithms = {x.code: x for x in tree_algorithms}
+        tree_algorithms = {
+            x.code: x for x in tree_algorithms if x.code in tree_algorithm_codes
+        }
+        # TODO: performance improvement, commented out for now to preserve baseline
+        # tree_algorithms = {x.code: x for x in tree_algorithms}
 
         # Derive stats_time_dim_id from Dim.is_time
         case_date_dim_id: UUID | None = None
