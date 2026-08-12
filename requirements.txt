@@ -32,7 +32,7 @@ cachetools==7.1.7
 slowapi==0.1.10
 python-dateutil==2.9.0.post0
 types-python-dateutil==2.9.*
-types-setuptools==83.0.*
+types-setuptools==84.0.*
 
 # mock OIDC server (test/test_client/oauth) — needed in Docker for the IDP compose stack
 cryptography==50.0.0
