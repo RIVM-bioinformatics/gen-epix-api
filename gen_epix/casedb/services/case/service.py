@@ -1,5 +1,6 @@
 import datetime
 from collections.abc import Callable, Iterable
+from typing import cast
 from uuid import UUID
 
 from cachetools import cached
@@ -444,7 +445,7 @@ class CaseService(BaseCaseService):
         calculate_case_date: bool = False,
         extra_access_col_ids: set[UUID] | None = None,
         apply_max_n_cases: bool = True,
-    ) -> list[model.Case]:
+    ) -> tuple[list[model.Case], bool]:
         # TODO: This is a temporary implementation, to be replaced by optimized query
         self._validate_case_access_args(
             right, on_invalid_case_id, filter_content, calculate_case_date
@@ -458,10 +459,9 @@ class CaseService(BaseCaseService):
         case_date_col_mappers, max_n_cases = self._resolve_case_date_mappers_and_limits(
             uow,
             user_id,
-            right,
-            case_type_id,
-            apply_max_n_cases,
             case_type,
+            right,
+            apply_max_n_cases,
             case_abac.is_full_access,
         )
 
@@ -479,34 +479,38 @@ class CaseService(BaseCaseService):
                     f"Invalid datetime range filter key: {datetime_range_filter.key}",
                 )
             datetime_range_filter.key = "case_date"
-        cases = self._retrieve_cases_by_ids_or_case_type_filter(
-            uow, user_id, case_type_id, case_ids, datetime_range_filter
+        cases, is_max_results_exceeded = (
+            self._retrieve_cases_by_ids_or_case_type_filter(
+                uow, user_id, case_type_id, case_ids, datetime_range_filter, max_n_cases
+            )
         )
 
         if case_abac.is_full_access:
-            return cases
+            return cases, is_max_results_exceeded
 
         # @ABAC: filter cases to which the user has access, and optionally also
         # the content (Cols)
-        filtered_cases = self._filter_cases_by_access_and_content(
-            uow,
-            user_id,
-            right,
-            case_ids,
-            on_invalid_case_id,
-            filter_content,
-            extra_access_col_ids,
-            access_data_collections,
-            data_collection_col_access,
-            max_n_cases,
-            cases,
+        filtered_cases, is_max_results_exceeded = (
+            self._filter_cases_by_access_and_content(
+                uow,
+                user_id,
+                right,
+                case_ids,
+                on_invalid_case_id,
+                filter_content,
+                extra_access_col_ids,
+                access_data_collections,
+                data_collection_col_access,
+                max_n_cases,
+                cases,
+            )
         )
 
         # Calculate case date if necessary
         if calculate_case_date and case_date_col_mappers:
             case_service_calculate_case_date(cases, case_date_col_mappers)
 
-        return filtered_cases
+        return filtered_cases, is_max_results_exceeded
 
     def _filter_cases_by_access_and_content(
         self,
@@ -521,10 +525,11 @@ class CaseService(BaseCaseService):
         data_collection_col_access: dict[UUID, model.CaseTypeAccessAbac],
         max_n_cases: int,
         cases: list[model.Case],
-    ) -> list[model.Case]:
+    ) -> tuple[list[model.Case], bool]:
         case_data_collections = self._retrieve_case_data_collections_map(uow, user_id)
         filtered_cases: list[model.Case] = []
         count = 0
+        is_max_results_exceeded = False
         for case in cases:
             data_collection_ids = self._authorize_case(
                 case,
@@ -539,6 +544,7 @@ class CaseService(BaseCaseService):
                 continue
             count += case.count if case.count is not None else 1
             if max_n_cases > 0 and count > max_n_cases:
+                is_max_results_exceeded = True
                 break
             # Keep case
             filtered_cases.append(case)
@@ -554,7 +560,7 @@ class CaseService(BaseCaseService):
                     user_id,
                 )
 
-        return filtered_cases
+        return filtered_cases, is_max_results_exceeded
 
     def _filter_case_content(
         self,
@@ -611,9 +617,15 @@ class CaseService(BaseCaseService):
         case_type_id: UUID,
         case_ids: list[UUID] | None = None,
         datetime_range_filter: DatetimeRangeFilter | None = None,
-    ) -> list[model.Case]:
+        max_n_cases: int = 0,
+    ) -> tuple[list[model.Case], bool]:
         cases: list[model.Case]
         if case_ids:
+            if max_n_cases > 0 and len(case_ids) > max_n_cases:
+                raise exc.RequestLimitExceededAuthError(
+                    "f9c1adb2",
+                    f"Number of requested cases {len(case_ids)} exceeds maximum allowed {max_n_cases}",
+                )
             if datetime_range_filter:
                 raise exc.InvalidArgumentsError(
                     "271e9667", "Cannot use datetime range filter with case ids"
@@ -629,6 +641,7 @@ class CaseService(BaseCaseService):
                 raise exc.InvalidArgumentsError(
                     "d0120f09", f"Some cases have invalid CaseType ids: {case_ids}"
                 )
+            is_max_results_exceeded = False
         else:
             case_type_filter = EqualsUuidFilter(key="case_type_id", value=case_type_id)
             if datetime_range_filter:
@@ -645,26 +658,25 @@ class CaseService(BaseCaseService):
                 CrudOperation.READ_ALL,
                 filter=case_filter,
             )
+            is_max_results_exceeded = max_n_cases > 0 and len(cases) > max_n_cases
+            cases = cases[:max_n_cases] if is_max_results_exceeded else cases
 
-        return cases
+        return cases, is_max_results_exceeded
 
     def _resolve_case_date_mappers_and_limits(
         self,
         uow: BaseUnitOfWork,
         user_id: UUID,
-        right: enum.CaseRight,
-        case_type_id: UUID,
-        apply_max_n_cases: bool,
         case_type: model.CaseType,
+        right: enum.CaseRight,
+        apply_max_n_cases: bool,
         is_full_access: bool,
     ) -> tuple[dict[UUID, Callable[[str], datetime.datetime]] | None, int]:
         case_date_col_mappers: dict[UUID, Callable[[str], datetime.datetime]] | None = (
             {}
         )
         max_n_cases = 0
-        if not apply_max_n_cases:
-            pass
-        elif not is_full_access:
+        if apply_max_n_cases:
             if right == enum.CaseRight.READ_CASE:
                 _raw = case_type.props.read_max_n_cases
                 max_n_cases = _raw if _raw > 0 else self._default_props.read_max_n_cases
@@ -675,8 +687,9 @@ class CaseService(BaseCaseService):
                 )
             else:
                 raise NotImplementedError(f"Unsupported case right: {right}")
+        if not is_full_access:
             case_date_col_mappers = case_service_get_case_date_col_mappers(
-                self, uow, user_id, case_type_id
+                self, uow, user_id, cast(UUID, case_type.id)
             )
 
         return case_date_col_mappers, max_n_cases
