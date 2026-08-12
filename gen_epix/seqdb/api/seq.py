@@ -95,6 +95,23 @@ class RetrieveBestSeqProfilePerSampleRequestBody(PydanticBaseModel):
     )
 
 
+class RetrieveBestSeqClassificationPerSampleRequestBody(PydanticBaseModel):
+
+    protocol_ids: set[UUID] = copy_model_field(
+        command.RetrieveBestSeqClassificationPerSampleCommand, "protocol_ids"
+    )
+    sample_ids: set[UUID] | None = copy_model_field(
+        command.RetrieveBestSeqClassificationPerSampleCommand, "sample_ids"
+    )
+    ranking_strategy: enum.SeqClassificationRankingStrategy = copy_model_field(
+        command.RetrieveBestSeqClassificationPerSampleCommand, "ranking_strategy"
+    )
+    return_primary_category_id: bool = copy_model_field(
+        command.RetrieveBestSeqClassificationPerSampleCommand,
+        "return_primary_category_id",
+    )
+
+
 def create_seq_endpoints(
     router: APIRouter | FastAPI,
     app: App,
@@ -361,4 +378,28 @@ def create_seq_endpoints(
             )
         except Exception as exception:
             handle_exception("e2b4d8f6", user, exception, request_ids=request_body.sample_ids)  # type: ignore
+        return retval
+
+    @router.post(
+        "/retrieve/best_seq_classification_per_sample",
+        operation_id="retrieve__best_seq_classification_per_sample",
+        name="RetrieveBestSeqClassificationPerSample",
+        description=command.RetrieveBestSeqClassificationPerSampleCommand.__doc__,
+    )
+    async def retrieve__best_seq_classification_per_sample(
+        user: registered_user_dependency,  # type: ignore
+        request_body: RetrieveBestSeqClassificationPerSampleRequestBody,  # type: ignore
+    ) -> dict[UUID, UUID]:
+        try:
+            retval: dict[UUID, UUID] = app.handle(
+                command.RetrieveBestSeqClassificationPerSampleCommand(
+                    user=user,
+                    protocol_ids=request_body.protocol_ids,
+                    sample_ids=request_body.sample_ids,
+                    ranking_strategy=request_body.ranking_strategy,
+                    return_primary_category_id=request_body.return_primary_category_id,
+                )
+            )
+        except Exception as exception:
+            handle_exception("a6f1c3d9", user, exception, request_ids=request_body.sample_ids)  # type: ignore
         return retval
