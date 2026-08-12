@@ -228,11 +228,11 @@ class TestUpdate:
         user_id = user.id
         assert user_id is not None
 
-        forgotten_user = env.anonymize_user(user)
+        anonymized_user = env.anonymize_user("root1_1", "org_user1_999")
 
-        assert forgotten_user.key == f"forgotten_user_org1_{user_id}"
-        assert forgotten_user.name == "Forgotten User"
-        assert forgotten_user.email == f"forgotten_user_org1_{user_id}"
-        assert forgotten_user.description is None
-        assert forgotten_user.is_active is False
-        assert env.get_obj(model.User, forgotten_user.id) is forgotten_user
+        assert anonymized_user.key == f"{user_id}"
+        assert anonymized_user.name is None
+        assert anonymized_user.email is None
+        assert anonymized_user.description is None
+        assert anonymized_user.is_active is False
+        assert env.get_obj(model.User, anonymized_user.id) is anonymized_user

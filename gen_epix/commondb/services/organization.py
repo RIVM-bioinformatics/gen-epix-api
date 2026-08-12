@@ -404,7 +404,7 @@ class OrganizationService(BaseOrganizationService):
                 obj_ids=cmd.tgt_user_id,
             )
             # Set the key to the user_id and the rest to None
-            tgt_user.key = f"{user.id}"
+            tgt_user.key = f"{cmd.tgt_user_id}"
             tgt_user.name = None
             tgt_user.email = None
             tgt_user.description = None

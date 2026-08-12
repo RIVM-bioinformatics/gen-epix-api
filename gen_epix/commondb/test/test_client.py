@@ -580,12 +580,14 @@ class TestClient:
         tgt_user: model.User = self.get_obj(
             self.user_class, tgt_user_or_str
         )  # type: ignore[assignment]
-        previous_key = self._get_key_for_obj(user)
         anonymized_user: model.User = self.handle(
             command.AnonymizeUserCommand(user=user, tgt_user_id=cast(UUID, tgt_user.id))
         )
         table = self.db[self.user_class]
-        table.pop(previous_key, None)
+        table.pop(tgt_user.name, None)
+        anonymized_user.name = (
+            tgt_user.key
+        )  # set the name to avoid test client from failing when trying to retrieve the user by name
         return self.set_obj(anonymized_user, update=True)  # type: ignore[return-value]
 
     def get_root_user(self, user_key: str | None = None) -> model.User:
