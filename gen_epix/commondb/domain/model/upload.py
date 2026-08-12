@@ -189,6 +189,27 @@ class UploadResultWithIdentifiers(UploadResult):
         """
         return self.identifiers
 
+    def propagate_identifier_failures(self) -> None:
+        """
+        Mark this result as FAILED if any of its own identifier results is
+        FAILED, so that a client checking only this result's own status does
+        not miss a failure that was only recorded on a nested identifier.
+        """
+        if self.status == EtlStatus.FAILED:
+            return
+        if self.has_log_code("d8f21b6a"):
+            return
+        n_failed = sum(
+            1 for x in (self.identifiers or []) if x.status == EtlStatus.FAILED
+        )
+        if n_failed == 0:
+            return
+        self.add_error(
+            "d8f21b6a",
+            f"{n_failed} identifier(s) failed verification; see nested results "
+            "for details.",
+        )
+
 
 class ParentForUpload(Model, IdentifiersMixin):
     """
@@ -440,6 +461,30 @@ class ParentUploadResult(UploadResultWithIdentifiers):
         for identifier_result in self.identifiers or []:
             status_count_map[identifier_result.status] += 1
         return status_count_map
+
+    def propagate_child_failures(self) -> None:
+        """
+        Mark this result, and each of its own children, as FAILED if any
+        nested child or identifier result has FAILED, so that a client
+        checking only a given result's own status does not miss a failure
+        that was only recorded on a result nested underneath it.
+        """
+        for field_name in self.get_child_results_field_names():
+            for child_result in getattr(self, field_name, None) or []:
+                if isinstance(child_result, UploadResultWithIdentifiers):
+                    child_result.propagate_identifier_failures()
+        if self.status == EtlStatus.FAILED:
+            return
+        if self.has_log_code("6a1f3d0c"):
+            return
+        n_failed = self.get_status_count(include_self=False)[EtlStatus.FAILED]
+        if n_failed == 0:
+            return
+        self.add_error(
+            "6a1f3d0c",
+            f"{n_failed} nested item(s) failed verification or upload; "
+            "see nested results for details.",
+        )
 
     def update_status_with_data_issues(self) -> None:
         """
@@ -803,5 +848,14 @@ class BaseBatchUploadResult(UploadResult):
             self.status = EtlStatus.CREATED
         elif status_count[EtlStatus.UPDATED] == n_results:
             self.status = EtlStatus.UPDATED
+        elif status_count[EtlStatus.FAILED] > 0:
+            # At least one nested result failed: this must not resolve to a
+            # "not failed" status (e.g. PROCESSED) even if other results in
+            # the batch succeeded.
+            self.add_error(
+                "1f8d4c65",
+                f"{status_count[EtlStatus.FAILED]} item(s) in the batch failed "
+                "verification or upload; see nested results for details.",
+            )
         else:
             self.status = EtlStatus.PROCESSED
