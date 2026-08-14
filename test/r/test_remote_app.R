@@ -57,3 +57,22 @@ stopifnot(identical(chromote_access_token_value(token_result), "browser-token"))
 
 missing_token_result <- list(result = list(subtype = "null"))
 stopifnot(is.null(chromote_access_token_value(missing_token_result)))
+
+timed_out_runtime <- new.env()
+timed_out_runtime$evaluate <- function(...) {
+    stop("Chromote: timed out waiting for response to command Runtime.evaluate")
+}
+timed_out_session <- list(Runtime = timed_out_runtime)
+stopifnot(is.null(read_chromote_access_token_during_login(timed_out_session)))
+
+disconnected_runtime <- new.env()
+disconnected_runtime$evaluate <- function(...) {
+    stop("Chromote: websocket disconnected")
+}
+disconnected_session <- list(Runtime = disconnected_runtime)
+capture_error_message <- function(error) conditionMessage(error)
+disconnected_error <- tryCatch(
+    read_chromote_access_token_during_login(disconnected_session),
+    error = capture_error_message
+)
+stopifnot(identical(disconnected_error, "Chromote: websocket disconnected"))

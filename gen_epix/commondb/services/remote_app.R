@@ -21,12 +21,40 @@ chromote_access_token_value <- function(evaluation_result) {
     access_token
 }
 
-read_chromote_access_token <- function(chromote_session) {
+read_chromote_access_token <- function(
+    chromote_session,
+    timeout_seconds = 2
+) {
     evaluation_result <- chromote_session$Runtime$evaluate(
         CHROMOTE_ACCESS_TOKEN_SCRIPT,
-        returnByValue = TRUE
+        returnByValue = TRUE,
+        timeout_ = timeout_seconds
     )
     chromote_access_token_value(evaluation_result)
+}
+
+is_chromote_navigation_error <- function(error) {
+    message <- conditionMessage(error)
+    transient_messages <- c(
+        "timed out waiting for response to command Runtime.evaluate",
+        "Cannot find context with specified id",
+        "Execution context was destroyed"
+    )
+    any(vapply(transient_messages, grepl, logical(1), x = message, fixed = TRUE))
+}
+
+handle_chromote_login_read_error <- function(error) {
+    if (is_chromote_navigation_error(error)) {
+        return(NULL)
+    }
+    stop(error)
+}
+
+read_chromote_access_token_during_login <- function(chromote_session) {
+    tryCatch(
+        read_chromote_access_token(chromote_session),
+        error = handle_chromote_login_read_error
+    )
 }
 
 login_with_chromote <- function(
@@ -46,7 +74,7 @@ login_with_chromote <- function(
 
     deadline <- Sys.time() + timeout_seconds
     while (Sys.time() < deadline) {
-        access_token <- read_chromote_access_token(chromote_session)
+        access_token <- read_chromote_access_token_during_login(chromote_session)
         if (!is.null(access_token)) {
             return(access_token)
         }
