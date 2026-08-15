@@ -315,7 +315,7 @@ class AppComposer(BaseAppComposer):
         curr_repository = None
         if repository_cfg:
             repository_class: type[BaseRepository] = repository_cfg["class"]
-            repository_props = repository_cfg["props"]
+            repository_props = repository_cfg.get("props", {})
             if isinstance(repository_cfg["type"], str):
                 repository_type = enum.RepositoryType(repository_cfg["type"])
             else:
@@ -428,6 +428,9 @@ class AppComposer(BaseAppComposer):
                 cfg_section = cast(dict[str, Any], next_section)
             if not path_exists:
                 # Config path does not exist
+                continue
+            if cfg_path[-2] and cfg_path[-2] not in cfg_section:
+                # Leaf key does not exist
                 continue
             # Check if value is of the correct type, and if not attempt to convert
             if cfg_path[-2] is None:

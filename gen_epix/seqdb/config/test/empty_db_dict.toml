@@ -64,51 +64,68 @@ props.timestamp_factory = "DATETIME_NOW"
 props.id_factory = "ULID"
 
 [service.abac]
-module = "gen_epix.commondb.services"
+module = "gen_epix.seqdb.services"
 class_name = "AbacService"
 
 [service.auth]
-module = "gen_epix.commondb.services"
+module = "gen_epix.seqdb.services"
 class_name = "AuthService"
-
 [service.auth.props]
 auto_create_new_users = false
-root_token_time_to_live = 0
-
+root_token_time_to_live = 0 # disabled during development
+[service.auth.props.auto_created_user]
+roles = ["SEQDB_ORG_USER"]
+organization_id = "018d074d-ea0c-e942-07db-a3cc0ba1d653"
 [service.auth.props.root.organization]
 id = "018d074d-ea0c-e942-07db-a3cc0ba1d653"
 code = "DUMMY"
 name = "DUMMY"
-
 [service.auth.props.root.user]
 key = "root@dummy.org"
 
 [service.organization]
-module = "gen_epix.commondb.services"
+module = "gen_epix.seqdb.services"
 class_name = "OrganizationService"
 
 [service.rbac]
-module = "gen_epix.commondb.services"
+module = "gen_epix.seqdb.services"
 class_name = "RbacService"
 props.user_invitation_time_to_live = 604800 # One week in seconds: 60 * 60 * 24 * 7
 
 [service.system]
-module = "gen_epix.commondb.services"
+module = "gen_epix.seqdb.services"
 class_name = "SystemService"
+
+[service.seq]
+module = "gen_epix.seqdb.services"
+class_name = "SeqService"
+
+[service.file]
+module = "gen_epix.seqdb.services"
+class_name = "FileService"
+
 
 [repository]
 
 [repository.defaults]
-type = "SA_SQLITE"
+type = "DICT"
 
 [repository.abac]
-module = "gen_epix.commondb.repositories"
-class_name = "AbacSARepository"
+module = "gen_epix.seqdb.repositories"
+class_name = "AbacDictRepository"
 
 [repository.organization]
-module = "gen_epix.commondb.repositories"
-class_name = "OrganizationSARepository"
+module = "gen_epix.seqdb.repositories"
+class_name = "OrganizationDictRepository"
 
 [repository.system]
-module = "gen_epix.commondb.repositories"
-class_name = "SystemSARepository"
+module = "gen_epix.seqdb.repositories"
+class_name = "SystemDictRepository"
+
+[repository.seq]
+module = "gen_epix.seqdb.repositories"
+class_name = "SeqDictRepository"
+
+[repository.file]
+module = "gen_epix.seqdb.repositories"
+class_name = "FileDictRepository"

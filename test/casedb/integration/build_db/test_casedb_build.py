@@ -76,7 +76,7 @@ _PARAMS = [
     params=_PARAMS,
     ids=[p.id for p in _PARAMS],
 )
-def get_test_client(request) -> Env:
+def get_test_client(request: pytest.FixtureRequest) -> Env:
     params: BuildDbParams = request.param
     cfg_key = f"{TEST_TYPE.value}__{params.dev_repository_config.value}"
     app_cfg = copy.copy(CASEDB_APP_CFGS[cfg_key])

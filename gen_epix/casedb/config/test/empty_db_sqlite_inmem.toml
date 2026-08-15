@@ -70,6 +70,18 @@ class_name = "AbacService"
 [service.auth]
 module = "gen_epix.casedb.services"
 class_name = "AuthService"
+[service.auth.props]
+auto_create_new_users = false
+root_token_time_to_live = 0 # disabled during development
+[service.auth.props.auto_created_user]
+roles = ["CASEDB_ORG_USER"]
+organization_id = "018d074d-ea0c-e942-07db-a3cc0ba1d653"
+[service.auth.props.root.organization]
+id = "018d074d-ea0c-e942-07db-a3cc0ba1d653"
+code = "DUMMY"
+name = "DUMMY"
+[service.auth.props.root.user]
+key = "root@dummy.org"
 
 [service.organization]
 module = "gen_epix.casedb.services"
@@ -100,46 +112,56 @@ class_name = "OntologyService"
 module = "gen_epix.casedb.services"
 class_name = "SeqdbService"
 
+[service.seqdb.props]
+seqdb_app_type = "LOCAL"
+
+[service.seqdb.props.seqdb_local_app.user]
+id = "018bcd02-eb19-fb14-c520-64cbb78d9135"
+key = "root@dummy.org"
+organization_id = "018d074d-ea0c-e942-07db-a3cc0ba1d653"
+roles = ["SEQDB_APP_ADMIN"]
+
+
+[service.seqdb.props.seqdb_remote_app]
+module = "gen_epix.casedb.services"
+class_name = "SeqdbRemoteApp"
+protocol = "HTTPS"
+host = "localhost"
+port = "8001"
+auth_protocol = "OAUTH2"
+oauth_flow = "CLIENT_CREDENTIALS"
+oauth_client_id = "CASEDB_FOR_SEQDB_DUMMY_CLIENT_ID"
+oauth_client_secret = "CASEDB_FOR_SEQDB_DUMMY_CLIENT_SECRET"
+oauth_scope = "DUMMY_SCOPE"
+oauth_discovery_url = "https://your-idp.com/.well-known/openid-configuration"
+
+
 
 [repository]
 
 [repository.defaults]
 type = "SA_SQLITE"
-[repository.defaults.props]
-dir="./data/casedb/demo"
 
 [repository.abac]
 module = "gen_epix.casedb.repositories"
 class_name = "AbacSARepository"
-[repository.abac.props]
-connection_string = "sqlite:///"file:ABAC?mode=memory&cache=shared""
 
 [repository.organization]
 module = "gen_epix.casedb.repositories"
 class_name = "OrganizationSARepository"
-[repository.organization.props]
-connection_string = "sqlite:///"file:ORGANIZATION?mode=memory&cache=shared""
 
 [repository.system]
 module = "gen_epix.casedb.repositories"
 class_name = "SystemSARepository"
-[repository.system.props]
-connection_string = "sqlite:///"file:SYSTEM?mode=memory&cache=shared""
 
 [repository.case]
 module = "gen_epix.casedb.repositories"
 class_name = "CaseSARepository"
-[repository.case.props]
-connection_string = "sqlite:///"file:CASE?mode=memory&cache=shared""
 
 [repository.geo]
 module = "gen_epix.casedb.repositories"
 class_name = "GeoSARepository"
-[repository.geo.props]
-connection_string = "sqlite:///"file:GEO?mode=memory&cache=shared""
 
 [repository.ontology]
 module = "gen_epix.casedb.repositories"
 class_name = "OntologySARepository"
-[repository.ontology.props]
-connection_string = "sqlite:///"file:ONTOLOGY?mode=memory&cache=shared""

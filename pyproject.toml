@@ -23,7 +23,9 @@ classifiers = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi[standard]==0.141.1",
+    # For compatibility with apache-airflow-core 3.3.0 used in other repositories, fastapi must be pinned to <0.137.0
+    # "fastapi[standard]==0.141.1",
+    "fastapi[standard]>=0.129.0,<0.137.0", 
     "gunicorn==26.0.*",
     "starlette==1.4.*",
     "httpx==0.28.1",

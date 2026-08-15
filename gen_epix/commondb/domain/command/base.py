@@ -2,6 +2,7 @@
 # This module defines base classes, methods are added later
 
 import datetime
+import uuid
 from collections.abc import Callable
 from typing import Annotated, Any, ClassVar
 from uuid import UUID
@@ -12,11 +13,10 @@ from gen_epix.commondb.domain import enum, model
 from gen_epix.fastapp import Command as ServiceCommand
 from gen_epix.fastapp import CrudCommand as ServiceCrudCommand
 from gen_epix.fastapp import UpdateAssociationCommand as ServiceUpdateAssociationCommand
-from gen_epix.util import generate_ulid
 
 
 class Command(ServiceCommand):
-    id: UUID = Field(default_factory=generate_ulid, description="The ID of the command")
+    id: UUID = Field(default_factory=uuid.uuid4, description="The ID of the command")
     created_at: datetime.datetime = Field(
         default_factory=datetime.datetime.now,
         description="The created timestamp of the command",

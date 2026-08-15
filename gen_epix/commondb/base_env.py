@@ -63,19 +63,24 @@ class BaseAppComposer(abc.ABC):
         **kwargs: Any,
     ) -> BaseRepository:
         repository: BaseRepository
+        props: dict = repository_cfg.get("props", {})
         if repository_type.value == "DICT":
             repository = DictRepository.create_repository_from_pkl(
                 repository_class,
                 entities,
-                repository_cfg["props"]["file"],
+                props["file"],
                 timestamp_factory=timestamp_factory,
                 **kwargs,
             )
         elif repository_type.value == "SA_SQLITE":
             assert issubclass(repository_class, SARepository)
+            file: str | None = props.get("file")
+            connection_string: str | None = props.get("connection_string")
+            if not connection_string and file:
+                connection_string = f"sqlite:///{file}"
             repository = repository_class.create_sa_repository(
                 entities,
-                "sqlite:///" + repository_cfg["props"]["file"],
+                connection_string=connection_string,
                 name=service_type.value,
                 timestamp_factory=timestamp_factory,
                 **kwargs,
@@ -84,7 +89,7 @@ class BaseAppComposer(abc.ABC):
             assert issubclass(repository_class, SARepository)
             repository = repository_class.create_sa_repository(
                 entities,
-                repository_cfg["props"]["connection_string"],
+                connection_string=props["connection_string"],
                 name=service_type.value,
                 timestamp_factory=timestamp_factory,
                 **kwargs,

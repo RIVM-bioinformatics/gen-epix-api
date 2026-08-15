@@ -56,17 +56,13 @@ class SARepository(BaseRepository):
     @classmethod
     def _process_repository_params(
         cls, kwargs: dict[str, Any]
-    ) -> tuple[list[Entity], str, dict[str, Any]]:
+    ) -> tuple[list[Entity], str | None, dict[str, Any]]:
         """Helper method to process common repository parameters and handle connection string/file logic."""
         entities = kwargs.pop("entities", [])
         connection_string = kwargs.pop("connection_string", None)
         file = kwargs.pop("file", None)
 
-        if connection_string is None:
-            if file is None:
-                raise exc.RepositoryInitializationServiceError(
-                    "978e1ed3", "Either connection_string or file must be provided"
-                )
+        if connection_string is None and file:
             connection_string = f"sqlite:///{Path(file).resolve().as_posix()}"
 
         return entities, connection_string, kwargs
@@ -1497,11 +1493,14 @@ class SARepository(BaseRepository):
     def create_sa_repository(
         cls,
         entities: list[Entity],
-        connection_string: str,
+        connection_string: str | None = None,
         **kwargs: Any,
     ) -> "SARepository":
         """
         Create an SARepository, setting up engine, schemas, and DDL.
+
+        When connection_string is None, an in-memory SQLite database will be created. When
+        connection_string is provided, it will be used to create the engine.
         """
         # Parse arguments
         echo = kwargs.pop("echo", False)
@@ -1509,16 +1508,31 @@ class SARepository(BaseRepository):
         recreate_sqlite_file = kwargs.pop("recreate_sqlite_file", False)
         schema_names = {x.schema_name for x in entities if x.persistable}
 
-        is_sqlite = str(connection_string).lower().startswith("sqlite:///")
+        # Handle sqlite separately
+        is_sqlite = connection_string is None or connection_string.lower().startswith(
+            "sqlite:///"
+        )
         if is_sqlite:
-            sqlite_target = re.sub(
-                ".*sqlite:///", "", connection_string, flags=re.IGNORECASE
+            sqlite_target = (
+                None
+                if connection_string is None
+                else re.sub(".*sqlite:///", "", connection_string, flags=re.IGNORECASE)
             )
-            sqlite_target_lower = sqlite_target.lower()
-            is_memory_target = sqlite_target_lower == ":memory:" or (
-                sqlite_target_lower.startswith("file:")
-                and "mode=memory" in sqlite_target_lower
-            )
+            if sqlite_target:
+                sqlite_target_lower = sqlite_target.lower()
+                is_memory_target = sqlite_target_lower == ":memory:" or (
+                    sqlite_target_lower.startswith("file:")
+                    and "mode=memory" in sqlite_target_lower
+                )
+            else:
+                is_memory_target = True
+                # Create random connection string for shared in-memory sqlite database,
+                # so that multiple SARepository instances created in this way will not
+                # share the same database. This is important e.g. for testing, where
+                # multiple tests may create their own SARepository instances.
+                sqlite_target = f"file:{uuid.uuid4()}?mode=memory&cache=shared"
+                sqlite_target_lower = sqlite_target.lower()
+                connection_string = f"sqlite:///{sqlite_target}"
 
             engine_kwargs: dict[str, Any] = {"echo": echo}
             sqlite_file: Path | None = None
@@ -1539,7 +1553,9 @@ class SARepository(BaseRepository):
                     conn = engine.connect()
                     conn.close()
                 elif not sqlite_file.is_file():
-                    raise ValueError("Unable to derive file from connection string")
+                    raise ValueError(
+                        "Unable to derive file from connection string or file does not exist"
+                    )
 
             # Filter some warnings
             warnings.filterwarnings(
@@ -1549,6 +1565,7 @@ class SARepository(BaseRepository):
             )
 
             # Create engine, using URI mode when targeting shared in-memory dbs.
+            assert connection_string is not None
             engine = sa.create_engine(connection_string, **engine_kwargs)
 
             # Make sure foreign key constraints are enforced,
@@ -1585,6 +1602,10 @@ class SARepository(BaseRepository):
                     )
 
         else:
+            if connection_string is None:
+                raise ValueError(
+                    "connection_string must be provided for non-sqlite databases"
+                )
             connect_args = kwargs.pop("connect_args", None)
             engine = EngineFactory.create_engine(
                 connection_string, echo, connect_args=connect_args
@@ -1604,9 +1625,10 @@ class SARepository(BaseRepository):
                         conn.execute(sa.schema.CreateSchema(schema_name))
                         conn.commit()
 
-        # Create all tables if necessary
+        # Get all metadata instances
         metadata_set: set[sa.MetaData] = set()
         for entity in entities:
+            # Retrieve metadata
             if not entity.persistable:
                 continue
             db_model_class = entity.db_model_class
@@ -1616,6 +1638,7 @@ class SARepository(BaseRepository):
                 )
             metadata_set.add(cast(sa.MetaData, getattr(db_model_class, "metadata")))
 
+        # Create all tables, if necessary, for each metadata instance
         for metadata in metadata_set:
             metadata.create_all(engine, checkfirst=True)
 
