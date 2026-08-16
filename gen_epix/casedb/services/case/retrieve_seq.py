@@ -84,7 +84,7 @@ def case_service_retrieve_phylogenetic_tree(
             return phylogenetic_tree
 
         # @ABAC: Get cases
-        cases = self._retrieve_cases_with_content_right(
+        cases, is_max_results_exceeded = self._retrieve_cases_with_content_right(
             uow,
             user.id,
             case_abac,
@@ -196,7 +196,7 @@ def _get_seq_ids_from_cases(
     seq_col_id: UUID,
 ) -> list[UUID | None]:
     # @ABAC: Get cases and sequence_ids
-    cases = self._retrieve_cases_with_content_right(
+    cases, is_max_results_exceeded = self._retrieve_cases_with_content_right(
         uow,
         user.id,  # type: ignore[arg-type]
         case_abac,

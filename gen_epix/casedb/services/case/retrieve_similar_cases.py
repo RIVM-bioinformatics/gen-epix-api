@@ -63,7 +63,7 @@ def case_service_retrieve_similar_cases(
         )
 
         # @ABAC: Get all cases
-        all_cases = self._retrieve_cases_with_content_right(
+        all_cases, is_max_results_exceeded = self._retrieve_cases_with_content_right(
             uow,
             user.id,
             case_abac,
@@ -113,16 +113,18 @@ def case_service_retrieve_similar_cases(
             return command.RetrieveSimilarCasesReturnValue(cases=[])
 
         # Retrieve similar cases with ABAC applied to case date
-        similar_cases = self._retrieve_cases_with_content_right(
-            uow,
-            user.id,
-            case_abac,
-            enum.CaseRight.READ_CASE,
-            case_type_id,
-            case_ids=similar_case_ids,
-            filter_content=True,
-            calculate_case_date=True,
-            apply_max_n_cases=False,
+        similar_cases, is_max_results_exceeded = (
+            self._retrieve_cases_with_content_right(
+                uow,
+                user.id,
+                case_abac,
+                enum.CaseRight.READ_CASE,
+                case_type_id,
+                case_ids=similar_case_ids,
+                filter_content=True,
+                calculate_case_date=True,
+                apply_max_n_cases=False,
+            )
         )
 
         # early return if there are now no similar cases after ABAC filtering

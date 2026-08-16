@@ -1,7 +1,6 @@
 """Refactored configuration management using Strategy Pattern."""
 
 import abc
-import copy
 import importlib
 import logging
 import logging.config as logging_config
@@ -271,34 +270,37 @@ class AppCfg(BaseAppCfg):
 
     def _init_validate_settings(self) -> None:
         """Validate settings and apply defaults to all services and repositories."""
-        # Map timestamp and id factories
         from gen_epix.commondb.domain.enum import (  # noqa: PLC0415
             IdFactory,
             TimestampFactory,
         )
 
-        defaults_cfg = self._cfg["service"]["defaults"]["props"]  # type: ignore[index]
-        timestamp_factory = getattr(
-            TimestampFactory,
-            defaults_cfg["timestamp_factory"],
+        # Map timestamp and id factory strings to factory objects
+        defaults_cfg = self._cfg["service"]["defaults"]["props"]
+        defaults_cfg["timestamp_factory"] = getattr(
+            TimestampFactory, defaults_cfg["timestamp_factory"]
         )
-        id_factory = getattr(IdFactory, defaults_cfg["id_factory"])
-        defaults_cfg["timestamp_factory"] = timestamp_factory
-        defaults_cfg["id_factory"] = id_factory
+        defaults_cfg["id_factory"] = getattr(IdFactory, defaults_cfg["id_factory"])
 
-        # Map default repository type
-        repo_defaults = self._cfg["repository"]["defaults"]  # type: ignore[index]
-        repository_type = getattr(self._repository_type_enum, repo_defaults["type"])
-        repo_defaults["type"] = repository_type
+        # Map default repository type string to enum member
+        repository_type = getattr(
+            self._repository_type_enum, self._cfg["repository"]["defaults"]["type"]
+        )
+        self._cfg["repository"]["defaults"]["type"] = repository_type
 
-        # Get class for and apply defaults to each service and repository
+        # Apply defaults and dynamically import classes
         for service_type in self._service_type_enum:
             service_type_str = service_type.value.lower()
+
+            # Ensure target service dict exists
             if service_type_str not in self._cfg["service"]:
-                self._cfg["service"].update(  # type: ignore[union-attr]
-                    {service_type_str: {}}
-                )
-            service_cfg = self._cfg["service"][service_type_str]
+                self._cfg["service"][service_type_str] = {}
+
+            # Merge defaults with custom settings (custom values on the right override defaults)
+            service_cfg = (
+                self._cfg["service"]["defaults"]
+                | self._cfg["service"][service_type_str]
+            )
 
             # Get class for service
             service_module = service_cfg["module"]
@@ -306,16 +308,17 @@ class AppCfg(BaseAppCfg):
             service_cfg["class"] = getattr(
                 importlib.import_module(service_module), service_class_name
             )
-
-            # Apply defaults to service
-            orig_cfg = copy.deepcopy(service_cfg)
-            service_cfg.update(self._cfg["service"]["defaults"])  # type: ignore[index]
-            service_cfg.update(orig_cfg)
+            self._cfg["service"][service_type_str] = service_cfg
 
             # Skip if the service does not have a repository
             if service_type_str not in self._cfg["repository"]:
                 continue
-            repository_cfg = self._cfg["repository"][service_type_str]
+
+            # Merge repository defaults with custom settings
+            repository_cfg = (
+                self._cfg["repository"]["defaults"]
+                | self._cfg["repository"][service_type_str]
+            )
 
             # Get class for repository
             repository_module = repository_cfg["module"]
@@ -323,13 +326,7 @@ class AppCfg(BaseAppCfg):
             repository_cfg["class"] = getattr(
                 importlib.import_module(repository_module), repository_class_name
             )
-
-            # Apply defaults to repository, if the service has a repository
-            orig_cfg = copy.deepcopy(repository_cfg)
-            repository_cfg.update(
-                self._cfg["repository"]["defaults"]  # type: ignore[index]
-            )
-            repository_cfg.update(orig_cfg)
+            self._cfg["repository"][service_type_str] = repository_cfg
 
     def copy_repository_files(
         self,

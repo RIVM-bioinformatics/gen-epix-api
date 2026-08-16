@@ -113,10 +113,14 @@ class BaseCaseService(DomainBaseCaseService):
         on_invalid_case_id: str = "raise",
         filter_content: bool = True,
         calculate_case_date: bool = False,
-        extra_access_case_col_ids: set[UUID] | None = None,
+        extra_access_col_ids: set[UUID] | None = None,
         apply_max_n_cases: bool = True,
-    ) -> list[model.Case]:
-        """Retrieve cases that the user has specific content rights for."""
+    ) -> tuple[list[model.Case], bool]:
+        """
+        Retrieve cases that the user has specific content rights for. The boolean in
+        the return value indicates whether the number of cases exceeds the maximum
+        allowed.
+        """
         raise NotImplementedError()
 
     @abstractmethod

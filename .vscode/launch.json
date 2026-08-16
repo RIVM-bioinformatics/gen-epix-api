@@ -475,7 +475,7 @@
             "justMyCode": true,
         },
         {
-            "name": "test.casedb.unit.services.case.upload",
+            "name": "test.casedb.unit.services.case.services.case.upload",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
@@ -580,6 +580,17 @@
             "program": "run.py",
             "args": [
                 "test_casedb_performance_startup"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.casedb.performance.retrieve_stats",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_casedb_performance_retrieve_stats"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

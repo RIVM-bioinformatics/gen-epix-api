@@ -655,6 +655,16 @@ class Run:
             ]
         )
 
+    def test_casedb_performance_retrieve_stats(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/casedb/performance/retrieve_stats",
+            ]
+        )
+
     def test_casedb_custom(self) -> None:
         import pytest
 
