@@ -18,11 +18,13 @@ from gen_epix.commondb.domain.model.base import Model, validate_int_enum_value_o
 from gen_epix.commondb.domain.model.organization import BaseIdentifier
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
+from gen_epix.fastapp.domain.util import create_multi_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.file import File
 from gen_epix.seqdb.domain.model.seq.base import BaseSeq, QualityMixin
 from gen_epix.seqdb.domain.model.seq.protocol import Protocol
 from gen_epix.seqdb.domain.model.seq.reads import ReadSet
+from gen_epix.seqdb.domain.model.seq.ref_seq import RefSeq
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 
 
@@ -88,6 +90,7 @@ class Seq(Model, HasSampleMixin, QualityMixin):
                 5: ("protocol_id", Protocol, "protocol"),
             }
         ),
+        multi_links=create_multi_links([("content", RefSeq)]),
     )
     uri: str | None = Field(
         default=None, description="The URI of the sequence data, if available."
