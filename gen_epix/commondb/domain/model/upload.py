@@ -549,6 +549,16 @@ class ParentUploadResult(UploadResultWithIdentifiers):
             if identifier_result.status == from_status:
                 identifier_result.status = to_status
 
+    def get_error_data_issues(self) -> list[DataIssue]:
+        """
+        Get all data issues that are errors.
+        """
+        return [
+            issue
+            for issue in self.data_issues
+            if issue.data_issue_type in DataIssueTypeSet.ERROR.value
+        ]
+
     @classmethod
     def get_child_results_field_names(cls) -> list[str]:
         """

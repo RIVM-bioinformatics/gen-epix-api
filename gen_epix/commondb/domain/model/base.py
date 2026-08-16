@@ -182,6 +182,18 @@ class BaseEtlResult(BaseModel):
         """Return True if any log item carries the given code."""
         return any(x.code == code for x in self.logs)
 
+    def get_errors(self) -> list[EtlLogItem]:
+        """Return a list of log items with ERROR severity."""
+        return [x for x in self.logs if x.severity == LogLevel.ERROR]
+
+    def get_warnings(self) -> list[EtlLogItem]:
+        """Return a list of log items with WARN severity."""
+        return [x for x in self.logs if x.severity == LogLevel.WARN]
+
+    def get_infos(self) -> list[EtlLogItem]:
+        """Return a list of log items with INFO severity."""
+        return [x for x in self.logs if x.severity == LogLevel.INFO]
+
 
 def validate_int_enum_value(
     enum_class: type[IntEnum], value: int | str | float | IntEnum
