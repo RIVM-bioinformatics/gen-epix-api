@@ -475,7 +475,7 @@
             "justMyCode": true,
         },
         {
-            "name": "test.casedb.unit.services.case.services.case.upload",
+            "name": "test.casedb.unit.services.case.upload",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
