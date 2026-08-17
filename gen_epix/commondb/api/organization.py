@@ -256,6 +256,24 @@ def create_organization_endpoints(
             handle_exception("a7f3b8e2", user, exception)
         return retval
 
+    @router.post(
+        "/user/{user_id}/anonymize",
+        operation_id="anonymize_user",
+        name="AnonymizeUser",
+        description=command.AnonymizeUserCommand.__doc__,
+    )
+    async def anonymize_user(
+        user: registered_user_dependency,  # type: ignore
+        user_id: UUID,
+    ) -> None:
+        try:
+            cmd = command.AnonymizeUserCommand(user=user, tgt_user_id=user_id)
+            retval = app.handle(cmd)
+        except Exception as exception:
+            handle_exception("c8fd634f", user, exception)
+
+        return retval
+
     @router.put(
         "/update_user/{object_id}",
         operation_id="update_user",
