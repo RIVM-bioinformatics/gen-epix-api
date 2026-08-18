@@ -90,7 +90,8 @@ class Seq(Model, HasSampleMixin, QualityMixin):
                 5: ("protocol_id", Protocol, "protocol"),
             }
         ),
-        multi_links=create_multi_links([("content", RefSeq)]),
+        # TODO: validate MultiLink fields during entity construction
+        multi_links=create_multi_links([("contigs", RefSeq)]),
     )
     uri: str | None = Field(
         default=None, description="The URI of the sequence data, if available."
