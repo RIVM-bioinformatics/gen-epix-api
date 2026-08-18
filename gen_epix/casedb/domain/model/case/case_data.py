@@ -85,7 +85,7 @@ class Case(Model):
         return {
             str(x): None if y is None else str(y)
             for x, y in value.items()
-            if y is not None
+
         }
 
     @field_serializer("content", mode="plain")
