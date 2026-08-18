@@ -649,6 +649,38 @@ class TestCaseContentUploadUpdates(BaseUploadTestCase):
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
+class TestCaseForUploadContentSerialization(BaseUploadTestCase):
+    """
+    LSP-3645: a None content value signals "delete this key" and must
+    survive serialization of the upload request body, even though a plain
+    Case still strips None content values (they mean "no value" there).
+    """
+
+    def test_case_for_upload_preserves_none_content_value(self) -> None:
+        deleted_col_id = uuid4()
+        case_for_upload = self.create_case_for_upload(
+            content={deleted_col_id: None, self.reads_col_id: "kept"}
+        )
+
+        dumped = case_for_upload.model_dump(mode="json")
+
+        assert dumped["case"]["content"] == {
+            str(deleted_col_id): None,
+            str(self.reads_col_id): "kept",
+        }
+
+    def test_plain_case_still_strips_none_content_value(self) -> None:
+        deleted_col_id = uuid4()
+        case = self.create_case(
+            content={deleted_col_id: None, self.reads_col_id: "kept"}
+        )
+
+        dumped = case.model_dump(mode="json")
+
+        assert dumped["content"] == {str(self.reads_col_id): "kept"}
+
+
+@pytest.mark.scenario_ids("TC-SEC-30-03")
 class TestVerifyUserRights(BaseUploadTestCase):
     """Tests for RBAC verification in CaseBatchUploader.verify_user_rights."""
 
