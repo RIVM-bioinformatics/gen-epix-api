@@ -553,6 +553,7 @@ class CaseValidator:
                 self.complete_case_type.cols[col_pair[1]].ref_col_id
             ]
 
+            # TODO: 3427 take into account RefCol.Unit
             # Only handle DECIMAL_XXX-INTERVAL and INTERVAL-INTERVAL pairs
             is_col1_decimal = ref_col1.col_type in ColTypeSet.NUMBER.value
             is_col2_interval = ref_col2.col_type == ColType.INTERVAL
