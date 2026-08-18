@@ -102,6 +102,7 @@ class User(fastapp.User, Model):
     organization: Organization | None = Field(
         default=None, description="The organization of the user"
     )
+    # TODO: potentially added is_anonymized field to indicate if the user has been anonymized. Then also add validation that is_active=True and is_anonymized=True is not allowed.
 
     @field_validator("key", mode="before")
     @classmethod
