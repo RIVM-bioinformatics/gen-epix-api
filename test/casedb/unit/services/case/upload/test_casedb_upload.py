@@ -649,6 +649,51 @@ class TestCaseContentUploadUpdates(BaseUploadTestCase):
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
+class TestUpsertBatchContentDeletionDelta(BaseUploadTestCase):
+    """
+    LSP-3647 regression: CaseBatchUploader.upsert_batch merges incoming
+    content into the existing DB content to re-validate the full resulting
+    state, which resolves a deletion into mere key-absence. If that merged
+    state were passed on as-is, the generic BatchUploader.upsert_batch could
+    never detect the deletion, since it re-derives its own diff from a fresh
+    DB read and only recognizes a deletion via an explicit {key: None}
+    entry. The content handed to the generic upsert must therefore still be
+    the pre-merge delta, not the merged state.
+    """
+
+    def test_content_deletion_delta_is_restored_before_generic_upsert(self) -> None:
+        col_id = self.reads_col_id
+        case = self.create_case(content={col_id: None})
+        case_result = model.CaseUploadResult(validated_content={col_id: None})
+        cmd = command.UploadCasesCommand(
+            user=self.create_org_user(),
+            case_type_id=self.case_type_id,
+            default_created_in_data_collection_id=self.data_collection_id,
+            case_batch=model.CaseBatchForUpload(cases=[model.CaseForUpload(case=case)]),
+            on_exists=UploadAction.UPDATE.value,  # type: ignore[call-arg]
+        )
+        batch_result = model.CaseBatchUploadResult(cases=[case_result])
+
+        uploader, service = self.create_uploader()
+        service.repository.read_fields.return_value = [
+            (self.case_id, {col_id: "old-value"})
+        ]
+        with (
+            patch.object(uploader, "_get_complete_case_type", return_value=Mock()),
+            patch.object(uploader, "_get_case_validator", return_value=Mock()),
+            patch(
+                "gen_epix.commondb.services.upload.BatchUploader.upsert_batch",
+                return_value=True,
+            ) as mock_generic_upsert,
+        ):
+            uploader.upsert_batch(cmd, batch_result, Mock())
+
+        persisted_cmd = mock_generic_upsert.call_args.args[0]
+        persisted_case = persisted_cmd.case_batch.cases[0].case
+        assert persisted_case.content == {col_id: None}
+
+
+@pytest.mark.scenario_ids("TC-SEC-30-03")
 class TestCaseForUploadContentSerialization(BaseUploadTestCase):
     """
     LSP-3645: a None content value signals "delete this key" and must
