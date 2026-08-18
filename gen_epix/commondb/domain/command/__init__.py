@@ -16,6 +16,9 @@ from gen_epix.commondb.domain.command.base import (
     UploadBatchCommandMixin as UploadBatchCommandMixin,
 )
 from gen_epix.commondb.domain.command.organization import (
+    AnonymizeUserCommand as AnonymizeUserCommand,
+)
+from gen_epix.commondb.domain.command.organization import (
     ContactCrudCommand as ContactCrudCommand,
 )
 from gen_epix.commondb.domain.command.organization import (
@@ -116,6 +119,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[type[fastapp.Command]
             DataCollectionSetCrudCommand,
             DataCollectionSetDataCollectionUpdateAssociationCommand,
             DataCollectionSetMemberCrudCommand,
+            AnonymizeUserCommand,
             IdentifierIssuerCrudCommand,
             InviteUserCommand,
             OrganizationCrudCommand,

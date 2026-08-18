@@ -221,3 +221,18 @@ class TestUpdate:
                     "data_collection23",
                     {"description": str(-i)},
                 )
+
+    def test_forget_user(self, env: Env) -> None:
+        """Anonymize and deactivate a user's personal information."""
+        user = env.invite_and_register_user("root1_1", "org_user1_999")
+        user_id = user.id
+        assert user_id is not None
+
+        anonymized_user = env.anonymize_user("root1_1", "org_user1_999")
+
+        assert anonymized_user.key == f"{user_id}"
+        assert anonymized_user.name is None
+        assert anonymized_user.email is None
+        assert anonymized_user.description is None
+        assert anonymized_user.is_active is False
+        assert env.get_obj(model.User, anonymized_user.id) is anonymized_user

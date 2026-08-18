@@ -163,6 +163,17 @@ class RetrieveOrganizationAdminNameEmailsCommand(Command):
     pass
 
 
+class AnonymizeUserCommand(Command):
+    """
+    Anonymizes, in the sense of the EU General Data Protection Regulation (GDPR), the
+    target user by removing the name and replacing the key by the user ID (a random
+    UUID), so that they can no longer be identified directly. Because the key is
+    altered, the user will no longer be able to log in either.
+    """
+
+    tgt_user_id: UUID = Field(description="The ID of the user to anonymize")
+
+
 # CRUD commands
 
 

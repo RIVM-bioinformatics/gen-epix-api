@@ -570,6 +570,26 @@ class TestClient:
         )
         return self.set_obj(updated_tgt_user, update=True)  # type: ignore[return-value]
 
+    def anonymize_user(
+        self, user_or_str: str | model.User, tgt_user_or_str: str | model.User
+    ) -> model.User:
+        """Anonymize a user's personal information and update the local object store."""
+        user: model.User = self.get_obj(
+            self.user_class, user_or_str
+        )  # type: ignore[assignment]
+        tgt_user: model.User = self.get_obj(
+            self.user_class, tgt_user_or_str
+        )  # type: ignore[assignment]
+        anonymized_user: model.User = self.handle(
+            command.AnonymizeUserCommand(user=user, tgt_user_id=cast(UUID, tgt_user.id))
+        )
+        table = self.db[self.user_class]
+        table.pop(tgt_user.name, None)
+        anonymized_user.name = (
+            tgt_user.key
+        )  # set the name to avoid test client from failing when trying to retrieve the user by name
+        return self.set_obj(anonymized_user, update=True)  # type: ignore[return-value]
+
     def get_root_user(self, user_key: str | None = None) -> model.User:
         """Retrieve the root user from the app's user manager."""
         if user_key is None:
