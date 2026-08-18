@@ -12,7 +12,7 @@ from uuid import UUID
 
 from gen_epix.casedb.api.router import create_routers
 from gen_epix.casedb.domain import command, enum, model
-from gen_epix.casedb.domain.model.case.case_data import CaseDataCollectionLink
+from gen_epix.casedb.domain.model.case.ops_data import CaseDataCollectionLink
 from gen_epix.casedb.env import AppComposer
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.commondb.app_setup import create_fast_api

@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import Field, computed_field, field_serializer, model_validator
 
-from gen_epix.casedb.domain.model.case.case_data import Case, CaseIdentifier
+from gen_epix.casedb.domain.model.case.ops_data import Case, CaseIdentifier
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import EtlLogItem, Model

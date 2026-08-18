@@ -14,8 +14,8 @@ from uuid import UUID, uuid4
 import pytest
 
 from gen_epix.casedb.domain import command, enum, model
-from gen_epix.casedb.domain.model.case.case_data import Case
 from gen_epix.casedb.domain.model.case.complete_case_type import CompleteCaseType
+from gen_epix.casedb.domain.model.case.ops_data import Case
 from gen_epix.casedb.domain.model.case.ref_data import Col, Dim, RefCol, RefDim
 from gen_epix.casedb.services.case.case_validator import CaseValidator
 from gen_epix.commondb.domain.enum import DataIssueType

@@ -65,10 +65,10 @@ class Case(Model):
         default_factory=dict,
         description=r"The cohort(s) that this case belongs to, as {cohort_id: cohort_definition_id}. This is used for traceability of the case to any omopdb cohorts (typically one) that it was derived from. None content values are allowed to support deletion of keys but will be removed upon serialization.",
     )
-    count: int | None = Field(
-        default=None,
-        description="The number of cases that this case represents, if not one. This can be used to store aggregated cases (n>=0) as well as reference data (n=0).",
-        gt=0,
+    count: int = Field(
+        default=1,
+        description="The number of cases that this case represents, if not one. This can be used to store aggregated cases (n>1) as well as reference data (n=0).",
+        ge=0,
     )
     case_date: datetime = Field(
         default_factory=datetime.now,

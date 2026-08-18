@@ -72,6 +72,9 @@ def case_service_crud_ref_col(
                     "col_type must correspond to RefDim.dim_type",
                     ids=invalid_ref_col_ids,
                 )
+
+            # TODO: 3427 verify that unit, if set, corresponds to ConceptSet unit
+
         return self.crud(cmd)  # type: ignore[return-value]
 
     if cmd.is_update():

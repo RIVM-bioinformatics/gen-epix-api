@@ -27,6 +27,9 @@ class ConceptSet(Model):
     code: str = Field(description="The code of the concept set", max_length=255)
     name: str = Field(description="The name of the concept set", max_length=255)
     type: enum.ConceptSetType = Field(description="The type of the concept set")
+    unit: enum.Unit | None = Field(
+        default=None, description="The unit of the concept set, if applicable."
+    )
     description: str | None = Field(
         default=None,
         description="The description of the concept set.",
@@ -40,8 +43,30 @@ class ConceptSet(Model):
             return enum.ConceptSetType(value)
         return value
 
-    @field_serializer("type", mode="plain")
-    def _serialize_type(self, value: enum.ConceptSetType) -> str:
+    @field_validator("unit", mode="before")
+    @classmethod
+    def _validate_unit(cls, value: Any) -> enum.Unit:
+        if isinstance(value, str):
+            return enum.Unit(value)
+        return value
+
+    @model_validator(mode="after")
+    def _validate_unit_for_type(self) -> Self:
+        if self.unit is None and self.type in enum.ConceptSetTypeSet.HAS_UNIT.value:
+            raise ValueError(
+                f"ConceptSet {self.code}: unit must be provided for quantitative concept sets."
+            )
+        elif (
+            self.unit is not None
+            and self.type not in enum.ConceptSetTypeSet.HAS_UNIT.value
+        ):
+            raise ValueError(
+                f"ConceptSet {self.code}: unit may not be provided for non-quantitative concept sets."
+            )
+        return self
+
+    @field_serializer("type", "unit", mode="plain")
+    def _serialize_type(self, value: enum.ConceptSetType | enum.Unit) -> str:
         return value.value
 
 

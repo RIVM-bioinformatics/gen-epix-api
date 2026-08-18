@@ -252,6 +252,10 @@ class RefCol(Model):
     col_type: enum.ColType = Field(
         description="The type of the data stored in the column."
     )
+    unit: enum.Unit | None = Field(
+        default=None,
+        description="The unit of the data stored in the column. Must be provided if the column type is numeric or interval.",
+    )
     concept_set_id: UUID | None = Field(
         default=None,
         description=(
@@ -305,9 +309,11 @@ class RefCol(Model):
 
     @field_validator("code", mode="before")
     @classmethod
-    def validate_code(cls, value: Any) -> str:
-        """Ensure that the code is always a string."""
-        return str(value)
+    def _validate_code(cls, value: Any) -> Any:
+        """Ensure that numbers are converted to strings."""
+        if isinstance(value, (int, float)):
+            return str(value)
+        return value
 
     @field_validator("col_type", mode="before")
     @classmethod
@@ -316,44 +322,97 @@ class RefCol(Model):
             return enum.ColType(value)
         return value
 
+    @field_validator("unit", mode="before")
+    @classmethod
+    def _validate_unit(cls, value: Any) -> enum.Unit:
+        if isinstance(value, str):
+            return enum.Unit(value)
+        return value
+
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
         """Validate the consistency of the RefCol based on its type and linked entities."""
+        if self.col_type in enum.ColTypeSet.HAS_UNIT.value:
+            if self.unit is None:
+                raise exc.InvalidArgumentsError(
+                    "0b6c1a3a",
+                    f"RefCol {self.code}: no unit provided for col_type {self.col_type.value}",
+                )
+        elif self.unit is not None:
+            raise exc.InvalidArgumentsError(
+                "29bdfe0d",
+                f"RefCol {self.code}: unit not allowed for col_type {self.col_type.value}",
+            )
         if self.col_type in enum.ColTypeSet.HAS_CONCEPT_SET.value:
             if self.concept_set_id is None:
                 raise exc.InvalidArgumentsError(
                     "00437e28",
-                    f"No concept_set_id provided for col_type {self.col_type.value}",
+                    f"RefCol {self.code}: no concept_set_id provided for col_type {self.col_type.value}",
                 )
+        elif self.concept_set_id is not None:
+            raise exc.InvalidArgumentsError(
+                "6357f6c4",
+                f"RefCol {self.code}: concept_set_id not allowed for col_type {self.col_type.value}",
+            )
         if self.col_type in enum.ColTypeSet.HAS_REGION_SET.value:
             if self.region_set_id is None:
                 raise exc.InvalidArgumentsError(
                     "3b16f972",
-                    f"No region_set_id provided for col_type {self.col_type.value}",
+                    f"RefCol {self.code}: no region_set_id provided for col_type {self.col_type.value}",
                 )
+        elif self.region_set_id is not None:
+            raise exc.InvalidArgumentsError(
+                "902946f9",
+                f"RefCol {self.code}: region_set_id not allowed for col_type {self.col_type.value}",
+            )
         if self.col_type in enum.ColTypeSet.HAS_GENETIC_DISTANCE_PROTOCOL.value:
             if self.genetic_distance_protocol_id is None:
                 raise exc.InvalidArgumentsError(
                     "b1f2639c",
-                    f"No genetic_distance_protocol_id provided for col_type {self.col_type.value}",
+                    f"RefCol {self.code}: no genetic_distance_protocol_id provided for col_type {self.col_type.value}",
                 )
+        elif self.genetic_distance_protocol_id is not None:
+            raise exc.InvalidArgumentsError(
+                "23db92a4",
+                f"RefCol {self.code}: genetic_distance_protocol_id not allowed for col_type {self.col_type.value}",
+            )
         if self.col_type in enum.ColTypeSet.HAS_REGEX.value:
             if self.regex is None:
-                raise AssertionError(f"Type {self.col_type.value} requires regex")
+                raise exc.InvalidArgumentsError(
+                    "0728233a",
+                    f"RefCol {self.code}: type {self.col_type.value} requires regex",
+                )
+        elif self.regex is not None:
+            raise exc.InvalidArgumentsError(
+                "dee07f88",
+                f"RefCol {self.code}: regex not allowed for col_type {self.col_type.value}",
+            )
         if self.col_type in enum.ColTypeSet.HAS_SCHEMA.value:
             if self.schema_definition is None and self.schema_uri is None:
-                raise AssertionError(
-                    f"Type {self.col_type.value} requires schema_definition or schema_uri"
+                raise exc.InvalidArgumentsError(
+                    "4f3501ad",
+                    f"RefCol {self.code}: type {self.col_type.value} requires schema_definition or schema_uri",
                 )
+        elif self.schema_definition is not None:
+            raise exc.InvalidArgumentsError(
+                "4bab82b4",
+                f"RefCol {self.code}: schema_definition not allowed for col_type {self.col_type.value}",
+            )
+        elif self.schema_uri is not None:
+            raise exc.InvalidArgumentsError(
+                "1b6ba175",
+                f"RefCol {self.code}: schema_uri not allowed for col_type {self.col_type.value}",
+            )
         if self.schema_definition is not None and self.schema_uri is not None:
-            raise AssertionError(
-                "Only one of schema_definition or schema_uri can be set"
+            raise exc.InvalidArgumentsError(
+                "4dd65d8e",
+                f"RefCol {self.code}: only one of schema_definition or schema_uri can be set",
             )
         return self
 
-    @field_serializer("col_type", mode="plain")
-    def _serialize_col_type(self, value: enum.ColType) -> str:
-        return value.value
+    @field_serializer("col_type", "unit", mode="plain")
+    def _serialize_col_type(self, value: enum.ColType | enum.Unit | None) -> str | None:
+        return None if value is None else value.value
 
 
 class CaseTypeProps(BaseModel):
@@ -654,8 +713,11 @@ class Col(Model):
 
     @field_validator("code", mode="before")
     @classmethod
-    def validate_code(cls, value: Any) -> str:
-        return str(value)
+    def _validate_code(cls, value: Any) -> Any:
+        """Ensure that numbers are converted to strings."""
+        if isinstance(value, (int, float)):
+            return str(value)
+        return value
 
     @field_validator("tree_algorithm_codes", mode="before")
     @classmethod
@@ -665,7 +727,7 @@ class Col(Model):
         if value is None or isinstance(value, set):
             return value
         if isinstance(value, str):
-            return {enum.TreeAlgorithmType[x] for x in json.loads(value)}
+            return {enum.TreeAlgorithmType(x) for x in json.loads(value)}
         return set(value)
 
     @field_serializer("tree_algorithm_codes", mode="plain")
