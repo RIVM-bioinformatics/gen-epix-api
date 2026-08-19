@@ -338,6 +338,8 @@ class UserManager(BaseUserManager):
     ) -> model.User | None:
         if user.name == new_name:
             return user
+        if user.is_active is False:
+            return None
         user.name = new_name
         with self._organization_service.repository.uow() as uow:
             updated_user: model.User = self._organization_service.repository.crud(

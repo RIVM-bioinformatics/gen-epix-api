@@ -1083,7 +1083,7 @@ class SARepository(BaseRepository):
             # Row field name assumed as filter key
             row_field_name = filter_key
         else:
-            row_field_name = mapper.get_mapped_field_name(str(filter.get_key()))
+            row_field_name = mapper.get_mapped_field_name(str(filter.get_key()))  # type: ignore[assignment]
         if row_field_name is None:
             raise exc.InvalidArgumentsError(
                 "320f2bf7",
@@ -1342,6 +1342,7 @@ class SARepository(BaseRepository):
         """
 
         row_class = mapper.row_class
+        table = cast(sa.Table, row_class.__table__)  # type: ignore[attr-defined]
         id_col = mapper.get_row_id_column()
         dialect = session.get_bind().dialect
         if dialect.name != "mssql":
@@ -1354,14 +1355,14 @@ class SARepository(BaseRepository):
         # TODO: check if temp table exists and take a different name in that case
         temp_table_name = f"#temp_{str(uuid.uuid4()).replace('-','_')}"
         id_col_name = id_col.name
-        id_datatype = row_class.__table__.c[id_col_name].type
+        id_datatype = table.c[id_col_name].type
         id_datatype_sql = id_datatype.compile(dialect=dialect)
         # TODO: finalize this part
         # Create the temp table
         # we might think to introspect after CREATE TABLE, but that opens us up to session/database sync and lock issues...
         # which we did experience in testing
         temp_table_obj = sa.Table(
-            temp_table_name, row_class.metadata, sa.Column(id_col_name, id_datatype)
+            temp_table_name, row_class.metadata, sa.Column(id_col_name, id_datatype)  # type: ignore[attr-defined]
         )
         session.execute(
             sa.text(f"CREATE TABLE {temp_table_name} ({id_col_name} {id_datatype_sql})")
@@ -1381,7 +1382,7 @@ class SARepository(BaseRepository):
         # Select with join to restrict to ids passed (mssql temp-table path)
         sql_select: sa.sql.Select = select(row_class).join(
             temp_table_obj,
-            row_class.__table__.c[id_col_name] == temp_table_obj.c[id_col_name],
+            table.c[id_col_name] == temp_table_obj.c[id_col_name],
         )
         return sql_select
 
@@ -1593,6 +1594,14 @@ class SARepository(BaseRepository):
                             else f"file:{schema_name}?mode=memory&cache=shared"
                         )
                     else:
+                        if len(schema_names) > 1:
+                            valid_schema_names = [
+                                x for x in schema_names if x is not None
+                            ]
+                            raise NotImplementedError(
+                                "Multiple schemas: "
+                                + ", ".join(sorted(valid_schema_names))
+                            )
                         assert sqlite_file is not None
                         attach_target = sqlite_file.as_posix()
                     conn.execute(

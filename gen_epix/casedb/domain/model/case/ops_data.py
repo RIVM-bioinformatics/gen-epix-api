@@ -82,19 +82,13 @@ class Case(Model):
     def _serialize_cohort(
         self, value: dict[UUID, UUID | None]
     ) -> dict[str, str | None]:
-        return {
-            str(x): None if y is None else str(y)
-            for x, y in value.items()
-            if y is not None
-        }
+        return {str(x): None if y is None else str(y) for x, y in value.items()}
 
     @field_serializer("content", mode="plain")
     def _serialize_content(
         self, value: dict[UUID, str | None]
     ) -> dict[str, str | None]:
-        return {
-            str(x): None if y is None else y for x, y in value.items() if y is not None
-        }
+        return {str(x): None if y is None else y for x, y in value.items()}
 
 
 class CaseIdentifier(BaseIdentifier):

@@ -314,35 +314,26 @@ class SAMapper(BaseSAMapper):
         self, user_id: Hashable | None, obj: Model, row: Row, **kwargs: Any
     ) -> bool:
         """
-        Update the given row with the values from the given object. Only fields that are
-        not None in the object are updated, preserving existing DB values for omitted
-        fields. Override in subclasses to add db-specific rules (e.g. never touch
-        created_at, stamp modified_by from user_id).
+        Update the given row with the values from the given object.
+        Override in subclasses to add db-specific rules.
 
         Returns True if any fields were updated, False otherwise.
         """
-        if self._is_identical_common_field_names:
-            mapped_dict = obj.model_dump(exclude_none=True)
-        else:
-            obj_dict = obj.model_dump(exclude_none=False)
-            mapped_dict = {
-                y: obj_dict[x]
-                for x, y in zip(
-                    self._field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
-                    self._row_field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
-                )
-                if obj_dict[x] is not None
-            }
-        if kwargs:
-            mapped_dict.update(kwargs)
+        # Go over each relevant field in the domain model and compare it to the corresponding field in the SA row. Update the SA row if the values differ.
         is_updated = False
-        for key, value in mapped_dict.items():
-            if value is None:
-                continue
-            curr_value = getattr(row, key)
-            if curr_value != value:
-                setattr(row, key, value)
+        obj_dict = obj.model_dump(
+            exclude_none=False
+        )  # Explicitly include None values (to ensure Pydantic always returns all fields, even if they are None and possible future defaults change)
+        for field_name, row_field_name in zip(
+            self._field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
+            self._row_field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
+        ):
+            curr_value = getattr(row, row_field_name)
+            new_value = obj_dict[field_name]
+            if curr_value != new_value:
+                setattr(row, row_field_name, new_value)
                 is_updated = True
+
         return is_updated
 
     def load(self, row: Row, **kwargs: Any) -> Model:

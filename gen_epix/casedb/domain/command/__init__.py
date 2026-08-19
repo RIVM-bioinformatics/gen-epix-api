@@ -164,6 +164,9 @@ from gen_epix.commondb.domain import enum as common_enum
 from gen_epix.commondb.domain.command import (
     COMMANDS_BY_SERVICE_TYPE as _COMMON_COMMANDS_BY_SERVICE_TYPE,
 )
+from gen_epix.commondb.domain.command import (
+    AnonymizeUserCommand as AnonymizeUserCommand,
+)
 from gen_epix.commondb.domain.command import Command as Command
 from gen_epix.commondb.domain.command import ContactCrudCommand as ContactCrudCommand
 from gen_epix.commondb.domain.command import CrudCommand as CrudCommand
