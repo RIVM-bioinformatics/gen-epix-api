@@ -25,7 +25,7 @@ requires-python = ">=3.14"
 dependencies = [
     # For compatibility with apache-airflow-core 3.3.0 used in other repositories, fastapi must be pinned to <0.137.0
     # "fastapi[standard]==0.141.1",
-    "fastapi[standard]>=0.129.0,<0.137.0", 
+    "fastapi[standard]>=0.141.1,<0.142.0", 
     "gunicorn==26.1.*",
     "starlette==1.6.*",
     "httpx==0.28.1",
