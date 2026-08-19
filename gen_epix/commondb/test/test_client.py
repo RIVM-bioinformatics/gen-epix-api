@@ -1199,12 +1199,8 @@ class TestClient:
         # automatically updated by the system and may not be the same in in_obj and
         # out_obj. They are also not relevant for verifying that the content of the
         # object was updated correctly.
-        out_obj_dict = out_obj.model_dump(
-            exclude=set(model.ModelNoId.CREATE_METADATA_FIELDS)
-        )
-        in_obj_dict = in_obj.model_dump(
-            exclude=set(model.ModelNoId.CREATE_METADATA_FIELDS)
-        )
+        out_obj_dict = out_obj.model_dump(exclude=set(model.ModelNoId.METADATA_FIELDS))
+        in_obj_dict = in_obj.model_dump(exclude=set(model.ModelNoId.METADATA_FIELDS))
         if isinstance(in_obj, model.User):
             in_obj_dict["roles"] = sorted(in_obj.roles)
             out_obj_dict["roles"] = sorted(out_obj.roles)

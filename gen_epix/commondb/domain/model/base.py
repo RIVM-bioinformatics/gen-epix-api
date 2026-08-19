@@ -11,12 +11,13 @@ from gen_epix.fastapp.enum import LogLevel
 
 
 class ModelNoId(fastapp.Model):
-    CREATE_METADATA_FIELDS: ClassVar[frozenset[str]] = frozenset(
+    METADATA_FIELDS: ClassVar[frozenset[str]] = frozenset(
         {"created_at", "modified_at", "modified_by"}
     )
-    UPDATE_METADATA_FIELDS: ClassVar[frozenset[str]] = frozenset(
-        {"modified_at", "modified_by"}
+    TIMESTAMP_METADATA_FIELDS: ClassVar[frozenset[str]] = frozenset(
+        {"created_at", "modified_at"}
     )
+    MODIFIED_BY_FIELD_NAME: ClassVar[str] = "modified_by"
 
     created_at: datetime | None = Field(
         default=None,
