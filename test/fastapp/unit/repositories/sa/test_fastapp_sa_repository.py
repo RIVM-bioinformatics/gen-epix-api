@@ -386,6 +386,16 @@ def test_create_sa_repository(tmp_path: Path) -> None:
     assert isinstance(repo, SARepository)
 
 
+def test_create_sa_repository_sqlite_shared_memory_uri() -> None:
+    """Shared-memory sqlite URI strings should be accepted by SARepository."""
+    repo = SARepository.create_sa_repository(
+        entities=[],
+        connection_string="sqlite:///file:test_mem?mode=memory&cache=shared",
+        register_mappers=False,
+    )
+    assert isinstance(repo, SARepository)
+
+
 def test_test_connection() -> None:
     assert SARepository.test_connection("sqlite:///:memory:") is None
     assert SARepository.test_connection("not-a-valid-sqlalchemy-url") is not None

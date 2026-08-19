@@ -1,6 +1,7 @@
+import datetime
 import io
 from test.util.mock_compat import MagicMock, Mock
-from typing import Any, Iterable, Optional, cast
+from typing import Any, Iterable, Literal, Optional, cast
 from uuid import UUID, uuid4
 
 import pytest
@@ -84,15 +85,15 @@ def make_child_entity(keys: bool = True) -> Entity:
 def make_repo(
     entities: Iterable[Entity],
     db: dict[type[Model], dict[Any, Model]],
-    extra_data: str = "ignore",
-    missing_data: str = "ignore",
+    extra_data: Literal["ignore", "raise", "drop"] = "ignore",
+    missing_data: Literal["raise", "ignore"] = "ignore",
 ) -> DictRepository:
     return DictRepository(
         entities=entities,
         db=db,
         extra_data=extra_data,
         missing_data=missing_data,
-        timestamp_factory=lambda: None,
+        timestamp_factory=lambda: datetime.datetime.now(datetime.timezone.utc),
     )
 
 
@@ -133,9 +134,20 @@ def pc_repo(parent_id: UUID, child_id: UUID) -> DictRepository:
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-03")
-def test_create_repository_no_file_raises() -> None:
-    with pytest.raises(exc.RepositoryInitializationServiceError):
-        DictRepository.create_repository(file=None, file_type="pkl")
+def test_create_repository_no_file_initializes_empty_db() -> None:
+    """Repository creation without a file should initialize empty model stores."""
+    parent_entity = make_parent_entity()
+    child_entity = make_child_entity()
+
+    repository = DictRepository.create_repository(
+        entities=[parent_entity, child_entity],
+        file=None,
+    )
+    assert isinstance(repository, DictRepository)
+    parent_model_class = cast(type[Model], parent_entity.model_class)
+    child_model_class = cast(type[Model], child_entity.model_class)
+    assert repository.db[parent_model_class] == {}
+    assert repository.db[child_model_class] == {}
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-03")
@@ -275,7 +287,12 @@ def test_init_invalid_extra_data_raises(parent_id: UUID) -> None:
         ParentModel: {parent_id: ParentModel(id=parent_id, value="p")}
     }
     with pytest.raises(ValueError):
-        DictRepository([parent_entity], db, extra_data="bad", missing_data="ignore")
+        DictRepository(
+            [parent_entity],
+            db,
+            extra_data=cast(Any, "bad"),
+            missing_data="ignore",
+        )
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-03")
@@ -285,7 +302,12 @@ def test_init_invalid_missing_data_raises(parent_id: UUID) -> None:
         ParentModel: {parent_id: ParentModel(id=parent_id, value="p")}
     }
     with pytest.raises(ValueError):
-        DictRepository([parent_entity], db, extra_data="ignore", missing_data="bad")
+        DictRepository(
+            [parent_entity],
+            db,
+            extra_data="ignore",
+            missing_data=cast(Any, "bad"),
+        )
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-03")

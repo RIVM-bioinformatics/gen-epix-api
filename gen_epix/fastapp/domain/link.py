@@ -1,6 +1,30 @@
 from pydantic import BaseModel
 
 
+class MultiLink(BaseModel, frozen=True):
+    """
+    Represents a link between entities, whereby the linking entity can be associated
+    with multiple instances of the linked entity.
+
+    Attributes
+    ----------
+    link_field_name : str
+        The name of the field that represents the link.
+    link_model_class : type[BaseModel]
+        The model class that the link points to.
+    """
+
+    link_field_name: str
+    link_model_class: type[BaseModel]
+
+    def to_tuple(self) -> tuple[str, type[BaseModel]]:
+        return (self.link_field_name, self.link_model_class)
+
+    @classmethod
+    def from_tuple(cls, tuple_: tuple[str, type[BaseModel]]) -> "MultiLink":
+        return cls(link_field_name=tuple_[0], link_model_class=tuple_[1])
+
+
 class Link(BaseModel, frozen=True):
     """
     Represents a link between entities.

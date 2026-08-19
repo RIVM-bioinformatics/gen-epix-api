@@ -24,6 +24,8 @@ from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
 from gen_epix.fastapp.model import Command
 
+_JWT_TEST_HS256_SECRET = "commondb-remote-app-test-secret-key-32b"
+
 # ============================================================================
 # Test Helpers and Dummy Classes
 # ============================================================================
@@ -305,7 +307,9 @@ class TestGetHeaders(BaseCommondbRemoteAppTestCase):
 
         # Create JWT token that expires in the future
         exp_time = int(datetime.now(timezone.utc).timestamp()) + 3600
-        jwt_token = jwt.encode({"exp": exp_time}, "secret", algorithm="HS256")
+        jwt_token = jwt.encode(
+            {"exp": exp_time}, _JWT_TEST_HS256_SECRET, algorithm="HS256"
+        )
 
         mock_idp_client.retrieve_jwt_with_client_credentials_flow.return_value = (
             jwt_token
@@ -354,11 +358,15 @@ class TestGetHeaders(BaseCommondbRemoteAppTestCase):
         # This token should trigger a refresh
         now_ts = int(datetime.now(timezone.utc).timestamp())
         exp_time1 = now_ts - 100  # Expired 100 seconds ago
-        jwt_token1 = jwt.encode({"exp": exp_time1}, "secret", algorithm="HS256")
+        jwt_token1 = jwt.encode(
+            {"exp": exp_time1}, _JWT_TEST_HS256_SECRET, algorithm="HS256"
+        )
 
         # Create different JWT token to return after token refresh
         exp_time2 = now_ts + 3600
-        jwt_token2 = jwt.encode({"exp": exp_time2}, "secret", algorithm="HS256")
+        jwt_token2 = jwt.encode(
+            {"exp": exp_time2}, _JWT_TEST_HS256_SECRET, algorithm="HS256"
+        )
 
         mock_idp_client.retrieve_jwt_with_client_credentials_flow.side_effect = [
             jwt_token1,
@@ -416,7 +424,7 @@ class TestGetHeaders(BaseCommondbRemoteAppTestCase):
         )  # 100 years
         jwt_token = jwt.encode(
             {"exp": far_future_ts, "sub": "user123"},
-            "secret",
+            _JWT_TEST_HS256_SECRET,
             algorithm="HS256",
         )
 
@@ -600,7 +608,9 @@ class TestIntegration(BaseCommondbRemoteAppTestCase):
         """Full flow: OAuth2 app retrieves and returns bearer token in headers."""
         mock_idp_client = Mock()
         exp_time = int(datetime.now(timezone.utc).timestamp()) + 3600
-        jwt_token = jwt.encode({"exp": exp_time}, "secret", algorithm="HS256")
+        jwt_token = jwt.encode(
+            {"exp": exp_time}, _JWT_TEST_HS256_SECRET, algorithm="HS256"
+        )
         mock_idp_client.retrieve_jwt_with_client_credentials_flow.return_value = (
             jwt_token
         )
