@@ -131,6 +131,10 @@ class UploadResult(BaseEtlResult, Model):
         default=False,
         description="Indicates whether the object did not exist before start of the upload. False in case upload failed before this could be determined.",
     )
+    is_reassigned: bool = Field(
+        default=False,
+        description="Indicates whether this identifier is being reassigned from a different internal object rather than newly created.",
+    )
 
     @model_validator(mode="after")
     def _validate_upload_result(self) -> Self:

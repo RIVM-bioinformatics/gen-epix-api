@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Generator, cast
+from typing import Any, Generator, cast
 from uuid import UUID
 
 from gen_epix import fastapp
@@ -365,7 +365,7 @@ class BatchUploader:
             cmd.user,
             self.parent_for_upload_class,
             self.parent_identifier_class,
-            parent_result_pairs,  # type: ignore[arg-type]
+            [(p, r, None) for p, r in parent_result_pairs],
         )
 
         # Fill in parent IDs based on Identifiers where possible
@@ -401,14 +401,22 @@ class BatchUploader:
             if not child_identifier_class:
                 # This child model does not have identifiers, skip
                 continue
-            # Get child_for_upload-result pairs
+            # Get child_for_upload-result pairs, plus the sibling list from the
+            # same parent as context (used by resolve_identifier_conflict to
+            # scope reassignment checks to a single PersonForUpload)
             child_result_pairs = []
+            identifier_verify_triples: list[
+                tuple[model.IdentifiersMixin, model.UploadResultWithIdentifiers, Any]
+            ] = []
             for parent_for_upload, parent_result in parent_result_pairs:
-                child_result_pairs.extend(
-                    zip(
-                        getattr(parent_for_upload, children_field_name) or [],
-                        getattr(parent_result, children_field_name) or [],
-                    )
+                siblings = getattr(parent_for_upload, children_field_name) or []
+                pairs = list(
+                    zip(siblings, getattr(parent_result, children_field_name) or [])
+                )
+                child_result_pairs.extend(pairs)
+                identifier_verify_triples.extend(
+                    (child_for_upload, child_result, siblings)
+                    for child_for_upload, child_result in pairs
                 )
             # Verify identifier issuer IDs and codes
             success &= self.verify_link_id(
@@ -427,7 +435,7 @@ class BatchUploader:
                 cmd.user,
                 child_model_class,
                 child_identifier_class,
-                child_result_pairs,
+                identifier_verify_triples,
             )
         return success
 
@@ -1082,6 +1090,21 @@ class BatchUploader:
             )
         return success
 
+    def resolve_identifier_conflict(
+        self,
+        model_class: type[Model],
+        obj_for_upload: model.IdentifiersMixin,
+        obj_id: UUID,
+        existing_identifier: model.BaseIdentifier,
+        context: Any,
+    ) -> bool:
+        """
+        Hook for subclasses to allow specific, structurally-provable identifier
+        reassignment scenarios instead of treating any owner mismatch as a hard
+        collision. Default: never allowed (current behavior unchanged).
+        """
+        return False
+
     def verify_identifiers(
         self,
         user: model.User | None,
@@ -1091,6 +1114,7 @@ class BatchUploader:
             tuple[
                 model.IdentifiersMixin,
                 model.UploadResultWithIdentifiers,
+                Any,
             ]
         ],
     ) -> bool:
@@ -1103,7 +1127,7 @@ class BatchUploader:
         identifier_tuples: list[tuple[UUID, str]] = list(
             {
                 (cast(UUID, y.identifier_issuer_id), y.external_id)
-                for x, _ in obj_result_pairs
+                for x, _, _ in obj_result_pairs
                 for y in x.identifiers or []
             }
         )
@@ -1140,7 +1164,7 @@ class BatchUploader:
 
         # Verify Identifiers for each object
         obj_id_field_name = model_class.ENTITY.get_id_field_name()
-        for obj_for_upload, obj_result in obj_result_pairs:
+        for obj_for_upload, obj_result, context in obj_result_pairs:
             for identifier_for_upload, identifier_result in zip(
                 obj_for_upload.identifiers or [],
                 obj_result.identifiers or [],
@@ -1161,10 +1185,10 @@ class BatchUploader:
                 # Identifier already exists
                 existing_identifier = existing_identifier_map[key]
                 identifier_result.id = existing_identifier.id
-                identifier_result.status = EtlStatus.SKIPPED
                 # Cross-validate with object ID if given
                 if self.is_null(obj_id):
                     # Object does not exist yet, fill in object ID
+                    identifier_result.status = EtlStatus.SKIPPED
                     setattr(
                         obj_for_upload,
                         obj_id_field_name,
@@ -1174,7 +1198,25 @@ class BatchUploader:
                 else:
                     # Object already exists
                     obj_result.id = obj_id
-                    if existing_identifier.internal_id != obj_id:
+                    if existing_identifier.internal_id == obj_id:
+                        identifier_result.status = EtlStatus.SKIPPED
+                    elif self.resolve_identifier_conflict(
+                        model_class,
+                        obj_for_upload,
+                        obj_id,
+                        existing_identifier,
+                        context,
+                    ):
+                        # Reassignment accepted: leave status PENDING so
+                        # create_identifiers() performs the update. is_reassigned
+                        # drives that routing; add_info is purely for human/audit
+                        # visibility and is emitted even on verify_only dry runs.
+                        identifier_result.is_reassigned = True
+                        identifier_result.add_info(
+                            "b2f7a1c4",
+                            f"{model_class.NAME} Identifier ({identifier_for_upload.identifier_issuer_id}, {identifier_for_upload.external_id}) will be reassigned from internal_id={existing_identifier.internal_id} to {obj_id_field_name}={obj_id}",
+                        )
+                    else:
                         success = False
                         identifier_result.add_error(
                             "0561ecd7",
@@ -1302,6 +1344,9 @@ class BatchUploader:
         to_create_identifier_result_pairs: list[
             tuple[model.BaseIdentifier, model.UploadResult]
         ] = []
+        to_reassign_identifier_result_pairs: list[
+            tuple[model.BaseIdentifier, model.UploadResult]
+        ] = []
         for (
             internal_id,
             identifiers_for_upload,
@@ -1318,36 +1363,51 @@ class BatchUploader:
                 if identifier_result.status != EtlStatus.PENDING:
                     # Not pending (likely skipped or failed), no need to create
                     continue
-                if not identifier_result.is_new:
-                    # Not new: unexpected since updating existing Identifiers is not supported
-                    identifier_result.add_error(
-                        "d3ac4368",
-                        f"{identifier_class.NAME} ({identifier_for_upload.identifier_issuer_id}, {identifier_for_upload.external_id}) already exists and cannot be updated",
-                    )
-                    continue
                 assert identifier_for_upload.identifier_issuer_id is not None
-                # Create Identifier object and add to list
+                # Build the Identifier object. Its id is deterministically derived
+                # from (identifier_issuer_id, external_id), so this naturally
+                # matches the existing DB row's PK when reassigning.
                 identifier = identifier_class(
                     id=None,
                     internal_id=internal_id,
                     identifier_issuer_id=identifier_for_upload.identifier_issuer_id,
                     external_id=identifier_for_upload.external_id,
                 )
-                to_create_identifier_result_pairs.append(
-                    (identifier, identifier_result)
-                )
-        if not to_create_identifier_result_pairs:
-            return success
+                if identifier_result.is_new:
+                    to_create_identifier_result_pairs.append(
+                        (identifier, identifier_result)
+                    )
+                elif identifier_result.is_reassigned:
+                    to_reassign_identifier_result_pairs.append(
+                        (identifier, identifier_result)
+                    )
+                else:
+                    # Neither new nor reassigned: unexpected since updating
+                    # existing Identifiers outside an approved reassignment is
+                    # not supported
+                    identifier_result.add_error(
+                        "d3ac4368",
+                        f"{identifier_class.NAME} ({identifier_for_upload.identifier_issuer_id}, {identifier_for_upload.external_id}) already exists and cannot be updated",
+                    )
 
-        # Create Identifiers
-        success &= self.create_objects(
-            uow,
-            user.id if user else None,
-            identifier_class,
-            to_create_identifier_result_pairs,  # type: ignore[arg-type]
-            is_same_service=False,
-            user=user,
-        )
+        # Create new Identifiers
+        if to_create_identifier_result_pairs:
+            success &= self.create_objects(
+                uow,
+                user.id if user else None,
+                identifier_class,
+                to_create_identifier_result_pairs,  # type: ignore[arg-type]
+                is_same_service=False,
+                user=user,
+            )
+        # Reassign Identifiers whose ownership was approved during verification
+        if to_reassign_identifier_result_pairs:
+            success &= self.update_objects(
+                uow,
+                user.id if user else None,
+                identifier_class,
+                to_reassign_identifier_result_pairs,  # type: ignore[arg-type]
+            )
         return success
 
     def create_refdata(

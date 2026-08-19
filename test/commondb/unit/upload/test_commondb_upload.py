@@ -2406,6 +2406,31 @@ class TestUploadEdgeCases(BaseUploadTestCase):
         assert success
         self.service.app.handle.assert_not_called()
 
+    def test_resolve_identifier_conflict_default_denies(self) -> None:
+        """
+        The base resolve_identifier_conflict hook (LSP-3662) must default to
+        False, so plain BatchUploader/commondb behavior is unchanged unless a
+        subclass (e.g. omopdb's PersonBatchUploader) explicitly opts in.
+        """
+        identifier1 = self.create_identifier_for_upload(
+            identifier_issuer_id=self.identifier_issuer_id,
+            identifier_issuer_code=self.identifier_issuer_code,
+            external_id="ext_id_1",
+        )
+        existing_identifier = self.get_parent_identifier_from_for_upload(
+            identifier1, internal_id=self.random_ids[0]
+        )
+        assert (
+            self.batch_uploader.resolve_identifier_conflict(
+                ParentIdentifier,
+                self.create_parent_for_upload(identifiers=[identifier1]),
+                self.random_ids[1],
+                existing_identifier,
+                None,
+            )
+            is False
+        )
+
 
 @pytest.mark.scenario_ids("TC-11-13-01")
 class TestDuplicateIds(BaseUploadTestCase):

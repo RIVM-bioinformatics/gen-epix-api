@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import UUID
 
 import gen_epix.omopdb.domain.command as command
@@ -5,8 +6,12 @@ import gen_epix.omopdb.domain.model as model
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
 from gen_epix.commondb.domain.enum import EtlStatus
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.upload import BaseBatchUploadResult
+from gen_epix.commondb.domain.model.upload import (
+    BaseBatchUploadResult,
+    IdentifiersMixin,
+)
 from gen_epix.commondb.services.upload import BatchUploader
+from gen_epix.fastapp import Model
 from gen_epix.fastapp.service import BaseService
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.omopdb.domain import exc
@@ -35,6 +40,55 @@ class PersonBatchUploader(BatchUploader):
         if not isinstance(cmd, command.UploadPersonsCommand):
             raise exc.InvalidArgumentsError("f8dbeb8d", "Invalid command type")
         # TODO: implement additional user rights verifications as necessary
+
+    def resolve_identifier_conflict(
+        self,
+        model_class: type[Model],
+        obj_for_upload: IdentifiersMixin,
+        obj_id: UUID,
+        existing_identifier: model.BaseIdentifier,
+        context: Any,
+    ) -> bool:
+        """
+        Specimens exist in a directed acyclic graph (DAG) of
+        derived_from_specimen_id links. If for example a new culture
+        is derived from an existing specimen, the new culture's
+        Specimen's derived_from_specimen_id will point to the existing
+        specimen's specimen_id. This method allows a Specimen identifier
+        to move from an old chain tip to a new one when the new specimen's
+        derived_from_specimen_id chain is a descendant of the Specimen
+        currently owning the identifier, and every specimen on that path is
+        present in the same PersonForUpload being uploaded now (LSP-3662).
+        """
+        if model_class is not model.Specimen or not isinstance(
+            obj_for_upload, model.SpecimenForUpload
+        ):
+            return False
+        specimens_by_id: dict[UUID, model.SpecimenForUpload] = {
+            s.specimen_id: s
+            for s in (context or [])
+            if isinstance(s, model.SpecimenForUpload)
+            and not self.is_null(s.specimen_id)
+        }
+        old_owner_id = existing_identifier.internal_id
+        if old_owner_id not in specimens_by_id:
+            # Old owner not present in this same PersonForUpload: not provably
+            # a retry, treat as a real collision.
+            return False
+        visited: set[UUID] = set()
+        current: model.SpecimenForUpload = obj_for_upload
+        while True:
+            parent_id = current.derived_from_specimen_id
+            if parent_id is None:
+                return False  # reached the root without finding the old owner
+            if parent_id == old_owner_id:
+                return True
+            if parent_id in visited or parent_id not in specimens_by_id:
+                # Cycle, or the chain leaves this person's payload before
+                # reaching the old owner: cannot prove same-person linkage.
+                return False
+            visited.add(parent_id)
+            current = specimens_by_id[parent_id]
 
     def verify_batch(
         self,

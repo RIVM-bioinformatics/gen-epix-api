@@ -256,6 +256,14 @@ STORED_MODEL_FIELD_PROPS: dict[type[fastapp.Model], dict[str, ModelFieldProps]] 
         for field_name in Person.model_fields
         if field_name != "person_id"
     },
+    SpecimenIdentifier: {
+        # internal_id is mutable so a retried derived-specimen chain can move
+        # its lab identifier to the new tip within the same PersonForUpload
+        # upload (LSP-3662). identifier_issuer_id/external_id stay immutable
+        # (by default): changing those makes it a different identifier, not a
+        # reassignment.
+        "internal_id": ModelFieldProps(is_mutable_always=True),
+    },
 }
 complete_stored_model_field_props(
     STORED_MODEL_FIELD_PROPS, SORTED_MODELS_BY_SERVICE_TYPE

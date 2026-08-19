@@ -1171,9 +1171,15 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
         """
         A retried derived-specimen chain (e.g. a repeat culture attempt) that
         carries the same lab identifier as the specimen it supersedes must
-        produce a clear, readable, correctly attributed error at every level
-        (identifier, specimen, person, batch) - and identically so whether
-        run for real or as a verify_only dry run.
+        still be rejected when the old owner specimen is NOT itself part of
+        this upload (only referenced via derived_from_specimen_id): there is
+        no proof within this batch that the reassignment is intentional, so
+        this must produce a clear, readable, correctly attributed error at
+        every level (identifier, specimen, person, batch) - and identically
+        so whether run for real or as a verify_only dry run. Contrast with
+        test_specimen_chain_retry_with_old_tip_in_payload_reassigns_identifier,
+        where the old owner IS included in the same PersonForUpload and the
+        upload succeeds (LSP-3662).
         """
 
         def make_result(verify_only: bool) -> PersonBatchUploadResult:
@@ -1233,6 +1239,219 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
             # where the real error lives, not just report a bare failure.
             assert specimen_result.has_log_code("d8f21b6a"), label
             assert person_result.has_log_code("6a1f3d0c"), label
+
+    def test_specimen_chain_retry_with_old_tip_in_payload_reassigns_identifier_dry_run(
+        self,
+    ) -> None:
+        """
+        LSP-3662: when the old chain tip (currently owning the lab identifier)
+        and the new chain tip (derived from it, carrying the same identifier)
+        are BOTH present in the same PersonForUpload - exactly what idsdb
+        actually resends on every retry - the reassignment is structurally
+        provable and a verify_only dry run must report success instead of
+        the 0561ecd7 collision.
+        """
+        old_tip_specimen_id = self.random_ids[3]
+        new_tip_specimen_id = self.random_ids[4]
+        lab_identifier = self.create_identifier_for_upload(
+            identifier_issuer_id=self.identifier_issuer_id,
+            external_id="LAB-SAMPLE-001",
+        )
+        existing_identifier = self.get_specimen_identifier_from_for_upload(
+            lab_identifier, internal_id=old_tip_specimen_id
+        )
+        old_tip_specimen = self.create_specimen_for_upload(
+            specimen_id=old_tip_specimen_id
+        )
+        new_tip_specimen = self.create_specimen_for_upload(
+            specimen_id=new_tip_specimen_id, identifiers=[lab_identifier]
+        )
+        new_tip_specimen.derived_from_specimen_id = old_tip_specimen_id
+        person_for_upload = self.create_person_for_upload(
+            person_id=self.person_id,
+            person=None,
+            specimens=[old_tip_specimen, new_tip_specimen],
+        )
+        self.service.app.handle.side_effect = [
+            [self.identifier_issuer],
+            [existing_identifier],
+        ]
+        self.service.repository.read_fields.side_effect = [
+            [(old_tip_specimen_id, self.person_id)],
+        ]
+        batch_result = self.upload_batch(
+            self.create_command_for_persons(person_for_upload).model_copy(
+                update={"verify_only": True}
+            )
+        )
+        person_result = batch_result.persons[0]
+        specimen_results = {x.id: x for x in person_result.specimens}
+        identifier_result = person_result.specimens[1].identifiers[0]
+
+        self.expectBatchProcessed(batch_result)
+        assert person_result.status != EtlStatus.FAILED
+        assert specimen_results[new_tip_specimen_id].status != EtlStatus.FAILED
+        assert identifier_result.is_reassigned is True
+        assert identifier_result.has_log_code("b2f7a1c4")
+        assert not identifier_result.has_log_code("0561ecd7")
+
+    def test_specimen_chain_retry_with_old_tip_in_payload_reassigns_identifier(
+        self,
+    ) -> None:
+        """
+        Same scenario as the dry-run variant, but a real (non-dry) run: the
+        SpecimenIdentifier row must actually be moved (UPDATE_SOME) to the
+        new tip, not inserted, and the new tip specimen itself gets created.
+        """
+        old_tip_specimen_id = self.random_ids[3]
+        new_tip_specimen_id = self.random_ids[4]
+        lab_identifier = self.create_identifier_for_upload(
+            identifier_issuer_id=self.identifier_issuer_id,
+            external_id="LAB-SAMPLE-001",
+        )
+        existing_identifier = self.get_specimen_identifier_from_for_upload(
+            lab_identifier, internal_id=old_tip_specimen_id
+        )
+        old_tip_specimen = self.create_specimen_for_upload(
+            specimen_id=old_tip_specimen_id
+        )
+        new_tip_specimen = self.create_specimen_for_upload(
+            specimen_id=new_tip_specimen_id, identifiers=[lab_identifier]
+        )
+        new_tip_specimen.derived_from_specimen_id = old_tip_specimen_id
+        person_for_upload = self.create_person_for_upload(
+            person_id=self.person_id,
+            person=None,
+            specimens=[old_tip_specimen, new_tip_specimen],
+        )
+        old_tip_specimen_db = Specimen(
+            **{
+                **old_tip_specimen.model_dump(),
+                "specimen_id": old_tip_specimen_id,
+                "person_id": self.person_id,
+            }
+        )
+        self.service.app.handle.side_effect = [
+            [self.identifier_issuer],
+            [existing_identifier],
+        ]
+        self.service.repository.read_fields.side_effect = [
+            [(old_tip_specimen_id, self.person_id)],
+        ]
+        self.service.repository.crud.side_effect = [
+            [new_tip_specimen_id],  # CREATE_SOME: new tip specimen created
+            [old_tip_specimen_db],  # READ_SOME: old tip, unchanged content
+            [existing_identifier],  # READ_SOME: identifier row to reassign
+            [existing_identifier.id],  # UPDATE_SOME: identifier reassigned
+        ]
+        batch_result = self.upload_batch(person_for_upload)
+        person_result = batch_result.persons[0]
+        old_tip_result, new_tip_result = person_result.specimens
+        identifier_result = new_tip_result.identifiers[0]
+
+        self.expectBatchProcessed(batch_result)
+        assert new_tip_result.id == new_tip_specimen_id
+        assert new_tip_result.status == EtlStatus.CREATED
+        assert old_tip_result.status == EtlStatus.SKIPPED
+        assert identifier_result.is_reassigned is True
+        assert identifier_result.status == EtlStatus.UPDATED
+        assert identifier_result.id == existing_identifier.id
+
+    def test_specimen_chain_no_derived_link_same_person_fails(self) -> None:
+        """
+        LSP-3662 guardrail: two specimens of the SAME person sharing a lab
+        identifier, with NO derived_from_specimen_id relationship between
+        them, must still fail as a hard collision. Being in the same
+        PersonForUpload is necessary but not sufficient - reassignment
+        requires the new specimen's chain to structurally reach the old
+        owner.
+        """
+        sibling_a_id = self.random_ids[3]
+        sibling_b_id = self.random_ids[4]
+        lab_identifier = self.create_identifier_for_upload(
+            identifier_issuer_id=self.identifier_issuer_id,
+            external_id="LAB-SAMPLE-001",
+        )
+        existing_identifier = self.get_specimen_identifier_from_for_upload(
+            lab_identifier, internal_id=sibling_a_id
+        )
+        sibling_a = self.create_specimen_for_upload(specimen_id=sibling_a_id)
+        sibling_b = self.create_specimen_for_upload(
+            specimen_id=sibling_b_id, identifiers=[lab_identifier]
+        )
+        # No derived_from_specimen_id link between sibling_a and sibling_b.
+        person_for_upload = self.create_person_for_upload(
+            person_id=self.person_id,
+            person=None,
+            specimens=[sibling_a, sibling_b],
+        )
+        self.service.app.handle.side_effect = [
+            [self.identifier_issuer],
+            [existing_identifier],
+        ]
+        self.service.repository.read_fields.side_effect = [
+            [(sibling_a_id, self.person_id)],
+        ]
+        batch_result = self.upload_batch(
+            self.create_command_for_persons(person_for_upload).model_copy(
+                update={"verify_only": True}
+            )
+        )
+        person_result = batch_result.persons[0]
+        identifier_result = person_result.specimens[1].identifiers[0]
+
+        self.expectBatchFailed(batch_result)
+        assert identifier_result.is_reassigned is False
+        assert identifier_result.has_log_code("0561ecd7")
+
+    def test_specimen_chain_transitive_retry_reassigns_identifier(self) -> None:
+        """
+        LSP-3662: a two-hop retry-of-a-retry (A -> B -> C, identifier
+        currently on A) uploaded in a single batch must succeed by walking
+        the derived_from_specimen_id chain transitively, so that a chain
+        which fell behind by more than one retry before this fix shipped
+        self-heals without a manual data patch.
+        """
+        specimen_a_id = self.random_ids[3]
+        specimen_b_id = self.random_ids[4]
+        specimen_c_id = self.random_ids[5]
+        lab_identifier = self.create_identifier_for_upload(
+            identifier_issuer_id=self.identifier_issuer_id,
+            external_id="LAB-SAMPLE-001",
+        )
+        existing_identifier = self.get_specimen_identifier_from_for_upload(
+            lab_identifier, internal_id=specimen_a_id
+        )
+        specimen_a = self.create_specimen_for_upload(specimen_id=specimen_a_id)
+        specimen_b = self.create_specimen_for_upload(specimen_id=specimen_b_id)
+        specimen_b.derived_from_specimen_id = specimen_a_id
+        specimen_c = self.create_specimen_for_upload(
+            specimen_id=specimen_c_id, identifiers=[lab_identifier]
+        )
+        specimen_c.derived_from_specimen_id = specimen_b_id
+        person_for_upload = self.create_person_for_upload(
+            person_id=self.person_id,
+            person=None,
+            specimens=[specimen_a, specimen_b, specimen_c],
+        )
+        self.service.app.handle.side_effect = [
+            [self.identifier_issuer],
+            [existing_identifier],
+        ]
+        self.service.repository.read_fields.side_effect = [
+            [(specimen_a_id, self.person_id), (specimen_b_id, self.person_id)],
+        ]
+        batch_result = self.upload_batch(
+            self.create_command_for_persons(person_for_upload).model_copy(
+                update={"verify_only": True}
+            )
+        )
+        person_result = batch_result.persons[0]
+        identifier_result = person_result.specimens[2].identifiers[0]
+
+        self.expectBatchProcessed(batch_result)
+        assert identifier_result.is_reassigned is True
+        assert not identifier_result.has_log_code("0561ecd7")
 
     def test_8_2_2_new_identifier_new_specimen(self) -> None:
         """Test 8.2.2: New Identifier for new specimen - should succeed."""
