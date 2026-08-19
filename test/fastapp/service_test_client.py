@@ -135,7 +135,7 @@ class ServiceTestClient:
             connection_string = f"sqlite:///{str(sqlite_file)}"
             sa_repository = repository_class.create_sa_repository(
                 entities,
-                connection_string,
+                connection_string=connection_string,
                 create_all=True,
                 recreate_sqlite_file=True,
                 **kwargs,

@@ -164,6 +164,7 @@ SEQDB_APP_CFGS = get_app_cfgs(
     enum.ServiceType,
     enum.RepositoryType,
     TEST_TYPE,
+    log_any=False,
 )
 
 # ── Module-level env fixture ─────────────────────────────────────────────────

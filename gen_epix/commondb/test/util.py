@@ -1,6 +1,8 @@
 import logging
 from typing import Any
 
+from dynaconf import Dynaconf
+
 from gen_epix.commondb.domain.model import User
 from gen_epix.fastapp import App
 
@@ -31,7 +33,7 @@ def get_existing_root_user(cfg: dict, app: App) -> User:
     return user
 
 
-def create_root_user_from_claims(cfg: dict, app: App) -> User:
+def create_root_user_from_claims(cfg: dict | Dynaconf, app: App) -> User:
     user_manager = app.user_manager
     if user_manager is None:
         raise ValueError("User generator not found")
