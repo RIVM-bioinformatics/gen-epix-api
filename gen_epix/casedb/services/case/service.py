@@ -605,6 +605,7 @@ class CaseService(BaseCaseService):
         case_data_collections: dict[UUID, set[UUID]],
         access_data_collections: set[UUID],
     ) -> frozenset[UUID] | None:
+        """Calculate the set of DataCollection ids in which the case is stored/accessible"""
         case_id = case.id
         if case_id is None:
             return None
