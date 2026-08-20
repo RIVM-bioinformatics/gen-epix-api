@@ -530,16 +530,21 @@ class CaseService(BaseCaseService):
         filtered_cases: list[model.Case] = []
         count = 0
         is_max_results_exceeded = False
+        case_access_cache: dict[frozenset[UUID], set[UUID]] = {}
         for case in cases:
-            data_collection_ids = self._authorize_case(
-                case,
-                case_ids,
-                on_invalid_case_id,
-                user_id,
-                case_data_collections,
-                access_data_collections,
+            data_collection_ids = (
+                self._authorize_case(
+                    case,
+                    case_ids,
+                    on_invalid_case_id,
+                    user_id,
+                    case_data_collections,
+                    access_data_collections,
+                )
+                or frozenset()
             )
-            if data_collection_ids is None:
+
+            if not data_collection_ids:
                 # No access to case
                 continue
             count += case.count if case.count is not None else 1
@@ -558,6 +563,7 @@ class CaseService(BaseCaseService):
                     extra_access_col_ids,
                     right,
                     user_id,
+                    case_access_cache,
                 )
 
         return filtered_cases, is_max_results_exceeded
@@ -565,25 +571,29 @@ class CaseService(BaseCaseService):
     def _filter_case_content(
         self,
         case: model.Case,
-        data_collection_ids: set[UUID],
+        data_collection_ids: frozenset[UUID],
         data_collection_col_access: dict[UUID, model.CaseTypeAccessAbac],
         extra_access_col_ids: set[UUID] | None,
         right: enum.CaseRight,
         user_id: UUID,
+        case_access_cache: dict[frozenset[UUID], set[UUID]],
     ) -> None:
-        col_ids: set[UUID] = set()
-        for data_collection_id in data_collection_ids:
-            abac = data_collection_col_access.get(data_collection_id)
-            if abac:
-                col_ids.update(abac.read_col_ids)
-        if extra_access_col_ids:
-            col_ids.update(extra_access_col_ids)
+        if data_collection_ids in case_access_cache:
+            col_ids = case_access_cache[data_collection_ids]
+        else:
+            col_ids: set[UUID] = set()
+            for data_collection_id in data_collection_ids:
+                abac = data_collection_col_access.get(data_collection_id)
+                if abac:
+                    col_ids.update(abac.read_col_ids)
+            if extra_access_col_ids:
+                col_ids.update(extra_access_col_ids)
 
-        if not col_ids:
-            raise AssertionError(
-                f"User {user_id} has zero columns with {right.value} access to case {case.id}"
-            )
-
+            if not col_ids:
+                raise AssertionError(
+                    f"User {user_id} has zero columns with {right.value} access to case {case.id}"
+                )
+            case_access_cache[data_collection_ids] = col_ids
         case.content = {x: y for x, y in case.content.items() if x in col_ids}
 
     def _authorize_case(
@@ -594,7 +604,7 @@ class CaseService(BaseCaseService):
         user_id: UUID,
         case_data_collections: dict[UUID, set[UUID]],
         access_data_collections: set[UUID],
-    ) -> set[UUID] | None:
+    ) -> frozenset[UUID] | None:
         case_id = case.id
         if case_id is None:
             return None
@@ -608,7 +618,7 @@ class CaseService(BaseCaseService):
                 )
             return None
 
-        return data_collection_ids
+        return frozenset(data_collection_ids)
 
     def _retrieve_cases_by_ids_or_case_type_filter(
         self,
