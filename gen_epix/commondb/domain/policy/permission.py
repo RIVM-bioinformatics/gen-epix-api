@@ -79,6 +79,7 @@ class RoleGenerator:
             (command.UserInvitationCrudCommand, PermissionTypeSet.CRD),
             (command.ContactCrudCommand, PermissionTypeSet.CUD),
             (command.SiteCrudCommand, PermissionTypeSet.CUD),
+            (command.AnonymizeUserCommand, PermissionTypeSet.E),
             # abac
         },
         Role.ORG_USER: {

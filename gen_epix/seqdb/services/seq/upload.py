@@ -64,6 +64,7 @@ class SampleBatchUploader(BatchUploader):
         success = True
 
         success &= self.verify_parents_identifiers(cmd, batch_result, uow)
+        success &= self.verify_children_identifiers(cmd, batch_result, uow)
         success &= self.verify_parents(cmd, batch_result, uow)
         # Verify existence and consistency of child models as needed
         success &= _verify_sample_children(self, cmd, batch_result, uow)

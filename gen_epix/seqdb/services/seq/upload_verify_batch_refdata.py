@@ -59,11 +59,7 @@ def _verify_batch_refdata_allele_profiles(
     protocol_map = {x.id: x for x in protocols}
 
     # Retrieve locus sets
-    locus_set_ids = {
-        protocol_map[x.protocol_id].locus_set_id
-        for x in profiles
-        if x.locus_code_map_id is not None and x.locus_code_map_id != NULL_ID
-    }
+    locus_set_ids = {protocol_map[x.protocol_id].locus_set_id for x in profiles}
     locus_sets: list[model.LocusSet] = self.service.repository.crud(
         uow,
         user_id,
@@ -94,7 +90,7 @@ def _verify_batch_refdata_allele_profiles(
         x.id: set(x.code_map) for x in locus_code_map_map.values()
     }
     rev_locus_code_map_map = {
-        x.id: {y: x for x, y in x.code_map.items()} for x in locus_code_map_map.values()
+        x.id: {z: y for y, z in x.code_map.items()} for x in locus_code_map_map.values()
     }
     allele_ids: list[UUID | None]
 
@@ -344,7 +340,7 @@ def _verify_batch_refdata_mlva_profiles(
     if not profiles:
         return success
 
-    protocol_ids = {profile.protocol_id for profile in profiles}
+    protocol_ids = {x.protocol_id for x in profiles}
     protocols: list[model.Protocol] = self.service.repository.crud(
         uow,
         user_id,
@@ -352,14 +348,9 @@ def _verify_batch_refdata_mlva_profiles(
         CrudOperation.READ_SOME,
         obj_ids=list(protocol_ids),
     )
-    protocol_map = {protocol.id: protocol for protocol in protocols}
+    protocol_map = {x.id: x for x in protocols}
 
-    locus_set_ids = {
-        protocol_map[profile.protocol_id].locus_set_id
-        for profile in profiles
-        if profile.locus_code_map_id is not None
-        and profile.locus_code_map_id != NULL_ID
-    }
+    locus_set_ids = {protocol_map[x.protocol_id].locus_set_id for x in profiles}
     locus_sets: list[model.LocusSet] = self.service.repository.crud(
         uow,
         user_id,
@@ -367,13 +358,12 @@ def _verify_batch_refdata_mlva_profiles(
         CrudOperation.READ_SOME,
         obj_ids=list(locus_set_ids),
     )
-    locus_set_map = {locus_set.id: locus_set for locus_set in locus_sets}
+    locus_set_map = {x.id: x for x in locus_sets}
 
     locus_code_map_ids = {
-        profile.locus_code_map_id
-        for profile in profiles
-        if profile.locus_code_map_id is not None
-        and profile.locus_code_map_id != NULL_ID
+        x.locus_code_map_id
+        for x in profiles
+        if x.locus_code_map_id is not None and x.locus_code_map_id != NULL_ID
     }
     locus_code_maps: list[model.LocusCodeMap] = self.service.repository.crud(
         uow,
@@ -383,11 +373,7 @@ def _verify_batch_refdata_mlva_profiles(
         obj_ids=list(locus_code_map_ids),
     )
     rev_locus_code_map_map = {
-        locus_code_map.id: {
-            locus_id: locus_code
-            for locus_code, locus_id in locus_code_map.code_map.items()
-        }
-        for locus_code_map in locus_code_maps
+        x.id: {z: y for y, z in x.code_map.items()} for x in locus_code_maps
     }
 
     repeat_numbers: list[int | None]

@@ -1,37 +1,50 @@
 from gen_epix import fastapp as fastapp
 from gen_epix import filter as filter
 from gen_epix import util as util
+from gen_epix.casedb import services as casedb_services
+from gen_epix.casedb.domain import DOMAIN as CASEDB_DOMAIN
 from gen_epix.casedb.domain import command as casedb_command
-from gen_epix.casedb.domain import enum as enum
+from gen_epix.casedb.domain import enum as casedb_enum
 from gen_epix.casedb.domain import model as casedb_model
 from gen_epix.casedb.domain import policy as casedb_policy
 from gen_epix.casedb.domain import service as casedb_service
+from gen_epix.commondb.domain import enum as commondb_enum
 from gen_epix.commondb.domain import exc as exc
 from gen_epix.commondb.domain import literal as literal
+from gen_epix.omopdb.domain import DOMAIN as OMOPDB_DOMAIN
 from gen_epix.omopdb.domain import command as omopdb_command
 from gen_epix.omopdb.domain import enum as omopdb_enum
 from gen_epix.omopdb.domain import model as omopdb_model
 from gen_epix.omopdb.domain import policy as omopdb_policy
 from gen_epix.omopdb.domain import service as omopdb_service
+from gen_epix.seqdb.domain import DOMAIN as SEQDB_DOMAIN
 from gen_epix.seqdb.domain import command as seqdb_command
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.seqdb.domain import policy as seqdb_policy
 from gen_epix.seqdb.domain import service as seqdb_service
 
+# TODO: consider removing _policy since they need not necessarily be part of the public API
 __all__ = [
+    "CASEDB_DOMAIN",
     "casedb_command",
-    "enum",
+    "casedb_enum",
     "casedb_model",
     "casedb_policy",
     "casedb_service",
+    "casedb_services",
+    "commondb_enum",
+    "exc",
     "fastapp",
     "filter",
+    "literal",
+    "OMOPDB_DOMAIN",
     "omopdb_command",
     "omopdb_enum",
     "omopdb_model",
     "omopdb_policy",
     "omopdb_service",
+    "SEQDB_DOMAIN",
     "seqdb_command",
     "seqdb_enum",
     "seqdb_model",

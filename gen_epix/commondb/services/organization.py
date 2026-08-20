@@ -385,3 +385,37 @@ class OrganizationService(BaseOrganizationService):
             sites=sites,
             contacts=contacts,
         )
+
+    def anonymize_user(self, cmd: command.AnonymizeUserCommand) -> model.User:
+        """Forget user information."""
+        user, repository = self._get_user_and_repository(cmd)
+        assert isinstance(user, model.User)
+        if user.id == cmd.tgt_user_id:
+            raise exc.UnauthorizedAuthError(
+                "f3c1e2d0", "User may not anonymize themselves"
+            )
+
+        with repository.uow() as uow:
+            tgt_user: model.User = repository.crud(
+                uow,
+                user.id,
+                self.user_class,
+                CrudOperation.READ_ONE,
+                obj_ids=cmd.tgt_user_id,
+            )
+            # Set the key to the user_id and the rest to None
+            tgt_user.key = f"{cmd.tgt_user_id}"
+            tgt_user.name = None
+            tgt_user.email = None
+            tgt_user.description = None
+            tgt_user.is_active = False
+
+            anonymized_user: model.User = repository.crud(
+                uow,
+                user.id,
+                self.user_class,
+                CrudOperation.UPDATE_ONE,
+                objs=tgt_user,
+            )
+
+        return anonymized_user
