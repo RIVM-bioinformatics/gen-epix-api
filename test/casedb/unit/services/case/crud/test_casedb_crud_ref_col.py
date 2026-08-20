@@ -2,11 +2,10 @@
 
 from test.casedb.unit.services.case.base import BaseCrudTestCase
 from test.util.mock_compat import patch
-from typing import ClassVar
+from typing import Any, ClassVar, cast
 from uuid import UUID, uuid4
 
 import pytest
-from pydantic import ValidationError
 
 from gen_epix.casedb.domain import enum, exc, model
 from gen_epix.casedb.services.case.crud_ref_col import case_service_crud_ref_col
@@ -23,15 +22,16 @@ class BaseRefColTestCase(BaseCrudTestCase):
         *,
         ref_dim_id: UUID | None = None,
         col_type: enum.ColType = enum.ColType.TEXT,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> model.RefCol:
-        return model.RefCol(
-            id=self.ref_col_id,
-            ref_dim_id=ref_dim_id or self.ref_dim_id,
-            code="test.code",
-            col_type=col_type,
-            **kwargs,
-        )
+        payload: dict[str, Any] = {
+            "id": self.ref_col_id,
+            "ref_dim_id": ref_dim_id or self.ref_dim_id,
+            "code": "test.code",
+            "col_type": col_type,
+        }
+        payload.update(kwargs)
+        return model.RefCol.model_validate(payload)
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")
@@ -198,16 +198,18 @@ class TestRefColStateValidation:
                 col_type=col_type,
             )
 
-        valid = model.RefCol(
-            ref_dim_id=self.ref_dim_id,
-            code="test.code",
-            col_type=col_type,
-            **{field: uuid4()},
+        valid = model.RefCol.model_validate(
+            {
+                "ref_dim_id": self.ref_dim_id,
+                "code": "test.code",
+                "col_type": col_type,
+                **cast(dict[str, Any], {field: uuid4()}),
+            }
         )
         assert valid.col_type is col_type
 
     def test_regex_requires_regex_value(self) -> None:
-        with pytest.raises(ValidationError, match="requires regex"):
+        with pytest.raises(exc.InvalidArgumentsError, match="requires regex"):
             model.RefCol(
                 ref_dim_id=self.ref_dim_id,
                 code="test.code",
@@ -232,14 +234,16 @@ class TestRefColStateValidation:
     def test_schema_type_requires_one_schema_source(
         self, col_type: enum.ColType
     ) -> None:
-        with pytest.raises(ValidationError, match="requires schema"):
+        with pytest.raises(exc.InvalidArgumentsError, match="requires schema"):
             model.RefCol(
                 ref_dim_id=self.ref_dim_id,
                 code="test.code",
                 col_type=col_type,
             )
 
-        with pytest.raises(ValidationError, match="Only one"):
+        with pytest.raises(
+            exc.InvalidArgumentsError, match="only one of schema_definition"
+        ):
             model.RefCol(
                 ref_dim_id=self.ref_dim_id,
                 code="test.code",

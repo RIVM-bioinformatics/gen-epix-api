@@ -1,7 +1,8 @@
 import re
+from collections.abc import Callable
 from decimal import Decimal, InvalidOperation
 from itertools import combinations
-from typing import NoReturn
+from typing import NoReturn, cast
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, model
@@ -10,6 +11,7 @@ from gen_epix.casedb.domain.enum import (
     ColTypeSet,
     ConceptRelationType,
     RegionRelationType,
+    Unit,
 )
 from gen_epix.casedb.domain.model.case.upload import CaseBatchUploadResult
 from gen_epix.casedb.services.case.base import BaseCaseService
@@ -44,7 +46,7 @@ from gen_epix.util import map_paired_elements
 
 
 class CaseValidator:
-    N_DECIMALS = {
+    N_DECIMALS: dict[ColType, int] = {
         ColType.DECIMAL_0: 0,
         ColType.DECIMAL_1: 1,
         ColType.DECIMAL_2: 2,
@@ -54,7 +56,7 @@ class CaseValidator:
         ColType.DECIMAL_6: 6,
     }
 
-    TIME_MATCHERS = {
+    TIME_MATCHERS: dict[ColType, Callable] = {
         ColType.TIME_YEAR: lambda x: (
             x if x is None or TIME_YEAR_PATTERN.match(x) else NoReturn
         ),
@@ -71,8 +73,29 @@ class CaseValidator:
             x if x is None or TIME_DAY_PATTERN.match(x) else NoReturn
         ),
     }
-
-    COL_TYPE_TO_TIME_UNIT = {
+    UNIT_PAIR_MULTIPLIER_MAP: dict[tuple[Unit, Unit], float] = {
+        (Unit.YEAR, Unit.QUARTER): 4.0,
+        (Unit.YEAR, Unit.MONTH): 12.0,
+        (Unit.YEAR, Unit.WEEK): 365.25 / 7,
+        (Unit.YEAR, Unit.DAY): 365.25,
+        (Unit.QUARTER, Unit.YEAR): 1 / 3.0,
+        (Unit.QUARTER, Unit.MONTH): 3.0,
+        (Unit.QUARTER, Unit.WEEK): 365.25 / (4 * 7),
+        (Unit.QUARTER, Unit.DAY): 365.25 / 4,
+        (Unit.MONTH, Unit.YEAR): 1 / 12.0,
+        (Unit.MONTH, Unit.QUARTER): 1 / 3.0,
+        (Unit.MONTH, Unit.WEEK): 365.25 / (12 * 7),
+        (Unit.MONTH, Unit.DAY): 365.25 / 12,
+        (Unit.WEEK, Unit.YEAR): 7 / 365.25,
+        (Unit.WEEK, Unit.QUARTER): (4 * 7) / 365.25,
+        (Unit.WEEK, Unit.MONTH): (12 * 7) / 365.25,
+        (Unit.WEEK, Unit.DAY): 7.0,
+        (Unit.DAY, Unit.YEAR): 1 / 365.25,
+        (Unit.DAY, Unit.QUARTER): 4 / 365.25,
+        (Unit.DAY, Unit.MONTH): 12 / 365.25,
+        (Unit.DAY, Unit.WEEK): 1 / 7.0,
+    }
+    COL_TYPE_TO_TIME_UNIT: dict[ColType, TimeUnit] = {
         ColType.TIME_YEAR: TimeUnit.YEAR,
         ColType.TIME_QUARTER: TimeUnit.QUARTER,
         ColType.TIME_MONTH: TimeUnit.MONTH,
@@ -552,8 +575,18 @@ class CaseValidator:
             ref_col2 = self.complete_case_type.ref_cols[
                 self.complete_case_type.cols[col_pair[1]].ref_col_id
             ]
+            multiplier = (
+                1.0
+                if ref_col1.unit == ref_col2.unit
+                else self.UNIT_PAIR_MULTIPLIER_MAP.get(
+                    (ref_col1.unit, ref_col2.unit)  # type: ignore[arg-type]
+                )
+            )
+            if multiplier is None:
+                raise NotImplementedError(
+                    f"No multiplier found for unit pair ({ref_col1.unit}, {ref_col2.unit})"
+                )
 
-            # TODO: 3427 take into account RefCol.Unit
             # Only handle DECIMAL_XXX-INTERVAL and INTERVAL-INTERVAL pairs
             is_col1_decimal = ref_col1.col_type in ColTypeSet.NUMBER.value
             is_col2_interval = ref_col2.col_type == ColType.INTERVAL
@@ -567,6 +600,7 @@ class CaseValidator:
                     data_issues_list,
                     col_pair,
                     ref_col2,
+                    multiplier,
                 )
 
             # INTERVAL -> INTERVAL transformation using IntervalToIntervalTransformer
@@ -578,7 +612,9 @@ class CaseValidator:
                     col_pair,
                     ref_col1,
                     ref_col2,
+                    multiplier,
                 )
+            pass
 
     def _transform_decimal_to_interval(
         self,
@@ -587,6 +623,7 @@ class CaseValidator:
         data_issues_list: list[list[model.CaseDataIssue] | None],
         col_pair: tuple[UUID, UUID],
         col2: model.RefCol,
+        multiplier: float,
     ) -> None:
         """Process DECIMAL_XXX -> INTERVAL transformation."""
         # Check if we have an interval transformer for col2's concept set
@@ -612,7 +649,7 @@ class CaseValidator:
                 continue
 
             # Use the interval transformer with "value" field name
-            adapter = ObjectAdapter({"value": from_number})
+            adapter = ObjectAdapter({"value": from_number * multiplier})
             transformed_adapter = interval_transformer.transform(adapter)
             to_interval_id = transformed_adapter.get("value")
             if to_interval_id is None:
@@ -636,21 +673,22 @@ class CaseValidator:
         updated_contents: list[dict[UUID, str | None] | None],
         data_issues_list: list[list[model.CaseDataIssue] | None],
         col_pair: tuple[UUID, UUID],
-        col1: model.RefCol,
-        col2: model.RefCol,
+        ref_col1: model.RefCol,
+        ref_col2: model.RefCol,
+        multiplier: float,
     ) -> None:
         """Process INTERVAL -> INTERVAL transformation using IntervalToIntervalTransformer."""
         # Check if both columns have concept sets
-        if col1.concept_set_id is None or col2.concept_set_id is None:
+        if ref_col1.concept_set_id is None or ref_col2.concept_set_id is None:
             return
 
         # Skip if trying to map to the same concept set
-        if col1.concept_set_id == col2.concept_set_id:
+        if ref_col1.concept_set_id == ref_col2.concept_set_id:
             return
 
         # Get interval transformers for both concept sets
-        src_transformer = self.interval_transformers.get(col1.concept_set_id)
-        tgt_transformer = self.interval_transformers.get(col2.concept_set_id)
+        src_transformer = self.interval_transformers.get(ref_col1.concept_set_id)
+        tgt_transformer = self.interval_transformers.get(ref_col2.concept_set_id)
 
         if src_transformer is None or tgt_transformer is None:
             return
@@ -660,11 +698,19 @@ class CaseValidator:
             interval_to_interval_transformer = IntervalToIntervalTransformer(
                 src_field="interval_value",
                 src_interval_names=src_transformer._interval_names,
-                src_lower_bounds=src_transformer._lower_bounds,  # type: ignore[arg-type]
-                src_upper_bounds=src_transformer._upper_bounds,  # type: ignore[arg-type]
+                src_lower_bounds=[
+                    float(x) * multiplier for x in src_transformer._lower_bounds
+                ],
+                src_upper_bounds=[
+                    float(x) * multiplier for x in src_transformer._upper_bounds
+                ],
                 tgt_interval_names=tgt_transformer._interval_names,
-                tgt_lower_bounds=tgt_transformer._lower_bounds,  # type: ignore[arg-type]
-                tgt_upper_bounds=tgt_transformer._upper_bounds,  # type: ignore[arg-type]
+                tgt_lower_bounds=[
+                    float(x) * multiplier for x in tgt_transformer._lower_bounds
+                ],
+                tgt_upper_bounds=[
+                    float(x) * multiplier for x in tgt_transformer._upper_bounds
+                ],
                 src_lower_bound_is_inclusive=src_transformer._lower_bound_is_inclusive,
                 src_upper_bound_is_inclusive=src_transformer._upper_bound_is_inclusive,
                 tgt_lower_bound_is_inclusive=tgt_transformer._lower_bound_is_inclusive,
@@ -807,13 +853,9 @@ class CaseValidator:
         for concept_set_id, concept_ids in concept_set_concepts_map.items():
             self.concept_value_maps[concept_set_id] = (
                 {str(x).lower(): str(x) for x in concept_ids}
+                | {concepts[x].code.lower(): str(x) for x in concept_ids}
                 | {
-                    concepts[x].code.lower(): str(x)
-                    for x in concept_ids
-                    if concepts[x].code is not None
-                }
-                | {
-                    concepts[x].name.lower(): str(x)  # type: ignore[index]
+                    concepts[x].name.lower(): str(x)  # type: ignore[union-attr]
                     for x in concept_ids
                     if concepts[x].name is not None
                 }
@@ -836,13 +878,29 @@ class CaseValidator:
             interval_concepts = [
                 concepts[x] for x in concept_set_concepts_map[concept_set_id]
             ]
+            props = [x.props or {} for x in interval_concepts]
+            lower_bounds = [x.get("lb") for x in props]
+            upper_bounds = [x.get("ub") for x in props]
+            lower_bound_is_inclusive = [x.get("lb_in") for x in props]
+            upper_bound_is_inclusive = [x.get("ub_in") for x in props]
+            if any(x is None for x in lower_bounds + upper_bounds):
+                raise ValueError(
+                    f"Interval concept set {concept_set_id} has concepts with missing lb or ub properties"
+                )
+            if any(
+                x is None for x in lower_bound_is_inclusive + upper_bound_is_inclusive
+            ):
+                raise ValueError(
+                    f"Interval concept set {concept_set_id} has concepts with missing lb_in or ub_in properties"
+                )
             self.interval_transformers[concept_set_id] = IntervalTransformer(
                 "value",  # src_field should match the field name used in ObjectAdapter
                 [str(x.id) for x in interval_concepts],
-                [x.props["lb"] for x in interval_concepts],
-                [x.props["ub"] for x in interval_concepts],
-                lower_bound_is_inclusive=[x.props["lb_in"] for x in interval_concepts],
-                upper_bound_is_inclusive=[x.props["ub_in"] for x in interval_concepts],
+                lower_bounds,
+                upper_bounds,
+                lower_bound_is_inclusive=cast(list[bool], lower_bound_is_inclusive),
+                upper_bound_is_inclusive=cast(list[bool], upper_bound_is_inclusive),
+                on_no_match=OnException.SET_NONE,
             )
 
     def _init_region_metadata(self) -> None:

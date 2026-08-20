@@ -65,9 +65,13 @@ class ConceptSet(Model):
             )
         return self
 
-    @field_serializer("type", "unit", mode="plain")
-    def _serialize_type(self, value: enum.ConceptSetType | enum.Unit) -> str:
+    @field_serializer("type", mode="plain")
+    def _serialize_type(self, value: enum.ConceptSetType) -> str:
         return value.value
+
+    @field_serializer("unit", mode="plain")
+    def _serialize_unit(self, value: enum.Unit | None) -> str | None:
+        return None if value is None else value.value
 
 
 class Concept(Model):
@@ -99,11 +103,41 @@ class Concept(Model):
 
     @field_validator("props", mode="before")
     @classmethod
-    def _validate_props(cls, value: dict[str, Any]) -> dict[str, Any]:
-        if isinstance(value, str):
+    def _validate_props(
+        cls, props_value: dict[str, Any] | str | None
+    ) -> dict[str, Any] | None:
+        """
+        Validate the props field, which is None, or a JSON string or dict with optional
+        keys:
+        - lb: lower bound (float)
+        - ub: upper bound (float)
+        - lb_in: lower bound inclusive (bool)
+        - ub_in: upper bound inclusive (bool)
+        """
+        if props_value is None:
+            return None
+        if isinstance(props_value, str):
             # Assume json
-            return json.loads(value)
-        return value
+            props = json.loads(props_value)
+        else:
+            props = props_value
+        for key in ("lb", "ub"):
+            if key not in props:
+                continue
+            value = props[key]
+            if isinstance(value, (int, float)):
+                props[key] = float(value)
+                continue
+            raise ValueError(f"Property {key} must be a number.")
+        for key in ("lb_in", "ub_in"):
+            if key not in props:
+                continue
+            value = props[key]
+            if isinstance(value, (bool, int)):
+                props[key] = bool(value)
+                continue
+            raise ValueError(f"Property {key} must be a boolean.")
+        return props
 
     @field_serializer("props", mode="plain")
     def _serialize_props(self, value: dict[str, Any] | None) -> str | None:

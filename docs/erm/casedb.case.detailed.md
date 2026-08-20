@@ -148,6 +148,7 @@ erDiagram
         int rank
         string label
         enum col_type
+        enum unit
         UUID concept_set_id FK
         UUID region_set_id FK
         UUID genetic_distance_protocol_id FK

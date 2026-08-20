@@ -183,7 +183,7 @@ class ConceptSetTypeSet(Enum):
     )
     HAS_UNIT = frozenset(
         {
-            ConceptSetType.ORDINAL,
+            ConceptSetType.INTERVAL,
         }
     )
 
@@ -426,6 +426,8 @@ class Unit(StrEnum):
     DAY = "DAY"
     WEEK = "WEEK"
     MONTH = "MONTH"
+    QUARTER = "QUARTER"
     YEAR = "YEAR"
     BASE_PAIR = "BASE_PAIR"
     DOSE = "DOSE"
+    OTHER = "OTHER"

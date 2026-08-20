@@ -143,6 +143,7 @@ class TestModelCaseRefData:
                 "code": 8,
                 "col_type": "INTERVAL",
                 "unit": enum.Unit.YEAR,
+                "concept_set_id": uuid4(),
             }
         )
         dumped = ref_col.model_dump()

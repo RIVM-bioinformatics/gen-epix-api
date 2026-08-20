@@ -34,20 +34,25 @@ class TestModelCaseOpsData:
                 count=-1,
             )
 
-    def test_case_serializers_drop_none_and_stringify_ids(self) -> None:
+    def test_case_serializers_stringify_ids(self) -> None:
         cohort_id = uuid4()
+        cohort_id2 = uuid4()
         cohort_definition_id = uuid4()
         col_id = uuid4()
+        col_id2 = uuid4()
         case = Case(
             case_type_id=uuid4(),
             created_in_data_collection_id=uuid4(),
-            cohort={cohort_id: cohort_definition_id, uuid4(): None},
-            content={col_id: "value", uuid4(): None},
+            cohort={cohort_id: cohort_definition_id, cohort_id2: None},
+            content={col_id: "value", col_id2: None},
         )
 
         dumped = case.model_dump()
-        assert dumped["cohort"] == {str(cohort_id): str(cohort_definition_id)}
-        assert dumped["content"] == {str(col_id): "value"}
+        assert dumped["cohort"] == {
+            str(cohort_id): str(cohort_definition_id),
+            str(cohort_id2): None,
+        }
+        assert dumped["content"] == {str(col_id): "value", str(col_id2): None}
 
     def test_case_identifier_instantiation(self) -> None:
         case = Case(

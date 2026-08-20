@@ -224,6 +224,13 @@ class RefCol(Model):
             }
         ),
     )
+
+    IMMUTABLE_FIELDS: ClassVar[set[str]] = {
+        "ref_dim_id",
+        "col_type",
+        "unit",
+    }
+
     ref_dim_id: UUID = Field(description="The ID of the dimension. FOREIGN KEY")
     ref_dim: RefDim | None = Field(default=None, description="The dimension")
     code_suffix: str | None = Field(
@@ -410,8 +417,12 @@ class RefCol(Model):
             )
         return self
 
-    @field_serializer("col_type", "unit", mode="plain")
-    def _serialize_col_type(self, value: enum.ColType | enum.Unit | None) -> str | None:
+    @field_serializer("col_type", mode="plain")
+    def _serialize_col_type(self, value: enum.ColType) -> str:
+        return value.value
+
+    @field_serializer("unit", mode="plain")
+    def _serialize_unit(self, value: enum.Unit | None) -> str | None:
         return None if value is None else value.value
 
 

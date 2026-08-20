@@ -119,7 +119,7 @@ class BaseRetrieveCaseTestCase:
             code=None,
             case_type_id=self.case_type_id,
             created_in_data_collection_id=self.data_collection_id,
-            count=None,
+            count=1,
             case_date=case_date or datetime.now(timezone.utc),
             content=content,
         )
@@ -129,6 +129,7 @@ class BaseRetrieveCaseTestCase:
         col_id: UUID,
         ref_col_id: UUID,
         col_type: enum.ColType,
+        unit: enum.Unit | None = None,
         concept_set_id: UUID | None = None,
         region_set_id: UUID | None = None,
     ) -> tuple[model.Col, model.RefCol]:
@@ -141,12 +142,15 @@ class BaseRetrieveCaseTestCase:
             rank=0,
             label=None,
             col_type=col_type,
+            unit=(
+                enum.Unit.OTHER
+                if unit is None and col_type in enum.ColTypeSet.HAS_UNIT.value
+                else unit
+            ),
             concept_set_id=concept_set_id,
             concept_set=None,
             region_set_id=region_set_id,
             region_set=None,
-            protocol_id=None,
-            protocol=None,
             description=None,
             props={},
         )
