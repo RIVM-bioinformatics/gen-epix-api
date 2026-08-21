@@ -182,6 +182,7 @@ erDiagram
     Measurement }o--|| Concept : "measurement_source_concept_id"
     Measurement }o--|| Concept : "unit_source_concept_id"
     Measurement }o--|| Concept : "meas_event_field_concept_id"
+    Measurement }o--|| Specimen : "derived_from_specimen_id"
     Observation }o--|| Person : "person_id"
     Observation }o--|| Concept : "observation_concept_id"
     Observation }o--|| Concept : "observation_type_concept_id"

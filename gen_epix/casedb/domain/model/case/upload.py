@@ -1,9 +1,8 @@
-from typing import Any, ClassVar, Self
+from typing import ClassVar, Self
 from uuid import UUID
 
 from pydantic import (
     Field,
-    SerializerFunctionWrapHandler,
     computed_field,
     field_serializer,
     model_validator,
@@ -155,22 +154,6 @@ class CaseForUpload(ParentForUpload, IdentifiersMixin):
         default=None,
         description="The case model itself, if to be created or updated as a whole.",
     )
-
-    @field_serializer("case", mode="wrap")
-    def _serialize_case(
-        self, value: Case | None, handler: SerializerFunctionWrapHandler
-    ) -> Any:
-        # Case.content strips None entries on serialization (they mean "no
-        # value", not "delete"), which silently discards an upload's intent
-        # to delete a content key before it ever reaches the server. Patch
-        # the raw, unfiltered content back in for this upload-only wrapper.
-        serialized = handler(value)
-        if value is not None and serialized is not None:
-            serialized["content"] = {
-                str(col_id): content_value
-                for col_id, content_value in value.content.items()
-            }
-        return serialized
 
     # Children
     read_sets: list[ReadSetForUpload] | None = Field(

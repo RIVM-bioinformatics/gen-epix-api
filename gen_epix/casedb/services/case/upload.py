@@ -130,6 +130,10 @@ class CaseBatchUploader(BatchUploader):
                 # Set case content to validated content. Since the case is a reference
                 # shared with the original cmd, it will be updated there as well
                 case.content = case_result.validated_content
+            if case_result.is_new and case.content:
+                # For creates, None has no deletion semantics and must never be
+                # persisted as content value.
+                case.content = {x: y for x, y in case.content.items() if y is not None}
             if not self.is_null(case.id) and case.content:
                 # Case and its content will be updated and has to be validated again
                 cases_for_validation.append(case)
