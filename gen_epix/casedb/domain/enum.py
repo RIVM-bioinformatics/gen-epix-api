@@ -377,6 +377,21 @@ class ColTypeSet(Enum):
     )
 
 
+class ColConceptSetType(Enum):
+    NOMINAL = (ColType.NOMINAL, ConceptSetType.NOMINAL)
+    ORDINAL = (ColType.ORDINAL, ConceptSetType.ORDINAL)
+    INTERVAL = (ColType.INTERVAL, ConceptSetType.INTERVAL)
+    REGULAR_LANGUAGE = (ColType.REGULAR_LANGUAGE, ConceptSetType.REGULAR_LANGUAGE)
+    CONTEXT_FREE_GRAMMAR_JSON = (
+        ColType.CONTEXT_FREE_GRAMMAR_JSON,
+        ConceptSetType.CONTEXT_FREE_GRAMMAR_JSON,
+    )
+    CONTEXT_FREE_GRAMMAR_XML = (
+        ColType.CONTEXT_FREE_GRAMMAR_XML,
+        ConceptSetType.CONTEXT_FREE_GRAMMAR_XML,
+    )
+
+
 # !FIXME: make sure the data reflects these definitions or these definitions are changed accordingly
 class DimColTypeSet(Enum):
     TEXT = frozenset(

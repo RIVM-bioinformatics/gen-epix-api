@@ -17,6 +17,10 @@ from gen_epix.casedb.services.case.crud_common import (
 )
 from gen_epix.fastapp import CrudOperation
 
+_REF_COL_CONCEPT_SET_TYPE_MAP: dict[enum.ColType, enum.ConceptSetType] = {
+    x.value[0]: x.value[1] for x in enum.ColConceptSetType
+}
+
 
 def case_service_crud_ref_col(
     self: BaseCaseService, cmd: command.RefColCrudCommand
@@ -52,7 +56,7 @@ def case_service_crud_ref_col(
                 obj_ids=ref_dim_ids,
             )
             ref_dim_map: dict[UUID, model.RefDim] = {
-                x.id: x for x in ref_dims
+                cast(UUID, x.id): x for x in ref_dims
             }  # type: ignore[assignment]
 
             # Verify col_type corresponds to dim_type
@@ -74,8 +78,8 @@ def case_service_crud_ref_col(
                     ids=invalid_ref_col_ids,
                 )
 
-            # Verify that unit, if set, corresponds to ConceptSet unit
-            _verify_ref_col_concept_set_unit(self, cmd, ref_cols)
+            # Verify that type and unit, if set, corresponds to ConceptSet
+            _verify_ref_col_concept_set_type_and_unit(self, cmd, ref_cols)
 
         return self.crud(cmd)  # type: ignore[return-value]
 
@@ -110,35 +114,64 @@ def case_service_crud_ref_col(
     )
 
 
-def _verify_ref_col_concept_set_unit(
-    self, cmd: command.ConceptSetCrudCommand, ref_cols: list[model.RefCol]
+def _verify_ref_col_concept_set_type_and_unit(
+    self: BaseCaseService,
+    cmd: command.RefColCrudCommand,
+    ref_cols: list[model.RefCol],
 ) -> None:
-    units = {x.unit for x in ref_cols if x.unit is not None}
-    if units:
-        concept_set_ids = list(
-            {x.concept_set_id for x in ref_cols if x.concept_set_id is not None}
+    concept_set_ids = {
+        x.concept_set_id for x in ref_cols if x.concept_set_id is not None
+    }
+    if not concept_set_ids:
+        return
+    concept_sets: list[model.ConceptSet] = self.app.handle(
+        command.ConceptSetCrudCommand(
+            user=cmd.user,
+            operation=CrudOperation.READ_SOME,
+            obj_ids=list(concept_set_ids),
         )
-        concept_sets: list[model.ConceptSet] = self.app.handle(
-            command.ConceptSetCrudCommand(
-                user=cmd.user,
-                operation=CrudOperation.READ_SOME,
-                obj_ids=concept_set_ids,
-            )
+    )
+    concept_set_map: dict[UUID, model.ConceptSet] = {
+        cast(UUID, x.id): x for x in concept_sets
+    }
+    invalid_unit_ref_cols = [
+        x
+        for x in ref_cols
+        if x.unit is not None
+        and x.concept_set_id is not None
+        and concept_set_map[x.concept_set_id].unit != x.unit
+    ]
+    invalid_concept_set_type_ref_cols = [
+        x
+        for x in ref_cols
+        if x.concept_set_id is not None
+        and x.col_type is not None
+        and concept_set_map[x.concept_set_id].type
+        != _REF_COL_CONCEPT_SET_TYPE_MAP[x.col_type]
+    ]
+    messages = []
+    if invalid_unit_ref_cols:
+        messages.extend(
+            [
+                f"{x.id}/{x.unit.value}/{concept_set_map[x.concept_set_id].unit.value}"  # type: ignore[union-attr,index]
+                for x in invalid_unit_ref_cols
+            ]
         )
-        concept_set_map: dict[UUID, model.ConceptSet] = {
-            cast(UUID, x.id): x for x in concept_sets
-        }
-        invalid_ref_cols = [
-            x
-            for x in ref_cols
-            if x.unit is not None
-            and x.concept_set_id is not None
-            and concept_set_map[x.concept_set_id].unit != x.unit
-        ]
-        if invalid_ref_cols:
-            invalid_ref_col_ids = [x.id for x in invalid_ref_cols if x.id is not None]
-            raise exc.InvalidArgumentsError(
-                "f3ddee47",
-                "RefCol.unit must correspond to ConceptSet.unit",
-                ids=invalid_ref_col_ids,
-            )
+        raise exc.InvalidArgumentsError(
+            "f3ddee47",
+            "RefCol.unit does not correspond to ConceptSet.unit: " + ";".join(messages),
+            ids=[x.id for x in invalid_unit_ref_cols],
+        )
+    if invalid_concept_set_type_ref_cols:
+        messages.extend(
+            [
+                f"{x.id}/{x.col_type.value}/{concept_set_map[x.concept_set_id].type.value}"  # type: ignore[arg-type,index]
+                for x in invalid_concept_set_type_ref_cols
+            ]
+        )
+        raise exc.InvalidArgumentsError(
+            "f3ddee48",
+            "RefCol.col_type does not correspond to ConceptSet.type: "
+            + ";".join(messages),
+            ids=[x.id for x in invalid_concept_set_type_ref_cols],
+        )

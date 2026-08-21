@@ -1,7 +1,7 @@
 """Unit tests for RefCol CRUD service behavior and model state validation."""
 
 from test.casedb.unit.services.case.base import BaseCrudTestCase
-from test.util.mock_compat import patch
+from test.util.mock_compat import Mock, patch
 from typing import Any, ClassVar, cast
 from uuid import UUID, uuid4
 
@@ -134,6 +134,99 @@ class TestRefColCreateAndUpdate(BaseRefColTestCase):
             ),
             pytest.raises(exc.InvalidArgumentsError),
         ):
+            case_service_crud_ref_col(self.service, cmd)
+
+        self.service.crud.assert_not_called()
+
+    def test_create_with_matching_concept_set_type_and_unit_returns_crud_result(
+        self,
+    ) -> None:
+        concept_set_id = uuid4()
+        ref_col = self.create_ref_col(
+            col_type=enum.ColType.INTERVAL,
+            concept_set_id=concept_set_id,
+            unit=enum.Unit.YEAR,
+        )
+        ref_dim = model.RefDim(
+            id=self.ref_dim_id,
+            dim_type=enum.DimType.NUMBER,
+            code="test",
+            label="Test",
+        )
+        concept_set = model.ConceptSet(
+            id=concept_set_id,
+            code="concept.set",
+            name="Concept Set",
+            type=enum.ConceptSetType.INTERVAL,
+            unit=enum.Unit.YEAR,
+        )
+        cmd = self.create_crud_command(CrudOperation.CREATE_ONE, objs=[ref_col])
+        expected = [self.ref_col_id]
+        self.service.crud.return_value = expected
+        self.service.repository.crud.return_value = [ref_dim]
+        self.service.app = Mock()
+        self.service.app.handle.return_value = [concept_set]
+
+        retval = case_service_crud_ref_col(self.service, cmd)
+
+        assert retval == expected
+        self.service.app.handle.assert_called_once()
+        self.service.crud.assert_called_once_with(cmd)
+
+    def test_create_with_mismatched_concept_set_unit_raises(self) -> None:
+        concept_set_id = uuid4()
+        ref_col = self.create_ref_col(
+            col_type=enum.ColType.INTERVAL,
+            concept_set_id=concept_set_id,
+            unit=enum.Unit.DAY,
+        )
+        ref_dim = model.RefDim(
+            id=self.ref_dim_id,
+            dim_type=enum.DimType.NUMBER,
+            code="test",
+            label="Test",
+        )
+        concept_set = model.ConceptSet(
+            id=concept_set_id,
+            code="concept.set",
+            name="Concept Set",
+            type=enum.ConceptSetType.INTERVAL,
+            unit=enum.Unit.YEAR,
+        )
+        cmd = self.create_crud_command(CrudOperation.CREATE_ONE, objs=[ref_col])
+        self.service.repository.crud.return_value = [ref_dim]
+        self.service.app = Mock()
+        self.service.app.handle.return_value = [concept_set]
+
+        with pytest.raises(exc.InvalidArgumentsError, match="does not correspond"):
+            case_service_crud_ref_col(self.service, cmd)
+
+        self.service.crud.assert_not_called()
+
+    def test_create_with_mismatched_concept_set_type_raises(self) -> None:
+        concept_set_id = uuid4()
+        ref_col = self.create_ref_col(
+            col_type=enum.ColType.NOMINAL,
+            concept_set_id=concept_set_id,
+        )
+        ref_dim = model.RefDim(
+            id=self.ref_dim_id,
+            dim_type=enum.DimType.NUMBER,
+            code="test",
+            label="Test",
+        )
+        concept_set = model.ConceptSet(
+            id=concept_set_id,
+            code="concept.set",
+            name="Concept Set",
+            type=enum.ConceptSetType.ORDINAL,
+        )
+        cmd = self.create_crud_command(CrudOperation.CREATE_ONE, objs=[ref_col])
+        self.service.repository.crud.return_value = [ref_dim]
+        self.service.app = Mock()
+        self.service.app.handle.return_value = [concept_set]
+
+        with pytest.raises(exc.InvalidArgumentsError, match="does not correspond"):
             case_service_crud_ref_col(self.service, cmd)
 
         self.service.crud.assert_not_called()
