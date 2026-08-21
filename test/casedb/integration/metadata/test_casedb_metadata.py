@@ -31,6 +31,7 @@ SEQDB_APP_CFGS = get_app_cfgs(
     seqdb_enum.ServiceType,
     seqdb_enum.RepositoryType,
     TEST_TYPE,
+    log_any=False,
 )
 CASEDB_APP_CFGS = get_app_cfgs(
     AppType.CASEDB,
@@ -38,6 +39,7 @@ CASEDB_APP_CFGS = get_app_cfgs(
     enum.RepositoryType,
     TEST_TYPE,
     seqdb_app_cfgs=SEQDB_APP_CFGS,
+    log_any=False,
 )
 
 _PARAMS = [

@@ -11,12 +11,13 @@ from gen_epix.fastapp.enum import LogLevel
 
 
 class ModelNoId(fastapp.Model):
-    CREATE_METADATA_FIELDS: ClassVar[frozenset[str]] = frozenset(
+    METADATA_FIELDS: ClassVar[frozenset[str]] = frozenset(
         {"created_at", "modified_at", "modified_by"}
     )
-    UPDATE_METADATA_FIELDS: ClassVar[frozenset[str]] = frozenset(
-        {"modified_at", "modified_by"}
+    TIMESTAMP_METADATA_FIELDS: ClassVar[frozenset[str]] = frozenset(
+        {"created_at", "modified_at"}
     )
+    MODIFIED_BY_FIELD_NAME: ClassVar[str] = "modified_by"
 
     created_at: datetime | None = Field(
         default=None,
@@ -181,6 +182,18 @@ class BaseEtlResult(BaseModel):
     def has_log_code(self, code: str) -> bool:
         """Return True if any log item carries the given code."""
         return any(x.code == code for x in self.logs)
+
+    def get_errors(self) -> list[EtlLogItem]:
+        """Return a list of log items with ERROR severity."""
+        return [x for x in self.logs if x.severity == LogLevel.ERROR]
+
+    def get_warnings(self) -> list[EtlLogItem]:
+        """Return a list of log items with WARN severity."""
+        return [x for x in self.logs if x.severity == LogLevel.WARN]
+
+    def get_infos(self) -> list[EtlLogItem]:
+        """Return a list of log items with INFO severity."""
+        return [x for x in self.logs if x.severity == LogLevel.INFO]
 
 
 def validate_int_enum_value(

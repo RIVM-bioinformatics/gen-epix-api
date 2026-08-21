@@ -15,27 +15,16 @@ from gen_epix.fastapp.repositories.dict.repository import DictRepository
 from gen_epix.fastapp.repositories.sa.repository import SARepository
 
 
-def get_test_clients() -> list[Env]:
-    envs = [
-        Env.get_test_client(
-            DictRepository,
-            domain=DOMAIN,
-            test_type=EnumTestType.SERVICE_SERVICE_UNIT_REPOSITORY,
-        ),
-        Env.get_test_client(
-            SARepository,
-            domain=DOMAIN,
-            test_type=EnumTestType.SERVICE_SERVICE_UNIT_REPOSITORY,
-        ),
-    ]
-    return envs
+@pytest.fixture(params=[DictRepository, SARepository])
+def env(request: pytest.FixtureRequest) -> Env:
+    return Env.get_test_client(
+        request.param,
+        domain=DOMAIN,
+        test_type=EnumTestType.SERVICE_SERVICE_UNIT_REPOSITORY,
+    )
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-04")
-@pytest.mark.parametrize(
-    "env",
-    get_test_clients(),
-)
 class TestRepository:
 
     def test_to_from_sql(self, env: Env) -> None:

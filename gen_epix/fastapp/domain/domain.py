@@ -26,6 +26,7 @@ class Domain:
         CrudOperation.UPDATE_SOME: PermissionType.UPDATE,
         CrudOperation.DELETE_ONE: PermissionType.DELETE,
         CrudOperation.DELETE_SOME: PermissionType.DELETE,
+        CrudOperation.DELETE_ALL: PermissionType.DELETE,
         CrudOperation.EXISTS_ONE: PermissionType.READ,
         CrudOperation.EXISTS_SOME: PermissionType.READ,
     }
