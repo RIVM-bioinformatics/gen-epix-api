@@ -1,6 +1,4 @@
-"""
-Pipeline for chaining transformers with error tracking and recovery mechanisms.
-"""
+"""Pipeline for chaining transformers with error tracking and recovery mechanisms."""
 
 import logging
 import time
@@ -16,6 +14,7 @@ class Pipeline(StreamProcessor):
     """Chainable pipeline of transformers with comprehensive error handling."""
 
     def __init__(self, transformers: list[Transformer] | None = None):
+        """Initialize the pipeline with an optional ordered transformer list."""
         self.transformers = transformers or []
         self.error_handlers: dict[str, Callable[[TransformResult], None]] = {}
         self.logger = logging.getLogger(__name__)
@@ -94,6 +93,7 @@ class RetryTransformer(Transformer):
         backoff_factor: float = 1.0,
         name: str | None = None,
     ):
+        """Wrap a transformer and retry failed transformations with backoff."""
         super().__init__(name or f"Retry_{transformer.name}")
         self.transformer = transformer
         self.max_retries = max_retries
@@ -122,6 +122,7 @@ class FallbackTransformer(Transformer):
     def __init__(
         self, primary: Transformer, fallback: Transformer, name: str | None = None
     ):
+        """Store the primary transformer and fallback transformer."""
         super().__init__(name)
         self.primary = primary
         self.fallback = fallback

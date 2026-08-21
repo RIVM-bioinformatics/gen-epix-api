@@ -1,6 +1,4 @@
-"""
-Core transformer classes and interfaces.
-"""
+"""Core transformer classes and interfaces."""
 
 from abc import ABC, abstractmethod
 from typing import Any
@@ -13,6 +11,7 @@ class Transformer(ABC):
     """Base transformer class for single object transformations."""
 
     def __init__(self, name: str | None = None):
+        """Set the transformer name used in transformation results."""
         self.name = name or self.__class__.__name__
 
     @abstractmethod

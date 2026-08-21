@@ -16,7 +16,8 @@ Gen-EpiX is the backend of a genomic epidemiology platform. It includes four Fas
 | 03 | [Security](./03-Security.md) | Authentication pipeline, authorization model, trust boundaries, risk modes |
 | 04 | [API Surface](./04-API-Surface.md) | Endpoint families, contracts, CRUD generation, OpenAPI |
 | 05 | [Configuration & Runtime](./05-Configuration-and-Runtime.md) | Settings model, Dynaconf, IDP/repo modes, startup lifecycle, logging |
-| 06 | [Development Guide](./06-Development-Guide.md) | Local development, testing workflows, linting |
+| 06 | [Development Guide](./06-Development-Guide.md) | Local development, testing workflows, linting, docstring convention |
+| 06s | [Python Docstring Standard](./standards/google-python-style-guide-3.8-comments-and-docstrings.md) | Canonical Google-style Python docstring guidance |
 | 06a | [CLI Reference](./06a-CLI-Reference.md) | `run.py` full subcommand catalog and design notes |
 | 06b | [Mutation Testing](./06b-Mutation-Testing.md) | `pytest-gremlins` guide including WSL setup |
 | 07 | [CI/CD & Release](./07-CI-CD-and-Release.md) | CI pipeline, quality gates, release-please, containers |

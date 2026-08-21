@@ -1,6 +1,4 @@
-"""
-ISO time transformer implementation.
-"""
+"""ISO time transformer implementation."""
 
 import datetime
 from collections.abc import Callable
@@ -40,6 +38,7 @@ class IsoTimeTransformer(Transformer):
         tgt_field_name: str | None = None,
         name: str | None = None,
     ):
+        """Configure source and target ISO time units for one field."""
         super().__init__(name)
         self.field_name = field_name
         self.src_unit = src_unit
@@ -73,8 +72,9 @@ class IsoTimeTransformer(Transformer):
     @staticmethod
     def can_transform_time(from_time_unit: TimeUnit, to_time_unit: TimeUnit) -> bool:
         """
-        Returns True if a transformation from from_time_unit to to_time_unit is supported by IsoTimeTransformer.
-        Checks both EXACT_ONLY and LARGEST_OVERLAP strategies for completeness.
+        Return whether an ISO time-unit transformation is supported.
+
+        Both EXACT_ONLY and LARGEST_OVERLAP strategies are checked for completeness.
         """
         if from_time_unit == to_time_unit:
             return True

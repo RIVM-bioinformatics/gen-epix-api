@@ -1,3 +1,10 @@
+"""Public API for the transformation framework.
+
+This package exposes adapters, transformer base classes, pipeline helpers,
+streaming utilities, result types, registry helpers, and built-in transformer
+implementations for object and field transformations.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix.transform.adapter import DictAdapter as DictAdapter
 from gen_epix.transform.adapter import ObjectAdapter as ObjectAdapter

@@ -1,6 +1,4 @@
-"""
-Multi-field transformer implementation.
-"""
+"""Multi-field transformer implementation."""
 
 from collections.abc import Callable, Hashable
 from typing import Any
@@ -17,6 +15,7 @@ class MultiFieldTransformer(Transformer):
         field_mapping: dict[Hashable, Callable[[Any], Any]],
         name: str | None = None,
     ):
+        """Configure per-field transformation callables."""
         super().__init__(name)
         self.field_mapping = field_mapping
 

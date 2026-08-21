@@ -1,6 +1,4 @@
-"""
-Field transformer implementation.
-"""
+"""Field transformer implementation."""
 
 from collections.abc import Callable, Hashable
 from typing import Any
@@ -18,6 +16,7 @@ class FieldTransformer(Transformer):
         transform_fn: Callable[[Any], Any],
         name: str | None = None,
     ):
+        """Configure the field and callable used for in-place field updates."""
         super().__init__(name)
         self.field_name = field_name
         self.transform_fn = transform_fn

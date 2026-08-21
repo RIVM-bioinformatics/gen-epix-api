@@ -1,6 +1,4 @@
-"""
-Stream processing interfaces and base classes.
-"""
+"""Stream processing interfaces and base classes."""
 
 from abc import ABC, abstractmethod
 from collections.abc import Iterator

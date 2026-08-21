@@ -51,7 +51,8 @@ If a proposed change violates these, explicitly explain why.
 - Validate that changes maintain backward compatibility unless explicitly breaking.
 - There should be no linter issues (ruff/flake8 compliant).
 - Use type hints and docstrings for clarity.
-- For Python code, follow PEP 8 conventions and use the project's linting/formatting tools.
+- For Python code, follow PEP 8 conventions, the repo docstring standard at
+  `docs/standards/google-python-style-guide-3.8-comments-and-docstrings.md`, and the project's linting/formatting tools.
 - Use the full class name in lower snake case for variable names. Exception: use x, y, z as loop variable names inside comprehensions.
 
 **Testing requirements:**

@@ -1,6 +1,4 @@
-"""
-Transformer registry for managing and creating transformer instances.
-"""
+"""Transformer registry for managing and creating transformer instances."""
 
 from collections.abc import Callable
 from typing import Any, TypeVar
@@ -50,6 +48,7 @@ class Registry:
         """Decorator for registering transformer classes."""
 
         def wrapper(transformer_class: type[TransformerType]) -> type[TransformerType]:
+            """Register the decorated transformer class and return it unchanged."""
             cls.register(name, transformer_class)
             return transformer_class
 
@@ -64,6 +63,7 @@ class Registry:
         def wrapper(
             factory_fn: Callable[..., TransformerType],
         ) -> Callable[..., TransformerType]:
+            """Register the decorated factory function and return it unchanged."""
             cls.register_factory(name, factory_fn)
             return factory_fn
 

@@ -1,12 +1,13 @@
 """
 This module contains the `Linter` class which is used to enforce code quality in the
-`gen-epix` package. It uses tools like pylint and mypy as specified in the project's
-documentation.
+`gen-epix` package. It uses tools like pylint, ruff, and mypy as specified in
+the project's documentation.
 
 Note:
     This module is part of the `gen-epix` package.
 """
 
+import os
 import re
 import subprocess
 import sys
@@ -21,7 +22,7 @@ import xlsxwriter
 class Linter:
     """
     This class provides an interface to run linting tools like mypy,
-    pylint, isort, and black with predefined settings. The settings are stored
+    pylint, ruff, isort, and black with predefined settings. The settings are stored
     in the `presets` class attribute as a dictionary.
 
     Attributes:
@@ -62,6 +63,15 @@ class Linter:
             # "--disable=C0414",  # Ignore "useless-import-alias" warnings
             # "test/",
         ],
+        "ruff": [
+            "ruff",
+            "check",
+            "--select",
+            "D",
+            "--ignore",
+            "D212,D417",
+            "gen_epix/transform",
+        ],
         "isort": [
             "isort",
             "--check-only",
@@ -95,6 +105,12 @@ class Linter:
         if disable_codes:
             base_cmd += [f"--disable={','.join(sorted(disable_codes))}"]
         return self.run(base_cmd, file=file)
+
+    def run_ruff(self, file: Path | str) -> str:
+        cmd = self.PRESETS["ruff"]
+        if isinstance(file, str):
+            file = Path(file)
+        return self.run(cmd, file=file)
 
     def run_mypy(
         self, file: Path | str, filter_on_codes: set[str] | None = None
@@ -196,11 +212,13 @@ class Linter:
         if verbose:
             print(f"Running program: {cmd[0]}")
 
+        env = os.environ.copy()
+        env.setdefault("PYTHONIOENCODING", "utf-8")
         # Subprocess does not naturally inherit the conda environment,
         # so we need to activate it manually.
         cmd = [sys.executable, "-m"] + cmd
         try:
-            retval = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+            retval = subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=env)
             if verbose:
                 print(f"{cmd[2]} passed")
             output = retval.decode("utf-8", errors="replace")
@@ -241,7 +259,7 @@ class Linter:
                 file2 = None
             output = self.run(value, file=file)
             if file2:
-                file2.write_text(file.read_text(encoding="utf-8"), encoding="utf-8")
+                file2.write_text(output, encoding="utf-8")
             if output:
                 outputs.append(output)
         if file_basename:

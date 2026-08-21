@@ -1,6 +1,4 @@
-"""
-Validation transformer implementation.
-"""
+"""Validation transformer implementation."""
 
 from collections.abc import Callable
 
@@ -14,6 +12,7 @@ class ValidationTransformer(Transformer):
     def __init__(
         self, validator: Callable[[ObjectAdapter], bool], name: str | None = None
     ):
+        """Store the predicate used to accept or reject objects."""
         super().__init__(name)
         self.validator = validator
 

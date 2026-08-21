@@ -1,6 +1,4 @@
-"""
-Examples demonstrating usage of the transformer framework.
-"""
+"""Examples demonstrating usage of the transformer framework."""
 
 from pydantic import BaseModel
 
@@ -29,16 +27,17 @@ class StringUpperTransformer(Transformer):
     """Example custom transformer."""
 
     def __init__(self, name: str = "StringUpperTransformer"):
+        """Initialize the example transformer with a registry-visible name."""
         super().__init__(name)
 
     def transform(self, obj: ObjectAdapter) -> ObjectAdapter:
+        """Return the example object unchanged."""
         # This would need to implement the actual transformation
         return obj
 
 
 def example_usage() -> None:
     """Demonstrate basic usage of the transformer framework."""
-
     # Sample data - mix of dict and Pydantic models
     data = [
         {"name": "john doe", "age": 30, "email": "JOHN@EXAMPLE.COM"},
@@ -80,7 +79,6 @@ def example_usage() -> None:
 
 def example_conditional_transformation() -> None:
     """Demonstrate conditional transformation."""
-
     data = [
         {"name": "John", "country": "US", "phone": "1234567890"},
         {"name": "Alice", "country": "UK", "phone": "9876543210"},

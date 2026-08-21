@@ -79,6 +79,22 @@ and BEFORE/DURING/AFTER impact only when changed or when a risk exists.
 - Do not hardcode config paths.
 - Do not assume ports; verify them in config.
 
+## Python docstrings and comments
+
+- Follow PEP 257 as the baseline and Google-style sections when a docstring needs
+  structure.
+- Use triple double quotes for all Python docstrings.
+- Keep summary lines brief and end them with a period.
+- Use `Args:`, `Returns:`, `Yields:`, and `Raises:` only when they add meaning
+  beyond the type hints.
+- Do not restate obvious type information already present in annotations.
+- Keep comment and docstring lines at or under 88 characters; for Claude-specific
+  work, keep them at or under 89 characters including indentation and comment
+  markers.
+- Use the repo standard at
+  `docs/standards/google-python-style-guide-3.8-comments-and-docstrings.md` for
+  the full reference.
+
 ## Agent Workflow
 
 - Optimize for correctness first and token efficiency second.

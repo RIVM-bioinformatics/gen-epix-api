@@ -1,6 +1,4 @@
-"""
-Object adapters for providing unified interface across different object types.
-"""
+"""Object adapters for providing unified interface across different object types."""
 
 from collections.abc import Hashable, Iterator
 from typing import Any, Protocol, runtime_checkable
@@ -37,6 +35,7 @@ class DictAdapter:
     """Adapter for dictionary objects."""
 
     def __init__(self, obj: dict):
+        """Wrap a mutable mapping so transformers can read and update it."""
         self._obj = obj
 
     def get(self, key: Hashable, default: Any = None) -> Any:
@@ -60,6 +59,7 @@ class PydanticAdapter:
     """Adapter for Pydantic model objects."""
 
     def __init__(self, obj: BaseModel):
+        """Wrap a Pydantic model and expose fields through adapter methods."""
         self._obj = obj
 
     def get(self, key: Hashable, default: Any = None) -> Any:
@@ -83,6 +83,7 @@ class PolarsAdapter:
     """Adapter for Polars objects."""
 
     def __init__(self, obj: Any):
+        """Wrap a Polars-like object that exposes column access."""
         self._obj = obj
 
     def get(self, key: Hashable, default: Any = None) -> Any:
@@ -113,6 +114,7 @@ class ObjectAdapter:
     """
 
     def __init__(self, obj: dict | BaseModel | Any):
+        """Select the concrete adapter for the wrapped object."""
         self._obj = obj
         self._adapter = self._create_adapter(obj)
 

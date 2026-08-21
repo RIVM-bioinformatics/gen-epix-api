@@ -1,6 +1,4 @@
-"""
-Conditional transformer implementation.
-"""
+"""Conditional transformer implementation."""
 
 from collections.abc import Callable
 
@@ -17,6 +15,7 @@ class ConditionalTransformer(Transformer):
         transformer: Transformer,
         name: str | None = None,
     ):
+        """Store the predicate and transformer used for conditional execution."""
         super().__init__(name)
         self.condition = condition
         self.transformer = transformer

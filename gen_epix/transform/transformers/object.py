@@ -1,6 +1,4 @@
-"""
-Object transformer implementation.
-"""
+"""Object transformer implementation."""
 
 from collections.abc import Callable
 from typing import Any
@@ -13,6 +11,7 @@ class ObjectTransformer(Transformer):
     """Transform entire object using a custom function."""
 
     def __init__(self, transform_fn: Callable[[Any], Any], name: str | None = None):
+        """Store the callable that transforms the unwrapped object."""
         super().__init__(name)
         self.transform_fn = transform_fn
 

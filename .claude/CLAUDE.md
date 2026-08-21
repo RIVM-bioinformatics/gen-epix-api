@@ -13,7 +13,8 @@
 - Before providing a solution always look for possible ambiguities and ask the user to make a decision
 - When writing comments always make them fit in 89 columns
 **How to apply:** When writing or editing any comment or docstring, ensure no line exceeds 89 characters including the leading whitespace and comment marker.
-
+- Follow the repo-wide Python docstring standard in
+  [docs/standards/google-python-style-guide-3.8-comments-and-docstrings.md](../docs/standards/google-python-style-guide-3.8-comments-and-docstrings.md).
 
 ## Architecture and context
 

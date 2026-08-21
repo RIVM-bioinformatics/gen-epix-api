@@ -1,6 +1,4 @@
-"""
-Transform result types for tracking success/failure in transformation pipelines.
-"""
+"""Transform result types for tracking success/failure in transformation pipelines."""
 
 from dataclasses import dataclass
 from typing import Any

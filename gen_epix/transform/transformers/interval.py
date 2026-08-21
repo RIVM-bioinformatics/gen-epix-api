@@ -1,6 +1,4 @@
-"""
-Number to interval transformer implementation.
-"""
+"""Number to interval transformer implementation."""
 
 import math
 from collections.abc import Hashable
@@ -26,8 +24,9 @@ class IntervalDict(TypedDict):
 
 class IntervalTransformer(Transformer):
     """
-    Maps a number to an interval represented by a hashable, based on the
-    bounds of the interval.
+    Map a number to an interval represented by a hashable.
+
+    Interval selection is based on configured lower and upper bounds.
     """
 
     def __init__(
@@ -45,6 +44,24 @@ class IntervalTransformer(Transformer):
             OnException.RAISE, OnException.SET_NONE, OnException.SET_NO_RETURN
         ] = OnException.RAISE,
     ) -> None:
+        """
+        Build a numeric-to-interval mapping and validate interval boundaries.
+
+        Args:
+            src_field: Field read from each row-like object.
+            interval_names: Values written when the source value falls in an interval.
+            lower_bounds: Lower interval bounds; None represents negative infinity.
+            upper_bounds: Upper interval bounds; None represents positive infinity.
+            tgt_field: Field to write; defaults to the source field.
+            lower_bound_is_inclusive: Inclusivity for lower interval bounds.
+            upper_bound_is_inclusive: Inclusivity for upper interval bounds.
+            name: Optional transformer name used in result metadata.
+            on_no_match: Behavior when a source value cannot be mapped.
+
+        Raises:
+            ValueError: Raised when on_no_match is unsupported, a lower bound is
+                greater than its upper bound, or intervals overlap.
+        """
         if on_no_match not in (
             OnException.RAISE,
             OnException.SET_NONE,
@@ -118,6 +135,21 @@ class IntervalTransformer(Transformer):
             OnException.RAISE, OnException.SET_NONE, OnException.SET_NO_RETURN
         ],
     ) -> Hashable | None | NoReturn:
+        """
+        Map a single numeric value according to the configured intervals.
+
+        Args:
+            value: Source value to place into an interval.
+            on_no_match: Behavior when the value is not numeric or has no interval.
+
+        Returns:
+            The matching interval name, None, or NoReturn according to the configured
+            no-match behavior.
+
+        Raises:
+            ValueError: Raised when no interval matches and on_no_match is RAISE.
+            NotImplementedError: Raised for unsupported no-match behavior.
+        """
         if value is None:
             return None
         if not isinstance(value, (int, float, Decimal)):
@@ -201,6 +233,29 @@ class IntervalToIntervalTransformer(Transformer):
         ] = OnException.RAISE,
         transform_strategy: IntervalTransformStrategy = IntervalTransformStrategy.CONTAINS_ONLY,
     ) -> None:
+        """
+        Build an interval-to-interval mapping between two categorizations.
+
+        Args:
+            src_field: Field containing the source interval name.
+            src_interval_names: Source categorization interval names.
+            src_lower_bounds: Source lower bounds; None represents negative infinity.
+            src_upper_bounds: Source upper bounds; None represents positive infinity.
+            tgt_interval_names: Target categorization interval names.
+            tgt_lower_bounds: Target lower bounds; None represents negative infinity.
+            tgt_upper_bounds: Target upper bounds; None represents positive infinity.
+            tgt_field: Field to write; defaults to the source field.
+            src_lower_bound_is_inclusive: Inclusivity for source lower bounds.
+            src_upper_bound_is_inclusive: Inclusivity for source upper bounds.
+            tgt_lower_bound_is_inclusive: Inclusivity for target lower bounds.
+            tgt_upper_bound_is_inclusive: Inclusivity for target upper bounds.
+            name: Optional transformer name used in result metadata.
+            on_no_match: Behavior when a source interval cannot be mapped.
+            transform_strategy: Mapping strategy used when containment is not enough.
+
+        Raises:
+            ValueError: Raised when on_no_match is unsupported.
+        """
         if on_no_match not in (
             OnException.RAISE,
             OnException.SET_NONE,
