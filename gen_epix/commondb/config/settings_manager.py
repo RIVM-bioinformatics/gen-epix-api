@@ -15,7 +15,12 @@ class SettingsManager:
     DEFAULT_SETTINGS_FILES_ENVVAR = "SETTINGS_FILES"
     DEFAULT_ENVVAR_SEPARATOR = "__"
 
-    def __init__(self, prefix: str, lowercase_keys: bool = True):
+    def __init__(
+        self,
+        prefix: str,
+        settings_files: list[str] | None = None,
+        lowercase_keys: bool = True,
+    ):
         """
         Initialize settings manager.
         """
@@ -23,6 +28,7 @@ class SettingsManager:
         self.prefix_without_underscore = prefix.rstrip("_")  # necessary for dynaconf
         self._settings_cache: Dynaconf | None = None
         self.lowercase_keys = lowercase_keys
+        self._settings_files = settings_files
 
     def load_settings(
         self,
@@ -35,6 +41,15 @@ class SettingsManager:
         Load settings from one or more settings file(s) specified either as a
         list or if not, in an environment variable.
         """
+        if self._settings_files:
+            # Load only settings files into Dynaconf, ignoring environment variables
+            settings_files = self._settings_files
+            settings = Dynaconf(
+                settings_files=settings_files,
+                lowercase_read=self.lowercase_keys,
+                merge_enabled=True,
+            )
+            return settings
         settings_files_envvar = (
             settings_files_envvar or self.DEFAULT_SETTINGS_FILES_ENVVAR
         )
@@ -110,5 +125,7 @@ class SettingsManager:
         Parse settings file from comma separated string.
         """
         if content.startswith("[") and content.endswith("]"):
-            return json.loads(content)
-        return [x.strip() for x in content.split(",") if x.strip()]
+            retval: list[str] = json.loads(content)  # type: ignore[assignment]
+            return retval
+        retval = [x.strip() for x in content.split(",") if x.strip()]
+        return retval

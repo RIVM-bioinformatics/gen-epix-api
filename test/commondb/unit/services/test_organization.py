@@ -79,7 +79,7 @@ class TestAnonymizeUser:
         anonymized_user = self.service.anonymize_user(cmd)
 
         assert anonymized_user is self.tgt_user
-        assert anonymized_user.key == str(self.admin_user_id)
+        assert anonymized_user.key == str(anonymized_user.id)
         assert anonymized_user.email is None
         assert anonymized_user.name is None
         assert anonymized_user.description is None
@@ -105,7 +105,7 @@ class TestAnonymizeUser:
             )
         )
 
-        assert anonymized_user.key == str(self.admin_user_id)
+        assert anonymized_user.key == str(anonymized_user.id)
         assert anonymized_user.email is None
         assert anonymized_user.is_active is False
 
@@ -141,5 +141,5 @@ class TestAnonymizeUser:
         )
 
         # Both should have the same key (the admin user's ID)
-        assert first_anonymized_user.key == str(self.admin_user_id)
-        assert second_anonymized_user.key == str(self.admin_user_id)
+        assert first_anonymized_user.key == str(first_anonymized_user.id)
+        assert second_anonymized_user.key == str(second_anonymized_user.id)

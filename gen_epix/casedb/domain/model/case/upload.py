@@ -12,7 +12,7 @@ from pydantic import (
 from gen_epix.casedb.domain.model.case.case_data import Case, CaseIdentifier
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import Model
-from gen_epix.commondb.domain.model.base import Model
+from gen_epix.commondb.domain.model.base import EtlLogItem, Model
 from gen_epix.commondb.domain.model.organization import IdentifierForUpload
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
@@ -276,6 +276,20 @@ class CaseUploadResult(ParentUploadResult):
         default=None,
         description="The results of uploading the sequences associated with the case, if any were provided, in the same order as provided.",
     )
+
+    def get_errors(self) -> list[EtlLogItem]:
+        """Get all data issues that are errors."""
+        log_items = super().get_errors()
+        if self.identifiers:
+            for identifier_result in self.identifiers:
+                log_items.extend(identifier_result.get_errors())
+        if self.read_sets:
+            for read_set_result in self.read_sets:
+                log_items.extend(read_set_result.get_errors())
+        if self.seqs:
+            for seq_result in self.seqs:
+                log_items.extend(seq_result.get_errors())
+        return log_items
 
 
 class CaseBatchForUpload(BaseBatchForUpload):

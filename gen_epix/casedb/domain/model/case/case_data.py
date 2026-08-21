@@ -13,10 +13,14 @@ from gen_epix.casedb.domain.model.case.ref_data import (
     CaseSetCategory,
     CaseSetStatus,
     CaseType,
+    Col,
 )
+from gen_epix.casedb.domain.model.geo import Region
+from gen_epix.casedb.domain.model.ontology import Concept
 from gen_epix.commondb.domain.model import DataCollection, Model
 from gen_epix.commondb.domain.model.organization import BaseIdentifier
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
+from gen_epix.fastapp.domain.util import create_multi_links
 
 
 class Case(Model):
@@ -37,6 +41,13 @@ class Case(Model):
                     "created_in_data_collection",
                 ),
             }
+        ),
+        multi_links=create_multi_links(
+            [
+                ("content", Col),  # content dict keys
+                ("content", Region),  # some content dict values
+                ("content", Concept),  # some content dict values
+            ]
         ),
     )
     code: str | None = Field(
@@ -68,12 +79,18 @@ class Case(Model):
     )
 
     @field_serializer("cohort", mode="plain")
-    def _serialize_cohort(self, value: dict[UUID, UUID | None]) -> dict[str, str]:
-        return {str(x): str(y) for x, y in value.items() if y is not None}
+    def _serialize_cohort(
+        self, value: dict[UUID, UUID | None]
+    ) -> dict[str, str | None]:
+        return {str(x): None if y is None else str(y) for x, y in value.items()}
 
     @field_serializer("content", mode="plain")
-    def _serialize_content(self, value: dict[UUID, str | None]) -> dict[str, str]:
-        return {str(x): y for x, y in value.items() if y is not None}
+    def _serialize_content(
+        self, value: dict[UUID, str | None]
+    ) -> dict[str, str | None]:
+        return {
+            str(x): None if y is None else y for x, y in value.items() if y is not None
+        }
 
 
 class CaseIdentifier(BaseIdentifier):

@@ -4,6 +4,7 @@ from gen_epix.fastapp.domain import Domain as Domain
 from gen_epix.fastapp.domain import Entity as Entity
 from gen_epix.fastapp.domain import Key as Key
 from gen_epix.fastapp.domain import Link as Link
+from gen_epix.fastapp.domain import MultiLink as MultiLink
 from gen_epix.fastapp.enum import AuthProtocol as AuthProtocol
 from gen_epix.fastapp.enum import CrudEndpointType as CrudEndpointType
 from gen_epix.fastapp.enum import CrudOperation as CrudOperation

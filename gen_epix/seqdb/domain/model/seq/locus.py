@@ -14,6 +14,7 @@ from pydantic import (
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
+from gen_epix.fastapp.domain.util import create_multi_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.seq.base import BaseSeq
 
@@ -93,6 +94,7 @@ class LocusSet(Model):
         table_name="locus_set",
         persistable=True,
         keys=create_keys({1: "code", 2: "name"}),
+        multi_links=create_multi_links([("locus_ids", Locus)]),
     )
     code: str = Field(description="The code of the locus set.", max_length=255)
     name: str = Field(description="The name of the locus set.", max_length=255)
@@ -136,6 +138,7 @@ class LocusCodeMap(Model):
         table_name="locus_code_map",
         persistable=True,
         keys=create_keys({1: ("code")}),
+        multi_links=create_multi_links([("code_map", Locus)]),
     )
     code: str = Field(
         description="The naming scheme used for the locus codes.",

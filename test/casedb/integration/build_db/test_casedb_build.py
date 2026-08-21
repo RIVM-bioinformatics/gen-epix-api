@@ -25,6 +25,7 @@ SEQDB_APP_CFGS = get_app_cfgs(
     seqdb_enum.ServiceType,
     seqdb_enum.RepositoryType,
     TEST_TYPE,
+    log_any=VERBOSE,
 )
 CASEDB_APP_CFGS = get_app_cfgs(
     AppType.CASEDB,
@@ -32,6 +33,7 @@ CASEDB_APP_CFGS = get_app_cfgs(
     enum.RepositoryType,
     TEST_TYPE,
     seqdb_app_cfgs=SEQDB_APP_CFGS,
+    log_any=VERBOSE,
 )
 
 
@@ -74,7 +76,7 @@ _PARAMS = [
     params=_PARAMS,
     ids=[p.id for p in _PARAMS],
 )
-def get_test_client(request) -> Env:
+def get_test_client(request: pytest.FixtureRequest) -> Env:
     params: BuildDbParams = request.param
     cfg_key = f"{TEST_TYPE.value}__{params.dev_repository_config.value}"
     app_cfg = copy.copy(CASEDB_APP_CFGS[cfg_key])
