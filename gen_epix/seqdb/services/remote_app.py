@@ -1,24 +1,20 @@
-import json
+import base64
 from collections.abc import Iterable
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
-import httpx
-
 from gen_epix.commondb.services.remote_app import CommondbRemoteApp
-from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.fastapp.enum import CrudOperation, HttpMethod
 from gen_epix.fastapp.model import Command
 from gen_epix.seqdb.api import (
     CalculatePhylogeneticTreeRequestBody,
-    RetrieveBestSeqClassificationPerSampleRequestBody,
-    RetrieveBestSeqPerSampleRequestBody,
-    RetrieveBestSeqProfilePerSampleRequestBody,
     RetrieveSampleIdentifiersByIdsRequestBody,
     RetrieveSamplesByIdsRequestBody,
     RetrieveSeqFastaRequestBody,
     RetrieveSimilarProfilesRequestBody,
 )
+from gen_epix.seqdb.api.file import CreateFileRequestBody
 from gen_epix.seqdb.domain import DOMAIN, command, enum, model
 
 
@@ -122,267 +118,127 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.CalculatePhylogeneticTreeCommand,
     ) -> model.PhylogeneticTree | None:
-        headers = self.get_headers(cmd)
-        route = self.get_route(cmd)
-
         request_body = CalculatePhylogeneticTreeRequestBody(
             protocol_id=cmd.protocol_id,
             tree_algorithm=cmd.tree_algorithm,
-            profile_ids=cmd.seq_profile_ids,
-            leaf_codes=cmd.leaf_names,
+            seq_profile_ids=cmd.seq_profile_ids,
+            leaf_names=cmd.leaf_names,
         )
-
-        with self.get_client(cmd) as client:
-            response = client.post(
-                route,
-                json=json.loads(request_body.model_dump_json()),
-                headers=headers,
-            )
-            response.raise_for_status()
-            data = response.json()
-        if not data:
+        response_body = self.request(cmd, HttpMethod.POST, model=request_body)
+        if not response_body:
             return None
-        return model.PhylogeneticTree(**data)
+        return model.PhylogeneticTree(**response_body)
 
     def retrieve_genetic_sequence_fasta_by_id(
         self,
         cmd: command.RetrieveSeqFastaCommand,
     ) -> Iterable[str]:
-        headers = self.get_headers(cmd)
-
-        route = self.get_route(cmd)
-
         request_body = RetrieveSeqFastaRequestBody(
             seq_ids=cmd.seq_ids,
             file_name="dummy.fasta",
         )
-
-        def _iter_fasta_generator() -> Iterable[str]:
-            with self.get_client(cmd) as client:
-                with client.stream(
-                    "POST",
-                    route,
-                    json=json.loads(request_body.model_dump_json()),
-                    headers=headers,
-                ) as resp:
-                    resp.raise_for_status()
-                    for chunk in resp.iter_bytes():
-                        yield chunk.decode()
-
-        return _iter_fasta_generator()
+        return self.stream(cmd, HttpMethod.POST, model=request_body)
 
     def create_file(
         self,
         cmd: command.CreateFileCommand,
     ) -> UUID:
-        headers = self.get_headers(cmd)
-        route = self.get_route(cmd)
-
-        request_body: dict[str, Any] = {
-            "user": cmd.user,
-            "file_content": cmd.file.content,
-            "file_format": cmd.format.value,
-            "file_compression": cmd.compression.value,
-        }
-
-        with httpx.Client(verify=self.ssl_context) as client:
-            response = client.post(
-                route,
-                json=request_body,
-                headers=headers,
-            )
-            response.raise_for_status()
-            data = response.json()
-        return UUID(data)
+        request_body: CreateFileRequestBody = CreateFileRequestBody(
+            content=base64.b64encode(cmd.file.content).decode("utf-8"),
+            format=cmd.format,
+            compression=cmd.compression,
+        )
+        response_body: str = self.request(  # type: ignore[assignment]
+            cmd, HttpMethod.POST, json_body=request_body
+        )
+        return UUID(response_body)
 
     def retrieve_similar_profiles(
         self,
         cmd: command.RetrieveSimilarProfilesCommand,
     ) -> list[UUID]:
-        headers = self.get_headers(cmd)
-        route = self.get_route(cmd)
-
         request_body = RetrieveSimilarProfilesRequestBody(
             protocol_id=cmd.protocol_id,
             profile_ids=cmd.profile_ids,
             max_distance=cmd.max_distance,
         )
-
-        with self.get_client(cmd) as client:
-            response = client.post(
-                route,
-                json=json.loads(request_body.model_dump_json()),
-                headers=headers,
-            )
-            response.raise_for_status()
-            data = response.json()
-        return [UUID(profile_id) for profile_id in data]
+        response_body: list[str] = self.request(cmd, HttpMethod.POST, model=request_body)  # type: ignore[assignment]
+        return [UUID(x) for x in response_body]
 
     def retrieve_samples_by_id(
         self,
         cmd: command.RetrieveSamplesByIdCommand,
     ) -> list[model.FullSample]:
-        headers = self.get_headers(cmd)
-        route = self.get_route(cmd)
         request_body = RetrieveSamplesByIdsRequestBody(sample_ids=cmd.sample_ids)
-        with self.get_client(cmd) as client:
-            response = client.post(
-                route,
-                json=json.loads(request_body.model_dump_json()),
-                headers=headers,
-            )
-            response.raise_for_status()
-            data = response.json()
-        return [model.FullSample(**item) for item in data]
+        response_body: list[dict[str, Any]] = self.request(cmd, HttpMethod.POST, model=request_body)  # type: ignore[assignment]
+        return [model.FullSample(**x) for x in response_body]
 
     def retrieve_sample_identifiers_by_id(
         self,
         cmd: command.RetrieveSampleIdentifiersByIdCommand,
     ) -> list[model.SampleIdentifier]:
-        headers = self.get_headers(cmd)
-        route = self.get_route(cmd)
         request_body = RetrieveSampleIdentifiersByIdsRequestBody(
             sample_ids=cmd.sample_ids
         )
-        with self.get_client(cmd) as client:
-            response = client.post(
-                route,
-                json=json.loads(request_body.model_dump_json()),
-                headers=headers,
-            )
-            response.raise_for_status()
-            data = response.json()
-        return [model.SampleIdentifier(**item) for item in data]
+        response_body: list[dict[str, Any]] = self.request(cmd, HttpMethod.POST, model=request_body)  # type: ignore[assignment]
+        return [model.SampleIdentifier(**x) for x in response_body]
 
     def retrieve_samples_by_query(
         self,
         cmd: command.RetrieveSamplesByQueryCommand,
     ) -> model.SampleQueryResult:
-        headers = self.get_headers(cmd)
-        route = self.get_route(cmd)
-        request_body = cmd.sample_query
-        with self.get_client(cmd) as client:
-            response = client.post(
-                route,
-                json=json.loads(request_body.model_dump_json()),
-                headers=headers,
-            )
-            response.raise_for_status()
-            data = response.json()
-        return model.SampleQueryResult(**data)
+        response_body: dict[str, Any] = self.request(cmd, HttpMethod.POST, model=cmd.sample_query)  # type: ignore[assignment]
+        return model.SampleQueryResult(**response_body)
 
     def update_seq_distances(
         self,
         cmd: command.UpdateSeqDistancesCommand,
     ) -> list[model.CalculateSeqDistancesResult]:
-        headers = self.get_headers(cmd)
-        route = self.get_route(cmd)
-        with self.get_client(cmd) as client:
-            response = client.post(
-                route,
-                json=json.loads(cmd.model_dump_json()),
-                headers=headers,
-            )
-            response.raise_for_status()
-            data = response.json()
-        return [model.CalculateSeqDistancesResult(**item) for item in data]
+        response_body: list[dict[str, Any]] = self.request(cmd, HttpMethod.POST, model=cmd, exclude={"user"})  # type: ignore[assignment]
+        return [model.CalculateSeqDistancesResult(**x) for x in response_body]
 
     def retrieve_seq_distance_protocol_ids(self) -> list[UUID]:
         protocols: list[model.Protocol] = self.handle(
             command.ProtocolCrudCommand(operation=CrudOperation.READ_ALL)
         )
         return [
-            p.id
-            for p in protocols
-            if p.protocol_type == enum.ProtocolType.SEQ_DISTANCE and p.id is not None
+            cast(UUID, x.id)
+            for x in protocols
+            if x.protocol_type == enum.ProtocolType.SEQ_DISTANCE
         ]
 
     def upload_samples(
         self,
         cmd: command.UploadSamplesCommand,
     ) -> model.SampleBatchUploadResult:
-        headers = self.get_headers(cmd)
-        route = self.get_route(cmd)
-
-        request_body = cmd
-
-        with self.get_client(cmd) as client:
-            response = client.post(
-                route,
-                json=json.loads(request_body.model_dump_json()),
-                headers=headers,
-            )
-            response.raise_for_status()
-            data = response.json()
-        return model.SampleBatchUploadResult(**data)
+        response_body: dict[str, Any] = self.request(cmd, HttpMethod.POST, model=cmd, exclude={"user"})  # type: ignore[assignment]
+        return model.SampleBatchUploadResult(**response_body)
 
     def retrieve_best_seq_per_sample(
         self,
         cmd: command.RetrieveBestSeqPerSampleCommand,
     ) -> dict[UUID, UUID]:
-        headers = self.get_headers(cmd)
-        route = self.get_route(cmd)
-
-        request_body = RetrieveBestSeqPerSampleRequestBody(
-            **cmd.model_dump(),
-        )
-
-        with self.get_client(cmd) as client:
-            response = client.post(
-                route,
-                json=json.loads(request_body.model_dump_json()),
-                headers=headers,
-            )
-            response.raise_for_status()
-            data = response.json()
-        return {UUID(k): UUID(v) for k, v in data.items()}
+        response_body: dict[str, str] = self.request(cmd, HttpMethod.POST, model=cmd, exclude={"user"})  # type: ignore[assignment]
+        return {UUID(x): UUID(y) for x, y in response_body.items()}
 
     def retrieve_best_seq_profile_per_sample(
         self,
         cmd: command.RetrieveBestSeqProfilePerSampleCommand,
     ) -> dict[UUID, UUID]:
-        headers = self.get_headers(cmd)
-        route = self.get_route(cmd)
-
-        request_body = RetrieveBestSeqProfilePerSampleRequestBody(
-            **cmd.model_dump(),
-        )
-
-        with self.get_client(cmd) as client:
-            response = client.post(
-                route,
-                json=json.loads(request_body.model_dump_json()),
-                headers=headers,
-            )
-            response.raise_for_status()
-            data = response.json()
-        return {UUID(k): UUID(v) for k, v in data.items()}
+        response_body: dict[str, str] = self.request(cmd, HttpMethod.POST, model=cmd, exclude={"user"})  # type: ignore[assignment]
+        return {UUID(x): UUID(y) for x, y in response_body.items()}
 
     def retrieve_best_seq_classification_per_sample(
         self,
         cmd: command.RetrieveBestSeqClassificationPerSampleCommand,
     ) -> dict[UUID, UUID]:
-        headers = self.get_headers(cmd)
-        route = self.get_route(cmd)
-
-        request_body = RetrieveBestSeqClassificationPerSampleRequestBody(
-            **cmd.model_dump(),
-        )
-
-        with self.get_client(cmd) as client:
-            response = client.post(
-                route,
-                json=json.loads(request_body.model_dump_json()),
-                headers=headers,
-            )
-            response.raise_for_status()
-            data = response.json()
-        return {UUID(k): UUID(v) for k, v in data.items()}
+        response_body: dict[str, str] = self.request(cmd, HttpMethod.POST, model=cmd, exclude={"user"})  # type: ignore[assignment]
+        return {UUID(x): UUID(y) for x, y in response_body.items()}
 
     def retrieve_seq_distance_last_modified(
         self, cmd: command.RetrieveSeqDistanceLastModifiedCommand
     ) -> datetime | None:
-        data = self._call_json(
-            cmd, "POST", route=f"{self.get_route(cmd)}/{cmd.protocol_id}"
+        response_body: str = self.request(  # type: ignore[assignment]
+            cmd, HttpMethod.POST, route=f"{self.get_route(cmd)}/{cmd.protocol_id}"
         )
-        return datetime.fromisoformat(data) if data else None
+        return datetime.fromisoformat(response_body) if response_body else None

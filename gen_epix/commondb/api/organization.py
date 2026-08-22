@@ -21,34 +21,54 @@ CommandName = Enum("CommandName", {x: x for x in DOMAIN.command_names})  # type:
 
 
 class ApiPermission(PydanticBaseModel, frozen=True):
+    """
+    Represents a permission in the API layer, derived from the domain Permission model.
+    """
+
     command_name: CommandName = (  # pyright: ignore[reportInvalidTypeForm]
         copy_model_field(Permission, "command_name")
     )
     permission_type: PermissionType = copy_model_field(Permission, "permission_type")
 
 
-class UserInvitationRequestBody(PydanticBaseModel):
+class InviteUserRequestBody(PydanticBaseModel):
+    """"""
+
+    __doc__ = command.InviteUserCommand.__doc__
     key: str | None = copy_model_field(model.UserInvitation, "key")
     description: str | None = copy_model_field(model.UserInvitation, "description")
-    roles: set[str] = copy_model_field(model.UserInvitation, "roles")
+    roles: set[str] = copy_model_field(
+        model.UserInvitation, "roles", max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH
+    )
     organization_id: UUID = copy_model_field(model.UserInvitation, "organization_id")
 
 
-class UpdateOrganizationSetOrganizationRequestBody(PydanticBaseModel):
-    organization_set_members: list[model.OrganizationSetMember] = Field(
-        description="The updated set of organization set members, replacing the previous set",
+class OrganizationSetOrganizationUpdateAssociationRequestBody(PydanticBaseModel):
+    """"""
+
+    __doc__ = command.OrganizationSetOrganizationUpdateAssociationCommand.__doc__
+    organization_set_members: list[model.OrganizationSetMember] = copy_model_field(
+        command.OrganizationSetOrganizationUpdateAssociationCommand,
+        "association_objs",
         max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
     )
 
 
-class UpdateDataCollectionSetDataCollectionRequestBody(PydanticBaseModel):
-    data_collection_set_members: list[model.DataCollectionSetMember] = Field(
-        description="The updated set of data collection set members, replacing the previous set",
+class DataCollectionSetDataCollectionUpdateAssociationRequestBody(PydanticBaseModel):
+    """"""
+
+    __doc__ = command.DataCollectionSetDataCollectionUpdateAssociationCommand.__doc__
+    data_collection_set_members: list[model.DataCollectionSetMember] = copy_model_field(
+        command.DataCollectionSetDataCollectionUpdateAssociationCommand,
+        "association_objs",
         max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
     )
 
 
 class UpdateUserRequestBody(PydanticBaseModel):
+    """"""
+
+    __doc__ = command.UpdateUserCommand.__doc__
     is_active: bool | None = Field(
         description="The updated active status of the user. Not updated if not provided."
     )
@@ -62,23 +82,32 @@ class UpdateUserRequestBody(PydanticBaseModel):
 
 
 class UpdateUserOwnOrganizationRequestBody(PydanticBaseModel):
-    organization_id: UUID = Field(
-        description="The ID of the organization to update the user to"
-    )
+    """"""
+
+    __doc__ = command.UpdateUserOwnOrganizationCommand.__doc__
+    organization_id: UUID = copy_model_field(model.User, "organization_id")
 
 
-class UpdateOrganizationIdentifierIssuerLinksRequestBody(PydanticBaseModel):
+class OrganizationIdentifierIssuerUpdateAssociationRequestBody(PydanticBaseModel):
+    """"""
+
+    __doc__ = command.OrganizationIdentifierIssuerUpdateAssociationCommand.__doc__
     organization_identifier_issuer_links: list[
         model.OrganizationIdentifierIssuerLink
-    ] = Field(
-        description="The identifier issuers that the organization is linked to.",
+    ] = copy_model_field(
+        command.OrganizationIdentifierIssuerUpdateAssociationCommand,
+        "association_objs",
         max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
     )
 
 
 class RetrieveOrganizationContactsRequestBody(PydanticBaseModel):
-    organization_id: UUID = Field(
-        description="The ID of the organization to retrieve contacts for."
+    """"""
+
+    __doc__ = command.RetrieveOrganizationContactsCommand.__doc__
+    organization_id: UUID = copy_model_field(
+        command.RetrieveOrganizationContactsCommand,
+        "organization_id",
     )
 
 
@@ -117,10 +146,10 @@ def create_organization_endpoints(
         description=invite_user_command_class.__doc__,
     )
     async def invite_user(
-        user: registered_user_dependency, user_invitation: UserInvitationRequestBody  # type: ignore[valid-type] # Dynamic type annotation
-    ) -> user_invitation_class:  # type: ignore
+        user: registered_user_dependency, user_invitation: InviteUserRequestBody  # type: ignore[valid-type]
+    ) -> user_invitation_class:  # type: ignore[valid-type]
         try:
-            retval: user_invitation_class = app.handle(  # type: ignore[valid-type] # Dynamic type annotation
+            retval: user_invitation_class = app.handle(  # type: ignore[valid-type]
                 invite_user_command_class(
                     user=user,
                     key=(
@@ -142,7 +171,7 @@ def create_organization_endpoints(
         description=retrieve_invite_user_constraints_command_class.__doc__,
     )
     async def invite_user__constraints(
-        user: registered_user_dependency,
+        user: registered_user_dependency,  # type: ignore[valid-type]
     ) -> model.UserInvitationConstraints:
         return cast(
             model.UserInvitationConstraints,
@@ -162,14 +191,14 @@ def create_organization_endpoints(
         description=command.RegisterInvitedUserCommand.__doc__,
     )
     async def user_registrations__post_one(
-        user: new_user_dependency, token: str  # type: ignore[valid-type] # Dynamic type annotation
-    ) -> user_class:  # type: ignore[valid-type] # Dynamic type annotation
+        user: new_user_dependency, token: str  # type: ignore[valid-type]
+    ) -> user_class:  # type: ignore[valid-type]
         try:
             cmd = command.RegisterInvitedUserCommand(
                 user=user,
                 token=token,
             )
-            retval: user_class = app.handle(cmd)  # type: ignore[valid-type] # Dynamic type annotation
+            retval: user_class = app.handle(cmd)  # type: ignore[valid-type]
         except Exception as exception:
             handle_exception("fc1fc53c", None, exception)
         return retval
@@ -181,9 +210,9 @@ def create_organization_endpoints(
         description=command.OrganizationSetOrganizationUpdateAssociationCommand.__doc__,
     )
     async def organization_sets__put__organizations(
-        user: registered_user_dependency,  # type: ignore
+        user: registered_user_dependency,  # type: ignore[valid-type]
         organization_set_id: UUID,
-        request_body: UpdateOrganizationSetOrganizationRequestBody,
+        request_body: OrganizationSetOrganizationUpdateAssociationRequestBody,
     ) -> list[model.OrganizationSetMember]:
         return cast(
             list[model.OrganizationSetMember],
@@ -208,9 +237,9 @@ def create_organization_endpoints(
         description=command.DataCollectionSetDataCollectionUpdateAssociationCommand.__doc__,
     )
     async def data_collection_sets__put__data_collections(
-        user: registered_user_dependency,  # type: ignore
+        user: registered_user_dependency,  # type: ignore[valid-type]
         data_collection_set_id: UUID,
-        request_body: UpdateDataCollectionSetDataCollectionRequestBody,
+        request_body: DataCollectionSetDataCollectionUpdateAssociationRequestBody,
     ) -> list[model.DataCollectionSetMember]:
         return cast(
             list[model.DataCollectionSetMember],
@@ -235,8 +264,8 @@ def create_organization_endpoints(
         description=user_class.__doc__,
     )
     async def user_me__get_one(
-        user: registered_user_dependency,  # type: ignore
-    ) -> user_class:
+        user: registered_user_dependency,  # type: ignore[valid-type]
+    ) -> user_class:  # type: ignore[valid-type]
         return user
 
     @router.get(
@@ -246,8 +275,8 @@ def create_organization_endpoints(
         description=command.RetrieveOwnPermissionsCommand.__doc__,
     )
     async def user_me__retrieve_permissions(
-        user: registered_user_dependency,  # type: ignore
-    ) -> set[api_permission_class]:  # pyricht: ignore[reportInvalidTypeForm]
+        user: registered_user_dependency,  # type: ignore[valid-type]
+    ) -> set[api_permission_class]:  # type: ignore[valid-type]
         try:
             cmd = command.RetrieveOwnPermissionsCommand(user=user)
             permissions: set[Permission] = app.handle(cmd)
@@ -263,16 +292,15 @@ def create_organization_endpoints(
         description=command.AnonymizeUserCommand.__doc__,
     )
     async def anonymize_user(
-        user: registered_user_dependency,  # type: ignore
+        user: registered_user_dependency,  # type: ignore[valid-type]
         user_id: UUID,
     ) -> None:
         try:
             cmd = command.AnonymizeUserCommand(user=user, tgt_user_id=user_id)
             retval = app.handle(cmd)
+            assert retval is None
         except Exception as exception:
             handle_exception("c8fd634f", user, exception)
-
-        return retval
 
     @router.put(
         "/update_user/{object_id}",
@@ -281,8 +309,8 @@ def create_organization_endpoints(
         description=update_user_command_class.__doc__,
     )
     async def update_user(
-        user: registered_user_dependency, object_id: UUID, request_body: UpdateUserRequestBody  # type: ignore
-    ) -> user_class:
+        user: registered_user_dependency, object_id: UUID, request_body: UpdateUserRequestBody  # type: ignore[valid-type]
+    ) -> user_class:  # type: ignore[valid-type]
         try:
             cmd = update_user_command_class(
                 user=user,
@@ -291,7 +319,7 @@ def create_organization_endpoints(
                 roles=request_body.roles,
                 organization_id=request_body.organization_id,
             )
-            retval: user_class = app.handle(cmd)
+            retval: user_class = app.handle(cmd)  # type: ignore[valid-type]
         except Exception as exception:
             handle_exception("a594ba2b", None, exception)
         return retval
@@ -303,14 +331,14 @@ def create_organization_endpoints(
         description=command.UpdateUserOwnOrganizationCommand.__doc__,
     )
     async def update_user_own_organization(
-        user: registered_user_dependency, data: UpdateUserOwnOrganizationRequestBody  # type: ignore
-    ) -> user_class:
+        user: registered_user_dependency, data: UpdateUserOwnOrganizationRequestBody  # type: ignore[valid-type]
+    ) -> user_class:  # type: ignore[valid-type]
         try:
             cmd = command.UpdateUserOwnOrganizationCommand(
                 user=user,
                 organization_id=data.organization_id,
             )
-            retval: model.User = app.handle(cmd)
+            retval: user_class = app.handle(cmd)  # type: ignore[valid-type]
         except Exception as exception:
             handle_exception("c2382b65", None, exception)
         return retval
@@ -319,12 +347,12 @@ def create_organization_endpoints(
         "/organizations/{organization_id}/identifier_issuers",
         operation_id="organizations__put__identifier_issuers",
         name="Update association between Organization and IdentifierIssuer",
-        description=command.OrganizationIdentifierIssuerLinkUpdateAssociationCommand.__doc__,
+        description=command.OrganizationIdentifierIssuerUpdateAssociationCommand.__doc__,
     )
     async def organizations__put__identifier_issuers(
-        user: registered_user_dependency,  # type: ignore
+        user: registered_user_dependency,  # type: ignore[valid-type]
         organization_id: UUID,
-        request_body: UpdateOrganizationIdentifierIssuerLinksRequestBody,
+        request_body: OrganizationIdentifierIssuerUpdateAssociationRequestBody,
     ) -> list[model.OrganizationIdentifierIssuerLink]:
         return cast(
             list[model.OrganizationIdentifierIssuerLink],
@@ -333,7 +361,7 @@ def create_organization_endpoints(
                 user=user,
                 exception_code="a3c7f9d2",
                 input_handle_exception=handle_exception,
-                input_command=command.OrganizationIdentifierIssuerLinkUpdateAssociationCommand(
+                input_command=command.OrganizationIdentifierIssuerUpdateAssociationCommand(
                     user=user,
                     obj_id1=organization_id,
                     association_objs=request_body.organization_identifier_issuer_links,
@@ -349,7 +377,7 @@ def create_organization_endpoints(
         description=command.RetrieveOrganizationContactsCommand.__doc__,
     )
     async def retrieve__organization_contacts(
-        user: registered_user_dependency,  # type: ignore
+        user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveOrganizationContactsRequestBody,
     ) -> model.OrganizationContacts:
         return cast(

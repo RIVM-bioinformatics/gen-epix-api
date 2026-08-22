@@ -1,6 +1,6 @@
 import json
 import ssl
-from collections.abc import Callable
+from collections.abc import Callable, Generator
 from decimal import Decimal
 from functools import partial
 from pathlib import Path
@@ -14,7 +14,13 @@ from gen_epix.fastapp import exc, model
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.domain.domain import Domain
-from gen_epix.fastapp.enum import CrudOperation, EventTiming, HttpProtocol, StringCasing
+from gen_epix.fastapp.enum import (
+    CrudOperation,
+    EventTiming,
+    HttpMethod,
+    HttpProtocol,
+    StringCasing,
+)
 from gen_epix.fastapp.exc import ServiceException
 from gen_epix.fastapp.model import Command, CrudCommand, Policy
 from gen_epix.fastapp.util import create_ssl_context
@@ -226,30 +232,95 @@ class RemoteApp(App):
             verify=self.ssl_context, timeout=timeout or self.get_timeout(type(cmd))
         )
 
-    def _call_json(
+    def request(
         self,
         cmd: Command,
-        method: str,
+        method: HttpMethod,
         *,
         route: str | None = None,
+        model: PydanticBaseModel | None = None,
         json_body: Any = None,
         params: dict[str, Any] | None = None,
-    ) -> Any:
+        exclude: set[str] | None = None,
+    ) -> Any | None:
         """
-        Executes an HTTP request for cmd and returns the parsed JSON response body.
-        route overrides the registered route (e.g. to append a path segment built
-        from a command field); defaults to self.get_route(cmd).
+        Execute an HTTP request for a command and method and return the parsed JSON
+        response body, if any.
+
+        The registered route for the command can be overridden by providing a custom
+        route, typically when a parameterised route is needed based on the command
+        contents.
+
+        If a request body is needed, it must be provided via either the `model` or the
+        `json_body` parameter. The Pydantic model will be converted to json via
+        model_dump_json(exclude=exclude) so any non-standard serialization is handled
+        properly and some fields can be excluded as necessary. If both model and
+        json_body are None, no request body will be sent. Other types of request bodies
+        are currently not supported by this method.
         """
+        # Parse input
+        if model is not None:
+            if json_body is not None:
+                raise ValueError(
+                    "Cannot provide both a Pydantic model and a JSON body for the request"
+                )
+            json_body = json.loads(model.model_dump_json(exclude=exclude))
+        # Get headers and route
         headers = self.get_headers(cmd)
         url = route if route is not None else self.get_route(cmd)
+        # Execute request and parse response
         with self.get_client(cmd) as client:
             response = client.request(
-                method, url, json=json_body, params=params, headers=headers
+                method.value, url, json=json_body, params=params, headers=headers
             )
             response.raise_for_status()
             if not response.content:
                 return None
             return response.json()
+
+    def stream(
+        self,
+        cmd: Command,
+        method: HttpMethod,
+        *,
+        route: str | None = None,
+        model: PydanticBaseModel | None = None,
+        json_body: Any = None,
+        form_data: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
+        exclude: set[str] | None = None,
+    ) -> Generator[str, None, None]:
+        """
+        Execute a streaming HTTP request for a command and yield decoded chunks.
+
+        Mirrors `request` but uses client.stream() and yields response bytes
+        decoded as UTF-8 strings instead of returning parsed JSON.
+
+        When `form_data` is provided, the request is sent as form-encoded data
+        without the default headers (e.g. for endpoints that authenticate via a
+        form field instead of an Authorization header).
+        """
+        if model is not None:
+            if json_body is not None:
+                raise ValueError(
+                    "Cannot provide both a Pydantic model and a JSON body for the request"
+                )
+            json_body = json.loads(model.model_dump_json(exclude=exclude))
+        url = route if route is not None else self.get_route(cmd)
+        # Skip default headers when auth is embedded in form_data.
+        headers = None if form_data is not None else self.get_headers(cmd)
+        with self.get_client(cmd) as client:
+            with client.stream(
+                method.value,
+                url,
+                json=json_body,
+                data=form_data,
+                params=params,
+                headers=headers,
+            ) as response:
+                response.raise_for_status()
+                for chunk in response.iter_bytes():
+                    yield chunk.decode()
 
     def register_generated_crud_route(
         self,

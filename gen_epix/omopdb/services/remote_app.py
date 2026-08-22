@@ -1,8 +1,9 @@
-import json
 from typing import Any
 
 from gen_epix.commondb.services import CommondbRemoteApp as CommondbRemoteApp
+from gen_epix.fastapp.enum import HttpMethod
 from gen_epix.fastapp.model import Command
+from gen_epix.omopdb import api
 from gen_epix.omopdb.domain import DOMAIN, command, model
 
 
@@ -56,70 +57,50 @@ class OmopdbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.UploadPersonsCommand,
     ) -> model.PersonBatchUploadResult:
-        headers = self.get_headers(cmd)
-        route = self.get_route(cmd)
-
-        request_body = cmd
-
-        with self.get_client(cmd) as client:
-            response = client.post(
-                route,
-                json=json.loads(request_body.model_dump_json()),
-                headers=headers,
-            )
-            response.raise_for_status()
-            data = response.json()
-        return model.PersonBatchUploadResult(**data)
+        response_body: dict[str, Any] = self.request(  # type: ignore[assignment]
+            cmd,
+            HttpMethod.POST,
+            model=cmd,
+            exclude={"user"},
+        )
+        return model.PersonBatchUploadResult(**response_body)
 
     def retrieve_persons_by_query(
         self,
         cmd: command.RetrievePersonsByQueryCommand,
     ) -> model.PersonQueryResult:
-        headers = self.get_headers(cmd)
-        route = self.get_route(cmd)
-        request_body = cmd.person_query
-
-        with self.get_client(cmd) as client:
-            response = client.post(
-                route,
-                json=json.loads(request_body.model_dump_json()),
-                headers=headers,
-            )
-            response.raise_for_status()
-            data = response.json()
-        return model.PersonQueryResult(**data)
-
-    def retrieve_specimen_ids_by_cohort_ids(
-        self,
-        cmd: command.RetrieveSpecimenIdsByCohortIdsCommand,
-    ) -> model.SpecimenIdsByCohortResult:
-        headers = self.get_headers(cmd)
-        route = self.get_route(cmd)
-        request_body = cmd
-        with self.get_client(cmd) as client:
-            response = client.post(
-                route,
-                json=json.loads(request_body.model_dump_json()),
-                headers=headers,
-            )
-            response.raise_for_status()
-            data = response.json()
-        return model.SpecimenIdsByCohortResult(**data)
+        response_body: dict[str, Any] = self.request(  # type: ignore[assignment]
+            cmd,
+            HttpMethod.POST,
+            model=cmd.person_query,
+        )
+        return model.PersonQueryResult(**response_body)
 
     def retrieve_persons_by_id(
         self,
         cmd: command.RetrievePersonsByIdCommand,
     ) -> list[model.FullPerson]:
-        headers = self.get_headers(cmd)
-        route = self.get_route(cmd)
-        request_body = cmd
+        request_body = api.RetrievePersonsByIdsRequestBody(
+            person_ids=cmd.person_ids,
+        )
+        response_body: list[dict[str, Any]] = self.request(  # type: ignore[assignment]
+            cmd,
+            HttpMethod.POST,
+            model=request_body,
+        )
+        return [model.FullPerson(**person) for person in response_body]
 
-        with self.get_client(cmd) as client:
-            response = client.post(
-                route,
-                json=json.loads(request_body.model_dump_json()),
-                headers=headers,
-            )
-            response.raise_for_status()
-            data = response.json()
-        return [model.FullPerson(**person) for person in data]
+    def retrieve_specimen_ids_by_cohort_ids(
+        self,
+        cmd: command.RetrieveSpecimenIdsByCohortIdsCommand,
+    ) -> model.SpecimenIdsByCohortResult:
+        request_body = api.RetrieveSpecimenIdsByCohortIdsRequestBody(
+            cohort_definition_id=cmd.cohort_definition_id,
+            cohort_ids=cmd.cohort_ids,
+        )
+        response_body: dict[str, Any] = self.request(  # type: ignore[assignment]
+            cmd,
+            HttpMethod.POST,
+            model=request_body,
+        )
+        return model.SpecimenIdsByCohortResult(**response_body)
