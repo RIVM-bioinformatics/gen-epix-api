@@ -1,4 +1,5 @@
 import importlib
+import json
 from datetime import datetime, timezone
 from enum import Enum
 from logging import Logger
@@ -7,13 +8,13 @@ from typing import Any
 import jwt
 
 from gen_epix.commondb.config import AppCfg
-from gen_epix.commondb.domain import enum, model
+from gen_epix.commondb.domain import command, enum, model
 from gen_epix.fastapp import HttpProtocol, RemoteApp, exc
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
 from gen_epix.fastapp.log import LogItem
-from gen_epix.fastapp.model import Command
+from gen_epix.fastapp.model import Command, Permission
 from gen_epix.fastapp.services.auth.model import OidcServerCfg
 from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 
@@ -26,7 +27,30 @@ class CommondbRemoteApp(RemoteApp):
 
     DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {}
 
-    ROUTE_MAP: dict[type[Command], str] = {}
+    ROUTE_MAP: dict[type[Command], str] = {
+        command.GetIdentityProvidersCommand: "/identity_providers",
+        command.InviteUserCommand: "/invite_user",
+        command.RetrieveInviteUserConstraintsCommand: "/invite_user/constraints",
+        command.RegisterInvitedUserCommand: "/user_registrations",
+        command.OrganizationSetOrganizationUpdateAssociationCommand: "/organization_sets",
+        command.DataCollectionSetDataCollectionUpdateAssociationCommand: (
+            "/data_collection_sets"
+        ),
+        command.RetrieveOwnPermissionsCommand: "/user_me/permissions",
+        command.AnonymizeUserCommand: "/user",
+        command.UpdateUserCommand: "/update_user",
+        command.UpdateUserOwnOrganizationCommand: "/update_user_own_organization",
+        command.OrganizationIdentifierIssuerLinkUpdateAssociationCommand: (
+            "/organizations"
+        ),
+        command.RetrieveOrganizationContactsCommand: "/retrieve/organization_contacts",
+        command.RetrieveOrganizationAdminNameEmailsCommand: (
+            "/retrieve_organization_admin_name_emails"
+        ),
+        command.RetrieveFeatureFlagsCommand: "/retrieve/feature_flags",
+        command.RetrieveLicensesCommand: "/retrieve/licenses",
+        command.RetrieveOutagesCommand: "/retrieve/outages",
+    }
 
     def __init__(
         self,
@@ -70,6 +94,59 @@ class CommondbRemoteApp(RemoteApp):
             ssl_cert_file=ssl_cert_file,
             **kwargs,
         )
+
+        # Register routes. CommondbRemoteApp.ROUTE_MAP is referenced explicitly
+        # (not self.ROUTE_MAP) because subclasses override ROUTE_MAP with their
+        # own dict rather than merging it, so self.ROUTE_MAP would resolve to the
+        # subclass's dict here and cause double registration in its own __init__.
+        for cmd_class, route in CommondbRemoteApp.ROUTE_MAP.items():
+            self.register_route(cmd_class, route)
+        # Register handlers
+        self.register_handler(
+            command.GetIdentityProvidersCommand, self.get_identity_providers
+        )
+        self.register_handler(command.InviteUserCommand, self.invite_user)
+        self.register_handler(
+            command.RetrieveInviteUserConstraintsCommand,
+            self.retrieve_invite_user_constraints,
+        )
+        self.register_handler(
+            command.RegisterInvitedUserCommand, self.register_invited_user
+        )
+        self.register_handler(
+            command.OrganizationSetOrganizationUpdateAssociationCommand,
+            self.organization_set_organization_update_association,
+        )
+        self.register_handler(
+            command.DataCollectionSetDataCollectionUpdateAssociationCommand,
+            self.data_collection_set_data_collection_update_association,
+        )
+        self.register_handler(
+            command.RetrieveOwnPermissionsCommand, self.retrieve_own_permissions
+        )
+        self.register_handler(command.AnonymizeUserCommand, self.anonymize_user)
+        self.register_handler(command.UpdateUserCommand, self.update_user)
+        self.register_handler(
+            command.UpdateUserOwnOrganizationCommand,
+            self.update_user_own_organization,
+        )
+        self.register_handler(
+            command.OrganizationIdentifierIssuerLinkUpdateAssociationCommand,
+            self.organization_identifier_issuer_link_update_association,
+        )
+        self.register_handler(
+            command.RetrieveOrganizationContactsCommand,
+            self.retrieve_organization_contacts,
+        )
+        self.register_handler(
+            command.RetrieveOrganizationAdminNameEmailsCommand,
+            self.retrieve_organization_admin_name_emails,
+        )
+        self.register_handler(
+            command.RetrieveFeatureFlagsCommand, self.retrieve_feature_flags
+        )
+        self.register_handler(command.RetrieveLicensesCommand, self.retrieve_licenses)
+        self.register_handler(command.RetrieveOutagesCommand, self.retrieve_outages)
 
         # Initialize IDP client if needed
         oauth_idp_client: OauthIdpClient | None = None
@@ -153,6 +230,152 @@ class CommondbRemoteApp(RemoteApp):
             "7bf9fe04",
             f"Auth protocol {self._auth_protocol.value} not supported for token retrieval",
         )
+
+    # --- Non-CRUD command handlers ---
+
+    def get_identity_providers(
+        self, cmd: command.GetIdentityProvidersCommand
+    ) -> list[model.IdentityProvider]:
+        data = self._call_json(cmd, "GET")
+        return [model.IdentityProvider(**item) for item in data]
+
+    def invite_user(self, cmd: command.InviteUserCommand) -> model.UserInvitation:
+        data = self._call_json(
+            cmd,
+            "POST",
+            json_body={
+                "key": cmd.key,
+                "description": cmd.description,
+                "roles": list(cmd.roles),
+                "organization_id": str(cmd.organization_id),
+            },
+        )
+        return model.UserInvitation(**data)
+
+    def retrieve_invite_user_constraints(
+        self, cmd: command.RetrieveInviteUserConstraintsCommand
+    ) -> model.UserInvitationConstraints:
+        data = self._call_json(cmd, "GET")
+        return model.UserInvitationConstraints(**data)
+
+    def register_invited_user(
+        self, cmd: command.RegisterInvitedUserCommand
+    ) -> model.User:
+        data = self._call_json(cmd, "POST", route=f"{self.get_route(cmd)}/{cmd.token}")
+        return model.User(**data)
+
+    def organization_set_organization_update_association(
+        self, cmd: command.OrganizationSetOrganizationUpdateAssociationCommand
+    ) -> list[model.OrganizationSetMember]:
+        data = self._call_json(
+            cmd,
+            "PUT",
+            route=f"{self.get_route(cmd)}/{cmd.obj_id1}/organizations",
+            json_body={
+                "organization_set_members": [
+                    json.loads(x.model_dump_json()) for x in cmd.association_objs
+                ]
+            },
+        )
+        return [model.OrganizationSetMember(**item) for item in data]
+
+    def data_collection_set_data_collection_update_association(
+        self, cmd: command.DataCollectionSetDataCollectionUpdateAssociationCommand
+    ) -> list[model.DataCollectionSetMember]:
+        data = self._call_json(
+            cmd,
+            "PUT",
+            route=f"{self.get_route(cmd)}/{cmd.obj_id1}/data_collections",
+            json_body={
+                "data_collection_set_members": [
+                    json.loads(x.model_dump_json()) for x in cmd.association_objs
+                ]
+            },
+        )
+        return [model.DataCollectionSetMember(**item) for item in data]
+
+    def retrieve_own_permissions(
+        self, cmd: command.RetrieveOwnPermissionsCommand
+    ) -> set[Permission]:
+        data = self._call_json(cmd, "GET")
+        return {Permission(**item) for item in data}
+
+    def anonymize_user(self, cmd: command.AnonymizeUserCommand) -> None:
+        self._call_json(
+            cmd,
+            "POST",
+            route=f"{self.get_route(cmd)}/{cmd.tgt_user_id}/anonymize",
+        )
+
+    def update_user(self, cmd: command.UpdateUserCommand) -> model.User:
+        data = self._call_json(
+            cmd,
+            "PUT",
+            route=f"{self.get_route(cmd)}/{cmd.tgt_user_id}",
+            json_body={
+                "is_active": cmd.is_active,
+                "roles": list(cmd.roles) if cmd.roles is not None else None,
+                "organization_id": (
+                    str(cmd.organization_id) if cmd.organization_id else None
+                ),
+            },
+        )
+        return model.User(**data)
+
+    def update_user_own_organization(
+        self, cmd: command.UpdateUserOwnOrganizationCommand
+    ) -> model.User:
+        data = self._call_json(
+            cmd, "PUT", json_body={"organization_id": str(cmd.organization_id)}
+        )
+        return model.User(**data)
+
+    def organization_identifier_issuer_link_update_association(
+        self, cmd: command.OrganizationIdentifierIssuerLinkUpdateAssociationCommand
+    ) -> list[model.OrganizationIdentifierIssuerLink]:
+        data = self._call_json(
+            cmd,
+            "PUT",
+            route=f"{self.get_route(cmd)}/{cmd.obj_id1}/identifier_issuers",
+            json_body={
+                "organization_identifier_issuer_links": [
+                    json.loads(x.model_dump_json()) for x in cmd.association_objs
+                ]
+            },
+        )
+        return [model.OrganizationIdentifierIssuerLink(**item) for item in data]
+
+    def retrieve_organization_contacts(
+        self, cmd: command.RetrieveOrganizationContactsCommand
+    ) -> model.OrganizationContacts:
+        data = self._call_json(
+            cmd, "POST", json_body={"organization_id": str(cmd.organization_id)}
+        )
+        return model.OrganizationContacts(**data)
+
+    def retrieve_organization_admin_name_emails(
+        self, cmd: command.RetrieveOrganizationAdminNameEmailsCommand
+    ) -> list[model.UserNameEmail]:
+        data = self._call_json(cmd, "GET")
+        return [model.UserNameEmail(**item) for item in data]
+
+    def retrieve_feature_flags(
+        self, cmd: command.RetrieveFeatureFlagsCommand
+    ) -> dict[str, bool]:
+        data = self._call_json(cmd, "GET")
+        return dict(data["feature_flags"])
+
+    def retrieve_licenses(
+        self, cmd: command.RetrieveLicensesCommand
+    ) -> list[model.PackageMetadata]:
+        data = self._call_json(cmd, "POST")
+        return [model.PackageMetadata(**item) for item in data]
+
+    def retrieve_outages(
+        self, cmd: command.RetrieveOutagesCommand
+    ) -> list[model.Outage]:
+        data = self._call_json(cmd, "GET")
+        return [model.Outage(**item) for item in data]
 
     @classmethod
     def create_local_or_remote_app(

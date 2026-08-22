@@ -1,6 +1,7 @@
 """Unit tests for SeqdbRemoteApp create_calculate_phylogenetic_tree_handler function."""
 
 import json
+from datetime import datetime
 from test.util.mock_compat import MagicMock, Mock, patch
 from typing import Any
 from uuid import uuid4
@@ -359,3 +360,57 @@ class TestSeqdbRemoteApp:
         assert app.port == 8001
         assert hasattr(app, "calculate_phylogenetic_tree")
         assert seqdb_command.CalculatePhylogeneticTreeCommand in app.ROUTE_MAP
+
+
+class TestRetrieveSeqDistanceLastModified:
+    """Test the retrieve_seq_distance_last_modified handler."""
+
+    @pytest.fixture
+    def remote_app(self) -> SeqdbRemoteApp:
+        return SeqdbRemoteApp(host="localhost", port=8001)
+
+    @pytest.fixture
+    def mock_client(self) -> Any:
+        with patch("gen_epix.fastapp.remote_app.httpx.Client") as mock_client_class:
+            client = MagicMock()
+            client.__enter__.return_value = client
+            client.__exit__.return_value = None
+            mock_client_class.return_value = client
+            yield client
+
+    def test_returns_parsed_datetime(
+        self, remote_app: SeqdbRemoteApp, mock_client: Any
+    ) -> None:
+        protocol_id = uuid4()
+        response = Mock()
+        response.status_code = 200
+        response.content = b'"2024-01-02T03:04:05"'
+        response.json.return_value = "2024-01-02T03:04:05"
+        response.raise_for_status.return_value = None
+        mock_client.request.return_value = response
+
+        cmd = seqdb_command.RetrieveSeqDistanceLastModifiedCommand(
+            user=None, protocol_id=protocol_id
+        )
+        result = remote_app.retrieve_seq_distance_last_modified(cmd)
+
+        method, url = mock_client.request.call_args.args
+        route = remote_app._routes[seqdb_command.RetrieveSeqDistanceLastModifiedCommand]
+        assert method == "POST"
+        assert url == f"{route}/{protocol_id}"
+        assert result == datetime(2024, 1, 2, 3, 4, 5)
+
+    def test_returns_none_when_never_modified(
+        self, remote_app: SeqdbRemoteApp, mock_client: Any
+    ) -> None:
+        response = Mock()
+        response.status_code = 200
+        response.content = b""
+        response.raise_for_status.return_value = None
+        mock_client.request.return_value = response
+
+        cmd = seqdb_command.RetrieveSeqDistanceLastModifiedCommand(
+            user=None, protocol_id=uuid4()
+        )
+        result = remote_app.retrieve_seq_distance_last_modified(cmd)
+        assert result is None

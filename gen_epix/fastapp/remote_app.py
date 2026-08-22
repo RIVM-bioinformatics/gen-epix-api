@@ -226,6 +226,31 @@ class RemoteApp(App):
             verify=self.ssl_context, timeout=timeout or self.get_timeout(type(cmd))
         )
 
+    def _call_json(
+        self,
+        cmd: Command,
+        method: str,
+        *,
+        route: str | None = None,
+        json_body: Any = None,
+        params: dict[str, Any] | None = None,
+    ) -> Any:
+        """
+        Executes an HTTP request for cmd and returns the parsed JSON response body.
+        route overrides the registered route (e.g. to append a path segment built
+        from a command field); defaults to self.get_route(cmd).
+        """
+        headers = self.get_headers(cmd)
+        url = route if route is not None else self.get_route(cmd)
+        with self.get_client(cmd) as client:
+            response = client.request(
+                method, url, json=json_body, params=params, headers=headers
+            )
+            response.raise_for_status()
+            if not response.content:
+                return None
+            return response.json()
+
     def register_generated_crud_route(
         self,
         command_class: type[CrudCommand],

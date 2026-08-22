@@ -184,9 +184,9 @@ def create_case_endpoints(
         user: registered_user_dependency,  # type: ignore
         case_type_set_id: UUID,
         request_body: UpdateCaseTypeSetCaseTypesRequestBody,
-    ) -> list[model.CaseSetMember]:
+    ) -> list[model.CaseTypeSetMember]:
         return cast(
-            list[model.CaseSetMember],
+            list[model.CaseTypeSetMember],
             handle_command(
                 app=app,
                 user=user,
