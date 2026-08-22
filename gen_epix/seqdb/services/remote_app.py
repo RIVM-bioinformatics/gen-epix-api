@@ -7,18 +7,12 @@ from uuid import UUID
 from gen_epix.commondb.services.remote_app import CommondbRemoteApp
 from gen_epix.fastapp.enum import CrudOperation, HttpMethod
 from gen_epix.fastapp.model import Command
-from gen_epix.seqdb.api import (
-    CalculatePhylogeneticTreeRequestBody,
-    RetrieveSampleIdentifiersByIdsRequestBody,
-    RetrieveSamplesByIdsRequestBody,
-    RetrieveSeqFastaRequestBody,
-    RetrieveSimilarProfilesRequestBody,
-)
-from gen_epix.seqdb.api.file import CreateFileRequestBody
+from gen_epix.seqdb import api
 from gen_epix.seqdb.domain import DOMAIN, command, enum, model
 
 
 class SeqdbRemoteApp(CommondbRemoteApp):
+    """Remote app client for the seqdb service."""
 
     DEFAULT_ROUTE_PREFIX = "/v1"
 
@@ -56,6 +50,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
     }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Register all seqdb routes and command handlers."""
         super().__init__(DOMAIN, *args, **kwargs)
         # Register routes
         for cmd_class, route in self.ROUTE_MAP.items():
@@ -118,7 +113,8 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.CalculatePhylogeneticTreeCommand,
     ) -> model.PhylogeneticTree | None:
-        request_body = CalculatePhylogeneticTreeRequestBody(
+        """Request phylogenetic tree calculation and return the result."""
+        request_body = api.CalculatePhylogeneticTreeRequestBody(
             protocol_id=cmd.protocol_id,
             tree_algorithm=cmd.tree_algorithm,
             seq_profile_ids=cmd.seq_profile_ids,
@@ -133,7 +129,8 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.RetrieveSeqFastaCommand,
     ) -> Iterable[str]:
-        request_body = RetrieveSeqFastaRequestBody(
+        """Stream genetic sequence FASTA data by sequence IDs."""
+        request_body = api.RetrieveSeqFastaRequestBody(
             seq_ids=cmd.seq_ids,
             file_name="dummy.fasta",
         )
@@ -143,7 +140,8 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.CreateFileCommand,
     ) -> UUID:
-        request_body: CreateFileRequestBody = CreateFileRequestBody(
+        """Upload a file and return its assigned UUID."""
+        request_body = api.CreateFileRequestBody(
             content=base64.b64encode(cmd.file.content).decode("utf-8"),
             format=cmd.format,
             compression=cmd.compression,
@@ -157,7 +155,8 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.RetrieveSimilarProfilesCommand,
     ) -> list[UUID]:
-        request_body = RetrieveSimilarProfilesRequestBody(
+        """Retrieve profile IDs similar to the given profiles within a distance threshold."""
+        request_body = api.RetrieveSimilarProfilesRequestBody(
             protocol_id=cmd.protocol_id,
             profile_ids=cmd.profile_ids,
             max_distance=cmd.max_distance,
@@ -169,7 +168,8 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.RetrieveSamplesByIdCommand,
     ) -> list[model.FullSample]:
-        request_body = RetrieveSamplesByIdsRequestBody(sample_ids=cmd.sample_ids)
+        """Retrieve full sample records by their IDs."""
+        request_body = api.RetrieveSamplesByIdsRequestBody(sample_ids=cmd.sample_ids)
         response_body: list[dict[str, Any]] = self.request(cmd, HttpMethod.POST, model=request_body)  # type: ignore[assignment]
         return [model.FullSample(**x) for x in response_body]
 
@@ -177,7 +177,8 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.RetrieveSampleIdentifiersByIdCommand,
     ) -> list[model.SampleIdentifier]:
-        request_body = RetrieveSampleIdentifiersByIdsRequestBody(
+        """Retrieve sample identifiers by sample IDs."""
+        request_body = api.RetrieveSampleIdentifiersByIdsRequestBody(
             sample_ids=cmd.sample_ids
         )
         response_body: list[dict[str, Any]] = self.request(cmd, HttpMethod.POST, model=request_body)  # type: ignore[assignment]
@@ -187,6 +188,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.RetrieveSamplesByQueryCommand,
     ) -> model.SampleQueryResult:
+        """Retrieve samples matching the given query."""
         response_body: dict[str, Any] = self.request(cmd, HttpMethod.POST, model=cmd.sample_query)  # type: ignore[assignment]
         return model.SampleQueryResult(**response_body)
 
@@ -194,10 +196,12 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.UpdateSeqDistancesCommand,
     ) -> list[model.CalculateSeqDistancesResult]:
+        """Trigger sequence distance calculation and return results."""
         response_body: list[dict[str, Any]] = self.request(cmd, HttpMethod.POST, model=cmd, exclude={"user"})  # type: ignore[assignment]
         return [model.CalculateSeqDistancesResult(**x) for x in response_body]
 
     def retrieve_seq_distance_protocol_ids(self) -> list[UUID]:
+        """Return IDs of all seq distance protocols."""
         protocols: list[model.Protocol] = self.handle(
             command.ProtocolCrudCommand(operation=CrudOperation.READ_ALL)
         )
@@ -211,6 +215,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.UploadSamplesCommand,
     ) -> model.SampleBatchUploadResult:
+        """Upload a batch of samples."""
         response_body: dict[str, Any] = self.request(cmd, HttpMethod.POST, model=cmd, exclude={"user"})  # type: ignore[assignment]
         return model.SampleBatchUploadResult(**response_body)
 
@@ -218,6 +223,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.RetrieveBestSeqPerSampleCommand,
     ) -> dict[UUID, UUID]:
+        """Retrieve the best sequence ID per sample ID."""
         response_body: dict[str, str] = self.request(cmd, HttpMethod.POST, model=cmd, exclude={"user"})  # type: ignore[assignment]
         return {UUID(x): UUID(y) for x, y in response_body.items()}
 
@@ -225,6 +231,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.RetrieveBestSeqProfilePerSampleCommand,
     ) -> dict[UUID, UUID]:
+        """Retrieve the best sequence profile ID per sample ID."""
         response_body: dict[str, str] = self.request(cmd, HttpMethod.POST, model=cmd, exclude={"user"})  # type: ignore[assignment]
         return {UUID(x): UUID(y) for x, y in response_body.items()}
 
@@ -232,12 +239,14 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.RetrieveBestSeqClassificationPerSampleCommand,
     ) -> dict[UUID, UUID]:
+        """Retrieve the best sequence classification ID per sample ID."""
         response_body: dict[str, str] = self.request(cmd, HttpMethod.POST, model=cmd, exclude={"user"})  # type: ignore[assignment]
         return {UUID(x): UUID(y) for x, y in response_body.items()}
 
     def retrieve_seq_distance_last_modified(
         self, cmd: command.RetrieveSeqDistanceLastModifiedCommand
     ) -> datetime | None:
+        """Retrieve the last-modified timestamp for sequence distances of a protocol."""
         response_body: str = self.request(  # type: ignore[assignment]
             cmd, HttpMethod.POST, route=f"{self.get_route(cmd)}/{cmd.protocol_id}"
         )

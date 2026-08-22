@@ -6,15 +6,7 @@ from typing import Any, Literal
 
 import jwt
 
-from gen_epix.commondb.api.organization import (
-    DataCollectionSetDataCollectionUpdateAssociationRequestBody,
-    InviteUserRequestBody,
-    OrganizationIdentifierIssuerUpdateAssociationRequestBody,
-    OrganizationSetOrganizationUpdateAssociationRequestBody,
-    RetrieveOrganizationContactsRequestBody,
-    UpdateUserOwnOrganizationRequestBody,
-    UpdateUserRequestBody,
-)
+from gen_epix.commondb import api
 from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.domain import command, enum, model
 from gen_epix.fastapp import HttpProtocol, RemoteApp, exc
@@ -28,6 +20,7 @@ from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 
 
 class CommondbRemoteApp(RemoteApp):
+    """Remote app client for the commondb service with OAuth2/NONE authentication."""
 
     DEFAULT_ROUTE_PREFIX = "/v1"
 
@@ -82,6 +75,7 @@ class CommondbRemoteApp(RemoteApp):
         log_item_class: type[LogItem] = LogItem,
         **kwargs: Any,
     ) -> None:
+        """Initialize with connection and authentication settings; register all commondb handlers."""
         if isinstance(auth_protocol, str):
             auth_protocol = AuthProtocol(auth_protocol)
         if isinstance(oauth_flow, str):
@@ -202,6 +196,7 @@ class CommondbRemoteApp(RemoteApp):
         self._oauth_header_cache: tuple[int, dict[str, str]] | None = None
 
     def get_headers(self, cmd: Command) -> dict[str, str]:
+        """Return auth headers, retrieving a fresh OAuth token when needed."""
         # Call identity provider to get JWT
         if self._auth_protocol == AuthProtocol.NONE:
             return self._default_headers
@@ -243,11 +238,13 @@ class CommondbRemoteApp(RemoteApp):
     def get_identity_providers(
         self, cmd: command.GetIdentityProvidersCommand
     ) -> list[model.IdentityProvider]:
+        """Retrieve the list of configured identity providers."""
         response_body: list[dict[str, Any]] = self.request(cmd, HttpMethod.GET)  # type: ignore[assignment]
         return [model.IdentityProvider(**x) for x in response_body]
 
     def invite_user(self, cmd: command.InviteUserCommand) -> model.UserInvitation:
-        request_body = InviteUserRequestBody(
+        """Send a user invitation request."""
+        request_body = api.InviteUserRequestBody(
             key=cmd.key,
             description=cmd.description,
             roles=cmd.roles,
@@ -261,12 +258,14 @@ class CommondbRemoteApp(RemoteApp):
     def retrieve_invite_user_constraints(
         self, cmd: command.RetrieveInviteUserConstraintsCommand
     ) -> model.UserInvitationConstraints:
+        """Retrieve constraints that govern user invitations."""
         response_body: dict[str, Any] = self.request(cmd, HttpMethod.GET)  # type: ignore[assignment]
         return model.UserInvitationConstraints(**response_body)
 
     def register_invited_user(
         self, cmd: command.RegisterInvitedUserCommand
     ) -> model.User:
+        """Register an invited user using their invitation token."""
         response_body: dict[str, Any] = self.request(
             cmd, HttpMethod.POST, route=f"{self.get_route(cmd)}/{cmd.token}"
         )  # type: ignore[assignment]
@@ -275,7 +274,8 @@ class CommondbRemoteApp(RemoteApp):
     def organization_set_organization_update_association(
         self, cmd: command.OrganizationSetOrganizationUpdateAssociationCommand
     ) -> list[model.OrganizationSetMember]:
-        request_body = OrganizationSetOrganizationUpdateAssociationRequestBody(
+        """Update the set of organizations associated with an organization set."""
+        request_body = api.OrganizationSetOrganizationUpdateAssociationRequestBody(
             organization_set_members=cmd.association_objs
         )
         response_body: list[dict[str, Any]] = self.request(  # type: ignore[assignment]
@@ -289,7 +289,8 @@ class CommondbRemoteApp(RemoteApp):
     def data_collection_set_data_collection_update_association(
         self, cmd: command.DataCollectionSetDataCollectionUpdateAssociationCommand
     ) -> list[model.DataCollectionSetMember]:
-        request_body = DataCollectionSetDataCollectionUpdateAssociationRequestBody(
+        """Update the set of data collections associated with a data collection set."""
+        request_body = api.DataCollectionSetDataCollectionUpdateAssociationRequestBody(
             data_collection_set_members=cmd.association_objs
         )
         response_body: list[dict[str, Any]] = self.request(  # type: ignore[assignment]
@@ -303,10 +304,12 @@ class CommondbRemoteApp(RemoteApp):
     def retrieve_own_permissions(
         self, cmd: command.RetrieveOwnPermissionsCommand
     ) -> set[Permission]:
+        """Retrieve the set of permissions for the authenticated user."""
         response_body: list[dict[str, Any]] = self.request(cmd, HttpMethod.GET)  # type: ignore[assignment]
         return {Permission(**x) for x in response_body}
 
     def anonymize_user(self, cmd: command.AnonymizeUserCommand) -> None:
+        """Anonymize a user's personal data."""
         self.request(
             cmd,
             HttpMethod.POST,
@@ -314,7 +317,8 @@ class CommondbRemoteApp(RemoteApp):
         )
 
     def update_user(self, cmd: command.UpdateUserCommand) -> model.User:
-        request_body = UpdateUserRequestBody(
+        """Update a user's active status, roles, or organization."""
+        request_body = api.UpdateUserRequestBody(
             is_active=cmd.is_active,
             roles=cmd.roles,
             organization_id=cmd.organization_id,
@@ -330,7 +334,8 @@ class CommondbRemoteApp(RemoteApp):
     def update_user_own_organization(
         self, cmd: command.UpdateUserOwnOrganizationCommand
     ) -> model.User:
-        request_body = UpdateUserOwnOrganizationRequestBody(
+        """Update the authenticated user's own organization."""
+        request_body = api.UpdateUserOwnOrganizationRequestBody(
             organization_id=cmd.organization_id
         )
         response_body: dict[str, Any] = self.request(cmd, HttpMethod.PUT, model=request_body)  # type: ignore[assignment]
@@ -339,7 +344,8 @@ class CommondbRemoteApp(RemoteApp):
     def organization_identifier_issuer_link_update_association(
         self, cmd: command.OrganizationIdentifierIssuerUpdateAssociationCommand
     ) -> list[model.OrganizationIdentifierIssuerLink]:
-        request_body = OrganizationIdentifierIssuerUpdateAssociationRequestBody(
+        """Update identifier issuer links for an organization."""
+        request_body = api.OrganizationIdentifierIssuerUpdateAssociationRequestBody(
             organization_identifier_issuer_links=cmd.association_objs
         )
         response_body: list[dict[str, Any]] = self.request(  # type: ignore[assignment]
@@ -353,7 +359,8 @@ class CommondbRemoteApp(RemoteApp):
     def retrieve_organization_contacts(
         self, cmd: command.RetrieveOrganizationContactsCommand
     ) -> model.OrganizationContacts:
-        request_body = RetrieveOrganizationContactsRequestBody(
+        """Retrieve contact information for an organization."""
+        request_body = api.RetrieveOrganizationContactsRequestBody(
             organization_id=cmd.organization_id
         )
         response_body: dict[str, Any] = self.request(  # type: ignore[assignment]
@@ -366,24 +373,28 @@ class CommondbRemoteApp(RemoteApp):
     def retrieve_organization_admin_name_emails(
         self, cmd: command.RetrieveOrganizationAdminNameEmailsCommand
     ) -> list[model.UserNameEmail]:
+        """Retrieve name and email for organization admins."""
         response_body: list[dict[str, Any]] = self.request(cmd, HttpMethod.GET)  # type: ignore[assignment]
         return [model.UserNameEmail(**x) for x in response_body]
 
     def retrieve_feature_flags(
         self, cmd: command.RetrieveFeatureFlagsCommand
     ) -> dict[str, bool]:
+        """Retrieve the current feature flag settings."""
         response_body: dict[Literal["feature_flags"], dict[str, bool]] = self.request(cmd, HttpMethod.GET)  # type: ignore[assignment]
         return response_body["feature_flags"]
 
     def retrieve_licenses(
         self, cmd: command.RetrieveLicensesCommand
     ) -> list[model.PackageMetadata]:
+        """Retrieve metadata for installed packages."""
         response_body: list[dict[str, Any]] = self.request(cmd, HttpMethod.POST)  # type: ignore[assignment]
         return [model.PackageMetadata(**x) for x in response_body]
 
     def retrieve_outages(
         self, cmd: command.RetrieveOutagesCommand
     ) -> list[model.Outage]:
+        """Retrieve current outage announcements."""
         response_body: list[dict[str, Any]] = self.request(cmd, HttpMethod.GET)  # type: ignore[assignment]
         return [model.Outage(**x) for x in response_body]
 
@@ -400,6 +411,7 @@ class CommondbRemoteApp(RemoteApp):
         repository_type_enum: type[Enum] | None = None,
         logger: Logger | None = None,
     ) -> tuple[App, model.User | None]:
+        """Create either a local or remote app instance based on setup type."""
         # Parse input
         app_setup_type = app_setup_type.upper()
         if app_setup_type not in ("LOCAL", "REMOTE"):
@@ -442,6 +454,7 @@ class CommondbRemoteApp(RemoteApp):
         repository_type_enum: type[Enum] | None,
         logger: Logger | None = None,
     ) -> tuple[App, model.User]:
+        """Instantiate a local app from configuration and a user definition."""
         if (
             local_app_props is None
             or app_composer_class is None
@@ -475,6 +488,7 @@ class CommondbRemoteApp(RemoteApp):
     def _create_remote_app(
         cls, remote_app_props: dict[str, Any] | None
     ) -> tuple[App, None]:
+        """Instantiate a remote app from a module path and class name."""
         if remote_app_props is None:
             raise exc.InitializationServiceError(
                 "4007b438", "remote_app_props must be provided for REMOTE app setup."

@@ -27,6 +27,7 @@ def create_ontology_endpoints(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     **kwargs: Any,
 ) -> None:
+    """Register all non-CRUD ontology endpoints on the given router."""
     assert handle_exception
     app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency
@@ -42,6 +43,7 @@ def create_ontology_endpoints(
         disease_id: UUID,
         request_body: DiseaseEtiologicalAgentUpdateAssociationRequestBody,
     ) -> list[model.Etiology]:
+        """See router description."""
         try:
             cmd = command.DiseaseEtiologicalAgentUpdateAssociationCommand(
                 user=user,

@@ -212,6 +212,7 @@ def create_seq_endpoints(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     **kwargs: Any,
 ) -> None:
+    """Register all non-CRUD seqdb endpoints on the given router."""
     assert handle_exception
     app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency
@@ -226,6 +227,7 @@ def create_seq_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: CalculatePhylogeneticTreeRequestBody,
     ) -> model.PhylogeneticTree:
+        """See router description."""
         try:
             retval: model.PhylogeneticTree = app.handle(
                 command.CalculatePhylogeneticTreeCommand(
@@ -252,6 +254,7 @@ def create_seq_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveSimilarProfilesRequestBody,
     ) -> list[UUID]:
+        """See router description."""
         try:
             retval: list[UUID] = app.handle(
                 command.RetrieveSimilarProfilesCommand(
@@ -275,6 +278,7 @@ def create_seq_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: model.SampleQuery,
     ) -> model.SampleQueryResult:
+        """See router description."""
         try:
             retval: model.SampleQueryResult = app.handle(
                 command.RetrieveSamplesByQueryCommand(
@@ -296,6 +300,7 @@ def create_seq_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveSamplesByIdsRequestBody,
     ) -> list[model.FullSample]:
+        """See router description."""
         try:
             retval: list[model.FullSample] = app.handle(
                 command.RetrieveSamplesByIdCommand(
@@ -317,6 +322,7 @@ def create_seq_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveSampleIdentifiersByIdsRequestBody,
     ) -> list[model.SampleIdentifier]:
+        """See router description."""
         try:
             retval: list[model.SampleIdentifier] = app.handle(
                 command.RetrieveSampleIdentifiersByIdCommand(
@@ -338,6 +344,7 @@ def create_seq_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveSeqFastaRequestBody,
     ) -> StreamingResponse:
+        """See router description."""
         try:
             fasta_iterable: Iterable[str] = app.handle(
                 command.RetrieveSeqFastaCommand(
@@ -366,6 +373,7 @@ def create_seq_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         protocol_id: UUID,
     ) -> datetime | None:
+        """See router description."""
         try:
             retval: datetime | None = app.handle(
                 command.RetrieveSeqDistanceLastModifiedCommand(
@@ -387,6 +395,7 @@ def create_seq_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: UpdateSeqDistancesRequestBody,
     ) -> list[model.CalculateSeqDistancesResult]:
+        """See router description."""
         try:
             retval: list[model.CalculateSeqDistancesResult] = app.handle(
                 command.UpdateSeqDistancesCommand(
@@ -411,6 +420,7 @@ def create_seq_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: UploadSamplesRequestBody,
     ) -> model.SampleBatchUploadResult:
+        """See router description."""
         try:
             retval: model.SampleBatchUploadResult = app.handle(
                 command.UploadSamplesCommand(
@@ -442,6 +452,7 @@ def create_seq_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveBestSeqPerSampleRequestBody,
     ) -> dict[UUID, UUID]:
+        """See router description."""
         try:
             retval: dict[UUID, UUID] = app.handle(
                 command.RetrieveBestSeqPerSampleCommand(
@@ -464,6 +475,7 @@ def create_seq_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveBestSeqProfilePerSampleRequestBody,
     ) -> dict[UUID, UUID]:
+        """See router description."""
         try:
             retval: dict[UUID, UUID] = app.handle(
                 command.RetrieveBestSeqProfilePerSampleCommand(
@@ -486,6 +498,7 @@ def create_seq_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveBestSeqClassificationPerSampleRequestBody,
     ) -> dict[UUID, UUID]:
+        """See router description."""
         try:
             retval: dict[UUID, UUID] = app.handle(
                 command.RetrieveBestSeqClassificationPerSampleCommand(

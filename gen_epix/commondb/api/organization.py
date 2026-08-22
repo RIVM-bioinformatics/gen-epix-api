@@ -119,6 +119,7 @@ def create_organization_endpoints(
     api_permission_class: type = Permission,
     **kwargs: Any,
 ) -> None:
+    """Register all non-CRUD organization endpoints on the given router."""
     assert handle_exception
     app_impl: AppImplDetails = app.impl
     user_class: type[model.User] = app_impl.get_mapped_class(model.User)
@@ -148,6 +149,7 @@ def create_organization_endpoints(
     async def invite_user(
         user: registered_user_dependency, user_invitation: InviteUserRequestBody  # type: ignore[valid-type]
     ) -> user_invitation_class:  # type: ignore[valid-type]
+        """See router description."""
         try:
             retval: user_invitation_class = app.handle(  # type: ignore[valid-type]
                 invite_user_command_class(
@@ -173,6 +175,7 @@ def create_organization_endpoints(
     async def invite_user__constraints(
         user: registered_user_dependency,  # type: ignore[valid-type]
     ) -> model.UserInvitationConstraints:
+        """See router description."""
         return cast(
             model.UserInvitationConstraints,
             handle_command(
@@ -193,6 +196,7 @@ def create_organization_endpoints(
     async def user_registrations__post_one(
         user: new_user_dependency, token: str  # type: ignore[valid-type]
     ) -> user_class:  # type: ignore[valid-type]
+        """See router description."""
         try:
             cmd = command.RegisterInvitedUserCommand(
                 user=user,
@@ -214,6 +218,7 @@ def create_organization_endpoints(
         organization_set_id: UUID,
         request_body: OrganizationSetOrganizationUpdateAssociationRequestBody,
     ) -> list[model.OrganizationSetMember]:
+        """See router description."""
         return cast(
             list[model.OrganizationSetMember],
             handle_command(
@@ -241,6 +246,7 @@ def create_organization_endpoints(
         data_collection_set_id: UUID,
         request_body: DataCollectionSetDataCollectionUpdateAssociationRequestBody,
     ) -> list[model.DataCollectionSetMember]:
+        """See router description."""
         return cast(
             list[model.DataCollectionSetMember],
             handle_command(
@@ -266,6 +272,7 @@ def create_organization_endpoints(
     async def user_me__get_one(
         user: registered_user_dependency,  # type: ignore[valid-type]
     ) -> user_class:  # type: ignore[valid-type]
+        """See router description."""
         return user
 
     @router.get(
@@ -277,6 +284,7 @@ def create_organization_endpoints(
     async def user_me__retrieve_permissions(
         user: registered_user_dependency,  # type: ignore[valid-type]
     ) -> set[api_permission_class]:  # type: ignore[valid-type]
+        """See router description."""
         try:
             cmd = command.RetrieveOwnPermissionsCommand(user=user)
             permissions: set[Permission] = app.handle(cmd)
@@ -295,6 +303,7 @@ def create_organization_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         user_id: UUID,
     ) -> None:
+        """See router description."""
         try:
             cmd = command.AnonymizeUserCommand(user=user, tgt_user_id=user_id)
             retval = app.handle(cmd)
@@ -311,6 +320,7 @@ def create_organization_endpoints(
     async def update_user(
         user: registered_user_dependency, object_id: UUID, request_body: UpdateUserRequestBody  # type: ignore[valid-type]
     ) -> user_class:  # type: ignore[valid-type]
+        """See router description."""
         try:
             cmd = update_user_command_class(
                 user=user,
@@ -333,6 +343,7 @@ def create_organization_endpoints(
     async def update_user_own_organization(
         user: registered_user_dependency, data: UpdateUserOwnOrganizationRequestBody  # type: ignore[valid-type]
     ) -> user_class:  # type: ignore[valid-type]
+        """See router description."""
         try:
             cmd = command.UpdateUserOwnOrganizationCommand(
                 user=user,
@@ -354,6 +365,7 @@ def create_organization_endpoints(
         organization_id: UUID,
         request_body: OrganizationIdentifierIssuerUpdateAssociationRequestBody,
     ) -> list[model.OrganizationIdentifierIssuerLink]:
+        """See router description."""
         return cast(
             list[model.OrganizationIdentifierIssuerLink],
             handle_command(
@@ -380,6 +392,7 @@ def create_organization_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveOrganizationContactsRequestBody,
     ) -> model.OrganizationContacts:
+        """See router description."""
         return cast(
             model.OrganizationContacts,
             handle_command(

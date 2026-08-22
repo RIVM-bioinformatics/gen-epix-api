@@ -33,6 +33,7 @@ from gen_epix.filter import (
 
 
 class RemoteApp(App):
+    """Base class for remote application clients that forward commands as HTTP requests."""
 
     DEFAULT_ROUTE_PREFIX = "/"
 
@@ -54,6 +55,7 @@ class RemoteApp(App):
         disable_ssl_verification: bool = False,
         **kwargs: Any,
     ) -> None:
+        """Initialize connection parameters, SSL context, routes, and optional CRUD handlers."""
         super().__init__(domain, **kwargs)
         self._host = host
         self._port = port
@@ -85,6 +87,7 @@ class RemoteApp(App):
         ssl_cert_file: Path | str | None,
         disable_ssl_verification: bool,
     ) -> None:
+        """Configure the SSL context based on protocol and certificate settings."""
         if self.protocol == HttpProtocol.HTTPS:
             self._ssl_context = create_ssl_context(
                 host, ssl_cert_file, disable_ssl_verification
@@ -94,25 +97,30 @@ class RemoteApp(App):
 
     @property
     def host(self) -> str:
+        """Remote host name."""
         return self._host
 
     @property
     def port(self) -> int | None:
+        """Remote port, or None if not specified."""
         return self._port
 
     @property
     def protocol(self) -> HttpProtocol:
+        """HTTP protocol (HTTP or HTTPS)."""
         if isinstance(self._protocol, HttpProtocol):
             return self._protocol
         return HttpProtocol[self._protocol.upper()]
 
     @property
     def host_url(self) -> str:
+        """Full base URL including protocol, host, and port."""
         port_str = f":{self.port}" if self.port else ""
         return f"{self.protocol.value.lower()}://{self.host}{port_str}"
 
     @property
     def ssl_context(self) -> ssl.SSLContext | bool:
+        """SSL context for HTTPS connections, or False to disable verification."""
         return self._ssl_context
 
     def register_policy(
@@ -121,11 +129,13 @@ class RemoteApp(App):
         policy: Policy,
         timing: EventTiming = EventTiming.BEFORE,
     ) -> None:
+        """Raise ServiceException; policies are not supported on RemoteApp."""
         raise ServiceException("Policies cannot be registered on RemoteApp instances")
 
     def unregister_policy(
         self, command_class: type[Command], policy: Policy, timing: EventTiming
     ) -> None:
+        """Raise ServiceException; policies are not supported on RemoteApp."""
         raise ServiceException("Policies cannot be unregistered on RemoteApp instances")
 
     def register_route(
@@ -153,6 +163,7 @@ class RemoteApp(App):
         return route
 
     def unregister_route(self, command_class: type[Command]) -> None:
+        """Remove the registered route for the given command class."""
         if command_class not in self._routes:
             raise ServiceException(
                 f"No route registered for command: {command_class.__name__}"
@@ -160,6 +171,7 @@ class RemoteApp(App):
         del self._routes[command_class]
 
     def get_route(self, cmd: Command) -> str:
+        """Return the registered URL for the given command, raising if not found."""
         route = self._routes.get(cmd.__class__, None)
         if not route:
             raise NotImplementedError(
@@ -178,6 +190,7 @@ class RemoteApp(App):
         cmd: Command,
         handler: Callable[[Command], Any],
     ) -> Any:
+        """Invoke the handler, wrapping transport and HTTP errors in ServiceException."""
         command_class = cmd.__class__
         route = self._routes.get(command_class, None)
         if not route:
@@ -331,6 +344,7 @@ class RemoteApp(App):
         route_root_casing: StringCasing = StringCasing.SNAKE_CASE,
         route_root_plural: bool = True,
     ) -> str:
+        """Derive the CRUD route from the model entity name and register it."""
         model_class = command_class.MODEL_CLASS
         entity = model_class.ENTITY
         assert entity is not None
@@ -350,6 +364,7 @@ class RemoteApp(App):
         query_route_suffix: str | None = None,
         ids_route_suffix: str | None = None,
     ) -> Callable[[Command], Any]:
+        """Return a partial handler that maps CRUD operations to HTTP requests."""
         batch_route_suffix = (
             batch_route_suffix or CrudEndpointGenerator.DEFAULT_BATCH_ROUTE_SUFFIX
         )
@@ -382,6 +397,7 @@ class RemoteApp(App):
         ids_route_suffix: str,
         cmd: CrudCommand,
     ) -> Any:
+        """Execute a CRUD command by dispatching to the appropriate HTTP method."""
 
         headers = self.get_headers(cmd)
         model_class = cmd.MODEL_CLASS
@@ -507,6 +523,7 @@ class RemoteApp(App):
         client: httpx.Client,
         headers: dict[str, str],
     ) -> list[bool]:
+        """Check existence of multiple IDs using a query-by-IDs endpoint."""
         if not obj_ids:
             return []
 
@@ -569,6 +586,7 @@ class RemoteApp(App):
 
     @staticmethod
     def _classify_exists_id_type(obj_ids: list[Any]) -> str:
+        """Return the id kind ('uuid', 'string', 'int', 'float', 'decimal', or 'mixed')."""
         if not obj_ids:
             return "mixed"
 
@@ -592,6 +610,7 @@ class RemoteApp(App):
         client: httpx.Client,
         headers: dict[str, str],
     ) -> list[bool]:
+        """Check existence of each ID via individual GET requests."""
         is_existing: list[bool] = []
         for obj_id in obj_ids:
             response = client.get(
@@ -609,6 +628,7 @@ class RemoteApp(App):
     def _content_to_obj(
         response: httpx.Response, retval_class: type, is_list: bool = False
     ) -> Any:
+        """Deserialize an HTTP response body into the expected model or UUID type."""
         if response.status_code not in (200, 201):
             return None
         decoded_obj = json.loads(response.content.decode(response.encoding or "utf-8"))

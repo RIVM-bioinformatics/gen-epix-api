@@ -224,6 +224,7 @@ class RefColValidationRulesResponseBody(PydanticBaseModel):
     def serialize_valid_col_types_by_dim_type(
         self, value: dict[enum.DimType, set[enum.ColType]]
     ) -> dict[str, list[str]]:
+        """Serialize dim-type keys and col-type sets to plain string dicts."""
         return {x.value: [z.value for z in y] for x, y in value.items()}
 
 
@@ -233,6 +234,7 @@ def create_case_endpoints(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     **kwargs: Any,
 ) -> None:
+    """Register all non-CRUD case endpoints on the given router."""
     assert handle_exception
     app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency
@@ -249,6 +251,7 @@ def create_case_endpoints(
         case_type_set_id: UUID,
         request_body: CaseTypeSetCaseTypeUpdateAssociationRequestBody,
     ) -> list[model.CaseTypeSetMember]:
+        """See router description."""
         return cast(
             list[model.CaseTypeSetMember],
             handle_command(
@@ -275,6 +278,7 @@ def create_case_endpoints(
         col_set_id: UUID,
         request_body: ColSetColUpdateAssociationRequestBody,
     ) -> list[model.ColSetMember]:
+        """See router description."""
         return cast(
             list[model.ColSetMember],
             handle_command(
@@ -300,6 +304,7 @@ def create_case_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         case_type_id: UUID,
     ) -> model.CompleteCaseType:
+        """See router description."""
         return cast(
             model.CompleteCaseType,
             handle_command(
@@ -323,6 +328,7 @@ def create_case_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         cmd: command.UploadCasesCommand,
     ) -> model.CaseBatchUploadResult:
+        """See router description."""
         cmd.user = user
         return cast(
             model.CaseBatchUploadResult,
@@ -345,6 +351,7 @@ def create_case_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: CreateCaseSetRequestBody,
     ) -> model.CaseSet:
+        """See router description."""
         return cast(
             model.CaseSet,
             handle_command(
@@ -371,6 +378,7 @@ def create_case_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveCaseTypeStatsRequestBody,
     ) -> list[model.CaseStats]:
+        """See router description."""
         return cast(
             list[model.CaseStats],
             handle_command(
@@ -394,6 +402,7 @@ def create_case_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveCaseSetStatsRequestBody,
     ) -> list[model.CaseStats]:
+        """See router description."""
         return cast(
             list[model.CaseStats],
             handle_command(
@@ -417,6 +426,7 @@ def create_case_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: model.CaseQuery,
     ) -> model.CaseQueryResult:
+        """See router description."""
         return cast(
             model.CaseQueryResult,
             handle_command(
@@ -441,6 +451,7 @@ def create_case_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveCaseCohortLinksByCaseTypeRequestBody,
     ) -> list[model.CaseCohortLink]:
+        """See router description."""
         return cast(
             list[model.CaseCohortLink],
             handle_command(
@@ -465,6 +476,7 @@ def create_case_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveCasesByIdRequestBody,
     ) -> list[model.Case]:
+        """See router description."""
         return cast(
             list[model.Case],
             handle_command(
@@ -490,6 +502,7 @@ def create_case_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveCaseRightsRequestBody,
     ) -> list[model.CaseRights]:
+        """See router description."""
         return cast(
             list[model.CaseRights],
             handle_command(
@@ -515,6 +528,7 @@ def create_case_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: list[UUID],
     ) -> list[model.CaseSetRights]:
+        """See router description."""
         # TODO: a dedicated request body model should be created for this endpoint
 
         return cast(
@@ -540,6 +554,7 @@ def create_case_endpoints(
     async def retrieve__phylogenetic_tree(
         user: registered_user_dependency, request_body: RetrievePhylogeneticTreeRequestBody  # type: ignore[valid-type]
     ) -> model.PhylogeneticTree:
+        """See router description."""
         return cast(
             model.PhylogeneticTree,
             handle_command(
@@ -566,6 +581,7 @@ def create_case_endpoints(
     async def retrieve__similar_cases(
         user: registered_user_dependency, request_body: RetrieveSimilarCasesRequestBody  # type: ignore[valid-type]
     ) -> RetrieveSimilarCasesResponseBody:
+        """See router description."""
         return cast(
             RetrieveSimilarCasesResponseBody,
             handle_command(
@@ -596,6 +612,7 @@ def create_case_endpoints(
         case_ids: Annotated[list[UUID], Form()],
         file_name: Annotated[str, Form()],
     ) -> StreamingResponse:
+        """See router description."""
         user: model.User | None = None
         app_impl: AppImplDetails = app.impl
         try:
@@ -636,6 +653,7 @@ def create_case_endpoints(
         col_id: UUID,
         request_body: CreateFileForReadSetRequestBody,
     ) -> UUID:
+        """See router description."""
         return cast(
             UUID,
             handle_command(
@@ -665,6 +683,7 @@ def create_case_endpoints(
         col_id: UUID,
         request_body: CreateFileForSeqRequestBody,
     ) -> UUID:
+        """See router description."""
         return cast(
             UUID,
             handle_command(
@@ -690,6 +709,7 @@ def create_case_endpoints(
     async def retrieve__sequencing_protocols(
         user: registered_user_dependency,  # type: ignore[valid-type]
     ) -> list[seqdb_model.Protocol]:
+        """See router description."""
         return cast(
             list[seqdb_model.Protocol],
             handle_command(
@@ -713,6 +733,7 @@ def create_case_endpoints(
     async def retrieve__assembly_protocols(
         user: registered_user_dependency,  # type: ignore[valid-type]
     ) -> list[seqdb_model.Protocol]:
+        """See router description."""
         return cast(
             list[seqdb_model.Protocol],
             handle_command(
@@ -737,6 +758,7 @@ def create_case_endpoints(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveCasesByIdRequestBody,
     ) -> dict[UUID, bool]:
+        """See router description."""
         return cast(
             dict[UUID, bool],
             handle_command(
@@ -764,6 +786,7 @@ def create_case_endpoints(
     async def get__ref_col__validation_rules(
         user: registered_user_dependency,  # type: ignore[valid-type]
     ) -> RefColValidationRulesResponseBody:
+        """See router description."""
         try:
             retval = RefColValidationRulesResponseBody()
         except Exception as exception:

@@ -14,6 +14,9 @@ from gen_epix.commondb.api.organization import (
     OrganizationSetOrganizationUpdateAssociationRequestBody as OrganizationSetOrganizationUpdateAssociationRequestBody,
 )
 from gen_epix.commondb.api.organization import (
+    RetrieveOrganizationContactsRequestBody as RetrieveOrganizationContactsRequestBody,
+)
+from gen_epix.commondb.api.organization import (
     UpdateUserOwnOrganizationRequestBody as UpdateUserOwnOrganizationRequestBody,
 )
 from gen_epix.commondb.api.organization import (

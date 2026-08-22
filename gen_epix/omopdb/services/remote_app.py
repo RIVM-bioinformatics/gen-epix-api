@@ -8,6 +8,7 @@ from gen_epix.omopdb.domain import DOMAIN, command, model
 
 
 class OmopdbRemoteApp(CommondbRemoteApp):
+    """Remote app client for the omopdb service."""
 
     DEFAULT_ROUTE_PREFIX = "/v1"
 
@@ -30,6 +31,7 @@ class OmopdbRemoteApp(CommondbRemoteApp):
     }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Register all omopdb routes and command handlers."""
         super().__init__(DOMAIN, *args, **kwargs)
 
         # Register routes
@@ -57,6 +59,7 @@ class OmopdbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.UploadPersonsCommand,
     ) -> model.PersonBatchUploadResult:
+        """Upload a batch of persons."""
         response_body: dict[str, Any] = self.request(  # type: ignore[assignment]
             cmd,
             HttpMethod.POST,
@@ -69,6 +72,7 @@ class OmopdbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.RetrievePersonsByQueryCommand,
     ) -> model.PersonQueryResult:
+        """Retrieve persons matching the given query."""
         response_body: dict[str, Any] = self.request(  # type: ignore[assignment]
             cmd,
             HttpMethod.POST,
@@ -80,6 +84,7 @@ class OmopdbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.RetrievePersonsByIdCommand,
     ) -> list[model.FullPerson]:
+        """Retrieve full person records by their IDs."""
         request_body = api.RetrievePersonsByIdsRequestBody(
             person_ids=cmd.person_ids,
         )
@@ -94,6 +99,7 @@ class OmopdbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.RetrieveSpecimenIdsByCohortIdsCommand,
     ) -> model.SpecimenIdsByCohortResult:
+        """Retrieve specimen IDs for the given cohort IDs."""
         request_body = api.RetrieveSpecimenIdsByCohortIdsRequestBody(
             cohort_definition_id=cmd.cohort_definition_id,
             cohort_ids=cmd.cohort_ids,

@@ -13,6 +13,7 @@ from gen_epix.seqdb.domain import model as seqdb_model
 
 
 class CasedbRemoteApp(CommondbRemoteApp):
+    """Remote app client for the casedb service."""
 
     DEFAULT_ROUTE_PREFIX = "/v1"
 
@@ -50,6 +51,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
     }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Register all casedb routes and command handlers."""
         super().__init__(DOMAIN, *args, **kwargs)
 
         # Register routes
@@ -124,6 +126,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.RetrieveCaseCohortLinksByCaseTypeCommand,
     ) -> list[model.CaseCohortLink]:
+        """Retrieve cohort links for a given case type."""
         request_body = api.RetrieveCaseCohortLinksByCaseTypeRequestBody(
             case_type_id=cmd.case_type_id
         )
@@ -138,6 +141,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.RetrieveCasesByQueryCommand,
     ) -> model.CaseQueryResult:
+        """Retrieve cases matching the given query."""
         response_body: dict[str, Any] = self.request(  # type: ignore[assignment]
             cmd,
             HttpMethod.POST,
@@ -149,6 +153,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.UploadCasesCommand,
     ) -> model.CaseBatchUploadResult:
+        """Upload a batch of cases."""
         response_body: dict[str, Any] = self.request(  # type: ignore[assignment]
             cmd, HttpMethod.POST, model=cmd, exclude={"user"}
         )
@@ -158,6 +163,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.CaseTypeSetCaseTypeUpdateAssociationCommand,
     ) -> list[model.CaseTypeSetMember]:
+        """Update case type associations for a case type set."""
         request_body = api.CaseTypeSetCaseTypeUpdateAssociationRequestBody(
             case_type_set_members=cmd.association_objs
         )
@@ -173,6 +179,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
         self,
         cmd: command.ColSetColUpdateAssociationCommand,
     ) -> list[model.ColSetMember]:
+        """Update column associations for a column set."""
         request_body = api.ColSetColUpdateAssociationRequestBody(
             col_set_members=cmd.association_objs
         )
@@ -187,12 +194,14 @@ class CasedbRemoteApp(CommondbRemoteApp):
     def retrieve_complete_case_type(
         self, cmd: command.RetrieveCompleteCaseTypeCommand
     ) -> model.CompleteCaseType:
+        """Retrieve the full definition of a case type."""
         response_body: dict[str, Any] = self.request(  # type: ignore[assignment]
             cmd, HttpMethod.GET, params={"case_type_id": str(cmd.case_type_id)}
         )
         return model.CompleteCaseType(**response_body)
 
     def create_case_set(self, cmd: command.CreateCaseSetCommand) -> model.CaseSet:
+        """Create a new case set."""
         request_body = api.CreateCaseSetRequestBody(
             case_set=cmd.case_set,
             data_collection_ids=cmd.data_collection_ids,
@@ -208,6 +217,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
     def retrieve_case_type_stats(
         self, cmd: command.RetrieveCaseTypeStatsCommand
     ) -> list[model.CaseStats]:
+        """Retrieve statistics per case type."""
         request_body = api.RetrieveCaseTypeStatsRequestBody(
             case_type_ids=cmd.case_type_ids,
             datetime_range_filter=cmd.datetime_range_filter,
@@ -220,6 +230,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
     def retrieve_case_set_stats(
         self, cmd: command.RetrieveCaseSetStatsCommand
     ) -> list[model.CaseStats]:
+        """Retrieve statistics per case set."""
         request_body = api.RetrieveCaseSetStatsRequestBody(
             case_set_ids=cmd.case_set_ids
         )
@@ -231,6 +242,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
     def retrieve_cases_by_id(
         self, cmd: command.RetrieveCasesByIdCommand
     ) -> list[model.Case]:
+        """Retrieve cases by their IDs."""
         request_body = api.RetrieveCasesByIdRequestBody(
             case_type_id=cmd.case_type_id,
             case_ids=cmd.case_ids,
@@ -243,6 +255,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
     def retrieve_case_rights(
         self, cmd: command.RetrieveCaseRightsCommand
     ) -> list[model.CaseRights]:
+        """Retrieve access rights for cases."""
         request_body = api.RetrieveCaseRightsRequestBody(
             case_type_id=cmd.case_type_id,
             case_ids=cmd.case_ids,
@@ -255,6 +268,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
     def retrieve_case_set_rights(
         self, cmd: command.RetrieveCaseSetRightsCommand
     ) -> list[model.CaseSetRights]:
+        """Retrieve access rights for case sets."""
         json_body = [str(x) for x in cmd.case_set_ids]
         response_body: list[dict[str, Any]] = self.request(  # type: ignore[assignment]
             cmd, HttpMethod.POST, json_body=json_body
@@ -264,6 +278,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
     def retrieve_phylogenetic_tree_by_cases(
         self, cmd: command.RetrievePhylogeneticTreeByCasesCommand
     ) -> model.PhylogeneticTree:
+        """Compute and retrieve a phylogenetic tree for the given cases."""
         request_body = api.RetrievePhylogeneticTreeRequestBody(
             case_type_id=cmd.case_type_id,
             genetic_distance_col_id=cmd.genetic_distance_col_id,
@@ -280,6 +295,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
     def retrieve_similar_cases(
         self, cmd: command.RetrieveSimilarCasesCommand
     ) -> command.RetrieveSimilarCasesReturnValue:
+        """Retrieve cases similar to the given cases within a distance threshold."""
         request_body = api.RetrieveSimilarCasesRequestBody(
             case_type_id=cmd.case_type_id,
             case_ids=cmd.case_ids,
@@ -296,6 +312,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
     def retrieve_genetic_sequence_fasta_by_case(
         self, cmd: command.RetrieveGeneticSequenceFastaByCaseCommand
     ) -> Iterable[str]:
+        """Stream genetic sequence FASTA data for cases."""
         # Auth token is passed as a form field; the endpoint does not use the
         # Authorization header.
         token = self.get_headers(cmd).get("Authorization", "").removeprefix("Bearer ")
@@ -314,6 +331,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
     def create_file_for_read_set(
         self, cmd: command.CreateFileForReadSetCommand
     ) -> UUID:
+        """Create a file associated with a read set column."""
         request_body = api.CreateFileForReadSetRequestBody(
             file_content=base64.b64encode(cmd.file_content).decode(),
             is_fwd=cmd.is_fwd,
@@ -330,6 +348,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
         return UUID(response_body)
 
     def create_file_for_seq(self, cmd: command.CreateFileForSeqCommand) -> UUID:
+        """Create a file associated with a sequence column."""
         request_body = api.CreateFileForSeqRequestBody(
             file_content=base64.b64encode(cmd.file_content).decode(),
             file_format=cmd.file_format,
@@ -347,6 +366,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
     def retrieve_protocols(
         self, cmd: command.RetrieveProtocolsCommand
     ) -> list[seqdb_model.Protocol]:
+        """Retrieve sequencing or assembly protocols."""
         # RetrieveProtocolsCommand is handled by two different GET endpoints
         # depending on protocol_type; the registered route is just a placeholder
         # so RemoteApp.apply_handler finds a route for this command class.
@@ -363,6 +383,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
     def retrieve_is_own_cases(
         self, cmd: command.RetrieveIsOwnCasesCommand
     ) -> dict[UUID, bool]:
+        """Check whether the user owns each of the given cases."""
         request_body = api.RetrieveCasesByIdRequestBody(
             case_type_id=cmd.case_type_id,
             case_ids=cmd.case_ids,
@@ -377,6 +398,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
     def disease_etiological_agent_update_association(
         self, cmd: command.DiseaseEtiologicalAgentUpdateAssociationCommand
     ) -> list[model.Etiology]:
+        """Update etiological agent associations for a disease."""
         request_body = api.DiseaseEtiologicalAgentUpdateAssociationRequestBody(
             etiologies=cmd.association_objs
         )
