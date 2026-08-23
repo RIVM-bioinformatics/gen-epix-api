@@ -75,7 +75,7 @@ class Case(Model):
         description="The datetime of the case used for sorting results, limiting results and statistics such as first and last case date. Normally re-calculated from the case content variables upon persisting. Default is the current datetime.",
     )
     content: dict[UUID, str | None] = Field(
-        description=r"The data content of the case as {col_id: str_value | None}. Only columns defined for the CaseType of the case should be present here, and if no value is present, the key should be omitted. None content values are allowed to support deletion of keys but will be removed upon serialization."
+        description=r"The data content of the case as {col_id: str_value | None}. Only columns defined for the CaseType of the case should be present here, and if no value is present, the key should be omitted. None content values are allowed to support deletion of keys."
     )
 
     @field_serializer("cohort", mode="plain")

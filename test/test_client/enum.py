@@ -37,7 +37,6 @@ class EnumTestType(
     OMOPDB_INTEGRATION_RETRIEVE_FULL_PERSONS = (
         "OMOPDB_INTEGRATION_RETRIEVE_FULL_PERSONS"
     )
-    DOCS_ERM = "DOCS_ERM"
 
 
 class ServerType(Enum):
