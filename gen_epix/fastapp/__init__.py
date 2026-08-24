@@ -40,5 +40,7 @@ from gen_epix.fastapp.repositories import SAUnitOfWork as SAUnitOfWork
 from gen_epix.fastapp.repository import BaseRepository as BaseRepository
 from gen_epix.fastapp.repository import BaseUnitOfWork as BaseUnitOfWork
 from gen_epix.fastapp.service import BaseService as BaseService
+from gen_epix.fastapp.services.auth.model import IdentityProvider as IdentityProvider
+from gen_epix.fastapp.services.auth.model import IDPUser as IDPUser
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork as BaseUnitOfWork
 from gen_epix.fastapp.user_manager import BaseUserManager as BaseUserManager
