@@ -33,6 +33,10 @@ from gen_epix.fastapp.model import UpdateAssociationCommand as UpdateAssociation
 from gen_epix.fastapp.model import User as User
 from gen_epix.fastapp.pdp import PolicyDecisionPoint as PolicyDecisionPoint
 from gen_epix.fastapp.remote_app import RemoteApp as RemoteApp
+from gen_epix.fastapp.repositories import DictRepository as DictRepository
+from gen_epix.fastapp.repositories import DictUnitOfWork as DictUnitOfWork
+from gen_epix.fastapp.repositories import SARepository as SARepository
+from gen_epix.fastapp.repositories import SAUnitOfWork as SAUnitOfWork
 from gen_epix.fastapp.repository import BaseRepository as BaseRepository
 from gen_epix.fastapp.repository import BaseUnitOfWork as BaseUnitOfWork
 from gen_epix.fastapp.service import BaseService as BaseService
