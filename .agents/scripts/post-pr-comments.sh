@@ -12,6 +12,8 @@
 # Exit 0 always; the caller inspects the JSON.
 set -euo pipefail
 
+ai_attribution='*AI-generated comment; not written by the person posting this review.*'
+
 input=$(cat)
 pr_number=$(echo "$input" | jq -r '.pr_number // empty')
 comments=$(echo "$input" | jq -c '.comments // empty')
@@ -47,6 +49,11 @@ for i in $(seq 0 $((comment_count - 1))); do
   line=$(echo "$comment" | jq -r '.line')
   side=$(echo "$comment" | jq -r '.side // "RIGHT"')
   body=$(echo "$comment" | jq -r '.body')
+  if [[ "$body" != *"$ai_attribution"* ]]; then
+    body="$body
+
+$ai_attribution"
+  fi
 
   # -F sends typed fields (line as an integer); -f would stringify it.
   if err=$(gh api --method POST \

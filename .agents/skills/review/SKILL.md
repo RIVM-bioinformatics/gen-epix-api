@@ -64,7 +64,8 @@ Resolved behavior:
 4. **User approval** — Shows each proposed comment and asks the user to approve all, some,
    or none before posting.
 5. **Post to GitHub** — Posts approved comments as PR reviews using `gh pr review`, with
-   relevant code context.
+  relevant code context. Every posted comment is marked as AI-generated and states that
+  the text was not written by the person posting the review.
 
 ## Prerequisites
 
@@ -136,6 +137,12 @@ For each finding, the skill composes a review comment with:
 - **Suggestion** — Actionable recommendation (e.g., "add type hint", "extract to a function",
   "use early return").
 
+The generated comment body is shown with this disclosure before approval:
+
+```markdown
+*AI-generated comment; not written by the person posting this review.*
+```
+
 Comments are grouped by severity (critical vs. advisory) and presented to the user for
 approval.
 
@@ -151,7 +158,8 @@ The skill displays each proposed comment and asks:
 
 The skill invokes `.agents/scripts/post-pr-comments.sh` to post each approved comment
 to the PR. The script uses the GitHub REST API to post inline comments at the specified
-file and line range. Each comment includes the code snippet for context.
+file and line range. Each comment includes the code snippet for context and appends the
+AI-generated disclosure exactly once, even if it was already included in the input.
 
 The script returns a JSON result with the list of successfully posted comments, failed
 comments, and any error messages. If posting fails (network error, rate limit, etc.), the
