@@ -120,7 +120,8 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         f(command.UploadCasesCommand, self.upload_cases)
         f(command.CreateCaseSetCommand, self.create_case_set)
         f(command.RetrieveCompleteCaseTypeCommand, self.retrieve_complete_case_type)
-        f(command.RetrieveCaseStatsCommand, self.retrieve_case_stats)
+        f(command.RetrieveCaseSetStatsCommand, self.retrieve_case_stats)
+        f(command.RetrieveCaseTypeStatsCommand, self.retrieve_case_stats)
         f(command.RetrieveCasesByQueryCommand, self.retrieve_cases_by_query)
         f(
             command.RetrieveCaseCohortLinksByCaseTypeCommand,
@@ -444,7 +445,7 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
     @abc.abstractmethod
     def retrieve_case_stats(
         self,
-        cmd: command.RetrieveCaseStatsCommand,
+        cmd: command.RetrieveCaseTypeStatsCommand | command.RetrieveCaseSetStatsCommand,
     ) -> list[model.CaseStats]:
         """Retrieve case statistics."""
         raise NotImplementedError()

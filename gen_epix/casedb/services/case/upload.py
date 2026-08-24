@@ -130,6 +130,10 @@ class CaseBatchUploader(BatchUploader):
                 # Set case content to validated content. Since the case is a reference
                 # shared with the original cmd, it will be updated there as well
                 case.content = case_result.validated_content
+            if case_result.is_new and case.content:
+                # For creates, None has no deletion semantics and must never be
+                # persisted as content value.
+                case.content = {x: y for x, y in case.content.items() if y is not None}
             if not self.is_null(case.id) and case.content:
                 # Case and its content will be updated and has to be validated again
                 cases_for_validation.append(case)
@@ -155,20 +159,7 @@ class CaseBatchUploader(BatchUploader):
                 )
                 if row[1] is not None
             }
-            # Merge new content into existing
-            for case in cases_for_validation:
-                existing_content = existing_content_by_id.get(case.id)  # type: ignore[arg-type]
-                if existing_content is None:
-                    continue
-                BatchUploader.update_sub_field_dict(existing_content, case.content)
-                case.content = existing_content
-            # Validate cases again, this time with a complete CaseType that includes
-            # all columns, i.e. with no ABAC applied
-            complete_case_type = self._get_complete_case_type(cmd, ignore_abac=True)
-            case_validator = self._get_case_validator(
-                complete_case_type, cmd.user.id if cmd.user and cmd.user.id else NULL_ID
-            )
-            case_validator.validate_and_transform(cmd, batch_result)
+            self._validate_merged_content(cmd, batch_result, existing_content_by_id)
 
         # Use the general parent method for upserting the cases
         is_pending_before_cases_only_upsert = [
@@ -208,6 +199,63 @@ class CaseBatchUploader(BatchUploader):
         success &= curr_success
 
         return success
+
+    def _validate_merged_content(
+        self,
+        cmd: command.UploadCasesCommand,
+        batch_result: model.CaseBatchUploadResult,
+        existing_content_by_id: dict[UUID, dict],
+    ) -> None:
+        """
+        Re-validate each case's content merged with what is already in the
+        database, so inconsistencies in the resulting state are caught, not
+        just in the incoming change.
+
+        The merge and validation temporarily replace each case's content
+        with the full merged state (existing content with the incoming
+        change applied, so deleted keys are simply absent rather than
+        explicitly None) directly on the real case object, since
+        CaseValidator.validate_and_transform mutates the case in place for
+        more than just content (e.g. it recalculates case_date). Afterward,
+        only the deleted keys are put back as explicit None: the generic
+        upsert that runs after this re-derives its own diff from a fresh DB
+        read and can only detect a deletion via an explicit {key: None}
+        entry, not a key's mere absence. Added or changed keys are already
+        correctly represented by their new value in the merged content, so
+        only deletions need reinstating; anything else validation may do to
+        content in place (e.g. normalizing a value) is left untouched.
+        """
+        deleted_col_ids_by_case_id: dict[UUID, set[UUID]] = {}
+        for case_for_upload in cmd.case_batch.cases:
+            case = case_for_upload.case
+            if case is None:
+                continue
+            existing_content = existing_content_by_id.get(case.id)  # type: ignore[arg-type]
+            if existing_content is None:
+                continue
+            deleted_col_ids_by_case_id[case.id] = {  # type: ignore[index]
+                col_id for col_id, value in case.content.items() if value is None
+            }
+            merged_content = dict(existing_content)
+            BatchUploader.update_sub_field_dict(merged_content, case.content)
+            case.content = merged_content
+
+        complete_case_type = self._get_complete_case_type(cmd, ignore_abac=True)
+        case_validator = self._get_case_validator(
+            complete_case_type,
+            cmd.user.id if cmd.user and cmd.user.id else NULL_ID,
+        )
+        case_validator.validate_and_transform(cmd, batch_result)
+
+        for case_for_upload in cmd.case_batch.cases:
+            case = case_for_upload.case
+            if case is None:
+                continue
+            deleted_col_ids = deleted_col_ids_by_case_id.get(case.id)  # type: ignore[arg-type]
+            if not deleted_col_ids:
+                continue
+            for col_id in deleted_col_ids:
+                case.content[col_id] = None
 
     def upload_samples(
         self,

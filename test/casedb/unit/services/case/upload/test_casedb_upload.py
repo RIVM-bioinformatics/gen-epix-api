@@ -646,6 +646,195 @@ class TestCaseContentUploadUpdates(BaseUploadTestCase):
             expected = {col_id: expected_content}
 
         assert updated_objs[0].content == expected
+        assert all(value is not None for value in updated_objs[0].content.values())
+
+
+@pytest.mark.scenario_ids("TC-SEC-30-03")
+class TestCaseContentUpsertPersistence(BaseUploadTestCase):
+    def test_upsert_batch_create_does_not_persist_none_content_values(self) -> None:
+        col_to_drop = uuid4()
+        col_to_keep = self.reads_col_id
+        created_case_id = uuid4()
+
+        case_for_upload = self.create_case_for_upload(
+            case_id=NULL_ID,
+            content={col_to_drop: None, col_to_keep: "new"},
+        )
+        cmd, batch_result = self.create_command_and_result(case_for_upload)
+        batch_result.cases[0].is_new = True
+        batch_result.cases[0].validated_content = dict(case_for_upload.case.content)  # type: ignore[union-attr]
+
+        uploader, service = self.create_uploader()
+        service.generate_id = Mock(return_value=created_case_id)
+        persisted_create_objs: list[model.Case] = []
+
+        def _crud_side_effect(
+            _uow: Mock,
+            _user_id: UUID | None,
+            model_class: type[model.Model],
+            operation: CrudOperation,
+            **kwargs: object,
+        ) -> list[model.Case] | list[UUID]:
+            if model_class is not model.Case:
+                return []
+            if operation == CrudOperation.CREATE_SOME:
+                objs = kwargs.get("objs")
+                assert isinstance(objs, list)
+                persisted_create_objs.extend(cast(list[model.Case], objs))
+                return [created_case_id]
+            return []
+
+        service.repository.crud.side_effect = _crud_side_effect
+
+        with (
+            patch.object(uploader, "_get_complete_case_type", return_value=Mock()),
+            patch.object(uploader, "_get_case_validator", return_value=Mock()),
+        ):
+            success = uploader.upsert_batch(cmd, batch_result, Mock())
+
+        assert success
+        assert len(persisted_create_objs) == 1
+        assert persisted_create_objs[0].content == {col_to_keep: "new"}
+        assert all(
+            value is not None for value in persisted_create_objs[0].content.values()
+        )
+
+    def test_upsert_batch_update_does_not_persist_none_content_values(self) -> None:
+        col_to_delete = uuid4()
+        col_to_keep = self.reads_col_id
+        case_id = self.case_id
+
+        case_for_upload = self.create_case_for_upload(
+            case_id=case_id,
+            content={col_to_delete: None, col_to_keep: "new"},
+        )
+        cmd, batch_result = self.create_command_and_result(case_for_upload)
+        batch_result.cases[0].is_new = False
+        batch_result.cases[0].validated_content = dict(case_for_upload.case.content)  # type: ignore[union-attr]
+
+        uploader, service = self.create_uploader()
+        persisted_update_objs: list[model.Case] = []
+        existing_case = self.create_case(
+            case_id=case_id,
+            content={col_to_delete: "old", col_to_keep: "old"},
+        )
+
+        def _crud_side_effect(
+            _uow: Mock,
+            _user_id: UUID | None,
+            model_class: type[model.Model],
+            operation: CrudOperation,
+            **kwargs: object,
+        ) -> list[model.Case] | list[UUID]:
+            if model_class is not model.Case:
+                return []
+            if operation == CrudOperation.READ_SOME:
+                return [existing_case]
+            if operation == CrudOperation.UPDATE_SOME:
+                objs = kwargs.get("objs")
+                assert isinstance(objs, list)
+                persisted_update_objs.extend(cast(list[model.Case], objs))
+                return [case_id]
+            return []
+
+        service.repository.crud.side_effect = _crud_side_effect
+        service.repository.read_fields.return_value = [
+            (case_id, {str(col_to_delete): "old", str(col_to_keep): "old"})
+        ]
+
+        with (
+            patch.object(uploader, "_get_complete_case_type", return_value=Mock()),
+            patch.object(uploader, "_get_case_validator", return_value=Mock()),
+        ):
+            success = uploader.upsert_batch(cmd, batch_result, Mock())
+
+        assert success
+        assert len(persisted_update_objs) == 1
+        assert persisted_update_objs[0].content == {col_to_keep: "new"}
+        assert all(
+            value is not None for value in persisted_update_objs[0].content.values()
+        )
+
+
+@pytest.mark.scenario_ids("TC-SEC-30-03")
+class TestUpsertBatchContentDeletionDelta(BaseUploadTestCase):
+    """
+    LSP-3647 regression: CaseBatchUploader.upsert_batch merges incoming
+    content into the existing DB content to re-validate the full resulting
+    state, which resolves a deletion into mere key-absence. If that merged
+    state were passed on as-is, the generic BatchUploader.upsert_batch could
+    never detect the deletion, since it re-derives its own diff from a fresh
+    DB read and only recognizes a deletion via an explicit {key: None}
+    entry. The content handed to the generic upsert must therefore still be
+    the pre-merge delta, not the merged state.
+    """
+
+    def test_content_deletion_delta_is_restored_before_generic_upsert(self) -> None:
+        col_id = self.reads_col_id
+        case = self.create_case(content={col_id: None})
+        case_result = model.CaseUploadResult(validated_content={col_id: None})
+        cmd = command.UploadCasesCommand(
+            user=self.create_org_user(),
+            case_type_id=self.case_type_id,
+            default_created_in_data_collection_id=self.data_collection_id,
+            case_batch=model.CaseBatchForUpload(cases=[model.CaseForUpload(case=case)]),
+            on_exists=UploadAction.UPDATE.value,  # type: ignore[call-arg]
+        )
+        batch_result = model.CaseBatchUploadResult(cases=[case_result])
+
+        uploader, service = self.create_uploader()
+        service.repository.read_fields.return_value = [
+            (self.case_id, {col_id: "old-value"})
+        ]
+        with (
+            patch.object(uploader, "_get_complete_case_type", return_value=Mock()),
+            patch.object(uploader, "_get_case_validator", return_value=Mock()),
+            patch(
+                "gen_epix.commondb.services.upload.BatchUploader.upsert_batch",
+                return_value=True,
+            ) as mock_generic_upsert,
+        ):
+            uploader.upsert_batch(cmd, batch_result, Mock())
+
+        persisted_cmd = mock_generic_upsert.call_args.args[0]
+        persisted_case = persisted_cmd.case_batch.cases[0].case
+        assert persisted_case.content == {col_id: None}
+
+
+@pytest.mark.scenario_ids("TC-SEC-30-03")
+class TestCaseForUploadContentSerialization(BaseUploadTestCase):
+    """
+    LSP-3645: a None content value signals "delete this key" and must
+    survive serialization for both upload wrappers and plain Case payloads.
+    Persistence logic must still interpret None as delete-intent and not
+    store None in the final persisted case content.
+    """
+
+    def test_case_for_upload_preserves_none_content_value(self) -> None:
+        deleted_col_id = uuid4()
+        case_for_upload = self.create_case_for_upload(
+            content={deleted_col_id: None, self.reads_col_id: "kept"}
+        )
+
+        dumped = case_for_upload.model_dump(mode="json")
+
+        assert dumped["case"]["content"] == {
+            str(deleted_col_id): None,
+            str(self.reads_col_id): "kept",
+        }
+
+    def test_plain_case_also_serializes_none_content_value(self) -> None:
+        deleted_col_id = uuid4()
+        case = self.create_case(
+            content={deleted_col_id: None, self.reads_col_id: "kept"}
+        )
+
+        dumped = case.model_dump(mode="json")
+
+        assert dumped["content"] == {
+            str(deleted_col_id): None,
+            str(self.reads_col_id): "kept",
+        }
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")

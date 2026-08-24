@@ -13,6 +13,7 @@ pyjwt==2.13.0
 #database handling
 sqlalchemy==2.0.52
 sqlalchemy_utils==0.42.1
+alembic==1.19.1
 
 # Data models/handling
 pydantic==2.13.4
@@ -25,7 +26,7 @@ PyYAML==6.0.3
 python-multipart==0.0.32
 
 # calculation
-scipy==1.18.0
+scipy==1.18.1
 numpy==2.5.2
 biopython==1.88
 

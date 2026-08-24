@@ -877,6 +877,7 @@ class DeviceExposure(Model, DataLineageMixin):
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
         return validate_int_for_uuid_field(value)
 
+
 class Specimen(Model, DataLineageMixin):
     """The specimen domain contains the records identifying biological samples from a person."""
 

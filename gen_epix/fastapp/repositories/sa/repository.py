@@ -1595,9 +1595,12 @@ class SARepository(BaseRepository):
                         )
                     else:
                         if len(schema_names) > 1:
-                            valid_schema_names = [x for x in schema_names if x is not None]
+                            valid_schema_names = [
+                                x for x in schema_names if x is not None
+                            ]
                             raise NotImplementedError(
-                                "Multiple schemas: " + ", ".join(sorted(valid_schema_names))
+                                "Multiple schemas: "
+                                + ", ".join(sorted(valid_schema_names))
                             )
                         assert sqlite_file is not None
                         attach_target = sqlite_file.as_posix()
