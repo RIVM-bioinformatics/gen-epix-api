@@ -51,7 +51,8 @@ services:
       retries: 12
       start_period: 30s
 
-  # One-shot container: creates the service databases then exits.
+  # One-shot container: creates the three databases then exits.
+  # create_sa_repository() handles schemas + tables on app startup.
   init-db:
     image: mcr.microsoft.com/mssql/server:2025-latest@sha256:4bab24f36c1ecd48e85f7d37df26e6bf301641d84c3fe652f9a0dcc947d512e1
     depends_on:
@@ -63,67 +64,15 @@ services:
       - >
         /opt/mssql-tools18/bin/sqlcmd -S lsp_sql -U sa
         -P 'Your_password123' -C
-        -Q "IF DB_ID('commondb') IS NULL CREATE DATABASE commondb;
-            IF DB_ID('casedb') IS NULL CREATE DATABASE casedb;
+        -Q "IF DB_ID('casedb') IS NULL CREATE DATABASE casedb;
             IF DB_ID('seqdb')  IS NULL CREATE DATABASE seqdb;
             IF DB_ID('omopdb') IS NULL CREATE DATABASE omopdb;"
         2>/dev/null
         || /opt/mssql-tools/bin/sqlcmd -S lsp_sql -U sa
         -P 'Your_password123'
-        -Q "IF DB_ID('commondb') IS NULL CREATE DATABASE commondb;
-            IF DB_ID('casedb') IS NULL CREATE DATABASE casedb;
+        -Q "IF DB_ID('casedb') IS NULL CREATE DATABASE casedb;
             IF DB_ID('seqdb')  IS NULL CREATE DATABASE seqdb;
             IF DB_ID('omopdb') IS NULL CREATE DATABASE omopdb;"
-    restart: "no"
-
-  # One migration job per database. This mirrors the pre-deployment jobs used
-  # in PRD: an API only starts after its database reached the Alembic head.
-  migrate-commondb:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    command: alembic -c gen_epix/commondb/repositories/alembic.ini upgrade head
-    environment:
-      ALEMBIC_URL: "mssql+pyodbc:///?odbc_connect=DRIVER={ODBC Driver 18 for SQL Server};SERVER=lsp_sql;DATABASE=commondb;UID=sa;PWD=Your_password123;TrustServerCertificate=yes"
-    depends_on:
-      init-db:
-        condition: service_completed_successfully
-    restart: "no"
-
-  migrate-seqdb:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    command: alembic -c gen_epix/seqdb/repositories/alembic.ini upgrade head
-    environment:
-      ALEMBIC_URL: "mssql+pyodbc:///?odbc_connect=DRIVER={ODBC Driver 18 for SQL Server};SERVER=lsp_sql;DATABASE=seqdb;UID=sa;PWD=Your_password123;TrustServerCertificate=yes"
-    depends_on:
-      init-db:
-        condition: service_completed_successfully
-    restart: "no"
-
-  migrate-omopdb:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    command: alembic -c gen_epix/omopdb/repositories/alembic.ini upgrade head
-    environment:
-      ALEMBIC_URL: "mssql+pyodbc:///?odbc_connect=DRIVER={ODBC Driver 18 for SQL Server};SERVER=lsp_sql;DATABASE=omopdb;UID=sa;PWD=Your_password123;TrustServerCertificate=yes"
-    depends_on:
-      init-db:
-        condition: service_completed_successfully
-    restart: "no"
-
-  migrate-casedb:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    command: alembic -c gen_epix/casedb/repositories/alembic.ini upgrade head
-    environment:
-      ALEMBIC_URL: "mssql+pyodbc:///?odbc_connect=DRIVER={ODBC Driver 18 for SQL Server};SERVER=lsp_sql;DATABASE=casedb;UID=sa;PWD=Your_password123;TrustServerCertificate=yes"
-    depends_on:
-      init-db:
-        condition: service_completed_successfully
     restart: "no"
 
   # Mock OAuth 2.0 / OIDC server. Runs without SSL (certs are stripped from the
@@ -180,7 +129,7 @@ services:
     ports:
       - "8001:8001"
     depends_on:
-      migrate-seqdb:
+      init-db:
         condition: service_completed_successfully
       init-mock-oidc:
         condition: service_completed_successfully
@@ -203,7 +152,7 @@ services:
     ports:
       - "8002:8002"
     depends_on:
-      migrate-omopdb:
+      init-db:
         condition: service_completed_successfully
       init-mock-oidc:
         condition: service_completed_successfully
@@ -229,7 +178,7 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      migrate-casedb:
+      init-db:
         condition: service_completed_successfully
       init-mock-oidc:
         condition: service_completed_successfully

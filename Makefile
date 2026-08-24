@@ -4,9 +4,6 @@
 #   restart-docker          Rebuild and restart the full stack (keeps DB volumes).
 #   restart-docker-teardown Same, but wipes DB volumes first (clean slate).
 #   test                    Run the full pytest suite.
-#   generate-schema-migration-docs
-#                           Generate the committed-friendly Alembic history
-#                           pages under docs/schema_migration/.
 #   calculate-distances-performance-mssql
 #                           Tear down the SQL Server volume, start only lsp_sql,
 #                           create the seqdb database, then run the seq-distance
@@ -21,7 +18,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 .PHONY: restart-docker restart-docker-teardown test \
-        generate-schema-migration-docs calculate-distances-performance-mssql
+        calculate-distances-performance-mssql
 
 COMPOSE_FILE = docker-compose.sql.idp.yml
 
@@ -41,14 +38,6 @@ restart-docker-teardown:
 
 test:
 	pytest --capture=fd -q --tb=short
-
-generate-schema-migration-docs:
-	mkdir -p docs/schema_migration
-	for service in commondb casedb seqdb omopdb; do \
-		printf '# %s Alembic migration history\n\n```text\n' "$$service" > "docs/schema_migration/$$service.md"; \
-		alembic -c "gen_epix/$$service/repositories/alembic.ini" history --verbose | sed -e 's/[[:space:]]*$$//' -e 's|Path: .*/gen_epix/|Path: gen_epix/|' >> "docs/schema_migration/$$service.md"; \
-		printf '```\n' >> "docs/schema_migration/$$service.md"; \
-	done
 
 calculate-distances-performance-mssql:
 	docker compose -f $(COMPOSE_FILE) down -v

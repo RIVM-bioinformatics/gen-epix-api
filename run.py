@@ -191,7 +191,6 @@ class Run:
                 "test/omopdb/unit",
                 "test/omopdb/integration",
                 "test/general/docs",
-                "test/general/migrations",
             ]
             + (["test/end_to_end"] if include_e2e else [])
             + [
