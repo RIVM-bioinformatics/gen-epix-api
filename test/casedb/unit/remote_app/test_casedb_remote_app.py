@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import base64
 import json
-from datetime import datetime, timezone
 from test.util.mock_compat import MagicMock, Mock, patch
 from typing import Any
 from uuid import uuid4
@@ -94,7 +93,7 @@ class TestNonCrudHandlers:
         self, app: CasedbRemoteApp, mock_client: Any
     ) -> None:
         case_type_id = uuid4()
-        data = {
+        data: dict[str, Any] = {
             "name": "CT",
             "user_id": None,
             "etiologies": {},
@@ -158,31 +157,35 @@ class TestNonCrudHandlers:
         self, app: CasedbRemoteApp, mock_client: Any
     ) -> None:
         case_type_id = uuid4()
-        cmd = command.RetrieveCaseStatsCommand(user=None, case_type_ids={case_type_id})
+        cmd = command.RetrieveCaseTypeStatsCommand(
+            user=None, case_type_ids={case_type_id}
+        )
         data = [{"case_type_id": str(case_type_id)}]
         mock_client.request.return_value = _mock_response(data)
-        result = app.retrieve_case_stats(cmd)
+        result = app.retrieve_case_type_stats(cmd)
         method, url = mock_client.request.call_args.args
         assert method == "POST"
-        assert url == app._routes[command.RetrieveCaseStatsCommand]
+        assert url == app._routes[command.RetrieveCaseTypeStatsCommand]
         assert result == [model.CaseStats(**data[0])]
 
     def test_retrieve_case_stats_by_case_set(
         self, app: CasedbRemoteApp, mock_client: Any
     ) -> None:
         case_set_id = uuid4()
-        cmd = command.RetrieveCaseStatsCommand(user=None, case_set_ids=[case_set_id])
-        data = [{"case_type_id": str(uuid4())}]
+        case_type_id = uuid4()
+        cmd = command.RetrieveCaseSetStatsCommand(user=None, case_set_ids={case_set_id})
+        data = [{"case_set_id": str(case_set_id), "case_type_id": str(case_type_id)}]
         mock_client.request.return_value = _mock_response(data)
-        result = app.retrieve_case_stats(cmd)
+        result = app.retrieve_case_set_stats(cmd)
         method, url = mock_client.request.call_args.args
         json_body = mock_client.request.call_args.kwargs["json"]
         assert method == "POST"
-        base_route = app._routes[command.RetrieveCaseStatsCommand]
-        assert url == base_route.replace(
-            "/retrieve/case_type_stats", "/retrieve/case_set_stats"
-        )
-        assert json_body == {"case_set_ids": [str(case_set_id)]}
+        base_route = app._routes[command.RetrieveCaseSetStatsCommand]
+        assert url == base_route
+        assert json_body == {
+            "case_set_ids": [str(case_set_id)],
+            "datetime_range_filter": None,
+        }
         assert result == [model.CaseStats(**data[0])]
 
     def test_retrieve_cases_by_id(self, app: CasedbRemoteApp, mock_client: Any) -> None:

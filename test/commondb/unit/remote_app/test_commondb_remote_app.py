@@ -903,7 +903,7 @@ class TestNonCrudHandlers:
         link = model.OrganizationIdentifierIssuerLink(
             organization_id=organization_id, identifier_issuer_id=uuid4()
         )
-        cmd = command.OrganizationIdentifierIssuerLinkUpdateAssociationCommand(
+        cmd = command.OrganizationIdentifierIssuerUpdateAssociationCommand(
             user=None, obj_id1=organization_id, association_objs=[link]
         )
         data = [
@@ -917,7 +917,7 @@ class TestNonCrudHandlers:
         method, url = mock_client.request.call_args.args
         assert method == "PUT"
         route = app._routes[
-            command.OrganizationIdentifierIssuerLinkUpdateAssociationCommand
+            command.OrganizationIdentifierIssuerUpdateAssociationCommand
         ]
         assert url == f"{route}/{organization_id}/identifier_issuers"
         assert result == [model.OrganizationIdentifierIssuerLink(**data[0])]
