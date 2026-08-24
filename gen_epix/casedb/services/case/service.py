@@ -135,7 +135,7 @@ class CaseService(BaseCaseService):
 
     def retrieve_case_stats(
         self,
-        cmd: command.RetrieveCaseStatsCommand,
+        cmd: command.RetrieveCaseTypeStatsCommand | command.RetrieveCaseSetStatsCommand,
     ) -> list[model.CaseStats]:
         return case_service_retrieve_case_stats(self, cmd)
 
