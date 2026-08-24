@@ -1498,21 +1498,25 @@ class SARepository(BaseRepository):
         **kwargs: Any,
     ) -> "SARepository":
         """
-        Create an SARepository, setting up engine, schemas, and DDL.
+        Create an SARepository and its database engine.
 
         When connection_string is None, an in-memory SQLite database will be created. When
-        connection_string is provided, it will be used to create the engine.
+        connection_string is provided, it will be used to create the engine. SQLite
+        repositories retain their convenient automatic schema setup. Other databases
+        are migration-managed by default; pass ``create_database_objects=True`` only
+        for explicit bootstrap tooling.
         """
         # Parse arguments
         echo = kwargs.pop("echo", False)
         register_mappers = kwargs.pop("register_mappers", True)
         recreate_sqlite_file = kwargs.pop("recreate_sqlite_file", False)
-        schema_names = {x.schema_name for x in entities if x.persistable}
 
         # Handle sqlite separately
         is_sqlite = connection_string is None or connection_string.lower().startswith(
             "sqlite:///"
         )
+        create_database_objects = kwargs.pop("create_database_objects", is_sqlite)
+        schema_names = {x.schema_name for x in entities if x.persistable}
         if is_sqlite:
             sqlite_target = (
                 None
@@ -1620,19 +1624,16 @@ class SARepository(BaseRepository):
                 connection_string, echo, connect_args=connect_args
             )
 
-            # Create schemas if not exists
-            for schema_name in schema_names:
-                if not schema_name:
-                    continue
-                with engine.connect() as conn:
-                    # print(conn)
-                    result = conn.execute(sa.text("SELECT name FROM sys.schemas"))
-                    schemas = [x[0] for x in result]
-                    # print(schemas)
-                    conn.dialect
-                    if not conn.dialect.has_schema(conn, schema_name):
-                        conn.execute(sa.schema.CreateSchema(schema_name))
-                        conn.commit()
+            if create_database_objects:
+                # Explicit bootstrap path for non-SQLite tooling. Production SQL
+                # Server schema creation is performed by Alembic migrations.
+                for schema_name in schema_names:
+                    if not schema_name:
+                        continue
+                    with engine.connect() as conn:
+                        if not conn.dialect.has_schema(conn, schema_name):
+                            conn.execute(sa.schema.CreateSchema(schema_name))
+                            conn.commit()
 
         # Get all metadata instances
         metadata_set: set[sa.MetaData] = set()
@@ -1647,9 +1648,12 @@ class SARepository(BaseRepository):
                 )
             metadata_set.add(cast(sa.MetaData, getattr(db_model_class, "metadata")))
 
-        # Create all tables, if necessary, for each metadata instance
-        for metadata in metadata_set:
-            metadata.create_all(engine, checkfirst=True)
+        # SQLite is used heavily by tests and local fixtures. SQL Server is
+        # deliberately managed by Alembic so an API process cannot introduce
+        # unreviewed schema changes at runtime.
+        if create_database_objects:
+            for metadata in metadata_set:
+                metadata.create_all(engine, checkfirst=True)
 
         # Create repository
         repository = cls(
