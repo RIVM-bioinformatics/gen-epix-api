@@ -13,19 +13,6 @@ from gen_epix.omopdb.repositories.sa_alembic.metadata import target_metadata
 config = context.config
 
 
-def _compare_nullable(
-    context: object,
-    inspected_column: object,
-    metadata_column: object,
-    inspected_nullable: bool,
-    metadata_nullable: bool,
-) -> bool | None:
-    """Ignore SQL Server's mandatory NOT NULL primary-key invariant."""
-    if getattr(inspected_column, "primary_key", False) and metadata_nullable:
-        return False
-    return None
-
-
 def _configure_url() -> None:
     url = context.get_x_argument(as_dictionary=True).get("url") or os.getenv(
         "ALEMBIC_URL"
@@ -43,7 +30,6 @@ def run_migrations_offline() -> None:
         include_schemas=True,
         compare_type=True,
         compare_server_default=False,
-        compare_nullable=_compare_nullable,
         version_table_schema="alembic",
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -73,7 +59,6 @@ def run_migrations_online() -> None:
             include_schemas=True,
             compare_type=True,
             compare_server_default=False,
-            compare_nullable=_compare_nullable,
             version_table_schema="alembic",
         )
         with context.begin_transaction():
