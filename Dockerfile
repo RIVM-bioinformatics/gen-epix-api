@@ -20,6 +20,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     openssl \
     libssl3t64 \
+    build-essential \
+    libstdc++6 \
     && apt-get install -y \
     curl \
     gnupg \
@@ -55,7 +57,7 @@ RUN adduser \
 # so it is not included in the requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
-    python -m pip install -r requirements.txt pyodbc==5.2.* --no-cache-dir
+    CC=g++ CXX=g++ python -m pip install -r requirements.txt pyodbc==5.2.* --no-cache-dir
 
 # Copy the source code into the container.
 COPY . /app
