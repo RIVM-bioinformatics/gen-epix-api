@@ -34,7 +34,7 @@ dependencies = [
     "urllib3==2.7.0",
     "sqlalchemy==2.0.52",
     "sqlalchemy_utils==0.42.1",
-    "alembic==1.18.4",
+    "alembic==1.19.1",
     "pydantic==2.13.4",
     "ulid-py==1.1.0",
     "fire==0.7.1",
