@@ -1,7 +1,5 @@
 import json
 from pathlib import Path
-from test.test_client import enum
-from test.test_client.util import get_test_name, get_test_output_dir
 
 import pytest
 
@@ -11,7 +9,6 @@ import docs.erm.erm_hash
 @pytest.mark.scenario_ids("TC-SEC-28-08")
 class TestERM:
 
-    TEST_DIR = get_test_output_dir(get_test_name(enum.EnumTestType.DOCS_ERM))
     HASH_FILE = Path.cwd() / "docs" / "erm" / "erm.json"
 
     def test_erm_images_updated(self) -> None:

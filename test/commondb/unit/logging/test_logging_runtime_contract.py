@@ -14,6 +14,7 @@ import json
 import subprocess
 import sys
 import textwrap
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +39,8 @@ _E2E_YAML_PATHS = [
     _REPO_ROOT / "test" / "end_to_end" / "casedb_seqdb_connection" / "logging.yaml",
 ]
 
+_RUNTIME_YAML_PATHS = _PRODUCTION_YAML_PATHS + _E2E_YAML_PATHS
+
 _ALL_YAML_PATHS = _PRODUCTION_YAML_PATHS + _DEBUG_YAML_PATHS + _E2E_YAML_PATHS
 
 JSONDict = dict[str, Any]
@@ -49,7 +52,10 @@ def _load_class(path: str) -> object:
     return getattr(module, class_name)
 
 
-def _emit_access_payload_via_dictconfig(yaml_path: Path) -> JSONDict:
+@lru_cache(maxsize=1)
+def _emit_runtime_payloads_for_all_yaml_paths() -> (
+    dict[str, tuple[JSONDict, list[JSONDict]]]
+):
     script = textwrap.dedent("""
         import json
         import logging
@@ -59,132 +65,140 @@ def _emit_access_payload_via_dictconfig(yaml_path: Path) -> JSONDict:
 
         import yaml
 
-        config_path = Path(sys.argv[1])
-        config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+        results = {}
+        for raw_path in sys.argv[1:]:
+            config_path = Path(raw_path)
+            config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
 
-        # Keep formatter/filter wiring but route all output through one console handler
-        # so this runtime contract stays side-effect free (no debug file writes).
-        config["handlers"] = {
-            "capture": {
-                "class": "logging.StreamHandler",
-                "level": "DEBUG",
-                "formatter": "json",
-                "stream": "ext://sys.stdout",
-            }
-        }
-        for logger_cfg in config.get("loggers", {}).values():
-            logger_cfg["handlers"] = ["capture"]
-            logger_cfg["propagate"] = False
-        root_cfg = config.get("root", {})
-        root_cfg["handlers"] = ["capture"]
-        root_cfg["level"] = "DEBUG"
-        config["root"] = root_cfg
+            # Keep formatter/filter wiring but route all output through one
+            # in-memory capture handler to avoid per-logline stdout overhead.
+            captured = []
 
-        logging.config.dictConfig(config)
-        access_logger = logging.getLogger("uvicorn.access")
-        access_logger.info(
-            '%s - "%s %s HTTP/%s" %d',
-            "127.0.0.1:12345",
-            "GET",
-            "/runtime-check",
-            "1.1",
-            204,
-        )
+            class CaptureHandler(logging.Handler):
+                def emit(self, record):
+                    msg = self.format(record)
+                    if msg:
+                        captured.append(msg)
+
+            capture_handler = CaptureHandler(level=logging.DEBUG)
+            formatter_name = "json"
+            fmt_cfg = config.get("formatters", {}).get(formatter_name)
+            if not fmt_cfg:
+                raise AssertionError(f"No '{formatter_name}' formatter in {config_path}")
+            if "()" in fmt_cfg:
+                class_path = fmt_cfg["()"]
+                module_name, class_name = class_path.rsplit(".", 1)
+                module = __import__(module_name, fromlist=[class_name])
+                cls = getattr(module, class_name)
+                kwargs = {k: v for k, v in fmt_cfg.items() if k != "()"}
+                formatter = cls(**kwargs)
+            else:
+                formatter = logging.Formatter(fmt_cfg.get("format", "%(message)s"))
+            capture_handler.setFormatter(formatter)
+
+            for logger_cfg in config.get("loggers", {}).values():
+                logger_cfg["handlers"] = []
+                logger_cfg["propagate"] = False
+                logger_cfg["level"] = "DEBUG"
+            root_cfg = config.get("root", {})
+            root_cfg["handlers"] = []
+            root_cfg["level"] = "DEBUG"
+            config["root"] = root_cfg
+
+            logging.config.dictConfig(config)
+
+            # Attach capture handler to all configured loggers plus root.
+            configured_logger_names = list(config.get("loggers", {}).keys())
+            for logger_name in configured_logger_names:
+                logging.getLogger(logger_name).addHandler(capture_handler)
+            logging.getLogger().addHandler(capture_handler)
+
+            # Emit one access log probe.
+            access_logger = logging.getLogger("uvicorn.access")
+            access_logger.info(
+                '%s - "%s %s HTTP/%s" %d',
+                "127.0.0.1:12345",
+                "GET",
+                "/runtime-check",
+                "1.1",
+                204,
+            )
+
+            # Emit app/service lifecycle probe records.
+            app_logger_name = next(
+                (name for name in config.get("loggers", {}) if name.endswith(".app")),
+                "casedb.app",
+            )
+            logger = logging.getLogger(app_logger_name)
+            service_logger_name = next(
+                (name for name in config.get("loggers", {}) if name.endswith(".service")),
+                "casedb.service",
+            )
+            service_logger = logging.getLogger(service_logger_name)
+            logger.info(
+                '{"code":"e8aafcec","msg":"STARTING_APP","app":{"id":"app-123","name":"CASEDB"}}'
+            )
+            logger.info(
+                '{"code":"e94cad9b","msg":"STARTED_COMMAND","command":{"class":"DemoCommand","id":"cmd-123","user_id":"u-123"}}'
+            )
+            logger.debug(
+                '{"code":"e94cad9b","msg":"STARTED_COMMAND","command":{"class":"DemoCommand","object":{"id":"cmd-obj-123"},"parent_command_id":null,"stack_trace":"DemoCommand"}}'
+            )
+            service_logger.info(
+                '{"code":"c10677fe","msg":"STARTING_SERVICE","service":{"id":"svc-123","name":"UploadService"}}'
+            )
+
+            payloads = []
+            for line in captured:
+                line = line.strip()
+                if line.startswith("{") and line.endswith("}"):
+                    payloads.append(json.loads(line))
+            results[str(config_path)] = payloads
+
+        print(json.dumps(results))
         """)
 
     proc = subprocess.run(
-        [sys.executable, "-c", script, str(yaml_path)],
+        [sys.executable, "-c", script, *[str(x) for x in _RUNTIME_YAML_PATHS]],
         capture_output=True,
         text=True,
         check=False,
     )
-    assert (
-        proc.returncode == 0
-    ), f"Subprocess failed for {yaml_path.name}: {proc.stderr}"
+    assert proc.returncode == 0, f"Subprocess failed: {proc.stderr}"
 
-    for line in reversed(proc.stdout.splitlines()):
-        line = line.strip()
-        if line.startswith("{") and line.endswith("}"):
-            return json.loads(line)
-    raise AssertionError(f"No JSON log line emitted for {yaml_path.name}")
+    stdout = proc.stdout.strip()
+    assert stdout, "No JSON payload mapping emitted by runtime probe subprocess"
+    raw_results: dict[str, list[JSONDict]] = json.loads(stdout)
 
-
-def _emit_app_lifecycle_payloads_via_dictconfig(yaml_path: Path) -> list[JSONDict]:
-    script = textwrap.dedent("""\
-        import logging
-        import logging.config
-        import sys
-        from pathlib import Path
-
-        import yaml
-
-        config_path = Path(sys.argv[1])
-        config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
-
-        config["handlers"] = {
-            "capture": {
-                "class": "logging.StreamHandler",
-                "level": "DEBUG",
-                "formatter": "json",
-                "stream": "ext://sys.stdout",
-            }
-        }
-        for logger_cfg in config.get("loggers", {}).values():
-            logger_cfg["handlers"] = ["capture"]
-            logger_cfg["propagate"] = False
-            logger_cfg["level"] = "DEBUG"
-        root_cfg = config.get("root", {})
-        root_cfg["handlers"] = ["capture"]
-        root_cfg["level"] = "DEBUG"
-        config["root"] = root_cfg
-
-        logging.config.dictConfig(config)
-
-        app_logger_name = next(
-            (name for name in config.get("loggers", {}) if name.endswith(".app")),
-            "casedb.app",
+    resolved: dict[str, tuple[JSONDict, list[JSONDict]]] = {}
+    for yaml_path in _RUNTIME_YAML_PATHS:
+        key = str(yaml_path)
+        payloads = raw_results.get(key)
+        assert payloads is not None, f"Missing payloads for {yaml_path.name}"
+        access_payload = next(
+            (
+                x
+                for x in payloads
+                if x.get("logger") == "uvicorn.access"
+                and str(x.get("message", "")).startswith("http.access")
+            ),
+            None,
         )
-        logger = logging.getLogger(app_logger_name)
-        service_logger_name = next(
-            (name for name in config.get("loggers", {}) if name.endswith(".service")),
-            "casedb.service",
-        )
-        service_logger = logging.getLogger(service_logger_name)
-        logger.info(
-            '{"code":"e8aafcec","msg":"STARTING_APP","app":{"id":"app-123","name":"CASEDB"}}'
-        )
-        logger.info(
-            '{"code":"e94cad9b","msg":"STARTED_COMMAND","command":{"class":"DemoCommand","id":"cmd-123","user_id":"u-123"}}'
-        )
-        logger.debug(
-            '{"code":"e94cad9b","msg":"STARTED_COMMAND","command":{"class":"DemoCommand","object":{"id":"cmd-obj-123"},"parent_command_id":null,"stack_trace":"DemoCommand"}}'
-        )
-        service_logger.info(
-            '{"code":"c10677fe","msg":"STARTING_SERVICE","service":{"id":"svc-123","name":"UploadService"}}'
-        )
-        """)
-
-    proc = subprocess.run(
-        [sys.executable, "-c", script, str(yaml_path)],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert (
-        proc.returncode == 0
-    ), f"Subprocess failed for {yaml_path.name}: {proc.stderr}"
-
-    payloads: list[JSONDict] = []
-    for line in proc.stdout.splitlines():
-        line = line.strip()
-        if line.startswith("{") and line.endswith("}"):
-            payloads.append(json.loads(line))
-
-    assert payloads, f"No JSON log lines emitted for {yaml_path.name}"
-    return payloads
+        assert (
+            access_payload is not None
+        ), f"No access payload emitted for {yaml_path.name}"
+        resolved[key] = (access_payload, payloads)
+    return resolved
 
 
-def _emit_log_level_resolution_payloads(enable_env_override: bool) -> list[JSONDict]:
+def _emit_runtime_payloads_via_dictconfig(
+    yaml_path: Path,
+) -> tuple[JSONDict, list[JSONDict]]:
+    return _emit_runtime_payloads_for_all_yaml_paths()[str(yaml_path)]
+
+
+@lru_cache(maxsize=1)
+def _emit_log_level_resolution_payloads_for_both_modes() -> dict[str, list[JSONDict]]:
     script = textwrap.dedent("""\
         import json
         import logging
@@ -196,35 +210,82 @@ def _emit_log_level_resolution_payloads(enable_env_override: bool) -> list[JSOND
         from gen_epix.commondb.domain.util import set_env_variables
         from gen_epix.omopdb.domain import enum
 
-        use_env_override = bool(int(sys.argv[1]))
-        set_env_variables(AppType.OMOPDB, DevIdpConfig.IDPS, DevRepositoryConfig.DICT_DEMO)
-        if use_env_override:
-            os.environ["OMOPDB_LOG_LEVEL"] = "WARNING"
-        else:
-            os.environ.pop("OMOPDB_LOG_LEVEL", None)
+        def run_probe(use_env_override: bool) -> list[dict[str, object]]:
+            set_env_variables(
+                AppType.OMOPDB,
+                DevIdpConfig.IDPS,
+                DevRepositoryConfig.DICT_DEMO,
+            )
+            if use_env_override:
+                os.environ["OMOPDB_LOG_LEVEL"] = "WARNING"
+            else:
+                os.environ.pop("OMOPDB_LOG_LEVEL", None)
 
-        app_cfg = AppCfg("OMOPDB", enum.ServiceType, enum.RepositoryType, log_setup=True)
-        app_cfg.setup_logger.info("PROBE_SETUP_INFO")
-        uvicorn_error_logger = logging.getLogger("uvicorn.error")
-        uvicorn_error_logger.info("PROBE_UVICORN_INFO")
-        uvicorn_error_logger.warning("PROBE_UVICORN_WARNING")
+            app_cfg = AppCfg(
+                "OMOPDB",
+                enum.ServiceType,
+                enum.RepositoryType,
+                log_setup=True,
+            )
+            app_cfg.setup_logger.info("PROBE_SETUP_INFO")
+            uvicorn_error_logger = logging.getLogger("uvicorn.error")
+            uvicorn_error_logger.info("PROBE_UVICORN_INFO")
+            uvicorn_error_logger.warning("PROBE_UVICORN_WARNING")
+
+            payloads = []
+            for line in sys.stdout.getvalue().splitlines():
+                line = line.strip()
+                if line.startswith("{") and line.endswith("}"):
+                    payloads.append(json.loads(line))
+            return payloads
+
+        # Capture stdout in-memory so we can return split payloads per mode.
+        from io import StringIO
+
+        original_stdout = sys.stdout
+        try:
+            results: dict[str, list[dict[str, object]]] = {}
+
+            sys.stdout = StringIO()
+            run_probe(False)
+            results["0"] = [
+                json.loads(line)
+                for line in sys.stdout.getvalue().splitlines()
+                if line.strip().startswith("{") and line.strip().endswith("}")
+            ]
+
+            sys.stdout = StringIO()
+            run_probe(True)
+            results["1"] = [
+                json.loads(line)
+                for line in sys.stdout.getvalue().splitlines()
+                if line.strip().startswith("{") and line.strip().endswith("}")
+            ]
+        finally:
+            sys.stdout = original_stdout
+
+        print(json.dumps(results))
         """)
 
     proc = subprocess.run(
-        [sys.executable, "-c", script, "1" if enable_env_override else "0"],
+        [sys.executable, "-c", script],
         capture_output=True,
         text=True,
         check=False,
     )
     assert proc.returncode == 0, f"Subprocess failed: {proc.stderr}"
 
-    payloads: list[JSONDict] = []
-    for line in proc.stdout.splitlines():
-        line = line.strip()
-        if line.startswith("{") and line.endswith("}"):
-            payloads.append(json.loads(line))
-    assert payloads, "No JSON payloads emitted by log-level resolution probe"
-    return payloads
+    stdout = proc.stdout.strip()
+    assert stdout, "No JSON payload mapping emitted by log-level resolution probe"
+    payloads_by_mode: dict[str, list[JSONDict]] = json.loads(stdout)
+    assert payloads_by_mode.get("0"), "No payloads emitted by non-override probe"
+    assert payloads_by_mode.get("1"), "No payloads emitted by override probe"
+    return payloads_by_mode
+
+
+def _emit_log_level_resolution_payloads(enable_env_override: bool) -> list[JSONDict]:
+    key = "1" if enable_env_override else "0"
+    return _emit_log_level_resolution_payloads_for_both_modes()[key]
 
 
 def _has_message(payloads: list[JSONDict], logger_name: str, message: str) -> bool:
@@ -258,14 +319,14 @@ def test_logging_yaml_formatter_and_filter_paths_are_importable(
 
 @pytest.mark.parametrize(
     "yaml_path",
-    _PRODUCTION_YAML_PATHS + _E2E_YAML_PATHS,
+    _RUNTIME_YAML_PATHS,
     ids=lambda p: f"runtime-{p.parent.parent.name}",
 )
 @pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_runtime_uvicorn_access_log_is_informative_for_downstream_logmessage(
     yaml_path: Path,
 ) -> None:
-    payload = _emit_access_payload_via_dictconfig(yaml_path)
+    payload, _ = _emit_runtime_payloads_via_dictconfig(yaml_path)
 
     assert payload["logger"] == "uvicorn.access"
     assert payload["level"] == "INFO"
@@ -284,14 +345,14 @@ def test_runtime_uvicorn_access_log_is_informative_for_downstream_logmessage(
 
 @pytest.mark.parametrize(
     "yaml_path",
-    _PRODUCTION_YAML_PATHS + _E2E_YAML_PATHS,
+    _RUNTIME_YAML_PATHS,
     ids=lambda p: f"runtime-app-{p.parent.parent.name}",
 )
 @pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_runtime_app_lifecycle_logs_have_message_and_operational_aliases(
     yaml_path: Path,
 ) -> None:
-    payloads = _emit_app_lifecycle_payloads_via_dictconfig(yaml_path)
+    _, payloads = _emit_runtime_payloads_via_dictconfig(yaml_path)
 
     startup = next((x for x in payloads if x.get("code") == "e8aafcec"), None)
     assert startup is not None
