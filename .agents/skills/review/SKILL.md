@@ -209,7 +209,7 @@ The skill validates adherence to the repo conventions:
 - **Formatting** — Import order follows isort and Python formatting follows Black with
   all options resolved from the repository's `pyproject.toml`; do not duplicate or
   override those settings in the review command.
-- **No nested functions** — All functions defined at module level.
+- **Avoid nested functions** — Avoid unnecessary nested helper functions and mid-file imports; endpoint factories, FastAPI dependency factories, tests, decorators, and run.py lazy imports are established exceptions.
 - **All imports at the top** — No mid-file imports.
 - **Variable naming** — Full class name in lower_snake_case (e.g., `batch_fetcher`,
   `upload_command_builder`), exception for loop vars (`x`, `y`).
