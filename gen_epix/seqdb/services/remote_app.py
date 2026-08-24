@@ -1,5 +1,6 @@
 import json
 from collections.abc import Iterable
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -40,6 +41,9 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         command.RetrieveSampleIdentifiersByIdCommand: "/retrieve/sample_identifiers_by_ids",
         command.RetrieveSamplesByIdCommand: "/retrieve/samples_by_ids",
         command.RetrieveSamplesByQueryCommand: "/retrieve/sample_ids_by_query",
+        command.RetrieveSeqDistanceLastModifiedCommand: (
+            "/retrieve/seq_distance_last_modified"
+        ),
     }
 
     DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {
@@ -106,16 +110,12 @@ class SeqdbRemoteApp(CommondbRemoteApp):
             self.retrieve_samples_by_query,
         )
         self.register_handler(
-            command.RetrieveBestSeqPerSampleCommand,
-            self.retrieve_best_seq_per_sample,
-        )
-        self.register_handler(
-            command.RetrieveBestSeqProfilePerSampleCommand,
-            self.retrieve_best_seq_profile_per_sample,
-        )
-        self.register_handler(
             command.RetrieveBestSeqClassificationPerSampleCommand,
             self.retrieve_best_seq_classification_per_sample,
+        )
+        self.register_handler(
+            command.RetrieveSeqDistanceLastModifiedCommand,
+            self.retrieve_seq_distance_last_modified,
         )
 
     def calculate_phylogenetic_tree(
@@ -378,3 +378,11 @@ class SeqdbRemoteApp(CommondbRemoteApp):
             response.raise_for_status()
             data = response.json()
         return {UUID(k): UUID(v) for k, v in data.items()}
+
+    def retrieve_seq_distance_last_modified(
+        self, cmd: command.RetrieveSeqDistanceLastModifiedCommand
+    ) -> datetime | None:
+        data = self._call_json(
+            cmd, "POST", route=f"{self.get_route(cmd)}/{cmd.protocol_id}"
+        )
+        return datetime.fromisoformat(data) if data else None

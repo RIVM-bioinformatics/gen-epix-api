@@ -11,18 +11,21 @@ subclass and its domain-specific initialization.
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
-from test.util.mock_compat import Mock, patch
+from test.util.mock_compat import MagicMock, Mock, patch
 from typing import Any, cast
+from uuid import uuid4
 
 import jwt
 import pytest
 
+from gen_epix.commondb.domain import DOMAIN, command, model
 from gen_epix.commondb.services.remote_app import CommondbRemoteApp
 from gen_epix.fastapp import RemoteApp, exc
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
-from gen_epix.fastapp.model import Command
+from gen_epix.fastapp.model import Command, Permission
 
 _JWT_TEST_HS256_SECRET = "commondb-remote-app-test-secret-key-32b"
 
@@ -64,6 +67,7 @@ class BaseCommondbRemoteAppTestCase:
         def _fake_app_init(self: Any, domain: Domain, **kwargs: Any) -> None:
             setattr(self, "_domain", domain)
             setattr(self, "_logger", None)
+            setattr(self, "_command_handler_map", {})
 
         self._app_init_patcher = patch(
             "gen_epix.fastapp.remote_app.App.__init__", _fake_app_init
@@ -657,3 +661,330 @@ class TestIntegration(BaseCommondbRemoteAppTestCase):
         assert headers["X-Custom-1"] == "value1"
         assert headers["X-Custom-2"] == "value2"
         assert "Authorization" not in headers
+
+
+# ============================================================================
+# Non-CRUD handler tests
+#
+# Each test builds a real CommondbRemoteApp, mocks the underlying httpx
+# client, invokes the handler directly, and checks the HTTP call it makes
+# (method, URL, body) plus that the response is parsed into the right model.
+# This guards against route/model drift between the API and the handler.
+# ============================================================================
+
+
+def _mock_response(json_data: Any, status_code: int = 200) -> Mock:
+    response = Mock()
+    response.status_code = status_code
+    response.content = b"1"
+    response.json.return_value = json_data
+    response.raise_for_status.return_value = None
+    return response
+
+
+class TestNonCrudHandlers:
+    """Test the hand-written (non-CRUD) command handlers."""
+
+    @pytest.fixture
+    def app(self) -> CommondbRemoteApp:
+        return CommondbRemoteApp(DOMAIN, host="example.org", port=8000)
+
+    @pytest.fixture
+    def mock_client(self) -> Any:
+        with patch("gen_epix.fastapp.remote_app.httpx.Client") as mock_client_class:
+            client = MagicMock()
+            client.__enter__.return_value = client
+            client.__exit__.return_value = None
+            mock_client_class.return_value = client
+            yield client
+
+    def test_get_identity_providers(
+        self, app: CommondbRemoteApp, mock_client: Any
+    ) -> None:
+        data = [
+            {
+                "name": "n",
+                "label": "l",
+                "issuer": "i",
+                "auth_protocol": "OAUTH2",
+            }
+        ]
+        mock_client.request.return_value = _mock_response(data)
+        result = app.get_identity_providers(
+            command.GetIdentityProvidersCommand(user=None)
+        )
+        method, url = mock_client.request.call_args.args
+        assert method == "GET"
+        assert url == app._routes[command.GetIdentityProvidersCommand]
+        assert result == [model.IdentityProvider(**data[0])]
+
+    def test_invite_user(self, app: CommondbRemoteApp, mock_client: Any) -> None:
+        organization_id = uuid4()
+        cmd = command.InviteUserCommand(
+            user=None,
+            key="a@example.org",
+            description="desc",
+            roles={"ADMIN"},
+            organization_id=organization_id,
+        )
+        data = {
+            "token": "tok",
+            "expires_at": "2030-01-01T00:00:00Z",
+            "roles": ["ADMIN"],
+            "invited_by_user_id": str(uuid4()),
+            "organization_id": str(organization_id),
+        }
+        mock_client.request.return_value = _mock_response(data)
+        result = app.invite_user(cmd)
+        method, url = mock_client.request.call_args.args
+        json_body = mock_client.request.call_args.kwargs["json"]
+        assert method == "POST"
+        assert url == app._routes[command.InviteUserCommand]
+        assert json_body == {
+            "key": "a@example.org",
+            "description": "desc",
+            "roles": ["ADMIN"],
+            "organization_id": str(organization_id),
+        }
+        assert result == model.UserInvitation(**data)
+
+    def test_retrieve_invite_user_constraints(
+        self, app: CommondbRemoteApp, mock_client: Any
+    ) -> None:
+        data = {"roles": ["ADMIN"], "organization_ids": [str(uuid4())]}
+        mock_client.request.return_value = _mock_response(data)
+        result = app.retrieve_invite_user_constraints(
+            command.RetrieveInviteUserConstraintsCommand(user=None)
+        )
+        method, url = mock_client.request.call_args.args
+        assert method == "GET"
+        assert url == app._routes[command.RetrieveInviteUserConstraintsCommand]
+        assert result == model.UserInvitationConstraints(**data)
+
+    def test_register_invited_user(
+        self, app: CommondbRemoteApp, mock_client: Any
+    ) -> None:
+        organization_id = uuid4()
+        data = {"roles": ["ADMIN"], "organization_id": str(organization_id)}
+        mock_client.request.return_value = _mock_response(data)
+        result = app.register_invited_user(
+            command.RegisterInvitedUserCommand(user=None, token="tok123")
+        )
+        method, url = mock_client.request.call_args.args
+        assert method == "POST"
+        assert url == f"{app._routes[command.RegisterInvitedUserCommand]}/tok123"
+        assert result == model.User(**data)
+
+    def test_organization_set_organization_update_association(
+        self, app: CommondbRemoteApp, mock_client: Any
+    ) -> None:
+        organization_set_id = uuid4()
+        member = model.OrganizationSetMember(
+            organization_set_id=organization_set_id, organization_id=uuid4()
+        )
+        cmd = command.OrganizationSetOrganizationUpdateAssociationCommand(
+            user=None, obj_id1=organization_set_id, association_objs=[member]
+        )
+        data = [
+            {
+                "organization_set_id": str(organization_set_id),
+                "organization_id": str(uuid4()),
+            }
+        ]
+        mock_client.request.return_value = _mock_response(data)
+        result = app.organization_set_organization_update_association(cmd)
+        method, url = mock_client.request.call_args.args
+        json_body = mock_client.request.call_args.kwargs["json"]
+        assert method == "PUT"
+        route = app._routes[command.OrganizationSetOrganizationUpdateAssociationCommand]
+        assert url == f"{route}/{organization_set_id}/organizations"
+        assert json_body == {
+            "organization_set_members": [json.loads(member.model_dump_json())]
+        }
+        assert result == [model.OrganizationSetMember(**data[0])]
+
+    def test_data_collection_set_data_collection_update_association(
+        self, app: CommondbRemoteApp, mock_client: Any
+    ) -> None:
+        data_collection_set_id = uuid4()
+        member = model.DataCollectionSetMember(
+            data_collection_set_id=data_collection_set_id, data_collection_id=uuid4()
+        )
+        cmd = command.DataCollectionSetDataCollectionUpdateAssociationCommand(
+            user=None, obj_id1=data_collection_set_id, association_objs=[member]
+        )
+        data = [
+            {
+                "data_collection_set_id": str(data_collection_set_id),
+                "data_collection_id": str(uuid4()),
+            }
+        ]
+        mock_client.request.return_value = _mock_response(data)
+        result = app.data_collection_set_data_collection_update_association(cmd)
+        method, url = mock_client.request.call_args.args
+        assert method == "PUT"
+        route = app._routes[
+            command.DataCollectionSetDataCollectionUpdateAssociationCommand
+        ]
+        assert url == f"{route}/{data_collection_set_id}/data_collections"
+        assert result == [model.DataCollectionSetMember(**data[0])]
+
+    def test_retrieve_own_permissions(
+        self, app: CommondbRemoteApp, mock_client: Any
+    ) -> None:
+        data = [{"command_name": "SomeCommand", "permission_type": "CREATE"}]
+        mock_client.request.return_value = _mock_response(data)
+        result = app.retrieve_own_permissions(
+            command.RetrieveOwnPermissionsCommand(user=None)
+        )
+        method, url = mock_client.request.call_args.args
+        assert method == "GET"
+        assert url == app._routes[command.RetrieveOwnPermissionsCommand]
+        assert result == {Permission(**data[0])}
+
+    def test_anonymize_user(self, app: CommondbRemoteApp, mock_client: Any) -> None:
+        tgt_user_id = uuid4()
+        mock_client.request.return_value = _mock_response(None)
+        result = app.anonymize_user(
+            command.AnonymizeUserCommand(user=None, tgt_user_id=tgt_user_id)
+        )
+        method, url = mock_client.request.call_args.args
+        assert method == "POST"
+        route = app._routes[command.AnonymizeUserCommand]
+        assert url == f"{route}/{tgt_user_id}/anonymize"
+        assert result is None
+
+    def test_update_user(self, app: CommondbRemoteApp, mock_client: Any) -> None:
+        tgt_user_id = uuid4()
+        organization_id = uuid4()
+        cmd = command.UpdateUserCommand(
+            user=None,
+            tgt_user_id=tgt_user_id,
+            is_active=True,
+            roles={"ADMIN"},
+            organization_id=organization_id,
+        )
+        data = {"roles": ["ADMIN"], "organization_id": str(organization_id)}
+        mock_client.request.return_value = _mock_response(data)
+        result = app.update_user(cmd)
+        method, url = mock_client.request.call_args.args
+        json_body = mock_client.request.call_args.kwargs["json"]
+        assert method == "PUT"
+        assert url == f"{app._routes[command.UpdateUserCommand]}/{tgt_user_id}"
+        assert json_body == {
+            "is_active": True,
+            "roles": ["ADMIN"],
+            "organization_id": str(organization_id),
+        }
+        assert result == model.User(**data)
+
+    def test_update_user_own_organization(
+        self, app: CommondbRemoteApp, mock_client: Any
+    ) -> None:
+        organization_id = uuid4()
+        data = {"roles": ["ADMIN"], "organization_id": str(organization_id)}
+        mock_client.request.return_value = _mock_response(data)
+        result = app.update_user_own_organization(
+            command.UpdateUserOwnOrganizationCommand(
+                user=None, organization_id=organization_id
+            )
+        )
+        method, url = mock_client.request.call_args.args
+        json_body = mock_client.request.call_args.kwargs["json"]
+        assert method == "PUT"
+        assert url == app._routes[command.UpdateUserOwnOrganizationCommand]
+        assert json_body == {"organization_id": str(organization_id)}
+        assert result == model.User(**data)
+
+    def test_organization_identifier_issuer_link_update_association(
+        self, app: CommondbRemoteApp, mock_client: Any
+    ) -> None:
+        organization_id = uuid4()
+        link = model.OrganizationIdentifierIssuerLink(
+            organization_id=organization_id, identifier_issuer_id=uuid4()
+        )
+        cmd = command.OrganizationIdentifierIssuerLinkUpdateAssociationCommand(
+            user=None, obj_id1=organization_id, association_objs=[link]
+        )
+        data = [
+            {
+                "organization_id": str(organization_id),
+                "identifier_issuer_id": str(uuid4()),
+            }
+        ]
+        mock_client.request.return_value = _mock_response(data)
+        result = app.organization_identifier_issuer_link_update_association(cmd)
+        method, url = mock_client.request.call_args.args
+        assert method == "PUT"
+        route = app._routes[
+            command.OrganizationIdentifierIssuerLinkUpdateAssociationCommand
+        ]
+        assert url == f"{route}/{organization_id}/identifier_issuers"
+        assert result == [model.OrganizationIdentifierIssuerLink(**data[0])]
+
+    def test_retrieve_organization_contacts(
+        self, app: CommondbRemoteApp, mock_client: Any
+    ) -> None:
+        organization_id = uuid4()
+        organization = model.Organization.model_construct(name="Org", code="ORG1")
+        data = {
+            "organization": organization.model_dump(mode="json"),
+            "sites": [],
+            "contacts": [],
+        }
+        mock_client.request.return_value = _mock_response(data)
+        result = app.retrieve_organization_contacts(
+            command.RetrieveOrganizationContactsCommand(
+                user=None, organization_id=organization_id
+            )
+        )
+        method, url = mock_client.request.call_args.args
+        json_body = mock_client.request.call_args.kwargs["json"]
+        assert method == "POST"
+        assert url == app._routes[command.RetrieveOrganizationContactsCommand]
+        assert json_body == {"organization_id": str(organization_id)}
+        assert result == model.OrganizationContacts(**data)
+
+    def test_retrieve_organization_admin_name_emails(
+        self, app: CommondbRemoteApp, mock_client: Any
+    ) -> None:
+        data = [{"email": "a@example.org"}]
+        mock_client.request.return_value = _mock_response(data)
+        result = app.retrieve_organization_admin_name_emails(
+            command.RetrieveOrganizationAdminNameEmailsCommand(user=None)
+        )
+        method, url = mock_client.request.call_args.args
+        assert method == "GET"
+        assert url == app._routes[command.RetrieveOrganizationAdminNameEmailsCommand]
+        assert result == [model.UserNameEmail(**data[0])]
+
+    def test_retrieve_feature_flags(
+        self, app: CommondbRemoteApp, mock_client: Any
+    ) -> None:
+        data = {"feature_flags": {"my_flag": True}}
+        mock_client.request.return_value = _mock_response(data)
+        result = app.retrieve_feature_flags(
+            command.RetrieveFeatureFlagsCommand(user=None)
+        )
+        method, url = mock_client.request.call_args.args
+        assert method == "GET"
+        assert url == app._routes[command.RetrieveFeatureFlagsCommand]
+        assert result == {"my_flag": True}
+
+    def test_retrieve_licenses(self, app: CommondbRemoteApp, mock_client: Any) -> None:
+        data = [{"name": "pkg", "version": "1.0"}]
+        mock_client.request.return_value = _mock_response(data)
+        result = app.retrieve_licenses(command.RetrieveLicensesCommand(user=None))
+        method, url = mock_client.request.call_args.args
+        assert method == "POST"
+        assert url == app._routes[command.RetrieveLicensesCommand]
+        assert result == [model.PackageMetadata(**data[0])]
+
+    def test_retrieve_outages(self, app: CommondbRemoteApp, mock_client: Any) -> None:
+        data = [{}]
+        mock_client.request.return_value = _mock_response(data)
+        result = app.retrieve_outages(command.RetrieveOutagesCommand(user=None))
+        method, url = mock_client.request.call_args.args
+        assert method == "GET"
+        assert url == app._routes[command.RetrieveOutagesCommand]
+        assert result == [model.Outage(**data[0])]
