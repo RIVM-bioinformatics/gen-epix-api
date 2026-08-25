@@ -26,7 +26,7 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
             command.UserInvitationCrudCommand,
             command.OrganizationIdentifierIssuerLinkCrudCommand,
             command.OrganizationSetOrganizationUpdateAssociationCommand,
-            command.OrganizationIdentifierIssuerLinkUpdateAssociationCommand,
+            command.OrganizationIdentifierIssuerUpdateAssociationCommand,
         }
         self.has_user_id_attr_command_classes: set[type[command.Command]] = set()
 

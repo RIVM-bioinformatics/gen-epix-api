@@ -98,7 +98,7 @@ def retrieve_case_type_stats(
     user: model.User,
 ) -> list[model.CaseStats]:
     return env.app.handle(
-        command.RetrieveCaseStatsCommand(
+        command.RetrieveCaseTypeStatsCommand(
             user=user,
             case_type_ids=case_type_ids,
         )
