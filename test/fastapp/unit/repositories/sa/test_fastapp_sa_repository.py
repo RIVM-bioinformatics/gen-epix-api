@@ -396,6 +396,38 @@ def test_create_sa_repository_sqlite_shared_memory_uri() -> None:
     assert isinstance(repo, SARepository)
 
 
+def test_create_sa_repository_default_sqlite_is_in_memory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    repo = SARepository.create_sa_repository(entities=[], register_mappers=False)
+
+    assert isinstance(repo, SARepository)
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_create_sa_repository_attached_sqlite_is_in_memory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    entity = Entity(
+        persistable=True,
+        schema_name="test_schema",
+        table_name="repo_model",
+        id_field_name="id",
+    )
+    entity.set_model_class(RepoModel).set_db_model_class(SARepoModel)
+    second_entity = entity.model_copy(update={"schema_name": "second_schema"})
+
+    repo = SARepository.create_sa_repository(
+        entities=[entity, second_entity], register_mappers=False
+    )
+
+    assert isinstance(repo, SARepository)
+    assert list(tmp_path.iterdir()) == []
+
+
 def test_test_connection() -> None:
     assert SARepository.test_connection("sqlite:///:memory:") is None
     assert SARepository.test_connection("not-a-valid-sqlalchemy-url") is not None
