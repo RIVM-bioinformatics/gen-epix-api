@@ -92,9 +92,10 @@ If a task description was provided, note it — it drives the intent check in St
 
 Run the repository quality checks directly:
 
-- **isort --check-only --diff --profile black --float-to-top --line-length=88 .** —
-  Validates import ordering.
-- **black -l 88 --check --diff .** — Validates Python formatting.
+- **isort --check-only --diff .** — Validates import ordering using the `[tool.isort]`
+  configuration in `pyproject.toml`.
+- **black --check --diff .** — Validates Python formatting using the `[tool.black]`
+  configuration in `pyproject.toml`.
 - **python run.py test_all --include_e2e=False** — Runs the repository's curated test
   suite without E2E tests. For a narrowly scoped review, use the matching documented
   `python run.py test_<app>_<scope>` command instead.
@@ -206,8 +207,9 @@ manual posting.
 The skill validates adherence to the repo conventions:
 
 - **Formatting** — Import order follows isort and Python formatting follows Black with
-  the repository's configured 88-character line length.
-- **No nested functions** — All functions defined at module level.
+  all options resolved from the repository's `pyproject.toml`; do not duplicate or
+  override those settings in the review command.
+- **Avoid nested functions** — Avoid unnecessary nested helper functions and mid-file imports; endpoint factories, FastAPI dependency factories, tests, decorators, and run.py lazy imports are established exceptions.
 - **All imports at the top** — No mid-file imports.
 - **Variable naming** — Full class name in lower_snake_case (e.g., `batch_fetcher`,
   `upload_command_builder`), exception for loop vars (`x`, `y`).
