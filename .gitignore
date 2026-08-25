@@ -187,4 +187,8 @@ cert/*.pem
 # Macbook specific files
 .DS_Store
 
-graphify-out/
+# Graphify output
+graphify-out/.*
+graphify-out/cache
+graphify-out/cost.json
+gen_epix/graphify-out/
