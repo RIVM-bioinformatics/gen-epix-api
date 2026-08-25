@@ -1,3 +1,0 @@
-[submodule ".github/gen-epix"]
-	path = .github/gen-epix
-	url = git@github.com:RIVM-bioinformatics/gen-epix.git
