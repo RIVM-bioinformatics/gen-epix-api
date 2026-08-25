@@ -187,4 +187,14 @@ cert/*.pem
 # Macbook specific files
 .DS_Store
 
-graphify-out/
+# Graphify local cache, graphify memory, machine specific files, conversion files, and backup snapshots
+graphify-out/cost.json
+graphify-out/cache/
+graphify-out/converted/
+graphify-out/memory/
+graphify-out/reflections/
+graphify-out/.graphify_*
+graphify-out/????-??-??/
+
+# Ruff linter
+.ruff_cache/
