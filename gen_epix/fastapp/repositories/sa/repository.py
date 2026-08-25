@@ -1510,9 +1510,9 @@ class SARepository(BaseRepository):
         schema_names = {x.schema_name for x in entities if x.persistable}
 
         # Handle sqlite separately
-        is_sqlite = connection_string is None or connection_string.lower().startswith(
-            "sqlite:///"
-        )
+        is_sqlite = connection_string is None or str(
+            connection_string
+        ).lower().startswith("sqlite:///")
         if is_sqlite:
             sqlite_target = (
                 None
