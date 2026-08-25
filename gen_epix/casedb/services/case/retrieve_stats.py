@@ -10,11 +10,10 @@ from gen_epix.filter.uuid_set import UuidSetFilter
 
 def case_service_retrieve_case_stats(
     self: BaseCaseService,
-    cmd: command.RetrieveCaseStatsCommand,
+    cmd: command.RetrieveCaseTypeStatsCommand | command.RetrieveCaseSetStatsCommand,
 ) -> list[model.CaseStats]:
     user, repository = self._get_user_and_repository(cmd)
     assert isinstance(user, model.User) and user.id is not None
-    case_type_ids = cmd.case_type_ids
 
     with repository.uow() as uow:
         # @ABAC: check READ_CASE right on CaseTypes
@@ -23,8 +22,11 @@ def case_service_retrieve_case_stats(
         read_case_type_ids = case_abac.get_case_types_with_access_right(
             enum.CaseRight.READ_CASE
         )
-        if case_type_ids is None:
-            # No CaseTypes provided -> use all CaseTypes with read access
+        if (
+            isinstance(cmd, command.RetrieveCaseTypeStatsCommand)
+            and cmd.case_type_ids is None
+        ):
+            # No CaseTypes provided -> get/use all CaseTypes with read access
             if case_abac.is_full_access:
                 # All CaseTypes
                 case_type_ids: set[UUID] = set(
@@ -38,7 +40,12 @@ def case_service_retrieve_case_stats(
                 )
             else:
                 case_type_ids = read_case_type_ids
-        assert case_type_ids is not None
+        elif isinstance(cmd, command.RetrieveCaseTypeStatsCommand):
+            # CaseTypes provided: use them; access check follows below
+            case_type_ids = cmd.case_type_ids  # type: ignore[assignment]
+        else:
+            # RetrieveCaseSetStatsCommand: case_type_ids are determined from case sets
+            case_type_ids = read_case_type_ids
         if not case_abac.is_full_access:
             unauthorized_case_type_ids = case_type_ids - read_case_type_ids
             if unauthorized_case_type_ids:
@@ -52,7 +59,10 @@ def case_service_retrieve_case_stats(
 
         # Retrieve case sets if applicable
         case_type_case_set_ids_map: dict[UUID, set[UUID]] | None = None
-        if cmd.case_set_ids is not None:
+        if (
+            isinstance(cmd, command.RetrieveCaseSetStatsCommand)
+            and cmd.case_set_ids is not None
+        ):
             # Get (case_set_id, case_type_id) tuples
             case_set_case_type_tuples: list[tuple[UUID, UUID]] = list(
                 self.repository.read_fields(
@@ -83,7 +93,7 @@ def case_service_retrieve_case_stats(
 
         # Calculate case stats per CaseType or case set
         case_stats: list[model.CaseStats] = []
-        for case_type_id in case_type_ids or []:
+        for case_type_id in case_type_ids:
             # @ABAC: Get complete CaseType, which contains all necessary ABAC info
             sub_cmd = command.RetrieveCompleteCaseTypeCommand(
                 user=user,
