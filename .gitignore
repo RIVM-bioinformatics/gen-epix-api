@@ -186,3 +186,5 @@ cert/*.pem
 
 # Macbook specific files
 .DS_Store
+
+graphify-out/
