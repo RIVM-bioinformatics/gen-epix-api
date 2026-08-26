@@ -138,7 +138,33 @@ Writes output to `test/output/`. (Source: `run.py`)
 
 ---
 
-## 5. Troubleshooting Local Development
+## 5. Graphify Setup For VS Code Agents
+
+This repository includes `graphify-out/` artifacts and agent instructions that expect
+Graphify to be available when answering architecture, structure, or code-navigation
+questions.
+
+Install the Graphify CLI first:
+
+```bash
+uv tool install graphifyy
+```
+
+Then install the repository-level Graphify integrations for the supported VS Code agents:
+
+```bash
+graphify claude install --project
+graphify codex install --project
+graphify vscode install
+```
+use 'graphify vscode install' for VS Code Copilot Chat
+
+See the upstream Graphify documentation for platform-specific details:
+[Graphify README](https://github.com/Graphify-Labs/graphify/blob/v8/README.md).
+
+---
+
+## 6. Troubleshooting Local Development
 
 When local startup breaks, reason in stages:
 
