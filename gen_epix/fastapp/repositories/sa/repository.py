@@ -1531,7 +1531,9 @@ class SARepository(BaseRepository):
                 # so that multiple SARepository instances created in this way will not
                 # share the same database. This is important e.g. for testing, where
                 # multiple tests may create their own SARepository instances.
-                sqlite_target = f"file:{uuid.uuid4()}?mode=memory&cache=shared"
+                sqlite_target = (
+                    f"file:{uuid.uuid4()}?mode=memory&cache=shared&uri=true"
+                )
                 sqlite_target_lower = sqlite_target.lower()
                 connection_string = f"sqlite:///{sqlite_target}"
 
@@ -1539,8 +1541,10 @@ class SARepository(BaseRepository):
             sqlite_file: Path | None = None
             if is_memory_target:
                 if sqlite_target_lower.startswith("file:"):
-                    # sqlite:///file:name?mode=memory&cache=shared requires URI mode.
-                    engine_kwargs["connect_args"] = {"uri": True}
+                    # SQLAlchemy forwards URI parameters from the URL to sqlite3.
+                    if "uri=" not in sqlite_target_lower:
+                        sqlite_target = f"{sqlite_target}&uri=true"
+                        connection_string = f"sqlite:///{sqlite_target}"
             else:
                 sqlite_file = Path(sqlite_target)
                 if recreate_sqlite_file:
@@ -1589,9 +1593,7 @@ class SARepository(BaseRepository):
                     if is_memory_target:
                         # For in-memory sqlite, give each schema its own shared-memory db.
                         attach_target = (
-                            sqlite_target
-                            if len(schema_names) == 1 and sqlite_target
-                            else f"file:{schema_name}?mode=memory&cache=shared"
+                            f"file:{schema_name}?mode=memory&cache=shared&uri=true"
                         )
                     else:
                         if len(schema_names) > 1:
