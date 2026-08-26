@@ -502,11 +502,14 @@ class TestCasedbCaseCreateSeq:
             mock_seq.file_id = existing_file_id
             mock_seq.file_hash = file_hash
 
-            with patch(
-                "gen_epix.casedb.services.case.create_seq.BaseCaseAbacPolicy.get_case_abac_from_command"
-            ), patch(
-                "gen_epix.casedb.services.case.create_seq._get_cases_for_create_file_for_read_sets_or_seqs",
-                return_value=[mock_case],
+            with (
+                patch(
+                    "gen_epix.casedb.services.case.create_seq.BaseCaseAbacPolicy.get_case_abac_from_command"
+                ),
+                patch(
+                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_file_for_read_sets_or_seqs",
+                    return_value=[mock_case],
+                ),
             ):
                 mock_service.app.handle.return_value = mock_seq
 
