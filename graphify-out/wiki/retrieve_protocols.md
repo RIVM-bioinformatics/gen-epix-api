@@ -1,0 +1,27 @@
+# .retrieve_protocols
+
+> 3 nodes · cohesion 0.67
+
+## Key Concepts
+
+- **.__init__()** (3 connections) — `gen_epix/casedb/services/remote_app.py`
+- **Any** (1 connections)
+- **Register all casedb routes and command handlers.** (1 connections) — `gen_epix/casedb/services/remote_app.py`
+
+## Relationships
+
+- [Casedb Remote App Client](Casedb_Remote_App_Client.md) (1 shared connections)
+
+## Source Files
+
+- `gen_epix/casedb/services/remote_app.py`
+
+## Audit Trail
+
+- EXTRACTED: 3 (100%)
+- INFERRED: 0 (0%)
+- AMBIGUOUS: 0 (0%)
+
+---
+
+*Part of the graphify knowledge wiki. See [index](index.md) to navigate.*
