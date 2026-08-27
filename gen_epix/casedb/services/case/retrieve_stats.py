@@ -45,7 +45,19 @@ def case_service_retrieve_case_stats(
             case_type_ids = cmd.case_type_ids  # type: ignore[assignment]
         else:
             # RetrieveCaseSetStatsCommand: case_type_ids are determined from case sets
-            case_type_ids = read_case_type_ids
+            if case_abac.is_full_access:
+                # All CaseTypes
+                case_type_ids: set[UUID] = set(
+                    self.repository.crud(
+                        uow,
+                        user.id,
+                        model.CaseType,
+                        CrudOperation.READ_ALL,
+                        return_id=True,
+                    )
+                )
+            else:
+                case_type_ids = read_case_type_ids
         if not case_abac.is_full_access:
             unauthorized_case_type_ids = case_type_ids - read_case_type_ids
             if unauthorized_case_type_ids:
