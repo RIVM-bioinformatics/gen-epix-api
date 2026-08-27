@@ -714,10 +714,10 @@
     "semantic_hash": "05e928623d76fe8d9118bba8a62a86b3"
   },
   "gen_epix/casedb/services/case/retrieve_stats.py": {
-    "mtime": 1787578264.2721274,
-    "seen": 1787674055.2843113,
-    "ast_hash": "e5aff83ec9e91a93d63c49c0e901db17",
-    "semantic_hash": "e5aff83ec9e91a93d63c49c0e901db17"
+    "mtime": 1787842089.0880215,
+    "seen": 1787845149.5622113,
+    "ast_hash": "1087cf67f76eef564bf8150e06f73c29",
+    "semantic_hash": "1087cf67f76eef564bf8150e06f73c29"
   },
   "gen_epix/casedb/services/case/service.py": {
     "mtime": 1787647792.4603796,
@@ -1476,10 +1476,10 @@
     "semantic_hash": "9553060901b99f284837bff04d693849"
   },
   "gen_epix/fastapp/repositories/sa/repository.py": {
-    "mtime": 1787578264.282347,
-    "seen": 1787674055.2843735,
-    "ast_hash": "6be4a9a12315a18d3877fffd0733eedf",
-    "semantic_hash": "6be4a9a12315a18d3877fffd0733eedf"
+    "mtime": 1787842089.088905,
+    "seen": 1787845149.5623224,
+    "ast_hash": "3f8efdcf9090783906026e2a35d8ef10",
+    "semantic_hash": "3f8efdcf9090783906026e2a35d8ef10"
   },
   "gen_epix/fastapp/repositories/sa/unit_of_work.py": {
     "mtime": 1786430343.3056746,
@@ -2922,10 +2922,10 @@
     "semantic_hash": "eccf5868c9ab4aecc9ab05508460bbf6"
   },
   "pyproject.toml": {
-    "mtime": 1787639879.7231483,
-    "seen": 1787674055.28451,
-    "ast_hash": "70a29bd2b91b61f91bb30f3cfca1a17b",
-    "semantic_hash": "70a29bd2b91b61f91bb30f3cfca1a17b"
+    "mtime": 1787842089.089929,
+    "seen": 1787845149.5625226,
+    "ast_hash": "923bf2b449fb373e7c36f4762616c49a",
+    "semantic_hash": "923bf2b449fb373e7c36f4762616c49a"
   },
   "release-please-config.json": {
     "mtime": 1786430343.3354776,
@@ -3618,10 +3618,10 @@
     "semantic_hash": "912f5e21dc0489f7bd3840732d6bed26"
   },
   "test/fastapp/unit/repositories/sa/test_fastapp_sa_repository.py": {
-    "mtime": 1787144074.6546495,
-    "seen": 1787674055.2845678,
-    "ast_hash": "000859267a0911e79b6625c6d9503a95",
-    "semantic_hash": "000859267a0911e79b6625c6d9503a95"
+    "mtime": 1787722612.2285144,
+    "seen": 1787845149.5626147,
+    "ast_hash": "d030c9915a8dbb41b79a2ac8b1b844fe",
+    "semantic_hash": "d030c9915a8dbb41b79a2ac8b1b844fe"
   },
   "test/fastapp/unit/repositories/sa/test_fastapp_sa_repository_mapper.py": {
     "mtime": 1786430343.368098,
@@ -4440,10 +4440,10 @@
     "semantic_hash": "c4da0bcac8545fb608cbf8fe36e4a950"
   },
   "AGENTS.md": {
-    "mtime": 1787647792.3397508,
-    "seen": 1787674055.2846415,
-    "ast_hash": "fad2148090d9d8ff6f5e8e8e224eb8b2",
-    "semantic_hash": "fad2148090d9d8ff6f5e8e8e224eb8b2"
+    "mtime": 1787730556.4642437,
+    "seen": 1787845149.562716,
+    "ast_hash": "d64d3905953003e18c5660999b764f4e",
+    "semantic_hash": "d64d3905953003e18c5660999b764f4e"
   },
   "CHANGELOG.md": {
     "mtime": 1786430342.8878014,
@@ -4458,10 +4458,10 @@
     "semantic_hash": "84ea2f11302f95acc6dc32dfb9c374f4"
   },
   "dev-requirements.txt": {
-    "mtime": 1787639879.7211466,
-    "seen": 1787674055.2846432,
-    "ast_hash": "bf22d67d6a6f37d72f6ca9f1d227ae19",
-    "semantic_hash": "bf22d67d6a6f37d72f6ca9f1d227ae19"
+    "mtime": 1787842089.0869074,
+    "seen": 1787845149.5627167,
+    "ast_hash": "2ba78d268ca7e414cc6aefe8762a81ec",
+    "semantic_hash": "2ba78d268ca7e414cc6aefe8762a81ec"
   },
   "docker-compose.ppr_test.yml": {
     "mtime": 1786430343.1843793,
@@ -4524,10 +4524,10 @@
     "semantic_hash": "7693c4da3f9bb603308839d21e79033c"
   },
   "docs/06-Development-Guide.md": {
-    "mtime": 1787639872.0836592,
-    "seen": 1787674055.2846487,
-    "ast_hash": "84d78a7445227a26e939e52d411d4d7b",
-    "semantic_hash": "84d78a7445227a26e939e52d411d4d7b"
+    "mtime": 1787731063.910601,
+    "seen": 1787845149.5627186,
+    "ast_hash": "3cffcf911486df04ad8fc6b19d17ec2b",
+    "semantic_hash": "3cffcf911486df04ad8fc6b19d17ec2b"
   },
   "docs/06a-CLI-Reference.md": {
     "mtime": 1787639872.0836592,
@@ -4968,10 +4968,10 @@
     "semantic_hash": "db7afd41336c058d68aa5f80374b02a5"
   },
   "requirements.txt": {
-    "mtime": 1787639879.7241507,
-    "seen": 1787674055.2846856,
-    "ast_hash": "272f89bfab8ccd0b390a9f94ed3b1a89",
-    "semantic_hash": "272f89bfab8ccd0b390a9f94ed3b1a89"
+    "mtime": 1787842089.089929,
+    "seen": 1787845149.5627196,
+    "ast_hash": "d43dd6bb229c322a0a4624b53e1c261b",
+    "semantic_hash": "d43dd6bb229c322a0a4624b53e1c261b"
   },
   "test/end_to_end/casedb_seqdb_connection/logging.yaml": {
     "mtime": 1773261096.3716433,
@@ -5170,5 +5170,23 @@
     "seen": 1787674055.2847028,
     "ast_hash": "75b8110b39cf9b2aa4e51bf6ad29c547",
     "semantic_hash": "75b8110b39cf9b2aa4e51bf6ad29c547"
+  },
+  ".github/instructions/python-pytest.instructions.md": {
+    "mtime": 1787842089.0869074,
+    "seen": 1787845149.5627146,
+    "ast_hash": "749f1a1287b66c3ee76009b3df211a76",
+    "semantic_hash": "749f1a1287b66c3ee76009b3df211a76"
+  },
+  "docs/00-Index.md": {
+    "mtime": 1787639872.0826595,
+    "seen": 1787845149.5627177,
+    "ast_hash": "c46c32a72a719d8855084ae2f6fa576a",
+    "semantic_hash": "c46c32a72a719d8855084ae2f6fa576a"
+  },
+  "docs/erm/seqdb.file.png": {
+    "mtime": 1787647792.4253783,
+    "seen": 1787845149.5627203,
+    "ast_hash": "5c1e166bca5d58f869eaa767f211c170",
+    "semantic_hash": "5c1e166bca5d58f869eaa767f211c170"
   }
 }
