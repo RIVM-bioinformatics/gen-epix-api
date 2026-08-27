@@ -1,6 +1,7 @@
 import datetime
 import hashlib
 import inspect
+import random
 import tomllib
 import uuid
 from collections import defaultdict
@@ -259,10 +260,44 @@ def chunk_list(values: list, chunk_size: int | None) -> list[list]:
     return [values[i : i + chunk_size] for i in range(0, n, chunk_size)]
 
 
-def profile_method(path: str | None = None) -> Callable:
-    """Decorator method to profile a method using Pyinstrument.
-    The profiling output is written to a file named after the method and the current timestamp.
-    The decorator automatically determines whether the method is synchronous or asynchronous.
+def profile_method(
+    path: str | None = None, probability: float | None = None
+) -> Callable:
+    """Decorator to profile a method using Pyinstrument.
+
+    This decorator instruments a method to capture performance profiling data and writes
+    the output to a timestamped log file. It automatically detects and handles both
+    synchronous and asynchronous methods.
+
+    The probability parameter is useful when you want to profile a method without
+    profiling every single request to an endpoint. For example, in a high-traffic API
+    endpoint, you might set probability=0.1 to profile only 10% of requests, reducing
+    overhead while still capturing representative performance data.
+
+    Args:
+        path: Optional directory path where profiling output files will be written.
+            Defaults to the project root directory if not specified.
+        probability: Optional probability threshold (0.0 to 1.0) for when to profile.
+            If None (default), the method is always profiled. If set to a value between
+            0 and 1, profiling only occurs when random.random() < probability, allowing
+            for statistical sampling. For example, 0.1 profiles approximately 10% of calls.
+
+    Returns:
+        Callable: A decorator function that wraps the target method with profiling
+            instrumentation.
+
+    Raises:
+        FileNotFoundError: If path is not provided and pyproject.toml cannot be found
+            in any parent directory (used to determine project root).
+
+    Example:
+        @profile_method()
+        def my_method():
+            pass
+
+        @profile_method(probability=0.1)
+        async def my_async_method():
+            pass
     """
 
     file_path = Path(path) if path else get_package_root()
@@ -285,12 +320,16 @@ def profile_method(path: str | None = None) -> Callable:
             async def async_wrapper(*args, **kwargs):
                 profiler = Profiler(async_mode="enabled")
 
-                profiler.start()
-                try:
+                should_profile = probability is None or random.random() < probability
+                if should_profile:
+                    profiler.start()
+                    try:
+                        return await method(*args, **kwargs)
+                    finally:
+                        profiler.stop()
+                        _write_profile(profiler, method.__name__)
+                else:
                     return await method(*args, **kwargs)
-                finally:
-                    profiler.stop()
-                    _write_profile(profiler, method.__name__)
 
             return async_wrapper
 
@@ -298,12 +337,16 @@ def profile_method(path: str | None = None) -> Callable:
         def sync_wrapper(*args, **kwargs):
             profiler = Profiler(async_mode="disabled")
 
-            profiler.start()
-            try:
+            should_profile = probability is None or random.random() < probability
+            if should_profile:
+                profiler.start()
+                try:
+                    return method(*args, **kwargs)
+                finally:
+                    profiler.stop()
+                    _write_profile(profiler, method.__name__)
+            else:
                 return method(*args, **kwargs)
-            finally:
-                profiler.stop()
-                _write_profile(profiler, method.__name__)
 
         return sync_wrapper
 
