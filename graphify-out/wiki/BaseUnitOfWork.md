@@ -1,70 +1,76 @@
 # BaseUnitOfWork
 
-> God node · 246 connections · `gen_epix/fastapp/unit_of_work.py`
+> 146 nodes · cohesion 0.03
 
-**Community:** [Casedb Case CRUD Commands](Casedb_Case_CRUD_Commands.md)
+## Key Concepts
 
-## Connections by Relation
+- **BaseUnitOfWork** (241 connections) — `gen_epix/fastapp/unit_of_work.py`
+- **BatchUploader** (59 connections) — `gen_epix/commondb/services/upload.py`
+- **UploadResult** (52 connections) — `gen_epix/commondb/domain/model/upload.py`
+- **fastapp/unit_of_work.py** (52 connections) — `gen_epix/fastapp/unit_of_work.py`
+- **UploadBatchCommandMixin** (42 connections) — `gen_epix/commondb/domain/command/base.py`
+- **model/upload.py** (41 connections) — `gen_epix/commondb/domain/model/upload.py`
+- **BaseBatchUploadResult** (40 connections) — `gen_epix/commondb/domain/model/upload.py`
+- **services/upload.py** (34 connections) — `gen_epix/commondb/services/upload.py`
+- **services/case/upload.py** (32 connections) — `gen_epix/casedb/services/case/upload.py`
+- **UploadSamplesCommand** (31 connections) — `gen_epix/seqdb/domain/command/seq.py`
+- **EtlStatus** (24 connections) — `gen_epix/commondb/domain/enum.py`
+- **services/omop/upload.py** (24 connections) — `gen_epix/omopdb/services/omop/upload.py`
+- **services/seq/upload.py** (23 connections) — `gen_epix/seqdb/services/seq/upload.py`
+- **upload_upsert_batch.py** (16 connections) — `gen_epix/seqdb/services/seq/upload_upsert_batch.py`
+- **.is_null()** (14 connections) — `gen_epix/commondb/services/upload.py`
+- **.upsert_batch()** (13 connections) — `gen_epix/commondb/services/upload.py`
+- **.verify_identifiers()** (13 connections) — `gen_epix/commondb/services/upload.py`
+- **.verify_link_id()** (13 connections) — `gen_epix/commondb/services/upload.py`
+- **.create_identifiers()** (12 connections) — `gen_epix/commondb/services/upload.py`
+- **.create_objects()** (12 connections) — `gen_epix/commondb/services/upload.py`
+- **.get_parents_for_upload()** (12 connections) — `gen_epix/commondb/services/upload.py`
+- **.verify_children()** (12 connections) — `gen_epix/commondb/services/upload.py`
+- **PersonBatchUploader** (12 connections) — `gen_epix/omopdb/services/omop/upload.py`
+- **SampleBatchUploader** (12 connections) — `gen_epix/seqdb/services/seq/upload.py`
+- **.create_child_identifiers()** (11 connections) — `gen_epix/commondb/services/upload.py`
+- *... and 121 more nodes in this community*
 
-### contains
-- fastapp/unit_of_work.py `EXTRACTED`
+## Relationships
 
-### imports
-- case/service.py `EXTRACTED`
-- gen_epix/fastapp/__init__.py `EXTRACTED`
-- test_fastapp_dict_repository.py `EXTRACTED`
-- sa/repository.py `EXTRACTED`
-- test_commondb_upload.py `EXTRACTED`
-- test_casedb_upload.py `EXTRACTED`
-- calculate_seq_distance.py `EXTRACTED`
-- test_seqdb_calculate_seq_distance.py `EXTRACTED`
-- casedb/services/case/base.py `EXTRACTED`
-- test_omopdb_upload.py `EXTRACTED`
-- case/crud_common.py `EXTRACTED`
-- test_seqdb_upload.py `EXTRACTED`
-- retrieve_case.py `EXTRACTED`
-- gen_epix/fastapp/service.py `EXTRACTED`
-- test_seqdb_retrieve_best.py `EXTRACTED`
-- services/upload.py `EXTRACTED`
-- dict/repository.py `EXTRACTED`
-- services/case/upload.py `EXTRACTED`
-- crud_dim.py `EXTRACTED`
-- test_seqdb_upload_verify_batch_refdata.py `EXTRACTED`
+- [commondb/domain/literal.py](commondb-domain-literal.py.md) (37 shared connections)
+- [CrudOperation](CrudOperation.md) (31 shared connections)
+- [BaseCaseService](BaseCaseService.md) (25 shared connections)
+- [_crud_cascade_delete](_crud_cascade_delete.md) (24 shared connections)
+- [SeqSARepository](SeqSARepository.md) (23 shared connections)
+- [commondb/domain/enum.py](commondb-domain-enum.py.md) (19 shared connections)
+- [UploadCasesCommand](UploadCasesCommand.md) (19 shared connections)
+- [test_omopdb_upload.py](test_omopdb_upload.py.md) (18 shared connections)
+- [get_case_abac_from_command](get_case_abac_from_command.md) (12 shared connections)
+- [SeqDictRepository](SeqDictRepository.md) (12 shared connections)
+- [CaseService](CaseService.md) (12 shared connections)
+- [test_commondb_upload.py](test_commondb_upload.py.md) (10 shared connections)
 
-### inherits
-- SAUnitOfWork `EXTRACTED`
-- DictUnitOfWork `EXTRACTED`
+## Source Files
 
-### method
-- .__exit__() `EXTRACTED`
-- .commit() `EXTRACTED`
-- .rollback() `EXTRACTED`
-- .__enter__() `EXTRACTED`
-- .is_managing_context() `EXTRACTED`
-- .flush() `EXTRACTED`
-- .__init__() `EXTRACTED`
+- `gen_epix/casedb/services/case/upload.py`
+- `gen_epix/casedb/services/seqdb/service.py`
+- `gen_epix/commondb/domain/command/base.py`
+- `gen_epix/commondb/domain/enum.py`
+- `gen_epix/commondb/domain/model/upload.py`
+- `gen_epix/commondb/services/upload.py`
+- `gen_epix/fastapp/unit_of_work.py`
+- `gen_epix/fastapp/user_manager.py`
+- `gen_epix/omopdb/services/omop/upload.py`
+- `gen_epix/seqdb/domain/command/seq.py`
+- `gen_epix/seqdb/services/seq/__init__.py`
+- `gen_epix/seqdb/services/seq/service.py`
+- `gen_epix/seqdb/services/seq/upload.py`
+- `gen_epix/seqdb/services/seq/upload_upsert_batch.py`
+- `gen_epix/seqdb/services/seq/upload_verify_batch.py`
+- `test/commondb/unit/upload/test_commondb_upload.py`
+- `test/seqdb/unit/services/seq/upload/test_seqdb_upload_verify_batch_refdata.py`
 
-### references
-- _crud_cascade_delete() `EXTRACTED`
-- _verify_children_seq_profiles() `EXTRACTED`
-- crud_with_access_filter() `EXTRACTED`
-- _calculate_and_store_distances() `EXTRACTED`
-- .crud() `EXTRACTED`
-- _verify_sample_refdata() `EXTRACTED`
-- _verify_children_seq_classifications() `EXTRACTED`
-- .crud() `EXTRACTED`
-- _verify_children_seqs() `EXTRACTED`
-- _get_cases_for_create_file_for_read_sets_or_seqs() `EXTRACTED`
-- _verify_protocol() `EXTRACTED`
-- _crud_create_dim() `EXTRACTED`
-- ._retrieve_cases_with_content_right() `EXTRACTED`
-- .upsert_batch() `EXTRACTED`
-- .verify_link_id() `EXTRACTED`
-- .update_association() `EXTRACTED`
-- case_service_get_case_date_col_mappers() `EXTRACTED`
-- _crud_dim_with_abac() `EXTRACTED`
-- case_service_read_association_with_valid_ids() `EXTRACTED`
-- _verify_case_filter() `EXTRACTED`
+## Audit Trail
+
+- EXTRACTED: 891 (99%)
+- INFERRED: 5 (1%)
+- AMBIGUOUS: 0 (0%)
 
 ---
 

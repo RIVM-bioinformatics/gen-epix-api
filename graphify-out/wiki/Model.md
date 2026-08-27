@@ -1,74 +1,61 @@
 # Model
 
-> God node · 159 connections · `gen_epix/fastapp/model.py`
+> 73 nodes · cohesion 0.06
 
-**Community:** [FastApp Domain Registration & UserManager](FastApp_Domain_Registration_&_UserManager.md)
+## Key Concepts
 
-## Connections by Relation
+- **Model** (29 connections)
+- **Hashable** (27 connections)
+- **.crud()** (19 connections) — `gen_epix/fastapp/repositories/dict/repository.py`
+- **Any** (16 connections)
+- **.get_id()** (10 connections) — `gen_epix/fastapp/model.py`
+- **.delete_some()** (10 connections) — `gen_epix/fastapp/repositories/dict/repository.py`
+- **.__init__()** (10 connections) — `gen_epix/fastapp/repositories/dict/repository.py`
+- **.read_some()** (10 connections) — `gen_epix/fastapp/repositories/dict/repository.py`
+- **.upsert_some()** (10 connections) — `gen_epix/fastapp/repositories/dict/repository.py`
+- **.verify_valid_ids()** (10 connections) — `gen_epix/fastapp/repositories/dict/repository.py`
+- **._validate_upsert_objects()** (9 connections) — `gen_epix/fastapp/repositories/dict/repository.py`
+- **._verify_duplicate_ids()** (9 connections) — `gen_epix/fastapp/repositories/dict/repository.py`
+- **.delete_all()** (8 connections) — `gen_epix/fastapp/repositories/dict/repository.py`
+- **.read_all()** (8 connections) — `gen_epix/fastapp/repositories/dict/repository.py`
+- **.upsert_model_objects()** (8 connections) — `gen_epix/fastapp/repositories/dict/repository.py`
+- **._apply_link_updates()** (7 connections) — `gen_epix/fastapp/repositories/dict/repository.py`
+- **.delete_one()** (7 connections) — `gen_epix/fastapp/repositories/dict/repository.py`
+- **.read_fields()** (7 connections) — `gen_epix/fastapp/repositories/dict/repository.py`
+- **.read_one()** (7 connections) — `gen_epix/fastapp/repositories/dict/repository.py`
+- **.upsert_one()** (7 connections) — `gen_epix/fastapp/repositories/dict/repository.py`
+- **._verify_duplicate_keys()** (7 connections) — `gen_epix/fastapp/repositories/dict/repository.py`
+- **._create_empty_db_for_entities()** (6 connections) — `gen_epix/fastapp/repositories/dict/repository.py`
+- **._get_links()** (6 connections) — `gen_epix/fastapp/repositories/dict/repository.py`
+- **._insert_new()** (6 connections) — `gen_epix/fastapp/repositories/dict/repository.py`
+- **._raise_invalid_ids()** (6 connections) — `gen_epix/fastapp/repositories/dict/repository.py`
+- *... and 48 more nodes in this community*
 
-### calls
-- .test_non_model_noid_objects_in_list_are_skipped() `EXTRACTED`
+## Relationships
 
-### contains
-- gen_epix/fastapp/model.py `EXTRACTED`
+- [DictRepository](DictRepository.md) (37 shared connections)
+- [Entity](Entity.md) (4 shared connections)
+- [Filter](Filter.md) (4 shared connections)
+- [BaseUnitOfWork](BaseUnitOfWork.md) (3 shared connections)
+- [CompositeFilter](CompositeFilter.md) (3 shared connections)
+- [CrudOperation](CrudOperation.md) (2 shared connections)
+- [CrudCommand](CrudCommand.md) (1 shared connections)
+- [casedb/domain/model/__init__.py](casedb-domain-model-__init__.py.md) (1 shared connections)
+- [Any](Any.md) (1 shared connections)
+- [BaseRepository](BaseRepository.md) (1 shared connections)
+- [.__init__](__init__.md) (1 shared connections)
+- [CommondbDictModelModifier](CommondbDictModelModifier.md) (1 shared connections)
 
-### imports
-- gen_epix/fastapp/__init__.py `EXTRACTED`
-- fastapp/app.py `EXTRACTED`
-- test_fastapp_dict_repository.py `EXTRACTED`
-- sa/repository.py `EXTRACTED`
-- test_fastapp_sa_repository.py `EXTRACTED`
-- test_fastapp_domain.py `EXTRACTED`
-- test_fastapp_remote_app.py `EXTRACTED`
-- gen_epix/fastapp/service.py `EXTRACTED`
-- test_fastapp_rbac_service.py `EXTRACTED`
-- dict/repository.py `EXTRACTED`
-- domain.py `EXTRACTED`
-- auth/model.py `EXTRACTED`
-- test/fastapp/model.py `EXTRACTED`
-- test_fastapp_base_repository.py `EXTRACTED`
-- test_fastapp_sa_repository_mapper.py `EXTRACTED`
-- fastapp/repository.py `EXTRACTED`
-- test_model_process_metadata_policy.py `EXTRACTED`
-- mapper.py `EXTRACTED`
-- sa_mapper.py `EXTRACTED`
-- dict_modifier.py `EXTRACTED`
+## Source Files
 
-### inherits
-- PydanticBaseModel `EXTRACTED`
+- `gen_epix/fastapp/model.py`
+- `gen_epix/fastapp/repositories/dict/repository.py`
 
-### method
-- .get_id() `EXTRACTED`
-- .model_entity() `EXTRACTED`
-- .model_name() `EXTRACTED`
+## Audit Trail
 
-### rationale_for
-- Base class for all models in an application. Models are used to represent the… `EXTRACTED`
-
-### references
-- .get_objs() `EXTRACTED`
-
-### uses
-- [Entity](Entity.md) `INFERRED`
-- [App](App.md) `INFERRED`
-- [DictRepository](DictRepository.md) `INFERRED`
-- [SARepository](SARepository.md) `INFERRED`
-- Domain `INFERRED`
-- BaseService `INFERRED`
-- BaseRepository `INFERRED`
-- SeqProfile `INFERRED`
-- Protocol `INFERRED`
-- SAMapper `INFERRED`
-- BaseSAMapper `INFERRED`
-- Seq `INFERRED`
-- OidcServerCfg `INFERRED`
-- Claims `INFERRED`
-- TestRegistrationAndLookups `INFERRED`
-- IdentityProvider `INFERRED`
-- ReadSet `INFERRED`
-- RefDataAccess `INFERRED`
-- _DummyMapper `INFERRED`
-- RBACTestClient `INFERRED`
+- EXTRACTED: 203 (100%)
+- INFERRED: 1 (0%)
+- AMBIGUOUS: 0 (0%)
 
 ---
 

@@ -1,76 +1,79 @@
 # BaseCaseService
 
-> God node · 149 connections · `gen_epix/casedb/services/case/base.py`
+> 130 nodes · cohesion 0.03
 
-**Community:** [Casedb Case CRUD Commands](Casedb_Case_CRUD_Commands.md)
+## Key Concepts
 
-## Connections by Relation
+- **BaseCaseService** (147 connections) — `gen_epix/casedb/services/case/base.py`
+- **case/service.py** (97 connections) — `gen_epix/casedb/services/case/service.py`
+- **casedb/services/case/base.py** (49 connections) — `gen_epix/casedb/services/case/base.py`
+- **case/crud_common.py** (46 connections) — `gen_epix/casedb/services/case/crud_common.py`
+- **casedb/domain/exc.py** (38 connections) — `gen_epix/casedb/domain/exc.py`
+- **BaseCaseAbacPolicy** (25 connections) — `gen_epix/casedb/domain/policy/abac.py`
+- **test_casedb_retrieve_similar_cases.py** (22 connections) — `test/casedb/unit/services/case/retrieve_case/test_casedb_retrieve_similar_cases.py`
+- **test_casedb_retrieve_is_own_cases.py** (20 connections) — `test/casedb/unit/services/case/retrieve_case/test_casedb_retrieve_is_own_cases.py`
+- **case_service_retrieve_is_own_cases()** (19 connections) — `gen_epix/casedb/services/case/retrieve_is_own_cases.py`
+- **retrieve_seq.py** (18 connections) — `gen_epix/casedb/services/case/retrieve_seq.py`
+- **test_retrieve_complete_case_type.py** (18 connections) — `test/casedb/unit/services/case/retrieve_case/test_retrieve_complete_case_type.py`
+- **crud_case.py** (17 connections) — `gen_epix/casedb/services/case/crud_case.py`
+- **crud_case_data_collection_link.py** (16 connections) — `gen_epix/casedb/services/case/crud_case_data_collection_link.py`
+- **casedb/domain/policy/abac.py** (15 connections) — `gen_epix/casedb/domain/policy/abac.py`
+- **case_service_retrieve_similar_cases()** (15 connections) — `gen_epix/casedb/services/case/retrieve_similar_cases.py`
+- **.get_case_abac_from_command()** (14 connections) — `gen_epix/casedb/domain/policy/abac.py`
+- **retrieve_similar_cases.py** (14 connections) — `gen_epix/casedb/services/case/retrieve_similar_cases.py`
+- **crud_ref_col.py** (13 connections) — `gen_epix/casedb/services/case/crud_ref_col.py`
+- **retrieve_stats.py** (13 connections) — `gen_epix/casedb/services/case/retrieve_stats.py`
+- **retrieve_is_own_cases.py** (12 connections) — `gen_epix/casedb/services/case/retrieve_is_own_cases.py`
+- **case_service_retrieve_complete_case_type()** (11 connections) — `gen_epix/casedb/services/case/retrieve_complete_case_type.py`
+- **UUID** (10 connections)
+- **case_service_crud_case_set_category()** (10 connections) — `gen_epix/casedb/services/case/crud_case_set_category.py`
+- **case_service_crud_case_set_status()** (10 connections) — `gen_epix/casedb/services/case/crud_case_set_status.py`
+- **case_service_crud_case_type_set_category()** (10 connections) — `gen_epix/casedb/services/case/crud_case_type_set_category.py`
+- *... and 105 more nodes in this community*
 
-### contains
-- casedb/services/case/base.py `EXTRACTED`
+## Relationships
 
-### imports
-- case/service.py `EXTRACTED`
-- test_casedb_upload.py `EXTRACTED`
-- case/crud_common.py `EXTRACTED`
-- case_validator.py `EXTRACTED`
-- test_casedb_retrieve_case.py `EXTRACTED`
-- retrieve_case.py `EXTRACTED`
-- services/case/upload.py `EXTRACTED`
-- crud_dim.py `EXTRACTED`
-- retrieve_complete_case_type.py `EXTRACTED`
-- test_casedb_retrieve_similar_cases.py `EXTRACTED`
-- crud_case_set.py `EXTRACTED`
-- create_seq.py `EXTRACTED`
-- test_casedb_retrieve_is_own_cases.py `EXTRACTED`
-- crud_col.py `EXTRACTED`
-- retrieve_seq.py `EXTRACTED`
-- test_retrieve_complete_case_type.py `EXTRACTED`
-- crud_case.py `EXTRACTED`
-- retrieve_stats.py `EXTRACTED`
-- crud_case_data_collection_link.py `EXTRACTED`
-- crud_case_set_data_collection_link.py `EXTRACTED`
+- [_crud_cascade_delete](_crud_cascade_delete.md) (67 shared connections)
+- [get_case_abac_from_command](get_case_abac_from_command.md) (35 shared connections)
+- [BaseUnitOfWork](BaseUnitOfWork.md) (23 shared connections)
+- [CrudOperation](CrudOperation.md) (21 shared connections)
+- [case_service_create_file_for_read_set_or_seq](case_service_create_file_for_read_set_or_seq.md) (20 shared connections)
+- [BaseIsOwnCasesTestCase](BaseIsOwnCasesTestCase.md) (19 shared connections)
+- [BaseCaseService](BaseCaseService.md) (15 shared connections)
+- [crud_dim.py](crud_dim.py.md) (13 shared connections)
+- [retrieve_case.py](retrieve_case.py.md) (13 shared connections)
+- [CaseService](CaseService.md) (13 shared connections)
+- [commondb/domain/enum.py](commondb-domain-enum.py.md) (12 shared connections)
+- [composite.py](composite.py.md) (12 shared connections)
 
-### inherits
-- DomainBaseCaseService `EXTRACTED`
+## Source Files
 
-### method
-- ._retrieve_cases_with_content_right() `EXTRACTED`
-- ._retrieve_case_sets_with_content_right() `EXTRACTED`
-- ._retrieve_seq_column_data() `EXTRACTED`
-- ._read_association_with_valid_ids() `EXTRACTED`
-- ._retrieve_association_map() `EXTRACTED`
-- ._retrieve_case_data_collections_map() `EXTRACTED`
-- ._retrieve_case_set_data_collections_map() `EXTRACTED`
-- ._retrieve_case_case_sets_map() `EXTRACTED`
-- ._verify_case_set_member_case_type() `EXTRACTED`
-- ._compose_id_filter() `EXTRACTED`
-- .__init__() `EXTRACTED`
+- `gen_epix/casedb/domain/exc.py`
+- `gen_epix/casedb/domain/policy/abac.py`
+- `gen_epix/casedb/services/case/base.py`
+- `gen_epix/casedb/services/case/create_case_set.py`
+- `gen_epix/casedb/services/case/crud_case.py`
+- `gen_epix/casedb/services/case/crud_case_data_collection_link.py`
+- `gen_epix/casedb/services/case/crud_case_set_category.py`
+- `gen_epix/casedb/services/case/crud_case_set_status.py`
+- `gen_epix/casedb/services/case/crud_case_type_set_category.py`
+- `gen_epix/casedb/services/case/crud_common.py`
+- `gen_epix/casedb/services/case/crud_genetic_distance_protocol.py`
+- `gen_epix/casedb/services/case/crud_ref_col.py`
+- `gen_epix/casedb/services/case/crud_tree_algorithm.py`
+- `gen_epix/casedb/services/case/crud_tree_algorithm_class.py`
+- `gen_epix/casedb/services/case/retrieve_complete_case_type.py`
+- `gen_epix/casedb/services/case/retrieve_is_own_cases.py`
+- `gen_epix/casedb/services/case/retrieve_seq.py`
+- `gen_epix/casedb/services/case/retrieve_similar_cases.py`
+- `gen_epix/casedb/services/case/retrieve_stats.py`
+- `gen_epix/casedb/services/case/service.py`
 
-### rationale_for
-- Abstract base class for case services defining the interface contract. This… `EXTRACTED`
+## Audit Trail
 
-### uses
-- AppImplDetails `INFERRED`
-- CaseService `INFERRED`
-- CaseValidator `INFERRED`
-- _crud_cascade_delete() `INFERRED`
-- BaseUploadTestCase `INFERRED`
-- crud_with_access_filter() `INFERRED`
-- case_service_crud_dim() `INFERRED`
-- BaseRetrieveCaseTestCase `INFERRED`
-- case_service_crud_case_set() `INFERRED`
-- case_service_create_file_for_read_set_or_seq() `INFERRED`
-- case_service_retrieve_cases_by_query() `INFERRED`
-- CaseBatchUploader `INFERRED`
-- case_service_retrieve_case_stats() `INFERRED`
-- case_service_crud_ref_col() `INFERRED`
-- case_service_retrieve_is_own_cases() `INFERRED`
-- _get_cases_for_create_file_for_read_sets_or_seqs() `INFERRED`
-- is_app_admin_or_above() `INFERRED`
-- _crud_create_dim() `INFERRED`
-- case_service_retrieve_cases_by_id() `INFERRED`
-- BaseIsOwnCasesTestCase `INFERRED`
+- EXTRACTED: 607 (87%)
+- INFERRED: 94 (13%)
+- AMBIGUOUS: 0 (0%)
 
 ---
 
