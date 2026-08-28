@@ -1,82 +1,62 @@
 # CasedbTestClient
 
-> God node · 120 connections · `test/casedb/casedb_test_client.py`
+> 102 nodes · cohesion 0.05
 
-**Community:** [Casedb Test Client Helpers](Casedb_Test_Client_Helpers.md)
+## Key Concepts
 
-## Connections by Relation
+- **CasedbTestClient** (120 connections) — `test/casedb/casedb_test_client.py`
+- **.get_obj()** (46 connections) — `test/casedb/casedb_test_client.py`
+- **User** (39 connections)
+- **map_paired_elements()** (21 connections) — `gen_epix/util.py`
+- **.create_case_set()** (9 connections) — `test/casedb/casedb_test_client.py`
+- **.create_ref_col()** (8 connections) — `test/casedb/casedb_test_client.py`
+- **.update_association_case_data_collection()** (8 connections) — `test/casedb/casedb_test_client.py`
+- **.create_case()** (7 connections) — `test/casedb/casedb_test_client.py`
+- **.create_case_data_collection_link()** (7 connections) — `test/casedb/casedb_test_client.py`
+- **.create_concept_set()** (7 connections) — `test/casedb/casedb_test_client.py`
+- **.create_organization_access_case_policy()** (7 connections) — `test/casedb/casedb_test_client.py`
+- **.create_user_access_case_policy()** (7 connections) — `test/casedb/casedb_test_client.py`
+- **.read_case_types_with_any_right()** (7 connections) — `test/casedb/casedb_test_client.py`
+- **.create_case_type()** (6 connections) — `test/casedb/casedb_test_client.py`
+- **.create_case_type_set()** (6 connections) — `test/casedb/casedb_test_client.py`
+- **.create_case_type_set_member()** (6 connections) — `test/casedb/casedb_test_client.py`
+- **.create_col()** (6 connections) — `test/casedb/casedb_test_client.py`
+- **.create_col_set_member()** (6 connections) — `test/casedb/casedb_test_client.py`
+- **.create_concept()** (6 connections) — `test/casedb/casedb_test_client.py`
+- **.create_etiology()** (6 connections) — `test/casedb/casedb_test_client.py`
+- **.create_genetic_distance_protocol()** (6 connections) — `test/casedb/casedb_test_client.py`
+- **.create_user_share_case_policy()** (6 connections) — `test/casedb/casedb_test_client.py`
+- **.read_user_access_case_policies_with_any_right()** (6 connections) — `test/casedb/casedb_test_client.py`
+- **CaseTypeSet** (6 connections)
+- **DataCollection** (6 connections)
+- *... and 77 more nodes in this community*
 
-### contains
-- casedb_test_client.py `EXTRACTED`
+## Relationships
 
-### imports
-- test_casedb_case_upload.py `EXTRACTED`
-- test_casedb_content.py `EXTRACTED`
-- test_casedb_refdata_access.py `EXTRACTED`
-- test_casedb_user_journey_performance.py `EXTRACTED`
-- test_casedb_build.py `EXTRACTED`
-- test_retrieve_stats.py `EXTRACTED`
-- test_casedb_opsdata_access.py `EXTRACTED`
-- test_casedb_metadata.py `EXTRACTED`
-- test_casedb_metadata_masking.py `EXTRACTED`
-- test_casedb_case_upload_content_deletion.py `EXTRACTED`
-- test_casedb_repository_performance.py `EXTRACTED`
-- test_casedb_startup_performance.py `EXTRACTED`
-- casedb/integration/build_db/update.py `EXTRACTED`
-- casedb/integration/build_db/create.py `EXTRACTED`
-- casedb/integration/build_db/read.py `EXTRACTED`
-- setup_case_data_reference.py `EXTRACTED`
-- casedb/integration/build_db/delete.py `EXTRACTED`
-- setup_case_data_operational.py `EXTRACTED`
-- setup_test_users_and_organizations_operational.py `EXTRACTED`
-- setup_test_users_and_organizations_reference.py `EXTRACTED`
+- [commondb/domain/enum.py](commondb-domain-enum.py.md) (21 shared connections)
+- [define_edge_cases_reference.py](define_edge_cases_reference.py.md) (8 shared connections)
+- [test_retrieve_stats.py](test_retrieve_stats.py.md) (7 shared connections)
+- [TestCaseUpload](TestCaseUpload.md) (4 shared connections)
+- [.get_test_client](get_test_client.md) (4 shared connections)
+- [TestcasedbEdgeCasesRefDataAccess](TestcasedbEdgeCasesRefDataAccess.md) (4 shared connections)
+- [CrudOperation](CrudOperation.md) (3 shared connections)
+- [get_test_client](get_test_client_2.md) (3 shared connections)
+- [TestCasedbMetadataMasking](TestCasedbMetadataMasking.md) (3 shared connections)
+- [composite.py](composite.py.md) (3 shared connections)
+- [CaseValidator](CaseValidator.md) (2 shared connections)
+- [TestClient](TestClient.md) (2 shared connections)
 
-### inherits
-- TestClient `EXTRACTED`
+## Source Files
 
-### method
-- .get_obj() `EXTRACTED`
-- .get_test_client() `EXTRACTED`
-- .create_case_set() `EXTRACTED`
-- .__init__() `EXTRACTED`
-- .update_association_case_data_collection() `EXTRACTED`
-- .create_ref_col() `EXTRACTED`
-- .create_case() `EXTRACTED`
-- .create_case_data_collection_link() `EXTRACTED`
-- .read_case_types_with_any_right() `EXTRACTED`
-- .create_concept_set() `EXTRACTED`
-- .create_organization_access_case_policy() `EXTRACTED`
-- .create_user_access_case_policy() `EXTRACTED`
-- .create_user_share_case_policy() `EXTRACTED`
-- .read_user_access_case_policies_with_any_right() `EXTRACTED`
-- .create_concept() `EXTRACTED`
-- .create_genetic_distance_protocol() `EXTRACTED`
-- .create_etiology() `EXTRACTED`
-- .create_case_type() `EXTRACTED`
-- .create_case_type_set_member() `EXTRACTED`
-- .create_case_type_set() `EXTRACTED`
+- `gen_epix/util.py`
+- `test/casedb/casedb_test_client.py`
+- `test/casedb/integration/case_upload/test_casedb_case_upload_content_deletion.py`
 
-### uses
-- TestClient `INFERRED`
-- TestCreate `INFERRED`
-- TestUpdate `INFERRED`
-- Role `INFERRED`
-- TestDelete `INFERRED`
-- AppComposer `INFERRED`
-- TestRead `INFERRED`
-- TestcasedbEdgeCasesRefDataAccess `INFERRED`
-- TestCasedbEdgeCasesAccess `INFERRED`
-- TestRead `INFERRED`
-- CasedbEndpointTestClient `INFERRED`
-- TestCaseUpload `INFERRED`
-- TestCasedbMetadataMasking `INFERRED`
-- TestCasedbModelProcessMetadata `INFERRED`
-- retrieve_case_type_stats_profiled() `INFERRED`
-- retrieve_case_type_stats() `INFERRED`
-- TestContent `INFERRED`
-- get_all_case_type_ids() `INFERRED`
-- test_retrieve_case_type_stats_scaled_profiled() `INFERRED`
-- CaseDataCollectionLink `INFERRED`
+## Audit Trail
+
+- EXTRACTED: 292 (88%)
+- INFERRED: 40 (12%)
+- AMBIGUOUS: 0 (0%)
 
 ---
 

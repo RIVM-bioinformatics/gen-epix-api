@@ -1,21 +1,21 @@
 # ._validate_some_criteria
 
-> 3 nodes · cohesion 0.67
+> 4 nodes · cohesion 0.50
 
 ## Key Concepts
 
-- **.get_obj_ids()** (3 connections) — `gen_epix/fastapp/model.py`
-- **Hashable** (2 connections)
-- **Get the object IDs, either from the obj_ids field or from the objs field. In…** (1 connections) — `gen_epix/fastapp/model.py`
+- **._validate_some_criteria()** (4 connections) — `gen_epix/omopdb/domain/model/omop/non_persistable.py`
+- **model_validator** (1 connections)
+- **Self** (1 connections)
+- **Validate that at least some criteria are provided, to avoid accidentally…** (1 connections) — `gen_epix/omopdb/domain/model/omop/non_persistable.py`
 
 ## Relationships
 
-- [FastApp Domain Registration & UserManager](FastApp_Domain_Registration_&_UserManager.md) (1 shared connections)
-- [Repository CRUD Base](Repository_CRUD_Base.md) (1 shared connections)
+- [omopdb/domain/model/__init__.py](omopdb-domain-model-__init__.py.md) (1 shared connections)
 
 ## Source Files
 
-- `gen_epix/fastapp/model.py`
+- `gen_epix/omopdb/domain/model/omop/non_persistable.py`
 
 ## Audit Trail
 

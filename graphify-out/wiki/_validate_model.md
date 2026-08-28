@@ -1,24 +1,28 @@
 # ._validate_model
 
-> 3 nodes · cohesion 0.67
+> 6 nodes · cohesion 0.40
 
 ## Key Concepts
 
-- **.validate_claim_map()** (3 connections) — `gen_epix/fastapp/services/auth/model.py`
-- **field_validator** (1 connections)
-- **Validate the claim_map field to ensure it is a dictionary of string keys to…** (1 connections) — `gen_epix/fastapp/services/auth/model.py`
+- **._validate_model()** (4 connections) — `gen_epix/commondb/domain/model/organization.py`
+- **._validate_issuer_fields()** (4 connections) — `gen_epix/commondb/domain/model/organization.py`
+- **model_validator** (2 connections)
+- **Self** (2 connections)
+- **Derive the id, if not provided, or otherwise verify that it is correctly…** (1 connections) — `gen_epix/commondb/domain/model/organization.py`
+- **Ensure that either identifier_issuer_id or identifier_issuer_code is set.** (1 connections) — `gen_epix/commondb/domain/model/organization.py`
 
 ## Relationships
 
-- [FastApp Domain Registration & UserManager](FastApp_Domain_Registration_&_UserManager.md) (1 shared connections)
+- [omopdb/domain/model/__init__.py](omopdb-domain-model-__init__.py.md) (1 shared connections)
+- [IdentifierForUpload](IdentifierForUpload.md) (1 shared connections)
 
 ## Source Files
 
-- `gen_epix/fastapp/services/auth/model.py`
+- `gen_epix/commondb/domain/model/organization.py`
 
 ## Audit Trail
 
-- EXTRACTED: 3 (100%)
+- EXTRACTED: 8 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

@@ -1,4 +1,4 @@
-# Gen-EpiX Full Logo
+# Gen-Epix Full Logo
 
 > 1 nodes · cohesion 1.00
 
