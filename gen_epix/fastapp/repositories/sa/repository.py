@@ -1531,9 +1531,7 @@ class SARepository(BaseRepository):
                 # so that multiple SARepository instances created in this way will not
                 # share the same database. This is important e.g. for testing, where
                 # multiple tests may create their own SARepository instances.
-                sqlite_target = (
-                    f"file:{uuid.uuid4()}?mode=memory&cache=shared&uri=true"
-                )
+                sqlite_target = f"file:{uuid.uuid4()}?mode=memory&cache=shared&uri=true"
                 sqlite_target_lower = sqlite_target.lower()
                 connection_string = f"sqlite:///{sqlite_target}"
 
@@ -1584,6 +1582,10 @@ class SARepository(BaseRepository):
                 cursor.close()
 
             # Add each schema as a separate database, as sqlite does not support schemas
+            # Unique per repository instance, so schemas of the same name from
+            # different SARepository instances don't collide on sqlite's
+            # process-wide shared cache (which is keyed by URI).
+            memory_schema_namespace = uuid.uuid4().hex
             with engine.connect() as conn:
                 for schema_name in schema_names:
                     if not schema_name:
@@ -1593,7 +1595,8 @@ class SARepository(BaseRepository):
                     if is_memory_target:
                         # For in-memory sqlite, give each schema its own shared-memory db.
                         attach_target = (
-                            f"file:{schema_name}?mode=memory&cache=shared&uri=true"
+                            f"file:{schema_name}_{memory_schema_namespace}"
+                            "?mode=memory&cache=shared&uri=true"
                         )
                     else:
                         if len(schema_names) > 1:
