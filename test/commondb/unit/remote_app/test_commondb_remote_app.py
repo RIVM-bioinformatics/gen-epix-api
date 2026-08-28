@@ -13,18 +13,19 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from test.util.mock_compat import MagicMock, Mock, patch
 from typing import Any, cast
 from uuid import uuid4
 
 import jwt
 import pytest
+
 from gen_epix.commondb.domain import DOMAIN, command, model
 from gen_epix.commondb.services.remote_app import CommondbRemoteApp
-from gen_epix.fastapp import exc
+from gen_epix.fastapp import RemoteApp, exc
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
 from gen_epix.fastapp.model import Command, Permission
-from test.util.mock_compat import MagicMock, Mock, patch
 
 _JWT_TEST_HS256_SECRET = "commondb-remote-app-test-secret-key-32b"
 
@@ -522,7 +523,7 @@ class TestHttpTimeoutConfiguration(BaseCommondbRemoteAppTestCase):
         assert DerivedRemoteApp.DEFAULT_HTTP_TIMEOUTS[DummyCommand] == 30.0
 
     def test_derived_remote_app_initialization(self) -> None:
-        """DerivedRemoteApp applies its command timeouts during initialization."""
+        """DerivedRemoteApp can be initialized."""
         app = DerivedRemoteApp(
             domain=self.domain,
             host="example.org",
@@ -530,7 +531,29 @@ class TestHttpTimeoutConfiguration(BaseCommondbRemoteAppTestCase):
         )
         assert isinstance(app, DerivedRemoteApp)
         assert isinstance(app, CommondbRemoteApp)
-        assert app.get_timeout(DummyCommand) == 30.0
+
+    def test_create_remote_app_applies_timeouts(self) -> None:
+        """_create_remote_app applies DEFAULT_HTTP_TIMEOUTS to remote app."""
+        # Create a mock remote app class
+        mock_remote_app_instance = Mock(spec=RemoteApp)
+
+        # Patch the module and class to return our mock
+        with patch("importlib.import_module") as mock_import:
+            mock_module = Mock()
+            mock_module.MockRemoteApp = Mock(return_value=mock_remote_app_instance)
+            mock_import.return_value = mock_module
+
+            # Use DerivedRemoteApp to have DEFAULT_HTTP_TIMEOUTS set
+            app, user = DerivedRemoteApp._create_remote_app(
+                remote_app_props={
+                    "module": "test.mock_module",
+                    "class_name": "MockRemoteApp",
+                }
+            )
+
+            # Verify set_timeout was called for each timeout in DEFAULT_HTTP_TIMEOUTS
+            mock_remote_app_instance.set_timeout.assert_called_with(DummyCommand, 30.0)
+            assert user is None
 
     def test_base_remote_app_has_empty_timeouts(self) -> None:
         """Base CommondbRemoteApp has empty DEFAULT_HTTP_TIMEOUTS."""

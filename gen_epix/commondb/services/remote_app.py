@@ -505,6 +505,8 @@ class CommondbRemoteApp(RemoteApp):
             importlib.import_module(remote_app_module), remote_app_class_name
         )
         app = remote_app_class(**remote_app_props)
+        for command_class, timeout in cls.DEFAULT_HTTP_TIMEOUTS.items():
+            app.set_timeout(command_class, timeout)
         # No user for remote app, this is handled via authentication to the actual remote service
         user = None
         return app, user
