@@ -39,6 +39,8 @@ class RemoteApp(App):
 
     DEFAULT_REQUEST_TIMEOUT = 5.0
 
+    DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {}
+
     DEFAULT_REQUEST_HEADERS: dict[str, str] = {"Content-Type": "application/json"}
 
     def __init__(
@@ -49,7 +51,7 @@ class RemoteApp(App):
         protocol: HttpProtocol | str = HttpProtocol.HTTPS,
         default_route_prefix: str | None = None,
         default_headers: dict[str, str] | None = None,
-        default_request_timeout: int | None = None,
+        default_request_timeout: float | None = None,
         add_generated_crud_route_handlers: bool = True,
         ssl_cert_file: Path | str | None = None,
         disable_ssl_verification: bool = False,
@@ -61,12 +63,16 @@ class RemoteApp(App):
         self._port = port
         self._protocol = protocol
         self._default_request_timeout = (
-            default_request_timeout or self.DEFAULT_REQUEST_TIMEOUT
+            default_request_timeout
+            if default_request_timeout is not None
+            else self.DEFAULT_REQUEST_TIMEOUT
         )
         self._default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
         self._default_headers = default_headers or self.DEFAULT_REQUEST_HEADERS
         self._routes: dict[type[Command], str] = {}
         self._timeouts: dict[type[Command], float] = {}
+        for command_class, timeout_seconds in self.DEFAULT_HTTP_TIMEOUTS.items():
+            self.set_timeout(command_class, timeout_seconds)
 
         # Initialise SSL context
         self._initialize_ssl_context(host, ssl_cert_file, disable_ssl_verification)
