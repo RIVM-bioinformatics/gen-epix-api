@@ -131,11 +131,7 @@ class SARepository(BaseRepository):
                 dialect_name = conn.dialect.name.lower()
                 transaction = conn.begin()
                 try:
-                    for (
-                        schema_name,
-                        table_name,
-                        constraint_name,
-                    ) in constraints:
+                    for schema_name, table_name, constraint_name in constraints:
                         try:
                             # NOTE: Only tested with MS SQL Server
                             if dialect_name == "mssql":
@@ -1353,7 +1349,7 @@ class SARepository(BaseRepository):
             return select(row_class).where(id_col.in_(obj_ids))
 
         # TODO: check if temp table exists and take a different name in that case
-        temp_table_name = f"#temp_{str(uuid.uuid4()).replace('-','_')}"
+        temp_table_name = f"#temp_{str(uuid.uuid4()).replace('-', '_')}"
         id_col_name = id_col.name
         id_datatype = table.c[id_col_name].type
         id_datatype_sql = id_datatype.compile(dialect=dialect)
