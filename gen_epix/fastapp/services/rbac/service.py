@@ -415,14 +415,20 @@ class BaseRbacService(BaseService):
         role_permissions_map: dict[
             Hashable, set[tuple[type[Command], PermissionType]]
         ] = {}
+        if verify_redundant_permissions:
+            orig_role_permissions_map = {
+                x: set(
+                    BaseRbacService._get_permissions(role_permission_sets.get(x, set()))
+                )
+                for x in role_hierarchy
+            }
+        else:
+            orig_role_permissions_map = {}
         for role in role_hierarchy:
             role_permissions_map[role] = BaseRbacService._get_permissions(
                 role_permission_sets.get(role, set())
             )
-            if verify_redundant_permissions:
-                orig_role_permissions = role_permissions_map[role].copy()
-            else:
-                orig_role_permissions = set()
+            orig_role_permissions = orig_role_permissions_map.get(role, set())
             BaseRbacService._compile_subrole_permissions(
                 role_hierarchy,
                 role_permission_sets,
@@ -452,8 +458,8 @@ class BaseRbacService(BaseService):
             role_permissions_map[role].update(sub_role_permissions)
             if not verify_redundant_permissions:
                 continue
-                # Check if any sub-role permissions are also in the role's unique
-                # permissions
+            # Check if any sub-role permissions are also in the role's unique
+            # permissions
             redundant_permissions = sub_role_permissions.intersection(
                 orig_role_permissions
             )
