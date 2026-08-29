@@ -16,6 +16,9 @@ from gen_epix.commondb.domain.command.base import (
     UploadBatchCommandMixin as UploadBatchCommandMixin,
 )
 from gen_epix.commondb.domain.command.organization import (
+    AnonymizeUserCommand as AnonymizeUserCommand,
+)
+from gen_epix.commondb.domain.command.organization import (
     ContactCrudCommand as ContactCrudCommand,
 )
 from gen_epix.commondb.domain.command.organization import (
@@ -43,7 +46,7 @@ from gen_epix.commondb.domain.command.organization import (
     OrganizationIdentifierIssuerLinkCrudCommand as OrganizationIdentifierIssuerLinkCrudCommand,
 )
 from gen_epix.commondb.domain.command.organization import (
-    OrganizationIdentifierIssuerLinkUpdateAssociationCommand as OrganizationIdentifierIssuerLinkUpdateAssociationCommand,
+    OrganizationIdentifierIssuerLinkUpdateAssociationCommand as OrganizationIdentifierIssuerUpdateAssociationCommand,
 )
 from gen_epix.commondb.domain.command.organization import (
     OrganizationSetCrudCommand as OrganizationSetCrudCommand,
@@ -116,11 +119,12 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[type[fastapp.Command]
             DataCollectionSetCrudCommand,
             DataCollectionSetDataCollectionUpdateAssociationCommand,
             DataCollectionSetMemberCrudCommand,
+            AnonymizeUserCommand,
             IdentifierIssuerCrudCommand,
             InviteUserCommand,
             OrganizationCrudCommand,
             OrganizationIdentifierIssuerLinkCrudCommand,
-            OrganizationIdentifierIssuerLinkUpdateAssociationCommand,
+            OrganizationIdentifierIssuerUpdateAssociationCommand,
             OrganizationSetCrudCommand,
             OrganizationSetMemberCrudCommand,
             OrganizationSetOrganizationUpdateAssociationCommand,

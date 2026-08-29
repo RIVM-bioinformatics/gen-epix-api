@@ -25,8 +25,8 @@ from test.end_to_end.client_credential_flow.apps import (  # pylint: disable=imp
 )
 from test.test_client.enum import ServerType
 from test.test_client.server_manager import ServerManager
+from test.util.mock_compat import MagicMock, Mock, patch
 from typing import Any
-from unittest.mock import MagicMock, Mock, patch
 
 import httpx
 import jwt
@@ -35,6 +35,7 @@ import pytest
 # Configure logging
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
+pytestmark = pytest.mark.e2e
 
 
 @pytest.fixture(scope="session")

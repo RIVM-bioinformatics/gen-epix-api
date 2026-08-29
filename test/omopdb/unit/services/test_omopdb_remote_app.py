@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
+from test.util.mock_compat import MagicMock, Mock, patch
 from types import SimpleNamespace
-from unittest.mock import MagicMock, Mock, patch
 from uuid import UUID
 
 from gen_epix.fastapp.enum import AuthProtocol
@@ -66,9 +66,10 @@ def test_retrieve_persons_by_query_posts_query_body() -> None:
     }
     response = Mock()
     response.raise_for_status.return_value = None
+    response.content = b"1"
     response.json.return_value = response_payload
     client = Mock()
-    client.post.return_value = response
+    client.request.return_value = response
     client_context = MagicMock()
     client_context.__enter__.return_value = client
     client_context.__exit__.return_value = None
@@ -80,8 +81,9 @@ def test_retrieve_persons_by_query_posts_query_body() -> None:
         result = app.retrieve_persons_by_query(cmd)
 
     assert result.person_ids == [UUID("11111111-1111-1111-1111-111111111111")]
-    client.post.assert_called_once()
-    posted_route = client.post.call_args.args[0]
-    posted_json = client.post.call_args.kwargs["json"]
+    client.request.assert_called_once()
+    method, posted_route = client.request.call_args.args
+    posted_json = client.request.call_args.kwargs["json"]
+    assert method == "POST"
     assert posted_route.endswith("/retrieve/person_ids_by_query")
     assert posted_json == query.model_dump(mode="json")

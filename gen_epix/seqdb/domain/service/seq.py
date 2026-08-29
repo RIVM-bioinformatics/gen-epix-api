@@ -57,6 +57,10 @@ class BaseSeqService(BaseService):
             self.retrieve_best_seq_profile_per_sample,
         )
         f(
+            command.RetrieveBestSeqClassificationPerSampleCommand,
+            self.retrieve_best_seq_classification_per_sample,
+        )
+        f(
             command.ProtocolCrudCommand,
             self.crud_protocol,
         )
@@ -272,6 +276,14 @@ class BaseSeqService(BaseService):
         cmd: command.RetrieveBestSeqProfilePerSampleCommand,
     ) -> dict[UUID, UUID]:
         """Retrieve best sequence profile per sample mapping."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_best_seq_classification_per_sample(
+        self,
+        cmd: command.RetrieveBestSeqClassificationPerSampleCommand,
+    ) -> dict[UUID, UUID]:
+        """Retrieve best sequence classification per sample mapping."""
         raise NotImplementedError()
 
     @abc.abstractmethod

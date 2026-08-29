@@ -3,18 +3,19 @@ import uuid
 from collections.abc import Callable, Hashable, Mapping
 from enum import Enum
 from functools import partial
-from typing import Any, ClassVar, Self
+from typing import Any, ClassVar, Self, cast
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from gen_epix.fastapp.domain.key import Key
-from gen_epix.fastapp.domain.link import Link
+from gen_epix.fastapp.domain.link import Link, MultiLink
 from gen_epix.fastapp.enum import FieldType, OnException, StringCasing
 from gen_epix.fastapp.exc import DomainException
 
 
 class Entity(BaseModel):
+
     CAMEL_TO_SNAKE_CASE_PATTERN: ClassVar[re.Pattern] = re.compile(
         r"(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])"
     )
@@ -42,8 +43,9 @@ class Entity(BaseModel):
     schema_name: str | None = None
     table_name: str | None = None
     id_field_name: str | None = None
-    keys: dict[int, Key] = {}
-    links: dict[int, Link] = {}
+    keys: dict[int, Key] = Field(default_factory=dict)
+    links: dict[int, Link] = Field(default_factory=dict)
+    multi_links: list[MultiLink] = Field(default_factory=list)
 
     _model_class: type[BaseModel] | None = None
     _db_model_class: type | None = None
@@ -136,7 +138,7 @@ class Entity(BaseModel):
             raise DomainException("52c69320", Entity.NO_MODEL_ERROR_MSG)
         if not self.persistable:
             raise ValueError(Entity.NOT_PERSISTABLE_ERROR_MSG)
-        return self._crud_command_class  # type: ignore
+        return self._crud_command_class
 
     @property
     def db_model_class(self) -> type | None:
@@ -144,26 +146,26 @@ class Entity(BaseModel):
             raise DomainException("7ee38603", Entity.NO_MODEL_ERROR_MSG)
         if not self.persistable:
             raise ValueError(Entity.NOT_PERSISTABLE_ERROR_MSG)
-        return self._db_model_class  # type: ignore
+        return self._db_model_class
 
     @property
     def create_api_model_class(self) -> type | None:
         if not self.has_model():
             raise DomainException("b0252bfa", Entity.NO_MODEL_ERROR_MSG)
-        return self._create_api_model_class  # type: ignore
+        return self._create_api_model_class
 
     @property
     def read_api_model_class(self) -> type | None:
         if not self.has_model():
             raise DomainException("81bb94f3", Entity.NO_MODEL_ERROR_MSG)
-        return self._read_api_model_class  # type: ignore
+        return self._read_api_model_class
 
     @property
     def get_obj_id(self) -> Callable[[Any], Hashable]:
         if not self.has_model():
             raise DomainException("3f1a0c53", Entity.NO_MODEL_ERROR_MSG)
         assert self.id_field_name
-        return lambda x: getattr(x, self.id_field_name)
+        return lambda x: getattr(x, cast(str, self.id_field_name))
 
     def set_model_class(
         self, model_class: type[BaseModel], on_existing: str = "raise"
@@ -190,8 +192,9 @@ class Entity(BaseModel):
             if self._model_class is model_class:
                 return self
             if on_existing == "raise":
+                existing_model_class: type = self._model_class  # type: ignore[assignment]
                 raise ValueError(
-                    f"Entity already has a model set: {self._model_class.__name__}"
+                    f"Entity already has a model set: {existing_model_class.__name__}"
                 )
             elif on_existing == "replace":
                 pass
@@ -347,9 +350,11 @@ class Entity(BaseModel):
         return field_names[0]
 
     def get_keys_field_names(self, by_alias: bool = True) -> list[tuple[str, ...]]:
+        fields = self._fields
+        assert fields is not None
         if by_alias:
             return [
-                tuple(self._fields[y]["alias"] for y in x.field_names)
+                tuple(fields[y]["alias"] for y in x.field_names)
                 for x in self.keys.values()
             ]
         return [x.field_names for x in self.keys.values()]
@@ -484,6 +489,17 @@ class Entity(BaseModel):
             raise ValueError(f"Field {link_field_name} is not a link field")
         return (link_type_id, link.link_model_class, link.relationship_field_name)
 
+    def has_keys(self) -> bool:
+        """
+        Check if the entity has keys.
+
+        Returns
+        -------
+        bool
+            True if the entity has keys, False otherwise.
+        """
+        return len(self.keys) > 0
+
     def has_links(self) -> bool:
         """
         Check if the entity has links.
@@ -495,16 +511,16 @@ class Entity(BaseModel):
         """
         return len(self.links) > 0
 
-    def has_keys(self) -> bool:
+    def has_multi_links(self) -> bool:
         """
-        Check if the entity has keys.
+        Check if the entity has multi-links.
 
         Returns
         -------
         bool
-            True if the entity has keys, False otherwise.
+            True if the entity has multi-links, False otherwise.
         """
-        return len(self.keys) > 0
+        return len(self.multi_links) > 0
 
     def get_name_by_casing(
         self,
@@ -743,6 +759,15 @@ class Entity(BaseModel):
             # entity is in the filtered set
             for link in entity.links.values():
                 linked_entity = link.link_model_class.ENTITY
+                if linked_entity in entity_set:
+                    # entity depends on linked_entity,
+                    # so linked_entity should come first
+                    adjacency[linked_entity].append(entity)
+                    in_degree[entity] += 1
+            # For each multi-link in the entity, add dependency if the linked
+            # entity is in the filtered set
+            for multi_link in entity.multi_links:
+                linked_entity = multi_link.link_model_class.ENTITY
                 if linked_entity in entity_set:
                     # entity depends on linked_entity,
                     # so linked_entity should come first

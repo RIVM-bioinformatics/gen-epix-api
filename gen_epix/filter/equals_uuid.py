@@ -12,4 +12,4 @@ class EqualsUuidFilter(EqualsFilter):
 
 
 class TypedEqualsUuidFilter(EqualsUuidFilter):
-    type: Literal[FilterType.EQUALS_UUID.value]
+    type: Literal[FilterType.EQUALS_UUID.value]  # type: ignore[name-defined]

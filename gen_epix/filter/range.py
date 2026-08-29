@@ -112,4 +112,4 @@ class RangeFilter(Filter):
 
 
 class TypedRangeFilter(RangeFilter):
-    type: Literal[FilterType.RANGE.value]
+    type: Literal[FilterType.RANGE.value]  # type: ignore[name-defined]

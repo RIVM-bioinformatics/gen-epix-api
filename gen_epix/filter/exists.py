@@ -66,4 +66,4 @@ class ExistsFilter(Filter):
 
 
 class TypedExistsFilter(ExistsFilter):
-    type: Literal[FilterType.EXISTS.value]
+    type: Literal[FilterType.EXISTS.value]  # type: ignore[name-defined]

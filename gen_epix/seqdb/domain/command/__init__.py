@@ -5,6 +5,9 @@ from gen_epix.commondb.domain import enum as common_enum
 from gen_epix.commondb.domain.command import (
     COMMANDS_BY_SERVICE_TYPE as _COMMON_COMMANDS_BY_SERVICE_TYPE,
 )
+from gen_epix.commondb.domain.command import (
+    AnonymizeUserCommand as AnonymizeUserCommand,
+)
 from gen_epix.commondb.domain.command import Command as Command
 from gen_epix.commondb.domain.command import ContactCrudCommand as ContactCrudCommand
 from gen_epix.commondb.domain.command import CrudCommand as CrudCommand
@@ -119,6 +122,9 @@ from gen_epix.seqdb.domain.command.seq import (
 )
 from gen_epix.seqdb.domain.command.seq import RefSeqCrudCommand as RefSeqCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
+    RetrieveBestSeqClassificationPerSampleCommand as RetrieveBestSeqClassificationPerSampleCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
     RetrieveBestSeqPerSampleCommand as RetrieveBestSeqPerSampleCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
@@ -215,6 +221,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         RefAlleleCrudCommand,
         RefSeqCrudCommand,
         CalculatePhylogeneticTreeCommand,
+        RetrieveBestSeqClassificationPerSampleCommand,
         RetrieveBestSeqPerSampleCommand,
         RetrieveBestSeqProfilePerSampleCommand,
         RetrieveSamplesByQueryCommand,

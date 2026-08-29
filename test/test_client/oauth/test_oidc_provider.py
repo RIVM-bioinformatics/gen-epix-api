@@ -16,7 +16,7 @@ import sys
 from datetime import datetime, timezone
 from test.test_client.oauth.jwks import JWKSManager
 from test.test_client.oauth.oidc_provider import OIDCProvider
-from unittest.mock import MagicMock, patch
+from test.util.mock_compat import MagicMock, patch
 
 import pytest
 

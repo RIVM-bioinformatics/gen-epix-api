@@ -2,8 +2,9 @@
 # This module defines base classes, methods are added later
 
 import datetime
+import uuid
 from collections.abc import Callable
-from typing import Any, ClassVar
+from typing import Annotated, Any, ClassVar
 from uuid import UUID
 
 from pydantic import Field, field_serializer
@@ -12,11 +13,10 @@ from gen_epix.commondb.domain import enum, model
 from gen_epix.fastapp import Command as ServiceCommand
 from gen_epix.fastapp import CrudCommand as ServiceCrudCommand
 from gen_epix.fastapp import UpdateAssociationCommand as ServiceUpdateAssociationCommand
-from gen_epix.util import generate_ulid
 
 
 class Command(ServiceCommand):
-    id: UUID = Field(default_factory=generate_ulid, description="The ID of the command")
+    id: UUID = Field(default_factory=uuid.uuid4, description="The ID of the command")
     created_at: datetime.datetime = Field(
         default_factory=datetime.datetime.now,
         description="The created timestamp of the command",
@@ -60,18 +60,27 @@ class UploadBatchCommandMixin:
     # The BaseBatchUploadResult child class that will contain the results of the upload
     BATCH_UPLOAD_RESULT_CLASS: ClassVar[type[model.BaseBatchUploadResult]] = None  # type: ignore[assignment]
 
-    verify_only: bool = Field(
-        default=False,
-        description="If true, the upload is only verified but not actually performed.",
-    )
-    on_exists: enum.UploadAction = Field(
-        default=enum.UploadAction.ERROR,
-        description="Action to take if one of the entities in the batch already exists upon upload.",
-    )
-    on_new: enum.UploadAction = Field(
-        default=enum.UploadAction.CREATE,
-        description="Action to take if one of the entities in the batch is new upon upload.",
-    )
+    verify_only: Annotated[
+        bool,
+        Field(
+            default=False,
+            description="If true, the upload is only verified but not actually performed.",
+        ),
+    ]
+    on_exists: Annotated[
+        enum.UploadAction,
+        Field(
+            default=enum.UploadAction.ERROR,
+            description="Action to take if one of the entities in the batch already exists upon upload.",
+        ),
+    ]
+    on_new: Annotated[
+        enum.UploadAction,
+        Field(
+            default=enum.UploadAction.CREATE,
+            description="Action to take if one of the entities in the batch is new upon upload.",
+        ),
+    ]
 
     def get_batch_for_upload(self) -> model.BaseBatchForUpload:
         """Get the batch for upload from the command."""

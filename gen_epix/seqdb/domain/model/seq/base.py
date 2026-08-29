@@ -3,7 +3,7 @@ import json
 import typing
 import uuid
 from enum import IntEnum
-from typing import Any, ClassVar, Self
+from typing import Annotated, Any, ClassVar, Self
 from uuid import UUID
 
 from pydantic import Field, Json, field_serializer, field_validator, model_validator
@@ -18,19 +18,6 @@ def str_uuid4() -> str:
     return str(uuid.uuid4())
 
 
-# TODO r[LSP-3497]: The CodeMixin class should be removed as it is replaced by general Identifier concept
-class CodeMixin:
-    """
-    Mixin class to add a code field to a model.
-    """
-
-    code: str = Field(
-        default="",
-        description="A code that should be unique within the context of the application. The code can be used as an alternative identifier for the instance, and can be more human-readable than the UUID.",
-        max_length=255,
-    )
-
-
 class ContentMixin[FormatType: IntEnum]:
     """
     Mixin class to add content-related fields to a model.
@@ -38,19 +25,32 @@ class ContentMixin[FormatType: IntEnum]:
 
     _FORMAT_TYPE_CLASS: ClassVar[type[FormatType]] = None  # type: ignore[assignment]
 
-    format: FormatType = Field(
-        description="The representation format of the content.",
-    )
-    content_hash: UUID = Field(
-        description="A 128-bit hash code of the content represented as UUID.",
-    )
-    content: str = Field(
-        description="The content in a specified format. Depending on the format, the content2 field may be used as well e.g. to optimize performance."
-    )
-    content2: str | None = Field(
-        default=None,
-        description="The second part of the content, if applicabe, depending on the specified format.",
-    )
+    # Annotation-only: an assigned Field lingers as class attr -> pydantic shadow warning
+    format: Annotated[
+        FormatType,
+        Field(
+            description="The representation format of the content.",
+        ),
+    ]
+    content_hash: Annotated[
+        UUID,
+        Field(
+            description="A 128-bit hash code of the content represented as UUID.",
+        ),
+    ]
+    content: Annotated[
+        str,
+        Field(
+            description="The content in a specified format. Depending on the format, the content2 field may be used as well e.g. to optimize performance."
+        ),
+    ]
+    content2: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description="The second part of the content, if applicabe, depending on the specified format.",
+        ),
+    ]
 
     @field_validator("format", mode="before")
     @classmethod
@@ -81,18 +81,27 @@ class QualityMixin:
     Mixin class to add quality related fields to a model.
     """
 
-    qc_result: enum.QualityControlResult = Field(
-        default=enum.QualityControlResult.PENDING,
-        description="The quality of the result as a qualitative value that is used by the application, where applicable, for filtering results.",
-    )
-    qc_score: float | None = Field(
-        default=None,
-        description="The quality of the result, as a numerical value. A higher score indicates better quality. The range and interpretation of this value is not in scope of the application and must be defined by the user.",
-    )
-    qc_report: Json | None = Field(
-        default=None,
-        description="A detailed report of the quality control results, which can include any relevant information such as metrics, logs, or other data that provides insights into the quality of the result. The structure and content of this report is not defined by the application and must be determined by the user. The only condition is that the data are JSON serializable.",
-    )
+    qc_result: Annotated[
+        enum.QualityControlResult,
+        Field(
+            default=enum.QualityControlResult.PENDING,
+            description="The quality of the result as a qualitative value that is used by the application, where applicable, for filtering results.",
+        ),
+    ]
+    qc_score: Annotated[
+        float | None,
+        Field(
+            default=None,
+            description="The quality of the result, as a numerical value. A higher score indicates better quality. The range and interpretation of this value is not in scope of the application and must be defined by the user.",
+        ),
+    ]
+    qc_report: Annotated[
+        Json | None,
+        Field(
+            default=None,
+            description="A detailed report of the quality control results, which can include any relevant information such as metrics, logs, or other data that provides insights into the quality of the result. The structure and content of this report is not defined by the application and must be determined by the user. The only condition is that the data are JSON serializable.",
+        ),
+    ]
 
     @field_validator("qc_result", mode="before")
     @classmethod

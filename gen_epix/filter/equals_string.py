@@ -11,4 +11,4 @@ class EqualsStringFilter(EqualsFilter):
 
 
 class TypedEqualsStringFilter(EqualsStringFilter):
-    type: Literal[FilterType.EQUALS_STRING.value]
+    type: Literal[FilterType.EQUALS_STRING.value]  # type: ignore[name-defined]

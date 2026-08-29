@@ -36,6 +36,7 @@ SEQDB_APP_CFGS = get_app_cfgs(
     seqdb_enum.ServiceType,
     seqdb_enum.RepositoryType,
     EnumTestType.CASEDB_PERFORMANCE_USER_JOURNEY,
+    log_any=False,
 )
 
 CASEDB_APP_CFGS = get_app_cfgs(
@@ -44,6 +45,7 @@ CASEDB_APP_CFGS = get_app_cfgs(
     enum.RepositoryType,
     EnumTestType.CASEDB_PERFORMANCE_USER_JOURNEY,
     seqdb_app_cfgs=SEQDB_APP_CFGS,
+    log_any=False,
 )
 
 
@@ -154,11 +156,11 @@ class TestRead:
                     PERFORMANCE_HTML[key] = profiler.output_html()
 
     def test_tear_down(self) -> None:
-        # TODO: tearDownClass should be called by the test framework instead
-        TestRead.tearDownClass()
+        # TODO: finalize_outputs should be called by the test framework instead
+        TestRead.finalize_outputs()
 
     @classmethod
-    def tearDownClass(cls) -> None:
+    def finalize_outputs(cls) -> None:
         test_dir = get_test_root_output_dir()
         df = pd.DataFrame.from_records(PERFORMANCE_DF)
         df.to_csv(Path(test_dir) / f"{cls.__name__}.performance.csv", index=False)

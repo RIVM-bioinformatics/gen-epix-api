@@ -9,9 +9,9 @@ from gen_epix.filter.hashable_set import HashableSetFilter
 
 class NumberSetFilter(HashableSetFilter):
     members: frozenset[int | float | Decimal] = Field(
-        default=None, description="The numbers to match.", frozen=True
+        description="The numbers to match.", frozen=True
     )
 
 
 class TypedNumberSetFilter(NumberSetFilter):
-    type: Literal[FilterType.NUMBER_SET.value]
+    type: Literal[FilterType.NUMBER_SET.value]  # type: ignore[name-defined]

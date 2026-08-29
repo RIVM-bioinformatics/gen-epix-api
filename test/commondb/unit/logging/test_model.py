@@ -7,7 +7,6 @@ Test coverage:
 
 """
 
-from unittest import TestCase
 from uuid import uuid4
 
 import pytest
@@ -17,9 +16,9 @@ from gen_epix.commondb.domain.model.base import ModelNoId
 
 # TODO: check scenario ids, how are they determined?
 @pytest.mark.scenario_ids("TC-MODEL-01")
-class TestSetModified(TestCase):
+class TestSetModified:
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         self.user_id = uuid4()
         self.model = ModelNoId()
 
@@ -42,9 +41,9 @@ class TestSetModified(TestCase):
 
 
 @pytest.mark.scenario_ids("TC-MODEL-02")
-class TestSetCreated(TestCase):
+class TestSetCreated:
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         self.user_id = uuid4()
         self.model = ModelNoId()
 

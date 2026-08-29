@@ -22,6 +22,7 @@ APP_CFGS = get_app_cfgs(
     seqdb_enum.ServiceType,
     seqdb_enum.RepositoryType,
     TEST_TYPE,
+    log_any=False,
 )
 
 

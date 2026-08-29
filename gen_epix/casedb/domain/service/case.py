@@ -120,7 +120,8 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         f(command.UploadCasesCommand, self.upload_cases)
         f(command.CreateCaseSetCommand, self.create_case_set)
         f(command.RetrieveCompleteCaseTypeCommand, self.retrieve_complete_case_type)
-        f(command.RetrieveCaseStatsCommand, self.retrieve_case_stats)
+        f(command.RetrieveCaseSetStatsCommand, self.retrieve_case_stats)
+        f(command.RetrieveCaseTypeStatsCommand, self.retrieve_case_stats)
         f(command.RetrieveCasesByQueryCommand, self.retrieve_cases_by_query)
         f(
             command.RetrieveCaseCohortLinksByCaseTypeCommand,
@@ -134,6 +135,7 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
             self.retrieve_phylogenetic_tree,
         )
         f(command.RetrieveSimilarCasesCommand, self.retrieve_similar_cases)
+        f(command.RetrieveIsOwnCasesCommand, self.retrieve_is_own_cases)
         f(
             command.RetrieveGeneticSequenceFastaByCaseCommand,
             self.retrieve_genetic_sequence_fasta_by_case,
@@ -443,7 +445,7 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
     @abc.abstractmethod
     def retrieve_case_stats(
         self,
-        cmd: command.RetrieveCaseStatsCommand,
+        cmd: command.RetrieveCaseTypeStatsCommand | command.RetrieveCaseSetStatsCommand,
     ) -> list[model.CaseStats]:
         """Retrieve case statistics."""
         raise NotImplementedError()
@@ -523,4 +525,12 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         cmd: command.RetrieveProtocolsCommand,
     ) -> list[seqdb_model.Protocol]:
         """Retrieve available protocols."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_is_own_cases(
+        self,
+        cmd: command.RetrieveIsOwnCasesCommand,
+    ) -> dict[UUID, bool]:
+        """Retrieve whether the user owns the specified cases."""
         raise NotImplementedError()

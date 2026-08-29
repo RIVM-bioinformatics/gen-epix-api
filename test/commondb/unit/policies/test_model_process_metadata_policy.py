@@ -13,7 +13,6 @@ MaskModelProcessMetadataPolicy (AFTER):
 
 from enum import Enum
 from test.commondb.unit.conftest import DEFAULT_CREATED_AT, DEFAULT_MODIFIED_AT
-from unittest import TestCase
 from uuid import uuid4
 
 import pytest
@@ -63,9 +62,9 @@ def _make_cmd(
 
 
 @pytest.mark.scenario_ids("TC-SEC-META-02", "TC-SEC-30-02")
-class TestModelMetadataPolicy(TestCase):
+class TestModelMetadataPolicy:
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         self.policy = ModelMetadataPolicy(_PRIVILEGED_ROLES_READ)
         self.regular_user = _make_user({Role.ORG_USER.value})
         self.admin_user = _make_user({Role.APP_ADMIN.value})

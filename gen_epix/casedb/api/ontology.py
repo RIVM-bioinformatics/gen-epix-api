@@ -8,12 +8,18 @@ from pydantic import BaseModel as PydanticBaseModel
 
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.app_impl_details import AppImplDetails
+from gen_epix.commondb.domain.literal import MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
+from gen_epix.util import copy_model_field
 
 
-class UpdateDiseaseEtiologicalAgentRequestBody(PydanticBaseModel):
-    etiologies: list[model.Etiology]
+class DiseaseEtiologicalAgentUpdateAssociationRequestBody(PydanticBaseModel):
+    etiologies: list[model.Etiology] = copy_model_field(
+        command.DiseaseEtiologicalAgentUpdateAssociationCommand,
+        "association_objs",
+        max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
+    )
 
 
 def create_ontology_endpoints(
@@ -22,6 +28,7 @@ def create_ontology_endpoints(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     **kwargs: Any,
 ) -> None:
+    """Register all non-CRUD ontology endpoints on the given router."""
     assert handle_exception
     app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency
@@ -33,16 +40,16 @@ def create_ontology_endpoints(
         description=command.DiseaseEtiologicalAgentUpdateAssociationCommand.__doc__,
     )
     async def diseases__put__concepts(
-        user: registered_user_dependency,  # type: ignore
+        user: registered_user_dependency,  # type: ignore[valid-type]
         disease_id: UUID,
-        request_body: UpdateDiseaseEtiologicalAgentRequestBody,
+        request_body: DiseaseEtiologicalAgentUpdateAssociationRequestBody,
     ) -> list[model.Etiology]:
+        """See router description."""
         try:
             cmd = command.DiseaseEtiologicalAgentUpdateAssociationCommand(
                 user=user,
                 obj_id1=disease_id,
                 association_objs=request_body.etiologies,
-                return_id=False,
             )
             retval: list[model.Etiology] = await run_in_threadpool(app.handle, cmd)
         except Exception as exception:
