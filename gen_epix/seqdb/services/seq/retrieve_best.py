@@ -111,7 +111,7 @@ def _get_best_id_per_sample(
             enum.SeqRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
             enum.SeqClassificationRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
         }:
-            # Sort by sample and descending quality rank so the first row wins.
+            # Sort descending by (sample_id, qc_result, qc_score, created_at)
             map_qc_result_to_sort_key = {
                 x: enum.QualityControlResult.get_sort_key(x)
                 for x in enum.QualityControlResult
@@ -122,6 +122,7 @@ def _get_best_id_per_sample(
             for row in sorted_iter:
                 sample_id = row[1]
                 if sample_id != prev_sample_id:
+                    # First row for new sample is the best according to the ranking strategy
                     best_id_per_sample[sample_id] = (
                         row[5] if return_primary_category_id else row[0]
                     )
