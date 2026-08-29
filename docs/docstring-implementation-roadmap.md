@@ -25,11 +25,35 @@ modules and packages.
 
 ## Package Phases
 
-1. `transform`
-2. `fastapp`
-3. `commondb`
-4. `seqdb`
-5. `casedb`
+1. `util`
+2. `transform`
+3. `fastapp`
+4. `commondb`
+5. `seqdb`
+6. `casedb`
+
+## Phase 1: `util`
+
+Status: implemented and lint-workflow integrated in branch
+`LSP-3786-util-module-docstrings`.
+
+Scope:
+
+- Document the public functions and non-trivial private helpers in
+  `gen_epix/util.py`.
+- Document the module and profiling decorator behavior, including synchronous
+  and asynchronous wrappers.
+- Confirm the module has no intra-package dependencies using the AST import
+  graph tooling.
+- Introduce Ruff docstring linting for `gen_epix/util.py` in local linting and
+  CI.
+
+Validation:
+
+- `ruff check --select D --ignore D212,D417 gen_epix/util.py`
+- `black -l 88 --check --diff gen_epix/util.py`
+- `isort --check-only --diff --profile black --float-to-top --line-length=88 gen_epix/util.py`
+- `python run.py test_all_unit`
 
 ## Phase 1: `transform`
 
@@ -68,13 +92,15 @@ For each later package, repeat the same bottom-up sequence and expand the
 configured Ruff docstring scope in local linting and CI only after the package
 has been documented.
 
-Phase 2 adds `gen_epix/fastapp`.
+Phase 2 adds `gen_epix/transform`.
 
-Phase 3 adds `gen_epix/commondb`.
+Phase 3 adds `gen_epix/fastapp`.
 
-Phase 4 adds `gen_epix/seqdb`.
+Phase 4 adds `gen_epix/commondb`.
 
-Phase 5 adds `gen_epix/casedb`.
+Phase 5 adds `gen_epix/seqdb`.
+
+Phase 6 adds `gen_epix/casedb`.
 
 Stop after each phase to review noise from linting, stale-docstring review effort,
 and test coverage for important documented behavior before adding more automation.

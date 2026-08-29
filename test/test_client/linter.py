@@ -71,6 +71,7 @@ class Linter:
             "--ignore",
             "D212,D417",
             "gen_epix/transform",
+            "gen_epix/util.py",
         ],
         "isort": [
             "isort",
