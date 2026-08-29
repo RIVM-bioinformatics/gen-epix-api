@@ -60,6 +60,10 @@ class RoleGenerator(CommonRoleGenerator):
             (command.CalculatePhylogeneticTreeCommand, PermissionTypeSet.E),
             (command.RetrieveBestSeqPerSampleCommand, PermissionTypeSet.E),
             (command.RetrieveBestSeqProfilePerSampleCommand, PermissionTypeSet.E),
+            (
+                command.RetrieveBestSeqClassificationPerSampleCommand,
+                PermissionTypeSet.E,
+            ),
             (command.RetrieveSampleIdentifiersByIdCommand, PermissionTypeSet.E),
             (command.RetrieveSamplesByIdCommand, PermissionTypeSet.E),
             (command.RetrieveSamplesByQueryCommand, PermissionTypeSet.E),
