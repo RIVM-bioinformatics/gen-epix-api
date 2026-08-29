@@ -75,4 +75,5 @@ class ExistsFilter(Filter):
 
 class TypedExistsFilter(ExistsFilter):
     """Existence filter carrying its serialized filter type."""
+
     type: Literal[FilterType.EXISTS.value]  # type: ignore[name-defined]

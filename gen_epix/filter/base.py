@@ -278,4 +278,5 @@ class Filter(BaseModel):
 
 class TypedFilter(Filter):
     """Base filter carrying an explicit serialized filter type."""
+
     type: Literal[FilterType.BASE.value]

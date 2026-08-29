@@ -33,6 +33,7 @@ from gen_epix.filter.uuid_set import TypedUuidSetFilter, UuidSetFilter
 
 class CompositeFilter(Filter):
     """Combine child filters using a configured logical operator."""
+
     filters: list[
         ExistsFilter
         | EqualsBooleanFilter
@@ -418,6 +419,7 @@ class CompositeFilter(Filter):
 
 class TypedCompositeFilter(CompositeFilter):
     """Composite filter carrying its serialized filter type."""
+
     type: Literal[enum.FilterType.COMPOSITE.value]  # type: ignore[name-defined]
     filters: list[
         TypedExistsFilter

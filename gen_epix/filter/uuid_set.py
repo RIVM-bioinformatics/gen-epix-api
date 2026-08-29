@@ -11,6 +11,7 @@ from gen_epix.filter.enum import FilterType
 
 class UuidSetFilter(Filter):
     """Match UUID values contained in an immutable set."""
+
     members: frozenset[UUID] = Field(description="The UUIDs to match.", frozen=True)
 
     @model_validator(mode="after")
@@ -28,4 +29,5 @@ class UuidSetFilter(Filter):
 
 class TypedUuidSetFilter(UuidSetFilter):
     """UUID set filter carrying its serialized filter type."""
+
     type: Literal[FilterType.UUID_SET.value]  # type: ignore[name-defined]

@@ -11,6 +11,7 @@ from gen_epix.filter.equals import EqualsFilter
 
 class EqualsNumberFilter(EqualsFilter):
     """Match an integer, floating-point, or decimal value."""
+
     value: int | float | Decimal = Field(
         description="The number to match.", frozen=True
     )
@@ -18,4 +19,5 @@ class EqualsNumberFilter(EqualsFilter):
 
 class TypedEqualsNumberFilter(EqualsNumberFilter):
     """Numeric equality filter carrying its serialized filter type."""
+
     type: Literal[FilterType.EQUALS_NUMBER.value]  # type: ignore[name-defined]

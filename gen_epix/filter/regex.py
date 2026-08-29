@@ -11,6 +11,7 @@ from gen_epix.filter.enum import FilterType
 
 class RegexFilter(Filter):
     """Match values whose string representation matches a regular expression."""
+
     pattern: str = Field(description="The regular expression to match.", frozen=True)
 
     @model_validator(mode="after")
@@ -27,4 +28,5 @@ class RegexFilter(Filter):
 
 class TypedRegexFilter(RegexFilter):
     """Regular-expression filter carrying its serialized filter type."""
+
     type: Literal[FilterType.REGEX.value]  # type: ignore[name-defined]

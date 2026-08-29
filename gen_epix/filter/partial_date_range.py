@@ -13,6 +13,7 @@ from gen_epix.filter.range import RangeFilter
 
 class PartialDateRangeFilter(RangeFilter):
     """Match partial dates whose full intervals lie within a configured range."""
+
     lower_bound: str | None = Field(
         default=None, description="The lower bound of the range.", frozen=True
     )
@@ -173,4 +174,5 @@ class PartialDateRangeFilter(RangeFilter):
 
 class TypedPartialDateRangeFilter(PartialDateRangeFilter):
     """Partial date range filter carrying its serialized filter type."""
+
     type: Literal[FilterType.PARTIAL_DATE_RANGE.value]  # type: ignore[name-defined]
