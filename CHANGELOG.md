@@ -1,5 +1,126 @@
 # CHANGELOG
 
+## [9.0.2](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v9.0.1...v9.0.2) (2026-07-15)
+
+
+### Bug Fixes
+
+* **ci:** publish packages from matching release tags ([98c9054](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/98c905451dda2fd3c5f5633b6a7f1e8211d1705b))
+
+## [9.0.1](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v9.0.0...v9.0.1) (2026-07-15)
+
+
+### Bug Fixes
+
+* **deps:** update dependency slowapi to v0.1.10 ([#572](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/572)) ([b1b16eb](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/b1b16eb2105d2c3050c773a591315a487556a228))
+
+## [9.0.0](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v8.1.0...v9.0.0) (2026-07-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* Lsp 3474 make upload work end to end ([#536](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/536))
+
+### Features
+
+* Add profiling decorator for methods ([#547](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/547)) ([27e0ff6](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/27e0ff6f7cd2633f90cf1d6664abee417e44d8a5))
+* auto-create root organization in user auto-creation flow ([#557](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/557)) ([6173881](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/61738815d758f2abf206ba40af4d91f55e5ebc08))
+* **caches:** add app-level cache invalidator registry (LSP-1829) ([#576](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/576)) ([2fe65c3](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/2fe65c3d188c0913c3c58a1c8329284eea185fe4))
+* Lsp 3474 make upload work end to end ([#536](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/536)) ([c0f26f3](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/c0f26f3913317669017f883f3e649fe793036af1))
+* **LSP-911:** Implement new endpoint to check is_own_cases for multiple case_ids ([#567](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/567)) ([4e87c54](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/4e87c54baea378eb3fe8aebe481e7b2237b47c7d))
+
+
+### Bug Fixes
+
+* **casedb:** prevent derived values from being overwritten during age-category update (LSP-3417) ([#566](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/566)) ([3f9acc7](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/3f9acc7c3ed8924c82455874fff6289756dbcf9b))
+* **casedb:** use highest-resolution date available for case_date ([#545](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/545)) ([d3a969b](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/d3a969bcc5feecc33e6f64c2b2ec417cd07ea4ed))
+* **ci:** always start from a clean venv on cache miss ([#549](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/549)) ([eae0550](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/eae0550ad5f10b3452ee30d951d75a102dbda02e))
+* **deps:** remove outdated cryptography dependency ([8ddac28](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/8ddac28c6306f9cded890e960f971f444f219fff))
+* **deps:** update dependency cryptography to v48 [security] ([#542](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/542)) ([ca6a29f](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/ca6a29f712156f1481c5d2ac9eb8d13102c0639f))
+* **deps:** update dependency pyjwt to v2.13.0 [security] ([#539](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/539)) ([dde6d19](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/dde6d1983b76ca951871f28b80d98315c38652c2))
+* **deps:** update dependency python-multipart to v0.0.31 [security] ([#538](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/538)) ([4c3b7d1](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/4c3b7d17fffbe4e9125965e3b4dfeff4adbe1fac))
+* **deps:** update dependency starlette to ==1.3.* [security] ([#540](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/540)) ([f220e8f](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/f220e8fd03ac4dc26a2dde38573bddc5af40f086))
+* **deps:** update dependency urllib3 to v2.7.0 [security] ([#541](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/541)) ([d695b02](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/d695b024ce7057ac603203dc95ca3cfaca07e321))
+* Resolved error in phylogenetic tree construction ([#565](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/565)) ([2df76f4](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/2df76f4c6ecd9e31255fde389c8547efdfaee7aa))
+* **seqdb:** skip content_hash check when hash is server-computed (NULL_ID) ([#546](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/546)) ([c4fcbc3](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/c4fcbc34303673b061a7d3f8b858624cc8b857e8))
+* Update operation type for data collection check ([feb6222](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/feb6222c8eb07a07691ad612561e9bd1f4f2f717))
+* use checkfirst=True in SARepository.create_all ([8daad11](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/8daad119e824b48c0f587919cb265aee15ec1d60))
+* use checkfirst=True in SARepository.create_all ([#556](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/556)) ([6433445](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/6433445b7425e8dbd98b6ad3b4c2fd4d7331749e))
+
+## [8.1.0](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v8.0.0...v8.1.0) (2026-06-15)
+
+
+### Features
+
+* Add case_set_date field to CaseSet model ([170e42e](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/170e42e2962337db9e44f02bb87bfe92009249bf))
+* Add default timeout for CalculatePhylogeneticTreeCommand and RetrieveSimilarProfilesCommand ([#534](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/534)) ([3b52408](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/3b52408e6e574d06154137b2f0ba5f72f753a2e0))
+* Add method to filter SeqProfiles by quality control result ([#495](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/495)) ([310fad2](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/310fad2c4b6b869b378070ed88cc284eef0f06dd))
+* add permission types for RegionRelation and TreeAlgorithm commands ([#492](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/492)) ([724672b](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/724672b022d591c0bb82c7b8a8c7509ae946cab7))
+* Add unique code to DomainException and derivatives ([#503](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/503)) ([b426292](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/b426292414406e330ccff39b2ac278eb2734ceda))
+* added abac commondb endpoints; WIP not tested ([#517](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/517)) ([841d6d9](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/841d6d9258441280290f0e2502c2bd2498014903))
+* **casedb:** LSP-3206 added Case.cohort property and corresponding functionality ([#526](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/526)) ([28b12d7](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/28b12d79004288f02782fff4d07473cb1f0f7975))
+* commondb EtlLogItem source and target trace variables added; WIP ([4f96bef](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/4f96befacd7045582cbe98167d1d362cd071ffa5))
+* commondb EtlLogItem source and target trace variables added; WIP ([c51a27b](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/c51a27b6d99ff4309e69b824c174b57c1453649d))
+* **commondb:** intra-parent link functionality added ([e3041f3](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/e3041f38e70e62225bcdcda3c5e35abbdceee15e))
+* fastapp Domain.get_dag_sorted_services and Entity.topological_sort added ([#504](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/504)) ([fb226b9](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/fb226b98e7c822050f28b3857276ad8e273324c9))
+* fastapp RemoteApp added mechanism to set timeout per handler ([#507](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/507)) ([a27c5c4](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/a27c5c4e6bf3b6376b517225a7516e30e1fd591c))
+* **fastapp:** log_cmd_object_on_error property added to App ([e3041f3](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/e3041f38e70e62225bcdcda3c5e35abbdceee15e))
+* Implement RetrieveFullPersonsCommand and related service methods ([#494](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/494)) ([41c3a1a](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/41c3a1a27952d1184fea0eac4188e68ab681302f))
+* Implement SNP Profile support for uploading and calculating seq-distances ([#508](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/508)) ([03c342a](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/03c342a83fa4b256bcdb5da9db40a8db46fc0df4))
+* Incremental processing: limit and existing_chunk_size parameters for bounded memory and HTTP timeout control ([e3041f3](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/e3041f38e70e62225bcdcda3c5e35abbdceee15e))
+* Introduced new UpdateSeqDistancesCommand and refactor SeqDistance calculation ([#493](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/493)) ([0e4afc0](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/0e4afc069b767cddbc645d9a9f37e6622a5deb1b))
+* Lsp 2348 add pagination to standard crud get all endpoints ([#527](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/527)) ([aa6a386](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/aa6a3862a597bcac15f54f6588c3d5a189e76e4f))
+* Lsp 2914 create omop geo data ([#489](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/489)) ([704d0d0](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/704d0d025a038d8ef0c2b0efe16102138c286bfb))
+* Lsp 3213 create local dockercompose setup for testing batch uploads with lsp data ([#502](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/502)) ([8469669](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/8469669ca89ba908f18b39b452f49ae82604d9f0))
+* Lsp 3213 upload batch to casedb ([#501](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/501)) ([e9e3478](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/e9e3478e7905bac2f13350b0e9127b42061b5f4e))
+* Lsp 3229 add salmonella order type 43 part 2 ([#511](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/511)) ([4f96bef](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/4f96befacd7045582cbe98167d1d362cd071ffa5))
+* LSP-3298 Fix end to end data flow in DEV ([#521](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/521)) ([e659a71](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/e659a713420fac633f0a262e43900e371c5a4fdf))
+* omopdb Measurement added field validator; minor fix in TupleTransformer ([#486](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/486)) ([e290bf5](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/e290bf5453b1b0257b29acd75d457fcee5730284))
+* seqdb added /retrieve/samples_by_ids and _by_query endpoints ([#499](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/499)) ([04bb8d4](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/04bb8d484139674fb8eb2e77b51c4120e459b6e6))
+* seqdb added RetrieveBestSeqPerSampleCommand, RetrieveBestSeqProfilePerSampleCommand; not tested ([bc9950a](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/bc9950a689546f605fee61713a3fa452c1c7e250))
+* seqdb added RetrieveBestSeqPerSampleCommand, RetrieveBestSeqProfilePerSampleCommand; WIP ([626557d](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/626557da162d61fee59e03c1ec3da9ba7c139bfb))
+* **seqdb:** add RetrieveBestSeq{,Profile}PerSample handlers to SeqdbRemoteApp ([619ee7f](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/619ee7fcd765dcb498c9d1d10bf85ffd47a3b613))
+* **seqdb:** upload adds verification of intra-parent links and possibility for temporary IDs to allow within-batch intra-parent links; child objects are matched on their natural key as well ([e3041f3](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/e3041f38e70e62225bcdcda3c5e35abbdceee15e))
+* transform TupleMapTransformer.get_row_key added ([4f96bef](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/4f96befacd7045582cbe98167d1d362cd071ffa5))
+* transform TupleMapTransformer.get_row_key added ([c51a27b](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/c51a27b6d99ff4309e69b824c174b57c1453649d))
+
+
+### Bug Fixes
+
+* add best_seq_per_sample methods to service ([ae83e1c](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/ae83e1c761b748f7b472e0d9cf8288fb3999bc38))
+* added stubs for missing _validate_content implementations ([31e3bb9](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31e3bb943df493f33a280a67ef25f4038c2497b8))
+* allow deletion of SeqProfile; prevent DNA sequences from flooding logs on errors ([e3041f3](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/e3041f38e70e62225bcdcda3c5e35abbdceee15e))
+* **casedb:** look up existing case content by id when merging on update ([48ca140](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/48ca140becd21fdfd800ac95f1cb9a474b039ee2))
+* continue if parent_id is null or null_id ([23b5aeb](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/23b5aebca9cf9bd7cbf31c783d3c618d8ca4b445))
+* cryptography==46.0.6 to solve conflicting requirements. ([ac385a2](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/ac385a275f8224ca7318a0d1e32b8d292a31169f))
+* **deps:** update dependency biopython to v1.87 ([#487](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/487)) ([e904812](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/e9048120942ff96e45a0b4225374fed5daa4f57f))
+* **deps:** update dependency numpy to v2.4.4 ([#485](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/485)) ([d203c42](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/d203c4252da05c7b34d72d8d76c124d51c9e7ff7))
+* Disable early max results limit in case_service_retrieve_cases_by_query ([0278579](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/0278579401c8785d2fa4b96a1372e1e952d0a0d2))
+* disable rate limiting with env var RATELIMIT_ENABLED ([1fc11d1](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/1fc11d13ac0e88485cd010921061dc4f8d6368a3))
+* duplicate key user in UploadSamplesCommand construction ([b224fb0](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/b224fb020e77c70e1056abc1a5bb6729c16841fd))
+* error message referenced non-existent attribute ([52e8a4c](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/52e8a4c770521b160c3f1dac0e1f7db640114e5c))
+* fix case abac check in upload.py ([96d6a3d](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/96d6a3de34c4f2a017cf54c42cbcc0b53011e474))
+* fix case abac during upload ([3f0597b](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/3f0597b300d07682b51c8cc2c8f655820db45467))
+* fix typo in HealthResponseBody ([7d3206e](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/7d3206ee5af40edb83e86decfc5d0840934dac92))
+* **LSP-3225:** fixes for uploading SampleForUploadBatch to SEQDB ([#506](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/506)) ([85cecb3](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/85cecb3367b913df203459e5e1eb0e1396c9f966))
+* **LSP-3275:** enforce immutability of case created_in_data_collection_id on upload ([#524](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/524)) ([04f4f91](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/04f4f91516c9fe72172a1020675fb1b02e8bf700))
+* **LSP-3356:** make case_date mutable and remove None reset on update ([#522](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/522)) ([9c7792f](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/9c7792fca09113cb5545512c7400739e0f387647))
+* **LSP-3367:** pre-validate SeqCategory FK before SeqClassification INSERT ([#525](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/525)) ([172ddc2](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/172ddc23f4be39a9d71a930f8d67f003511b81c3))
+* missed one location to skip null parent ([a2a9ff3](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/a2a9ff3818b26b422205c896bd3197e076df9ab7))
+* overwrite in loop caused always empty return value ([b241817](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/b241817066584bf86e6e21506baa485a9a4604e2))
+* replaced NumberSetFilter for StringSetFilter for string column ([d23a76a](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/d23a76a7eb75d433836cb927166897f19a9c95d6))
+* Resolved bug in upload process where the child-id was not being passed to the ForUpload class ([e04e1a4](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/e04e1a42d006151a4867ba9ac97f3d367c7b3463))
+* return as dict which the casebuilder expects. ([83a8254](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/83a8254822442630aacf91fa7c2ebba9e7e5c06a))
+* seqdb SeqProfile key removed ([4979333](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/4979333cdf7688c53bed40caa952ad4a9d358ee2))
+* **seqdb:** treat protocol_ids=None as "any protocol" in retrieve_best ([724bca4](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/724bca40775f7f00a4cbd3d1b000bc3212750958))
+* set_envvar() for api_platform_local ([6052b2d](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/6052b2ddfa13f544327da02d05b8722df43055da))
+* space got introduced in merge ([8b00269](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/8b00269efeab789685860732d85bda027cf47cf4))
+* SQL NOT EXISTS scan: push missing-distance profile lookup into DB, eliminating Python set-difference over 10k+ UUIDs ([e3041f3](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/e3041f38e70e62225bcdcda3c5e35abbdceee15e))
+* Temp-table JOINs: fix ODBC 07002 on uniqueidentifier IN() for iter_seq_distances, get_profiles_by_protocol_ids, and retrieve_similar_profiles ([e3041f3](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/e3041f38e70e62225bcdcda3c5e35abbdceee15e))
+* upload of seqdb sample batches ([85cecb3](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/85cecb3367b913df203459e5e1eb0e1396c9f966))
+* warning that was annoying me ([#512](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/512)) ([2af2c2e](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/2af2c2ef9ca15fb5bd3296aec6093695844677a9))
+* when qc_result, set default (PENDING) if it is None ([fb7458e](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/fb7458e929af95b71b4cd3fbb0ba570d6af61695))
+
 ## [8.0.0](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v7.1.2...v8.0.0) (2026-03-30)
 
 

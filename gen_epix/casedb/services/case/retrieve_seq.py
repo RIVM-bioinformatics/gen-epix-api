@@ -1,4 +1,3 @@
-import json
 from collections.abc import Iterable
 from uuid import UUID
 
@@ -25,7 +24,7 @@ def case_service_retrieve_phylogenetic_tree(
     assert case_abac is not None
     with repository.uow() as uow:
         # Get distance column data
-        dist_col: model.Col = repository.crud(  # type: ignore[assignment]
+        dist_col: model.Col = repository.crud(
             uow,
             user.id,
             model.Col,
@@ -37,7 +36,7 @@ def case_service_retrieve_phylogenetic_tree(
                 "b081c000",
                 f"Col {dist_col_id} does not belong to CaseType {case_type_id}",
             )
-        dist_ref_col: model.RefCol = repository.crud(  # type: ignore[assignment]
+        dist_ref_col: model.RefCol = repository.crud(
             uow,
             user.id,
             model.RefCol,
@@ -59,7 +58,7 @@ def case_service_retrieve_phylogenetic_tree(
             )
 
         # Get protocol
-        genetic_distance_protocol: model.GeneticDistanceProtocol = self.repository.crud(  # type: ignore[assignment]
+        genetic_distance_protocol: model.GeneticDistanceProtocol = self.repository.crud(
             uow,
             user.id,
             model.GeneticDistanceProtocol,
@@ -85,7 +84,7 @@ def case_service_retrieve_phylogenetic_tree(
             return phylogenetic_tree
 
         # @ABAC: Get cases
-        cases = self._retrieve_cases_with_content_right(
+        cases, is_max_results_exceeded = self._retrieve_cases_with_content_right(
             uow,
             user.id,
             case_abac,
@@ -197,7 +196,7 @@ def _get_seq_ids_from_cases(
     seq_col_id: UUID,
 ) -> list[UUID | None]:
     # @ABAC: Get cases and sequence_ids
-    cases = self._retrieve_cases_with_content_right(
+    cases, is_max_results_exceeded = self._retrieve_cases_with_content_right(
         uow,
         user.id,  # type: ignore[arg-type]
         case_abac,

@@ -570,6 +570,26 @@ class TestClient:
         )
         return self.set_obj(updated_tgt_user, update=True)  # type: ignore[return-value]
 
+    def anonymize_user(
+        self, user_or_str: str | model.User, tgt_user_or_str: str | model.User
+    ) -> model.User:
+        """Anonymize a user's personal information and update the local object store."""
+        user: model.User = self.get_obj(
+            self.user_class, user_or_str
+        )  # type: ignore[assignment]
+        tgt_user: model.User = self.get_obj(
+            self.user_class, tgt_user_or_str
+        )  # type: ignore[assignment]
+        anonymized_user: model.User = self.handle(
+            command.AnonymizeUserCommand(user=user, tgt_user_id=cast(UUID, tgt_user.id))
+        )
+        table = self.db[self.user_class]
+        table.pop(tgt_user.name, None)
+        anonymized_user.name = (
+            tgt_user.key
+        )  # set the name to avoid test client from failing when trying to retrieve the user by name
+        return self.set_obj(anonymized_user, update=True)  # type: ignore[return-value]
+
     def get_root_user(self, user_key: str | None = None) -> model.User:
         """Retrieve the root user from the app's user manager."""
         if user_key is None:
@@ -688,15 +708,42 @@ class TestClient:
     ) -> list[model.Model]:
         """Read all objects of the given model class via the app."""
         user: model.User = self.get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
-        retval: list[model.Model] = self.handle(
+        objs: list[model.Model] = self.handle(
             self.app.domain.get_crud_command_for_model(model_class)(
                 user=user,
                 operation=CrudOperation.READ_ALL,
-                props={"cascade_read": cascade},
             ),
             use_endpoint=False,
         )
-        return retval
+        if cascade:
+            self._add_linked_objs(user, model_class, objs)
+        return objs
+
+    def _add_linked_objs(
+        self,
+        user: model.User,
+        model_class: type[model.Model],
+        objs: list[model.Model],
+    ) -> None:
+        """For each object, read all linked objects and attach them to the object if the corresponding relationship field exists."""
+        for link in model_class.ENTITY.links.values():
+            relationship_field_name = link.relationship_field_name
+            if not relationship_field_name:
+                continue
+            link_field_name = link.link_field_name
+            linked_model_class = link.link_model_class
+            linked_obj_ids = {getattr(x, link_field_name) for x in objs}
+            linked_obj_ids.discard(None)
+            if not linked_obj_ids:
+                continue
+            linked_objs = self.read_some(user, linked_model_class, list(linked_obj_ids))
+            linked_obj_map = {x.get_id(): x for x in linked_objs}
+            for obj in objs:
+                setattr(
+                    obj,
+                    link_field_name,
+                    [linked_obj_map[getattr(obj, link_field_name)]],
+                )
 
     def read_some(
         self,
@@ -716,10 +763,11 @@ class TestClient:
                     if isinstance(obj_ids, set)
                     else obj_ids  # type: ignore[arg-type]
                 ),
-                props={"cascade_read": cascade},
             ),
             use_endpoint=False,
         )
+        if cascade:
+            self._add_linked_objs(user, model_class, retval)
         return retval
 
     def read_some_by_property(
@@ -1151,12 +1199,8 @@ class TestClient:
         # automatically updated by the system and may not be the same in in_obj and
         # out_obj. They are also not relevant for verifying that the content of the
         # object was updated correctly.
-        out_obj_dict = out_obj.model_dump(
-            exclude=set(model.ModelNoId.CREATE_METADATA_FIELDS)
-        )
-        in_obj_dict = in_obj.model_dump(
-            exclude=set(model.ModelNoId.CREATE_METADATA_FIELDS)
-        )
+        out_obj_dict = out_obj.model_dump(exclude=set(model.ModelNoId.METADATA_FIELDS))
+        in_obj_dict = in_obj.model_dump(exclude=set(model.ModelNoId.METADATA_FIELDS))
         if isinstance(in_obj, model.User):
             in_obj_dict["roles"] = sorted(in_obj.roles)
             out_obj_dict["roles"] = sorted(out_obj.roles)

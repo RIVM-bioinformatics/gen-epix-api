@@ -1,5 +1,6 @@
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.build_db.base import (
+    APP_ADMIN,
     APP_ADMIN_OR_ABOVE_USERS,
     BELOW_APP_ADMIN_DATA_USERS,
     BELOW_APP_ADMIN_USERS,
@@ -449,16 +450,29 @@ class TestCreate:
                     col_type=enum.ColType.NOMINAL,
                     concept_set="concept_set1_nominal",
                 )
-        # TODO [LSP-2691] create additional tests for casedb build_db create RefCol:
-        #  invalid col_type for RefDim type
-        #  missing concept_set for nominal, ordinal, interval, regular_language,
-        #    context_free_grammar_json, context_free_grammar_xml col_types
-        #  missing regex for regular_language col_type
-        #  missing schema_definition/schema_uri for context_free_grammar_json/xml
-        #    col_types
-        #  missing region_set for region col_types
-        #  missing genetic_sequence_col for genetic_distance col_type
-        #  missing tree_algorithm_codes for genetic_distance col_type
+        with pytest.raises(exc.InvalidArgumentsError):
+            env.create_ref_col("root1_1", "ref_col4_99", col_type=enum.ColType.TEXT)
+
+        for col_type in [
+            enum.ColType.NOMINAL,
+            enum.ColType.ORDINAL,
+            enum.ColType.INTERVAL,
+        ]:
+            with pytest.raises(exc.InvalidArgumentsError):
+                env.create_ref_col("root1_1", "ref_col1_99", col_type=col_type)
+
+        with pytest.raises(exc.InvalidArgumentsError):
+            env.create_ref_col(
+                "root1_1", "ref_col5_99", col_type=enum.ColType.GEO_REGION
+            )
+
+        with pytest.raises(exc.InvalidLinkIdsError):
+            env.create_ref_col(
+                "root1_1",
+                "ref_col1_99",
+                col_type=enum.ColType.GENETIC_DISTANCE,
+                set_dummy_genetic_distance_protocol=True,
+            )
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_disease(self, env: Env) -> None:
@@ -717,11 +731,27 @@ class TestCreate:
             code = dim.code.replace("dim", "col")
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_col(exec_user, f"{code}_1")
-        # TODO [LSP-2693] Add test for creating Col for
-        # non-existing CaseType
-        # non-existing Dim
-        # non-existing RefCol
-        # RefCol is for different RefDim than Dim
+
+        with pytest.raises(exc.InvalidArgumentsError):
+            # non-existing CaseType
+            env.create_col(
+                APP_ADMIN,
+                "col1_1_1_1",
+                set_dummy_case_type=True,
+            )
+        with pytest.raises(exc.InvalidIdsError):
+            # non-existing Dim
+            env.create_col(APP_ADMIN, "col1_1_1_1", set_dummy_dim=True)
+        with pytest.raises(exc.InvalidIdsError):
+            # non-existing RefCol
+            env.create_col(APP_ADMIN, "col1_1_1_1", set_dummy_ref_col=True)
+        with pytest.raises(exc.InvalidArgumentsError):
+            # RefCol is for different RefDim than Dim
+            env.create_col(
+                APP_ADMIN,
+                "col1_1_1_1",
+                ref_col="ref_col2_1",
+            )
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_col_set(self, env: Env) -> None:
@@ -1139,6 +1169,7 @@ class TestCreate:
                     col_type=enum.ColType.NOMINAL,
                     concept_set="concept_set11_nominal",
                     set_dummy_concept_set=True,
+                    verify_other_service_links=True,
                 )
         # RefCol.region_set does not exist
         if not SKIP_CREATE_DATA:
@@ -1154,6 +1185,7 @@ class TestCreate:
                     col_type=enum.ColType.GEO_REGION,
                     region_set="region_set11",
                     set_dummy_region_set=True,
+                    verify_other_service_links=True,
                 )
         # RefCol.genetic_distance_protocol does not exist
         if not SKIP_CREATE_DATA:
@@ -1169,6 +1201,7 @@ class TestCreate:
                     col_type=enum.ColType.GENETIC_DISTANCE,
                     genetic_distance_protocol="genetic_distance_protocol11",
                     set_dummy_genetic_distance_protocol=True,
+                    verify_other_service_links=True,
                 )
         # Etiology.disease does not exist
         if not SKIP_CREATE_DATA:
@@ -1192,7 +1225,12 @@ class TestCreate:
         if not SKIP_CREATE_DATA:
             with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
                 env.create_case_type(
-                    ROOT, "case_type11", "disease11", None, set_dummy_disease=True
+                    ROOT,
+                    "case_type11",
+                    "disease11",
+                    None,
+                    set_dummy_disease=True,
+                    verify_other_service_links=True,
                 )
         # CaseType.etiological_agent does not exist
         if not SKIP_CREATE_DATA:
@@ -1203,6 +1241,7 @@ class TestCreate:
                     None,
                     "etiological_agent11",
                     set_dummy_etiological_agent=True,
+                    verify_other_service_links=True,
                 )
         # CaseTypeSet.case_type_set_category does not exist
         if not SKIP_CREATE_DATA:

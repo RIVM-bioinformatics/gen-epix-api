@@ -50,8 +50,10 @@ class OmopSARepository(SARepository, BaseOmopRepository):
                     sa_model.Specimen,
                     sa.and_(
                         sa_model.Cohort.subject_id == sa_model.Specimen.person_id,
-                        sa_model.Specimen.specimen_date >= sa_model.Cohort.cohort_start_date,
-                        sa_model.Specimen.specimen_date <= sa_model.Cohort.cohort_end_date,
+                        sa_model.Specimen.specimen_date
+                        >= sa_model.Cohort.cohort_start_date,
+                        sa_model.Specimen.specimen_date
+                        <= sa_model.Cohort.cohort_end_date,
                     ),
                 )
                 .where(
@@ -73,31 +75,32 @@ class OmopSARepository(SARepository, BaseOmopRepository):
         if not person_ids:
             return []
 
-        # Initialize some
         person_id_set = set(person_ids)
-        model_classes = cast(
+        # Phase 1 classes are keyed directly by person_id (or internal_id == person_id for
+        # PersonIdentifier). IDENTIFIER_CLASSES (e.g. SpecimenIdentifier) use internal_id as
+        # the *entity* id (e.g. specimen_id), so they need a two-step lookup in Phase 2.
+        phase1_classes = cast(
             list[type[model.Model]],
-            [model.Person, model.PersonIdentifier]
-            + model.FullPerson.DATA_CLASSES
-            + model.FullPerson.IDENTIFIER_CLASSES,
+            [model.Person, model.PersonIdentifier] + model.FullPerson.DATA_CLASSES,
         )
+        all_model_classes = phase1_classes + list(model.FullPerson.IDENTIFIER_CLASSES)
         db: dict[type[model.Model], dict[UUID, list[model.Model]]] = {
             model_class: {person_id: [] for person_id in person_ids}
-            for model_class in model_classes
+            for model_class in all_model_classes
         }
 
-        # Retrieve all data and create FullPersons
         with self.uow() as uow:
             assert isinstance(uow, SAUnitOfWork)
-            # Retrieve all data per person
-            for model_class in model_classes:
+
+            # Phase 1: fetch Person, PersonIdentifier, and DATA_CLASSES by person_id
+            for model_class in phase1_classes:
                 sa_model_class: Any = sa_model.SA_MODELS_BY_SERVICE_TYPE[
                     enum.ServiceType.OMOP
                 ][model_class]
                 id_field_name = (
                     "person_id"
                     if model_class in [model.Person] + model.FullPerson.DATA_CLASSES
-                    else "internal_id"
+                    else "internal_id"  # PersonIdentifier.internal_id == person_id
                 )
                 id_field = getattr(sa_model_class, id_field_name)
                 stmt: sa.Select = sa.select(sa_model_class).where(
@@ -109,6 +112,42 @@ class OmopSARepository(SARepository, BaseOmopRepository):
                     obj = cast(model.Model, mapper.load(row[0]))
                     person_id = cast(UUID, getattr(obj, id_field_name))
                     objs_by_person[person_id].append(obj)
+
+            # Phase 2: fetch IDENTIFIER_CLASSES via entity IDs derived from DATA_CLASSES.
+            # e.g. SpecimenIdentifier.internal_id == specimen_id (not person_id), so we
+            # build a specimen_id → person_id reverse map from the already-fetched Specimens.
+            identifier_to_data_class: dict[type[model.Model], type[model.Model]] = {
+                v: k  # type: ignore[misc]
+                for k, v in model.FullPerson.DATA_IDENTIFIER_CLASS_MAP.items()
+            }
+            for id_class in model.FullPerson.IDENTIFIER_CLASSES:
+                data_class = identifier_to_data_class.get(id_class)  # type: ignore[arg-type]
+                if data_class is None:
+                    continue
+                entity_id_field: str = data_class.ENTITY.id_field_name  # type: ignore[union-attr,assignment]
+                # Reverse map: entity_id → person_id from already-fetched data class objects
+                entity_id_to_person_id: dict[UUID, UUID] = {}
+                for person_id, entities in db[data_class].items():  # type: ignore[index]
+                    for entity in entities:
+                        entity_id: UUID | None = getattr(entity, entity_id_field, None)
+                        if entity_id is not None:
+                            entity_id_to_person_id[entity_id] = person_id
+                if not entity_id_to_person_id:
+                    continue
+                sa_id_class: Any = sa_model.SA_MODELS_BY_SERVICE_TYPE[
+                    enum.ServiceType.OMOP
+                ][id_class]
+                stmt = sa.select(sa_id_class).where(
+                    sa_id_class.internal_id.in_(entity_id_to_person_id.keys())
+                )
+                mapper = self.get_mapper(id_class)  # type: ignore[arg-type]
+                objs_by_person = db[id_class]  # type: ignore[index]
+                for row in uow.session.execute(stmt):
+                    obj = cast(model.Model, mapper.load(row[0]))
+                    entity_id = cast(UUID, obj.internal_id)  # type: ignore[union-attr,attr-defined]
+                    person_id = entity_id_to_person_id.get(entity_id)  # type: ignore[assignment]
+                    if person_id is not None:
+                        objs_by_person[person_id].append(obj)
 
             # Create FullPersons
             class_field_map = (

@@ -34,6 +34,7 @@ SEQDB_APP_CFGS = get_app_cfgs(
     seqdb_enum.ServiceType,
     seqdb_enum.RepositoryType,
     TEST_TYPE,
+    log_any=False,
 )
 
 CREATE_DEMO_DATA: bool = False
@@ -190,7 +191,7 @@ class TestSeqDistancePerformance(BaseSeqDistancePerformance):
         for test_repository_performance in test_repositories_performance:
             with test_repository_performance.repository.uow() as uow:
                 profiles: list[model.SeqProfile] = (
-                    test_repository_performance.repository.crud(  # type: ignore[assignment]
+                    test_repository_performance.repository.crud(
                         uow,
                         env.get_root_user().id,
                         model.SeqProfile,
@@ -199,7 +200,7 @@ class TestSeqDistancePerformance(BaseSeqDistancePerformance):
                 )
                 profile_ids: list[UUID] = [x.id for x in profiles if x.id is not None]
                 protocols: list[model.Protocol] = (
-                    test_repository_performance.repository.crud(  # type: ignore[assignment]
+                    test_repository_performance.repository.crud(
                         uow,
                         env.get_root_user().id,
                         model.Protocol,

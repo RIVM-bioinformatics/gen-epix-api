@@ -21,6 +21,7 @@ seqdb_APP_CFGS = get_app_cfgs(
     enum.ServiceType,
     enum.RepositoryType,
     TEST_TYPE,
+    log_any=False,
 )
 
 
@@ -170,6 +171,37 @@ class TestRetrieveSamples:
             env.handle(
                 command.RetrieveSamplesByIdCommand(
                     user=root_user,
+                    sample_ids=[duplicate_sample_id, duplicate_sample_id],
+                ),
+                use_endpoint=False,
+            )
+
+    def test_retrieve_sample_identifiers_by_ids(self, env: Env) -> None:
+        sample_ids = [
+            sample.id for sample in self.test_samples if sample.id is not None
+        ]
+        assert sample_ids
+
+        identifiers: list[model.SampleIdentifier] = env.handle(
+            command.RetrieveSampleIdentifiersByIdCommand(
+                user=env.get_root_user(),
+                sample_ids=sample_ids,
+            ),
+            use_endpoint=False,
+        )
+
+        assert isinstance(identifiers, list)
+        assert all(isinstance(x, model.SampleIdentifier) for x in identifiers)
+        returned_sample_ids = {x.internal_id for x in identifiers}
+        assert returned_sample_ids.issubset(set(sample_ids))
+
+    def test_retrieve_sample_identifiers_with_duplicate_ids(self, env: Env) -> None:
+        duplicate_sample_id = env.generate_id()
+
+        with pytest.raises(ValueError, match="sample_ids must be unique"):
+            env.handle(
+                command.RetrieveSampleIdentifiersByIdCommand(
+                    user=env.get_root_user(),
                     sample_ids=[duplicate_sample_id, duplicate_sample_id],
                 ),
                 use_endpoint=False,

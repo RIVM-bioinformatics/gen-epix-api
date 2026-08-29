@@ -81,9 +81,6 @@ class CrudOperation(Enum):
     UNDELETE_ONE = "UNDELETE_ONE"
     UNDELETE_SOME = "UNDELETE_SOME"
     UNDELETE_ALL = "UNDELETE_ALL"
-    RESTORE_ONE = "RESTORE_ONE"
-    RESTORE_SOME = "RESTORE_SOME"
-    RESTORE_ALL = "RESTORE_ALL"
     EXISTS_ONE = "EXISTS_ONE"
     EXISTS_SOME = "EXISTS_SOME"
 
@@ -103,15 +100,6 @@ class CrudOperationSet(Enum):
             CrudOperation.READ_ONE,
         }
     )
-    READ_OR_EXISTS = frozenset(
-        {
-            CrudOperation.READ_ALL,
-            CrudOperation.READ_SOME,
-            CrudOperation.READ_ONE,
-            CrudOperation.EXISTS_ONE,
-            CrudOperation.EXISTS_SOME,
-        }
-    )
     UPDATE = frozenset({CrudOperation.UPDATE_ONE, CrudOperation.UPDATE_SOME})
     DELETE = frozenset(
         {
@@ -121,6 +109,37 @@ class CrudOperationSet(Enum):
         }
     )
     EXISTS = frozenset({CrudOperation.EXISTS_ONE, CrudOperation.EXISTS_SOME})
+    WRITE = frozenset(
+        {
+            CrudOperation.CREATE_ONE,
+            CrudOperation.CREATE_SOME,
+            CrudOperation.UPDATE_ONE,
+            CrudOperation.UPDATE_SOME,
+            CrudOperation.UPSERT_ONE,
+            CrudOperation.UPSERT_SOME,
+        }
+    )
+    WRITE_OR_READ_ALL_OR_DELETE_ALL = frozenset(
+        {
+            CrudOperation.CREATE_ONE,
+            CrudOperation.CREATE_SOME,
+            CrudOperation.UPDATE_ONE,
+            CrudOperation.UPDATE_SOME,
+            CrudOperation.UPSERT_ONE,
+            CrudOperation.UPSERT_SOME,
+            CrudOperation.READ_ALL,
+            CrudOperation.DELETE_ALL,
+        }
+    )
+    READ_OR_EXISTS = frozenset(
+        {
+            CrudOperation.READ_ALL,
+            CrudOperation.READ_SOME,
+            CrudOperation.READ_ONE,
+            CrudOperation.EXISTS_ONE,
+            CrudOperation.EXISTS_SOME,
+        }
+    )
     NON_READ = frozenset(
         {
             CrudOperation.CREATE_ONE,
@@ -149,27 +168,11 @@ class CrudOperationSet(Enum):
             CrudOperation.DELETE_ALL,
         }
     )
-    WRITE = frozenset(
-        {
-            CrudOperation.CREATE_ONE,
-            CrudOperation.CREATE_SOME,
-            CrudOperation.UPDATE_ONE,
-            CrudOperation.UPDATE_SOME,
-            CrudOperation.UPSERT_ONE,
-            CrudOperation.UPSERT_SOME,
-        }
-    )
     UNDELETE = frozenset(
         {
             CrudOperation.UNDELETE_ONE,
             CrudOperation.UNDELETE_SOME,
             CrudOperation.UNDELETE_ALL,
-        }
-    )
-    RESTORE = frozenset(
-        {
-            CrudOperation.RESTORE_ONE,
-            CrudOperation.RESTORE_SOME,
         }
     )
     WRITE_ONE = frozenset(
@@ -391,6 +394,7 @@ class OnException(Enum):
     REPLACE = "REPLACE"
     SET_DEFAULT = "SET_DEFAULT"
     SET_NONE = "SET_NONE"
+    SET_NO_RETURN = "SET_NO_RETURN"
 
 
 class FileExtension(Enum):

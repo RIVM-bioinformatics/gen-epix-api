@@ -11,4 +11,4 @@ class EqualsBooleanFilter(EqualsFilter):
 
 
 class TypedEqualsBooleanFilter(EqualsBooleanFilter):
-    type: Literal[FilterType.EQUALS_BOOLEAN.value]
+    type: Literal[FilterType.EQUALS_BOOLEAN.value]  # type: ignore[name-defined]

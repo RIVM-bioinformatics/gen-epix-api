@@ -45,7 +45,7 @@
             "justMyCode": true
         },
         {
-            "name": "api.casedb.local.idps.sa_sql_demo",
+            "name": "api.casedb.local.idps.sa_sql",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
@@ -123,6 +123,19 @@
                 "SEQDB",
                 "MOCK",
                 "SA_SQLITE_EMPTY"
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "api.seqdb.local.idps.sa_sql",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "api",
+                "SEQDB",
+                "IDPS",
+                "SA_SQL"
             ],
             "justMyCode": true
         },
@@ -462,6 +475,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.casedb.unit.services.case.upload",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_casedb_unit_services_case_upload"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.casedb.integration",
             "type": "debugpy",
             "request": "launch",
@@ -561,6 +585,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.casedb.performance.retrieve_stats",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_casedb_performance_retrieve_stats"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.casedb.custom",
             "type": "debugpy",
             "request": "launch",
@@ -605,34 +640,45 @@
             "justMyCode": true,
         },
         {
-            "name": "test.seqdb.unit.models_for_upload",
+            "name": "test.seqdb.unit.domain.models_for_upload",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_seqdb_unit_models_for_upload"
+                "test_seqdb_unit_domain_models_for_upload"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
         },
         {
-            "name": "test.seqdb.unit.upload",
+            "name": "test.seqdb.unit.services.seq.upload",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_seqdb_unit_upload"
+                "test_seqdb_unit_services_seq_upload"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
         },
         {
-            "name": "test.seqdb.unit_calculate_seq_distance",
+            "name": "test.seqdb.unit.services.seq.calculate_seq_distance",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_seqdb_unit_calculate_seq_distance"
+                "test_seqdb_unit_services_seq_calculate_seq_distance"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.seqdb.unit.services.seq.retrieve_best",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_seqdb_unit_services_seq_retrieve_best"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -726,12 +772,34 @@
             "justMyCode": true
         },
         {
-            "name": "test.omopdb.unit.upload",
+            "name": "test.omopdb.unit.services",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_omopdb_unit_upload"
+                "test_omopdb_unit_services"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "test.omopdb.unit.services.omop",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_omopdb_unit_services_omop"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "test.omopdb.unit.services.omop.upload",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_omopdb_unit_services_omop_upload"
             ],
             "console": "integratedTerminal",
             "justMyCode": true
@@ -968,6 +1036,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.fastapp.unit.repositories",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_fastapp_unit_repositories"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.fastapp.performance.repository",
             "type": "debugpy",
             "request": "launch",
@@ -1012,6 +1091,13 @@
             "justMyCode": true,
         },
         {
+            "name": "test.r.remote_app",
+            "type": "R-Debugger",
+            "request": "launch",
+            "file": "${workspaceFolder}/test/r/test_remote_app.R",
+            "workingDirectory": "${workspaceFolder}"
+        },
+        {
             "name": "test.general.docs",
             "type": "debugpy",
             "request": "launch",
@@ -1040,6 +1126,17 @@
             "program": "run.py",
             "args": [
                 "test_general_code_test_model_field_properties"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.general.code.test.error.code.unicity",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_general_code_test_error_code_unicity"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

@@ -180,26 +180,6 @@ erDiagram
         string gene_product_code
     }
 
-    LocusSet {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        string code
-        string name
-        list[UUID] locus_ids
-        any n_loci
-    }
-
-    LocusCodeMap {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        string code
-        dict[string, UUID] code_map
-    }
-
     TreeAlgorithmClass {
         timestamp created_at
         timestamp modified_at
@@ -263,12 +243,12 @@ erDiagram
     }
 
     Sample {
-        string code
         timestamp created_at
         timestamp modified_at
         UUID modified_by
         UUID id PK
         UUID created_in_data_collection_id FK
+        string code
         dict[string, string | int | float] props
     }
 
@@ -312,6 +292,26 @@ erDiagram
         UUID id PK
         UUID taxon_set_id FK
         UUID taxon_id FK
+    }
+
+    LocusSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        string code
+        string name
+        list[UUID] locus_ids
+        any n_loci
+    }
+
+    LocusCodeMap {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        string code
+        dict[string, UUID] code_map
     }
 
     RefAllele {
@@ -454,7 +454,6 @@ erDiagram
         float qc_score
         Json qc_report
         UUID protocol_id FK
-        string code
         UUID sample_id FK
         timestamp created_at
         timestamp modified_at
@@ -469,6 +468,7 @@ erDiagram
         UUID fwd_reads_hash
         UUID rev_reads_hash
         string sequencing_run_code
+        string code
         any is_available
     }
 
@@ -518,7 +518,6 @@ erDiagram
         enum qc_result
         float qc_score
         Json qc_report
-        string code
         UUID sample_id FK
         timestamp created_at
         timestamp modified_at
@@ -533,8 +532,9 @@ erDiagram
         UUID read_set2_id FK
         UUID protocol_id FK
         list[Contig] contigs
+        UUID seq_hash
+        string code
         any is_available
-        any seq_hash
         any n_contigs
         any length
         any max_contig_length

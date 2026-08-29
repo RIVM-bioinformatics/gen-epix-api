@@ -12,7 +12,6 @@ Verifies that:
 
 import datetime
 from test.commondb.unit.conftest import DEFAULT_CREATED_AT, DEFAULT_MODIFIED_AT
-from unittest import TestCase
 from uuid import uuid4
 
 import pytest
@@ -38,9 +37,9 @@ def _make_obj(
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-04")
-class TestCommondbDictModelModifier(TestCase):
+class TestCommondbDictModelModifier:
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         self.user_id = uuid4()
         self.modifier = CommondbDictModelModifier(timestamp_factory=_fixed_factory)
 

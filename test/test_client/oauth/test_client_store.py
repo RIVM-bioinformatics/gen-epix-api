@@ -15,8 +15,8 @@ import os
 import sys
 from datetime import datetime
 from test.test_client.oauth.client_store import Client, ClientStore
+from test.util.mock_compat import patch
 from typing import Any
-from unittest.mock import patch
 
 import pytest
 

@@ -438,6 +438,7 @@ class CasedbTestClient(TestClient):
         set_dummy_concept_set: bool = False,
         set_dummy_region_set: bool = False,
         set_dummy_genetic_distance_protocol: bool = False,
+        verify_other_service_links: bool = False,
     ) -> model.RefCol:
         user: model.User = self.get_obj(
             model.User, user_or_str
@@ -489,6 +490,7 @@ class CasedbTestClient(TestClient):
             command.RefColCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
+                verify_other_service_links=verify_other_service_links,
                 objs=model.RefCol(
                     code=code,
                     label=code,
@@ -591,6 +593,7 @@ class CasedbTestClient(TestClient):
         etiological_agent: str | model.EtiologicalAgent | None,
         set_dummy_disease: bool = False,
         set_dummy_etiological_agent: bool = False,
+        verify_other_service_links: bool = False,
     ) -> model.CaseType:
         user: model.User = self.get_obj(
             model.User, user_or_str
@@ -599,6 +602,7 @@ class CasedbTestClient(TestClient):
             command.CaseTypeCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
+                verify_other_service_links=verify_other_service_links,
                 objs=model.CaseType(
                     name=case_type_or_str,
                     disease_id=(
@@ -786,6 +790,7 @@ class CasedbTestClient(TestClient):
         code: str,
         genetic_sequence_col_id: UUID | None = None,
         tree_algorithm_codes: set[enum.TreeAlgorithmType] | None = None,
+        ref_col: str | None = None,
         set_dummy_case_type: bool = False,
         set_dummy_dim: bool = False,
         set_dummy_ref_col: bool = False,
@@ -798,7 +803,7 @@ class CasedbTestClient(TestClient):
             raise ValueError(f"Invalid code {code}")
         case_type_str = "case_type" + m.group(2)
         dim_str = "dim" + m.group(2) + "_" + m.group(3) + "_" + m.group(4)
-        ref_col_str = "ref_col" + m.group(3) + "_" + m.group(5)
+        ref_col_str = ref_col or ("ref_col" + m.group(3) + "_" + m.group(5))
         if set_dummy_case_type:
             case_type_id = self.generate_id()
         else:
@@ -2263,7 +2268,7 @@ class CasedbTestClient(TestClient):
         table = self.db[model_class]
         key = self._get_obj_key(table, model_class, obj, on_missing)
         if model_class == model.CaseDataCollectionLink:
-            dc_id = key[0]
+            data_collection_id = key[0]
             case_id = key[1]
 
             case_data_collection_links: list[model.CaseDataCollectionLink] = self.read_all(  # type: ignore[assignment]
@@ -2271,7 +2276,7 @@ class CasedbTestClient(TestClient):
             )
             good_case_data_collection_links_list = []
             for y in case_data_collection_links:
-                if y.case_id == case_id and y.data_collection_id == dc_id:
+                if y.case_id == case_id and y.data_collection_id == data_collection_id:
                     good_case_data_collection_links_list.append(y)
 
             if not good_case_data_collection_links_list:

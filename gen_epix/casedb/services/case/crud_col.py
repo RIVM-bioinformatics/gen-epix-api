@@ -72,7 +72,7 @@ def _validate_cols(
 
         # Get Dims
         dim_ids = list({x.dim_id for x in cols})
-        dims: list[model.Dim] = self.repository.crud(  # type: ignore[assignment]
+        dims: list[model.Dim] = self.repository.crud(
             uow,
             user.id,
             model.Dim,
@@ -85,7 +85,7 @@ def _validate_cols(
 
         # Get RefCols
         ref_col_ids: list[UUID] = list({x.ref_col_id for x in cols})
-        ref_cols: list[model.RefCol] = self.repository.crud(  # type: ignore[assignment]
+        ref_cols: list[model.RefCol] = self.repository.crud(
             uow,
             user.id,
             model.RefCol,

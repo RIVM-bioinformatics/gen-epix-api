@@ -13,6 +13,7 @@ from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.domain.model.system import PackageMetadata
 from gen_epix.fastapp import App, LogLevel
 from gen_epix.fastapp.api import CrudEndpointGenerator
+from gen_epix.fastapp.middleware.limiter import limiter
 
 external_logger_fmap = exc.get_logger_fmap(logging.getLogger("commondb.external"))
 
@@ -67,6 +68,7 @@ def create_system_endpoints(
         operation_id="health",
         name="Health",
     )
+    @limiter.exempt
     async def get__health() -> HealthResponseBody:
         """
         Returns the health status of the service. If no response is received

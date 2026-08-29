@@ -8,7 +8,7 @@ import pandas as pd
 
 from gen_epix.commondb.domain import model
 from gen_epix.commondb.test.test_client import TestClient
-from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.fastapp.enum import CrudOperation, OnException
 
 
 def retrieve_db_data_from_file(
@@ -103,7 +103,7 @@ def retrieve_db_data_from_file(
             user=root_user,
             operation=CrudOperation.CREATE_SOME,
             objs=objs,  # type: ignore[arg-type]
-            props={"id_present": "keep"},
+            on_id_set=OnException.IGNORE,
         )
         test_client.app.handle(cmd)
     for table_name in extra_table_to_sheet_map:

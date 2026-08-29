@@ -14,4 +14,4 @@ class EqualsNumberFilter(EqualsFilter):
 
 
 class TypedEqualsNumberFilter(EqualsNumberFilter):
-    type: Literal[FilterType.EQUALS_NUMBER.value]
+    type: Literal[FilterType.EQUALS_NUMBER.value]  # type: ignore[name-defined]

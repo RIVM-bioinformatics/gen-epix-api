@@ -44,11 +44,11 @@ class AppImplDetails(BaseModel):
         default=None,
         description="Dependency that provides a user known by the identity provider but not registered in the application",
     )
-    model_class_map: dict[type[model.Model], type[model.Model]] = Field(
+    model_class_map: dict[type[fastapp.Model], type[fastapp.Model]] = Field(
         default_factory=dict,
         description="Mapping of commondb model classes to any derived implementing model classes",
     )
-    command_class_map: dict[type[command.Command], type[command.Command]] = Field(
+    command_class_map: dict[type[fastapp.Command], type[fastapp.Command]] = Field(
         default_factory=dict,
         description="Mapping of commondb command classes to any derived implementing command classes",
     )
@@ -79,7 +79,7 @@ class AppImplDetails(BaseModel):
     )
     @cached_property
     def rev_role_map(self) -> dict[str, enum.Role | Enum]:
-        """"""
+        """Return a reverse lookup map from role string to role enum value."""
         return {x: y for y, x in self.role_map.items()}
 
     @computed_field(  # type: ignore[prop-decorator]
@@ -87,7 +87,7 @@ class AppImplDetails(BaseModel):
     )
     @cached_property
     def registered_user_dependency(self) -> Callable[..., model.User]:
-        """"""
+        """Return the registered-user dependency, raising when it is unset."""
         if self.registered_user_dependency_or_none is None:
             raise ValueError("registered_user_dependency is not set")
         return self.registered_user_dependency_or_none
@@ -97,7 +97,7 @@ class AppImplDetails(BaseModel):
     )
     @cached_property
     def new_user_dependency(self) -> Callable[..., model.User]:
-        """"""
+        """Return the new-user dependency, raising when it is unset."""
         if self.new_user_dependency_or_none is None:
             raise ValueError("new_user_dependency is not set")
         return self.new_user_dependency_or_none
@@ -107,7 +107,7 @@ class AppImplDetails(BaseModel):
     )
     @cached_property
     def idp_user_dependency(self) -> Callable[..., Any]:
-        """"""
+        """Return the IDP-user dependency, raising when it is unset."""
         if self.idp_user_dependency_or_none is None:
             raise ValueError("idp_user_dependency is not set")
         return self.idp_user_dependency_or_none
@@ -169,14 +169,14 @@ class AppImplDetails(BaseModel):
 
     def get_mapped_class(
         self,
-        base_class: type[model.Model] | type[command.Command] | type[fastapp.Policy],
-    ) -> type[model.Model] | type[command.Command] | type[fastapp.Policy]:
+        base_class: type[fastapp.Model] | type[fastapp.Command] | type[fastapp.Policy],
+    ) -> type[fastapp.Model] | type[fastapp.Command] | type[fastapp.Policy]:
         """
         Get the mapped class for a given base class, or return the base class if no mapping exists.
         """
-        if issubclass(base_class, model.Model):
+        if issubclass(base_class, fastapp.Model):
             return self.model_class_map.get(base_class, base_class)
-        if issubclass(base_class, command.Command):
+        if issubclass(base_class, fastapp.Command):
             return self.command_class_map.get(base_class, base_class)
         if issubclass(base_class, fastapp.Policy):
             return self.policy_class_map.get(base_class, base_class)

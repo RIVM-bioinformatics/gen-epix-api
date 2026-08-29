@@ -54,7 +54,7 @@ def seq_service_calculate_phylogenetic_tree(
         # )
 
         # Retrieve genetic distance protocol
-        protocol: model.Protocol = repository.crud(  # type: ignore[assignment]
+        protocol: model.Protocol = repository.crud(
             uow,
             user_id,
             model.Protocol,
@@ -75,7 +75,7 @@ def seq_service_calculate_phylogenetic_tree(
 
         # Retrieve distance matrix
         if tree_algorithm in enum.TreeAlgorithmSet.DISTANCE_BASED.value:
-            seq_distances = repository.crud(  # type: ignore[assignment]
+            seq_distances = repository.crud(
                 uow,
                 user_id,
                 model.SeqDistance,
@@ -153,8 +153,8 @@ def seq_service_calculate_phylogenetic_tree(
                 id=self.generate_id(),  # type: ignore[arg-type]
                 tree_algorithm=tree_algorithm,
                 protocol_id=protocol_id,
-                profile_ids=seq_profile_ids,
-                leaf_names=leaf_names,
+                profile_ids=tree_profile_ids,
+                leaf_names=tree_leaf_names,
                 newick_repr=(f"({tree_leaf_names[0]});" if tree_profile_ids else "();"),
             )
 
@@ -213,8 +213,8 @@ def seq_service_calculate_phylogenetic_tree(
         id=self.generate_id(),  # type: ignore[arg-type]
         tree_algorithm=tree_algorithm,
         protocol_id=protocol_id,
-        profile_ids=seq_profile_ids,
-        leaf_names=leaf_names,
+        profile_ids=tree_profile_ids,
+        leaf_names=tree_leaf_names,
         newick_repr=newick_repr,
     )
     # profiler.stop()

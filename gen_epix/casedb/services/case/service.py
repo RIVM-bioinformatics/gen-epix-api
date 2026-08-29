@@ -1,5 +1,6 @@
 import datetime
 from collections.abc import Callable, Iterable
+from typing import cast
 from uuid import UUID
 
 from cachetools import cached
@@ -66,11 +67,15 @@ from gen_epix.casedb.services.case.read_association_with_valid_ids import (
     case_service_read_association_with_valid_ids,
 )
 from gen_epix.casedb.services.case.retrieve_case import (
+    case_service_retrieve_case_cohort_links_by_case_type,
     case_service_retrieve_cases_by_id,
     case_service_retrieve_cases_by_query,
 )
 from gen_epix.casedb.services.case.retrieve_complete_case_type import (
     case_service_retrieve_complete_case_type,
+)
+from gen_epix.casedb.services.case.retrieve_is_own_cases import (
+    case_service_retrieve_is_own_cases,
 )
 from gen_epix.casedb.services.case.retrieve_seq import (
     case_service_retrieve_genetic_sequence_fasta_by_case,
@@ -130,7 +135,7 @@ class CaseService(BaseCaseService):
 
     def retrieve_case_stats(
         self,
-        cmd: command.RetrieveCaseStatsCommand,
+        cmd: command.RetrieveCaseTypeStatsCommand | command.RetrieveCaseSetStatsCommand,
     ) -> list[model.CaseStats]:
         return case_service_retrieve_case_stats(self, cmd)
 
@@ -138,6 +143,11 @@ class CaseService(BaseCaseService):
         self, cmd: command.RetrieveCasesByQueryCommand
     ) -> model.CaseQueryResult:
         return case_service_retrieve_cases_by_query(self, cmd)
+
+    def retrieve_case_cohort_links_by_case_type(
+        self, cmd: command.RetrieveCaseCohortLinksByCaseTypeCommand
+    ) -> list[model.CaseCohortLink]:
+        return case_service_retrieve_case_cohort_links_by_case_type(self, cmd)
 
     def retrieve_cases_by_id(
         self, cmd: command.RetrieveCasesByIdCommand
@@ -163,16 +173,21 @@ class CaseService(BaseCaseService):
         # Retrieve all cases and case data collection links
         with repository.uow() as uow:
             # Retrieve cases/sets
-            cases_or_sets: list[model.CaseSet] | list[model.Case] = self.repository.crud(  # type: ignore[assignment]
-                uow,
-                user.id,
-                model.CaseSet if is_case_set else model.Case,
-                CrudOperation.READ_SOME,
-                obj_ids=case_or_set_ids,
+            cases_or_sets: list[model.CaseSet] | list[model.Case] = (
+                self.repository.crud(
+                    uow,
+                    user.id,
+                    model.CaseSet if is_case_set else model.Case,
+                    CrudOperation.READ_SOME,
+                    obj_ids=case_or_set_ids,
+                )
             )
             # Retrieve case/set data collection links
             key = "case_set_id" if is_case_set else "case_id"
-            case_or_set_data_collection_links: list[model.CaseDataCollectionLink] | list[model.CaseSetDataCollectionLink] = self.repository.crud(  # type: ignore[assignment]
+            case_or_set_data_collection_links: (
+                list[model.CaseDataCollectionLink]
+                | list[model.CaseSetDataCollectionLink]
+            ) = self.repository.crud(
                 uow,
                 user.id,
                 (
@@ -208,7 +223,7 @@ class CaseService(BaseCaseService):
                 case_or_set.id,
                 case_or_set.case_type_id,
                 case_or_set.created_in_data_collection_id,
-                case_or_set_data_collections.get(case_or_set.id, set()),
+                data_collection_ids,
             )
             retval.append(case_abac.get_case_set_rights(*args) if is_case_set else case_abac.get_case_rights(*args))  # type: ignore[arg-type]
 
@@ -221,7 +236,7 @@ class CaseService(BaseCaseService):
 
     def retrieve_similar_cases(
         self, cmd: command.RetrieveSimilarCasesCommand
-    ) -> list[UUID]:
+    ) -> command.RetrieveSimilarCasesReturnValue:
         return case_service_retrieve_similar_cases(self, cmd)
 
     def retrieve_genetic_sequence_fasta_by_case(
@@ -287,15 +302,13 @@ class CaseService(BaseCaseService):
     ) -> list[model.CaseSet]:
         # TODO: This is a temporary implementation, to be replaced by optimized query
         self.validate_case_right(right, on_invalid_case_set_id)
-        case_sets: list[model.CaseSet] = (
-            self.repository.crud(  # type: ignore[assignment]
-                uow,
-                user_id,
-                model.CaseSet,
-                CrudOperation.READ_SOME if case_set_ids else CrudOperation.READ_ALL,
-                filter=None if case_set_ids else filter,
-                obj_ids=case_set_ids if case_set_ids else None,
-            )
+        case_sets: list[model.CaseSet] = self.repository.crud(
+            uow,
+            user_id,
+            model.CaseSet,
+            CrudOperation.READ_SOME if case_set_ids else CrudOperation.READ_ALL,
+            filter=None if case_set_ids else filter,
+            obj_ids=case_set_ids if case_set_ids else None,
         )
 
         # Filter on case_type_id if any or verify that all case sets have the valid
@@ -432,7 +445,7 @@ class CaseService(BaseCaseService):
         calculate_case_date: bool = False,
         extra_access_col_ids: set[UUID] | None = None,
         apply_max_n_cases: bool = True,
-    ) -> list[model.Case]:
+    ) -> tuple[list[model.Case], bool]:
         # TODO: This is a temporary implementation, to be replaced by optimized query
         self._validate_case_access_args(
             right, on_invalid_case_id, filter_content, calculate_case_date
@@ -446,10 +459,9 @@ class CaseService(BaseCaseService):
         case_date_col_mappers, max_n_cases = self._resolve_case_date_mappers_and_limits(
             uow,
             user_id,
-            right,
-            case_type_id,
-            apply_max_n_cases,
             case_type,
+            right,
+            apply_max_n_cases,
             case_abac.is_full_access,
         )
 
@@ -467,34 +479,38 @@ class CaseService(BaseCaseService):
                     f"Invalid datetime range filter key: {datetime_range_filter.key}",
                 )
             datetime_range_filter.key = "case_date"
-        cases = self._retrieve_cases_by_ids_or_case_type_filter(
-            uow, user_id, case_type_id, case_ids, datetime_range_filter
+        cases, is_max_results_exceeded = (
+            self._retrieve_cases_by_ids_or_case_type_filter(
+                uow, user_id, case_type_id, case_ids, datetime_range_filter, max_n_cases
+            )
         )
 
         if case_abac.is_full_access:
-            return cases
+            return cases, is_max_results_exceeded
 
         # @ABAC: filter cases to which the user has access, and optionally also
         # the content (Cols)
-        filtered_cases = self._filter_cases_by_access_and_content(
-            uow,
-            user_id,
-            right,
-            case_ids,
-            on_invalid_case_id,
-            filter_content,
-            extra_access_col_ids,
-            access_data_collections,
-            data_collection_col_access,
-            max_n_cases,
-            cases,
+        filtered_cases, is_max_results_exceeded = (
+            self._filter_cases_by_access_and_content(
+                uow,
+                user_id,
+                right,
+                case_ids,
+                on_invalid_case_id,
+                filter_content,
+                extra_access_col_ids,
+                access_data_collections,
+                data_collection_col_access,
+                max_n_cases,
+                cases,
+            )
         )
 
         # Calculate case date if necessary
         if calculate_case_date and case_date_col_mappers:
             case_service_calculate_case_date(cases, case_date_col_mappers)
 
-        return filtered_cases
+        return filtered_cases, is_max_results_exceeded
 
     def _filter_cases_by_access_and_content(
         self,
@@ -509,24 +525,31 @@ class CaseService(BaseCaseService):
         data_collection_col_access: dict[UUID, model.CaseTypeAccessAbac],
         max_n_cases: int,
         cases: list[model.Case],
-    ) -> list[model.Case]:
+    ) -> tuple[list[model.Case], bool]:
         case_data_collections = self._retrieve_case_data_collections_map(uow, user_id)
         filtered_cases: list[model.Case] = []
         count = 0
+        is_max_results_exceeded = False
+        case_access_cache: dict[frozenset[UUID], set[UUID]] = {}
         for case in cases:
-            data_collection_ids = self._authorize_case(
-                case,
-                case_ids,
-                on_invalid_case_id,
-                user_id,
-                case_data_collections,
-                access_data_collections,
+            data_collection_ids = (
+                self._authorize_case(
+                    case,
+                    case_ids,
+                    on_invalid_case_id,
+                    user_id,
+                    case_data_collections,
+                    access_data_collections,
+                )
+                or frozenset()
             )
-            if data_collection_ids is None:
+
+            if not data_collection_ids:
                 # No access to case
                 continue
             count += case.count if case.count is not None else 1
             if max_n_cases > 0 and count > max_n_cases:
+                is_max_results_exceeded = True
                 break
             # Keep case
             filtered_cases.append(case)
@@ -540,32 +563,37 @@ class CaseService(BaseCaseService):
                     extra_access_col_ids,
                     right,
                     user_id,
+                    case_access_cache,
                 )
 
-        return filtered_cases
+        return filtered_cases, is_max_results_exceeded
 
     def _filter_case_content(
         self,
         case: model.Case,
-        data_collection_ids: set[UUID],
+        data_collection_ids: frozenset[UUID],
         data_collection_col_access: dict[UUID, model.CaseTypeAccessAbac],
         extra_access_col_ids: set[UUID] | None,
         right: enum.CaseRight,
         user_id: UUID,
+        case_access_cache: dict[frozenset[UUID], set[UUID]],
     ) -> None:
-        col_ids: set[UUID] = set()
-        for data_collection_id in data_collection_ids:
-            abac = data_collection_col_access.get(data_collection_id)
-            if abac:
-                col_ids.update(abac.read_col_ids)
-        if extra_access_col_ids:
-            col_ids.update(extra_access_col_ids)
+        if data_collection_ids in case_access_cache:
+            col_ids = case_access_cache[data_collection_ids]
+        else:
+            col_ids: set[UUID] = set()
+            for data_collection_id in data_collection_ids:
+                abac = data_collection_col_access.get(data_collection_id)
+                if abac:
+                    col_ids.update(abac.read_col_ids)
+            if extra_access_col_ids:
+                col_ids.update(extra_access_col_ids)
 
-        if not col_ids:
-            raise AssertionError(
-                f"User {user_id} has zero columns with {right.value} access to case {case.id}"
-            )
-
+            if not col_ids:
+                raise AssertionError(
+                    f"User {user_id} has zero columns with {right.value} access to case {case.id}"
+                )
+            case_access_cache[data_collection_ids] = col_ids
         case.content = {x: y for x, y in case.content.items() if x in col_ids}
 
     def _authorize_case(
@@ -576,7 +604,8 @@ class CaseService(BaseCaseService):
         user_id: UUID,
         case_data_collections: dict[UUID, set[UUID]],
         access_data_collections: set[UUID],
-    ) -> set[UUID] | None:
+    ) -> frozenset[UUID] | None:
+        """Calculate the set of DataCollection ids in which the case is stored/accessible"""
         case_id = case.id
         if case_id is None:
             return None
@@ -590,7 +619,7 @@ class CaseService(BaseCaseService):
                 )
             return None
 
-        return data_collection_ids
+        return frozenset(data_collection_ids)
 
     def _retrieve_cases_by_ids_or_case_type_filter(
         self,
@@ -599,14 +628,20 @@ class CaseService(BaseCaseService):
         case_type_id: UUID,
         case_ids: list[UUID] | None = None,
         datetime_range_filter: DatetimeRangeFilter | None = None,
-    ) -> list[model.Case]:
+        max_n_cases: int = 0,
+    ) -> tuple[list[model.Case], bool]:
         cases: list[model.Case]
         if case_ids:
+            if max_n_cases > 0 and len(case_ids) > max_n_cases:
+                raise exc.RequestLimitExceededAuthError(
+                    "f9c1adb2",
+                    f"Number of requested cases {len(case_ids)} exceeds maximum allowed {max_n_cases}",
+                )
             if datetime_range_filter:
                 raise exc.InvalidArgumentsError(
                     "271e9667", "Cannot use datetime range filter with case ids"
                 )
-            cases = self.repository.crud(  # type: ignore[assignment]
+            cases = self.repository.crud(
                 uow,
                 user_id,
                 model.Case,
@@ -617,6 +652,7 @@ class CaseService(BaseCaseService):
                 raise exc.InvalidArgumentsError(
                     "d0120f09", f"Some cases have invalid CaseType ids: {case_ids}"
                 )
+            is_max_results_exceeded = False
         else:
             case_type_filter = EqualsUuidFilter(key="case_type_id", value=case_type_id)
             if datetime_range_filter:
@@ -626,33 +662,32 @@ class CaseService(BaseCaseService):
                 )
             else:
                 case_filter = case_type_filter
-            cases = self.repository.crud(  # type: ignore[assignment]
+            cases = self.repository.crud(
                 uow,
                 user_id,
                 model.Case,
                 CrudOperation.READ_ALL,
                 filter=case_filter,
             )
+            is_max_results_exceeded = max_n_cases > 0 and len(cases) > max_n_cases
+            cases = cases[:max_n_cases] if is_max_results_exceeded else cases
 
-        return cases
+        return cases, is_max_results_exceeded
 
     def _resolve_case_date_mappers_and_limits(
         self,
         uow: BaseUnitOfWork,
         user_id: UUID,
-        right: enum.CaseRight,
-        case_type_id: UUID,
-        apply_max_n_cases: bool,
         case_type: model.CaseType,
+        right: enum.CaseRight,
+        apply_max_n_cases: bool,
         is_full_access: bool,
     ) -> tuple[dict[UUID, Callable[[str], datetime.datetime]] | None, int]:
         case_date_col_mappers: dict[UUID, Callable[[str], datetime.datetime]] | None = (
             {}
         )
         max_n_cases = 0
-        if not apply_max_n_cases:
-            pass
-        elif not is_full_access:
+        if apply_max_n_cases:
             if right == enum.CaseRight.READ_CASE:
                 _raw = case_type.props.read_max_n_cases
                 max_n_cases = _raw if _raw > 0 else self._default_props.read_max_n_cases
@@ -663,8 +698,9 @@ class CaseService(BaseCaseService):
                 )
             else:
                 raise NotImplementedError(f"Unsupported case right: {right}")
+        if not is_full_access:
             case_date_col_mappers = case_service_get_case_date_col_mappers(
-                self, uow, user_id, case_type_id
+                self, uow, user_id, cast(UUID, case_type.id)
             )
 
         return case_date_col_mappers, max_n_cases
@@ -675,14 +711,12 @@ class CaseService(BaseCaseService):
         user_id: UUID,
         case_type_id: UUID,
     ) -> model.CaseType:
-        case_types: list[model.CaseType] = (
-            self.repository.crud(  # type: ignore[assignment]
-                uow,
-                user_id,
-                model.CaseType,
-                CrudOperation.READ_SOME,
-                obj_ids=[case_type_id],
-            )
+        case_types: list[model.CaseType] = self.repository.crud(
+            uow,
+            user_id,
+            model.CaseType,
+            CrudOperation.READ_SOME,
+            obj_ids=[case_type_id],
         )
         if not case_types:
             raise exc.InvalidArgumentsError(
@@ -825,14 +859,14 @@ class CaseService(BaseCaseService):
         self, uow: BaseUnitOfWork, user: model.User, seq_col_id: UUID
     ) -> tuple[model.Col, model.RefCol]:
         repository = self.repository
-        seq_col: model.Col = repository.crud(  # type: ignore[assignment]
+        seq_col: model.Col = repository.crud(
             uow,
             user.id,
             model.Col,
             CrudOperation.READ_ONE,
             obj_ids=seq_col_id,
         )
-        ref_seq_col: model.RefCol = repository.crud(  # type: ignore[assignment]
+        ref_seq_col: model.RefCol = repository.crud(
             uow,
             user.id,
             model.RefCol,
@@ -852,17 +886,15 @@ class CaseService(BaseCaseService):
         with self.repository.uow() as uow:
             case_set_ids = {x.case_set_id for x in case_set_members}
             case_ids = {x.case_id for x in case_set_members}
-            case_sets_: list[model.CaseSet] = (
-                self.repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user.id if user else None,
-                    model.CaseSet,
-                    CrudOperation.READ_SOME,
-                    obj_ids=list(case_set_ids),
-                )
+            case_sets_: list[model.CaseSet] = self.repository.crud(
+                uow,
+                user.id if user else None,
+                model.CaseSet,
+                CrudOperation.READ_SOME,
+                obj_ids=list(case_set_ids),
             )
             case_sets = {x.id: x for x in case_sets_}
-            cases_: list[model.Case] = self.repository.crud(  # type: ignore[assignment]
+            cases_: list[model.Case] = self.repository.crud(
                 uow,
                 user.id if user else None,
                 model.Case,
@@ -883,6 +915,13 @@ class CaseService(BaseCaseService):
                 "3e11edd5",
                 f"Case set members invalid, case set and case must have the same CaseType: {invalid_case_set_member_ids_str}",
             )
+
+    def retrieve_is_own_cases(
+        self,
+        cmd: command.RetrieveIsOwnCasesCommand,
+    ) -> dict[UUID, bool]:
+        """Retrieve whether the user owns the specified cases."""
+        return case_service_retrieve_is_own_cases(self, cmd)
 
     # CRUD method implementations
     def crud_case(

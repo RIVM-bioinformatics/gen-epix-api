@@ -1,6 +1,7 @@
 from collections.abc import Hashable
 from typing import Any
 
+from gen_epix.commondb.domain.model import ModelNoId
 from gen_epix.fastapp.enum import FieldTypeSet
 from gen_epix.fastapp.model import Model
 from gen_epix.fastapp.repositories.sa.mapper import (
@@ -35,40 +36,32 @@ class CommondbSAMapper(SAMapper):
 
         Returns True if at least one field was actually changed.
         """
-        # Build the base update dict, skipping fields whose new value is None so that
-        # existing DB values are preserved when the incoming object omits a field.
-        if self._is_identical_common_field_names:
-            mapped_dict: dict[str, Any] = obj.model_dump(exclude_none=True)
-        else:
-            obj_dict = obj.model_dump(exclude_none=False)
-
-            mapped_dict = {
-                row_field_name: obj_dict[field_name]
-                for field_name, row_field_name in zip(
-                    self._field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
-                    self._row_field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
-                )
-                if obj_dict[field_name] is not None
-            }
-
-        if kwargs:
-            mapped_dict.update(kwargs)
-
-        # Strip fields that are owned exclusively by the DB and must never be touched
-        # from Python during an update.
-        mapped_dict.pop("created_at", None)
-        mapped_dict.pop("modified_at", None)
-        # Always stamp modified_by with the acting user, overriding any value the
-        # domain object might carry.
-        mapped_dict["modified_by"] = user_id
-
+        # Go over each relevant field in the domain model and compare it to the corresponding field in the SA row. Update the SA row if the values differ.
         is_updated = False
-        for key, value in mapped_dict.items():
-
-            curr_value = getattr(row, key, None)
-            if curr_value != value:
-                setattr(row, key, value)
+        modified_by_row_field_name: str | None = None
+        obj_dict = obj.model_dump(
+            exclude_none=False
+        )  # Explicitly include None values (to ensure Pydantic always returns all fields, even if they are None and possible future defaults change)
+        for field_name, row_field_name in zip(
+            self._field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
+            self._row_field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
+        ):
+            if field_name in ModelNoId.METADATA_FIELDS:
+                if field_name == ModelNoId.MODIFIED_BY_FIELD_NAME:
+                    # Switch to mapped
+                    modified_by_row_field_name = row_field_name
+                continue
+            curr_value = getattr(row, row_field_name)
+            new_value = obj_dict[field_name]
+            if curr_value != new_value:
+                setattr(row, row_field_name, new_value)
                 is_updated = True
+
+        # Set modified_by if the row was updated
+        if is_updated:
+            assert modified_by_row_field_name is not None
+            setattr(row, modified_by_row_field_name, user_id)
+
         return is_updated
 
     def dump(self, user_id: Hashable | None, obj: Model, **kwargs: Any) -> Any:
@@ -80,6 +73,7 @@ class CommondbSAMapper(SAMapper):
         """
         row = super().dump(user_id, obj, **kwargs)
 
+        # TODO: this should not happen here, but in the service layer.  The service layer should know if the user has the right to see the metadata fields.  The mapper should just do a straight dump.
         row.created_at = None
         row.modified_at = None
         row.modified_by = user_id

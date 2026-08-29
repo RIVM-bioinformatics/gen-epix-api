@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, ClassVar
 from uuid import UUID
 
 from cachetools import TTLCache, cached
@@ -21,6 +21,7 @@ class OrganizationService(BaseOrganizationService):
         command.UserCrudCommand,
         command.UpdateUserCommand,
     )
+    _RETRIEVE_USER_BY_KEY_CACHE: ClassVar[TTLCache] = TTLCache(maxsize=1000, ttl=60)
 
     def __init__(
         self,
@@ -28,6 +29,11 @@ class OrganizationService(BaseOrganizationService):
         **kwargs: Any,
     ) -> None:
         super().__init__(app, **kwargs)
+
+        for command_class in self.CACHE_INVALIDATION_COMMANDS:
+            app.register_cache_invalidator(command_class, self._invalidate_cache)
+            app.set_auto_invalidate_cache(command_class, True)
+
         app_impl: AppImplDetails = app.impl
         self.user_class: type[model.User] = app_impl.get_mapped_class(model.User)
         self.user_invitation_class: type[model.UserInvitation] = (
@@ -70,13 +76,12 @@ class OrganizationService(BaseOrganizationService):
                     f"Root user may not delete {'self' if is_delete_user else 'own organization'}",
                 )
 
-        retval = super().crud(cmd)
-        # Invalidate cache
-        if issubclass(type(cmd), OrganizationService.CACHE_INVALIDATION_COMMANDS):
-            self.retrieve_user_by_key.cache_clear()  # type: ignore[attr-defined]
-        return retval
+        return super().crud(cmd)
 
-    @cached(cache=TTLCache(maxsize=1000, ttl=60))
+    def _invalidate_cache(self, _cmd: Command) -> None:
+        self.retrieve_user_by_key.cache_clear()
+
+    @cached(cache=_RETRIEVE_USER_BY_KEY_CACHE)
     def retrieve_user_by_key(self, user_key: str) -> model.User:
         with self.repository.uow() as uow:
             return self.repository.retrieve_user_by_key(uow, user_key)
@@ -114,7 +119,7 @@ class OrganizationService(BaseOrganizationService):
                         "7ca0dc91", "User already exists"
                     )
 
-            is_existing_organization = self.repository.crud(
+            is_existing_organization: bool = self.repository.crud(
                 uow,
                 user.id,
                 model.Organization,
@@ -141,7 +146,7 @@ class OrganizationService(BaseOrganizationService):
                     user.id,
                     self.user_invitation_class,
                     CrudOperation.READ_ALL,
-                )  # type: ignore
+                )
                 user_invitations = [x for x in user_invitations if x.key == key]
                 if user_invitations:
                     self.repository.crud(
@@ -168,7 +173,7 @@ class OrganizationService(BaseOrganizationService):
                     )
                 ),
             )
-            user_invitation_in_db: model.UserInvitation = self.repository.crud(  # type: ignore[assignment]
+            user_invitation_in_db: model.UserInvitation = self.repository.crud(
                 uow,
                 user.id,
                 self.user_invitation_class,
@@ -201,7 +206,7 @@ class OrganizationService(BaseOrganizationService):
 
         with self.repository.uow() as uow:
             # Get possible user invitations
-            user_invitations: list[model.UserInvitation] = self.repository.crud(  # type: ignore[assignment]
+            user_invitations: list[model.UserInvitation] = self.repository.crud(
                 uow,
                 None,
                 self.user_invitation_class,
@@ -294,7 +299,7 @@ class OrganizationService(BaseOrganizationService):
         if cmd.roles is not None and len(cmd.roles) == 0:
             raise exc.InvalidArgumentsError("8ac5ab63", "Roles cannot be empty")
         with self.repository.uow() as uow:
-            tgt_user: model.User = self.repository.crud(  # type: ignore[assignment]
+            tgt_user: model.User = self.repository.crud(
                 uow,
                 cmd.user.id,
                 self.user_class,
@@ -331,7 +336,7 @@ class OrganizationService(BaseOrganizationService):
 
             if tgt_user.created_at is None:
                 tgt_user.created_at = tgt_user.modified_at
-            updated_tgt_user: model.User = self.repository.crud(  # type: ignore[assignment]
+            updated_tgt_user: model.User = self.repository.crud(
                 uow,
                 cmd.user.id,
                 self.user_class,
@@ -339,8 +344,6 @@ class OrganizationService(BaseOrganizationService):
                 objs=tgt_user,
             )
 
-        # Invalidate cache for the user
-        self.retrieve_user_by_key.cache_clear()
         return updated_tgt_user
 
     def retrieve_organization_contacts(
@@ -352,7 +355,7 @@ class OrganizationService(BaseOrganizationService):
         sites: list[model.Site]
         contacts: list[model.Contact]
         with repository.uow() as uow:
-            organization: model.Organization = repository.crud(  # type: ignore[assignment]
+            organization: model.Organization = repository.crud(
                 uow,
                 user.id,
                 model.Organization,
@@ -360,13 +363,13 @@ class OrganizationService(BaseOrganizationService):
                 obj_ids=cmd.organization_id,
             )
 
-            sites = repository.crud(  # type: ignore[assignment]
+            sites = repository.crud(
                 uow,
                 user.id,
                 model.Site,
                 CrudOperation.READ_ALL,
             )
-            contacts = repository.crud(  # type: ignore[assignment]
+            contacts = repository.crud(
                 uow,
                 user.id,
                 model.Contact,
@@ -382,3 +385,37 @@ class OrganizationService(BaseOrganizationService):
             sites=sites,
             contacts=contacts,
         )
+
+    def anonymize_user(self, cmd: command.AnonymizeUserCommand) -> model.User:
+        """Forget user information."""
+        user, repository = self._get_user_and_repository(cmd)
+        assert isinstance(user, model.User)
+        if user.id == cmd.tgt_user_id:
+            raise exc.UnauthorizedAuthError(
+                "f3c1e2d0", "User may not anonymize themselves"
+            )
+
+        with repository.uow() as uow:
+            tgt_user: model.User = repository.crud(
+                uow,
+                user.id,
+                self.user_class,
+                CrudOperation.READ_ONE,
+                obj_ids=cmd.tgt_user_id,
+            )
+            # Set the key to the user_id and the rest to None
+            tgt_user.key = f"{cmd.tgt_user_id}"
+            tgt_user.name = None
+            tgt_user.email = None
+            tgt_user.description = None
+            tgt_user.is_active = False
+
+            anonymized_user: model.User = repository.crud(
+                uow,
+                user.id,
+                self.user_class,
+                CrudOperation.UPDATE_ONE,
+                objs=tgt_user,
+            )
+
+        return anonymized_user

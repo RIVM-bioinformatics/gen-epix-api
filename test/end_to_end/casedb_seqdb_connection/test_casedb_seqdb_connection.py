@@ -5,6 +5,7 @@ from collections.abc import Generator
 from pathlib import Path
 from test.end_to_end.casedb_seqdb_connection.envvar import set_envvar
 from test.test_client.enum import ServerType
+from test.test_client.oauth.server import LOGGER as OAUTH_LOGGER
 from test.test_client.server_manager import ServerManager
 from uuid import UUID
 
@@ -19,10 +20,14 @@ from gen_epix.casedb.env import AppComposer as CasedbAppComposer
 from gen_epix.commondb.app_setup import create_fast_api
 from gen_epix.commondb.config.cfg import AppCfg
 from gen_epix.commondb.domain.enum import AppType
-from gen_epix.fastapp import CrudOperation
+from gen_epix.fastapp import CrudOperation, exc
 from gen_epix.seqdb.api.router import create_routers as seqdb_create_routers
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.env import AppComposer as SeqdbAppComposer
+
+pytestmark = pytest.mark.e2e
+
+VERBOSE = False  # Use for debugging
 
 SSL_CERTFILE = Path("cert/cert.pem").absolute().as_posix()
 SSL_KEYFILE = Path("cert/key.pem").absolute().as_posix()
@@ -67,11 +72,14 @@ def test_logging_config_contract_includes_uvicorn_json_loggers() -> None:
 
 
 @pytest.fixture(scope="function")
-def oauth_server() -> Generator[ServerManager, None, None]:
+def oauth_server(free_tcp_port: int) -> Generator[ServerManager, None, None]:
     """Start OAuth server and create CASEDB_FOR_SEQDB client."""
+
+    orig_level = OAUTH_LOGGER.level
+    OAUTH_LOGGER.setLevel(logging.DEBUG if VERBOSE else logging.FATAL)
     with ServerManager(
         service=ServerType.OAUTH,
-        port=5443,
+        port=free_tcp_port,
         ssl_keyfile=SSL_KEYFILE,
         ssl_certfile=SSL_CERTFILE,
     ) as server:
@@ -86,35 +94,65 @@ def oauth_server() -> Generator[ServerManager, None, None]:
             scopes=["openid", "profile", "aud"],
         )
         if not success:
+            OAUTH_LOGGER.setLevel(orig_level)
             pytest.fail("Failed to add CASEDB_FOR_SEQDB client")
 
         yield server
+    OAUTH_LOGGER.setLevel(orig_level)
+
+
+@pytest.fixture(scope="function")
+def oauth_discovery_settings_file(oauth_server: ServerManager, tmp_path: Path) -> Path:
+    """Create identity-provider settings for the isolated OAuth server port."""
+    settings_file = tmp_path / "oauth-discovery.toml"
+    identity_provider_file = Path(__file__).with_name("identity_provider.toml")
+    settings_file.write_text(
+        identity_provider_file.read_text(encoding="utf-8").replace(
+            "https://127.0.0.1:5443", f"https://127.0.0.1:{oauth_server.port}"
+        ),
+        encoding="utf-8",
+    )
+    return settings_file
+
+
+@pytest.fixture(scope="function", autouse=True)
+def suppress_logs_when_not_verbose() -> Generator[None, None, None]:
+    """Suppress log output for this module unless VERBOSE is explicitly enabled."""
+    if VERBOSE:
+        yield
+        return
+    previous_disable = logging.root.manager.disable
+    logging.disable(logging.CRITICAL)
+    try:
+        yield
+    finally:
+        logging.disable(previous_disable)
 
 
 @pytest.fixture(scope="function")
 def seqdb_server(
-    oauth_server: ServerManager,
+    oauth_discovery_settings_file: Path,
 ) -> Generator[ServerManager, None, None]:
     """Start seqdb server on port 8001."""
     # Set environment variables for both casedb and seqdb
-    set_envvar()
+    set_envvar(oauth_discovery_settings_file)
 
     # Create seqdb app and fastapi instance
     seqdb_app_cfg = AppCfg(
         AppType.SEQDB,
         seqdb_enum.ServiceType,
         seqdb_enum.RepositoryType,
-        log_setup=True,
+        log_any=VERBOSE,
     )
-    seqdb_app_composer = SeqdbAppComposer(seqdb_app_cfg, log_setup=True)
+    seqdb_app_composer = SeqdbAppComposer(seqdb_app_cfg, log_setup=VERBOSE)
     seqdb_app = seqdb_app_composer.app
     seqdb_fastapi_app = create_fast_api(
         app=seqdb_app,
         create_routers_fn=seqdb_create_routers,
         app_id=seqdb_app_composer.app.generate_id(),
-        setup_logger=seqdb_app_cfg.setup_logger,
-        api_logger=seqdb_app_cfg.api_logger,
-        debug=True,
+        setup_logger=seqdb_app_cfg.setup_logger if VERBOSE else None,
+        api_logger=seqdb_app_cfg.api_logger if VERBOSE else None,
+        debug=VERBOSE,
     )
 
     with ServerManager(
@@ -132,11 +170,13 @@ def seqdb_server(
 
 @pytest.mark.scenario_ids("TC-SEC-28-06", "TC-SEC-31-01", "TC-SEC-07-01")
 def test_casedb_seqdb_connection(
-    oauth_server: ServerManager, seqdb_server: ServerManager
+    oauth_server: ServerManager,
+    oauth_discovery_settings_file: Path,
+    seqdb_server: ServerManager,
 ) -> None:
     """Test casedb to seqdb connection with OAuth authentication."""
     # Set environment variables for both casedb and seqdb
-    set_envvar()
+    set_envvar(oauth_discovery_settings_file)
     protocol = "https" if SSL_CERTFILE and SSL_KEYFILE else "http"
 
     # Create casedb app instance
@@ -144,9 +184,11 @@ def test_casedb_seqdb_connection(
         AppType.CASEDB,
         enum.ServiceType,
         enum.RepositoryType,
-        log_setup=False,
+        log_any=VERBOSE,
     )
-    casedb_app_composer = CasedbAppComposer(casedb_app_cfg, log_setup=False)
+    casedb_app_composer = CasedbAppComposer(
+        casedb_app_cfg, log_any=VERBOSE, log_setup=VERBOSE
+    )
     casedb_app = casedb_app_composer.app
 
     # Test that the OAuth server is accessible
@@ -154,9 +196,10 @@ def test_casedb_seqdb_connection(
 
     try:
         with httpx.Client(timeout=5.0, verify=SSL_CERTFILE) as client:
-            response = client.get(f"{protocol}://localhost:5443/health")
+            response = client.get(f"{protocol}://localhost:{oauth_server.port}/health")
             assert response.status_code == 200
-            logging.info("✅ OAuth server is accessible")
+            if VERBOSE:
+                logging.info("OAuth server is accessible")
     except Exception as e:
         pytest.fail(f"OAuth server health check failed: {e}")
 
@@ -165,7 +208,8 @@ def test_casedb_seqdb_connection(
         with httpx.Client(timeout=5.0, verify=SSL_CERTFILE) as client:
             response = client.get(f"{protocol}://127.0.0.1:8003/v1/health")
             assert response.status_code == 200
-            logging.info("✅ seqdb server is accessible")
+            if VERBOSE:
+                logging.info("seqdb server is accessible")
     except Exception as e:
         pytest.fail(f"seqdb server health check failed: {e}")
 
@@ -173,12 +217,13 @@ def test_casedb_seqdb_connection(
     try:
         with httpx.Client(timeout=5.0, verify=SSL_CERTFILE) as client:
             response = client.get(
-                f"{protocol}://localhost:5443/.well-known/openid-configuration"
+                f"{protocol}://localhost:{oauth_server.port}/.well-known/openid-configuration"
             )
             assert response.status_code == 200
             discovery_data = response.json()
             assert "token_endpoint" in discovery_data
-            logging.info("✅ OAuth discovery endpoint is accessible")
+            if VERBOSE:
+                logging.info("OAuth discovery endpoint is accessible")
     except Exception as e:
         pytest.fail(f"OAuth discovery endpoint failed: {e}")
 
@@ -221,16 +266,17 @@ def test_casedb_seqdb_connection(
         for x in cols.values()
         if ref_cols[x.ref_col_id].col_type == enum.ColType.GENETIC_DISTANCE
     ]
+    phylogenetic_tree: model.PhylogeneticTree | None = None
+    similar_case_ids: list[UUID] = []
     for col_id in genetic_distance_col_ids:
         col = cols[col_id]
         assert col.genetic_sequence_col_id is not None
         col = cols[col_id]
-        genetic_sequence_col_id: UUID = (
-            col.genetic_sequence_col_id  # type: ignore[assignment]
-        )
-        case_ids: list[UUID] = [
-            x.id for x in cases if x.content.get(genetic_sequence_col_id)
-        ]
+        case_ids = [
+            case.id
+            for case in cases
+            if case.case_type_id == col.case_type_id and case.id is not None
+        ][:10]
         if len(case_ids) < 2:
             continue
         if len(case_ids) > 5:
@@ -247,15 +293,18 @@ def test_casedb_seqdb_connection(
                     )
                 )
                 is_phylogenetic_tree_retrieved = True
-                similar_case_ids: list[UUID] = casedb_app.handle(
-                    command.RetrieveSimilarCasesCommand(
-                        user=root_user,
-                        case_type_id=col.case_type_id,
-                        genetic_distance_col_id=col.id,
-                        case_ids=case_ids[0:5],
-                        max_distance=5,
+                similar_cases: command.RetrieveSimilarCasesReturnValue = (
+                    casedb_app.handle(
+                        command.RetrieveSimilarCasesCommand(
+                            user=root_user,
+                            case_type_id=col.case_type_id,
+                            genetic_distance_col_id=col.id,
+                            case_ids=case_ids[0:5],
+                            max_distance=5,
+                        )
                     )
                 )
+                similar_case_ids = [x.id for x in similar_cases.cases]
                 if len(similar_case_ids) > 0:
                     is_similar_cases_retrieved = True
                 break
@@ -272,36 +321,39 @@ def test_casedb_seqdb_connection(
         for x in cols.values()
         if ref_cols[x.ref_col_id].col_type == enum.ColType.GENETIC_SEQUENCE
     ]
-    has_seq_case_ids: list[UUID] = []
+    fasta_retrieved = False
     for genetic_sequence_col in genetic_sequence_cols:
         assert genetic_sequence_col.id is not None
-        has_seq_case_ids: list[UUID] = [
-            UUID(x.content[genetic_sequence_col.id])
-            for x in cases
-            if x.content.get(genetic_sequence_col.id)
-        ]
-        if has_seq_case_ids:
-            break
-
-    fasta_retrieved: bool = False
-    if has_seq_case_ids:
-        fasta_iter = casedb_app.handle(
-            command.RetrieveGeneticSequenceFastaByIdCommand(
-                user=root_user,
-                seq_ids=has_seq_case_ids,
-                wrap=50,
+        candidate_case_ids = [
+            case.id
+            for case in cases
+            if case.case_type_id == genetic_sequence_col.case_type_id
+            and case.id is not None
+        ][:10]
+        if not candidate_case_ids:
+            continue
+        try:
+            fasta_iter = casedb_app.handle(
+                command.RetrieveGeneticSequenceFastaByCaseCommand(
+                    user=root_user,
+                    case_type_id=genetic_sequence_col.case_type_id,
+                    genetic_sequence_col_id=genetic_sequence_col.id,
+                    case_ids=candidate_case_ids,
+                )
             )
-        )
-
-        # Read a few chunks to validate FASTA-like content
-        chunks_read = 0
-        for chunk in fasta_iter:
-            # Expect FASTA header or sequence lines
-            if chunk.strip():
-                assert chunk.startswith(">") or chunk.strip().isalpha()
-                fasta_retrieved = True
-            chunks_read += 1
-            if chunks_read >= 10:
-                break
+            # Read a few chunks to validate FASTA-like content
+            chunks_read = 0
+            for chunk in fasta_iter:
+                # Expect FASTA header or sequence lines
+                if chunk.strip():
+                    assert chunk.startswith(">") or chunk.strip().isalpha()
+                    fasta_retrieved = True
+                chunks_read += 1
+                if chunks_read >= 10:
+                    break
+        except exc.InvalidIdsError:
+            continue
+        if fasta_retrieved:
+            break
 
     assert fasta_retrieved

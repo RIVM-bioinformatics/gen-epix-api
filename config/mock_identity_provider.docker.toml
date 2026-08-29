@@ -1,0 +1,25 @@
+[[service.auth.props.idps_cfg]]
+name = "mock"
+label = "MOCK"
+protocol = "OIDC"
+discovery_url = "http://mock-oidc:8080/.well-known/openid-configuration"
+client_id = "mock"
+client_secret = "mock"
+scope = "openid profile email"
+public = true
+enable_introspection = false
+introspection_interval_seconds = 300
+introspection_timeout_seconds = 2
+introspection_auth_method = "client_secret_basic"
+ssl_context = false
+
+[service.auth.props.idps_cfg.claim_map]
+__key__ = "sub"
+
+# The client_credentials grant sets sub=client_id, so the lsp-data "mock"
+# client's JWT carries sub="mock". Overriding root.user.key to "mock" here
+# (this file is loaded after .example.secrets.service.toml, so it wins)
+# makes is_root_user_claims() match on the first request and lets
+# create_root_user_from_claims() auto-create the root org+user idempotently.
+[service.auth.props.root.user]
+key = "mock"

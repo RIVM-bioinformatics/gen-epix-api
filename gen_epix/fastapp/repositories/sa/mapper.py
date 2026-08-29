@@ -97,17 +97,22 @@ class BaseSAMapper(abc.ABC):
         """Get row field names by field type set."""
         raise NotImplementedError()
 
-    def get_id(self, obj: Model) -> Hashable | MappedColumn:
+    def get_id(self, obj: Model) -> Hashable:
         return obj.get_id()
 
     @abc.abstractmethod
-    def get_row_id(self, row: Row | type[Row]) -> Hashable:
+    def get_row_id(self, row: Row) -> Hashable:
         """Get row ID from row object or row class."""
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def get_row_id_column(self) -> MappedColumn:
+        """Get the row ID column."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def dump(self, user_id: Hashable | None, obj: Model, **kwargs: Any) -> Any:
-        """Dump model object to SQLAlchemy format."""
+        """Dump model object to SQLAlchemy row object."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -124,6 +129,7 @@ class BaseSAMapper(abc.ABC):
 
     @staticmethod
     def _get_schema_name(row: Row | type[Row]) -> str | None:
+        """Get the schema name from the row class __table_args__."""
         for arg in row.__table_args__:  # type: ignore[union-attr]
             if isinstance(arg, dict) and "schema" in arg:
                 return arg["schema"]  # type: ignore[no-any-return]
@@ -151,7 +157,10 @@ class BaseSAMapperFactory(abc.ABC):
 
 
 class SAMapperFactory(BaseSAMapperFactory):
-    """Default factory that creates standard SAMapper instances with no special update logic."""
+    """
+    Default factory that creates standard SAMapper instances with no special update
+    logic.
+    """
 
     def create_mapper(
         self,
@@ -163,6 +172,14 @@ class SAMapperFactory(BaseSAMapperFactory):
 
 
 class SAMapper(BaseSAMapper):
+    """
+    Standard SAMapper implementation that provides default mapping logic between model and
+    row fields based on field types and an optional field name map. The field name map
+    is used to handle cases where model and row field names differ, but there is still
+    a one-to-one mapping (e.g. created_by in model maps to created_by_id in row). The
+    dump, update, and load methods provide default implementations that can be overridden
+    in subclasses for db-specific rules.
+    """
 
     def __init__(
         self,
@@ -217,6 +234,10 @@ class SAMapper(BaseSAMapper):
         return self._field_names_by_set[field_type_set]
 
     def get_field_name_map(self, reverse: bool = False) -> dict[str, str]:
+        """
+        Get a field name map between model and row fields. If one of the fields does not
+        exist, it will be ignored.
+        """
         if reverse:
             return self.rev_field_name_map
         return self.field_name_map
@@ -224,6 +245,10 @@ class SAMapper(BaseSAMapper):
     def get_mapped_field_name(
         self, field_name: str, reverse: bool = False
     ) -> str | None:
+        """
+        Get the mapped field name between model and row fields. If the field does not
+        exist, return None.
+        """
         if self._is_identical_common_field_names:
             return field_name
         if reverse:
@@ -231,18 +256,44 @@ class SAMapper(BaseSAMapper):
         return self.field_name_map.get(field_name)
 
     def get_row_field_names_by_type(self, field_type: FieldType) -> tuple:
+        """
+        The order of field names is guaranteed to be the same as the order of the model
+        field names returned by the corresponding function.
+        """
         return self._row_field_names_by_type[field_type]
 
     def get_row_field_names_by_set(self, field_type_set: FieldTypeSet) -> tuple:
+        """
+        The order of field names is guaranteed to be the same as the order of the model
+        field names returned by the corresponding function.
+        """
         return self._row_field_names_by_set[field_type_set]
 
     def get_id(self, obj: Model) -> Hashable:
-        return self._get_id(obj)
+        """
+        Get the ID value from the given model object.
+        """
+        retval: Hashable = getattr(obj, self._id_field_name)
+        return retval
 
-    def get_row_id(self, row: Row | type[Row]) -> Hashable | MappedColumn:
-        return self._get_row_id(row)
+    def get_row_id(self, row: Row) -> Hashable:
+        """Return the ID value from the row."""
+        retval: Hashable = getattr(row, self._row_id_field_name)
+        return retval
+
+    def get_row_id_column(self) -> MappedColumn:
+        """
+        Return the row ID column.
+        """
+        return self._row_id_field
 
     def dump(self, user_id: Hashable | None, obj: Model, **kwargs: Any) -> Any:
+        """
+        Dump the given model object into a row object. Only fields that are not None
+        in the model object are included, preserving existing DB values for omitted
+        fields. Override in subclasses to add db-specific rules (e.g. never touch
+        created_at, stamp modified_by from user_id).
+        """
         if self._is_identical_common_field_names:
             mapped_dict = obj.model_dump(exclude_none=True)
         else:
@@ -263,38 +314,33 @@ class SAMapper(BaseSAMapper):
         self, user_id: Hashable | None, obj: Model, row: Row, **kwargs: Any
     ) -> bool:
         """
-        Update the given row with the values from the given object. Only fields that are
-        not None in the object are updated, preserving existing DB values for omitted
-        fields. Override in subclasses to add db-specific rules (e.g. never touch
-        created_at, stamp modified_by from user_id).
+        Update the given row with the values from the given object.
+        Override in subclasses to add db-specific rules.
 
         Returns True if any fields were updated, False otherwise.
         """
-        if self._is_identical_common_field_names:
-            mapped_dict = obj.model_dump(exclude_none=True)
-        else:
-            obj_dict = obj.model_dump(exclude_none=False)
-            mapped_dict = {
-                y: obj_dict[x]
-                for x, y in zip(
-                    self._field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
-                    self._row_field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
-                )
-                if obj_dict[x] is not None
-            }
-        if kwargs:
-            mapped_dict.update(kwargs)
+        # Go over each relevant field in the domain model and compare it to the corresponding field in the SA row. Update the SA row if the values differ.
         is_updated = False
-        for key, value in mapped_dict.items():
-            if value is None:
-                continue
-            curr_value = getattr(row, key)
-            if curr_value != value:
-                setattr(row, key, value)
+        obj_dict = obj.model_dump(
+            exclude_none=False
+        )  # Explicitly include None values (to ensure Pydantic always returns all fields, even if they are None and possible future defaults change)
+        for field_name, row_field_name in zip(
+            self._field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
+            self._row_field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
+        ):
+            curr_value = getattr(row, row_field_name)
+            new_value = obj_dict[field_name]
+            if curr_value != new_value:
+                setattr(row, row_field_name, new_value)
                 is_updated = True
+
         return is_updated
 
     def load(self, row: Row, **kwargs: Any) -> Model:
+        """
+        Load a model object from the given row object. Override in subclasses to add
+        db-specific rules (e.g. load related objects based on relationship fields).
+        """
         if self._is_identical_common_field_names:
             mapped_dict = {
                 x: getattr(row, x)
@@ -315,6 +361,13 @@ class SAMapper(BaseSAMapper):
     def _init_field_names(
         self, model_class: type[Model], row_class: type, field_name_map: dict[str, str]
     ) -> None:
+        """
+        Initialize field name mappings between model and row classes. Validates that all
+        model fields of the specified types have corresponding row fields, and that all
+        row fields in the field name map exist in the row class. The field name map is
+        used to handle cases where model and row field names differ, but there is still
+        a one-to-one mapping (e.g. created_by in model maps to created_by_id in row).
+        """
         # Set model and row field names by field type
         valid_row_field_names = set(row_class.__table__.columns.keys())
         entity = model_class.ENTITY
@@ -361,6 +414,11 @@ class SAMapper(BaseSAMapper):
         service_metadata_field_names: Iterable[str] | None = None,
         db_metadata_field_names: Iterable[str] | None = None,
     ) -> tuple[tuple[str, ...] | None, tuple[str, ...] | None, list[str], set[str]]:
+        """
+        Retrieve and validate field names for service metadata, db metadata, and actual
+        row fields. The service and db metadata field names are optional and can be
+        None. If provided, they must be tuples of strings.
+        """
         row_field_names = set(
             self._row_field_names_by_set[FieldTypeSet.MODEL_DB_COMMON]
         )
@@ -395,6 +453,12 @@ class SAMapper(BaseSAMapper):
         name: str,
         valid_field_names: Iterable[str],
     ) -> tuple[str, ...] | None:
+        """
+        Check that the provided field names are valid. If field names is None, return
+        None. If field names is not an iterable of strings, raise an error. If any field
+        names are not in the valid field names, raise an error. Otherwise, return the
+        field names as a tuple.
+        """
         if field_names is None:
             return None
         if isinstance(field_names, Iterable):
@@ -415,6 +479,13 @@ class SAMapper(BaseSAMapper):
     def _init_relationship_field_names(
         self, model_class: type[Model], row_class: type, field_name_map: dict[str, str]
     ) -> None:
+        """
+        Initialize relationship field name mappings between model and row classes.
+        Validates that all link fields in the model have corresponding relationship
+        fields in the row. The field name map is used to handle cases where model and
+        row field names differ, but there is still a one-to-one mapping (e.g. created_by
+        in model maps to created_by_id in row).
+        """
         # Check that all link fields in the model have corresponding relationship fields in the row
         entity = model_class.ENTITY
         if entity is None:
@@ -436,15 +507,19 @@ class SAMapper(BaseSAMapper):
             self._relationship_field_name_reverse_map[row_field_name] = field_name
 
     def _init_extract_primary_key(self, model_class: type[Model]) -> None:
+        """
+        Initialize functions to extract the primary key values from model and row objects.
+        Validates that there is exactly one ID field in the model and row, and that they
+        are mapped to each other.
+        """
         id_field_names = self._field_names_by_type[FieldType.ID]
         row_id_field_names = self._row_field_names_by_type[FieldType.ID]
         if len(id_field_names) != 1 or len(row_id_field_names) != 1:
             raise NotImplementedError(
                 f"Model {model_class.__name__} has more than one ID field"
             )
-        id_field_name = id_field_names[0]
-        row_id_field_name = row_id_field_names[0]
-        self._get_id: Callable[[Model], Hashable] = lambda x: getattr(x, id_field_name)
-        self._get_row_id: Callable[[Row | type[Row]], Hashable | MappedColumn] = (
-            lambda x: getattr(x, row_id_field_name)
+        self._id_field_name = id_field_names[0]
+        self._row_id_field_name = row_id_field_names[0]
+        self._row_id_field: MappedColumn = getattr(
+            self.row_class, self._row_id_field_name
         )

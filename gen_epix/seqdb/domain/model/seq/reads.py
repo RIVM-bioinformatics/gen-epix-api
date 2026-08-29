@@ -10,20 +10,17 @@ from pydantic import (
 )
 
 from gen_epix.commondb.domain.model import Model
-from gen_epix.commondb.domain.model.base import (
-    Model,
-    validate_int_enum_value_or_none,
-)
+from gen_epix.commondb.domain.model.base import Model, validate_int_enum_value_or_none
 from gen_epix.commondb.domain.model.organization import BaseIdentifier
-from gen_epix.fastapp.domain import Entity, create_keys, create_links
+from gen_epix.fastapp.domain import Entity, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.file import File
-from gen_epix.seqdb.domain.model.seq.base import CodeMixin, QualityMixin
+from gen_epix.seqdb.domain.model.seq.base import QualityMixin
 from gen_epix.seqdb.domain.model.seq.protocol import HasProtocolMixin, Protocol
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 
 
-class ReadSet(Model, HasSampleMixin, CodeMixin, HasProtocolMixin, QualityMixin):
+class ReadSet(Model, HasSampleMixin, HasProtocolMixin, QualityMixin):
     """
     A set of sequencing reads, either single-end or paired-end, that is the result
     of sequencing a sample using a protocol. The reads data itself are
@@ -38,7 +35,6 @@ class ReadSet(Model, HasSampleMixin, CodeMixin, HasProtocolMixin, QualityMixin):
         snake_case_plural_name="read_sets",
         table_name="read_set",
         persistable=True,
-        keys=create_keys({1: "code"}),
         links=create_links(
             {
                 1: ("sample_id", Sample, "sample"),
@@ -89,6 +85,11 @@ class ReadSet(Model, HasSampleMixin, CodeMixin, HasProtocolMixin, QualityMixin):
     )
     sequencing_run_code: str | None = Field(
         description="The code of the sequencing run.", max_length=255, default=None
+    )
+    code: str | None = Field(
+        default=None,
+        max_length=255,
+        description="A code for the read set for further reference",
     )
 
     @computed_field(  # type: ignore[prop-decorator]

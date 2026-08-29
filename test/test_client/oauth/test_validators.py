@@ -16,8 +16,8 @@ import sys
 from test.test_client.oauth.client_store import Client, ClientStore
 from test.test_client.oauth.token_store import Token, TokenStore
 from test.test_client.oauth.validators import OAuth2Validator
+from test.util.mock_compat import MagicMock
 from typing import Any
-from unittest.mock import MagicMock
 
 import pytest
 

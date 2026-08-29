@@ -8,8 +8,8 @@ import datetime
 from contextlib import contextmanager
 from test.fastapp.enum import ServiceType
 from test.fastapp.unit.auth.mock_jwk_and_token import MockJWKAndToken
+from test.util.mock_compat import Mock, patch
 from typing import Any, Generator
-from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
 
 import jwt
@@ -695,7 +695,7 @@ class TestRootTokenTTL:
     def test_ttl_zero_disables_expiry(self) -> None:
         root_user = make_cdb_user(user_id=_MOCK_USER_ID, roles={_ROOT_ROLE})
         env = AuthEnv(root_token_time_to_live=0, initial_users=[root_user])
-        assert env.auth_service._root_token_time_to_live is None
+        assert env.auth_service._root_token_time_to_live == 0
 
     def test_non_root_user_not_affected_by_ttl(self) -> None:
         regular_user = make_cdb_user(user_id=_MOCK_USER_ID, roles={_GUEST_ROLE})

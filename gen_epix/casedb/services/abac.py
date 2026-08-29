@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import ClassVar
 from uuid import UUID
 
 from cachetools import TTLCache, cached
@@ -27,7 +28,15 @@ class AbacService(BaseAbacService):
         command.UserShareCasePolicyCrudCommand,
         command.OrganizationAccessCasePolicyCrudCommand,
         command.OrganizationShareCasePolicyCrudCommand,
+        command.UpdateUserOwnOrganizationCommand,
     )
+    _GET_CASE_ABAC_CACHE: ClassVar[TTLCache] = TTLCache(maxsize=1024, ttl=300)
+    _GET_REF_DATA_ACCESS_CACHE: ClassVar[TTLCache] = TTLCache(maxsize=1024, ttl=300)
+
+    def _invalidate_cache(self, _cmd: Command) -> None:
+        super()._invalidate_cache(_cmd)
+        self._get_case_abac_cached.cache_clear()
+        self._get_ref_data_access_cached.cache_clear()
 
     def register_policies(
         self,
@@ -204,15 +213,9 @@ class AbacService(BaseAbacService):
                 )
             )
 
-        # Invalidate cache
-        # TODO: develop general system for caching and cache invalidation
-        self._get_user_by_id_cached.cache_clear()  # type: ignore[attr-defined]
-        self._get_case_abac_cached.cache_clear()  # type: ignore[attr-defined]
-        self._get_ref_data_access_cached.cache_clear()  # type: ignore[attr-defined]
-
         return user
 
-    @cached(cache=TTLCache(maxsize=1024, ttl=300))
+    @cached(cache=_GET_CASE_ABAC_CACHE)
     def _get_case_abac_cached(
         self,
         user_id: UUID,
@@ -250,7 +253,7 @@ class AbacService(BaseAbacService):
             # Retrieve organization access and share case policies
             organization_access_case_policies: list[
                 model.OrganizationAccessCasePolicy
-            ] = self.repository.crud(  # type: ignore[assignment]
+            ] = self.repository.crud(
                 uow,
                 user_id=user_id,
                 model_class=model.OrganizationAccessCasePolicy,
@@ -259,7 +262,7 @@ class AbacService(BaseAbacService):
             )
             organization_share_case_policies: list[
                 model.OrganizationShareCasePolicy
-            ] = self.repository.crud(  # type: ignore[assignment]
+            ] = self.repository.crud(
                 uow,
                 user_id=user_id,
                 model_class=model.OrganizationShareCasePolicy,
@@ -268,7 +271,7 @@ class AbacService(BaseAbacService):
             )
             # Retrieve user access and share case policies
             user_access_case_policies: list[model.UserAccessCasePolicy] = (
-                self.repository.crud(  # type: ignore[assignment]
+                self.repository.crud(
                     uow,
                     user_id=user_id,
                     model_class=model.UserAccessCasePolicy,
@@ -277,7 +280,7 @@ class AbacService(BaseAbacService):
                 )
             )
             user_share_case_policies: list[model.UserShareCasePolicy] = (
-                self.repository.crud(  # type: ignore[assignment]
+                self.repository.crud(
                     uow,
                     user_id=user_id,
                     model_class=model.UserShareCasePolicy,
@@ -603,7 +606,7 @@ class AbacService(BaseAbacService):
             )
         return self._get_ref_data_access_cached(user)
 
-    @cached(cache=TTLCache(maxsize=1024, ttl=300), key=lambda self, user: user.id)
+    @cached(cache=_GET_REF_DATA_ACCESS_CACHE, key=lambda self, user: user.id)
     def _get_ref_data_access_cached(self, user: model.User) -> model.RefDataAccess:
 
         if not self.role_set_map[CommonRoleSet.GE_REFDATA_ADMIN].isdisjoint(user.roles):
@@ -626,18 +629,20 @@ class AbacService(BaseAbacService):
             organization_ids: set[UUID] = {user.organization_id}
             if not self.role_set_map[CommonRoleSet.GE_ORG_ADMIN].isdisjoint(user.roles):
                 # ORG_ADMIN (rest of roles handled earlier): add all organizations that this user is admin for
-                organization_admin_policies: list[model.OrganizationAdminPolicy] = self.repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user.id,
-                    self.organization_admin_policy_model_class,
-                    CrudOperation.READ_ALL,
-                    filter=CompositeFilter(
-                        operator=LogicalOperator.AND,
-                        filters=[
-                            EqualsUuidFilter(key="user_id", value=user.id),
-                            EqualsBooleanFilter(key="is_active", value=True),
-                        ],
-                    ),
+                organization_admin_policies: list[model.OrganizationAdminPolicy] = (
+                    self.repository.crud(
+                        uow,
+                        user.id,
+                        self.organization_admin_policy_model_class,
+                        CrudOperation.READ_ALL,
+                        filter=CompositeFilter(
+                            operator=LogicalOperator.AND,
+                            filters=[
+                                EqualsUuidFilter(key="user_id", value=user.id),
+                                EqualsBooleanFilter(key="is_active", value=True),
+                            ],
+                        ),
+                    )
                 )
                 organization_ids |= {
                     x.organization_id for x in organization_admin_policies
@@ -654,7 +659,7 @@ class AbacService(BaseAbacService):
 
             # Retrieve organization access and share case policies
             org_access_policies: list[model.OrganizationAccessCasePolicy] = (
-                self.repository.crud(  # type: ignore[assignment]
+                self.repository.crud(
                     uow,
                     user_id=None,
                     model_class=model.OrganizationAccessCasePolicy,
@@ -663,7 +668,7 @@ class AbacService(BaseAbacService):
                 )
             )
             org_share_policies: list[model.OrganizationShareCasePolicy] = (
-                self.repository.crud(  # type: ignore[assignment]
+                self.repository.crud(
                     uow,
                     user_id=None,
                     model_class=model.OrganizationShareCasePolicy,

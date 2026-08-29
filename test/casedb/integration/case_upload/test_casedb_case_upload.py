@@ -23,7 +23,7 @@ from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.domain.service.organization import BaseOrganizationService
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.commondb.env import App
-from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.fastapp.enum import CrudOperation, OnException
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
@@ -34,6 +34,7 @@ SEQDB_APP_CFGS = get_app_cfgs(
     seqdb_enum.ServiceType,
     seqdb_enum.RepositoryType,
     TEST_TYPE,
+    log_any=VERBOSE,
 )
 CASEDB_APP_CFGS = get_app_cfgs(
     AppType.CASEDB,
@@ -41,6 +42,7 @@ CASEDB_APP_CFGS = get_app_cfgs(
     enum.RepositoryType,
     TEST_TYPE,
     seqdb_app_cfgs=SEQDB_APP_CFGS,
+    log_any=VERBOSE,
 )
 
 
@@ -128,7 +130,7 @@ class CaseUploadSetup:
         # Get identifier issuers
         with casedb_organization_service.repository.uow() as uow:
             identifier_issuers: list[model.IdentifierIssuer] = (
-                casedb_organization_service.repository.crud(  # type: ignore[assignment]
+                casedb_organization_service.repository.crud(
                     uow,
                     None,
                     model.IdentifierIssuer,
@@ -163,6 +165,9 @@ class CaseUploadSetup:
             )
 
 
+@pytest.mark.skip(
+    "Test is no longer valid, replaced by corresponding unit test. Code kept for now."
+)
 @pytest.mark.scenario_ids(
     "TC-RBAC-02-01",
     "TC-RBAC-04-01",
@@ -216,7 +221,7 @@ class TestCaseUpload(CaseUploadSetup):
                 operation=CrudOperation.READ_ALL,
             )
         )
-        ref_col_map: dict[UUID, model.RefCol] = {x.id: x for x in ref_cols}
+        ref_col_map: dict[UUID, model.RefCol] = {cast(UUID, x.id): x for x in ref_cols}
         cols: list[model.Col] = env.app.handle(  # type: ignore[assignment]
             command.ColCrudCommand(
                 user=root_user,
@@ -248,7 +253,7 @@ class TestCaseUpload(CaseUploadSetup):
                     user=user,
                     operation=CrudOperation.CREATE_ONE,
                     objs=self._create_case(row),
-                    props={"id_present": "keep"},
+                    on_id_set=OnException.IGNORE,
                 )
             elif row_operation == "READ":
                 cmd = command.CaseCrudCommand(
@@ -290,7 +295,6 @@ class TestCaseUpload(CaseUploadSetup):
                             )
                         ]  # type: ignore[arg-type]
                     ),
-                    props={"id_present": "keep"},
                 )
             elif row_operation == "RETRIEVE_CASES_BY_ID":
                 cmd = command.RetrieveCasesByIdCommand(
@@ -500,7 +504,7 @@ class TestCaseUpload(CaseUploadSetup):
                 user=user,
                 case_type_id=case_type_id,
                 created_in_data_collection_id=created_in_data_collection_id,
-                verify_only=True,
+                verify_only=True,  # type: ignore[call-arg]
                 case_batch=case_batch,
             )
             # Execute command
@@ -668,7 +672,7 @@ class TestCaseUpload(CaseUploadSetup):
                 seqs.append(
                     model.SeqForUpload(  # type: ignore[call-arg]
                         col_id=col_id,
-                        external_sample_id=identifier_for_upload,
+                        other_sample_identifier=identifier_for_upload,
                         protocol_id=assembly_protocol_id,  # type: ignore[arg-type]
                     )
                 )
@@ -681,9 +685,9 @@ class TestCaseUpload(CaseUploadSetup):
             content=case_content,
         )
         if for_upload:
-            return model.CaseForUpload(  # type: ignore[call-arg]
+            return model.CaseForUpload(
                 id=case.id,
-                identifiers=(
+                identifiers=(  # type: ignore[call-arg]
                     None if identifier_for_upload is None else [identifier_for_upload]
                 ),
                 case=case,

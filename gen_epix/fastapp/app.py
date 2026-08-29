@@ -47,6 +47,12 @@ class App:
     DEFAULT_LOG_ITEM_CLASS = LogItem
     DEFAULT_LOG_SUMMARIZATION_ENABLED: bool = True
     DEFAULT_LOG_MAX_LIST_ITEMS: int = 3
+    DEFAULT_LOG_MAX_STRING_LENGTH: int = 500
+    DEFAULT_LOG_MAX_DICT_ITEMS: int = 30
+    # Exceptions (e.g. DB integrity errors) get a longer, separate budget than
+    # ordinary strings: their useful content (the driver's actual error) is
+    # often at the very end, after a long echoed SQL statement.
+    DEFAULT_LOG_MAX_EXCEPTION_MESSAGE_LENGTH: int = 2000
     _CFG_TRUE_VALUES: set[str] = {"1", "true", "yes", "on"}
     _CFG_FALSE_VALUES: set[str] = {"0", "false", "no", "off"}
 
@@ -63,6 +69,7 @@ class App:
         id: str | None = None,
         name: str | None = None,
         timestamp_factory: Callable[[], datetime] = datetime.now,
+        log_cmd_object_on_error: bool = True,
         feature_flags: dict[Hashable, bool] | None = None,
         **kwargs: Any,
     ):
@@ -88,6 +95,11 @@ class App:
             EventTiming, dict[type[Command], list[Callable[[Command, Any], None]]]
         ] = {x: {} for x in EventTiming}
         self._command_stack: list[Command] = []
+        self._cache_invalidator_map: dict[
+            type[Command], list[Callable[[Command], None]]
+        ] = {}
+        self._auto_invalidate_cache_set: set[type[Command]] = set()
+        self._log_cmd_object_on_error: bool = log_cmd_object_on_error
         self._init_log_settings()
 
         # Log start
@@ -262,6 +274,47 @@ class App:
         else:
             listeners[command_class] = [listener]
 
+    def register_cache_invalidator(
+        self,
+        command_class: type[Command],
+        invalidator_fn: Callable[[Command], None],
+    ) -> None:
+        """Register a callback to invalidate caches for a command type."""
+        if self._logger and self._logger.level <= logging.DEBUG:
+            self._logger.debug(
+                self.create_log_message(
+                    "66a90fdb",
+                    "REGISTERING_CACHE_INVALIDATOR",
+                    command={"class": command_class.__name__},
+                    invalidator_fn={
+                        "name": getattr(invalidator_fn, "__name__", str(invalidator_fn))
+                    },
+                ),
+            )
+        invalidators = self._cache_invalidator_map.setdefault(command_class, [])
+        if invalidator_fn in invalidators:
+            raise exc.InitializationServiceError(
+                "a252c748",
+                f"Cache invalidator already registered for {command_class.__name__}",
+            )
+        invalidators.append(invalidator_fn)
+
+    def invalidate_cache(self, cmd: Command) -> None:
+        """Execute cache invalidators registered for the exact command type."""
+        for invalidator_fn in self._cache_invalidator_map.get(type(cmd), []):
+            invalidator_fn(cmd)
+
+    def set_auto_invalidate_cache(
+        self,
+        command_class: type[Command],
+        enabled: bool,
+    ) -> None:
+        """Enable or disable automatic cache invalidation for a command type."""
+        if enabled:
+            self._auto_invalidate_cache_set.add(command_class)
+        else:
+            self._auto_invalidate_cache_set.discard(command_class)
+
     def unregister_listener(
         self,
         command_class: type[Command],
@@ -392,12 +445,18 @@ class App:
                 type(cmd), []
             ):
                 listener(cmd, retval)
+            if type(cmd) in self._auto_invalidate_cache_set:
+                self.invalidate_cache(cmd)
         except exc.ServiceException as exception:
             # Service errors should always capture the stack trace to aid diagnosis.
             if self._logger:
                 self._logger.error(
                     self.create_log_message(
-                        "f3c7a1d9", "SERVICE_EXCEPTION", cmd=cmd, exception=exception
+                        "f3c7a1d9",
+                        "SERVICE_EXCEPTION",
+                        add_debug_info=self._log_cmd_object_on_error,
+                        cmd=cmd,
+                        exception=exception,
                     ),
                     exc_info=True,
                 )
@@ -408,7 +467,11 @@ class App:
             if self._logger:
                 self._logger.warning(
                     self.create_log_message(
-                        "e8891b42", "DOMAIN_EXCEPTION", cmd=cmd, exception=exception
+                        "e8891b42",
+                        "DOMAIN_EXCEPTION",
+                        add_debug_info=self._log_cmd_object_on_error,
+                        cmd=cmd,
+                        exception=exception,
                     )
                 )
             self._command_stack.pop()
@@ -418,7 +481,11 @@ class App:
             if self._logger:
                 self._logger.error(
                     self.create_log_message(
-                        "b575040c", "ERROR", cmd=cmd, exception=exception
+                        "b575040c",
+                        "ERROR",
+                        add_debug_info=self._log_cmd_object_on_error,
+                        cmd=cmd,
+                        exception=exception,
                     ),
                     exc_info=True,
                     stack_info=True,
@@ -434,7 +501,11 @@ class App:
             if self._logger:
                 self._logger.error(
                     self.create_log_message(
-                        "ad536c0b", "ERROR", cmd=cmd, exception=exception
+                        "ad536c0b",
+                        "ERROR",
+                        add_debug_info=self._log_cmd_object_on_error,
+                        cmd=cmd,
+                        exception=exception,
                     ),
                     exc_info=True,
                     stack_info=True,
@@ -461,7 +532,11 @@ class App:
             if self._logger:
                 self._logger.error(
                     self.create_log_message(
-                        "abd561ff", "ERROR", cmd=cmd, exception=exception
+                        "abd561ff",
+                        "ERROR",
+                        add_debug_info=self._log_cmd_object_on_error,
+                        cmd=cmd,
+                        exception=exception,
                     ),
                     exc_info=True,
                     stack_info=True,
@@ -473,7 +548,12 @@ class App:
         log_code = "e94cad9b"
         if self._logger.level <= logging.DEBUG:
             self._logger.debug(
-                self.create_log_message(log_code, "STARTED_COMMAND", cmd=cmd)
+                self.create_log_message(
+                    log_code,
+                    "STARTED_COMMAND",
+                    add_debug_info=self._log_cmd_object_on_error,
+                    cmd=cmd,
+                )
             )
         elif is_initial_command:
             self._logger.info(
@@ -500,6 +580,18 @@ class App:
         )
         self._log_max_list_items = App._get_int_from_cfg_value(
             cfg.get("max_list_items", self.DEFAULT_LOG_MAX_LIST_ITEMS)
+        )
+        self._log_max_string_length = App._get_int_from_cfg_value(
+            cfg.get("max_string_length", self.DEFAULT_LOG_MAX_STRING_LENGTH)
+        )
+        self._log_max_dict_items = App._get_int_from_cfg_value(
+            cfg.get("max_dict_items", self.DEFAULT_LOG_MAX_DICT_ITEMS)
+        )
+        self._log_max_exception_message_length = App._get_int_from_cfg_value(
+            cfg.get(
+                "max_exception_message_length",
+                self.DEFAULT_LOG_MAX_EXCEPTION_MESSAGE_LENGTH,
+            )
         )
 
     def create_log_message(
@@ -535,6 +627,8 @@ class App:
                     ),
                 }
             if kwargs:
+                if self._log_summarization_enabled:
+                    kwargs = self._summarise_command_object_for_log(kwargs)
                 content = {**content, **kwargs}
         else:
             content = kwargs
@@ -551,12 +645,30 @@ class App:
         self,
         data: dict[str, Any],
     ) -> dict[str, Any]:
-        """Recursively walk *data* and replace any list longer than *max_items* with
-        a compact ``{"_count": N, "_sample": [...]}`` dict so the serialised log
-        payload stays within downstream log-sink size constraints."""
+        """Recursively walk *data* and replace any list or mapping longer than their
+        respective thresholds with a compact ``{"_count": N, "_sample": ...}`` summary,
+        and truncate any string longer than *max_string_length* to its first N chars
+        with a suffix showing the total length. Exceptions get their own, longer
+        budget (*max_exception_message_length*) and are truncated from the middle
+        rather than the end, since DB driver errors often echo the full SQL
+        statement first and put the actual error message at the very end. All of
+        this keeps the serialised log payload within downstream log-sink size
+        constraints."""
 
         def _walk(obj: Any) -> Any:
+            if isinstance(obj, Exception):
+                return App._truncate_middle(
+                    str(obj), self._log_max_exception_message_length
+                )
             if isinstance(obj, dict):
+                if len(obj) > self._log_max_dict_items:
+                    return {
+                        "_count": len(obj),
+                        "_sample": {
+                            x: _walk(y)
+                            for x, y in list(obj.items())[: self._log_max_list_items]
+                        },
+                    }
                 return {x: _walk(y) for x, y in obj.items()}
             if isinstance(obj, list):
                 if len(obj) > self._log_max_list_items:
@@ -565,6 +677,8 @@ class App:
                         "_sample": [_walk(x) for x in obj[: self._log_max_list_items]],
                     }
                 return [_walk(x) for x in obj]
+            if isinstance(obj, str) and len(obj) > self._log_max_string_length:
+                return f"{obj[:self._log_max_string_length]}…[{len(obj)} chars]"
             return obj
 
         return _walk(data)  # type: ignore[return-value]
@@ -616,3 +730,20 @@ class App:
                 f"Invalid integer config value: {value}",
             )
         return parsed
+
+    @staticmethod
+    def _truncate_middle(text: str, max_length: int) -> str:
+        """Truncate *text* to *max_length* chars, keeping a prefix and a suffix
+        rather than just the head. DB driver error strings (e.g. FK/unique
+        constraint violations) often echo the full SQL statement first and put
+        the actual error message at the end, so a head-only cut hides it."""
+        if max_length <= 0:
+            return f"…[{len(text)} chars omitted]…"
+        if len(text) <= max_length:
+            return text
+        prefix_len = max_length // 2
+        suffix_len = max_length - prefix_len
+        omitted = len(text) - max_length
+        prefix = text[:prefix_len] if prefix_len else ""
+        suffix = text[-suffix_len:] if suffix_len else ""
+        return f"{prefix}…[{omitted} chars omitted]…{suffix}"

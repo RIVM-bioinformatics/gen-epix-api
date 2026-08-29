@@ -74,7 +74,9 @@ class TestFilterMatch:
             BLUE = 3
 
         # case_sensitive=True: enum .name must be in members
-        f = StringSetFilter(key="a", members=frozenset({"RED", "GREEN"}), case_sensitive=True)
+        f = StringSetFilter(
+            key="a", members=frozenset({"RED", "GREEN"}), case_sensitive=True
+        )
         rows = [{"a": x} for x in [Color.RED, Color.GREEN, Color.BLUE, None]]
         util.validate_filter_behavior(f, rows, [True, True, False, False])
 

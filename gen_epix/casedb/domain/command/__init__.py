@@ -72,6 +72,9 @@ from gen_epix.casedb.domain.command.case import (
 from gen_epix.casedb.domain.command.case import RefColCrudCommand as RefColCrudCommand
 from gen_epix.casedb.domain.command.case import RefDimCrudCommand as RefDimCrudCommand
 from gen_epix.casedb.domain.command.case import (
+    RetrieveCaseCohortLinksByCaseTypeCommand as RetrieveCaseCohortLinksByCaseTypeCommand,
+)
+from gen_epix.casedb.domain.command.case import (
     RetrieveCaseRightsCommand as RetrieveCaseRightsCommand,
 )
 from gen_epix.casedb.domain.command.case import (
@@ -84,13 +87,19 @@ from gen_epix.casedb.domain.command.case import (
     RetrieveCaseSetRightsCommand as RetrieveCaseSetRightsCommand,
 )
 from gen_epix.casedb.domain.command.case import (
-    RetrieveCaseStatsCommand as RetrieveCaseStatsCommand,
+    RetrieveCaseSetStatsCommand as RetrieveCaseSetStatsCommand,
+)
+from gen_epix.casedb.domain.command.case import (
+    RetrieveCaseTypeStatsCommand as RetrieveCaseTypeStatsCommand,
 )
 from gen_epix.casedb.domain.command.case import (
     RetrieveCompleteCaseTypeCommand as RetrieveCompleteCaseTypeCommand,
 )
 from gen_epix.casedb.domain.command.case import (
     RetrieveGeneticSequenceFastaByCaseCommand as RetrieveGeneticSequenceFastaByCaseCommand,
+)
+from gen_epix.casedb.domain.command.case import (
+    RetrieveIsOwnCasesCommand as RetrieveIsOwnCasesCommand,
 )
 from gen_epix.casedb.domain.command.case import (
     RetrievePhylogeneticTreeByCasesCommand as RetrievePhylogeneticTreeByCasesCommand,
@@ -103,6 +112,9 @@ from gen_epix.casedb.domain.command.case import (
 )
 from gen_epix.casedb.domain.command.case import (
     RetrieveSimilarCasesCommand as RetrieveSimilarCasesCommand,
+)
+from gen_epix.casedb.domain.command.case import (
+    RetrieveSimilarCasesReturnValue as RetrieveSimilarCasesReturnValue,
 )
 from gen_epix.casedb.domain.command.case import (
     TreeAlgorithmClassCrudCommand as TreeAlgorithmClassCrudCommand,
@@ -154,6 +166,9 @@ from gen_epix.casedb.domain.command.seqdb import (
 from gen_epix.commondb.domain import enum as common_enum
 from gen_epix.commondb.domain.command import (
     COMMANDS_BY_SERVICE_TYPE as _COMMON_COMMANDS_BY_SERVICE_TYPE,
+)
+from gen_epix.commondb.domain.command import (
+    AnonymizeUserCommand as AnonymizeUserCommand,
 )
 from gen_epix.commondb.domain.command import Command as Command
 from gen_epix.commondb.domain.command import ContactCrudCommand as ContactCrudCommand
@@ -269,15 +284,18 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         RefDimCrudCommand,
         GeneticDistanceProtocolCrudCommand,
         RetrieveProtocolsCommand,
+        RetrieveCaseCohortLinksByCaseTypeCommand,
         RetrieveCaseRightsCommand,
         RetrieveCasesByIdCommand,
         RetrieveCasesByQueryCommand,
         RetrieveCaseSetRightsCommand,
-        RetrieveCaseStatsCommand,
+        RetrieveCaseSetStatsCommand,
+        RetrieveCaseTypeStatsCommand,
         RetrieveCompleteCaseTypeCommand,
         RetrieveGeneticSequenceFastaByCaseCommand,
         RetrievePhylogeneticTreeByCasesCommand,
         RetrieveSimilarCasesCommand,
+        RetrieveIsOwnCasesCommand,
         RetrievePhylogeneticTreeByProfilesCommand,
         TreeAlgorithmClassCrudCommand,
         TreeAlgorithmCrudCommand,

@@ -54,6 +54,11 @@ class RoleGenerator(CommonRoleGenerator):
                 command.ColSetColUpdateAssociationCommand,
                 PermissionTypeSet.E,
             ),
+            # retrieve
+            (
+                command.RetrieveCaseCohortLinksByCaseTypeCommand,
+                PermissionTypeSet.E,
+            ),
             # abac
             (command.OrganizationAccessCasePolicyCrudCommand, PermissionTypeSet.CUD),
             (
@@ -133,8 +138,10 @@ class RoleGenerator(CommonRoleGenerator):
             (command.RetrieveProtocolsCommand, PermissionTypeSet.E),
             (command.RetrieveCaseRightsCommand, PermissionTypeSet.E),
             (command.RetrieveCaseSetRightsCommand, PermissionTypeSet.E),
-            (command.RetrieveCaseStatsCommand, PermissionTypeSet.E),
+            (command.RetrieveCaseSetStatsCommand, PermissionTypeSet.E),
+            (command.RetrieveCaseTypeStatsCommand, PermissionTypeSet.E),
             (command.RetrieveCasesByIdCommand, PermissionTypeSet.E),
+            (command.RetrieveIsOwnCasesCommand, PermissionTypeSet.E),
             (command.RetrieveCasesByQueryCommand, PermissionTypeSet.E),
             (command.RetrieveCompleteCaseTypeCommand, PermissionTypeSet.E),
             (command.TreeAlgorithmClassCrudCommand, PermissionTypeSet.R),

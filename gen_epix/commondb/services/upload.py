@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Generator, cast
 from uuid import UUID
 
@@ -14,6 +15,7 @@ from gen_epix.commondb.domain.model.upload import (
     UploadResultWithIdentifiers,
 )
 from gen_epix.fastapp import BaseService, BaseUnitOfWork, CrudOperation, Model
+from gen_epix.fastapp.exc import DuplicateIdsError
 from gen_epix.filter import (
     CompositeFilter,
     LogicalOperator,
@@ -137,6 +139,16 @@ class BatchUploader:
                 code="a3f7e9d2",
                 message="Verification ended",
             )
+            if not success:
+                # Record the batch-level failure regardless of verify_only,
+                # so that a dry run reports the same outcome as a real run.
+                batch_result.add_error(
+                    code="02095f22",
+                    message="Verification found errors, upload will not proceed",
+                )
+            for parent_result in batch_result.get_parent_results():
+                parent_result.propagate_child_failures()
+
             if cmd.verify_only:
                 # Stop here if only verification was requested; mark all
                 # still-PENDING individual results as SKIPPED (nothing was stored)
@@ -156,10 +168,6 @@ class BatchUploader:
 
             if not success:
                 # Do not proceed with upsert due to errors
-                batch_result.add_error(
-                    code="02095f22",
-                    message="Verification found errors, upload will not proceed",
-                )
                 return batch_result
 
             # Upsert the batch data
@@ -172,6 +180,8 @@ class BatchUploader:
                 code="f8b12027",
                 message="Upsert ended",
             )
+            for parent_result in batch_result.get_parent_results():
+                parent_result.propagate_child_failures()
             if not success:
                 # Rollback due to errors, but do not raise an exception since those will be reported in batch_result
                 batch_result.add_error(
@@ -296,9 +306,10 @@ class BatchUploader:
         success &= self.verify_parents_identifiers(cmd, batch_result, uow)
         # Verify Identifiers for child models to fill in any missing child IDs
         success &= self.verify_children_identifiers(cmd, batch_result, uow)
-        # Verify parents and children next with any IDs derived Identifiers already filled in
-        success &= self.verify_parents(cmd, batch_result, uow)
+        # Verify children before parents. Child parent links may resolve missing
+        # parent IDs, so parent existence/newness must be evaluated afterwards.
         success &= self.verify_children(cmd, batch_result, uow)
+        success &= self.verify_parents(cmd, batch_result, uow)
         # Verify reference data last since it may depend on parent and children verification
         success &= self.verify_refdata(cmd, batch_result, uow)
         return success
@@ -440,6 +451,14 @@ class BatchUploader:
         for i, (parent_for_upload, parent_result) in enumerate(
             self.parent_result_items(cmd, batch_result)
         ):
+            if parent_result.status == EtlStatus.FAILED:
+                continue
+            # TODO: parents resolved in verify_children (child-inferred parent ID)
+            # also land here and get existence-checked + on_exists/on_new applied a
+            # second time. Detected cases: SKIPPED (guard above misses it), and
+            # PENDING parents where verify_children set parent_result.id or
+            # parent_result.is_new. Consequence is redundant DB calls and duplicate
+            # info log messages; final state is identical so no correctness bug.
             parent_id = parent_for_upload.id
             parent = parent_for_upload.get_parent()
             if parent is None:
@@ -474,11 +493,34 @@ class BatchUploader:
             # No parent IDs given, nothing left to check
             return success
 
+        # Detect duplicate parent IDs. Mark every occurrence of a duplicated UUID as
+        # FAILED (including the first — a duplicate UUID is always ambiguous) and
+        # remove them from the existence-check list so the repository never sees it.
+        parent_id_to_indices: dict[UUID, list[int]] = {}
+        for i, parent_id in enumerate(parent_ids):
+            if parent_id is None:
+                continue
+            parent_id_to_indices.setdefault(parent_id, []).append(i)
+        parent_result_list = list(self.parent_result_items(cmd, batch_result))
+        for parent_id, indices in parent_id_to_indices.items():
+            if len(indices) <= 1:
+                continue
+            for i in indices:
+                _, parent_result = parent_result_list[i]
+                parent_result.add_error(
+                    "a1b2c3d4",
+                    f"{self.parent_class.NAME} id={parent_id} appears "
+                    f"{len(indices)} times in the batch.",
+                )
+                parent_ids[i] = None  # exclude from objects_exist()
+
         # Some parent IDs are given, check existence
         parents_exist = self.objects_exist(uow, user_id, self.parent_class, parent_ids)
         for parent_exists, (parent_for_upload, parent_result) in zip(
             parents_exist, self.parent_result_items(cmd, batch_result)
         ):
+            if parent_result.status == EtlStatus.FAILED:
+                continue  # already marked by duplicate detection above
             if parent_exists:
                 parent_result.id = parent_for_upload.id
                 if cmd.on_exists == UploadAction.ERROR:
@@ -553,13 +595,47 @@ class BatchUploader:
             child_ids = [
                 getattr(x, child_id_field_name) for _, _, x, _ in parent_child_tuples
             ]
-            children_exist = self.objects_exist(
-                uow, user_id, child_model_class, child_ids
-            )
 
-            # Get (id, parent_id) for all existing ids
+            # Detect duplicate child IDs (within a parent or across parents).
+            # For every duplicated child UUID, mark all parent results that contain
+            # it as FAILED and remove those child slots from the existence-check list.
+            child_id_to_entries: defaultdict[
+                UUID,
+                list[tuple[int, model.ParentForUpload, model.ParentUploadResult]],
+            ] = defaultdict(list)
+            for idx, (parent_for_upload, parent_result, _, _) in enumerate(
+                parent_child_tuples
+            ):
+                child_id = child_ids[idx]
+                if self.is_null(child_id):
+                    continue
+                child_id_to_entries[child_id].append(
+                    (idx, parent_for_upload, parent_result)
+                )
+            for child_id, entries in child_id_to_entries.items():
+                if len(entries) <= 1:
+                    continue
+                seen_parent_results: set[int] = set()
+                parent_ids_str = ", ".join(
+                    str(e[1].id) for e in entries if e[1].id is not None
+                )
+                for idx, parent_for_upload, parent_result in entries:
+                    child_ids[idx] = None  # exclude from objects_exist()
+                    if id(parent_result) not in seen_parent_results:
+                        seen_parent_results.add(id(parent_result))
+                        parent_result.add_error(
+                            "e5f6a7b8",
+                            f"{child_model_class.NAME} id={child_id} appears in multiple "
+                            f"entries in the batch (parents: {parent_ids_str}).",
+                        )
+
+            # Single read_fields replaces the old EXISTS_SOME + read_fields pair.
+            # Presence in the result means the child exists; absence means new.
+            # Duplicate-nulled entries (None) are excluded from the query and
+            # correctly map to children_exist=False via the `in` check below.
+            actual_child_ids = frozenset(x for x in child_ids if not self.is_null(x))
             child_parent_id_map: dict[UUID, UUID] = {}
-            if any(children_exist):
+            if actual_child_ids:
                 result_iter = self.service.repository.read_fields(
                     uow,
                     user_id,
@@ -567,20 +643,21 @@ class BatchUploader:
                     [child_id_field_name, child_parent_id_field_name],
                     filter=UuidSetFilter(
                         key=child_id_field_name,
-                        members=frozenset(
-                            [x for x, y in zip(child_ids, children_exist) if y]
-                        ),
+                        members=actual_child_ids,
                     ),
                 )
                 child_parent_id_map = {x[0]: x[1] for x in result_iter}
+            children_exist = [x in child_parent_id_map for x in child_ids]
 
             # Process all children (both with and without IDs)
             for (
                 parent_for_upload,
-                _,
+                parent_result,
                 child_for_upload,
                 child_result,
             ), child_exists in zip(parent_child_tuples, children_exist):
+                if parent_result.status == EtlStatus.FAILED:
+                    continue  # parent already marked FAILED by duplicate detection above
                 parent_id = parent_for_upload.id
                 has_parent_id = not self.is_null(parent_id)
                 child_id = getattr(child_for_upload, child_id_field_name)
@@ -617,16 +694,58 @@ class BatchUploader:
                 else:
                     # Parent ID not given
                     if has_child_parent_id:
-                        # Parent ID not given: fill in from child
-                        setattr(
-                            parent_for_upload,
-                            self.parent_id_field_name,
-                            child_parent_id,
-                        )
+                        # Parent ID not given: infer from child and re-apply
+                        # on_exists/on_new semantics for the resolved parent ID.
+                        parent_for_upload.id = child_parent_id
+                        parent = parent_for_upload.get_parent()
+                        if parent is not None:
+                            setattr(parent, self.parent_id_field_name, child_parent_id)
+                        parent_exists = self.objects_exist(
+                            uow,
+                            user_id,
+                            self.parent_class,
+                            [child_parent_id],
+                        )[0]
+                        if parent_exists:
+                            parent_result.id = child_parent_id
+                            parent_result.is_new = False
+                            if cmd.on_exists == UploadAction.ERROR:
+                                success = False
+                                parent_result.add_error(
+                                    "f2a13b7c",
+                                    f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
+                                )
+                            elif cmd.on_exists == UploadAction.SKIP:
+                                parent_result.status = EtlStatus.SKIPPED
+                                parent_result.add_info(
+                                    "9f43d602",
+                                    f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
+                                )
+                        else:
+                            parent_result.is_new = True
+                            if cmd.on_new == UploadAction.ERROR:
+                                success = False
+                                parent_result.add_error(
+                                    "1ca29f8e",
+                                    f"{self.parent_class.NAME} does not exist and on_new={cmd.on_new.value}.",
+                                )
+                            elif cmd.on_new == UploadAction.SKIP:
+                                parent_result.status = EtlStatus.SKIPPED
+                                parent_result.add_info(
+                                    "6e8ab14d",
+                                    f"{self.parent_class.NAME} does not exist and on_new={cmd.on_new.value}.",
+                                )
+                            elif cmd.on_new == UploadAction.CREATE:
+                                parent_result.add_info(
+                                    "3b9d87f4",
+                                    f"{self.parent_class.NAME} will be created with provided ID",
+                                )
                     else:
                         # Neither parent ID nor child parent ID given
                         pass
                 # Child ID given
+                # Apply on_exists/on_new based on existence determined from storage,
+                # not just on whether a child ID value is present in the payload.
                 if child_exists:
                     # Child already exists
                     if cmd.on_exists == UploadAction.ERROR:
@@ -654,7 +773,7 @@ class BatchUploader:
                         # New child and on_new=SKIP: do not create
                         child_result.status = EtlStatus.SKIPPED
                         child_result.add_info(
-                            "cfc3da21",
+                            "cfd622df",
                             f"{child_for_upload.__class__.NAME} does not exist and on_new={cmd.on_new.value}",
                         )
                     elif cmd.on_new == UploadAction.CREATE:
@@ -1022,11 +1141,11 @@ class BatchUploader:
         # Verify Identifiers for each object
         obj_id_field_name = model_class.ENTITY.get_id_field_name()
         for obj_for_upload, obj_result in obj_result_pairs:
-            obj_id = getattr(obj_for_upload, obj_id_field_name)
             for identifier_for_upload, identifier_result in zip(
                 obj_for_upload.identifiers or [],
                 obj_result.identifiers or [],
             ):
+                obj_id = getattr(obj_for_upload, obj_id_field_name)
                 if identifier_result.status != EtlStatus.PENDING:
                     # Not pending (likely skipped or failed), no need to check existence
                     continue
@@ -1188,7 +1307,7 @@ class BatchUploader:
             identifiers_for_upload,
             identifier_results,
         ) in identifier_tuples:
-            if internal_id is None:
+            if self.is_null(internal_id):
                 # Parent was skipped or failed and was never assigned a real ID;
                 # no identifiers can be created for it.
                 continue
@@ -1272,7 +1391,7 @@ class BatchUploader:
                 for y in getattr(x, child_field_name) or []
             }
         )
-        ids = {x[0] for x in id_code_tuples if x[0] is not None and x[0] != NULL_ID}
+        ids = {x[0] for x in id_code_tuples if not self.is_null(x[0])}
         codes = {x[1] for x in id_code_tuples if x[1] is not None}
         id_code_map: dict[UUID, str] = {}
         code_id_map: dict[str, UUID] = {}
@@ -1285,7 +1404,7 @@ class BatchUploader:
             # Same service: use repository directly
             result_iter = self.service.repository.read_fields(
                 uow,
-                user.id,
+                user.id if user else None,
                 linked_model_class,
                 [linked_model_id_field_name, linked_model_code_field_name],
                 filter=CompositeFilter(
@@ -1426,6 +1545,59 @@ class BatchUploader:
                         pass
         return success
 
+    def retrieve_parent_id_by_intra_parent_linked_child_id(
+        self,
+        uow: BaseUnitOfWork,
+        cmd: command.UploadBatchCommandMixin,
+        from_child_class: type[Model],
+        from_child_link_id_field_name: str,
+        to_child_class: type[Model],
+    ) -> dict[UUID, UUID]:
+        """
+        Retrieve a dict[to_child_id, parent_id] containing all existing (to_child_id,
+        parent_id) pairs for children referred to by the from_child_link_id_field_name
+        field on from_child_class instances in the upload, where parent_id is the ID of
+        the parent of the child with ID to_child_id
+        """
+        # Get all to_child_ids referred to by from_child_link_id_field_name fields on from_child_class instances in the upload
+        to_child_ids: list[UUID] = []
+        for parent_for_upload in self.get_parents_for_upload(cmd):
+            children_for_upload: list[Model] = (
+                getattr(
+                    parent_for_upload,
+                    self.child_children_field_name_map[from_child_class],
+                )
+                or []
+            )
+            for child_for_upload in children_for_upload:
+                child_link_id = getattr(child_for_upload, from_child_link_id_field_name)
+                if not self.is_null(child_link_id):
+                    to_child_ids.append(cast(UUID, child_link_id))
+
+        # Retrieve parent IDs for these child IDs
+        existing_parent_id_by_child_id: dict[UUID, UUID] = {}
+        if to_child_ids:
+            to_child_id_field_name = self.child_id_field_name_map[to_child_class]
+            to_child_parent_id_field_name = self.child_parent_id_field_name_map[
+                to_child_class
+            ]
+            user: model.User | None = getattr(cmd, "user")
+            result_iter = self.service.repository.read_fields(
+                uow,
+                user.id if user else None,
+                to_child_class,
+                [
+                    to_child_id_field_name,
+                    to_child_parent_id_field_name,
+                ],
+                filter=UuidSetFilter(
+                    key=to_child_id_field_name, members=frozenset(to_child_ids)
+                ),
+            )
+            for x in result_iter:
+                existing_parent_id_by_child_id[x[0]] = x[1]
+        return existing_parent_id_by_child_id
+
     def objects_exist(
         self,
         uow: BaseUnitOfWork,
@@ -1436,21 +1608,17 @@ class BatchUploader:
         # Initialise output
         objs_exist = [False] * len(obj_ids)
         # Determine which indices are actually IDs
-        is_id_indices = [
-            i for i, x in enumerate(obj_ids) if x is not None and x != NULL_ID
-        ]
+        is_id_indices = [i for i, x in enumerate(obj_ids) if not self.is_null(x)]
         if len(is_id_indices) == 0:
             return objs_exist
         # Retrieve which of the actual IDs also exists
         is_id_obj_ids: list[UUID] = [obj_ids[i] for i in is_id_indices]
-        is_id_objs_exist: list[bool] = (
-            self.service.repository.crud(  # type: ignore[assignment]
-                uow,
-                user_id,
-                model_class,
-                CrudOperation.EXISTS_SOME,
-                obj_ids=is_id_obj_ids,
-            )
+        is_id_objs_exist: list[bool] = self.service.repository.crud(
+            uow,
+            user_id,
+            model_class,
+            CrudOperation.EXISTS_SOME,
+            obj_ids=is_id_obj_ids,
         )
         # Finalise output
         for i, obj_exists in zip(is_id_indices, is_id_objs_exist):
@@ -1482,9 +1650,9 @@ class BatchUploader:
                 # Assign a new ID
                 obj_id = self.service.generate_id()
                 setattr(obj, obj_id_field_name, obj_id)  # type: ignore[assignment]
-        if is_same_service:
-            created_obj_ids: list[UUID] = (
-                self.service.repository.crud(  # type: ignore[assignment]
+        try:
+            if is_same_service:
+                created_obj_ids: list[UUID] = self.service.repository.crud(
                     uow,
                     user_id,
                     model_class,
@@ -1492,21 +1660,30 @@ class BatchUploader:
                     objs=to_create_objs,
                     return_id=True,  # Avoid returning the whole object list again
                 )
-            )
-        else:
-            crud_command_class = self.service.app.domain.get_crud_command_for_model(
-                model_class
-            )
-            created_obj_ids = self.service.app.handle(
-                crud_command_class(
-                    user=user,
-                    operation=CrudOperation.CREATE_SOME,
-                    objs=to_create_objs,
-                    props={
-                        "return_id": True
-                    },  # Avoid returning the whole object list again
+            else:
+                crud_command_class = self.service.app.domain.get_crud_command_for_model(
+                    model_class
                 )
-            )
+                created_obj_ids = self.service.app.handle(
+                    crud_command_class(
+                        user=user,
+                        operation=CrudOperation.CREATE_SOME,
+                        objs=to_create_objs,
+                        return_id=True,  # Avoid returning the whole object list again
+                    )
+                )
+        except DuplicateIdsError as exc_:
+            # TODO [LSP-3357] check how it is possible that these errors occur here
+            duplicate_ids = set(exc_.ids) if exc_.ids else set()
+            obj_id_field_name_local = model_class.ENTITY.get_id_field_name()
+            for obj, obj_result in to_create_obj_result_pairs:
+                if getattr(obj, obj_id_field_name_local) in duplicate_ids:
+                    obj_result.add_error(
+                        "c9d0e1f2",
+                        f"{model_class.NAME} id={getattr(obj, obj_id_field_name_local)} "
+                        "is a duplicate and could not be created.",
+                    )
+            return False
 
         # Assign object ID and status to results
         for created_obj_id, (_, obj_result) in zip(
@@ -1526,63 +1703,67 @@ class BatchUploader:
     ) -> bool:
         """
         Update any existing objects and update the corresponding UploadResults.
+        Per-object errors (missing ID, immutable field) are logged to the individual
+        UploadResult and that object is skipped; they do not abort the remaining batch.
         """
         success = True
         if not to_update_obj_result_pairs:
             return success
 
-        # Collect object IDs to update
-        obj_ids: list[UUID] = []
         obj_id_field_name = model_class.ENTITY.get_id_field_name()
+        stored_model_field_props = self.stored_model_field_props[model_class]
+
+        # Separate pairs with valid IDs from those without, to keep zip alignment correct
+        valid_pairs: list[tuple[Model, UploadResult]] = []
+        obj_ids: list[UUID] = []
         for obj, obj_result in to_update_obj_result_pairs:
             obj_id = getattr(obj, obj_id_field_name)
             if self.is_null(obj_id):
-                success = False
-                obj_result.status = EtlStatus.FAILED
                 obj_result.add_error(
                     "8b7824f4",
                     f"Cannot update object without valid ID: {obj}",
                 )
             else:
+                valid_pairs.append((obj, obj_result))
                 obj_ids.append(obj_id)
 
-        # Determine model class and stored model field properties
-        stored_model_field_props = self.stored_model_field_props[model_class]
+        if not obj_ids:
+            return success
 
-        # Retrieve existing objects
-        existing_objs: list[Model] = (
-            self.service.repository.crud(  # type: ignore[assignment]
-                uow,
-                user_id,
-                model_class,
-                CrudOperation.READ_SOME,
-                obj_ids=obj_ids,
-            )
+        # Retrieve existing objects (aligned with valid_pairs / obj_ids)
+        existing_objs: list[Model] = self.service.repository.crud(
+            uow,
+            user_id,
+            model_class,
+            CrudOperation.READ_SOME,
+            obj_ids=obj_ids,
         )
 
         # Determine which objects actually need to be updated instead of having identical data
         to_update_objs: list[Model] = []
         to_update_obj_results: list[model.UploadResult] = []
-        for (obj, obj_result), existing_obj in zip(
-            to_update_obj_result_pairs, existing_objs
-        ):
+        for (obj, obj_result), existing_obj in zip(valid_pairs, existing_objs):
             # Only check props for updates, other fields are not updatable
             is_updated = False
             for field_name, field_props in stored_model_field_props.items():
                 if field_name == obj_id_field_name:
                     continue  # ID field is the lookup key; never part of updates
                 existing_value = getattr(existing_obj, field_name)
-                # Field if the field, with its existing value, is (still) mutable
-                if not field_props.is_mutable_value(existing_value):
-                    success = False
-                    obj_result.status = EtlStatus.FAILED
-                    obj_result.add_error(
-                        "f5e09001",
-                        f"Field {field_name} with existing value {existing_value} may not be updated.",
-                    )
-                    continue
-                # Update the existing object's field if the new value is different
                 new_value = getattr(obj, field_name)
+                if not field_props.is_mutable_value(existing_value):
+                    # Immutable field: only an error if the value is actually changing.
+                    # Re-uploading the same value (e.g. a full record with one extra
+                    # field added) is fine and requires no action for this field.
+                    # None or NULL_ID means "not specified" — treat as a no-op for
+                    # immutable fields so that partial-update payloads don't fail.
+                    if not self.is_null(new_value) and new_value != existing_value:
+                        obj_result.add_error(
+                            "f5e09001",
+                            f"Field {field_name} with existing value {existing_value} may not be updated to {new_value}.",
+                        )
+                        break
+                    continue
+                # Mutable field: apply update if value differs
                 if existing_value is None:
                     # Existing value is None: set new value if not None
                     if new_value:
@@ -1590,30 +1771,32 @@ class BatchUploader:
                         setattr(existing_obj, field_name, new_value)
                 elif field_props.is_sub_field_dict:
                     # Field content is a dict: update keys individually
-                    is_updated |= BatchUploader.update_sub_field_dict(
-                        existing_value, new_value
-                    )
+                    if existing_value != new_value:
+                        is_updated |= BatchUploader.update_sub_field_dict(
+                            existing_value, new_value
+                        )
                 else:
                     # Field content is a single value: compare directly
                     if new_value != existing_value:
                         is_updated = True
                         setattr(existing_obj, field_name, new_value)
-            # Determine whether to update, i.e. if any values are indeed different, or otherwise skip
-            if not is_updated and obj_result.status != EtlStatus.FAILED:
+            if obj_result.status == EtlStatus.FAILED:
+                # Per-object error logged above; skip without aborting the batch
+                continue
+            # Determine whether to update or skip (identical content)
+            if not is_updated:
                 obj_result.status = EtlStatus.SKIPPED
-                obj_result.add_info("f5e09001", "Content is identical")
+                obj_result.add_info("64eef8a5", "Content is identical")
             else:
-                to_update_objs.append(obj)
+                # Persist the merged existing object because mutable sub-dict fields
+                # are updated in place on existing_obj.
+                to_update_objs.append(existing_obj)
                 to_update_obj_results.append(obj_result)
-
-        # Stop if there were errors
-        if not success:
-            return success
 
         # Update the objects whose data are different
         if not to_update_objs:
             return success
-        _: list[UUID] = self.service.repository.crud(  # type: ignore[assignment]
+        _: list[UUID] = self.service.repository.crud(
             uow,
             user_id,
             model_class,
@@ -1661,8 +1844,15 @@ class BatchUploader:
         obj_class = obj.__class__
         if obj_class is self.parent_for_upload_class:
             return self.parent_id_field_name
-        else:
-            return self.child_parent_id_field_name_map[obj_class]
+        if obj_class in self.child_id_field_name_map:
+            return self.child_id_field_name_map[obj_class]
+        for (
+            child_model_class,
+            child_for_upload_class,
+        ) in self.child_for_upload_class_map.items():
+            if obj_class is child_for_upload_class:
+                return self.child_id_field_name_map[child_model_class]
+        raise KeyError(f"Could not determine ID field for {obj_class.__name__}")
 
     @staticmethod
     def update_sub_field_dict(content: dict, updates: dict | None) -> bool:

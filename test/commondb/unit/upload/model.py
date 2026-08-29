@@ -64,6 +64,10 @@ class Parent(fastapp.Model):
         default=None,
         description="A dict value that can be mutated only if the current value is empty (None).",
     )
+    fk_id: UUID | None = Field(
+        default=None,
+        description="A UUID value immutable once set. NULL_ID is treated as 'not specified'.",
+    )
 
 
 class ParentIdentifier(commondb_model.BaseIdentifier):
@@ -300,6 +304,7 @@ STORED_MODEL_FIELD_PROPS = {
             is_mutable_if_empty=True,
             is_sub_field_dict=True,
         ),
+        "fk_id": gen_epix.fastapp.model.ModelFieldProps(),
     },
     Child1: {
         "a": gen_epix.fastapp.model.ModelFieldProps(

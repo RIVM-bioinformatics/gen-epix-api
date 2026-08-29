@@ -409,7 +409,7 @@ class CompositeFilter(Filter):
 
 
 class TypedCompositeFilter(CompositeFilter):
-    type: Literal[enum.FilterType.COMPOSITE.value]
+    type: Literal[enum.FilterType.COMPOSITE.value]  # type: ignore[name-defined]
     filters: list[
         TypedExistsFilter
         | TypedEqualsBooleanFilter

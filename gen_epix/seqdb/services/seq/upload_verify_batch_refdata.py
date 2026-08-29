@@ -49,7 +49,7 @@ def _verify_batch_refdata_allele_profiles(
 
     # Retrieve all protocols
     uq_protocol_ids = {x.protocol_id for x in profiles}
-    protocols: list[model.Protocol] = self.service.repository.crud(  # type: ignore[assignment]
+    protocols: list[model.Protocol] = self.service.repository.crud(
         uow,
         user_id,
         model.Protocol,
@@ -59,12 +59,8 @@ def _verify_batch_refdata_allele_profiles(
     protocol_map = {x.id: x for x in protocols}
 
     # Retrieve locus sets
-    locus_set_ids = {
-        protocol_map[x.protocol_id].locus_set_id
-        for x in profiles
-        if x.locus_code_map_id is not None and x.locus_code_map_id != NULL_ID
-    }
-    locus_sets: list[model.LocusSet] = self.service.repository.crud(  # type: ignore[assignment]
+    locus_set_ids = {protocol_map[x.protocol_id].locus_set_id for x in profiles}
+    locus_sets: list[model.LocusSet] = self.service.repository.crud(
         uow,
         user_id,
         model.LocusSet,
@@ -79,7 +75,7 @@ def _verify_batch_refdata_allele_profiles(
         for x in profiles
         if x.locus_code_map_id is not None and x.locus_code_map_id != NULL_ID
     }
-    locus_code_maps: list[model.LocusCodeMap] = self.service.repository.crud(  # type: ignore[assignment]
+    locus_code_maps: list[model.LocusCodeMap] = self.service.repository.crud(
         uow,
         user_id,
         model.LocusCodeMap,
@@ -94,7 +90,7 @@ def _verify_batch_refdata_allele_profiles(
         x.id: set(x.code_map) for x in locus_code_map_map.values()
     }
     rev_locus_code_map_map = {
-        x.id: {y: x for x, y in x.code_map.items()} for x in locus_code_map_map.values()
+        x.id: {z: y for y, z in x.code_map.items()} for x in locus_code_map_map.values()
     }
     allele_ids: list[UUID | None]
 
@@ -156,7 +152,7 @@ def _verify_batch_refdata_allele_profiles(
         curr_allele_ids = uq_allele_ids_list[
             i : min(i + chunk_size, len(uq_allele_ids_list))
         ]
-        is_existing: list[bool] = self.service.repository.crud(  # type: ignore[assignment]
+        is_existing: list[bool] = self.service.repository.crud(
             uow,
             user_id,
             model.Allele,
@@ -202,7 +198,20 @@ def _verify_batch_refdata_allele_profiles(
     # Verify that any new alleles have been provided and set their locus IDs from the alleles in the sample data
     if new_allele_locus_map:
         provided_alleles = cmd.sample_batch.alleles or []
-        provided_allele_ids = {x.id for x in provided_alleles}
+        # Deduplicate alleles in-place (keep first occurrence per ID). The
+        # batch constructor may emit the same content-addressed allele once
+        # per sample; the repository requires unique IDs.
+        _seen_allele_ids: set[UUID] = set()
+        _dup_allele_indexes: list[int] = []
+        for _i, _allele in enumerate(provided_alleles):
+            assert _allele.id is not None
+            if _allele.id in _seen_allele_ids:
+                _dup_allele_indexes.append(_i)
+            else:
+                _seen_allele_ids.add(_allele.id)
+        for _index in sorted(_dup_allele_indexes, reverse=True):
+            del provided_alleles[_index]
+        provided_allele_ids = _seen_allele_ids
         # Determine if any missing alleles
         missing_allele_ids = set(new_allele_locus_map.keys()) - provided_allele_ids
         if missing_allele_ids:
@@ -255,8 +264,9 @@ def _verify_batch_refdata_allele_profiles(
                 allele.locus_id = expected_locus_id
                 continue
             if locus_id != expected_locus_id:
-                # Different locus ID, put the one derived from the profile
-                success = False
+                # Different locus ID: override with the one derived from the
+                # profile and emit a warning (not a hard failure).
+                allele.locus_id = expected_locus_id
                 batch_result.add_warning(
                     "e401b1bd",
                     f"Different locus ID for new allele {allele.id}: expected {expected_locus_id}, got {locus_id}, used the former",
@@ -264,6 +274,15 @@ def _verify_batch_refdata_allele_profiles(
         # Remove any extra alleles
         for index in sorted(extra_allele_indexes, reverse=True):
             del provided_alleles[index]
+
+    else:
+        # Every allele referenced in every profile is already stored. Any allele
+        # sequences included in the upload payload are redundant — drop them so
+        # _create_sample_refdata does not call UPSERT_SOME and trigger an
+        # expensive full-row reload of up to 3004 immutable allele records.
+        provided_alleles = cmd.sample_batch.alleles
+        if provided_alleles:
+            del provided_alleles[:]
 
     return success
 
@@ -321,38 +340,32 @@ def _verify_batch_refdata_mlva_profiles(
     if not profiles:
         return success
 
-    protocol_ids = {profile.protocol_id for profile in profiles}
-    protocols: list[model.Protocol] = self.service.repository.crud(  # type: ignore[assignment]
+    protocol_ids = {x.protocol_id for x in profiles}
+    protocols: list[model.Protocol] = self.service.repository.crud(
         uow,
         user_id,
         model.Protocol,
         CrudOperation.READ_SOME,
         obj_ids=list(protocol_ids),
     )
-    protocol_map = {protocol.id: protocol for protocol in protocols}
+    protocol_map = {x.id: x for x in protocols}
 
-    locus_set_ids = {
-        protocol_map[profile.protocol_id].locus_set_id
-        for profile in profiles
-        if profile.locus_code_map_id is not None
-        and profile.locus_code_map_id != NULL_ID
-    }
-    locus_sets: list[model.LocusSet] = self.service.repository.crud(  # type: ignore[assignment]
+    locus_set_ids = {protocol_map[x.protocol_id].locus_set_id for x in profiles}
+    locus_sets: list[model.LocusSet] = self.service.repository.crud(
         uow,
         user_id,
         model.LocusSet,
         CrudOperation.READ_SOME,
         obj_ids=list(locus_set_ids),
     )
-    locus_set_map = {locus_set.id: locus_set for locus_set in locus_sets}
+    locus_set_map = {x.id: x for x in locus_sets}
 
     locus_code_map_ids = {
-        profile.locus_code_map_id
-        for profile in profiles
-        if profile.locus_code_map_id is not None
-        and profile.locus_code_map_id != NULL_ID
+        x.locus_code_map_id
+        for x in profiles
+        if x.locus_code_map_id is not None and x.locus_code_map_id != NULL_ID
     }
-    locus_code_maps: list[model.LocusCodeMap] = self.service.repository.crud(  # type: ignore[assignment]
+    locus_code_maps: list[model.LocusCodeMap] = self.service.repository.crud(
         uow,
         user_id,
         model.LocusCodeMap,
@@ -360,11 +373,7 @@ def _verify_batch_refdata_mlva_profiles(
         obj_ids=list(locus_code_map_ids),
     )
     rev_locus_code_map_map = {
-        locus_code_map.id: {
-            locus_id: locus_code
-            for locus_code, locus_id in locus_code_map.code_map.items()
-        }
-        for locus_code_map in locus_code_maps
+        x.id: {z: y for y, z in x.code_map.items()} for x in locus_code_maps
     }
 
     repeat_numbers: list[int | None]
@@ -438,21 +447,110 @@ def _verify_batch_refdata_snp_profiles(
     batch_result: model.SampleBatchUploadResult,
     uow: Any,
 ) -> bool:
-    """Verify SNP profiles specific rules"""
+    """Verify SNP profiles specific rules."""
+
+    # TODO: LSP-3268-Implement-SNP-profile-support-seqdb:
+    #   - Load the 'real' ref_seq record.
+    #   - Handle aligned_nucleotide_seq form.
+    #   - Rebuild the full aligned sequence via nextclade_get_ref_alignment().
+
     success = True
-    for sample, sample_result in zip(cmd.sample_batch.samples, batch_result.samples):
-        for profile, profile_result in zip(
-            sample.seq_profiles or [], sample_result.seq_profiles or []
-        ):
+    user_id = cmd.user.id if cmd.user else None
+    samples = cmd.sample_batch.samples
+    sample_results = batch_result.samples
+
+    # Collect PENDING SNP profiles
+    profiles: list[model.SeqProfileForUpload] = []
+    profile_results: list[UploadResult] = []
+    for sample, sample_result in zip(samples, sample_results):
+        curr_profiles = sample.seq_profiles or []
+        curr_profile_results = sample_result.seq_profiles or []
+        for profile, profile_result in zip(curr_profiles, curr_profile_results):
             if profile_result.status != EtlStatus.PENDING:
                 continue
             if profile.seq_profile_type not in enum.SeqProfileTypeSet.SNP.value:
                 continue
+            profiles.append(profile)
+            profile_results.append(profile_result)
+    if not profiles:
+        return success
+
+    # Retrieve protocols
+    uq_protocol_ids = {x.protocol_id for x in profiles}
+    protocols: list[model.Protocol] = (
+        self.service.repository.crud(  # type: ignore[assignment]
+            uow,
+            user_id,
+            model.Protocol,
+            CrudOperation.READ_SOME,
+            obj_ids=list(uq_protocol_ids),
+        )
+    )
+    protocol_map = {x.id: x for x in protocols}
+
+    # Verify ref_seq exists for each protocol
+    ref_seq_ids = {
+        protocol_map[x.protocol_id].ref_seq_id
+        for x in profiles
+        if protocol_map[x.protocol_id].ref_seq_id is not None
+    }
+    if ref_seq_ids:
+        ref_seq_exists: list[bool] = (
+            self.service.repository.crud(  # type: ignore[assignment]
+                uow,
+                user_id,
+                model.RefSeq,
+                CrudOperation.EXISTS_SOME,
+                obj_ids=list(ref_seq_ids),
+            )
+        )
+        missing_ref_seqs = {
+            ref_seq_id
+            for ref_seq_id, exists in zip(ref_seq_ids, ref_seq_exists)
+            if not exists
+        }
+        if missing_ref_seqs:
+            success = False
+            batch_result.add_error(
+                "b7c6d5e4",
+                f"Reference sequences not found:" f" {sorted(missing_ref_seqs)}",
+            )
+
+    for profile, profile_result in zip(profiles, profile_results):
+        if profile_result.status != EtlStatus.PENDING:
+            continue
+
+        protocol = protocol_map[profile.protocol_id]
+        ref_seq_id = protocol.ref_seq_id
+        if ref_seq_id is None:
             success = False
             profile_result.add_error(
-                "f7a8b9c0",
-                "Verification of SNP profiles is not yet implemented",
+                "a6b5c4d3",
+                "Protocol has no ref_seq_id for SNP profile",
             )
+            continue
+
+        content = profile.content
+        if not content:
+            success = False
+            profile_result.add_error(
+                "d3e2f1a0",
+                "SNP profile content is empty",
+            )
+            continue
+
+        if content is None or content == "":
+            success = False
+            profile_result.add_error(
+                "c5d4e3f2",
+                "SNP profile content is empty",
+            )
+            continue
+        else:
+            if profile.format == enum.SeqProfileFormat.NEXTCLADE:
+                # TODO: Add more specific SNP profile validations as needed
+                pass
+
     return success
 
 

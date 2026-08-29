@@ -56,8 +56,14 @@ class BaseSeqRepository(BaseRepository):
         self,
         uow: BaseUnitOfWork,
         protocol_id: UUID,
+        profile_ids: list[UUID] | None = None,
     ) -> Iterable[model.SeqDistance]:
-        """Iterate over sequence distance records for protocol."""
+        """Iterate over SeqDistance records for a protocol.
+
+        When ``profile_ids`` is given, only records whose
+        ``seq_profile_id`` is in that list are yielded.
+        When ``None``, all records for the protocol are yielded
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -97,6 +103,24 @@ class BaseSeqRepository(BaseRepository):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def get_profiles_without_seq_distance(
+        self,
+        uow: BaseUnitOfWork,
+        distance_protocol_id: UUID,
+        seq_profile_protocol_ids: list[UUID],
+        limit: int | None = None,
+    ) -> list[model.SeqProfile]:
+        """Return profiles that have no SeqDistance record for
+        distance_protocol_id.
+
+        Pushes the set-difference into SQL (NOT EXISTS subquery) so that
+        neither the full profile list nor the full distance-profile-id set
+        is materialised in Python.  limit is applied as a SQL LIMIT /
+        TOP so only the required rows are transferred.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def get_sample_ids_modified_in_range(
         self,
         uow: BaseUnitOfWork,
@@ -117,6 +141,30 @@ class BaseSeqRepository(BaseRepository):
         """
         Retrieve all relevant data for the specified sample IDs and construct
         FullSample objects.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def update_some_seq_distance_content(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID | None,
+        objs: list[model.SeqDistance],
+    ) -> None:
+        """Update only the content field of SeqDistance records in bulk.
+
+        Exists as a domain-specific method rather than relying on the
+        framework's UPDATE_SOME because UPDATE_SOME issues one ORM flush
+        per row (474 round trips for a typical production call). This
+        method issues a single Core executemany statement instead.
+
+        Option B — modifying the framework's update_some to use bulk
+        updates — was deliberately not chosen: update_some does a
+        read-then-write cycle (fetch ORM rows → apply mapper → flush)
+        that handles modified_at via onupdate and modified_by via the
+        mapper. A bulk Core UPDATE bypasses both, so it cannot be a
+        transparent drop-in without risking silent side-effect omissions
+        for other callers across all four services.
         """
         raise NotImplementedError()
 

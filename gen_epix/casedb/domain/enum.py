@@ -353,7 +353,9 @@ class DimColTypeSet(Enum):
         )
     )
     IDENTIFIER = ColTypeSet.ID.value
-    NUMBER = ColTypeSet.NUMBER.value.union({ColType.INTERVAL, ColType.NOMINAL})
+    NUMBER = ColTypeSet.NUMBER.value.union(
+        {ColType.INTERVAL, ColType.NOMINAL, ColType.ORDINAL}
+    )
     TIME = ColTypeSet.TIME.value
     GEO = ColTypeSet.GEO.value
     ORGANIZATION = ColTypeSet.ORGANIZATION.value
@@ -376,3 +378,8 @@ class ColTypeOrder(Enum):
         ColType.TIME_QUARTER: 4,
         ColType.TIME_YEAR: 5,
     }
+
+
+class FeatureFlag(Enum):
+    UPDATE_OWN_ORGANIZATION = "UPDATE_OWN_ORGANIZATION"
+    DISABLE_UPLOAD = "UPLOAD_ENABLED"

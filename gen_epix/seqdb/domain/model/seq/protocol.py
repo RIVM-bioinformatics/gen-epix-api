@@ -2,7 +2,7 @@ import json
 import string
 from datetime import datetime, timezone
 from enum import IntEnum
-from typing import Any, ClassVar, Self
+from typing import Annotated, Any, ClassVar, Self
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -320,18 +320,39 @@ class Protocol(Model):
             return str(value)
         return value
 
+    def get_seq_profile_type_for_distance_protocol(
+        self,
+    ) -> SeqProfileType:
+        """Given a distance protocol, return the SeqProfileType it applies to."""
+        if self.protocol_type not in ProtocolTypeSet.IS_SEQ_DISTANCE.value:
+            raise ValueError(
+                f"Protocol type {self.protocol_type} is not a sequence distance protocol, cannot determine SeqProfileType."
+            )
+        for (
+            profile_type,
+            seq_distance_type_set,
+        ) in self.SEQ_PROFILE_DISTANCE_TYPE_MAP.items():
+            if self.seq_distance_type in seq_distance_type_set.value:
+                return profile_type
+        raise ValueError(
+            f"Unable to determine SeqProfileType for SeqDistanceType {self.seq_distance_type}"
+        )
+
 
 class HasProtocolMixin:
     """Mixin for models that have an associated Protocol. Provides a protocol_id field
     and a method to retrieve the associated Protocol.
     """
 
-    protocol_id: UUID = Field(
-        description="The ID of the associated protocol. FOREIGN KEY."
-    )
-    protocol: Protocol | None = Field(
-        default=None, description="The associated protocol."
-    )
+    # Annotation-only: an assigned Field lingers as class attr -> pydantic shadow warning
+    protocol_id: Annotated[
+        UUID,
+        Field(description="The ID of the associated protocol. FOREIGN KEY."),
+    ]
+    protocol: Annotated[
+        Protocol | None,
+        Field(default=None, description="The associated protocol."),
+    ]
 
 
 class ProtocolSet(Model):

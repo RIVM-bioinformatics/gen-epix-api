@@ -803,3 +803,53 @@ def test_uvicorn_access_filter_reuses_existing_json_formatter_configuration() ->
     assert payload["service"] == "shared-service"
     assert payload["environment"] == "prod"
     assert payload["message"] == "http.access GET /v1/discovered-formatter 200"
+
+
+# ---------------------------------------------------------------------------
+# Fix 13 – long exception messages are truncated
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.scenario_ids("TC-LOG-01-01")
+def test_long_exception_message_is_truncated() -> None:
+    """Truncation cuts from the middle, keeping both a prefix and a suffix,
+    since DB driver errors often echo the SQL statement first and put the
+    actual error message at the end."""
+    formatter = JsonFormatter(max_exception_message_length=50)
+    long_msg = "a" * 500 + "b" * 500
+
+    try:
+        raise RuntimeError(long_msg)
+    except RuntimeError:
+        record = _make_record(
+            msg="failed", level=logging.ERROR, exc_info=sys.exc_info()
+        )
+
+    payload = json.loads(formatter.format(record))
+
+    exc_message = payload["exception"]["message"]
+    assert exc_message.startswith("a" * 25)
+    assert exc_message.endswith("b" * 25)
+    assert "[950 chars omitted]" in exc_message
+
+
+@pytest.mark.scenario_ids("TC-LOG-01-01")
+def test_short_exception_message_passes_through_and_none_disables_truncation() -> None:
+    short_formatter = JsonFormatter(max_exception_message_length=10_000)
+    unlimited_formatter = JsonFormatter(max_exception_message_length=None)
+    msg = "short error"
+
+    try:
+        raise ValueError(msg)
+    except ValueError:
+        exc = sys.exc_info()
+
+    record_a = _make_record(msg="err", level=logging.ERROR, exc_info=exc)
+    record_b = _make_record(msg="err", level=logging.ERROR, exc_info=exc)
+    payload_a = json.loads(short_formatter.format(record_a))
+    payload_b = json.loads(unlimited_formatter.format(record_b))
+
+    assert payload_a["exception"]["message"] == msg
+    assert payload_b["exception"]["message"] == msg
+    assert _TRUNCATED_SUFFIX not in payload_a["exception"]["message"]
+    assert _TRUNCATED_SUFFIX not in payload_b["exception"]["message"]

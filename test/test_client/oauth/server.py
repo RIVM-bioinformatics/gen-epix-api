@@ -13,6 +13,7 @@ The server includes:
 """
 
 import logging
+import os
 import time
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -33,7 +34,12 @@ from pydantic import BaseModel
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
+
+# When set, all JWTs and the discovery document use this as the issuer instead of
+# deriving it from request.url.netloc. Useful for docker-compose stacks where the
+# service hostname (mock-oidc:8080) differs from the host-facing URL (localhost:8080).
+_ISSUER: str | None = os.environ.get("MOCK_OIDC_ISSUER")
 
 # Initialize components
 client_store = ClientStore()
@@ -47,12 +53,12 @@ authorization_code_store = AuthorizationCodeStore()
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Initialize the OAuth server."""
-    logger.info("Starting OAuth 2.0 Provider with OIDC support")
+    LOGGER.info("Starting OAuth 2.0 Provider with OIDC support")
 
     yield  # This is where the app runs
 
     # Cleanup code would go here if needed
-    logger.info("Shutting down OAuth 2.0 Provider")
+    LOGGER.info("Shutting down OAuth 2.0 Provider")
 
 
 # FastAPI app
@@ -166,7 +172,7 @@ async def openid_configuration(request: Request) -> dict[str, Any]:
     base_url = f"{request.url.scheme}://{request.url.netloc}"
 
     return {
-        "issuer": base_url,
+        "issuer": _ISSUER or base_url,
         "authorization_endpoint": f"{base_url}/oauth/authorize",
         "token_endpoint": f"{base_url}/oauth/token",
         "userinfo_endpoint": f"{base_url}/oauth/userinfo",
@@ -244,7 +250,7 @@ async def token_endpoint(request: Request) -> JSONResponse:
         expires_at = now + timedelta(seconds=expires_in)
 
         access_token_payload = {
-            "iss": f"{request.url.scheme}://{request.url.netloc}",
+            "iss": _ISSUER or f"{request.url.scheme}://{request.url.netloc}",
             "sub": auth_code.user_id,
             "aud": client.audience or client.client_id,
             "iat": int(now.timestamp()),
@@ -274,7 +280,7 @@ async def token_endpoint(request: Request) -> JSONResponse:
 
         if "openid" in auth_code.scopes:
             id_token_payload = {
-                "iss": f"{request.url.scheme}://{request.url.netloc}",
+                "iss": _ISSUER or f"{request.url.scheme}://{request.url.netloc}",
                 "sub": auth_code.user_id,
                 "aud": client.audience or client.client_id,
                 "iat": int(now.timestamp()),
@@ -285,7 +291,7 @@ async def token_endpoint(request: Request) -> JSONResponse:
             id_token = jwks_manager.create_jwt(id_token_payload)
             response_data["id_token"] = id_token
 
-        logger.info(
+        LOGGER.info(
             f"Exchanged authorization code for client {client.client_id} with scopes: {auth_code.scopes}"
         )
 
@@ -311,7 +317,7 @@ async def token_endpoint(request: Request) -> JSONResponse:
 
     # Create access token
     access_token_payload = {
-        "iss": f"{request.url.scheme}://{request.url.netloc}",
+        "iss": _ISSUER or f"{request.url.scheme}://{request.url.netloc}",
         "sub": client.client_id,
         "aud": client.audience or client.client_id,  # Use client's audience if set
         "iat": int(now.timestamp()),
@@ -343,7 +349,7 @@ async def token_endpoint(request: Request) -> JSONResponse:
     # Add ID token if openid scope is requested
     if "openid" in allowed_scopes:
         id_token_payload = {
-            "iss": f"{request.url.scheme}://{request.url.netloc}",
+            "iss": _ISSUER or f"{request.url.scheme}://{request.url.netloc}",
             "sub": client.client_id,
             "aud": client.audience or client.client_id,  # Use client's audience if set
             "iat": int(now.timestamp()),
@@ -353,7 +359,7 @@ async def token_endpoint(request: Request) -> JSONResponse:
         id_token = jwks_manager.create_jwt(id_token_payload)
         response_data["id_token"] = id_token
 
-    logger.info(
+    LOGGER.info(
         f"Issued token for client {client.client_id} with scopes: {allowed_scopes}"
     )
 
@@ -408,7 +414,7 @@ async def authorize_endpoint(request: Request) -> RedirectResponse:
         code_challenge_method=code_challenge_method,
     )
 
-    logger.info(
+    LOGGER.info(
         f"Issued authorization code for client {client.client_id} scopes={allowed_scopes} user={user_id}"
     )
 
@@ -487,9 +493,9 @@ async def userinfo_endpoint(request: Request) -> JSONResponse:
     # Validate token
     try:
         payload = jwks_manager.verify_jwt(access_token)
-        logger.info(f"JWT validation successful for token: {access_token[:20]}...")
+        LOGGER.info(f"JWT validation successful for token: {access_token[:20]}...")
     except jwt.InvalidTokenError as e:
-        logger.error(
+        LOGGER.error(
             f"JWT validation failed for token: {access_token[:20]}... Error: {e}"
         )
         raise HTTPException(
@@ -498,12 +504,12 @@ async def userinfo_endpoint(request: Request) -> JSONResponse:
 
     # Check if token has openid scope
     stored_token = token_store.get_token(access_token)
-    logger.info(f"Token lookup result: {stored_token is not None}")
+    LOGGER.info(f"Token lookup result: {stored_token is not None}")
     if stored_token:
-        logger.info(f"Token scope: {stored_token.scope}")
+        LOGGER.info(f"Token scope: {stored_token.scope}")
 
     if not stored_token or "openid" not in stored_token.scope:
-        logger.error(
+        LOGGER.error(
             f"Token validation failed: stored_token={stored_token is not None}, scope={stored_token.scope if stored_token else 'None'}"
         )
         raise HTTPException(
@@ -550,7 +556,7 @@ async def create_client(client_request: ClientCreateRequest) -> ClientResponse:
 
     client_store.store_client(client)
 
-    logger.info(f"Created new client: {client_request.client_id}")
+    LOGGER.info(f"Created new client: {client_request.client_id}")
 
     # Return client info (without secret)
     return ClientResponse(
@@ -574,7 +580,7 @@ async def delete_client(client_id: str) -> None:
             detail=f"Client with ID '{client_id}' not found",
         )
 
-    logger.info(f"Deleted client: {client_id}")
+    LOGGER.info(f"Deleted client: {client_id}")
 
 
 @app.get("/admin/clients")

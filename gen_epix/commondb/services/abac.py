@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, ClassVar
 from uuid import UUID
 
 from cachetools import TTLCache, cached
@@ -15,7 +15,7 @@ from gen_epix.commondb.domain.repository.abac import BaseAbacRepository
 from gen_epix.commondb.domain.service import BaseAbacService
 from gen_epix.fastapp import App, CrudOperation
 from gen_epix.fastapp.enum import EventTiming
-from gen_epix.fastapp.model import Command, CrudCommand, Policy
+from gen_epix.fastapp.model import Command, Policy
 from gen_epix.filter import (
     CompositeFilter,
     EqualsBooleanFilter,
@@ -26,7 +26,10 @@ from gen_epix.filter import (
 
 class AbacService(BaseAbacService):
 
-    CACHE_INVALIDATION_COMMANDS: tuple[type[Command], ...] = tuple()
+    CACHE_INVALIDATION_COMMANDS: tuple[type[Command], ...] = (
+        command.UpdateUserOwnOrganizationCommand,
+    )
+    _GET_USER_BY_ID_CACHE: ClassVar[TTLCache] = TTLCache(maxsize=1024, ttl=300)
 
     def __init__(
         self,
@@ -43,6 +46,10 @@ class AbacService(BaseAbacService):
             setup_logger=setup_logger,
             **kwargs,
         )
+        for command_class in self.CACHE_INVALIDATION_COMMANDS:
+            app.register_cache_invalidator(command_class, self._invalidate_cache)
+            app.set_auto_invalidate_cache(command_class, True)
+
         app_impl: AppImplDetails = app.impl
         self.organization_admin_policy_model_class: type[
             model.OrganizationAdminPolicy
@@ -68,12 +75,8 @@ class AbacService(BaseAbacService):
         self.role_map = app_impl.role_map
         self.role_set_map = app_impl.role_set_map
 
-    def crud(self, cmd: CrudCommand) -> Any:
-        retval = super().crud(cmd)
-        # Invalidate cache
-        if issubclass(type(cmd), AbacService.CACHE_INVALIDATION_COMMANDS):
-            self._get_user_by_id_cached.cache_clear()
-        return retval
+    def _invalidate_cache(self, _cmd: Command) -> None:
+        self._get_user_by_id_cached.cache_clear()
 
     def register_policies(
         self,
@@ -144,7 +147,7 @@ class AbacService(BaseAbacService):
         # Retrieve organizations for which the user is an admin
         with self.repository.uow() as uow:
             organization_admin_policies: list[model.OrganizationAdminPolicy] = (
-                self.repository.crud(  # type: ignore[assignment]
+                self.repository.crud(
                     uow,
                     cmd.user.id,
                     self.organization_admin_policy_model_class,
@@ -171,7 +174,7 @@ class AbacService(BaseAbacService):
             )
         with self.repository.uow() as uow:
             organization_admin_policies: list[model.OrganizationAdminPolicy] = (
-                self.repository.crud(  # type: ignore[assignment]
+                self.repository.crud(
                     uow,
                     cmd.user.id,
                     self.organization_admin_policy_model_class,
@@ -256,12 +259,9 @@ class AbacService(BaseAbacService):
                 )
             )
 
-        # Invalidate cache
-        # TODO: develop general system for caching and cache invalidation
-        self._get_user_by_id_cached.cache_clear()
         return user
 
-    @cached(cache=TTLCache(maxsize=1024, ttl=300))
+    @cached(cache=_GET_USER_BY_ID_CACHE)
     def _get_user_by_id_cached(self, user_id: UUID) -> model.User:
         user: model.User = self.app.handle(
             self.user_crud_command_class(

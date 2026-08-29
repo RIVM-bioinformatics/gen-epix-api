@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import Field, computed_field, model_validator
 
 from gen_epix.commondb.domain.literal import NULL_ID
+from gen_epix.commondb.domain.model.base import EtlLogItem
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
@@ -203,14 +204,17 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
         return self
 
     def _validate_snp_profile_upload(self) -> Self:
-        self._validate_exactly_one_representation(
-            (
-                ("content", self.content != ""),
-                ("aligned_nucleotide_seq", self.aligned_nucleotide_seq is not None),
+        if self.content == "" and self.aligned_nucleotide_seq is None:
+            raise ValueError(
+                "content or aligned_nucleotide_seq must be provided for SNP profiles."
             )
-        )
-        if self.aligned_nucleotide_seq is not None:
-            self.content = self.aligned_nucleotide_seq
+        # TODO: When content is provided, the parent SeqProfile._validate_content validator
+        # has already parsed the JSON, validated required NextClade fields, and
+        # computed/verified the hash. Nothing more to do here.
+        # When aligned_nucleotide_seq is provided (content == ""), the parent skips
+        # validation and the conversion to content + hash computation will be
+        # implemented here.
+
         return self
 
     def _validate_allele_profile_upload(self) -> Self:
@@ -410,6 +414,12 @@ class SampleForUpload(ParentForUpload):
     CHILD_PARENT_ID_FIELD_NAME_MAP: ClassVar = {
         x: "sample_id" for x in CHILD_FOR_UPLOAD_CLASS_MAP.keys()
     }
+    CHILD_INTRA_PARENT_LINKS_MAP: ClassVar = {
+        Seq: [("read_set_id", ReadSet), ("read_set2_id", ReadSet)],
+        SeqClassification: [("seq_id", Seq)],
+        SeqProfile: [("seq_id", Seq)],
+        SeqTaxonomy: [("seq_id", Seq)],
+    }
 
     # Parent
     sample: Sample | None = Field(
@@ -495,6 +505,35 @@ class SampleUploadResult(ParentUploadResult):
         default=None,
         description="The results of uploading the AST measurements associated with the sample, if any were provided, in the same order as provided.",
     )
+
+    def get_errors(self) -> list[EtlLogItem]:
+        """Get all data issues that are errors."""
+        log_items = super().get_errors()
+        if self.identifiers:
+            for identifier_result in self.identifiers:
+                log_items.extend(identifier_result.get_errors())
+        if self.read_sets:
+            for read_set_result in self.read_sets:
+                log_items.extend(read_set_result.get_errors())
+        if self.seqs:
+            for seq_result in self.seqs:
+                log_items.extend(seq_result.get_errors())
+        if self.seq_taxonomies:
+            for seq_taxonomy_result in self.seq_taxonomies:
+                log_items.extend(seq_taxonomy_result.get_errors())
+        if self.seq_classifications:
+            for seq_classification_result in self.seq_classifications:
+                log_items.extend(seq_classification_result.get_errors())
+        if self.seq_profiles:
+            for seq_profile_result in self.seq_profiles:
+                log_items.extend(seq_profile_result.get_errors())
+        if self.pcr_measurements:
+            for pcr_measurement_result in self.pcr_measurements:
+                log_items.extend(pcr_measurement_result.get_errors())
+        if self.ast_measurements:
+            for ast_measurement_result in self.ast_measurements:
+                log_items.extend(ast_measurement_result.get_errors())
+        return log_items
 
 
 class SampleBatchForUpload(BaseBatchForUpload):

@@ -1,0 +1,196 @@
+# SA_SQL compose stack with mock OIDC — SQL Server 2022 backend plus a local
+# OAuth 2.0 / OIDC provider so that auth and permission issues can be reproduced
+# locally without a real identity provider.
+#
+# Services run in MOCK IDP mode: every request must carry a valid JWT signed by
+# the mock-oidc server. The "mock" OAuth client (id=mock / secret=mock) is
+# registered by the init-mock-oidc one-shot container after the server is ready.
+#
+# Usage:
+#   docker compose -f docker-compose.sql.idp.yaml up --wait
+#   docker compose -f docker-compose.sql.idp.yaml down        # keep data
+#   docker compose -f docker-compose.sql.idp.yaml down -v     # wipe data
+#
+# lsp-data .env settings needed to match:
+#   *_AUTH_PROTOCOL=OAUTH2
+#   *_OAUTH_DISCOVERY_URL=http://localhost:8080/.well-known/openid-configuration
+#   *_OAUTH_CLIENT_ID=mock
+#   *_OAUTH_CLIENT_SECRET=mock
+#
+# Authentication flow: the client_credentials grant sets sub=client_id ("mock")
+# in the JWT. MOCK_OIDC_ISSUER fixes the issuer to http://localhost:8080 so that
+# JWTs fetched by lsp-data from localhost:8080 have the same iss as the value the
+# gen-epix-api services read from the discovery doc at mock-oidc:8080.
+# mock_identity_provider.docker.toml overrides root.user.key to "mock" so that
+# is_root_user_claims() matches and create_root_user_from_claims() auto-creates
+# the root org+user on the first request (idempotent).
+
+services:
+
+  lsp_sql:
+    image: mcr.microsoft.com/mssql/server:2025-latest@sha256:4bab24f36c1ecd48e85f7d37df26e6bf301641d84c3fe652f9a0dcc947d512e1
+    user: root
+    environment:
+      MSSQL_SA_PASSWORD: "Your_password123"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "127.0.0.1:1433:1433"
+    volumes:
+      - lsp_sql_data:/var/opt/mssql
+    healthcheck:
+      # Fall back to the older tools path for forward-compatibility.
+      test:
+        - "CMD-SHELL"
+        - >
+          /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa
+          -P 'Your_password123' -C -Q 'SELECT 1' 2>/dev/null
+          || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa
+          -P 'Your_password123' -Q 'SELECT 1' 2>/dev/null
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  # One-shot container: creates the three databases then exits.
+  # create_sa_repository() handles schemas + tables on app startup.
+  init-db:
+    image: mcr.microsoft.com/mssql/server:2025-latest@sha256:4bab24f36c1ecd48e85f7d37df26e6bf301641d84c3fe652f9a0dcc947d512e1
+    depends_on:
+      lsp_sql:
+        condition: service_healthy
+    command:
+      - bash
+      - -c
+      - >
+        /opt/mssql-tools18/bin/sqlcmd -S lsp_sql -U sa
+        -P 'Your_password123' -C
+        -Q "IF DB_ID('casedb') IS NULL CREATE DATABASE casedb;
+            IF DB_ID('seqdb')  IS NULL CREATE DATABASE seqdb;
+            IF DB_ID('omopdb') IS NULL CREATE DATABASE omopdb;"
+        2>/dev/null
+        || /opt/mssql-tools/bin/sqlcmd -S lsp_sql -U sa
+        -P 'Your_password123'
+        -Q "IF DB_ID('casedb') IS NULL CREATE DATABASE casedb;
+            IF DB_ID('seqdb')  IS NULL CREATE DATABASE seqdb;
+            IF DB_ID('omopdb') IS NULL CREATE DATABASE omopdb;"
+    restart: "no"
+
+  # Mock OAuth 2.0 / OIDC server. Runs without SSL (certs are stripped from the
+  # image by Dockerfile.dev). The discovery URL exposed to lsp-data on the host
+  # is http://localhost:8080/.well-known/openid-configuration.
+  mock-oidc:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    # Bypass start_server.py/ServerManager — it hardcodes --host localhost regardless
+    # of the host argument, so only loopback would be reachable from other containers.
+    command: python -m uvicorn test.test_client.oauth.server:app --host 0.0.0.0 --port 8080
+    environment:
+      # Use the host-facing URL as the issuer so that JWTs issued to lsp-data
+      # (which fetches tokens from localhost:8080) have iss=http://localhost:8080.
+      # This matches what the gen-epix-api services read from the discovery doc,
+      # since they use the same MOCK_OIDC_ISSUER value regardless of which internal
+      # hostname (mock-oidc:8080) they use to reach the discovery endpoint.
+      MOCK_OIDC_ISSUER: "http://localhost:8080"
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  # One-shot container: registers the "mock" OAuth client after the OIDC server
+  # is healthy. The client_id / client_secret must match mock_identity_provider.toml
+  # (and the corresponding lsp-data .env settings).
+  init-mock-oidc:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    depends_on:
+      mock-oidc:
+        condition: service_healthy
+    command:
+      - python
+      - -c
+      - "import httpx; r = httpx.post('http://mock-oidc:8080/admin/clients', json={'client_id':'mock','client_secret':'mock','client_name':'Mock','scopes':['openid','profile','email'],'grant_types':['client_credentials']}); assert r.status_code in (201, 409), f'Unexpected status {r.status_code}: {r.text}'; print(r.status_code, r.text)"
+    restart: "no"
+
+  seqdb:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: python run.py api SEQDB MOCK SA_SQL --noreload
+    environment:
+      SEQDB_REPOSITORY__DEFAULTS__PROPS__SERVER: lsp_sql
+    volumes:
+      - ./config/mock_identity_provider.docker.toml:/app/config/mock_identity_provider.toml:ro
+    ports:
+      - "8001:8001"
+    depends_on:
+      init-db:
+        condition: service_completed_successfully
+      init-mock-oidc:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8001/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  omopdb:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: python run.py api OMOPDB MOCK SA_SQL --noreload
+    environment:
+      OMOPDB_REPOSITORY__DEFAULTS__PROPS__SERVER: lsp_sql
+    volumes:
+      - ./config/mock_identity_provider.docker.toml:/app/config/mock_identity_provider.toml:ro
+    ports:
+      - "8002:8002"
+    depends_on:
+      init-db:
+        condition: service_completed_successfully
+      init-mock-oidc:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8002/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  casedb:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: python run.py api CASEDB MOCK SA_SQL --noreload
+    environment:
+      CASEDB_REPOSITORY__DEFAULTS__PROPS__SERVER: lsp_sql
+      # casedb's embedded LOCAL seqdb loads its config under the SEQDB_ prefix,
+      # so the server override must be set here too.
+      SEQDB_REPOSITORY__DEFAULTS__PROPS__SERVER: lsp_sql
+    volumes:
+      - ./config/mock_identity_provider.docker.toml:/app/config/mock_identity_provider.toml:ro
+    ports:
+      - "8000:8000"
+    depends_on:
+      init-db:
+        condition: service_completed_successfully
+      init-mock-oidc:
+        condition: service_completed_successfully
+      # seqdb must be healthy before casedb starts (same reasoning as docker-compose.sql.yml).
+      seqdb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8000/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  lsp_sql_data:

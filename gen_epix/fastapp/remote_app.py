@@ -1,6 +1,7 @@
 import json
 import ssl
-from collections.abc import Callable
+from collections.abc import Callable, Generator
+from decimal import Decimal
 from functools import partial
 from pathlib import Path
 from typing import Any, cast
@@ -13,13 +14,26 @@ from gen_epix.fastapp import exc, model
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.domain.domain import Domain
-from gen_epix.fastapp.enum import CrudOperation, EventTiming, HttpProtocol, StringCasing
+from gen_epix.fastapp.enum import (
+    CrudOperation,
+    EventTiming,
+    HttpMethod,
+    HttpProtocol,
+    StringCasing,
+)
 from gen_epix.fastapp.exc import ServiceException
 from gen_epix.fastapp.model import Command, CrudCommand, Policy
 from gen_epix.fastapp.util import create_ssl_context
+from gen_epix.filter import (
+    FilterType,
+    TypedNumberSetFilter,
+    TypedStringSetFilter,
+    TypedUuidSetFilter,
+)
 
 
 class RemoteApp(App):
+    """Base class for remote application clients that forward commands as HTTP requests."""
 
     DEFAULT_ROUTE_PREFIX = "/"
 
@@ -41,6 +55,7 @@ class RemoteApp(App):
         disable_ssl_verification: bool = False,
         **kwargs: Any,
     ) -> None:
+        """Initialize connection parameters, SSL context, routes, and optional CRUD handlers."""
         super().__init__(domain, **kwargs)
         self._host = host
         self._port = port
@@ -72,6 +87,7 @@ class RemoteApp(App):
         ssl_cert_file: Path | str | None,
         disable_ssl_verification: bool,
     ) -> None:
+        """Configure the SSL context based on protocol and certificate settings."""
         if self.protocol == HttpProtocol.HTTPS:
             self._ssl_context = create_ssl_context(
                 host, ssl_cert_file, disable_ssl_verification
@@ -81,25 +97,30 @@ class RemoteApp(App):
 
     @property
     def host(self) -> str:
+        """Remote host name."""
         return self._host
 
     @property
     def port(self) -> int | None:
+        """Remote port, or None if not specified."""
         return self._port
 
     @property
     def protocol(self) -> HttpProtocol:
+        """HTTP protocol (HTTP or HTTPS)."""
         if isinstance(self._protocol, HttpProtocol):
             return self._protocol
         return HttpProtocol[self._protocol.upper()]
 
     @property
     def host_url(self) -> str:
+        """Full base URL including protocol, host, and port."""
         port_str = f":{self.port}" if self.port else ""
         return f"{self.protocol.value.lower()}://{self.host}{port_str}"
 
     @property
     def ssl_context(self) -> ssl.SSLContext | bool:
+        """SSL context for HTTPS connections, or False to disable verification."""
         return self._ssl_context
 
     def register_policy(
@@ -108,11 +129,13 @@ class RemoteApp(App):
         policy: Policy,
         timing: EventTiming = EventTiming.BEFORE,
     ) -> None:
+        """Raise ServiceException; policies are not supported on RemoteApp."""
         raise ServiceException("Policies cannot be registered on RemoteApp instances")
 
     def unregister_policy(
         self, command_class: type[Command], policy: Policy, timing: EventTiming
     ) -> None:
+        """Raise ServiceException; policies are not supported on RemoteApp."""
         raise ServiceException("Policies cannot be unregistered on RemoteApp instances")
 
     def register_route(
@@ -140,6 +163,7 @@ class RemoteApp(App):
         return route
 
     def unregister_route(self, command_class: type[Command]) -> None:
+        """Remove the registered route for the given command class."""
         if command_class not in self._routes:
             raise ServiceException(
                 f"No route registered for command: {command_class.__name__}"
@@ -147,6 +171,7 @@ class RemoteApp(App):
         del self._routes[command_class]
 
     def get_route(self, cmd: Command) -> str:
+        """Return the registered URL for the given command, raising if not found."""
         route = self._routes.get(cmd.__class__, None)
         if not route:
             raise NotImplementedError(
@@ -165,6 +190,7 @@ class RemoteApp(App):
         cmd: Command,
         handler: Callable[[Command], Any],
     ) -> Any:
+        """Invoke the handler, wrapping transport and HTTP errors in ServiceException."""
         command_class = cmd.__class__
         route = self._routes.get(command_class, None)
         if not route:
@@ -219,6 +245,96 @@ class RemoteApp(App):
             verify=self.ssl_context, timeout=timeout or self.get_timeout(type(cmd))
         )
 
+    def request(
+        self,
+        cmd: Command,
+        method: HttpMethod,
+        *,
+        route: str | None = None,
+        model: PydanticBaseModel | None = None,
+        json_body: Any = None,
+        params: dict[str, Any] | None = None,
+        exclude: set[str] | None = None,
+    ) -> Any | None:
+        """
+        Execute an HTTP request for a command and method and return the parsed JSON
+        response body, if any.
+
+        The registered route for the command can be overridden by providing a custom
+        route, typically when a parameterised route is needed based on the command
+        contents.
+
+        If a request body is needed, it must be provided via either the `model` or the
+        `json_body` parameter. The Pydantic model will be converted to json via
+        model_dump_json(exclude=exclude) so any non-standard serialization is handled
+        properly and some fields can be excluded as necessary. If both model and
+        json_body are None, no request body will be sent. Other types of request bodies
+        are currently not supported by this method.
+        """
+        # Parse input
+        if model is not None:
+            if json_body is not None:
+                raise ValueError(
+                    "Cannot provide both a Pydantic model and a JSON body for the request"
+                )
+            json_body = json.loads(model.model_dump_json(exclude=exclude))
+        # Get headers and route
+        headers = self.get_headers(cmd)
+        url = route if route is not None else self.get_route(cmd)
+        # Execute request and parse response
+        with self.get_client(cmd) as client:
+            response = client.request(
+                method.value, url, json=json_body, params=params, headers=headers
+            )
+            response.raise_for_status()
+            if not response.content:
+                return None
+            return response.json()
+
+    def stream(
+        self,
+        cmd: Command,
+        method: HttpMethod,
+        *,
+        route: str | None = None,
+        model: PydanticBaseModel | None = None,
+        json_body: Any = None,
+        form_data: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
+        exclude: set[str] | None = None,
+    ) -> Generator[str, None, None]:
+        """
+        Execute a streaming HTTP request for a command and yield decoded chunks.
+
+        Mirrors `request` but uses client.stream() and yields response bytes
+        decoded as UTF-8 strings instead of returning parsed JSON.
+
+        When `form_data` is provided, the request is sent as form-encoded data
+        without the default headers (e.g. for endpoints that authenticate via a
+        form field instead of an Authorization header).
+        """
+        if model is not None:
+            if json_body is not None:
+                raise ValueError(
+                    "Cannot provide both a Pydantic model and a JSON body for the request"
+                )
+            json_body = json.loads(model.model_dump_json(exclude=exclude))
+        url = route if route is not None else self.get_route(cmd)
+        # Skip default headers when auth is embedded in form_data.
+        headers = None if form_data is not None else self.get_headers(cmd)
+        with self.get_client(cmd) as client:
+            with client.stream(
+                method.value,
+                url,
+                json=json_body,
+                data=form_data,
+                params=params,
+                headers=headers,
+            ) as response:
+                response.raise_for_status()
+                for chunk in response.iter_bytes():
+                    yield chunk.decode()
+
     def register_generated_crud_route(
         self,
         command_class: type[CrudCommand],
@@ -228,6 +344,7 @@ class RemoteApp(App):
         route_root_casing: StringCasing = StringCasing.SNAKE_CASE,
         route_root_plural: bool = True,
     ) -> str:
+        """Derive the CRUD route from the model entity name and register it."""
         model_class = command_class.MODEL_CLASS
         entity = model_class.ENTITY
         assert entity is not None
@@ -247,6 +364,7 @@ class RemoteApp(App):
         query_route_suffix: str | None = None,
         ids_route_suffix: str | None = None,
     ) -> Callable[[Command], Any]:
+        """Return a partial handler that maps CRUD operations to HTTP requests."""
         batch_route_suffix = (
             batch_route_suffix or CrudEndpointGenerator.DEFAULT_BATCH_ROUTE_SUFFIX
         )
@@ -279,6 +397,7 @@ class RemoteApp(App):
         ids_route_suffix: str,
         cmd: CrudCommand,
     ) -> Any:
+        """Execute a CRUD command by dispatching to the appropriate HTTP method."""
 
         headers = self.get_headers(cmd)
         model_class = cmd.MODEL_CLASS
@@ -288,7 +407,7 @@ class RemoteApp(App):
             match cmd.operation:
                 case CrudOperation.READ_ALL:
                     if cmd.query_filter:
-                        if cmd.props.get("return_id", False):
+                        if cmd.return_id:
                             query_suffix = query_route_suffix.rstrip("/")
                             ids_suffix = (
                                 ids_route_suffix
@@ -319,6 +438,28 @@ class RemoteApp(App):
                     response = client.get(
                         f"{base_route}/{cmd.obj_ids}",
                         headers=headers,
+                    )
+                case CrudOperation.EXISTS_ONE:
+                    assert cmd.obj_ids is not None
+                    return self._exists_some_via_query_ids(
+                        client=client,
+                        headers=headers,
+                        model_class=model_class,
+                        base_route=base_route,
+                        query_route_suffix=query_route_suffix,
+                        ids_route_suffix=ids_route_suffix,
+                        obj_ids=[cmd.obj_ids],
+                    )[0]
+                case CrudOperation.EXISTS_SOME:
+                    assert isinstance(cmd.obj_ids, list)
+                    return self._exists_some_via_query_ids(
+                        client=client,
+                        headers=headers,
+                        model_class=model_class,
+                        base_route=base_route,
+                        query_route_suffix=query_route_suffix,
+                        ids_route_suffix=ids_route_suffix,
+                        obj_ids=cmd.obj_ids,
                     )
                 case CrudOperation.CREATE_ONE:
                     assert isinstance(cmd.objs, model.Model)
@@ -372,10 +513,122 @@ class RemoteApp(App):
         retval = self._content_to_obj(response, return_model_class, is_list=is_list)
         return retval
 
+    def _exists_some_via_query_ids(
+        self,
+        base_route: str,
+        query_route_suffix: str,
+        ids_route_suffix: str,
+        model_class: type[model.Model],
+        obj_ids: list[Any],
+        client: httpx.Client,
+        headers: dict[str, str],
+    ) -> list[bool]:
+        """Check existence of multiple IDs using a query-by-IDs endpoint."""
+        if not obj_ids:
+            return []
+
+        id_field_name = model_class.ENTITY.id_field_name
+        if not isinstance(id_field_name, str):
+            raise AssertionError(
+                f"Model {model_class.__name__} does not define a string id_field_name."
+            )
+        query_suffix = query_route_suffix.rstrip("/")
+        ids_suffix = (
+            ids_route_suffix
+            if ids_route_suffix.startswith("/")
+            else ("/" + ids_route_suffix)
+        )
+        query_ids_url = base_route + query_suffix + ids_suffix
+
+        id_type = self._classify_exists_id_type(obj_ids)
+        number_id_types = {"int", "float", "decimal"}
+        query_filter: TypedUuidSetFilter | TypedStringSetFilter | TypedNumberSetFilter
+
+        if id_type == "uuid":
+            query_filter = TypedUuidSetFilter(
+                type=FilterType.UUID_SET.value,
+                key=id_field_name,
+                members=frozenset(obj_ids),
+            )
+        elif id_type == "string":
+            query_filter = TypedStringSetFilter(
+                type=FilterType.STRING_SET.value,
+                key=id_field_name,
+                members=frozenset(obj_ids),
+                case_sensitive=True,
+            )
+        elif id_type in number_id_types:
+            query_filter = TypedNumberSetFilter(
+                type=FilterType.NUMBER_SET.value,
+                key=id_field_name,
+                members=frozenset(obj_ids),
+            )
+        else:
+            return self._exists_some_via_get(
+                base_route=base_route,
+                obj_ids=obj_ids,
+                client=client,
+                headers=headers,
+            )
+
+        response = client.post(
+            query_ids_url,
+            json=json.loads(query_filter.model_dump_json()),
+            headers=headers,
+        )
+        response.raise_for_status()
+        found_ids = json.loads(response.content.decode(response.encoding or "utf-8"))
+        if id_type == "uuid":
+            found_set = {UUID(x) for x in found_ids}
+        else:
+            found_set = set(found_ids)
+        return [obj_id in found_set for obj_id in obj_ids]
+
+    @staticmethod
+    def _classify_exists_id_type(obj_ids: list[Any]) -> str:
+        """Return the id kind ('uuid', 'string', 'int', 'float', 'decimal', or 'mixed')."""
+        if not obj_ids:
+            return "mixed"
+
+        first_type = type(obj_ids[0])
+        if not all(type(obj_id) is first_type for obj_id in obj_ids[1:]):
+            return "mixed"
+
+        type_to_id_kind: dict[type, str] = {
+            UUID: "uuid",
+            str: "string",
+            int: "int",
+            float: "float",
+            Decimal: "decimal",
+        }
+        return type_to_id_kind.get(first_type, "mixed")
+
+    @staticmethod
+    def _exists_some_via_get(
+        base_route: str,
+        obj_ids: list[Any],
+        client: httpx.Client,
+        headers: dict[str, str],
+    ) -> list[bool]:
+        """Check existence of each ID via individual GET requests."""
+        is_existing: list[bool] = []
+        for obj_id in obj_ids:
+            response = client.get(
+                f"{base_route}/{obj_id}",
+                headers=headers,
+            )
+            if response.status_code == 404:
+                is_existing.append(False)
+                continue
+            response.raise_for_status()
+            is_existing.append(True)
+        return is_existing
+
     @staticmethod
     def _content_to_obj(
         response: httpx.Response, retval_class: type, is_list: bool = False
     ) -> Any:
+        """Deserialize an HTTP response body into the expected model or UUID type."""
         if response.status_code not in (200, 201):
             return None
         decoded_obj = json.loads(response.content.decode(response.encoding or "utf-8"))

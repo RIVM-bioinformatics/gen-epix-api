@@ -77,10 +77,12 @@ from gen_epix.seqdb.services.seq.crud_tree_algorithm_class import (
     seq_service_crud_tree_algorithm_class,
 )
 from gen_epix.seqdb.services.seq.retrieve_best import (
+    seq_service_retrieve_best_seq_classification_per_sample,
     seq_service_retrieve_best_seq_per_sample,
     seq_service_retrieve_best_seq_profile_per_sample,
 )
 from gen_epix.seqdb.services.seq.retrieve_sample import (
+    seq_service_retrieve_sample_identifiers_by_id,
     seq_service_retrieve_samples_by_id,
     seq_service_retrieve_samples_by_query,
 )
@@ -104,6 +106,11 @@ class SeqService(BaseSeqService):
         self, cmd: command.RetrieveSamplesByIdCommand
     ) -> list[model.FullSample]:
         return seq_service_retrieve_samples_by_id(self, cmd)
+
+    def retrieve_sample_identifiers_by_id(
+        self, cmd: command.RetrieveSampleIdentifiersByIdCommand
+    ) -> list[model.SampleIdentifier]:
+        return seq_service_retrieve_sample_identifiers_by_id(self, cmd)
 
     def retrieve_samples_by_query(
         self,
@@ -173,6 +180,12 @@ class SeqService(BaseSeqService):
         cmd: command.RetrieveBestSeqProfilePerSampleCommand,
     ) -> dict[UUID, UUID]:
         return seq_service_retrieve_best_seq_profile_per_sample(self, cmd)
+
+    def retrieve_best_seq_classification_per_sample(
+        self,
+        cmd: command.RetrieveBestSeqClassificationPerSampleCommand,
+    ) -> dict[UUID, UUID]:
+        return seq_service_retrieve_best_seq_classification_per_sample(self, cmd)
 
     def crud_protocol(
         self,

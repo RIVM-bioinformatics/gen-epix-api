@@ -1,7 +1,7 @@
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain import enum
@@ -11,6 +11,7 @@ from gen_epix.commondb.domain.command import (
     UpdateAssociationCommand,
 )
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
+from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
 
@@ -56,6 +57,7 @@ class CreateCaseSetCommand(Command):
     case_set: model.CaseSet = Field(description="The case set to create.")
     data_collection_ids: set[UUID] = Field(
         description="The data collections to associate with the case set, other than the created_in_data_collection. The latter will be removed from the set if present.",
+        default_factory=set,
     )
     case_ids: set[UUID] | None = Field(
         description="The cases to associate with the case set upon creation, if any. These cases must have the same CaseType as the case set.",
@@ -86,8 +88,9 @@ class UploadCasesCommand(Command, UploadBatchCommandMixin):
     case_type_id: UUID = Field(
         description="The CaseType ID that all the cases must belong to. All cases in the case set must have this CaseType ID."
     )
-    created_in_data_collection_id: UUID = Field(
-        description="The created in data collection ID that all the cases must belong to. All cases in the case set must have this created in data collection ID."
+    default_created_in_data_collection_id: UUID = Field(
+        default=NULL_ID,
+        description="The default data collection to associate with the cases if not specified at the case level AND the case does not exist yet.",
     )
     case_batch: model.CaseBatchForUpload = Field(
         description="The unique cases to validate."
@@ -99,17 +102,10 @@ class UploadCasesCommand(Command, UploadBatchCommandMixin):
         cases = [x.case for x in cases_for_upload if x.case is not None]
         if any(x.case_type_id != self.case_type_id for x in cases):
             raise ValueError("All cases must belong to the given CaseType ID.")
-        if any(
-            x.created_in_data_collection_id != self.created_in_data_collection_id
-            for x in cases
-        ):
-            raise ValueError(
-                "All cases must belong to the given created_in_data_collection_id."
-            )
         return self
 
 
-class RetrieveCaseStatsCommand(Command):
+class RetrieveCaseTypeStatsCommand(Command):
     """
     Retrieve statistics for a set of CaseTypes. Each of the parameters, when
     provided, will further filter the cases that are considered for the
@@ -120,13 +116,26 @@ class RetrieveCaseStatsCommand(Command):
         default=None,
         description="The CaseType IDs to retrieve stats for, if not all.",
     )
-    case_set_ids: list[UUID] | None = Field(
+    datetime_range_filter: TypedDatetimeRangeFilter | None = Field(
         default=None,
-        description="The case set IDs to retrieve stats for, if not all. UNIQUE",
+        description="The datetime range to filter cases by, if any. The key attribute of the filter should be left empty.",
+    )
+
+
+class RetrieveCaseSetStatsCommand(Command):
+    """
+    Retrieve statistics for a set of CaseSets. Each of the parameters, when
+    provided, will further filter the cases that are considered for the
+    statistics.
+    """
+
+    case_set_ids: set[UUID] | None = Field(
+        default=None,
+        description="The case set IDs to retrieve stats for, if not all.",
     )
     datetime_range_filter: TypedDatetimeRangeFilter | None = Field(
         default=None,
-        description="The datetime range to filter cases by, if any. The key attribute fo the filter should be left empty.",
+        description="The datetime range to filter cases by, if any. The key attribute of the filter should be left empty.",
     )
 
 
@@ -144,6 +153,19 @@ class RetrieveCasesByQueryCommand(Command):
     """
 
     case_query: model.CaseQuery = Field(description="The query to filter cases by.")
+
+
+class RetrieveCaseCohortLinksByCaseTypeCommand(Command):
+    """
+    Retrieve all (case_id, cohort_ids) pairs for a given CaseType.
+    Returns every case without pagination. Restricted to APP_ADMIN.
+    """
+
+    case_type_id: UUID = Field(description="The CaseType ID to retrieve pairs for.")
+    include_missing: bool = Field(
+        default=False,
+        description="Whether to include cases that have no linked cohorts, with NULL_ID as the cohort_id and cohort_definition_id.",
+    )
 
 
 class RetrieveCasesByIdCommand(Command):
@@ -256,13 +278,21 @@ class RetrieveSimilarCasesCommand(Command):
 
     max_distance: float = Field(
         description="The maximum genetic distance for cases to be considered similar.",
-        default=5,
+        ge=0,
+    )
+    genetic_distance_col_id: UUID = Field(
+        description="The Col ID to use for determining the genetic distance between cases."
     )
     case_ids: list[UUID] = Field(
         description="The IDs of cases to get the similar cases for.",
     )
-    genetic_distance_col_id: UUID = Field(
-        description="The Col ID to use for determining the genetic distance between cases."
+
+
+class RetrieveSimilarCasesReturnValue(BaseModel):
+    """The return value for the RetrieveSimilarCasesCommand."""
+
+    cases: list[model.SimilarCase] = Field(
+        description="The similar cases that were found, limited to their IDs and case dates."
     )
 
 
@@ -334,6 +364,20 @@ class RetrieveProtocolsCommand(Command):
 
     protocol_type: seqdb_enum.ProtocolType = Field(
         description="The type of protocols to retrieve."
+    )
+
+
+class RetrieveIsOwnCasesCommand(Command):
+    """
+    Given a list of case IDs, check which of the cases are owned by the user or the user has access to.
+    Returns a list of case IDs that the user owns or has access to.
+    """
+
+    case_type_id: UUID = Field(
+        description="The CaseType ID that all the cases must belong to."
+    )
+    case_ids: list[UUID] = Field(
+        description="The IDs of the cases to check ownership for."
     )
 
 

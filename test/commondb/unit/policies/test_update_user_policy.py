@@ -1,4 +1,4 @@
-from unittest.mock import Mock
+from test.util.mock_compat import Mock
 from uuid import UUID, uuid4
 
 import pytest

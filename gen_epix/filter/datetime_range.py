@@ -17,4 +17,4 @@ class DatetimeRangeFilter(RangeFilter):
 
 
 class TypedDatetimeRangeFilter(DatetimeRangeFilter):
-    type: Literal[FilterType.DATETIME_RANGE.value]
+    type: Literal[FilterType.DATETIME_RANGE.value]  # type: ignore[name-defined]
