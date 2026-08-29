@@ -109,7 +109,7 @@ jobs:
       - name: Check transform docstrings
         run: |
           source ~/.venv/bin/activate
-          ruff check --select D --ignore D212,D417 gen_epix/transform
+          ruff check --select D --ignore D212,D417 gen_epix
       - name: Comment PR with pylint score
         if: github.event_name == 'pull_request'
         uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
