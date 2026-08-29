@@ -25,7 +25,7 @@ for rules not covered here.
 4. Always add a docstring. When it documents a public API, nontrivial code, or
    non-obvious behavior, make a complete docstring. Do not skip docstrings that
    add no information, such as `"""Tests for foo.bar."""`, but keep them one line
-   long. Test module docstrings are not optional.
+   long. Test module docstrings must be created, but can be very brief.
 5. Describe what the code does and how callers should use it, not its internal
    implementation. Mention implementation details only when callers need to
    know them, such as whether an argument is mutated in place.
