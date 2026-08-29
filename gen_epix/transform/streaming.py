@@ -1,4 +1,4 @@
-"""Advanced streaming pipeline with backpressure handling and async support."""
+"""Streaming helpers for collecting outcomes and processing batches concurrently."""
 
 import asyncio
 from collections import deque

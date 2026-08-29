@@ -1,4 +1,4 @@
-"""Transformer registry for managing and creating transformer instances."""
+"""Named registry for transformer classes and transformer factory functions."""
 
 from collections.abc import Callable
 from typing import Any, TypeVar
@@ -9,7 +9,7 @@ TransformerType = TypeVar("TransformerType", bound=Transformer)
 
 
 class Registry:
-    """Central registry for transformer types and factory methods."""
+    """Store named constructors and create transformers from configuration."""
 
     _transformers: dict[str, type[Transformer]] = {}
     _factories: dict[str, Callable[..., Transformer]] = {}
@@ -28,7 +28,7 @@ class Registry:
 
     @classmethod
     def create(cls, name: str, **kwargs: Any) -> Transformer:
-        """Create transformer instance by name."""
+        """Create a named transformer, preferring a factory over a class."""
         if name in cls._factories:
             return cls._factories[name](**kwargs)
         elif name in cls._transformers:

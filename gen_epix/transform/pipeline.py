@@ -1,4 +1,4 @@
-"""Pipeline for chaining transformers with error tracking and recovery mechanisms."""
+"""Synchronous transformer pipeline with ordered execution and error recovery."""
 
 import logging
 import time
@@ -11,7 +11,7 @@ from gen_epix.transform.transformer import Transformer
 
 
 class Pipeline(StreamProcessor):
-    """Chainable pipeline of transformers with comprehensive error handling."""
+    """Apply transformers in order and stop processing an object after failure."""
 
     def __init__(self, transformers: list[Transformer] | None = None):
         """Initialize the pipeline with an optional ordered transformer list."""
@@ -20,23 +20,23 @@ class Pipeline(StreamProcessor):
         self.logger = logging.getLogger(__name__)
 
     def add(self, transformer: Transformer) -> "Pipeline":
-        """Add transformer to pipeline."""
+        """Append a transformer and return this pipeline for fluent composition."""
         self.transformers.append(transformer)
         return self
 
     def __or__(self, other: Transformer) -> "Pipeline":
-        """Enable chaining with | operator."""
+        """Append `other` using the pipeline chaining operator."""
         return self.add(other)
 
     def register_error_handler(
         self, transformer_name: str, handler: Callable[[TransformResult], None]
     ) -> "Pipeline":
-        """Register error handler for specific transformer."""
+        """Register a callback invoked when the named transformer fails."""
         self.error_handlers[transformer_name] = handler
         return self
 
     def process_stream(self, stream: Iterator[Any]) -> Iterator[TransformResult]:
-        """Process stream through pipeline with error tracking."""
+        """Lazily process each input and yield its final result."""
         for obj in stream:
             yield from self._process_single_object(obj)
 
@@ -84,7 +84,7 @@ class Pipeline(StreamProcessor):
 
 
 class RetryTransformer(Transformer):
-    """Wrapper that adds retry logic to any transformer."""
+    """Wrap a transformer and retry raised exceptions with exponential backoff."""
 
     def __init__(
         self,
@@ -100,7 +100,7 @@ class RetryTransformer(Transformer):
         self.backoff_factor = backoff_factor
 
     def transform(self, obj: Any) -> Any:
-        """Transform with retry logic."""
+        """Run the wrapped transformer until success or the retry limit is reached."""
         last_exception = None
 
         for attempt in range(self.max_retries + 1):
@@ -117,7 +117,7 @@ class RetryTransformer(Transformer):
 
 
 class FallbackTransformer(Transformer):
-    """Use fallback transformer if primary fails."""
+    """Use a fallback transformer when the primary raises an exception."""
 
     def __init__(
         self, primary: Transformer, fallback: Transformer, name: str | None = None
@@ -128,7 +128,7 @@ class FallbackTransformer(Transformer):
         self.fallback = fallback
 
     def transform(self, obj: Any) -> Any:
-        """Transform with fallback on failure."""
+        """Return the primary result, or invoke the fallback after a primary failure."""
         try:
             return self.primary.transform(obj)
         except Exception:

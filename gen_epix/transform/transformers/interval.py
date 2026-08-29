@@ -1,4 +1,4 @@
-"""Number to interval transformer implementation."""
+"""Transform numeric values and interval labels between categorizations."""
 
 import math
 from collections.abc import Hashable
@@ -13,7 +13,7 @@ from gen_epix.transform.transformer import Transformer
 
 # TODO: make this a regular class and add methods like __in__ that take another interval, a number or None; __eq__, __lt__, __gt__, __le__, __ge__, __str__, __repr__ etc., moving this logic from the two tranformer classes here
 class IntervalDict(TypedDict):
-    """Type definition for interval dictionaries."""
+    """Normalized interval bounds and endpoint-inclusivity metadata."""
 
     name: Hashable
     lb: float
@@ -23,10 +23,9 @@ class IntervalDict(TypedDict):
 
 
 class IntervalTransformer(Transformer):
-    """
-    Map a number to an interval represented by a hashable.
+    """Map a numeric field to the name of its configured interval.
 
-    Interval selection is based on configured lower and upper bounds.
+    Bounds may be open or closed and `None` represents an unbounded endpoint.
     """
 
     def __init__(
@@ -181,7 +180,7 @@ class IntervalTransformer(Transformer):
         raise NotImplementedError(f"Invalid on_no_match value {on_no_match}")
 
     def transform(self, obj: ObjectAdapter) -> ObjectAdapter:
-        """Map number to interval."""
+        """Map the source field and write the interval name to the target field."""
         src_value = obj.get(self.src_field)
         tgt_value = self.transform_value(src_value)
         obj.set(self.tgt_field, tgt_value)
@@ -190,14 +189,14 @@ class IntervalTransformer(Transformer):
     def transform_value(
         self, value: float | int | Decimal | None
     ) -> Hashable | None | NoReturn:
-        """Map number to interval."""
+        """Return the interval name selected for `value` under no-match policy."""
         tgt_value = self._map_to_interval(
             value, self._on_no_match
         )  # type: ignore[arg-type]
         return tgt_value
 
     def is_transformable(self, value: float | int | Decimal | None) -> bool:
-        """Check if a value can be transformed to an interval without performing the transformation."""
+        """Return whether `value` matches an interval without mutating an object."""
         if value is None:
             return True  # None values are always transformable
 
@@ -206,11 +205,10 @@ class IntervalTransformer(Transformer):
 
 
 class IntervalToIntervalTransformer(Transformer):
-    """
-    Maps intervals from one categorization to another based on overlapping ranges.
+    """Map an interval label from one categorization to another.
 
-    This transformer takes an interval from a source categorization and maps it to
-    the corresponding interval(s) in a target categorization based on range overlaps.
+    Source intervals are mapped to contained target intervals, or to the target
+    with the largest overlap when that strategy is configured.
     """
 
     def __init__(
@@ -298,7 +296,7 @@ class IntervalToIntervalTransformer(Transformer):
         lower_inclusive: list[bool] | bool,
         upper_inclusive: list[bool] | bool,
     ) -> list[IntervalDict]:
-        """Create standardized interval representation."""
+        """Normalize parallel bound and inclusivity lists into interval records."""
         n_intervals = len(names)
 
         if isinstance(lower_inclusive, bool):
@@ -329,7 +327,7 @@ class IntervalToIntervalTransformer(Transformer):
         return intervals
 
     def _compute_interval_mapping(self) -> dict[Hashable, Hashable]:
-        """Pre-compute mapping from source intervals to target intervals."""
+        """Build the source-to-target mapping according to the selected strategy."""
         mapping = {}
 
         for src_interval in self._src_intervals:
@@ -371,7 +369,7 @@ class IntervalToIntervalTransformer(Transformer):
         src_interval: IntervalDict,
         tgt_interval: IntervalDict,
     ) -> float:
-        """Calculate overlap between two intervals."""
+        """Return the numeric length shared by two normalized intervals."""
         # Determine effective bounds for overlap calculation
         overlap_start = max(src_interval["lb"], tgt_interval["lb"])
         overlap_end = min(src_interval["ub"], tgt_interval["ub"])
@@ -388,7 +386,7 @@ class IntervalToIntervalTransformer(Transformer):
     def _is_contained(
         self, src_interval: IntervalDict, tgt_interval: IntervalDict
     ) -> bool:
-        """Check if source interval is completely contained in target interval."""
+        """Return whether the source interval, including endpoint rules, fits in target."""
         # Check lower bound
         if src_interval["lb"] < tgt_interval["lb"]:
             return False
@@ -412,7 +410,7 @@ class IntervalToIntervalTransformer(Transformer):
         return True
 
     def _map_interval(self, src_interval_name: Hashable) -> Hashable | None | NoReturn:
-        """Map source interval name to target interval name."""
+        """Resolve a source interval name using the precomputed mapping."""
         if src_interval_name is None:
             return None
 
@@ -432,19 +430,19 @@ class IntervalToIntervalTransformer(Transformer):
         return mapped_name
 
     def transform(self, obj: ObjectAdapter) -> ObjectAdapter:
-        """Transform interval from source categorization to target categorization."""
+        """Map the source interval field and write the result to the target field."""
         src_value = obj.get(self.src_field)
         tgt_value = self.transform_value(src_value)
         obj.set(self.tgt_field, tgt_value)
         return obj
 
     def transform_value(self, src_interval_name: Hashable) -> Hashable | None:
-        """Transform interval name directly."""
+        """Map an interval label directly without adapting or mutating an object."""
         tgt_value = self._map_interval(src_interval_name)
         return tgt_value
 
     def is_transformable(self, src_interval_name: Hashable) -> bool:
-        """Check if source interval can be mapped to target categorization."""
+        """Return whether a source label has a configured target mapping."""
         if src_interval_name is None:
             return True
 

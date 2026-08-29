@@ -1,4 +1,4 @@
-"""ISO time transformer implementation."""
+"""Transform ISO year, quarter, month, week, and day representations."""
 
 import datetime
 from collections.abc import Callable
@@ -12,7 +12,7 @@ from gen_epix.transform.transformer import Transformer
 
 
 class IsoTimeTransformer(Transformer):
-    """Transform ISO time values from one time unit to another."""
+    """Map an ISO time field between supported units and precision strategies."""
 
     DAY = TimeUnit.DAY
     WEEK = TimeUnit.WEEK
@@ -50,7 +50,7 @@ class IsoTimeTransformer(Transformer):
         self.transform_fn = self._get_transform_fn()
 
     def _get_transform_fn(self) -> Callable[[str | None], str | None]:
-        """Get the appropriate transform function based on src_unit, tgt_unit, and strategy."""
+        """Return the converter for the configured units and strategy."""
         key = (self.src_unit, self.tgt_unit, self.strategy)
         if key in self.TRANSFORM_FN_MAP:
             return self.TRANSFORM_FN_MAP[key]
@@ -59,7 +59,7 @@ class IsoTimeTransformer(Transformer):
         return self.convert_unsupported
 
     def transform(self, obj: ObjectAdapter) -> ObjectAdapter:
-        """Transform the ISO time field if it exists."""
+        """Convert an existing non-null source field and write the target field."""
         if obj.has_key(self.field_name):
             current_value = obj.get(self.field_name)
             if current_value is not None:
@@ -74,7 +74,7 @@ class IsoTimeTransformer(Transformer):
         """
         Return whether an ISO time-unit transformation is supported.
 
-        Both EXACT_ONLY and LARGEST_OVERLAP strategies are checked for completeness.
+        Both `EXACT_ONLY` and `LARGEST_OVERLAP` strategies are checked.
         """
         if from_time_unit == to_time_unit:
             return True

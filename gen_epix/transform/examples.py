@@ -1,4 +1,4 @@
-"""Examples demonstrating usage of the transformer framework."""
+"""Executable examples of composing field, validation, and streaming transforms."""
 
 from pydantic import BaseModel
 
@@ -15,7 +15,7 @@ from gen_epix.transform.transformer import Transformer
 
 
 class Person(BaseModel):
-    """Example Pydantic model."""
+    """Example Pydantic model accepted by the object adapter."""
 
     name: str
     age: int
@@ -24,7 +24,7 @@ class Person(BaseModel):
 
 @register_transformer("string_upper")
 class StringUpperTransformer(Transformer):
-    """Example custom transformer."""
+    """Example registry-backed custom transformer."""
 
     def __init__(self, name: str = "StringUpperTransformer"):
         """Initialize the example transformer with a registry-visible name."""
@@ -37,7 +37,7 @@ class StringUpperTransformer(Transformer):
 
 
 def example_usage() -> None:
-    """Demonstrate basic usage of the transformer framework."""
+    """Demonstrate validation, field transforms, and result collection."""
     # Sample data - mix of dict and Pydantic models
     data = [
         {"name": "john doe", "age": 30, "email": "JOHN@EXAMPLE.COM"},
@@ -78,7 +78,7 @@ def example_usage() -> None:
 
 
 def example_conditional_transformation() -> None:
-    """Demonstrate conditional transformation."""
+    """Demonstrate applying a field transform only for matching rows."""
     data = [
         {"name": "John", "country": "US", "phone": "1234567890"},
         {"name": "Alice", "country": "UK", "phone": "9876543210"},

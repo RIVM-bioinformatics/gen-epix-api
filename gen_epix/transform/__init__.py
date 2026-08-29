@@ -2,7 +2,7 @@
 
 This package exposes adapters, transformer base classes, pipeline helpers,
 streaming utilities, result types, registry helpers, and built-in transformer
-implementations for object and field transformations.
+implementations for object, field, interval, and time transformations.
 """
 
 # pylint: disable=useless-import-alias

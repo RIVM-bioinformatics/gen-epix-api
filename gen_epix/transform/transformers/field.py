@@ -1,4 +1,4 @@
-"""Field transformer implementation."""
+"""Transformer for applying a callable to one field of an adapted object."""
 
 from collections.abc import Callable, Hashable
 from typing import Any
@@ -8,7 +8,7 @@ from gen_epix.transform.transformer import Transformer
 
 
 class FieldTransformer(Transformer):
-    """Transform a specific field in an object."""
+    """Apply a callable to one existing field and update that field in place."""
 
     def __init__(
         self,
@@ -22,7 +22,7 @@ class FieldTransformer(Transformer):
         self.transform_fn = transform_fn
 
     def transform(self, obj: ObjectAdapter) -> ObjectAdapter:
-        """Transform the specified field if it exists."""
+        """Transform the field when present, leaving objects without it unchanged."""
         if obj.has_key(self.field_name):
             current_value = obj.get(self.field_name)
             transformed_value = self.transform_fn(current_value)

@@ -1,4 +1,4 @@
-"""Conditional transformer implementation."""
+"""Transformer that conditionally delegates to another transformer."""
 
 from collections.abc import Callable
 
@@ -7,7 +7,7 @@ from gen_epix.transform.transformer import Transformer
 
 
 class ConditionalTransformer(Transformer):
-    """Apply transformation only when condition is met."""
+    """Apply a wrapped transformer only when its predicate accepts the object."""
 
     def __init__(
         self,
@@ -21,7 +21,7 @@ class ConditionalTransformer(Transformer):
         self.transformer = transformer
 
     def transform(self, obj: ObjectAdapter) -> ObjectAdapter:
-        """Apply transformation if condition is met."""
+        """Transform `obj` when the predicate returns true; otherwise return it unchanged."""
         if self.condition(obj):
             return self.transformer.transform(obj)
         return obj

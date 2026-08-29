@@ -1,4 +1,4 @@
-"""Enumerations used by transform strategies and result classification."""
+"""Enumerations for temporal granularity, interval mapping, and result status."""
 
 from enum import Enum
 
@@ -34,7 +34,7 @@ class TransformType(Enum):
 
 
 class TransformResultType(Enum):
-    """Enum for different types of transformation results."""
+    """Classify a transformation as successful, failed, or skipped."""
 
     SUCCESS = "SUCCESS"
     ERROR = "ERROR"

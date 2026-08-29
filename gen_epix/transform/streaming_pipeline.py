@@ -1,4 +1,4 @@
-"""Advanced streaming pipeline with backpressure handling and async support."""
+"""Streaming helpers for callbacks, error thresholds, and concurrent batches."""
 
 import asyncio
 from collections import deque
@@ -10,7 +10,7 @@ from gen_epix.transform.transform_result import TransformResult
 
 
 class StreamingPipeline:
-    """Advanced streaming pipeline with backpressure handling."""
+    """Wrap a pipeline with outcome callbacks, error-rate limits, and batching."""
 
     def __init__(
         self,
@@ -32,7 +32,12 @@ class StreamingPipeline:
         on_success: Callable[[TransformResult], None] | None = None,
         on_error: Callable[[TransformResult], None] | None = None,
     ) -> Iterator[TransformResult]:
-        """Process stream asynchronously with callbacks."""
+        """Process inputs lazily, invoking callbacks and enforcing the error limit.
+
+        Despite its historical name, this iterator executes the synchronous
+        pipeline directly. Use `process_stream_async_coroutine` for concurrent
+        executor-backed processing.
+        """
         for obj in stream:
             results = list(self.pipeline.process_stream(iter([obj])))
 
@@ -59,7 +64,7 @@ class StreamingPipeline:
     def collect_errors(
         self, stream: Iterator[Any]
     ) -> tuple[list[Any], list[TransformResult]]:
-        """Collect successful and failed transformations separately."""
+        """Return transformed values and failed results separately."""
         successes: list[Any] = []
         errors: list[TransformResult] = []
 
@@ -74,7 +79,7 @@ class StreamingPipeline:
     async def process_stream_async_coroutine(
         self, stream: Iterator[Any], batch_size: int = 100
     ) -> list[TransformResult]:
-        """Process stream asynchronously using coroutines."""
+        """Process input batches concurrently through the event loop executor."""
         results: list[TransformResult] = []
         batch: list[Any] = []
 
@@ -94,12 +99,12 @@ class StreamingPipeline:
         return results
 
     async def _process_batch_async(self, batch: list[Any]) -> list[TransformResult]:
-        """Process a batch of objects asynchronously."""
+        """Schedule one executor-backed transformation for each batch item."""
         tasks = [self._process_single_async(x) for x in batch]
         return await asyncio.gather(*tasks)
 
     async def _process_single_async(self, obj: Any) -> TransformResult:
-        """Process a single object asynchronously."""
+        """Run one synchronous pipeline operation without blocking the event loop."""
         # Run in thread pool to avoid blocking
         loop = asyncio.get_event_loop()
         results = await loop.run_in_executor(

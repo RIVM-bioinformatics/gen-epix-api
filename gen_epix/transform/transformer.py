@@ -1,4 +1,4 @@
-"""Core transformer classes and interfaces."""
+"""Base class for object transformers and their result-producing call interface."""
 
 from abc import ABC, abstractmethod
 from typing import Any
@@ -8,7 +8,7 @@ from gen_epix.transform.transform_result import TransformResult
 
 
 class Transformer(ABC):
-    """Base transformer class for single object transformations."""
+    """Transform one supported object while converting failures to results."""
 
     def __init__(self, name: str | None = None):
         """Set the transformer name used in transformation results."""
@@ -16,26 +16,25 @@ class Transformer(ABC):
 
     @abstractmethod
     def transform(self, obj: ObjectAdapter) -> ObjectAdapter:
-        """
-        Transform a single object.
+        """Transform a single adapted object.
 
         Args:
-            obj: Object adapter wrapping the object to transform
+            obj: Adapter wrapping the object to transform.
 
         Returns:
-            Transformed object adapter
+            The transformed object adapter.
         """
         pass
 
     def __call__(self, obj: Any) -> TransformResult:
-        """
-        Transform an object with error handling.
+        """Adapt and transform an object, returning failures as `TransformResult`.
 
         Args:
-            obj: Object to transform
+            obj: Object to adapt and transform.
 
         Returns:
-            TransformResult containing success/failure information
+            A result containing the unwrapped transformed object or the caught
+            exception.
         """
         try:
             adapter = ObjectAdapter(obj)

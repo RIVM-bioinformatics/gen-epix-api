@@ -1,4 +1,4 @@
-"""Tuple map transformer implementation."""
+"""Transformer for looking up tuples of source fields in a configured mapping."""
 
 from collections.abc import Hashable
 from typing import Any
@@ -159,7 +159,8 @@ class TupleMapTransformer(Transformer):
         Transform the provided object using the mapping.
 
         The object has the target fields added or updated based on the mapping, and is
-        also returned again to allow for method chaining.
+        returned again to allow for method chaining. Missing mappings either raise or
+        write configured defaults according to `on_no_match`.
         """
         key = self._normalize_key(tuple(obj.get(x) for x in self._row_src_fields))
         if key not in self._tuple_map:
@@ -181,7 +182,7 @@ class TupleMapTransformer(Transformer):
 
     def transform_row(self, row: dict) -> dict:
         """
-        Transform a dictionary row in place.
+        Transform a dictionary row in place and return the same dictionary.
 
         This is the row-oriented equivalent of transform for keyed values.
         """
@@ -191,7 +192,7 @@ class TupleMapTransformer(Transformer):
 
     def get_row_key(self, row: dict) -> dict:
         """
-        Return the configured source-field values for a row.
+        Return the configured source-field values for a row without transforming it.
 
         The returned mapping can be used for mapping-key inspection without requiring
         callers to know the configured source field names.
