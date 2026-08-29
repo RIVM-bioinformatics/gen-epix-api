@@ -1,12 +1,18 @@
+"""Utilities for the fastapp enum module."""
+
 from enum import Enum
 
 
 class SortOrder(Enum):
+    """Provide the sort order framework abstraction."""
+
     ASCENDING = "ASCENDING"
     DESCENDING = "DESCENDING"
 
 
 class PermissionType(Enum):
+    """Provide the permission type framework abstraction."""
+
     CREATE = "CREATE"
     READ = "READ"
     UPDATE = "UPDATE"
@@ -15,6 +21,8 @@ class PermissionType(Enum):
 
 
 class PermissionTypeSet(Enum):
+    """Provide the permission type set framework abstraction."""
+
     E = frozenset({PermissionType.EXECUTE})
     CRUD = frozenset(
         {
@@ -66,6 +74,8 @@ class PermissionTypeSet(Enum):
 
 
 class CrudOperation(Enum):
+    """Provide the crud operation framework abstraction."""
+
     CREATE_ONE = "CREATE_ONE"
     CREATE_SOME = "CREATE_SOME"
     READ_ALL = "READ_ALL"
@@ -86,6 +96,8 @@ class CrudOperation(Enum):
 
 
 class CrudOperationSet(Enum):
+    """Provide the crud operation set framework abstraction."""
+
     CREATE = frozenset({CrudOperation.CREATE_ONE, CrudOperation.CREATE_SOME})
     READ = frozenset(
         {
@@ -223,11 +235,15 @@ class CrudOperationSet(Enum):
 
 
 class HttpProtocol(Enum):
+    """Provide the http protocol framework abstraction."""
+
     HTTP = "HTTP"
     HTTPS = "HTTPS"
 
 
 class CrudEndpointType(Enum):
+    """Provide the crud endpoint type framework abstraction."""
+
     POST_ONE = "POST_ONE"
     POST_SOME = "POST_SOME"
     GET_ALL = "GET_ALL"
@@ -243,6 +259,8 @@ class CrudEndpointType(Enum):
 
 
 class IsolationLevel(Enum):
+    """Provide the isolation level framework abstraction."""
+
     READ_UNCOMMITED = "READ_UNCOMMITED"
     READ_COMMITED = "READ_COMMITED"
     REPEATABLE_READ = "REPEATABLE_READ"
@@ -250,6 +268,8 @@ class IsolationLevel(Enum):
 
 
 class LogLevel(Enum):
+    """Provide the log level framework abstraction."""
+
     FATAL = "FATAL"
     ERROR = "ERROR"
     WARN = "WARN"
@@ -259,6 +279,8 @@ class LogLevel(Enum):
 
 
 class LogLevelSet(Enum):
+    """Provide the log level set framework abstraction."""
+
     ERROR_OR_WORSE = frozenset({LogLevel.ERROR, LogLevel.FATAL})
     WARN_OR_WORSE = frozenset({LogLevel.WARN, LogLevel.ERROR, LogLevel.FATAL})
     INFO_OR_WORSE = frozenset(
@@ -280,18 +302,24 @@ class LogLevelSet(Enum):
 
 
 class EventTiming(Enum):
+    """Provide the event timing framework abstraction."""
+
     BEFORE = "BEFORE"
     DURING = "DURING"
     AFTER = "AFTER"
 
 
 class AuthProtocol(Enum):
+    """Provide the auth protocol framework abstraction."""
+
     NONE = "NONE"
     OAUTH2 = "OAUTH2"
     OIDC = "OIDC"
 
 
 class OAuthFlow(Enum):
+    """Provide the o auth flow framework abstraction."""
+
     AUTHORIZATION_CODE = "AUTHORIZATION_CODE"
     CLIENT_CREDENTIALS = "CLIENT_CREDENTIALS"
     RESOURCE_OWNER = "RESOURCE_OWNER"
@@ -301,6 +329,8 @@ class OAuthFlow(Enum):
 
 
 class HttpMethod(Enum):
+    """Provide the http method framework abstraction."""
+
     GET = "GET"
     POST = "POST"
     PUT = "PUT"
@@ -313,6 +343,8 @@ class HttpMethod(Enum):
 
 
 class StringCasing(Enum):
+    """Provide the string casing framework abstraction."""
+
     SNAKE_CASE = "SNAKE_CASE"
     CAMEL_CASE = "CAMEL_CASE"
     PASCAL_CASE = "PASCAL_CASE"
@@ -324,7 +356,7 @@ class FieldType(Enum):
     This enumeration is used to categorize the different types of fields that can be
     present in a model as well as in its persisted version.
 
-    Attributes
+    Attributes:
     ----------
     ID : Enum
         Represents an identifier field in the model.
@@ -352,6 +384,7 @@ class FieldType(Enum):
 class FieldTypeSet(Enum):
     """
     Different sets of field types that can be used to categorize the fields in a model.
+
     The value is a tuple instead of a frozenset to guarantee the order of the elements.
     """
 
@@ -388,6 +421,8 @@ class FieldTypeSet(Enum):
 
 
 class OnException(Enum):
+    """Provide the on exception framework abstraction."""
+
     RAISE = "RAISE"
     IGNORE = "IGNORE"
     SKIP = "SKIP"
@@ -398,6 +433,8 @@ class OnException(Enum):
 
 
 class FileExtension(Enum):
+    """Provide the file extension framework abstraction."""
+
     PKL = ".pkl"
     JSON = ".json"
     ZIP = ".zip"

@@ -1,3 +1,5 @@
+"""Authentication services, commands, clients, and models."""
+
 # pylint: disable=useless-import-alias
 from gen_epix.fastapp.services.auth.base import BaseAuthService as BaseAuthService
 from gen_epix.fastapp.services.auth.command import (

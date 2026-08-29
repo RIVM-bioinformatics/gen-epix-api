@@ -110,7 +110,25 @@ For each later package, repeat the same bottom-up sequence and expand the
 configured Ruff docstring scope in local linting and CI only after the package
 has been documented.
 
-Phase 3 adds `gen_epix/fastapp`.
+## Phase 3: `fastapp`
+
+Status: implemented in branch `LSP-3760-fastapp-folder`.
+
+Scope:
+
+- Document the shared application framework modules, nested packages, public
+  classes, and public methods under `gen_epix/fastapp`.
+- Preserve command, policy, service, repository, and API-layer boundaries while
+  documenting their contracts and lifecycle responsibilities.
+- Record the missing `scripts/ast_import_graph.py` reference for follow-up
+  tooling work; no runtime behavior was changed.
+
+Validation:
+
+- `ruff check --select D --ignore D212,D417 gen_epix/fastapp`
+- `black -l 88 --check --diff gen_epix/fastapp`
+- `isort --check-only --diff --profile black --float-to-top --line-length=88 gen_epix/fastapp`
+- `python run.py test_fastapp_unit`
 
 Phase 4 adds `gen_epix/commondb`.
 

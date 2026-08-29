@@ -1,3 +1,5 @@
+"""In-process identity-provider client for tests and local development."""
+
 import logging
 import uuid
 from typing import Any
@@ -13,6 +15,7 @@ from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider
 
 
 class MockIDPClient(IdpClient):
+    """Provide the mock i d p client framework abstraction."""
 
     def __init__(
         self,
@@ -20,6 +23,7 @@ class MockIDPClient(IdpClient):
         log_item_class: type[BaseLogItem] = LogItem,
         **kwargs: Any,
     ):
+        """Initialize the instance."""
         self._id: uuid.UUID = kwargs.get("id", uuid.uuid4())  # type: ignore[assignment]
         # Set input properties and initialise some
         self._logger = logger
@@ -27,22 +31,27 @@ class MockIDPClient(IdpClient):
 
     @property
     def id(self) -> uuid.UUID:
+        """Perform the id operation."""
         return self._id
 
     def get_identity_provider(self) -> IdentityProvider:
+        """Perform the get identity provider operation."""
         raise NotImplementedError("Method not yet implemented")
 
     async def get_claims_from_jwt(
         self, jwt_token: str
     ) -> dict[str, str | int | bool | list[str]] | None:
+        """Perform the get claims from jwt operation."""
         raise NotImplementedError("Method not yet implemented")
 
     def get_claims_from_userinfo(
         self, access_token: str
     ) -> dict[str, str | int | bool | list[str]]:
+        """Perform the get claims from userinfo operation."""
         raise NotImplementedError("Method not yet implemented")
 
     async def __call__(self, request: Request) -> Claims | None:
+        """Perform the   call   operation."""
         if authorization := request.headers.get("authorization"):
             scheme, token = get_authorization_scheme_param(authorization)
             if scheme.upper() == "BEARER":

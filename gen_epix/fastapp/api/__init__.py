@@ -1,3 +1,5 @@
+"""Utilities for the fastapp   init   module."""
+
 # pylint: disable=useless-import-alias
 from gen_epix.fastapp.api.crud_endpoint_generator import (
     CrudEndpointGenerator as CrudEndpointGenerator,

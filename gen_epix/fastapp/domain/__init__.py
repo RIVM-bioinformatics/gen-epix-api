@@ -1,3 +1,5 @@
+"""Utilities for the fastapp   init   module."""
+
 # pylint: disable=useless-import-alias
 from gen_epix.fastapp.domain.domain import Domain as Domain
 from gen_epix.fastapp.domain.entity import Entity as Entity

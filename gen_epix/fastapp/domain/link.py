@@ -1,3 +1,5 @@
+"""Utilities for the fastapp link module."""
+
 from pydantic import BaseModel
 
 
@@ -6,7 +8,7 @@ class MultiLink(BaseModel, frozen=True):
     Represents a link between entities, whereby the linking entity can be associated
     with multiple instances of the linked entity.
 
-    Attributes
+    Attributes:
     ----------
     link_field_name : str
         The name of the field that represents the link.
@@ -18,10 +20,12 @@ class MultiLink(BaseModel, frozen=True):
     link_model_class: type[BaseModel]
 
     def to_tuple(self) -> tuple[str, type[BaseModel]]:
+        """Perform the to tuple operation."""
         return (self.link_field_name, self.link_model_class)
 
     @classmethod
     def from_tuple(cls, tuple_: tuple[str, type[BaseModel]]) -> "MultiLink":
+        """Perform the from tuple operation."""
         return cls(link_field_name=tuple_[0], link_model_class=tuple_[1])
 
 
@@ -29,7 +33,7 @@ class Link(BaseModel, frozen=True):
     """
     Represents a link between entities.
 
-    Attributes
+    Attributes:
     ----------
     link_field_name : str
         The name of the field that represents the link.
@@ -38,7 +42,7 @@ class Link(BaseModel, frozen=True):
     relationship_field_name : str, optional
         The name of the field used for back-population, by default None.
 
-    Methods
+    Methods:
     -------
     None
     """
@@ -48,6 +52,7 @@ class Link(BaseModel, frozen=True):
     relationship_field_name: str | None = None
 
     def to_tuple(self) -> tuple[str, type[BaseModel], str | None]:
+        """Perform the to tuple operation."""
         return (
             self.link_field_name,
             self.link_model_class,
@@ -56,6 +61,7 @@ class Link(BaseModel, frozen=True):
 
     @classmethod
     def from_tuple(cls, tuple_: tuple[str, type[BaseModel], str | None]) -> "Link":
+        """Perform the from tuple operation."""
         return cls(
             link_field_name=tuple_[0],
             link_model_class=tuple_[1],

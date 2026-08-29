@@ -1,3 +1,5 @@
+"""Utilities for the fastapp   init   module."""
+
 # pylint: disable=useless-import-alias
 from gen_epix.fastapp.middleware.handle_auth_exception import (
     HandleAuthExceptionMiddleware as HandleAuthExceptionMiddleware,

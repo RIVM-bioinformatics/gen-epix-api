@@ -1,3 +1,5 @@
+"""Utilities for the fastapp app module."""
+
 from __future__ import annotations
 
 import json
@@ -74,6 +76,7 @@ class App:
         **kwargs: Any,
     ):
         # Set input members
+        """Initialize the instance."""
         self._id_factory: Callable[[], Hashable] = id_factory
         self._id: str = id or str(self._id_factory())
         self._name: str = name or self._id
@@ -114,22 +117,27 @@ class App:
 
     @property
     def id(self) -> str:
+        """Perform the id operation."""
         return self._id
 
     @property
     def name(self) -> str:
+        """Perform the name operation."""
         return self._name
 
     @property
     def created_at(self) -> datetime:
+        """Perform the created at operation."""
         return self._created_at
 
     @property
     def domain(self) -> Domain:
+        """Perform the domain operation."""
         return self._domain
 
     @property
     def pdp(self) -> PolicyDecisionPoint:
+        """Perform the pdp operation."""
         if self._pdp is None:
             raise exc.InitializationServiceError(
                 "a336efaf", "Policy decision point not set"
@@ -138,24 +146,29 @@ class App:
 
     @property
     def user_manager(self) -> BaseUserManager:
+        """Perform the user manager operation."""
         if self._user_manager is None:
             raise exc.InitializationServiceError("3a557c34", "User manager not set")
         return self._user_manager
 
     @user_manager.setter
     def user_manager(self, user_manager: BaseUserManager | None) -> None:
+        """Perform the user manager operation."""
         self._user_manager = user_manager
 
     @property
     def logger(self) -> logging.Logger | None:
+        """Perform the logger operation."""
         return self._logger
 
     @logger.setter
     def logger(self, logger: logging.Logger | None) -> None:
+        """Perform the logger operation."""
         self._logger = logger
 
     @property
     def cfg(self) -> Any:
+        """Perform the cfg operation."""
         if self._cfg is None:
             raise exc.InitializationServiceError(
                 "67bd528f", "Configuration data is not set"
@@ -164,6 +177,7 @@ class App:
 
     @property
     def impl(self) -> Any:
+        """Perform the impl operation."""
         if self._impl is None:
             raise exc.InitializationServiceError(
                 "0fe120d0", "Implementation details are not set"
@@ -172,6 +186,7 @@ class App:
 
     @property
     def log_item_class(self) -> type[BaseLogItem]:
+        """Perform the log item class operation."""
         return self._log_item_class
 
     @property
@@ -180,23 +195,28 @@ class App:
         return dict(self._feature_flags)
 
     def generate_id(self) -> Hashable:
+        """Perform the generate id operation."""
         return self._id_factory()
 
     def generate_timestamp(self) -> datetime:
+        """Perform the generate timestamp operation."""
         return self._timestamp_factory()
 
     def set_feature_flag(self, key: Hashable, value: bool) -> None:
+        """Perform the set feature flag operation."""
         if not isinstance(value, bool):
             raise ValueError("Feature flag value must be a boolean")
         self._feature_flags[key] = value
 
     def get_feature_flag(self, key: Hashable, default: bool = False) -> bool:
+        """Perform the get feature flag operation."""
         return self._feature_flags.get(key, default)
 
     def register_command(
         self,
         command_class: type[Command],
     ) -> None:
+        """Perform the register command operation."""
         if self._logger and self._logger.level <= logging.DEBUG:
             self._logger.debug(
                 self.create_log_message(
@@ -213,6 +233,7 @@ class App:
         policy: Policy,
         timing: EventTiming = EventTiming.BEFORE,
     ) -> None:
+        """Perform the register policy operation."""
         if self._logger and self._logger.level <= logging.DEBUG:
             self._logger.debug(
                 self.create_log_message(
@@ -231,6 +252,7 @@ class App:
         policy: Policy,
         timing: EventTiming,
     ) -> None:
+        """Perform the unregister policy operation."""
         if self._logger and self._logger.level <= logging.DEBUG:
             self._logger.debug(
                 self.create_log_message(
@@ -252,6 +274,7 @@ class App:
         """
         Register a listener for a command class that is executed BEFORE the command
         is executed.
+
         """
         if self._logger and self._logger.level <= logging.DEBUG:
             self._logger.debug(
@@ -321,6 +344,7 @@ class App:
         listener: Callable[[Command, Any], None],
         timing: EventTiming,
     ) -> None:
+        """Perform the unregister listener operation."""
         if self._logger and self._logger.level <= logging.DEBUG:
             self._logger.debug(
                 self.create_log_message(
@@ -351,6 +375,7 @@ class App:
         # and that obj does have the correct type
         # The actual message handling does not have this issue
         # since it is supplied objs of types
+        """Perform the register handler operation."""
         command_class = type(command_class.model_construct())
         if self._logger and self._logger.level <= logging.DEBUG:
             self._logger.debug(
@@ -380,6 +405,7 @@ class App:
         self._command_handler_map[command_class] = handler_fn
 
     def get_handler(self, command_class: type[Command]) -> Callable:
+        """Perform the get handler operation."""
         for type_ in command_class.__mro__:
             handler = self._command_handler_map.get(type_)
             if handler:
@@ -389,6 +415,7 @@ class App:
         )
 
     def handle(self, cmd: Command) -> Any:
+        """Perform the handle operation."""
         self._command_stack.append(cmd)
         is_initial_command = len(self._command_stack) == 1
         if self._logger:
@@ -409,6 +436,7 @@ class App:
         return retval
 
     def _log_command_finish(self, cmd: Command, is_initial_command: bool) -> None:
+        """Perform the  log command finish operation."""
         msg = self.create_log_message(
             "14a19691", "FINISHED_COMMAND", add_debug_info=False, cmd=cmd
         )
@@ -420,6 +448,7 @@ class App:
     def _execute_command(
         self, cmd: Command, is_initial_command: bool, handler: Callable
     ) -> Any:
+        """Perform the  execute command operation."""
         try:
             # Apply BEFORE listeners
             for listener in self._command_listeners[EventTiming.BEFORE].get(
@@ -495,6 +524,7 @@ class App:
         return retval
 
     def _get_command_handler(self, cmd: Command) -> Callable:
+        """Perform the  get command handler operation."""
         try:
             handler = self.get_handler(type(cmd))
         except Exception as exception:
@@ -515,6 +545,7 @@ class App:
         return handler
 
     def _handle_initial_command(self, cmd: Command) -> None:
+        """Perform the  handle initial command operation."""
         try:
             self.pdp.apply(cmd, EventTiming.BEFORE)
         except exc.UnauthorizedAuthError as exception:
@@ -545,6 +576,7 @@ class App:
             raise exception
 
     def _log_command_start(self, cmd: Command, is_initial_command: bool) -> None:
+        """Perform the  log command start operation."""
         log_code = "e94cad9b"
         if self._logger.level <= logging.DEBUG:
             self._logger.debug(
@@ -566,10 +598,12 @@ class App:
             )
 
     def apply_handler(self, cmd: Command, handler: Callable) -> Any:
+        """Perform the apply handler operation."""
         retval = cast(Any, handler(cmd))
         return retval
 
     def _init_log_settings(self) -> None:
+        """Perform the  init log settings operation."""
         self._log_summarization_enabled = self.DEFAULT_LOG_SUMMARIZATION_ENABLED
         self._log_max_list_items = self.DEFAULT_LOG_MAX_LIST_ITEMS
         cfg: dict = (
@@ -602,6 +636,7 @@ class App:
         cmd: Command | None = None,
         **kwargs: Any,
     ) -> str:
+        """Perform the create log message operation."""
         content = {}
         if add_debug_info:
             content["app"] = kwargs.pop("app", {}) | {
@@ -653,9 +688,11 @@ class App:
         rather than the end, since DB driver errors often echo the full SQL
         statement first and put the actual error message at the very end. All of
         this keeps the serialised log payload within downstream log-sink size
-        constraints."""
+        constraints.
+        """
 
         def _walk(obj: Any) -> Any:
+            """Perform the  walk operation."""
             if isinstance(obj, Exception):
                 return App._truncate_middle(
                     str(obj), self._log_max_exception_message_length
@@ -690,6 +727,7 @@ class App:
         log_item_class: type[BaseLogItem] = DEFAULT_LOG_ITEM_CLASS,
         **kwargs: Any,
     ) -> str:
+        """Perform the create static log message operation."""
         cmd: Command | None = kwargs.pop("cmd", None)
         content = kwargs
         if cmd:
@@ -702,11 +740,13 @@ class App:
         return log_item.dumps()
 
     def __del__(self) -> None:
+        """Perform the   del   operation."""
         if self._logger:
             self._logger.info(self.create_log_message("aa21c54a", "STOPPING_APP"))
 
     @staticmethod
     def _get_bool_from_cfg_value(value: Any) -> bool:
+        """Perform the  get bool from cfg value operation."""
         if isinstance(value, bool):
             return value
         if isinstance(value, str):
@@ -722,6 +762,7 @@ class App:
 
     @staticmethod
     def _get_int_from_cfg_value(value: Any) -> int:
+        """Perform the  get int from cfg value operation."""
         try:
             parsed = int(value)
         except (TypeError, ValueError):
@@ -736,7 +777,8 @@ class App:
         """Truncate *text* to *max_length* chars, keeping a prefix and a suffix
         rather than just the head. DB driver error strings (e.g. FK/unique
         constraint violations) often echo the full SQL statement first and put
-        the actual error message at the end, so a head-only cut hides it."""
+        the actual error message at the end, so a head-only cut hides it.
+        """
         if max_length <= 0:
             return f"…[{len(text)} chars omitted]…"
         if len(text) <= max_length:

@@ -1,3 +1,5 @@
+"""Utilities for the fastapp handle no response module."""
+
 import logging
 from collections.abc import Callable
 
@@ -11,6 +13,7 @@ from gen_epix.fastapp.app import App
 class HandleNoResponseMiddleware(BaseHTTPMiddleware):
     """
     Middleware to handle cases where no response is returned from the endpoint.
+
     This is a workaround for a known issue in FastAPI where a RuntimeError is raised
     when the request is disconnected before a response is returned.
 
@@ -25,11 +28,13 @@ class HandleNoResponseMiddleware(BaseHTTPMiddleware):
         fast_app: App = None,  # type: ignore[assignment]
         logger: logging.Logger | None = None,
     ):
+        """Initialize the instance."""
         super().__init__(app)
         self._fast_app = fast_app
         self._logger = logger or fast_app.logger
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        """Perform the dispatch operation."""
         try:
             response: Response = await call_next(request)
             return response

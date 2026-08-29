@@ -1,3 +1,5 @@
+"""Utilities for the fastapp domain module."""
+
 from collections.abc import Hashable
 from enum import Enum
 from graphlib import CycleError, TopologicalSorter
@@ -16,6 +18,8 @@ from gen_epix.fastapp.model import Command, CrudCommand, Model, Permission
 
 
 class Domain:
+    """Provide the domain framework abstraction."""
+
     CRUD_PERMISSION_TYPE_MAP: dict[CrudOperation, PermissionType] = {
         CrudOperation.CREATE_ONE: PermissionType.CREATE,
         CrudOperation.CREATE_SOME: PermissionType.CREATE,
@@ -57,6 +61,7 @@ class Domain:
 
     @staticmethod
     def get_service_name(service_type: Hashable | None) -> str:
+        """Perform the get service name operation."""
         if service_type is None:
             raise exc.DomainException("811a1bac", "Service type is not given")
         if isinstance(service_type, str):
@@ -67,12 +72,14 @@ class Domain:
 
     @staticmethod
     def get_command_name(command_class: type[Command]) -> str:
+        """Perform the get command name operation."""
         if command_class.NAME is None:
             command_class.NAME = command_class.__name__
         return command_class.NAME
 
     @staticmethod
     def get_command_permissions(command_class: type[Command]) -> frozenset[Permission]:
+        """Perform the get command permissions operation."""
         if command_class._PERMISSIONS is None:
             if command_class.NAME is None:
                 raise exc.InitializationServiceError(
@@ -88,11 +95,13 @@ class Domain:
 
     @staticmethod
     def get_model_name(model_class: type[Model]) -> str:
+        """Perform the get model name operation."""
         if model_class.NAME is None:
             model_class.NAME = model_class.__name__  # type: ignore
         return model_class.NAME
 
     def __init__(self, name: str, description: str | None = None):
+        """Initialize the instance."""
         self._name = name
         self._description = description
 
@@ -158,47 +167,58 @@ class Domain:
 
     @property
     def name(self) -> str:
+        """Perform the name operation."""
         return self._name
 
     @property
     def description(self) -> str | None:
+        """Perform the description operation."""
         return self._description
 
     @property
     def service_types(self) -> frozenset[Hashable]:
+        """Perform the service types operation."""
         return frozenset(self._service_types)
 
     @property
     def service_names(self) -> frozenset[str]:
+        """Perform the service names operation."""
         return frozenset(self._service_type_for_name.keys())
 
     @property
     def entities(self) -> frozenset[Entity]:
+        """Perform the entities operation."""
         return frozenset(self._entities)
 
     @property
     def commands(self) -> frozenset[type[Command]]:
+        """Perform the commands operation."""
         return frozenset(self._commands)
 
     @property
     def command_names(self) -> frozenset[str]:
+        """Perform the command names operation."""
         return frozenset(self._command_for_name.keys())
 
     @property
     def crud_commands(self) -> frozenset[type[CrudCommand]]:
+        """Perform the crud commands operation."""
         return frozenset(self._crud_commands)
 
     @property
     def models(self) -> frozenset[type[Model]]:
+        """Perform the models operation."""
         return frozenset(self._models)
 
     @property
     def permissions(self) -> frozenset[Permission]:
+        """Perform the permissions operation."""
         return frozenset(self._permissions)
 
     def get_commands(
         self, include_crud: bool = False, frozen: bool = True
     ) -> set[type[Command]] | frozenset[type[Command]]:
+        """Perform the get commands operation."""
         if include_crud:
             if frozen:
                 return frozenset(self._commands)
@@ -211,6 +231,7 @@ class Domain:
     def get_service_type_for_entity(
         self, entity: Entity, verify: bool = False
     ) -> Hashable | None:
+        """Perform the get service type for entity operation."""
         if verify:
             self._verify_entity_exists(entity)
             return self._service_type_for_entity[entity]
@@ -219,6 +240,7 @@ class Domain:
     def get_entities_for_service_type(
         self, service_type: Hashable, verify: bool = False, frozen: bool = True
     ) -> set[Entity] | frozenset[Entity] | None:
+        """Perform the get entities for service type operation."""
         if verify:
             self._verify_service_type_exists(service_type)
         entities = self._entities_for_service_type.get(service_type)
@@ -227,11 +249,13 @@ class Domain:
         return frozenset(entities) if frozen else entities
 
     def get_service_types(self) -> set[Hashable]:
+        """Perform the get service types operation."""
         return set(self._service_types)
 
     def get_service_type_for_model(
         self, model_class: type[Model], verify: bool = False
     ) -> Hashable:
+        """Perform the get service type for model operation."""
         if verify:
             self._verify_model_exists(model_class)
         return self._service_type_for_model.get(model_class)
@@ -239,12 +263,14 @@ class Domain:
     def get_models_for_service_type(
         self, service_type: Hashable, frozen: bool = True
     ) -> set[type[Model]] | frozenset[type[Model]]:
+        """Perform the get models for service type operation."""
         self._verify_service_type_exists(service_type)
         if frozen:
             return frozenset(self._models_for_service_type[service_type])
         return set(self._models_for_service_type[service_type])
 
     def get_service_type_for_command(self, command_class: type[Command]) -> Hashable:
+        """Perform the get service type for command operation."""
         self._verify_command_exists(command_class)
         return self._service_type_for_command[command_class]
 
@@ -254,6 +280,7 @@ class Domain:
         frozen: bool = True,
         base_class: type[Command] | None = None,
     ) -> set[type[Command]] | frozenset[type[Command]]:
+        """Perform the get commands for service type operation."""
         self._verify_service_type_exists(service_type)
         if frozen:
             if base_class:
@@ -279,6 +306,7 @@ class Domain:
         frozen: bool = True,
         base_class: type[CrudCommand] | None = None,
     ) -> set[type[CrudCommand]] | frozenset[type[CrudCommand]]:
+        """Perform the get crud commands for service type operation."""
         self._verify_service_type_exists(service_type)
         if frozen:
             if base_class:
@@ -301,12 +329,14 @@ class Domain:
         return frozenset(self._crud_commands_for_service_type[service_type])
 
     def get_command_for_name(self, command_name: str) -> type[Command]:
+        """Perform the get command for name operation."""
         self._verify_command_exists(command_name)
         return self._command_for_name[command_name]
 
     def get_permissions_for_service_type(
         self, service_type: Hashable, frozen: bool = True
     ) -> set[Permission] | frozenset[Permission]:
+        """Perform the get permissions for service type operation."""
         self._verify_service_type_exists(service_type)
         if frozen:
             return frozenset(self._permissions_for_service_type[service_type])
@@ -315,9 +345,7 @@ class Domain:
     def get_permissions_for_domain(
         self, frozen: bool = True
     ) -> set[Permission] | frozenset[Permission]:
-        """
-        Get permissions for all the commands in the domain.
-        """
+        """Get permissions for all the commands in the domain."""
         if frozen:
             return frozenset(self._permissions)
         return set(self._permissions)
@@ -328,6 +356,7 @@ class Domain:
         model class and the value is a PermissionTypeSet that indicates which
         CRUD operations are not allowed. Only models that have missing
         permissions are included in the dict.
+
         """
         permission_type_map: dict[frozenset[PermissionType], PermissionTypeSet] = {
             x.value: x for x in PermissionTypeSet
@@ -346,50 +375,60 @@ class Domain:
         return excluded_permissions
 
     def get_service_type_for_permission(self, permission: Permission) -> Hashable:
+        """Perform the get service type for permission operation."""
         self._verify_permission_exists(permission)
         return self._service_type_for_permission[permission]
 
     def get_entity_for_model(self, model_class: type[Model]) -> Entity:
+        """Perform the get entity for model operation."""
         self._verify_model_exists(model_class)
         return self._entity_for_model[model_class]
 
     def get_model_for_entity(self, entity: Entity) -> type[Model]:
+        """Perform the get model for entity operation."""
         self._verify_entity_exists(entity)
         return self._model_for_entity[entity]
 
     def get_entity_for_crud_command(
         self, crud_command_class: type[CrudCommand]
     ) -> Entity:
+        """Perform the get entity for crud command operation."""
         self._verify_command_exists(crud_command_class)
         return self._entity_for_crud_command[crud_command_class]
 
     def get_crud_command_for_entity(self, entity: Entity) -> type[CrudCommand]:
+        """Perform the get crud command for entity operation."""
         self._verify_entity_exists(entity)
         return self._crud_command_for_entity[entity]
 
     def get_entity_for_permission(self, permission: Permission) -> Entity:
+        """Perform the get entity for permission operation."""
         self._verify_permission_exists(permission)
         return self._entity_for_permission[permission]
 
     def get_permissions_for_entity(
         self, entity: Entity, frozen: bool = True
     ) -> set[Permission] | frozenset[Permission]:
+        """Perform the get permissions for entity operation."""
         self._verify_entity_exists(entity)
         if frozen:
             return frozenset(self._permissions_for_entity[entity])
         return set(self._permissions_for_entity[entity])
 
     def get_crud_command_for_model(self, model_class: type[Model]) -> type[CrudCommand]:
+        """Perform the get crud command for model operation."""
         self._verify_model_exists(model_class)
         return self._crud_command_for_model[model_class]
 
     def get_model_for_crud_command(
         self, crud_command_class: type[CrudCommand]
     ) -> type[Model]:
+        """Perform the get model for crud command operation."""
         self._verify_command_exists(crud_command_class)
         return self._model_for_crud_command[crud_command_class]
 
     def get_model_for_permission(self, permission: Permission) -> type[Model]:
+        """Perform the get model for permission operation."""
         self._verify_permission_exists(permission)
         return self._model_for_permission[permission]
 
@@ -399,6 +438,7 @@ class Domain:
         frozen: bool = True,
         permission_type_set: PermissionTypeSet | None = None,
     ) -> set[Permission] | frozenset[Permission]:
+        """Perform the get permissions for model operation."""
         self._verify_model_exists(model_class)
         return self.get_permissions_for_command(
             self.get_crud_command_for_model(model_class),
@@ -412,6 +452,7 @@ class Domain:
         frozen: bool = True,
         permission_type_set: PermissionTypeSet | None = None,
     ) -> set[Permission] | frozenset[Permission]:
+        """Perform the get permissions for command operation."""
         self._verify_command_exists(command_class)
         if permission_type_set:
             permissions = set(
@@ -429,6 +470,7 @@ class Domain:
         return set(self._permissions_for_command[command_class])
 
     def get_command_for_permission(self, permission: Permission) -> type[Command]:
+        """Perform the get command for permission operation."""
         self._verify_permission_exists(permission)
         return self._command_for_permission[permission]
 
@@ -437,6 +479,7 @@ class Domain:
         command_class_or_name: type[Command] | str,
         permission_type: PermissionType,
     ) -> Permission:
+        """Perform the get permission operation."""
         self._verify_command_exists(command_class_or_name)
         return self._permission_for_tuple[(command_class_or_name, permission_type)]
 
@@ -444,6 +487,7 @@ class Domain:
         self,
         cmd: Command,
     ) -> Permission:
+        """Perform the get permission for command instance operation."""
         command_class = type(cmd)
         if issubclass(command_class, CrudCommand):
             permission_type = Domain.CRUD_PERMISSION_TYPE_MAP[cmd.operation]  # type: ignore
@@ -461,6 +505,7 @@ class Domain:
         schema_name: str | None = None,
         invert: bool = False,
     ) -> dict[int, tuple[str, type[Model], str | None]] | dict[int, Link]:
+        """Perform the get model links operation."""
         self._verify_model_exists(model_class)
         entity = self.get_entity_for_model(model_class)
         links = {}
@@ -494,6 +539,7 @@ class Domain:
         reverse: bool = False,
         on_cycle: OnException = OnException.RAISE,
     ) -> list[Entity]:
+        """Perform the get dag sorted entities operation."""
         if service_type:
             self._verify_service_type_exists(service_type)
         entities = self._filter_entities(
@@ -521,6 +567,7 @@ class Domain:
         reverse: bool = False,
         on_cycle: OnException = OnException.RAISE,
     ) -> list[type[Model]]:
+        """Perform the get dag sorted models operation."""
         return [
             x.model_class  # type: ignore
             for x in self.get_dag_sorted_entities(
@@ -540,6 +587,7 @@ class Domain:
         reverse: bool = False,
         on_cycle: OnException = OnException.RAISE,
     ) -> list[Hashable]:
+        """Perform the get dag sorted service types operation."""
         entities = self.get_dag_sorted_entities(on_cycle=on_cycle)
         if len(entities) == 0:
             return []
@@ -580,6 +628,7 @@ class Domain:
         return sorted_service_types
 
     def register_service_type(self, service_type: Hashable) -> Hashable:
+        """Perform the register service type operation."""
         if service_type not in self._service_types:
             self._service_types.add(service_type)
             self._entities_for_service_type[service_type] = set()
@@ -598,6 +647,7 @@ class Domain:
         on_cycle: OnException = OnException.RAISE,
     ) -> Entity:
         # Set service type Model and CrudCommand
+        """Perform the register entity operation."""
         if model_class:
             entity.set_model_class(model_class)
         if crud_command_class:
@@ -644,6 +694,7 @@ class Domain:
         schema_name: str | None,
         invert: bool,
     ) -> list[Entity]:
+        """Perform the  filter entities operation."""
         entities: list[Entity] = []
         for entity in self._dag_sorted_entities:
             if (
@@ -668,6 +719,7 @@ class Domain:
     def _update_entity_dag(
         self, entity: Entity, on_cycle: Literal[OnException.RAISE, OnException.IGNORE]
     ) -> None:
+        """Perform the  update entity dag operation."""
         for link in entity.links.values():
             if link.link_model_class not in self._models:
                 if on_cycle == OnException.RAISE:
@@ -690,6 +742,7 @@ class Domain:
         model_class: type[Model],
         model_name: str,
     ) -> None:
+        """Perform the  link new entity and model operation."""
         self._service_type_for_entity[entity] = service_type
         self._entities_for_service_type[service_type].add(entity)
         self._service_type_for_model[model_class] = service_type
@@ -702,6 +755,7 @@ class Domain:
     def _add_new_entity_and_model(
         self, entity: Entity, model_class: type[Model], model_name: str
     ) -> None:
+        """Perform the  add new entity and model operation."""
         self._entities.add(entity)
         self._entity_dag[entity] = []
         self._models.add(model_class)
@@ -711,6 +765,7 @@ class Domain:
     def register_command(
         self, command_class: type[Command], service_type: Hashable | None = None
     ) -> type[Command]:
+        """Perform the register command operation."""
         command_name = Domain.get_command_name(command_class)
 
         # Verify already registered Command
@@ -785,6 +840,7 @@ class Domain:
         model_class: type[Model],
         entity: Entity,
     ) -> None:
+        """Perform the  link new command operation."""
         model_name = Domain.get_model_name(model_class)
         self._crud_commands_for_service_type[service_type].add(crud_command_class)
         self._entity_for_crud_command[crud_command_class] = entity
@@ -805,6 +861,7 @@ class Domain:
         command_name: str,
         permissions: frozenset[Permission],
     ) -> None:
+        """Perform the  associate command with service operation."""
         self._service_type_for_command[command_class] = service_type
         self._commands_for_service_type[service_type].add(command_class)
         self._permissions_for_service_type[service_type].update(permissions)
@@ -823,6 +880,7 @@ class Domain:
     def _add_new_command(
         self, command_class: type[Command], command_name: str
     ) -> frozenset[Permission]:
+        """Perform the  add new command operation."""
         permissions = Domain.get_command_permissions(command_class)
         self._commands.add(command_class)
         self._permissions.update(permissions)
@@ -836,6 +894,7 @@ class Domain:
         service_type: Hashable | None,
         command_name: str,
     ) -> None:
+        """Perform the  verify registered command operation."""
         if command_name != self._name_for_command[command_class]:
             raise exc.DomainException(
                 "e26100e6",
@@ -860,6 +919,7 @@ class Domain:
                 )
 
     def _verify_model_has_entity(self, model_class: type[Model]) -> None:
+        """Perform the  verify model has entity operation."""
         if model_class.ENTITY is None:
             raise exc.DomainException(
                 "1689f54a",
@@ -867,12 +927,14 @@ class Domain:
             )
 
     def _verify_entity_exists(self, entity: Entity) -> None:
+        """Perform the  verify entity exists operation."""
         if entity not in self._entities:
             raise exc.DomainException(
                 "5a937380", f"Entity {entity.name} is not registered"
             )
 
     def _verify_service_type_exists(self, service_type: Hashable) -> None:
+        """Perform the  verify service type exists operation."""
         if service_type not in self._service_types:
             raise exc.DomainException(
                 "ef28d4ad", f"Service type {service_type} is not registered"
@@ -881,6 +943,7 @@ class Domain:
     def _verify_command_exists(
         self, command_class_or_name: type[Command] | str
     ) -> None:
+        """Perform the  verify command exists operation."""
         if isinstance(command_class_or_name, str):
             command_name = command_class_or_name
             if command_name not in self._command_for_name:
@@ -896,6 +959,7 @@ class Domain:
                 )
 
     def _verify_model_exists(self, model_class_or_name: type[Model] | str) -> None:
+        """Perform the  verify model exists operation."""
         if isinstance(model_class_or_name, str):
             model_name = model_class_or_name
             if model_name not in self._model_for_name:
@@ -911,6 +975,7 @@ class Domain:
                 )
 
     def _verify_permission_exists(self, permission: Permission) -> None:
+        """Perform the  verify permission exists operation."""
         if permission not in self._permissions:
             raise exc.DomainException(
                 "b2cee1c1", f"Permission {permission} is not registered"

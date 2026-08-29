@@ -1,3 +1,5 @@
+"""Role-based access-control policy implementation."""
+
 from collections.abc import Callable, Hashable
 
 from gen_epix.fastapp.domain import Domain
@@ -21,6 +23,7 @@ class RbacPolicy(Policy):
         retrieve_user_is_non_rbac_authorized: Callable[[Command], bool] | None = None,
         retrieve_user_is_root: Callable[[User], bool] | None = None,
     ):
+        """Initialize the instance."""
         self._get_permission_for_command = get_permission_for_command
         self._get_permission_has_rbac = get_permission_has_rbac
         self._get_roles_by_permission = get_roles_by_permission
@@ -31,6 +34,7 @@ class RbacPolicy(Policy):
         self._retrieve_user_is_root = retrieve_user_is_root
 
     def is_allowed(self, cmd: Command) -> bool:
+        """Perform the is allowed operation."""
         user = cmd.user
         permission = self._get_permission_for_command(cmd)
 

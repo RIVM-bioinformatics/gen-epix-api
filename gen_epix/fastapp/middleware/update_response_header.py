@@ -1,3 +1,5 @@
+"""Utilities for the fastapp update response header module."""
+
 import os
 from collections.abc import Callable
 
@@ -8,17 +10,21 @@ from gen_epix.util import get_package_version
 
 
 class UpdateResponseHeaderMiddleware(BaseHTTPMiddleware):
+    """Provide the update response header middleware framework abstraction."""
+
     def __init__(
         self,
         app: FastAPI,
         general_headers: dict[str, str] | None = None,
         exception_headers: list[tuple[set[str], dict[str, str]]] | None = None,
     ):
+        """Initialize the instance."""
         super().__init__(app)
         self._general_headers = general_headers or {}
         self._exception_headers = exception_headers
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        """Perform the dispatch operation."""
         response: Response = await call_next(request)
         if not self._exception_headers:
             if self._general_headers:

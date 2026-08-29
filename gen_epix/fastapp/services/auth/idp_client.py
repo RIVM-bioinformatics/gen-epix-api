@@ -1,3 +1,5 @@
+"""Identity-provider client interface and shared response models."""
+
 import abc
 import ssl
 import uuid
@@ -10,6 +12,7 @@ from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider
 
 
 class IdpClient(abc.ABC):
+    """Provide the idp client framework abstraction."""
 
     DEFAULT_TOKEN = "id_token"
 
@@ -21,6 +24,7 @@ class IdpClient(abc.ABC):
         ssl_context: ssl.SSLContext | bool = True,
         **kwargs: dict,
     ) -> None:
+        """Initialize the instance."""
         self.id: UUID = id or uuid.uuid4()
 
         self.ssl_context = ssl_context
@@ -55,5 +59,6 @@ class IdpClient(abc.ABC):
         """
         Returns the claims of the user from the request or None if claims cannot be
         processed by this client.
+
         """
         raise NotImplementedError()

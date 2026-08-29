@@ -1,3 +1,5 @@
+"""Authentication domain models and validation rules."""
+
 from typing import ClassVar, Self
 from uuid import UUID
 
@@ -9,6 +11,8 @@ from gen_epix.fastapp.model import Model
 
 
 class IDPUser(Model):
+    """Provide the i d p user framework abstraction."""
+
     ENTITY: ClassVar = Entity()
 
     issuer: str = Field(description="The issuer of the user")
@@ -16,6 +20,8 @@ class IDPUser(Model):
 
 
 class IdentityProvider(Model):
+    """Provide the identity provider framework abstraction."""
+
     ENTITY: ClassVar = Entity()
 
     name: str = Field(description="Name of the identity provider")
@@ -41,6 +47,7 @@ class IdentityProvider(Model):
 
     @model_validator(mode="after")
     def _validate(self) -> Self:
+        """Perform the  validate operation."""
         if self.public:
             if self.client_id is None:
                 raise ValueError(
@@ -54,6 +61,8 @@ class IdentityProvider(Model):
 
 
 class Claims(Model):
+    """Provide the claims framework abstraction."""
+
     ENTITY: ClassVar = Entity()
 
     scheme: str = Field(description="The authorization scheme of the token")

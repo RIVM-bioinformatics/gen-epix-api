@@ -1,3 +1,5 @@
+"""Utilities for the fastapp entity module."""
+
 import re
 import uuid
 from collections.abc import Callable, Hashable, Mapping
@@ -15,6 +17,7 @@ from gen_epix.fastapp.exc import DomainException
 
 
 class Entity(BaseModel):
+    """Provide the entity framework abstraction."""
 
     CAMEL_TO_SNAKE_CASE_PATTERN: ClassVar[re.Pattern] = re.compile(
         r"(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])"
@@ -76,11 +79,13 @@ class Entity(BaseModel):
     )
     @classmethod
     def _validate_names(cls, value: str | Enum | None) -> str | None:
+        """Perform the  validate names operation."""
         return str(value.value) if isinstance(value, Enum) else value
 
     @model_validator(mode="before")
     @classmethod
     def _validate_model(cls, data: Any) -> Any:
+        """Perform the  validate model operation."""
         if (
             "id_field_name" not in data
             and "persistable" in data
@@ -92,17 +97,13 @@ class Entity(BaseModel):
     @field_validator("keys", mode="before")
     @classmethod
     def _validate_keys(cls, value: dict[int, Any]) -> dict[int, Key]:
-        """
-        Validate and convert keys to Key objs.
-        """
+        """Validate and convert keys to Key objs."""
         return {x: y if isinstance(y, Key) else Key(y) for x, y in value.items()}
 
     @field_validator("links", mode="before")
     @classmethod
     def _validate_links(cls, value: dict[int, Any]) -> dict[int, Link]:
-        """
-        Validate and convert links to Link objs.
-        """
+        """Validate and convert links to Link objs."""
         return {
             x: (
                 y
@@ -122,18 +123,21 @@ class Entity(BaseModel):
 
     @property
     def name(self) -> str:
+        """Perform the name operation."""
         if not self.has_model():
             raise DomainException("aa2c7c40", Entity.NO_MODEL_ERROR_MSG)
         return self._model_class.NAME  # type: ignore
 
     @property
     def model_class(self) -> type[BaseModel]:
+        """Perform the model class operation."""
         if not self.has_model():
             raise DomainException("be45913e", Entity.NO_MODEL_ERROR_MSG)
         return self._model_class  # type: ignore
 
     @property
     def crud_command_class(self) -> type[BaseModel] | None:
+        """Perform the crud command class operation."""
         if not self.has_model():
             raise DomainException("52c69320", Entity.NO_MODEL_ERROR_MSG)
         if not self.persistable:
@@ -142,6 +146,7 @@ class Entity(BaseModel):
 
     @property
     def db_model_class(self) -> type | None:
+        """Perform the db model class operation."""
         if not self.has_model():
             raise DomainException("7ee38603", Entity.NO_MODEL_ERROR_MSG)
         if not self.persistable:
@@ -150,18 +155,21 @@ class Entity(BaseModel):
 
     @property
     def create_api_model_class(self) -> type | None:
+        """Perform the create api model class operation."""
         if not self.has_model():
             raise DomainException("b0252bfa", Entity.NO_MODEL_ERROR_MSG)
         return self._create_api_model_class
 
     @property
     def read_api_model_class(self) -> type | None:
+        """Perform the read api model class operation."""
         if not self.has_model():
             raise DomainException("81bb94f3", Entity.NO_MODEL_ERROR_MSG)
         return self._read_api_model_class
 
     @property
     def get_obj_id(self) -> Callable[[Any], Hashable]:
+        """Perform the get obj id operation."""
         if not self.has_model():
             raise DomainException("3f1a0c53", Entity.NO_MODEL_ERROR_MSG)
         assert self.id_field_name
@@ -178,12 +186,12 @@ class Entity(BaseModel):
         model_class : type[BaseModel]
             The model class to set for the entity.
 
-        Returns
+        Returns:
         -------
         Self
             The updated entity obj.
 
-        Raises
+        Raises:
         ------
         ValueError
             If the entity already has a model set or if the id_field_name is invalid.
@@ -246,7 +254,7 @@ class Entity(BaseModel):
         """
         Check if the entity has a model set.
 
-        Returns
+        Returns:
         -------
         bool
             True if the entity has a model set, False otherwise.
@@ -257,6 +265,7 @@ class Entity(BaseModel):
         """
         Set the repository model class for the entity, which is intended as the class
         that is stored or retrieved from the repository.
+
         """
         if not self.has_model():
             raise DomainException("cffc3b23", Entity.NO_MODEL_ERROR_MSG)
@@ -269,6 +278,7 @@ class Entity(BaseModel):
         """
         Set the API model class for the entity, which is intended as the request model
         that is posted to an endpoint to create a resource.
+
         """
         if not self.has_model():
             raise DomainException("8025d2b1", Entity.NO_MODEL_ERROR_MSG)
@@ -279,6 +289,7 @@ class Entity(BaseModel):
         """
         Set the API model class for the entity, which is intended as the model
         that returned in a response by an endpoint.
+
         """
         if not self.has_model():
             raise DomainException("bb74ae18", Entity.NO_MODEL_ERROR_MSG)
@@ -289,6 +300,7 @@ class Entity(BaseModel):
         """
         Set the CRUD command class for the entity, which is intended as the class
         that is stored or retrieved from the repository.
+
         """
         if not self.has_model():
             raise DomainException("b8955690", Entity.NO_MODEL_ERROR_MSG)
@@ -310,12 +322,12 @@ class Entity(BaseModel):
         field_type : FieldType or None, optional
             The type of model fields to filter by. Defaults to None.
 
-        Returns
+        Returns:
         -------
         list[str]
             A list of field names of the entity.
 
-        Raises
+        Raises:
         ------
         ValueError
             If the entity does not have fields set.
@@ -338,7 +350,7 @@ class Entity(BaseModel):
         by_alias : bool, optional
             If True, return the ID field name by alias. Defaults to True.
 
-        Returns
+        Returns:
         -------
         str
             The ID field name of the entity.
@@ -350,6 +362,7 @@ class Entity(BaseModel):
         return field_names[0]
 
     def get_keys_field_names(self, by_alias: bool = True) -> list[tuple[str, ...]]:
+        """Perform the get keys field names operation."""
         fields = self._fields
         assert fields is not None
         if by_alias:
@@ -368,12 +381,11 @@ class Entity(BaseModel):
         by_alias : bool, optional
             If True, return the link field names by alias. Defaults to True.
 
-        Returns
+        Returns:
         -------
         list[str]
             A list of link field names of the entity.
         """
-
         return self.get_field_names(by_alias=by_alias, field_type=FieldType.LINK)
 
     def get_relationship_field_names(self, by_alias: bool = True) -> list[str]:
@@ -385,7 +397,7 @@ class Entity(BaseModel):
         by_alias : bool, optional
             If True, return the back-populate field names by alias. Defaults to True.
 
-        Returns
+        Returns:
         -------
         list[str]
             A list of back-populate field names of the entity.
@@ -403,24 +415,23 @@ class Entity(BaseModel):
         by_alias : bool, optional
             If True, return the value field names by alias. Defaults to True.
 
-        Returns
+        Returns:
         -------
         list[str]
             A list of value field names of the entity.
         """
-
         return self.get_field_names(by_alias=by_alias, field_type=FieldType.VALUE)
 
     def get_keys_generator(self) -> Callable | None:
         """
         Get the keys generator for the entity.
 
-        Returns
+        Returns:
         -------
         Callable or None
             The keys generator for the entity, or None if no keys generator is set.
 
-        Raises
+        Raises:
         ------
         ValueError
             If the entity does not have a model set.
@@ -430,6 +441,7 @@ class Entity(BaseModel):
         return self._keys_generator
 
     def get_link_id(self, link_model_class: type) -> Callable[[Any], Hashable]:
+        """Perform the get link id operation."""
         fn = self._get_link_id_by_model_class.get(link_model_class)
         if fn is None:
             raise ValueError(
@@ -446,12 +458,12 @@ class Entity(BaseModel):
         link_field_name : str
             The field name of the link.
 
-        Returns
+        Returns:
         -------
         Entity | None
             The linked entity or None if no linked entity.
 
-        Raises
+        Raises:
         ------
         ValueError
             If the entity is not linked to an entity-relationship model.
@@ -470,13 +482,13 @@ class Entity(BaseModel):
         link_field_name : str
             The field name of the link.
 
-        Returns
+        Returns:
         -------
         tuple[int, type[BaseModel], str or None]
             A tuple containing the link type ID, link model class, and back-populate
             field name.
 
-        Raises
+        Raises:
         ------
         ValueError
             If the entity is not linked to an entity-relationship model or if the
@@ -493,7 +505,7 @@ class Entity(BaseModel):
         """
         Check if the entity has keys.
 
-        Returns
+        Returns:
         -------
         bool
             True if the entity has keys, False otherwise.
@@ -504,7 +516,7 @@ class Entity(BaseModel):
         """
         Check if the entity has links.
 
-        Returns
+        Returns:
         -------
         bool
             True if the entity has links, False otherwise.
@@ -515,7 +527,7 @@ class Entity(BaseModel):
         """
         Check if the entity has multi-links.
 
-        Returns
+        Returns:
         -------
         bool
             True if the entity has multi-links, False otherwise.
@@ -527,6 +539,7 @@ class Entity(BaseModel):
         string_casing: StringCasing = StringCasing.SNAKE_CASE,
         is_plural: bool = False,
     ) -> str | None:
+        """Perform the get name by casing operation."""
         if string_casing == StringCasing.SNAKE_CASE:
             name = (
                 self.snake_case_plural_name
@@ -559,7 +572,7 @@ class Entity(BaseModel):
         **kwargs : Any
             Keyword arguments to update the entity.
 
-        Returns
+        Returns:
         -------
         Self
             A copy of the entity with updated attributes.
@@ -599,12 +612,12 @@ class Entity(BaseModel):
         model_class : type[BaseModel]
             The model class to verify and parse links for.
 
-        Returns
+        Returns:
         -------
         Self
             The updated entity obj.
 
-        Raises
+        Raises:
         ------
         ValueError
             If any link field names or back populate field names are invalid.
@@ -648,7 +661,7 @@ class Entity(BaseModel):
         link : Link
             The link to verify.
 
-        Raises
+        Raises:
         ------
         ValueError
             If the link field name is invalid or not unique.
@@ -685,7 +698,7 @@ class Entity(BaseModel):
         link : Link
             The link to verify.
 
-        Raises
+        Raises:
         ------
         ValueError
             If the back populate field name is invalid or not unique.
@@ -714,6 +727,7 @@ class Entity(BaseModel):
     def _check_identical_field_names(
         self, link_field_names: set, relationship_field_names: set
     ) -> None:
+        """Perform the  check identical field names operation."""
         identical_field_names = link_field_names & relationship_field_names
         if identical_field_names:
             identical_field_names_str = ", ".join(identical_field_names)
@@ -723,19 +737,21 @@ class Entity(BaseModel):
             )
 
     def _create_keys_generator(self) -> None:
-        """Create a function that will calculate all the keys for a given obj"""
+        """Create a function that will calculate all the keys for a given obj."""
         # Special case: no keys
         if not self.keys:
             self._keys_generator = lambda x: {}
             return
 
         def keys_generator(keys: dict[int, Key], obj: BaseModel) -> dict[int, Any]:
+            """Perform the keys generator operation."""
             return {x: y(obj) for x, y in keys.items()}
 
         self._keys_generator = partial(keys_generator, self.keys)
 
     @classmethod
     def camel_to_snake_case(cls, value: str) -> str:
+        """Perform the camel to snake case operation."""
         return cls.CAMEL_TO_SNAKE_CASE_PATTERN.sub("_", value).lower()
 
     @classmethod
@@ -804,9 +820,7 @@ class Entity(BaseModel):
     def _get_model_field_names(
         model_class: type[BaseModel],
     ) -> list[tuple[str, str | None]]:
-        """
-        Returns a list of (field_name, alias) tuples.
-        """
+        """Returns a list of (field_name, alias) tuples."""
         field_names = []
         for field_name, field in (
             model_class.model_fields | model_class.model_computed_fields
@@ -815,4 +829,5 @@ class Entity(BaseModel):
         return field_names
 
     def __hash__(self) -> int:
+        """Perform the   hash   operation."""
         return self.name.__hash__()

@@ -1,3 +1,5 @@
+"""Utilities for the fastapp crud endpoint generator module."""
+
 import itertools
 import json
 from collections.abc import Callable, Hashable
@@ -44,6 +46,7 @@ from gen_epix.filter import (
 def _default_validate_query_filter(
     query_filter: Filter,
 ) -> bool:
+    """Perform the  default validate query filter operation."""
     if isinstance(query_filter, CompositeFilter):
         for subfilter in query_filter.filters:
             if isinstance(subfilter, CompositeFilter):
@@ -52,6 +55,8 @@ def _default_validate_query_filter(
 
 
 class CrudEndpointGenerator:
+    """Provide the crud endpoint generator framework abstraction."""
+
     DEFAULT_BATCH_ROUTE_SUFFIX = "/batch"
     DEFAULT_QUERY_ROUTE_SUFFIX = "/query"
     DEFAULT_IDS_ROUTE_SUFFIX = "/ids"
@@ -87,6 +92,7 @@ class CrudEndpointGenerator:
     def convert_ids_string_to_list(
         id_class: type, ids_str: str
     ) -> tuple[list | None, list[str]]:
+        """Perform the convert ids string to list operation."""
         invalid_ids = []
         try:
             ids = [id_class(x) for x in ids_str.split(",")]
@@ -110,7 +116,10 @@ class CrudEndpointGenerator:
         route: CrudEndpointSet,
         handle_exception_fn: Callable,
     ) -> None:
+        """Perform the generate get all operation."""
+
         async def endpoint_function(user: route.user_dependency, limit: int | None = None, offset: int | None = None) -> Any:  # type: ignore
+            """Perform the endpoint function operation."""
             obj_ids = None
             try:
                 cmd = route.crud_command_class(
@@ -158,10 +167,12 @@ class CrudEndpointGenerator:
         handle_exception_fn: Callable,
         batch_route_suffix: str | None = None,
     ) -> None:
+        """Perform the generate get some operation."""
         if not batch_route_suffix:
             batch_route_suffix = CrudEndpointGenerator.DEFAULT_BATCH_ROUTE_SUFFIX
 
         async def endpoint_function(user: route.user_dependency, ids: str) -> Any:  # type: ignore
+            """Perform the endpoint function operation."""
             obj_ids, invalid_obj_ids = CrudEndpointGenerator.convert_ids_string_to_list(
                 route.id_class, ids
             )
@@ -220,6 +231,7 @@ class CrudEndpointGenerator:
             Callable[[Filter], bool] | None
         ) = _default_validate_query_filter,
     ) -> None:
+        """Perform the generate post query operation."""
         if not query_route_suffix:
             query_route_suffix = CrudEndpointGenerator.DEFAULT_QUERY_ROUTE_SUFFIX
         if not ids_route_suffix:
@@ -254,6 +266,7 @@ class CrudEndpointGenerator:
             limit: int | None = None,
             offset: int | None = None,
         ) -> Any:
+            """Perform the endpoint function operation."""
             if validate_query_filter and not validate_query_filter(filter):
                 handle_exception_fn(
                     "cee23041" + route.endpoint_basename,
@@ -308,10 +321,13 @@ class CrudEndpointGenerator:
         route: CrudEndpointSet,
         handle_exception_fn: Callable,
     ) -> None:
+        """Perform the generate get one operation."""
+
         async def endpoint_function(
             user: route.user_dependency,  # type: ignore
             object_id: route.id_class,  # type: ignore
         ) -> Any:
+            """Perform the endpoint function operation."""
             try:
                 cmd = route.crud_command_class(
                     user=user,
@@ -349,9 +365,12 @@ class CrudEndpointGenerator:
         route: CrudEndpointSet,
         handle_exception_fn: Callable,
     ) -> None:
+        """Perform the generate post one operation."""
+
         async def endpoint_function(
             user: route.user_dependency, create_obj: route.create_api_model_class  # type: ignore
         ) -> Any:
+            """Perform the endpoint function operation."""
             try:
                 cmd = route.crud_command_class(
                     user=user,
@@ -402,12 +421,14 @@ class CrudEndpointGenerator:
         handle_exception_fn: Callable,
         batch_route_suffix: str | None = None,
     ) -> None:
+        """Perform the generate post some operation."""
         if not batch_route_suffix:
             batch_route_suffix = CrudEndpointGenerator.DEFAULT_BATCH_ROUTE_SUFFIX
 
         async def endpoint_function(
             user: route.user_dependency, create_objs: list[route.create_api_model_class]  # type: ignore
         ) -> Any:
+            """Perform the endpoint function operation."""
             try:
                 cmd = route.crud_command_class(
                     user=user,
@@ -464,11 +485,14 @@ class CrudEndpointGenerator:
         route: CrudEndpointSet,
         handle_exception_fn: Callable,
     ) -> None:
+        """Perform the generate put one operation."""
+
         async def endpoint_function(
             user: route.user_dependency,
             object_id: route.id_class,  # type: ignore
             update_obj: route.create_api_model_class,  # type: ignore
         ) -> Any:
+            """Perform the endpoint function operation."""
             if update_obj.id != object_id:
                 raise api_exc.BadRequest400HTTPException()
             try:
@@ -515,6 +539,7 @@ class CrudEndpointGenerator:
         handle_exception_fn: Callable,
         batch_route_suffix: str | None = None,
     ) -> None:
+        """Perform the generate put some operation."""
         if not batch_route_suffix:
             batch_route_suffix = CrudEndpointGenerator.DEFAULT_BATCH_ROUTE_SUFFIX
 
@@ -522,6 +547,7 @@ class CrudEndpointGenerator:
             user: route.user_dependency,  # type: ignore
             update_objs: list[route.create_api_model_class],  # type: ignore
         ) -> Any:
+            """Perform the endpoint function operation."""
             try:
                 cmd = route.crud_command_class(
                     user=user,
@@ -568,9 +594,12 @@ class CrudEndpointGenerator:
         route: CrudEndpointSet,
         handle_exception_fn: Callable,
     ) -> None:
+        """Perform the generate delete one operation."""
+
         async def endpoint_function(user: route.user_dependency, object_id: Any) -> Any:  # type: ignore
             # TODO: distinguish between soft and hard delete through hard_delete:
             #  bool = False parameter
+            """Perform the endpoint function operation."""
             try:
                 cmd = route.crud_command_class(
                     user=user,
@@ -604,7 +633,10 @@ class CrudEndpointGenerator:
         route: CrudEndpointSet,
         handle_exception_fn: Callable,
     ) -> None:
+        """Perform the generate delete all operation."""
+
         async def endpoint_function(user: route.user_dependency, limit: int | None = None, offset: int | None = None) -> Any:  # type: ignore
+            """Perform the endpoint function operation."""
             obj_ids = None
             cmd = route.crud_command_class(
                 user=user,
@@ -643,6 +675,7 @@ class CrudEndpointGenerator:
         handle_exception_fn: Callable,
         batch_route_suffix: str | None = None,
     ) -> None:
+        """Perform the generate delete some operation."""
         if not batch_route_suffix:
             batch_route_suffix = CrudEndpointGenerator.DEFAULT_BATCH_ROUTE_SUFFIX
 
@@ -650,6 +683,7 @@ class CrudEndpointGenerator:
             user: route.user_dependency,  # type: ignore
             ids: str,
         ) -> Any:
+            """Perform the endpoint function operation."""
             obj_ids, invalid_obj_ids = CrudEndpointGenerator.convert_ids_string_to_list(
                 route.id_class, ids
             )
@@ -704,6 +738,7 @@ class CrudEndpointGenerator:
         route: CrudEndpointSet,
         operation_id: str | None = None,
     ) -> None:
+        """Perform the  add route operation."""
         if not operation_id:
             tokens = endpoint.split("/")
             if tokens[-1] == "{object_id}" or method.value.upper() == "POST":
@@ -735,6 +770,7 @@ class CrudEndpointGenerator:
         ) = _default_validate_query_filter,
     ) -> None:
         # Map endpoint types to functions
+        """Perform the generate endpoints operation."""
         function_map = {
             CrudEndpointType.GET_ALL: CrudEndpointGenerator.generate_get_all,
             CrudEndpointType.GET_SOME: CrudEndpointGenerator.generate_get_some,
@@ -800,6 +836,7 @@ class CrudEndpointGenerator:
         ) = _default_validate_query_filter,
     ) -> list[CrudEndpointSet]:
         # Parse exclusions
+        """Perform the create crud endpoint set for domain operation."""
         if excluded_permissions is None:
             excluded_permissions = app.domain.get_model_excluded_permissions()  # type: ignore[assignment] # Unclear why raised
         parsed_excluded_permissions: set[Permission] = set()
@@ -875,6 +912,7 @@ class CrudEndpointGenerator:
         ) = _default_validate_query_filter,
     ) -> CrudEndpointSet:
         # Initialize some
+        """Perform the get crud endpoint set for entity operation."""
         model_class = entity.model_class
         assert issubclass(model_class, model.Model)
         if excluded_crud_endpoint_types is None:
@@ -930,6 +968,7 @@ class CrudEndpointGenerator:
     def get_crud_operations_for_permissions(
         permissions: set[Permission],
     ) -> set[CrudOperation]:
+        """Perform the get crud operations for permissions operation."""
         crud_operations = set()
         for permission in permissions:
             permission_type = permission.permission_type
@@ -969,6 +1008,7 @@ class CrudEndpointGenerator:
         string_casing: StringCasing = StringCasing.SNAKE_CASE,
         is_plural: bool = True,
     ) -> str:
+        """Perform the get endpoint basename operation."""
         name = entity.get_name_by_casing(string_casing, is_plural=is_plural)
         if name is None:
             raise exc.DomainException(
@@ -981,6 +1021,7 @@ class CrudEndpointGenerator:
     def get_crud_endpoint_types_for_operations(
         crud_operations: set[CrudOperation], add_query_route: bool = True
     ) -> set[CrudEndpointType]:
+        """Perform the get crud endpoint types for operations operation."""
         crud_endpoint_types = set()
         for crud_operation in crud_operations:
             crud_endpoint_types.add(

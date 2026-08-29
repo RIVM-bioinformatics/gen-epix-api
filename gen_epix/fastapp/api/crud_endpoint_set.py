@@ -1,3 +1,5 @@
+"""Utilities for the fastapp crud endpoint set module."""
+
 from collections.abc import Callable
 from typing import Any
 
@@ -10,6 +12,8 @@ from gen_epix.filter import Filter
 
 
 class CrudEndpointSet(BaseModel):
+    """Provide the crud endpoint set framework abstraction."""
+
     model_config = ConfigDict(arbitrary_types_allowed=True, protected_namespaces=())
     model_class: type
     create_api_model_class: type | None = None
@@ -31,6 +35,7 @@ class CrudEndpointSet(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def _validate_args(cls, data: Any) -> Any:
+        """Perform the  validate args operation."""
         if isinstance(data, dict):
             if not data.get("read_api_model_class"):
                 data["read_api_model_class"] = data["model_class"]

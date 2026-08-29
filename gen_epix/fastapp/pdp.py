@@ -1,3 +1,5 @@
+"""Policy decision point abstractions and policy evaluation results."""
+
 from typing import Any
 
 from gen_epix.fastapp import exc, model
@@ -17,6 +19,7 @@ class PolicyDecisionPoint:
     """
 
     def __init__(self) -> None:
+        """Initialize the instance."""
         self._policies: dict[
             type[model.Command], dict[EventTiming, list[model.Policy]]
         ] = {}
@@ -27,9 +30,7 @@ class PolicyDecisionPoint:
         policy: model.Policy,
         timing: EventTiming = EventTiming.BEFORE,
     ) -> None:
-        """
-        Register a policy for a command class and timing before, during or after command execution.
-        """
+        """Register a policy for a command class and timing before, during or after command execution."""
         if command_class not in self._policies:
             self._policies[command_class] = {}
         if timing not in self._policies[command_class]:
@@ -47,9 +48,7 @@ class PolicyDecisionPoint:
         policy: model.Policy,
         timing: EventTiming | None = None,
     ) -> None:
-        """
-        Unregister a policy for a command class and timing (all timings if None).
-        """
+        """Unregister a policy for a command class and timing (all timings if None)."""
         if command_class not in self._policies:
             raise exc.InitializationServiceError(
                 "380afa27", f"No policies registered for command class {command_class}"
@@ -81,9 +80,7 @@ class PolicyDecisionPoint:
     def get_policies(
         self, command_class: type[model.Command], timing: EventTiming
     ) -> list[model.Policy]:
-        """
-        Get all policies registered for a command class and timing. The list is a copy.
-        """
+        """Get all policies registered for a command class and timing. The list is a copy."""
         return list(self._policies.get(command_class, {}).get(timing, []))
 
     def apply(
@@ -91,6 +88,7 @@ class PolicyDecisionPoint:
     ) -> Any | None:
         """
         Apply policies for a command class and timing.
+
         In case of BEFORE, raise unauthorized error if any policy denies the command.
         In case of DURING, add policies to command so that they can be used during command execution.
         In case of AFTER, filter the return value with each policy and return it.

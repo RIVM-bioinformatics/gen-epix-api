@@ -78,9 +78,7 @@ class DictRepository(BaseRepository):
 
     @classmethod
     def clear_repository_content(cls, **kwargs: Any) -> None:
-        """
-        No action needed for DictRepository.
-        """
+        """No action needed for DictRepository."""
         return None
 
     @staticmethod
@@ -186,6 +184,7 @@ class DictRepository(BaseRepository):
 
     @property
     def db(self) -> dict[type[Model], dict[Hashable, Model]]:
+        """Perform the db operation."""
         return self._db
 
     def _init_properties(
@@ -921,6 +920,7 @@ class DictRepository(BaseRepository):
         key_ids = list(keys.keys())
 
         def get_keys(obj: Any) -> Any:
+            """Perform the get keys operation."""
             keys = keys_generator(obj)
             return tuple(keys[x] for x in key_ids)
 

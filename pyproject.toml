@@ -98,6 +98,9 @@ ignore = [
     # Parameter documentation is intentionally semantic and non-duplicative. Ruff
     # cannot determine when an annotated parameter needs extra prose.
     "D417",
+    # Existing fastapp docstrings use summary prose followed immediately by the
+    # detailed description; normalize this legacy style in a later lint phase.
+    "D205",
 ]
 
 [tool.ruff.lint.pydocstyle]

@@ -1,3 +1,5 @@
+"""Authentication service coordinating users, tokens, and IDP clients."""
+
 import logging
 import ssl
 import threading
@@ -25,6 +27,7 @@ from gen_epix.fastapp.user_manager import BaseUserManager
 
 
 class AuthService(BaseAuthService):
+    """Provide the auth service framework abstraction."""
 
     DEFAULT_IS_PUBLIC_IDP = False  # Security: IDPs are not public by default
     DEFAULT_ROOT_TOKEN_TIME_TO_LIVE = (
@@ -47,6 +50,7 @@ class AuthService(BaseAuthService):
         repository: None = None,
         **kwargs: Any,
     ):
+        """Initialize the instance."""
         super().__init__(
             app,
             repository=repository,
@@ -90,11 +94,13 @@ class AuthService(BaseAuthService):
 
     @property
     def idp_clients(self) -> list[IdpClient]:
+        """Perform the idp clients operation."""
         return list(self._idp_clients)
 
     async def get_existing_user_from_token(self, token: str) -> model.User | None:
         """Get existing user based on provided token,
-        return None if token is invalid or user does not exist"""
+        return None if token is invalid or user does not exist.
+        """
         for idp_client in self._idp_clients:
             jwt_claims = await idp_client.get_claims_from_jwt(token)
             if jwt_claims:
@@ -116,7 +122,7 @@ class AuthService(BaseAuthService):
     def create_user_dependencies(
         self,
     ) -> tuple[model.User, model.User, IDPUser]:
-
+        """Perform the create user dependencies operation."""
         if not self._idp_clients:
             # No authentication -> create/retrieve root user
             return self._create_no_auth_dependencies()
@@ -150,6 +156,7 @@ class AuthService(BaseAuthService):
             _security_scopes: SecurityScopes,
             claims_0: Claims = Depends(idp_client_list[0]),
         ) -> model.User:
+            """Perform the get current user1 operation."""
             if claims_0:
                 return await self.get_existing_user_from_claims(claims_0)
             self._warn_too_many_idps(request)
@@ -160,6 +167,7 @@ class AuthService(BaseAuthService):
             _security_scopes: SecurityScopes,
             claims_0: Claims = Depends(idp_client_list[0]),
         ) -> model.User:
+            """Perform the get new user1 operation."""
             if claims_0:
                 return await self.get_new_user_from_claims(claims_0)
             self._warn_too_many_idps(request)
@@ -170,6 +178,7 @@ class AuthService(BaseAuthService):
             _security_scopes: SecurityScopes,
             claims_0: Claims = Depends(idp_client_list[0]),
         ) -> IDPUser:
+            """Perform the get idp user1 operation."""
             if claims_0:
                 return await self.get_idp_user_from_claims(claims_0)
             self._warn_too_many_idps(request)
@@ -181,6 +190,7 @@ class AuthService(BaseAuthService):
             claims_0: Claims = Depends(idp_client_list[0]),
             claims_1: Claims = Depends(idp_client_list[1]),
         ) -> model.User:
+            """Perform the get current user2 operation."""
             if claims_0:
                 return await self.get_existing_user_from_claims(claims_0)
             if claims_1:
@@ -194,6 +204,7 @@ class AuthService(BaseAuthService):
             claims_0: Claims = Depends(idp_client_list[0]),
             claims_1: Claims = Depends(idp_client_list[1]),
         ) -> model.User:
+            """Perform the get new user2 operation."""
             if claims_0:
                 return await self.get_new_user_from_claims(claims_0)
             if claims_1:
@@ -207,6 +218,7 @@ class AuthService(BaseAuthService):
             claims_0: Claims = Depends(idp_client_list[0]),
             claims_1: Claims = Depends(idp_client_list[1]),
         ) -> IDPUser:
+            """Perform the get idp user2 operation."""
             if claims_0:
                 return await self.get_idp_user_from_claims(claims_0)
             if claims_1:
@@ -221,6 +233,7 @@ class AuthService(BaseAuthService):
             claims_1: Claims = Depends(idp_client_list[1]),
             claims_2: Claims = Depends(idp_client_list[2]),
         ) -> model.User:
+            """Perform the get current user3 operation."""
             if claims_0:
                 return await self.get_existing_user_from_claims(claims_0)
             if claims_1:
@@ -237,6 +250,7 @@ class AuthService(BaseAuthService):
             claims_1: Claims = Depends(idp_client_list[1]),
             claims_2: Claims = Depends(idp_client_list[2]),
         ) -> model.User:
+            """Perform the get new user3 operation."""
             if claims_0:
                 return await self.get_new_user_from_claims(claims_0)
             if claims_1:
@@ -253,6 +267,7 @@ class AuthService(BaseAuthService):
             claims_1: Claims = Depends(idp_client_list[1]),
             claims_2: Claims = Depends(idp_client_list[2]),
         ) -> IDPUser:
+            """Perform the get idp user3 operation."""
             if claims_0:
                 return await self.get_idp_user_from_claims(claims_0)
             if claims_1:
@@ -270,6 +285,7 @@ class AuthService(BaseAuthService):
             claims_2: Claims = Depends(idp_client_list[2]),
             claims_3: Claims = Depends(idp_client_list[3]),
         ) -> model.User:
+            """Perform the get current user4 operation."""
             if claims_0:
                 return await self.get_existing_user_from_claims(claims_0)
             if claims_1:
@@ -289,6 +305,7 @@ class AuthService(BaseAuthService):
             claims_2: Claims = Depends(idp_client_list[2]),
             claims_3: Claims = Depends(idp_client_list[3]),
         ) -> model.User:
+            """Perform the get new user4 operation."""
             if claims_0:
                 return await self.get_new_user_from_claims(claims_0)
             if claims_1:
@@ -308,6 +325,7 @@ class AuthService(BaseAuthService):
             claims_2: Claims = Depends(idp_client_list[2]),
             claims_3: Claims = Depends(idp_client_list[3]),
         ) -> IDPUser:
+            """Perform the get idp user4 operation."""
             if claims_0:
                 return await self.get_idp_user_from_claims(claims_0)
             if claims_1:
@@ -328,6 +346,7 @@ class AuthService(BaseAuthService):
             claims_3: Claims = Depends(idp_client_list[3]),
             claims_4: Claims = Depends(idp_client_list[4]),
         ) -> model.User:
+            """Perform the get current user5 operation."""
             if claims_0:
                 return await self.get_existing_user_from_claims(claims_0)
             if claims_1:
@@ -350,6 +369,7 @@ class AuthService(BaseAuthService):
             claims_3: Claims = Depends(idp_client_list[3]),
             claims_4: Claims = Depends(idp_client_list[4]),
         ) -> model.User:
+            """Perform the get new user5 operation."""
             if claims_0:
                 return await self.get_new_user_from_claims(claims_0)
             if claims_1:
@@ -372,6 +392,7 @@ class AuthService(BaseAuthService):
             claims_3: Claims = Depends(idp_client_list[3]),
             claims_4: Claims = Depends(idp_client_list[4]),
         ) -> IDPUser:
+            """Perform the get idp user5 operation."""
             if claims_0:
                 return await self.get_idp_user_from_claims(claims_0)
             if claims_1:
@@ -416,6 +437,7 @@ class AuthService(BaseAuthService):
         )
 
     def _create_no_auth_dependencies(self) -> tuple[model.User, model.User, IDPUser]:
+        """Perform the  create no auth dependencies operation."""
         user_manager = self.app.user_manager
         if not user_manager:
             raise exc.InitializationServiceError(
@@ -427,6 +449,7 @@ class AuthService(BaseAuthService):
         async def dummy_get_existing_user(
             request: Request, _security_scopes: SecurityScopes
         ) -> model.User:
+            """Perform the dummy get existing user operation."""
             claims = await self._no_auth_idp_client(request)
             if claims:
                 user = await self.get_existing_user_from_claims(
@@ -439,6 +462,7 @@ class AuthService(BaseAuthService):
         async def dummy_get_new_user(
             request: Request, _security_scopes: SecurityScopes
         ) -> model.User:
+            """Perform the dummy get new user operation."""
             claims = await self._no_auth_idp_client(request)
             if claims:
                 user = await self.get_new_user_from_claims(
@@ -466,6 +490,7 @@ class AuthService(BaseAuthService):
         return registered_user_dependency, new_user_dependency, idp_user_dependency
 
     def _warn_too_many_idps(self, request: Request) -> None:
+        """Perform the  warn too many idps operation."""
         if self._logger:
             self._logger.warning(
                 self.create_log_message(
@@ -482,6 +507,7 @@ class AuthService(BaseAuthService):
         get_current_user_functions: list[Callable],
         get_new_user_functions: list[Callable],
     ) -> tuple[model.User, model.User, IDPUser]:
+        """Perform the  create user dependencies from callables operation."""
         if n_idp_clients > len(get_current_user_functions):
             msg = (
                 f"More than {len(get_current_user_functions)} "
@@ -518,6 +544,7 @@ class AuthService(BaseAuthService):
         self,
         cmd: GetIdentityProvidersCommand,
     ) -> list[IdentityProvider]:
+        """Perform the get identity providers operation."""
         try:
             self._retry_pending_idp_clients()
         except Exception as e:
@@ -536,6 +563,7 @@ class AuthService(BaseAuthService):
         return identity_providers
 
     async def get_idp_user_from_claims(self, claims: Claims) -> IDPUser:
+        """Perform the get idp user from claims operation."""
         claims_dict = claims.claims
         issuer: str = claims_dict["iss"]  # type: ignore
         sub: str = claims_dict["sub"]  # type: ignore
@@ -546,6 +574,7 @@ class AuthService(BaseAuthService):
         self, claims: Claims, request_userinfo: bool = True
     ) -> model.User:
         # Get userinfo
+        """Perform the get new user from claims operation."""
         if request_userinfo:
             claims.claims.update(
                 self._idp_client_by_id[claims.idp_client_id].get_claims_from_userinfo(
@@ -581,6 +610,7 @@ class AuthService(BaseAuthService):
         Verify that if the user is a root user, the token is not too old based on the
         configured root token time to live, to mitigate risk of leaked root tokens
         being used by attackers.
+
         """
         if self._root_token_time_to_live == 0:
             # No root token time to live configured, no need to verify
@@ -612,6 +642,7 @@ class AuthService(BaseAuthService):
     async def get_existing_user_from_claims(
         self, claims: Claims, request_userinfo: bool = True
     ) -> model.User:
+        """Perform the get existing user from claims operation."""
         issuer: str = claims.claims["iss"]  # type: ignore
         sub: str = claims.claims["sub"]  # type: ignore
         user_manager: BaseUserManager = self.app.user_manager
@@ -691,6 +722,7 @@ class AuthService(BaseAuthService):
         user_manager: BaseUserManager,
         user_key: str,
     ) -> model.User:
+        """Perform the  auto create new user operation."""
         try:
             user = user_manager.auto_create_new_user(claims.claims)
             if user is None:
@@ -731,6 +763,7 @@ class AuthService(BaseAuthService):
         sub: str,
         user_manager: BaseUserManager | None,
     ) -> str:
+        """Perform the  generate user key from claims operation."""
         if not user_manager:
             # No user generator configured
             raise exc.UnauthorizedAuthError("cd3d76d6")
@@ -761,6 +794,7 @@ class AuthService(BaseAuthService):
     ) -> IdpClient | None:
         """
         Try to initialize a single IDP client from its configuration.
+
         If unsuccessful, log and return None.
         """
         try:
@@ -812,6 +846,7 @@ class AuthService(BaseAuthService):
         ssl_context: ssl.SSLContext | bool,
     ) -> None:
         # Parse input
+        """Perform the  init idp clients operation."""
         logger = app.logger
         if not idp_cfgs:
             idp_cfgs = []
@@ -847,7 +882,7 @@ class AuthService(BaseAuthService):
     ) -> None:
         """
         Verify non-unique names and labels in the provided IDP configurations and
-        raise InitializationServiceError if duplicates are found
+        raise InitializationServiceError if duplicates are found.
         """
         for key in ["name", "label"]:
             duplicate_values: set[str] = set()
@@ -866,6 +901,7 @@ class AuthService(BaseAuthService):
                 raise exc.InitializationServiceError("85447b4a", msg)
 
     def _retry_pending_idp_clients(self) -> None:
+        """Perform the  retry pending idp clients operation."""
         with self._pending_idp_clients_lock:
             if not self._pending_idp_client_cfgs:
                 return

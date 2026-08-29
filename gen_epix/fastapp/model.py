@@ -1,3 +1,5 @@
+"""Base Pydantic models for commands, users, permissions, and policies."""
+
 from __future__ import annotations
 
 import abc
@@ -139,7 +141,7 @@ class Permission(PydanticBaseModel, frozen=True):
     )
     @cached_property
     def name(self) -> str:
-        """"""
+        """Return the canonical permission name."""
         return f"{self.command_name}{Permission._NAME_DELIMITER}{self.permission_type.value}"
 
     @computed_field(  # type: ignore[prop-decorator]
@@ -147,7 +149,7 @@ class Permission(PydanticBaseModel, frozen=True):
     )
     @cached_property
     def sort_key(self) -> tuple[str, int]:
-        """"""
+        """Return the stable sort key for this permission."""
         permission_type_map = {
             PermissionType.EXECUTE: 0,
             PermissionType.CREATE: 1,
@@ -158,7 +160,7 @@ class Permission(PydanticBaseModel, frozen=True):
         return self.command_name, permission_type_map[self.permission_type]
 
     def __eq__(self, permission: object) -> bool:
-        """"""
+        """Compare permissions by command name and permission type."""
         # TODO: Investigate why two objs of this class with the same values are
         # not equal without overriding __eq__
         if not isinstance(permission, Permission):
@@ -169,12 +171,12 @@ class Permission(PydanticBaseModel, frozen=True):
         )
 
     def __repr__(self) -> str:
-        """"""
+        """Return a compact representation of this permission."""
         return f"({self.command_name},{self.permission_type.value})"
 
     @field_serializer("permission_type", mode="plain")
     def _serialize_permission_type(self, value: PermissionType) -> str:
-        """"""
+        """Serialize the permission type to its wire representation."""
         return value.value
 
 
@@ -186,22 +188,27 @@ class Policy(abc.ABC):
     """
 
     def get_is_denied_exception(self) -> type[Exception]:
+        """Return the exception raised when this policy denies a command."""
         return exc.UnauthorizedAuthError
 
     # Not an abstract method since it is not always needed
     def is_allowed(self, cmd: Command) -> bool:
+        """Return whether the command is allowed by this policy."""
         raise NotImplementedError("Method is not implemented for this policy")
 
     # Not an abstract method since it is not always needed
     def get_content(self, cmd: Command) -> Any:
+        """Return policy content associated with a command."""
         raise NotImplementedError("Method is not implemented for this policy")
 
     # Not an abstract method since it is not always needed
     def get_content_return_type(self, cmd: Command) -> type:
+        """Return the type of content produced by this policy."""
         raise NotImplementedError("Method is not implemented for this policy")
 
     # Not an abstract method since it is not always needed
     def filter(self, cmd: Command, retval: Any) -> Any:
+        """Filter a command result according to this policy."""
         raise NotImplementedError("Method is not implemented for this policy")
 
 
@@ -377,9 +384,7 @@ class CrudCommand(Command):
         return [objs.get_id()]
 
     def get_objs(self) -> list[Model] | None:
-        """
-        Get the objects as a list, or None if no objects.
-        """
+        """Get the objects as a list, or None if no objects."""
         if self.objs is not None:
             return self.objs if isinstance(self.objs, list) else [self.objs]
         return None
@@ -555,9 +560,7 @@ class ModelFieldProps(BaseModel):
         return self
 
     def is_mutable_value(self, stored_value: Any | None) -> bool:
-        """
-        Determine if a stored value for this field is mutable.
-        """
+        """Determine if a stored value for this field is mutable."""
         if self.is_mutable_always:
             return True
         if self.is_mutable_if_empty:

@@ -1,3 +1,5 @@
+"""SQLAlchemy repository implementation."""
+
 import re
 import uuid
 import warnings
@@ -46,9 +48,7 @@ from gen_epix.filter import (
 
 
 class SARepository(BaseRepository):
-    """
-    SQLAlchemy-backed repository
-    """
+    """SQLAlchemy-backed repository."""
 
     DEFAULT_MAX_INSERT_BATCH_SIZE = 2000
     DEFAULT_MAX_PARAMETERS_IN_CLAUSE = 1000
@@ -71,6 +71,7 @@ class SARepository(BaseRepository):
     def create_repository(cls, **kwargs: Any) -> BaseRepository:
         """
         Create a repository instance from keyword arguments.
+
         Accepts either ``connection_string`` or ``file`` (SQLite path).
         """
         entities, connection_string, remaining_kwargs = cls._process_repository_params(
@@ -84,9 +85,7 @@ class SARepository(BaseRepository):
 
     @classmethod
     def clear_repository_content(cls, **kwargs: Any) -> None:
-        """
-        Delete all database objects associated with the repository.
-        """
+        """Delete all database objects associated with the repository."""
         entities, connection_string, remaining_kwargs = cls._process_repository_params(
             kwargs
         )
@@ -189,6 +188,7 @@ class SARepository(BaseRepository):
     def __init__(self, engine: Engine, **kwargs: Any):
         """
         Initialise the repository with the provided SQLAlchemy engine.
+
         Registers mappers for each persistable entity and creates per-
         isolation-level session factories.
         """
@@ -259,6 +259,7 @@ class SARepository(BaseRepository):
     ) -> BaseUnitOfWork:
         """
         Return a unit-of-work context manager backed by an SA session.
+
         Nests within the active UoW when already inside a context.
         """
         if self._uow_context_stack:
@@ -307,6 +308,7 @@ class SARepository(BaseRepository):
     ) -> None:
         """
         Create and register mappers for a list of entities using the given factory.
+
         The factory encapsulates all db-specific mapper construction, so SARepository
         has no knowledge of process fields or metadata field rules.
         """
@@ -334,9 +336,7 @@ class SARepository(BaseRepository):
         field_name_map: dict[type[Model], dict[str, str]] | None = None,
         **kwargs: Any,
     ) -> None:
-        """
-        Default implementation to register standard mappers for a list of entities.
-        """
+        """Default implementation to register standard mappers for a list of entities."""
         # Parse arguments
         entities = entities or []
         field_name_map = field_name_map or {}
@@ -532,6 +532,7 @@ class SARepository(BaseRepository):
         # Create rows
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
+            """Perform the  execute operation."""
             rows = self.to_sql(user_id, model_class, objs)
             n_rows = len(rows)
             n_batches = int(n_rows / max_batch_size) + (n_rows / max_batch_size > 0)
@@ -583,6 +584,7 @@ class SARepository(BaseRepository):
         optimize_parameter_handling = kwargs.get("optimize_parameter_handling", False)
 
         def _execute(session: Session) -> list[Model]:
+            """Perform the  execute operation."""
             rows, row_ids = SARepository._in_session_read_some(
                 mapper,
                 session,
@@ -622,6 +624,7 @@ class SARepository(BaseRepository):
     ) -> list[Model] | list[Hashable]:
         """
         Fetch all rows matching an optional filter, with limit/offset support.
+
         An ``obj_filter`` kwarg may apply additional Python-side filtering.
         """
         # Check arguments
@@ -634,6 +637,7 @@ class SARepository(BaseRepository):
         offset = offset or 0
 
         def _add_sql_limit_offset(stmt: sa.Select) -> sa.Select:
+            """Perform the  add sql limit offset operation."""
             if limit > 0:
                 stmt = stmt.limit(limit)
             if offset > 0:
@@ -641,6 +645,7 @@ class SARepository(BaseRepository):
             return stmt
 
         def _apply_obj_limit_offset(objs: list[Model]) -> list[Model]:
+            """Perform the  apply obj limit offset operation."""
             if limit > 0:
                 if offset > len(objs):
                     return []
@@ -652,6 +657,7 @@ class SARepository(BaseRepository):
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
             # Get either rows or row_ids
+            """Perform the  execute operation."""
             if return_id:
                 # Select only row_ids
                 stmt = select(mapper.get_row_id_column())
@@ -728,6 +734,7 @@ class SARepository(BaseRepository):
         row_class = mapper.row_class
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
+            """Perform the  execute operation."""
             obj_ids = [mapper.get_id(x) for x in objs]
             rows, row_ids = SARepository._in_session_read_some(
                 mapper,
@@ -774,6 +781,7 @@ class SARepository(BaseRepository):
     ) -> list[Model] | list[Hashable]:
         """
         Insert new objects and update existing ones in a single call.
+
         Existence is checked in batches to respect SQL Server's parameter limit.
         """
         objs = objs if isinstance(objs, list) else list(objs)
@@ -793,6 +801,7 @@ class SARepository(BaseRepository):
         row_class = mapper.row_class
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
+            """Perform the  execute operation."""
             obj_ids = [mapper.get_id(x) for x in objs]
 
             # Chunk the existence check to avoid SQL Server's 2100-parameter limit.
@@ -884,6 +893,7 @@ class SARepository(BaseRepository):
         row_class = mapper.row_class
 
         def _execute(session: Session) -> None:
+            """Perform the  execute operation."""
             is_existing = self.exists_some(model_class, row_ids)
             if not all(is_existing):
                 invalid_ids = [x for x, y in zip(row_ids, is_existing) if not y]
@@ -919,7 +929,7 @@ class SARepository(BaseRepository):
         obj_filter: Filter | None = kwargs.get("obj_filter", None)
 
         def _execute(session: Session) -> list[Hashable] | None:
-
+            """Perform the  execute operation."""
             row_ids: list[Hashable] | None = None
 
             # filter and/or obj_filter provided
@@ -997,6 +1007,7 @@ class SARepository(BaseRepository):
         SARepository._verify_duplicate_ids(model_class, obj_ids)
 
         def _execute(session: Session) -> list[bool]:
+            """Perform the  execute operation."""
             row_id_col = mapper.get_row_id_column()
             rows: Sequence = session.execute(
                 select(row_id_col).where(row_id_col.in_(obj_ids))
@@ -1026,6 +1037,7 @@ class SARepository(BaseRepository):
         row_class = mapper.row_class
 
         def _execute(session: Session) -> Iterable[tuple[Any, ...]]:
+            """Perform the  execute operation."""
             stmt = select(*[getattr(row_class, x) for x in row_field_names])
             if filter:
                 # Convert filter to where clause and add to statement
@@ -1138,6 +1150,7 @@ class SARepository(BaseRepository):
         """
         Recursively partition a filter into a SQL-expressible subtree and
         a remainder to be evaluated in Python.
+
         """
         map_key_only_classes = [
             ExistsFilter,
@@ -1220,7 +1233,7 @@ class SARepository(BaseRepository):
         return None, filter
 
     def print_db_content(self, model_class: type[Model], **kwargs: Any) -> None:
-        """Helper method for debugging"""
+        """Helper method for debugging."""
         header = kwargs.get("header", "")
         mapper = self.get_mapper(model_class)
         tables_classes = [
@@ -1333,10 +1346,10 @@ class SARepository(BaseRepository):
         max_ids_in_clause: int = DEFAULT_MAX_PARAMETERS_IN_CLAUSE,
     ) -> sa.sql.Select:
         """Build a SELECT restricted to the given ids via a temp-table JOIN.
+
         Avoids ODBC 07002 errors on MSSQL for UNIQUEIDENTIFIER IN() queries.
         Falls back to a plain IN() clause on non-MSSQL dialects.
         """
-
         row_class = mapper.row_class
         table = cast(sa.Table, row_class.__table__)  # type: ignore[attr-defined]
         id_col = mapper.get_row_id_column()
@@ -1573,6 +1586,7 @@ class SARepository(BaseRepository):
             def set_sqlite_pragma(
                 dbapi_connection: Any, connection_record: Any
             ) -> None:
+                """Perform the set sqlite pragma operation."""
                 cursor = dbapi_connection.cursor()
                 cursor.execute("PRAGMA foreign_keys=ON")
                 cursor.close()
@@ -1668,6 +1682,7 @@ class SARepository(BaseRepository):
         """
         Try to open a database connection; return None on success or the
         exception on failure.
+
         """
         try:
             connection = sa.create_engine(
