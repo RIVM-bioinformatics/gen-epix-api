@@ -106,6 +106,10 @@ jobs:
           if [ -z "$score_line" ]; then score_line="Your code has been rated at N/A/10"; fi
           # Export outputs for other steps (use GITHUB_OUTPUT)
           echo "pylint_score_line=$score_line" >> $GITHUB_OUTPUT
+      - name: Check transform docstrings
+        run: |
+          source ~/.venv/bin/activate
+          ruff check --select D --ignore D212,D417 gen_epix/transform
       - name: Comment PR with pylint score
         if: github.event_name == 'pull_request'
         uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5

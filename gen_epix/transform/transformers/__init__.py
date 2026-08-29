@@ -1,3 +1,9 @@
+"""Built-in transformer implementations for the transform package.
+
+The subpackage provides field, object, conditional, validation, interval,
+ISO-time, multi-field, and tuple-mapping transformers.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix.transform.transformers.conditional import (
     ConditionalTransformer as ConditionalTransformer,

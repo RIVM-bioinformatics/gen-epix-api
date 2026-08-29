@@ -85,3 +85,20 @@ target-version = ['py313']
 profile = "black"
 float_to_top = true
 line_length = 88
+
+[tool.ruff]
+line-length = 88
+target-version = "py314"
+
+[tool.ruff.lint]
+ignore = [
+    # The repository uses the PEP 257-compatible form where multi-line docstring
+    # summaries start on the second line after the opening quotes.
+    "D212",
+    # Parameter documentation is intentionally semantic and non-duplicative. Ruff
+    # cannot determine when an annotated parameter needs extra prose.
+    "D417",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
