@@ -146,13 +146,14 @@ instead of duplicating it:
 When docs and executable behavior conflict, report both explicitly as "Docs say
 X, code shows Y" and recommend which should be updated.
 
-## graphify
+## Graphify
 
 For any question about this repo's architecture, structure, components, or how to add/modify/find
-code, your first action should be `graphify query "<question>"` when `graphify-out/graph.json`
-exists. Use `graphify path "<A>" "<B>"` for relationship questions and `graphify explain "<concept>"`
-for focused-concept questions. These return a scoped subgraph, usually much smaller than the full
-report or raw grep output.
+code, use the `$graphify` skill first when it is available. If the skill is unavailable, your
+first action should be `graphify query "<question>"` when `graphify-out/graph.json` exists. Use
+`graphify path "<A>" "<B>"` for relationship questions and `graphify explain "<concept>"` for
+focused-concept questions. These return a scoped subgraph, usually much smaller than the full report
+or raw grep output.
 
 Triggers: "how do I…", "where is…", "what does … do", "add/modify a <component>",
 "explain the architecture", or anything that depends on how files or classes relate.

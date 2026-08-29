@@ -179,7 +179,38 @@ mypy, and writes output to `test/output/`. (Source: `run.py`; Source:
 
 ---
 
-## 5. Troubleshooting Local Development
+## 5. Graphify Setup For Coding Agents
+
+This repository includes `graphify-out/` artifacts and `AGENTS.md` instructions
+that expect Graphify to be used for architecture, structure, relationship,
+code-navigation, and blast-radius questions.
+
+Install the Graphify CLI first:
+
+```bash
+uv tool install graphifyy
+```
+
+For Codex, Graphify can also be exposed as a user-level skill by placing a
+`SKILL.md` file under:
+
+```text
+%USERPROFILE%\.codex\skills\graphify\SKILL.md
+```
+Local testing showed that Codex uses Graphify more reliably through the
+user-level skill on the local machine.
+
+The user-level skill is still optional and machine-local. The repository-level 
+fallback remains `AGENTS.md`, which tells agents to use 
+`$graphify` when available, then fall back to `graphify query`, `graphify path`, or
+`graphify explain` against `graphify-out/graph.json`.
+
+See the upstream Graphify documentation for platform-specific details:
+[Graphify README](https://github.com/Graphify-Labs/graphify/blob/v8/README.md).
+
+---
+
+## 6. Troubleshooting Local Development
 
 When local startup breaks, reason in stages:
 
