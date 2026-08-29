@@ -1,21 +1,21 @@
 # ._get_user_and_repository
 
-> 3 nodes · cohesion 0.67
+> 3 nodes
 
 ## Key Concepts
 
-- **.retrieve_phylogenetic_tree_by_cases()** (4 connections) — `gen_epix/casedb/services/remote_app.py`
-- **PhylogeneticTree** (1 connections)
-- **Compute and retrieve a phylogenetic tree for the given cases.** (1 connections) — `gen_epix/casedb/services/remote_app.py`
+- **._get_user_and_repository()** (4 connections) — `gen_epix/fastapp/service.py`
+- **Command** (1 connections)
+- **User** (1 connections)
 
 ## Relationships
 
-- [Casedb Domain CRUD Commands](Casedb_Domain_CRUD_Commands.md) (1 shared connections)
-- [Casedb Remote App Client](Casedb_Remote_App_Client.md) (1 shared connections)
+- [BaseRepository](BaseRepository.md) (1 shared connections)
+- [BaseService](BaseService.md) (1 shared connections)
 
 ## Source Files
 
-- `gen_epix/casedb/services/remote_app.py`
+- `gen_epix/fastapp/service.py`
 
 ## Audit Trail
 

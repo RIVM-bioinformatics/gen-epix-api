@@ -1,5 +1,7 @@
-"""
-Object adapters for providing unified interface across different object types.
+"""Adapters that expose a common field interface for row-like objects.
+
+The adapters let transformers read, update, and inspect dictionaries, Pydantic
+models, and Polars-like objects without depending on one concrete representation.
 """
 
 from collections.abc import Hashable, Iterator
@@ -10,33 +12,34 @@ from pydantic import BaseModel
 
 @runtime_checkable
 class RowLike(Protocol):
-    """Protocol for row-like objects."""
+    """Structural interface required by row-oriented transformation code."""
 
     def get(self, key: Hashable, default: Any = None) -> Any:
-        """Get value by key with optional default."""
+        """Return the value for `key`, or `default` when the key is absent."""
         raise NotImplementedError()
 
     def __getitem__(self, key: Hashable) -> Any:
-        """Get value by key."""
+        """Return the value associated with `key`."""
         raise NotImplementedError()
 
     def __setitem__(self, key: Hashable, value: Any) -> None:
-        """Set value by key."""
+        """Set the value associated with `key`."""
         raise NotImplementedError()
 
     def __contains__(self, key: Hashable) -> bool:
-        """Check if key exists."""
+        """Return whether `key` is present."""
         raise NotImplementedError()
 
     def keys(self) -> Iterator[Hashable]:
-        """Get all keys."""
+        """Iterate over the available keys."""
         raise NotImplementedError()
 
 
 class DictAdapter:
-    """Adapter for dictionary objects."""
+    """Adapt a mutable dictionary to the transformer field interface."""
 
     def __init__(self, obj: dict):
+        """Wrap a mutable mapping so transformers can read and update it."""
         self._obj = obj
 
     def get(self, key: Hashable, default: Any = None) -> Any:
@@ -57,9 +60,10 @@ class DictAdapter:
 
 
 class PydanticAdapter:
-    """Adapter for Pydantic model objects."""
+    """Adapt a Pydantic model to the transformer field interface."""
 
     def __init__(self, obj: BaseModel):
+        """Wrap a Pydantic model and expose fields through adapter methods."""
         self._obj = obj
 
     def get(self, key: Hashable, default: Any = None) -> Any:
@@ -80,9 +84,10 @@ class PydanticAdapter:
 
 
 class PolarsAdapter:
-    """Adapter for Polars objects."""
+    """Adapt a Polars-like object with column access to the field interface."""
 
     def __init__(self, obj: Any):
+        """Wrap a Polars-like object that exposes column access."""
         self._obj = obj
 
     def get(self, key: Hashable, default: Any = None) -> Any:
@@ -106,20 +111,24 @@ class PolarsAdapter:
 
 
 class ObjectAdapter:
-    """
-    Unified adapter that provides consistent interface for different object types.
+    """Select and delegate to an adapter for a supported object representation.
 
-    Supports dict, Pydantic models, and Polars objects.
+    Supported values are dictionaries, Pydantic models, and objects exposing a
+    Polars-style `columns` attribute or dataframe protocol.
+
+    Raises:
+        ValueError: If `obj` does not match a supported representation.
     """
 
     def __init__(self, obj: dict | BaseModel | Any):
+        """Select the concrete adapter for the wrapped object."""
         self._obj = obj
         self._adapter = self._create_adapter(obj)
 
     def _create_adapter(
         self, obj: Any
     ) -> DictAdapter | PydanticAdapter | PolarsAdapter:
-        """Factory method to create appropriate adapter for object type."""
+        """Create the concrete adapter appropriate for `obj`."""
         if isinstance(obj, dict):
             return DictAdapter(obj)
         elif isinstance(obj, BaseModel):
@@ -148,5 +157,5 @@ class ObjectAdapter:
         return self._adapter.keys()
 
     def unwrap(self) -> Any:
-        """Return the original object."""
+        """Return the wrapped object, including any adapter-applied updates."""
         return self._obj
