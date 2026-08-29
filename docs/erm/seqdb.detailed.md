@@ -180,26 +180,6 @@ erDiagram
         string gene_product_code
     }
 
-    LocusSet {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        string code
-        string name
-        list[UUID] locus_ids
-        any n_loci
-    }
-
-    LocusCodeMap {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        string code
-        dict[string, UUID] code_map
-    }
-
     TreeAlgorithmClass {
         timestamp created_at
         timestamp modified_at
@@ -312,6 +292,26 @@ erDiagram
         UUID id PK
         UUID taxon_set_id FK
         UUID taxon_id FK
+    }
+
+    LocusSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        string code
+        string name
+        list[UUID] locus_ids
+        any n_loci
+    }
+
+    LocusCodeMap {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        string code
+        dict[string, UUID] code_map
     }
 
     RefAllele {

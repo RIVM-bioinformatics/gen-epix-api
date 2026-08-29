@@ -1,19 +1,19 @@
 # code quality and testing extensions
 # typing_extensions==4.8.0 # do we need this?
 pandas==3.0.5
-polars==1.43.2
+polars==1.44.1
 xlsxwriter==3.2.9
 pytest
 pytest-gremlins==1.9.0
 pytest-xdist
 pytest-mock==3.15.*
 pytest-dependency==0.6.*
-isort==8.0.*
+isort==9.0.*
 black==26.5.*
 pylint==4.0.*
 mypy==2.3.*
 oauthlib==3.3.1
-coverage==7.15.4
+coverage==7.16.0
 
 
 # stubs
@@ -25,4 +25,4 @@ types-setuptools==84.0.*
 types-python-dateutil==2.9.*
 
 # TODO: remove if run.py no longer uses it
-uvicorn==0.52.1
+uvicorn==0.52.4

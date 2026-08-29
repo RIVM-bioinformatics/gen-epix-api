@@ -14,12 +14,14 @@ from gen_epix.commondb.domain.model.base import Model
 from gen_epix.commondb.domain.model.organization import BaseIdentifier
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity, create_links
+from gen_epix.fastapp.domain.util import create_multi_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.literal import (
     MLVA_NO_LOCUS_REPEAT_NUMBER,
     REQUIRED_NEXTCLADE_SEQ_KEYS,
 )
 from gen_epix.seqdb.domain.model.seq.base import ContentMixin, QualityMixin
+from gen_epix.seqdb.domain.model.seq.locus import Allele, Locus
 from gen_epix.seqdb.domain.model.seq.protocol import HasProtocolMixin, Protocol
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 from gen_epix.seqdb.domain.model.seq.seq import HasSeqMixin, Seq
@@ -48,6 +50,7 @@ class SeqProfile(
                 ),
             }
         ),
+        multi_links=create_multi_links([("content", Locus), ("content", Allele)]),
     )
     FORMATS_BY_SEQ_PROFILE_TYPE: ClassVar[
         dict[enum.SeqProfileType, frozenset[enum.SeqProfileFormat]]

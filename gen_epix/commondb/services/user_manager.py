@@ -1,5 +1,5 @@
 import datetime
-from typing import Any, cast
+from typing import Any
 from uuid import UUID
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
@@ -13,6 +13,7 @@ from gen_epix.commondb.domain.service import (
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation, Permission
 from gen_epix.fastapp.services.auth import get_email_from_claims
 from gen_epix.fastapp.services.auth.util import get_name_from_claims
+from gen_epix.util import str_to_uuid
 
 
 class UserManager(BaseUserManager):
@@ -140,7 +141,7 @@ class UserManager(BaseUserManager):
                 )
             # Create and store root user
             root_user = self._root_user.model_copy()
-            root_user.id = cast(UUID, self._organization_service.generate_id())
+            root_user.id = root_user.id or str_to_uuid(root_user.key)
             root_user.email = get_email_from_claims(claims)
             root_user.name = self.get_user_name_from_claims(claims)
             user: model.User = self._organization_service.repository.crud(
@@ -337,6 +338,8 @@ class UserManager(BaseUserManager):
     ) -> model.User | None:
         if user.name == new_name:
             return user
+        if user.is_active is False:
+            return None
         user.name = new_name
         with self._organization_service.repository.uow() as uow:
             updated_user: model.User = self._organization_service.repository.crud(

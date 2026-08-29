@@ -5,7 +5,7 @@ import os
 import tempfile
 import textwrap
 from pathlib import Path
-from typing import Iterator
+from typing import Any, Iterator, cast
 
 import pytest
 
@@ -20,6 +20,9 @@ _APP_IMPORT_SPECS = {
     "CASEDB": {
         "default_auto_create_new_users": False,
     },
+    "COMMONDB": {
+        "default_auto_create_new_users": False,
+    },
     "SEQDB": {
         "default_auto_create_new_users": False,
     },
@@ -28,19 +31,28 @@ _APP_IMPORT_SPECS = {
     },
 }
 
+_TEST_CFG_DIR = _REPO_ROOT / "gen_epix" / "commondb" / "config" / "test"
+_TEST_CFG_FILES = {
+    "EMPTY_DB_DICT": [_TEST_CFG_DIR / "empty_db_dict.toml"],
+    "EMPTY_DB_SQLITE_INMEM": [_TEST_CFG_DIR / "empty_db_sqlite_inmem.toml"],
+}
+
 
 def _read_config(
     app_name: str,
     extra_settings_files: list[Path] | None = None,
+    settings_files: list[Path] | None = None,
 ) -> dict:
+    """Construct and compose an app config, returning key config/auth values."""
 
     # Set environment variables
-    set_env_variables(
-        AppType[app_name],
-        DevIdpConfig.NONE,
-        DevRepositoryConfig.DICT_EMPTY,
-        extra_settings_files=extra_settings_files,
-    )
+    if settings_files is None:
+        set_env_variables(
+            AppType[app_name],
+            DevIdpConfig.NONE,
+            DevRepositoryConfig.DICT_EMPTY,
+            extra_settings_files=extra_settings_files,
+        )
     for log_app in AppType:
         os.environ[f"{log_app.name}_LOG_LEVEL"] = "WARNING"
 
@@ -51,13 +63,19 @@ def _read_config(
         app_name,
         enum_module.ServiceType,
         enum_module.RepositoryType,
+        settings_files=(
+            [str(x.resolve()) for x in settings_files] if settings_files else None
+        ),
+        log_any=False,
     )
     app_composer: AppComposer = app_composer_module.AppComposer(app_cfg)
 
     # Get some additional data from the auth service
     app = app_composer.app
     auth_service: BaseAuthService = app_composer.services[enum_module.ServiceType.AUTH]  # type: ignore[assignment]
-    auth_props = app_cfg.cfg["service"]["auth"]["props"]
+    cfg = cast(dict[str, Any], app_cfg.cfg)
+    auth_props = cast(dict[str, Any], cfg["service"]["auth"]["props"])
+    auth_service_any = cast(Any, auth_service)
 
     retval = {
         "app_cfg_type": type(app_cfg).__name__,
@@ -70,8 +88,8 @@ def _read_config(
         "feature_flag_update_own_organization": app.get_feature_flag(
             "update_own_organization"
         ),
-        "service_root_token_time_to_live": auth_service._root_token_time_to_live,
-        "service_idp_client_count": len(auth_service.idp_clients),
+        "service_root_token_time_to_live": auth_service_any._root_token_time_to_live,
+        "service_idp_client_count": len(auth_service_any.idp_clients),
     }
     return retval
 
@@ -132,6 +150,22 @@ def test_casedb_read_config_defaults() -> None:
     payload = _read_config("CASEDB")
 
     _assert_default_import_payload(payload, "CASEDB")
+
+
+@pytest.mark.scenario_ids("TC-CFG-01-01")
+@pytest.mark.parametrize(
+    "settings_file_key",
+    ["EMPTY_DB_DICT", "EMPTY_DB_SQLITE_INMEM"],
+)
+def test_commondb_read_config_with_constructor_settings_files(
+    settings_file_key: str,
+) -> None:
+    payload = _read_config(
+        "COMMONDB",
+        settings_files=_TEST_CFG_FILES[settings_file_key],
+    )
+
+    _assert_default_import_payload(payload, "COMMONDB")
 
 
 @pytest.mark.scenario_ids("TC-CFG-01-01")

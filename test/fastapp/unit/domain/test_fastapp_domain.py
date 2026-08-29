@@ -906,3 +906,42 @@ class TestServiceTypeDagSorting:
         with pytest.raises(exc.DomainException) as context:
             domain.get_dag_sorted_service_types(on_cycle=OnException.RAISE)
         assert context.value.args[0] == "f8b2c94d"
+
+
+@pytest.mark.scenario_ids("TC-SEC-28-02")
+class TestCrudPermissionTypeMapCompleteness(BaseDomainTestCase):
+    def test_delete_all_has_permission_type_map_entry(self) -> None:
+        """
+        LSP-3650 regression: DELETE_ALL is wired into the generated
+        DELETE /v1/{entity} endpoint, so a command with this operation is
+        dispatched through the PDP permission check. Domain.CRUD_PERMISSION_
+        TYPE_MAP lacked an entry for it, causing a KeyError instead of the
+        expected DELETE permission check.
+        """
+        crud_instance: CrudCommand = CrudA.model_construct()
+        setattr(crud_instance, "operation", CrudOperation.DELETE_ALL)
+
+        perm = self.domain.get_permission_for_command_instance(crud_instance)
+
+        assert perm.permission_type == PermissionType.DELETE
+
+    def test_permission_type_map_covers_all_generated_endpoint_operations(
+        self,
+    ) -> None:
+        """
+        Every CrudOperation that the generic CRUD endpoint generator actually
+        wires up to a REST endpoint must have a Domain.CRUD_PERMISSION_TYPE_MAP
+        entry, since a real request for that endpoint dispatches a command
+        with that operation through the PDP permission check. This is the
+        broader invariant behind the DELETE_ALL regression above: it also
+        catches the same class of omission for any operation added to
+        endpoint generation in the future without a matching map entry.
+        """
+        from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
+
+        generated_operations = set(
+            CrudEndpointGenerator.CRUD_OPERATION_TO_ENDPOINT_TYPE.keys()
+        )
+        mapped_operations = set(Domain.CRUD_PERMISSION_TYPE_MAP.keys())
+
+        assert generated_operations.issubset(mapped_operations)
