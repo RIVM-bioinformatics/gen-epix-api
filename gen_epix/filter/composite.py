@@ -1,3 +1,5 @@
+"""Logical composition of scalar and row filter expressions."""
+
 # pylint: disable=protected-access
 # because the functions are dynamically generated in _is_valid
 
@@ -30,6 +32,7 @@ from gen_epix.filter.uuid_set import TypedUuidSetFilter, UuidSetFilter
 
 
 class CompositeFilter(Filter):
+    """Combine child filters using a configured logical operator."""
     filters: list[
         ExistsFilter
         | EqualsBooleanFilter
@@ -152,7 +155,7 @@ class CompositeFilter(Filter):
         return self
 
     def _match(self, value: Any) -> bool:
-        """Function is implemented dynamically in _validate_state"""
+        """Match a value using the function generated during validation."""
         raise NotImplementedError(
             "Method is implemented dynamically in _validate_state"
         )
@@ -160,7 +163,7 @@ class CompositeFilter(Filter):
     def _match_row(
         self, value_exists: Iterable[bool], value: Iterable[Any], is_model: bool
     ) -> bool:
-        """Function is implemented dynamically in _validate_state"""
+        """Match row values using the function generated during validation."""
         raise NotImplementedError(
             "Method is implemented dynamically in _validate_state"
         )
@@ -236,6 +239,7 @@ class CompositeFilter(Filter):
         ) = None,
         is_model: bool = False,
     ) -> bool:
+        """Return whether a row satisfies the composite filter."""
         if not self._all_subfilters_have_key():
             raise ValueError(
                 "Key must be set for each filter to apply filter to a row."
@@ -290,6 +294,7 @@ class CompositeFilter(Filter):
         ) = None,
         is_model: bool = False,
     ) -> Iterator[bool]:
+        """Yield composite matches for each row."""
         # Match, per row and filter, if both key exists, value not null and value matches
         if not self._all_subfilters_have_key():
             raise ValueError(
@@ -341,6 +346,7 @@ class CompositeFilter(Filter):
         ) = None,
         is_model: bool = False,
     ) -> Iterator[dict[Hashable, Any | None]]:
+        """Yield rows that satisfy the composite filter."""
         # Match, per row and filter, if both key exists, value not null and value matches
         if not self._all_subfilters_have_key():
             raise ValueError(
@@ -383,6 +389,7 @@ class CompositeFilter(Filter):
                     yield row
 
     def get_keys(self) -> list[Hashable]:
+        """Return leaf-filter keys in traversal order."""
         keys = []
 
         def _recursion(keys: list, filters: list[Filter]) -> None:
@@ -398,6 +405,7 @@ class CompositeFilter(Filter):
     def set_keys(
         self, key_map: dict[Hashable, Hashable] | Callable[[Hashable], Hashable]
     ) -> Self:
+        """Set leaf keys using a mapping or a key transformation function."""
         for filter in self.filters:
             if isinstance(filter, CompositeFilter):
                 filter.set_keys(key_map)
@@ -409,6 +417,7 @@ class CompositeFilter(Filter):
 
 
 class TypedCompositeFilter(CompositeFilter):
+    """Composite filter carrying its serialized filter type."""
     type: Literal[enum.FilterType.COMPOSITE.value]  # type: ignore[name-defined]
     filters: list[
         TypedExistsFilter

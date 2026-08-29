@@ -1,3 +1,5 @@
+"""Range filters for dates represented at partial ISO precision."""
+
 import datetime
 from typing import Literal, Self
 
@@ -10,6 +12,7 @@ from gen_epix.filter.range import RangeFilter
 
 
 class PartialDateRangeFilter(RangeFilter):
+    """Match partial dates whose full intervals lie within a configured range."""
     lower_bound: str | None = Field(
         default=None, description="The lower bound of the range.", frozen=True
     )
@@ -19,13 +22,12 @@ class PartialDateRangeFilter(RangeFilter):
 
     @staticmethod
     def fromisoformat(datetime_str: str) -> datetime.datetime:
+        """Parse an ISO-formatted datetime string."""
         return datetime.datetime.fromisoformat(datetime_str)
 
     @staticmethod
     def _get_datetime_bounds(value: str) -> tuple[datetime.datetime, datetime.datetime]:
-        """
-        Get the inclusive lower and exclusive upper bound of an ISO datetime string.
-        """
+        """Return the inclusive lower and exclusive upper datetime bounds."""
         fromisoformat = PartialDateRangeFilter.fromisoformat
         if len(value) == 4:
             # YYYY
@@ -170,4 +172,5 @@ class PartialDateRangeFilter(RangeFilter):
 
 
 class TypedPartialDateRangeFilter(PartialDateRangeFilter):
+    """Partial date range filter carrying its serialized filter type."""
     type: Literal[FilterType.PARTIAL_DATE_RANGE.value]  # type: ignore[name-defined]

@@ -27,10 +27,11 @@ modules and packages.
 
 1. `util`
 2. `transform`
-3. `fastapp`
-4. `commondb`
-5. `seqdb`
-6. `casedb`
+3. `filter`
+4. `fastapp`
+5. `commondb`
+6. `seqdb`
+7. `casedb`
 
 ## Phase 1: `util`
 
@@ -86,13 +87,28 @@ Lint ownership:
   advisory and may intentionally overlap on missing-docstring diagnostics during
   the staged rollout.
 
+## Phase 2: `filter`
+
+Status: implemented in branch `LSP-3788-filter-folder-docstrings`.
+
+Scope:
+
+- Document filter modules, public filter classes, and matching methods.
+- Document non-trivial validation and dynamically generated matching helpers.
+- Preserve filter behavior while completing package-level docstring coverage.
+
+Validation:
+
+- `ruff check --select D --ignore D212,D417 gen_epix/filter`
+- `black -l 88 --check --diff gen_epix/filter`
+- `isort --check-only --diff --profile black --float-to-top --line-length=88 gen_epix/filter`
+- `python run.py test_filter_unit`
+
 ## Later Phases
 
 For each later package, repeat the same bottom-up sequence and expand the
 configured Ruff docstring scope in local linting and CI only after the package
 has been documented.
-
-Phase 2 adds `gen_epix/transform`.
 
 Phase 3 adds `gen_epix/fastapp`.
 

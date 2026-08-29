@@ -1,3 +1,5 @@
+"""Filters that test whether values are present and non-null."""
+
 from collections.abc import Callable, Hashable, Iterable
 from typing import Any, Literal
 
@@ -6,6 +8,7 @@ from gen_epix.filter.enum import FilterType
 
 
 class ExistsFilter(Filter):
+    """Match values that exist and are not null or excluded NA values."""
 
     def match_value(
         self,
@@ -13,6 +16,7 @@ class ExistsFilter(Filter):
         na_values: set[Any] | None = None,
         map_fn: Callable[[Any], Any] | None = None,
     ) -> bool:
+        """Return whether a scalar value exists, respecting inversion."""
         if na_values is None:
             return (value is not None) ^ self.invert
         return (value not in na_values) ^ self.invert
@@ -23,6 +27,7 @@ class ExistsFilter(Filter):
         na_values: set[Any] | None = None,
         map_fn: Callable[[Any], Any] | None = None,
     ) -> Iterable[bool]:
+        """Yield existence matches for each value in a column."""
         if na_values is None:
             for value in values:
                 yield (value is not None) ^ self.invert
@@ -36,6 +41,7 @@ class ExistsFilter(Filter):
         na_values: set[Any] | None = None,
         map_fn: Callable[[Any], Any] | None = None,
     ) -> bool:
+        """Return whether the filter key exists in a row with a value."""
         if self.key is None:
             raise ValueError("Key must be set to apply filter to a row.")
         # Match if both key exists and value not null
@@ -50,6 +56,7 @@ class ExistsFilter(Filter):
         na_values: set[Any] | None = None,
         map_fn: Callable[[Any], Any] | None = None,
     ) -> Iterable[bool]:
+        """Yield existence matches for each row."""
         if self.key is None:
             raise ValueError("Key must be set to apply filter to a row.")
         # Match if both key exists and value not null
@@ -62,8 +69,10 @@ class ExistsFilter(Filter):
                 yield ((key in row) and (row[key] not in na_values)) ^ self.invert
 
     def _match(self, value: Any) -> bool:
+        """Treat every supplied value as an existing value."""
         return True
 
 
 class TypedExistsFilter(ExistsFilter):
+    """Existence filter carrying its serialized filter type."""
     type: Literal[FilterType.EXISTS.value]  # type: ignore[name-defined]

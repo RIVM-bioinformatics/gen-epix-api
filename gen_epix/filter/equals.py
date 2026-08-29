@@ -1,3 +1,5 @@
+"""Generic equality filter implementation."""
+
 from typing import Any
 
 from pydantic import Field
@@ -6,6 +8,7 @@ from gen_epix.filter.base import Filter
 
 
 class EqualsFilter(Filter):
+    """Match values equal to the configured value."""
     value: Any = Field(default=None, description="The value to match.", frozen=True)
 
     def _match(self, value: Any) -> bool:

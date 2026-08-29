@@ -1,3 +1,5 @@
+"""Public filter models and operators for matching scalar and row data."""
+
 # pylint: disable=useless-import-alias
 # Import all filter classes, part 1
 from gen_epix.filter.base import Filter as Filter
