@@ -1091,6 +1091,13 @@
             "justMyCode": true,
         },
         {
+            "name": "test.r.remote_app",
+            "type": "R-Debugger",
+            "request": "launch",
+            "file": "${workspaceFolder}/test/r/test_remote_app.R",
+            "workingDirectory": "${workspaceFolder}"
+        },
+        {
             "name": "test.general.docs",
             "type": "debugpy",
             "request": "launch",
