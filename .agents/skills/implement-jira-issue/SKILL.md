@@ -1,21 +1,21 @@
 ---
-name: handle-jira-issue
+name: implement-jira-issue
 description: >-
   Investigate, implement, test, commit, and open a draft pull request for a
-  JIRA issue. Use when asked to handle, implement, fix, or deliver a JIRA
-  ticket by its issue ID.
+  JIRA issue. Use when asked to implement, fix, or deliver a JIRA ticket by
+	its issue ID.
 argument-hint: '<JIRA issue ID>'
 ---
 
-# Handle JIRA Issue
+# Implement JIRA Issue
 
 Use this skill only with an issue ID. The invocation prompt is simply:
 
 ```text
-Handle issue <ISSUE-ID>
+Implement issue <ISSUE-ID>
 ```
 
-For example: `Handle issue LSP-3427`.
+For example: `Implement issue LSP-3427`.
 
 ## 1. Retrieve and Assess the Issue
 
