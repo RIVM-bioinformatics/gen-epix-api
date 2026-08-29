@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "Gen-EpiX"
 version = "9.0.2"
 authors = [
-    { name="RIVM-bioinformatics", email="ids-bioinformatics@rivm.nl" },
+    { name = "RIVM-bioinformatics", email = "ids-bioinformatics@rivm.nl" },
 ]
 description = "Genomic Epidemiology platform for disease X"
 readme = "README.md"
@@ -14,7 +14,7 @@ license = "EUPL-1.2"
 license-files = ["LICENSE"]
 keywords = ["Genomic Epidemiology", "Disease X", "Bioinformatics"]
 classifiers = [
-    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.13.*",
     "Operating System :: OS Independent",
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -61,7 +61,18 @@ Documentation = "https://rivm-bioinformatics.github.io/gen-epix-api/"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["gen_epix*"]
-exclude = ["tests", "tests.*", "docs", "docs.*", "data", "data.*", "cert", "cert.*", "cicd", "cicd.*"]
+exclude = [
+    "tests",
+    "tests.*",
+    "docs",
+    "docs.*",
+    "data",
+    "data.*",
+    "cert",
+    "cert.*",
+    "cicd",
+    "cicd.*",
+]
 
 [tool.pytest.ini_options]
 norecursedirs = ["mutants"]
@@ -85,3 +96,31 @@ target-version = ['py313']
 profile = "black"
 float_to_top = true
 line_length = 88
+
+[dependency-groups]
+dev = [
+    "black==26.3.*",
+    "coverage==7.13.5",
+    "cryptography==46.0.6",
+    "isort==8.0.*",
+    "mypy==1.19.*",
+    "oauthlib==3.3.1",
+    "openpyxl==3.1.*",
+    "pandas==3.0.2",
+    "pandas-stubs==3.0.*",
+    "polars==1.39.3",
+    "pyinstrument==5.1.*",
+    "pylint==4.0.*",
+    "pytest>=9.0.3",
+    "pytest-dependency==0.6.*",
+    "pytest-gremlins==1.8.0",
+    "pytest-mock==3.15.*",
+    "pytest-xdist>=3.8.0",
+    "python-multipart==0.0.22",
+    "types-cachetools==6.2.*",
+    "types-python-dateutil==2.9.*",
+    "types-pyyaml==6.0.*",
+    "types-setuptools==82.0.*",
+    "uvicorn==0.42.0",
+    "xlsxwriter==3.2.9",
+]
