@@ -95,7 +95,7 @@ class TestSeqdbRemoteApp:
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = sample_response_data
-        mock_client.post.return_value = mock_response
+        mock_client.request.return_value = mock_response
         mock_client.__enter__.return_value = mock_client
         mock_client.__exit__.return_value = None
         mock_client_class.return_value = mock_client
@@ -124,14 +124,15 @@ class TestSeqdbRemoteApp:
         expected_request_body = CalculatePhylogeneticTreeRequestBody(
             protocol_id=sample_command.protocol_id,
             tree_algorithm=sample_command.tree_algorithm,
-            profile_ids=sample_command.seq_profile_ids,
-            leaf_codes=sample_command.leaf_names,
+            seq_profile_ids=sample_command.seq_profile_ids,
+            leaf_names=sample_command.leaf_names,
         )
 
-        mock_client.post.assert_called_once_with(
-            # remote_app.host_url + "calculate/phylogenetic_tree",
+        mock_client.request.assert_called_once_with(
+            "POST",
             remote_app.get_route(sample_command),
             json=json.loads(expected_request_body.model_dump_json()),
+            params=None,
             headers={"Authorization": "Bearer test_token"},
         )
 
@@ -157,7 +158,7 @@ class TestSeqdbRemoteApp:
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = response_data
-        mock_client.post.return_value = mock_response
+        mock_client.request.return_value = mock_response
         mock_client.__enter__.return_value = mock_client
         mock_client.__exit__.return_value = None
         mock_client_class.return_value = mock_client
@@ -188,7 +189,7 @@ class TestSeqdbRemoteApp:
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = None
-        mock_client.post.return_value = mock_response
+        mock_client.request.return_value = mock_response
         mock_client.__enter__.return_value = mock_client
         mock_client.__exit__.return_value = None
         mock_client_class.return_value = mock_client
@@ -214,7 +215,7 @@ class TestSeqdbRemoteApp:
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {}
-        mock_client.post.return_value = mock_response
+        mock_client.request.return_value = mock_response
         mock_client.__enter__.return_value = mock_client
         mock_client.__exit__.return_value = None
         mock_client_class.return_value = mock_client
@@ -242,7 +243,7 @@ class TestSeqdbRemoteApp:
         mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
             "Server Error", request=Mock(), response=mock_response
         )
-        mock_client.post.return_value = mock_response
+        mock_client.request.return_value = mock_response
         mock_client.__enter__.return_value = mock_client
         mock_client.__exit__.return_value = None
         mock_client_class.return_value = mock_client
@@ -267,7 +268,7 @@ class TestSeqdbRemoteApp:
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = sample_response_data
-        mock_client.post.return_value = mock_response
+        mock_client.request.return_value = mock_response
         mock_client.__enter__.return_value = mock_client
         mock_client.__exit__.return_value = None
         mock_client_class.return_value = mock_client
@@ -284,8 +285,8 @@ class TestSeqdbRemoteApp:
 
         # Verify headers were requested and used
         remote_app.get_headers.assert_called_with(sample_command)
-        mock_client.post.assert_called_once()
-        call_kwargs = mock_client.post.call_args[1]
+        mock_client.request.assert_called_once()
+        call_kwargs = mock_client.request.call_args.kwargs
         assert call_kwargs["headers"] == expected_headers
 
     @patch("httpx.Client")
@@ -302,7 +303,7 @@ class TestSeqdbRemoteApp:
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = sample_response_data
-        mock_client.post.return_value = mock_response
+        mock_client.request.return_value = mock_response
         mock_client.__enter__.return_value = mock_client
         mock_client.__exit__.return_value = None
         mock_client_class.return_value = mock_client
@@ -317,13 +318,15 @@ class TestSeqdbRemoteApp:
         expected_request_body = CalculatePhylogeneticTreeRequestBody(
             protocol_id=sample_command.protocol_id,
             tree_algorithm=sample_command.tree_algorithm,
-            profile_ids=sample_command.seq_profile_ids,
-            leaf_codes=sample_command.leaf_names,
+            seq_profile_ids=sample_command.seq_profile_ids,
+            leaf_names=sample_command.leaf_names,
         )
 
-        mock_client.post.assert_called_once_with(
+        mock_client.request.assert_called_once_with(
+            "POST",
             remote_app.get_route(sample_command),
             json=json.loads(expected_request_body.model_dump_json()),
+            params=None,
             headers={},
         )
 

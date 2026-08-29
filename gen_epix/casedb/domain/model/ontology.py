@@ -244,5 +244,5 @@ class Etiology(Model):
         description="The ID of the etiological agent. FOREIGN KEY"
     )
     etiological_agent: EtiologicalAgent | None = Field(
-        None, description="The etiological agent"
+        default=None, description="The etiological agent"
     )

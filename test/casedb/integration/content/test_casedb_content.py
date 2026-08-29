@@ -233,8 +233,8 @@ class TestContent:
         }
 
         # Get CaseType and and case set stats
-        case_stats = app.handle(command.RetrieveCaseStatsCommand(user=org_user))
-        case_set_stats = app.handle(command.RetrieveCaseStatsCommand(user=org_user))
+        case_stats = app.handle(command.RetrieveCaseTypeStatsCommand(user=org_user))
+        case_set_stats = app.handle(command.RetrieveCaseSetStatsCommand(user=org_user))
 
         # Go over all CaseTypes with data
         found_some_similar_cases = False
@@ -524,7 +524,7 @@ class TestContent:
                 )
             )
             candidate_case_stats = app.handle(
-                command.RetrieveCaseStatsCommand(user=candidate_user)
+                command.RetrieveCaseTypeStatsCommand(user=candidate_user)
             )
             has_cases_ct_ids: set[UUID] = {
                 x.case_type_id for x in candidate_case_stats if x.n_cases > 0
@@ -569,7 +569,7 @@ class TestContent:
         case_types: list[model.CaseType] = app.handle(
             command.CaseTypeCrudCommand(user=org_user, operation=CrudOperation.READ_ALL)
         )
-        case_stats = app.handle(command.RetrieveCaseStatsCommand(user=org_user))
+        case_stats = app.handle(command.RetrieveCaseTypeStatsCommand(user=org_user))
         has_cases_ct_ids: set[UUID] = {
             x.case_type_id for x in case_stats if x.n_cases > 0
         }

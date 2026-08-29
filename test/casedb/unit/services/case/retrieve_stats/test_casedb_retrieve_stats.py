@@ -139,30 +139,26 @@ class BaseRetrieveStatsTestCase:
             case_set_status_id=uuid4(),
         )
 
-    def case_stats_cmd(
+    def case_type_stats_cmd(
         self,
         *,
         case_type_ids: set[UUID] | None,
-        case_set_ids: set[UUID] | None = None,
         datetime_range_filter: TypedDatetimeRangeFilter | None = None,
-    ) -> case_command.RetrieveCaseStatsCommand:
-        return case_command.RetrieveCaseStatsCommand(
+    ) -> case_command.RetrieveCaseTypeStatsCommand:
+        return case_command.RetrieveCaseTypeStatsCommand(
             user=self.user,
             case_type_ids=case_type_ids,
-            case_set_ids=case_set_ids,
             datetime_range_filter=datetime_range_filter,
         )
 
     def case_set_stats_cmd(
         self,
         *,
-        case_type_ids: set[UUID] | None = None,
         case_set_ids: set[UUID] | None = None,
         datetime_range_filter: TypedDatetimeRangeFilter | None = None,
-    ) -> case_command.RetrieveCaseStatsCommand:
-        return case_command.RetrieveCaseStatsCommand(
+    ) -> case_command.RetrieveCaseSetStatsCommand:
+        return case_command.RetrieveCaseSetStatsCommand(
             user=self.user,
-            case_type_ids=case_type_ids,
             case_set_ids=case_set_ids,
             datetime_range_filter=datetime_range_filter,
         )
@@ -225,7 +221,7 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
             "get_case_abac_from_command",
             return_value=abac,
         ) as get_abac:
-            cmd = self.case_stats_cmd(
+            cmd = self.case_type_stats_cmd(
                 case_type_ids=None, datetime_range_filter=dt_filter
             )
             result: list[case_model.CaseStats] = case_service_retrieve_case_stats(
@@ -300,7 +296,7 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
             "get_case_abac_from_command",
             return_value=abac,
         ):
-            cmd = self.case_stats_cmd(case_type_ids=None)
+            cmd = self.case_type_stats_cmd(case_type_ids=None)
             result: list[case_model.CaseStats] = case_service_retrieve_case_stats(
                 self.service, cmd
             )
@@ -325,7 +321,7 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
             "get_case_abac_from_command",
             return_value=abac,
         ):
-            cmd = self.case_stats_cmd(case_type_ids=requested_ids)
+            cmd = self.case_type_stats_cmd(case_type_ids=requested_ids)
             with pytest.raises(Exception, match="READ_CASE right for CaseTypes"):
                 case_service_retrieve_case_stats(self.service, cmd)
 
@@ -359,7 +355,7 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
             "get_case_abac_from_command",
             return_value=abac,
         ):
-            cmd = self.case_stats_cmd(case_type_ids=requested_ids)
+            cmd = self.case_type_stats_cmd(case_type_ids=requested_ids)
             result: list[case_model.CaseStats] = case_service_retrieve_case_stats(
                 self.service, cmd
             )
@@ -377,7 +373,7 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
             "get_case_abac_from_command",
             return_value=None,
         ):
-            cmd = self.case_stats_cmd(case_type_ids={self.case_type_id1})
+            cmd = self.case_type_stats_cmd(case_type_ids={self.case_type_id1})
             with pytest.raises(AssertionError):
                 case_service_retrieve_case_stats(self.service, cmd)
 
@@ -448,8 +444,8 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
             is_full_access=True, readable_case_type_ids={self.case_type_id1}
         )
 
-        cmd = self.case_stats_cmd(
-            case_type_ids=None, case_set_ids={self.case_set_id1, self.case_set_id2}
+        cmd = self.case_set_stats_cmd(
+            case_set_ids={self.case_set_id1, self.case_set_id2}
         )
 
         with patch.object(
@@ -482,7 +478,7 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
 
         # Mock repository.crud to return empty list for CaseTypes
         self.repository.crud = Mock(return_value=[])
-        cmd = self.case_stats_cmd(case_type_ids=None, case_set_ids=None)
+        cmd = self.case_set_stats_cmd(case_set_ids=None)
 
         with patch.object(
             BaseCaseAbacPolicy,
@@ -538,7 +534,7 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
             is_full_access=True, readable_case_type_ids={self.case_type_id1}
         )
 
-        cmd = self.case_stats_cmd(case_type_ids=None, case_set_ids={self.case_set_id1})
+        cmd = self.case_set_stats_cmd(case_set_ids={self.case_set_id1})
 
         with patch.object(
             BaseCaseAbacPolicy,

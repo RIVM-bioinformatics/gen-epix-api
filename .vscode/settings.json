@@ -21,54 +21,9 @@
     },
     "git.allowNoVerifyCommit": true,
     "github.copilot.chat.commitMessageGeneration.instructions": [
-        {
-            "text": "Use conventional commit format: type: description"
-        },
-        {
-            "text": "Capitalize the first letter of the subject line"
-        },
-        {
-            "text": "Do not end the subject line with a period"
-        },
-        {
-            "text": "Use body for detailed explanation if needed"
-        },
-        {
-            "text": "Separate subject from body with a blank line"
-        },
-        {
-            "text": "Use bullet points for multiple changes in the body"
-        },
-        {
-            "text": "Reference related issues or pull requests"
-        },
-        {
-            "text": "Use emojis for visual clarity (optional)"
-        },
-        {
-            "text": "Keep commit messages concise and clear"
-        },
-        {
-            "text": "Avoid using 'WIP' in commit messages"
-        },
-        {
-            "text": "Use present tense for the subject line"
-        },
-        {
-            "text": "Use past tense for the body if describing completed work"
-        },
-        {
-            "text": "Avoid using 'fixes' or 'closes' in the subject line"
-        },
-        {
-            "text": "Use 'BREAKING CHANGE:' in the body for major changes"
-        },
-        {
-            "text": "Use types: feat, fix, docs, style, refactor, perf, test, chore, ci"
-        },
-        {
-            "text": "Reference issue numbers with # prefix"
-        }
+    {
+      "text": "Follow these rules when generating git commit messages:\n\n1. Message format: `type(scope): description`\n- **type**: Choose from `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `build`, `ci`, `style` based on what the diff actually does.\n- **scope**: Infer in this priority order:\n  1. Dominant directory/module in the diff (e.g. hooks, skills, etl).\n  2. Component/ticket implied by branch name (e.g. branch `lsp-3559-optimize-agentic-ai-...` -> scope like `agents`).\n  3. Reuse scope from the last two commits if this continues the same line of work.\n  Omit scope only when no meaningful one exists.\n- **description**: Lower-case, imperative sentence summarizing the change. No trailing period. Keep under ~72 chars.\n\n2. Body: Add ONE short body paragraph after a blank line only when it explains *why* or links the change to recent work.\n\n3. Relate to recent work: If continuing/fixing previous commits, reuse scope and phrase description as a continuation (e.g. 'extend', 'finish', 'follow up on'). Never fabricate relationships."
+    }
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,

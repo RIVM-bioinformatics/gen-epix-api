@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from httpx import Response
 from pydantic import BaseModel as PydanticBaseModel
 
-from gen_epix.commondb.api import UpdateUserRequestBody, UserInvitationRequestBody
+from gen_epix.commondb.api import InviteUserRequestBody, UpdateUserRequestBody
 from gen_epix.commondb.domain import command, model
 from gen_epix.fastapp import App, Command, CrudCommand, CrudOperation
 
@@ -60,9 +60,7 @@ class EndpointTestClient:
         update_user_command_class: type[
             command.UpdateUserCommand
         ] = command.UpdateUserCommand,
-        user_invitation_request_body: type[
-            PydanticBaseModel
-        ] = UserInvitationRequestBody,
+        user_invitation_request_body: type[PydanticBaseModel] = InviteUserRequestBody,
         update_user_request_body: type[PydanticBaseModel] = UpdateUserRequestBody,
         register_crud_commands: bool = True,
         route_prefix: str | None = None,
