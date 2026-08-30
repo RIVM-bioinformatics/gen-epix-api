@@ -1,9 +1,10 @@
-"""Shared utility functions for identifiers, models, collections, and profiling.
+"""Provide shared helpers for identifiers, models, collections, and profiling.
 
-The module contains small helpers used across the application packages. The
-helpers preserve deterministic identifier mappings, copy Pydantic field
-configuration, compose inherited documentation, and optionally profile
-synchronous or asynchronous callables.
+Identifier helpers generate sortable UUIDs or deterministically map strings and
+integers to UUIDs. Model helpers copy Pydantic field configuration and combine
+inherited class documentation. Collection helpers group paired values and split
+lists into batches. The profiling decorator records synchronous or asynchronous
+call executions without changing their results or exceptions.
 """
 
 import datetime
@@ -33,17 +34,16 @@ def generate_ulid() -> uuid.UUID:
 
 
 def get_package_root() -> Path:
-    """
-    Get the root path of the project by looking for pyproject.toml.
+    """Return the repository root located from this module's source path.
 
-    Searches upward from the current file's directory until it finds
-    a directory containing pyproject.toml, which indicates the project root.
+    Searches parent directories for ``pyproject.toml`` rather than depending on
+    the caller's current working directory.
 
     Returns:
-        Path: The absolute path to the project root directory.
+        Absolute path to the directory containing ``pyproject.toml``.
 
     Raises:
-        FileNotFoundError: If pyproject.toml cannot be found in any parent directory.
+        FileNotFoundError: If no parent directory contains ``pyproject.toml``.
     """
     current_dir = Path(__file__).parent
 
@@ -66,8 +66,8 @@ def get_package_version() -> str:
         The version declared under ``project.version``.
 
     Raises:
-        FileNotFoundError: If called outside a directory containing the
-            project metadata file.
+        FileNotFoundError: If the current directory lacks the project metadata
+            file.
         KeyError: If the metadata does not define the expected project version.
     """
     pyproject_path = "pyproject.toml"
@@ -207,7 +207,8 @@ def add_parent_class_docs(
     Excluded classes and ``object`` are omitted. For a set of classes, parents
     are processed before children so inherited documentation is available when
     each child is updated. The single-class form mutates ``cls.__doc__`` only
-    when at least one eligible parent has documentation.
+    when at least one eligible parent has documentation. A supplied set of
+    excluded classes is also mutated to include ``object``.
 
     Args:
         cls: Class to update, or classes whose inheritance graph should be
@@ -337,10 +338,10 @@ def chunk_list(values: list, chunk_size: int | None) -> list[list]:
 def profile_method(path: str | None = None) -> Callable:
     """Profile a callable and write its report to a timestamped log file.
 
-    The decorator detects whether the wrapped callable is synchronous or
-    asynchronous, preserves its return value, and writes the report even when
-    the callable raises. When no path is provided, reports are written at the
-    project root.
+    The returned decorator detects whether the wrapped callable is synchronous
+    or asynchronous, forwards its arguments and return value unchanged, and
+    writes a report even when the callable raises. When no path is provided,
+    reports are written at the repository root.
 
     Args:
         path: Directory in which profiling logs should be created, or ``None``
