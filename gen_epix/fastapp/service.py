@@ -30,7 +30,7 @@ from gen_epix.filter import CompositeFilter, LogicalOperator
 
 
 class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
-    """Provide the base service framework abstraction."""
+    """Base class for domain services that register command handlers."""
 
     SERVICE_TYPE: Hashable = None
 
@@ -50,7 +50,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         **kwargs: Any,
     ):
         # Set input members
-        """Initialize the instance."""
+        """Initialize a BaseService instance."""
         self._id_factory: Callable[[], Hashable] = id_factory or app.generate_id
         self._timestamp_factory: Callable[[], datetime.datetime] = (
             timestamp_factory or app.generate_timestamp
@@ -88,54 +88,54 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
 
     @property
     def id(self) -> str:
-        """Perform the id operation."""
+        """Id the requested value."""
         return self._id
 
     @property
     def service_type(self) -> Hashable:
-        """Perform the service type operation."""
+        """Service type."""
         return self._service_type
 
     @property
     def name(self) -> str:
-        """Perform the name operation."""
+        """Name the requested value."""
         return self._name
 
     @property
     def created_at(self) -> datetime.datetime:
-        """Perform the created at operation."""
+        """Created at."""
         return self._created_at
 
     @property
     def app(self) -> App:
-        """Perform the app operation."""
+        """App the requested value."""
         return self._app
 
     @property
     def logger(self) -> logging.Logger | None:
-        """Perform the logger operation."""
+        """Logger the requested value."""
         return self._logger
 
     @logger.setter
     def logger(self, logger: logging.Logger | None) -> None:
-        """Perform the logger operation."""
+        """Logger the requested value."""
         self._logger = logger
 
     @property
     def repository(self) -> Repository:
-        """Perform the repository operation."""
+        """Repository the requested value."""
         if not self._repository:
             raise exc.ServiceException("529122a8", "Repository not set")
         return self._repository
 
     @repository.setter
     def repository(self, repository: Repository) -> None:
-        """Perform the repository operation."""
+        """Repository the requested value."""
         self._repository = repository
 
     @property
     def props(self) -> dict[str, Any]:
-        """Perform the props operation."""
+        """Props the requested value."""
         return self._props
 
     @abc.abstractmethod
@@ -166,11 +166,11 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
             self.app.register_handler(crud_command_class, self.crud)
 
     def generate_id(self) -> Hashable:
-        """Perform the generate id operation."""
+        """Generate id."""
         return self._id_factory()
 
     def generate_timestamp(self) -> datetime.datetime:
-        """Perform the generate timestamp operation."""
+        """Generate timestamp."""
         return self._timestamp_factory()
 
     def register_crud_listener(
@@ -205,7 +205,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         timing: EventTiming,
         listener: Callable[[BaseService, CrudCommand, Any], tuple[CrudCommand, Any]],
     ) -> None:
-        """Perform the unregister crud listener operation."""
+        """Unregister crud listener."""
         key = (command_class, timing)
         if key not in self._crud_listeners:
             raise ValueError(f"Listener not registered for {key}")
@@ -214,7 +214,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         self._crud_listeners[key].remove(listener)
 
     def crud(self, cmd: CrudCommand) -> Any:
-        """Perform the crud operation."""
+        """Crud the requested value."""
         assert cmd.MODEL_CLASS.ENTITY is not None
         id_field_name = cmd.MODEL_CLASS.ENTITY.id_field_name
         if self._logger and self._logger.level <= logging.DEBUG:
@@ -291,7 +291,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         links: dict[int, Link] | None = None,
     ) -> Any:
         # Get filters depending on the operation
-        """Perform the crud repository operation."""
+        """Crud repository."""
         if cmd.operation in CrudOperationSet.ANY_ALL.value:
             # Query filter is applied, access filter is added to query filter
             query_filter = cmd.query_filter
@@ -362,7 +362,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
     def update_association(
         self, cmd: UpdateAssociationCommand, **kwargs: Any
     ) -> list[Hashable] | list[Model] | None:
-        """Perform the update association operation."""
+        """Update association."""
         if self._logger and self._logger.level <= logging.DEBUG:
             self._logger.debug(
                 self.create_log_message(
@@ -413,7 +413,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
     def set_object_id(
         self, obj: Model, id_field_name: str, on_id_set: OnException = OnException.RAISE
     ) -> None:
-        """Perform the set object id operation."""
+        """Set object id."""
         if getattr(obj, id_field_name):
             if on_id_set == OnException.RAISE:
                 raise exc.InvalidArgumentsError(
@@ -438,7 +438,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         add_debug_info: bool = True,
         **kwargs: Any,
     ) -> str:
-        """Perform the create log message operation."""
+        """Create log message."""
         if add_debug_info:
             service = kwargs.pop("service", {}) | {"id": self.id, "name": self.name}
             return self.app.create_log_message(
@@ -456,7 +456,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         dict[int, Link],
         dict[int, Link],
     ]:
-        """Perform the  get model links operation."""
+        """Return model links."""
         if isinstance(cmd, CrudCommand):
             model_class = cmd.MODEL_CLASS
         elif isinstance(cmd, UpdateAssociationCommand):
@@ -472,7 +472,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         return same_service_links, other_service_links
 
     def _get_user_and_repository(self, cmd: Command) -> tuple[User, BaseRepository]:
-        """Perform the  get user and repository operation."""
+        """Return user and repository."""
         user = cmd.user
         if user is None:
             raise exc.UnauthorizedAuthError("a621f6fc", "No user provided")
@@ -486,7 +486,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         objs: Iterable[Model],
         other_service_links: dict[int, Link],
     ) -> None:
-        """Perform the  verify other service links operation."""
+        """Verify other service links."""
         if not cmd.verify_other_service_links or not other_service_links:
             return
         for link in other_service_links.values():
@@ -521,7 +521,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         objs: Iterable[Model],
         same_service_links: dict[int, Link],
     ) -> None:
-        """Perform the  verify same service links operation."""
+        """Verify same service links."""
         if not self.repository:
             raise exc.ServiceException("63baf129", "Repository not set")
         if not cmd.verify_same_service_links or not same_service_links:
@@ -550,7 +550,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
                     )
 
     def __del__(self) -> None:
-        """Perform the   del   operation."""
+        """Del the requested value."""
         if getattr(self, "_setup_logger", None):
             self._setup_logger.info(
                 self.create_log_message("d84f9d21", "STOPPING_SERVICE")

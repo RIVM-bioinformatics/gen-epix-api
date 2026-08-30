@@ -1,4 +1,4 @@
-"""Utilities for the fastapp entity module."""
+"""Metadata describing a domain model and its persistence relationships."""
 
 import re
 import uuid
@@ -17,7 +17,7 @@ from gen_epix.fastapp.exc import DomainException
 
 
 class Entity(BaseModel):
-    """Provide the entity framework abstraction."""
+    """Describe a domain model's names, persistence, keys, and links."""
 
     CAMEL_TO_SNAKE_CASE_PATTERN: ClassVar[re.Pattern] = re.compile(
         r"(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])"
@@ -79,13 +79,13 @@ class Entity(BaseModel):
     )
     @classmethod
     def _validate_names(cls, value: str | Enum | None) -> str | None:
-        """Perform the  validate names operation."""
+        """Convert enum name values to their string values."""
         return str(value.value) if isinstance(value, Enum) else value
 
     @model_validator(mode="before")
     @classmethod
     def _validate_model(cls, data: Any) -> Any:
-        """Perform the  validate model operation."""
+        """Set the default identifier field for persistable entities."""
         if (
             "id_field_name" not in data
             and "persistable" in data
@@ -123,21 +123,21 @@ class Entity(BaseModel):
 
     @property
     def name(self) -> str:
-        """Perform the name operation."""
+        """Name the requested value."""
         if not self.has_model():
             raise DomainException("aa2c7c40", Entity.NO_MODEL_ERROR_MSG)
         return self._model_class.NAME  # type: ignore
 
     @property
     def model_class(self) -> type[BaseModel]:
-        """Perform the model class operation."""
+        """Model class."""
         if not self.has_model():
             raise DomainException("be45913e", Entity.NO_MODEL_ERROR_MSG)
         return self._model_class  # type: ignore
 
     @property
     def crud_command_class(self) -> type[BaseModel] | None:
-        """Perform the crud command class operation."""
+        """Crud command class."""
         if not self.has_model():
             raise DomainException("52c69320", Entity.NO_MODEL_ERROR_MSG)
         if not self.persistable:
@@ -146,7 +146,7 @@ class Entity(BaseModel):
 
     @property
     def db_model_class(self) -> type | None:
-        """Perform the db model class operation."""
+        """Db model class."""
         if not self.has_model():
             raise DomainException("7ee38603", Entity.NO_MODEL_ERROR_MSG)
         if not self.persistable:
@@ -155,21 +155,21 @@ class Entity(BaseModel):
 
     @property
     def create_api_model_class(self) -> type | None:
-        """Perform the create api model class operation."""
+        """Create api model class."""
         if not self.has_model():
             raise DomainException("b0252bfa", Entity.NO_MODEL_ERROR_MSG)
         return self._create_api_model_class
 
     @property
     def read_api_model_class(self) -> type | None:
-        """Perform the read api model class operation."""
+        """Read api model class."""
         if not self.has_model():
             raise DomainException("81bb94f3", Entity.NO_MODEL_ERROR_MSG)
         return self._read_api_model_class
 
     @property
     def get_obj_id(self) -> Callable[[Any], Hashable]:
-        """Perform the get obj id operation."""
+        """Return obj id."""
         if not self.has_model():
             raise DomainException("3f1a0c53", Entity.NO_MODEL_ERROR_MSG)
         assert self.id_field_name
@@ -362,7 +362,7 @@ class Entity(BaseModel):
         return field_names[0]
 
     def get_keys_field_names(self, by_alias: bool = True) -> list[tuple[str, ...]]:
-        """Perform the get keys field names operation."""
+        """Return keys field names."""
         fields = self._fields
         assert fields is not None
         if by_alias:
@@ -441,7 +441,7 @@ class Entity(BaseModel):
         return self._keys_generator
 
     def get_link_id(self, link_model_class: type) -> Callable[[Any], Hashable]:
-        """Perform the get link id operation."""
+        """Return link id."""
         fn = self._get_link_id_by_model_class.get(link_model_class)
         if fn is None:
             raise ValueError(
@@ -539,7 +539,7 @@ class Entity(BaseModel):
         string_casing: StringCasing = StringCasing.SNAKE_CASE,
         is_plural: bool = False,
     ) -> str | None:
-        """Perform the get name by casing operation."""
+        """Return name by casing."""
         if string_casing == StringCasing.SNAKE_CASE:
             name = (
                 self.snake_case_plural_name
@@ -727,7 +727,7 @@ class Entity(BaseModel):
     def _check_identical_field_names(
         self, link_field_names: set, relationship_field_names: set
     ) -> None:
-        """Perform the  check identical field names operation."""
+        """Check identical field names."""
         identical_field_names = link_field_names & relationship_field_names
         if identical_field_names:
             identical_field_names_str = ", ".join(identical_field_names)
@@ -744,14 +744,14 @@ class Entity(BaseModel):
             return
 
         def keys_generator(keys: dict[int, Key], obj: BaseModel) -> dict[int, Any]:
-            """Perform the keys generator operation."""
+            """Keys generator."""
             return {x: y(obj) for x, y in keys.items()}
 
         self._keys_generator = partial(keys_generator, self.keys)
 
     @classmethod
     def camel_to_snake_case(cls, value: str) -> str:
-        """Perform the camel to snake case operation."""
+        """Camel to snake case."""
         return cls.CAMEL_TO_SNAKE_CASE_PATTERN.sub("_", value).lower()
 
     @classmethod
@@ -829,5 +829,5 @@ class Entity(BaseModel):
         return field_names
 
     def __hash__(self) -> int:
-        """Perform the   hash   operation."""
+        """Hash the requested value."""
         return self.name.__hash__()

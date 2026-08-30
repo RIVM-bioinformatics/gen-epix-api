@@ -4,12 +4,12 @@ from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 
 class DictUnitOfWork(BaseUnitOfWork):
-    """Provide the dict unit of work framework abstraction."""
+    """Unit of work for the in-memory dictionary repository."""
 
     def commit(self) -> None:
-        """Perform the commit operation."""
+        """Commit the requested value."""
         pass
 
     def rollback(self) -> None:
-        """Perform the rollback operation."""
+        """Rollback the requested value."""
         pass

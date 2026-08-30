@@ -1,4 +1,4 @@
-"""Utilities for the fastapp log module."""
+"""Structured log message types and JSON serialization."""
 
 import abc
 import datetime
@@ -14,7 +14,7 @@ class BaseLogItem(abc.ABC):
     """
 
     def __init__(self, **kwargs: Any) -> None:
-        """Initialize the instance."""
+        """Initialize a BaseLogItem instance."""
         self.content = kwargs
 
     @abc.abstractmethod
@@ -26,7 +26,7 @@ class BaseLogItem(abc.ABC):
 
     @staticmethod
     def _custom_json_encoder(obj: Any) -> str:
-        """Perform the  custom json encoder operation."""
+        """Serialize exceptions, datetimes, and other unsupported objects as strings."""
         if isinstance(obj, Exception):
             # TODO: Provide more structured encoding of exception
             return str(obj)
@@ -36,16 +36,16 @@ class BaseLogItem(abc.ABC):
 
 
 class LogItem(BaseLogItem):
-    """Provide the log item framework abstraction."""
+    """Serialize an application log code, message, and optional contextual fields."""
 
     def __init__(self, **kwargs: Any) -> None:
-        """Initialize the instance."""
+        """Initialize a LogItem instance."""
         self.code: str | None = kwargs.pop("code", None)  # type: ignore
         self.msg: str | None = kwargs.pop("msg", None)  # type: ignore
         self.content = kwargs if kwargs else None
 
     def dumps(self, indent=None, separators=(",", ":")) -> str:
-        """Perform the dumps operation."""
+        """Serialize this log item as JSON."""
         msg = {
             "code": self.code,
             "msg": self.msg,

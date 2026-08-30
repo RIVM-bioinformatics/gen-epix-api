@@ -15,7 +15,7 @@ from gen_epix.fastapp.services.auth.model import OidcServerCfg
 
 
 class TokenIntrospectionManager:
-    """Provide the token introspection manager framework abstraction."""
+    """Manage token introspection and discovery-endpoint caching."""
 
     DEFAULT_INTROSPECTION_REQUEST_HEADERS: dict[str, str] = {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -37,7 +37,7 @@ class TokenIntrospectionManager:
         log_item_class: type[BaseLogItem] = LogItem,
         logger: logging.Logger | None = None,
     ):
-        """Initialize the instance."""
+        """Initialize a TokenIntrospectionManager instance."""
         self.server_cfg = server_cfg.model_copy()
         self.discovery_url = discovery_url
         self.ssl_context = ssl_context
@@ -61,14 +61,14 @@ class TokenIntrospectionManager:
         self._validate_discovery_url()
 
         class IntrospectionCacheEntry(TypedDict):
-            """Provide the introspection cache entry framework abstraction."""
+            """Cache entry for a token introspection response."""
 
             active: bool | None
             last_checked: int
             exp: int
 
         class IntrospectionEndpointRetrievalCacheEntry(TypedDict):
-            """Provide the introspection endpoint retrieval cache entry framework abstraction."""
+            """Cache entry for an identity provider's introspection endpoint."""
 
             endpoint: str | None
             last_checked: int
@@ -80,23 +80,23 @@ class TokenIntrospectionManager:
         }
 
     def _validate_introspection_interval(self) -> None:
-        """Perform the  validate introspection interval operation."""
+        """Validate introspection interval."""
         if self._introspection_interval_seconds > 1800:
             raise ValueError(
                 "introspection_interval_seconds cannot be more than 1800 seconds (30 minutes)"
             )
 
     def _validate_discovery_url(self) -> None:
-        """Perform the  validate discovery url operation."""
+        """Validate discovery url."""
         if self.discovery_url.strip() == "":
             raise ValueError("discovery_url cannot be empty for token introspection")
 
     def _now(self) -> int:
-        """Perform the  now operation."""
+        """Now the requested value."""
         return int(datetime.datetime.now(datetime.timezone.utc).timestamp())
 
     def _fetch_introspection_endpoint(self) -> str:
-        """Perform the  fetch introspection endpoint operation."""
+        """Fetch introspection endpoint."""
         try:
             with httpx.Client(verify=self.ssl_context) as client:
                 response = client.get(self.discovery_url)
@@ -117,7 +117,7 @@ class TokenIntrospectionManager:
             ) from exception
 
     def _get_cached_introspection_endpoint(self) -> str:
-        """Perform the  get cached introspection endpoint operation."""
+        """Return cached introspection endpoint."""
         now = self._now()
         endpoint = self._introspection_endpoint_cache.get("endpoint")
         last_checked = self._introspection_endpoint_cache.get("last_checked", 0)
@@ -132,7 +132,7 @@ class TokenIntrospectionManager:
         return endpoint
 
     def introspect_token(self, jwt_token: str, claims: dict[str, Any]) -> None:
-        """Perform the introspect token operation."""
+        """Introspect token."""
         now = self._now()
         self._prune_expired_introspection_cache(now)
         if self._is_cached_introspection_token_inactive(jwt_token):
@@ -175,7 +175,7 @@ class TokenIntrospectionManager:
                 )
 
     def _prune_expired_introspection_cache(self, now: int | None = None) -> None:
-        """Perform the  prune expired introspection cache operation."""
+        """Prune expired introspection cache."""
         time_stamp = now or self._now()
         expired_keys = [
             x for x, y in self._introspection_cache.items() if y["exp"] <= time_stamp
@@ -184,12 +184,12 @@ class TokenIntrospectionManager:
             self._introspection_cache.pop(x, None)
 
     def _is_cached_introspection_token_inactive(self, jwt_token: str) -> bool:
-        """Perform the  is cached introspection token inactive operation."""
+        """Return whether cached introspection token inactive."""
         introspection_token = self._introspection_cache.get(jwt_token)
         return bool(introspection_token and introspection_token.get("active") is False)
 
     def _is_recheck_introspection(self, jwt_token: str, now: int | None = None) -> bool:
-        """Perform the  is recheck introspection operation."""
+        """Return whether recheck introspection."""
         introspection_token = self._introspection_cache.get(jwt_token)
         if not introspection_token:
             return True
@@ -200,7 +200,7 @@ class TokenIntrospectionManager:
     def _update_introspection_cache(
         self, jwt_token: str, active: bool | None, exp: int, now: int | None = None
     ) -> None:
-        """Perform the  update introspection cache operation."""
+        """Update introspection cache."""
         self._introspection_cache[jwt_token] = {
             "active": active,
             "last_checked": now or self._now(),
@@ -208,7 +208,7 @@ class TokenIntrospectionManager:
         }
 
     def _introspect_token_with_server(self, jwt_token: str) -> bool | None:
-        """Perform the  introspect token with server operation."""
+        """Introspect token with server."""
         endpoint = self._get_cached_introspection_endpoint()
         if not endpoint:
             return None

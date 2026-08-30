@@ -38,7 +38,7 @@ class UTCDateTime(TypeDecorator):
     def process_result_value(
         self, value: datetime.datetime | None, dialect: Any
     ) -> datetime.datetime | None:
-        """Perform the process result value operation."""
+        """Process result value."""
         if value is not None and value.tzinfo is None:
             return value.replace(tzinfo=datetime.timezone.utc)
         return value
@@ -107,7 +107,7 @@ SA_METADATA_BY_TYPE: dict[type[TypeEngine], frozenset[str]] = {
 
 
 class ServerUtcTimestamp(expression.FunctionElement):
-    """Provide the server utc timestamp framework abstraction."""
+    """SQLAlchemy type decorator that normalizes timestamps to UTC."""
 
     type = sa.TIMESTAMP()
     inherit_cache = True
@@ -117,7 +117,7 @@ class ServerUtcTimestamp(expression.FunctionElement):
 def postgresql_utc_timestamp(
     _element: ServerUtcTimestamp, _compiler: SQLCompiler, **_kw: dict
 ) -> str:
-    """Perform the postgresql utc timestamp operation."""
+    """Postgresql utc timestamp."""
     return "TIMEZONE('utc', CURRENT_TIMESTAMP)"
 
 
@@ -125,7 +125,7 @@ def postgresql_utc_timestamp(
 def mssql_utc_timestamp(
     _element: ServerUtcTimestamp, _compiler: SQLCompiler, **_kw: dict
 ) -> str:
-    """Perform the mssql utc timestamp operation."""
+    """Mssql utc timestamp."""
     return "GETUTCDATE()"
 
 
@@ -133,12 +133,12 @@ def mssql_utc_timestamp(
 def sqlite_utc_timestamp(
     _element: ServerUtcTimestamp, _compiler: SQLCompiler, **_kw: dict
 ) -> str:
-    """Perform the sqlite utc timestamp operation."""
+    """Sqlite utc timestamp."""
     return "STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')"
 
 
 class ServerUtcCurrentTime(expression.FunctionElement):
-    """Provide the server utc current time framework abstraction."""
+    """SQL expression that returns the database server's current UTC time."""
 
     type = DateTime()
     inherit_cache = True
@@ -148,7 +148,7 @@ class ServerUtcCurrentTime(expression.FunctionElement):
 def postgresql_utc_current_time(
     _element: ServerUtcCurrentTime, _compiler: SQLCompiler, **_kw: dict
 ) -> str:
-    """Perform the postgresql utc current time operation."""
+    """Postgresql utc current time."""
     return "TIMEZONE('utc', CURRENT_TIMESTAMP)"
 
 
@@ -156,7 +156,7 @@ def postgresql_utc_current_time(
 def mssql_utc_current_time(
     _element: ServerUtcCurrentTime, _compiler: SQLCompiler, **_kw: dict
 ) -> str:
-    """Perform the mssql utc current time operation."""
+    """Mssql utc current time."""
     return "GETUTCDATE()"
 
 
@@ -164,7 +164,7 @@ def mssql_utc_current_time(
 def sqlite_utc_current_time(
     _element: ServerUtcCurrentTime, _compiler: SQLCompiler, **_kw: dict
 ) -> str:
-    """Perform the sqlite utc current time operation."""
+    """Sqlite utc current time."""
     return "CURRENT_TIMESTAMP"
 
 
@@ -189,7 +189,7 @@ def create_sa_type_from_field_info(
 
     def _create_sa_type(sa_type_class: type[TypeEngine]) -> TypeEngine:
         # Get column kwargs for this type, overridden by kwargs
-        """Perform the  create sa type operation."""
+        """Create sa type."""
         new_kwargs = (
             get_sa_type_kwargs_from_field_info(sa_type_class, field_info) | kwargs
         )
@@ -223,7 +223,7 @@ def get_sa_type_kwargs_from_field_info(
     sa_type_class: type[sa.types.TypeEngine], field_info: FieldInfo | ComputedFieldInfo
 ) -> dict[str, Any]:
     # Extract column kwargs from field metadata
-    """Perform the get sa type kwargs from field info operation."""
+    """Return sa type kwargs from field info."""
     kwargs: dict[str, Any] = {}
     if isinstance(field_info, FieldInfo):
         for metadata in field_info.metadata:

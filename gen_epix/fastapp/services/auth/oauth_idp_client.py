@@ -30,7 +30,7 @@ from gen_epix.fastapp.services.auth.token_introspection_manager import (
 
 
 class OauthIdpClient(IdpClient, OpenIdConnect):
-    """Provide the oauth idp client framework abstraction."""
+    """OAuth identity-provider client that validates and obtains tokens."""
 
     DEFAULT_INTROSPECTION_REQUEST_HEADERS: dict[str, str] = {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -60,7 +60,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         **kwargs: Any,
     ):
         # Set IdpClient properties
-        """Initialize the instance."""
+        """Initialize a OauthIdpClient instance."""
         issuer = server_cfg.issuer
         if issuer is None:
             # Fetch issuer later from discovery document
@@ -136,18 +136,18 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
 
     @property
     def issuer(self) -> str:
-        """Perform the issuer operation."""
+        """Issuer the requested value."""
         assert self.server_cfg.issuer is not None
         return self.server_cfg.issuer
 
     @property
     def audience(self) -> str:
-        """Perform the audience operation."""
+        """Audience the requested value."""
         return self.server_cfg.audience or self.server_cfg.client_id
 
     @property
     def scope(self) -> str:
-        """Perform the scope operation."""
+        """Scope the requested value."""
         assert self.server_cfg.scope is not None
         return self.server_cfg.scope
 
@@ -213,7 +213,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             raise exc.InitializationServiceError("66b9919e", msg) from exception
 
     async def get_jwk_from_jwt(self, jwt_token: str) -> jwt.PyJWK:
-        """Perform the get jwk from jwt operation."""
+        """Return jwk from jwt."""
         key_id: str = self._validate_key_id(jwt_token, self._parse_kid(jwt_token))
 
         # Verify that the signing key in this session is outdated, fetch new one if so
@@ -230,7 +230,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         return key
 
     def _log_keys_fetch_success(self) -> None:
-        """Perform the  log keys fetch success operation."""
+        """Log keys fetch success."""
         if self.logger and self.logger.level <= logging.DEBUG:
             self.logger.debug(
                 self._log_item_class(
@@ -241,7 +241,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             )
 
     def _log_keys_fetch_failure(self, key_id: str) -> None:
-        """Perform the  log keys fetch failure operation."""
+        """Log keys fetch failure."""
         if self.logger:
             self.logger.warning(
                 self._log_item_class(
@@ -253,7 +253,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             )
 
     def _refresh_signing_keys(self) -> None:
-        """Perform the  refresh signing keys operation."""
+        """Refresh signing keys."""
         if self.logger and self.logger.level <= logging.DEBUG:
             self.logger.debug(
                 self._log_item_class(
@@ -265,7 +265,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         self._load_keys()
 
     def _validate_key_id(self, jwt_token: str, key_id: str | None) -> str:
-        """Perform the  validate key id operation."""
+        """Validate key id."""
         if not key_id:
             if self.logger:
                 self.logger.warning(
@@ -280,7 +280,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         return key_id
 
     def _parse_kid(self, jwt_token: str) -> str | None:
-        """Perform the  parse kid operation."""
+        """Parse kid."""
         try:
             return jwt.get_unverified_header(jwt_token).get("kid")
         except jwt.PyJWTError as e:
@@ -297,7 +297,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             raise exc.UnauthorizedAuthError("5bb8ffb6") from e
 
     async def get_claims_from_jwt(self, jwt_token: str) -> dict[str, Any] | None:
-        """Perform the get claims from jwt operation."""
+        """Return claims from jwt."""
         claims = self._decode_jwt_unverified(jwt_token)
         if not self._validate_issuer(claims):
             return None
@@ -323,7 +323,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         return self._map_claims(claims)
 
     def _map_claims(self, claims: dict[str, Any]) -> dict[str, Any]:
-        """Perform the  map claims operation."""
+        """Map claims."""
         for new_claim_name, orig_claim_names in self.server_cfg.claim_map.items():
             for orig_claim_name in orig_claim_names:
                 value = claims.get(orig_claim_name)
@@ -334,7 +334,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         return claims
 
     def _check_required_claims(self, claims: dict[str, Any]) -> None:
-        """Perform the  check required claims operation."""
+        """Check required claims."""
         issuer = claims["iss"]
         sub = claims.get("sub")
         if not issuer or not sub:
@@ -357,7 +357,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             )
 
     def _verify_token(self, jwt_token: str, key: jwt.PyJWK) -> dict[str, Any]:
-        """Perform the  verify token operation."""
+        """Verify token."""
         try:
             claims: dict[str, Any] = jwt.decode(
                 jwt_token,
@@ -396,7 +396,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         return claims
 
     def _validate_issuer(self, claims: dict[str, Any]) -> bool:
-        """Perform the  validate issuer operation."""
+        """Validate issuer."""
         if claims["iss"] != self.server_cfg.issuer:
             if self.logger and self.logger.level <= logging.DEBUG:
                 self.logger.debug(
@@ -413,7 +413,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         return True
 
     def _decode_jwt_unverified(self, jwt_token: str) -> dict[str, Any]:
-        """Perform the  decode jwt unverified operation."""
+        """Decode jwt unverified."""
         return jwt.decode(jwt_token, options={"verify_signature": False})  # type: ignore[no-any-return]
 
     def retrieve_jwt_with_client_credentials_flow(
@@ -447,7 +447,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         url: str,
         token_data: str,
     ) -> str:
-        """Perform the  request token with retries operation."""
+        """Request token with retries."""
         last_exception: Exception | None = None
         for attempt in range(max_retries + 1):
             try:
@@ -482,7 +482,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         )
 
     def _log_failed_token_retrieval_attempts(self, max_retries: int) -> None:
-        """Perform the  log failed token retrieval attempts operation."""
+        """Log failed token retrieval attempts."""
         if self.logger:
             self.logger.error(
                 self._log_item_class(
@@ -504,7 +504,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         return token_data
 
     def _set_authorization_header(self, headers: dict[str, str]) -> None:
-        """Perform the  set authorization header operation."""
+        """Set authorization header."""
         headers["Authorization"] = (
             "Basic "
             + base64.b64encode(
@@ -513,7 +513,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         )
 
     def _get_token_endpoint(self) -> str:
-        """Perform the  get token endpoint operation."""
+        """Return token endpoint."""
         url = self.server_cfg.token_endpoint
         if not isinstance(url, str):
             # Try to get from discovery document
@@ -534,7 +534,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         return url
 
     def get_claims_from_userinfo(self, access_token: str) -> dict[str, Any]:
-        """Perform the get claims from userinfo operation."""
+        """Return claims from userinfo."""
         userinfo_endpoint = self.server_cfg.userinfo_endpoint
         assert userinfo_endpoint is not None
         try:
@@ -559,7 +559,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
     def _validate_claims_from_userinfo(
         self, userinfo_endpoint: str, response: httpx.Response
     ) -> dict[str, Any]:
-        """Perform the  validate claims from userinfo operation."""
+        """Validate claims from userinfo."""
         claims: dict[str, Any] = json.loads(response.content)
         if (
             not isinstance(claims, dict) or "error" in claims  # type: ignore[unreachable]
@@ -578,7 +578,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         return claims
 
     def get_identity_provider(self) -> IdentityProvider:
-        """Perform the get identity provider operation."""
+        """Return identity provider."""
         issuer = self.server_cfg.issuer
         assert issuer is not None
         return IdentityProvider(
@@ -595,7 +595,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         )
 
     def _load_keys(self) -> None:
-        """Perform the  load keys operation."""
+        """Load keys."""
         jwks_uri = self.server_cfg.jwks_uri
         assert jwks_uri is not None
         try:
@@ -623,7 +623,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                 self._signing_keys[key_data["kid"]] = jwt.PyJWK.from_dict(key_data)
 
     def _log_auth_error(self, exception: exc.AuthException) -> None:
-        """Perform the  log auth error operation."""
+        """Log auth error."""
         if self.logger:
             self.logger.warning(
                 self._log_item_class(
@@ -635,7 +635,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             )
 
     def _log_unsupported_authorization_scheme(self, scheme: str) -> None:
-        """Perform the  log unsupported authorization scheme operation."""
+        """Log unsupported authorization scheme."""
         if self.logger:
             self.logger.warning(
                 self._log_item_class(
@@ -646,7 +646,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             )
 
     def _log_missing_authorization_header(self) -> None:
-        """Perform the  log missing authorization header operation."""
+        """Log missing authorization header."""
         if self.logger:
             self.logger.warning(
                 self._log_item_class(
@@ -657,7 +657,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             )
 
     def _parse_authorization_header(self, request: Request) -> tuple[str, str] | None:
-        """Perform the  parse authorization header operation."""
+        """Parse authorization header."""
         if authorization := request.headers.get("authorization"):
             scheme, token = get_authorization_scheme_param(authorization)
             return (scheme, token)

@@ -8,7 +8,7 @@ LOCAL_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0"}
 
 
 def serialize_id(value: Hashable) -> str | None:
-    """Perform the serialize id operation."""
+    """Serialize id."""
     return str(value) if value else None
 
 

@@ -1,4 +1,4 @@
-"""Utilities for the fastapp limiter module."""
+"""Rate-limit configuration for API requests."""
 
 from fastapi import Request
 from slowapi import Limiter

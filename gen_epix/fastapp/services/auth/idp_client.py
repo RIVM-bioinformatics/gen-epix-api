@@ -12,7 +12,7 @@ from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider
 
 
 class IdpClient(abc.ABC):
-    """Provide the idp client framework abstraction."""
+    """Base client for an external identity provider."""
 
     DEFAULT_TOKEN = "id_token"
 
@@ -24,7 +24,7 @@ class IdpClient(abc.ABC):
         ssl_context: ssl.SSLContext | bool = True,
         **kwargs: dict,
     ) -> None:
-        """Initialize the instance."""
+        """Initialize a IdpClient instance."""
         self.id: UUID = id or uuid.uuid4()
 
         self.ssl_context = ssl_context
