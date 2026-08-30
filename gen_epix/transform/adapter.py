@@ -15,23 +15,69 @@ class RowLike(Protocol):
     """Structural interface required by row-oriented transformation code."""
 
     def get(self, key: Hashable, default: Any = None) -> Any:
-        """Return the value for `key`, or `default` when the key is absent."""
+        """Return the value for a key, or a fallback when it is absent.
+
+        Args:
+            key: Field name or other hashable field identifier.
+            default: Value returned when the key is absent.
+
+        Returns:
+            Stored value for ``key``, or ``default``.
+
+        Raises:
+            NotImplementedError: Always, until a compatible row type implements it.
+        """
         raise NotImplementedError()
 
     def __getitem__(self, key: Hashable) -> Any:
-        """Return the value associated with `key`."""
+        """Return the value associated with a required key.
+
+        Args:
+            key: Field name or other hashable field identifier.
+
+        Returns:
+            Stored value for ``key``.
+
+        Raises:
+            NotImplementedError: Always, until a compatible row type implements it.
+        """
         raise NotImplementedError()
 
     def __setitem__(self, key: Hashable, value: Any) -> None:
-        """Set the value associated with `key`."""
+        """Set the value associated with a key.
+
+        Args:
+            key: Field name or other hashable field identifier.
+            value: Value to store for ``key``.
+
+        Raises:
+            NotImplementedError: Always, until a compatible row type implements it.
+        """
         raise NotImplementedError()
 
     def __contains__(self, key: Hashable) -> bool:
-        """Return whether `key` is present."""
+        """Return whether a key is present.
+
+        Args:
+            key: Field name or other hashable field identifier.
+
+        Returns:
+            Whether ``key`` is present.
+
+        Raises:
+            NotImplementedError: Always, until a compatible row type implements it.
+        """
         raise NotImplementedError()
 
     def keys(self) -> Iterator[Hashable]:
-        """Iterate over the available keys."""
+        """Iterate over available keys.
+
+        Yields:
+            Field name or other hashable field identifier.
+
+        Raises:
+            NotImplementedError: Always, until a compatible row type implements it.
+        """
         raise NotImplementedError()
 
 
@@ -128,7 +174,21 @@ class ObjectAdapter:
     def _create_adapter(
         self, obj: Any
     ) -> DictAdapter | PydanticAdapter | PolarsAdapter:
-        """Create the concrete adapter appropriate for `obj`."""
+        """Select the concrete adapter appropriate for an object representation.
+
+        Dictionaries retain in-place updates, Pydantic models expose model fields,
+        and dataframe-like objects use their column interface.
+
+        Args:
+            obj: Object to adapt for transformer field access.
+
+        Returns:
+            Adapter that exposes ``obj`` through the common field interface.
+
+        Raises:
+            ValueError: If ``obj`` is not a dictionary, Pydantic model, or
+                dataframe-like object.
+        """
         if isinstance(obj, dict):
             return DictAdapter(obj)
         elif isinstance(obj, BaseModel):

@@ -1,8 +1,13 @@
-"""Public API for the transformation framework.
+"""Expose the public API for the transformation framework.
 
-This package exposes adapters, transformer base classes, pipeline helpers,
-streaming utilities, result types, registry helpers, and built-in transformer
-implementations for object, field, interval, and time transformations.
+Adapters normalize dictionaries, Pydantic models, and dataframe-like objects
+for transformation. ``Transformer`` defines the single-object contract, while
+``Pipeline``, ``StreamingPipeline``, retry, and fallback helpers orchestrate
+ordered or concurrent processing. ``TransformResult`` and
+``TransformResultType`` represent outcomes, and ``Registry`` with its decorators
+provides named transformer construction. Built-in transformers cover field,
+object, conditional, validation, interval, ISO-time, multi-field, and tuple-map
+transformations.
 """
 
 # pylint: disable=useless-import-alias

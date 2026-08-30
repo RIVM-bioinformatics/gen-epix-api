@@ -1,7 +1,10 @@
-"""Built-in transformer implementations for the transform package.
+"""Expose the built-in transformation implementations.
 
-The subpackage provides field, object, conditional, validation, interval,
-ISO-time, multi-field, and tuple-mapping transformers.
+Field and object transformers update selected values or whole objects.
+Conditional and validation transformers control whether a transformation
+continues. Interval and ISO-time transformers map domain ranges and temporal
+granularities, while multi-field and tuple-map transformers coordinate related
+fields through supplied functions or lookup mappings.
 """
 
 # pylint: disable=useless-import-alias

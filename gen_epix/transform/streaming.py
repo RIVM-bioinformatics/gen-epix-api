@@ -32,7 +32,22 @@ class StreamingPipeline:
         on_success: Callable[[TransformResult], None] | None = None,
         on_error: Callable[[TransformResult], None] | None = None,
     ) -> Iterator[TransformResult]:
-        """Process stream asynchronously with callbacks."""
+        """Process a stream while invoking callbacks and enforcing an error threshold.
+
+        Despite its historical name, this method evaluates the synchronous pipeline
+        directly and yields each result lazily.
+
+        Args:
+            stream: Objects to transform in encounter order.
+            on_success: Optional callback for each successful transformation.
+            on_error: Optional callback for each failed transformation.
+
+        Yields:
+            Transformation result for each processed input.
+
+        Raises:
+            RuntimeError: If the observed failure rate exceeds ``error_threshold``.
+        """
         for obj in stream:
             results = list(self.pipeline.process_stream(iter([obj])))
 

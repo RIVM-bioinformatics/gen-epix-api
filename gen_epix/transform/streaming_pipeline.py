@@ -37,6 +37,17 @@ class StreamingPipeline:
         Despite its historical name, this iterator executes the synchronous
         pipeline directly. Use `process_stream_async_coroutine` for concurrent
         executor-backed processing.
+
+        Args:
+            stream: Objects to transform in encounter order.
+            on_success: Optional callback for each successful transformation.
+            on_error: Optional callback for each failed transformation.
+
+        Yields:
+            Transformation result for each processed input.
+
+        Raises:
+            RuntimeError: If the observed failure rate exceeds ``error_threshold``.
         """
         for obj in stream:
             results = list(self.pipeline.process_stream(iter([obj])))

@@ -28,7 +28,18 @@ class Registry:
 
     @classmethod
     def create(cls, name: str, **kwargs: Any) -> Transformer:
-        """Create a named transformer, preferring a factory over a class."""
+        """Create a named transformer, preferring a registered factory over a class.
+
+        Args:
+            name: Registered transformer or factory name.
+            **kwargs: Arguments forwarded to the selected constructor.
+
+        Returns:
+            Transformer created by the registered factory or class.
+
+        Raises:
+            ValueError: If no transformer class or factory is registered as ``name``.
+        """
         if name in cls._factories:
             return cls._factories[name](**kwargs)
         elif name in cls._transformers:

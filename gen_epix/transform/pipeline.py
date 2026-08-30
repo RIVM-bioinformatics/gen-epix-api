@@ -100,7 +100,21 @@ class RetryTransformer(Transformer):
         self.backoff_factor = backoff_factor
 
     def transform(self, obj: Any) -> Any:
-        """Run the wrapped transformer until success or the retry limit is reached."""
+        """Run the wrapped transformer until it succeeds or retries are exhausted.
+
+        Retries only exceptions raised by the wrapped transform method. Delays grow
+        exponentially from ``backoff_factor`` between attempts.
+
+        Args:
+            obj: Object passed to the wrapped transformer.
+
+        Returns:
+            Result returned by the wrapped transformer.
+
+        Raises:
+            Exception: Re-raises the final exception from the wrapped transformer
+                after the retry limit is reached.
+        """
         last_exception = None
 
         for attempt in range(self.max_retries + 1):

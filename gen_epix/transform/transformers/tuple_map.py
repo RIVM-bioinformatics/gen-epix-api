@@ -155,12 +155,20 @@ class TupleMapTransformer(Transformer):
         self._row_fields = row_src_fields + row_tgt_fields
 
     def transform(self, obj: ObjectAdapter) -> ObjectAdapter:
-        """
-        Transform the provided object using the mapping.
+        """Transform an adapted object using the configured tuple mapping.
 
-        The object has the target fields added or updated based on the mapping, and is
-        returned again to allow for method chaining. Missing mappings either raise or
-        write configured defaults according to `on_no_match`.
+        Target fields are added or updated in place. Missing mappings either raise or
+        write configured defaults according to ``on_no_match``.
+
+        Args:
+            obj: Adapted object containing the configured source fields.
+
+        Returns:
+            The same adapter after its target fields are updated.
+
+        Raises:
+            ValueError: If no tuple mapping exists and ``on_no_match`` is ``RAISE``,
+                or if the configured no-match behavior is unsupported.
         """
         key = self._normalize_key(tuple(obj.get(x) for x in self._row_src_fields))
         if key not in self._tuple_map:
