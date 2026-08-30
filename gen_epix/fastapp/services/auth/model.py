@@ -20,7 +20,11 @@ class IDPUser(Model):
 
 
 class IdentityProvider(Model):
-    """Configuration for an external identity provider."""
+    """Configuration for an external identity provider.
+
+    Model validation:
+    Public providers require both a client ID and an OIDC scope.
+    """
 
     ENTITY: ClassVar = Entity()
 
@@ -35,11 +39,13 @@ class IdentityProvider(Model):
         default=None, description="The discovery URL of the identity provider"
     )
     client_id: str | None = Field(
-        default=None, description="The client ID that tokens should be requested for"
+        default=None,
+        description="Client ID requested in tokens; required when the provider is public.",
     )
     client_secret: str | None = Field(default=None, description="The client secret")
     scope: str | None = Field(
-        default=None, description="The OIDC scopes, space separated"
+        default=None,
+        description="Space-separated OIDC scopes; required when the provider is public.",
     )
     public: bool = Field(
         default=False, description="Whether the identity provider is public"
@@ -47,7 +53,7 @@ class IdentityProvider(Model):
 
     @model_validator(mode="after")
     def _validate(self) -> Self:
-        """Validate the requested value."""
+        """Validate public-provider credentials."""
         if self.public:
             if self.client_id is None:
                 raise ValueError(
@@ -95,6 +101,10 @@ class OidcServerCfg(Model):
         This model extends the basic configuration fields (name, label, client_id, etc.)
         with the complete set of OpenID Provider Metadata fields for full specification
         compliance.
+
+    Model validation:
+    Claim mappings cannot map a claim to itself. Public providers require both
+    a client ID and an OIDC scope.
     """
 
     NON_SPEC_FIELDS: ClassVar[set[str]] = {
@@ -125,20 +135,27 @@ class OidcServerCfg(Model):
         default=None, description="The URL of the OpenID Connect discovery document"
     )
     client_id: str | None = Field(
-        default=None, description="The client ID of the application"
+        default=None,
+        description="Application client ID; required when the provider is public.",
     )
     client_secret: str | None = Field(
         default=None, description="The client secret of the application"
     )
     claim_map: dict[str, list[str]] = Field(
         default_factory=dict,
-        description="Mapping of identity provider claims to standard names. Space separated original claim names can be used as values.",
+        description=(
+            "Maps normalized claims to source names. Strings are split on spaces; "
+            "keys and values must be strings."
+        ),
     )
     audience: str | None = Field(
         default=None,
         description="The audience that the identity provider will include in the aud claim of tokens",
     )
-    scope: str | None = Field(default=None, description="The scope of the application")
+    scope: str | None = Field(
+        default=None,
+        description="Application OIDC scope; required when the provider is public.",
+    )
     public: bool = Field(
         default=False, description="Whether the identity provider is public"
     )
@@ -312,7 +329,7 @@ class OidcServerCfg(Model):
 
     @model_validator(mode="after")
     def _validate(self) -> Self:
-        """Validate that all required fields are set after model initialization."""
+        """Validate claim mappings and public-provider credentials."""
         for new_claim_name, orig_claim_names in self.claim_map.items():
             if new_claim_name in orig_claim_names:
                 raise ValueError(
@@ -332,7 +349,7 @@ class OidcServerCfg(Model):
     @field_validator("claim_map", mode="before")
     @classmethod
     def validate_claim_map(cls, claim_map: dict) -> dict[str, list[str]]:
-        """Validate the claim_map field to ensure it is a dictionary of string keys to list of string values."""
+        """Normalize source claim names to string lists."""
         if not isinstance(claim_map, dict):
             raise ValueError("claim_map must be a dictionary")
         for new_claim in claim_map:

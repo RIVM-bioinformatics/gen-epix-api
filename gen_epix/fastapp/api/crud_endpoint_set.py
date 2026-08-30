@@ -12,7 +12,12 @@ from gen_epix.filter import Filter
 
 
 class CrudEndpointSet(BaseModel):
-    """Describe the routes and models used for a CRUD API resource."""
+    """Describe the routes and models used for a CRUD API resource.
+
+    Model validation:
+    Missing read and create API model classes are derived from `model_class`.
+    Non-mapping initialization data is rejected.
+    """
 
     model_config = ConfigDict(arbitrary_types_allowed=True, protected_namespaces=())
     model_class: type
@@ -35,17 +40,7 @@ class CrudEndpointSet(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def _validate_args(cls, data: Any) -> Any:
-        """Fill omitted API model classes and operation-ID basenames.
-
-        Args:
-            data: Mapping used to initialize the endpoint set.
-
-        Returns:
-            Input mapping with default API model classes and operation ID basename.
-
-        Raises:
-            NotImplementedError: If Pydantic supplies non-mapping input.
-        """
+        """Normalize endpoint-set initialization data."""
         if isinstance(data, dict):
             if not data.get("read_api_model_class"):
                 data["read_api_model_class"] = data["model_class"]

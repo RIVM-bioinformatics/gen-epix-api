@@ -185,7 +185,7 @@ class RepositoryInitializationServiceError(InitializationServiceError):
 
 
 class RepositoryServiceError(ServiceException):
-    """Error raised by repository-backed service operations."""
+    """Error representing a failure in a repository-backed service operation."""
 
     pass
 
