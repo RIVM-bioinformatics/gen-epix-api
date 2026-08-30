@@ -14,11 +14,23 @@ from gen_epix.seqdb.services.seq.crud_file import file_service_crud_file
 
 
 class FileService(BaseFileService):
+    """Validate and persist SeqDB biological files."""
 
     def create_file(
         self,
         cmd: command.CreateFileCommand,
     ) -> UUID:
+        """Validate file content and create its persisted file record.
+
+        Args:
+            cmd: File-creation command containing content, format, and compression.
+
+        Returns:
+            Identifier of the persisted file.
+
+        Raises:
+            InvalidArgumentsError: The format is unsupported or the content is invalid.
+        """
         # Validate file content based on format
         if cmd.format == enum.FileFormat.FASTA:
             self._verify_fasta_content(cmd.file.content, cmd.compression)
@@ -47,6 +59,18 @@ class FileService(BaseFileService):
     def _get_file_text_stream(
         self, content: bytes, compression: enum.FileCompression
     ) -> StringIO:
+        """Decode possibly gzip-compressed UTF-8 content into a text stream.
+
+        Args:
+            content: Raw file bytes to decode.
+            compression: Compression used for the file bytes.
+
+        Returns:
+            Decoded text stream positioned at its start.
+
+        Raises:
+            InvalidArgumentsError: The bytes cannot be decompressed or decoded as UTF-8.
+        """
         try:
             if compression == enum.FileCompression.NONE:
                 text_stream = StringIO(content.decode("utf-8"))
@@ -62,6 +86,16 @@ class FileService(BaseFileService):
     def _verify_fasta_content(
         self, content: bytes, compression: enum.FileCompression
     ) -> None:
+        """Verify a FASTA payload has records containing valid DNA characters.
+
+        Args:
+            content: Raw FASTA file bytes to validate.
+            compression: Compression used for the file bytes.
+
+        Raises:
+            InvalidArgumentsError: The content is unparsable, empty, or contains invalid
+                sequence characters.
+        """
         text_stream: StringIO = self._get_file_text_stream(content, compression)
         try:
             seq_records: Iterable = SeqIO.parse(text_stream, "fasta")  # type: ignore[no-untyped-call]
@@ -90,6 +124,16 @@ class FileService(BaseFileService):
     def _verify_fastq_content(
         self, content: bytes, compression: enum.FileCompression
     ) -> None:
+        """Verify a FASTQ payload has valid DNA records and matching quality scores.
+
+        Args:
+            content: Raw FASTQ file bytes to validate.
+            compression: Compression used for the file bytes.
+
+        Raises:
+            InvalidArgumentsError: The content is unparsable, empty, lacks matching
+                quality scores, or contains invalid sequence characters.
+        """
         text_stream: StringIO = self._get_file_text_stream(content, compression)
         try:
             seq_records: Iterable = SeqIO.parse(text_stream, "fastq")  # type: ignore[no-untyped-call]
@@ -129,4 +173,5 @@ class FileService(BaseFileService):
         self,
         cmd: command.FileCrudCommand,
     ) -> model.File | list[model.File] | UUID | list[UUID] | bool | list[bool] | None:
+        """Delegate file CRUD to the specialized file CRUD operation."""
         return file_service_crud_file(self, cmd)

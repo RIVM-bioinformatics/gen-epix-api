@@ -1,3 +1,5 @@
+"""Re-export SeqDB service interfaces."""
+
 # pylint: disable=useless-import-alias
 
 from gen_epix.commondb.domain.service import (

@@ -9,11 +9,14 @@ from gen_epix.seqdb.domain.service import BaseAbacService
 
 
 class ReadOrganizationResultsOnlyPolicy(CommonReadOrganizationResultsOnlyPolicy):
+    """Restrict result reads to the caller's authorized organization scope."""
+
     def __init__(
         self,
         abac_service: BaseAbacService,
         **kwargs: Any,
     ):
+        """Initialize the shared policy with SeqDB command-attribute mappings."""
         super().__init__(
             abac_service,
             **kwargs,

@@ -1,4 +1,6 @@
 # pylint: disable=useless-import-alias
+"""Re-export SQLAlchemy persistence models registered for SeqDB entities."""
+
 from gen_epix.commondb.repositories.sa_model import Contact as Contact
 from gen_epix.commondb.repositories.sa_model import DataCollection as DataCollection
 from gen_epix.commondb.repositories.sa_model import (

@@ -9,11 +9,14 @@ from gen_epix.commondb.policies import (
 
 
 class ReadSelfResultsOnlyPolicy(CommonReadSelfResultsOnlyPolicy):
+    """Restrict eligible result reads to resources owned by the caller."""
+
     def __init__(
         self,
         abac_service: BaseAbacService,
         **kwargs: Any,
     ):
+        """Initialize the shared policy with SeqDB identifier-attribute mappings."""
         super().__init__(
             abac_service,
             **kwargs,

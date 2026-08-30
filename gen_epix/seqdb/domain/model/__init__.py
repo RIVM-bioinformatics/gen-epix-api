@@ -1,3 +1,5 @@
+"""Re-export SeqDB domain model types."""
+
 # pylint: disable=useless-import-alias
 from gen_epix import fastapp
 from gen_epix.commondb.domain import enum as common_enum

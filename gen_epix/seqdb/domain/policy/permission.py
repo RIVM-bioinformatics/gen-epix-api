@@ -9,6 +9,7 @@ from gen_epix.seqdb.domain.enum import Role
 
 
 class RoleGenerator(CommonRoleGenerator):
+    """Generate SeqDB role permissions from common and domain command mappings."""
 
     COMMON_ROLE_ENUM_MAP = {x: Role[x.name] for x in CommonRole}
 
