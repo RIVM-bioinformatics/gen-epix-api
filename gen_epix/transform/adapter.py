@@ -75,6 +75,9 @@ class RowLike(Protocol):
         Yields:
             Field name or other hashable field identifier.
 
+        Returns:
+            An iterator over available field identifiers.
+
         Raises:
             NotImplementedError: Always, until a compatible row type implements it.
         """

@@ -221,6 +221,10 @@ class TupleMapTransformer(Transformer):
         """
         Validate the fallback values used when no tuple mapping is found.
 
+        Args:
+            on_no_match: Behavior to apply when no mapping is found.
+            default_values: Fallback values for the configured target fields.
+
         Raises:
             ValueError: Raised when SET_DEFAULT lacks default values or the number of
                 defaults does not match the configured target fields.
@@ -241,6 +245,10 @@ class TupleMapTransformer(Transformer):
     ) -> None:
         """
         Validate row source and target fields against the transformer shape.
+
+        Args:
+            row_src_fields: Source fields to read from input rows.
+            row_tgt_fields: Target fields to write to output rows.
 
         Raises:
             ValueError: Raised when row field counts differ from initialization or
@@ -280,6 +288,11 @@ class TupleMapTransformer(Transformer):
     ) -> None:
         """
         Validate mapping fields against the configured row fields.
+
+        Args:
+            map_src_fields: Source fields used by mapping rows.
+            map_tgt_fields: Target fields produced by mapping rows.
+            is_active_map_field: Optional mapping-row field controlling activity.
 
         Raises:
             ValueError: Raised when map field counts differ from row field counts,
