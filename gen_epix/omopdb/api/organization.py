@@ -1,3 +1,5 @@
+"""API schemas extending shared organization endpoint permissions for OmopDB."""
+
 from enum import Enum
 
 from pydantic import BaseModel
@@ -11,6 +13,8 @@ CommandName = Enum("CommandName", {x: x for x in DOMAIN.command_names})  # type:
 
 
 class ApiPermission(BaseModel, frozen=True):
+    """Represent an OmopDB command permission exposed by organization APIs."""
+
     command_name: CommandName = (  # pyright: ignore[reportInvalidTypeForm]
         copy_model_field(Permission, "command_name")
     )

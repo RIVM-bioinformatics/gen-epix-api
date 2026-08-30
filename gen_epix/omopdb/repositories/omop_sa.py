@@ -1,3 +1,5 @@
+"""SQLAlchemy-backed repository for OmopDB person and cohort queries."""
+
 from datetime import datetime
 from typing import Any, cast
 from uuid import UUID
@@ -12,6 +14,7 @@ from gen_epix.omopdb.repositories import sa_model as sa_model
 
 
 class OmopSARepository(SARepository, BaseOmopRepository):
+    """Implement OMOP query operations using SQLAlchemy model mappings."""
 
     def get_person_ids_modified_in_range(
         self,
@@ -19,6 +22,7 @@ class OmopSARepository(SARepository, BaseOmopRepository):
         modified_since: datetime | None = None,
         modified_until: datetime | None = None,
     ) -> list[UUID]:
+        """Return person IDs modified in the requested half-open time range."""
         assert isinstance(uow, SAUnitOfWork)
         modified_person_ids: set[UUID] = set()
         for model_class in [model.Person] + model.FullPerson.DATA_CLASSES:
@@ -72,6 +76,7 @@ class OmopSARepository(SARepository, BaseOmopRepository):
         self,
         person_ids: list[UUID],
     ) -> list[model.FullPerson]:
+        """Assemble full-person results from OMOP entities and identifiers."""
         if not person_ids:
             return []
 

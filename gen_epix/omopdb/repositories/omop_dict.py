@@ -1,3 +1,5 @@
+"""Dictionary-backed repository for OmopDB person and cohort queries."""
+
 from datetime import date, datetime
 from uuid import UUID
 
@@ -8,6 +10,7 @@ from gen_epix.omopdb.domain.repository.omop import BaseOmopRepository
 
 
 class OmopDictRepository(DictRepository, BaseOmopRepository):
+    """Implement OMOP query operations using in-memory model collections."""
 
     def get_person_ids_modified_in_range(
         self,

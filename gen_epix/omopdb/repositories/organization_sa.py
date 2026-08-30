@@ -1,3 +1,5 @@
+"""SQLAlchemy organization repository configured with OmopDB user models."""
+
 from typing import Any
 
 from sqlalchemy import Engine
@@ -12,11 +14,14 @@ from gen_epix.omopdb.domain import model
 
 
 class OrganizationSARepository(CommonOrganizationSARepository):
+    """Use shared organization persistence with OmopDB SQLAlchemy model types."""
+
     def __init__(
         self,
         engine: Engine,
         **kwargs: Any,
     ):
+        """Initialize shared SQL organization storage with OmopDB model classes."""
         super().__init__(
             engine,
             user_class=model.User,

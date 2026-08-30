@@ -1,3 +1,9 @@
+"""Register and expose SQLAlchemy mappings for shared and OmopDB model types.
+
+The module re-exports mapped CommonDB and OMOP tables and builds
+`SA_MODELS_BY_SERVICE_TYPE` for repository-to-domain model conversion.
+"""
+
 # pylint: disable=useless-import-alias
 
 from gen_epix import fastapp
