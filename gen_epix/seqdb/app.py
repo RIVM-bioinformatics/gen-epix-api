@@ -1,3 +1,10 @@
+"""Compose and expose the configured SeqDB FastAPI application.
+
+This module combines the SeqDB application composer, shared router factory,
+logging configuration, and OpenAPI metadata. The `app` alias preserves the
+ASGI import contract used by existing startup integrations.
+"""
+
 from gen_epix.commondb.app_setup import create_fast_api
 from gen_epix.commondb.config import AppCfg
 from gen_epix.seqdb.api.router import create_routers

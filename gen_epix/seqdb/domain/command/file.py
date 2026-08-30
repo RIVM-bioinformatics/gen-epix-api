@@ -1,3 +1,5 @@
+"""Define command objects for creating and managing SeqDB file records."""
+
 from typing import ClassVar
 
 from pydantic import Field
@@ -8,9 +10,10 @@ from gen_epix.seqdb.domain import enum, model
 
 # Non-CRUD commands
 class CreateFileCommand(Command):
-    """
-    Create a file. The given expected format and compression are used to verify the
-    file content.
+    """Create a file after verifying its declared format and compression.
+
+    The expected format and compression describe how the submitted content must
+    be interpreted before the file is persisted.
     """
 
     file: model.File = Field(description="The file to create.")
@@ -23,4 +26,6 @@ class CreateFileCommand(Command):
 
 # CRUD commands
 class FileCrudCommand(CrudCommand):
+    """Provide shared CRUD command metadata for SeqDB file records."""
+
     MODEL_CLASS: ClassVar = model.File

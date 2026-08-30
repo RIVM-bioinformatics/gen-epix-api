@@ -1,3 +1,9 @@
+"""Expose SeqDB sequence operations through command-backed API endpoints.
+
+The request models mirror sequence command inputs while the endpoint factory
+delegates sequence, distance, tree, and similarity operations to SeqDB.
+"""
+
 from collections.abc import Callable, Iterable
 from datetime import datetime
 from typing import Any, NoReturn, Self
@@ -20,7 +26,7 @@ from gen_epix.util import copy_model_field
 
 
 class UploadSamplesRequestBody(command.UploadSamplesCommand):
-    """"""
+    """Represent a batch-upload request using the upload command contract."""
 
     __doc__ = command.UploadSamplesCommand.__doc__
 
@@ -45,7 +51,7 @@ class UploadSamplesRequestBody(command.UploadSamplesCommand):
 
 
 class CalculatePhylogeneticTreeRequestBody(PydanticBaseModel):
-    """"""
+    """Represent inputs for generating a phylogenetic tree from profiles."""
 
     __doc__ = command.CalculatePhylogeneticTreeCommand.__doc__
     protocol_id: UUID = copy_model_field(
@@ -67,7 +73,7 @@ class CalculatePhylogeneticTreeRequestBody(PydanticBaseModel):
 
 
 class RetrieveSimilarProfilesRequestBody(PydanticBaseModel):
-    """"""
+    """Represent profile identifiers and a distance threshold for similarity search."""
 
     __doc__ = command.RetrieveSimilarProfilesCommand.__doc__
     protocol_id: UUID = copy_model_field(
@@ -84,7 +90,11 @@ class RetrieveSimilarProfilesRequestBody(PydanticBaseModel):
 
 
 class UpdateSeqDistancesRequestBody(PydanticBaseModel):
-    """"""
+    """Represent a request to calculate missing distances for a protocol.
+
+    Model validation: Uses the deprecated `max_new_profiles` value as `limit`
+    when no explicit limit is supplied.
+    """
 
     __doc__ = command.UpdateSeqDistancesCommand.__doc__
     protocol_id: UUID = copy_model_field(
@@ -105,13 +115,14 @@ class UpdateSeqDistancesRequestBody(PydanticBaseModel):
     # TODO: remove max_new_profiles usage and replace by limit
     @model_validator(mode="after")
     def validate_limit(self) -> Self:
+        """Use the deprecated maximum-profile value when no explicit limit is set."""
         if self.limit is None:
             self.limit = self.max_new_profiles
         return self
 
 
 class RetrieveSamplesByIdsRequestBody(PydanticBaseModel):
-    """"""
+    """Represent sample identifiers for a full-sample retrieval request."""
 
     __doc__ = command.RetrieveSamplesByIdCommand.__doc__
     sample_ids: list[UUID] = copy_model_field(
@@ -122,7 +133,7 @@ class RetrieveSamplesByIdsRequestBody(PydanticBaseModel):
 
 
 class RetrieveSampleIdentifiersByIdsRequestBody(PydanticBaseModel):
-    """"""
+    """Represent sample identifiers for a lightweight identifier retrieval request."""
 
     __doc__ = command.RetrieveSampleIdentifiersByIdCommand.__doc__
     sample_ids: list[UUID] = copy_model_field(
@@ -133,7 +144,7 @@ class RetrieveSampleIdentifiersByIdsRequestBody(PydanticBaseModel):
 
 
 class RetrieveSeqFastaRequestBody(PydanticBaseModel):
-    """"""
+    """Represent sequence identifiers and download metadata for a FASTA response."""
 
     __doc__ = command.RetrieveSeqFastaCommand.__doc__
 
@@ -149,7 +160,7 @@ class RetrieveSeqFastaRequestBody(PydanticBaseModel):
 
 
 class RetrieveBestSeqPerSampleRequestBody(PydanticBaseModel):
-    """"""
+    """Represent ranking criteria for selecting each sample's best sequence."""
 
     __doc__ = command.RetrieveBestSeqPerSampleCommand.__doc__
 
@@ -166,7 +177,7 @@ class RetrieveBestSeqPerSampleRequestBody(PydanticBaseModel):
 
 
 class RetrieveBestSeqProfilePerSampleRequestBody(PydanticBaseModel):
-    """"""
+    """Represent ranking criteria for selecting each sample's best profile."""
 
     __doc__ = command.RetrieveBestSeqProfilePerSampleCommand.__doc__
 
@@ -183,7 +194,7 @@ class RetrieveBestSeqProfilePerSampleRequestBody(PydanticBaseModel):
 
 
 class RetrieveBestSeqClassificationPerSampleRequestBody(PydanticBaseModel):
-    """"""
+    """Represent ranking criteria for selecting each sample's best classification."""
 
     __doc__ = command.RetrieveBestSeqClassificationPerSampleCommand.__doc__
 
