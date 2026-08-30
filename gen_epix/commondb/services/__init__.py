@@ -1,3 +1,9 @@
+"""Re-export concrete commondb services and the remote commondb HTTP client.
+
+The package provides ABAC, organization, RBAC, system, upload, and user-manager
+implementations alongside FastApp's authentication service.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix.commondb.services.abac import AbacService as AbacService
 from gen_epix.commondb.services.organization import (

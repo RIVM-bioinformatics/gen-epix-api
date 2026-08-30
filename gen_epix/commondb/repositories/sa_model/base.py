@@ -1,3 +1,5 @@
+"""Define reusable SQLAlchemy audit metadata mixins for commondb rows."""
+
 import datetime
 from uuid import UUID
 
@@ -9,9 +11,7 @@ from gen_epix.fastapp.repositories.sa import ServerUtcCurrentTime, UTCDateTime
 
 @declarative_mixin
 class RowMetadataMixin:
-    """
-    SQLAlchemy model mixin for adding a number of standard fields.
-    """
+    """Add ID, creation, modification, and modifying-user fields to a row."""
 
     id: Mapped[UUID] = mapped_column(UUIDType(), primary_key=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
@@ -28,10 +28,7 @@ class RowMetadataMixin:
 
 @declarative_mixin
 class NoIdRowMetadataMixin:
-    """
-    SQLAlchemy model mixin for adding a number of standard fields, but no standard `id`
-    column as primary key.
-    """
+    """Add audit metadata fields to a row with a nonstandard primary key."""
 
     created_at: Mapped[datetime.datetime] = mapped_column(
         UTCDateTime, nullable=False, server_default=ServerUtcCurrentTime()
