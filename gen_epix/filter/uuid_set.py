@@ -10,7 +10,11 @@ from gen_epix.filter.enum import FilterType
 
 
 class UuidSetFilter(Filter):
-    """Match UUID values contained in an immutable set."""
+    """Match UUID values contained in an immutable set.
+
+    Model validation:
+    Initializes a direct UUID membership matcher.
+    """
 
     members: frozenset[UUID] = Field(description="The UUIDs to match.", frozen=True)
 
@@ -21,7 +25,17 @@ class UuidSetFilter(Filter):
         return self
 
     def _match(self, value: Any) -> bool:
-        """Match a value using the function generated during validation."""
+        """Match a value using the function generated during validation.
+
+        Args:
+            value: The UUID value to match.
+
+        Returns:
+            Whether the value belongs to the configured set.
+
+        Raises:
+            NotImplementedError: Always, until model validation supplies the function.
+        """
         raise NotImplementedError(
             "Method is implemented dynamically in _validate_state"
         )

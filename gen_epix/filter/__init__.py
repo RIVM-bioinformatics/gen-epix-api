@@ -1,4 +1,13 @@
-"""Public filter models and operators for matching scalar and row data."""
+"""Expose public filter models and operators for matching scalar and row data.
+
+The base `Filter`, `CompositeFilter`, date and datetime range filters define
+shared matching and logical-composition behavior. `ComparisonOperator`,
+`FilterType`, and `LogicalOperator` configure range and composite semantics.
+
+Equality, existence, set-membership, numeric/date range, partial-date, regex,
+and no-op filters provide concrete matching behavior. Their `Typed...` variants
+carry a serialized `FilterType` for transport and persistence boundaries.
+"""
 
 # pylint: disable=useless-import-alias
 # Import all filter classes, part 1

@@ -9,7 +9,12 @@ from gen_epix.filter.enum import ComparisonOperator, FilterType
 
 
 class RangeFilter(Filter):
-    """Match values using configurable lower and upper boundary operators."""
+    """Match values using configurable lower and upper boundary operators.
+
+    Model validation:
+    At least one bound is required; ordered bounds and compatible censor
+    operators are enforced before building the matching function.
+    """
 
     lower_bound: Any | None = Field(
         default=None, description="The lower bound of the range.", frozen=True
@@ -29,7 +34,11 @@ class RangeFilter(Filter):
     )
 
     def _validate_state_bounds(self) -> None:
-        """Validate bound presence, ordering, and compatible censor operators."""
+        """Validate bound presence, ordering, and compatible censor operators.
+
+        Raises:
+            AssertionError: If bounds or censor operators form an invalid range.
+        """
         # Validate the bounds and censors
         if self.lower_bound is None:
             if self.upper_bound is None:
@@ -111,7 +120,17 @@ class RangeFilter(Filter):
         return self
 
     def _match(self, value: Any) -> bool:
-        """Match a value using the function generated during validation."""
+        """Match a value using the function generated during validation.
+
+        Args:
+            value: The scalar value to match.
+
+        Returns:
+            Whether the value is within the configured range.
+
+        Raises:
+            NotImplementedError: Always, until model validation supplies the function.
+        """
         raise NotImplementedError(
             "Method is implemented dynamically in _validate_state"
         )

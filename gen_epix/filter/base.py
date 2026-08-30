@@ -218,7 +218,17 @@ class Filter(BaseModel):
     def _initialize_mapping(
         self, map_fn: Callable[[Any], Any] | None
     ) -> tuple[Callable[[Any], Any], Hashable]:
-        """Validate the row key and return the mapping function and key."""
+        """Validate the row key and return the mapping function and key.
+
+        Args:
+            map_fn: Optional mapping applied before matching a row value.
+
+        Returns:
+            The mapping function and configured row key.
+
+        Raises:
+            ValueError: If no row key is configured.
+        """
         if self.key is None:
             raise ValueError("Key must be set to apply filter to a row.")
         if not map_fn:
@@ -235,6 +245,9 @@ class Filter(BaseModel):
 
         Returns:
             Whether the value matches the filter.
+
+        Raises:
+            NotImplementedError: Always, because subclasses provide matching logic.
         """
         raise NotImplementedError()
 
@@ -267,7 +280,10 @@ class Filter(BaseModel):
             map_fn (Callable[[Any], Any] | None, optional): Function to be applied to each value before matching. Defaults to None.
 
         Returns:
-            Iterable[bool]: An iterable of booleans for each row, True if the data matches the filter, False otherwise.
+            An iterator containing the values that match this filter.
+
+        Raises:
+            ValueError: If `axis` is not zero or one.
         """
         if axis == 0:
             return self.filter_rows(data, na_values=na_values, map_fn=map_fn)

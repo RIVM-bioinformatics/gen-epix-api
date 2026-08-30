@@ -41,7 +41,19 @@ class ExistsFilter(Filter):
         na_values: set[Any] | None = None,
         map_fn: Callable[[Any], Any] | None = None,
     ) -> bool:
-        """Return whether the filter key exists in a row with a value."""
+        """Return whether the filter key exists in a row with a value.
+
+        Args:
+            row: Row to inspect.
+            na_values: Values treated as unavailable.
+            map_fn: Ignored compatibility mapping argument.
+
+        Returns:
+            Whether the configured key has a usable value.
+
+        Raises:
+            ValueError: If no row key is configured.
+        """
         if self.key is None:
             raise ValueError("Key must be set to apply filter to a row.")
         # Match if both key exists and value not null
@@ -56,7 +68,22 @@ class ExistsFilter(Filter):
         na_values: set[Any] | None = None,
         map_fn: Callable[[Any], Any] | None = None,
     ) -> Iterable[bool]:
-        """Yield existence matches for each row."""
+        """Yield existence matches for each row.
+
+        Args:
+            rows: Rows to inspect.
+            na_values: Values treated as unavailable.
+            map_fn: Ignored compatibility mapping argument.
+
+        Yields:
+            Whether each row has a usable value at the configured key.
+
+        Returns:
+            An iterator over row match results.
+
+        Raises:
+            ValueError: If no row key is configured.
+        """
         if self.key is None:
             raise ValueError("Key must be set to apply filter to a row.")
         # Match if both key exists and value not null
