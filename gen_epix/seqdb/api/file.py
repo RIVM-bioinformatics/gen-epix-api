@@ -1,3 +1,9 @@
+"""Expose SeqDB file creation and generated file CRUD API endpoints.
+
+The endpoint factory translates file-upload requests into SeqDB commands and
+delegates generated CRUD endpoint registration to the shared FastApp adapter.
+"""
+
 import base64
 from collections.abc import Callable
 from typing import Any, NoReturn
@@ -15,6 +21,8 @@ from gen_epix.util import copy_model_field
 
 
 class CreateFileRequestBody(PydanticBaseModel):
+    """Represent a base64-encoded file and its declared storage encoding."""
+
     content: str = Field(description="The content of the file as base64 encoded bytes.")
     format: enum.FileFormat = copy_model_field(command.CreateFileCommand, "format")
     compression: enum.FileCompression = copy_model_field(
@@ -28,6 +36,17 @@ def create_file_endpoints(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     **kwargs: Any,
 ) -> None:
+    """Register endpoints that create and manage SeqDB files.
+
+    The custom upload endpoint creates a file command from the decoded request
+    body. Standard file CRUD endpoints are registered by the shared generator.
+
+    Args:
+        router: Router or application that receives the endpoints.
+        app: SeqDB application that handles file commands.
+        handle_exception: Application exception translator for endpoint errors.
+        **kwargs: Additional endpoint registration options.
+    """
     assert handle_exception
     app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency
@@ -42,6 +61,7 @@ def create_file_endpoints(
         user: registered_user_dependency,
         request_body: CreateFileRequestBody,  # type: ignore
     ) -> UUID:
+        """Create a SeqDB file from its encoded request content."""
         try:
             retval: UUID = app.handle(
                 command.CreateFileCommand(

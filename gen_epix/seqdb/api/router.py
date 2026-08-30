@@ -1,3 +1,5 @@
+"""Compose the common and SeqDB-specific API routers."""
+
 from collections.abc import Callable
 from typing import Any, NoReturn
 
@@ -24,6 +26,22 @@ def create_routers(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     router_kwargs: dict = {},
 ) -> list[APIRouter]:
+    """Create the routers that expose the SeqDB application.
+
+    Common authentication, authorization, organization, and system endpoints
+    share the same application as SeqDB-specific sequence and file endpoints.
+
+    Args:
+        app: Composed SeqDB application used by all registered endpoints.
+        registered_user_dependency: Dependency resolving registered callers.
+        new_user_dependency: Dependency resolving first-time callers.
+        idp_user_dependency: Dependency resolving identity-provider callers.
+        handle_exception: Application exception translator for endpoint errors.
+        router_kwargs: Keyword arguments applied to every created router.
+
+    Returns:
+        Routers configured for the common and SeqDB-specific endpoint groups.
+    """
     assert app
     router_data: list[RouterData] = [
         # Common routers
