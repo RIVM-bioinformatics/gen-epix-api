@@ -33,6 +33,7 @@ from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 class Contig(BaseSeq, QualityMixin):
     """
     A contiguous DNA sequence. Any IUPAC ambiguity codes are allowed in the sequence.
+
     A contig is not persistable on its own, but is meant to be part of other objects
     through composition.
 
@@ -41,12 +42,15 @@ class Contig(BaseSeq, QualityMixin):
 
     A contig is immutable: once created, it cannot be updated. As such,
     contig IDs can safely be referenced in other models and outside of the application.
+
+    Model serialization: Contig identifiers are emitted as strings.
     """
 
     NAME: ClassVar = "Contig"
 
     @field_serializer("id", mode="plain")
     def _serialize_id(self, value: UUID | None) -> str | None:
+        """Serialize a contig identifier as a string when present."""
         if isinstance(value, UUID):
             return str(value)
         return value
@@ -72,6 +76,12 @@ class Seq(Model, HasSampleMixin, QualityMixin):
     well,  based on the sorted sequence hashes of the contigs that make up the
     sequence, thereby providing an easy way to search for existing exactly matching
     sequences.
+
+    Model validation: File links require a format and default missing compression;
+    URI and file links are mutually exclusive. Paired read-set IDs must be distinct,
+    contigs must be unique, and their hashes derive the sequence hash.
+
+    Model serialization: Contigs are emitted as a JSON list of model representations.
     """
 
     ENTITY: ClassVar = Entity(
@@ -149,7 +159,7 @@ class Seq(Model, HasSampleMixin, QualityMixin):
     )
     @property
     def is_available(self) -> bool:
-        """"""
+        """Return whether the sequence has at least one processed contig."""
         return len(self.contigs) > 0
 
     @computed_field(  # type: ignore[prop-decorator]
@@ -157,7 +167,7 @@ class Seq(Model, HasSampleMixin, QualityMixin):
     )
     @cached_property
     def n_contigs(self) -> int:
-        """"""
+        """Return the number of contigs in this sequence."""
         return len(self.contigs)
 
     @computed_field(  # type: ignore[prop-decorator]
@@ -165,7 +175,7 @@ class Seq(Model, HasSampleMixin, QualityMixin):
     )
     @cached_property
     def length(self) -> int:
-        """"""
+        """Return the total contig length, or zero when no contigs are available."""
         return sum(contig.length for contig in self.contigs) if self.contigs else 0
 
     @computed_field(  # type: ignore[prop-decorator]
@@ -174,7 +184,7 @@ class Seq(Model, HasSampleMixin, QualityMixin):
     @cached_property
     # TODO: consider making this a computed field, add similar fields
     def max_contig_length(self) -> int:
-        """"""
+        """Return the longest contig length, or zero when no contigs are available."""
         return max(contig.length for contig in self.contigs) if self.contigs else 0
 
     @computed_field(  # type: ignore[prop-decorator]
@@ -182,7 +192,7 @@ class Seq(Model, HasSampleMixin, QualityMixin):
     )
     @cached_property
     def min_contig_length(self) -> int:
-        """"""
+        """Return the shortest contig length, or zero when no contigs are available."""
         return min(contig.length for contig in self.contigs) if self.contigs else 0
 
     @computed_field(  # type: ignore[prop-decorator]
@@ -190,7 +200,7 @@ class Seq(Model, HasSampleMixin, QualityMixin):
     )
     @cached_property
     def median_contig_length(self) -> float:
-        """"""
+        """Return the median contig length, or zero when no contigs are available."""
         if not self.contigs:
             return 0.0
         lengths = sorted(contig.length for contig in self.contigs)
@@ -205,7 +215,14 @@ class Seq(Model, HasSampleMixin, QualityMixin):
     )
     @cached_property
     def n50(self) -> int:
-        """"""
+        """Return the assembly N50 contig length.
+
+        Returns:
+            The shortest contig length covering at least half the assembly, or zero.
+
+        Raises:
+            RuntimeError: If the N50 accumulation unexpectedly cannot find a breakpoint.
+        """
         if not self.contigs:
             return 0
         # Sort contigs by length in descending order
@@ -227,6 +244,7 @@ class Seq(Model, HasSampleMixin, QualityMixin):
     def _validate_file_format(
         cls, value: enum.SeqFileFormat | str | int | None
     ) -> enum.SeqFileFormat | None:
+        """Normalize the sequence-file format from its accepted enum representation."""
         return validate_int_enum_value_or_none(enum.SeqFileFormat, value)  # type: ignore[return-value]
 
     @field_validator("file_compression", mode="before")
@@ -234,12 +252,13 @@ class Seq(Model, HasSampleMixin, QualityMixin):
     def _validate_file_compression(
         cls, value: enum.FileCompression | str | int | None
     ) -> enum.FileCompression | None:
+        """Normalize sequence-file compression from its accepted enum representation."""
         return validate_int_enum_value_or_none(enum.FileCompression, value)  # type: ignore[return-value]
 
     @field_validator("contigs", mode="before")
     @classmethod
     def _validate_contigs(cls, value: list[Contig] | str) -> list[Contig]:
-        """"""
+        """Normalize JSON contigs and reject duplicate contig identifiers."""
         if isinstance(value, str):
             value = [Contig.model_validate(x) for x in json.loads(value)]
         elif isinstance(value, list):
@@ -261,7 +280,7 @@ class Seq(Model, HasSampleMixin, QualityMixin):
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
-        """"""
+        """Validate sequence links and derive a hash from available contigs."""
         if self.file_id is not None:
             if self.file_format is None:
                 raise ValueError("file_format must be provided when linking a file")
@@ -284,16 +303,24 @@ class Seq(Model, HasSampleMixin, QualityMixin):
 
     @field_serializer("contigs")
     def _serialize_contigs(self, value: list[Contig]) -> str:
-        """"""
+        """Serialize contigs as a JSON list of model representations."""
         return json.dumps([contig.model_dump() for contig in value])
 
     @staticmethod
     def get_nucleotide_seq_from_nextclade_format(
         ref_seq: str, nextclade_dict: dict[str, Any]
     ) -> str:
-        """
-        Convert a sequence represented in Nextclade format versus a particular reference
-        sequence to the corresponding nucleotide sequence.
+        """Reconstruct a nucleotide sequence from a NextClade representation.
+
+        Args:
+            ref_seq: Reference sequence used by the NextClade result.
+            nextclade_dict: NextClade substitutions, ranges, insertions, and alignment.
+
+        Returns:
+            The reconstructed lower-case nucleotide sequence.
+
+        Raises:
+            ValueError: If a substitution's reference nucleotide differs from ``ref_seq``.
         """
         # Initialise sequence as list of reference sequence symbols
         seq = list(ref_seq)
@@ -373,6 +400,8 @@ class Seq(Model, HasSampleMixin, QualityMixin):
 
 
 class SeqIdentifier(BaseIdentifier):
+    """Associate an external identifier with a sequence."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         Seq,
         relationship_field_name="seq",
@@ -388,6 +417,8 @@ class SeqIdentifier(BaseIdentifier):
 
 
 class HasSeqMixin:
+    """Provide optional sequence relationship fields to derived result models."""
+
     # Annotation-only: an assigned Field lingers as class attr -> pydantic shadow warning
     seq_id: Annotated[
         UUID | None,

@@ -22,17 +22,12 @@ from gen_epix.seqdb.domain.model.seq.base import BaseSeq
 
 
 class Locus(Model):
-    """
-    A genetic locus, e.g. a gene or other genomic region of interest. The locus can be
-    defined on any taxonomic level, e.g. species, lineage, etc. As such, depending on
-    the analysis, two loci may actually represent the same genomic region, but defined
-    for lower taxonomic levels than the one used in the analysis. This information,
-    where relevant, can be captured in a LocusSet or can reside entirely outside the
-    application.
+    """Describe an immutable genetic locus used by sequence analyses.
 
-    A locus is immutable: once created, it cannot be deleted. Its properties
-    should not change semantically either. As such, locus IDs can safely be
-    referenced in other models and outside of the application.
+    Model validation: Empty gene-product codes are normalized to ``None`` and a
+    non-empty gene-product code is permitted only for gene loci.
+
+    Model serialization: Locus types are emitted by their string enum value.
     """
 
     ENTITY: ClassVar = Entity(
@@ -62,34 +57,28 @@ class Locus(Model):
     @field_validator("gene_product_code", mode="before")
     @classmethod
     def _validate_gene_product_code(cls, value: str | None) -> str | None:
+        """Normalize an empty gene-product code to ``None``."""
         if isinstance(value, str) and len(value) == 0:
             return None
         return value
 
     @model_validator(mode="after")
     def _validate_locus(self) -> Self:
+        """Restrict gene-product codes to loci typed as genes."""
         if self.locus_type != enum.LocusType.GENE and self.gene_product_code:
             raise ValueError("gene_product_code must be provided for locus_type GENE.")
         return self
 
     @field_serializer("locus_type", mode="plain")
     def _serialize_locus_type(self, value: str | enum.LocusType) -> str:
+        """Serialize a locus-type enum as its string value."""
         if isinstance(value, enum.LocusType):
             return value.value
         return value
 
 
 class LocusSet(Model):
-    """
-    An ordered set of loci. This can be used to define e.g. schemes for wgMLST typing
-    or other locus-based analyses. Because the set is ordered, i.e. a list of unique
-    locus IDS, it can also be used to define the order of loci in allele profiles and
-    other analyses.
-
-    A locus set is immutable: once created, it cannot be deleted or updated. As such,
-    locus set IDs and names can safely be referenced in other models and outside of the
-    application.
-    """
+    """Define an immutable ordered locus set for locus-based analyses."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="locus_sets",
@@ -109,31 +98,25 @@ class LocusSet(Model):
     )
     @cached_property
     def n_loci(self) -> int:
-        """"""
+        """Return the number of loci in this set."""
         return len(self.locus_ids)
 
     @field_validator("locus_ids", mode="before")
     @classmethod
     def _validate_locus_ids(cls, value: list[UUID] | str) -> list[UUID]:
-        """
-        Validate and convert locus_ids representation to a list[UUID]. When given as a
-        string, it is assumed to be a JSON list of UUID string representations.
-        """
+        """Normalize a JSON locus-ID list to UUID objects."""
         if isinstance(value, str):
             return [UUID(x) for x in json.loads(value)]
         return value
 
     @field_serializer("locus_ids", mode="plain")
     def _serialize_locus_ids(self, value: list[UUID]) -> list[str]:
+        """Serialize ordered locus identifiers as strings."""
         return [str(x) for x in value]
 
 
 class LocusCodeMap(Model):
-    """
-    A mapping from locus codes to locus IDs for a specific naming scheme. This can be
-    used e.g. to translate locus codes used by a particular application to the IDs used
-    in this application, thereby facilitating interoperability.
-    """
+    """Map external locus codes to SeqDB locus identifiers."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="locus_code_maps",
@@ -153,10 +136,7 @@ class LocusCodeMap(Model):
     @field_validator("code_map", mode="before")
     @classmethod
     def _validate_code_map(cls, value: dict[str, UUID] | str) -> dict[str, UUID]:
-        """
-        Validate and convert code_map representation to a dict[str, UUID]. When given as
-        a string, it is assumed to be a JSON object.
-        """
+        """Normalize a JSON locus-code map and enforce its key length limit."""
         dict_value: dict = value  # type: ignore[assignment]
         if isinstance(value, str):
             dict_value = json.loads(value)
@@ -166,23 +146,12 @@ class LocusCodeMap(Model):
 
     @field_serializer("code_map", mode="plain")
     def _serialize_locus_ids(self, value: dict[str, UUID]) -> dict[str, str]:
+        """Serialize locus-code-map identifier values as strings."""
         return {x: str(y) for x, y in value.items()}
 
 
 class RefAllele(BaseSeq):
-    """
-    A reference allele for a locus. This can be an actual sequence or an
-    artificial construct, typically then a consensus sequence. It can be used
-    e.g. as a reference for alignment of other alleles for the locus or for
-    reducing storage requirements of alleles.
-
-    A reference allele is immutable: once created, it cannot be deleted or updated. As
-    such, reference allele IDs can safely be referenced in other models and outside of
-    the application.
-
-    The ID of the reference allele is equal to the hash of the sequence. As such, the
-    ID of the reference allele can be computed outside of the application as well.
-    """
+    """Represent an immutable sequence-hashed reference allele for a locus."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="ref_alleles",
@@ -203,29 +172,7 @@ class RefAllele(BaseSeq):
 
 
 class Allele(BaseSeq):
-    """
-    An allele for a locus, i.e., a specific DNA sequence variant observed at that locus.
-    Any IUPAC ambiguity codes are allowed in the sequence. The locus only represents the
-    first observed locus that the allele was observed for, but the allele can be
-    observed for multiple loci, e.g. due to gene duplication or because the locus
-    definition is not specific enough to distinguish between multiple similar loci.
-
-    An allele is immutable: once created, it cannot be deleted or updated. As such,
-    allele IDs can safely be referenced in other models and outside of the application.
-
-    The ID of the allele is equal to the hash of the sequence. As such, the ID of the
-    allele can be computed outside of the application as well, e.g., to improve
-    performance. In case of a collision, i.e., two different sequences yielding the same
-    hash, the newer allele cannot be persisted. The probability of such collisions is
-    extremely low: about 10^15 alleles would need to be stored for a one-in-a-billion
-    chance of a collision. If such a collision does occur, you could send it to your
-    nearest cryptographer, as they will be thrilled to investigate it. A word of
-    caution though: this will lead to the discovery that SHA256 is cryptographically
-    broken, which in turn will lead to the discovery that P=NP. This will lead to the
-    collapse of modern cryptography, triggering a period of global chaos that will
-    eventually lead to nuclear armageddon and bring about the end of human civilization
-    as we know it. No liability is accepted for this chain of events.
-    """
+    """Represent an immutable sequence-hashed allele first observed at a locus."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="alleles",
