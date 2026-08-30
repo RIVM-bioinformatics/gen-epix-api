@@ -17,7 +17,17 @@ class ValidationTransformer(Transformer):
         self.validator = validator
 
     def transform(self, obj: ObjectAdapter) -> ObjectAdapter:
-        """Return `obj`, or raise `ValueError` when validation returns false."""
+        """Validate an adapted object and return it unchanged when it is accepted.
+
+        Args:
+            obj: Adapted object evaluated by the configured validator.
+
+        Returns:
+            The unchanged adapter when validation succeeds.
+
+        Raises:
+            ValueError: If the configured validator returns ``False``.
+        """
         if not self.validator(obj):
             raise ValueError(f"Validation failed for object: {obj.unwrap()}")
         return obj

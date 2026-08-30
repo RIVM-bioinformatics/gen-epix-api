@@ -327,7 +327,18 @@ class IntervalToIntervalTransformer(Transformer):
         return intervals
 
     def _compute_interval_mapping(self) -> dict[Hashable, Hashable]:
-        """Build the source-to-target mapping according to the selected strategy."""
+        """Build the source-to-target mapping for the configured strategy.
+
+        Source intervals map to a containing target interval when available. The
+        largest-overlap strategy maps otherwise unmatched source intervals to the
+        target interval with the greatest positive overlap.
+
+        Returns:
+            Mapping from source interval names to target interval names.
+
+        Raises:
+            NotImplementedError: If the configured transform strategy is unsupported.
+        """
         mapping = {}
 
         for src_interval in self._src_intervals:
@@ -410,7 +421,21 @@ class IntervalToIntervalTransformer(Transformer):
         return True
 
     def _map_interval(self, src_interval_name: Hashable) -> Hashable | None | NoReturn:
-        """Resolve a source interval name using the precomputed mapping."""
+        """Resolve a source interval name using the precomputed mapping.
+
+        Missing mappings follow the configured ``on_no_match`` behavior: raise an
+        error, return ``None``, or return the ``NoReturn`` sentinel.
+
+        Args:
+            src_interval_name: Source interval label to transform.
+
+        Returns:
+            Target interval label, ``None``, or the ``NoReturn`` sentinel.
+
+        Raises:
+            ValueError: If no mapping exists and ``on_no_match`` is ``RAISE``.
+            NotImplementedError: If ``on_no_match`` is unsupported.
+        """
         if src_interval_name is None:
             return None
 
