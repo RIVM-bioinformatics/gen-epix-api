@@ -45,6 +45,9 @@ class StreamingPipeline:
         Yields:
             Transformation result for each processed input.
 
+        Returns:
+            An iterator over transformation results.
+
         Raises:
             RuntimeError: If the observed failure rate exceeds ``error_threshold``.
         """

@@ -13,6 +13,7 @@ class EqualsFilter(Filter):
     value: Any = Field(default=None, description="The value to match.", frozen=True)
 
     def _match(self, value: Any) -> bool:
+        """Return whether a value equals the configured value."""
         is_match: bool = value == self.value
         return is_match
 

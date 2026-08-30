@@ -1,3 +1,5 @@
+"""Implement commondb identity resolution, root bootstrap, and user provisioning."""
+
 import datetime
 from typing import Any
 from uuid import UUID
@@ -17,6 +19,8 @@ from gen_epix.util import str_to_uuid
 
 
 class UserManager(BaseUserManager):
+    """Resolve authenticated users and create root, invited, and automatic users."""
+
     DEFAULT_KEY_CLAIM = "__key__"
     DEFAULT_NAME_CLAIMS: list[str | list[str]] = [
         "name",
@@ -35,7 +39,20 @@ class UserManager(BaseUserManager):
         key_claim: str | None = None,
         name_claims: list[str | list[str]] | None = None,
     ):
+        """Initialize mapped commondb user models and identity claim configuration.
 
+        Args:
+            organization_service: Service that persists organizations and users.
+            rbac_service: Service that resolves configured role values.
+            root_cfg: Required root organization and user configuration.
+            auto_created_user_cfg: Optional defaults for automatic user provisioning.
+            key_claim: Identity claim used as the user key.
+            name_claims: Claims used to resolve user display names.
+
+        Raises:
+            InitializationServiceError: If root or automatic-user configuration is
+                incomplete or invalid.
+        """
         # Derive some properties
         app_impl: AppImplDetails = organization_service.app.impl
         user_class: type[model.User] = app_impl.get_mapped_class(model.User)
@@ -56,17 +73,49 @@ class UserManager(BaseUserManager):
         )
 
     def generate_id(self) -> UUID:
+        """Generate an ID through the organization service.
+
+        Returns:
+            New user identifier.
+        """
         return self._organization_service.generate_id()  # type: ignore[return-value]
 
     def get_user_key_from_claims(self, claims: dict[str, Any]) -> str | None:
+        """Retrieve the configured user-key claim from identity claims.
+
+        Args:
+            claims: Authenticated identity-provider claims.
+
+        Returns:
+            Claim value when present; otherwise None.
+        """
         return claims.get(self._key_claim)
 
     def get_user_name_from_claims(self, claims: dict[str, Any]) -> str | None:
+        """Resolve a display name from configured identity-provider claims.
+
+        Args:
+            claims: Authenticated identity-provider claims.
+
+        Returns:
+            Resolved display name when available; otherwise None.
+        """
         return get_name_from_claims(claims, self._name_claims)
 
     def construct_user_instance_from_claims(
         self, claims: dict[str, Any]
     ) -> model.User | None:
+        """Construct a user from claims and configured automatic-user defaults.
+
+        Args:
+            claims: Authenticated identity-provider claims.
+
+        Returns:
+            New user model, or None when no model can be constructed.
+
+        Raises:
+            CredentialsAuthError: If the configured key claim is absent or empty.
+        """
         if self._auto_created_user_cfg is None:
             # No auto-created user config provided, set dummy roles and organization ID for the created user since they are mandatory, and which should be overridden by the calling function
             roles = {self._rbac_service.guest_role}
@@ -90,12 +139,39 @@ class UserManager(BaseUserManager):
         )
 
     def is_root_user_claims(self, claims: dict[str, Any]) -> bool:
+        """Determine whether identity claims belong to the configured root user.
+
+        Args:
+            claims: Authenticated identity-provider claims.
+
+        Returns:
+            True when the configured key claim matches the root user key.
+        """
         return self._root_user.key == claims.get(self._key_claim)
 
     def is_root_user(self, user: model.User) -> bool:  # type: ignore[override]
+        """Determine whether a user has the configured root role.
+
+        Args:
+            user: User whose assigned roles are evaluated.
+
+        Returns:
+            True when the user has the root role; otherwise False.
+        """
         return self._rbac_service.root_role in user.roles
 
     def create_root_user_from_claims(self, claims: dict[str, Any]) -> model.User:
+        """Create or retrieve the configured root organization and user.
+
+        The operation is idempotent to support services sharing a commondb database,
+        including NONE IDP mode where claims may be empty.
+
+        Args:
+            claims: Identity claims used for root user name and email fields.
+
+        Returns:
+            Existing or newly persisted root user.
+        """
         assert self._organization_service.repository
 
         # Handle transactions
@@ -155,6 +231,19 @@ class UserManager(BaseUserManager):
         return user
 
     def auto_create_new_user(self, claims: dict[str, Any]) -> model.User | None:
+        """Create a user from configured defaults when automatic provisioning is enabled.
+
+        Args:
+            claims: Authenticated identity-provider claims for the new user.
+
+        Returns:
+            Newly persisted user, or None when automatic provisioning is disabled.
+
+        Raises:
+            InitializationServiceError: If the configured target organization is absent.
+            ServiceException: If the user exists or cannot be constructed from claims.
+            CredentialsAuthError: If the configured key claim is absent or empty.
+        """
         if self._auto_created_user_cfg is None:
             return None
         assert self._organization_service.repository
@@ -210,24 +299,25 @@ class UserManager(BaseUserManager):
                 objs=claims_user,
             )
 
-            # TODO: this should be removed, does not belong in commondb since specific for casedb, and the case policies in question should not be added to the user at this stage
-            # # Add user case policies by calling switching organization method
-            # try:
-            #     user = self._organization_service.app.handle(
-            #         command.UpdateUserOwnOrganizationCommand(
-            #             user=user,
-            #             organization_id=user.organization_id,
-            #             is_new_user=True,
-            #         ),
-            #     )
-            # except Exception as exception:
-            #     raise exc.UnauthorizedAuthError("Unable to add user case policies")
-
         return user
 
     def create_new_user_from_token(  # type: ignore[override]
         self, user: model.User, token: str, **kwargs: Any
     ) -> model.User:
+        """Create an invited user after validating inviter, token, and organization.
+
+        Args:
+            user: User model supplied during invitation registration.
+            token: Invitation token that authorizes registration.
+            **kwargs: Requires ``created_by_user_id`` for the invitation issuer.
+
+        Returns:
+            Newly persisted user.
+
+        Raises:
+            UnauthorizedAuthError: If the inviter, invitation, organization, or new
+                user is invalid, or persistence cannot create the user.
+        """
         assert self._organization_service.repository
         created_by_user_id: UUID = kwargs["created_by_user_id"]
 
@@ -261,6 +351,14 @@ class UserManager(BaseUserManager):
             )
 
             def convert_to_utc(x: datetime.datetime) -> datetime.datetime:
+                """Normalize an invitation expiration timestamp to UTC.
+
+                Args:
+                    x: Naive or timezone-aware timestamp to normalize.
+
+                Returns:
+                    Timestamp expressed with the UTC timezone.
+                """
                 if x.tzinfo is None:
                     return x.replace(tzinfo=datetime.timezone.utc)
                 return x.astimezone(datetime.timezone.utc)
@@ -315,14 +413,39 @@ class UserManager(BaseUserManager):
     def is_existing_user_by_key(
         self, user_key: str | None, uow: BaseUnitOfWork
     ) -> bool:
+        """Determine whether a normalized user key already exists.
+
+        Args:
+            user_key: Candidate user key, or None when no key is available.
+            uow: Active unit of work for the lookup.
+
+        Returns:
+            True when a user exists for the key; otherwise False.
+        """
         return self._organization_service.repository.is_existing_user_by_key(
             uow, user_key
         )
 
     def retrieve_user_by_key(self, user_key: str) -> model.User:
+        """Retrieve a commondb user by normalized key.
+
+        Args:
+            user_key: User key to resolve.
+
+        Returns:
+            Matching user.
+        """
         return self._organization_service.retrieve_user_by_key(user_key)
 
     def retrieve_user_by_id(self, user_id: UUID) -> model.User:  # type: ignore[override]
+        """Retrieve a commondb user by ID.
+
+        Args:
+            user_id: ID of the user to retrieve.
+
+        Returns:
+            Matching persisted user.
+        """
         with self._organization_service.repository.uow() as uow:
             user: model.User = self._organization_service.repository.crud(
                 uow,
@@ -336,6 +459,15 @@ class UserManager(BaseUserManager):
     def update_user_name(  # type: ignore[override]
         self, user: model.User, new_name: str
     ) -> model.User | None:
+        """Update an active user's display name when it has changed.
+
+        Args:
+            user: User to update.
+            new_name: Replacement display name.
+
+        Returns:
+            Original or updated user, or None when the user is inactive.
+        """
         if user.name == new_name:
             return user
         if user.is_active is False:
@@ -354,4 +486,12 @@ class UserManager(BaseUserManager):
     def retrieve_user_permissions(  # type: ignore[override]
         self, user: model.User
     ) -> set[Permission]:
+        """Retrieve effective permissions through the commondb RBAC service.
+
+        Args:
+            user: User whose permissions are requested.
+
+        Returns:
+            Effective permissions assigned through the RBAC service.
+        """
         return self._rbac_service.retrieve_user_permissions(user)

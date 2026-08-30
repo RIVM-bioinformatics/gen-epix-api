@@ -1,6 +1,12 @@
 # pylint: disable=too-few-public-methods
 # This module defines base classes, methods are added later
 
+"""Provide commondb command base types for application dispatch.
+
+The classes extend FastApp commands with commondb user context, command audit
+metadata, and payload conventions for CRUD, association, and batch uploads.
+"""
+
 import datetime
 import uuid
 from collections.abc import Callable
@@ -16,29 +22,42 @@ from gen_epix.fastapp import UpdateAssociationCommand as ServiceUpdateAssociatio
 
 
 class Command(ServiceCommand):
+    """Carry commondb user context, audit metadata, and serializable properties."""
+
     id: UUID = Field(default_factory=uuid.uuid4, description="The ID of the command")
     created_at: datetime.datetime = Field(
         default_factory=datetime.datetime.now,
-        description="The created timestamp of the command",
+        description="Command creation timestamp, serialized as an ISO 8601 value.",
     )
     user: model.User | None = None
-    props: dict[str, Any] = {}
+    props: Annotated[
+        dict[str, Any],
+        Field(
+            description="Command properties; callable entries are omitted from serialization.",
+        ),
+    ] = {}
 
     @field_serializer("created_at", mode="plain")
     def _serialize_created_at(self, value: datetime.datetime) -> str | None:
+        """Serialize the creation timestamp as ISO 8601."""
         return value.isoformat() if value else None
 
     @field_serializer("props", mode="plain")
     def _serialize_props(self, value: dict[str, Any]) -> dict[str, Any]:
+        """Omit callable properties from serialized command data."""
         return {x: y for x, y in value.items() if not isinstance(y, Callable)}
 
 
 class CrudCommand(ServiceCrudCommand, Command):
+    """Extend a commondb command with target identifiers for CRUD operations."""
+
     user: model.User | None = None
     obj_ids: UUID | list[UUID] | None = None  # type: ignore
 
 
 class UpdateAssociationCommand(ServiceUpdateAssociationCommand, Command):
+    """Extend a commondb command with identifiers and payloads for associations."""
+
     user: model.User | None = None
     obj_id1: UUID | list[UUID] | None = None
     obj_id2: UUID | list[UUID] | None = None
@@ -46,7 +65,7 @@ class UpdateAssociationCommand(ServiceUpdateAssociationCommand, Command):
 
 
 class UploadBatchCommandMixin:
-    """Mixin class for BatchForUpload classes providing common functionality."""
+    """Provide batch-upload options and payload access for upload commands."""
 
     # Must be set in child class
     # The BaseBatchForUpload child class that this command uploads

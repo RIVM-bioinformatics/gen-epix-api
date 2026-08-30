@@ -1,3 +1,5 @@
+"""Define the commondb ABAC service contract and registered command handlers."""
+
 import abc
 import uuid
 
@@ -9,6 +11,8 @@ from gen_epix.fastapp.model import Command
 
 
 class BaseAbacService(BaseService[BaseAbacRepository]):
+    """Provide ABAC operations that resolve organization administration and scope."""
+
     SERVICE_TYPE = ServiceType.ABAC
 
     ORGANIZATION_ADMIN_WRITE_COMMANDS: set[type[Command]] = {
@@ -37,9 +41,11 @@ class BaseAbacService(BaseService[BaseAbacRepository]):
     # Property overridden to provide narrower return value to support linter
     @property  # type: ignore
     def repository(self) -> BaseAbacRepository:  # type: ignore
+        """Return the ABAC repository with its concrete interface type."""
         return super().repository  # type: ignore
 
     def register_handlers(self) -> None:
+        """Register ABAC retrieval and self-organization update command handlers."""
         self.register_default_crud_handlers()
         f = self.app.register_handler
         f(
@@ -60,19 +66,49 @@ class BaseAbacService(BaseService[BaseAbacRepository]):
         self,
         cmd: command.RetrieveOrganizationAdminNameEmailsCommand,
     ) -> list[model.UserNameEmail]:
-        """Retrieve name and email of organization admins for a given organization."""
+        """Retrieve display identities of administrators for an organization.
+
+        Args:
+            cmd: Command identifying the organization.
+
+        Returns:
+            Display identities of the organization's administrators.
+
+        Raises:
+            NotImplementedError: Always; concrete services implement retrieval.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
     def retrieve_organizations_under_admin(
         self, cmd: command.RetrieveOrganizationsUnderAdminCommand
     ) -> set[uuid.UUID]:
-        """Retrieve organization IDs under the admin's purview."""
+        """Retrieve IDs of organizations administered by the command's user.
+
+        Args:
+            cmd: Command whose user defines the administration scope.
+
+        Returns:
+            IDs of organizations administered by the user.
+
+        Raises:
+            NotImplementedError: Always; concrete services implement retrieval.
+        """
         raise NotImplementedError()
 
     def update_user_own_organization(
         self,
         cmd: command.UpdateUserOwnOrganizationCommand,
     ) -> model.User:
-        """Allow a user to update their own organization affiliation."""
+        """Update the executing user's organization affiliation.
+
+        Args:
+            cmd: Command identifying the user and target organization.
+
+        Returns:
+            Updated user.
+
+        Raises:
+            NotImplementedError: Always; concrete services implement the update.
+        """
         raise NotImplementedError()

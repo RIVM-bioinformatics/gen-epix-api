@@ -1,10 +1,11 @@
 """Expose the built-in transformation implementations.
 
-Field and object transformers update selected values or whole objects.
-Conditional and validation transformers control whether a transformation
-continues. Interval and ISO-time transformers map domain ranges and temporal
-granularities, while multi-field and tuple-map transformers coordinate related
-fields through supplied functions or lookup mappings.
+`FieldTransformer` and `ObjectTransformer` update selected values or whole
+objects. `ConditionalTransformer` and `ValidationTransformer` control whether
+a transformation continues. `IntervalTransformer` and `IsoTimeTransformer` map
+domain ranges and temporal granularities. `MultiFieldTransformer` and
+`TupleMapTransformer` coordinate related fields through supplied functions or
+lookup mappings.
 """
 
 # pylint: disable=useless-import-alias

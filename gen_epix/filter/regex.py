@@ -10,12 +10,17 @@ from gen_epix.filter.enum import FilterType
 
 
 class RegexFilter(Filter):
-    """Match values whose string representation matches a regular expression."""
+    """Match values whose string representation matches a regular expression.
+
+    Model validation:
+    The configured pattern must compile as a Python regular expression.
+    """
 
     pattern: str = Field(description="The regular expression to match.", frozen=True)
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
+        """Compile the configured regular-expression pattern."""
         try:
             self._pattern = re.compile(self.pattern)
         except re.error as exc:
@@ -23,6 +28,7 @@ class RegexFilter(Filter):
         return self
 
     def _match(self, value: Any) -> bool:
+        """Return whether a value matches the compiled regular expression."""
         return self._pattern.match(value) is not None
 
 

@@ -15,7 +15,12 @@ def _enum_to_str(x: Any) -> str:
 
 
 class StringSetFilter(Filter):
-    """Match strings from an immutable set with optional case sensitivity."""
+    """Match strings from an immutable set with optional case sensitivity.
+
+    Model validation:
+    Case-insensitive members and matched enum names are normalized to lowercase
+    before membership is evaluated.
+    """
 
     members: frozenset[str] = Field(description="The strings to match.", frozen=True)
     case_sensitive: bool = Field(
@@ -39,7 +44,17 @@ class StringSetFilter(Filter):
         return self
 
     def _match(self, value: Any) -> bool:
-        """Match a value using the function generated during validation."""
+        """Match a value using the function generated during validation.
+
+        Args:
+            value: The string-like value to match.
+
+        Returns:
+            Whether the value belongs to the configured set.
+
+        Raises:
+            NotImplementedError: Always, until model validation supplies the function.
+        """
         raise NotImplementedError(
             "Method is implemented dynamically in _validate_state"
         )

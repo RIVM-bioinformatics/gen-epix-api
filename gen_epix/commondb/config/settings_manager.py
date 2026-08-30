@@ -21,9 +21,7 @@ class SettingsManager:
         settings_files: list[str] | None = None,
         lowercase_keys: bool = True,
     ):
-        """
-        Initialize settings manager.
-        """
+        """Initialize settings manager."""
         self.prefix = prefix
         self.prefix_without_underscore = prefix.rstrip("_")  # necessary for dynaconf
         self._settings_cache: Dynaconf | None = None
@@ -38,8 +36,22 @@ class SettingsManager:
         post_hooks: Callable | list[Callable] | None = None,
     ) -> Dynaconf:
         """
-        Load settings from one or more settings file(s) specified either as a
-        list or if not, in an environment variable.
+        Load settings from configured files or an environment variable.
+
+        Settings files can be supplied as a list or through an environment variable.
+
+        Args:
+            settings_files: Optional settings paths or serialized path collection.
+            settings_files_envvar: Environment variable containing settings paths.
+            envvar_separator: Separator used by Dynaconf nested environment overrides.
+            post_hooks: Optional Dynaconf hooks executed after loading settings.
+
+        Returns:
+            Loaded Dynaconf settings instance.
+
+        Raises:
+            ValueError: If no settings files are configured.
+            FileNotFoundError: If a configured settings file does not exist.
         """
         if self._settings_files:
             # Load only settings files into Dynaconf, ignoring environment variables
@@ -97,7 +109,14 @@ class SettingsManager:
 
     @property
     def settings(self) -> Dynaconf:
-        """Get loaded settings."""
+        """Return loaded settings.
+
+        Returns:
+            Cached Dynaconf settings.
+
+        Raises:
+            RuntimeError: If settings have not been loaded.
+        """
         if self._settings_cache is None:
             raise RuntimeError("Settings not loaded. Call load_settings() first.")
         return self._settings_cache
@@ -111,6 +130,9 @@ class SettingsManager:
 
         Returns:
             Setting value or default
+
+        Raises:
+            RuntimeError: If settings have not been loaded.
         """
         if self._settings_cache is None:
             raise RuntimeError("Settings not loaded. Call load_settings() first.")
@@ -121,9 +143,7 @@ class SettingsManager:
 
     @staticmethod
     def parse_settings_files_from_string(content: str) -> list[str]:
-        """
-        Parse settings file from comma separated string.
-        """
+        """Parse settings file from comma separated string."""
         if content.startswith("[") and content.endswith("]"):
             retval: list[str] = json.loads(content)  # type: ignore[assignment]
             return retval

@@ -17,7 +17,12 @@ from gen_epix.fastapp.exc import DomainException
 
 
 class Entity(BaseModel):
-    """Describe a domain model's names, persistence, keys, and links."""
+    """Describe a domain model's names, persistence, keys, and links.
+
+    Model validation:
+    Persistable entities without an explicit identifier field use the default
+    identifier field name.
+    """
 
     CAMEL_TO_SNAKE_CASE_PATTERN: ClassVar[re.Pattern] = re.compile(
         r"(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])"
@@ -33,19 +38,50 @@ class Entity(BaseModel):
 
     id: UUID = Field(default_factory=uuid.uuid4)
     persistable: bool = Field(default=False, frozen=True)
-    snake_case_singular_name: str | None = None
-    snake_case_plural_name: str | None = None
-    camel_case_singular_name: str | None = None
-    camel_case_plural_name: str | None = None
-    pascal_case_singular_name: str | None = None
-    pascal_case_plural_name: str | None = None
-    kebab_case_singular_name: str | None = None
-    kebab_case_plural_name: str | None = None
-    url_name: str | None = None
-    database_name: str | None = None
-    schema_name: str | None = None
-    table_name: str | None = None
-    id_field_name: str | None = None
+    snake_case_singular_name: str | None = Field(
+        default=None,
+        description="Singular snake-case name; enum values are normalized.",
+    )
+    snake_case_plural_name: str | None = Field(
+        default=None, description="Plural snake-case name; enum values are normalized."
+    )
+    camel_case_singular_name: str | None = Field(
+        default=None,
+        description="Singular camel-case name; enum values are normalized.",
+    )
+    camel_case_plural_name: str | None = Field(
+        default=None, description="Plural camel-case name; enum values are normalized."
+    )
+    pascal_case_singular_name: str | None = Field(
+        default=None,
+        description="Singular Pascal-case name; enum values are normalized.",
+    )
+    pascal_case_plural_name: str | None = Field(
+        default=None, description="Plural Pascal-case name; enum values are normalized."
+    )
+    kebab_case_singular_name: str | None = Field(
+        default=None,
+        description="Singular kebab-case name; enum values are normalized.",
+    )
+    kebab_case_plural_name: str | None = Field(
+        default=None, description="Plural kebab-case name; enum values are normalized."
+    )
+    url_name: str | None = Field(
+        default=None, description="URL name; enum values are normalized."
+    )
+    database_name: str | None = Field(
+        default=None, description="Database name; enum values are normalized."
+    )
+    schema_name: str | None = Field(
+        default=None, description="Database schema name; enum values are normalized."
+    )
+    table_name: str | None = Field(
+        default=None, description="Database table name; enum values are normalized."
+    )
+    id_field_name: str | None = Field(
+        default=None,
+        description="Identifier field name; enum values are normalized or defaulted.",
+    )
     keys: dict[int, Key] = Field(default_factory=dict)
     links: dict[int, Link] = Field(default_factory=dict)
     multi_links: list[MultiLink] = Field(default_factory=list)
@@ -85,7 +121,7 @@ class Entity(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def _validate_model(cls, data: Any) -> Any:
-        """Set the default identifier field for persistable entities."""
+        """Set a persistable entity's default identifier field."""
         if (
             "id_field_name" not in data
             and "persistable" in data

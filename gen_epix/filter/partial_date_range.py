@@ -12,7 +12,11 @@ from gen_epix.filter.range import RangeFilter
 
 
 class PartialDateRangeFilter(RangeFilter):
-    """Match partial dates whose full intervals lie within a configured range."""
+    """Match partial dates whose full intervals lie within a configured range.
+
+    Model validation:
+    Bound strings are expanded to their represented intervals before matching.
+    """
 
     lower_bound: str | None = Field(
         default=None, description="The lower bound of the range.", frozen=True
@@ -86,6 +90,7 @@ class PartialDateRangeFilter(RangeFilter):
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
+        """Derive bound intervals and build the partial-date matching function."""
         # Derive lower/upper lower bound and lower/upper upper bound from string bounds
         if self.lower_bound is not None:
             self._llb, self._ulb = self._get_datetime_bounds(self.lower_bound)
@@ -104,6 +109,7 @@ class PartialDateRangeFilter(RangeFilter):
             ):
 
                 def _match(value: str) -> bool:
+                    """Match a partial date with inclusive lower and exclusive upper bounds."""
                     l_value, u_value = PartialDateRangeFilter._get_datetime_bounds(
                         value
                     )
@@ -115,6 +121,7 @@ class PartialDateRangeFilter(RangeFilter):
             ):
 
                 def _match(value: str) -> bool:
+                    """Match a partial date with inclusive range bounds."""
                     l_value, u_value = PartialDateRangeFilter._get_datetime_bounds(
                         value
                     )
@@ -126,6 +133,7 @@ class PartialDateRangeFilter(RangeFilter):
             ):
 
                 def _match(value: str) -> bool:
+                    """Match a partial date with exclusive lower and upper bounds."""
                     l_value, u_value = PartialDateRangeFilter._get_datetime_bounds(
                         value
                     )
@@ -137,6 +145,7 @@ class PartialDateRangeFilter(RangeFilter):
             ):
 
                 def _match(value: str) -> bool:
+                    """Match a partial date with exclusive lower and inclusive upper bounds."""
                     l_value, u_value = PartialDateRangeFilter._get_datetime_bounds(
                         value
                     )
@@ -146,12 +155,14 @@ class PartialDateRangeFilter(RangeFilter):
             if self.lower_bound_censor == enum.ComparisonOperator.GTE:
 
                 def _match(value: str) -> bool:
+                    """Match a partial date against an inclusive lower bound."""
                     l_value, _ = PartialDateRangeFilter._get_datetime_bounds(value)
                     return self._llb <= l_value
 
             elif self.lower_bound_censor == enum.ComparisonOperator.GT:
 
                 def _match(value: str) -> bool:
+                    """Match a partial date against an exclusive lower bound."""
                     l_value, _ = PartialDateRangeFilter._get_datetime_bounds(value)
                     return self._ulb <= l_value
 
@@ -159,12 +170,14 @@ class PartialDateRangeFilter(RangeFilter):
             if self.upper_bound_censor == enum.ComparisonOperator.ST:
 
                 def _match(value: str) -> bool:
+                    """Match a partial date against an exclusive upper bound."""
                     _, u_value = PartialDateRangeFilter._get_datetime_bounds(value)
                     return u_value <= self._lub
 
             elif self.upper_bound_censor == enum.ComparisonOperator.STE:
 
                 def _match(value: str) -> bool:
+                    """Match a partial date against an inclusive upper bound."""
                     _, u_value = PartialDateRangeFilter._get_datetime_bounds(value)
                     return u_value <= self._uub
 

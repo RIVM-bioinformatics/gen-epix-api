@@ -15,6 +15,7 @@ class HashableSetFilter(Filter):
     )
 
     def _match(self, value: Hashable) -> bool:
+        """Return whether a value is a configured set member."""
         return value in self.members
 
 

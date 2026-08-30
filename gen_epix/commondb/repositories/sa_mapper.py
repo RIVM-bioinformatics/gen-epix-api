@@ -1,3 +1,5 @@
+"""Map commondb domain models to SQLAlchemy rows with protected audit metadata."""
+
 from collections.abc import Hashable
 from typing import Any
 
@@ -31,10 +33,16 @@ class CommondbSAMapper(SAMapper):
     def update(
         self, user_id: Hashable | None, obj: Model, row: Any, **kwargs: Any
     ) -> bool:
-        """
-        Update `row` from `obj`, applying commondb metadata-field rules.
+        """Update a SQLAlchemy row from a domain model using commondb metadata rules.
 
-        Returns True if at least one field was actually changed.
+        Args:
+            user_id: ID of the user performing the update, if known.
+            obj: Domain model containing candidate persisted values.
+            row: SQLAlchemy row to update in place.
+            **kwargs: Reserved base-mapper options.
+
+        Returns:
+            True when at least one non-metadata field changed; otherwise False.
         """
         # Go over each relevant field in the domain model and compare it to the corresponding field in the SA row. Update the SA row if the values differ.
         is_updated = False
@@ -65,11 +73,18 @@ class CommondbSAMapper(SAMapper):
         return is_updated
 
     def dump(self, user_id: Hashable | None, obj: Model, **kwargs: Any) -> Any:
-        """
-        Dump `obj` to a dict, applying commondb metadata-field rules.
+        """Dump a domain model while hiding protected audit metadata.
 
         For users without privileged roles, this means masking out the metadata fields
         by setting them to None, so that they are not exposed by the API.
+
+        Args:
+            user_id: ID of the user receiving the representation, if known.
+            obj: Domain model to map to its SQLAlchemy representation.
+            **kwargs: Reserved base-mapper options.
+
+        Returns:
+            SQLAlchemy row representation with protected metadata values masked.
         """
         row = super().dump(user_id, obj, **kwargs)
 
@@ -82,9 +97,10 @@ class CommondbSAMapper(SAMapper):
 
 
 class CommondbSAMapperFactory(BaseSAMapperFactory):
-    """
-    Factory that produces CommondbSAMapper instances for all SA-backed databases that
-    inherit from RowMetadataMixin (casedb, seqdb, omopdb, …).
+    """Create commondb SQLAlchemy mappers for audit-metadata-enabled databases.
+
+    The factory supports databases that inherit from RowMetadataMixin (casedb,
+    seqdb, omopdb, …).
 
     Injected into SARepository at construction time by commondb/env.py so that the
     fastapp layer never needs to know which fields are metadata-protected.
@@ -96,6 +112,16 @@ class CommondbSAMapperFactory(BaseSAMapperFactory):
         row_class: type,
         field_name_map: dict[str, str] | None = None,
     ) -> CommondbSAMapper:
+        """Create a mapper that enforces commondb audit metadata behavior.
+
+        Args:
+            model_class: Domain model class to map.
+            row_class: SQLAlchemy row class corresponding to the domain model.
+            field_name_map: Optional domain-to-row field name mapping.
+
+        Returns:
+            Mapper configured for the model and row classes.
+        """
         return CommondbSAMapper(
             model_class,
             row_class,

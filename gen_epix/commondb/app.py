@@ -1,3 +1,5 @@
+"""Compose and expose the commondb FastAPI application and OpenAPI metadata."""
+
 from gen_epix.commondb.app_setup import create_fast_api
 from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.domain import enum

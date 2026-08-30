@@ -164,6 +164,9 @@ class App:
     def pdp(self) -> PolicyDecisionPoint:
         """Return the policy decision point configured for command execution.
 
+        Returns:
+            The policy decision point used during command execution.
+
         Raises:
             InitializationServiceError: If no policy decision point is configured.
         """
@@ -176,6 +179,9 @@ class App:
     @property
     def user_manager(self) -> BaseUserManager:
         """Return the user manager used by authorization policies.
+
+        Returns:
+            The user manager used by authorization policies.
 
         Raises:
             InitializationServiceError: If no user manager is configured.
@@ -203,6 +209,9 @@ class App:
     def cfg(self) -> Any:
         """Return application configuration required by configured services.
 
+        Returns:
+            The configured application settings.
+
         Raises:
             InitializationServiceError: If no configuration is configured.
         """
@@ -215,6 +224,9 @@ class App:
     @property
     def impl(self) -> Any:
         """Return application-specific implementation details.
+
+        Returns:
+            The configured application implementation details.
 
         Raises:
             InitializationServiceError: If no implementation details are configured.

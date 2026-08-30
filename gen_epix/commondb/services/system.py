@@ -1,3 +1,5 @@
+"""Implement commondb outage, feature-flag, and package-license services."""
+
 import importlib
 import importlib.metadata
 import re
@@ -20,12 +22,20 @@ from gen_epix.util import get_package_root
 
 
 class SystemService(BaseSystemService):
+    """Provide system configuration data and register global commondb policies."""
+
     REQUIREMENTS_FILE_NAME = "pyproject.toml"
     _PARSE_AND_GET_PACKAGE_METADATA_CACHE: ClassVar[TTLCache] = TTLCache(
         maxsize=1000, ttl=60
     )
 
     def __init__(self, app: App, **kwargs: Any) -> None:
+        """Initialize configured concrete policy classes.
+
+        Args:
+            app: Application that owns this service.
+            **kwargs: Additional base-service configuration.
+        """
         super().__init__(app, **kwargs)
         app_impl: AppImplDetails = app.impl
         self.has_system_outage_policy_class: type[BaseHasSystemOutagePolicy] = (
@@ -36,9 +46,10 @@ class SystemService(BaseSystemService):
         )
 
     def register_policies(self) -> None:
-        """
-        Registers policies that checks if the system has a current outage
+        """Register global outage and audit-metadata policies.
 
+        The outage policy runs BEFORE other policies to short-circuit unavailable
+        commands. Metadata masking runs AFTER all other policies.
         """
         # System outage policy should be BEFORE all other policies to short-circuit if there is an outage
         system_outage_policy = self.has_system_outage_policy_class(system_service=self)
@@ -58,6 +69,14 @@ class SystemService(BaseSystemService):
     def retrieve_outages(
         self, cmd: command.RetrieveOutagesCommand
     ) -> list[model.Outage]:
+        """Retrieve all configured system outages.
+
+        Args:
+            cmd: Command requesting outage records.
+
+        Returns:
+            Stored outage records.
+        """
         with self.repository.uow() as uow:
             outages: list[model.Outage] = self.repository.crud(
                 uow,
@@ -70,20 +89,34 @@ class SystemService(BaseSystemService):
     def retrieve_feature_flags(
         self, cmd: command.RetrieveFeatureFlagsCommand
     ) -> dict[Hashable, bool]:
+        """Retrieve feature flags currently configured on the application.
+
+        Args:
+            cmd: Command requesting feature-flag configuration.
+
+        Returns:
+            Mapping of feature-flag names to enabled states.
+        """
         return self.app.feature_flags
 
     def retrieve_licenses(
         self, cmd: command.RetrieveLicensesCommand
     ) -> list[model.PackageMetadata]:
+        """Retrieve metadata for the application and installed dependencies.
+
+        Args:
+            cmd: Command requesting package license metadata.
+
+        Returns:
+            Package names, versions, licenses, and homepages when available.
+        """
         packages = SystemService._parse_and_get_package_metadata()
         return packages
 
     @staticmethod
     @cached(cache=_PARSE_AND_GET_PACKAGE_METADATA_CACHE)
     def _parse_and_get_package_metadata() -> list[model.PackageMetadata]:
-        """
-        Parse pyproject.toml, extract package names, and get their metadata.
-        """
+        """Parse package metadata from pyproject.toml and installed dependencies."""
         pyproject_path = get_package_root() / SystemService.REQUIREMENTS_FILE_NAME
         packages: list[model.PackageMetadata] = []
 
@@ -146,9 +179,9 @@ class SystemService(BaseSystemService):
 
     @staticmethod
     def _extract_homepage_from_project_urls(project_urls_str: str) -> str:
-        """
-        Extract homepage URL from Project-URL metadata using well-known labels:
-        (https://packaging.python.org/en/latest/specifications/well-known-project-urls/#well-known-labels)
+        """Extract a homepage URL using well-known Project-URL labels.
+
+        Labels follow the Python packaging specification for well-known project URLs.
         """
         if not project_urls_str:
             return ""
