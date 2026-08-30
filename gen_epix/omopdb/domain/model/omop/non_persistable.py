@@ -1,3 +1,5 @@
+"""Non-persistable OMOP models for retrieval requests and assembled results."""
+
 from datetime import datetime
 from typing import ClassVar, Self
 from uuid import UUID
@@ -40,6 +42,8 @@ from gen_epix.omopdb.domain.model.omop.clinical_data import (
 
 
 class SpecimenIdsByCohortResult(Model):
+    """Map each requested cohort identifier to its matching specimen identifiers."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="specimen_ids_by_cohort_results",
         persistable=False,
@@ -56,6 +60,9 @@ class PersonQuery(Model):
     A query for retrieving persons based on their demographic information. All
     constraints are optional, but at least some must be provided, and the query will
     match any person that matches all of the provided criteria.
+
+    Model validation: At least one modification-time bound must be provided to
+    prevent an unbounded person retrieval.
     """
 
     ENTITY: ClassVar = Entity(
@@ -84,6 +91,8 @@ class PersonQuery(Model):
 
 
 class PersonQueryResult(Model):
+    """Return the person identifiers matching an executed person query."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="person_query_results",
         persistable=False,
