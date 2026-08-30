@@ -15,7 +15,7 @@ from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider
 
 
 class MockIDPClient(IdpClient):
-    """Provide the mock i d p client framework abstraction."""
+    """Identity-provider client that serves configured mock claims."""
 
     def __init__(
         self,
@@ -23,7 +23,7 @@ class MockIDPClient(IdpClient):
         log_item_class: type[BaseLogItem] = LogItem,
         **kwargs: Any,
     ):
-        """Initialize the instance."""
+        """Initialize a MockIDPClient instance."""
         self._id: uuid.UUID = kwargs.get("id", uuid.uuid4())  # type: ignore[assignment]
         # Set input properties and initialise some
         self._logger = logger
@@ -31,27 +31,27 @@ class MockIDPClient(IdpClient):
 
     @property
     def id(self) -> uuid.UUID:
-        """Perform the id operation."""
+        """Id the requested value."""
         return self._id
 
     def get_identity_provider(self) -> IdentityProvider:
-        """Perform the get identity provider operation."""
+        """Return identity provider."""
         raise NotImplementedError("Method not yet implemented")
 
     async def get_claims_from_jwt(
         self, jwt_token: str
     ) -> dict[str, str | int | bool | list[str]] | None:
-        """Perform the get claims from jwt operation."""
+        """Return claims from jwt."""
         raise NotImplementedError("Method not yet implemented")
 
     def get_claims_from_userinfo(
         self, access_token: str
     ) -> dict[str, str | int | bool | list[str]]:
-        """Perform the get claims from userinfo operation."""
+        """Return claims from userinfo."""
         raise NotImplementedError("Method not yet implemented")
 
     async def __call__(self, request: Request) -> Claims | None:
-        """Perform the   call   operation."""
+        """Call the requested value."""
         if authorization := request.headers.get("authorization"):
             scheme, token = get_authorization_scheme_param(authorization)
             if scheme.upper() == "BEARER":

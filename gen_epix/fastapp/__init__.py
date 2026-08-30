@@ -1,4 +1,11 @@
-"""Utilities for the fastapp   init   module."""
+"""Public building blocks for composing Gen-EpiX application domains.
+
+The package re-exports the application mediator, domain metadata types, command
+and model types, policy and authorization types, shared enumerations, logging,
+repository and unit-of-work implementations, remote application support, and
+identity-provider models. Applications normally import these types from
+``gen_epix.fastapp`` while implementations remain in their dedicated modules.
+"""
 
 # pylint: disable=useless-import-alias
 from gen_epix.fastapp.app import App as App

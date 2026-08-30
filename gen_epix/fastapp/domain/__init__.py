@@ -1,4 +1,4 @@
-"""Utilities for the fastapp   init   module."""
+"""Domain metadata types and factory helpers."""
 
 # pylint: disable=useless-import-alias
 from gen_epix.fastapp.domain.domain import Domain as Domain

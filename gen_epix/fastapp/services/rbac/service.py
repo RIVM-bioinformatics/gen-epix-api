@@ -33,7 +33,7 @@ class BaseRbacService(BaseService):
     """
 
     def __init__(self, app: App, **kwargs: Any):
-        """Initialize the instance."""
+        """Initialize a BaseRbacService instance."""
         super().__init__(app, **kwargs)
         self._permissions_without_rbac: set[Permission] = set()
         self._permissions_by_role: dict[Hashable, set[Permission]] = {}
@@ -44,17 +44,17 @@ class BaseRbacService(BaseService):
 
     @property
     def permissions_without_rbac(self) -> set[Permission]:
-        """Perform the permissions without rbac operation."""
+        """Permissions without rbac."""
         return self._permissions_without_rbac
 
     @property
     def permissions_by_role(self) -> dict[Hashable, set[Permission]]:
-        """Perform the permissions by role operation."""
+        """Permissions by role."""
         return self._permissions_by_role
 
     @property
     def roles_by_permission(self) -> dict[Permission, set[Hashable]]:
-        """Perform the roles by permission operation."""
+        """Roles by permission."""
         return self._roles_by_permission
 
     def register_handlers(self) -> None:
@@ -372,7 +372,7 @@ class BaseRbacService(BaseService):
         role: Hashable,
         permissions: set[Permission],
     ) -> None:
-        """Perform the  validate and register role operation."""
+        """Validate and register role."""
         if root_role and role == root_role:
             missing_permissions = all_permissions - permissions
             if missing_permissions:
@@ -457,7 +457,7 @@ class BaseRbacService(BaseService):
         role: Hashable,
         orig_role_permissions: set[tuple[type[Command], PermissionType]],
     ) -> None:
-        """Perform the  compile subrole permissions operation."""
+        """Compile subrole permissions."""
         for sub_role in role_hierarchy.get(role, set()):
             # Add the permissions of the sub-role to the role
             sub_role_permissions = BaseRbacService._get_permissions(
@@ -511,7 +511,7 @@ class BaseRbacService(BaseService):
     def _get_permissions(
         role_permission_sets: set[tuple[type[Command], PermissionTypeSet]],
     ) -> set[tuple[type[Command], PermissionType]]:
-        """Perform the  get permissions operation."""
+        """Return permissions."""
         permissions: set[tuple[type[Command], PermissionType]] = set()
         for command_class, permission_type_set in role_permission_sets:
             permissions.update({(command_class, x) for x in permission_type_set.value})

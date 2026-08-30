@@ -532,7 +532,7 @@ class SARepository(BaseRepository):
         # Create rows
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
-            """Perform the  execute operation."""
+            """Execute the requested value."""
             rows = self.to_sql(user_id, model_class, objs)
             n_rows = len(rows)
             n_batches = int(n_rows / max_batch_size) + (n_rows / max_batch_size > 0)
@@ -584,7 +584,7 @@ class SARepository(BaseRepository):
         optimize_parameter_handling = kwargs.get("optimize_parameter_handling", False)
 
         def _execute(session: Session) -> list[Model]:
-            """Perform the  execute operation."""
+            """Execute the requested value."""
             rows, row_ids = SARepository._in_session_read_some(
                 mapper,
                 session,
@@ -637,7 +637,7 @@ class SARepository(BaseRepository):
         offset = offset or 0
 
         def _add_sql_limit_offset(stmt: sa.Select) -> sa.Select:
-            """Perform the  add sql limit offset operation."""
+            """Add sql limit offset."""
             if limit > 0:
                 stmt = stmt.limit(limit)
             if offset > 0:
@@ -645,7 +645,7 @@ class SARepository(BaseRepository):
             return stmt
 
         def _apply_obj_limit_offset(objs: list[Model]) -> list[Model]:
-            """Perform the  apply obj limit offset operation."""
+            """Apply obj limit offset."""
             if limit > 0:
                 if offset > len(objs):
                     return []
@@ -657,7 +657,7 @@ class SARepository(BaseRepository):
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
             # Get either rows or row_ids
-            """Perform the  execute operation."""
+            """Execute the requested value."""
             if return_id:
                 # Select only row_ids
                 stmt = select(mapper.get_row_id_column())
@@ -734,7 +734,7 @@ class SARepository(BaseRepository):
         row_class = mapper.row_class
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
-            """Perform the  execute operation."""
+            """Execute the requested value."""
             obj_ids = [mapper.get_id(x) for x in objs]
             rows, row_ids = SARepository._in_session_read_some(
                 mapper,
@@ -801,7 +801,7 @@ class SARepository(BaseRepository):
         row_class = mapper.row_class
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
-            """Perform the  execute operation."""
+            """Execute the requested value."""
             obj_ids = [mapper.get_id(x) for x in objs]
 
             # Chunk the existence check to avoid SQL Server's 2100-parameter limit.
@@ -893,7 +893,7 @@ class SARepository(BaseRepository):
         row_class = mapper.row_class
 
         def _execute(session: Session) -> None:
-            """Perform the  execute operation."""
+            """Execute the requested value."""
             is_existing = self.exists_some(model_class, row_ids)
             if not all(is_existing):
                 invalid_ids = [x for x, y in zip(row_ids, is_existing) if not y]
@@ -929,7 +929,7 @@ class SARepository(BaseRepository):
         obj_filter: Filter | None = kwargs.get("obj_filter", None)
 
         def _execute(session: Session) -> list[Hashable] | None:
-            """Perform the  execute operation."""
+            """Execute the requested value."""
             row_ids: list[Hashable] | None = None
 
             # filter and/or obj_filter provided
@@ -1007,7 +1007,7 @@ class SARepository(BaseRepository):
         SARepository._verify_duplicate_ids(model_class, obj_ids)
 
         def _execute(session: Session) -> list[bool]:
-            """Perform the  execute operation."""
+            """Execute the requested value."""
             row_id_col = mapper.get_row_id_column()
             rows: Sequence = session.execute(
                 select(row_id_col).where(row_id_col.in_(obj_ids))
@@ -1037,7 +1037,7 @@ class SARepository(BaseRepository):
         row_class = mapper.row_class
 
         def _execute(session: Session) -> Iterable[tuple[Any, ...]]:
-            """Perform the  execute operation."""
+            """Execute the requested value."""
             stmt = select(*[getattr(row_class, x) for x in row_field_names])
             if filter:
                 # Convert filter to where clause and add to statement
@@ -1586,7 +1586,7 @@ class SARepository(BaseRepository):
             def set_sqlite_pragma(
                 dbapi_connection: Any, connection_record: Any
             ) -> None:
-                """Perform the set sqlite pragma operation."""
+                """Set sqlite pragma."""
                 cursor = dbapi_connection.cursor()
                 cursor.execute("PRAGMA foreign_keys=ON")
                 cursor.close()

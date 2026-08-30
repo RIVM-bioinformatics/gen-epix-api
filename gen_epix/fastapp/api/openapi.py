@@ -1,4 +1,4 @@
-"""Utilities for the fastapp openapi module."""
+"""OpenAPI schema generation and compatibility fixes."""
 
 from collections.abc import Callable
 from functools import partial
@@ -21,7 +21,7 @@ def create_custom_openapi_function(
     fix_schema: bool = True,
     auth_service: AuthService | None = None,
 ) -> Callable[[], dict[str, Any]]:
-    """Perform the create custom openapi function operation."""
+    """Create a cached OpenAPI schema factory with optional schema fixes."""
 
     def custom_openapi_function(
         default_kwargs: dict[str, Any],
@@ -30,7 +30,7 @@ def create_custom_openapi_function(
         auth_service: AuthService | None,
     ) -> dict[str, Any]:
         # Set defaults
-        """Perform the custom openapi function operation."""
+        """Build the OpenAPI schema with the configured defaults and security schemes."""
         for key, value in _GET_OPEN_API_DEFAULTS.items():
             get_open_api_kwargs[key] = get_open_api_kwargs.get(key, value)
 

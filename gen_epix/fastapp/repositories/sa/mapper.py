@@ -25,7 +25,7 @@ class BaseSAMapper(abc.ABC):
         row_class: type[Row],
         **kwargs: Any,
     ):
-        """Initialize the instance."""
+        """Initialize a BaseSAMapper instance."""
         if model_class.ENTITY is None:
             raise exc.RepositoryServiceError(
                 "e0c83ad7",
@@ -38,22 +38,22 @@ class BaseSAMapper(abc.ABC):
 
     @property
     def model_class(self) -> type[Model]:
-        """Perform the model class operation."""
+        """Model class."""
         return self._model_class
 
     @property
     def row_class(self) -> type:
-        """Perform the row class operation."""
+        """Row class."""
         return self._row_class
 
     @property
     def table_name(self) -> str:
-        """Perform the table name operation."""
+        """Table name."""
         return self._table_name
 
     @property
     def schema_name(self) -> str | None:
-        """Perform the schema name operation."""
+        """Schema name."""
         return self._schema_name
 
     @abc.abstractmethod
@@ -107,7 +107,7 @@ class BaseSAMapper(abc.ABC):
         raise NotImplementedError()
 
     def get_id(self, obj: Model) -> Hashable:
-        """Perform the get id operation."""
+        """Return id."""
         return obj.get_id()
 
     @abc.abstractmethod
@@ -178,7 +178,7 @@ class SAMapperFactory(BaseSAMapperFactory):
         row_class: type,
         field_name_map: dict[str, str] | None = None,
     ) -> "SAMapper":
-        """Perform the create mapper operation."""
+        """Create mapper."""
         return SAMapper(model_class, row_class, field_name_map=field_name_map)
 
 
@@ -202,7 +202,7 @@ class SAMapper(BaseSAMapper):
         ) = None,
         **kwargs: Any,
     ):
-        """Initialize the instance."""
+        """Initialize a SAMapper instance."""
         super().__init__(model_class, row_class, **kwargs)
         self.field_name_map = field_name_map or {}
         self.rev_field_name_map = {y: x for x, y in self.field_name_map.items()}

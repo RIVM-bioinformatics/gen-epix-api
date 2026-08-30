@@ -184,7 +184,7 @@ class DictRepository(BaseRepository):
 
     @property
     def db(self) -> dict[type[Model], dict[Hashable, Model]]:
-        """Perform the db operation."""
+        """Db the requested value."""
         return self._db
 
     def _init_properties(
@@ -920,7 +920,7 @@ class DictRepository(BaseRepository):
         key_ids = list(keys.keys())
 
         def get_keys(obj: Any) -> Any:
-            """Perform the get keys operation."""
+            """Return keys."""
             keys = keys_generator(obj)
             return tuple(keys[x] for x in key_ids)
 

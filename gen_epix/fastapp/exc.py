@@ -1,85 +1,85 @@
-"""Utilities for the fastapp exc module."""
+"""Exceptions used by the domain, service, and API layers."""
 
 from collections.abc import Iterable
 from typing import Any
 
 
 class DomainException(Exception):
-    """Provide the domain exception framework abstraction."""
+    """Base error that carries a stable application error code and message."""
 
     def __init__(self, code: str, message: str | None):
-        """Initialize the instance."""
+        """Initialize a DomainException instance."""
         self.code = code
         self.message = message
 
 
 class DataException(DomainException):
-    """Provide the data exception framework abstraction."""
+    """Domain error associated with one or more data identifiers."""
 
     def __init__(self, code: str, message: str | None, ids: Iterable | None = None):
-        """Initialize the instance."""
+        """Initialize a DataException instance."""
         super().__init__(code, message)
         self.ids = ids
 
 
 class InvalidArgumentsError(DataException):
-    """Provide the invalid arguments error framework abstraction."""
+    """Error for command arguments that fail validation."""
 
     def __init__(self, code: str, message: str, ids: Iterable | None = None):
-        """Initialize the instance."""
+        """Initialize a InvalidArgumentsError instance."""
         super().__init__(code, message, ids=ids)
 
 
 class IdsError(DataException):
-    """Provide the ids error framework abstraction."""
+    """Base error associated with supplied object identifiers."""
 
     def __init__(self, code: str, message: str, ids: Iterable | None = None):
-        """Initialize the instance."""
+        """Initialize a IdsError instance."""
         super().__init__(code, message, ids=ids)
 
 
 class InvalidIdsError(IdsError):
-    """Provide the invalid ids error framework abstraction."""
+    """Error for malformed or unknown object identifiers."""
 
     def __init__(self, code: str, message: str, ids: Iterable | None = None):
-        """Initialize the instance."""
+        """Initialize a InvalidIdsError instance."""
         super().__init__(code, message, ids=ids)
 
 
 class DuplicateIdsError(IdsError):
-    """Provide the duplicate ids error framework abstraction."""
+    """Error for duplicate object identifiers in one operation."""
 
     def __init__(self, code: str, message: str, ids: Iterable | None = None):
-        """Initialize the instance."""
+        """Initialize a DuplicateIdsError instance."""
         super().__init__(code, message, ids=ids)
 
 
 class InvalidModelIdsError(IdsError):
-    """Provide the invalid model ids error framework abstraction."""
+    """Error for identifiers belonging to an unexpected model."""
 
     def __init__(self, code: str, message: str, ids: Iterable | None = None):
-        """Initialize the instance."""
+        """Initialize a InvalidModelIdsError instance."""
         super().__init__(code, message, ids=ids)
 
 
 class AlreadyExistingIdsError(IdsError):
-    """Provide the already existing ids error framework abstraction."""
+    """Error for identifiers that already exist in persistent storage."""
 
     def __init__(self, code: str, message: str, ids: Iterable | None = None):
-        """Initialize the instance."""
+        """Initialize a AlreadyExistingIdsError instance."""
         super().__init__(code, message, ids=ids)
 
 
 class InvalidLinkIdsError(IdsError):
-    """Provide the invalid link ids error framework abstraction."""
+    """Error for identifiers that violate a model relationship."""
 
     def __init__(self, code: str, message: str, ids: Iterable | None = None):
-        """Initialize the instance."""
+        """Initialize a InvalidLinkIdsError instance."""
         super().__init__(code, message, ids=ids)
 
 
 class LinkConstraintViolationError(IdsError):
-    """Provide the link constraint violation error framework abstraction."""
+    """Error for a relationship constraint violation between model instances."""
 
     def __init__(
         self,
@@ -88,13 +88,13 @@ class LinkConstraintViolationError(IdsError):
         ids: Iterable | None = None,
         linked_ids: Iterable | None = None,
     ):
-        """Initialize the instance."""
+        """Initialize a LinkConstraintViolationError instance."""
         super().__init__(code, message, ids=ids)
         self.linked_ids = linked_ids
 
 
 class UniqueConstraintViolationError(DataException):
-    """Provide the unique constraint violation error framework abstraction."""
+    """Error for data that violates a unique constraint."""
 
     def __init__(
         self,
@@ -103,13 +103,13 @@ class UniqueConstraintViolationError(DataException):
         ids: Iterable | None = None,
         duplicate_key_ids: Iterable | None = None,
     ):
-        """Initialize the instance."""
+        """Initialize a UniqueConstraintViolationError instance."""
         super().__init__(code, message, ids=ids)
         self.duplicate_key_ids = duplicate_key_ids
 
 
 class NotNullConstraintViolationError(DataException):
-    """Provide the not null constraint violation error framework abstraction."""
+    """Error for data that omits a required field."""
 
     def __init__(
         self,
@@ -118,22 +118,22 @@ class NotNullConstraintViolationError(DataException):
         ids: Iterable | None = None,
         column_names: Iterable[str] | None = None,
     ):
-        """Initialize the instance."""
+        """Initialize a NotNullConstraintViolationError instance."""
         super().__init__(code, message, ids=ids)
         self.column_names = column_names
 
 
 class NoResultsError(DataException):
-    """Provide the no results error framework abstraction."""
+    """Error for an operation that expected matching data but found none."""
 
     def __init__(self, code: str, message: str | None = None):
         # Message is optional
-        """Initialize the instance."""
+        """Initialize a NoResultsError instance."""
         super().__init__(code, message)
 
 
 class ServiceException(DomainException):
-    """Provide the service exception framework abstraction."""
+    """Base service error with HTTP response properties."""
 
     def __init__(
         self,
@@ -142,22 +142,22 @@ class ServiceException(DomainException):
         http_props: dict[str, Any] | None = None,
     ):
         # Message is optional
-        """Initialize the instance."""
+        """Initialize a ServiceException instance."""
         super().__init__(code, message)
         if http_props is None:
             http_props = {}
         self._init_http_props(http_props, 500)
 
     def get_http_status_code(self) -> int:
-        """Perform the get http status code operation."""
+        """Return http status code."""
         return int(self.http_props["status_code"])
 
     def get_http_other_props(self) -> dict[str, Any]:
-        """Perform the get http other props operation."""
+        """Return http other props."""
         return {x: y for x, y in self.http_props.items() if x not in {"status_code"}}
 
     def _init_message(self, message: str | None, default_message: str) -> None:
-        """Perform the  init message operation."""
+        """Initialize message."""
         super().__init__(
             code=self.code, message=default_message if not message else message
         )
@@ -165,7 +165,7 @@ class ServiceException(DomainException):
     def _init_http_props(
         self, http_props: dict[str, Any], http_status_code: int
     ) -> None:
-        """Perform the  init http props operation."""
+        """Initialize http props."""
         self.http_props = {**http_props}
         self.http_props["status_code"] = self.http_props.get(
             "status_code", http_status_code
@@ -173,31 +173,31 @@ class ServiceException(DomainException):
 
 
 class InitializationServiceError(ServiceException):
-    """Provide the initialization service error framework abstraction."""
+    """Error while initializing an application service."""
 
     pass
 
 
 class RepositoryInitializationServiceError(InitializationServiceError):
-    """Provide the repository initialization service error framework abstraction."""
+    """Error while initializing a repository-backed service."""
 
     pass
 
 
 class RepositoryServiceError(ServiceException):
-    """Provide the repository service error framework abstraction."""
+    """Error raised by repository-backed service operations."""
 
     pass
 
 
 class AuthException(ServiceException):
-    """Provide the auth exception framework abstraction."""
+    """Base error for authentication and authorization failures."""
 
     pass
 
 
 class FeatureDisabledServiceError(ServiceException):
-    """Provide the feature disabled service error framework abstraction."""
+    """HTTP 503 error for commands disabled by application configuration."""
 
     def __init__(
         self,
@@ -205,7 +205,7 @@ class FeatureDisabledServiceError(ServiceException):
         message: str | None = None,
         http_props: dict[str, Any] | None = None,
     ):
-        """Initialize the instance."""
+        """Initialize a FeatureDisabledServiceError instance."""
         super().__init__(code, message, http_props)
         if http_props is None:
             http_props = {}
@@ -214,7 +214,7 @@ class FeatureDisabledServiceError(ServiceException):
 
 
 class CredentialsAuthError(AuthException):
-    """Provide the credentials auth error framework abstraction."""
+    """HTTP 401 error for credentials that cannot be validated."""
 
     def __init__(
         self,
@@ -222,7 +222,7 @@ class CredentialsAuthError(AuthException):
         message: str | None = None,
         http_props: dict[str, Any] | None = None,
     ):
-        """Initialize the instance."""
+        """Initialize a CredentialsAuthError instance."""
         super().__init__(code, message, http_props)
         if http_props is None:
             http_props = {}
@@ -231,7 +231,7 @@ class CredentialsAuthError(AuthException):
 
 
 class UnauthorizedAuthError(AuthException):
-    """Provide the unauthorized auth error framework abstraction."""
+    """HTTP 403 error for credentials without the required authorization."""
 
     def __init__(
         self,
@@ -239,7 +239,7 @@ class UnauthorizedAuthError(AuthException):
         message: str | None = None,
         http_props: dict[str, Any] | None = None,
     ):
-        """Initialize the instance."""
+        """Initialize a UnauthorizedAuthError instance."""
         super().__init__(code, message, http_props)
         if http_props is None:
             http_props = {}
@@ -248,7 +248,7 @@ class UnauthorizedAuthError(AuthException):
 
 
 class UserNotFoundAuthError(AuthException):
-    """Provide the user not found auth error framework abstraction."""
+    """HTTP 404 error for an identity with no application user."""
 
     def __init__(
         self,
@@ -256,7 +256,7 @@ class UserNotFoundAuthError(AuthException):
         message: str | None = None,
         http_props: dict[str, Any] | None = None,
     ):
-        """Initialize the instance."""
+        """Initialize a UserNotFoundAuthError instance."""
         super().__init__(code, message, http_props)
         if http_props is None:
             http_props = {}
@@ -265,7 +265,7 @@ class UserNotFoundAuthError(AuthException):
 
 
 class UserAlreadyExistsAuthError(AuthException):
-    """Provide the user already exists auth error framework abstraction."""
+    """HTTP 409 error for an identity that already has an application user."""
 
     def __init__(
         self,
@@ -273,7 +273,7 @@ class UserAlreadyExistsAuthError(AuthException):
         message: str | None = None,
         http_props: dict[str, Any] | None = None,
     ):
-        """Initialize the instance."""
+        """Initialize a UserAlreadyExistsAuthError instance."""
         super().__init__(code, message, http_props)
         if http_props is None:
             http_props = {}
@@ -282,7 +282,7 @@ class UserAlreadyExistsAuthError(AuthException):
 
 
 class ConcurrentModificationError(ServiceException):
-    """Provide the concurrent modification error framework abstraction."""
+    """HTTP 409 error for a conflicting concurrent modification."""
 
     def __init__(
         self,
@@ -290,7 +290,7 @@ class ConcurrentModificationError(ServiceException):
         message: str | None = None,
         http_props: dict[str, Any] | None = None,
     ):
-        """Initialize the instance."""
+        """Initialize a ConcurrentModificationError instance."""
         super().__init__(code, message, http_props)
         if http_props is None:
             http_props = {}
@@ -302,7 +302,7 @@ class ConcurrentModificationError(ServiceException):
 
 
 class ServiceUnavailableError(ServiceException):
-    """Provide the service unavailable error framework abstraction."""
+    """HTTP 503 error for a temporarily unavailable service."""
 
     def __init__(
         self,
@@ -310,7 +310,7 @@ class ServiceUnavailableError(ServiceException):
         message: str | None = None,
         http_props: dict[str, Any] | None = None,
     ):
-        """Initialize the instance."""
+        """Initialize a ServiceUnavailableError instance."""
         super().__init__(code, message, http_props)
         if http_props is None:
             http_props = {}
@@ -319,7 +319,7 @@ class ServiceUnavailableError(ServiceException):
 
 
 class RequestLimitExceededAuthError(AuthException):
-    """Provide the request limit exceeded auth error framework abstraction."""
+    """HTTP 429 error for an authentication request that exceeds its limit."""
 
     def __init__(
         self,
@@ -327,7 +327,7 @@ class RequestLimitExceededAuthError(AuthException):
         message: str | None = None,
         http_props: dict[str, Any] | None = None,
     ):
-        """Initialize the instance."""
+        """Initialize a RequestLimitExceededAuthError instance."""
         super().__init__(code, message, http_props)
         if http_props is None:
             http_props = {}

@@ -1,17 +1,17 @@
-"""Utilities for the fastapp enum module."""
+"""Enumerations shared by the application framework."""
 
 from enum import Enum
 
 
 class SortOrder(Enum):
-    """Provide the sort order framework abstraction."""
+    """Specify ascending or descending ordering."""
 
     ASCENDING = "ASCENDING"
     DESCENDING = "DESCENDING"
 
 
 class PermissionType(Enum):
-    """Provide the permission type framework abstraction."""
+    """Specify the action authorized by a permission."""
 
     CREATE = "CREATE"
     READ = "READ"
@@ -21,7 +21,7 @@ class PermissionType(Enum):
 
 
 class PermissionTypeSet(Enum):
-    """Provide the permission type set framework abstraction."""
+    """Provide named combinations of permission types."""
 
     E = frozenset({PermissionType.EXECUTE})
     CRUD = frozenset(
@@ -74,7 +74,7 @@ class PermissionTypeSet(Enum):
 
 
 class CrudOperation(Enum):
-    """Provide the crud operation framework abstraction."""
+    """Identify a supported create, read, update, delete, or existence operation."""
 
     CREATE_ONE = "CREATE_ONE"
     CREATE_SOME = "CREATE_SOME"
@@ -96,7 +96,7 @@ class CrudOperation(Enum):
 
 
 class CrudOperationSet(Enum):
-    """Provide the crud operation set framework abstraction."""
+    """Provide named combinations of CRUD operations."""
 
     CREATE = frozenset({CrudOperation.CREATE_ONE, CrudOperation.CREATE_SOME})
     READ = frozenset(
@@ -235,14 +235,14 @@ class CrudOperationSet(Enum):
 
 
 class HttpProtocol(Enum):
-    """Provide the http protocol framework abstraction."""
+    """Specify an HTTP transport protocol."""
 
     HTTP = "HTTP"
     HTTPS = "HTTPS"
 
 
 class CrudEndpointType(Enum):
-    """Provide the crud endpoint type framework abstraction."""
+    """Identify a generated CRUD endpoint shape."""
 
     POST_ONE = "POST_ONE"
     POST_SOME = "POST_SOME"
@@ -259,7 +259,7 @@ class CrudEndpointType(Enum):
 
 
 class IsolationLevel(Enum):
-    """Provide the isolation level framework abstraction."""
+    """Specify the transaction isolation level for a database session."""
 
     READ_UNCOMMITED = "READ_UNCOMMITED"
     READ_COMMITED = "READ_COMMITED"
@@ -268,7 +268,7 @@ class IsolationLevel(Enum):
 
 
 class LogLevel(Enum):
-    """Provide the log level framework abstraction."""
+    """Specify a supported logging severity."""
 
     FATAL = "FATAL"
     ERROR = "ERROR"
@@ -279,7 +279,7 @@ class LogLevel(Enum):
 
 
 class LogLevelSet(Enum):
-    """Provide the log level set framework abstraction."""
+    """Provide named combinations of logging severities."""
 
     ERROR_OR_WORSE = frozenset({LogLevel.ERROR, LogLevel.FATAL})
     WARN_OR_WORSE = frozenset({LogLevel.WARN, LogLevel.ERROR, LogLevel.FATAL})
@@ -302,7 +302,7 @@ class LogLevelSet(Enum):
 
 
 class EventTiming(Enum):
-    """Provide the event timing framework abstraction."""
+    """Identify a phase in command execution."""
 
     BEFORE = "BEFORE"
     DURING = "DURING"
@@ -310,7 +310,7 @@ class EventTiming(Enum):
 
 
 class AuthProtocol(Enum):
-    """Provide the auth protocol framework abstraction."""
+    """Identify an authentication protocol supported by an identity provider."""
 
     NONE = "NONE"
     OAUTH2 = "OAUTH2"
@@ -318,7 +318,7 @@ class AuthProtocol(Enum):
 
 
 class OAuthFlow(Enum):
-    """Provide the o auth flow framework abstraction."""
+    """Identify an OAuth authorization flow."""
 
     AUTHORIZATION_CODE = "AUTHORIZATION_CODE"
     CLIENT_CREDENTIALS = "CLIENT_CREDENTIALS"
@@ -329,7 +329,7 @@ class OAuthFlow(Enum):
 
 
 class HttpMethod(Enum):
-    """Provide the http method framework abstraction."""
+    """Identify an HTTP request method."""
 
     GET = "GET"
     POST = "POST"
@@ -343,7 +343,7 @@ class HttpMethod(Enum):
 
 
 class StringCasing(Enum):
-    """Provide the string casing framework abstraction."""
+    """Identify a string naming convention."""
 
     SNAKE_CASE = "SNAKE_CASE"
     CAMEL_CASE = "CAMEL_CASE"
@@ -421,7 +421,7 @@ class FieldTypeSet(Enum):
 
 
 class OnException(Enum):
-    """Provide the on exception framework abstraction."""
+    """Specify how command execution responds to an exception."""
 
     RAISE = "RAISE"
     IGNORE = "IGNORE"
@@ -433,7 +433,7 @@ class OnException(Enum):
 
 
 class FileExtension(Enum):
-    """Provide the file extension framework abstraction."""
+    """Identify a supported file extension."""
 
     PKL = ".pkl"
     JSON = ".json"

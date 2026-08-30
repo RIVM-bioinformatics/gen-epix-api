@@ -18,7 +18,7 @@ class EngineFactory:
     _ENGINE_MAP: dict[tuple, Engine] = {}
 
     def __init__(self) -> None:
-        """Initialize the instance."""
+        """Initialize a EngineFactory instance."""
         raise ValueError(
             "EngineFactory is a static class and should not be instantiated."
         )
@@ -70,6 +70,6 @@ class EngineFactory:
         pool_recycle: int = DEFAULT_POOL_RECYCLE,
         connect_args: dict | None = None,
     ) -> tuple:
-        """Perform the  compose key operation."""
+        """Compose key."""
         frozen = tuple(sorted(connect_args.items())) if connect_args else ()
         return (connection_string, echo, pool_recycle, frozen)

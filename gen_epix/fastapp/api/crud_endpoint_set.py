@@ -1,4 +1,4 @@
-"""Utilities for the fastapp crud endpoint set module."""
+"""Configuration for generated CRUD API endpoints."""
 
 from collections.abc import Callable
 from typing import Any
@@ -12,7 +12,7 @@ from gen_epix.filter import Filter
 
 
 class CrudEndpointSet(BaseModel):
-    """Provide the crud endpoint set framework abstraction."""
+    """Describe the routes and models used for a CRUD API resource."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True, protected_namespaces=())
     model_class: type
@@ -35,7 +35,17 @@ class CrudEndpointSet(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def _validate_args(cls, data: Any) -> Any:
-        """Perform the  validate args operation."""
+        """Fill omitted API model classes and operation-ID basenames.
+
+        Args:
+            data: Mapping used to initialize the endpoint set.
+
+        Returns:
+            Input mapping with default API model classes and operation ID basename.
+
+        Raises:
+            NotImplementedError: If Pydantic supplies non-mapping input.
+        """
         if isinstance(data, dict):
             if not data.get("read_api_model_class"):
                 data["read_api_model_class"] = data["model_class"]

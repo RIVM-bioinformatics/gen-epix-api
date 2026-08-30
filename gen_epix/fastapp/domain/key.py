@@ -1,4 +1,4 @@
-"""Utilities for the fastapp key module."""
+"""Key definitions for domain model instances."""
 
 from collections.abc import Callable
 from functools import partial
@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 
 class Key:
-    """Provide the key framework abstraction."""
+    """Generate a stable key from one or more model fields."""
 
     DEFAULT_KEY_GENERATOR_SEPARATOR = "|"
 
@@ -16,13 +16,13 @@ class Key:
         field_names: str | tuple[str, ...],
         key_generator: Callable[[BaseModel], str] | None = None,
     ):
-        """Initialize the instance."""
+        """Initialize a Key instance."""
         self._field_names: tuple[str, ...] = (
             (field_names,) if isinstance(field_names, str) else field_names
         )
 
         def _key_generator(field_names: tuple[str, ...], obj: BaseModel) -> str:
-            """Perform the  key generator operation."""
+            """Join the configured field values into a default key."""
             return Key.DEFAULT_KEY_GENERATOR_SEPARATOR.join(
                 f"{obj.__dict__[x]}" for x in field_names
             )
@@ -35,7 +35,7 @@ class Key:
 
     @property
     def field_names(self) -> tuple[str, ...]:
-        """Perform the field names operation."""
+        """Return the fields used to generate the key."""
         return self._field_names
 
     @property
@@ -51,5 +51,5 @@ class Key:
         return self._key_generator
 
     def __call__(self, obj: BaseModel) -> str:
-        """Perform the   call   operation."""
+        """Generate this key for a model instance."""
         return self._key_generator(obj)

@@ -25,26 +25,26 @@ class SAUnitOfWork(BaseUnitOfWork):
     def __init__(
         self, session: Session, context_stack: list[BaseUnitOfWork] | None = None
     ):
-        """Initialize the instance."""
+        """Initialize a SAUnitOfWork instance."""
         super().__init__()
         self._session = session
         self._context_stack = context_stack
 
     @property
     def session(self) -> Session:
-        """Perform the session operation."""
+        """Session the requested value."""
         return self._session
 
     def commit(self) -> None:
-        """Perform the commit operation."""
+        """Commit the requested value."""
         self._session.commit()
 
     def rollback(self) -> None:
-        """Perform the rollback operation."""
+        """Rollback the requested value."""
         self._session.rollback()
 
     def flush(self) -> None:
-        """Perform the flush operation."""
+        """Flush the requested value."""
         self._session.flush()
 
     @staticmethod

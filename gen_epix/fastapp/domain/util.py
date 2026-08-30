@@ -1,4 +1,4 @@
-"""Utilities for the fastapp util module."""
+"""Factories and type helpers for domain metadata."""
 
 from collections.abc import Callable
 from types import NoneType, UnionType

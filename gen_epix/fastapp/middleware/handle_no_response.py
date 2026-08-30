@@ -1,4 +1,4 @@
-"""Utilities for the fastapp handle no response module."""
+"""Middleware for disconnected requests that produce no response."""
 
 import logging
 from collections.abc import Callable
@@ -28,13 +28,13 @@ class HandleNoResponseMiddleware(BaseHTTPMiddleware):
         fast_app: App = None,  # type: ignore[assignment]
         logger: logging.Logger | None = None,
     ):
-        """Initialize the instance."""
+        """Initialize a HandleNoResponseMiddleware instance."""
         super().__init__(app)
         self._fast_app = fast_app
         self._logger = logger or fast_app.logger
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        """Perform the dispatch operation."""
+        """Return HTTP 204 when a disconnected request has no response."""
         try:
             response: Response = await call_next(request)
             return response

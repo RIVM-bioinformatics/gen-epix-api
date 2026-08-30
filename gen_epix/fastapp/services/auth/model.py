@@ -11,7 +11,7 @@ from gen_epix.fastapp.model import Model
 
 
 class IDPUser(Model):
-    """Provide the i d p user framework abstraction."""
+    """Normalized user identity returned by an identity provider."""
 
     ENTITY: ClassVar = Entity()
 
@@ -20,7 +20,7 @@ class IDPUser(Model):
 
 
 class IdentityProvider(Model):
-    """Provide the identity provider framework abstraction."""
+    """Configuration for an external identity provider."""
 
     ENTITY: ClassVar = Entity()
 
@@ -47,7 +47,7 @@ class IdentityProvider(Model):
 
     @model_validator(mode="after")
     def _validate(self) -> Self:
-        """Perform the  validate operation."""
+        """Validate the requested value."""
         if self.public:
             if self.client_id is None:
                 raise ValueError(
@@ -61,7 +61,7 @@ class IdentityProvider(Model):
 
 
 class Claims(Model):
-    """Provide the claims framework abstraction."""
+    """Typed identity claims returned by an identity provider."""
 
     ENTITY: ClassVar = Entity()
 

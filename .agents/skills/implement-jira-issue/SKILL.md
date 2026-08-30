@@ -50,7 +50,15 @@ Only after the assessment is clear:
 	files are present, stop and ask the user to commit. A new issue branch must
 	start with no uncommitted files.
 2. Fetch the remote `dev` branch, then create the new branch directly from
-	`origin/dev`, in line with repository policy.
+	`origin/dev`, in line with repository policy. Create it without inheriting
+	`origin/dev` as its upstream, for example:
+
+	```text
+	git switch --create <branch-name> --no-track origin/dev
+	```
+
+	Do not use a plain `git switch -c <branch-name> origin/dev` or equivalent
+	that configures `branch.<branch-name>.merge` as `refs/heads/dev`.
 3. Name the branch from `f"{issue_id}-{issue_description}"`, where
 	`issue_description` is the issue summary normalized to a Git-safe ASCII
 	slug: lowercase, with non-alphanumeric runs replaced by a single hyphen,
@@ -60,10 +68,21 @@ Only after the assessment is clear:
 	`LSP-3427-age-category-derivation-in-different-units-is-incorrect`.
 4. If the normalized name collides with an existing branch for different work,
 	stop and ask the user how to disambiguate it.
+5. Verify the new branch before continuing:
+	- `git branch --show-current` must equal the normalized issue branch name.
+	- `git config --get branch.<branch-name>.merge` must be empty, or must name
+	  `refs/heads/<branch-name>`; it must never name `refs/heads/dev`.
+	- The branch must not have an upstream pointing at `dev` before its first
+	  push.
+	- When publishing the branch, use `git push -u origin
+	  HEAD:refs/heads/<branch-name>` and verify `git branch -vv` tracks
+	  `origin/<branch-name>` afterward. Never use an inherited `origin/dev`
+	  upstream for the first push.
 
 ## 3. Establish the Test Baseline
 
-Before implementation, run the full project test suite:
+Before implementation, run the full project test suite unless the user explicitly 
+requested not to have a test baseline:
 
 ```text
 python run.py test_all
@@ -94,7 +113,8 @@ as known baseline failures; otherwise stop and ask the user how to proceed.
 
 ## 5. Final Validation and Delivery
 
-1. Run all relevant focused tests, then rerun:
+1. Run all relevant focused tests, then rerun all tests unless the user
+	explicitly requested not to have a test baseline (go to step 3 then directly):
 
 ```text
 python run.py test_all

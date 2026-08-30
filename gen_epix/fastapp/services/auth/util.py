@@ -8,7 +8,7 @@ from gen_epix.fastapp.services.auth.literal import EMAIL_PATTERN
 def get_email_from_claims(
     claims: dict[str, Any],
 ) -> str | None:
-    """Perform the get email from claims operation."""
+    """Return email from claims."""
     email = claims.get("email")
     if email is None:
         for claim in claims.values():

@@ -1,11 +1,11 @@
-"""Utilities for the fastapp router module."""
+"""Types for application router registration."""
 
 from collections.abc import Callable
 from typing import Any, NotRequired, TypedDict
 
 
 class RouterData(TypedDict):
-    """Provide the router data framework abstraction."""
+    """Describe a router factory registered by an application."""
 
     name: str
     create_endpoints_fn: Callable[..., Any]

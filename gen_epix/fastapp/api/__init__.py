@@ -1,4 +1,10 @@
-"""Utilities for the fastapp   init   module."""
+"""Public API routing types for FastApp applications.
+
+The package exposes ``CrudEndpointGenerator`` for adding command-backed CRUD
+routes, ``CrudEndpointSet`` for configuring a resource's API models and route
+behavior, and ``RouterData`` for registering router factory functions during
+application composition.
+"""
 
 # pylint: disable=useless-import-alias
 from gen_epix.fastapp.api.crud_endpoint_generator import (

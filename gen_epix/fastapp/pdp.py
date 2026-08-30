@@ -19,7 +19,7 @@ class PolicyDecisionPoint:
     """
 
     def __init__(self) -> None:
-        """Initialize the instance."""
+        """Initialize a PolicyDecisionPoint instance."""
         self._policies: dict[
             type[model.Command], dict[EventTiming, list[model.Policy]]
         ] = {}
@@ -30,7 +30,20 @@ class PolicyDecisionPoint:
         policy: model.Policy,
         timing: EventTiming = EventTiming.BEFORE,
     ) -> None:
-        """Register a policy for a command class and timing before, during or after command execution."""
+        """Register a policy for one command class and lifecycle timing.
+
+        Policies run in registration order. BEFORE policies authorize, DURING
+        policies are attached to the command, and AFTER policies filter its result.
+
+        Args:
+            command_class: Command class to which the policy applies.
+            policy: Policy instance to register.
+            timing: Lifecycle phase at which the policy is evaluated.
+
+        Raises:
+            InitializationServiceError: If the policy is already registered for the
+                command class and timing.
+        """
         if command_class not in self._policies:
             self._policies[command_class] = {}
         if timing not in self._policies[command_class]:
@@ -48,7 +61,17 @@ class PolicyDecisionPoint:
         policy: model.Policy,
         timing: EventTiming | None = None,
     ) -> None:
-        """Unregister a policy for a command class and timing (all timings if None)."""
+        """Remove a registered policy from one or all lifecycle timings.
+
+        Args:
+            command_class: Command class associated with the policy.
+            policy: Policy instance to remove.
+            timing: Specific lifecycle timing, or all timings when omitted.
+
+        Raises:
+            InitializationServiceError: If no policy registration matches the supplied
+                command class, policy, and timing.
+        """
         if command_class not in self._policies:
             raise exc.InitializationServiceError(
                 "380afa27", f"No policies registered for command class {command_class}"
@@ -86,12 +109,21 @@ class PolicyDecisionPoint:
     def apply(
         self, cmd: model.Command, timing: EventTiming, retval: Any | None = None
     ) -> Any | None:
-        """
-        Apply policies for a command class and timing.
+        """Apply policies for a command at one lifecycle phase.
 
-        In case of BEFORE, raise unauthorized error if any policy denies the command.
-        In case of DURING, add policies to command so that they can be used during command execution.
-        In case of AFTER, filter the return value with each policy and return it.
+        BEFORE policies authorize the command, DURING policies are attached to it,
+        and AFTER policies successively filter the handler result.
+
+        Args:
+            cmd: Command to authorize, annotate, or whose result to filter.
+            timing: Lifecycle phase whose policies should run.
+            retval: Handler result passed through AFTER policies.
+
+        Returns:
+            Filtered result for AFTER policies; otherwise ``None``.
+
+        Raises:
+            UnauthorizedAuthError: If a BEFORE policy denies the command.
         """
         policies = self.get_policies(type(cmd), timing)
         if not policies:
