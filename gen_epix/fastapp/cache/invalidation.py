@@ -17,8 +17,9 @@ runs.
 import threading
 import uuid
 from abc import ABC, abstractmethod
+from collections import deque
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from gen_epix.fastapp.cache.clock import Clock, SystemClock
@@ -251,11 +252,25 @@ class LocalInvalidationBus(InvalidationBus):
         self._lock = threading.Lock()
         self._handlers: list[Callable[[Invalidation], None]] = []
         self._seen: set[str] = set()
-        self._order: list[str] = []
+        self._order: deque[str] = deque()
 
     def publish(self, invalidation: Invalidation) -> None:
-        """See base method."""
-        self.deliver(invalidation)
+        """Stamp this bus as the origin and deliver the request.
+
+        A request that already carries an origin keeps it, so re-publishing a
+        message received from elsewhere does not disguise where it came from.
+        The message identifier is preserved, which is what lets a transport
+        recognize its own echo and lets repeated delivery stay harmless.
+
+        Args:
+            invalidation: The request to publish.
+        """
+        stamped = (
+            invalidation
+            if invalidation.origin is not None
+            else replace(invalidation, origin=self.origin)
+        )
+        self.deliver(stamped)
 
     def subscribe(self, handler: Callable[[Invalidation], None]) -> None:
         """See base method."""
@@ -279,7 +294,7 @@ class LocalInvalidationBus(InvalidationBus):
             self._seen.add(invalidation.message_id)
             self._order.append(invalidation.message_id)
             while len(self._order) > self.history_size:
-                self._seen.discard(self._order.pop(0))
+                self._seen.discard(self._order.popleft())
             handlers = list(self._handlers)
         for handler in handlers:
             try:

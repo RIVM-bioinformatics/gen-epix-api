@@ -295,6 +295,7 @@ def test_concurrent_readers_run_the_loader_once() -> None:
     for thread in threads:
         thread.join(timeout=5)
 
+    assert not any(thread.is_alive() for thread in threads)
     assert results == ["value"] * 4
     assert len(calls) == 1
 

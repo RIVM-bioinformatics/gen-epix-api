@@ -340,6 +340,16 @@ class Run:
             ]
         )
 
+    def test_fastapp_unit_cache(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/fastapp/unit/cache",
+            ]
+        )
+
     def test_fastapp_unit_domain(self) -> None:
         import pytest
 

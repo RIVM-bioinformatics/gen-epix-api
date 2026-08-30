@@ -162,6 +162,7 @@ def test_single_flight_runs_one_loader_per_key() -> None:
     for thread in threads:
         thread.join(timeout=5)
 
+    assert not any(thread.is_alive() for thread in threads)
     assert sorted(calls) == ["a", "b"]
     assert sorted(results) == ["a", "a", "a", "b"]
 

@@ -90,8 +90,43 @@ def region_config_from_mapping(
                     f"Invalid {field} {value!r} for region {name}"
                 ) from exception
     if "scope_parts" in values:
-        values["scope_parts"] = tuple(values["scope_parts"])
+        values["scope_parts"] = _as_scope_parts(name, values["scope_parts"])
     return RegionConfig(name=name, **values)
+
+
+def _as_scope_parts(region_name: str, value: Any) -> tuple[str, ...]:
+    """Return a configured `scope_parts` value as a tuple of part names.
+
+    A bare string is refused rather than iterated, because `tuple("tenant")`
+    would silently yield one scope part per character and produce keys that
+    look partitioned but are not.
+
+    Args:
+        region_name: The region the setting belongs to, used in error messages.
+        value: The configured value.
+
+    Returns:
+        The scope part names.
+
+    Raises:
+        CacheConfigurationError: If the value is a string, is not a list or
+            tuple, or contains anything other than non-empty strings.
+    """
+    if isinstance(value, str):
+        raise CacheConfigurationError(
+            f"scope_parts for region {region_name} must be a list of names, "
+            f"not the string {value!r}"
+        )
+    if not isinstance(value, (list, tuple)):
+        raise CacheConfigurationError(
+            f"scope_parts for region {region_name} must be a list of names"
+        )
+    parts = tuple(value)
+    if any(not isinstance(part, str) or not part for part in parts):
+        raise CacheConfigurationError(
+            f"scope_parts for region {region_name} must contain non-empty names"
+        )
+    return parts
 
 
 class CacheManager:

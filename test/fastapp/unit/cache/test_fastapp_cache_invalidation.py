@@ -4,7 +4,7 @@ import pytest
 
 from gen_epix.fastapp.cache.clock import ManualClock
 from gen_epix.fastapp.cache.enum import InvalidationMode
-from gen_epix.fastapp.cache.exc import RegionNotFoundError
+from gen_epix.fastapp.cache.exc import CacheConfigurationError, RegionNotFoundError
 from gen_epix.fastapp.cache.invalidation import (
     DependencyRegistry,
     Invalidation,
@@ -137,6 +137,30 @@ def test_the_invalidation_strategy_separates_hard_from_soft_cut_offs() -> None:
     assert not strategy.is_soft_invalidated(written_at)
 
 
+def test_a_published_request_carries_the_origin_of_the_bus() -> None:
+    """A transport needs the origin to recognize the echo of its own message."""
+    bus = LocalInvalidationBus(origin="worker-1")
+    received: list[Invalidation] = []
+    bus.subscribe(received.append)
+
+    bus.publish(Invalidation.for_tags(["case:1"]))
+
+    assert received[0].origin == "worker-1"
+
+
+def test_a_forwarded_request_keeps_the_origin_it_arrived_with() -> None:
+    """Re-publishing must not disguise where a request came from."""
+    bus = LocalInvalidationBus(origin="worker-1")
+    received: list[Invalidation] = []
+    bus.subscribe(received.append)
+    inbound = Invalidation.for_tags(["case:1"], origin="worker-2")
+
+    bus.publish(inbound)
+
+    assert received[0].origin == "worker-2"
+    assert received[0].message_id == inbound.message_id
+
+
 def test_a_repeated_invalidation_message_is_applied_once() -> None:
     """At-least-once transports redeliver, and that must be harmless."""
     bus = LocalInvalidationBus()
@@ -260,6 +284,17 @@ def test_identical_requests_collapse_inside_a_transaction() -> None:
     assert len(applied) == 1
 
 
+def test_namespace_bumps_with_different_generations_are_both_kept() -> None:
+    """Collapsing them would make receivers adopt a generation behind the origin."""
+    applied: list[Invalidation] = []
+
+    with invalidation_transaction(applied.append) as transaction:
+        transaction.add(Invalidation.for_namespace("cases", generation=5))
+        transaction.add(Invalidation.for_namespace("cases", generation=6))
+
+    assert [invalidation.generation for invalidation in applied] == [5, 6]
+
+
 def test_a_closed_transaction_refuses_further_requests() -> None:
     """Silently dropping a late request would leave a stale cache."""
     with invalidation_transaction(lambda invalidation: None) as transaction:
@@ -341,6 +376,18 @@ def test_regions_can_be_described_entirely_in_configuration() -> None:
     assert config.ttl == 30.0
     assert config.eviction_policy.name == "TINY_LFU"
     assert config.failure_mode.name == "FAIL_CLOSED"
+
+
+def test_a_scope_part_string_is_refused_rather_than_split() -> None:
+    """`tuple("tenant")` would produce one scope part per character."""
+    with pytest.raises(CacheConfigurationError):
+        region_config_from_mapping("cases", {"scope_parts": "tenant"})
+    with pytest.raises(CacheConfigurationError):
+        region_config_from_mapping("cases", {"scope_parts": ["tenant", ""]})
+
+    config = region_config_from_mapping("cases", {"scope_parts": ["tenant"]})
+
+    assert config.scope_parts == ("tenant",)
 
 
 def test_disabling_the_manager_bypasses_every_region() -> None:

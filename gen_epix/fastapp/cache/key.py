@@ -331,7 +331,8 @@ class KeySpec:
         if factory is not None:
             generate = factory(namespace, fn)
         elif self.template is not None:
-            generate = template_key_generator(self.template, self.to_str)(namespace, fn)
+            template_factory = template_key_generator(self.template, self.to_str)
+            generate = template_factory(namespace, fn)
         elif self.include or self.exclude:
             generate = self._selective_generator(namespace, fn)
         else:

@@ -25,7 +25,10 @@ class InvalidationTransaction:
 
     Requests that are identical apart from their message identifier collapse
     into one, so a loop that touches many objects of the same kind does not
-    replay the same broad invalidation repeatedly.
+    replay the same broad invalidation repeatedly. Every other field, including
+    the observed generation, is part of that identity: dropping a namespace
+    bump because an older one is already buffered would make receivers adopt a
+    generation that is behind the origin.
 
     Attributes:
         sink: Callable applied to each request at commit time.
@@ -69,6 +72,8 @@ class InvalidationTransaction:
             invalidation.keys,
             invalidation.tags,
             invalidation.namespace,
+            invalidation.generation,
+            invalidation.origin,
         )
         with self._lock:
             if self._closed:
