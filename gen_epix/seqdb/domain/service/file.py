@@ -9,9 +9,12 @@ from gen_epix.seqdb.domain.enum import ServiceType
 
 
 class BaseFileService(BaseService):
+    """Define the file-service command handlers for SeqDB implementations."""
+
     SERVICE_TYPE = ServiceType.FILE
 
     def register_handlers(self) -> None:
+        """Register default CRUD and SeqDB-specific file command handlers."""
         self.register_default_crud_handlers()
         f = self.app.register_handler
         f(
@@ -28,7 +31,17 @@ class BaseFileService(BaseService):
         self,
         cmd: command.CreateFileCommand,
     ) -> UUID:
-        """Create a new file and return its unique identifier."""
+        """Create a file and return its identifier.
+
+        Args:
+            cmd: File-creation command to execute.
+
+        Returns:
+            The identifier of the created file.
+
+        Raises:
+            NotImplementedError: Always, until a concrete file service implements it.
+        """
         raise NotImplementedError()
 
     @abstractmethod
@@ -36,5 +49,15 @@ class BaseFileService(BaseService):
         self,
         cmd: command.FileCrudCommand,
     ) -> model.File | list[model.File] | UUID | list[UUID] | bool | list[bool] | None:
-        """Perform CRUD operations on files based on the command."""
+        """Execute a file CRUD command.
+
+        Args:
+            cmd: File CRUD command to execute.
+
+        Returns:
+            The command-specific file result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete file service implements it.
+        """
         raise NotImplementedError()
