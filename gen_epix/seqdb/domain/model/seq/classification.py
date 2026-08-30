@@ -1,3 +1,5 @@
+"""Define SeqDB domain models for domain.model.seq.classification."""
+
 from typing import ClassVar, Self
 from uuid import UUID
 

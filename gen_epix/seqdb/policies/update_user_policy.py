@@ -1,3 +1,5 @@
+"""Implement SeqDB authorization policy behavior for policies.update_user_policy."""
+
 from typing import Any
 
 from gen_epix.commondb.policies import UpdateUserPolicy as CommonUpdateUserPolicy

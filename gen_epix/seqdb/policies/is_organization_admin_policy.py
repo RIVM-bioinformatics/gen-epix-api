@@ -1,3 +1,5 @@
+"""Implement SeqDB authorization policy behavior for policies.is_organization_admin_policy."""
+
 from typing import Any
 
 from gen_epix.commondb.domain.service import BaseAbacService

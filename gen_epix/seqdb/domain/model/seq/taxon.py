@@ -1,3 +1,5 @@
+"""Define SeqDB domain models for domain.model.seq.taxon."""
+
 import json
 from typing import ClassVar
 from uuid import UUID

@@ -1,3 +1,5 @@
+"""Define SQLAlchemy persistence mappings for SeqDB repositories.sa_model.file."""
+
 # pylint: disable=too-few-public-methods
 
 import sqlalchemy.orm as orm

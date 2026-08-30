@@ -1,3 +1,5 @@
+"""Define SeqDB domain models for domain.model.seq.tree."""
+
 from typing import ClassVar, Self
 from uuid import UUID
 

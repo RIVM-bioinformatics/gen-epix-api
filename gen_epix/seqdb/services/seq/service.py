@@ -1,3 +1,5 @@
+"""Implement SeqDB sequence service behavior for services.seq.service."""
+
 import datetime
 from collections.abc import Iterable
 from uuid import UUID

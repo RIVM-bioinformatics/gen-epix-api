@@ -1,3 +1,5 @@
+"""Implement SeqDB application service behavior for services.rbac."""
+
 from gen_epix.commondb.services import RbacService as CommonRbacService
 from gen_epix.seqdb.domain import enum
 

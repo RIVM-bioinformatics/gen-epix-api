@@ -1,3 +1,5 @@
+"""Compose SeqDB application dependencies from the configured environment."""
+
 # pylint: disable=unused-import-alias
 from typing import Any
 

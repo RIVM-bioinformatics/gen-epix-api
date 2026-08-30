@@ -1,3 +1,5 @@
+"""Define SeqDB domain models for domain.model.seq.profile."""
+
 import base64
 import hashlib
 import json

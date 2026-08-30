@@ -1,3 +1,5 @@
+"""Provide SeqDB persistence behavior for repositories.abac_dict."""
+
 from gen_epix.fastapp.repositories import DictRepository
 from gen_epix.seqdb.domain.repository import BaseAbacRepository
 

@@ -1,3 +1,5 @@
+"""Define SeqDB domain interfaces and policies for domain.repository.seq."""
+
 import abc
 import json
 from collections.abc import Iterable

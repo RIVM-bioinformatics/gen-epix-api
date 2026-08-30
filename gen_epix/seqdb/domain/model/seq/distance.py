@@ -1,3 +1,5 @@
+"""Define SeqDB domain models for domain.model.seq.distance."""
+
 import json
 from typing import ClassVar, Self
 from uuid import UUID

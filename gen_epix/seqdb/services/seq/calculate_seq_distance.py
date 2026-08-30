@@ -1,3 +1,5 @@
+"""Implement SeqDB sequence service behavior for services.seq.calculate_seq_distance."""
+
 import json
 import time
 from datetime import datetime

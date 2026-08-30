@@ -1,3 +1,5 @@
+"""Implement SeqDB sequence service behavior for services.seq.retrieve_best."""
+
 from uuid import UUID
 
 import gen_epix.seqdb.domain.command as command

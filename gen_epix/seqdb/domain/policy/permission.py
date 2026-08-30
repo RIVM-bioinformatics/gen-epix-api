@@ -1,3 +1,5 @@
+"""Define SeqDB domain interfaces and policies for domain.policy.permission."""
+
 from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.domain.policy import RoleGenerator as CommonRoleGenerator
 from gen_epix.fastapp import PermissionTypeSet

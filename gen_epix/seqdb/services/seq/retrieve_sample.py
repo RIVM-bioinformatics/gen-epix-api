@@ -1,3 +1,5 @@
+"""Implement SeqDB sequence service behavior for services.seq.retrieve_sample."""
+
 import gen_epix.seqdb.domain.command as command
 import gen_epix.seqdb.domain.model as model
 from gen_epix.fastapp import CrudOperation

@@ -1,3 +1,5 @@
+"""Define SeqDB domain models for domain.model.seq.locus."""
+
 import json
 from functools import cached_property
 from typing import ClassVar, Self

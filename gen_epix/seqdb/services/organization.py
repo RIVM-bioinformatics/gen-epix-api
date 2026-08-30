@@ -1,3 +1,5 @@
+"""Implement SeqDB application service behavior for services.organization."""
+
 from typing import Any
 
 from gen_epix.commondb.services import OrganizationService as CommonOrganizationService

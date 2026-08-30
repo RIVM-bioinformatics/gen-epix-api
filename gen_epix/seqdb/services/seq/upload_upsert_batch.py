@@ -1,3 +1,5 @@
+"""Implement SeqDB sequence service behavior for services.seq.upload_upsert_batch."""
+
 from gen_epix.commondb.domain.enum import EtlStatus, UploadAction
 from gen_epix.commondb.services import BatchUploader
 from gen_epix.fastapp.enum import CrudOperation

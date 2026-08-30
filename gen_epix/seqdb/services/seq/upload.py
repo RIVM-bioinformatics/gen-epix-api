@@ -1,3 +1,5 @@
+"""Implement SeqDB sequence service behavior for services.seq.upload."""
+
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.services import BatchUploader
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork

@@ -1,3 +1,5 @@
+"""Define SeqDB domain models for domain.model.seq.protocol."""
+
 import json
 import string
 from datetime import datetime, timezone

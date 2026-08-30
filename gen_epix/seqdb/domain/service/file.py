@@ -1,3 +1,5 @@
+"""Define SeqDB domain interfaces and policies for domain.service.file."""
+
 from abc import abstractmethod
 from uuid import UUID
 

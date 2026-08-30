@@ -1,3 +1,5 @@
+"""Define SeqDB domain models for domain.model.seq.non_persistable."""
+
 from datetime import datetime
 from typing import ClassVar, Self
 from uuid import UUID

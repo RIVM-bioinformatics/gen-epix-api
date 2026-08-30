@@ -1,3 +1,5 @@
+"""Define SQLAlchemy persistence mappings for SeqDB repositories.sa_model.seq.ref_data."""
+
 # pylint: disable=too-few-public-methods
 from datetime import datetime
 from uuid import UUID

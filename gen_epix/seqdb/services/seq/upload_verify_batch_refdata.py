@@ -1,3 +1,5 @@
+"""Implement SeqDB sequence service behavior for services.seq.upload_verify_batch_refdata."""
+
 from typing import Any
 from uuid import UUID
 

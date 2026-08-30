@@ -1,3 +1,5 @@
+"""Implement SeqDB application service behavior for services.abac."""
+
 from __future__ import annotations
 
 from gen_epix.fastapp.model import Command

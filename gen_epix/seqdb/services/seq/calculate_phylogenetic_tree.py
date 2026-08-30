@@ -1,3 +1,5 @@
+"""Implement SeqDB sequence service behavior for services.seq.calculate_phylogenetic_tree."""
+
 import json
 import sys
 from typing import Any, cast

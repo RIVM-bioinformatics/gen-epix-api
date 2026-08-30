@@ -1,3 +1,5 @@
+"""Implement SeqDB application service behavior for services.file."""
+
 import gzip
 from collections.abc import Iterable
 from io import BytesIO, StringIO

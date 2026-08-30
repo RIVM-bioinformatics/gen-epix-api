@@ -1,3 +1,5 @@
+"""Expose SeqDB api.file API adapters and request representations."""
+
 import base64
 from collections.abc import Callable
 from typing import Any, NoReturn

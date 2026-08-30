@@ -1,3 +1,5 @@
+"""Define SQLAlchemy persistence mappings for SeqDB repositories.sa_model.seq.operational_data."""
+
 from uuid import UUID
 
 from sqlalchemy.orm import Mapped, relationship

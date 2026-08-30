@@ -1,3 +1,5 @@
+"""Implement SeqDB CRUD service operations for services.seq.crud_seq_profile_identifier."""
+
 from uuid import UUID
 
 from gen_epix.seqdb.domain import command, model

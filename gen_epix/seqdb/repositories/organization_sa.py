@@ -1,3 +1,5 @@
+"""Provide SeqDB persistence behavior for repositories.organization_sa."""
+
 from typing import Any
 
 from sqlalchemy import Engine

@@ -1,3 +1,5 @@
+"""Implement SeqDB sequence service behavior for services.seq.upload_verify_batch."""
+
 from collections import defaultdict
 from typing import cast
 from uuid import UUID

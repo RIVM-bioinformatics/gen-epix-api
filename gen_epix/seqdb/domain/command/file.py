@@ -1,3 +1,5 @@
+"""Define SeqDB command objects for domain.command.file."""
+
 from typing import ClassVar
 
 from pydantic import Field

@@ -1,3 +1,5 @@
+"""Define SQLAlchemy persistence mappings for SeqDB repositories.sa_model.seq.base."""
+
 from enum import IntEnum
 from uuid import UUID
 

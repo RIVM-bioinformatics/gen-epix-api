@@ -1,3 +1,5 @@
+"""Expose SeqDB api.router API adapters and request representations."""
+
 from collections.abc import Callable
 from typing import Any, NoReturn
 

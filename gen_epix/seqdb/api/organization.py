@@ -1,3 +1,5 @@
+"""Expose SeqDB api.organization API adapters and request representations."""
+
 from enum import Enum
 
 from pydantic import BaseModel

@@ -1,3 +1,5 @@
+"""Expose SeqDB api.seq API adapters and request representations."""
+
 from collections.abc import Callable, Iterable
 from datetime import datetime
 from typing import Any, NoReturn, Self

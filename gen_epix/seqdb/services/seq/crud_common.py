@@ -1,3 +1,5 @@
+"""Implement SeqDB CRUD service operations for services.seq.crud_common."""
+
 from uuid import UUID
 
 from gen_epix.commondb.domain.command import CrudCommand

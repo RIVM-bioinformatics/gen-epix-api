@@ -1,3 +1,5 @@
+"""Define SeqDB domain models for domain.model.seq.pheno."""
+
 from typing import ClassVar, Self
 
 from pydantic import model_validator

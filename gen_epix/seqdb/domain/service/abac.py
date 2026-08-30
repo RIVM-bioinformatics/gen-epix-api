@@ -1,3 +1,5 @@
+"""Define SeqDB domain interfaces and policies for domain.service.abac."""
+
 from gen_epix.commondb.services import AbacService as CommonAbacService
 from gen_epix.fastapp.model import Command
 from gen_epix.seqdb.domain import command

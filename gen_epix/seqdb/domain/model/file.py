@@ -1,3 +1,5 @@
+"""Define SeqDB domain models for domain.model.file."""
+
 from typing import ClassVar
 
 from pydantic import Field

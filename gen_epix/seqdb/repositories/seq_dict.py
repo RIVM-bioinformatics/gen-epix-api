@@ -1,3 +1,5 @@
+"""Provide SeqDB persistence behavior for repositories.seq_dict."""
+
 from collections.abc import Iterable
 from collections.abc import Set as AbstractSet
 from datetime import datetime

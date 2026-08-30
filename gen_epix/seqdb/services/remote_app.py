@@ -1,3 +1,5 @@
+"""Implement SeqDB application service behavior for services.remote_app."""
+
 import base64
 from collections.abc import Iterable
 from datetime import datetime
