@@ -14,6 +14,7 @@ from gen_epix.seqdb.domain.repository import BaseSeqRepository
 
 
 class SeqDictRepository(DictRepository, BaseSeqRepository):
+    """Implement SeqDB sequence persistence against in-memory dictionaries."""
 
     def get_sample_ids_modified_in_range(
         self,
@@ -21,6 +22,7 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         modified_since: datetime | None = None,
         modified_until: datetime | None = None,
     ) -> list[UUID]:
+        """Return samples modified directly or through linked records in a time range."""
         modified_since = modified_since or datetime.min
         modified_until = modified_until or datetime.max
         modified_sample_ids: set[UUID] = set()
@@ -44,7 +46,7 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         self,
         sample_ids: list[UUID],
     ) -> list[model.FullSample]:
-        """See parent class method"""
+        """Construct complete sample aggregates from in-memory linked records."""
         # Retrieve all data per sample
         sample_id_set = set(sample_ids)
         model_classes = (
@@ -94,6 +96,18 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         uow: BaseUnitOfWork,
         seq_ids: list[UUID],
     ) -> Iterable[tuple[UUID, list[tuple[UUID, str]]]]:
+        """Yield requested sequences and their DNA contigs for FASTA generation.
+
+        Args:
+            uow: Unit of work used for the persistence operation.
+            seq_ids: Sequence identifiers to retrieve.
+
+        Returns:
+            Sequence identifiers paired with contig identifiers and DNA strings.
+
+        Raises:
+            InitializationServiceError: A contig does not use the plain DNA format.
+        """
         self.raise_on_duplicate_ids(seq_ids)
 
         seqs: list[model.Seq] = self.read_some(model.Seq, seq_ids)  # type: ignore[assignment]
@@ -118,6 +132,7 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         max_distance: float,
         **kwargs: Any,
     ) -> list[UUID]:
+        """Return profile IDs connected by stored distances within the threshold."""
         if not profile_ids:
             return []
 
@@ -148,6 +163,7 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         protocol_id: UUID,
         profile_ids: list[UUID] | None = None,
     ) -> Iterable[model.SeqDistance]:
+        """Yield distance records for a protocol, optionally limited to profile IDs."""
         table: dict[UUID, model.SeqDistance] = self.db[  # type: ignore[assignment]
             model.SeqDistance
         ]
@@ -169,6 +185,7 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         uow: BaseUnitOfWork,
         protocol_id: UUID,
     ) -> Iterable[UUID]:
+        """Yield unique profile IDs that have distance records for a protocol."""
         # table: dict[UUID, model.SeqDistance] = self.db[  # type: ignore[assignment]
         #     model.SeqDistance
         # ]
@@ -184,6 +201,7 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         uow: BaseUnitOfWork,
         protocol_id: UUID,
     ) -> datetime | None:
+        """Return the latest modification time among a protocol's distance records."""
         df: dict[UUID, model.SeqDistance] = self.db[  # type: ignore[assignment]
             model.SeqDistance
         ]
@@ -203,6 +221,7 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         user_id: UUID | None,
         objs: list[model.SeqDistance],
     ) -> None:
+        """Persist changed distance records and update their modification metadata."""
         # In-memory backend — objects are mutated by reference so content is
         # already updated. Delegate to UPDATE_SOME to keep modified_at and
         # modified_by consistent with what the SA backend writes.
@@ -218,6 +237,7 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         seq_profile_protocol_ids: list[UUID],
         limit: int | None = None,
     ) -> list[model.SeqProfile]:
+        """Return profiles missing a distance record for the given distance protocol."""
         protocol_id_set = set(seq_profile_protocol_ids)
         has_distance: set[UUID] = {
             x.seq_profile_id
@@ -242,6 +262,7 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         uow: BaseUnitOfWork,
         protocol_ids: list[UUID],
     ) -> list[model.SeqProfile]:
+        """Return profiles linked to one of the supplied profiling protocols."""
         unique_protocol_ids = set(protocol_ids)
         df: dict[UUID, model.SeqProfile] = self.db[  # type: ignore[assignment]
             model.SeqProfile
@@ -256,6 +277,7 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
             enum.QualityControlResult
         ] = enum.QualityControlResultSet.USABLE.value,
     ) -> list[UUID]:
+        """Return requested profile IDs whose quality result is allowed."""
         unique_profile_ids = set(seq_profile_ids)
         df: dict[UUID, model.SeqProfile] = self.db[  # type: ignore[assignment]
             model.SeqProfile
