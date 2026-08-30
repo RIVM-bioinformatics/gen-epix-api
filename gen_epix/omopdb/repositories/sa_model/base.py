@@ -1,3 +1,5 @@
+"""Shared SQLAlchemy mixins used by OmopDB table mappings."""
+
 from uuid import UUID
 
 import sqlalchemy as sa

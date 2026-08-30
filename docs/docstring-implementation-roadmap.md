@@ -136,5 +136,30 @@ Phase 5 adds `gen_epix/seqdb`.
 
 Phase 6 adds `gen_epix/casedb`.
 
+Phase 8 adds `gen_epix/omopdb`.
+
+## Phase 8: `omopdb`
+
+Status: in progress in branch `LSP-3787-phase-8-omopdb-folder`.
+
+Scope:
+
+- Document OmopDB modules, public APIs, commands, policies, services,
+  repositories, models, and test-support helpers.
+- Document the package facades deepest first after their child modules.
+- Preserve the existing command, policy, service, repository, and API-layer
+  responsibilities while documenting their caller-facing contracts.
+- Document modules in dependency order where possible. The ticket's referenced
+  `scripts/ast_import_graph.py` tool is absent from this repository, so the
+  dependency order is established from local imports and existing architecture.
+
+Validation:
+
+- `python .agents/skills/write-docstring/scripts/check_docstrings.py gen_epix/omopdb`
+- `ruff check --select D --ignore D212,D417 gen_epix/omopdb`
+- `black -l 88 --check --diff gen_epix/omopdb`
+- `isort --check-only --diff --profile black --float-to-top --line-length=88 gen_epix/omopdb`
+- `python run.py test_omopdb_unit`
+
 Stop after each phase to review noise from linting, stale-docstring review effort,
 and test coverage for important documented behavior before adding more automation.

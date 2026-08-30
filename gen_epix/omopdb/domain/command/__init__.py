@@ -1,3 +1,11 @@
+"""Expose shared and OMOP command types plus command-registration metadata.
+
+CommonDB commands cover users, organizations, authorization, and system
+operations. OMOP commands cover model-specific CRUD operations, person upload,
+and person or specimen retrieval. `COMMANDS_BY_SERVICE_TYPE` and
+`COMMON_COMMAND_MAP` support domain composition and shared-command mapping.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix import fastapp
 from gen_epix.commondb.domain import command as common_command

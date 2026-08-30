@@ -1,3 +1,5 @@
+"""Transport adapters for OmopDB person upload, retrieval, and CRUD endpoints."""
+
 from collections.abc import Callable
 from typing import Any, NoReturn, cast
 from uuid import UUID
@@ -14,12 +16,16 @@ from gen_epix.util import copy_model_field
 
 
 class RetrievePersonsByIdsRequestBody(PydanticBaseModel):
+    """Carry unique person identifiers for a full-person retrieval request."""
+
     person_ids: list[UUID] = copy_model_field(
         command.RetrievePersonsByIdCommand, "person_ids"
     )
 
 
 class RetrieveSpecimenIdsByCohortIdsRequestBody(PydanticBaseModel):
+    """Carry cohort identifiers for a cohort-to-specimen retrieval request."""
+
     cohort_definition_id: UUID = copy_model_field(
         command.RetrieveSpecimenIdsByCohortIdsCommand, "cohort_definition_id"
     )
@@ -34,6 +40,7 @@ def create_omop_endpoints(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     **kwargs: Any,
 ) -> None:
+    """Register OMOP upload, retrieval, and generated CRUD transport endpoints."""
     assert handle_exception
     app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency
@@ -48,6 +55,7 @@ def create_omop_endpoints(
         user: registered_user_dependency,  # type: ignore
         cmd: command.UploadPersonsCommand,
     ) -> model.PersonBatchUploadResult:
+        """Delegate a person-upload command for the authenticated user."""
         cmd.user = user
         return cast(
             model.PersonBatchUploadResult,
@@ -70,6 +78,7 @@ def create_omop_endpoints(
         user: registered_user_dependency,  # type: ignore
         request_body: model.PersonQuery,
     ) -> model.PersonQueryResult:
+        """Delegate a person-query retrieval command for the authenticated user."""
         return cast(
             model.PersonQueryResult,
             handle_command(
@@ -94,6 +103,7 @@ def create_omop_endpoints(
         user: registered_user_dependency,  # type: ignore
         request_body: RetrievePersonsByIdsRequestBody,
     ) -> list[model.FullPerson]:
+        """Delegate a full-person retrieval command for the authenticated user."""
         return cast(
             list[model.FullPerson],
             handle_command(
@@ -118,6 +128,7 @@ def create_omop_endpoints(
         user: registered_user_dependency,  # type: ignore
         request_body: RetrieveSpecimenIdsByCohortIdsRequestBody,
     ) -> model.SpecimenIdsByCohortResult:
+        """Delegate a cohort specimen-ID retrieval command for the user."""
         return cast(
             model.SpecimenIdsByCohortResult,
             handle_command(

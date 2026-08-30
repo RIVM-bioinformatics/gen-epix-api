@@ -1,3 +1,5 @@
+"""Generate OmopDB role permissions from shared and OMOP-specific commands."""
+
 from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.domain.policy import RoleGenerator as CommonRoleGenerator
 from gen_epix.fastapp.enum import PermissionTypeSet
@@ -7,6 +9,7 @@ from gen_epix.omopdb.domain.enum import Role
 
 
 class RoleGenerator(CommonRoleGenerator):
+    """Build hierarchical OmopDB role permissions for shared and local commands."""
 
     COMMON_ROLE_ENUM_MAP = {x: Role[x.name] for x in CommonRole}
 
