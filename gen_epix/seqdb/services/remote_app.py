@@ -44,6 +44,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         command.RetrieveSampleIdentifiersByIdCommand: 45.0,
         command.RetrieveSamplesByIdCommand: 45.0,
         command.RetrieveSamplesByQueryCommand: 45.0,
+        command.LocusCrudCommand: 45.0,
         command.RetrieveBestSeqPerSampleCommand: 15.0,
         command.RetrieveBestSeqProfilePerSampleCommand: 15.0,
         command.RetrieveBestSeqClassificationPerSampleCommand: 15.0,
