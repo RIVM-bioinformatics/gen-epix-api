@@ -78,7 +78,7 @@ class CaseValidator:
         (Unit.YEAR, Unit.MONTH): 12.0,
         (Unit.YEAR, Unit.WEEK): 365.25 / 7,
         (Unit.YEAR, Unit.DAY): 365.25,
-        (Unit.QUARTER, Unit.YEAR): 1 / 3.0,
+        (Unit.QUARTER, Unit.YEAR): 1 / 4.0,
         (Unit.QUARTER, Unit.MONTH): 3.0,
         (Unit.QUARTER, Unit.WEEK): 365.25 / (4 * 7),
         (Unit.QUARTER, Unit.DAY): 365.25 / 4,
