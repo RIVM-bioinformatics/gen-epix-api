@@ -596,6 +596,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.casedb.performance.upload_deadlock",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_casedb_upload_deadlock"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
             "name": "test.casedb.custom",
             "type": "debugpy",
             "request": "launch",
