@@ -1,4 +1,4 @@
-"""Implement SeqDB CRUD service operations for services.seq.crud_protocol_set_member."""
+"""Implement seqdb CRUD service operations for services.seq.crud_protocol_set_member."""
 
 from uuid import UUID
 
@@ -17,7 +17,18 @@ def seq_service_crud_protocol_set_member(
     | bool
     | None
 ):
-    """Handle CRUD operations for ProtocolSetMember entities."""
+    """Handle CRUD operations for protocol-set membership entities.
+
+    Args:
+        self: Sequence service executing the command.
+        cmd: Typed protocol-set-member CRUD command.
+
+    Returns:
+        The action-specific protocol-set-member result.
+
+    Raises:
+        AssertionError: The command operation is unsupported.
+    """
     user_id = cmd.user.id if cmd.user else None
     protocol_set_members: list[model.ProtocolSetMember] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():

@@ -1,4 +1,4 @@
-"""Re-export SeqDB sequence-domain model types."""
+"""Re-export seqdb sequence-domain model types."""
 
 from gen_epix.commondb.domain.model import IdentifierForUpload as IdentifierForUpload
 

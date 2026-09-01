@@ -1,4 +1,4 @@
-"""Define SeqDB domain models for domain.model.seq.protocol."""
+"""Define seqdb domain models for domain.model.seq.protocol."""
 
 import json
 import string

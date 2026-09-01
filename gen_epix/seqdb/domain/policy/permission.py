@@ -1,4 +1,4 @@
-"""Define SeqDB domain interfaces and policies for domain.policy.permission."""
+"""Define seqdb domain interfaces and policies for domain.policy.permission."""
 
 from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.domain.policy import RoleGenerator as CommonRoleGenerator
@@ -9,7 +9,7 @@ from gen_epix.seqdb.domain.enum import Role
 
 
 class RoleGenerator(CommonRoleGenerator):
-    """Generate SeqDB role permissions from common and domain command mappings."""
+    """Generate seqdb role permissions from common and domain command mappings."""
 
     COMMON_ROLE_ENUM_MAP = {x: Role[x.name] for x in CommonRole}
 

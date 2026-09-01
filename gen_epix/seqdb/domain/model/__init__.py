@@ -1,4 +1,4 @@
-"""Re-export SeqDB domain model types."""
+"""Re-export seqdb domain model types."""
 
 # pylint: disable=useless-import-alias
 from gen_epix import fastapp

@@ -1,4 +1,4 @@
-"""Define SeqDB domain interfaces and policies for domain.repository.seq."""
+"""Define seqdb domain interfaces and policies for domain.repository.seq."""
 
 import abc
 import json
@@ -14,7 +14,7 @@ from gen_epix.seqdb.domain import enum, model
 
 
 class BaseSeqRepository(BaseRepository):
-    """Define backend-independent persistence operations for SeqDB sequence data."""
+    """Define backend-independent persistence operations for seqdb sequence data."""
 
     @abc.abstractmethod
     def retrieve_seq_fasta(

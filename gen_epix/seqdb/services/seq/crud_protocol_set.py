@@ -1,4 +1,4 @@
-"""Implement SeqDB CRUD service operations for services.seq.crud_protocol_set."""
+"""Implement seqdb CRUD service operations for services.seq.crud_protocol_set."""
 
 from uuid import UUID
 
@@ -17,7 +17,18 @@ def seq_service_crud_protocol_set(
     | bool
     | None
 ):
-    """Handle CRUD operations for ProtocolSet entities."""
+    """Handle CRUD operations for protocol-set entities.
+
+    Args:
+        self: Sequence service executing the command.
+        cmd: Typed protocol-set CRUD command.
+
+    Returns:
+        The action-specific protocol-set result.
+
+    Raises:
+        AssertionError: The command operation is unsupported.
+    """
     user_id = cmd.user.id if cmd.user else None
     protocol_sets: list[model.ProtocolSet] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():

@@ -1,4 +1,4 @@
-"""Define SQLAlchemy persistence mappings for SeqDB repositories.sa_model.seq.ref_data."""
+"""Define SQLAlchemy persistence mappings for seqdb repositories.sa_model.seq.ref_data."""
 
 # pylint: disable=too-few-public-methods
 from datetime import datetime
@@ -21,9 +21,7 @@ Base: type = orm.declarative_base(name=enum.ServiceType.SEQ.value)
 
 
 class Protocol(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.Protocol)
 
@@ -77,9 +75,7 @@ class Protocol(Base, RowMetadataMixin):
 
 
 class ProtocolSet(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.ProtocolSet)
 
@@ -88,9 +84,7 @@ class ProtocolSet(Base, RowMetadataMixin):
 
 
 class ProtocolSetMember(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.ProtocolSetMember)
 
@@ -112,9 +106,7 @@ class ProtocolSetMember(Base, RowMetadataMixin):
 
 
 class Allele(Base, RowMetadataMixin, SeqMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.Allele)
 
@@ -122,9 +114,7 @@ class Allele(Base, RowMetadataMixin, SeqMixin):
 
 
 class Locus(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.Locus)
 
@@ -140,9 +130,7 @@ class Locus(Base, RowMetadataMixin):
 
 
 class LocusCodeMap(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.LocusCodeMap)
 
@@ -153,9 +141,7 @@ class LocusCodeMap(Base, RowMetadataMixin):
 
 
 class LocusSet(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.LocusSet)
 
@@ -168,9 +154,7 @@ class LocusSet(Base, RowMetadataMixin):
 
 
 class RefAllele(Base, RowMetadataMixin, SeqMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.RefAllele)
 
@@ -179,9 +163,7 @@ class RefAllele(Base, RowMetadataMixin, SeqMixin):
 
 
 class RefSeq(Base, RowMetadataMixin, SeqMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.RefSeq)
 
@@ -195,9 +177,7 @@ class RefSeq(Base, RowMetadataMixin, SeqMixin):
 
 
 class SeqCategory(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.SeqCategory)
 
@@ -211,9 +191,7 @@ class SeqCategory(Base, RowMetadataMixin):
 
 
 class SeqCategorySet(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.SeqCategorySet)
 
@@ -222,9 +200,7 @@ class SeqCategorySet(Base, RowMetadataMixin):
 
 
 class Taxon(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.Taxon)
 
@@ -247,9 +223,7 @@ class Taxon(Base, RowMetadataMixin):
 
 
 class TaxonSet(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.TaxonSet)
 
@@ -258,9 +232,7 @@ class TaxonSet(Base, RowMetadataMixin):
 
 
 class TaxonSetMember(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.TaxonSetMember)
 
@@ -282,9 +254,7 @@ class TaxonSetMember(Base, RowMetadataMixin):
 
 
 class TreeAlgorithmClass(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.TreeAlgorithmClass)
 
@@ -302,9 +272,7 @@ class TreeAlgorithmClass(Base, RowMetadataMixin):
 
 
 class TreeAlgorithm(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.TreeAlgorithm)
 

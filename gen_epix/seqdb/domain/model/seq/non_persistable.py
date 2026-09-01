@@ -1,4 +1,4 @@
-"""Define SeqDB domain models for domain.model.seq.non_persistable."""
+"""Define seqdb domain models for domain.model.seq.non_persistable."""
 
 from datetime import datetime
 from typing import ClassVar, Self

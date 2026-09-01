@@ -1,4 +1,4 @@
-"""Define SeqDB domain models for domain.model.seq.locus."""
+"""Define seqdb domain models for domain.model.seq.locus."""
 
 import json
 from functools import cached_property
@@ -22,7 +22,16 @@ from gen_epix.seqdb.domain.model.seq.base import BaseSeq
 
 
 class Locus(Model):
-    """Describe an immutable genetic locus used by sequence analyses.
+    """A genetic locus, e.g. a gene or other genomic region of interest. The locus can be
+    defined on any taxonomic level, e.g. species, lineage, etc. As such, depending on
+    the analysis, two loci may actually represent the same genomic region, but defined
+    for lower taxonomic levels than the one used in the analysis. This information,
+    where relevant, can be captured in a LocusSet or can reside entirely outside the
+    application.
+
+    A locus is immutable: once created, it cannot be deleted. Its properties
+    should not change semantically either. As such, locus IDs can safely be
+    referenced in other models and outside of the application.
 
     Model validation: Empty gene-product codes are normalized to ``None`` and a
     non-empty gene-product code is permitted only for gene loci.
@@ -116,7 +125,7 @@ class LocusSet(Model):
 
 
 class LocusCodeMap(Model):
-    """Map external locus codes to SeqDB locus identifiers."""
+    """Map external locus codes to seqdb locus identifiers."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="locus_code_maps",

@@ -1,4 +1,4 @@
-"""Provide SeqDB functionality for domain.literal."""
+"""Provide seqdb functionality for domain.literal."""
 
 import re
 

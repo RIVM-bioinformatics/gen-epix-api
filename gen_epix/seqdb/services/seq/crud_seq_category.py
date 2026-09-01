@@ -1,4 +1,4 @@
-"""Implement SeqDB CRUD service operations for services.seq.crud_seq_category."""
+"""Implement seqdb CRUD service operations for services.seq.crud_seq_category."""
 
 from uuid import UUID
 
@@ -17,7 +17,18 @@ def seq_service_crud_seq_category(
     | bool
     | None
 ):
-    """Handle CRUD operations for SeqCategory entities."""
+    """Handle CRUD operations for sequence-category entities.
+
+    Args:
+        self: Sequence service executing the command.
+        cmd: Typed sequence-category CRUD command.
+
+    Returns:
+        The action-specific sequence-category result.
+
+    Raises:
+        AssertionError: The command operation is unsupported.
+    """
     user_id = cmd.user.id if cmd.user else None
     seq_categories: list[model.SeqCategory] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():

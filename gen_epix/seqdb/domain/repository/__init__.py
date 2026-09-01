@@ -1,4 +1,4 @@
-"""Re-export SeqDB repository interfaces."""
+"""Re-export seqdb repository interfaces."""
 
 # pylint: disable=useless-import-alias
 from gen_epix.commondb.domain.repository import BaseAbacRepository as BaseAbacRepository

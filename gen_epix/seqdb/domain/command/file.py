@@ -1,4 +1,4 @@
-"""Define SeqDB command objects for domain.command.file."""
+"""Define seqdb command objects for domain.command.file."""
 
 from typing import ClassVar
 
@@ -25,6 +25,6 @@ class CreateFileCommand(Command):
 
 # CRUD commands
 class FileCrudCommand(CrudCommand):
-    """Apply a standard CRUD operation to persisted SeqDB file records."""
+    """Apply a standard CRUD operation to persisted seqdb file records."""
 
     MODEL_CLASS: ClassVar = model.File

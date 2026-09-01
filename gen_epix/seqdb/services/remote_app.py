@@ -1,4 +1,4 @@
-"""Implement SeqDB application service behavior for services.remote_app."""
+"""Implement seqdb application service behavior for services.remote_app."""
 
 import base64
 from collections.abc import Iterable

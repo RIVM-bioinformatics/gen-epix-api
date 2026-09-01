@@ -1,4 +1,4 @@
-"""Define SeqDB domain models for domain.model.seq.tree."""
+"""Define seqdb domain models for domain.model.seq.tree."""
 
 from typing import ClassVar, Self
 from uuid import UUID
@@ -13,7 +13,7 @@ from gen_epix.seqdb.domain.model.seq.protocol import Protocol
 
 
 class TreeAlgorithmClass(Model):
-    """Describe an input-capability class for phylogenetic tree algorithms."""
+    """A class (type)of phylogenetic tree algorithms."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="tree_algorithm_classes",

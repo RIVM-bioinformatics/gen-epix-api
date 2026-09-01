@@ -1,5 +1,5 @@
 # pylint: disable=useless-import-alias
-"""Re-export SeqDB and shared command types for application composition."""
+"""Re-export seqdb and shared command types for application composition."""
 
 from gen_epix import fastapp
 from gen_epix.commondb.domain import command as common_command

@@ -1,4 +1,4 @@
-"""Implement SeqDB CRUD service operations for services.seq.crud_seq_distance."""
+"""Implement seqdb CRUD service operations for services.seq.crud_seq_distance."""
 
 from uuid import UUID
 
@@ -17,7 +17,18 @@ def seq_service_crud_seq_distance(
     | bool
     | None
 ):
-    """Handle CRUD operations for SeqDistance entities."""
+    """Handle CRUD operations for sequence-distance entities.
+
+    Args:
+        self: Sequence service executing the command.
+        cmd: Typed sequence-distance CRUD command.
+
+    Returns:
+        The action-specific sequence-distance result.
+
+    Raises:
+        AssertionError: The command operation is unsupported.
+    """
     user_id = cmd.user.id if cmd.user else None
     seq_distances: list[model.SeqDistance] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():

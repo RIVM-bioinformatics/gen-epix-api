@@ -1,4 +1,4 @@
-"""Define SeqDB domain models for domain.model.seq.ref_seq."""
+"""Define seqdb domain models for domain.model.seq.ref_seq."""
 
 from typing import ClassVar
 from uuid import UUID

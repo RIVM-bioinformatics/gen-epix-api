@@ -1,4 +1,4 @@
-"""Compose and expose the configured SeqDB FastAPI application."""
+"""Compose and expose the configured seqdb FastAPI application."""
 
 from gen_epix.commondb.app_setup import create_fast_api
 from gen_epix.commondb.config import AppCfg

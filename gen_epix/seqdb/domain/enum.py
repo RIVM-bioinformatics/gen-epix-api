@@ -1,4 +1,4 @@
-"""Provide SeqDB functionality for domain.enum."""
+"""Provide seqdb functionality for domain.enum."""
 
 # pylint: disable=wildcard-import, unused-import
 # because this is a package, and imported as such in other modules
@@ -37,20 +37,20 @@ class IntEnumWithJsonSchemaMixin:
 
 
 class TimestampFactory(Enum):
-    """Provide timestamp-generation strategies used by SeqDB models."""
+    """Provide timestamp-generation strategies used by seqdb models."""
 
     DATETIME_NOW = lambda: datetime.datetime.now(datetime.timezone.utc)
 
 
 class IdFactory(Enum):
-    """Provide identifier-generation strategies used by SeqDB models."""
+    """Provide identifier-generation strategies used by seqdb models."""
 
     UUID4 = uuid.uuid4
     ULID = lambda: ulid.api.new().uuid
 
 
 class ServiceType(Enum):
-    """Identify services available within the SeqDB application."""
+    """Identify services available within the seqdb application."""
 
     AUTH = "AUTH"
     ORGANIZATION = "ORGANIZATION"
@@ -62,7 +62,7 @@ class ServiceType(Enum):
 
 
 class RepositoryType(Enum):
-    """Identify supported SeqDB persistence backend implementations."""
+    """Identify supported seqdb persistence backend implementations."""
 
     DICT = "DICT"
     SA_SQLITE = "SA_SQLITE"
@@ -70,7 +70,7 @@ class RepositoryType(Enum):
 
 
 class Role(Enum):
-    """Define SeqDB application roles for command-centric authorization."""
+    """Define seqdb application roles for command-centric authorization."""
 
     ROOT = "SEQDB_ROOT"
     APP_ADMIN = "SEQDB_APP_ADMIN"

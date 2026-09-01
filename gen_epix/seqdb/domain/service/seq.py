@@ -1,4 +1,4 @@
-"""Define SeqDB domain interfaces and policies for domain.service.seq."""
+"""Define seqdb domain interfaces and policies for domain.service.seq."""
 
 import abc
 import datetime
@@ -11,12 +11,12 @@ from gen_epix.seqdb.domain.enum import ServiceType
 
 
 class BaseSeqService(BaseService):
-    """Define SeqDB command handlers implemented by concrete sequence services."""
+    """Define seqdb command handlers implemented by concrete sequence services."""
 
     SERVICE_TYPE = ServiceType.SEQ
 
     def register_handlers(self) -> None:
-        """Register default CRUD and SeqDB-specific sequence command handlers."""
+        """Register default CRUD and seqdb-specific sequence command handlers."""
         f = self.app.register_handler
         self.register_default_crud_handlers()
         f(

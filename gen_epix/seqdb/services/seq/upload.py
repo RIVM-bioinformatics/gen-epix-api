@@ -1,4 +1,4 @@
-"""Implement SeqDB sequence service behavior for services.seq.upload."""
+"""Implement seqdb sequence service behavior for services.seq.upload."""
 
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.services import BatchUploader
@@ -16,11 +16,13 @@ from gen_epix.seqdb.services.seq.upload_verify_batch import (
 
 
 class SampleBatchUploader(BatchUploader):
+    """Coordinate validation and persistence of seqdb sample upload batches."""
 
     def __init__(
         self,
         service: BaseSeqService,
     ):
+        """Configure upload processing for seqdb stored model fields."""
         super().__init__(
             command.UploadSamplesCommand,
             model.STORED_MODEL_FIELD_PROPS,  # type: ignore[arg-type]
@@ -31,8 +33,13 @@ class SampleBatchUploader(BatchUploader):
         self,
         cmd: command.UploadSamplesCommand,
     ) -> None:
-        """
-        Verify if the user has the necessary rights to upload samples.
+        """Verify that the command user may upload the supplied sample batch.
+
+        Args:
+            cmd: Upload command whose user authorization is checked.
+
+        Raises:
+            UnauthorizedAuthError: The user lacks required data-collection write access.
         """
         user_roles = cmd.user.roles if cmd.user else set()
 
@@ -60,9 +67,7 @@ class SampleBatchUploader(BatchUploader):
         batch_result: model.SampleBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
-        """
-        Check existence of parent model and child models.
-        """
+        """Check existence of parent model and child models."""
         success = True
 
         success &= self.verify_parents_identifiers(cmd, batch_result, uow)
@@ -81,9 +86,7 @@ class SampleBatchUploader(BatchUploader):
         batch_result: model.SampleBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
-        """
-        Create or update the sample and any reference data.
-        """
+        """Create or update the sample and any reference data."""
         success = True
 
         # Add any new reference data
@@ -107,9 +110,7 @@ def seq_service_upload_samples(
     self: BaseSeqService,
     cmd: command.UploadSamplesCommand,
 ) -> model.SampleBatchUploadResult:
-    """
-    See command.UploadSamplesCommand for details.
-    """
+    """See command.UploadSamplesCommand for details."""
     sample_batch_uploader = SampleBatchUploader(self)
     batch_result: model.SampleBatchUploadResult = sample_batch_uploader.upload_batch(
         cmd

@@ -1,4 +1,4 @@
-"""Implement SeqDB sequence service behavior for services.seq.upload_upsert_batch."""
+"""Implement seqdb sequence service behavior for services.seq.upload_upsert_batch."""
 
 from gen_epix.commondb.domain.enum import EtlStatus, UploadAction
 from gen_epix.commondb.services import BatchUploader
@@ -14,9 +14,7 @@ def _create_sample_refdata(
     batch_result: model.SampleBatchUploadResult,
     uow: BaseUnitOfWork,
 ) -> bool:
-    """
-    Upsert reference data as part of creating or updating the sample data.
-    """
+    """Upsert reference data as part of creating or updating the sample data."""
     user_id = cmd.user.id if cmd.user else None
     success = True
 

@@ -1,4 +1,4 @@
-"""Define SeqDB domain models for domain.model.seq.upload."""
+"""Define seqdb domain models for domain.model.seq.upload."""
 
 import json
 from typing import ClassVar, Self

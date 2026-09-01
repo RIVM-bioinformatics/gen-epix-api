@@ -1,4 +1,4 @@
-"""Define SeqDB domain interfaces and policies for domain.service.file."""
+"""Define seqdb domain interfaces and policies for domain.service.file."""
 
 from abc import abstractmethod
 from uuid import UUID
@@ -9,12 +9,12 @@ from gen_epix.seqdb.domain.enum import ServiceType
 
 
 class BaseFileService(BaseService):
-    """Define the file-service command handlers for SeqDB implementations."""
+    """Define seqdb command handlers implemented by concrete file services."""
 
     SERVICE_TYPE = ServiceType.FILE
 
     def register_handlers(self) -> None:
-        """Register default CRUD and SeqDB-specific file command handlers."""
+        """Register default CRUD and seqdb-specific file command handlers."""
         self.register_default_crud_handlers()
         f = self.app.register_handler
         f(

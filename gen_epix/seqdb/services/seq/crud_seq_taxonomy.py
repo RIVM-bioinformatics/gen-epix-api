@@ -1,4 +1,4 @@
-"""Implement SeqDB CRUD service operations for services.seq.crud_seq_taxonomy."""
+"""Implement seqdb CRUD service operations for services.seq.crud_seq_taxonomy."""
 
 from uuid import UUID
 
@@ -17,7 +17,18 @@ def seq_service_crud_seq_taxonomy(
     | bool
     | None
 ):
-    """Handle CRUD operations for SeqTaxonomy entities."""
+    """Handle CRUD operations for sequence-taxonomy entities.
+
+    Args:
+        self: Sequence service executing the command.
+        cmd: Typed sequence-taxonomy CRUD command.
+
+    Returns:
+        The action-specific sequence-taxonomy result.
+
+    Raises:
+        AssertionError: The command operation is unsupported.
+    """
     user_id = cmd.user.id if cmd.user else None
     seq_taxonomies: list[model.SeqTaxonomy] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():

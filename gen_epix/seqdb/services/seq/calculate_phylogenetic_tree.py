@@ -1,4 +1,4 @@
-"""Implement SeqDB sequence service behavior for services.seq.calculate_phylogenetic_tree."""
+"""Implement seqdb sequence service behavior for services.seq.calculate_phylogenetic_tree."""
 
 import json
 import sys
@@ -27,7 +27,18 @@ def seq_service_calculate_phylogenetic_tree(
     self: BaseSeqService,
     cmd: command.CalculatePhylogeneticTreeCommand,
 ) -> model.PhylogeneticTree:
+    """Build a phylogenetic tree from stored sequence-profile distances.
 
+    Args:
+        self: Sequence service providing repository access.
+        cmd: Command identifying profiles, protocol, and tree algorithm.
+
+    Returns:
+        Tree containing the selected profiles and Newick representation.
+
+    Raises:
+        InvalidArgumentsError: Profile IDs are duplicated or the algorithm is unsupported.
+    """
     # profiler = pyinstrument.Profiler(async_mode="enabled")
     # profiler.start()
     user_id = cmd.user.id if cmd.user else None
@@ -120,6 +131,7 @@ def seq_service_calculate_phylogenetic_tree(
         )
 
         def _get_condensed_distance_matrix_index(i: int, j: int, n: int) -> int:
+            """Return the condensed matrix offset for one unordered profile pair."""
             if i < j:
                 i, j = j, i
             return n * j - j * (j + 1) // 2 + i - 1 - j
@@ -227,11 +239,14 @@ def seq_service_calculate_phylogenetic_tree(
 
 
 def _correct_nj_tree_negative_branch_lengths_recursion(clade: Any) -> None:
-    """
-    Recursively update negative branch lengths by adding the negative branch
-    length to all siblings. Only one sibling may have a negative branch length.
-    """
+    """Correct a negative child branch length by distributing it to siblings.
 
+    Args:
+        clade: Biopython clade whose descendants are corrected recursively.
+
+    Raises:
+        ValueError: A clade has more than one negative child branch length.
+    """
     # TODO: check if this is correct. Non-terminal branches may have their length
     # updated (extended). As a result their distance to other clades also
     # increases, even if the distance to the sibling that had the negative branch

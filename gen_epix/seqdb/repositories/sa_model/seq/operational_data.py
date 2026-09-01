@@ -1,4 +1,4 @@
-"""Define SQLAlchemy persistence mappings for SeqDB repositories.sa_model.seq.operational_data."""
+"""Define SQLAlchemy persistence mappings for seqdb repositories.sa_model.seq.operational_data."""
 
 from uuid import UUID
 
@@ -23,9 +23,7 @@ from gen_epix.seqdb.repositories.sa_model.seq.ref_data import (
 
 
 class Sample(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.Sample)
 
@@ -37,9 +35,7 @@ class Sample(Base, RowMetadataMixin):
 
 
 class SampleDataCollectionLink(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.SampleDataCollectionLink)
 
@@ -52,9 +48,7 @@ class SampleDataCollectionLink(Base, RowMetadataMixin):
 
 
 class SampleIdentifier(Base, IdentifierMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.SampleIdentifier)
 
@@ -65,9 +59,7 @@ class SampleIdentifier(Base, IdentifierMixin):
 
 
 class ReadSet(Base, RowMetadataMixin, QualityMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.ReadSet)
 
@@ -108,9 +100,7 @@ class ReadSet(Base, RowMetadataMixin, QualityMixin):
 
 
 class ReadSetIdentifier(Base, IdentifierMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.ReadSetIdentifier)
 
@@ -121,9 +111,7 @@ class ReadSetIdentifier(Base, IdentifierMixin):
 
 
 class Seq(Base, RowMetadataMixin, QualityMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.Seq)
 
@@ -172,9 +160,7 @@ class Seq(Base, RowMetadataMixin, QualityMixin):
 
 
 class SeqIdentifier(Base, IdentifierMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.SeqIdentifier)
 
@@ -187,9 +173,7 @@ class SeqIdentifier(Base, IdentifierMixin):
 class AstMeasurement(
     Base, RowMetadataMixin, ContentMixin[enum.AstResultFormat], QualityMixin
 ):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.AstMeasurement)
 
@@ -207,9 +191,7 @@ class AstMeasurement(
 class AstPrediction(
     Base, RowMetadataMixin, ContentMixin[enum.AstResultFormat], QualityMixin
 ):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.AstPrediction)
 
@@ -231,9 +213,7 @@ class AstPrediction(
 class PcrMeasurement(
     Base, RowMetadataMixin, ContentMixin[enum.PcrResultFormat], QualityMixin
 ):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.PcrMeasurement)
 
@@ -251,9 +231,7 @@ class PcrMeasurement(
 class SeqClassification(
     Base, RowMetadataMixin, ContentMixin[enum.SeqClassificationFormat], QualityMixin
 ):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.SeqClassification)
 
@@ -281,9 +259,7 @@ class SeqClassification(
 class SeqTaxonomy(
     Base, RowMetadataMixin, ContentMixin[enum.SeqTaxonomyFormat], QualityMixin
 ):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.SeqTaxonomy)
 
@@ -309,9 +285,7 @@ class SeqTaxonomy(
 
 
 class SeqProfile(Base, RowMetadataMixin, ContentMixin, QualityMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.SeqProfile)
 
@@ -334,9 +308,7 @@ class SeqProfile(Base, RowMetadataMixin, ContentMixin, QualityMixin):
 
 
 class SeqProfileIdentifier(Base, IdentifierMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.SeqProfileIdentifier)
 
@@ -349,9 +321,7 @@ class SeqProfileIdentifier(Base, IdentifierMixin):
 
 
 class SeqDistance(Base, RowMetadataMixin, ContentMixin[enum.SeqDistanceFormat]):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """SQLAlchemy model for the corresponding persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.SeqDistance)
 

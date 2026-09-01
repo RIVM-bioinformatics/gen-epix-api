@@ -1,4 +1,4 @@
-"""Implement SeqDB CRUD service operations for services.seq.crud_allele."""
+"""Implement seqdb CRUD service operations for services.seq.crud_allele."""
 
 from uuid import UUID
 
@@ -9,7 +9,18 @@ from gen_epix.seqdb.domain.service import BaseSeqService
 def seq_service_crud_allele(
     self: BaseSeqService, cmd: command.AlleleCrudCommand
 ) -> list[model.Allele] | model.Allele | list[UUID] | UUID | list[bool] | bool | None:
-    """Handle CRUD operations for Allele entities."""
+    """Handle CRUD operations for allele entities.
+
+    Args:
+        self: Sequence service executing the command.
+        cmd: Typed allele CRUD command.
+
+    Returns:
+        The action-specific allele result.
+
+    Raises:
+        AssertionError: The command operation is unsupported.
+    """
     user_id = cmd.user.id if cmd.user else None
     alleles: list[model.Allele] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():

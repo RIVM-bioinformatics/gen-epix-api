@@ -1,4 +1,4 @@
-"""Define SeqDB domain models for domain.model.seq.taxon."""
+"""Define seqdb domain models for domain.model.seq.taxon."""
 
 import json
 from typing import ClassVar
@@ -12,8 +12,7 @@ from gen_epix.seqdb.domain import enum
 
 
 class Taxon(Model):
-    """
-    Represent a taxonomic unit in a unified taxonomy.
+    """Represent a taxonomic unit in a unified taxonomy.
 
     A single unified taxonomy is modelled rather than separate taxonomies such as NCBI
     Taxonomy

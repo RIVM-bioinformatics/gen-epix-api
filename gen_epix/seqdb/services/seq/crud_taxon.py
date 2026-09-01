@@ -1,4 +1,4 @@
-"""Implement SeqDB CRUD service operations for services.seq.crud_taxon."""
+"""Implement seqdb CRUD service operations for services.seq.crud_taxon."""
 
 from uuid import UUID
 
@@ -9,7 +9,18 @@ from gen_epix.seqdb.domain.service import BaseSeqService
 def seq_service_crud_taxon(
     self: BaseSeqService, cmd: command.TaxonCrudCommand
 ) -> list[model.Taxon] | model.Taxon | list[UUID] | UUID | list[bool] | bool | None:
-    """Handle CRUD operations for Taxon entities."""
+    """Handle CRUD operations for taxon entities.
+
+    Args:
+        self: Sequence service executing the command.
+        cmd: Typed taxon CRUD command.
+
+    Returns:
+        The action-specific taxon result.
+
+    Raises:
+        AssertionError: The command operation is unsupported.
+    """
     user_id = cmd.user.id if cmd.user else None
     taxons: list[model.Taxon] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():

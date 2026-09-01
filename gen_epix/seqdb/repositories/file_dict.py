@@ -1,8 +1,10 @@
-"""Provide SeqDB persistence behavior for repositories.file_dict."""
+"""Provide seqdb persistence behavior for repositories.file_dict."""
 
 from gen_epix.fastapp.repositories.dict.repository import DictRepository
 from gen_epix.seqdb.domain.repository.file import BaseFileRepository
 
 
 class FileDictRepository(DictRepository, BaseFileRepository):
+    """Provide dictionary-backed persistence for seqdb uploaded files."""
+
     pass

@@ -1,4 +1,4 @@
-"""Define SeqDB domain models for domain.model.seq.seq."""
+"""Define seqdb domain models for domain.model.seq.seq."""
 
 import hashlib
 import json
@@ -57,8 +57,7 @@ class Contig(BaseSeq, QualityMixin):
 
 
 class Seq(Model, HasSampleMixin, QualityMixin):
-    """
-    A DNA sequence, typically representing an assembled genome or a part thereof. A
+    """A DNA sequence, typically representing an assembled genome or a part thereof. A
     sequence consists of one or more contiguous sequences (contigs).
 
     The actual sequence data need not be provided on creation of this instance, to

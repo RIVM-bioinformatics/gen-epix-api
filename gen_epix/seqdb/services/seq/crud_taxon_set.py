@@ -1,4 +1,4 @@
-"""Implement SeqDB CRUD service operations for services.seq.crud_taxon_set."""
+"""Implement seqdb CRUD service operations for services.seq.crud_taxon_set."""
 
 from uuid import UUID
 
@@ -11,7 +11,18 @@ def seq_service_crud_taxon_set(
 ) -> (
     list[model.TaxonSet] | model.TaxonSet | list[UUID] | UUID | list[bool] | bool | None
 ):
-    """Handle CRUD operations for TaxonSet entities."""
+    """Handle CRUD operations for taxon-set entities.
+
+    Args:
+        self: Sequence service executing the command.
+        cmd: Typed taxon-set CRUD command.
+
+    Returns:
+        The action-specific taxon-set result.
+
+    Raises:
+        AssertionError: The command operation is unsupported.
+    """
     user_id = cmd.user.id if cmd.user else None
     taxon_sets: list[model.TaxonSet] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():

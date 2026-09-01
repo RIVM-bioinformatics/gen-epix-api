@@ -1,4 +1,4 @@
-"""Expose SeqDB api.file API adapters and request representations."""
+"""Expose seqdb api.file API adapters and request representations."""
 
 import base64
 from collections.abc import Callable
@@ -17,6 +17,8 @@ from gen_epix.util import copy_model_field
 
 
 class CreateFileRequestBody(PydanticBaseModel):
+    """Represent a base64-encoded file creation request."""
+
     content: str = Field(description="The content of the file as base64 encoded bytes.")
     format: enum.FileFormat = copy_model_field(command.CreateFileCommand, "format")
     compression: enum.FileCompression = copy_model_field(
@@ -30,6 +32,14 @@ def create_file_endpoints(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     **kwargs: Any,
 ) -> None:
+    """Register file creation and CRUD transport endpoints.
+
+    Args:
+        router: Router or application receiving the endpoints.
+        app: Application that dispatches file commands.
+        handle_exception: Handler for command-processing exceptions.
+        **kwargs: Additional endpoint-generation configuration.
+    """
     assert handle_exception
     app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency
@@ -44,6 +54,7 @@ def create_file_endpoints(
         user: registered_user_dependency,
         request_body: CreateFileRequestBody,  # type: ignore
     ) -> UUID:
+        """Create a file from decoded request content through its command."""
         try:
             retval: UUID = app.handle(
                 command.CreateFileCommand(

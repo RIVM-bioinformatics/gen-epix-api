@@ -1,4 +1,4 @@
-"""Define SeqDB domain models for domain.model.seq.sample."""
+"""Define seqdb domain models for domain.model.seq.sample."""
 
 import json
 from typing import Annotated, ClassVar
@@ -13,7 +13,7 @@ from gen_epix.fastapp.domain.util import create_links
 
 
 class Sample(Model):
-    """Represent the original specimen from which SeqDB data was derived.
+    """Represent the original specimen from which seqdb data was derived.
 
     Derived cultures and library preparations are not modelled. Additional sample
     properties, such as collection date, are stored as key-value pairs.

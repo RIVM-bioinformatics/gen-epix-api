@@ -1,4 +1,4 @@
-"""Implement SeqDB sequence service behavior for services.seq.service."""
+"""Implement seqdb sequence service behavior for services.seq.service."""
 
 import datetime
 from collections.abc import Iterable
@@ -92,7 +92,7 @@ from gen_epix.seqdb.services.seq.upload import seq_service_upload_samples
 
 
 class SeqService(BaseSeqService):
-    """Implement SeqDB commands through specialized service operations."""
+    """Implement seqdb commands through specialized service operations."""
 
     def upload_samples(
         self,

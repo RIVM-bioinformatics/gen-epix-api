@@ -1,4 +1,4 @@
-"""Implement SeqDB CRUD service operations for services.seq.crud_sample_data_collection_link."""
+"""Implement seqdb CRUD service operations for services.seq.crud_sample_data_collection_link."""
 
 from uuid import UUID
 
@@ -17,7 +17,18 @@ def seq_service_crud_sample_data_collection_link(
     | bool
     | None
 ):
-    """Handle CRUD operations for SampleDataCollectionLink entities."""
+    """Handle CRUD operations for sample-data-collection link entities.
+
+    Args:
+        self: Sequence service executing the command.
+        cmd: Typed sample-data-collection-link CRUD command.
+
+    Returns:
+        The action-specific sample-data-collection-link result.
+
+    Raises:
+        AssertionError: The command operation is unsupported.
+    """
     user_id = cmd.user.id if cmd.user else None
     sample_data_collection_links: list[model.SampleDataCollectionLink] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():

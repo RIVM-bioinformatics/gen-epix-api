@@ -1,4 +1,4 @@
-"""Implement SeqDB sequence service behavior for services.seq.upload_verify_batch_refdata."""
+"""Implement seqdb sequence service behavior for services.seq.upload_verify_batch_refdata."""
 
 from typing import Any
 from uuid import UUID
@@ -18,9 +18,7 @@ def _verify_batch_refdata_allele_profiles(
     batch_result: model.SampleBatchUploadResult,
     uow: Any,
 ) -> bool:
-    """
-    Verify and complete reference data for allele profiles.
-    """
+    """Verify and complete reference data for allele profiles."""
     success = True
     user_id = cmd.user.id if cmd.user else None
     samples = cmd.sample_batch.samples
@@ -292,6 +290,7 @@ def _verify_batch_refdata_allele_profiles(
 def _handle_locus_allele_pair_mismatch(
     profile_result: UploadResult, invalid_locus_allele_pairs: list[tuple[UUID, UUID]]
 ) -> None:
+    """Record a bounded diagnostic for locus and allele pairs absent from reference data."""
     if len(invalid_locus_allele_pairs) <= 5:
         invalid_pairs_str = ", ".join(
             [
@@ -321,7 +320,7 @@ def _verify_batch_refdata_mlva_profiles(
     batch_result: model.SampleBatchUploadResult,
     uow: Any,
 ) -> bool:
-    """Verify MLVA profiles specific rules"""
+    """Verify MLVA profile-specific rules."""
     success = True
     user_id = cmd.user.id if cmd.user else None
     samples = cmd.sample_batch.samples
@@ -450,7 +449,6 @@ def _verify_batch_refdata_snp_profiles(
     uow: Any,
 ) -> bool:
     """Verify SNP profiles specific rules."""
-
     # TODO: LSP-3268-Implement-SNP-profile-support-seqdb:
     #   - Load the 'real' ref_seq record.
     #   - Handle aligned_nucleotide_seq form.
@@ -562,7 +560,7 @@ def _verify_batch_refdata_kmer_profiles(
     batch_result: model.SampleBatchUploadResult,
     uow: Any,
 ) -> bool:
-    """Verify k-mer profiles specific rules"""
+    """Verify k-mer profile-specific rules."""
     success = True
     for sample, sample_result in zip(cmd.sample_batch.samples, batch_result.samples):
         for profile, profile_result in zip(

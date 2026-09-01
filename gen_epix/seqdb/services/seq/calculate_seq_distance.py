@@ -1,4 +1,4 @@
-"""Implement SeqDB sequence service behavior for services.seq.calculate_seq_distance."""
+"""Implement seqdb sequence service behavior for services.seq.calculate_seq_distance."""
 
 import json
 import time
@@ -27,6 +27,8 @@ from gen_epix.util import chunk_list
 
 
 class _ParsedNextcladeProfile(BaseModel):
+    """Store normalized Nextclade variants and their aligned reference interval."""
+
     model_config = ConfigDict(frozen=True)
 
     substitutions: dict[int, str]
@@ -140,7 +142,18 @@ def seq_service_retrieve_seq_distance_last_modified(
     self: BaseSeqService,
     cmd: command.RetrieveSeqDistanceLastModifiedCommand,
 ) -> datetime | None:
+    """Return the latest distance-record update for a sequence-distance protocol.
 
+    Args:
+        self: Sequence service providing persistence access.
+        cmd: Command identifying the distance protocol.
+
+    Returns:
+        Latest distance modification time, or ``None`` when no records exist.
+
+    Raises:
+        InvalidArgumentsError: The requested protocol is not a distance protocol.
+    """
     with self.repository.uow() as uow:
         seq_distance_protocol: model.Protocol = self.repository.crud(
             uow,
@@ -162,11 +175,22 @@ def seq_service_calculate_seq_distances_for_new_profiles(
     self: BaseSeqService,
     cmd: command.CalculateSeqDistancesForNewProfilesCommand,
 ) -> list[model.CalculateSeqDistancesResult]:
-    """
-    For each new SeqProfile find applicable SeqDistance protocols, compute distances
+    """Calculate and persist distances for newly supplied sequence profiles.
+
+    For each new profile, finds applicable distance protocols, computes distances
     between every new profile and all existing profiles (plus between new profiles
     themselves), update existing SeqDistance records to mirror the pairwise distance,
     create SeqDistance records for the new profiles, and return results.
+
+    Args:
+        self: Sequence service providing persistence access.
+        cmd: Command containing profiles and distance-calculation options.
+
+    Returns:
+        Results grouped by processed distance protocol.
+
+    Raises:
+        NotImplementedError: A supplied profile type has no supported distance method.
     """
     user_id = cmd.user.id if cmd.user else None
     seq_profiles = cmd.seq_profiles
@@ -306,10 +330,21 @@ def seq_service_update_seq_distances(
     self: BaseSeqService,
     cmd: command.UpdateSeqDistancesCommand,
 ) -> list[model.CalculateSeqDistancesResult]:
-    """
-    For a given distance protocol, find all profiles that don't yet have a SeqDistance
-    record, compute the missing distances and create the records while maintaining the
-    symmetry invariant.
+    """Calculate and persist records missing from a distance protocol.
+
+    For a given distance protocol, finds profiles without a record, computes missing
+    distances, and creates records while maintaining the symmetry invariant.
+
+    Args:
+        self: Sequence service providing persistence access.
+        cmd: Command identifying the protocol and calculation limits.
+
+    Returns:
+        Results for the processed distance protocol.
+
+    Raises:
+        ConcurrentModificationError: Distance data changed after the command snapshot.
+        NotImplementedError: The protocol's profile type has no supported distance method.
     """
     repository: BaseSeqRepository = self.repository  # type: ignore[assignment]
     log = self.logger
@@ -419,6 +454,17 @@ def _decode_profile(
                 else list[bytes | None] (16-byte UUID chunks, one per locus)
       MLVA    → list[int]           (repeat numbers)
       SNP     → _ParsedNextcladeProfile (only NEXTCLADE format supported)
+
+    Args:
+        seq_profile_type: Representation type to decode.
+        profile: Profile whose content is decoded.
+        use_numpy_allele: Whether to encode allele IDs as a NumPy array.
+
+    Returns:
+        Representation-specific data suitable for pairwise comparison.
+
+    Raises:
+        NotImplementedError: The profile type is unsupported for distance calculation.
     """
     if seq_profile_type == enum.SeqProfileType.ALLELE:
         if use_numpy_allele:
@@ -448,6 +494,17 @@ def _calculate_distance_for_decoded_profile_pair(
     Performance note: with N existing profiles and M new profiles per
     chunk, using _decode_profile + _calculate_distance_for_decoded_profile_pair reduces
     decode calls from N×M to N+M.
+
+    Args:
+        seq_profile_type: Representation type of both decoded profiles.
+        data1: Decoded first profile.
+        data2: Decoded second profile.
+
+    Returns:
+        Distance between the decoded profiles.
+
+    Raises:
+        NotImplementedError: The profile type is unsupported for distance calculation.
     """
     if seq_profile_type == enum.SeqProfileType.ALLELE:
         if isinstance(data1, np.ndarray):
@@ -485,8 +542,31 @@ def _calculate_and_store_distances(
     use_batch_new_profiles: bool = False,
     use_int32_vocab: bool = False,
 ) -> None:
-    """
-    Calculate pairwise distances between new_seq_profiles and all existing
+    """Calculate, synchronize, and persist profile distances for one protocol.
+
+    Calculates pairwise distances between new profiles and all existing profiles for
+    the protocol, then persists updates and new SeqDistance records.
+
+    Args:
+        service: Sequence service providing repository access.
+        uow: Active persistence unit of work.
+        user_id: User recorded as modifier for persisted distance records.
+        protocol: Distance protocol used for the calculation.
+        seq_profile_type: Representation type of the profiles.
+        new_seq_profiles: Profiles requiring distance records.
+        results: Results collection updated for the processed protocol.
+        seq_distance_last_modified_at: Optional optimistic-concurrency snapshot.
+        known_existing_profile_ids: Optional profile IDs with existing records.
+        existing_chunk_size: Maximum existing profiles processed per batch.
+        use_numpy_allele: Whether to use NumPy for allele distances.
+        use_batch_new_profiles: Whether to batch new allele profiles.
+        use_int32_vocab: Whether to use an int32 allele vocabulary.
+
+    Raises:
+        ConcurrentModificationError: Existing records changed after the supplied snapshot.
+        NotImplementedError: The profile type is unsupported for distance calculation.
+
+    Calculates pairwise distances between new_seq_profiles and all existing
     profiles for protocol, then persist updates and new SeqDistance records.
 
     ALGORITHM OVERVIEW
@@ -899,9 +979,9 @@ def _calculate_pairwise_profile_distances(
     max_stored_distance: float,
     decoded_profiles: list[Any] | None = None,
 ) -> None:
-    """
-    Compute pairwise distances between profiles within a single batch and
-    populate *distance_maps* (upper-triangle only; both directions stored).
+    """Compute pairwise distances between profiles within a single batch.
+
+    Populate *distance_maps* (upper-triangle only; both directions stored).
 
     decoded_profiles may be supplied from step 3 to reuse already-decoded
     numpy arrays and avoid re-decoding. When None, profiles are decoded here.
@@ -933,9 +1013,9 @@ def _get_matching_seq_profile_protocol_ids(
     seq_distance_protocol: model.Protocol,
     seq_profile_protocols: list[model.Protocol],
 ) -> list[UUID]:
-    """
-    Return IDs of SeqProfile protocols whose subset (locus_set or ref_seq)
-    matches the SeqDistance protocol.
+    """Return profile-protocol IDs whose subset matches the distance protocol.
+
+    The subset is a locus set or reference sequence, depending on profile type.
     """
     if profile_type in enum.SeqProfileTypeSet.LOCUS_SET_BASED.value:
         return [
@@ -953,10 +1033,22 @@ def _get_matching_seq_profile_protocol_ids(
 
 
 def _split_nextclade_field(value: str) -> list[str]:
+    """Split a comma-separated Nextclade field into trimmed nonempty tokens."""
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
 def _parse_nextclade_position_token(token: str) -> set[int]:
+    """Parse one Nextclade position or inclusive position range.
+
+    Args:
+        token: Position token in the supported Nextclade range syntax.
+
+    Returns:
+        Positions represented by the token.
+
+    Raises:
+        ValueError: The token is malformed or its end precedes its start.
+    """
     match = NEXTCLADE_POSITION_RANGE_PATTERN.fullmatch(token)
     if match is None:
         raise ValueError(f"Invalid Nextclade position token: {token}")
@@ -968,6 +1060,17 @@ def _parse_nextclade_position_token(token: str) -> set[int]:
 
 
 def _parse_nextclade_substitutions(value: str) -> dict[int, str]:
+    """Parse Nextclade substitution tokens into normalized bases by position.
+
+    Args:
+        value: Comma-separated Nextclade substitution field.
+
+    Returns:
+        Lowercase substituted bases indexed by reference position.
+
+    Raises:
+        ValueError: A substitution token is malformed.
+    """
     substitutions: dict[int, str] = {}
     for token in _split_nextclade_field(value):
         match = NEXTCLADE_SUBSTITUTION_PATTERN.fullmatch(token)
@@ -978,6 +1081,7 @@ def _parse_nextclade_substitutions(value: str) -> dict[int, str]:
 
 
 def _parse_nextclade_ranges(value: str) -> set[int]:
+    """Parse comma-separated Nextclade position ranges into individual positions."""
     positions: set[int] = set()
     for token in _split_nextclade_field(value):
         positions.update(_parse_nextclade_position_token(token))
@@ -985,6 +1089,17 @@ def _parse_nextclade_ranges(value: str) -> set[int]:
 
 
 def _parse_nextclade_non_acgtns(value: str) -> dict[int, str]:
+    """Parse non-ACGTN bases by reference position from a Nextclade field.
+
+    Args:
+        value: Comma-separated Nextclade non-ACGTN field.
+
+    Returns:
+        Lowercase non-ACGTN bases indexed by reference position.
+
+    Raises:
+        ValueError: A non-ACGTN token or its position range is malformed.
+    """
     non_acgtns: dict[int, str] = {}
     for token in _split_nextclade_field(value):
         match = NEXTCLADE_NON_ACGTN_PATTERN.fullmatch(token)
@@ -998,6 +1113,17 @@ def _parse_nextclade_non_acgtns(value: str) -> dict[int, str]:
 
 @lru_cache(maxsize=4096)
 def _parse_nextclade_profile_content(content: str) -> _ParsedNextcladeProfile:
+    """Parse cached JSON Nextclade profile content into normalized variant states.
+
+    Args:
+        content: JSON object containing Nextclade SNP profile fields.
+
+    Returns:
+        Parsed variants and aligned reference interval.
+
+    Raises:
+        ValueError: Content is invalid JSON, lacks substitutions, or has invalid fields.
+    """
     nextclade_fields = json.loads(content)
     if not isinstance(nextclade_fields, dict):
         raise ValueError("Nextclade SNP profile content must be a JSON object")
@@ -1045,6 +1171,17 @@ def _parse_nextclade_profile_content(content: str) -> _ParsedNextcladeProfile:
 
 
 def _parse_nextclade_profile(profile: model.SeqProfile) -> _ParsedNextcladeProfile:
+    """Parse a Nextclade-formatted sequence profile for SNP distance calculation.
+
+    Args:
+        profile: Sequence profile whose content is parsed.
+
+    Returns:
+        Parsed Nextclade variants and aligned reference interval.
+
+    Raises:
+        NotImplementedError: The profile does not use the Nextclade format.
+    """
     if profile.format != enum.SeqProfileFormat.NEXTCLADE:
         raise NotImplementedError(
             "SNP distance calculation currently supports only Nextclade profiles"
@@ -1056,6 +1193,7 @@ def _nextclade_position_state(
     profile: _ParsedNextcladeProfile,
     position: int,
 ) -> tuple[str, str | None]:
+    """Return the normalized state of one reference position in a parsed profile."""
     if position < profile.alignment_start or position > profile.alignment_end:
         return ("outside", None)
     return profile.variant_states.get(position, ("reference", None))
@@ -1117,6 +1255,7 @@ def _calculate_nextclade_snp_hamming_distance(
     profile1: model.SeqProfile,
     profile2: model.SeqProfile,
 ) -> float:
+    """Calculate SNP Hamming distance between two Nextclade sequence profiles."""
     parsed_profile1 = _parse_nextclade_profile(profile1)
     parsed_profile2 = _parse_nextclade_profile(profile2)
     return _nextclade_hamming_from_parsed(parsed_profile1, parsed_profile2)
@@ -1129,7 +1268,22 @@ def _calculate_profile_distance(
     ref_seq: model.RefSeq | None = None,
     locus_set: model.LocusSet | None = None,
 ) -> float:
-    """Return the distance between two profiles of the same type"""
+    """Calculate the distance between two profiles of the same representation type.
+
+    Args:
+        seq_profile_model_type: Representation type shared by both profiles.
+        profile1: First profile to compare.
+        profile2: Second profile to compare.
+        ref_seq: Reference sequence required for non-Nextclade SNP profiles.
+        locus_set: Locus set required by locus-based profile types.
+
+    Returns:
+        Distance between the two profiles.
+
+    Raises:
+        NotImplementedError: The profile type or representation is unsupported.
+        ValueError: A Nextclade profile contains malformed content.
+    """
     # TODO: LSP-3268 This function forces both profile representations (i.e. ready for distance calculation) to be calculated each time for each pair. More efficient would be to calculate all representations just once and then loop over the pairs.
     if seq_profile_model_type == enum.SeqProfileType.SNP:
         if (

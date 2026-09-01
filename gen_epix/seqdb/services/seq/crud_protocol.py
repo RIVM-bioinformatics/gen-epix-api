@@ -1,4 +1,4 @@
-"""Implement SeqDB CRUD service operations for services.seq.crud_protocol."""
+"""Implement seqdb CRUD service operations for services.seq.crud_protocol."""
 
 from uuid import UUID
 
@@ -14,7 +14,18 @@ def seq_service_crud_protocol(
 ) -> (
     list[model.Protocol] | model.Protocol | list[UUID] | UUID | list[bool] | bool | None
 ):
-    """Handle CRUD operations for Protocol entities"""
+    """Handle CRUD operations for protocol entities.
+
+    Args:
+        self: Sequence service executing the command.
+        cmd: Typed protocol CRUD command.
+
+    Returns:
+        The action-specific protocol result.
+
+    Raises:
+        ValueError: A create duplicates a protocol identity or an update changes type.
+    """
     user_id = cmd.user.id if cmd.user else None
     protocols: list[model.Protocol] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():

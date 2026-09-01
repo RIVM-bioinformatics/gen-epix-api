@@ -59,32 +59,41 @@ for rules not covered here.
 9. For public classes with multiple responsibilities or lifecycle behavior, use
    a summary followed by paragraphs explaining their role, collaboration
    boundaries, lifecycle, side effects, and security or trust implications where
-   relevant. Avoid starting with "Class that...". Describe public attributes in
+   relevant. Start the docstring with "Encapsulates...". Describe public attributes in
    an `Attributes:` section.
 10. Rules for specific types of classes, overruling the behaviour above on specific
    aspects:
    a. Exception classes: describe what the error represents rather than when
       it is raised.
-   b. Pydantic models: do not describe each field in an `Attributes:` section.
-      Instead, make sure that each field has an appropriate description. If field
-      validators and/or serializers are used, document their purpose and behavior
-      in the corresponding `Field()` description, including normalization,
-      accepted forms, derived values, and serialization behavior. Do not describe
-      field validation or serialization in the model docstring. If model validators
-      are used, document their purpose, invariants, and error conditions in a
-      separate `Model validation:` paragraph in the class description. If model
-      serializers are used, document their output representation, omitted or
-      derived values, and error conditions when applicable in a separate `Model
-      serialization:` paragraph. Decorated validator and serializer methods still
-      need concise docstrings for coverage, but must not duplicate caller-facing
-      contracts or include Google-style sections. Do not change a field default,
-      declaration form, or runtime behavior solely to add a description; use the
-      existing `Field()` or `Annotated` metadata pattern.
+   b. Pydantic models (classes):
+      i. Start the docstring with "Models ..."
+      ii. Do not describe each field in an `Attributes:` section. Instead, make sure 
+          that each field has an appropriate description. If field validators and/or
+          serializers are used, document their purpose and behavior in the 
+          corresponding `Field()` description, including normalization, accepted forms,
+          derived values, and serialization behavior. Do not describe field validation 
+          or serialization in the class docstring.
+      iii. If model validators are used, document their purpose, invariants, and
+          error conditions in a separate `Model validation:` paragraph in the class 
+          description.
+      iv. If model serializers are used, document their output representation, omitted 
+          or derived values, and error conditions when applicable in a separate 
+          `Model serialization:` paragraph. Decorated validator and serializer methods
+          still need concise docstrings for coverage, but must not duplicate caller-
+          facing contracts or include Google-style sections.
+      v. Do not change a field default, declaration form, or runtime behavior solely to
+         add a description; use the existing `Field()` or `Annotated` metadata pattern.
    c. FastAPI route handlers: including nested handlers, always require a
       docstring as their first statement. A router decorator's `description`
       parameter supplements OpenAPI documentation; it does not replace the
       Python docstring. A concise one-line docstring is sufficient when the
       decorator already supplies the complete caller-facing description.
+   d. Programmatically overridden docstrings: if the body of the function, method,
+      class or module contains a statement that assigns a value to __doc__
+      (typically the first statement of the body), then there is technically no
+      need for a docstring. However, for clarity and to avoid linting false 
+      positives put in place the literal docstring
+      `"""Docstring assigned automatically"""`.
 11. Public module docstrings must state the module's responsibility and summarize
    its principal public types, functions, and collaboration boundary. Package
    docstrings in `__init__.py` must additionally summarize each group of

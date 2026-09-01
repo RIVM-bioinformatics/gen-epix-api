@@ -1,4 +1,4 @@
-"""Implement SeqDB CRUD service operations for services.seq.crud_seq_identifier."""
+"""Implement seqdb CRUD service operations for services.seq.crud_seq_identifier."""
 
 from uuid import UUID
 
@@ -17,7 +17,18 @@ def seq_service_crud_seq_identifier(
     | bool
     | None
 ):
-    """Handle CRUD operations for SeqIdentifier entities."""
+    """Handle CRUD operations for sequence-identifier entities.
+
+    Args:
+        self: Sequence service executing the command.
+        cmd: Typed sequence-identifier CRUD command.
+
+    Returns:
+        The action-specific sequence-identifier result.
+
+    Raises:
+        AssertionError: The command operation is unsupported.
+    """
     user_id = cmd.user.id if cmd.user else None
     seq_identifiers: list[model.SeqIdentifier] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():

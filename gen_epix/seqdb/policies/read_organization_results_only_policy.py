@@ -1,4 +1,4 @@
-"""Implement SeqDB authorization policy behavior for policies.read_organization_results_only_policy."""
+"""Implement seqdb authorization policy behavior for policies.read_organization_results_only_policy."""
 
 from typing import Any
 
@@ -16,7 +16,7 @@ class ReadOrganizationResultsOnlyPolicy(CommonReadOrganizationResultsOnlyPolicy)
         abac_service: BaseAbacService,
         **kwargs: Any,
     ):
-        """Initialize the shared policy with SeqDB command-attribute mappings."""
+        """Initialize the shared policy with seqdb command-attribute mappings."""
         super().__init__(
             abac_service,
             **kwargs,

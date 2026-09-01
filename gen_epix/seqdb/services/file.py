@@ -1,4 +1,4 @@
-"""Implement SeqDB application service behavior for services.file."""
+"""Implement seqdb application service behavior for services.file."""
 
 import gzip
 from collections.abc import Iterable
@@ -14,7 +14,7 @@ from gen_epix.seqdb.services.seq.crud_file import file_service_crud_file
 
 
 class FileService(BaseFileService):
-    """Validate and persist SeqDB biological files."""
+    """Encapsulates seqdb file service behavior."""
 
     def create_file(
         self,

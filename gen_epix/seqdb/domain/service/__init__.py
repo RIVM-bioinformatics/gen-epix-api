@@ -1,4 +1,4 @@
-"""Re-export SeqDB service interfaces."""
+"""Re-export seqdb service interfaces."""
 
 # pylint: disable=useless-import-alias
 

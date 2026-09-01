@@ -1,4 +1,4 @@
-"""Provide SeqDB functionality for domain.exc."""
+"""Provide seqdb functionality for domain.exc."""
 
 # pylint: disable=wildcard-import, unused-wildcard-import
 # because this is a package, and imported as such in other modules

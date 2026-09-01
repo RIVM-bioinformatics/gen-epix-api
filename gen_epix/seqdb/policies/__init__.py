@@ -1,4 +1,4 @@
-"""Re-export SeqDB policy adapters and mappings for application composition."""
+"""Re-export seqdb policy adapters and mappings for application composition."""
 
 # pylint: disable=useless-import-alias
 from gen_epix import fastapp

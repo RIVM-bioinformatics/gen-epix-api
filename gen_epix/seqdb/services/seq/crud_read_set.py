@@ -1,4 +1,4 @@
-"""Implement SeqDB CRUD service operations for services.seq.crud_read_set."""
+"""Implement seqdb CRUD service operations for services.seq.crud_read_set."""
 
 from uuid import UUID
 
@@ -9,7 +9,18 @@ from gen_epix.seqdb.domain.service import BaseSeqService
 def seq_service_crud_read_set(
     self: BaseSeqService, cmd: command.ReadSetCrudCommand
 ) -> list[model.ReadSet] | model.ReadSet | list[UUID] | UUID | list[bool] | bool | None:
-    """Handle CRUD operations for ReadSet entities."""
+    """Handle CRUD operations for read-set entities.
+
+    Args:
+        self: Sequence service executing the command.
+        cmd: Typed read-set CRUD command.
+
+    Returns:
+        The action-specific read-set result.
+
+    Raises:
+        AssertionError: The command operation is unsupported.
+    """
     user_id = cmd.user.id if cmd.user else None
     read_sets: list[model.ReadSet] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():

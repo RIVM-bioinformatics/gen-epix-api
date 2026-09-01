@@ -1,4 +1,4 @@
-"""Expose SeqDB api.seq API adapters and request representations."""
+"""Expose seqdb api.seq API adapters and request representations."""
 
 from collections.abc import Callable, Iterable
 from datetime import datetime
@@ -22,7 +22,7 @@ from gen_epix.util import copy_model_field
 
 
 class UploadSamplesRequestBody(command.UploadSamplesCommand):
-    """"""
+    """Docstring assigned automatically."""
 
     __doc__ = command.UploadSamplesCommand.__doc__
 
@@ -47,9 +47,10 @@ class UploadSamplesRequestBody(command.UploadSamplesCommand):
 
 
 class CalculatePhylogeneticTreeRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically."""
 
     __doc__ = command.CalculatePhylogeneticTreeCommand.__doc__
+
     protocol_id: UUID = copy_model_field(
         command.CalculatePhylogeneticTreeCommand, "protocol_id"
     )
@@ -69,9 +70,10 @@ class CalculatePhylogeneticTreeRequestBody(PydanticBaseModel):
 
 
 class RetrieveSimilarProfilesRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically."""
 
     __doc__ = command.RetrieveSimilarProfilesCommand.__doc__
+
     protocol_id: UUID = copy_model_field(
         command.RetrieveSimilarProfilesCommand, "protocol_id"
     )
@@ -86,7 +88,7 @@ class RetrieveSimilarProfilesRequestBody(PydanticBaseModel):
 
 
 class UpdateSeqDistancesRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically."""
 
     __doc__ = command.UpdateSeqDistancesCommand.__doc__
     protocol_id: UUID = copy_model_field(
@@ -107,13 +109,14 @@ class UpdateSeqDistancesRequestBody(PydanticBaseModel):
     # TODO: remove max_new_profiles usage and replace by limit
     @model_validator(mode="after")
     def validate_limit(self) -> Self:
+        """Normalize the deprecated maximum-profile field into ``limit``."""
         if self.limit is None:
             self.limit = self.max_new_profiles
         return self
 
 
 class RetrieveSamplesByIdsRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically."""
 
     __doc__ = command.RetrieveSamplesByIdCommand.__doc__
     sample_ids: list[UUID] = copy_model_field(
@@ -124,7 +127,7 @@ class RetrieveSamplesByIdsRequestBody(PydanticBaseModel):
 
 
 class RetrieveSampleIdentifiersByIdsRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically."""
 
     __doc__ = command.RetrieveSampleIdentifiersByIdCommand.__doc__
     sample_ids: list[UUID] = copy_model_field(
@@ -135,7 +138,7 @@ class RetrieveSampleIdentifiersByIdsRequestBody(PydanticBaseModel):
 
 
 class RetrieveSeqFastaRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically."""
 
     __doc__ = command.RetrieveSeqFastaCommand.__doc__
 
@@ -151,7 +154,7 @@ class RetrieveSeqFastaRequestBody(PydanticBaseModel):
 
 
 class RetrieveBestSeqPerSampleRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically."""
 
     __doc__ = command.RetrieveBestSeqPerSampleCommand.__doc__
 
@@ -168,7 +171,7 @@ class RetrieveBestSeqPerSampleRequestBody(PydanticBaseModel):
 
 
 class RetrieveBestSeqProfilePerSampleRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically."""
 
     __doc__ = command.RetrieveBestSeqProfilePerSampleCommand.__doc__
 
@@ -185,7 +188,7 @@ class RetrieveBestSeqProfilePerSampleRequestBody(PydanticBaseModel):
 
 
 class RetrieveBestSeqClassificationPerSampleRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically."""
 
     __doc__ = command.RetrieveBestSeqClassificationPerSampleCommand.__doc__
 

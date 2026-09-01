@@ -1,7 +1,7 @@
-"""Define commands for SeqDB sequence workflows and managed domain records.
+"""Define commands for seqdb sequence workflows and managed domain records.
 
 The command types carry input for upload, distance, tree, similarity, and
-sample retrieval operations, plus CRUD metadata for SeqDB sequence models.
+sample retrieval operations, plus CRUD metadata for seqdb sequence models.
 """
 
 # pylint: disable=too-few-public-methods

@@ -1,4 +1,4 @@
-"""Implement SeqDB CRUD service operations for services.seq.crud_ast_prediction."""
+"""Implement seqdb CRUD service operations for services.seq.crud_ast_prediction."""
 
 from uuid import UUID
 
@@ -17,7 +17,18 @@ def seq_service_crud_ast_prediction(
     | bool
     | None
 ):
-    """Handle CRUD operations for AstPrediction entities."""
+    """Handle CRUD operations for AST prediction entities.
+
+    Args:
+        self: Sequence service executing the command.
+        cmd: Typed AST-prediction CRUD command.
+
+    Returns:
+        The action-specific AST-prediction result.
+
+    Raises:
+        AssertionError: The command operation is unsupported.
+    """
     user_id = cmd.user.id if cmd.user else None
     ast_predictions: list[model.AstPrediction] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():

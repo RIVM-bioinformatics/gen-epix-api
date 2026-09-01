@@ -1,4 +1,4 @@
-"""Define SQLAlchemy persistence mappings for SeqDB repositories.sa_model.seq.base."""
+"""Define SQLAlchemy persistence mappings for seqdb repositories.sa_model.seq.base."""
 
 from enum import IntEnum
 from uuid import UUID
@@ -14,9 +14,7 @@ from gen_epix.seqdb.domain import DOMAIN, enum, model
 
 
 class ContentMixin[FormatType: IntEnum]:
-    """
-    SQLAlchemy model mixin for adding content-related fields to a model.
-    """
+    """SQLAlchemy model mixin for adding content-related fields to a model."""
 
     format: Mapped[FormatType] = get_mixin_mapped_column(
         model.ContentMixin, "format", sa.Integer
@@ -33,9 +31,7 @@ class ContentMixin[FormatType: IntEnum]:
 
 
 class QualityMixin:
-    """
-    SQLAlchemy model mixin for adding a number of standard fields.
-    """
+    """SQLAlchemy model mixin for adding a number of standard fields."""
 
     qc_result: Mapped[enum.QualityControlResult] = get_mixin_mapped_column(
         model.QualityMixin, "qc_result", sa.String
@@ -49,9 +45,7 @@ class QualityMixin:
 
 
 class SeqMixin:
-    """
-    SQLAlchemy model mixin for adding a number of standard fields.
-    """
+    """SQLAlchemy model mixin for adding a number of standard fields."""
 
     seq: Mapped[str] = create_mapped_column(DOMAIN, model.BaseSeq, "seq")
     seq_format: Mapped[enum.SeqFormat] = create_mapped_column(

@@ -1,4 +1,4 @@
-"""Implement SeqDB sequence service behavior for services.seq.retrieve_best."""
+"""Implement seqdb sequence service behavior for services.seq.retrieve_best."""
 
 from uuid import UUID
 
@@ -17,9 +17,7 @@ def seq_service_retrieve_best_seq_profile_per_sample(
     self: BaseSeqService,
     cmd: command.RetrieveBestSeqProfilePerSampleCommand,
 ) -> dict[UUID, UUID]:
-    """
-    Retrieve the best SeqProfile ID per sample for the given protocol and sample IDs.
-    """
+    """Retrieve the best SeqProfile ID for each requested sample."""
     return _get_best_id_per_sample(self, cmd)
 
 
@@ -27,9 +25,7 @@ def seq_service_retrieve_best_seq_per_sample(
     self: BaseSeqService,
     cmd: command.RetrieveBestSeqPerSampleCommand,
 ) -> dict[UUID, UUID]:
-    """
-    Retrieve the best Seq ID per sample for the given protocol and sample IDs.
-    """
+    """Retrieve the best Seq ID for each requested sample."""
     return _get_best_id_per_sample(self, cmd)
 
 
@@ -37,9 +33,7 @@ def seq_service_retrieve_best_seq_classification_per_sample(
     self: BaseSeqService,
     cmd: command.RetrieveBestSeqClassificationPerSampleCommand,
 ) -> dict[UUID, UUID]:
-    """
-    Retrieve the best SeqClassification ID per sample for the given protocol and sample IDs.
-    """
+    """Retrieve the best SeqClassification ID for each requested sample."""
     return _get_best_id_per_sample(self, cmd)
 
 
@@ -51,12 +45,24 @@ def _get_best_id_per_sample(
         | command.RetrieveBestSeqClassificationPerSampleCommand
     ),
 ) -> dict[UUID, UUID]:
-    """
-    Retrieve the best Seq, SeqProfile, SeqClassification ID per sample for the given
+    """Retrieve the best result identifier for each requested sample.
+
+    Retrieves the best Seq, SeqProfile, or SeqClassification ID for the given
     protocol and sample IDs, based on the specified ranking strategy.
 
     For SeqClassification, if `cmd.return_primary_category_id` is True, the primary
     category ID will be returned instead of the SeqClassification ID.
+
+    Args:
+        self: Sequence service providing repository access.
+        cmd: Typed best-result retrieval command.
+
+    Returns:
+        Mapping from sample IDs to the selected result identifiers.
+
+    Raises:
+        NotImplementedError: The command type is unsupported.
+        ServiceException: The requested ranking strategy is unsupported.
     """
     model_class: type[model.Model]
     return_primary_category_id = False

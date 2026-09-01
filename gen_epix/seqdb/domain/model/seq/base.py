@@ -1,4 +1,4 @@
-"""Define SeqDB domain models for domain.model.seq.base."""
+"""Define seqdb domain models for domain.model.seq.base."""
 
 import hashlib
 import json

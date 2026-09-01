@@ -1,6 +1,6 @@
 """Expose shared organization policies and OmopDB role generation.
 
-The facade re-exports CommonDB policies for organization administration,
+The facade re-exports commondb policies for organization administration,
 scoped result reads, and user updates, together with OmopDB `RoleGenerator`.
 """
 

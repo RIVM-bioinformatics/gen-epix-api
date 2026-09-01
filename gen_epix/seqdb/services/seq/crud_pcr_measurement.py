@@ -1,4 +1,4 @@
-"""Implement SeqDB CRUD service operations for services.seq.crud_pcr_measurement."""
+"""Implement seqdb CRUD service operations for services.seq.crud_pcr_measurement."""
 
 from uuid import UUID
 
@@ -17,7 +17,18 @@ def seq_service_crud_pcr_measurement(
     | bool
     | None
 ):
-    """Handle CRUD operations for PcrMeasurement entities."""
+    """Handle CRUD operations for PCR measurement entities.
+
+    Args:
+        self: Sequence service executing the command.
+        cmd: Typed PCR-measurement CRUD command.
+
+    Returns:
+        The action-specific PCR-measurement result.
+
+    Raises:
+        AssertionError: The command operation is unsupported.
+    """
     user_id = cmd.user.id if cmd.user else None
     pcr_measurements: list[model.PcrMeasurement] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():

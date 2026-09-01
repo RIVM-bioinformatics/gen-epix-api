@@ -1,4 +1,4 @@
-"""Provide SeqDB persistence behavior for repositories.seq_dict."""
+"""Provide seqdb persistence behavior for repositories.seq_dict."""
 
 from collections.abc import Iterable
 from collections.abc import Set as AbstractSet
@@ -14,7 +14,7 @@ from gen_epix.seqdb.domain.repository import BaseSeqRepository
 
 
 class SeqDictRepository(DictRepository, BaseSeqRepository):
-    """Implement SeqDB sequence persistence against in-memory dictionaries."""
+    """Encapsulates seqdb persistence behavior for sequence repositories using in-memory dictionaries."""
 
     def get_sample_ids_modified_in_range(
         self,

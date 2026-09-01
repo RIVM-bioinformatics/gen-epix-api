@@ -1,4 +1,4 @@
-"""Implement SeqDB CRUD service operations for services.seq.crud_common."""
+"""Implement seqdb CRUD service operations for services.seq.crud_common."""
 
 from uuid import UUID
 
@@ -10,6 +10,7 @@ from gen_epix.filter.uuid_set import UuidSetFilter
 
 
 def _get_not_implemented_message(cmd: CrudCommand) -> str:
+    """Format an unsupported CRUD-operation message including the caller's roles."""
     user = cmd.user
     assert user is not None
     return (
@@ -19,6 +20,7 @@ def _get_not_implemented_message(cmd: CrudCommand) -> str:
 
 
 def _compose_id_filter(*key_and_ids: tuple[str, set[UUID]]) -> Filter:
+    """Combine field-specific UUID membership filters with logical AND."""
     return CompositeFilter(
         filters=[
             UuidSetFilter(key=key, members=frozenset(ids)) for key, ids in key_and_ids
