@@ -87,7 +87,15 @@ class Locus(Model):
 
 
 class LocusSet(Model):
-    """Define an immutable ordered locus set for locus-based analyses."""
+    """An ordered set of loci. This can be used to define e.g. schemes for wgMLST typing
+    or other locus-based analyses. Because the set is ordered, i.e. a list of unique
+    locus IDS, it can also be used to define the order of loci in allele profiles and
+    other analyses.
+
+    A locus set is immutable: once created, it cannot be deleted or updated. As such,
+    locus set IDs and names can safely be referenced in other models and outside of the
+    application.
+    """
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="locus_sets",
