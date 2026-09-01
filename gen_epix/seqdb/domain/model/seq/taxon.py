@@ -12,7 +12,7 @@ from gen_epix.seqdb.domain import enum
 
 
 class Taxon(Model):
-    """Represent a taxonomic unit in a unified taxonomy.
+    """Represents a taxonomic unit in a unified taxonomy.
 
     A single unified taxonomy is modelled rather than separate taxonomies such as NCBI
     Taxonomy
@@ -98,7 +98,9 @@ class Taxon(Model):
 
 
 class TaxonSet(Model):
-    """Group taxa relevant to a specific analysis or application."""
+    """Represents a set of taxa, for example a set of taxa that are relevant for a specific
+    analysis or application.
+    """
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="taxon_sets",
@@ -111,7 +113,9 @@ class TaxonSet(Model):
 
 
 class TaxonSetMember(Model):
-    """Associate a taxon with a taxon set."""
+    """Represents a member of a taxon set, representing the inclusion of a specific taxon
+    in a taxon set.
+    """
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="taxon_set_members",

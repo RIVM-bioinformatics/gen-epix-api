@@ -168,7 +168,18 @@ class LocusCodeMap(Model):
 
 
 class RefAllele(BaseSeq):
-    """Represent an immutable sequence-hashed reference allele for a locus."""
+    """A reference allele for a locus. This can be an actual sequence or an
+    artificial construct, typically then a consensus sequence. It can be used
+    e.g. as a reference for alignment of other alleles for the locus or for
+    reducing storage requirements of alleles.
+
+    A reference allele is immutable: once created, it cannot be deleted or updated. As
+    such, reference allele IDs can safely be referenced in other models and outside of
+    the application.
+
+    The ID of the reference allele is equal to the hash of the sequence. As such, the
+    ID of the reference allele can be computed outside of the application as well.
+    """
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="ref_alleles",
@@ -189,7 +200,28 @@ class RefAllele(BaseSeq):
 
 
 class Allele(BaseSeq):
-    """Represent an immutable sequence-hashed allele first observed at a locus."""
+    """An allele for a locus, i.e., a specific DNA sequence variant observed at that locus.
+    Any IUPAC ambiguity codes are allowed in the sequence. The locus only represents the
+    first observed locus that the allele was observed for, but the allele can be
+    observed for multiple loci, e.g. due to gene duplication or because the locus
+    definition is not specific enough to distinguish between multiple similar loci.
+
+    An allele is immutable: once created, it cannot be deleted or updated. As such,
+    allele IDs can safely be referenced in other models and outside of the application.
+
+    The ID of the allele is equal to the hash of the sequence. As such, the ID of the
+    allele can be computed outside of the application as well, e.g., to improve
+    performance. In case of a collision, i.e., two different sequences yielding the same
+    hash, the newer allele cannot be persisted. The probability of such collisions is
+    extremely low: about 10^15 alleles would need to be stored for a one-in-a-billion
+    chance of a collision. If such a collision does occur, you could send it to your
+    nearest cryptographer, as they will be thrilled to investigate it. A word of
+    caution though: this will lead to the discovery that SHA256 is cryptographically
+    broken, which in turn will lead to the discovery that P=NP. This will lead to the
+    collapse of modern cryptography, triggering a period of global chaos that will
+    eventually lead to nuclear armageddon and bring about the end of human civilization
+    as we know it. No liability is accepted for this chain of events.
+    """
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="alleles",

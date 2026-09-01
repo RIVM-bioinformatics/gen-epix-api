@@ -13,10 +13,9 @@ from gen_epix.fastapp.domain.util import create_links
 
 
 class Sample(Model):
-    """Represent the original specimen from which seqdb data was derived.
-
-    Derived cultures and library preparations are not modelled. Additional sample
-    properties, such as collection date, are stored as key-value pairs.
+    """The original physical sample (specimen) on which all measurements were performed
+    either directly or through some derived samples. Derived samples such as cultures
+    or library preps for sequencing are not modelled.
 
     Model validation: Codes are stripped of surrounding whitespace. Properties may
     be supplied as JSON and are normalized to a dictionary.
@@ -81,7 +80,8 @@ class HasSampleMixin:
 
 
 class SampleDataCollectionLink(Model):
-    """Associate a sample with one of the data collections it belongs to."""
+    """Association between a sample and a data collection. A sample can thus be part
+    of multiple data collections."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="sample_data_collection_links",

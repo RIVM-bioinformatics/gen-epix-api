@@ -13,7 +13,7 @@ from gen_epix.seqdb.domain.model.seq.protocol import Protocol
 
 
 class TreeAlgorithmClass(Model):
-    """A class (type)of phylogenetic tree algorithms."""
+    """A class (type) of phylogenetic tree algorithms."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="tree_algorithm_classes",
@@ -40,7 +40,11 @@ class TreeAlgorithmClass(Model):
 
 
 class TreeAlgorithm(Model):
-    """Describe a supported phylogenetic tree-building algorithm."""
+    """See https://en.wikipedia.org/wiki/Hierarchical_clustering,
+    https://en.wikipedia.org/wiki/Neighbor_joining,
+     https://en.wikipedia.org/wiki/Computational_phylogenetics,
+     https://en.wikipedia.org/wiki/Spanning_tree
+    """
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="tree_algorithms",

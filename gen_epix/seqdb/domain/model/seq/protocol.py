@@ -51,10 +51,14 @@ def _create_field_description(
 
 
 class Protocol(Model):
-    """Represent an analytical method used to derive results from source data.
+    """Represents an analytical method used to derive a result from source data. The class
+    is conceptually polymorphic, with the protocol_type field determining which
+    additional fields are required and which results it may be linked to. This design
+    allows for a flexible and extensible representation of various analytical protocols
+    while maintaining a single model for this type of reference data.
 
-    Protocol type determines its required reference data and result relationships.
-    Repository and commit metadata can identify the exact analytical logic.
+    The Protocol model includes optional fields for linking to Git repositories and
+    commits, so that the exact analytical logic can be traced.
 
     Model validation: Datetimes are normalized to UTC, enum fields accept their
     integer representations, Git references and JSON properties are validated, and
@@ -348,7 +352,9 @@ class Protocol(Model):
 
 
 class HasProtocolMixin:
-    """Provide protocol relationship fields to models produced by a protocol."""
+    """Mixin for models that have an associated Protocol. Provides a protocol_id field
+    and a method to retrieve the associated Protocol.
+    """
 
     # Annotation-only: an assigned Field lingers as class attr -> pydantic shadow warning
     protocol_id: Annotated[
@@ -362,7 +368,8 @@ class HasProtocolMixin:
 
 
 class ProtocolSet(Model):
-    """Group protocols relevant to a specific analysis or application."""
+    """A set of Protocols, for example a set of Protocol that are relevant for a specific
+    analysis or application."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="protocol_sets",
@@ -376,7 +383,10 @@ class ProtocolSet(Model):
 
 
 class ProtocolSetMember(Model):
-    """Associate a protocol with a protocol set."""
+    """Represents the membership of an entity in a protocol set. This is used to link
+    protocols to protocol sets, allowing for grouping of protocols based on shared
+    characteristics or purposes.
+    """
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="protocol_set_members",

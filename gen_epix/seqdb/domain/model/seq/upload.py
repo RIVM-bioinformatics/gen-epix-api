@@ -106,7 +106,8 @@ class SeqForUpload(Seq, IdentifiersMixin, ValidateRefDataIdCodeMixin):
 
 
 class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMixin):
-    """Represent a sequence profile with upload-specific reference-data inputs.
+    """Represents a sequence profile record intended for upload. Equal to a SeqProfile,
+    with additional variables.
 
     Model validation: Exactly one representation is accepted for allele, MLVA,
     and k-mer profiles. Ordered representations derive content and its hash;
@@ -381,7 +382,9 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
 
 
 class AlleleForUpload(Allele):
-    """Represent an allele with upload-specific reference-data inputs."""
+    """An allele intended for upload. Equal to an Allele, with
+    additional variables.
+    """
 
     ENTITY: ClassVar = Allele.model_entity().clone(update={"persistable": False})
     NAME: ClassVar = "AlleleForUpload"
@@ -393,7 +396,8 @@ class AlleleForUpload(Allele):
 
 
 class SeqClassificationForUpload(SeqClassification, ValidateRefDataIdCodeMixin):
-    """Represent a sequence classification with upload-specific reference-data inputs.
+    """A sequence classification intended for upload. Equal to a SeqClassification, with
+    additional variables.
 
     Model validation: Content validation is not implemented yet, so classification
     content is accepted unchanged after inherited validation.
@@ -449,7 +453,7 @@ class SeqClassificationForUpload(SeqClassification, ValidateRefDataIdCodeMixin):
 
 
 class SampleForUpload(ParentForUpload):
-    """Represent a sample and its associated data for upload."""
+    """A sample intended for upload, together with any relevant associated data."""
 
     ENTITY: ClassVar = ParentForUpload.model_entity().clone()
     NAME = "SampleForUpload"
@@ -601,7 +605,8 @@ class SampleUploadResult(ParentUploadResult):
 
 
 class SampleBatchForUpload(BaseBatchForUpload):
-    """Represent samples and reference data submitted in one upload batch.
+    """A set of samples intended for upload, together with any new reference data required
+    for the storage of these data.
 
     The batch can include new alleles required to store its sample data.
     """
@@ -667,7 +672,10 @@ class SampleBatchForUpload(BaseBatchForUpload):
 
 
 class CalculateSeqDistancesResult(UploadResult):
-    """Represent distances calculated between existing and uploaded profiles.
+    """Represents the result of calculating distances between existing profiles and new
+    profiles or between new profiles themselves, as part of the upload process.
+    The seq_distance_profile_id refers to the sequence distance profile (i.e.,
+    AlleleProfile or MlvaProfile).
 
     ``seq_distance_profile_id`` identifies the profile containing these distances.
     """

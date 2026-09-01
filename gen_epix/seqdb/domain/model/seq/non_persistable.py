@@ -20,7 +20,8 @@ from gen_epix.seqdb.domain.model.seq.seq import Seq, SeqIdentifier
 
 
 class SampleQuery(Model):
-    """Filter samples by their labels or last-modified time range.
+    """A query for retrieving samples. All constraints are optional, but at least one
+    criterion must be provided.
 
     Model validation: At least one datetime boundary must be provided. Labels do
     not independently satisfy the criterion requirement.
@@ -71,7 +72,7 @@ class SampleQueryResult(Model):
 
 
 class FullSample(Model):
-    """Aggregate a sample with its retrieved sequence data and identifiers."""
+    """A comprehensive sample view with all sample-linked data and identifiers."""
 
     NAME: ClassVar = "FullSample"
     ENTITY: ClassVar = Entity(

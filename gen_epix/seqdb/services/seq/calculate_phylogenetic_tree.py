@@ -239,7 +239,8 @@ def seq_service_calculate_phylogenetic_tree(
 
 
 def _correct_nj_tree_negative_branch_lengths_recursion(clade: Any) -> None:
-    """Correct a negative child branch length by distributing it to siblings.
+    """Recursively update negative branch lengths by adding the negative branch
+    length to all siblings. Only one sibling may have a negative branch length.
 
     Args:
         clade: Biopython clade whose descendants are corrected recursively.
