@@ -160,13 +160,14 @@ def _verify_ref_col_concept_set_type_and_unit(
         raise exc.InvalidArgumentsError(
             "f3ddee47",
             "RefCol.unit does not correspond to ConceptSet.unit: " + ";".join(messages),
-            ids=[x.id for x in invalid_unit_ref_cols],
+            ids=[x.id for x in invalid_unit_ref_cols if x.id is not None],
         )
     if invalid_concept_set_type_ref_cols:
         messages.extend(
             [
                 f"{x.id}/{x.col_type.value}/{concept_set_map[x.concept_set_id].type.value}"  # type: ignore[arg-type,index]
                 for x in invalid_concept_set_type_ref_cols
+                if x.id is not None
             ]
         )
         raise exc.InvalidArgumentsError(
