@@ -1,3 +1,5 @@
+"""Re-export seqdb sequence-domain model types."""
+
 from gen_epix.commondb.domain.model import IdentifierForUpload as IdentifierForUpload
 
 # pylint: disable=useless-import-alias
