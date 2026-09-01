@@ -455,7 +455,7 @@ def create_case_endpoints(
         """See router description."""
         return cast(
             list[model.CaseCohortLink],
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="b3c912d7",
@@ -585,7 +585,7 @@ def create_case_endpoints(
         """See router description."""
         return cast(
             RetrieveSimilarCasesResponseBody,
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="e4c2e1b2",
@@ -763,7 +763,7 @@ def create_case_endpoints(
         """See router description."""
         return cast(
             dict[UUID, bool],
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="d4e5f6g7",

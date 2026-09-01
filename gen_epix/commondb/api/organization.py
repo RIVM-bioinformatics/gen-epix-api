@@ -312,7 +312,7 @@ def create_organization_endpoints(
         """See router description."""
         try:
             cmd = command.AnonymizeUserCommand(user=user, tgt_user_id=user_id)
-            retval = app.handle(cmd)
+            retval = await run_in_threadpool(app.handle, cmd)
             assert retval is None
         except Exception as exception:
             handle_exception("c8fd634f", user, exception)

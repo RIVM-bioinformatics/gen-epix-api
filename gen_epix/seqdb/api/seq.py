@@ -283,11 +283,12 @@ def create_seq_endpoints(
     ) -> model.SampleQueryResult:
         """See router description."""
         try:
-            retval: model.SampleQueryResult = app.handle(
+            retval: model.SampleQueryResult = await run_in_threadpool(
+                app.handle,
                 command.RetrieveSamplesByQueryCommand(
                     user=user,
                     sample_query=request_body,
-                )
+                ),
             )
         except Exception as exception:
             handle_exception("8f3a1c7d", user, exception)  # type: ignore[call-arg]
@@ -305,7 +306,8 @@ def create_seq_endpoints(
     ) -> list[model.FullSample]:
         """See router description."""
         try:
-            retval: list[model.FullSample] = app.handle(
+            retval: list[model.FullSample] = await run_in_threadpool(
+                app.handle,
                 command.RetrieveSamplesByIdCommand(
                     user=user,
                     sample_ids=request_body.sample_ids,
@@ -327,11 +329,12 @@ def create_seq_endpoints(
     ) -> list[model.SampleIdentifier]:
         """See router description."""
         try:
-            retval: list[model.SampleIdentifier] = app.handle(
+            retval: list[model.SampleIdentifier] = await run_in_threadpool(
+                app.handle,
                 command.RetrieveSampleIdentifiersByIdCommand(
                     user=user,
                     sample_ids=request_body.sample_ids,
-                )
+                ),
             )
         except Exception as exception:
             handle_exception("b3f91a2e", user, exception, request_ids=request_body.sample_ids)  # type: ignore[call-arg]
@@ -379,11 +382,12 @@ def create_seq_endpoints(
     ) -> datetime | None:
         """See router description."""
         try:
-            retval: datetime | None = app.handle(
+            retval: datetime | None = await run_in_threadpool(
+                app.handle,
                 command.RetrieveSeqDistanceLastModifiedCommand(
                     user=user,
                     protocol_id=protocol_id,
-                )
+                ),
             )
         except Exception as exception:
             handle_exception("d9e5f4a7", user, exception)  # type: ignore[call-arg]
@@ -401,14 +405,15 @@ def create_seq_endpoints(
     ) -> list[model.CalculateSeqDistancesResult]:
         """See router description."""
         try:
-            retval: list[model.CalculateSeqDistancesResult] = app.handle(
+            retval: list[model.CalculateSeqDistancesResult] = await run_in_threadpool(
+                app.handle,
                 command.UpdateSeqDistancesCommand(
                     user=user,
                     protocol_id=request_body.protocol_id,
                     limit=request_body.limit,
                     existing_chunk_size=request_body.existing_chunk_size,
                     use_numpy_allele_distance=request_body.use_numpy_allele_distance,
-                )
+                ),
             )
         except Exception as exception:
             handle_exception("a7b3c1d2", user, exception)  # type: ignore[call-arg]
@@ -459,12 +464,13 @@ def create_seq_endpoints(
     ) -> dict[UUID, UUID]:
         """See router description."""
         try:
-            retval: dict[UUID, UUID] = app.handle(
+            retval: dict[UUID, UUID] = await run_in_threadpool(
+                app.handle,
                 command.RetrieveBestSeqPerSampleCommand(
                     user=user,
                     protocol_ids=request_body.protocol_ids,
                     sample_ids=request_body.sample_ids,
-                )
+                ),
             )
         except Exception as exception:
             handle_exception("c3f7a9e1", user, exception, request_ids=request_body.sample_ids)  # type: ignore[call-arg]
@@ -482,12 +488,13 @@ def create_seq_endpoints(
     ) -> dict[UUID, UUID]:
         """See router description."""
         try:
-            retval: dict[UUID, UUID] = app.handle(
+            retval: dict[UUID, UUID] = await run_in_threadpool(
+                app.handle,
                 command.RetrieveBestSeqProfilePerSampleCommand(
                     user=user,
                     protocol_ids=request_body.protocol_ids,
                     sample_ids=request_body.sample_ids,
-                )
+                ),
             )
         except Exception as exception:
             handle_exception("e2b4d8f6", user, exception, request_ids=request_body.sample_ids)  # type: ignore[call-arg]
@@ -505,14 +512,15 @@ def create_seq_endpoints(
     ) -> dict[UUID, UUID]:
         """See router description."""
         try:
-            retval: dict[UUID, UUID] = app.handle(
+            retval: dict[UUID, UUID] = await run_in_threadpool(
+                app.handle,
                 command.RetrieveBestSeqClassificationPerSampleCommand(
                     user=user,
                     protocol_ids=request_body.protocol_ids,
                     sample_ids=request_body.sample_ids,
                     ranking_strategy=request_body.ranking_strategy,
                     return_primary_category_id=request_body.return_primary_category_id,
-                )
+                ),
             )
         except Exception as exception:
             handle_exception("a6f1c3d9", user, exception, request_ids=request_body.sample_ids)  # type: ignore[call-arg]
