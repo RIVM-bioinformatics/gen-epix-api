@@ -3,6 +3,7 @@ CRUD operations for RefCol entities.
 This is a simple metadata entity with no ABAC restrictions.
 """
 
+from typing import cast
 from uuid import UUID
 
 import gen_epix.casedb.domain.command as command
@@ -15,6 +16,10 @@ from gen_epix.casedb.services.case.crud_common import (
     get_ref_data_access_from_command,
 )
 from gen_epix.fastapp import CrudOperation
+
+_REF_COL_CONCEPT_SET_TYPE_MAP: dict[enum.ColType, enum.ConceptSetType] = {
+    x.value[0]: x.value[1] for x in enum.ColConceptSetType
+}
 
 
 def case_service_crud_ref_col(
@@ -31,8 +36,8 @@ def case_service_crud_ref_col(
         access_filter = ref_data_access.get_ref_col_filter("id")
         # No cascade delete to force conscious decision to delete from other models
         with self.repository.uow() as uow:
-            retval = crud_with_access_filter(self, uow, cmd, access_filter)  # type: ignore[return-value]
-        return retval
+            retval = crud_with_access_filter(self, uow, cmd, access_filter)
+        return retval  # type: ignore[return-value]
 
     if cmd.is_delete():
         return self.crud(cmd)  # type: ignore[return-value]
@@ -51,11 +56,11 @@ def case_service_crud_ref_col(
                 obj_ids=ref_dim_ids,
             )
             ref_dim_map: dict[UUID, model.RefDim] = {
-                x.id: x for x in ref_dims
+                cast(UUID, x.id): x for x in ref_dims
             }  # type: ignore[assignment]
 
             # Verify col_type corresponds to dim_type
-            invalid_ref_col_ids = [
+            invalid_ref_cols = [
                 x
                 for x in ref_cols
                 if x.col_type
@@ -63,15 +68,19 @@ def case_service_crud_ref_col(
                     ref_dim_map[x.ref_dim_id].dim_type.value
                 ].value
             ]
-            if invalid_ref_col_ids:
+            if invalid_ref_cols:
                 invalid_ref_col_ids = [
-                    x.id for x in invalid_ref_col_ids if x.id is not None
+                    cast(UUID, x.id) for x in invalid_ref_cols if x.id is not None
                 ]
                 raise exc.InvalidArgumentsError(
                     "f3ddee46",
                     "col_type must correspond to RefDim.dim_type",
                     ids=invalid_ref_col_ids,
                 )
+
+            # Verify that type and unit, if set, corresponds to ConceptSet
+            _verify_ref_col_concept_set_type_and_unit(self, cmd, ref_cols)
+
         return self.crud(cmd)  # type: ignore[return-value]
 
     if cmd.is_update():
@@ -83,35 +92,86 @@ def case_service_crud_ref_col(
                 CrudOperation.READ_SOME,
                 obj_ids=[x.id for x in ref_cols],
             )
-            if any(
-                x.ref_dim_id != y.ref_dim_id
-                for x, y in zip(ref_cols, existing_ref_cols)
-            ):
-                invalid_ref_col_ids = [
-                    x.id
+            for field_name in model.RefCol.IMMUTABLE_FIELDS:  # type: ignore[attr-defined]
+                if any(
+                    getattr(x, field_name) != getattr(y, field_name)
                     for x, y in zip(ref_cols, existing_ref_cols)
-                    if x.ref_dim_id != y.ref_dim_id
-                ]
-                raise exc.InvalidArgumentsError(
-                    "d0bfffff",
-                    "ref_dim_id is immutable and cannot be updated",
-                    ids=invalid_ref_col_ids,
-                )
-            if any(
-                x.col_type != y.col_type for x, y in zip(ref_cols, existing_ref_cols)
-            ):
-                invalid_ref_col_ids = [
-                    x.id
-                    for x, y in zip(ref_cols, existing_ref_cols)
-                    if x.col_type != y.col_type
-                ]
-                raise exc.InvalidArgumentsError(
-                    "e9033c17",
-                    "col_type is immutable and cannot be updated",
-                    ids=invalid_ref_col_ids,
-                )
+                ):
+                    invalid_ref_col_ids = [
+                        cast(UUID, x.id)
+                        for x, y in zip(ref_cols, existing_ref_cols)
+                        if getattr(x, field_name) != getattr(y, field_name)
+                    ]
+                    raise exc.InvalidArgumentsError(
+                        "e9033c17",
+                        f"{field_name} is immutable and cannot be updated",
+                        ids=invalid_ref_col_ids,
+                    )
         return self.crud(cmd)  # type: ignore[return-value]
 
     raise exc.InvalidArgumentsError(
         "d4d29edb", f"Unsupported operation: {cmd.operation}"
     )
+
+
+def _verify_ref_col_concept_set_type_and_unit(
+    self: BaseCaseService,
+    cmd: command.RefColCrudCommand,
+    ref_cols: list[model.RefCol],
+) -> None:
+    concept_set_ids = {
+        x.concept_set_id for x in ref_cols if x.concept_set_id is not None
+    }
+    if not concept_set_ids:
+        return
+    concept_sets: list[model.ConceptSet] = self.app.handle(
+        command.ConceptSetCrudCommand(
+            user=cmd.user,
+            operation=CrudOperation.READ_SOME,
+            obj_ids=list(concept_set_ids),
+        )
+    )
+    concept_set_map: dict[UUID, model.ConceptSet] = {
+        cast(UUID, x.id): x for x in concept_sets
+    }
+    invalid_unit_ref_cols = [
+        x
+        for x in ref_cols
+        if x.unit is not None
+        and x.concept_set_id is not None
+        and concept_set_map[x.concept_set_id].unit != x.unit
+    ]
+    invalid_concept_set_type_ref_cols = [
+        x
+        for x in ref_cols
+        if x.concept_set_id is not None
+        and x.col_type is not None
+        and concept_set_map[x.concept_set_id].type
+        != _REF_COL_CONCEPT_SET_TYPE_MAP[x.col_type]
+    ]
+    messages = []
+    if invalid_unit_ref_cols:
+        messages.extend(
+            [
+                f"{x.id}/{x.unit.value}/{concept_set_map[x.concept_set_id].unit.value}"  # type: ignore[union-attr,index]
+                for x in invalid_unit_ref_cols
+            ]
+        )
+        raise exc.InvalidArgumentsError(
+            "f3ddee47",
+            "RefCol.unit does not correspond to ConceptSet.unit: " + ";".join(messages),
+            ids=[x.id for x in invalid_unit_ref_cols],
+        )
+    if invalid_concept_set_type_ref_cols:
+        messages.extend(
+            [
+                f"{x.id}/{x.col_type.value}/{concept_set_map[x.concept_set_id].type.value}"  # type: ignore[arg-type,index]
+                for x in invalid_concept_set_type_ref_cols
+            ]
+        )
+        raise exc.InvalidArgumentsError(
+            "f3ddee48",
+            "RefCol.col_type does not correspond to ConceptSet.type: "
+            + ";".join(messages),
+            ids=[x.id for x in invalid_concept_set_type_ref_cols],
+        )

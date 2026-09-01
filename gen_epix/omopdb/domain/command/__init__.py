@@ -1,6 +1,6 @@
 """Expose shared and OMOP command types plus command-registration metadata.
 
-CommonDB commands cover users, organizations, authorization, and system
+commondb commands cover users, organizations, authorization, and system
 operations. OMOP commands cover model-specific CRUD operations, person upload,
 and person or specimen retrieval. `COMMANDS_BY_SERVICE_TYPE` and
 `COMMON_COMMAND_MAP` support domain composition and shared-command mapping.

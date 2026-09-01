@@ -1,3 +1,5 @@
+"""Define seqdb domain models for domain.model.seq.reads."""
+
 from typing import ClassVar, Self
 from uuid import UUID
 
@@ -21,14 +23,20 @@ from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 
 
 class ReadSet(Model, HasSampleMixin, HasProtocolMixin, QualityMixin):
-    """
-    A set of sequencing reads, either single-end or paired-end, that is the result
+    """A set of sequencing reads, either single-end or paired-end, that is the result
     of sequencing a sample using a protocol. The reads data itself are
     not included in this model, but are referenced via either URIs or file links.
 
     The actual reads data need not be referenced on creation of this instance, to allow
     for deferred upload of the reads data. The is_available property can be used
     to check whether the reads data have been linked to this instance.
+
+    Model validation: Forward and reverse URIs, file identifiers, and content hashes
+    must differ when both are provided. URI and file links cannot be mixed. File links
+    require a format and default missing compression to ``NONE``.
+
+    Model serialization: Read-file format and compression are emitted as integer enum
+    values when present.
     """
 
     ENTITY: ClassVar = Entity(
@@ -97,7 +105,7 @@ class ReadSet(Model, HasSampleMixin, HasProtocolMixin, QualityMixin):
     )
     @property
     def is_available(self) -> bool:
-        """"""
+        """Return whether forward or reverse reads have a URI or file link."""
         return (
             self.fwd_uri is not None
             or self.fwd_file_id is not None
@@ -110,6 +118,7 @@ class ReadSet(Model, HasSampleMixin, HasProtocolMixin, QualityMixin):
     def _validate_file_format(
         cls, value: enum.ReadsFileFormat | str | int | None
     ) -> enum.ReadsFileFormat | None:
+        """Normalize the read-file format from its accepted enum representation."""
         return validate_int_enum_value_or_none(enum.ReadsFileFormat, value)  # type: ignore[return-value]
 
     @field_validator("file_compression", mode="before")
@@ -117,10 +126,12 @@ class ReadSet(Model, HasSampleMixin, HasProtocolMixin, QualityMixin):
     def _validate_file_compression(
         cls, value: enum.FileCompression | str | int | None
     ) -> enum.FileCompression | None:
+        """Normalize read-file compression from its accepted enum representation."""
         return validate_int_enum_value_or_none(enum.FileCompression, value)  # type: ignore[return-value]
 
     @model_validator(mode="after")
     def _validate_model(self) -> Self:
+        """Validate mutually exclusive read links and paired-read values."""
         if self.fwd_uri and self.rev_uri and self.fwd_uri == self.rev_uri:
             raise ValueError("fwd_uri must be different from rev_uri")
         if (
@@ -150,12 +161,15 @@ class ReadSet(Model, HasSampleMixin, HasProtocolMixin, QualityMixin):
     def _serialize_file_format(
         self, value: enum.ReadsFileFormat | enum.FileCompression | None
     ) -> int | None:
+        """Serialize read-file enum values as integers."""
         if value is not None:
             return value.value
         return value
 
 
 class ReadSetIdentifier(BaseIdentifier):
+    """Associate an external identifier with a read set."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         ReadSet,
         relationship_field_name="read_set",

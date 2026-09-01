@@ -1,3 +1,5 @@
+"""Define seqdb domain models for domain.model.seq.base."""
+
 import hashlib
 import json
 import typing
@@ -15,12 +17,15 @@ from gen_epix.seqdb.domain.literal import REQUIRED_NEXTCLADE_SEQ_KEYS
 
 
 def str_uuid4() -> str:
+    """Return a newly generated UUID4 as text."""
     return str(uuid.uuid4())
 
 
 class ContentMixin[FormatType: IntEnum]:
-    """
-    Mixin class to add content-related fields to a model.
+    """Add formatted content and a content hash to a model.
+
+    Model validation: Subclasses must validate the relationship between their
+    content, format, and content hash.
     """
 
     _FORMAT_TYPE_CLASS: ClassVar[type[FormatType]] = None  # type: ignore[assignment]
@@ -55,6 +60,7 @@ class ContentMixin[FormatType: IntEnum]:
     @field_validator("format", mode="before")
     @classmethod
     def _validate_format(cls, value: str | int | float | FormatType) -> FormatType:
+        """Convert the supplied value to the content format enum used by the subclass."""
         if cls._FORMAT_TYPE_CLASS is None:
             for base in getattr(cls, "__orig_bases__", []):  # type: ignore[unreachable]
                 if typing.get_origin(base) is not ContentMixin:
@@ -77,9 +83,7 @@ class ContentMixin[FormatType: IntEnum]:
 
 
 class QualityMixin:
-    """
-    Mixin class to add quality related fields to a model.
-    """
+    """Add qualitative and numeric quality-control data to a model."""
 
     qc_result: Annotated[
         enum.QualityControlResult,
@@ -108,18 +112,21 @@ class QualityMixin:
     def _validate_qc_result(
         cls, value: str | int | float | enum.QualityControlResult | None
     ) -> enum.QualityControlResult:
+        """Convert a supplied quality result, defaulting missing values to pending."""
         if value is None:
             return enum.QualityControlResult.PENDING
         return validate_int_enum_value(enum.QualityControlResult, value)  # type: ignore[return-value]
 
     @field_serializer("qc_result", mode="plain")
     def _serialize_qc_result(self, value: enum.QualityControlResult) -> int:
+        """Serialize the quality result as its stable integer representation."""
         return value.value
 
     @staticmethod
     def get_sort_key(instance: "QualityMixin") -> tuple[int, float]:
-        """
-        Return a sort key for sorting instances of QualityMixin by quality control
+        """Return the quality-control sort key for an instance.
+
+        The quality result is primary, followed by the optional numeric quality
         result and subsequently score. The qc_result is considered leading as it is
         mandatory, and the qc_score is considered secondary as it is optional and may be
         less reliable.
@@ -130,11 +137,15 @@ class QualityMixin:
 
 
 class BaseSeq(Model):
-    """
-    Base class for a sequence. The class includes validation logic to ensure
+    """Represent a sequence with a validated representation, length, and hash.
+
+    The class includes validation logic to ensure
     consistency between the sequence, its format, length, and derived sequence hash.
     The sequence hash is stored in the id field of the model and is equal to the first
     128 bits of the SHA256 hash of the lower case sequence.
+
+    Model validation: Normalizes DNA sequence casing, derives verifiable sequence
+    hashes and lengths, and rejects inconsistent or unsupported representations.
     """
 
     ENTITY: ClassVar = Entity(
@@ -160,12 +171,14 @@ class BaseSeq(Model):
     def _validate_seq_format(
         cls, value: str | int | float | enum.SeqFormat
     ) -> enum.SeqFormat:
+        """Convert a supplied value to a supported sequence representation format."""
         return validate_int_enum_value(enum.SeqFormat, value)  # type: ignore[return-value]
 
     @model_validator(mode="after")
     def _validate_model(self) -> Self:
-        """
-        Derive the sequence hash as the first 128 bits of the SHA256 hash of the lower
+        """Normalize and validate the sequence representation, length, and hash.
+
+        Derives the sequence hash as the first 128 bits of the SHA256 hash of the lower
         case sequence, if not provided, or otherwise verify that it is correctly derived
         if possible. The sequence hash is stored in the id field that must be present in
         the class making use of the mixin.
@@ -263,7 +276,20 @@ class BaseSeq(Model):
     #     return value
 
     def get_nucleotide_seq(self, ref_seq_str: str | None = None) -> str:
-        """Return the nucleotide sequence as a string, if possible, otherwise raise an error."""
+        """Return the nucleotide sequence represented by this model.
+
+        Args:
+            ref_seq_str: Reference sequence required to resolve NextClade content.
+
+        Returns:
+            The sequence as a nucleotide string when the format is directly supported.
+
+        Raises:
+            ValueError: If a required reference sequence or valid mutation position is
+                missing.
+            NotImplementedError: If the sequence format or required NextClade features
+                cannot yet be converted.
+        """
         if self.seq_format == enum.SeqFormat.STR_DNA:
             return self.seq
         elif self.seq_format == enum.SeqFormat.NEXTCLADE:

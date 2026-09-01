@@ -1,3 +1,5 @@
+"""Expose seqdb repository implementations for application composition."""
+
 # pylint: disable=useless-import-alias
 from gen_epix.commondb.repositories import (
     OrganizationDictRepository as OrganizationDictRepository,

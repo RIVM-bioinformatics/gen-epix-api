@@ -1,6 +1,6 @@
 """Expose shared and OMOP model types plus their domain registration metadata.
 
-The facade re-exports CommonDB identity, organization, authorization, and
+The facade re-exports commondb identity, organization, authorization, and
 system models alongside OMOP clinical, ontology, metadata, and upload models.
 `SORTED_MODELS_BY_SERVICE_TYPE`, `SORTED_SERVICE_TYPES`, and
 `STORED_MODEL_FIELD_PROPS` describe their application composition.

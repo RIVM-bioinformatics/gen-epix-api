@@ -1,3 +1,5 @@
+"""Define seqdb domain models for domain.model.seq.pheno."""
+
 from typing import ClassVar, Self
 
 from pydantic import model_validator
@@ -17,6 +19,12 @@ class PcrMeasurement(
     ContentMixin[enum.PcrResultFormat],
     QualityMixin,
 ):
+    """Store a PCR measurement produced from a sample by a protocol.
+
+    Model validation: Content-hash validation is not implemented yet, so the
+    model currently accepts content unchanged after its inherited validation.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="pcr_measurements",
         table_name="pcr_measurement",
@@ -32,6 +40,7 @@ class PcrMeasurement(
 
     @model_validator(mode="after")
     def _validate_content(self) -> Self:
+        """Reserve post-validation for future content-hash verification."""
         # TODO: implement content hash validation
         return self
 
@@ -43,6 +52,12 @@ class AstMeasurement(
     ContentMixin[enum.PcrResultFormat],
     QualityMixin,
 ):
+    """Store an antimicrobial-susceptibility measurement from a sample.
+
+    Model validation: Content-hash validation is not implemented yet, so the
+    model currently accepts content unchanged after its inherited validation.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="ast_measurements",
         table_name="ast_measurement",
@@ -58,5 +73,6 @@ class AstMeasurement(
 
     @model_validator(mode="after")
     def _validate_content(self) -> Self:
+        """Reserve post-validation for future content-hash verification."""
         # TODO: implement content hash validation
         return self

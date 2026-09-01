@@ -76,6 +76,7 @@ class TestRetrievePersons:
         )
         assert persons
 
+        assert request.cls is not None
         request.cls.all_persons = persons
         request.cls.test_persons = persons[:10]
 

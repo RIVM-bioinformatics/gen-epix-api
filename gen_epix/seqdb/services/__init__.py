@@ -1,3 +1,5 @@
+"""Expose seqdb service implementations for application composition."""
+
 # pylint: disable=useless-import-alias
 from gen_epix.commondb.services import AuthService as AuthService
 from gen_epix.commondb.services import OrganizationService as OrganizationService

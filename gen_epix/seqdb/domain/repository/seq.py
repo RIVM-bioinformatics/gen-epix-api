@@ -1,3 +1,5 @@
+"""Define seqdb domain interfaces and policies for domain.repository.seq."""
+
 import abc
 import json
 from collections.abc import Iterable
@@ -12,6 +14,7 @@ from gen_epix.seqdb.domain import enum, model
 
 
 class BaseSeqRepository(BaseRepository):
+    """Define backend-independent persistence operations for seqdb sequence data."""
 
     @abc.abstractmethod
     def retrieve_seq_fasta(
@@ -19,9 +22,17 @@ class BaseSeqRepository(BaseRepository):
         uow: BaseUnitOfWork,
         seq_ids: list[UUID],
     ) -> Iterable[tuple[UUID, list[tuple[UUID, str]]]]:
-        """
-        Retrieve an Iterable[tuple[seq_id, list[tuple[contig_hash, contig_seq]]]] that
-        can be converted into FASTA format through a streaming approach.
+        """Stream sequence and contig data for FASTA generation.
+
+        Args:
+            uow: Unit of work used for persistence access.
+            seq_ids: Sequence identifiers to retrieve.
+
+        Returns:
+            Sequence identifiers paired with their contig hashes and nucleotide strings.
+
+        Raises:
+            NotImplementedError: Always, until a concrete repository implements it.
         """
         raise NotImplementedError()
 
@@ -34,7 +45,21 @@ class BaseSeqRepository(BaseRepository):
         max_distance: float,
         **kwargs: Any,
     ) -> list[UUID]:
-        """Retrieve UUIDs of profiles similar to specified profiles."""
+        """Return profiles within a distance threshold of the supplied profiles.
+
+        Args:
+            uow: Unit of work used for persistence access.
+            protocol_id: Distance protocol to query.
+            profile_ids: Source profile identifiers.
+            max_distance: Inclusive distance threshold.
+            **kwargs: Backend-specific query options.
+
+        Returns:
+            Matching profile identifiers.
+
+        Raises:
+            NotImplementedError: Always, until a concrete repository implements it.
+        """
         raise NotImplementedError()
 
     @staticmethod
@@ -45,6 +70,7 @@ class BaseSeqRepository(BaseRepository):
         distances: str,
         distances2: str | None = None,
     ) -> None:
+        """Add distance-map profiles no farther than the supplied threshold."""
         if distance_format == enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP:
             distance_dict = json.loads(distances)
             for profile_id, distance in distance_dict.items():
@@ -58,11 +84,18 @@ class BaseSeqRepository(BaseRepository):
         protocol_id: UUID,
         profile_ids: list[UUID] | None = None,
     ) -> Iterable[model.SeqDistance]:
-        """Iterate over SeqDistance records for a protocol.
+        """Iterate sequence-distance records for a protocol.
 
-        When ``profile_ids`` is given, only records whose
-        ``seq_profile_id`` is in that list are yielded.
-        When ``None``, all records for the protocol are yielded
+        Args:
+            uow: Unit of work used for persistence access.
+            protocol_id: Distance protocol to query.
+            profile_ids: Optional profile IDs to limit yielded records.
+
+        Returns:
+            Matching sequence-distance records.
+
+        Raises:
+            NotImplementedError: Always, until a concrete repository implements it.
         """
         raise NotImplementedError()
 
@@ -72,9 +105,17 @@ class BaseSeqRepository(BaseRepository):
         uow: BaseUnitOfWork,
         protocol_id: UUID,
     ) -> Iterable[UUID]:
-        """
-        Yield unique profile IDs that have SeqDistance
-        records for the given protocol.
+        """Yield profile identifiers having distance records for a protocol.
+
+        Args:
+            uow: Unit of work used for persistence access.
+            protocol_id: Distance protocol to query.
+
+        Returns:
+            Unique profile identifiers with stored distances.
+
+        Raises:
+            NotImplementedError: Always, until a concrete repository implements it.
         """
         raise NotImplementedError()
 
@@ -84,9 +125,17 @@ class BaseSeqRepository(BaseRepository):
         uow: BaseUnitOfWork,
         protocol_id: UUID,
     ) -> datetime | None:
-        """
-        Return the maximum modified_at timestamp of
-        SeqDistance records for the given protocol.
+        """Return the latest distance-record modification time for a protocol.
+
+        Args:
+            uow: Unit of work used for persistence access.
+            protocol_id: Distance protocol to query.
+
+        Returns:
+            Latest modification time, or ``None`` when no records exist.
+
+        Raises:
+            NotImplementedError: Always, until a concrete repository implements it.
         """
         raise NotImplementedError()
 
@@ -96,9 +145,17 @@ class BaseSeqRepository(BaseRepository):
         uow: BaseUnitOfWork,
         protocol_ids: list[UUID],
     ) -> list[model.SeqProfile]:
-        """
-        Return all SeqProfiles linked to the given
-        profiling protocol IDs.
+        """Return profiles linked to any supplied profiling protocol.
+
+        Args:
+            uow: Unit of work used for persistence access.
+            protocol_ids: Profiling protocol identifiers.
+
+        Returns:
+            Matching sequence profiles.
+
+        Raises:
+            NotImplementedError: Always, until a concrete repository implements it.
         """
         raise NotImplementedError()
 
@@ -110,13 +167,19 @@ class BaseSeqRepository(BaseRepository):
         seq_profile_protocol_ids: list[UUID],
         limit: int | None = None,
     ) -> list[model.SeqProfile]:
-        """Return profiles that have no SeqDistance record for
-        distance_protocol_id.
+        """Return profiles lacking a record for a distance protocol.
 
-        Pushes the set-difference into SQL (NOT EXISTS subquery) so that
-        neither the full profile list nor the full distance-profile-id set
-        is materialised in Python.  limit is applied as a SQL LIMIT /
-        TOP so only the required rows are transferred.
+        Args:
+            uow: Unit of work used for persistence access.
+            distance_protocol_id: Distance protocol whose records must be absent.
+            seq_profile_protocol_ids: Profiling protocols to search.
+            limit: Maximum number of profiles to return.
+
+        Returns:
+            Profiles without a stored distance record.
+
+        Raises:
+            NotImplementedError: Always, until a concrete repository implements it.
         """
         raise NotImplementedError()
 
@@ -127,9 +190,18 @@ class BaseSeqRepository(BaseRepository):
         modified_since: datetime | None = None,
         modified_until: datetime | None = None,
     ) -> list[UUID]:
-        """
-        Retrieve sample IDs for samples and sample-linked data modified in the
-        [modified_since, modified_until) range.
+        """Return samples modified directly or through linked data in a time range.
+
+        Args:
+            uow: Unit of work used for persistence access.
+            modified_since: Inclusive modification-time lower bound.
+            modified_until: Exclusive modification-time upper bound.
+
+        Returns:
+            Matching sample identifiers.
+
+        Raises:
+            NotImplementedError: Always, until a concrete repository implements it.
         """
         raise NotImplementedError()
 
@@ -138,9 +210,16 @@ class BaseSeqRepository(BaseRepository):
         self,
         sample_ids: list[UUID],
     ) -> list[model.FullSample]:
-        """
-        Retrieve all relevant data for the specified sample IDs and construct
-        FullSample objects.
+        """Construct complete sample aggregates for the supplied identifiers.
+
+        Args:
+            sample_ids: Samples to retrieve with their linked data.
+
+        Returns:
+            Complete sample aggregates.
+
+        Raises:
+            NotImplementedError: Always, until a concrete repository implements it.
         """
         raise NotImplementedError()
 
@@ -165,6 +244,14 @@ class BaseSeqRepository(BaseRepository):
         mapper. A bulk Core UPDATE bypasses both, so it cannot be a
         transparent drop-in without risking silent side-effect omissions
         for other callers across all four services.
+
+        Args:
+            uow: Unit of work used for persistence access.
+            user_id: User to record as the modifier, when applicable.
+            objs: Distance records whose content is updated.
+
+        Raises:
+            NotImplementedError: Always, until a concrete repository implements it.
         """
         raise NotImplementedError()
 
@@ -177,8 +264,17 @@ class BaseSeqRepository(BaseRepository):
             enum.QualityControlResult
         ] = enum.QualityControlResultSet.USABLE.value,
     ) -> list[UUID]:
-        """
-        Given a list of SeqProfile IDs, return the subset of SeqProfiles IDs
-        that have a usable quality check result.
+        """Return profile IDs whose quality result is in the allowed set.
+
+        Args:
+            uow: Unit of work used for persistence access.
+            seq_profile_ids: Profiles to filter.
+            allowed_qc_results: Quality results considered usable.
+
+        Returns:
+            Profile IDs with an allowed quality result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete repository implements it.
         """
         raise NotImplementedError()

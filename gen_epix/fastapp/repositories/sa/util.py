@@ -45,7 +45,7 @@ class UTCDateTime(TypeDecorator):
 
 
 PYTHON_SQL_TYPE_MAP = {
-    str: sa.String,  # sa.Text, sa.Unicode, sa.UnicodeText can be chosen
+    str: sa.Unicode,  # sa.String, sa.Text, sa.Unicode, sa.UnicodeText can be chosen
     int: sa.Integer,
     float: sa.Float,
     bool: sa.Boolean,

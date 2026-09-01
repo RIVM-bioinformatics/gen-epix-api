@@ -1,4 +1,4 @@
-"""Create transport-only API endpoints for CommonDB ABAC commands."""
+"""Create transport-only API endpoints for commondb ABAC commands."""
 
 from collections.abc import Callable
 from typing import Any, NoReturn
@@ -26,7 +26,7 @@ def create_abac_endpoints(
 
     Args:
         router: Router or application receiving the endpoints.
-        app: Composed CommonDB application that dispatches commands.
+        app: Composed commondb application that dispatches commands.
         service_type: Domain service type used to generate CRUD endpoints.
         handle_exception: Exception adapter used by endpoint handlers.
         **_kwargs: Unused router composition options.

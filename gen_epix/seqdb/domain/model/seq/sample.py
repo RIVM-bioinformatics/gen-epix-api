@@ -1,3 +1,5 @@
+"""Define seqdb domain models for domain.model.seq.sample."""
+
 import json
 from typing import Annotated, ClassVar
 from uuid import UUID
@@ -11,13 +13,12 @@ from gen_epix.fastapp.domain.util import create_links
 
 
 class Sample(Model):
-    """
-    The original physical sample (specimen) on which all measurements were performed
+    """The original physical sample (specimen) on which all measurements were performed
     either directly or through some derived samples. Derived samples such as cultures
     or library preps for sequencing are not modelled.
 
-    Descriptive properties of the sample, such as the sampling date, are not
-    modelled explicitly but can be stored in the props attribute as key-value pairs.
+    Model validation: Codes are stripped of surrounding whitespace. Properties may
+    be supplied as JSON and are normalized to a dictionary.
     """
 
     ENTITY: ClassVar = Entity(
@@ -51,6 +52,7 @@ class Sample(Model):
 
     @model_validator(mode="before")
     def _validate_model(cls, values: dict) -> dict:
+        """Normalize the sample code and JSON-encoded properties."""
         # Strip code of whitespace
         code = values.get("code")
         if code is not None:
@@ -65,6 +67,8 @@ class Sample(Model):
 
 
 class HasSampleMixin:
+    """Provide sample relationship fields to models derived from a sample."""
+
     # Annotation-only: an assigned Field lingers as class attr -> pydantic shadow warning
     sample_id: Annotated[
         UUID,
@@ -76,10 +80,8 @@ class HasSampleMixin:
 
 
 class SampleDataCollectionLink(Model):
-    """
-    Association between a sample and a data collection. A sample can thus be part
-    of multiple data collections.
-    """
+    """Association between a sample and a data collection. A sample can thus be part
+    of multiple data collections."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="sample_data_collection_links",
@@ -110,6 +112,8 @@ class SampleDataCollectionLink(Model):
 
 
 class SampleIdentifier(BaseIdentifier):
+    """Associate an external identifier with a sample."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         Sample,
         snake_case_plural_name="sample_identifiers",

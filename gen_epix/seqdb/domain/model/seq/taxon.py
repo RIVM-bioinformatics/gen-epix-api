@@ -1,3 +1,5 @@
+"""Define seqdb domain models for domain.model.seq.taxon."""
+
 import json
 from typing import ClassVar
 from uuid import UUID
@@ -10,9 +12,10 @@ from gen_epix.seqdb.domain import enum
 
 
 class Taxon(Model):
-    """
-    A taxonomic unit (taxon) in the taxonomic hierarchy. A single unified taxonomy
-    is modelled rather than multiple separate taxonomies such as NCBI Taxonomy
+    """Represents a taxonomic unit in a unified taxonomy.
+
+    A single unified taxonomy is modelled rather than separate taxonomies such as NCBI
+    Taxonomy
     and ICTV taxonomy. The corresponding taxon codes for these taxonomies, as
     well as SNOMED-CT organism codes, can be added. The responsibility for creating
     a single unified taxonomy lies outside of the application.
@@ -51,6 +54,7 @@ class Taxon(Model):
     @field_validator("ncbi_taxid", mode="before")
     @classmethod
     def _validate_ncbi_taxid(cls, value: int | float | str) -> int:
+        """Normalize an NCBI taxon identifier, accepting its standard prefix."""
         if isinstance(value, str):
             return int(value.replace(cls.NCBI_TAXON_PREFIX, ""))
         return int(value)
@@ -58,6 +62,7 @@ class Taxon(Model):
     @field_validator("ncbi_ancestor_taxids", mode="before")
     @classmethod
     def _validate_ncbi_ancestor_taxids(cls, value: list[int] | str) -> list[int]:
+        """Normalize JSON or prefixed NCBI ancestor identifiers to integers."""
         if isinstance(value, str):
             return [
                 (
@@ -72,6 +77,7 @@ class Taxon(Model):
     @field_validator("ancestor_taxon_ids", mode="before")
     @classmethod
     def _validate_ancestor_taxon_ids(cls, value: list[UUID] | str) -> list[UUID]:
+        """Normalize a JSON ancestor identifier list to UUID objects."""
         if isinstance(value, str):
             return [UUID(x) for x in json.loads(value)]
         return value
@@ -79,11 +85,7 @@ class Taxon(Model):
     @field_validator("rank", mode="before")
     @classmethod
     def _validate_rank(cls, value: str | enum.TaxonRank) -> enum.TaxonRank:
-        """
-        Validate and convert rank representation to a TaxonRank enum value. When given
-        as a string, it is converted to upper case and spaces are replaced with
-        underscores to support NCBI rank names as input.
-        """
+        """Normalize a taxon rank, accepting spaced NCBI rank names."""
         if isinstance(value, str):
             value = value.upper().replace(" ", "_")
             return enum.TaxonRank(value)
@@ -91,12 +93,12 @@ class Taxon(Model):
 
     @field_serializer("ancestor_taxon_ids", mode="plain")
     def _serialize_ancestor_taxon_ids(self, value: list[UUID]) -> list[str]:
+        """Serialize ancestor taxon identifiers as strings."""
         return [str(x) for x in value]
 
 
 class TaxonSet(Model):
-    """
-    A set of taxa, for example a set of taxa that are relevant for a specific
+    """Represents a set of taxa, for example a set of taxa that are relevant for a specific
     analysis or application.
     """
 
@@ -111,8 +113,8 @@ class TaxonSet(Model):
 
 
 class TaxonSetMember(Model):
-    """
-    A member of a taxon set, representing the inclusion of a specific taxon in a taxon set.
+    """Represents a member of a taxon set, representing the inclusion of a specific taxon
+    in a taxon set.
     """
 
     ENTITY: ClassVar = Entity(

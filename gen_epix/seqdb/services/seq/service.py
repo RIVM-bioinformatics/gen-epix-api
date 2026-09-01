@@ -1,3 +1,5 @@
+"""Implement seqdb sequence service behavior for services.seq.service."""
+
 import datetime
 from collections.abc import Iterable
 from uuid import UUID
@@ -88,35 +90,42 @@ from gen_epix.seqdb.services.seq.upload import seq_service_upload_samples
 
 
 class SeqService(BaseSeqService):
+    """Implement seqdb commands through specialized service operations."""
 
     def upload_samples(
         self,
         cmd: command.UploadSamplesCommand,
     ) -> model.SampleBatchUploadResult:
+        """Delegate a sample-upload command to the upload operation."""
         return seq_service_upload_samples(self, cmd)
 
     def calculate_phylogenetic_tree(
         self, cmd: command.CalculatePhylogeneticTreeCommand
     ) -> model.PhylogeneticTree | None:
+        """Delegate a phylogenetic-tree command to the tree operation."""
         return seq_service_calculate_phylogenetic_tree(self, cmd)
 
     def retrieve_samples_by_id(
         self, cmd: command.RetrieveSamplesByIdCommand
     ) -> list[model.FullSample]:
+        """Delegate complete sample retrieval to the sample operation."""
         return seq_service_retrieve_samples_by_id(self, cmd)
 
     def retrieve_sample_identifiers_by_id(
         self, cmd: command.RetrieveSampleIdentifiersByIdCommand
     ) -> list[model.SampleIdentifier]:
+        """Delegate sample-identifier retrieval to the sample operation."""
         return seq_service_retrieve_sample_identifiers_by_id(self, cmd)
 
     def retrieve_samples_by_query(
         self,
         cmd: command.RetrieveSamplesByQueryCommand,
     ) -> model.SampleQueryResult:
+        """Delegate sample-query retrieval to the sample operation."""
         return seq_service_retrieve_samples_by_query(self, cmd)
 
     def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
+        """Stream repository contigs as wrapped or unwrapped FASTA records."""
         wrap = cmd.wrap or cmd.model_fields["wrap"].default
         self.repository: BaseSeqRepository
         with self.repository.uow() as uow:
@@ -136,6 +145,7 @@ class SeqService(BaseSeqService):
         self,
         cmd: command.RetrieveSimilarProfilesCommand,
     ) -> list[UUID]:
+        """Return profiles similar to the supplied profiles within the command limit."""
         # Special case: zero query profile ids
         if not cmd.profile_ids:
             return []
@@ -153,36 +163,42 @@ class SeqService(BaseSeqService):
         self,
         cmd: command.RetrieveSeqDistanceLastModifiedCommand,
     ) -> datetime.datetime | None:
+        """Delegate distance modification-time retrieval to the distance operation."""
         return seq_service_retrieve_seq_distance_last_modified(self, cmd)
 
     def calculate_seq_distances_for_new_profiles(
         self,
         cmd: command.CalculateSeqDistancesForNewProfilesCommand,
     ) -> list[model.CalculateSeqDistancesResult]:
+        """Delegate missing-profile distance calculation to the distance operation."""
         return seq_service_calculate_seq_distances_for_new_profiles(self, cmd)
 
     def update_seq_distances(
         self,
         cmd: command.UpdateSeqDistancesCommand,
     ) -> list[model.CalculateSeqDistancesResult]:
+        """Delegate distance updates to the distance operation."""
         return seq_service_update_seq_distances(self, cmd)
 
     def retrieve_best_seq_per_sample(
         self,
         cmd: command.RetrieveBestSeqPerSampleCommand,
     ) -> dict[UUID, UUID]:
+        """Delegate best-sequence selection per sample to the retrieval operation."""
         return seq_service_retrieve_best_seq_per_sample(self, cmd)
 
     def retrieve_best_seq_profile_per_sample(
         self,
         cmd: command.RetrieveBestSeqProfilePerSampleCommand,
     ) -> dict[UUID, UUID]:
+        """Delegate best-profile selection per sample to the retrieval operation."""
         return seq_service_retrieve_best_seq_profile_per_sample(self, cmd)
 
     def retrieve_best_seq_classification_per_sample(
         self,
         cmd: command.RetrieveBestSeqClassificationPerSampleCommand,
     ) -> dict[UUID, UUID]:
+        """Delegate best-classification selection to the retrieval operation."""
         return seq_service_retrieve_best_seq_classification_per_sample(self, cmd)
 
     def crud_protocol(
@@ -197,6 +213,7 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate protocol CRUD to the protocol operation."""
         return seq_service_crud_protocol(self, cmd)
 
     def crud_protocol_set(
@@ -211,6 +228,7 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate protocol-set CRUD to the protocol-set operation."""
         return seq_service_crud_protocol_set(self, cmd)
 
     def crud_protocol_set_member(
@@ -225,6 +243,7 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate protocol-set-member CRUD to the membership operation."""
         return seq_service_crud_protocol_set_member(self, cmd)
 
     def crud_allele(
@@ -233,6 +252,7 @@ class SeqService(BaseSeqService):
     ) -> (
         model.Allele | list[model.Allele] | UUID | list[UUID] | bool | list[bool] | None
     ):
+        """Delegate allele CRUD to the allele operation."""
         return seq_service_crud_allele(self, cmd)
 
     def crud_ast_measurement(
@@ -247,6 +267,7 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate AST-measurement CRUD to the measurement operation."""
         return seq_service_crud_ast_measurement(self, cmd)
 
     def crud_ast_prediction(
@@ -261,12 +282,14 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate AST-prediction CRUD to the prediction operation."""
         return seq_service_crud_ast_prediction(self, cmd)
 
     def crud_locus(
         self,
         cmd: command.LocusCrudCommand,
     ) -> model.Locus | list[model.Locus] | UUID | list[UUID] | bool | list[bool] | None:
+        """Delegate locus CRUD to the locus operation."""
         return seq_service_crud_locus(self, cmd)
 
     def crud_locus_code_map(
@@ -281,6 +304,7 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate locus-code-map CRUD to the mapping operation."""
         return seq_service_crud_locus_code_map(self, cmd)
 
     def crud_seq_profile(
@@ -295,6 +319,7 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate sequence-profile CRUD to the profile operation."""
         return seq_service_crud_seq_profile(self, cmd)
 
     def crud_seq_profile_identifier(
@@ -309,6 +334,7 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate sequence-profile-identifier CRUD to the identifier operation."""
         return seq_service_crud_seq_profile_identifier(self, cmd)
 
     def crud_locus_set(
@@ -323,6 +349,7 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate locus-set CRUD to the locus-set operation."""
         return seq_service_crud_locus_set(self, cmd)
 
     def crud_pcr_measurement(
@@ -337,6 +364,7 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate PCR-measurement CRUD to the measurement operation."""
         return seq_service_crud_pcr_measurement(self, cmd)
 
     def crud_read_set(
@@ -351,6 +379,7 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate read-set CRUD to the read-set operation."""
         return seq_service_crud_read_set(self, cmd)
 
     def crud_read_set_identifier(
@@ -365,6 +394,7 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate read-set-identifier CRUD to the identifier operation."""
         return seq_service_crud_read_set_identifier(self, cmd)
 
     def crud_ref_allele(
@@ -379,6 +409,7 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate reference-allele CRUD to the reference-allele operation."""
         return seq_service_crud_ref_allele(self, cmd)
 
     def crud_ref_seq(
@@ -387,6 +418,7 @@ class SeqService(BaseSeqService):
     ) -> (
         model.RefSeq | list[model.RefSeq] | UUID | list[UUID] | bool | list[bool] | None
     ):
+        """Delegate reference-sequence CRUD to the reference-sequence operation."""
         return seq_service_crud_ref_seq(self, cmd)
 
     def crud_sample(
@@ -395,6 +427,7 @@ class SeqService(BaseSeqService):
     ) -> (
         model.Sample | list[model.Sample] | UUID | list[UUID] | bool | list[bool] | None
     ):
+        """Delegate sample CRUD to the sample operation."""
         return seq_service_crud_sample(self, cmd)
 
     def crud_sample_data_collection_link(
@@ -409,6 +442,7 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate sample-data-collection-link CRUD to the link operation."""
         return seq_service_crud_sample_data_collection_link(self, cmd)
 
     def crud_sample_identifier(
@@ -423,12 +457,14 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate sample-identifier CRUD to the identifier operation."""
         return seq_service_crud_sample_identifier(self, cmd)
 
     def crud_seq(
         self,
         cmd: command.SeqCrudCommand,
     ) -> model.Seq | list[model.Seq] | UUID | list[UUID] | bool | list[bool] | None:
+        """Delegate sequence CRUD to the sequence operation."""
         return seq_service_crud_seq(self, cmd)
 
     def crud_seq_category(
@@ -443,6 +479,7 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate sequence-category CRUD to the category operation."""
         return seq_service_crud_seq_category(self, cmd)
 
     def crud_seq_category_set(
@@ -457,6 +494,7 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate sequence-category-set CRUD to the category-set operation."""
         return seq_service_crud_seq_category_set(self, cmd)
 
     def crud_seq_classification(
@@ -471,6 +509,7 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate sequence-classification CRUD to the classification operation."""
         return seq_service_crud_seq_classification(self, cmd)
 
     def crud_seq_distance(
@@ -485,6 +524,7 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate sequence-distance CRUD to the distance operation."""
         return seq_service_crud_seq_distance(self, cmd)
 
     def crud_seq_identifier(
@@ -499,6 +539,7 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate sequence-identifier CRUD to the identifier operation."""
         return seq_service_crud_seq_identifier(self, cmd)
 
     def crud_seq_taxonomy(
@@ -513,12 +554,14 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate sequence-taxonomy CRUD to the taxonomy operation."""
         return seq_service_crud_seq_taxonomy(self, cmd)
 
     def crud_taxon(
         self,
         cmd: command.TaxonCrudCommand,
     ) -> model.Taxon | list[model.Taxon] | UUID | list[UUID] | bool | list[bool] | None:
+        """Delegate taxon CRUD to the taxon operation."""
         return seq_service_crud_taxon(self, cmd)
 
     def crud_taxon_set(
@@ -533,6 +576,7 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate taxon-set CRUD to the taxon-set operation."""
         return seq_service_crud_taxon_set(self, cmd)
 
     def crud_taxon_set_member(
@@ -547,6 +591,7 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate taxon-set-member CRUD to the membership operation."""
         return seq_service_crud_taxon_set_member(self, cmd)
 
     def crud_tree_algorithm(
@@ -561,6 +606,7 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate tree-algorithm CRUD to the algorithm operation."""
         return seq_service_crud_tree_algorithm(self, cmd)
 
     def crud_tree_algorithm_class(
@@ -575,4 +621,5 @@ class SeqService(BaseSeqService):
         | list[bool]
         | None
     ):
+        """Delegate tree-algorithm-class CRUD to the class operation."""
         return seq_service_crud_tree_algorithm_class(self, cmd)

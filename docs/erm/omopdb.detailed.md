@@ -18,6 +18,7 @@ erDiagram
     Concept }o--|| Domain : "domain_id"
     Concept }o--|| Vocabulary : "vocabulary_id"
     Concept }o--|| ConceptClass : "concept_class_id"
+    Cohort }o--|| CohortDefinition : "cohort_definition_id"
     Contact }o--|| Site : "site_id"
     UserInvitation }o--|| Organization : "organization_id"
     UserInvitation }o--|| User : "invited_by_user_id"
@@ -367,17 +368,6 @@ erDiagram
         date cohort_initiation_date
     }
 
-    Cohort {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID cohort_definition_id
-        UUID subject_id
-        date cohort_start_date
-        date cohort_end_date
-        UUID cohort_id PK
-    }
-
     Site {
         timestamp created_at
         timestamp modified_at
@@ -443,6 +433,17 @@ erDiagram
         date valid_start_date
         date valid_end_date
         string invalid_reason
+    }
+
+    Cohort {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID cohort_definition_id FK
+        UUID subject_id
+        date cohort_start_date
+        date cohort_end_date
+        UUID cohort_id PK
     }
 
     Contact {

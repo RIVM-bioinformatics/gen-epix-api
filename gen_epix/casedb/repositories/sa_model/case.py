@@ -147,6 +147,7 @@ class RefCol(Base, RowMetadataMixin):
     col_type: Mapped[enum.ColType] = create_mapped_column(
         DOMAIN, model.RefCol, "col_type"
     )
+    unit: Mapped[enum.Unit | None] = create_mapped_column(DOMAIN, model.RefCol, "unit")
     concept_set_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.RefCol, "concept_set_id"
     )
@@ -364,7 +365,7 @@ class Case(Base, RowMetadataMixin):
     cohort: Mapped[dict[UUID, UUID]] = create_mapped_column(
         DOMAIN, model.Case, "cohort"
     )
-    count: Mapped[int | None] = create_mapped_column(DOMAIN, model.Case, "count")
+    count: Mapped[int] = create_mapped_column(DOMAIN, model.Case, "count")
     case_date: Mapped[datetime] = create_mapped_column(DOMAIN, model.Case, "case_date")
     content: Mapped[dict[UUID, str]] = create_mapped_column(
         DOMAIN, model.Case, "content"

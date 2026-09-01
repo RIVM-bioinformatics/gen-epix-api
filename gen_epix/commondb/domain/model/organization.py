@@ -234,7 +234,7 @@ class Contact(Model):
         default=None, description="The email address of the contact", max_length=320
     )
     phone: str | None = Field(
-        default=None, description="The phone number of the contact"
+        default=None, description="The phone number of the contact", max_length=20
     )
 
 
