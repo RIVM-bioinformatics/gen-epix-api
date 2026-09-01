@@ -73,27 +73,28 @@ class CaseValidator:
             x if x is None or TIME_DAY_PATTERN.match(x) else NoReturn
         ),
     }
+    # Multipliers (from, to) for unit conversions
     UNIT_PAIR_MULTIPLIER_MAP: dict[tuple[Unit, Unit], float] = {
         (Unit.YEAR, Unit.QUARTER): 4.0,
         (Unit.YEAR, Unit.MONTH): 12.0,
-        (Unit.YEAR, Unit.WEEK): 365.25 / 7,
+        (Unit.YEAR, Unit.WEEK): 365.25 / 7.0,
         (Unit.YEAR, Unit.DAY): 365.25,
-        (Unit.QUARTER, Unit.YEAR): 1 / 3.0,
+        (Unit.QUARTER, Unit.YEAR): 1.0 / 4.0,
         (Unit.QUARTER, Unit.MONTH): 3.0,
-        (Unit.QUARTER, Unit.WEEK): 365.25 / (4 * 7),
-        (Unit.QUARTER, Unit.DAY): 365.25 / 4,
-        (Unit.MONTH, Unit.YEAR): 1 / 12.0,
-        (Unit.MONTH, Unit.QUARTER): 1 / 3.0,
-        (Unit.MONTH, Unit.WEEK): 365.25 / (12 * 7),
-        (Unit.MONTH, Unit.DAY): 365.25 / 12,
-        (Unit.WEEK, Unit.YEAR): 7 / 365.25,
-        (Unit.WEEK, Unit.QUARTER): (4 * 7) / 365.25,
-        (Unit.WEEK, Unit.MONTH): (12 * 7) / 365.25,
+        (Unit.QUARTER, Unit.WEEK): 365.25 / (4.0 * 7.0),
+        (Unit.QUARTER, Unit.DAY): 365.25 / 4.0,
+        (Unit.MONTH, Unit.YEAR): 1.0 / 12.0,
+        (Unit.MONTH, Unit.QUARTER): 1.0 / 3.0,
+        (Unit.MONTH, Unit.WEEK): 365.25 / (12.0 * 7.0),
+        (Unit.MONTH, Unit.DAY): 365.25 / 12.0,
+        (Unit.WEEK, Unit.YEAR): 7.0 / 365.25,
+        (Unit.WEEK, Unit.QUARTER): (4.0 * 7.0) / 365.25,
+        (Unit.WEEK, Unit.MONTH): (12.0 * 7.0) / 365.25,
         (Unit.WEEK, Unit.DAY): 7.0,
-        (Unit.DAY, Unit.YEAR): 1 / 365.25,
-        (Unit.DAY, Unit.QUARTER): 4 / 365.25,
-        (Unit.DAY, Unit.MONTH): 12 / 365.25,
-        (Unit.DAY, Unit.WEEK): 1 / 7.0,
+        (Unit.DAY, Unit.YEAR): 1.0 / 365.25,
+        (Unit.DAY, Unit.QUARTER): 4.0 / 365.25,
+        (Unit.DAY, Unit.MONTH): 12.0 / 365.25,
+        (Unit.DAY, Unit.WEEK): 1.0 / 7.0,
     }
     COL_TYPE_TO_TIME_UNIT: dict[ColType, TimeUnit] = {
         ColType.TIME_YEAR: TimeUnit.YEAR,
@@ -705,12 +706,8 @@ class CaseValidator:
                     float(x) * multiplier for x in src_transformer._upper_bounds
                 ],
                 tgt_interval_names=tgt_transformer._interval_names,
-                tgt_lower_bounds=[
-                    float(x) * multiplier for x in tgt_transformer._lower_bounds
-                ],
-                tgt_upper_bounds=[
-                    float(x) * multiplier for x in tgt_transformer._upper_bounds
-                ],
+                tgt_lower_bounds=[float(x) for x in tgt_transformer._lower_bounds],
+                tgt_upper_bounds=[float(x) for x in tgt_transformer._upper_bounds],
                 src_lower_bound_is_inclusive=src_transformer._lower_bound_is_inclusive,
                 src_upper_bound_is_inclusive=src_transformer._upper_bound_is_inclusive,
                 tgt_lower_bound_is_inclusive=tgt_transformer._lower_bound_is_inclusive,
