@@ -273,7 +273,7 @@ class SARepository(BaseRepository):
                     "b78b8c87",
                     "Cannot pass arguments when creating a nested UnitOfWork",
                 )
-            last_uow: SAUnitOfWork = self._uow_context_stack[-1]  # type: ignore[assignment]
+            last_uow: SAUnitOfWork = context_stack[-1]
             return SAUnitOfWork(
                 last_uow.session,
                 context_stack=self._uow_context_stack_local.value,
