@@ -56,12 +56,22 @@ class UploadSamplesCommand(Command, UploadBatchCommandMixin):
             " to prevent concurrent modification conflicts."
         ),
     )
+    # TODO: is a temporary option, to be removed once the memory handling is handled properly server-side
     existing_chunk_size: int | None = Field(
         default=None,
         description=(
             "If set, existing profiles are processed in chunks of this size "
             "during distance calculation to limit memory use. When None, all "
             "existing profiles are loaded in a single pass (original behaviour)."
+        ),
+    )
+    # TODO: is a temporary option, to be removed once the numpy-vectorised ALLELE distance calculation (or any other that is eventually chosen) is fully validated and deployed. It is intended to allow testing of the new implementation without affecting existing behaviour.
+    use_numpy_allele_distance: bool = Field(
+        default=False,
+        description=(
+            "If True, use numpy-vectorised ALLELE Hamming with an automatic "
+            "variant gate: numpy_batch for n_new < 200, int32_vocab for "
+            "n_new >= 200. No effect on non-ALLELE profile types."
         ),
     )
 
@@ -109,6 +119,14 @@ class CalculateSeqDistancesForNewProfilesCommand(Command):
             "existing profiles are loaded in a single pass (original behaviour)."
         ),
     )
+    use_numpy_allele_distance: bool = Field(
+        default=False,
+        description=(
+            "If True, use numpy-vectorised ALLELE Hamming with an automatic "
+            "variant gate: numpy_batch for n_new < 200, int32_vocab for "
+            "n_new >= 200. No effect on non-ALLELE profile types."
+        ),
+    )
 
 
 class UpdateSeqDistancesCommand(Command):
@@ -137,6 +155,14 @@ class UpdateSeqDistancesCommand(Command):
             "If set, existing profiles are processed in chunks of this size "
             "to limit memory use. When None, all existing profiles are loaded "
             "and streamed in a single pass (original behaviour)."
+        ),
+    )
+    use_numpy_allele_distance: bool = Field(
+        default=False,
+        description=(
+            "If True, use numpy-vectorised ALLELE Hamming with an automatic "
+            "variant gate: numpy_batch for n_new < 200, int32_vocab for "
+            "n_new >= 200. No effect on non-ALLELE profile types."
         ),
     )
 
@@ -295,6 +321,30 @@ class RetrieveBestSeqProfilePerSampleCommand(Command):
     ranking_strategy: enum.SeqProfileRankingStrategy = Field(
         default=enum.SeqProfileRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
         description="The strategy to use for ranking the profiles. This determines how the best profile is selected.",
+    )
+
+
+class RetrieveBestSeqClassificationPerSampleCommand(Command):
+    """
+    Retrieve the best SeqClassification ID for each sample among the given sample IDs and
+    protocol IDs, and using a particular ranking strategy.
+    Returns a dict[sample_id, seq_classification_id].
+    """
+
+    protocol_ids: set[UUID] = Field(
+        description="The IDs of the sequence classification protocols to search among.",
+        min_length=1,
+    )
+    sample_ids: set[UUID] | None = Field(
+        description="The IDs of the samples to search among. If None, search among all samples.",
+    )
+    ranking_strategy: enum.SeqClassificationRankingStrategy = Field(
+        default=enum.SeqClassificationRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
+        description="The strategy to use for ranking the classifications. This determines how the best classification is selected.",
+    )
+    return_primary_category_id: bool = Field(
+        default=False,
+        description="If True, return the primary category ID of the best classification, rather than the ID of the best classification. This facilitates the most frequent use casees where the primary category is the desired output.",
     )
 
 

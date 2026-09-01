@@ -1,3 +1,11 @@
+"""Expose shared and OMOP model types plus their domain registration metadata.
+
+The facade re-exports CommonDB identity, organization, authorization, and
+system models alongside OMOP clinical, ontology, metadata, and upload models.
+`SORTED_MODELS_BY_SERVICE_TYPE`, `SORTED_SERVICE_TYPES`, and
+`STORED_MODEL_FIELD_PROPS` describe their application composition.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix import fastapp
 from gen_epix.commondb.domain import enum as common_enum
@@ -199,12 +207,12 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             DrugExposureIdentifier,
             DeviceExposure,
             DeviceExposureIdentifier,
+            Specimen,
+            SpecimenIdentifier,
             Measurement,
             MeasurementIdentifier,
             Observation,
             ObservationIdentifier,
-            Specimen,
-            SpecimenIdentifier,
             Note,
             NoteIdentifier,
             NoteNlp,

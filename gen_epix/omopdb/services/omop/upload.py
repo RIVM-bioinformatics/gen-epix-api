@@ -1,3 +1,5 @@
+"""Upload person-centered OMOP batches through the shared batch-upload workflow."""
+
 from uuid import UUID
 
 import gen_epix.omopdb.domain.command as command
@@ -15,7 +17,17 @@ from gen_epix.omopdb.services.omop.person_validator import PersonValidator
 
 
 class PersonBatchUploader(BatchUploader):
+    """Validate and persist batches of persons and their associated OMOP data."""
+
     def __init__(self, service: BaseService) -> None:
+        """Initialize the uploader for an OMOP service.
+
+        Args:
+            service: Service that owns person upload persistence and validation.
+
+        Raises:
+            InvalidArgumentsError: If `service` is not an OmopDB service.
+        """
         super().__init__(
             command.UploadPersonsCommand,
             model.STORED_MODEL_FIELD_PROPS,  # type: ignore[arg-type]
@@ -26,10 +38,13 @@ class PersonBatchUploader(BatchUploader):
         self.service: BaseOmopService = service
 
     def verify_user_rights(self, cmd: UploadBatchCommandMixin) -> None:
-        """
-        Implements user rights verification for uploading cases. Only ABAC rights are
-        verified: the user must have write access to all Cols contained in
-        the uploaded cases for the created in data collection.
+        """Verify rights for a person-upload command.
+
+        Args:
+            cmd: Batch command whose user permissions are being checked.
+
+        Raises:
+            InvalidArgumentsError: If `cmd` is not an upload-persons command.
         """
         # Verify command type
         if not isinstance(cmd, command.UploadPersonsCommand):
@@ -42,8 +57,18 @@ class PersonBatchUploader(BatchUploader):
         batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
-        """
-        Extends batch verification to the person content.
+        """Verify generic batch requirements and person content.
+
+        Args:
+            cmd: Upload-persons command containing the batch.
+            batch_result: Mutable result that receives validation issues.
+            uow: Unit of work used for generic batch verification.
+
+        Returns:
+            `True` when generic and person-content verification succeed.
+
+        Raises:
+            InvalidArgumentsError: If the command or batch result has an invalid type.
         """
         if not isinstance(cmd, command.UploadPersonsCommand):
             raise exc.InvalidArgumentsError("7b3446fe", "Invalid command type")
@@ -69,8 +94,18 @@ class PersonBatchUploader(BatchUploader):
         batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
-        """
-        Extends batch upload to uploading the persons with this service.
+        """Upsert the persons in a validated upload batch.
+
+        Args:
+            cmd: Upload-persons command containing the batch.
+            batch_result: Mutable result that records persisted entities.
+            uow: Unit of work used for batch persistence.
+
+        Returns:
+            `True` when the generic batch upsert succeeds.
+
+        Raises:
+            InvalidArgumentsError: If the command or batch result has an invalid type.
         """
         if not isinstance(cmd, command.UploadPersonsCommand):
             raise exc.InvalidArgumentsError("94c3402c", "Invalid command type")
@@ -120,6 +155,7 @@ class PersonBatchUploader(BatchUploader):
 def omop_service_upload_persons(
     self: BaseOmopService, cmd: command.UploadPersonsCommand
 ) -> model.PersonBatchUploadResult:
+    """Upload a person batch through an OmopDB service instance."""
     batch_uploader = PersonBatchUploader(self)
 
     batch_result: model.PersonBatchUploadResult = batch_uploader.upload_batch(cmd)  # type: ignore[assignment]

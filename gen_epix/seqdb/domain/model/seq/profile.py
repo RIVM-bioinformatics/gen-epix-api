@@ -5,6 +5,7 @@ import struct
 from typing import Any, ClassVar, Self
 from uuid import UUID
 
+import numpy as np
 from pydantic import Field, field_serializer, field_validator, model_validator
 
 from gen_epix.commondb.domain.literal import NULL_ID
@@ -13,12 +14,14 @@ from gen_epix.commondb.domain.model.base import Model
 from gen_epix.commondb.domain.model.organization import BaseIdentifier
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity, create_links
+from gen_epix.fastapp.domain.util import create_multi_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.literal import (
     MLVA_NO_LOCUS_REPEAT_NUMBER,
     REQUIRED_NEXTCLADE_SEQ_KEYS,
 )
 from gen_epix.seqdb.domain.model.seq.base import ContentMixin, QualityMixin
+from gen_epix.seqdb.domain.model.seq.locus import Allele, Locus
 from gen_epix.seqdb.domain.model.seq.protocol import HasProtocolMixin, Protocol
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 from gen_epix.seqdb.domain.model.seq.seq import HasSeqMixin, Seq
@@ -47,6 +50,7 @@ class SeqProfile(
                 ),
             }
         ),
+        multi_links=create_multi_links([("content", Locus), ("content", Allele)]),
     )
     FORMATS_BY_SEQ_PROFILE_TYPE: ClassVar[
         dict[enum.SeqProfileType, frozenset[enum.SeqProfileFormat]]
@@ -244,6 +248,21 @@ class SeqProfile(
             return result
         raise NotImplementedError(
             "Unable to parse allele IDs for this allele profile format"
+        )
+
+    def get_allele_array(self) -> np.ndarray:
+        """Return allele IDs as an (n_loci,) S16 numpy array.
+
+        Each element is a 16-byte UUID; missing loci (null UUID) appear as
+        b"\\x00" * 16 matching the _NULL_ALLELE sentinel in distance kernels.
+        Zero-copy frombuffer view of the decoded base64 blob.
+        """
+        if self.seq_profile_type != enum.SeqProfileType.ALLELE:
+            raise ValueError("Allele array can only be computed for allele profiles")
+        if self.format == enum.SeqProfileFormat.ORDERED_ALLELE_IDS:
+            return np.frombuffer(base64.b64decode(self.content), dtype="S16")
+        raise NotImplementedError(
+            "Unable to compute allele array for this allele profile format"
         )
 
     def get_allele_ids(self, **kwargs: Any) -> list[UUID | None]:

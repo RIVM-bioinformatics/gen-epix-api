@@ -101,12 +101,16 @@ from test.commondb.unit.upload.model import (
     ParentBatchUploadResult,
     ParentForUpload,
     ParentIdentifier,
+)
+from test.commondb.unit.upload.model import (
+    ParentUploadResult as FixtureParentUploadResult,
+)
+from test.commondb.unit.upload.model import (
     Ref1,
     Ref2,
     UploadParentsCommand,
 )
-from unittest import TestCase
-from unittest.mock import Mock
+from test.util.mock_compat import Mock
 from uuid import UUID, uuid4
 
 import pytest
@@ -124,10 +128,10 @@ from gen_epix.fastapp.service import BaseService
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 
-class BaseUploadTestCase(TestCase):
+class BaseUploadTestCase:
     """Base test case with common fixtures and utilities."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         """Set up test fixtures."""
         # Test user
         self.user = User(
@@ -416,19 +420,19 @@ class BaseUploadTestCase(TestCase):
         )
         return batch_result  # type: ignore[return-value]
 
-    def assertBatchProcessed(self, upload_result: UploadResult) -> None:
+    def expectBatchProcessed(self, upload_result: UploadResult) -> None:
         if upload_result.status not in UploadStatusSet.PROCESSED.value:
-            self.fail(
+            pytest.fail(
                 f"Upload was not processed, status: {upload_result.status.value}",
             )
 
-    def assertBatchFailed(self, upload_result: UploadResult) -> None:
+    def expectBatchFailed(self, upload_result: UploadResult) -> None:
         if upload_result.status not in UploadStatusSet.FAILED.value:
-            self.fail(
+            pytest.fail(
                 f"Upload did not fail, status: {upload_result.status.value}",
             )
 
-    def assertHasLogCode(
+    def expectHasLogCode(
         self, upload_result: UploadResult, code: list[str] | str
     ) -> None:
         if isinstance(code, str):
@@ -437,10 +441,10 @@ class BaseUploadTestCase(TestCase):
         if missing_codes:
             missing_codes_str = ", ".join(missing_codes)
             if len(missing_codes) == 1:
-                self.fail(f"Log missing for code {missing_codes_str}")
-            self.fail(f"Logs missing for codes {missing_codes_str}")
+                pytest.fail(f"Log missing for code {missing_codes_str}")
+            pytest.fail(f"Logs missing for codes {missing_codes_str}")
 
-    def assertStatusCount(
+    def expectStatusCount(
         self,
         upload_result: ParentUploadResult,
         n_skipped: int = 0,
@@ -478,7 +482,7 @@ class BaseUploadTestCase(TestCase):
             different_status_count_str = ", ".join(
                 f"{x[0].value} ({x[1]}/{x[2]})" for x in different_status_count
             )
-            self.fail(
+            pytest.fail(
                 f"Status count mismatch (expected/actual): {different_status_count_str}"
             )
 
@@ -504,7 +508,7 @@ class TestRetrieveParentIdByIntraChildLinkedId(BaseUploadTestCase):
             to_child_class=Child2,
         )
 
-        self.assertEqual(result, {})
+        assert result == {}
         self.service.repository.read_fields.assert_not_called()
 
     def test_reads_distinct_ids_and_returns_child_parent_mapping(self) -> None:
@@ -543,21 +547,17 @@ class TestRetrieveParentIdByIntraChildLinkedId(BaseUploadTestCase):
             to_child_class=Child2,
         )
 
-        self.assertEqual(
-            result,
-            {
-                linked_id_1: self.parent_id,
-                linked_id_2: self.random_ids[2],
-            },
-        )
+        assert result == {
+            linked_id_1: self.parent_id,
+            linked_id_2: self.random_ids[2],
+        }
         self.service.repository.read_fields.assert_called_once()
         _, _, _, fields, *_ = self.service.repository.read_fields.call_args.args
-        self.assertEqual(fields, ["child2_id", "parent_id"])
+        assert fields == ["child2_id", "parent_id"]
         query_filter = self.service.repository.read_fields.call_args.kwargs["filter"]
-        self.assertEqual(query_filter.key, "child2_id")
-        self.assertEqual(
-            query_filter.members,
-            frozenset({linked_id_1, linked_id_2, linked_id_3}),
+        assert query_filter.key == "child2_id"
+        assert query_filter.members == frozenset(
+            {linked_id_1, linked_id_2, linked_id_3}
         )
 
     def test_uses_none_user_id_when_command_has_no_user(self) -> None:
@@ -581,7 +581,7 @@ class TestRetrieveParentIdByIntraChildLinkedId(BaseUploadTestCase):
             to_child_class=Child2,
         )
 
-        self.assertEqual(self.service.repository.read_fields.call_args.args[1], None)
+        assert self.service.repository.read_fields.call_args.args[1] == None
 
 
 # Test Scenario 1: Existence of parent and/or child objects in the repository
@@ -600,9 +600,9 @@ class Test1ObjectExistence(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=1)
-        self.assertEqual(batch_result.parents[0].id, created_parent_id)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=1)
+        assert batch_result.parents[0].id == created_parent_id
 
     def test_1_2_parent_id_provided_as_new_id_succeeds(self) -> None:
         """Test 1.2: ID provided by batch creator (new_id); object does not exist yet - should be created with that ID."""
@@ -615,9 +615,9 @@ class Test1ObjectExistence(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=1)
-        self.assertEqual(batch_result.parents[0].id, parent_for_upload.id)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=1)
+        assert batch_result.parents[0].id == parent_for_upload.id
 
 
 # Test Scenario 2: Provision of child objects
@@ -639,9 +639,9 @@ class Test2ChildObjectProvision(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=1)
-        self.assertEqual(batch_result.parents[0].id, created_parent_id)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=1)
+        assert batch_result.parents[0].id == created_parent_id
 
     def test_2_2_parent_with_child1_only(self) -> None:
         """Test 2.2: Parent with Child1 objects only."""
@@ -665,10 +665,10 @@ class Test2ChildObjectProvision(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=2)
-        self.assertEqual(batch_result.parents[0].id, created_parent_id)
-        self.assertEqual(batch_result.parents[0].children1[0].id, created_child1_id)  # type: ignore[index]
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=2)
+        assert batch_result.parents[0].id == created_parent_id
+        assert batch_result.parents[0].children1[0].id == created_child1_id  # type: ignore[index]
 
     def test_2_3_parent_with_child2_only(self) -> None:
         """Test 2.3: Parent with Child2 objects only."""
@@ -692,10 +692,10 @@ class Test2ChildObjectProvision(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=2)
-        self.assertEqual(batch_result.parents[0].id, created_parent_id)
-        self.assertEqual(batch_result.parents[0].children2[0].id, created_child2_id)  # type: ignore[index]
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=2)
+        assert batch_result.parents[0].id == created_parent_id
+        assert batch_result.parents[0].children2[0].id == created_child2_id  # type: ignore[index]
 
     def test_2_4_parent_with_both_children(self) -> None:
         """Test 2.4: Parent with both Child1 and Child2 objects."""
@@ -729,11 +729,11 @@ class Test2ChildObjectProvision(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=3)
-        self.assertEqual(batch_result.parents[0].id, created_parent_id)
-        self.assertEqual(batch_result.parents[0].children1[0].id, created_child1_id)  # type: ignore[index]
-        self.assertEqual(batch_result.parents[0].children2[0].id, created_child2_id)  # type: ignore[index]
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=3)
+        assert batch_result.parents[0].id == created_parent_id
+        assert batch_result.parents[0].children1[0].id == created_child1_id  # type: ignore[index]
+        assert batch_result.parents[0].children2[0].id == created_child2_id  # type: ignore[index]
 
 
 # Test Scenario 3: Links to reference data in child objects
@@ -754,8 +754,8 @@ class Test3ReferenceDataLinks(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1, n_pending=1)
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_failed=2)
 
     def test_3_1_2_ref_id_provided_and_found_succeeds(self) -> None:
         """Test 3.1.2: Reference model ID found - should succeed."""
@@ -779,10 +779,10 @@ class Test3ReferenceDataLinks(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=2)
-        self.assertEqual(batch_result.parents[0].id, created_parent_id)
-        self.assertEqual(batch_result.parents[0].children1[0].id, created_child1_id)  # type: ignore[index]
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=2)
+        assert batch_result.parents[0].id == created_parent_id
+        assert batch_result.parents[0].children1[0].id == created_child1_id  # type: ignore[index]
 
     def test_3_2_1_ref_code_provided_not_found_fails(self) -> None:
         """Test 3.2.1: Reference model code not found - should fail."""
@@ -797,8 +797,8 @@ class Test3ReferenceDataLinks(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1, n_pending=1)
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_failed=2)
 
     def test_3_2_2_ref_code_provided_and_found_sets_id(self) -> None:
         """Test 3.2.2: Reference model code found - should succeed (and set reference model ID)."""
@@ -824,11 +824,11 @@ class Test3ReferenceDataLinks(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=2)
-        self.assertEqual(batch_result.parents[0].id, created_parent_id)
-        self.assertEqual(batch_result.parents[0].children1[0].id, created_child1_id)  # type: ignore[index]
-        self.assertEqual(child1_for_upload.ref1_id, self.ref1_id)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=2)
+        assert batch_result.parents[0].id == created_parent_id
+        assert batch_result.parents[0].children1[0].id == created_child1_id  # type: ignore[index]
+        assert child1_for_upload.ref1_id == self.ref1_id
 
     def test_3_3_1_ref_id_and_code_mismatch_fails(self) -> None:
         """Test 3.3.1: Reference model ID and code do not match but both exist - should fail."""
@@ -848,8 +848,8 @@ class Test3ReferenceDataLinks(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1, n_pending=1)
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_failed=2)
 
     def test_3_3_2_ref_id_and_code_match_succeeds(self) -> None:
         """Test 3.3.2: Reference model ID and code match - should succeed."""
@@ -873,8 +873,8 @@ class Test3ReferenceDataLinks(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=2)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=2)
 
     def test_3_4_1_child2_null_id_no_code_provided_fails(self) -> None:
         """Test 3.4.1: Child2 with ref ID NULL_ID and no code provided - should fail since eventual reference ID cannot be NULL_ID."""
@@ -886,8 +886,8 @@ class Test3ReferenceDataLinks(BaseUploadTestCase):
         # Set up mocks
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1, n_pending=1)
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_failed=2)
 
     def test_3_4_2_child2_no_id_or_code_succeeds(self) -> None:
         """Test 3.4.2: Child2 with no ID or code - should succeed (reference is optional)."""
@@ -907,9 +907,9 @@ class Test3ReferenceDataLinks(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=2)
-        self.assertEqual(parent_for_upload.children2[0].ref2_id, None)  # type: ignore[index]
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=2)
+        assert parent_for_upload.children2[0].ref2_id == None  # type: ignore[index]
 
 
 # Test Scenario 4: Parent link in child objects
@@ -941,9 +941,9 @@ class Test4ParentLinks(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=2)
-        self.assertEqual(parent_for_upload.children1[0].parent_id, created_parent_id)  # type: ignore[index]
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=2)
+        assert parent_for_upload.children1[0].parent_id == created_parent_id  # type: ignore[index]
 
     def test_4_2_1_child_parent_id_parent_not_exists_fails(self) -> None:
         """Test 4.2.1: Parent does not exist or has different ID - should fail."""
@@ -972,8 +972,8 @@ class Test4ParentLinks(BaseUploadTestCase):
         batch_result = self.upload_batch(
             parent_for_upload, validate_command=False
         )  # Skip command validation to allow inconsistent IDs
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_pending=1, n_failed=1)
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_failed=2)
 
     def test_4_2_2_child_parent_id_matches_succeeds(self) -> None:
         """Test 4.2.2: Parent exists with matching ID - should succeed."""
@@ -1002,10 +1002,10 @@ class Test4ParentLinks(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_skipped=1, n_created=1)
-        self.assertEqual(parent_for_upload.id, created_parent_id)
-        self.assertEqual(batch_result.parents[0].children1[0].id, created_child1_id)  # type: ignore[index]
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_skipped=1, n_created=1)
+        assert parent_for_upload.id == created_parent_id
+        assert batch_result.parents[0].children1[0].id == created_child1_id  # type: ignore[index]
 
 
 # Test Scenario 5: Field mutability for stored objects
@@ -1033,9 +1033,9 @@ class Test5FieldMutability(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_updated=1)
-        self.assertEqual(existing_parent.a, resulting_value)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_updated=1)
+        assert existing_parent.a == resulting_value
 
     def test_5_1_2_always_mutable_list_field(self) -> None:
         """Test 5.1.2: Always mutable list field - should be updated."""
@@ -1057,9 +1057,9 @@ class Test5FieldMutability(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_updated=1)
-        self.assertEqual(existing_parent.b, resulting_value)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_updated=1)
+        assert existing_parent.b == resulting_value
 
     def test_5_1_3_1_always_mutable_dict_add_new_key(self) -> None:
         """Test 5.1.3.1: Dict field - add new key with non-None value."""
@@ -1080,9 +1080,9 @@ class Test5FieldMutability(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_updated=1)
-        self.assertEqual(existing_parent.c, resulting_value)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_updated=1)
+        assert existing_parent.c == resulting_value
 
     def test_5_1_3_2_always_mutable_dict_new_key_none_value(self) -> None:
         """Test 5.1.3.2: Dict field - new key with None value should not be added."""
@@ -1102,9 +1102,9 @@ class Test5FieldMutability(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_skipped=1)
-        self.assertEqual(existing_parent.c, resulting_value)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_skipped=1)
+        assert existing_parent.c == resulting_value
 
     def test_5_1_3_3_always_mutable_dict_update_existing_key(self) -> None:
         """Test 5.1.3.3: Dict field - update existing key with new value."""
@@ -1125,9 +1125,9 @@ class Test5FieldMutability(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_updated=1)
-        self.assertEqual(existing_parent.c, resulting_value)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_updated=1)
+        assert existing_parent.c == resulting_value
 
     def test_5_1_3_4_always_mutable_dict_remove_existing_key(self) -> None:
         """Test 5.1.3.4: Dict field - remove existing key when new value is None."""
@@ -1148,9 +1148,9 @@ class Test5FieldMutability(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_updated=1)
-        self.assertEqual(existing_parent.c, resulting_value)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_updated=1)
+        assert existing_parent.c == resulting_value
 
     def test_5_2_1_mutable_if_empty_stored_empty_updated(self) -> None:
         """Test 5.2.1: Mutable if empty - stored None, new value set."""
@@ -1165,9 +1165,9 @@ class Test5FieldMutability(BaseUploadTestCase):
             [existing_parent.parent_id],  # Updated parents returned IDs
         ]
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_updated=1)
-        self.assertEqual(existing_parent.x, "new")
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_updated=1)
+        assert existing_parent.x == "new"
 
     def test_5_2_2_mutable_if_empty_stored_not_empty_new_empty(self) -> None:
         """Test 5.2.2: Mutable if empty - stored not empty, new None, no change."""
@@ -1182,9 +1182,9 @@ class Test5FieldMutability(BaseUploadTestCase):
             [existing_parent],  # Existing parents
         ]
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_skipped=1)
-        self.assertEqual(existing_parent.x, "existing")
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_skipped=1)
+        assert existing_parent.x == "existing"
 
     def test_5_2_3_mutable_if_empty_stored_not_empty_new_not_empty_fails(self) -> None:
         """Test 5.2.3: Mutable if empty - stored not empty, new different value, error."""
@@ -1199,8 +1199,11 @@ class Test5FieldMutability(BaseUploadTestCase):
             [existing_parent],  # Existing parents
         ]
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1)
+        # update_objects() intentionally does not abort the rest of the batch
+        # for a per-object immutable-field error, but the batch-level status
+        # must still reflect that this parent failed.
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_failed=1)
 
     def test_5_2_4_immutable_uuid_null_id_treated_as_not_specified(self) -> None:
         """Test 5.2.4: Immutable UUID field - NULL_ID is treated as "not specified", no error."""
@@ -1216,9 +1219,9 @@ class Test5FieldMutability(BaseUploadTestCase):
             [existing_parent],  # Existing parents
         ]
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_skipped=1)
-        self.assertEqual(existing_parent.fk_id, stored_fk_id)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_skipped=1)
+        assert existing_parent.fk_id == stored_fk_id
 
 
 # Test Scenario 6: Identifiers for parent objects
@@ -1240,8 +1243,8 @@ class Test6Identifiers(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=1)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=1)
 
     def test_6_2_1_1_existing_identifier_null_parent_sets_id(self) -> None:
         """Test 6.2.1.1: Existing Identifier with NULL parent ID - should set parent ID."""
@@ -1268,9 +1271,9 @@ class Test6Identifiers(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_skipped=2)
-        self.assertEqual(batch_result.parents[0].id, existing_parent_id)  # type
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_skipped=2)
+        assert batch_result.parents[0].id == existing_parent_id  # type
 
     def test_6_2_1_2_1_existing_identifier_same_parent_succeeds(self) -> None:
         """Test 6.2.1.2.1: Existing Identifier with same parent ID - should succeed."""
@@ -1297,8 +1300,8 @@ class Test6Identifiers(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_skipped=2)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_skipped=2)
 
     def test_6_2_1_2_2_existing_identifier_different_parent_fails(self) -> None:
         """Test 6.2.1.2.2: Existing Identifier with different parent ID - should fail."""
@@ -1326,8 +1329,8 @@ class Test6Identifiers(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1, n_pending=1)
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_failed=2)
 
     def test_6_2_2_new_identifier_new_parent(self) -> None:
         """Test 6.2.2: New Identifier for new parent - should succeed."""
@@ -1355,13 +1358,12 @@ class Test6Identifiers(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=2)
-        self.assertEqual(batch_result.parents[0].id, created_parent_id)
-        self.assertEqual(
-            batch_result.parents[0].identifiers[0].id,  # type: ignore[index]
-            created_identifier_id,
-        )
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=2)
+        assert batch_result.parents[0].id == created_parent_id
+        assert (
+            batch_result.parents[0].identifiers[0].id == created_identifier_id
+        )  # type: ignore[index]
 
     def test_6_2_3_1_multiple_identifiers_some_existing_same_parent(self) -> None:
         """Test 6.2.3.1: Multiple Identifiers, some existing for same parent - should succeed."""
@@ -1406,8 +1408,8 @@ class Test6Identifiers(BaseUploadTestCase):
 
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=1, n_skipped=2)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=1, n_skipped=2)
 
     def test_6_2_3_1_multiple_identifiers_some_existing_different_parent(self) -> None:
         """Test 6.2.3.1: Multiple Identifiers, some existing for different parent - should fail."""
@@ -1439,8 +1441,8 @@ class Test6Identifiers(BaseUploadTestCase):
 
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1, n_pending=2)
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_failed=2, n_pending=1)
 
     def test_6_2_3_2_multiple_identifiers_all_new_same_issuer(self) -> None:
         """Test 6.2.3.2: Multiple Identifiers, all new but same issuer - should fail."""
@@ -1499,8 +1501,8 @@ class Test6Identifiers(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=3)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=3)
 
     # TODO: create tests for scenarios 6.3 on invalid identifier issuer
 
@@ -1522,8 +1524,8 @@ class Test7OnExistsAndOnNewActions(BaseUploadTestCase):
         batch_result = self.upload_batch(
             parent_for_upload, on_exists=UploadAction.ERROR
         )
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1)
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_failed=1)
 
     def test_7_2_on_exists_skip_with_existing_object_skips(self) -> None:
         """Test 7.2: on_exists=SKIP with existing object - should skip."""
@@ -1535,8 +1537,8 @@ class Test7OnExistsAndOnNewActions(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload, on_exists=UploadAction.SKIP)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_skipped=1)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_skipped=1)
 
     def test_7_3_on_exists_update_with_existing_object_updates(self) -> None:
         """Test 7.3: on_exists=UPDATE with existing object - should update."""
@@ -1557,8 +1559,8 @@ class Test7OnExistsAndOnNewActions(BaseUploadTestCase):
         batch_result = self.upload_batch(
             parent_for_upload, on_exists=UploadAction.UPDATE
         )
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_updated=1)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_updated=1)
 
     def test_7_4_on_new_create_with_new_id_creates(self) -> None:
         """Test 7.4: on_new=CREATE with new object having provided ID - should create."""
@@ -1571,8 +1573,8 @@ class Test7OnExistsAndOnNewActions(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload, on_new=UploadAction.CREATE)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=1)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=1)
 
     def test_7_5_on_new_skip_with_new_id_skips(self) -> None:
         """Test 7.5: on_new=SKIP with new object having provided ID - should skip."""
@@ -1584,8 +1586,8 @@ class Test7OnExistsAndOnNewActions(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload, on_new=UploadAction.SKIP)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_skipped=1)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_skipped=1)
 
     def test_7_6_on_new_error_with_new_id_fails(self) -> None:
         """Test 7.6: on_new=ERROR with new object having provided ID - should fail."""
@@ -1597,8 +1599,8 @@ class Test7OnExistsAndOnNewActions(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload, on_new=UploadAction.ERROR)
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1)
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_failed=1)
 
 
 # Test Scenario 8: Parameterized batch sizes
@@ -1609,51 +1611,49 @@ class Test8ParameterizedBatchSizes(BaseUploadTestCase):
     def test_8_batch_of_n_new_parents(self) -> None:
         """Test 8.1: Upload batch of n new parent objects."""
         for n_parents in [1, 3, 5]:
-            with self.subTest(n_parents=n_parents):
-                self.setUp()  # Reset mocks for each subtest
-                parents_for_upload = [
-                    self.create_parent_for_upload() for _ in range(n_parents)
-                ]
-                created_ids = self.random_ids[:n_parents]
-                self.service.repository.crud.side_effect = [
-                    created_ids,  # CREATE_SOME: create parents returns IDs
-                ]
-                batch_result = self.upload_batch(parents_for_upload)
-                self.assertBatchProcessed(batch_result)
-                self.assertStatusCount(batch_result, n_created=n_parents)
-                for i, created_id in enumerate(created_ids):
-                    self.assertEqual(batch_result.parents[i].id, created_id)
+            self.setup_method()  # Reset mocks for each iteration
+            parents_for_upload = [
+                self.create_parent_for_upload() for _ in range(n_parents)
+            ]
+            created_ids = self.random_ids[:n_parents]
+            self.service.repository.crud.side_effect = [
+                created_ids,  # CREATE_SOME: create parents returns IDs
+            ]
+            batch_result = self.upload_batch(parents_for_upload)
+            self.expectBatchProcessed(batch_result)
+            self.expectStatusCount(batch_result, n_created=n_parents)
+            for i, created_id in enumerate(created_ids):
+                assert batch_result.parents[i].id == created_id
 
     def test_8_parent_with_n_children(self) -> None:
         """Test 8.2: Upload parent with varying number of Child1 objects."""
         ref1_code = "test_ref1_code"
         for n_children in [0, 1, 3]:
-            with self.subTest(n_children=n_children):
-                self.setUp()  # Reset mocks for each subtest
-                children1 = [
-                    self.create_child1_for_upload(ref1_code=ref1_code)
-                    for _ in range(n_children)
+            self.setup_method()  # Reset mocks for each iteration
+            children1 = [
+                self.create_child1_for_upload(ref1_code=ref1_code)
+                for _ in range(n_children)
+            ]
+            parent_for_upload = self.create_parent_for_upload(
+                children1=children1 if children1 else None,
+            )
+            created_parent_id = self.random_ids[0]
+            created_child_ids = self.random_ids[1 : 1 + n_children]
+            crud_side_effects: list[list] = [
+                [created_parent_id],  # CREATE_SOME: create parent returns ID
+            ]
+            if n_children > 0:
+                crud_side_effects.append(
+                    created_child_ids
+                )  # CREATE_SOME: create children returns IDs
+            self.service.repository.crud.side_effect = crud_side_effects
+            if n_children > 0:
+                self.service.repository.read_fields.side_effect = [
+                    [(self.ref1_id, ref1_code)],  # Resolve Ref1 by code
                 ]
-                parent_for_upload = self.create_parent_for_upload(
-                    children1=children1 if children1 else None,
-                )
-                created_parent_id = self.random_ids[0]
-                created_child_ids = self.random_ids[1 : 1 + n_children]
-                crud_side_effects: list[list] = [
-                    [created_parent_id],  # CREATE_SOME: create parent returns ID
-                ]
-                if n_children > 0:
-                    crud_side_effects.append(
-                        created_child_ids
-                    )  # CREATE_SOME: create children returns IDs
-                self.service.repository.crud.side_effect = crud_side_effects
-                if n_children > 0:
-                    self.service.repository.read_fields.side_effect = [
-                        [(self.ref1_id, ref1_code)],  # Resolve Ref1 by code
-                    ]
-                batch_result = self.upload_batch(parent_for_upload)
-                self.assertBatchProcessed(batch_result)
-                self.assertStatusCount(batch_result, n_created=1 + n_children)
+            batch_result = self.upload_batch(parent_for_upload)
+            self.expectBatchProcessed(batch_result)
+            self.expectStatusCount(batch_result, n_created=1 + n_children)
 
 
 # Test Scenario 9: Identifiers for Child2 objects
@@ -1681,8 +1681,8 @@ class Test9Child2Identifiers(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=2)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=2)
 
     def test_9_2_1_1_existing_identifier_null_child2_sets_id(self) -> None:
         """Test 9.2.1.1: Existing Identifier with NULL child2 ID - should set child2 ID."""
@@ -1727,9 +1727,9 @@ class Test9Child2Identifiers(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=1, n_skipped=2)
-        self.assertEqual(batch_result.parents[0].children2[0].id, existing_child2_id)  # type: ignore[index]
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=1, n_skipped=2)
+        assert batch_result.parents[0].children2[0].id == existing_child2_id  # type: ignore[index]
 
     def test_9_2_1_2_1_existing_identifier_same_child2_succeeds(self) -> None:
         """Test 9.2.1.2.1: Existing Identifier with same child2 ID - should succeed."""
@@ -1777,8 +1777,8 @@ class Test9Child2Identifiers(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=1, n_skipped=2)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=1, n_skipped=2)
 
     def test_9_2_1_2_2_existing_identifier_different_child2_fails(self) -> None:
         """Test 9.2.1.2.2: Existing Identifier with different child2 ID - should fail."""
@@ -1815,8 +1815,8 @@ class Test9Child2Identifiers(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1, n_pending=2)
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_failed=3)
 
     def test_9_2_2_new_identifier_new_child2(self) -> None:
         """Test 9.2.2: New Identifier for new child2 - should succeed."""
@@ -1850,13 +1850,13 @@ class Test9Child2Identifiers(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=3)
-        self.assertEqual(batch_result.parents[0].children2[0].id, created_child2_id)  # type: ignore[index]
-        self.assertEqual(
-            batch_result.parents[0].children2[0].identifiers[0].id,  # type: ignore[index]
-            created_identifier_id,
-        )
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=3)
+        assert batch_result.parents[0].children2[0].id == created_child2_id  # type: ignore[index]
+        assert (
+            batch_result.parents[0].children2[0].identifiers[0].id
+            == created_identifier_id
+        )  # type: ignore[index]
 
     def test_9_2_3_1_multiple_identifiers_some_existing_same_child2(self) -> None:
         """Test 9.2.3.1: Multiple Identifiers, some existing for same child2 - should succeed."""
@@ -1918,8 +1918,8 @@ class Test9Child2Identifiers(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=2, n_skipped=1, n_pending=1)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=2, n_skipped=1, n_pending=1)
 
     def test_9_2_3_1_multiple_identifiers_some_existing_different_child2(self) -> None:
         """Test 9.2.3.1: Multiple Identifiers, some existing for different child2 - should fail."""
@@ -1956,8 +1956,8 @@ class Test9Child2Identifiers(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1, n_pending=3)
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_failed=3, n_pending=1)
 
     def test_9_2_3_2_multiple_identifiers_all_new_same_issuer(self) -> None:
         """Test 9.2.3.2: Multiple Identifiers all new but same issuer - should fail."""
@@ -2020,8 +2020,8 @@ class Test9Child2Identifiers(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=4)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=4)
 
     def test_9_3_1_identifier_issuer_id_not_found(self) -> None:
         """Test 9.3.1: Identifier issuer ID (any except NULL_ID) provided and not found - should fail."""
@@ -2044,8 +2044,8 @@ class Test9Child2Identifiers(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1, n_pending=2)
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_failed=3)
 
     def test_9_3_2_identifier_issuer_code_not_found(self) -> None:
         """Test 9.3.2: Identifier issuer code provided and not found - should fail."""
@@ -2068,8 +2068,8 @@ class Test9Child2Identifiers(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1, n_pending=2)
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_failed=3)
 
     def test_9_3_3_identifier_issuer_id_and_code_mismatch(self) -> None:
         """Test 9.3.3: Both identifier issuer ID and code provided but do not match - should fail."""
@@ -2093,8 +2093,8 @@ class Test9Child2Identifiers(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1, n_pending=2)
+        self.expectBatchFailed(batch_result)
+        self.expectStatusCount(batch_result, n_failed=3)
 
 
 # Combined scenario tests
@@ -2145,8 +2145,8 @@ class TestCombinedScenarios(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=4)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=4)
 
     def test_update_existing_parent_with_new_children(self) -> None:
         """Test updating an existing parent with new child objects."""
@@ -2174,8 +2174,8 @@ class TestCombinedScenarios(BaseUploadTestCase):
         batch_result = self.upload_batch(
             parent_for_upload, on_exists=UploadAction.UPDATE
         )
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_updated=1, n_created=1)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_updated=1, n_created=1)
 
     def test_complex_reference_resolution(self) -> None:
         """Test complex reference data resolution across multiple children."""
@@ -2223,8 +2223,8 @@ class TestCombinedScenarios(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
-        self.assertStatusCount(batch_result, n_created=5)
+        self.expectBatchProcessed(batch_result)
+        self.expectStatusCount(batch_result, n_created=5)
 
     def test_child2_with_identifiers_and_parent_relationship(self) -> None:
         """Test Child2 with Identifiers in combination with parent relationships and other children."""
@@ -2274,9 +2274,9 @@ class TestCombinedScenarios(BaseUploadTestCase):
 
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchProcessed(batch_result)
+        self.expectBatchProcessed(batch_result)
         # Result: 1 parent + 1 child1 + 1 child2 + 1 child2 Identifier
-        self.assertStatusCount(batch_result, n_created=4)
+        self.expectStatusCount(batch_result, n_created=4)
 
 
 @pytest.mark.scenario_ids("TC-11-13-01")
@@ -2317,10 +2317,10 @@ class TestUploadEdgeCases(BaseUploadTestCase):
 
         batch_result = self.upload_batch(parent_for_upload)
 
-        self.assertBatchFailed(batch_result)
+        self.expectBatchFailed(batch_result)
         identifier_results = batch_result.parents[0].identifiers or []
-        self.assertEqual(len(identifier_results), 2)
-        self.assertTrue(identifier_results[1].has_log_code("0561ecd7"))
+        assert len(identifier_results) == 2
+        assert identifier_results[1].has_log_code("0561ecd7")
 
     def test_verify_link_id_same_service_allows_none_user(self) -> None:
         """Same-service link verification should support user=None without crashing."""
@@ -2347,8 +2347,8 @@ class TestUploadEdgeCases(BaseUploadTestCase):
             is_frozen=False,
         )
 
-        self.assertTrue(success)
-        self.assertEqual(self.service.repository.read_fields.call_args.args[1], None)
+        assert success
+        assert self.service.repository.read_fields.call_args.args[1] == None
 
     def test_inconsistent_child_parent_ids_fail(self) -> None:
         """Different non-null parent IDs across children in one parent should fail."""
@@ -2377,9 +2377,9 @@ class TestUploadEdgeCases(BaseUploadTestCase):
         batch_result = self.batch_uploader.upload_batch(cmd)
 
         child_results = batch_result.parents[0].children1 or []
-        self.assertEqual(len(child_results), 2)
-        self.assertEqual(child_results[1].status, EtlStatus.FAILED)
-        self.assertTrue(child_results[1].has_log_code("13ba4246"))
+        assert len(child_results) == 2
+        assert child_results[1].status == EtlStatus.FAILED
+        assert child_results[1].has_log_code("13ba4246")
 
     def test_create_identifiers_skips_null_id_internal_id(self) -> None:
         """NULL_ID internal_id should be treated as unresolved and skipped."""
@@ -2403,7 +2403,7 @@ class TestUploadEdgeCases(BaseUploadTestCase):
             ],
         )
 
-        self.assertTrue(success)
+        assert success
         self.service.app.handle.assert_not_called()
 
 
@@ -2469,12 +2469,12 @@ class TestDuplicateIds(BaseUploadTestCase):
         )
 
         r0, r1, r2 = batch_result.get_parent_results()
-        self.assertEqual(r0.status, EtlStatus.FAILED)
-        self.assertTrue(r0.has_log_code("a1b2c3d4"))
-        self.assertEqual(r2.status, EtlStatus.FAILED)
-        self.assertTrue(r2.has_log_code("a1b2c3d4"))
+        assert r0.status == EtlStatus.FAILED
+        assert r0.has_log_code("a1b2c3d4")
+        assert r2.status == EtlStatus.FAILED
+        assert r2.has_log_code("a1b2c3d4")
         # Distinct parent: PENDING → SKIPPED by verify_only.
-        self.assertEqual(r1.status, EtlStatus.SKIPPED)
+        assert r1.status == EtlStatus.SKIPPED
 
     def test_duplicate_child_within_one_parent_parent_failed(self) -> None:
         """Two children with the same UUID inside one parent → parent FAILED."""
@@ -2490,8 +2490,8 @@ class TestDuplicateIds(BaseUploadTestCase):
         )
 
         (r,) = batch_result.get_parent_results()
-        self.assertEqual(r.status, EtlStatus.FAILED)
-        self.assertTrue(r.has_log_code("e5f6a7b8"))
+        assert r.status == EtlStatus.FAILED
+        assert r.has_log_code("e5f6a7b8")
 
     def test_duplicate_child_across_two_parents_both_parents_failed(self) -> None:
         """Same child UUID in two distinct parents → both parents FAILED, message names both."""
@@ -2515,13 +2515,13 @@ class TestDuplicateIds(BaseUploadTestCase):
         )
 
         ra, rb = batch_result.get_parent_results()
-        self.assertEqual(ra.status, EtlStatus.FAILED)
-        self.assertTrue(ra.has_log_code("e5f6a7b8"))
-        self.assertEqual(rb.status, EtlStatus.FAILED)
-        self.assertTrue(rb.has_log_code("e5f6a7b8"))
+        assert ra.status == EtlStatus.FAILED
+        assert ra.has_log_code("e5f6a7b8")
+        assert rb.status == EtlStatus.FAILED
+        assert rb.has_log_code("e5f6a7b8")
         error_msg = next(e.message for e in ra.logs if e.code == "e5f6a7b8")
-        self.assertIn(str(parent_id_a), error_msg)
-        self.assertIn(str(parent_id_b), error_msg)
+        assert str(parent_id_a) in error_msg
+        assert str(parent_id_b) in error_msg
 
     def test_non_duplicate_batch_unaffected(self) -> None:
         """Batch with fully distinct IDs produces no FAILED results and no duplicate codes."""
@@ -2534,6 +2534,9 @@ class TestDuplicateIds(BaseUploadTestCase):
 
         # Both parents exist; child objects_exist is also called (two IDs each time).
         self.service.repository.crud.return_value = [True, True]
+        # Both children reference self.ref1_id; resolve it so the batch is
+        # genuinely clean, isolating this test to duplicate-ID detection only.
+        self.service.repository.read_fields.return_value = [(self.ref1_id, "ref1_code")]
 
         batch_result = self.batch_uploader.upload_batch(  # type: ignore[assignment]
             self._verify_only_cmd([pa, pb])
@@ -2541,6 +2544,89 @@ class TestDuplicateIds(BaseUploadTestCase):
 
         ra, rb = batch_result.get_parent_results()
         for r in (ra, rb):
-            self.assertNotEqual(r.status, EtlStatus.FAILED)
-            self.assertFalse(r.has_log_code("a1b2c3d4"))
-            self.assertFalse(r.has_log_code("e5f6a7b8"))
+            assert r.status != EtlStatus.FAILED
+            assert not r.has_log_code("a1b2c3d4")
+            assert not r.has_log_code("e5f6a7b8")
+
+
+class TestVerificationAttributionAndDryRun(BaseUploadTestCase):
+    """
+    LSP-3655: a child-level failure must be visible on its own parent's
+    status (not just buried in a nested result), and a dry run (verify_only)
+    must report the same outcome as a real run.
+    """
+
+    def _make_child_parent_id_mismatch_cmd(self) -> UploadParentsCommand:
+        """Build a fresh command whose only problem is a child/parent ID mismatch."""
+        child1_a = self.create_child1_for_upload(
+            parent_id=self.random_ids[0],
+            ref1_id=self.ref1_id,
+            ref1_code=None,
+        )
+        child1_b = self.create_child1_for_upload(
+            parent_id=self.random_ids[1],
+            ref1_id=self.ref1_id,
+            ref1_code=None,
+        )
+        parent_for_upload = self.create_parent_for_upload(
+            parent_id=None,
+            children1=[child1_a, child1_b],
+        )
+        return self.create_command_for_parents(parent_for_upload)
+
+    def test_child_failure_propagates_to_parent_status(self) -> None:
+        """A FAILED child result must also mark its own parent result FAILED."""
+        self.service.repository.read_fields.return_value = [
+            (self.ref1_id, "ref1_code"),
+        ]
+        self.service.repository.crud.return_value = [True]
+        cmd = self._make_child_parent_id_mismatch_cmd().model_copy(
+            update={"verify_only": True}
+        )
+
+        batch_result = self.upload_batch(cmd)
+
+        parent_result = batch_result.parents[0]
+        child_results = parent_result.children1 or []
+        assert child_results[1].status == EtlStatus.FAILED
+        assert child_results[1].has_log_code("13ba4246")
+        assert parent_result.status == EtlStatus.FAILED
+        assert parent_result.has_log_code("6a1f3d0c")
+
+    def test_dry_run_and_real_run_report_same_failure(self) -> None:
+        """verify_only=True and verify_only=False must agree on batch outcome."""
+        self.service.repository.read_fields.return_value = [
+            (self.ref1_id, "ref1_code"),
+        ]
+        self.service.repository.crud.return_value = [True]
+
+        dry_run_cmd = self._make_child_parent_id_mismatch_cmd().model_copy(
+            update={"verify_only": True}
+        )
+        real_run_cmd = self._make_child_parent_id_mismatch_cmd().model_copy(
+            update={"verify_only": False}
+        )
+
+        dry_run_result = self.upload_batch(dry_run_cmd)
+        real_run_result = self.upload_batch(real_run_cmd)
+
+        for result in (dry_run_result, real_run_result):
+            self.expectBatchFailed(result)
+            assert result.parents[0].status == EtlStatus.FAILED
+            assert result.has_log_code("02095f22")
+
+    def test_resolve_status_reports_failed_when_any_descendant_failed(self) -> None:
+        """A mix of FAILED and successful descendants must resolve to FAILED, not PROCESSED."""
+        ok_parent = FixtureParentUploadResult(status=EtlStatus.CREATED)
+        bad_parent = FixtureParentUploadResult(status=EtlStatus.PENDING)
+        bad_parent.add_error("test_code_dead_beef", "boom")
+        batch_result = ParentBatchUploadResult(
+            batch_id=uuid4(),
+            status=EtlStatus.PENDING,
+            parents=[ok_parent, bad_parent],
+        )
+
+        batch_result.resolve_status()
+
+        assert batch_result.status == EtlStatus.FAILED
+        assert batch_result.has_log_code("1f8d4c65")

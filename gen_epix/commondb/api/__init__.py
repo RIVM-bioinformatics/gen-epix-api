@@ -1,23 +1,32 @@
+"""Re-export commondb API endpoint factories and request/response schemas.
+
+The package exposes endpoint builders for authentication, RBAC, organization, and
+system commands plus request/response models used by remote commondb clients.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix.commondb.api.auth import create_auth_endpoints as create_auth_endpoints
 from gen_epix.commondb.api.organization import ApiPermission as ApiPermission
 from gen_epix.commondb.api.organization import (
-    UpdateDataCollectionSetDataCollectionRequestBody as UpdateDataCollectionSetDataCollectionRequestBody,
+    DataCollectionSetDataCollectionUpdateAssociationRequestBody as DataCollectionSetDataCollectionUpdateAssociationRequestBody,
 )
 from gen_epix.commondb.api.organization import (
-    UpdateOrganizationIdentifierIssuerLinksRequestBody as UpdateOrganizationIdentifierIssuerLinksRequestBody,
+    InviteUserRequestBody as InviteUserRequestBody,
 )
 from gen_epix.commondb.api.organization import (
-    UpdateOrganizationSetOrganizationRequestBody as UpdateOrganizationSetOrganizationRequestBody,
+    OrganizationIdentifierIssuerUpdateAssociationRequestBody as OrganizationIdentifierIssuerUpdateAssociationRequestBody,
+)
+from gen_epix.commondb.api.organization import (
+    OrganizationSetOrganizationUpdateAssociationRequestBody as OrganizationSetOrganizationUpdateAssociationRequestBody,
+)
+from gen_epix.commondb.api.organization import (
+    RetrieveOrganizationContactsRequestBody as RetrieveOrganizationContactsRequestBody,
 )
 from gen_epix.commondb.api.organization import (
     UpdateUserOwnOrganizationRequestBody as UpdateUserOwnOrganizationRequestBody,
 )
 from gen_epix.commondb.api.organization import (
     UpdateUserRequestBody as UpdateUserRequestBody,
-)
-from gen_epix.commondb.api.organization import (
-    UserInvitationRequestBody as UserInvitationRequestBody,
 )
 from gen_epix.commondb.api.organization import (
     create_organization_endpoints as create_organization_endpoints,

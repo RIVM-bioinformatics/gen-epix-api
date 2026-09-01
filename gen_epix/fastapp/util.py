@@ -1,3 +1,5 @@
+"""General helpers for identifiers, TLS configuration, and serialization."""
+
 import ssl
 from collections.abc import Hashable
 from pathlib import Path
@@ -6,6 +8,7 @@ LOCAL_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0"}
 
 
 def serialize_id(value: Hashable) -> str | None:
+    """Serialize id."""
     return str(value) if value else None
 
 

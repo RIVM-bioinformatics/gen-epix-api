@@ -173,34 +173,39 @@ class Run:
         )
 
     ## test
-    def test_all(self) -> None:
+    def test_all(self, include_e2e: bool = True) -> None:
         import subprocess
 
-        pytest_args = Run.DEFAULT_PYTEST_ARGS + [
-            "test/filter/unit",
-            "test/transform/unit",
-            "test/fastapp/unit",
-            "test/commondb/unit",
-            "test/commondb/integration",
-            "test/casedb/unit",
-            "test/casedb/integration",
-            "test/seqdb/unit",
-            "test/seqdb/integration",
-            "test/omopdb/unit",
-            "test/omopdb/integration",
-            "test/general/docs",
-            "test/end_to_end",
-            "test/util",
-            # Not normally included, uncomment if needed
-            # "test/casedb/performance",
-            # "test/seqdb/performance",
-            # "test/omopdb/performance",
-            # "test/commondb/performance",
-            # "test/fastapp/performance",
-            # "test/general/code",
-        ]
+        pytest_args = (
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/filter/unit",
+                "test/transform/unit",
+                "test/fastapp/unit",
+                "test/commondb/unit",
+                "test/commondb/integration",
+                "test/casedb/unit",
+                "test/casedb/integration",
+                "test/seqdb/unit",
+                "test/seqdb/integration",
+                "test/omopdb/unit",
+                "test/omopdb/integration",
+                "test/general/docs",
+            ]
+            + (["test/end_to_end"] if include_e2e else [])
+            + [
+                "test/util",
+                # Not normally included, uncomment if needed
+                # "test/casedb/performance",
+                # "test/seqdb/performance",
+                # "test/omopdb/performance",
+                # "test/commondb/performance",
+                # "test/fastapp/performance",
+                # "test/general/code",
+            ]
+        )
 
-        subprocess.run(
+        test_run = subprocess.run(
             [
                 sys.executable,
                 "-m",
@@ -214,7 +219,7 @@ class Run:
             check=False,
         )
         # Generate HTML report
-        subprocess.run(
+        html_report = subprocess.run(
             [
                 sys.executable,
                 "-m",
@@ -223,13 +228,31 @@ class Run:
                 "-d",
                 "test/output/coverage.html",
             ],
-            check=True,
+            check=False,
         )
         # Generate XML report
-        subprocess.run(
+        xml_report = subprocess.run(
             [sys.executable, "-m", "coverage", "xml", "-o", "test/output/coverage.xml"],
-            check=True,
+            check=False,
         )
+
+        failures: list[str] = []
+        if test_run.returncode != 0:
+            failures.append(
+                "pytest test all failed likely due to test failures or errors"
+            )
+        if html_report.returncode != 0:
+            failures.append(
+                "coverage html report generation failed with exit status "
+                f"{html_report.returncode}"
+            )
+        if xml_report.returncode != 0:
+            failures.append(
+                "coverage xml report generation failed with exit status "
+                f"{xml_report.returncode}"
+            )
+        if failures:
+            raise RuntimeError("; ".join(failures))
 
     def test_all_incl_performance(self) -> None:
         import pytest
@@ -314,6 +337,16 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/fastapp/unit/auth/",
+            ]
+        )
+
+    def test_fastapp_unit_cache(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/fastapp/unit/cache",
             ]
         )
 
@@ -524,23 +557,13 @@ class Run:
             ]
         )
 
-    def test_casedb_unit_upload(self) -> None:
+    def test_casedb_unit_services_case_upload(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/casedb/unit/upload",
-            ]
-        )
-
-    def test_casedb_unit_col_order(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/unit/col_order",
+                "test/casedb/unit/services/case/upload",
             ]
         )
 
@@ -642,6 +665,16 @@ class Run:
             ]
         )
 
+    def test_casedb_performance_retrieve_stats(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/casedb/performance/retrieve_stats",
+            ]
+        )
+
     def test_casedb_custom(self) -> None:
         import pytest
 
@@ -672,33 +705,43 @@ class Run:
             ]
         )
 
-    def test_seqdb_unit_models_for_upload(self) -> None:
+    def test_seqdb_unit_domain_models_for_upload(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/seqdb/unit/models_for_upload",
+                "test/seqdb/unit/domain/models_for_upload",
             ]
         )
 
-    def test_seqdb_unit_upload(self) -> None:
+    def test_seqdb_unit_services_seq_upload(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/seqdb/unit/upload",
+                "test/seqdb/unit/services/seq/upload",
             ]
         )
 
-    def test_seqdb_unit_calculate_seq_distance(self) -> None:
+    def test_seqdb_unit_services_seq_calculate_seq_distance(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/seqdb/unit/calculate_seq_distance",
+                "test/seqdb/unit/services/seq/calculate_seq_distance",
+            ]
+        )
+
+    def test_seqdb_unit_services_seq_retrieve_best(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/seqdb/unit/services/seq/retrieve_best",
             ]
         )
 
@@ -783,13 +826,33 @@ class Run:
             ]
         )
 
-    def test_omopdb_unit_upload(self) -> None:
+    def test_omopdb_unit_services(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/omopdb/unit/upload",
+                "test/omopdb/unit/services",
+            ]
+        )
+
+    def test_omopdb_unit_services_omop(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/omopdb/unit/services/omop",
+            ]
+        )
+
+    def test_omopdb_unit_services_omop_upload(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/omopdb/unit/services/omop/upload",
             ]
         )
 
@@ -854,6 +917,17 @@ class Run:
             ]
         )
 
+    def test_general_code_test_error_code_unicity(self) -> None:
+
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/general/code/test_error_code_unicity.py",
+            ]
+        )
+
     def test_end_to_end(self) -> None:
         import pytest
 
@@ -905,11 +979,11 @@ class Run:
         generate_uuids(n_rows=n_rows, n_cols=n_cols)
 
     def other_general_generate_hex_strings(
-        self, n_rows: int = 1000, n_cols: int = 100, length: int = 8
+        self, n_rows: int = 1000, length: int = 8
     ) -> None:
         from test.test_client.util import generate_hex_strings
 
-        generate_hex_strings(n_rows=n_rows, n_cols=n_cols, length=length)
+        generate_hex_strings(n_rows=n_rows, length=length)
 
     def other_general_run_linters(self) -> None:
         from test.test_client.linter import Linter
@@ -936,12 +1010,23 @@ class Run:
             Path(__file__).parent / "test" / "output" / f"linter.{now_str}.pylint.txt"
         )
         linter = Linter()
-        linter.run_pylint(file=file, filter_on_codes=filter_on_codes)
-        file2.write_text(file.read_text(encoding="utf-8"), encoding="utf-8")
+        output = linter.run_pylint(file=file, filter_on_codes=filter_on_codes)
+        file2.write_text(output, encoding="utf-8")
         for line in linter.parse_pylint_for_issue_lines(
             file, filter_on_codes=filter_on_codes
         ):
             print(line)
+
+    def other_general_run_ruff(self) -> None:
+        from test.test_client.linter import Linter
+
+        file = Path(__file__).parent / "test" / "output" / "linter.ruff.txt"
+        now_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        file2 = Path(__file__).parent / "test" / "output" / f"linter.{now_str}.ruff.txt"
+        linter = Linter()
+        output = linter.run_ruff(file=file)
+        file2.write_text(output, encoding="utf-8")
+        print(output, end="")
 
     def other_general_analyse_pylint_code_impact(self) -> None:
 

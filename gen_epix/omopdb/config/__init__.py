@@ -1,1 +1,1 @@
-# Needed for it to be included in the package
+"""Configuration package for OmopDB runtime settings."""

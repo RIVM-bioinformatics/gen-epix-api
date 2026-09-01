@@ -1,3 +1,12 @@
+"""Re-export commondb commands and their service-type registrations.
+
+Base exports support CRUD, association updates, and batch uploads. Organization
+exports manage organizations, users, invitations, collections, and identifiers.
+System, RBAC, and ABAC exports retrieve operational, permission, and
+organization-administration data. ``COMMANDS_BY_SERVICE_TYPE`` groups commands
+for application dispatch; ``COMMON_COMMAND_MAP`` supports cross-service mapping.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix import fastapp
 from gen_epix.commondb.domain import enum
@@ -14,6 +23,9 @@ from gen_epix.commondb.domain.command.base import (
 )
 from gen_epix.commondb.domain.command.base import (
     UploadBatchCommandMixin as UploadBatchCommandMixin,
+)
+from gen_epix.commondb.domain.command.organization import (
+    AnonymizeUserCommand as AnonymizeUserCommand,
 )
 from gen_epix.commondb.domain.command.organization import (
     ContactCrudCommand as ContactCrudCommand,
@@ -43,7 +55,7 @@ from gen_epix.commondb.domain.command.organization import (
     OrganizationIdentifierIssuerLinkCrudCommand as OrganizationIdentifierIssuerLinkCrudCommand,
 )
 from gen_epix.commondb.domain.command.organization import (
-    OrganizationIdentifierIssuerLinkUpdateAssociationCommand as OrganizationIdentifierIssuerLinkUpdateAssociationCommand,
+    OrganizationIdentifierIssuerLinkUpdateAssociationCommand as OrganizationIdentifierIssuerUpdateAssociationCommand,
 )
 from gen_epix.commondb.domain.command.organization import (
     OrganizationSetCrudCommand as OrganizationSetCrudCommand,
@@ -116,11 +128,12 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[type[fastapp.Command]
             DataCollectionSetCrudCommand,
             DataCollectionSetDataCollectionUpdateAssociationCommand,
             DataCollectionSetMemberCrudCommand,
+            AnonymizeUserCommand,
             IdentifierIssuerCrudCommand,
             InviteUserCommand,
             OrganizationCrudCommand,
             OrganizationIdentifierIssuerLinkCrudCommand,
-            OrganizationIdentifierIssuerLinkUpdateAssociationCommand,
+            OrganizationIdentifierIssuerUpdateAssociationCommand,
             OrganizationSetCrudCommand,
             OrganizationSetMemberCrudCommand,
             OrganizationSetOrganizationUpdateAssociationCommand,

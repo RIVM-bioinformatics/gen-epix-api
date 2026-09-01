@@ -11,7 +11,7 @@ IDENTIFIER_CLASSES by entity ids.
 """
 
 from datetime import date
-from unittest.mock import Mock
+from test.util.mock_compat import Mock
 from uuid import UUID
 
 import pytest

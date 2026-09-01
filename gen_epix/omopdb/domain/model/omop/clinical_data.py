@@ -1,3 +1,5 @@
+"""Persistable OMOP clinical person, encounter, event, and identifier models."""
+
 from datetime import date, datetime
 from typing import Any, ClassVar
 from uuid import UUID
@@ -131,6 +133,7 @@ class Person(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize person concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -183,6 +186,7 @@ class ObservationPeriod(Model, DataLineageMixin):
     @field_validator("period_type_concept_id", mode="before")
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize the observation-period type identifier to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -286,6 +290,7 @@ class VisitOccurrence(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize visit-occurrence concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -397,6 +402,7 @@ class VisitDetail(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize visit-detail concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -508,6 +514,7 @@ class ConditionOccurrence(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize condition-occurrence concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -613,6 +620,7 @@ class ProcedureOccurrence(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize procedure-occurrence concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -753,6 +761,7 @@ class DrugExposure(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize drug-exposure concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -875,6 +884,119 @@ class DeviceExposure(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize device-exposure concept identifiers to UUID form."""
+        return validate_int_for_uuid_field(value)
+
+
+class Specimen(Model, DataLineageMixin):
+    """The specimen domain contains the records identifying biological samples from a person."""
+
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="Specimens",
+        table_name="specimen",
+        persistable=True,
+        id_field_name="specimen_id",
+        links=create_links(
+            {
+                1: ("person_id", Person, None),
+                2: ("specimen_concept_id", Concept, None),
+                3: ("specimen_type_concept_id", Concept, None),
+                4: ("unit_concept_id", Concept, None),
+                5: ("anatomic_site_concept_id", Concept, None),
+                6: ("disease_status_concept_id", Concept, None),
+                7: ("derived_from_specimen_concept_id", Concept, None),
+            }
+        ),
+    )
+    specimen_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nUnique identifier for each specimen.\nETL conventions:\nNone",
+    )
+    person_id: UUID = Field(
+        description="User guidance:\nThe person from whom the specimen is collected.\nETL conventions:\nNone"
+    )
+    specimen_concept_id: UUID = Field(
+        description="User guidance:\nNone\nETL conventions:\nThe standard CONCEPT_ID that the SPECIMEN_SOURCE_VALUE maps to in the specimen domain. [Accepted Concepts](https://athena.ohdsi.org/search-terms/terms?domain=Specimen&standardConcept=Standard&page=1&pageSize=15&query=)"
+    )
+    specimen_type_concept_id: UUID = Field(
+        description="User guidance:\nNone\nETL conventions:\nPut the source of the specimen record, as in an EHR system. [Accepted Concepts](https://athena.ohdsi.org/search-terms/terms?standardConcept=Standard&domain=Type+Concept&page=1&pageSize=15&query=). A more detailed explanation of each Type Concept can be found on the [vocabulary wiki](https://github.com/OHDSI/Vocabulary-v5.0/wiki/Vocab.-TYPE_CONCEPT)."
+    )
+    specimen_date: date = Field(
+        description="User guidance:\nThe date the specimen was collected.\nETL conventions:\nNone"
+    )
+    specimen_datetime: datetime | None = Field(
+        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+    )
+    quantity: float | None = Field(
+        default=None,
+        description="User guidance:\nThe amount of specimen collected from the person.\nETL conventions:\nNone",
+    )
+    unit_concept_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nThe unit for the quantity of the specimen.\nETL conventions:\nMap the UNIT_SOURCE_VALUE to a Standard Concept in the Unit domain. [Accepted Concepts](https://athena.ohdsi.org/search-terms/terms?domain=Unit&standardConcept=Standard&page=1&pageSize=15&query=). If the source unit is NULL (applicable to cases when there's no numerical value or when it doesn't require a unit), keep unit_concept_id NULL as well. If there's no mapping of a source unit, populate unit_concept_id with 0.",
+    )
+    anatomic_site_concept_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nThis is the site on the body where the specimen is from.\nETL conventions:\nMap the ANATOMIC_SITE_SOURCE_VALUE to a Standard Concept in the Spec Anatomic Site domain. This should be coded at the lowest level of granularity [Accepted Concepts](https://athena.ohdsi.org/search-terms/terms?standardConcept=Standard&domain=Spec+Anatomic+Site&conceptClass=Body+Structure&page=4&pageSize=15&query=)",
+    )
+    disease_status_concept_id: UUID | None = Field(
+        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+    )
+    specimen_source_id: str | None = Field(
+        default=None,
+        description="User guidance:\nThis is the identifier for the specimen from the source system.\nETL conventions:\nNone",
+        max_length=50,
+    )
+    specimen_source_value: str | None = Field(
+        default=None,
+        description="User guidance:\nNone\nETL conventions:\nNone",
+        max_length=50,
+    )
+    unit_source_value: str | None = Field(
+        default=None,
+        description="User guidance:\nNone\nETL conventions:\nThis unit for the quantity of the specimen, as represented in the source.",
+        max_length=50,
+    )
+    anatomic_site_source_value: str | None = Field(
+        default=None,
+        description="User guidance:\nNone\nETL conventions:\nThis is the site on the body where the specimen was taken from, as represented in the source.",
+        max_length=50,
+    )
+    disease_status_source_value: str | None = Field(
+        default=None,
+        description="User guidance:\nNone\nETL conventions:\nNone",
+        max_length=50,
+    )
+    specimen_iso_interval: str | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
+        max_length=55,
+    )
+    derived_from_specimen_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The source specimen from which this specimen was derived.\nETL conventions:\nNone",
+    )
+    derived_from_specimen_concept_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The protocol used to derive this specimen from the source specimen.\nETL conventions:\nNone",
+    )
+    provided_by_organization_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The id of the Organization that provided the data for this Specimen.\nETL conventions:\nNone",
+    )
+
+    @field_validator(
+        "specimen_concept_id",
+        "specimen_type_concept_id",
+        "unit_concept_id",
+        "anatomic_site_concept_id",
+        "disease_status_concept_id",
+        "derived_from_specimen_concept_id",
+        mode="before",
+    )
+    @classmethod
+    def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize specimen concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -900,6 +1022,7 @@ class Measurement(Model, DataLineageMixin):
                 10: ("measurement_source_concept_id", Concept, None),
                 11: ("unit_source_concept_id", Concept, None),
                 12: ("meas_event_field_concept_id", Concept, None),
+                13: ("derived_from_specimen_id", Specimen, None),
             }
         ),
     )
@@ -1022,6 +1145,7 @@ class Measurement(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize measurement concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
     @field_validator(
@@ -1174,117 +1298,7 @@ class Observation(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
-        return validate_int_for_uuid_field(value)
-
-
-class Specimen(Model, DataLineageMixin):
-    """The specimen domain contains the records identifying biological samples from a person."""
-
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="Specimens",
-        table_name="specimen",
-        persistable=True,
-        id_field_name="specimen_id",
-        links=create_links(
-            {
-                1: ("person_id", Person, None),
-                2: ("specimen_concept_id", Concept, None),
-                3: ("specimen_type_concept_id", Concept, None),
-                4: ("unit_concept_id", Concept, None),
-                5: ("anatomic_site_concept_id", Concept, None),
-                6: ("disease_status_concept_id", Concept, None),
-                7: ("derived_from_specimen_concept_id", Concept, None),
-            }
-        ),
-    )
-    specimen_id: UUID | None = Field(
-        default=None,
-        description="User guidance:\nUnique identifier for each specimen.\nETL conventions:\nNone",
-    )
-    person_id: UUID = Field(
-        description="User guidance:\nThe person from whom the specimen is collected.\nETL conventions:\nNone"
-    )
-    specimen_concept_id: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nThe standard CONCEPT_ID that the SPECIMEN_SOURCE_VALUE maps to in the specimen domain. [Accepted Concepts](https://athena.ohdsi.org/search-terms/terms?domain=Specimen&standardConcept=Standard&page=1&pageSize=15&query=)"
-    )
-    specimen_type_concept_id: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nPut the source of the specimen record, as in an EHR system. [Accepted Concepts](https://athena.ohdsi.org/search-terms/terms?standardConcept=Standard&domain=Type+Concept&page=1&pageSize=15&query=). A more detailed explanation of each Type Concept can be found on the [vocabulary wiki](https://github.com/OHDSI/Vocabulary-v5.0/wiki/Vocab.-TYPE_CONCEPT)."
-    )
-    specimen_date: date = Field(
-        description="User guidance:\nThe date the specimen was collected.\nETL conventions:\nNone"
-    )
-    specimen_datetime: datetime | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
-    )
-    quantity: float | None = Field(
-        default=None,
-        description="User guidance:\nThe amount of specimen collected from the person.\nETL conventions:\nNone",
-    )
-    unit_concept_id: UUID | None = Field(
-        default=None,
-        description="User guidance:\nThe unit for the quantity of the specimen.\nETL conventions:\nMap the UNIT_SOURCE_VALUE to a Standard Concept in the Unit domain. [Accepted Concepts](https://athena.ohdsi.org/search-terms/terms?domain=Unit&standardConcept=Standard&page=1&pageSize=15&query=). If the source unit is NULL (applicable to cases when there's no numerical value or when it doesn't require a unit), keep unit_concept_id NULL as well. If there's no mapping of a source unit, populate unit_concept_id with 0.",
-    )
-    anatomic_site_concept_id: UUID | None = Field(
-        default=None,
-        description="User guidance:\nThis is the site on the body where the specimen is from.\nETL conventions:\nMap the ANATOMIC_SITE_SOURCE_VALUE to a Standard Concept in the Spec Anatomic Site domain. This should be coded at the lowest level of granularity [Accepted Concepts](https://athena.ohdsi.org/search-terms/terms?standardConcept=Standard&domain=Spec+Anatomic+Site&conceptClass=Body+Structure&page=4&pageSize=15&query=)",
-    )
-    disease_status_concept_id: UUID | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
-    )
-    specimen_source_id: str | None = Field(
-        default=None,
-        description="User guidance:\nThis is the identifier for the specimen from the source system.\nETL conventions:\nNone",
-        max_length=50,
-    )
-    specimen_source_value: str | None = Field(
-        default=None,
-        description="User guidance:\nNone\nETL conventions:\nNone",
-        max_length=50,
-    )
-    unit_source_value: str | None = Field(
-        default=None,
-        description="User guidance:\nNone\nETL conventions:\nThis unit for the quantity of the specimen, as represented in the source.",
-        max_length=50,
-    )
-    anatomic_site_source_value: str | None = Field(
-        default=None,
-        description="User guidance:\nNone\nETL conventions:\nThis is the site on the body where the specimen was taken from, as represented in the source.",
-        max_length=50,
-    )
-    disease_status_source_value: str | None = Field(
-        default=None,
-        description="User guidance:\nNone\nETL conventions:\nNone",
-        max_length=50,
-    )
-    specimen_iso_interval: str | None = Field(
-        default=None,
-        description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
-        max_length=55,
-    )
-    derived_from_specimen_id: UUID | None = Field(
-        default=None,
-        description="User guidance:\nNot part of OMOP CDM. The source specimen from which this specimen was derived.\nETL conventions:\nNone",
-    )
-    derived_from_specimen_concept_id: UUID | None = Field(
-        default=None,
-        description="User guidance:\nNot part of OMOP CDM. The protocol used to derive this specimen from the source specimen.\nETL conventions:\nNone",
-    )
-    provided_by_organization_id: UUID | None = Field(
-        default=None,
-        description="User guidance:\nNot part of OMOP CDM. The id of the Organization that provided the data for this Specimen.\nETL conventions:\nNone",
-    )
-
-    @field_validator(
-        "specimen_concept_id",
-        "specimen_type_concept_id",
-        "unit_concept_id",
-        "anatomic_site_concept_id",
-        "disease_status_concept_id",
-        "derived_from_specimen_concept_id",
-        mode="before",
-    )
-    @classmethod
-    def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize observation concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -1382,6 +1396,7 @@ class Note(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize note concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -1468,6 +1483,7 @@ class NoteNlp(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize note-NLP concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -1511,6 +1527,7 @@ class FactRelationship(Model):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize fact-relationship identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -1552,6 +1569,7 @@ class MeasurementRelation(Model):
     @field_validator("measurement_relation_concept_id", mode="before")
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize measurement-relation identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -1619,10 +1637,13 @@ class Death(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize death concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
 class PersonIdentifier(BaseIdentifier):
+    """Associate an external identifier with a person record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         Person,
         relationship_field_name="person",
@@ -1638,6 +1659,8 @@ class PersonIdentifier(BaseIdentifier):
 
 
 class ObservationPeriodIdentifier(BaseIdentifier):
+    """Associate an external identifier with an observation-period record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         ObservationPeriod,
         relationship_field_name="observation_period",
@@ -1654,6 +1677,8 @@ class ObservationPeriodIdentifier(BaseIdentifier):
 
 
 class VisitOccurrenceIdentifier(BaseIdentifier):
+    """Associate an external identifier with a visit-occurrence record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         VisitOccurrence,
         relationship_field_name="visit_occurrence",
@@ -1670,6 +1695,8 @@ class VisitOccurrenceIdentifier(BaseIdentifier):
 
 
 class VisitDetailIdentifier(BaseIdentifier):
+    """Associate an external identifier with a visit-detail record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         VisitDetail,
         relationship_field_name="visit_detail",
@@ -1686,6 +1713,8 @@ class VisitDetailIdentifier(BaseIdentifier):
 
 
 class ConditionOccurrenceIdentifier(BaseIdentifier):
+    """Associate an external identifier with a condition-occurrence record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         ConditionOccurrence,
         relationship_field_name="condition_occurrence",
@@ -1702,6 +1731,8 @@ class ConditionOccurrenceIdentifier(BaseIdentifier):
 
 
 class ProcedureOccurrenceIdentifier(BaseIdentifier):
+    """Associate an external identifier with a procedure-occurrence record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         ProcedureOccurrence,
         relationship_field_name="procedure_occurrence",
@@ -1718,6 +1749,8 @@ class ProcedureOccurrenceIdentifier(BaseIdentifier):
 
 
 class DrugExposureIdentifier(BaseIdentifier):
+    """Associate an external identifier with a drug-exposure record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         DrugExposure,
         relationship_field_name="drug_exposure",
@@ -1734,6 +1767,8 @@ class DrugExposureIdentifier(BaseIdentifier):
 
 
 class DeviceExposureIdentifier(BaseIdentifier):
+    """Associate an external identifier with a device-exposure record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         DeviceExposure,
         relationship_field_name="device_exposure",
@@ -1750,6 +1785,8 @@ class DeviceExposureIdentifier(BaseIdentifier):
 
 
 class MeasurementIdentifier(BaseIdentifier):
+    """Associate an external identifier with a measurement record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         Measurement,
         relationship_field_name="measurement",
@@ -1766,6 +1803,8 @@ class MeasurementIdentifier(BaseIdentifier):
 
 
 class ObservationIdentifier(BaseIdentifier):
+    """Associate an external identifier with an observation record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         Observation,
         relationship_field_name="observation",
@@ -1782,6 +1821,8 @@ class ObservationIdentifier(BaseIdentifier):
 
 
 class SpecimenIdentifier(BaseIdentifier):
+    """Associate an external identifier with a specimen record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         Specimen,
         relationship_field_name="specimen",
@@ -1798,6 +1839,8 @@ class SpecimenIdentifier(BaseIdentifier):
 
 
 class NoteIdentifier(BaseIdentifier):
+    """Associate an external identifier with a note record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         Note,
         relationship_field_name="note",
@@ -1813,6 +1856,8 @@ class NoteIdentifier(BaseIdentifier):
 
 
 class NoteNlpIdentifier(BaseIdentifier):
+    """Associate an external identifier with a note-NLP record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         NoteNlp,
         relationship_field_name="note_nlp",
@@ -1829,6 +1874,8 @@ class NoteNlpIdentifier(BaseIdentifier):
 
 
 class MeasurementRelationIdentifier(BaseIdentifier):
+    """Associate an external identifier with a measurement-relation record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         MeasurementRelation,
         relationship_field_name="measurement_relation",
@@ -1845,6 +1892,8 @@ class MeasurementRelationIdentifier(BaseIdentifier):
 
 
 class DeathIdentifier(BaseIdentifier):
+    """Associate an external identifier with a death record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         Death,
         relationship_field_name="death",

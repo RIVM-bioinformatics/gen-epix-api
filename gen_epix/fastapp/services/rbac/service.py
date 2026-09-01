@@ -1,3 +1,5 @@
+"""Role and permission registration service."""
+
 import abc
 from collections.abc import Hashable
 from enum import Enum
@@ -21,7 +23,7 @@ class BaseRbacService(BaseService):
     Abstract base class for a Role-Based Access Control (RBAC) service. Implement this
     class to provide RBAC functionality to the application. Most methods already have
     an implementation, but the following methods must be implemented by the subclass:
-    - retrieve_user_roles: retrieve the roles of a user
+    - retrieve_user_roles: retrieve the roles of a user.
 
     A role is defined as a hashable object such as a string or an Enum, which is
     registered with this service together with the associated Permissions. The service
@@ -31,6 +33,7 @@ class BaseRbacService(BaseService):
     """
 
     def __init__(self, app: App, **kwargs: Any):
+        """Initialize a BaseRbacService instance."""
         super().__init__(app, **kwargs)
         self._permissions_without_rbac: set[Permission] = set()
         self._permissions_by_role: dict[Hashable, set[Permission]] = {}
@@ -41,20 +44,21 @@ class BaseRbacService(BaseService):
 
     @property
     def permissions_without_rbac(self) -> set[Permission]:
+        """Permissions without rbac."""
         return self._permissions_without_rbac
 
     @property
     def permissions_by_role(self) -> dict[Hashable, set[Permission]]:
+        """Permissions by role."""
         return self._permissions_by_role
 
     @property
     def roles_by_permission(self) -> dict[Permission, set[Hashable]]:
+        """Roles by permission."""
         return self._roles_by_permission
 
     def register_handlers(self) -> None:
-        """
-        No handlers to register in base implementation. Override as needed.
-        """
+        """No handlers to register in base implementation. Override as needed."""
         pass
 
     def register_permission_without_rbac(self, permission: Permission) -> None:
@@ -62,6 +66,7 @@ class BaseRbacService(BaseService):
         Register a permission that is not subject to RBAC. This can be used for
         permissions or commands that are not associated with a role, but are still used
         in the application.
+
         """
         roles = self._roles_by_permission[permission]
         if roles:
@@ -77,6 +82,7 @@ class BaseRbacService(BaseService):
         Unregister a permission that is not subject to RBAC. This can be used for
         permissions that are not associated with a role, but are still used in the
         application.
+
         """
         if permission not in self._permissions_without_rbac:
             raise exc.ServiceException(
@@ -93,6 +99,7 @@ class BaseRbacService(BaseService):
         register_role at runtime in when a role is updated or added. In case of multiple
         objs, a mechanism should be implemented to ensure that the role is
         (eventually) updated or added in all objs.
+
         """
         # Check if all permissions are registered
         invalid_permissions = permissions - self.app.domain.permissions
@@ -139,6 +146,7 @@ class BaseRbacService(BaseService):
         Permission objects or tuples of Command class and PermissionType. The root_role
         is optional and is used to check that the root role has all permissions. The
         keyword arguments are passed to the register_role method.
+
         """
         on_missing_root_permissions = on_missing_root_permissions.lower()
         if on_missing_root_permissions not in ("add", "raise"):
@@ -189,6 +197,7 @@ class BaseRbacService(BaseService):
         Verify that all permissions that are subject to RBAC have at least one role
         registered. This is useful to ensure that no such permission is forgotten to be
         associated with a role.
+
         """
         missing_permissions = {
             x for x in self._roles_by_permission if not self._roles_by_permission[x]
@@ -205,6 +214,7 @@ class BaseRbacService(BaseService):
         """
         Get the permissions for a command class that are subject to RBAC, i.e. which are
         registered to be subject to RBAC.
+
         """
         all_permissions = self.app.domain.get_permissions_for_command(command_class)
         assert isinstance(all_permissions, set)
@@ -214,20 +224,20 @@ class BaseRbacService(BaseService):
         """
         Get all command classes that are subject to RBAC, i.e. for which at least one
         permission is registered to be subject to RBAC.
+
         """
         permissions = self.app.domain.permissions - self._permissions_without_rbac
         return {self.app.domain.get_command_for_permission(x) for x in permissions}
 
     def get_roles(self) -> set[Hashable]:
-        """
-        Get all registered roles.
-        """
+        """Get all registered roles."""
         return set(self._permissions_by_role.keys())
 
     def get_sub_roles(self, role: Hashable) -> set[Hashable]:
         """
         Get all sub roles of a role, i.e. all roles whose permissions are a subset of
         the role in question. The role hierarchy is calculated lazily.
+
         """
         if role not in self._sub_roles_by_role:
             self._sub_roles_by_role[role] = set()
@@ -240,17 +250,13 @@ class BaseRbacService(BaseService):
         return self._sub_roles_by_role[role]
 
     def get_root_permissions(self) -> set[Permission]:
-        """
-        Get all possible permissions.
-        """
+        """Get all possible permissions."""
         permissions: set[Permission] = self.app.domain.get_permissions_for_domain(frozen=False)  # type: ignore[assignment]
         return permissions
 
     @abc.abstractmethod
     def retrieve_user_roles(self, user: User) -> set[Hashable]:
-        """
-        Implement this method to retrieve the roles of a user.
-        """
+        """Implement this method to retrieve the roles of a user."""
         raise NotImplementedError()
 
     def retrieve_user_is_non_rbac_authorized(self, cmd: Command) -> bool:
@@ -258,6 +264,7 @@ class BaseRbacService(BaseService):
         Overriding this method provides a mechanism for a user to exist but
         (currently) not being authorized to execute the command in question,
         regardless of whether the user has the required permission through their roles.
+
         This is one way to implement non role-based access control.
         """
         return True
@@ -266,22 +273,19 @@ class BaseRbacService(BaseService):
         """
         Overriding this method provides a mechanism for a root user to exist, which is
         always allowed to execute any command.
+
         """
         return False
 
     def retrieve_user_permissions(self, user: User) -> set[Permission]:
-        """
-        Retrieve all permissions that a user has.
-        """
+        """Retrieve all permissions that a user has."""
         return set.union(
             set(),
             *[self._permissions_by_role[x] for x in self.retrieve_user_roles(user)],
         )
 
     def retrieve_user_has_all_rbac_permissions(self, user: User) -> bool:
-        """
-        Retrieve whether a user has all permissions that are subject to RBAC.
-        """
+        """Retrieve whether a user has all permissions that are subject to RBAC."""
         return (
             len(
                 self.app.domain.permissions
@@ -298,6 +302,7 @@ class BaseRbacService(BaseService):
         Retrieve whether a user has more permissions than a target user or a set of
         roles. This is useful for determining whether a user can perform an action on
         another user.
+
         """
         if isinstance(tgt_user_or_roles, User):
             permissions = self.retrieve_user_permissions(tgt_user_or_roles)
@@ -367,6 +372,7 @@ class BaseRbacService(BaseService):
         role: Hashable,
         permissions: set[Permission],
     ) -> None:
+        """Validate and register role."""
         if root_role and role == root_role:
             missing_permissions = all_permissions - permissions
             if missing_permissions:
@@ -397,6 +403,7 @@ class BaseRbacService(BaseService):
     ) -> dict[Hashable, set[tuple[type[Command], PermissionType]]]:
         """
         Add the permissions of all sub-roles in a role hierarchy to the current role.
+
         This is useful to describe all permissions only for the lowest roles in the
         hierarchy, avoiding code duplication and risk of inconsistencies.
 
@@ -415,14 +422,20 @@ class BaseRbacService(BaseService):
         role_permissions_map: dict[
             Hashable, set[tuple[type[Command], PermissionType]]
         ] = {}
+        if verify_redundant_permissions:
+            orig_role_permissions_map = {
+                x: set(
+                    BaseRbacService._get_permissions(role_permission_sets.get(x, set()))
+                )
+                for x in role_hierarchy
+            }
+        else:
+            orig_role_permissions_map = {}
         for role in role_hierarchy:
             role_permissions_map[role] = BaseRbacService._get_permissions(
                 role_permission_sets.get(role, set())
             )
-            if verify_redundant_permissions:
-                orig_role_permissions = role_permissions_map[role].copy()
-            else:
-                orig_role_permissions = set()
+            orig_role_permissions = orig_role_permissions_map.get(role, set())
             BaseRbacService._compile_subrole_permissions(
                 role_hierarchy,
                 role_permission_sets,
@@ -444,6 +457,7 @@ class BaseRbacService(BaseService):
         role: Hashable,
         orig_role_permissions: set[tuple[type[Command], PermissionType]],
     ) -> None:
+        """Compile subrole permissions."""
         for sub_role in role_hierarchy.get(role, set()):
             # Add the permissions of the sub-role to the role
             sub_role_permissions = BaseRbacService._get_permissions(
@@ -452,8 +466,8 @@ class BaseRbacService(BaseService):
             role_permissions_map[role].update(sub_role_permissions)
             if not verify_redundant_permissions:
                 continue
-                # Check if any sub-role permissions are also in the role's unique
-                # permissions
+            # Check if any sub-role permissions are also in the role's unique
+            # permissions
             redundant_permissions = sub_role_permissions.intersection(
                 orig_role_permissions
             )
@@ -497,6 +511,7 @@ class BaseRbacService(BaseService):
     def _get_permissions(
         role_permission_sets: set[tuple[type[Command], PermissionTypeSet]],
     ) -> set[tuple[type[Command], PermissionType]]:
+        """Return permissions."""
         permissions: set[tuple[type[Command], PermissionType]] = set()
         for command_class, permission_type_set in role_permission_sets:
             permissions.update({(command_class, x) for x in permission_type_set.value})

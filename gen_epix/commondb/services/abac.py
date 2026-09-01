@@ -1,7 +1,9 @@
+"""Implement commondb ABAC policies and organization-scope service operations."""
+
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, ClassVar
 from uuid import UUID
 
 from cachetools import TTLCache, cached
@@ -15,7 +17,7 @@ from gen_epix.commondb.domain.repository.abac import BaseAbacRepository
 from gen_epix.commondb.domain.service import BaseAbacService
 from gen_epix.fastapp import App, CrudOperation
 from gen_epix.fastapp.enum import EventTiming
-from gen_epix.fastapp.model import Command, CrudCommand, Policy
+from gen_epix.fastapp.model import Command, Policy
 from gen_epix.filter import (
     CompositeFilter,
     EqualsBooleanFilter,
@@ -25,8 +27,12 @@ from gen_epix.filter import (
 
 
 class AbacService(BaseAbacService):
+    """Register commondb ABAC policies and resolve organization administration."""
 
-    CACHE_INVALIDATION_COMMANDS: tuple[type[Command], ...] = tuple()
+    CACHE_INVALIDATION_COMMANDS: tuple[type[Command], ...] = (
+        command.UpdateUserOwnOrganizationCommand,
+    )
+    _GET_USER_BY_ID_CACHE: ClassVar[TTLCache] = TTLCache(maxsize=1024, ttl=300)
 
     def __init__(
         self,
@@ -36,6 +42,15 @@ class AbacService(BaseAbacService):
         setup_logger: logging.Logger | None = None,
         **kwargs: Any,
     ):
+        """Initialize ABAC model, command, policy, and role mappings.
+
+        Args:
+            app: Application that owns this service.
+            repository: Repository used for ABAC policy persistence.
+            logger: Optional operational logger.
+            setup_logger: Optional application setup logger.
+            **kwargs: Additional base-service configuration.
+        """
         super().__init__(
             app,
             repository=repository,
@@ -43,6 +58,10 @@ class AbacService(BaseAbacService):
             setup_logger=setup_logger,
             **kwargs,
         )
+        for command_class in self.CACHE_INVALIDATION_COMMANDS:
+            app.register_cache_invalidator(command_class, self._invalidate_cache)
+            app.set_auto_invalidate_cache(command_class, True)
+
         app_impl: AppImplDetails = app.impl
         self.organization_admin_policy_model_class: type[
             model.OrganizationAdminPolicy
@@ -68,12 +87,13 @@ class AbacService(BaseAbacService):
         self.role_map = app_impl.role_map
         self.role_set_map = app_impl.role_set_map
 
-    def crud(self, cmd: CrudCommand) -> Any:
-        retval = super().crud(cmd)
-        # Invalidate cache
-        if issubclass(type(cmd), AbacService.CACHE_INVALIDATION_COMMANDS):
-            self._get_user_by_id_cached.cache_clear()
-        return retval
+    def _invalidate_cache(self, _cmd: Command) -> None:
+        """Clear cached user lookups after a command changes ABAC-related state.
+
+        Args:
+            _cmd: Completed command that triggered cache invalidation.
+        """
+        self._get_user_by_id_cached.cache_clear()
 
     def register_policies(
         self,
@@ -83,6 +103,19 @@ class AbacService(BaseAbacService):
         read_organization_results_only_commands: set[type[Command]] | None = None,
         read_self_results_only_commands: set[type[Command]] | None = None,
     ) -> None:
+        """Register ABAC policies at their required command lifecycle phases.
+
+        Organization-admin and user-mutation policies run BEFORE handlers. User and
+        organization result policies run AFTER handlers; organization result policies
+        also run DURING execution for supported commands.
+
+        Args:
+            organization_admin_write_commands: Commands requiring administrator scope.
+            read_user_commands: Commands whose user results need ABAC filtering.
+            update_user_commands: Commands that create or update users.
+            read_organization_results_only_commands: Commands scoped to organizations.
+            read_self_results_only_commands: Commands scoped to the current user.
+        """
         organization_admin_write_commands = (
             organization_admin_write_commands or self.ORGANIZATION_ADMIN_WRITE_COMMANDS
         )
@@ -118,6 +151,16 @@ class AbacService(BaseAbacService):
     def retrieve_organizations_under_admin(
         self, cmd: command.RetrieveOrganizationsUnderAdminCommand
     ) -> set[UUID]:
+        """Retrieve organizations that the command user administers.
+
+        Application administrators are considered administrators of every organization.
+
+        Args:
+            cmd: Command carrying the user whose administrator scope is requested.
+
+        Returns:
+            IDs of organizations the user may administer.
+        """
         assert cmd.user and cmd.user.id
         # Special case: user has a role that makes them admin of all organizations
         is_all_organizations = False
@@ -164,6 +207,17 @@ class AbacService(BaseAbacService):
         self,
         cmd: command.RetrieveOrganizationAdminNameEmailsCommand,
     ) -> list[model.UserNameEmail]:
+        """Retrieve identities of active administrators for the user's organization.
+
+        Args:
+            cmd: Command carrying the organization whose administrators are requested.
+
+        Returns:
+            Administrator IDs, names, and email addresses.
+
+        Raises:
+            ServiceException: If the command user is absent or not a commondb user.
+        """
         if not isinstance(cmd.user, model.User):
             raise exc.ServiceException(
                 "129606cd",
@@ -206,11 +260,19 @@ class AbacService(BaseAbacService):
         self,
         cmd: command.UpdateUserOwnOrganizationCommand,
     ) -> model.User:
-        """
-        Behaviour:
-        - Update User.organization
-        - Delete any OrganizationAdminPolicy for the user and their previous
-          organization
+        """Update a user's organization and revoke prior organization administration.
+
+        The update deletes OrganizationAdminPolicy records for the user and their
+        previous organization unless it is part of new-user registration.
+
+        Args:
+            cmd: Command carrying the user and target organization.
+
+        Returns:
+            Updated user, or the original user when the organization is unchanged.
+
+        Raises:
+            FeatureDisabledServiceError: If self-service organization updates are off.
         """
         if not self.app.get_feature_flag("update_own_organization"):
             raise exc.FeatureDisabledServiceError(
@@ -256,13 +318,18 @@ class AbacService(BaseAbacService):
                 )
             )
 
-        # Invalidate cache
-        # TODO: develop general system for caching and cache invalidation
-        self._get_user_by_id_cached.cache_clear()
         return user
 
-    @cached(cache=TTLCache(maxsize=1024, ttl=300))
+    @cached(cache=_GET_USER_BY_ID_CACHE)
     def _get_user_by_id_cached(self, user_id: UUID) -> model.User:
+        """Retrieve and cache a user by ID without a requesting user context.
+
+        Args:
+            user_id: Persisted ID of the user to retrieve.
+
+        Returns:
+            User returned by the application command handler.
+        """
         user: model.User = self.app.handle(
             self.user_crud_command_class(
                 user=None,

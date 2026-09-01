@@ -1,6 +1,9 @@
+"""Map commondb domain models to SQLAlchemy rows with protected audit metadata."""
+
 from collections.abc import Hashable
 from typing import Any
 
+from gen_epix.commondb.domain.model import ModelNoId
 from gen_epix.fastapp.enum import FieldTypeSet
 from gen_epix.fastapp.model import Model
 from gen_epix.fastapp.repositories.sa.mapper import (
@@ -30,56 +33,62 @@ class CommondbSAMapper(SAMapper):
     def update(
         self, user_id: Hashable | None, obj: Model, row: Any, **kwargs: Any
     ) -> bool:
+        """Update a SQLAlchemy row from a domain model using commondb metadata rules.
+
+        Args:
+            user_id: ID of the user performing the update, if known.
+            obj: Domain model containing candidate persisted values.
+            row: SQLAlchemy row to update in place.
+            **kwargs: Reserved base-mapper options.
+
+        Returns:
+            True when at least one non-metadata field changed; otherwise False.
         """
-        Update `row` from `obj`, applying commondb metadata-field rules.
-
-        Returns True if at least one field was actually changed.
-        """
-        # Build the base update dict, skipping fields whose new value is None so that
-        # existing DB values are preserved when the incoming object omits a field.
-        if self._is_identical_common_field_names:
-            mapped_dict: dict[str, Any] = obj.model_dump(exclude_none=True)
-        else:
-            obj_dict = obj.model_dump(exclude_none=False)
-
-            mapped_dict = {
-                row_field_name: obj_dict[field_name]
-                for field_name, row_field_name in zip(
-                    self._field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
-                    self._row_field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
-                )
-                if obj_dict[field_name] is not None
-            }
-
-        if kwargs:
-            mapped_dict.update(kwargs)
-
-        # Strip fields that are owned exclusively by the DB and must never be touched
-        # from Python during an update.
-        mapped_dict.pop("created_at", None)
-        mapped_dict.pop("modified_at", None)
-        # Always stamp modified_by with the acting user, overriding any value the
-        # domain object might carry.
-        mapped_dict["modified_by"] = user_id
-
+        # Go over each relevant field in the domain model and compare it to the corresponding field in the SA row. Update the SA row if the values differ.
         is_updated = False
-        for key, value in mapped_dict.items():
-
-            curr_value = getattr(row, key, None)
-            if curr_value != value:
-                setattr(row, key, value)
+        modified_by_row_field_name: str | None = None
+        obj_dict = obj.model_dump(
+            exclude_none=False
+        )  # Explicitly include None values (to ensure Pydantic always returns all fields, even if they are None and possible future defaults change)
+        for field_name, row_field_name in zip(
+            self._field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
+            self._row_field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
+        ):
+            if field_name in ModelNoId.METADATA_FIELDS:
+                if field_name == ModelNoId.MODIFIED_BY_FIELD_NAME:
+                    # Switch to mapped
+                    modified_by_row_field_name = row_field_name
+                continue
+            curr_value = getattr(row, row_field_name)
+            new_value = obj_dict[field_name]
+            if curr_value != new_value:
+                setattr(row, row_field_name, new_value)
                 is_updated = True
+
+        # Set modified_by if the row was updated
+        if is_updated:
+            assert modified_by_row_field_name is not None
+            setattr(row, modified_by_row_field_name, user_id)
+
         return is_updated
 
     def dump(self, user_id: Hashable | None, obj: Model, **kwargs: Any) -> Any:
-        """
-        Dump `obj` to a dict, applying commondb metadata-field rules.
+        """Dump a domain model while hiding protected audit metadata.
 
         For users without privileged roles, this means masking out the metadata fields
         by setting them to None, so that they are not exposed by the API.
+
+        Args:
+            user_id: ID of the user receiving the representation, if known.
+            obj: Domain model to map to its SQLAlchemy representation.
+            **kwargs: Reserved base-mapper options.
+
+        Returns:
+            SQLAlchemy row representation with protected metadata values masked.
         """
         row = super().dump(user_id, obj, **kwargs)
 
+        # TODO: this should not happen here, but in the service layer.  The service layer should know if the user has the right to see the metadata fields.  The mapper should just do a straight dump.
         row.created_at = None
         row.modified_at = None
         row.modified_by = user_id
@@ -88,9 +97,10 @@ class CommondbSAMapper(SAMapper):
 
 
 class CommondbSAMapperFactory(BaseSAMapperFactory):
-    """
-    Factory that produces CommondbSAMapper instances for all SA-backed databases that
-    inherit from RowMetadataMixin (casedb, seqdb, omopdb, …).
+    """Create commondb SQLAlchemy mappers for audit-metadata-enabled databases.
+
+    The factory supports databases that inherit from RowMetadataMixin (casedb,
+    seqdb, omopdb, …).
 
     Injected into SARepository at construction time by commondb/env.py so that the
     fastapp layer never needs to know which fields are metadata-protected.
@@ -102,6 +112,16 @@ class CommondbSAMapperFactory(BaseSAMapperFactory):
         row_class: type,
         field_name_map: dict[str, str] | None = None,
     ) -> CommondbSAMapper:
+        """Create a mapper that enforces commondb audit metadata behavior.
+
+        Args:
+            model_class: Domain model class to map.
+            row_class: SQLAlchemy row class corresponding to the domain model.
+            field_name_map: Optional domain-to-row field name mapping.
+
+        Returns:
+            Mapper configured for the model and row classes.
+        """
         return CommondbSAMapper(
             model_class,
             row_class,

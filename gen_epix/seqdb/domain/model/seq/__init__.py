@@ -2,7 +2,6 @@ from gen_epix.commondb.domain.model import IdentifierForUpload as IdentifierForU
 
 # pylint: disable=useless-import-alias
 from gen_epix.seqdb.domain.model.seq.base import BaseSeq as BaseSeq
-from gen_epix.seqdb.domain.model.seq.base import CodeMixin as CodeMixin
 from gen_epix.seqdb.domain.model.seq.base import ContentMixin as ContentMixin
 from gen_epix.seqdb.domain.model.seq.base import QualityMixin as QualityMixin
 from gen_epix.seqdb.domain.model.seq.category import SeqCategory as SeqCategory

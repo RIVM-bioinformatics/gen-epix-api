@@ -1,3 +1,5 @@
+"""Provide integration-test helpers for constructing and inspecting commondb state."""
+
 import datetime
 import logging
 import re
@@ -21,9 +23,9 @@ BASE_MODEL_TYPE = TypeVar("BASE_MODEL_TYPE", bound=model.Model)
 
 
 class TestClient:
-    """
-    Integration test client providing helpers to set up, query, and verify application
-    state via commands and the in-memory object store.
+    """Provide integration-test helpers for querying and verifying application state.
+
+    Helpers use commands and the in-memory object store.
     """
 
     DEFAULT_ROUTE_PREFIX_VALUE = "/v1"
@@ -55,7 +57,22 @@ class TestClient:
         default_route_prefix: str | None = None,
         **kwargs: Any,
     ):
-        """Initialise the test client with app configuration and optional endpoint routing."""
+        """Initialize a test client with application configuration and endpoint routing.
+
+        Args:
+            test_name: Name of the owning test.
+            test_dir: Directory containing test resources.
+            app_cfg: Application configuration.
+            app_composer: Composer that created the application.
+            verbose: Whether to print diagnostic output.
+            log_level: Logging level for the application.
+            use_endpoints: Whether to dispatch commands through HTTP endpoints.
+            default_route_prefix: Optional API route prefix.
+            **kwargs: Optional endpoint client and application exception state.
+
+        Raises:
+            ValueError: If endpoint routing lacks required test support objects.
+        """
         # Set provided parameters
         self.test_name = test_name
         self.test_dir = test_dir
@@ -158,7 +175,21 @@ class TestClient:
         copy: bool = False,
         on_missing: str = "raise",
     ) -> model.Model | list[model.Model] | None:
-        """Retrieve an object from the local object store by key, id, or model instance."""
+        """Retrieve an object from the local object store by key, ID, or instance.
+
+        Args:
+            model_class: Model class of the stored object.
+            obj: Object reference, identifier, key, or collection of references.
+            copy: Whether to return a model copy.
+            on_missing: Missing-object behavior, ``raise`` or ``return_none``.
+
+        Returns:
+            Stored object, objects, or ``None`` for an allowed missing object.
+
+        Raises:
+            ValueError: If an object is not found or reference is invalid.
+            NotImplementedError: If `on_missing` is unsupported.
+        """
         if isinstance(obj, list):
             return [cast(model.Model, self.get_obj(model_class, x)) for x in obj]
         if model_class not in self.db:
@@ -175,7 +206,18 @@ class TestClient:
         return table[key] if not copy else table[key].model_copy()
 
     def set_obj(self, obj: model.Model, update: bool = False) -> model.Model:
-        """Store an object in the local object store, optionally updating an existing entry."""
+        """Store an object locally, optionally replacing an existing entry.
+
+        Args:
+            obj: Model object to store.
+            update: Whether an existing object may be replaced.
+
+        Returns:
+            Stored object.
+
+        Raises:
+            ValueError: If the object already exists and updates are disabled.
+        """
         model_class = type(obj)
         if model_class not in self.db:
             self.db[model_class] = {}
@@ -198,7 +240,18 @@ class TestClient:
         return obj
 
     def delete_obj(self, model_class: type[model.Model], obj_id: UUID) -> model.Model:
-        """Remove an object from the local object store by id."""
+        """Remove an object from the local object store by ID.
+
+        Args:
+            model_class: Model class of the stored object.
+            obj_id: Identifier of the object to remove.
+
+        Returns:
+            Removed object.
+
+        Raises:
+            ValueError: If the object cannot be found.
+        """
         if model_class not in self.db:
             self.db[model_class] = {}
         table = self.db[model_class]
@@ -221,7 +274,21 @@ class TestClient:
         route_prefix: str | None = None,
         **kwargs: Any,
     ) -> Any:
-        """Dispatch a command via the HTTP endpoint or directly through the app."""
+        """Dispatch a command through an HTTP endpoint or directly through the app.
+
+        Args:
+            cmd: Command to dispatch.
+            return_response: Whether endpoint calls include the HTTP response.
+            use_endpoint: Optional per-call endpoint-routing override.
+            route_prefix: Optional API route prefix.
+            **kwargs: Additional endpoint client arguments.
+
+        Returns:
+            Command result, optionally paired with its HTTP response.
+
+        Raises:
+            Exception: Any exception captured during endpoint command handling.
+        """
         use_endpoint = use_endpoint if use_endpoint is not None else self.use_endpoints
         if use_endpoint:
             assert self.app_last_handled_exception is not None
@@ -279,7 +346,23 @@ class TestClient:
         set_dummy_token: bool = False,
         set_key: bool = True,
     ) -> model.User:
-        """Invite and register a user, verifying role and invitation constraints."""
+        """Invite and register a user, validating the resulting invitation state.
+
+        Args:
+            user_or_str: Inviting user or local user reference.
+            user_name: Role-and-organization encoded user name.
+            description: Optional user description.
+            set_dummy_organization: Whether a missing organization uses a generated ID.
+            set_dummy_token: Whether registration uses a generated token.
+            set_key: Whether to include an invitation key.
+
+        Returns:
+            Registered user stored in the local object store.
+
+        Raises:
+            ValueError: If the name is invalid, organization is missing, or validation
+                checks fail.
+        """
         root_user: model.User = self.get_root_user()
         user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         m = re.match(r"^(.*?)(\d+)_(\d+)$", user_name.lower())
@@ -519,7 +602,23 @@ class TestClient:
         organization_or_str: str | None = None,
         set_dummy_organization: bool = False,
     ) -> model.User:
-        """Update a user's attributes and store the result in the local object store."""
+        """Update user attributes and store the result in the local object store.
+
+        Args:
+            user_or_str: User performing the update.
+            tgt_user_or_str: User to update.
+            is_active: Optional active-state replacement.
+            roles: Optional role-set replacement.
+            organization_or_str: Optional target organization reference.
+            set_dummy_organization: Whether to generate an organization ID.
+
+        Returns:
+            Updated user.
+
+        Raises:
+            ValueError: If an organization is provided with dummy organization enabled.
+            AssertionError: If required persisted user identifiers are absent.
+        """
         user: model.User = self.get_obj(
             self.user_class, user_or_str
         )  # type: ignore[assignment]
@@ -570,6 +669,26 @@ class TestClient:
         )
         return self.set_obj(updated_tgt_user, update=True)  # type: ignore[return-value]
 
+    def anonymize_user(
+        self, user_or_str: str | model.User, tgt_user_or_str: str | model.User
+    ) -> model.User:
+        """Anonymize a user's personal information and update the local object store."""
+        user: model.User = self.get_obj(
+            self.user_class, user_or_str
+        )  # type: ignore[assignment]
+        tgt_user: model.User = self.get_obj(
+            self.user_class, tgt_user_or_str
+        )  # type: ignore[assignment]
+        anonymized_user: model.User = self.handle(
+            command.AnonymizeUserCommand(user=user, tgt_user_id=cast(UUID, tgt_user.id))
+        )
+        table = self.db[self.user_class]
+        table.pop(tgt_user.name, None)
+        anonymized_user.name = (
+            tgt_user.key
+        )  # set the name to avoid test client from failing when trying to retrieve the user by name
+        return self.set_obj(anonymized_user, update=True)  # type: ignore[return-value]
+
     def get_root_user(self, user_key: str | None = None) -> model.User:
         """Retrieve the root user from the app's user manager."""
         if user_key is None:
@@ -583,7 +702,19 @@ class TestClient:
         include_self: bool = False,
         on_no_admin: str = "raise",
     ) -> list[UUID]:
-        """Return organisation ids for which the user is an organisation admin."""
+        """Return organization IDs for which a user is an organization administrator.
+
+        Args:
+            user_or_str: User or local user reference.
+            include_self: Whether to include the user's own organization.
+            on_no_admin: Missing-administrator behavior.
+
+        Returns:
+            Managed organization identifiers.
+
+        Raises:
+            ValueError: If the user is not an administrator and failures are requested.
+        """
         user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         df: dict[UUID, model.OrganizationAdminPolicy] = self.db[self.organization_admin_policy_class]  # type: ignore[assignment]
         org_admin_policies = [x for x in df.values() if x.user_id == user.id]
@@ -634,7 +765,20 @@ class TestClient:
         include_other_org_admins: bool = False,
         on_no_admin: str = "raise",
     ) -> list[model.User]:
-        """Return all users managed by the given organisation admin."""
+        """Return all users managed by the given organization administrator.
+
+        Args:
+            user_or_str: Administrator or local user reference.
+            include_self: Whether to include the administrator.
+            include_other_org_admins: Whether to include peer administrators.
+            on_no_admin: Missing-administrator behavior.
+
+        Returns:
+            Users in organizations managed by the administrator.
+
+        Raises:
+            ValueError: If the user is not an administrator and failures are requested.
+        """
         user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         df: dict[UUID, model.OrganizationAdminPolicy] = self.db[self.organization_admin_policy_class]  # type: ignore[assignment]
         org_admin_policies: list[model.OrganizationAdminPolicy] = [
@@ -668,9 +812,9 @@ class TestClient:
         role: str,
         allow_equal: bool = False,
     ) -> bool:
-        """
-        Check if sub_role is indeed a sub-role of role based on the permissions
-        they each have. Set allow_equal=True to allow sub_role to be equal to role.
+        """Determine whether one role is subordinate to another by permissions.
+
+        Set ``allow_equal`` to allow the roles to have equal permissions.
         """
         permissions = self.role_permissions_map[role]
         sub_permissions = self.role_permissions_map[sub_role]
@@ -770,7 +914,21 @@ class TestClient:
         value: Any,
         cascade: bool = False,
     ) -> model.Model:
-        """Read exactly one object matching a given property value via the app."""
+        """Read exactly one object matching a property value through the app.
+
+        Args:
+            user_or_key: User or user key issuing the read.
+            model_class: Model class to search.
+            name: Property name to match.
+            value: Required property value.
+            cascade: Whether to load linked objects.
+
+        Returns:
+            Sole matching object.
+
+        Raises:
+            ValueError: If no object or multiple objects match.
+        """
         objs = self.read_some_by_property(
             user_or_key, model_class, name, value, cascade=cascade
         )
@@ -821,7 +979,22 @@ class TestClient:
         verify: bool = False,
         delete_user_or_str: str | model.User | None = None,
     ) -> UUID:
-        """Delete an object via the app and remove it from the local object store."""
+        """Delete an object through the app and remove it from local storage.
+
+        Args:
+            user_or_key: User or user key issuing the deletion.
+            model_class: Model class to delete.
+            obj_or_key: Object or local reference to delete.
+            retry_obj: Optional fallback reference.
+            verify: Whether to verify deletion through the app.
+            delete_user_or_str: Optional user used for verification.
+
+        Returns:
+            Identifier of the deleted object.
+
+        Raises:
+            ValueError: If verification finds that the object still exists.
+        """
         user: model.User = self.get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
         obj: model.Model = self.get_obj(model_class, obj_or_key, copy=True)  # type: ignore[assignment]
 
@@ -863,7 +1036,16 @@ class TestClient:
         model_class: type[model.Model],
         expected_ids: set[UUID] | list[model.Model],
     ) -> None:
-        """Assert that reading all objects of the given model class returns the expected ids."""
+        """Assert that reading all objects returns the expected identifiers.
+
+        Args:
+            user_or_str: User or local user reference issuing the read.
+            model_class: Model class to read.
+            expected_ids: Expected object IDs or objects.
+
+        Raises:
+            ValueError: If actual and expected object identifiers differ.
+        """
         user: model.User = self.get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         objs = self.handle(
             self.app.domain.get_crud_command_for_model(model_class)(
@@ -1034,9 +1216,9 @@ class TestClient:
         set_dummy_link: dict[str, bool] | bool = False,
         exclude_none: bool = True,
     ) -> None:
-        """
-        Helper function for update methods. All the (field_name, value) pairs in props
-        are set as attributes of obj. If the field_name is a relationship field, the value
+        """Apply update properties and linked-object IDs to a model.
+
+        All field-value pairs in ``props`` are set on ``obj``. For relationship fields, the value
         is set as the id of the linked object. If set_dummy_link is provided for a
         relationship field and no real linked obj is provided, a dummy id is put instead.
         If exclude_none is True, fields or link fields with value None are not set.
@@ -1104,7 +1286,23 @@ class TestClient:
         field_name: str,
         value: Any,
     ) -> tuple[str, UUID | None]:
-        """Resolve a relationship field value to its link field name and target id."""
+        """Resolve a relationship value to its link field name and target ID.
+
+        Args:
+            set_dummy_link: Per-field dummy-link settings.
+            model_class: Model class owning the relationship.
+            id_field_name: Identifier field on the linked model.
+            link_map: Relationship metadata by field name.
+            default_set_dummy_link: Default dummy-link setting.
+            field_name: Relationship field to resolve.
+            value: Provided relationship value.
+
+        Returns:
+            Link field name and resolved identifier.
+
+        Raises:
+            ValueError: If a value is provided while its dummy link is enabled.
+        """
         field_name, link_model_class = link_map[field_name]
         if not value:
             if set_dummy_link.get(field_name, default_set_dummy_link):
@@ -1133,7 +1331,22 @@ class TestClient:
         ),
         on_missing: str,
     ) -> tuple[UUID, UUID] | UUID | None:
-        """Derive the local object store lookup key for the given object reference."""
+        """Derive the local object-store lookup key for an object reference.
+
+        Args:
+            table: Local object-store table.
+            model_class: Model class being resolved.
+            obj: Object reference, identifier, key, or composite key.
+            on_missing: Missing-object behavior.
+
+        Returns:
+            Resolved local key, or ``None`` when configured for a missing object.
+
+        Raises:
+            ValueError: If the reference is invalid or an object is missing.
+            NotImplementedError: If `on_missing` is unsupported.
+            AssertionError: If the model has no entity metadata.
+        """
         key_fields = self.MODEL_KEY_MAP[model_class]
         assert model_class.ENTITY
         get_obj_id = model_class.ENTITY.get_obj_id
@@ -1174,17 +1387,23 @@ class TestClient:
         user_id: UUID,
         **kwargs: Any,
     ) -> None:
-        """Assert that an updated object matches the input, excluding metadata fields."""
+        """Assert that an updated object matches its input excluding metadata fields.
+
+        Args:
+            in_obj: Object submitted for update.
+            out_obj: Object returned by the update.
+            user_id: Identifier of the user that performed the update.
+            **kwargs: Optional comparison configuration.
+
+        Raises:
+            ValueError: If persisted content differs from the submitted content.
+        """
         # The metadata fields are excluded from the comparison because they are
         # automatically updated by the system and may not be the same in in_obj and
         # out_obj. They are also not relevant for verifying that the content of the
         # object was updated correctly.
-        out_obj_dict = out_obj.model_dump(
-            exclude=set(model.ModelNoId.CREATE_METADATA_FIELDS)
-        )
-        in_obj_dict = in_obj.model_dump(
-            exclude=set(model.ModelNoId.CREATE_METADATA_FIELDS)
-        )
+        out_obj_dict = out_obj.model_dump(exclude=set(model.ModelNoId.METADATA_FIELDS))
+        in_obj_dict = in_obj.model_dump(exclude=set(model.ModelNoId.METADATA_FIELDS))
         if isinstance(in_obj, model.User):
             in_obj_dict["roles"] = sorted(in_obj.roles)
             out_obj_dict["roles"] = sorted(out_obj.roles)

@@ -57,6 +57,7 @@ class CreateCaseSetCommand(Command):
     case_set: model.CaseSet = Field(description="The case set to create.")
     data_collection_ids: set[UUID] = Field(
         description="The data collections to associate with the case set, other than the created_in_data_collection. The latter will be removed from the set if present.",
+        default_factory=set,
     )
     case_ids: set[UUID] | None = Field(
         description="The cases to associate with the case set upon creation, if any. These cases must have the same CaseType as the case set.",
@@ -104,7 +105,7 @@ class UploadCasesCommand(Command, UploadBatchCommandMixin):
         return self
 
 
-class RetrieveCaseStatsCommand(Command):
+class RetrieveCaseTypeStatsCommand(Command):
     """
     Retrieve statistics for a set of CaseTypes. Each of the parameters, when
     provided, will further filter the cases that are considered for the
@@ -115,13 +116,26 @@ class RetrieveCaseStatsCommand(Command):
         default=None,
         description="The CaseType IDs to retrieve stats for, if not all.",
     )
-    case_set_ids: list[UUID] | None = Field(
+    datetime_range_filter: TypedDatetimeRangeFilter | None = Field(
         default=None,
-        description="The case set IDs to retrieve stats for, if not all. UNIQUE",
+        description="The datetime range to filter cases by, if any. The key attribute of the filter should be left empty.",
+    )
+
+
+class RetrieveCaseSetStatsCommand(Command):
+    """
+    Retrieve statistics for a set of CaseSets. Each of the parameters, when
+    provided, will further filter the cases that are considered for the
+    statistics.
+    """
+
+    case_set_ids: set[UUID] | None = Field(
+        default=None,
+        description="The case set IDs to retrieve stats for, if not all.",
     )
     datetime_range_filter: TypedDatetimeRangeFilter | None = Field(
         default=None,
-        description="The datetime range to filter cases by, if any. The key attribute fo the filter should be left empty.",
+        description="The datetime range to filter cases by, if any. The key attribute of the filter should be left empty.",
     )
 
 
@@ -277,7 +291,7 @@ class RetrieveSimilarCasesCommand(Command):
 class RetrieveSimilarCasesReturnValue(BaseModel):
     """The return value for the RetrieveSimilarCasesCommand."""
 
-    cases: list[model.CaseIdAndDate] = Field(
+    cases: list[model.SimilarCase] = Field(
         description="The similar cases that were found, limited to their IDs and case dates."
     )
 
@@ -350,6 +364,20 @@ class RetrieveProtocolsCommand(Command):
 
     protocol_type: seqdb_enum.ProtocolType = Field(
         description="The type of protocols to retrieve."
+    )
+
+
+class RetrieveIsOwnCasesCommand(Command):
+    """
+    Given a list of case IDs, check which of the cases are owned by the user or the user has access to.
+    Returns a list of case IDs that the user owns or has access to.
+    """
+
+    case_type_id: UUID = Field(
+        description="The CaseType ID that all the cases must belong to."
+    )
+    case_ids: list[UUID] = Field(
+        description="The IDs of the cases to check ownership for."
     )
 
 

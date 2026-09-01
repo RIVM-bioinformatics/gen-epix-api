@@ -10,7 +10,6 @@ from gen_epix.commondb.repositories.sa_model import (
 from gen_epix.commondb.repositories.sa_model.organization import IdentifierMixin
 from gen_epix.seqdb.domain import DOMAIN, enum, model
 from gen_epix.seqdb.repositories.sa_model.seq.base import (
-    CodeMixin,
     ContentMixin,
     QualityMixin,
 )
@@ -21,7 +20,7 @@ from gen_epix.seqdb.repositories.sa_model.seq.ref_data import (
 )
 
 
-class Sample(Base, RowMetadataMixin, CodeMixin):
+class Sample(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -31,6 +30,7 @@ class Sample(Base, RowMetadataMixin, CodeMixin):
     created_in_data_collection_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.Sample, "created_in_data_collection_id"
     )
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.Sample, "code")
     props: Mapped[dict[str, str]] = create_mapped_column(DOMAIN, model.Sample, "props")
 
 
@@ -62,7 +62,7 @@ class SampleIdentifier(Base, IdentifierMixin):
     sample: Mapped[Sample] = relationship(Sample, foreign_keys=[internal_id])
 
 
-class ReadSet(Base, RowMetadataMixin, CodeMixin, QualityMixin):
+class ReadSet(Base, RowMetadataMixin, QualityMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -102,6 +102,7 @@ class ReadSet(Base, RowMetadataMixin, CodeMixin, QualityMixin):
 
     sample: Mapped[Sample] = relationship("Sample", foreign_keys=[sample_id])
     protocol: Mapped[Protocol] = relationship("Protocol", foreign_keys=[protocol_id])
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.ReadSet, "code")
 
 
 class ReadSetIdentifier(Base, IdentifierMixin):
@@ -117,7 +118,7 @@ class ReadSetIdentifier(Base, IdentifierMixin):
     read_set: Mapped[ReadSet] = relationship(ReadSet, foreign_keys=[internal_id])
 
 
-class Seq(Base, RowMetadataMixin, CodeMixin, QualityMixin):
+class Seq(Base, RowMetadataMixin, QualityMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -165,6 +166,7 @@ class Seq(Base, RowMetadataMixin, CodeMixin, QualityMixin):
         "ReadSet", foreign_keys=[read_set2_id]
     )
     protocol: Mapped[Protocol] = relationship("Protocol", foreign_keys=[protocol_id])
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.Sample, "code")
 
 
 class SeqIdentifier(Base, IdentifierMixin):

@@ -1,6 +1,4 @@
-"""
-Advanced streaming pipeline with backpressure handling and async support.
-"""
+"""Streaming helpers for collecting outcomes and processing batches concurrently."""
 
 import asyncio
 from collections import deque
@@ -20,6 +18,7 @@ class StreamingPipeline:
         buffer_size: int = 1000,
         error_threshold: float = 0.1,
     ):
+        """Configure stream processing state and error-rate thresholding."""
         self.pipeline = pipeline
         self.buffer_size = buffer_size
         self.error_threshold = error_threshold
@@ -33,8 +32,25 @@ class StreamingPipeline:
         on_success: Callable[[TransformResult], None] | None = None,
         on_error: Callable[[TransformResult], None] | None = None,
     ) -> Iterator[TransformResult]:
-        """Process stream asynchronously with callbacks."""
+        """Process a stream while invoking callbacks and enforcing an error threshold.
 
+        Despite its historical name, this method evaluates the synchronous pipeline
+        directly and yields each result lazily.
+
+        Args:
+            stream: Objects to transform in encounter order.
+            on_success: Optional callback for each successful transformation.
+            on_error: Optional callback for each failed transformation.
+
+        Yields:
+            Transformation result for each processed input.
+
+        Returns:
+            An iterator over transformation results.
+
+        Raises:
+            RuntimeError: If the observed failure rate exceeds ``error_threshold``.
+        """
         for obj in stream:
             results = list(self.pipeline.process_stream(iter([obj])))
 

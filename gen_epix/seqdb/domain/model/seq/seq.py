@@ -1,7 +1,7 @@
 import hashlib
 import json
 from functools import cached_property
-from typing import Any, ClassVar, Self
+from typing import Annotated, Any, ClassVar, Self
 from uuid import UUID
 
 from pydantic import (
@@ -18,11 +18,13 @@ from gen_epix.commondb.domain.model.base import Model, validate_int_enum_value_o
 from gen_epix.commondb.domain.model.organization import BaseIdentifier
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
+from gen_epix.fastapp.domain.util import create_multi_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.file import File
-from gen_epix.seqdb.domain.model.seq.base import BaseSeq, CodeMixin, QualityMixin
+from gen_epix.seqdb.domain.model.seq.base import BaseSeq, QualityMixin
 from gen_epix.seqdb.domain.model.seq.protocol import Protocol
 from gen_epix.seqdb.domain.model.seq.reads import ReadSet
+from gen_epix.seqdb.domain.model.seq.ref_seq import RefSeq
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 
 
@@ -48,7 +50,7 @@ class Contig(BaseSeq, QualityMixin):
         return value
 
 
-class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
+class Seq(Model, HasSampleMixin, QualityMixin):
     """
     A DNA sequence, typically representing an assembled genome or a part thereof. A
     sequence consists of one or more contiguous sequences (contigs).
@@ -88,6 +90,8 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
                 5: ("protocol_id", Protocol, "protocol"),
             }
         ),
+        # TODO: validate MultiLink fields during entity construction
+        multi_links=create_multi_links([("contigs", RefSeq)]),
     )
     uri: str | None = Field(
         default=None, description="The URI of the sequence data, if available."
@@ -131,6 +135,11 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
     seq_hash: UUID = Field(
         default=NULL_ID,
         description="The first 128 bits of the SHA256 hash of the sorted contig seq hashes concatenated together. If the sequence has no contigs, the null UUID is returned.",
+    )
+    code: str | None = Field(
+        default=None,
+        max_length=255,
+        description="A code for the seq for further reference",
     )
 
     @computed_field(  # type: ignore[prop-decorator]
@@ -377,8 +386,12 @@ class SeqIdentifier(BaseIdentifier):
 
 
 class HasSeqMixin:
-    seq_id: UUID | None = Field(
-        default=None,
-        description="The unique identifier for the sequence from which these results were obtained. FOREIGN KEY",
-    )
-    seq: Seq | None = Field(default=None, description="The sequence.")
+    # Annotation-only: an assigned Field lingers as class attr -> pydantic shadow warning
+    seq_id: Annotated[
+        UUID | None,
+        Field(
+            default=None,
+            description="The unique identifier for the sequence from which these results were obtained. FOREIGN KEY",
+        ),
+    ]
+    seq: Annotated[Seq | None, Field(default=None, description="The sequence.")]

@@ -1,3 +1,5 @@
+"""Compose commondb applications from configured services, repositories, and policies."""
+
 import datetime
 import logging
 import traceback
@@ -5,7 +7,7 @@ import traceback
 # pylint: disable=unused-import-alias
 from collections.abc import Callable, Iterable
 from enum import Enum
-from typing import Any
+from typing import Any, Hashable, cast
 
 from dynaconf import Dynaconf
 
@@ -32,20 +34,19 @@ from gen_epix.fastapp.util import create_ssl_context
 
 
 class App(fastapp.App):
-    """
-    Application class for the GenEpix FastAPI application. Overrides some properties
-    to provide more specific types and linter support.
+    """Provide the commondb FastAPI application with specialized property types.
+
+    The specialized properties provide more specific types and linter support.
     """
 
     @property
     def cfg(self) -> Dynaconf:
+        """Loaded Dynaconf settings object."""
         return super().cfg
 
 
 class AppComposer(BaseAppComposer):
-    """
-    Compose the commondb application by wiring services, repositories, and policies.
-    """
+    """Compose the commondb application by wiring services, repositories, and policies."""
 
     def __init__(
         self,
@@ -62,11 +63,33 @@ class AppComposer(BaseAppComposer):
         policy_class_map: (
             dict[type[fastapp.Policy], type[fastapp.Policy]] | None
         ) = None,
+        log_any: bool = True,
         log_setup: bool = True,
         **kwargs: Any,
     ):
-        """Initialise the composer, parse configuration, and compose the application."""
+        """Initialize the composer, parse configuration, and compose the application.
+
+        Args:
+            app_cfg: Resolved configuration used to compose the application.
+            domain: Optional domain registration replacing the default commondb domain.
+            sorted_service_types: Optional service initialization order.
+            role_generator_class: Optional class that derives roles and permissions.
+            rbac_service_class: Optional RBAC service implementation.
+            user_manager_class: Optional user-manager implementation.
+            model_class_map: Optional mappings to derived model classes.
+            command_class_map: Optional mappings to derived command classes.
+            policy_class_map: Optional mappings to derived policy classes.
+            log_any: Whether any application logging is enabled.
+            log_setup: Whether composition lifecycle events are logged.
+            **kwargs: Additional options forwarded to application composition.
+
+        Raises:
+            ValueError: If setup logging is enabled while all logging is disabled.
+            InitializationServiceError: If a configured value cannot be converted.
+        """
         # Parse input
+        if log_setup and not log_any:
+            raise ValueError("log_setup can only be True if log_any is True")
         self._app_cfg = app_cfg
         self._cfg = app_cfg.cfg
         self._domain = domain or DOMAIN
@@ -77,6 +100,7 @@ class AppComposer(BaseAppComposer):
         self._model_class_map = model_class_map or {}
         self._command_class_map = command_class_map or {}
         self._policy_class_map = policy_class_map or {}
+        self._log_any = log_any
         self._log_setup = log_setup
 
         # Parse config to test presence of expected values and to convert any values as necessary, such as feature flags
@@ -91,19 +115,27 @@ class AppComposer(BaseAppComposer):
 
         # Compose application
         data = self.compose_application(**kwargs)
-        self._app: App = data["app"]
+        self._app = cast(App, data["app"])
         self._services: dict[Enum, BaseService] = data["services"]
         self._repositories: dict[Enum, BaseRepository] = data["repositories"]
         self._registered_user_dependency: Callable = data["registered_user_dependency"]
         self._new_user_dependency: Callable = data["new_user_dependency"]
         self._idp_user_dependency: Callable = data["idp_user_dependency"]
 
-    def compose_application(self) -> dict[str, Any]:
-        """
-        Create the App instance, initialise all services and repositories, and register
-        policies.
-        """
+    def compose_application(self, **kwargs: Any) -> dict[str, Any]:
+        """Create the application, initialize services and repositories, and register policies.
 
+        Composition returns the dependencies required by the API layer.
+
+        Args:
+            **kwargs: Additional options accepted by composed service constructors.
+
+        Returns:
+            Application, service, repository, and API dependency instances.
+
+        Raises:
+            Exception: Re-raises an error encountered while composing the application.
+        """
         # Get loggers
         cfg = self._app_cfg.cfg
         setup_logger = self._app_cfg.setup_logger
@@ -116,6 +148,7 @@ class AppComposer(BaseAppComposer):
                 self._setup_application_logging(setup_logger)
 
             # Initialize app
+            cfg_dict = cast(dict[str, Any], cfg)
             app_impl = AppImplDetails(
                 sorted_service_types=list(self._sorted_service_types),
                 rbac_service_class=self._rbac_service_class,
@@ -127,17 +160,22 @@ class AppComposer(BaseAppComposer):
                 role_set_map=self._role_set_map,
                 role_permissions_map=self._role_permissions_map,
             )
+            _service_defaults = cast(
+                dict[str, Any], cfg_dict["service"]["defaults"]["props"]
+            )
+            _app_cfg_section = cast(dict[str, Any], cfg_dict["app"])
             app = App(
                 name=self._app_cfg.app_name,
                 domain=self._domain,
                 cfg=self._app_cfg.cfg,
                 impl=app_impl,
                 logger=app_logger if self._log_setup else None,
-                id_factory=cfg["service"]["defaults"]["props"]["id_factory"],
-                feature_flags=cfg.get("feature_flags", {}),
+                id_factory=_service_defaults["id_factory"],
+                feature_flags=cfg_dict.get("feature_flags", {}),
             )
             ssl_context = create_ssl_context(
-                host=cfg["app"]["host"], ssl_cert_file=cfg["app"].get("ssl_cert_file")
+                host=_app_cfg_section["host"],
+                ssl_cert_file=_app_cfg_section.get("ssl_cert_file"),
             )
 
             # Initialise services and where necessary repositories
@@ -162,27 +200,49 @@ class AppComposer(BaseAppComposer):
             ) = self._get_services(app_impl)
 
             # Set up roles
+            role_permissions = cast(
+                dict[
+                    Hashable,
+                    set[
+                        fastapp.Permission
+                        | tuple[type[fastapp.Command], fastapp.PermissionType]
+                    ],
+                ],
+                app_impl.role_permissions_map,
+            )
             rbac_service.register_roles(
-                app_impl.role_permissions_map, app_impl.role_map[enum.Role.ROOT]
+                role_permissions,
+                app_impl.role_map[enum.Role.ROOT],
             )
 
             # Create and set user generator, which can create new users under different scenarios
             # such as from claims, from invitation, and when matching root secret
-            app.user_manager = app_impl.user_manager_class(
+            app_cfg_dict = cast(dict[str, Any], app.cfg)
+            _auth_props = cast(dict[str, Any], app_cfg_dict["service"]["auth"]["props"])
+            user_manager_class = cast(Any, self._user_manager_class)
+            app.user_manager = user_manager_class(
                 organization_service,
                 rbac_service,
-                root_cfg=app.cfg["service"]["auth"]["props"]["root"],
-                auto_created_user_cfg=app.cfg["service"]["auth"]["props"].get(
-                    "auto_created_user"
-                ),
+                root_cfg=_auth_props["root"],
+                auto_created_user_cfg=_auth_props.get("auto_created_user"),
             )
 
             # Get current user and new user dependencies for injecting authentication in endpoints
             (
-                app_impl.registered_user_dependency_or_none,
-                app_impl.new_user_dependency_or_none,
-                app_impl.idp_user_dependency_or_none,
-            ) = auth_service.create_user_dependencies()
+                registered_user_dependency,
+                new_user_dependency,
+                idp_user_dependency,
+            ) = cast(
+                tuple[
+                    Callable[..., model.User],
+                    Callable[..., model.User],
+                    Callable[..., Any],
+                ],
+                auth_service.create_user_dependencies(),
+            )
+            app_impl.registered_user_dependency_or_none = registered_user_dependency
+            app_impl.new_user_dependency_or_none = new_user_dependency
+            app_impl.idp_user_dependency_or_none = idp_user_dependency
 
             # Register policies with app
             if self._log_setup and setup_logger:
@@ -271,16 +331,18 @@ class AppComposer(BaseAppComposer):
         service_type: Enum,
     ) -> None:
         """Initialise a single service and its repository from configuration."""
-        service_cfg = cfg["service"][service_type.value]
+        cfg_dict = cast(dict[str, Any], cfg)
+        service_cfg = cast(dict[str, Any], cfg_dict["service"][service_type.value])
         service_class = service_cfg["class"]
         service_props = service_cfg["props"]
-        repository_cfg = cfg["repository"].get(service_type.value)
+        repository_section = cast(dict[str, Any], cfg_dict["repository"])
+        repository_cfg = repository_section.get(service_type.value)
 
         # Create repository if necessary
         curr_repository = None
         if repository_cfg:
             repository_class: type[BaseRepository] = repository_cfg["class"]
-            repository_props = repository_cfg["props"]
+            repository_props = repository_cfg.get("props", {})
             if isinstance(repository_cfg["type"], str):
                 repository_type = enum.RepositoryType(repository_cfg["type"])
             else:
@@ -366,34 +428,45 @@ class AppComposer(BaseAppComposer):
         )
 
     def _parse_config(self) -> None:
-        """
-        Parse configuration values to test presence of expected values and convert any
-        values as necessary, such as feature flags.
+        """Validate configuration values and convert supported primitive types.
+
+        This includes feature flags and configured authentication properties.
+
+        Raises:
+            InitializationServiceError: If a configured value has an unsupported or
+                invalid type.
         """
         # TODO: expand with a framework for parsing and validating config values, potentially using Pydantic classes to define expected config structure and types, and to perform parsing and validation.
-        cfg_content_types = [
+        cfg_content_types: list[tuple[Any, ...]] = [
             ("feature_flags", None, bool),  # All feature flags
             ("service", "auth", "props", "auto_create_new_users", bool),
             ("service", "auth", "props", "root_token_time_to_live", int),
         ]
-        cfg = self._app_cfg.cfg
+        cfg = cast(dict[str, Any], self._app_cfg.cfg)
         # Convert boolean values
         for cfg_path in cfg_content_types:
             # Traverse config path to get value
-            cfg_section = cfg
+            cfg_section: dict[str, Any] = cfg
             path_exists = True
             for ancestor_key in cfg_path[:-2]:
                 if ancestor_key not in cfg_section:
                     path_exists = False
                     break
-                cfg_section = cfg_section[ancestor_key]
+                next_section = cfg_section[ancestor_key]
+                if not isinstance(next_section, dict):
+                    path_exists = False
+                    break
+                cfg_section = cast(dict[str, Any], next_section)
             if not path_exists:
                 # Config path does not exist
+                continue
+            if cfg_path[-2] and cfg_path[-2] not in cfg_section:
+                # Leaf key does not exist
                 continue
             # Check if value is of the correct type, and if not attempt to convert
             if cfg_path[-2] is None:
                 # Special case: all leaf keys should have this content type
-                leaf_dict = cfg_section
+                leaf_dict: dict[str, Any] = dict(cfg_section)
             else:
                 # Single leaf key with content type
                 leaf_dict = {cfg_path[-2]: cfg_section[cfg_path[-2]]}
@@ -409,8 +482,20 @@ class AppComposer(BaseAppComposer):
                 if converted_value != leaf_value:
                     cfg_section[leaf_key] = converted_value
 
+    @staticmethod
     def _verify_type(value: Any, content_type: type) -> Any:
-        """Verify and optionally convert a value to the expected type."""
+        """Verify and optionally convert a value to the expected type.
+
+        Args:
+            value: Configuration value to verify or convert.
+            content_type: Required primitive type.
+
+        Returns:
+            Tuple indicating validation success and the converted value.
+
+        Raises:
+            InitializationServiceError: If ``content_type`` is unsupported.
+        """
         if isinstance(value, content_type):
             return True, value
         if value is None:
@@ -420,15 +505,26 @@ class AppComposer(BaseAppComposer):
             is_bool, converted_value = AppComposer.convert_to_bool(value)
             return is_bool, converted_value
         elif content_type is int:
-            converted_value = int(value)
-            return True, converted_value
+            int_value = int(value)
+            return True, int_value
         raise exc.InitializationServiceError(
             "85715da3", f"Unsupported content type {content_type} for config parsing"
         )
 
     @staticmethod
     def _get_enum_from_list(enums: Iterable[Enum], name: str) -> Enum:
-        """Return the enum member with the given name from an iterable of enums."""
+        """Return an enum member with the requested name.
+
+        Args:
+            enums: Enum members to search.
+            name: Member name to match.
+
+        Returns:
+            Matching enum member.
+
+        Raises:
+            ValueError: If no member has the requested name.
+        """
         for enum_item in enums:
             if enum_item.name == name:
                 return enum_item
@@ -436,9 +532,9 @@ class AppComposer(BaseAppComposer):
 
     @staticmethod
     def convert_to_bool(value: Any) -> tuple[bool, bool]:
-        """
-        Convert a value to boolean if possible. Returns a tuple of (success,
-        converted_value).
+        """Convert a value to boolean when possible.
+
+        Returns a tuple of ``(success, converted_value)``.
         Accepts boolean values and strings "true", "1", "false", "0" (case
         insensitive). If conversion is not possible, returns (False, False).
         """

@@ -1,3 +1,5 @@
+"""SQLAlchemy transaction and unit-of-work implementation."""
+
 from types import TracebackType
 from typing import Self
 
@@ -23,21 +25,26 @@ class SAUnitOfWork(BaseUnitOfWork):
     def __init__(
         self, session: Session, context_stack: list[BaseUnitOfWork] | None = None
     ):
+        """Initialize a SAUnitOfWork instance."""
         super().__init__()
         self._session = session
         self._context_stack = context_stack
 
     @property
     def session(self) -> Session:
+        """Session the requested value."""
         return self._session
 
     def commit(self) -> None:
+        """Commit the requested value."""
         self._session.commit()
 
     def rollback(self) -> None:
+        """Rollback the requested value."""
         self._session.rollback()
 
     def flush(self) -> None:
+        """Flush the requested value."""
         self._session.flush()
 
     @staticmethod
@@ -50,6 +57,7 @@ class SAUnitOfWork(BaseUnitOfWork):
         Handle exceptions raised during a unit of work, converting them into a domain
         exception when they are due to normal operation such as a unique constraint
         failing. Any other exceptions are re-raised with traceback.
+
         """
         if issubclass(exception_class, exc.DomainException):
             raise exception_value
@@ -68,7 +76,11 @@ class SAUnitOfWork(BaseUnitOfWork):
             # Suppress context for the same reason.
             exc_upper = str(exception_value).upper()
             orig_msg = str(getattr(exception_value, "orig", exception_value))
-            if "UNIQUE" in exc_upper:
+            if (
+                "UNIQUE" in exc_upper
+                or "DUPLICATE KEY" in exc_upper
+                or "PRIMARY KEY" in exc_upper
+            ):
                 raise exc.UniqueConstraintViolationError(
                     "e2cabb6c",
                     f"Unique constraint violation: {orig_msg}",
@@ -78,7 +90,7 @@ class SAUnitOfWork(BaseUnitOfWork):
                     "f8368798",
                     f"Not null constraint violation: {orig_msg}",
                 ) from None
-            elif "FOREIGN KEY" in exc_upper:
+            elif "FOREIGN KEY" in exc_upper or "REFERENCE CONSTRAINT" in exc_upper:
                 raise exc.LinkConstraintViolationError(
                     "eba3198a",
                     f"Foreign key constraint violation: {orig_msg}",
@@ -93,6 +105,7 @@ class SAUnitOfWork(BaseUnitOfWork):
         raise NotImplementedError().with_traceback(traceback)
 
     def __enter__(self) -> Self:
+        """Enter the managed context."""
         if self._context_stack is not None:
             self._context_stack.append(self)
         self._is_managing_context = True
@@ -104,6 +117,7 @@ class SAUnitOfWork(BaseUnitOfWork):
         exception_value: Exception | None,
         traceback: TracebackType | None,
     ) -> None:
+        """Exit the managed context."""
         self._is_managing_context = False
         # Handle nested contexts
         if self._context_stack is not None:

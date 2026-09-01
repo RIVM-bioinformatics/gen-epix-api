@@ -1,3 +1,5 @@
+"""Orchestrate validation, upsert, and result reporting for commondb batch uploads."""
+
 from collections import defaultdict
 from typing import Generator, cast
 from uuid import UUID
@@ -25,9 +27,7 @@ from gen_epix.filter import (
 
 
 class BatchUploader:
-    """
-    A class encapsulating batch upload functionality, intended as a singleton.
-    """
+    """Coordinate batch-upload validation, persistence, rollback, and result status."""
 
     def __init__(
         self,
@@ -35,6 +35,14 @@ class BatchUploader:
         stored_model_field_props: dict[type[Model], dict[str, fastapp.ModelFieldProps]],
         service: BaseService,
     ):
+        """Initialize upload model metadata and service dependencies.
+
+        Args:
+            upload_batch_command_class: Command type defining upload batch and result
+                model classes.
+            stored_model_field_props: Persisted field metadata by domain model class.
+            service: Service whose repository validates and persists uploaded models.
+        """
         self.upload_batch_command_class = upload_batch_command_class
         self.service = service
         self.stored_model_field_props = stored_model_field_props
@@ -110,8 +118,17 @@ class BatchUploader:
         self,
         cmd: command.UploadBatchCommandMixin,
     ) -> BaseBatchUploadResult:
-        """
-        See command.UploadSamplesCommand for details.
+        """Verify and upload a batch through the configured upload workflow.
+
+        Args:
+            cmd: Upload command carrying the batch and requesting user context.
+
+        Returns:
+            Batch result containing verification and upload outcomes.
+
+        Raises:
+            InvalidArgumentsError: If the command has no identifier.
+            Exception: Propagates authorization, validation, or persistence failures.
         """
         # Verify arguments
         assert isinstance(cmd, command.Command)
@@ -139,6 +156,16 @@ class BatchUploader:
                 code="a3f7e9d2",
                 message="Verification ended",
             )
+            if not success:
+                # Record the batch-level failure regardless of verify_only,
+                # so that a dry run reports the same outcome as a real run.
+                batch_result.add_error(
+                    code="02095f22",
+                    message="Verification found errors, upload will not proceed",
+                )
+            for parent_result in batch_result.get_parent_results():
+                parent_result.propagate_child_failures()
+
             if cmd.verify_only:
                 # Stop here if only verification was requested; mark all
                 # still-PENDING individual results as SKIPPED (nothing was stored)
@@ -158,10 +185,6 @@ class BatchUploader:
 
             if not success:
                 # Do not proceed with upsert due to errors
-                batch_result.add_error(
-                    code="02095f22",
-                    message="Verification found errors, upload will not proceed",
-                )
                 return batch_result
 
             # Upsert the batch data
@@ -174,6 +197,8 @@ class BatchUploader:
                 code="f8b12027",
                 message="Upsert ended",
             )
+            for parent_result in batch_result.get_parent_results():
+                parent_result.propagate_child_failures()
             if not success:
                 # Rollback due to errors, but do not raise an exception since those will be reported in batch_result
                 batch_result.add_error(
@@ -196,8 +221,8 @@ class BatchUploader:
         return batch_result
 
     def verify_user_rights(self, cmd: command.UploadBatchCommandMixin) -> None:
-        """
-        Verify that the user has rights to perform the upload.
+        """Verify that the user has rights to perform the upload.
+
         This base implementation performs no verification. Override as needed.
         """
         pass
@@ -290,9 +315,7 @@ class BatchUploader:
         batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
-        """
-        Verify parents, children, identifiers and reference data.
-        """
+        """Verify parents, children, identifiers and reference data."""
         success = True
         # Verify Identifiers first to fill in any missing parent IDs
         success &= self.verify_parents_identifiers(cmd, batch_result, uow)
@@ -312,9 +335,7 @@ class BatchUploader:
         batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
-        """
-        Create or update parents, children, identifiers and reference data.
-        """
+        """Create or update parents, children, identifiers and reference data."""
         success = True
         # Create refdata before parents and children to ensure all references exist
         success &= self.create_refdata(cmd, batch_result, uow)
@@ -335,7 +356,7 @@ class BatchUploader:
         batch_result: BaseBatchUploadResult,
         uow: fastapp.BaseUnitOfWork,
     ) -> bool:
-        """Retrieve and verify parent Identifiers"""
+        """Retrieve and verify parent Identifiers."""
         assert isinstance(cmd, command.Command)
         success = True
 
@@ -374,8 +395,9 @@ class BatchUploader:
         batch_result: BaseBatchUploadResult,
         uow: fastapp.BaseUnitOfWork,
     ) -> bool:
-        """
-        Verify Identifiers in any of the child objects. This includes
+        """Verify identifiers in child objects.
+
+        This includes
         verifying that any provided identifier IDs exist and are accessible
         by the user, and filling in any missing IDs based on provided codes.
         """
@@ -429,7 +451,7 @@ class BatchUploader:
         batch_result: BaseBatchUploadResult,
         uow: fastapp.BaseUnitOfWork,
     ) -> bool:
-        """Check parent model existence when ID is given"""
+        """Check parent model existence when ID is given."""
         assert isinstance(cmd, command.Command)
         user_id = cmd.user.id if cmd.user else None
         success = True
@@ -563,7 +585,7 @@ class BatchUploader:
         batch_result: BaseBatchUploadResult,
         uow: fastapp.BaseUnitOfWork,
     ) -> bool:
-        """Check child model existence and consistency"""
+        """Check child model existence and consistency."""
         assert isinstance(cmd, command.Command)
         user_id = cmd.user.id if cmd.user else None
         success = True
@@ -801,9 +823,7 @@ class BatchUploader:
         batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
-        """
-        Create any parents.
-        """
+        """Create any parents."""
         assert isinstance(cmd, command.Command)
         success = True
 
@@ -869,9 +889,7 @@ class BatchUploader:
         batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
-        """
-        Update any parents.
-        """
+        """Update any parents."""
         assert isinstance(cmd, command.Command)
         success = True
 
@@ -924,9 +942,7 @@ class BatchUploader:
         batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
-        """
-        Create any child models. Assumes that the parent models already exist.
-        """
+        """Create any child models. Assumes that the parent models already exist."""
         assert isinstance(cmd, command.Command)
         user_id = cmd.user.id if cmd.user else None
         success = True
@@ -1008,9 +1024,7 @@ class BatchUploader:
         batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
-        """
-        Update any child models. Assumes that the parent models already exist.
-        """
+        """Update any child models. Assumes that the parent models already exist."""
         assert isinstance(cmd, command.Command)
         user_id = cmd.user.id if cmd.user else None
         success = True
@@ -1086,8 +1100,9 @@ class BatchUploader:
             ]
         ],
     ) -> bool:
-        """
-        Verify that any provided Identifiers exist and are consistent with provided
+        """Verify provided identifiers and resolve missing object IDs.
+
+        The verification confirms that provided Identifiers exist and are consistent with provided
         object IDs, and fill in any missing object IDs based on provided Identifiers.
         """
         success = True
@@ -1181,8 +1196,9 @@ class BatchUploader:
         batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
-        """
-        Create any new Identifiers for parent objects. Assumes that all parent objects
+        """Create new identifiers for parent objects.
+
+        Assumes that all parent objects
         already exist and have IDs, and that any provided Identifiers have already
         been verified.
         """
@@ -1218,8 +1234,9 @@ class BatchUploader:
         batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
-        """
-        Create any new Identifiers for child objects. Assumes that all child objects
+        """Create new identifiers for child objects.
+
+        Assumes that all child objects
         already exist and have IDs, and that any provided Identifiers have already
         been verified.
         """
@@ -1286,8 +1303,9 @@ class BatchUploader:
             ]
         ],
     ) -> bool:
-        """
-        Create new Identifiers for objects that already exist and have IDs. Assumes
+        """Create identifiers for existing objects with IDs.
+
+        Assumes
         that any provided Identifiers have already been verified.
         """
         success = True
@@ -1348,8 +1366,9 @@ class BatchUploader:
         batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
-        """
-        Create any new reference data entries as needed. Performs no action and
+        """Create reference data entries as needed.
+
+        The base implementation performs no action and
         returns True.
 
         Override as needed.
@@ -1370,7 +1389,7 @@ class BatchUploader:
         is_same_service: bool = True,
         is_frozen: bool = False,
     ) -> bool:
-        """Set and verify entities provided by ID and/or code, filling in IDs and verifying consistency"""
+        """Set and verify entities provided by ID and/or code, filling in IDs and verifying consistency."""
         success = True
         if not parent_result_pairs:
             return success
@@ -1545,11 +1564,12 @@ class BatchUploader:
         from_child_link_id_field_name: str,
         to_child_class: type[Model],
     ) -> dict[UUID, UUID]:
-        """
-        Retrieve a dict[to_child_id, parent_id] containing all existing (to_child_id,
+        """Retrieve parent IDs for uploaded intra-parent child links.
+
+        Returns a dict[to_child_id, parent_id] containing all existing (to_child_id,
         parent_id) pairs for children referred to by the from_child_link_id_field_name
         field on from_child_class instances in the upload, where parent_id is the ID of
-        the parent of the child with ID to_child_id
+        the parent of the child with ID to_child_id.
         """
         # Get all to_child_ids referred to by from_child_link_id_field_name fields on from_child_class instances in the upload
         to_child_ids: list[UUID] = []
@@ -1597,6 +1617,17 @@ class BatchUploader:
         model_class: type[Model],
         obj_ids: list[UUID | None],
     ) -> list[bool]:
+        """Determine which non-null object IDs exist while preserving input order.
+
+        Args:
+            uow: Active unit of work used for existence checks.
+            user_id: Acting user ID, if known.
+            model_class: Persisted model type to query.
+            obj_ids: Candidate object IDs, including null placeholders.
+
+        Returns:
+            Existence state for each supplied ID; null IDs are False.
+        """
         # Initialise output
         objs_exist = [False] * len(obj_ids)
         # Determine which indices are actually IDs
@@ -1626,9 +1657,7 @@ class BatchUploader:
         is_same_service: bool = True,
         user: model.User | None = None,
     ) -> bool:
-        """
-        Create any new objects and update the corresponding UploadResults.
-        """
+        """Create any new objects and update the corresponding UploadResults."""
         success = True
         if not to_create_obj_result_pairs:
             return success
@@ -1693,8 +1722,8 @@ class BatchUploader:
         model_class: type[Model],
         to_update_obj_result_pairs: list[tuple[Model, UploadResult]],
     ) -> bool:
-        """
-        Update any existing objects and update the corresponding UploadResults.
+        """Update existing objects and their corresponding UploadResults.
+
         Per-object errors (missing ID, immutable field) are logged to the individual
         UploadResult and that object is skipped; they do not abort the remaining batch.
         """
@@ -1811,8 +1840,9 @@ class BatchUploader:
     ) -> list[
         tuple[model.ParentForUpload, model.ParentUploadResult, Model, UploadResult]
     ]:
-        """
-        Get a list of tuples of (parent_for_upload, parent_result, child_for_upload,
+        """Get parent, result, child, and child-result tuples for all uploaded children.
+
+        The result contains tuples of (parent_for_upload, parent_result, child_for_upload,
         child_result) for all children across all parents based on the given children
         field name.
         """
@@ -1833,6 +1863,17 @@ class BatchUploader:
         return result
 
     def _get_obj_id_field_name(self, obj: Model) -> str:
+        """Resolve the configured identifier field name for an upload object.
+
+        Args:
+            obj: Parent, child, or upload-wrapper object being processed.
+
+        Returns:
+            Field name containing the object's identifier.
+
+        Raises:
+            KeyError: If the object's class has no configured identifier field.
+        """
         obj_class = obj.__class__
         if obj_class is self.parent_for_upload_class:
             return self.parent_id_field_name
@@ -1848,8 +1889,9 @@ class BatchUploader:
 
     @staticmethod
     def update_sub_field_dict(content: dict, updates: dict | None) -> bool:
-        """
-        Update a dictionary in place with new values and return whether any updates were
+        """Update a dictionary in place and return whether any values changed.
+
+        The function applies new values and returns whether any updates were
         made.
 
         An update is made if:
@@ -1886,4 +1928,12 @@ class BatchUploader:
 
     @staticmethod
     def is_null(obj_id: UUID | None) -> bool:
+        """Determine whether an ID is absent or the upload null-ID sentinel.
+
+        Args:
+            obj_id: Candidate object ID.
+
+        Returns:
+            True when the ID is None or equals the configured null-ID sentinel.
+        """
         return obj_id is None or obj_id == NULL_ID

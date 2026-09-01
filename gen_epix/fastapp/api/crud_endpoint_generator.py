@@ -1,3 +1,11 @@
+"""Generate FastAPI routes that dispatch domain CRUD commands.
+
+The module translates ``CrudEndpointSet`` configuration into GET, POST, PUT,
+and DELETE routes. Generated handlers validate input, construct CRUD commands,
+dispatch them through ``App.handle``, convert domain models to API models, and
+delegate failures to the configured exception handler.
+"""
+
 import itertools
 import json
 from collections.abc import Callable, Hashable
@@ -45,6 +53,7 @@ from gen_epix.filter import (
 def _default_validate_query_filter(
     query_filter: Filter,
 ) -> bool:
+    """Allow query filters with at most one level of composite filters."""
     if isinstance(query_filter, CompositeFilter):
         for subfilter in query_filter.filters:
             if isinstance(subfilter, CompositeFilter):
@@ -53,6 +62,18 @@ def _default_validate_query_filter(
 
 
 class CrudEndpointGenerator:
+    """Generate command-backed CRUD routes for a configured domain resource.
+
+    Each generator method registers a FastAPI endpoint from a ``CrudEndpointSet``.
+    The resulting handler builds the appropriate CRUD command, delegates its
+    execution to the application's command lifecycle, and translates domain
+    models to configured API response models. It supports single and batch
+    operations, pagination, filter queries, and optional identifier-only writes.
+
+    Route construction is transport-only: authorization and domain behavior are
+    enforced by the command policies and handlers invoked through ``App.handle``.
+    """
+
     DEFAULT_BATCH_ROUTE_SUFFIX = "/batch"
     DEFAULT_QUERY_ROUTE_SUFFIX = "/query"
     DEFAULT_IDS_ROUTE_SUFFIX = "/ids"
@@ -88,6 +109,16 @@ class CrudEndpointGenerator:
     def convert_ids_string_to_list(
         id_class: type, ids_str: str
     ) -> tuple[list | None, list[str]]:
+        """Parse comma-separated or JSON-encoded identifiers for a route parameter.
+
+        Args:
+            id_class: Target type used to convert each identifier.
+            ids_str: Comma-separated values or a JSON array.
+
+        Returns:
+            Converted identifiers, or ``None`` for an invalid overall representation,
+            and identifiers that could not be converted.
+        """
         invalid_ids = []
         try:
             ids = [id_class(x) for x in ids_str.split(",")]
@@ -111,7 +142,10 @@ class CrudEndpointGenerator:
         route: CrudEndpointSet,
         handle_exception_fn: Callable,
     ) -> None:
+        """Generate get all."""
+
         async def endpoint_function(user: route.user_dependency, limit: int | None = None, offset: int | None = None) -> Any:  # type: ignore
+            """Endpoint function."""
             obj_ids = None
             try:
                 cmd = route.crud_command_class(
@@ -159,10 +193,12 @@ class CrudEndpointGenerator:
         handle_exception_fn: Callable,
         batch_route_suffix: str | None = None,
     ) -> None:
+        """Generate get some."""
         if not batch_route_suffix:
             batch_route_suffix = CrudEndpointGenerator.DEFAULT_BATCH_ROUTE_SUFFIX
 
         async def endpoint_function(user: route.user_dependency, ids: str) -> Any:  # type: ignore
+            """Endpoint function."""
             obj_ids, invalid_obj_ids = CrudEndpointGenerator.convert_ids_string_to_list(
                 route.id_class, ids
             )
@@ -221,6 +257,7 @@ class CrudEndpointGenerator:
             Callable[[Filter], bool] | None
         ) = _default_validate_query_filter,
     ) -> None:
+        """Generate post query."""
         if not query_route_suffix:
             query_route_suffix = CrudEndpointGenerator.DEFAULT_QUERY_ROUTE_SUFFIX
         if not ids_route_suffix:
@@ -255,6 +292,7 @@ class CrudEndpointGenerator:
             limit: int | None = None,
             offset: int | None = None,
         ) -> Any:
+            """Endpoint function."""
             if validate_query_filter and not validate_query_filter(filter):
                 handle_exception_fn(
                     "cee23041" + route.endpoint_basename,
@@ -309,10 +347,13 @@ class CrudEndpointGenerator:
         route: CrudEndpointSet,
         handle_exception_fn: Callable,
     ) -> None:
+        """Generate get one."""
+
         async def endpoint_function(
             user: route.user_dependency,  # type: ignore
             object_id: route.id_class,  # type: ignore
         ) -> Any:
+            """Endpoint function."""
             try:
                 cmd = route.crud_command_class(
                     user=user,
@@ -350,9 +391,12 @@ class CrudEndpointGenerator:
         route: CrudEndpointSet,
         handle_exception_fn: Callable,
     ) -> None:
+        """Generate post one."""
+
         async def endpoint_function(
             user: route.user_dependency, create_obj: route.create_api_model_class  # type: ignore
         ) -> Any:
+            """Endpoint function."""
             try:
                 cmd = route.crud_command_class(
                     user=user,
@@ -403,12 +447,14 @@ class CrudEndpointGenerator:
         handle_exception_fn: Callable,
         batch_route_suffix: str | None = None,
     ) -> None:
+        """Generate post some."""
         if not batch_route_suffix:
             batch_route_suffix = CrudEndpointGenerator.DEFAULT_BATCH_ROUTE_SUFFIX
 
         async def endpoint_function(
             user: route.user_dependency, create_objs: list[route.create_api_model_class]  # type: ignore
         ) -> Any:
+            """Endpoint function."""
             try:
                 cmd = route.crud_command_class(
                     user=user,
@@ -465,11 +511,28 @@ class CrudEndpointGenerator:
         route: CrudEndpointSet,
         handle_exception_fn: Callable,
     ) -> None:
+        """Register the single-object update endpoint for a CRUD resource.
+
+        The generated transport handler converts the API model when needed and
+        dispatches the update command through ``App.handle``.
+
+        Args:
+            fast_api: FastAPI application or router receiving the endpoint.
+            route: Resource-specific CRUD endpoint configuration.
+            handle_exception_fn: Exception adapter used by generated handlers.
+        """
+
         async def endpoint_function(
             user: route.user_dependency,
             object_id: route.id_class,  # type: ignore
             update_obj: route.create_api_model_class,  # type: ignore
         ) -> Any:
+            """Dispatch an update for one object addressed by its route identifier.
+
+            Raises:
+                BadRequest400HTTPException: If the URL identifier and request body's
+                    identifier differ.
+            """
             if update_obj.id != object_id:
                 raise api_exc.BadRequest400HTTPException()
             try:
@@ -516,6 +579,7 @@ class CrudEndpointGenerator:
         handle_exception_fn: Callable,
         batch_route_suffix: str | None = None,
     ) -> None:
+        """Generate put some."""
         if not batch_route_suffix:
             batch_route_suffix = CrudEndpointGenerator.DEFAULT_BATCH_ROUTE_SUFFIX
 
@@ -523,6 +587,7 @@ class CrudEndpointGenerator:
             user: route.user_dependency,  # type: ignore
             update_objs: list[route.create_api_model_class],  # type: ignore
         ) -> Any:
+            """Endpoint function."""
             try:
                 cmd = route.crud_command_class(
                     user=user,
@@ -569,9 +634,12 @@ class CrudEndpointGenerator:
         route: CrudEndpointSet,
         handle_exception_fn: Callable,
     ) -> None:
+        """Generate delete one."""
+
         async def endpoint_function(user: route.user_dependency, object_id: Any) -> Any:  # type: ignore
             # TODO: distinguish between soft and hard delete through hard_delete:
             #  bool = False parameter
+            """Endpoint function."""
             try:
                 cmd = route.crud_command_class(
                     user=user,
@@ -605,7 +673,10 @@ class CrudEndpointGenerator:
         route: CrudEndpointSet,
         handle_exception_fn: Callable,
     ) -> None:
+        """Generate delete all."""
+
         async def endpoint_function(user: route.user_dependency, limit: int | None = None, offset: int | None = None) -> Any:  # type: ignore
+            """Endpoint function."""
             obj_ids = None
             cmd = route.crud_command_class(
                 user=user,
@@ -644,6 +715,7 @@ class CrudEndpointGenerator:
         handle_exception_fn: Callable,
         batch_route_suffix: str | None = None,
     ) -> None:
+        """Generate delete some."""
         if not batch_route_suffix:
             batch_route_suffix = CrudEndpointGenerator.DEFAULT_BATCH_ROUTE_SUFFIX
 
@@ -651,6 +723,7 @@ class CrudEndpointGenerator:
             user: route.user_dependency,  # type: ignore
             ids: str,
         ) -> Any:
+            """Endpoint function."""
             obj_ids, invalid_obj_ids = CrudEndpointGenerator.convert_ids_string_to_list(
                 route.id_class, ids
             )
@@ -705,6 +778,7 @@ class CrudEndpointGenerator:
         route: CrudEndpointSet,
         operation_id: str | None = None,
     ) -> None:
+        """Add route."""
         if not operation_id:
             tokens = endpoint.split("/")
             if tokens[-1] == "{object_id}" or method.value.upper() == "POST":
@@ -736,6 +810,7 @@ class CrudEndpointGenerator:
         ) = _default_validate_query_filter,
     ) -> None:
         # Map endpoint types to functions
+        """Generate endpoints."""
         function_map = {
             CrudEndpointType.GET_ALL: CrudEndpointGenerator.generate_get_all,
             CrudEndpointType.GET_SOME: CrudEndpointGenerator.generate_get_some,
@@ -800,6 +875,29 @@ class CrudEndpointGenerator:
             Callable[[Filter], bool] | None
         ) = _default_validate_query_filter,
     ) -> list[CrudEndpointSet]:
+        """Create CRUD endpoint configurations for persistable domain entities.
+
+        Selects entities by service type, derives permitted operations, and applies
+        caller-supplied permission, operation, and endpoint exclusions.
+
+        Args:
+            app: Application whose domain supplies entity metadata and permissions.
+            service_type: Optional service type or set of service types to include.
+            user_dependency: Optional FastAPI dependency injected into each endpoint.
+            excluded_permissions: Permissions to exclude globally or by model.
+            excluded_crud_operations: Operations to exclude by model.
+            excluded_crud_endpoint_types: Endpoint types to exclude by model.
+            default_description: Description used when a CRUD command lacks one.
+            endpoint_string_casing: Casing used for endpoint basenames.
+            query_filter_validator: Optional validator for query route filters.
+
+        Returns:
+            Endpoint configurations for selected persistable entities.
+
+        Raises:
+            DomainException: If ``service_type`` is neither a service identifier nor a
+                set of service identifiers.
+        """
         # Parse exclusions
         if excluded_permissions is None:
             excluded_permissions = app.domain.get_model_excluded_permissions()  # type: ignore[assignment] # Unclear why raised
@@ -875,6 +973,31 @@ class CrudEndpointGenerator:
             Callable[[Filter], bool] | None
         ) = _default_validate_query_filter,
     ) -> CrudEndpointSet:
+        """Create the CRUD endpoint configuration for one persistable entity.
+
+        Determines endpoint types from the entity's CRUD permissions after applying
+        exclusions, and derives the API basename from the requested casing.
+
+        Args:
+            entity: Persistable entity whose routes are configured.
+            app: Application supplying domain permissions.
+            user_dependency: Optional FastAPI dependency injected into endpoints.
+            add_query_route: Whether to include query endpoint types.
+            excluded_permissions: Permissions excluded from this entity.
+            excluded_crud_operations: CRUD operations excluded from this entity.
+            excluded_crud_endpoint_types: Endpoint types excluded from this entity.
+            default_description: Description used when the command lacks one.
+            endpoint_string_casing: Casing used for the endpoint basename.
+            endpoint_string_is_plural: Whether the endpoint basename is pluralized.
+            query_filter_validator: Optional validator for query route filters.
+
+        Returns:
+            Fully configured CRUD endpoint set for ``entity``.
+
+        Raises:
+            DomainException: If the entity lacks a CRUD command class or requested
+                endpoint name.
+        """
         # Initialize some
         model_class = entity.model_class
         assert issubclass(model_class, model.Model)
@@ -931,6 +1054,17 @@ class CrudEndpointGenerator:
     def get_crud_operations_for_permissions(
         permissions: set[Permission],
     ) -> set[CrudOperation]:
+        """Map CRUD permissions to the operations needed by generated endpoints.
+
+        Args:
+            permissions: Model permissions to translate into CRUD operations.
+
+        Returns:
+            CRUD operations enabled by the supplied permissions.
+
+        Raises:
+            NotImplementedError: If a permission uses an unsupported permission type.
+        """
         crud_operations = set()
         for permission in permissions:
             permission_type = permission.permission_type
@@ -970,6 +1104,19 @@ class CrudEndpointGenerator:
         string_casing: StringCasing = StringCasing.SNAKE_CASE,
         is_plural: bool = True,
     ) -> str:
+        """Return the endpoint basename derived from entity naming metadata.
+
+        Args:
+            entity: Entity providing the configured name.
+            string_casing: Casing used for the endpoint name.
+            is_plural: Whether to request the plural entity name.
+
+        Returns:
+            Endpoint basename for the entity.
+
+        Raises:
+            DomainException: If the entity does not define the requested name.
+        """
         name = entity.get_name_by_casing(string_casing, is_plural=is_plural)
         if name is None:
             raise exc.DomainException(
@@ -982,6 +1129,7 @@ class CrudEndpointGenerator:
     def get_crud_endpoint_types_for_operations(
         crud_operations: set[CrudOperation], add_query_route: bool = True
     ) -> set[CrudEndpointType]:
+        """Return crud endpoint types for operations."""
         crud_endpoint_types = set()
         for crud_operation in crud_operations:
             crud_endpoint_types.add(

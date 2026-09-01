@@ -63,7 +63,7 @@ def case_service_retrieve_similar_cases(
         )
 
         # @ABAC: Get all cases
-        all_cases = self._retrieve_cases_with_content_right(
+        all_cases, is_max_results_exceeded = self._retrieve_cases_with_content_right(
             uow,
             user.id,
             case_abac,
@@ -109,23 +109,35 @@ def case_service_retrieve_similar_cases(
             not in case_ids_set  # Exclude query cases if they appear as similar
         ]
 
+        if not similar_case_ids:
+            return command.RetrieveSimilarCasesReturnValue(cases=[])
+
         # Retrieve similar cases with ABAC applied to case date
-        similar_cases = self._retrieve_cases_with_content_right(
-            uow,
-            user.id,
-            case_abac,
-            enum.CaseRight.READ_CASE,
-            case_type_id,
-            case_ids=similar_case_ids,
-            filter_content=True,
-            calculate_case_date=True,
-            apply_max_n_cases=False,
+        similar_cases, is_max_results_exceeded = (
+            self._retrieve_cases_with_content_right(
+                uow,
+                user.id,
+                case_abac,
+                enum.CaseRight.READ_CASE,
+                case_type_id,
+                case_ids=similar_case_ids,
+                filter_content=True,
+                calculate_case_date=True,
+                apply_max_n_cases=False,
+            )
         )
+
+        # early return if there are now no similar cases after ABAC filtering
+        if len(similar_cases) == 0:
+            return command.RetrieveSimilarCasesReturnValue(cases=[])
 
         # Construct return value
         retval = command.RetrieveSimilarCasesReturnValue(
             cases=[
-                model.CaseIdAndDate(id=x.id, case_date=x.case_date)
+                model.SimilarCase(
+                    id=x.id,
+                    case_date=x.case_date,
+                )
                 for x in similar_cases
                 if x.id is not None
             ]

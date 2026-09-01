@@ -1,3 +1,17 @@
+"""Expose the public API for the transformation framework.
+
+`DictAdapter`, `ObjectAdapter`, `PolarsAdapter`, and `PydanticAdapter` normalize
+row-like objects. `Transformer` defines the single-object contract, while
+`Pipeline`, `StreamingPipeline`, `StreamProcessor`, `RetryTransformer`, and
+`FallbackTransformer` orchestrate ordered or concurrent processing.
+
+`TransformResult` and `TransformResultType` represent outcomes. `Registry`,
+`register_factory`, and `register_transformer` provide named transformer
+construction. Built-in `ConditionalTransformer`, `FieldTransformer`,
+`IsoTimeTransformer`, `MultiFieldTransformer`, `ObjectTransformer`,
+`TupleMapTransformer`, and `ValidationTransformer` implement common mappings.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix.transform.adapter import DictAdapter as DictAdapter
 from gen_epix.transform.adapter import ObjectAdapter as ObjectAdapter

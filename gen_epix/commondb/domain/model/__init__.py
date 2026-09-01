@@ -1,3 +1,13 @@
+"""Re-export commondb domain models and model metadata.
+
+Base and ETL exports provide audit fields, structured result logs, and enum
+normalization. Organization exports represent organizations, users, contacts,
+collections, invitations, and external identifiers. System and ABAC exports
+provide outage metadata and organization-administrator policies. Upload exports
+define nested upload payloads and outcomes. Model maps group persisted models
+by service type for application-domain registration.
+"""
+
 # pylint: disable=useless-import-alias
 import gen_epix.fastapp as fastapp
 from gen_epix.commondb.domain import enum

@@ -1,3 +1,5 @@
+"""Provide commondb domain setup, test configuration, and model registration helpers."""
+
 import datetime
 import gzip
 import importlib
@@ -7,7 +9,7 @@ import pickle
 from collections.abc import Hashable, Iterable
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from gen_epix import fastapp
@@ -35,6 +37,19 @@ def set_env_variables(
     general_cfg_path: Path | None = None,
     cfg_path: Path | None = None,
 ) -> None:
+    """Set environment variables for an app type, IDP, and repository configuration.
+
+    Args:
+        app_type: Application type or its name.
+        dev_idp_config: Development identity-provider configuration or its name.
+        dev_repository_config: Development repository configuration or its name.
+        extra_settings_files: Optional additional settings files.
+        general_cfg_path: Optional path to shared settings.
+        cfg_path: Optional path to application settings.
+
+    Raises:
+        KeyError: If a supplied configuration name is not a valid enum member.
+    """
     # Parse input
     if isinstance(app_type, str):
         if app_type.upper() in AppType.__members__:
@@ -132,12 +147,14 @@ def create_demo_data_from_repository(
     sa_repository: SARepository,
     module_root: str,
 ) -> None:
-    model = importlib.import_module(f"{module_root}.domain.model")
+    """Populate an SA repository from a dict repository for the given entities."""
+    dict_repository_any = cast(Any, dict_repository)
+    sa_repository_any = cast(Any, sa_repository)
     # Delete all first in reverse order
     for entity in entities[::-1]:
         model_class = entity.model_class
         with sa_repository.uow() as sa_uow:
-            sa_repository.crud(
+            sa_repository_any.crud(
                 sa_uow,
                 user_id,
                 model_class,
@@ -149,14 +166,14 @@ def create_demo_data_from_repository(
             dict_repository.uow() as dict_uow,
             sa_repository.uow() as sa_uow,
         ):
-            objs: list[model.Model] = dict_repository.crud(
+            objs = dict_repository_any.crud(
                 dict_uow,
                 user_id,
                 model_class,
                 CrudOperation.READ_ALL,
                 return_copy=False,
             )
-            sa_repository.crud(
+            sa_repository_any.crud(
                 sa_uow,
                 user_id,
                 model_class,
@@ -171,6 +188,7 @@ def load_demo_data(
     connect_timeout: float = 1,
     verbose: bool = True,
 ) -> None:
+    """Load demo data for the given app type from zip archives into dict and SA repos."""
     domain: Domain = importlib.import_module(f"{module_root}.domain").DOMAIN
     # Import the sa_model module to register the models
     importlib.import_module(f"{module_root}.repositories.sa_model")
@@ -192,11 +210,19 @@ def load_demo_data(
     )
     # user_id = dict_app_cfg.cfg["service"]["auth"]["props"]["root"]["user"]["id"]
     user_id = NULL_ID
+    dict_app_cfg_data = cast(dict[str, Any], dict_app_cfg.cfg)
+    sa_sqlite_app_cfg_data = cast(dict[str, Any], sa_sqlite_app_cfg.cfg)
+    sa_sql_app_cfg_data = cast(dict[str, Any], sa_sql_app_cfg.cfg)
     for service_type in enum.ServiceType:
         # # TODO: TEMPORARY for debugging, remove later
         # if service_type.value != "CASE":
         #     continue
-        dict_repository_cfg = dict_app_cfg.cfg["repository"].get(service_type.value)
+        dict_repository_cfg = cast(
+            dict[str, Any] | None,
+            cast(dict[str, Any], dict_app_cfg_data["repository"]).get(
+                service_type.value
+            ),
+        )
         if not dict_repository_cfg:
             continue
         entities = domain.get_dag_sorted_entities(
@@ -232,9 +258,12 @@ def load_demo_data(
                 f"App {app_type.value}, service {service_type.value}: dict repository written to file in {end_time - start_time}s"
             )
         # Create empty and demo SA_SQLITE repositories
-        sa_sqlite_repository_cfg = sa_sqlite_app_cfg.cfg["repository"][
-            service_type.value
-        ]
+        sa_sqlite_repository_cfg = cast(
+            dict[str, Any],
+            cast(dict[str, Any], sa_sqlite_app_cfg_data["repository"])[
+                service_type.value
+            ],
+        )
         sa_repository_class: type[SARepository] = sa_sqlite_repository_cfg["class"]
         demo_sa_sqlite_file = Path(sa_sqlite_repository_cfg["props"]["file"]).resolve()
         empty_sa_sqlite_file = Path(
@@ -266,7 +295,10 @@ def load_demo_data(
                 f"App {app_type.value}, service {service_type.value}: sa_sqlite repository written to file in {end_time - start_time}s"
             )
         # Create empty SA_SQL repository or loaded with demo data
-        sa_sql_repository_cfg = sa_sql_app_cfg.cfg["repository"][service_type.value]
+        sa_sql_repository_cfg = cast(
+            dict[str, Any],
+            cast(dict[str, Any], sa_sql_app_cfg_data["repository"])[service_type.value],
+        )
         connection_string = sa_sql_repository_cfg["props"]["connection_string"]
         if "mssql" in connection_string:
             connect_args = {
@@ -323,28 +355,51 @@ def get_app_cfgs(
         list[Path | str] | Path | str | None
     ) = "./test/test_client/settings.toml",
     seqdb_app_cfgs: dict[str, AppCfg] | None = None,
+    log_any: bool = False,
     log_setup: bool = False,
     log_level: str | int = logging.ERROR,
 ) -> dict[str, AppCfg]:
     """
-    Create all casedb and seqdb app cfgs with a name for the given test type and
-    dev repository config so that they can be reused in tests
+    Create reusable casedb and seqdb application configurations for tests.
+
+    Each configuration is named for the test type and development repository config.
+
+    Args:
+        app_type: Application type for created configurations.
+        service_type_enum: Enum of application service types.
+        repository_type_enum: Enum of supported repository backends.
+        test_type: Test category used in configuration names.
+        dev_idp_config: Identity-provider configuration for the test.
+        general_cfg_path: Optional path to shared settings.
+        cfg_path: Optional path to application settings.
+        extra_settings_files: Optional extra settings paths.
+        seqdb_app_cfgs: Optional prebuilt SeqDB configurations for CaseDB.
+        log_any: Whether created configurations enable logging.
+        log_setup: Whether created configurations log setup.
+        log_level: Logging level for created configurations.
+
+    Returns:
+        Created configurations keyed by test and repository configuration.
+
+    Raises:
+        ValueError: If an extra settings path has an invalid type or is not a file.
     """
     if isinstance(test_type, Enum):
         test_type = test_type.value
+    resolved_extra_settings_files: list[Path] | None = None
     if extra_settings_files:
         if not isinstance(extra_settings_files, list):
             extra_settings_files = [extra_settings_files]
-        for i, file in enumerate(extra_settings_files):
+        resolved_extra_settings_files = []
+        for file in extra_settings_files:
             if not isinstance(file, (str, Path)):
                 raise ValueError("extra_settings_files must be a list of str or Path")
-            if isinstance(file, str):
-                file = Path(file)
-            if not file.is_file():
+            file_path = file if isinstance(file, Path) else Path(file)
+            if not file_path.is_file():
                 raise ValueError(
-                    f"extra_settings_file {file} does not exist or is not a file"
+                    f"extra_settings_file {file_path} does not exist or is not a file"
                 )
-            extra_settings_files[i] = file.resolve()
+            resolved_extra_settings_files.append(file_path.resolve())
     app_cfgs: dict[str, AppCfg] = {}
     for dev_repository_config in DevRepositoryConfig:
         name = f"{test_type}__{dev_repository_config.value}"
@@ -354,22 +409,24 @@ def get_app_cfgs(
             dev_repository_config,
             general_cfg_path=general_cfg_path,
             cfg_path=cfg_path,
-            extra_settings_files=extra_settings_files,
+            extra_settings_files=resolved_extra_settings_files,
         )
         app_cfgs[name] = AppCfg(
             app_type,
             service_type_enum,
             repository_type_enum,
             name=name,
+            log_any=log_any,
             log_setup=log_setup,
         )
         # Set log level
         app_cfgs[name].set_log_level(log_level)
         # Add seqdb app_cfg to casedb app_cfg for seqdb service local app so that when the latter is instantiated, it can directly use this app_cfg without risk of having seqdb env variables being altered in the meantime
         if app_type == AppType.CASEDB and seqdb_app_cfgs is not None:
-            app_cfgs[name].cfg["service"]["seqdb"]["props"]["seqdb_local_app"][
-                "app_cfg"
-            ] = seqdb_app_cfgs[name]
+            app_cfg_data = cast(dict[str, Any], app_cfgs[name].cfg)
+            app_cfg_data["service"]["seqdb"]["props"]["seqdb_local_app"]["app_cfg"] = (
+                seqdb_app_cfgs[name]
+            )
     return app_cfgs
 
 
@@ -377,8 +434,14 @@ def complete_stored_model_field_props(
     stored_model_field_props: dict[type[fastapp.Model], dict[str, ModelFieldProps]],
     sorted_models_by_service_type: dict[Any, list[type[fastapp.Model]]],
 ) -> None:
-    """
-    Complete the stored_model_field_props with default props for all other models/fields
+    """Complete stored model field properties with defaults for missing fields.
+
+    Args:
+        stored_model_field_props: Mutable per-model persistence field properties.
+        sorted_models_by_service_type: Models grouped by service initialization order.
+
+    Raises:
+        ValueError: If a model lacks entity metadata or non-persisted model has props.
     """
     # Complete the stored model field props with default props for all other models/fields
     for model_classes in sorted_models_by_service_type.values():
@@ -418,8 +481,9 @@ def register_domain_entities(
     set_schema_to_service_type: bool = False,
 ) -> None:
     """
-    Register service types, models and commands with a domain. In case some
-    models or commands are subclassed from another domain and the provides
+    Register service types, models, and commands with a domain.
+
+    When models or commands are subclassed from another domain and the provided
     models and commands contain their parent classes, they can be substituted
     in the input and subsequently be registered as the actual classes, by
     providing a mapping.
@@ -427,6 +491,18 @@ def register_domain_entities(
     If `set_schema_to_service_type` is enabled, the schema name of the model
     will be set to the lower case service name for persistable entities, unless
     the schema name is already set.
+
+    Args:
+        domain: Domain receiving the registrations.
+        sorted_service_types: Service types in registration order.
+        sorted_models_by_service_type: Models grouped by service type.
+        commands_by_service_type: Commands grouped by service type.
+        common_model_map: Optional base-to-derived model substitutions.
+        common_command_map: Optional base-to-derived command substitutions.
+        set_schema_to_service_type: Whether to infer schemas for persisted models.
+
+    Raises:
+        ValueError: If a mapped model or command cannot be registered consistently.
     """
     if not common_model_map:
         common_model_map = {}

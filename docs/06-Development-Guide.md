@@ -76,6 +76,17 @@ black .
 
 ### Linting
 
+Run the same Ruff docstring check locally that CI runs:
+
+```
+python run.py other_general_run_ruff
+```
+
+This command checks Google-style docstring rules for `gen_epix/transform` only.
+The scope expands package by package as documented modules are completed.
+
+Run Pylint locally:
+
 ```
 python run.py other_general_run_pylint
 ```
@@ -86,7 +97,35 @@ Or narrowed to specific error codes:
 python run.py other_general_run_pylint <error_code>
 ```
 
-(Source: `.github/workflows/main.yml#L102-L113`)
+Pylint is currently used as an advisory score report in CI: the workflow captures
+and comments the score but does not fail the lint job on Pylint findings. The local
+Pylint preset keeps `--fail-under=9` as the tracked target, while the `run.py`
+wrapper writes the report and continues so developers can inspect the same signal.
+
+(Source: `.github/workflows/main.yml#L102-L113`; Source:
+`test/test_client/linter.py#L57-L73`)
+
+### Docstring convention
+
+Gen-EpiX uses PEP 257 as the baseline docstring convention and Google-style
+sections when a docstring needs structure. Keep docstrings concise, behavior-led,
+and focused on contract details that are not already obvious from the type hints.
+
+For the full canonical reference, see
+[docs/standards/google-python-style-guide-3.8-comments-and-docstrings.md](./standards/google-python-style-guide-3.8-comments-and-docstrings.md).
+
+In practice:
+- prefer a one-line docstring for simple behavior
+- use `Args:`, `Returns:`, `Yields:`, and `Raises:` only when the contract is
+  not obvious from the signature or intent
+- do not repeat obvious type information already present in annotations
+- document side effects, constraints, caller expectations, and invariants when
+  they matter
+
+During the staged rollout, Ruff and Pylint intentionally overlap on missing
+docstring messages in the Ruff-enabled package. Ruff owns the Google-style
+section syntax checks, while Pylint continues to provide the existing broader
+code-quality report.
 
 ### Type checking
 
@@ -123,7 +162,9 @@ CI runs the same `mypy.ini`-driven policy as a required quality gate. (Source: `
 python run.py other_general_run_linters
 ```
 
-Writes output to `test/output/`. (Source: `run.py`)
+Runs the repository linter presets, including Pylint, Ruff, isort, black, and
+mypy, and writes output to `test/output/`. (Source: `run.py`; Source:
+`test/test_client/linter.py`)
 
 ---
 
@@ -132,13 +173,44 @@ Writes output to `test/output/`. (Source: `run.py`)
 | File | Contents |
 |------|----------|
 | `requirements.txt` | Runtime dependencies |
-| `dev-requirements.txt` | Dev/test tools: `pytest`, `isort`, `black`, `pylint`, `mypy`, `coverage` |
+| `dev-requirements.txt` | Dev/test tools: `pytest`, `isort`, `black`, `ruff`, `pylint`, `mypy`, `coverage` |
 
 (Source: `requirements.txt#L3-L35`; Source: `dev-requirements.txt#L1-L25`)
 
 ---
 
-## 5. Troubleshooting Local Development
+## 5. Graphify Setup For Coding Agents
+
+This repository includes `graphify-out/` artifacts and `AGENTS.md` instructions
+that expect Graphify to be used for architecture, structure, relationship,
+code-navigation, and blast-radius questions.
+
+Install the Graphify CLI first:
+
+```bash
+uv tool install graphifyy
+```
+
+For Codex, Graphify can also be exposed as a user-level skill by placing a
+`SKILL.md` file under:
+
+```text
+%USERPROFILE%\.codex\skills\graphify\SKILL.md
+```
+Local testing showed that Codex uses Graphify more reliably through the
+user-level skill on the local machine.
+
+The user-level skill is still optional and machine-local. The repository-level 
+fallback remains `AGENTS.md`, which tells agents to use 
+`$graphify` when available, then fall back to `graphify query`, `graphify path`, or
+`graphify explain` against `graphify-out/graph.json`.
+
+See the upstream Graphify documentation for platform-specific details:
+[Graphify README](https://github.com/Graphify-Labs/graphify/blob/v8/README.md).
+
+---
+
+## 6. Troubleshooting Local Development
 
 When local startup breaks, reason in stages:
 

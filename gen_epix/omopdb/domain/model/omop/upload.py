@@ -1,9 +1,12 @@
+"""Non-persistable OMOP models for person-centered batch uploads and results."""
+
 from typing import Any, ClassVar
 from uuid import UUID
 
 from pydantic import Field, computed_field
 
 from gen_epix.commondb.domain.literal import NULL_ID
+from gen_epix.commondb.domain.model.base import EtlLogItem
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
@@ -156,7 +159,7 @@ class PersonForUpload(ParentForUpload):
 
 
 class PersonDataIssue(DataIssue):
-    pass
+    """Describe a validation or processing issue in an OMOP person upload."""
 
 
 class PersonUploadResult(ParentUploadResult):
@@ -189,6 +192,26 @@ class PersonUploadResult(ParentUploadResult):
         default=None,
         description="The results of uploading the individual measurement relations, if any were provided, in the same order as provided.",
     )
+
+    def get_errors(self) -> list[EtlLogItem]:
+        """Get all data issues that are errors."""
+        log_items = super().get_errors()
+        if self.identifiers:
+            for identifier_result in self.identifiers:
+                log_items.extend(identifier_result.get_errors())
+        if self.measurements:
+            for measurement_result in self.measurements:
+                log_items.extend(measurement_result.get_errors())
+        if self.observations:
+            for observation_result in self.observations:
+                log_items.extend(observation_result.get_errors())
+        if self.specimens:
+            for specimen_result in self.specimens:
+                log_items.extend(specimen_result.get_errors())
+        if self.measurement_relations:
+            for measurement_relation_result in self.measurement_relations:
+                log_items.extend(measurement_relation_result.get_errors())
+        return log_items
 
 
 class PersonBatchForUpload(BaseBatchForUpload):

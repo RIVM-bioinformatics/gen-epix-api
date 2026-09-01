@@ -42,7 +42,7 @@ Quality enforcement is split into focused checks:
 | Gate | Tool | Source |
 |------|------|--------|
 | Formatting | `isort --check-only --diff --profile black .` + `black --check --diff .` | `.github/workflows/main.yml#L73-L77` |
-| Linting | `pylint` with PR comment output | `.github/workflows/main.yml#L102-L113` |
+| Linting | Advisory `pylint` score output plus blocking Ruff docstring check for `gen_epix/transform` | `.github/workflows/main.yml#L102-L113` |
 | Type checking | `mypy --config-file mypy.ini ./` | `.github/workflows/main.yml#L136-L140` |
 | Tests | `python run.py test_all` | `.github/workflows/main.yml#L167-L170` |
 | Coverage | XML uploaded as artifact, consumed by SonarCloud | `.github/workflows/main.yml#L171-L197` |
@@ -56,39 +56,41 @@ Developer Note: CI test scope is exactly what `run.py test_all` includes; perfor
 | Tests | `python run.py test_all` |
 | Formatting check | `isort --check-only --diff --profile black .` then `black --check --diff .` |
 | Type checking | `python run.py other_general_run_mypy` or `mypy --config-file mypy.ini ./` |
-| Linting | `python run.py other_general_run_pylint` |
+| Linting | `python run.py other_general_run_pylint` and `python run.py other_general_run_ruff` |
 
-Tooling is present in `dev-requirements.txt` (`pytest`, `isort`, `black`, `pylint`, `mypy`, `coverage`). (Source: `dev-requirements.txt#L6-L16`)
+Tooling is present in `dev-requirements.txt` (`pytest`, `isort`, `black`, `ruff`, `pylint`, `mypy`, `coverage`). (Source: `dev-requirements.txt#L6-L16`)
 
 ---
 
 ## 4. Authority Model for Versions and Releases
 
-Release intent comes from release-please configuration and manifest state, not from manual tag creation. The workflow explicitly passes both config and manifest files into `googleapis/release-please-action`. (Source: `.github/workflows/release.yaml#L25-L31`; Source: `release-please-config.json#L2-L9`; Source: `.release-please-manifest.json#L1-L3`)
+Release intent comes from release-please configuration and manifest state, not from
+manual tag creation. The workflow explicitly passes both config and manifest files
+into `googleapis/release-please-action`. Release Please uses its Python strategy to
+update the package version in the release PR. (Source:
+`.github/workflows/release.yaml#L25-L31`; Source:
+`release-please-config.json#L2-L10`; Source: `.release-please-manifest.json#L1-L3`)
 
-The workflow also updates `pyproject.toml` version by comparing current project version against release-please-derived target version, then auto-commits if changed. This creates a second version authority synchronization step inside CI/CD. (Source: `.github/workflows/release.yaml#L51-L77`)
-
-Operator Note: current repository state shows manifest and `pyproject.toml` version values diverging (`7.1.2` vs `7.1.1`), which explains why the version bump step exists. (Source: `.release-please-manifest.json#L2-L2`; Source: `pyproject.toml#L7-L7`)
+`pyproject.toml` remains the package build authority. Before building, the workflow
+checks out the newly created release tag and verifies that its version matches the
+tag. This prevents publishing stale package filenames to PyPI. (Source:
+`.github/workflows/release.yaml#L33-L54`; Source: `pyproject.toml#L7-L7`)
 
 ---
 
 ## 5. Release Publication Flow
 
-Release workflow starts by running release-please, then checks out repository state and optionally switches to a release-please branch when PRs are created. (Source: `.github/workflows/release.yaml#L25-L36`)
-
-If release-please indicates a version update path:
-1. Workflow bumps `pyproject.toml` and commits the change.
-2. Pushes with `--force`.
-
-(Source: `.github/workflows/release.yaml#L51-L85`)
+Release workflow starts by running release-please. When a release is created, it
+checks out the release tag and verifies the package version before publishing.
+(Source: `.github/workflows/release.yaml#L25-L54`)
 
 If a release is created:
-1. Builds distributions.
+1. Builds distributions from the tagged source.
 2. Zips artifacts.
 3. Uploads zip to GitHub Release.
 4. Publishes package files from `dist` to PyPI.
 
-(Source: `.github/workflows/release.yaml#L87-L118`)
+(Source: `.github/workflows/release.yaml#L62-L93`)
 
 Security Note: Publishing is configured with `id-token: write` and a named `PyPI` environment, so release permissions and secrets posture are tied to GitHub environment governance. (Source: `.github/workflows/release.yaml#L11-L23`)
 
@@ -151,7 +153,7 @@ That phase model maps directly to workflow structure and is the fastest incident
 
 1. Environment protection rules, required reviewers, and secret governance for the `PyPI` environment: `<TBF elsewhere>`. (Source: `.github/workflows/release.yaml#L21-L23`)
 2. Formal rollback process for a bad PyPI/GitHub release: `<TBF elsewhere>`.
-3. Branch protection and force-push policy alignment with automated version bumping: `<TBF elsewhere>`. (Source: `.github/workflows/release.yaml#L84-L85`)
+3. Branch protection and release-please GitHub App permissions: `<TBF elsewhere>`.
 4. Code review policy (required approvals, reviewer roles, merge policy): `<TBF elsewhere>`.
 5. Issue triage and prioritization process: `<TBF elsewhere>`.
 6. Runtime infrastructure rollout/rollback strategy: `<TBF elsewhere>`.

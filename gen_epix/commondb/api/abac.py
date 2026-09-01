@@ -1,3 +1,5 @@
+"""Create transport-only API endpoints for CommonDB ABAC commands."""
+
 from collections.abc import Callable
 from typing import Any, NoReturn
 
@@ -16,6 +18,18 @@ def create_abac_endpoints(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     **_kwargs: Any,
 ) -> None:
+    """Register ABAC retrieval and generated CRUD endpoints.
+
+    Handlers construct commands and delegate policy and business behavior to
+    ``app.handle``.
+
+    Args:
+        router: Router or application receiving the endpoints.
+        app: Composed CommonDB application that dispatches commands.
+        service_type: Domain service type used to generate CRUD endpoints.
+        handle_exception: Exception adapter used by endpoint handlers.
+        **_kwargs: Unused router composition options.
+    """
     assert handle_exception
     app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency
@@ -29,6 +43,7 @@ def create_abac_endpoints(
     async def retrieve_organization_admin_name_emails(
         user: registered_user_dependency,  # type: ignore
     ) -> list[model.UserNameEmail]:
+        """Retrieve names and email addresses of the user's organization admins."""
         try:
             cmd = command.RetrieveOrganizationAdminNameEmailsCommand(user=user)
             retval: list[model.UserNameEmail] = app.handle(cmd)

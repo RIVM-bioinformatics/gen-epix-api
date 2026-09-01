@@ -1,19 +1,19 @@
-"""
-Number to interval transformer implementation.
-"""
+"""Transform numeric values and interval labels between categorizations."""
 
 import math
 from collections.abc import Hashable
 from decimal import Decimal
-from typing import NoReturn, TypedDict
+from typing import Literal, NoReturn, TypedDict
 
 from gen_epix.fastapp.enum import OnException
 from gen_epix.transform.adapter import ObjectAdapter
+from gen_epix.transform.enum import IntervalTransformStrategy
 from gen_epix.transform.transformer import Transformer
 
 
+# TODO: make this a regular class and add methods like __in__ that take another interval, a number or None; __eq__, __lt__, __gt__, __le__, __ge__, __str__, __repr__ etc., moving this logic from the two tranformer classes here
 class IntervalDict(TypedDict):
-    """Type definition for interval dictionaries."""
+    """Normalized interval bounds and endpoint-inclusivity metadata."""
 
     name: Hashable
     lb: float
@@ -23,9 +23,9 @@ class IntervalDict(TypedDict):
 
 
 class IntervalTransformer(Transformer):
-    """
-    Maps a number to an interval represented by a hashable, based on the
-    bounds of the interval.
+    """Map a numeric field to the name of its configured interval.
+
+    Bounds may be open or closed and `None` represents an unbounded endpoint.
     """
 
     def __init__(
@@ -38,8 +38,35 @@ class IntervalTransformer(Transformer):
         lower_bound_is_inclusive: list[bool] | bool = True,
         upper_bound_is_inclusive: list[bool] | bool = False,
         name: str | None = None,
-        on_no_match: OnException = OnException.RAISE,
+        # TODO: split on_no_match into on_invalid_source (default SET_NO_RETURN) and on_no_target (default SET_NONE); do this for all transformers
+        on_no_match: Literal[
+            OnException.RAISE, OnException.SET_NONE, OnException.SET_NO_RETURN
+        ] = OnException.RAISE,
     ) -> None:
+        """
+        Build a numeric-to-interval mapping and validate interval boundaries.
+
+        Args:
+            src_field: Field read from each row-like object.
+            interval_names: Values written when the source value falls in an interval.
+            lower_bounds: Lower interval bounds; None represents negative infinity.
+            upper_bounds: Upper interval bounds; None represents positive infinity.
+            tgt_field: Field to write; defaults to the source field.
+            lower_bound_is_inclusive: Inclusivity for lower interval bounds.
+            upper_bound_is_inclusive: Inclusivity for upper interval bounds.
+            name: Optional transformer name used in result metadata.
+            on_no_match: Behavior when a source value cannot be mapped.
+
+        Raises:
+            ValueError: Raised when on_no_match is unsupported, a lower bound is
+                greater than its upper bound, or intervals overlap.
+        """
+        if on_no_match not in (
+            OnException.RAISE,
+            OnException.SET_NONE,
+            OnException.SET_NO_RETURN,
+        ):
+            raise ValueError(f"Invalid on_no_match value {on_no_match}")
 
         # Initialise some
         super().__init__(name)
@@ -100,11 +127,38 @@ class IntervalTransformer(Transformer):
                     f"Intervals overlap: {lb1_str},{ub1_str} and {lb2_str},{ub2_str}"
                 )
 
-    def _get_interval(
-        self, value: float | int | Decimal | None
+    def _map_to_interval(
+        self,
+        value: float | int | Decimal | None,
+        on_no_match: Literal[
+            OnException.RAISE, OnException.SET_NONE, OnException.SET_NO_RETURN
+        ],
     ) -> Hashable | None | NoReturn:
+        """
+        Map a single numeric value according to the configured intervals.
+
+        Args:
+            value: Source value to place into an interval.
+            on_no_match: Behavior when the value is not numeric or has no interval.
+
+        Returns:
+            The matching interval name, None, or NoReturn according to the configured
+            no-match behavior.
+
+        Raises:
+            ValueError: Raised when no interval matches and on_no_match is RAISE.
+            NotImplementedError: Raised for unsupported no-match behavior.
+        """
         if value is None:
             return None
+        if not isinstance(value, (int, float, Decimal)):
+            if on_no_match == OnException.RAISE:
+                raise ValueError(f"Value {value} does not match any interval")
+            elif on_no_match == OnException.SET_NONE:
+                return None
+            elif on_no_match == OnException.SET_NO_RETURN:
+                return NoReturn
+            raise NotImplementedError(f"Invalid on_no_match value {on_no_match}")
         for i in range(self._n_intervals):
             # Match interval
             match_lb = value > self._lower_bounds[i] or (
@@ -116,48 +170,45 @@ class IntervalTransformer(Transformer):
             if match_lb and match_ub:
                 # Interval matches -> assign value to target field and stop
                 return self._interval_names[i]
-        return NoReturn
+        # Does not match to any interval
+        if on_no_match == OnException.RAISE:
+            raise ValueError(f"Value {value} does not match any interval")
+        elif on_no_match == OnException.SET_NONE:
+            return None
+        elif on_no_match == OnException.SET_NO_RETURN:
+            return NoReturn
+        raise NotImplementedError(f"Invalid on_no_match value {on_no_match}")
 
     def transform(self, obj: ObjectAdapter) -> ObjectAdapter:
-        """Map number to interval."""
+        """Map the source field and write the interval name to the target field."""
         src_value = obj.get(self.src_field)
-        tgt_value = self._get_interval(src_value)
-        if tgt_value == NoReturn:
-            if self._on_no_match == OnException.RAISE:
-                raise ValueError(f"Value {src_value} does not match any interval")
-            elif self._on_no_match == OnException.SET_NONE:
-                obj.set(self.tgt_field, None)
-                return obj
-            raise NotImplementedError(f"Invalid on_no_match value {self._on_no_match}")
+        tgt_value = self.transform_value(src_value)
         obj.set(self.tgt_field, tgt_value)
         return obj
 
-    def transform_value(self, value: float | int | Decimal | None) -> Hashable | None:
-        """Map number to interval."""
-        tgt_value = self._get_interval(value)
-        if tgt_value == NoReturn:
-            if self._on_no_match == OnException.RAISE:
-                raise ValueError(f"Value {value} does not match any interval")
-            elif self._on_no_match == OnException.SET_NONE:
-                return None
-            raise NotImplementedError(f"Invalid on_no_match value {self._on_no_match}")
+    def transform_value(
+        self, value: float | int | Decimal | None
+    ) -> Hashable | None | NoReturn:
+        """Return the interval name selected for `value` under no-match policy."""
+        tgt_value = self._map_to_interval(
+            value, self._on_no_match
+        )  # type: ignore[arg-type]
         return tgt_value
 
     def is_transformable(self, value: float | int | Decimal | None) -> bool:
-        """Check if a value can be transformed to an interval without performing the transformation."""
+        """Return whether `value` matches an interval without mutating an object."""
         if value is None:
             return True  # None values are always transformable
 
-        tgt_value = self._get_interval(value)
+        tgt_value = self._map_to_interval(value, OnException.SET_NO_RETURN)
         return tgt_value != NoReturn
 
 
 class IntervalToIntervalTransformer(Transformer):
-    """
-    Maps intervals from one categorization to another based on overlapping ranges.
+    """Map an interval label from one categorization to another.
 
-    This transformer takes an interval from a source categorization and maps it to
-    the corresponding interval(s) in a target categorization based on range overlaps.
+    Source intervals are mapped to contained target intervals, or to the target
+    with the largest overlap when that strategy is configured.
     """
 
     def __init__(
@@ -175,15 +226,46 @@ class IntervalToIntervalTransformer(Transformer):
         tgt_lower_bound_is_inclusive: list[bool] | bool = True,
         tgt_upper_bound_is_inclusive: list[bool] | bool = False,
         name: str | None = None,
-        on_no_match: OnException = OnException.RAISE,
-        overlap_strategy: str = "largest_overlap",  # "largest_overlap" or "exact_fit"
+        on_no_match: Literal[
+            OnException.RAISE, OnException.SET_NONE, OnException.SET_NO_RETURN
+        ] = OnException.RAISE,
+        transform_strategy: IntervalTransformStrategy = IntervalTransformStrategy.CONTAINS_ONLY,
     ) -> None:
+        """
+        Build an interval-to-interval mapping between two categorizations.
+
+        Args:
+            src_field: Field containing the source interval name.
+            src_interval_names: Source categorization interval names.
+            src_lower_bounds: Source lower bounds; None represents negative infinity.
+            src_upper_bounds: Source upper bounds; None represents positive infinity.
+            tgt_interval_names: Target categorization interval names.
+            tgt_lower_bounds: Target lower bounds; None represents negative infinity.
+            tgt_upper_bounds: Target upper bounds; None represents positive infinity.
+            tgt_field: Field to write; defaults to the source field.
+            src_lower_bound_is_inclusive: Inclusivity for source lower bounds.
+            src_upper_bound_is_inclusive: Inclusivity for source upper bounds.
+            tgt_lower_bound_is_inclusive: Inclusivity for target lower bounds.
+            tgt_upper_bound_is_inclusive: Inclusivity for target upper bounds.
+            name: Optional transformer name used in result metadata.
+            on_no_match: Behavior when a source interval cannot be mapped.
+            transform_strategy: Mapping strategy used when containment is not enough.
+
+        Raises:
+            ValueError: Raised when on_no_match is unsupported.
+        """
+        if on_no_match not in (
+            OnException.RAISE,
+            OnException.SET_NONE,
+            OnException.SET_NO_RETURN,
+        ):
+            raise ValueError(f"Invalid on_no_match value {on_no_match}")
 
         super().__init__(name)
         self.src_field = src_field
         self.tgt_field = tgt_field or src_field
+        self._transform_strategy = transform_strategy
         self._on_no_match = on_no_match
-        self._overlap_strategy = overlap_strategy
 
         # Initialize source intervals
         self._src_intervals = self._create_interval_list(
@@ -214,7 +296,7 @@ class IntervalToIntervalTransformer(Transformer):
         lower_inclusive: list[bool] | bool,
         upper_inclusive: list[bool] | bool,
     ) -> list[IntervalDict]:
-        """Create standardized interval representation."""
+        """Normalize parallel bound and inclusivity lists into interval records."""
         n_intervals = len(names)
 
         if isinstance(lower_inclusive, bool):
@@ -245,7 +327,18 @@ class IntervalToIntervalTransformer(Transformer):
         return intervals
 
     def _compute_interval_mapping(self) -> dict[Hashable, Hashable]:
-        """Pre-compute mapping from source intervals to target intervals."""
+        """Build the source-to-target mapping for the configured strategy.
+
+        Source intervals map to a containing target interval when available. The
+        largest-overlap strategy maps otherwise unmatched source intervals to the
+        target interval with the greatest positive overlap.
+
+        Returns:
+            Mapping from source interval names to target interval names.
+
+        Raises:
+            NotImplementedError: If the configured transform strategy is unsupported.
+        """
         mapping = {}
 
         for src_interval in self._src_intervals:
@@ -254,20 +347,27 @@ class IntervalToIntervalTransformer(Transformer):
 
             for tgt_interval in self._tgt_intervals:
                 overlap = self._calculate_overlap(src_interval, tgt_interval)
+                if self._is_contained(src_interval, tgt_interval):
+                    mapping[src_interval["name"]] = tgt_interval["name"]
+                    break
+                if self._transform_strategy == IntervalTransformStrategy.CONTAINS_ONLY:
+                    continue  # Skip if source interval is not contained in target
 
-                if self._overlap_strategy == "exact_fit":
-                    # Only map if source interval is completely contained in target
-                    if self._is_contained(src_interval, tgt_interval):
-                        mapping[src_interval["name"]] = tgt_interval["name"]
-                        break
-                elif self._overlap_strategy == "largest_overlap":
+                if (
+                    self._transform_strategy
+                    == IntervalTransformStrategy.LARGEST_OVERLAP
+                ):
                     # Map to target with largest overlap
                     if overlap > max_overlap:
                         max_overlap = overlap
                         best_match = tgt_interval["name"]
+                    continue
+                raise NotImplementedError(
+                    f"transform_strategy={self._transform_strategy} not implemented"
+                )
 
             if (
-                self._overlap_strategy == "largest_overlap"
+                self._transform_strategy == IntervalTransformStrategy.LARGEST_OVERLAP
                 and best_match
                 and max_overlap > 0
             ):
@@ -280,7 +380,7 @@ class IntervalToIntervalTransformer(Transformer):
         src_interval: IntervalDict,
         tgt_interval: IntervalDict,
     ) -> float:
-        """Calculate overlap between two intervals."""
+        """Return the numeric length shared by two normalized intervals."""
         # Determine effective bounds for overlap calculation
         overlap_start = max(src_interval["lb"], tgt_interval["lb"])
         overlap_end = min(src_interval["ub"], tgt_interval["ub"])
@@ -297,7 +397,7 @@ class IntervalToIntervalTransformer(Transformer):
     def _is_contained(
         self, src_interval: IntervalDict, tgt_interval: IntervalDict
     ) -> bool:
-        """Check if source interval is completely contained in target interval."""
+        """Return whether the source interval, including endpoint rules, fits in target."""
         # Check lower bound
         if src_interval["lb"] < tgt_interval["lb"]:
             return False
@@ -321,51 +421,53 @@ class IntervalToIntervalTransformer(Transformer):
         return True
 
     def _map_interval(self, src_interval_name: Hashable) -> Hashable | None | NoReturn:
-        """Map source interval name to target interval name."""
+        """Resolve a source interval name using the precomputed mapping.
+
+        Missing mappings follow the configured ``on_no_match`` behavior: raise an
+        error, return ``None``, or return the ``NoReturn`` sentinel.
+
+        Args:
+            src_interval_name: Source interval label to transform.
+
+        Returns:
+            Target interval label, ``None``, or the ``NoReturn`` sentinel.
+
+        Raises:
+            ValueError: If no mapping exists and ``on_no_match`` is ``RAISE``.
+            NotImplementedError: If ``on_no_match`` is unsupported.
+        """
         if src_interval_name is None:
             return None
 
         mapped_name = self._interval_mapping.get(src_interval_name)
         if mapped_name is None:
-            return NoReturn
-
+            if self._on_no_match == OnException.RAISE:
+                raise ValueError(
+                    f"Source interval '{src_interval_name}' does not exist in the mapping."
+                )
+            elif self._on_no_match == OnException.SET_NONE:
+                return None
+            elif self._on_no_match == OnException.SET_NO_RETURN:
+                return NoReturn
+            raise NotImplementedError(
+                f"on_no_match={self._on_no_match} not implemented"
+            )
         return mapped_name
 
     def transform(self, obj: ObjectAdapter) -> ObjectAdapter:
-        """Transform interval from source categorization to target categorization."""
+        """Map the source interval field and write the result to the target field."""
         src_value = obj.get(self.src_field)
-        tgt_value = self._map_interval(src_value)
-
-        if tgt_value == NoReturn:
-            if self._on_no_match == OnException.RAISE:
-                raise ValueError(
-                    f"Interval {src_value} cannot be mapped to target categorization"
-                )
-            elif self._on_no_match == OnException.SET_NONE:
-                obj.set(self.tgt_field, None)
-                return obj
-            raise NotImplementedError(f"Invalid on_no_match value {self._on_no_match}")
-
+        tgt_value = self.transform_value(src_value)
         obj.set(self.tgt_field, tgt_value)
         return obj
 
     def transform_value(self, src_interval_name: Hashable) -> Hashable | None:
-        """Transform interval name directly."""
+        """Map an interval label directly without adapting or mutating an object."""
         tgt_value = self._map_interval(src_interval_name)
-
-        if tgt_value == NoReturn:
-            if self._on_no_match == OnException.RAISE:
-                raise ValueError(
-                    f"Interval {src_interval_name} cannot be mapped to target categorization"
-                )
-            elif self._on_no_match == OnException.SET_NONE:
-                return None
-            raise NotImplementedError(f"Invalid on_no_match value {self._on_no_match}")
-
         return tgt_value
 
     def is_transformable(self, src_interval_name: Hashable) -> bool:
-        """Check if source interval can be mapped to target categorization."""
+        """Return whether a source label has a configured target mapping."""
         if src_interval_name is None:
             return True
 

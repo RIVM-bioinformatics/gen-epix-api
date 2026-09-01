@@ -34,6 +34,7 @@ SEQDB_APP_CFGS = get_app_cfgs(
     seqdb_enum.ServiceType,
     seqdb_enum.RepositoryType,
     TEST_TYPE,
+    log_any=VERBOSE,
 )
 CASEDB_APP_CFGS = get_app_cfgs(
     AppType.CASEDB,
@@ -41,6 +42,7 @@ CASEDB_APP_CFGS = get_app_cfgs(
     enum.RepositoryType,
     TEST_TYPE,
     seqdb_app_cfgs=SEQDB_APP_CFGS,
+    log_any=VERBOSE,
 )
 
 
@@ -118,12 +120,6 @@ class TestContent:
         # profiler.start()
 
         # t0 = datetime.datetime.now()
-
-        # organizations = app.handle(
-        #     command.OrganizationCrudCommand(
-        #         user=root_user, operation=CrudOperation.READ_ALL
-        #     )
-        # )
 
         # t1 = datetime.datetime.now()
         # print(f"\n\n\n\nRetrieveCaseSetStatsCommand took {t1 - t0}\n\n\n\n")
@@ -237,8 +233,8 @@ class TestContent:
         }
 
         # Get CaseType and and case set stats
-        case_stats = app.handle(command.RetrieveCaseStatsCommand(user=org_user))
-        case_set_stats = app.handle(command.RetrieveCaseStatsCommand(user=org_user))
+        case_stats = app.handle(command.RetrieveCaseTypeStatsCommand(user=org_user))
+        case_set_stats = app.handle(command.RetrieveCaseSetStatsCommand(user=org_user))
 
         # Go over all CaseTypes with data
         found_some_similar_cases = False
@@ -461,3 +457,169 @@ class TestContent:
         #     f.write("".join(profiler.output_html()))
         # with open(env.test_dir / f"content.performance.html", "w") as f:
         #     f.write("".join(profiler.output_html()))
+
+    def test_retrieve_is_own_cases(self, env: Env) -> None:
+        """
+        Happy-path test for RetrieveIsOwnCasesCommand.
+
+        Finds an org user whose organization has at least one private data
+        collection, locates cases that were created in that collection, and
+        verifies the command returns True for every one of those cases.
+        """
+        app = env.app
+        app_impl: AppImplDetails = app.impl
+
+        root_user = env.get_root_user()
+        users: list[model.User] = app.handle(
+            command.UserCrudCommand(user=root_user, operation=CrudOperation.READ_ALL)
+        )
+        org_access_case_policies: list[model.OrganizationAccessCasePolicy] = app.handle(
+            command.OrganizationAccessCasePolicyCrudCommand(
+                user=root_user, operation=CrudOperation.READ_ALL
+            )
+        )
+        orgs_with_private_dc: set[UUID] = {
+            x.organization_id for x in org_access_case_policies if x.is_private
+        }
+
+        all_org_users: list[model.User] = [
+            x
+            for x in users
+            if app_impl.role_map[CommonRole.ORG_USER] in x.roles and len(x.roles) == 1
+        ]
+
+        org_user: model.User | None = None
+        private_dc_ids: set[UUID] = set()
+
+        # Select an ORG_USER from an organization with private data
+        # collections AND who has cases in those collections
+        for candidate_user in all_org_users:
+            if candidate_user.organization_id not in orgs_with_private_dc:
+                continue
+
+            # Check if this user has any cases in their private data collections
+            candidate_private_dc_ids: set[UUID] = {
+                x.data_collection_id
+                for x in org_access_case_policies
+                if x.is_private and x.organization_id == candidate_user.organization_id
+            }
+
+            candidate_case_types: list[model.CaseType] = app.handle(
+                command.CaseTypeCrudCommand(
+                    user=candidate_user, operation=CrudOperation.READ_ALL
+                )
+            )
+            candidate_case_stats = app.handle(
+                command.RetrieveCaseTypeStatsCommand(user=candidate_user)
+            )
+            has_cases_ct_ids: set[UUID] = {
+                x.case_type_id for x in candidate_case_stats if x.n_cases > 0
+            }
+
+            # Check if any case type has cases in private data collections
+            found_own_cases = False
+            for case_type in candidate_case_types:
+                if case_type.id not in has_cases_ct_ids:
+                    continue
+                q_result: model.CaseQueryResult = app.handle(
+                    command.RetrieveCasesByQueryCommand(
+                        user=candidate_user,
+                        case_query=model.CaseQuery(case_type_id=case_type.id),
+                    )
+                )
+                if not q_result.case_ids:
+                    continue
+                candidate_cases: list[model.Case] = app.handle(
+                    command.RetrieveCasesByIdCommand(
+                        user=candidate_user,
+                        case_type_id=case_type.id,
+                        case_ids=q_result.case_ids[:20],
+                    )
+                )
+                if any(
+                    x.created_in_data_collection_id in candidate_private_dc_ids
+                    for x in candidate_cases
+                ):
+                    found_own_cases = True
+                    break
+
+            if found_own_cases:
+                org_user = candidate_user
+                private_dc_ids = candidate_private_dc_ids
+                break
+
+        if org_user is None:
+            raise ValueError("No ORG_USER found with cases in private data collections")
+
+        # Find the first case type that has cases in a private data collection
+        case_types: list[model.CaseType] = app.handle(
+            command.CaseTypeCrudCommand(user=org_user, operation=CrudOperation.READ_ALL)
+        )
+        case_stats = app.handle(command.RetrieveCaseTypeStatsCommand(user=org_user))
+        has_cases_ct_ids: set[UUID] = {
+            x.case_type_id for x in case_stats if x.n_cases > 0
+        }
+
+        for own_case_type in case_types:
+            assert own_case_type.id is not None
+            if own_case_type.id not in has_cases_ct_ids:
+                continue
+            q_result: model.CaseQueryResult = app.handle(
+                command.RetrieveCasesByQueryCommand(
+                    user=org_user,
+                    case_query=model.CaseQuery(case_type_id=own_case_type.id),
+                )
+            )
+            candidate_ids: list[UUID] = q_result.case_ids[:20]
+            if not candidate_ids:
+                continue
+            candidate_cases: list[model.Case] = app.handle(
+                command.RetrieveCasesByIdCommand(
+                    user=org_user,
+                    case_type_id=own_case_type.id,
+                    case_ids=candidate_ids,
+                )
+            )
+            own_case_ids: list[UUID] = [
+                c.id
+                for c in candidate_cases
+                if c.created_in_data_collection_id in private_dc_ids
+                and c.id is not None
+            ]
+            if not own_case_ids:
+                continue
+
+            # Call RetrieveIsOwnCasesCommand: all own cases must be marked True
+            is_own_map: dict[UUID, bool] = app.handle(
+                command.RetrieveIsOwnCasesCommand(
+                    user=org_user,
+                    case_type_id=own_case_type.id,
+                    case_ids=own_case_ids,
+                )
+            )
+
+            assert set(is_own_map.keys()) == set(own_case_ids)
+            assert all(is_own_map[cid] is True for cid in own_case_ids)
+
+            # Test scenario: shared (non-own) cases should return False
+            shared_case_ids: list[UUID] = [
+                x.id
+                for x in candidate_cases
+                if x.created_in_data_collection_id not in private_dc_ids
+                and x.id is not None
+            ]
+            if shared_case_ids:
+                is_own_map_shared: dict[UUID, bool] = app.handle(
+                    command.RetrieveIsOwnCasesCommand(
+                        user=org_user,
+                        case_type_id=own_case_type.id,
+                        case_ids=shared_case_ids,
+                    )
+                )
+                assert set(is_own_map_shared.keys()) == set(shared_case_ids)
+                assert all(is_own_map_shared[cid] is False for cid in shared_case_ids)
+            return
+
+        raise ValueError(
+            "No cases in a private data collection found for any case type"
+        )

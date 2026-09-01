@@ -1,3 +1,10 @@
+"""Define commondb organization, user, contact, and identifier models.
+
+The models represent organizational membership and contact data, user
+invitations, collections, and externally issued identifiers. They are shared
+by services, policies, and repositories across application domains.
+"""
+
 import datetime
 import hashlib
 import json
@@ -21,9 +28,7 @@ from gen_epix.util import copy_model_field
 
 
 class Organization(Model):
-    """
-    Represents an organization.
-    """
+    """Represent an organization that owns users and related domain data."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="organizations",
@@ -45,6 +50,8 @@ class Organization(Model):
 
 
 class UserNameEmail(fastapp.Model):
+    """Expose a non-persisted user identity for display and lookup responses."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="user_name_emails",
         persistable=False,
@@ -59,6 +66,12 @@ class UserNameEmail(fastapp.Model):
 
 
 class User(fastapp.User, Model):
+    """Represent an authenticated commondb user and their organization membership.
+
+    The user key is stored lower case for unique lookup. Inactive users retain
+    their data but cannot perform operations that require authorization.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="users",
         table_name="user",
@@ -75,7 +88,7 @@ class User(fastapp.User, Model):
     )  # pyright: ignore[reportIncompatibleVariableOverride]
     key: str | None = Field(
         default=None,
-        description="The key of the user, lowercase, UNIQUE",
+        description="Unique user key, normalized to lowercase.",
         max_length=320,
     )
     email: str | None = Field(
@@ -94,7 +107,9 @@ class User(fastapp.User, Model):
         description="Whether the user is active or not. An inactive user cannot perform any actions that require authorization.",
     )
     roles: set[str] = Field(
-        description="The roles of the user", min_length=1, max_length=255
+        description="User roles, accepting a set, list, or JSON list string and serializing as a list.",
+        min_length=1,
+        max_length=255,
     )
     organization_id: UUID = Field(
         description="The ID of the organization of the user. FOREIGN KEY"
@@ -102,24 +117,24 @@ class User(fastapp.User, Model):
     organization: Organization | None = Field(
         default=None, description="The organization of the user"
     )
+    # TODO: potentially added is_anonymized field to indicate if the user has been anonymized. Then also add validation that is_active=True and is_anonymized=True is not allowed.
 
     @field_validator("key", mode="before")
     @classmethod
     def _validate_key(cls, value: str | None) -> str | None:
+        """Normalize a supplied user key to lower case."""
         if value is None:
             return None
         return value.lower()
 
     def get_key(self) -> str:
+        """Return the normalized key used to identify this user."""
         return self.key
 
     @field_validator("roles", mode="before")
     @classmethod
     def _validate_roles(cls, value: set[str] | list[str] | str) -> set[str]:
-        """
-        Validate and convert roles representation to a set[str]. When given as a
-        string, it is assumed to be a JSON list.
-        """
+        """Normalize role input to a set."""
         if isinstance(value, str):
             return set(json.loads(value))
         if isinstance(value, list):
@@ -128,10 +143,13 @@ class User(fastapp.User, Model):
 
     @field_serializer("roles", mode="plain")
     def _serialize_roles(self, value: set[str]) -> list[str]:
+        """Serialize the user's role set as a JSON-compatible list."""
         return list(value)
 
 
 class OrganizationSet(Model):
+    """Represent a named, persisted collection of organizations."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="organization_sets",
         table_name="organization_set",
@@ -145,6 +163,8 @@ class OrganizationSet(Model):
 
 
 class OrganizationSetMember(Model):
+    """Associate one organization with a persisted organization set."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="organization_set_members",
         table_name="organization_set_member",
@@ -168,9 +188,7 @@ class OrganizationSetMember(Model):
 
 
 class Site(Model):
-    """
-    Represents a physical site of an organization.
-    """
+    """Represent a physical site belonging to an organization."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="sites",
@@ -191,9 +209,7 @@ class Site(Model):
 
 
 class Contact(Model):
-    """
-    A class representing contact information for an organization.
-    """
+    """Represent contact information associated with an organization site."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="contacts",
@@ -223,9 +239,10 @@ class Contact(Model):
 
 
 class IdentifierIssuer(Model):
-    """
-    A system or process that issues identifiers.
-    The combination (identifier_issuer, issued_identifier) is universally unique.
+    """Represent a system or process that issues externally supplied identifiers.
+
+    An identifier issuer combined with an identifier issued by it is a universally
+    unique value.
     """
 
     ENTITY: ClassVar = Entity(
@@ -244,9 +261,7 @@ class IdentifierIssuer(Model):
 
 
 class DataCollection(Model):
-    """
-    Represents a collection of data.
-    """
+    """Represent a named collection of data managed by commondb."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="data_collections",
@@ -266,6 +281,8 @@ class DataCollection(Model):
 
 
 class DataCollectionSet(Model):
+    """Represent a named, persisted collection of data collections."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="data_collection_sets",
         table_name="data_collection_set",
@@ -281,6 +298,8 @@ class DataCollectionSet(Model):
 
 
 class DataCollectionSetMember(Model):
+    """Associate one data collection with a persisted data-collection set."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="data_collection_set_members",
         table_name="data_collection_set_member",
@@ -310,10 +329,7 @@ class DataCollectionSetMember(Model):
 
 
 class UserInvitation(Model):
-    """
-    Represents an invitation for a new user of a particular organization and
-    with particular starting properties.
-    """
+    """Represent an expiring invitation with a user's initial organization and roles."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="user_invitations",
@@ -330,7 +346,7 @@ class UserInvitation(Model):
     ROLE_ENUM: ClassVar[type[Enum]] = enum.Role
     key: str | None = Field(
         default=None,
-        description="The key of the user, lowercase, UNIQUE",
+        description="Unique user key; an empty value is normalized to omitted.",
         max_length=320,
     )
     email: str | None = copy_model_field(User, "email")
@@ -341,7 +357,7 @@ class UserInvitation(Model):
         description="The expiry date of the invitation"
     )
     roles: set[str] = Field(
-        description="The initial roles that the new user will have",
+        description="Initial roles, accepting a set, list, or JSON list string and serializing as a list.",
         min_length=1,
         max_length=255,
     )
@@ -361,6 +377,7 @@ class UserInvitation(Model):
     @field_validator("key", mode="before")
     @classmethod
     def _validate_key(cls, value: str | None) -> str | None:
+        """Convert an empty invitation user key to an omitted key."""
         if value == "":
             return None
         return value
@@ -368,10 +385,7 @@ class UserInvitation(Model):
     @field_validator("roles", mode="before")
     @classmethod
     def _validate_roles(cls, value: set[str] | list[str] | str) -> set[str]:
-        """
-        Validate and convert roles representation to a set[str]. When given as a
-        string, it is assumed to be a JSON list.
-        """
+        """Normalize invitation role input to a set."""
         if isinstance(value, str):
             return set(json.loads(value))
         if isinstance(value, list):
@@ -380,13 +394,12 @@ class UserInvitation(Model):
 
     @field_serializer("roles", mode="plain")
     def _serialize_roles(self, value: set[str]) -> list[str]:
+        """Serialize the invitation's initial roles as a JSON-compatible list."""
         return list(value)
 
 
 class UserInvitationConstraints(Model):
-    """
-    Represents the constraints for a user invitation.
-    """
+    """Constrain roles and organizations an inviting user may assign."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="user_invitation_constraints",
@@ -404,11 +417,10 @@ class UserInvitationConstraints(Model):
 
 
 class OrganizationIdentifierIssuerLink(Model):
-    """
-    The association between an organization and an identifier issuer.
+    """Associate an organization with an identifier issuer it may use.
 
-    This information can be used to restrict which identifier issuers
-    are available to users of a particular organization.
+    Services can use these links to restrict identifier issuers available to users
+    of a particular organization.
     """
 
     ENTITY: ClassVar = Entity(
@@ -436,27 +448,21 @@ class OrganizationIdentifierIssuerLink(Model):
 
 
 class BaseIdentifier(Model):
-    """
-    Base class for an identifier generated outside of the system by a particular
-    identifier issuer for a particular entity, together with the system's own
-    identifier. The combination of (identifier_issuer_id, external_id) must be unique.
+    """Represent an identifier generated outside the system for an entity.
+
+    It records an identifier issuer and the system's own
+    identifier.
+
+    Subclasses bind ``MODEL_CLASS`` to the related domain model. The identifier
+    UUID is deterministically derived from the issuer UUID and normalized
+    external identifier, making each issuer/external-ID pair unique.
+
+    Model validation:
+    A missing ``id`` is derived deterministically from ``identifier_issuer_id``
+    and ``external_id``; a supplied ID must match that derived value.
     """
 
     ENTITY: ClassVar = Entity(persistable=False, id_field_name="id")
-    # ENTITY: ClassVar = Entity(
-    #     id_field_name="id",
-    #     persistable=True,
-    #     keys=create_keys(
-    #         {
-    #             1: ("identifier_issuer_id", "external_id"),
-    #         }
-    #     ),
-    #     links=create_links(
-    #         {
-    #             1: ("identifier_issuer_id", IdentifierIssuer, "identifier_issuer"),
-    #         }
-    #     ),
-    # )
 
     # The model class associated with this base identifier, to be defined in subclasses
     MODEL_CLASS: ClassVar[type[fastapp.Model]] = None  # type: ignore[assignment]
@@ -472,17 +478,14 @@ class BaseIdentifier(Model):
         default=None, description="The identifier issuer corresponding to the ID"
     )
     external_id: str = Field(
-        description="The identifier issued by the identifier issuer, converted to string if necessary. The identifier will be stripped of leading and trailing whitespace.",
+        description="Issuer-provided identifier, normalized by stripping leading and trailing whitespace.",
         max_length=255,
     )
     internal_id: UUID = Field(description="The internal identifier.")
 
     @model_validator(mode="after")
     def _validate_model(self) -> Self:
-        """
-        Derive the id, if not provided, or otherwise verify that it is
-        correctly derived if possible.
-        """
+        """Derive or validate the deterministic identifier UUID."""
         seq_id = self.id
         computed_id = UUID(
             hashlib.sha256(
@@ -499,6 +502,7 @@ class BaseIdentifier(Model):
     @field_validator("external_id", mode="after")
     @classmethod
     def _strip_external_id(cls, value: str) -> str:
+        """Strip leading and trailing whitespace from an external identifier."""
         return value.strip()
 
     @classmethod
@@ -511,9 +515,18 @@ class BaseIdentifier(Model):
         persistable: bool = True,
         **kwargs: Any,
     ) -> Entity:
-        """
-        Create an Entity for a derived Identifier model class, based on the
-        associated model class and the fields of the base identifier.
+        """Create persistence metadata for a derived external-identifier model.
+
+        Args:
+            model_class: The model identified by the derived identifier.
+            relationship_field_name: The relationship name for ``internal_id``.
+            snake_case_plural_name: The optional collection name.
+            table_name: The optional persistence table name.
+            persistable: Whether the derived model is persisted.
+            **kwargs: Additional Entity configuration.
+
+        Returns:
+            Entity metadata keyed by issuer and external identifier.
         """
         entity = Entity(
             snake_case_plural_name=snake_case_plural_name,
@@ -537,30 +550,33 @@ class BaseIdentifier(Model):
 
 
 class IdentifierForUpload(BaseModel, frozen=True):
-    """
-    An external identifier, defined as the combination of
-    (identifier issuer, identifier), intended for an upload operation.
+    """Represent an external identifier used in an upload operation.
+
+    It is defined as the combination of an identifier issuer and identifier.
     The identifier issuer can be given either as its code or ID to facilitate the
     upload operation where applicable.
     The model is immutable (frozen) to allow its use in sets and as dictionary keys.
+
+    Model validation:
+    At least one of ``identifier_issuer_id`` or ``identifier_issuer_code`` is required.
     """
 
     NAME: ClassVar[str] = "IdentifierForUpload"
 
     identifier_issuer_id: UUID | None = Field(
         default=None,
-        description="The UUID of the identifier issuer that issued the identifier. Must be present if the identifier_issuer_code is not present.",
+        description="Issuer UUID; at least this field or identifier_issuer_code is required.",
     )
     identifier_issuer_code: str | None = Field(
         default=None,
-        description="The code of the identifier issuer that issued the identifier. Must be present if the identifier_issuer_id is not present.",
+        description="Issuer code; at least this field or identifier_issuer_id is required.",
         max_length=255,
     )
     external_id: str = Field(description="The external identifier", max_length=255)
 
     @model_validator(mode="after")
     def _validate_issuer_fields(self) -> Self:
-        """Ensure that either identifier_issuer_id or identifier_issuer_code is set."""
+        """Require an issuer UUID or code."""
         if self.identifier_issuer_id is None and self.identifier_issuer_code is None:
             raise ValueError(
                 "Either identifier_issuer_id or identifier_issuer_code must be provided."
@@ -568,10 +584,7 @@ class IdentifierForUpload(BaseModel, frozen=True):
         return self
 
     def __eq__(self, other: object) -> bool:
-        """
-        Check equality based on identifier_issuer_id, identifier_issuer_code, and identifier.
-        Only when all three match, the objects are considered equal.
-        """
+        """Compare issuer references and external ID with another upload identifier."""
         if not isinstance(other, IdentifierForUpload):
             return False
         return (
@@ -581,12 +594,15 @@ class IdentifierForUpload(BaseModel, frozen=True):
         )
 
     def __hash__(self) -> int:
+        """Return a hash of the issuer references and external identifier."""
         return hash(
             (self.identifier_issuer_id, self.identifier_issuer_code, self.external_id)
         )
 
 
 class OrganizationContacts(BaseModel):
+    """Group an organization with its sites and site-specific contacts."""
+
     organization: Organization = Field(
         description="The organization corresponding to the contacts"
     )
