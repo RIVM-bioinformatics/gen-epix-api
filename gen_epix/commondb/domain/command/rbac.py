@@ -1,16 +1,21 @@
+"""Define commondb commands for retrieving role-based access-control data."""
+
 from gen_epix.commondb.domain.command.base import Command
 
 # Non-CRUD commands
 
 
 class RetrieveOwnPermissionsCommand(Command):
+    """Retrieve the effective permissions of the executing user."""
+
     pass
 
 
 class RetrieveSubRolesCommand(Command):
-    """
-    Retrieves all sub-roles of a user. If the current user roles themselves have some
-    sub-roles of each other, those will be included as well.
+    """Retrieve all roles inherited below the executing user's assigned roles.
+
+    The result includes sub-roles that are also inherited through another
+    assigned role.
     """
 
     pass

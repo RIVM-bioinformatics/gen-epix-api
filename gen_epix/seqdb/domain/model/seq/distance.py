@@ -1,3 +1,5 @@
+"""Define seqdb domain models for domain.model.seq.distance."""
+
 import json
 from typing import ClassVar, Self
 from uuid import UUID
@@ -16,6 +18,13 @@ from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 class SeqDistance(
     Model, HasSampleMixin, HasProtocolMixin, ContentMixin[enum.SeqDistanceFormat]
 ):
+    """Store profile-to-profile distances produced by a protocol.
+
+    Model validation: The content must encode a JSON profile-distance map in
+    ``PROFILE_DISTANCE_MAP`` format. Validation resets ``content_hash`` to its
+    required sentinel because this model does not use content hashes.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="seq_distances",
         table_name="seq_distance",
@@ -63,16 +72,21 @@ class SeqDistance(
 
     @model_validator(mode="after")
     def _validate_content(self) -> Self:
-        """
-        Validate that the content representation is valid.
-        """
+        """Validate the profile-distance-map content and reset its unused hash."""
         self.content_hash = NULL_ID
         self.get_profile_distance_map()  # This will raise an error if the content is not a valid profile distance map
         return self
 
     def get_profile_distance_map(self) -> dict[UUID, float]:
-        """
-        Get the profile distance map from the content.
+        """Decode the stored JSON profile-distance map.
+
+        Returns:
+            Distances keyed by sequence-profile identifier.
+
+        Raises:
+            ValueError: If the content uses an unsupported sequence-distance format.
+            json.JSONDecodeError: If the content is not valid JSON.
+            ValueError: If a JSON map key is not a valid UUID.
         """
         if self.format != enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP:
             raise ValueError(f"Unsupported format: {self.format}")

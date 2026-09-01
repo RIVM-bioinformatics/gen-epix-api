@@ -1,3 +1,5 @@
+"""Compose OmopDB services, policies, commands, and domain metadata."""
+
 from typing import Any
 
 from gen_epix.commondb.config import AppCfg
@@ -9,12 +11,15 @@ from gen_epix.omopdb.services import RbacService
 
 
 class AppComposer(CommonAppComposer):
+    """Configure the shared application composer with OmopDB registrations."""
+
     def __init__(
         self,
         app_cfg: AppCfg,
         log_setup: bool = True,
         **kwargs: Any,
     ):
+        """Initialize the application composer from the OmopDB configuration."""
         super().__init__(
             app_cfg,
             log_setup=log_setup,

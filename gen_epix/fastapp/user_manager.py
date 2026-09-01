@@ -1,3 +1,5 @@
+"""User manager interface used by authentication and authorization services."""
+
 import abc
 from collections.abc import Hashable
 from typing import Any
@@ -25,6 +27,7 @@ class BaseUserManager(abc.ABC):
         claims. The email claim is used here as the default user key, with the value
         set to lowercase to allow case-insensitive matching. Empty string as email is
         set to None. Override this method if another key should be used.
+
         """
         email_claim: str | None = claims.get(self.STANDARD_EMAIL_CLAIM)
         if email_claim:

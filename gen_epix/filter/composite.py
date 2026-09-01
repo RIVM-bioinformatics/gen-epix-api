@@ -1,3 +1,5 @@
+"""Logical composition of scalar and row filter expressions."""
+
 # pylint: disable=protected-access
 # because the functions are dynamically generated in _is_valid
 
@@ -30,6 +32,13 @@ from gen_epix.filter.uuid_set import TypedUuidSetFilter, UuidSetFilter
 
 
 class CompositeFilter(Filter):
+    """Combine child filters using a configured logical operator.
+
+    Model validation:
+    At least one child filter is required. `NOT` requires exactly one child, and
+    operators other than `AND` and `OR` support no more than two children.
+    """
+
     filters: list[
         ExistsFilter
         | EqualsBooleanFilter
@@ -66,6 +75,7 @@ class CompositeFilter(Filter):
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
+        """Validate child-filter cardinality and build matching functions."""
         if len(self.filters) == 0:
             raise AssertionError("At least one filter must be set.")
         if self.operator == enum.LogicalOperator.NOT and len(self.filters) != 1:
@@ -152,7 +162,17 @@ class CompositeFilter(Filter):
         return self
 
     def _match(self, value: Any) -> bool:
-        """Function is implemented dynamically in _validate_state"""
+        """Match a value using the function generated during validation.
+
+        Args:
+            value: The scalar value to match.
+
+        Returns:
+            Whether the value matches the configured composition.
+
+        Raises:
+            NotImplementedError: Always, until model validation supplies the function.
+        """
         raise NotImplementedError(
             "Method is implemented dynamically in _validate_state"
         )
@@ -160,7 +180,19 @@ class CompositeFilter(Filter):
     def _match_row(
         self, value_exists: Iterable[bool], value: Iterable[Any], is_model: bool
     ) -> bool:
-        """Function is implemented dynamically in _validate_state"""
+        """Match row values using the function generated during validation.
+
+        Args:
+            value_exists: Flags indicating whether each child value exists.
+            value: Values to match against the child filters.
+            is_model: Whether values originate from model rows.
+
+        Returns:
+            Whether the row values match the configured composition.
+
+        Raises:
+            NotImplementedError: Always, until model validation supplies the function.
+        """
         raise NotImplementedError(
             "Method is implemented dynamically in _validate_state"
         )
@@ -168,6 +200,7 @@ class CompositeFilter(Filter):
     def _not_none_row_iterator(
         self, row: dict[Hashable, Any | None] | BaseModel, is_model: bool = False
     ) -> Generator:
+        """Yield child-value presence flags while treating `None` as absent."""
         for filter in self.filters:  # type: ignore
             if filter._is_composite:
                 yield all(filter._not_none_row_iterator(row, is_model))
@@ -183,6 +216,7 @@ class CompositeFilter(Filter):
         na_values: set[Any],
         is_model: bool = False,
     ) -> Generator:
+        """Yield child-value presence flags while excluding configured NA values."""
         for filter in self.filters:  # type: ignore
             if filter._is_composite:
                 yield all(filter._not_na_row_iterator(row, na_values, is_model))
@@ -193,6 +227,7 @@ class CompositeFilter(Filter):
                 )
 
     def _all_subfilters_have_key(self) -> bool:
+        """Return whether every leaf filter has a key for row matching."""
         retval = True
         for filter in self.filters:
             if filter._is_composite:
@@ -212,6 +247,17 @@ class CompositeFilter(Filter):
             | None
         ) = None,
     ) -> list[Callable[[Any], Any]]:
+        """Normalize row-value mappings to one function per child filter.
+
+        Args:
+            map_fn: A shared, per-key, or per-filter value mapping.
+
+        Returns:
+            A mapping function for each child filter.
+
+        Raises:
+            ValueError: If mappings are invalid or do not match the child-filter count.
+        """
         if not map_fn:
             map_fn = [lambda x: x for _ in self.filters]
         elif isinstance(map_fn, dict):
@@ -236,6 +282,20 @@ class CompositeFilter(Filter):
         ) = None,
         is_model: bool = False,
     ) -> bool:
+        """Return whether a row satisfies the composite filter.
+
+        Args:
+            row: Mapping or model row to match.
+            na_values: Values treated as unavailable.
+            map_fn: A shared, per-key, or per-filter value mapping.
+            is_model: Whether `row` is a model instance.
+
+        Returns:
+            Whether the row satisfies the configured composition.
+
+        Raises:
+            ValueError: If a child filter lacks a row key or mappings are invalid.
+        """
         if not self._all_subfilters_have_key():
             raise ValueError(
                 "Key must be set for each filter to apply filter to a row."
@@ -290,6 +350,23 @@ class CompositeFilter(Filter):
         ) = None,
         is_model: bool = False,
     ) -> Iterator[bool]:
+        """Yield composite matches for each row.
+
+        Args:
+            rows: Rows to match.
+            na_values: Values treated as unavailable.
+            map_fn: A shared, per-key, or per-filter value mapping.
+            is_model: Whether rows are model instances.
+
+        Yields:
+            Whether each row satisfies the configured composition.
+
+        Returns:
+            An iterator over row match results.
+
+        Raises:
+            ValueError: If a child filter lacks a row key or mappings are invalid.
+        """
         # Match, per row and filter, if both key exists, value not null and value matches
         if not self._all_subfilters_have_key():
             raise ValueError(
@@ -341,6 +418,23 @@ class CompositeFilter(Filter):
         ) = None,
         is_model: bool = False,
     ) -> Iterator[dict[Hashable, Any | None]]:
+        """Yield rows that satisfy the composite filter.
+
+        Args:
+            rows: Rows to filter.
+            na_values: Values treated as unavailable.
+            map_fn: A shared, per-key, or per-filter value mapping.
+            is_model: Whether rows are model instances.
+
+        Yields:
+            Rows that satisfy the configured composition.
+
+        Returns:
+            An iterator over matching rows.
+
+        Raises:
+            ValueError: If a child filter lacks a row key or mappings are invalid.
+        """
         # Match, per row and filter, if both key exists, value not null and value matches
         if not self._all_subfilters_have_key():
             raise ValueError(
@@ -383,9 +477,11 @@ class CompositeFilter(Filter):
                     yield row
 
     def get_keys(self) -> list[Hashable]:
+        """Return leaf-filter keys in traversal order."""
         keys = []
 
         def _recursion(keys: list, filters: list[Filter]) -> None:
+            """Append leaf-filter keys from a nested filter collection."""
             for filter in filters:
                 if isinstance(filter, CompositeFilter):
                     _recursion(keys, filter.filters)
@@ -398,6 +494,7 @@ class CompositeFilter(Filter):
     def set_keys(
         self, key_map: dict[Hashable, Hashable] | Callable[[Hashable], Hashable]
     ) -> Self:
+        """Set leaf keys using a mapping or a key transformation function."""
         for filter in self.filters:
             if isinstance(filter, CompositeFilter):
                 filter.set_keys(key_map)
@@ -409,6 +506,8 @@ class CompositeFilter(Filter):
 
 
 class TypedCompositeFilter(CompositeFilter):
+    """Composite filter carrying its serialized filter type."""
+
     type: Literal[enum.FilterType.COMPOSITE.value]  # type: ignore[name-defined]
     filters: list[
         TypedExistsFilter

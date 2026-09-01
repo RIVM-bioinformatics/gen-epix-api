@@ -1,3 +1,9 @@
+"""Provide the commondb user-manager contract for resolved identities.
+
+The manager builds the root fallback user and optional automatically created
+user defaults from application configuration and organization/RBAC services.
+"""
+
 from typing import Any
 from uuid import UUID
 
@@ -9,6 +15,8 @@ from gen_epix.fastapp.user_manager import BaseUserManager as ServiceUserManager
 
 
 class BaseUserManager(ServiceUserManager):
+    """Resolve commondb users and validate root and automatic-user configuration."""
+
     DEFAULT_KEY_CLAIM = "__key__"
 
     DEFAULT_NAME_CLAIMS: list[str | list[str]] = [
@@ -30,6 +38,21 @@ class BaseUserManager(ServiceUserManager):
         key_claim: str | None = None,
         name_claims: list[str | list[str]] | None = None,
     ):
+        """Initialize identity claim settings and user creation configuration.
+
+        Args:
+            organization_service: Service that retrieves commondb users.
+            rbac_service: Service that supplies registered role values.
+            user_class: Model used to represent resolved users.
+            user_invitation_class: Model used to represent invitations.
+            root_cfg: Required configuration for the root organization and user.
+            auto_created_user_cfg: Optional defaults for automatically created users.
+            key_claim: Identity-provider claim used as the user key.
+            name_claims: Claims considered when resolving a display name.
+
+        Raises:
+            InitializationServiceError: If required root configuration is absent or invalid.
+        """
         # Assign input properties
         self._organization_service = organization_service
         self._rbac_service = rbac_service
@@ -49,6 +72,15 @@ class BaseUserManager(ServiceUserManager):
         self.init_auto_created_user_cfg(auto_created_user_cfg)
 
     def init_root_cfg(self, root_cfg: dict[str, dict[str, str]]) -> None:
+        """Validate and construct the root organization and root user.
+
+        Args:
+            root_cfg: Configuration containing ``organization`` and ``user`` sections.
+
+        Raises:
+            InitializationServiceError: If required sections or the organization ID are
+                missing.
+        """
         # Check top level keys
         required_keys = {"organization", "user"}
         if not required_keys.issubset(root_cfg.keys()):
@@ -76,6 +108,16 @@ class BaseUserManager(ServiceUserManager):
     def init_auto_created_user_cfg(
         self, auto_created_user_cfg: dict[str, str] | None
     ) -> None:
+        """Validate optional defaults used to create previously unknown users.
+
+        Args:
+            auto_created_user_cfg: Role and organization defaults, or None to disable
+                automatic user creation.
+
+        Raises:
+            InitializationServiceError: If required values are missing, roles are not
+                registered, or the organization ID is invalid.
+        """
         self._auto_created_user_cfg: dict[str, Any] | None = None
         if not auto_created_user_cfg:
             # No configuration provided, so automatic new user creation is disabled

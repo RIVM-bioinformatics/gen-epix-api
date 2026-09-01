@@ -1,3 +1,5 @@
+"""Authorize commondb user invitations and updates without privilege escalation."""
+
 from typing import Any
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
@@ -9,7 +11,15 @@ from gen_epix.fastapp import Command
 
 
 class UpdateUserPolicy(BaseUpdateUserPolicy):
+    """Apply BEFORE-phase role and organization checks to user mutations."""
+
     def __init__(self, abac_service: BaseAbacService, **kwargs: Any):
+        """Initialize mapped user type and configured role mappings.
+
+        Args:
+            abac_service: Service that resolves organization administration rights.
+            **kwargs: Additional base-policy configuration.
+        """
         super().__init__(abac_service, **kwargs)
 
         app_impl: AppImplDetails = abac_service.app.impl
@@ -18,6 +28,21 @@ class UpdateUserPolicy(BaseUpdateUserPolicy):
         self.role_set_map = app_impl.role_set_map
 
     def is_allowed(self, cmd: Command) -> bool:
+        """Determine whether a user may invite or update the target user.
+
+        Root users may manage any user. Other administrators must remain above the
+        target's effective permissions and, for organization administrators, operate
+        only within organizations they administer.
+
+        Args:
+            cmd: Invitation or user-update command evaluated in the BEFORE phase.
+
+        Returns:
+            True when the mutation does not exceed the current user's authority.
+
+        Raises:
+            NotImplementedError: If ``cmd`` is neither an invitation nor user update.
+        """
         user: model.User | None = cmd.user  # type: ignore[assignment]
         if user is None or user.id is None:
             return False
@@ -66,6 +91,19 @@ class UpdateUserPolicy(BaseUpdateUserPolicy):
     def _get_target_user_info(
         self, cmd: Command, user: User
     ) -> tuple[bool, set[str], model.User, bool]:
+        """Resolve update target state and early-exit conditions for a user command.
+
+        Args:
+            cmd: Invitation or user-update command being authorized.
+            user: User attempting the operation.
+
+        Returns:
+            Organization-change flag, combined target roles, target user, and early-exit
+            flag.
+
+        Raises:
+            NotImplementedError: If the command is neither an invitation nor update.
+        """
         tgt_user: model.User
         early_exit = False
         if isinstance(cmd, command.InviteUserCommand):
@@ -92,6 +130,15 @@ class UpdateUserPolicy(BaseUpdateUserPolicy):
         return is_organization_update, tgt_roles_union, tgt_user, early_exit
 
     def _has_more_permissions(self, user: model.User, tgt_user: model.User) -> bool:
+        """Determine whether a user strictly exceeds a target user's permissions.
+
+        Args:
+            user: User whose permissions are compared.
+            tgt_user: Target user whose permissions are compared.
+
+        Returns:
+            True when target permissions are a proper subset of user permissions.
+        """
         permissions = self.abac_service.app.user_manager.retrieve_user_permissions(user)
         tgt_permissions = self.abac_service.app.user_manager.retrieve_user_permissions(
             tgt_user

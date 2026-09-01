@@ -1,3 +1,5 @@
+"""Define seqdb domain models for domain.model.seq.classification."""
+
 from typing import ClassVar, Self
 from uuid import UUID
 
@@ -23,6 +25,12 @@ class SeqClassification(
     ContentMixin[enum.SeqClassificationFormat],
     QualityMixin,
 ):
+    """Store a sequence classification produced by a protocol.
+
+    Model validation: Content-hash validation is not implemented yet, so the
+    model currently accepts content unchanged after its inherited validation.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="seq_classifications",
         table_name="seq_classification",
@@ -48,6 +56,7 @@ class SeqClassification(
 
     @model_validator(mode="after")
     def _validate_content(self) -> Self:
+        """Reserve post-validation for future content-hash verification."""
         # TODO: implement content hash validation
         return self
 
@@ -60,6 +69,12 @@ class AstPrediction(
     ContentMixin[enum.AstResultFormat],
     QualityMixin,
 ):
+    """Store an antimicrobial-susceptibility prediction for a sequence.
+
+    Model validation: Content-hash validation is not implemented yet, so the
+    model currently accepts content unchanged after its inherited validation.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="ast_predictions",
         table_name="ast_prediction",
@@ -76,6 +91,7 @@ class AstPrediction(
 
     @model_validator(mode="after")
     def _validate_content(self) -> Self:
+        """Reserve post-validation for future content-hash verification."""
         # TODO: implement content hash validation
         return self
 
@@ -88,6 +104,12 @@ class SeqTaxonomy(
     ContentMixin[enum.SeqTaxonomyFormat],
     QualityMixin,
 ):
+    """Store a taxonomy assignment produced for a sequence by a protocol.
+
+    Model validation: Content-hash validation is not implemented yet, so the
+    model currently accepts content unchanged after its inherited validation.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="seq_taxonomies",
         table_name="seq_taxonomy",
@@ -113,5 +135,6 @@ class SeqTaxonomy(
 
     @model_validator(mode="after")
     def _validate_content(self) -> Self:
+        """Reserve post-validation for future content-hash verification."""
         # TODO: implement content hash validation
         return self

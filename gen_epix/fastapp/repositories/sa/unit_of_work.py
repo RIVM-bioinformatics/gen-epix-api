@@ -1,3 +1,5 @@
+"""SQLAlchemy transaction and unit-of-work implementation."""
+
 from types import TracebackType
 from typing import Self
 
@@ -23,21 +25,26 @@ class SAUnitOfWork(BaseUnitOfWork):
     def __init__(
         self, session: Session, context_stack: list[BaseUnitOfWork] | None = None
     ):
+        """Initialize a SAUnitOfWork instance."""
         super().__init__()
         self._session = session
         self._context_stack = context_stack
 
     @property
     def session(self) -> Session:
+        """Session the requested value."""
         return self._session
 
     def commit(self) -> None:
+        """Commit the requested value."""
         self._session.commit()
 
     def rollback(self) -> None:
+        """Rollback the requested value."""
         self._session.rollback()
 
     def flush(self) -> None:
+        """Flush the requested value."""
         self._session.flush()
 
     @staticmethod
@@ -50,6 +57,7 @@ class SAUnitOfWork(BaseUnitOfWork):
         Handle exceptions raised during a unit of work, converting them into a domain
         exception when they are due to normal operation such as a unique constraint
         failing. Any other exceptions are re-raised with traceback.
+
         """
         if issubclass(exception_class, exc.DomainException):
             raise exception_value
@@ -97,6 +105,7 @@ class SAUnitOfWork(BaseUnitOfWork):
         raise NotImplementedError().with_traceback(traceback)
 
     def __enter__(self) -> Self:
+        """Enter the managed context."""
         if self._context_stack is not None:
             self._context_stack.append(self)
         self._is_managing_context = True
@@ -108,6 +117,7 @@ class SAUnitOfWork(BaseUnitOfWork):
         exception_value: Exception | None,
         traceback: TracebackType | None,
     ) -> None:
+        """Exit the managed context."""
         self._is_managing_context = False
         # Handle nested contexts
         if self._context_stack is not None:

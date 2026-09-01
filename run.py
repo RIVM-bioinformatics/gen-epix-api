@@ -340,6 +340,16 @@ class Run:
             ]
         )
 
+    def test_fastapp_unit_cache(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/fastapp/unit/cache",
+            ]
+        )
+
     def test_fastapp_unit_domain(self) -> None:
         import pytest
 
@@ -1000,12 +1010,23 @@ class Run:
             Path(__file__).parent / "test" / "output" / f"linter.{now_str}.pylint.txt"
         )
         linter = Linter()
-        linter.run_pylint(file=file, filter_on_codes=filter_on_codes)
-        file2.write_text(file.read_text(encoding="utf-8"), encoding="utf-8")
+        output = linter.run_pylint(file=file, filter_on_codes=filter_on_codes)
+        file2.write_text(output, encoding="utf-8")
         for line in linter.parse_pylint_for_issue_lines(
             file, filter_on_codes=filter_on_codes
         ):
             print(line)
+
+    def other_general_run_ruff(self) -> None:
+        from test.test_client.linter import Linter
+
+        file = Path(__file__).parent / "test" / "output" / "linter.ruff.txt"
+        now_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        file2 = Path(__file__).parent / "test" / "output" / f"linter.{now_str}.ruff.txt"
+        linter = Linter()
+        output = linter.run_ruff(file=file)
+        file2.write_text(output, encoding="utf-8")
+        print(output, end="")
 
     def other_general_analyse_pylint_code_impact(self) -> None:
 

@@ -1,3 +1,5 @@
+"""Provide an in-process client that dispatches commondb commands to API endpoints."""
+
 import json
 import uuid
 from collections.abc import Callable
@@ -19,6 +21,7 @@ from gen_epix.fastapp import App, Command, CrudCommand, CrudOperation
 
 
 class EndpointTestClient:
+    """Translate supported commondb commands into FastAPI test-client requests."""
 
     SECRET_KEY = str(uuid.uuid4())
     ENCRYPTION_ALGORITHM = "HS256"
@@ -65,6 +68,29 @@ class EndpointTestClient:
         register_crud_commands: bool = True,
         route_prefix: str | None = None,
     ):
+        """Initialize endpoint handlers and model classes used by the test client.
+
+        Args:
+            app: Composed application whose commands determine registered handlers.
+            fast_api: FastAPI application receiving in-process HTTP requests.
+            app_last_handled_exception: Shared exception diagnostic state.
+            user_class: Model class used to deserialize user responses.
+            user_invitation_class: Model class used to deserialize invitations.
+            user_invitation_constraints_class: Model class for invitation constraints.
+            organization_admin_policy_class: Model class for administrator policies.
+            user_crud_command_class: Command class used for user CRUD.
+            user_invitation_crud_command_class: Command class for invitation CRUD.
+            organization_admin_policy_crud_command_class: Command class for policy CRUD.
+            retrieve_invite_user_constraints_command_class: Constraints command class.
+            invite_user_command_class: Invitation command class.
+            register_invited_user_command_class: Registration command class.
+            retrieve_organization_admin_name_emails_command_class: Admin lookup command.
+            update_user_command_class: User update command class.
+            user_invitation_request_body: Request schema for invitations.
+            update_user_request_body: Request schema for user updates.
+            register_crud_commands: Whether to register generic CRUD handlers.
+            route_prefix: Optional prefix prepended to generated API routes.
+        """
         self.app = app
         self.fast_api = fast_api
         self.test_client = TestClient(fast_api, raise_server_exceptions=False)
@@ -114,6 +140,12 @@ class EndpointTestClient:
         command_class: type[Command],
         handler: Callable[[Command, str, dict[str, str] | None], tuple[Any, Response]],
     ) -> None:
+        """Register a command class with its endpoint-dispatch handler.
+
+        Args:
+            command_class: Command class accepted by the handler.
+            handler: Function that turns the command into an HTTP request.
+        """
         self._handlers[command_class] = handler
 
     def handle(
@@ -123,6 +155,20 @@ class EndpointTestClient:
         route_prefix: str | None = None,
         **kwargs: Any,
     ) -> Any:
+        """Dispatch a supported command to its corresponding API endpoint.
+
+        Args:
+            cmd: Command to translate into an HTTP request.
+            return_response: Whether to return the raw HTTP response with the result.
+            route_prefix: Optional prefix overriding the configured route prefix.
+            **kwargs: Reserved options for specialized test clients.
+
+        Returns:
+            Deserialized endpoint result, optionally paired with its HTTP response.
+
+        Raises:
+            NotImplementedError: If no handler is registered for the command class.
+        """
         route_prefix = route_prefix or self.route_prefix
         if cmd.user:
             headers = self.get_headers(cmd)
@@ -142,6 +188,16 @@ class EndpointTestClient:
         route_prefix: str,
         headers: dict[str, str] | None,
     ) -> tuple[Any, Response]:
+        """Request identity providers and deserialize the returned list.
+
+        Args:
+            cmd: Identity-provider command being dispatched.
+            route_prefix: Prefix prepended to the identity-provider route.
+            headers: Optional request headers.
+
+        Returns:
+            Deserialized identity providers and the HTTP response.
+        """
         response = self.test_client.get(route_prefix + "/identity_providers")
         retval = self._content_to_obj(response, model.IdentityProvider, is_list=True)
         return retval, response
@@ -152,6 +208,16 @@ class EndpointTestClient:
         route_prefix: str,
         headers: dict[str, str] | None,
     ) -> tuple[Any, Response]:
+        """Submit an invitation command to the invitation endpoint.
+
+        Args:
+            cmd: Invitation command supplying the request body.
+            route_prefix: Prefix prepended to the invitation route.
+            headers: Optional authorization headers.
+
+        Returns:
+            Deserialized invitation and the HTTP response.
+        """
         request_body = self.user_invitation_request_body(
             key=cmd.key,
             email=cmd.email,
@@ -173,6 +239,16 @@ class EndpointTestClient:
         route_prefix: str,
         headers: dict[str, str] | None,
     ) -> tuple[Any, Response]:
+        """Request invitation constraints from the API.
+
+        Args:
+            cmd: Invitation-constraints command being dispatched.
+            route_prefix: Prefix prepended to the constraints route.
+            headers: Optional authorization headers.
+
+        Returns:
+            Deserialized constraints and the HTTP response.
+        """
         response = self.test_client.get(
             route_prefix + "/invite_user/constraints",
             headers=headers,
@@ -186,6 +262,16 @@ class EndpointTestClient:
         route_prefix: str,
         headers: dict[str, str] | None,
     ) -> tuple[Any, Response]:
+        """Register an invited user through the registration endpoint.
+
+        Args:
+            cmd: Registration command supplying the invitation token.
+            route_prefix: Prefix prepended to the registration route.
+            headers: Optional authorization headers.
+
+        Returns:
+            Deserialized registered user and the HTTP response.
+        """
         response = self.test_client.post(
             route_prefix + f"/user_registrations/{cmd.token}",
             headers=headers,
@@ -199,6 +285,16 @@ class EndpointTestClient:
         route_prefix: str,
         headers: dict[str, str] | None,
     ) -> tuple[Any, Response]:
+        """Submit a user-update command to the update endpoint.
+
+        Args:
+            cmd: User-update command supplying target and changed properties.
+            route_prefix: Prefix prepended to the update route.
+            headers: Optional authorization headers.
+
+        Returns:
+            Deserialized updated user and the HTTP response.
+        """
         request_body = self.update_user_request_body(
             is_active=cmd.is_active,
             roles=cmd.roles,
@@ -215,6 +311,18 @@ class EndpointTestClient:
         return retval, response
 
     def get_headers(self, cmd: Command, **kwargs: Any) -> dict[str, str] | None:
+        """Create test authorization headers for a command user when available.
+
+        Args:
+            cmd: Command whose user supplies the synthetic JWT identity.
+            **kwargs: Reserved options for specialized test clients.
+
+        Returns:
+            Bearer-token headers, or None for commands without a user.
+
+        Raises:
+            ValueError: If the command user has neither a key nor email address.
+        """
         if cmd.user:
             assert cmd.user is not None
             key_or_email = cmd.user.get_key() or cmd.user.email  # type: ignore[attr-defined]
@@ -236,6 +344,19 @@ class EndpointTestClient:
         exp: int | None = None,
         expire_default_minutes: int = 15,
     ) -> str:
+        """Create a signed test JWT with configurable standard claims.
+
+        Args:
+            email: Email and synthetic application key claim.
+            iss: Optional issuer claim.
+            sub: Optional subject claim.
+            aud: Optional audience claim.
+            exp: Optional expiration claim.
+            expire_default_minutes: Expiry duration when ``exp`` is omitted.
+
+        Returns:
+            Encoded JWT signed with the test client's secret key.
+        """
         claims = {
             "__key__": email,
             "email": email,
@@ -259,6 +380,19 @@ class EndpointTestClient:
         exp: int | None = None,
         expire_default_minutes: int = 15,
     ) -> dict[str, str]:
+        """Create bearer authorization headers containing a synthetic JWT.
+
+        Args:
+            email: Email and synthetic application key claim.
+            iss: Optional issuer claim.
+            sub: Optional subject claim.
+            aud: Optional audience claim.
+            exp: Optional expiration claim.
+            expire_default_minutes: Expiry duration when ``exp`` is omitted.
+
+        Returns:
+            Authorization header containing the encoded JWT.
+        """
         return {
             "Authorization": f"Bearer {self.get_dummy_jwt(email, iss, sub, aud, exp, expire_default_minutes)}"
         }
@@ -266,6 +400,19 @@ class EndpointTestClient:
     def handle_crud_command(
         self, cmd: CrudCommand, route_prefix: str, headers: dict[str, str] | None
     ) -> tuple[Any, Response]:
+        """Dispatch a generic CRUD command to its model's REST endpoint.
+
+        Args:
+            cmd: CRUD command to translate into an HTTP request.
+            route_prefix: Prefix prepended to the model route.
+            headers: Optional authorization headers.
+
+        Returns:
+            Deserialized CRUD result and the HTTP response.
+
+        Raises:
+            NotImplementedError: If the CRUD operation is unsupported.
+        """
         model_class = cmd.MODEL_CLASS
         entity = model_class.ENTITY
         assert entity is not None
@@ -350,6 +497,19 @@ class EndpointTestClient:
     def _content_to_obj(
         response: Response, retval_class: type, is_list: bool = False
     ) -> Any:
+        """Deserialize a successful HTTP response to the requested model type.
+
+        Args:
+            response: HTTP response returned by the test client.
+            retval_class: Pydantic model or UUID class used for deserialization.
+            is_list: Whether the response body contains a list of values.
+
+        Returns:
+            Deserialized response body, or None for an unsuccessful response.
+
+        Raises:
+            NotImplementedError: If the requested return type is unsupported.
+        """
         if response.status_code not in (200, 201):
             return None
         decoded_obj = json.loads(response.content.decode(response.encoding or "utf-8"))

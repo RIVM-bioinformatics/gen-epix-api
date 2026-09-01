@@ -1,3 +1,5 @@
+"""Base authentication service contract."""
+
 import abc
 
 from gen_epix.fastapp.service import BaseService
@@ -6,7 +8,10 @@ from gen_epix.fastapp.services.auth.command import GetIdentityProvidersCommand
 
 
 class BaseAuthService(BaseService):
+    """Base class for authentication services."""
+
     def register_handlers(self) -> None:
+        """Register handlers."""
         self.app.register_handler(
             GetIdentityProvidersCommand, self.get_identity_providers
         )

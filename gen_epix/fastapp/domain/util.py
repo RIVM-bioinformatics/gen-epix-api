@@ -1,3 +1,5 @@
+"""Factories and type helpers for domain metadata."""
+
 from collections.abc import Callable
 from types import NoneType, UnionType
 from typing import Any, Union
@@ -9,9 +11,7 @@ from gen_epix.fastapp.domain.link import Link, MultiLink
 
 
 def create_keys(keys: dict[int, Key | str | tuple | Callable]) -> dict[int, Key]:
-    """
-    Create a dictionary of Key objects from a dictionary of key definitions.
-    """
+    """Create a dictionary of Key objects from a dictionary of key definitions."""
     retval = {}
     for x, y in keys.items():
         if isinstance(y, Key):
@@ -24,9 +24,7 @@ def create_keys(keys: dict[int, Key | str | tuple | Callable]) -> dict[int, Key]
 def create_links(
     links: dict[int, Link | tuple[str, type, str | None]],
 ) -> dict[int, Link]:
-    """
-    Create a dictionary of Link objects from a dictionary of link definitions.
-    """
+    """Create a dictionary of Link objects from a dictionary of link definitions."""
     retval = {}
     for x, y in links.items():
         if isinstance(y, Link):
@@ -43,9 +41,7 @@ def create_links(
 def create_multi_links(
     multi_links: list[tuple[str, type]],
 ) -> list[MultiLink]:
-    """
-    Create a list of MultiLink objects from a list of multi-link definitions.
-    """
+    """Create a list of MultiLink objects from a list of multi-link definitions."""
     retval = []
     for x in multi_links:
         retval.append(
@@ -60,9 +56,7 @@ def create_multi_links(
 def get_type_from_annotation(
     annotation: type[Any] | None,
 ) -> type:
-    """
-    Adapted from https://github.com/fastapi/sqlmodel v0.0.24
-    """
+    """Adapted from https://github.com/fastapi/sqlmodel v0.0.24."""
     # Resolve Optional fields
     if annotation is None:
         raise ValueError("Missing field type")

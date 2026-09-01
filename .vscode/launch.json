@@ -992,6 +992,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.fastapp.unit.cache",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_fastapp_unit_cache"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.fastapp.unit.domain",
             "type": "debugpy",
             "request": "launch",

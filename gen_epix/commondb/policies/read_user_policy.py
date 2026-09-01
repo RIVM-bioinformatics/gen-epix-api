@@ -1,3 +1,5 @@
+"""Restrict commondb user reads according to ABAC organization visibility."""
+
 from typing import Any
 from uuid import UUID
 
@@ -14,9 +16,17 @@ from gen_epix.filter.equals_uuid import EqualsUuidFilter
 
 
 class ReadUserPolicy(BaseReadUserPolicy):
+    """Apply AFTER-phase filtering to user records visible to the command user."""
+
     # TODO: replace by get_content implementation for more efficient application DURING execution
 
     def __init__(self, abac_service: BaseAbacService, **kwargs: Any):
+        """Initialize organization-admin query support and configured role mappings.
+
+        Args:
+            abac_service: Service used to dispatch organization-admin policy queries.
+            **kwargs: Additional base-policy configuration.
+        """
         super().__init__(abac_service, **kwargs)
 
         app_impl: AppImplDetails = abac_service.app.impl
@@ -29,6 +39,20 @@ class ReadUserPolicy(BaseReadUserPolicy):
     def filter(
         self, cmd: Command, retval: model.User | list[model.User]
     ) -> model.User | list[model.User]:
+        """Filter requested users to records visible under the current user's ABAC scope.
+
+        Args:
+            cmd: Completed user CRUD command evaluated in the AFTER phase.
+            retval: User or users returned by the command handler.
+
+        Returns:
+            The filtered result, or the original result when the policy is inapplicable.
+
+        Raises:
+            AssertionError: If the command has no authenticated user.
+            UnauthorizedAuthError: If a targeted user is outside the visible scope.
+            NotImplementedError: If the command operation or type is unsupported.
+        """
         if self._check_invalid_filter_input(cmd):
             return retval
         user: model.User = cmd.user  # type: ignore[assignment]
@@ -68,6 +92,7 @@ class ReadUserPolicy(BaseReadUserPolicy):
         raise NotImplementedError("Unsupported operation: {cmd.operation.value}")
 
     def _is_no_abac_user(self, user: model.User) -> bool:
+        """Determine whether a user is exempt from user-read ABAC filtering."""
         return (
             len(
                 user.roles.intersection(
@@ -78,6 +103,18 @@ class ReadUserPolicy(BaseReadUserPolicy):
         )
 
     def _check_invalid_filter_input(self, cmd: Command) -> bool:
+        """Validate a user-read command and identify non-read operations.
+
+        Args:
+            cmd: Command being evaluated by the user-read policy.
+
+        Returns:
+            True when the command is not a read operation and needs no filtering.
+
+        Raises:
+            NotImplementedError: If the command is not a user CRUD command.
+            AssertionError: If the command has no authenticated user ID.
+        """
         early_return: bool = False
         user: model.User | None = cmd.user
         if not isinstance(cmd, command.UserCrudCommand):
@@ -96,6 +133,14 @@ class ReadUserPolicy(BaseReadUserPolicy):
         self,
         user: model.User,
     ) -> tuple[set[UUID], bool, set[UUID]]:
+        """Build the organizations and users visible to a requesting user.
+
+        Args:
+            user: Authenticated user whose roles define the read scope.
+
+        Returns:
+            Administered organization IDs, admin status, and visible user IDs.
+        """
         organization_ids: set[UUID]
         is_org_admin = (
             len(
@@ -124,6 +169,20 @@ class ReadUserPolicy(BaseReadUserPolicy):
         is_org_admin: bool,
         user_ids: set[UUID],
     ) -> model.User | list[model.User]:
+        """Allow or deny a single returned user according to the read scope.
+
+        Args:
+            result: User returned by the command.
+            organization_ids: Organizations administered by the requester.
+            is_org_admin: Whether the requester is an organization administrator.
+            user_ids: Explicit user IDs visible to the requester.
+
+        Returns:
+            The permitted user result.
+
+        Raises:
+            UnauthorizedAuthError: If the result is outside the requester's scope.
+        """
         if (
             result.organization_id not in organization_ids and result.id not in user_ids
         ) or not (result.is_active or is_org_admin):
@@ -141,6 +200,21 @@ class ReadUserPolicy(BaseReadUserPolicy):
         is_org_admin: bool,
         user_ids: set[UUID],
     ) -> model.User | list[model.User]:
+        """Allow or deny multiple returned users according to the read scope.
+
+        Args:
+            result_list: Returned users used for permission validation.
+            organization_ids: Organizations administered by the requester.
+            results: Original command result to return when permitted.
+            is_org_admin: Whether the requester is an organization administrator.
+            user_ids: Explicit user IDs visible to the requester.
+
+        Returns:
+            The original permitted command result.
+
+        Raises:
+            UnauthorizedAuthError: If any result is outside the requester's scope.
+        """
         if not all(
             (x.organization_id in organization_ids or x.id in user_ids)
             and (x.is_active or is_org_admin)
@@ -153,6 +227,14 @@ class ReadUserPolicy(BaseReadUserPolicy):
         return results
 
     def get_admin_user_ids_own_organization(self, user: model.User) -> set[UUID]:
+        """Retrieve active organization administrator IDs for a user's organization.
+
+        Args:
+            user: User whose organization defines the administrator scope.
+
+        Returns:
+            IDs of active administrators for the user's organization.
+        """
         org_admin_policies = self.abac_service.app.handle(
             self.organization_admin_policy_crud_command_class(
                 user=user,
@@ -175,6 +257,14 @@ class ReadUserPolicy(BaseReadUserPolicy):
         self,
         user: model.User,
     ) -> tuple[set[UUID], set[UUID]]:
+        """Retrieve active administrators and organizations administered by a user.
+
+        Args:
+            user: Organization administrator whose scope is resolved.
+
+        Returns:
+            Administrator user IDs and organization IDs under the user's administration.
+        """
         org_admin_policies = self.abac_service.app.handle(
             self.organization_admin_policy_crud_command_class(
                 user=user,

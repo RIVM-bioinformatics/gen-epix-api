@@ -1,3 +1,5 @@
+"""Non-persistable OMOP models for person-centered batch uploads and results."""
+
 from typing import Any, ClassVar
 from uuid import UUID
 
@@ -157,7 +159,7 @@ class PersonForUpload(ParentForUpload):
 
 
 class PersonDataIssue(DataIssue):
-    pass
+    """Describe a validation or processing issue in an OMOP person upload."""
 
 
 class PersonUploadResult(ParentUploadResult):

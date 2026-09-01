@@ -1,3 +1,5 @@
+"""Define seqdb domain models for domain.model.seq.profile."""
+
 import base64
 import hashlib
 import json
@@ -35,6 +37,14 @@ class SeqProfile(
     ContentMixin[enum.SeqProfileFormat],
     QualityMixin,
 ):
+    """Store a typed sequence profile derived from a sequence and protocol.
+
+    Model validation: The content format must match the profile type. Content is
+    parsed according to that type, and its hash is derived or verified.
+
+    Model serialization: The profile type is emitted as its integer enum value.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="seq_profiles",
         table_name="seq_profile",
@@ -91,13 +101,12 @@ class SeqProfile(
     def _validate_seq_profile_type(
         cls, value: str | int | float | enum.SeqProfileType
     ) -> enum.SeqProfileType:
+        """Normalize the profile type from its accepted enum representation."""
         return validate_int_enum_value(enum.SeqProfileType, value)  # type: ignore[return-value]
 
     @model_validator(mode="after")
     def _validate_format_for_seq_profile_type(self) -> Self:
-        """
-        Validate that the content format is compatible with the sequence profile type.
-        """
+        """Validate that the content format matches the sequence profile type."""
         if self.format not in self.FORMATS_BY_SEQ_PROFILE_TYPE[self.seq_profile_type]:
             raise ValueError(
                 f"Invalid format {self.format} for sequence profile type {self.seq_profile_type}"
@@ -106,9 +115,9 @@ class SeqProfile(
 
     @model_validator(mode="after")
     def _validate_content(self) -> Self:
-        """
-        Verify the representation of the content depending on the format. Verify or set
-        the content hash.
+        """Verify profile content and derive or validate its content hash.
+
+        Upload-only alternate representations skip this validation until normalized.
         """
         # TODO: 3268: not sure why this is here since these fields do not exist. Perhaps because of SeqProfileForUpload having these fields?
         if self.content == "" and any(
@@ -148,7 +157,15 @@ class SeqProfile(
         return self
 
     def _validate_snp_profile(self) -> UUID:
-        """Validate the SNP profile content"""
+        """Validate SNP content and derive its hash.
+
+        Returns:
+            The derived SNP profile hash.
+
+        Raises:
+            ValueError: If required NextClade fields are absent.
+            NotImplementedError: If the content format cannot produce a hash.
+        """
         computed_content_hash = NULL_ID
         if self.format == enum.SeqProfileFormat.NEXTCLADE:
             # content is a flat JSON dict of NextClade fields for this single sample
@@ -165,7 +182,7 @@ class SeqProfile(
         return computed_content_hash
 
     def _validate_kmer_profile(self) -> UUID:
-        """Validate the k-mer profile content"""
+        """Validate the k-mer profile content."""
         computed_content_hash = NULL_ID
         if self.format == enum.SeqProfileFormat.KMER_FREQUENCY_MAP:
             # Parse the profile from json object
@@ -178,7 +195,7 @@ class SeqProfile(
         return computed_content_hash
 
     def _validate_mlva_profile(self) -> UUID:
-        """Validate the MLVA profile content"""
+        """Validate the MLVA profile content."""
         computed_content_hash = NULL_ID
         if self.format == enum.SeqProfileFormat.ORDERED_REPEAT_NUMBERS:
             # Parse the profile from json array
@@ -190,7 +207,15 @@ class SeqProfile(
         return computed_content_hash
 
     def _validate_allele_profile(self) -> UUID:
-        """Validate the allele profile content"""
+        """Validate allele content and derive its hash.
+
+        Returns:
+            The derived allele profile hash.
+
+        Raises:
+            ValueError: If decoded allele content is not a multiple of 16 bytes.
+            NotImplementedError: If the content format cannot produce a hash.
+        """
         computed_content_hash = NULL_ID
         if self.format == enum.SeqProfileFormat.ORDERED_ALLELE_IDS:
             # Parse the profile from base64 encoded concatenated 128-bit allele IDs
@@ -206,7 +231,14 @@ class SeqProfile(
         return computed_content_hash
 
     def _validate_locus_profile(self) -> UUID:
-        """Validate the locus profile content"""
+        """Report that locus-profile hash validation is not implemented.
+
+        Returns:
+            A profile hash, although this implementation never returns.
+
+        Raises:
+            NotImplementedError: Always, because locus-profile hashing is unsupported.
+        """
         # TODO: 3268 just put a NotImplemented error here
         raise NotImplementedError(
             "Unable to validate locus profile content hash for this format"
@@ -214,14 +246,23 @@ class SeqProfile(
 
     @field_serializer("seq_profile_type", mode="plain")
     def _serialize_seq_profile_type(self, value: enum.SeqProfileType) -> int:
+        """Serialize the profile type as its integer enum value."""
         return value.value
 
     def get_aligned_nucleotide_seq(
         self, ref_seq_str: str | None = None, **kwargs: Any
     ) -> str:
-        """
-        Parse and return the aligned nucleotide sequence from the SNP profile based on its
-        format. The sequence is guaranteed to be lower case.
+        """Return the lower-case aligned nucleotide sequence for an SNP profile.
+
+        Args:
+            ref_seq_str: Reserved reference sequence input.
+            **kwargs: Reserved compatibility arguments.
+
+        Returns:
+            The stored aligned nucleotide sequence.
+
+        Raises:
+            ValueError: If this is not an SNP profile.
         """
         if self.seq_profile_type != enum.SeqProfileType.SNP:
             raise ValueError(
@@ -232,7 +273,18 @@ class SeqProfile(
         return self.content
 
     def get_allele_id_bytes(self, **kwargs: Any) -> list[bytes | None]:
-        """Return allele IDs as raw 16-byte chunks."""
+        """Return ordered allele IDs as raw 16-byte chunks.
+
+        Args:
+            **kwargs: Reserved compatibility arguments.
+
+        Returns:
+            One UUID byte sequence or ``None`` for each locus.
+
+        Raises:
+            ValueError: If this is not an allele profile.
+            NotImplementedError: If its allele representation is unsupported.
+        """
         if self.seq_profile_type != enum.SeqProfileType.ALLELE:
             raise ValueError("Allele IDs can only be retrieved for allele profiles")
         if self.format == enum.SeqProfileFormat.ORDERED_ALLELE_IDS:
@@ -251,11 +303,18 @@ class SeqProfile(
         )
 
     def get_allele_array(self) -> np.ndarray:
-        """Return allele IDs as an (n_loci,) S16 numpy array.
+        r"""Return allele IDs as an (n_loci,) S16 numpy array.
 
         Each element is a 16-byte UUID; missing loci (null UUID) appear as
         b"\\x00" * 16 matching the _NULL_ALLELE sentinel in distance kernels.
         Zero-copy frombuffer view of the decoded base64 blob.
+
+        Returns:
+            A one-dimensional array of 16-byte allele identifiers.
+
+        Raises:
+            ValueError: If this is not an allele profile.
+            NotImplementedError: If its allele representation is unsupported.
         """
         if self.seq_profile_type != enum.SeqProfileType.ALLELE:
             raise ValueError("Allele array can only be computed for allele profiles")
@@ -266,8 +325,17 @@ class SeqProfile(
         )
 
     def get_allele_ids(self, **kwargs: Any) -> list[UUID | None]:
-        """
-        Parse and return the allele IDs from the allele profile based on its format.
+        """Return ordered allele identifiers from this profile.
+
+        Args:
+            **kwargs: Reserved compatibility arguments.
+
+        Returns:
+            One identifier or ``None`` for each locus.
+
+        Raises:
+            ValueError: If this is not an allele profile.
+            NotImplementedError: If its allele representation is unsupported.
         """
         if self.seq_profile_type != enum.SeqProfileType.ALLELE:
             raise ValueError("Allele IDs can only be retrieved for allele profiles")
@@ -287,8 +355,17 @@ class SeqProfile(
         )
 
     def get_n_loci(self, **kwargs: Any) -> int:
-        """
-        Parse and return the number of loci from the allele profile based on its format.
+        """Return the number of non-null loci in this allele profile.
+
+        Args:
+            **kwargs: Reserved compatibility arguments.
+
+        Returns:
+            The number of loci with an allele identifier.
+
+        Raises:
+            ValueError: If this is not an allele profile.
+            NotImplementedError: If its allele representation is unsupported.
         """
         if self.seq_profile_type != enum.SeqProfileType.ALLELE:
             raise ValueError("Number of loci can only be retrieved for allele profiles")
@@ -304,8 +381,16 @@ class SeqProfile(
         )
 
     def get_repeat_numbers(self, **kwargs: Any) -> list[int]:
-        """
-        Parse and return the repeat numbers from the MLVA profile based on its format.
+        """Return MLVA repeat numbers from this profile.
+
+        Args:
+            **kwargs: Reserved compatibility arguments.
+
+        Returns:
+            The ordered repeat-number representation.
+
+        Raises:
+            NotImplementedError: If the MLVA representation is unsupported.
         """
         if self.format == enum.SeqProfileFormat.ORDERED_REPEAT_NUMBERS:
             return json.loads(self.content)
@@ -314,8 +399,16 @@ class SeqProfile(
         )
 
     def get_kmer_frequency_map(self, **kwargs: Any) -> dict[str, float]:
-        """
-        Parse and return the k-mer frequency map from the k-mer profile based on its format.
+        """Return the k-mer frequency map from this profile.
+
+        Args:
+            **kwargs: Reserved compatibility arguments.
+
+        Returns:
+            Frequencies keyed by k-mer string.
+
+        Raises:
+            NotImplementedError: If the k-mer representation is unsupported.
         """
         if self.format == enum.SeqProfileFormat.KMER_FREQUENCY_MAP:
             retval: dict[str, float] = json.loads(self.content)
@@ -325,10 +418,16 @@ class SeqProfile(
         )
 
     def get_snps(self, **kwargs: Any) -> list[tuple[int, str]]:
-        """
-        Parse and return the SNPs from the SNP profile based on its format as an ordered
-        list of (position, nucleotide) tuples. The position is 1-based and the
-        nucleotide is in lowercase.
+        """Return ordered, lower-case SNP substitutions from NextClade content.
+
+        Args:
+            **kwargs: Reserved compatibility arguments.
+
+        Returns:
+            One-based position and nucleotide pairs in position order.
+
+        Raises:
+            NotImplementedError: If the SNP representation is unsupported.
         """
         if self.format == enum.SeqProfileFormat.NEXTCLADE:
             nextclade_dict: dict[str, Any] = json.loads(self.content)
@@ -363,10 +462,16 @@ class SeqProfile(
         )
 
     def get_missing_seq_ranges(self, ref_seq_length: int) -> list[tuple[int, int]]:
-        """
-        Parse and return the missing sequence ranges from the SNP profile based on its
-        format as an ordered list of (start, end) tuples. The positions are 1-based and
-        inclusive.
+        """Return ordered inclusive missing sequence ranges from NextClade content.
+
+        Args:
+            ref_seq_length: Length of the reference sequence.
+
+        Returns:
+            One-based inclusive start and end position pairs.
+
+        Raises:
+            NotImplementedError: If the SNP representation is unsupported.
         """
         if self.format == enum.SeqProfileFormat.NEXTCLADE:
             nextclade_dict: dict[str, Any] = json.loads(self.content)
@@ -397,10 +502,7 @@ class SeqProfile(
 
     @staticmethod
     def get_ordered_allele_ids_representation(allele_ids: list[UUID | None]) -> str:
-        """
-        Generate and return the allele profile in ORDERED_ALLELE_IDS format based on
-        the ordered allele IDs.
-        """
+        """Return ordered allele identifiers in their encoded profile representation."""
         return base64.b64encode(
             b"".join(NULL_ID.bytes if x is None else x.bytes for x in allele_ids)
         ).decode("ascii")
@@ -409,10 +511,7 @@ class SeqProfile(
     def get_ordered_repeat_numbers_representation(
         repeat_numbers: list[int | None],
     ) -> str:
-        """
-        Generate and return the MLVA profile in ORDERED_REPEAT_NUMBERS format based on
-        the ordered repeat numbers.
-        """
+        """Return ordered MLVA repeat numbers in their JSON profile representation."""
         return json.dumps(
             [
                 int(x) if x is not None else MLVA_NO_LOCUS_REPEAT_NUMBER
@@ -422,6 +521,7 @@ class SeqProfile(
 
     @staticmethod
     def get_allele_profile_hash(allele_ids: list[UUID | None]) -> UUID:
+        """Return the deterministic content hash for ordered allele identifiers."""
         sha256 = hashlib.sha256()
         for allele_id in allele_ids:
             if allele_id is not None:
@@ -432,6 +532,7 @@ class SeqProfile(
 
     @staticmethod
     def get_mlva_profile_hash(repeat_numbers: list[int | None]) -> UUID:
+        """Return the deterministic content hash for ordered MLVA repeat numbers."""
         sha256 = hashlib.sha256()
         for repeat_number in repeat_numbers:
             if repeat_number is not None:
@@ -446,6 +547,7 @@ class SeqProfile(
 
     @staticmethod
     def get_kmer_profile_hash(kmer_frequency_map: dict[str, float]) -> UUID:
+        """Return the deterministic content hash for a k-mer frequency map."""
         sha256 = hashlib.sha256()
         for kmer in sorted(kmer_frequency_map.keys()):
             freq = kmer_frequency_map[kmer]
@@ -456,10 +558,7 @@ class SeqProfile(
     @staticmethod
     # TODO: 3268 This should instead calculate the hash from a canonical representation of SNPs. I kept the old function commented out for reference - to be removed
     def get_snp_profile_hash(snps: list[tuple[int, str]]) -> UUID:
-        """
-        Compute a deterministic hash from the canonical representation of SNPs of a
-        single sample. The SNPs are iterated in sorted order.
-        """
+        """Return a deterministic hash for SNPs in position-sorted order."""
         sha256 = hashlib.sha256()
         for position, nucleotide in sorted(snps, key=lambda x: x[0]):
             sha256.update(str(position).encode("ascii"))
@@ -484,10 +583,17 @@ class SeqProfile(
 
     @staticmethod
     def _raise_no_computable_hash() -> None:
+        """Report that the active profile format has no supported hash calculation.
+
+        Raises:
+            NotImplementedError: Always, because the profile format is unsupported.
+        """
         raise NotImplementedError("Unable to compute content hash for this format")
 
 
 class SeqProfileIdentifier(BaseIdentifier):
+    """Associate an external identifier with a sequence profile."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         SeqProfile,
         relationship_field_name="seq_profile",

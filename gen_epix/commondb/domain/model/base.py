@@ -1,3 +1,10 @@
+"""Provide commondb base models and helpers for ETL result reporting.
+
+The models add audit metadata and identifiers to FastApp models. ETL result
+types accumulate structured log entries, while enum helpers normalize values
+submitted to integer-enum fields.
+"""
+
 from datetime import UTC, datetime
 from enum import IntEnum
 from typing import ClassVar
@@ -11,6 +18,12 @@ from gen_epix.fastapp.enum import LogLevel
 
 
 class ModelNoId(fastapp.Model):
+    """Add creation and modification metadata to a FastApp domain model.
+
+    Services call the mutation helpers before persisting a model so audit
+    timestamps and the responsible user ID remain synchronized.
+    """
+
     METADATA_FIELDS: ClassVar[frozenset[str]] = frozenset(
         {"created_at", "modified_at", "modified_by"}
     )
@@ -33,11 +46,13 @@ class ModelNoId(fastapp.Model):
     )
 
     def set_modified(self, user_id: UUID) -> None:
+        """Record the current UTC time and user as the latest modification."""
         now = datetime.now(UTC)
         self.modified_at = now
         self.modified_by = user_id
 
     def set_created(self, user_id: UUID) -> None:
+        """Record the current UTC time and user as both creation and modification."""
         now = datetime.now(UTC)
         self.modified_at = now
         self.modified_by = user_id
@@ -45,6 +60,8 @@ class ModelNoId(fastapp.Model):
 
 
 class Model(ModelNoId):
+    """Add an optional persistent identifier to commondb audit-aware models."""
+
     id: UUID | None = Field(
         default=None,
         description="The unique identifier for the object.",
@@ -52,10 +69,7 @@ class Model(ModelNoId):
 
 
 class EtlLogItem(BaseModel):
-    """
-    Represents a log item for an ETL result accumulator, containing a timestamp,
-    code, message and severity. Immutable Pydantic value object.
-    """
+    """Represent one immutable, structured event in an ETL result accumulator."""
 
     timestamp: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
@@ -68,7 +82,7 @@ class EtlLogItem(BaseModel):
         description="The log message describing the event or information.",
     )
     severity: LogLevel = Field(
-        description="The severity level of the log item.",
+        description="Log severity, accepting a LogLevel or member name and serializing to its string value.",
     )
     source: str | None = Field(
         default=None,
@@ -82,26 +96,24 @@ class EtlLogItem(BaseModel):
     @field_validator("severity", mode="before")
     @classmethod
     def _validate_severity(cls, severity: LogLevel | str) -> LogLevel:
+        """Normalize a severity member name to a LogLevel."""
         if isinstance(severity, str):
             return LogLevel[severity]
         return severity
 
     @field_serializer("severity")
     def _serialize_severity(self, value: LogLevel) -> str:
+        """Serialize a log level as its configured value."""
         return value.value
 
 
 class BaseEtlResult(BaseModel):
-    """
-    Pydantic BaseModel that declares ``logs`` and provides log accumulation
-    and query helpers.
+    """Accumulate structured ETL messages and expose severity-specific queries.
 
-    ``add_error`` appends an ERROR log item and then calls
-    ``_set_error_status()``.  Override ``_set_error_status`` in each
-    concrete class to apply the appropriate status enum value, e.g.::
+    Pydantic subclasses declare their status field and override
+    :meth:`set_error_status` to mark an error after :meth:`add_error` appends
+    an ERROR-severity event.
 
-        def _set_error_status(self) -> None:
-            self.status = MyStatus.ERROR
     """
 
     logs: list[EtlLogItem] = Field(
@@ -129,7 +141,11 @@ class BaseEtlResult(BaseModel):
         self.set_error_status()
 
     def set_error_status(self) -> None:
-        """Override to set the concrete class's error status value."""
+        """Set the concrete result's status to its error value.
+
+        Subclasses override this hook when their status is represented by an
+        application-specific enum.
+        """
 
     def add_warning(
         self,
@@ -199,7 +215,19 @@ class BaseEtlResult(BaseModel):
 def validate_int_enum_value(
     enum_class: type[IntEnum], value: int | str | float | IntEnum
 ) -> IntEnum:
-    """Validate that the given value is a valid member of the given IntEnum class."""
+    """Normalize a value to a member of an integer enumeration.
+
+    Args:
+        enum_class: The enumeration that accepts the value.
+        value: A member name, integer value, integral float, or member.
+
+    Returns:
+        The corresponding member of ``enum_class``.
+
+    Raises:
+        ValueError: If ``value`` has an unsupported type or is not a member.
+        KeyError: If a string value does not name a member.
+    """
     if isinstance(value, enum_class):
         return value
     if isinstance(value, str):
@@ -214,7 +242,19 @@ def validate_int_enum_value(
 def validate_int_enum_value_or_none(
     enum_class: type[IntEnum], value: int | str | float | IntEnum | None
 ) -> IntEnum | None:
-    """Validate that the given value is a valid member of the given IntEnum class or None."""
+    """Normalize an optional value to a member of an integer enumeration.
+
+    Args:
+        enum_class: The enumeration that accepts non-null values.
+        value: A member name, integer value, integral float, member, or None.
+
+    Returns:
+        The corresponding member of ``enum_class``, or None when ``value`` is None.
+
+    Raises:
+        ValueError: If a non-null value has an unsupported type or is not a member.
+        KeyError: If a string value does not name a member.
+    """
     if value is None:
         return None
     return validate_int_enum_value(enum_class, value)

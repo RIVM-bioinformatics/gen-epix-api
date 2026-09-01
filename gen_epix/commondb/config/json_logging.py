@@ -1,5 +1,6 @@
 """
 Central JSON logging formatter for all GenEpix container applications.
+
 Ensures every log entry is valid single-line JSON using json.dumps().
 Prevents inconsistent Monitoring Platform parsing caused by raw string formatting.
 Enables reliable structured logging for observability and security dashboards.
@@ -78,9 +79,11 @@ _DEFAULT_MAX_EXCEPTION_MSG_LENGTH = 2000  # prevents huge SQL payloads in except
 
 def _truncate_middle(text: str, max_length: int) -> str:
     """Truncate *text* to *max_length* chars, keeping a prefix and a suffix.
+
     DB driver errors (e.g. FK/unique constraint violations) often echo the
     full SQL statement first and put the actual error message at the end, so
-    a head-only cut would hide it."""
+    a head-only cut would hide it.
+    """
     if max_length <= 0:
         return f"…[{len(text)} chars omitted]…"
     if len(text) <= max_length:
@@ -94,11 +97,27 @@ def _truncate_middle(text: str, max_length: int) -> str:
 
 
 def _utc_iso(ts: float) -> str:
+    """Format a Unix timestamp as a millisecond-precision UTC ISO 8601 value.
+
+    Args:
+        ts: Unix timestamp in seconds.
+
+    Returns:
+        UTC timestamp with a ``Z`` suffix.
+    """
     s = datetime.fromtimestamp(ts, tz=timezone.utc).isoformat(timespec="milliseconds")
     return _ISO8601_Z_RE.sub("Z", s)
 
 
 def _safe_json_loads(s: str) -> Any:
+    """Parse a string that appears to contain a JSON object or array.
+
+    Args:
+        s: Candidate JSON text.
+
+    Returns:
+        Parsed JSON value, or None when the text is empty, non-JSON, or invalid.
+    """
     s = s.strip()
     if not s:
         return None
@@ -113,6 +132,14 @@ def _safe_json_loads(s: str) -> Any:
 def _normalise_sensitive_keys(
     sensitive_keys: list[str] | tuple[str, ...] | set[str] | None,
 ) -> tuple[str, ...]:
+    """Normalize configured sensitive keys or return the default redaction keys.
+
+    Args:
+        sensitive_keys: Optional collection of key names requiring redaction.
+
+    Returns:
+        Unique, lowercase sensitive keys, or the default key collection.
+    """
     if sensitive_keys is None:
         return _DEFAULT_SENSITIVE_KEYS
     deduped: list[str] = []
@@ -124,6 +151,14 @@ def _normalise_sensitive_keys(
 
 
 def _build_sensitive_re(sensitive_keys: tuple[str, ...]) -> re.Pattern[str]:
+    """Build a case-insensitive pattern for sensitive key-value text fragments.
+
+    Args:
+        sensitive_keys: Normalized key names that require redaction.
+
+    Returns:
+        Compiled regular expression matching sensitive key-value pairs.
+    """
     escaped = "|".join(re.escape(x) for x in sensitive_keys)
     return re.compile(rf"(?i)({escaped})=((?:Bearer\s+)?[^\s&,;]+)")
 
@@ -156,10 +191,28 @@ class UvicornAccessLogFilter(logging.Filter):
 
     @staticmethod
     def _build_access_message(method: Any, path: Any, status: Any) -> str:
+        """Create the normalized message text for an HTTP access event.
+
+        Args:
+            method: HTTP method value.
+            path: Request path value.
+            status: HTTP status value.
+
+        Returns:
+            Normalized HTTP access-event message.
+        """
         return f"http.access {method} {path} {status}"
 
     @staticmethod
     def _is_json_formatter(formatter: logging.Formatter | None) -> bool:
+        """Determine whether a formatter emits this module's structured JSON.
+
+        Args:
+            formatter: Handler formatter to inspect.
+
+        Returns:
+            True when the formatter is a JsonFormatter.
+        """
         return isinstance(formatter, JsonFormatter)
 
     @classmethod
@@ -198,6 +251,14 @@ class UvicornAccessLogFilter(logging.Filter):
             handler.setFormatter(json_formatter)
 
     def filter(self, record: logging.LogRecord) -> bool:
+        """Normalize a Uvicorn access record and attach structured HTTP fields.
+
+        Args:
+            record: Uvicorn access log record to normalize in place.
+
+        Returns:
+            True so the normalized record continues through logging handlers.
+        """
         self._ensure_uvicorn_access_json_formatter(record)
 
         # Priority 1: raw args tuple from uvicorn internals – most reliable.
@@ -245,6 +306,8 @@ class UvicornAccessLogFilter(logging.Filter):
 
 
 class JsonFormatter(logging.Formatter):
+    """Format application logs as redacted, monitoring-friendly JSON records."""
+
     def __init__(
         self,
         *,
@@ -257,6 +320,18 @@ class JsonFormatter(logging.Formatter):
         max_stacktrace_length: int | None = _DEFAULT_MAX_STACKTRACE_LENGTH,
         max_exception_message_length: int | None = _DEFAULT_MAX_EXCEPTION_MSG_LENGTH,
     ):
+        """Initialize JSON logging options and the set of reserved log-record fields.
+
+        Args:
+            service: Optional stable service label for every formatted record.
+            environment: Optional deployment-environment label for every record.
+            merge_message_json: Whether JSON messages are merged into the envelope.
+            extras_key: Key used to contain non-reserved log-record attributes.
+            sensitive_keys: Optional names whose values must be redacted.
+            redacted_value: Replacement text for sensitive values.
+            max_stacktrace_length: Maximum serialized exception stacktrace length.
+            max_exception_message_length: Maximum serialized exception message length.
+        """
         super().__init__()
         self.service = (
             service or os.getenv("SERVICE_NAME") or os.getenv("APP_NAME") or None
@@ -328,6 +403,14 @@ class JsonFormatter(logging.Formatter):
 
     @staticmethod
     def _get_app_id(payload: dict[str, Any]) -> str | None:
+        """Extract an application ID from a structured logging payload.
+
+        Args:
+            payload: Structured logging payload to inspect.
+
+        Returns:
+            Application ID as text, or None when it is unavailable.
+        """
         app = payload.get("app")
         if not isinstance(app, dict):
             return None
@@ -338,6 +421,14 @@ class JsonFormatter(logging.Formatter):
 
     @staticmethod
     def _get_command_id(payload: dict[str, Any]) -> str | None:
+        """Extract a command ID from a structured logging payload.
+
+        Args:
+            payload: Structured logging payload to inspect.
+
+        Returns:
+            Command ID as text, or None when it is unavailable.
+        """
         command = payload.get("command")
         if not isinstance(command, dict):
             return None
@@ -352,6 +443,14 @@ class JsonFormatter(logging.Formatter):
 
     @staticmethod
     def _get_user_id(payload: dict[str, Any]) -> str | None:
+        """Extract a command actor ID from a structured logging payload.
+
+        Args:
+            payload: Structured logging payload to inspect.
+
+        Returns:
+            User ID as text, or None when it is unavailable.
+        """
         command = payload.get("command")
         if not isinstance(command, dict):
             return None
@@ -378,6 +477,14 @@ class JsonFormatter(logging.Formatter):
 
     @staticmethod
     def _get_organization_id(payload: dict[str, Any]) -> str | None:
+        """Extract a command actor's organization ID from a logging payload.
+
+        Args:
+            payload: Structured logging payload to inspect.
+
+        Returns:
+            Organization ID as text, or None when it is unavailable.
+        """
         command = payload.get("command")
         if not isinstance(command, dict):
             return None
@@ -397,9 +504,22 @@ class JsonFormatter(logging.Formatter):
 
     @staticmethod
     def _is_non_empty_string(value: Any) -> bool:
+        """Determine whether a value is a string containing non-whitespace text.
+
+        Args:
+            value: Value to inspect.
+
+        Returns:
+            True when the value is a non-empty string after trimming whitespace.
+        """
         return isinstance(value, str) and value.strip() != ""
 
     def _normalise_containerlogv2_fields(self, payload: dict[str, Any]) -> None:
+        """Add query-friendly message and identifier aliases to a log payload.
+
+        Args:
+            payload: Structured log payload updated in place.
+        """
         # Ensure every app-style log event has a usable top-level message.
         if "message" not in payload:
             raw_msg = payload.get("msg")
@@ -432,6 +552,14 @@ class JsonFormatter(logging.Formatter):
                 payload["organization_id"] = organization_id
 
     def format(self, record: logging.LogRecord) -> str:
+        """Serialize a log record to a single redacted JSON line.
+
+        Args:
+            record: Log record to format.
+
+        Returns:
+            JSON representation of the record, including structured extras and errors.
+        """
         base: dict[str, Any] = {
             "ts": _utc_iso(record.created),
             "level": record.levelname,

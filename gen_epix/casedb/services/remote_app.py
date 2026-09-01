@@ -48,6 +48,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
         command.UploadCasesCommand: 45.0,
         command.RetrieveCasesByIdCommand: 45.0,
         command.RetrieveCasesByQueryCommand: 45.0,
+        command.RegionRelationCrudCommand: 45.0,
     }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:

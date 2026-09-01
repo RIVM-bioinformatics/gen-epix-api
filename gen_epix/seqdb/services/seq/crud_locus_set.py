@@ -1,3 +1,5 @@
+"""Implement seqdb CRUD service operations for services.seq.crud_locus_set."""
+
 from uuid import UUID
 
 from gen_epix.seqdb.domain import command, model
@@ -9,7 +11,18 @@ def seq_service_crud_locus_set(
 ) -> (
     list[model.LocusSet] | model.LocusSet | list[UUID] | UUID | list[bool] | bool | None
 ):
-    """Handle CRUD operations for LocusSet entities."""
+    """Handle CRUD operations for locus-set entities.
+
+    Args:
+        self: Sequence service executing the command.
+        cmd: Typed locus-set CRUD command.
+
+    Returns:
+        The action-specific locus-set result.
+
+    Raises:
+        AssertionError: The command operation is unsupported.
+    """
     user_id = cmd.user.id if cmd.user else None
     locus_sets: list[model.LocusSet] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():
