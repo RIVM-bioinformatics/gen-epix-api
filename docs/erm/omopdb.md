@@ -18,6 +18,7 @@ erDiagram
     Concept }o--|| Domain : "domain_id"
     Concept }o--|| Vocabulary : "vocabulary_id"
     Concept }o--|| ConceptClass : "concept_class_id"
+    Cohort }o--|| CohortDefinition : "cohort_definition_id"
     Contact }o--|| Site : "site_id"
     UserInvitation }o--|| Organization : "organization_id"
     UserInvitation }o--|| User : "invited_by_user_id"
@@ -228,12 +229,6 @@ erDiagram
     }
 
     CdmSource {
-    }
-
-    CohortDefinition {
-    }
-
-    Cohort {
     }
 
 ```

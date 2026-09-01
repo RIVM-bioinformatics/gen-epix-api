@@ -12,7 +12,7 @@ from uuid import UUID
 
 from gen_epix.casedb.api.router import create_routers
 from gen_epix.casedb.domain import command, enum, model
-from gen_epix.casedb.domain.model.case.case_data import CaseDataCollectionLink
+from gen_epix.casedb.domain.model.case.ops_data import CaseDataCollectionLink
 from gen_epix.casedb.env import AppComposer
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.commondb.app_setup import create_fast_api
@@ -261,12 +261,15 @@ class CasedbTestClient(TestClient):
         user_or_str: str | model.User,
         code: str,
         concept_set_type: enum.ConceptSetType,
+        unit: enum.Unit | None = None,
         concepts: set[str | model.Concept] | None = None,
         set_dummy_concepts: bool = False,
     ) -> model.ConceptSet:
         user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
+        if unit is None and concept_set_type in enum.ConceptSetTypeSet.HAS_UNIT.value:
+            unit = enum.Unit.OTHER
         concept_set = self.handle(
             command.ConceptSetCrudCommand(
                 user=user,
@@ -275,6 +278,7 @@ class CasedbTestClient(TestClient):
                     code=code,
                     name=code,
                     type=concept_set_type,
+                    unit=unit,
                 ),
             )
         )
@@ -428,6 +432,7 @@ class CasedbTestClient(TestClient):
         user_or_str: str | model.User,
         code: str,
         col_type: enum.ColType = enum.ColType.TEXT,
+        unit: enum.Unit | None = None,
         concept_set: str | model.ConceptSet | None = None,
         region_set: str | model.RegionSet | None = None,
         genetic_distance_protocol: str | model.GeneticDistanceProtocol | None = None,
@@ -448,6 +453,8 @@ class CasedbTestClient(TestClient):
             raise ValueError(f"Invalid code {code}")
         ref_dim = "ref_dim" + m.group(2)
         rank = int(m.group(3))
+        if unit is None and col_type in enum.ColTypeSet.HAS_UNIT.value:
+            unit = enum.Unit.OTHER
         if set_dummy_ref_dim:
             ref_dim_id = self.generate_id()
         else:
@@ -497,6 +504,7 @@ class CasedbTestClient(TestClient):
                     ref_dim_id=ref_dim_id,
                     col_type=col_type,
                     rank=rank,
+                    unit=unit,
                     concept_set_id=concept_set_id,
                     region_set_id=region_set_id,
                     genetic_distance_protocol_id=genetic_distance_protocol_id,

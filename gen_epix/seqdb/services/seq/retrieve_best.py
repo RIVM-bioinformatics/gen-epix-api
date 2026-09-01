@@ -119,17 +119,18 @@ def _get_best_id_per_sample(
             enum.SeqRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
             enum.SeqClassificationRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
         }:
-            # Sort by (sample_id, qc_result, qc_score, created_at)
+            # Sort descending by (sample_id, qc_result, qc_score, created_at)
             map_qc_result_to_sort_key = {
                 x: enum.QualityControlResult.get_sort_key(x)
                 for x in enum.QualityControlResult
             }
             sort_fn = lambda x: (x[1], map_qc_result_to_sort_key[x[2]], x[3], x[4])
-            sorted_iter = sorted(iter_fields, key=sort_fn)
+            sorted_iter = sorted(iter_fields, key=sort_fn, reverse=True)
             prev_sample_id = None
             for row in sorted_iter:
                 sample_id = row[1]
                 if sample_id != prev_sample_id:
+                    # First row for new sample is the best according to the ranking strategy
                     best_id_per_sample[sample_id] = (
                         row[5] if return_primary_category_id else row[0]
                     )

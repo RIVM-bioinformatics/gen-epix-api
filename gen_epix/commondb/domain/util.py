@@ -23,6 +23,7 @@ from gen_epix.commondb.domain.enum import (
 )
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.fastapp import Command, Domain, Model, ModelFieldProps, exc
+from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.repositories.dict import DictRepository
 from gen_epix.fastapp.repositories.sa import SARepository
@@ -142,17 +143,17 @@ def set_env_variables(
 
 def create_demo_data_from_repository(
     user_id: UUID,
-    entities: list,
+    entities: list[Entity],
     dict_repository: DictRepository,
     sa_repository: SARepository,
     module_root: str,
 ) -> None:
     """Populate an SA repository from a dict repository for the given entities."""
-    dict_repository_any = cast(Any, dict_repository)
-    sa_repository_any = cast(Any, sa_repository)
+    dict_repository_any = dict_repository
+    sa_repository_any = sa_repository
     # Delete all first in reverse order
     for entity in entities[::-1]:
-        model_class = entity.model_class
+        model_class: type[Model] = entity.model_class  # type: ignore[assignment]
         with sa_repository.uow() as sa_uow:
             sa_repository_any.crud(
                 sa_uow,
@@ -161,7 +162,7 @@ def create_demo_data_from_repository(
                 CrudOperation.DELETE_ALL,
             )
     for entity in entities:
-        model_class = entity.model_class
+        model_class: type[Model] = entity.model_class  # type: ignore[assignment]
         with (
             dict_repository.uow() as dict_uow,
             sa_repository.uow() as sa_uow,
@@ -312,6 +313,17 @@ def load_demo_data(
             }
         else:
             connect_args = {}
+        # Warn about files over 100 MB as they cannot be pushed
+        if (
+            demo_sa_sqlite_file.exists()
+            and demo_sa_sqlite_file.is_file()
+            and demo_sa_sqlite_file.stat().st_size > 100 * 1024 * 1024
+        ):
+            if verbose:
+                print(
+                    f"WARNING: App {app_type.value}, service {service_type.value}: sa_sql repository file {demo_sa_sqlite_file} is too large ({demo_sa_sqlite_file.stat().st_size / (1024 * 1024):.2f} MB) to be pushed"
+                )
+            # demo_sa_sqlite_file.unlink()
         # Skip load if no connection can be made
         if exception := sa_repository_class.test_connection(
             connection_string, **connect_args
@@ -337,10 +349,6 @@ def load_demo_data(
             user_id, entities, dict_repository, sa_sql_repository, module_root
         )
         end_time = datetime.datetime.now(datetime.timezone.utc)
-        if verbose:
-            print(
-                f"App {app_type.value}, service {service_type.value}: sa_sql repository loaded in {end_time - start_time}s"
-            )
 
 
 def get_app_cfgs(

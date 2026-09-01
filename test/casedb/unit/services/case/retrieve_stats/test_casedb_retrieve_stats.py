@@ -71,7 +71,7 @@ class BaseRetrieveStatsTestCase:
         case_type_id: UUID,
         created_in_data_collection_id: UUID,
         case_date: datetime | None = None,
-        count: int | None = None,
+        count: int = 1,
     ) -> case_model.Case:
         return case_model.Case(
             id=case_id or uuid4(),

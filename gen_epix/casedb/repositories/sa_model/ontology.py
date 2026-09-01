@@ -31,6 +31,9 @@ class ConceptSet(Base, RowMetadataMixin):
     type: Mapped[enum.ConceptSetType] = create_mapped_column(
         DOMAIN, model.ConceptSet, "type"
     )
+    unit: Mapped[enum.Unit | None] = create_mapped_column(
+        DOMAIN, model.ConceptSet, "unit"
+    )
     description: Mapped[str] = create_mapped_column(
         DOMAIN, model.ConceptSet, "description"
     )

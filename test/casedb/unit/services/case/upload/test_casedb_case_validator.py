@@ -14,8 +14,8 @@ from uuid import UUID, uuid4
 import pytest
 
 from gen_epix.casedb.domain import command, enum, model
-from gen_epix.casedb.domain.model.case.case_data import Case
 from gen_epix.casedb.domain.model.case.complete_case_type import CompleteCaseType
+from gen_epix.casedb.domain.model.case.ops_data import Case
 from gen_epix.casedb.domain.model.case.ref_data import Col, Dim, RefCol, RefDim
 from gen_epix.casedb.services.case.case_validator import CaseValidator
 from gen_epix.commondb.domain.enum import DataIssueType
@@ -70,7 +70,6 @@ class BaseCaseValidatorTestCase:
         self.concept_set_string: UUID = UUID("550e8400-e29b-41d4-a716-446655440301")
         self.concept_set_interval1: UUID = UUID("550e8400-e29b-41d4-a716-446655440302")
         self.concept_set_interval2: UUID = UUID("550e8400-e29b-41d4-a716-446655440303")
-        self.concept_set_regex: UUID = UUID("550e8400-e29b-41d4-a716-446655440304")
         self.region_set_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440305")
 
         # Concepts
@@ -174,6 +173,7 @@ class BaseCaseValidatorTestCase:
             code="Number.Decimal",
             rank=1,
             col_type=enum.ColType.DECIMAL_2,
+            unit=enum.Unit.MONTH,
         )
         ref_col_num_interval1 = RefCol(
             id=self.num_interval1_ref_col_id,
@@ -182,6 +182,7 @@ class BaseCaseValidatorTestCase:
             rank=2,
             col_type=enum.ColType.INTERVAL,
             concept_set_id=self.concept_set_interval1,
+            unit=enum.Unit.YEAR,
         )
         ref_col_num_interval2 = RefCol(
             id=self.num_interval2_ref_col_id,
@@ -190,6 +191,7 @@ class BaseCaseValidatorTestCase:
             rank=3,
             col_type=enum.ColType.INTERVAL,
             concept_set_id=self.concept_set_interval2,
+            unit=enum.Unit.QUARTER,
         )
         ref_col_string = RefCol(
             id=self.string_ref_col_id,
@@ -205,7 +207,6 @@ class BaseCaseValidatorTestCase:
             code="Regex.Pattern",
             rank=2,
             col_type=enum.ColType.REGULAR_LANGUAGE,
-            concept_set_id=self.concept_set_regex,
             regex=r"^[A-Z]{2}\d{3}$",
         )
         ref_col_org = RefCol(
@@ -471,7 +472,6 @@ class BaseCaseValidatorTestCase:
             self.concept_set_string: {self.string_concept1_id},
             self.concept_set_interval1: {self.interval1_a_id, self.interval1_b_id},
             self.concept_set_interval2: {self.interval2_x_id, self.interval2_y_id},
-            self.concept_set_regex: set(),
         }
         concept_contained_in: dict[tuple[UUID, UUID], dict[str, str]] = {}
         return concept_set_concepts_map, concepts, concept_contained_in  # type: ignore[return-value]
@@ -563,7 +563,7 @@ class BaseCaseValidatorTestCase:
         batch = model.CaseBatchForUpload(cases=cases_for_upload)
         cmd = command.UploadCasesCommand(
             case_type_id=self.case_type_id,
-            created_in_data_collection_id=created_in_data_collection_id,
+            default_created_in_data_collection_id=created_in_data_collection_id,
             case_batch=batch,
         )
         retval = model.CaseBatchUploadResult(cases=case_results)
@@ -699,7 +699,7 @@ class TestTransformValuePairs(BaseCaseValidatorTestCase):
         from_region_value: str = str(self.region_b_id)  # contained in A -> derive A
         day_value: str = "2024-01-05"  # week 01
         decimal_value: str = (
-            "12.5"  # maps to interval1_b, then to interval2_y via overlap
+            "12.5"  # 12.5 months -> interval1_a in years -> interval2_x in quarters
         )
 
         contents: list[dict[UUID, str | None] | None] = [
@@ -737,17 +737,11 @@ class TestTransformValuePairs(BaseCaseValidatorTestCase):
         # TIME derived week
         assert uc[self.time_week_col_id] == "2024-W01"
 
-        # NUMBER decimal -> interval1
-        assert uc[self.num_interval1_col_id] in {
-            str(self.interval1_a_id),
-            str(self.interval1_b_id),
-        }
+        # NUMBER decimal -> interval1 using month -> year conversion
+        assert uc[self.num_interval1_col_id] == str(self.interval1_a_id)
 
-        # NUMBER interval1 -> interval2
-        assert uc[self.num_interval2_col_id] in {
-            str(self.interval2_x_id),
-            str(self.interval2_y_id),
-        }
+        # NUMBER interval1 -> interval2 using year -> quarter conversion
+        assert uc[self.num_interval2_col_id] == str(self.interval2_x_id)
 
         issues = data_issues_list[0]
         assert issues is not None
@@ -783,10 +777,7 @@ class TestNumberPairReverseDirectionGuard(BaseCaseValidatorTestCase):
         # Source interval1 remains exactly as supplied.
         assert uc[self.num_interval1_col_id] == str(self.interval1_a_id)
         # Forward derivation still populated interval2.
-        assert uc[self.num_interval2_col_id] in {
-            str(self.interval2_x_id),
-            str(self.interval2_y_id),
-        }
+        assert uc[self.num_interval2_col_id] == str(self.interval2_x_id)
         # No conflict/derived issue rewrote the supplied interval1 value.
         interval1_issues = [
             x
@@ -808,6 +799,8 @@ class TestNumberPairReverseDirectionGuard(BaseCaseValidatorTestCase):
         ref_col_interval1 = validator.complete_case_type.ref_cols[
             self.num_interval1_ref_col_id
         ]
+        assert ref_col_interval2.unit is not None
+        assert ref_col_interval1.unit is not None
         col_pair = (self.num_interval2_col_id, self.num_interval1_col_id)
 
         contents: list[dict[UUID, str | None] | None] = [
@@ -828,6 +821,9 @@ class TestNumberPairReverseDirectionGuard(BaseCaseValidatorTestCase):
             col_pair,
             ref_col_interval2,
             ref_col_interval1,
+            CaseValidator.UNIT_PAIR_MULTIPLIER_MAP[
+                (ref_col_interval2.unit, ref_col_interval1.unit)
+            ],
         )
 
         uc = updated_contents[0]
@@ -845,9 +841,7 @@ class TestCalculateCaseDate(BaseCaseValidatorTestCase):
         validator.complete_case_type.case_date_dim_id = None
         cmd, retval = self._make_cmd_and_result([{self.time_day_col_id: "2024-01-05"}])
         # Should not raise and not add issues
-        validator.calculate_case_date(
-            cmd, [retval.cases[0].validated_content], [retval.cases[0].data_issues]
-        )
+        validator.calculate_case_date(cmd, retval, [retval.cases[0].validated_content])
         assert len(retval.cases[0].data_issues) == 0
 
     def test_uses_highest_resolution_col_when_multiple_time_cols_present(self) -> None:
@@ -872,7 +866,7 @@ class TestCalculateCaseDate(BaseCaseValidatorTestCase):
             [{self.time_day_col_id: "2024-02-02"}]
         )
 
-        updated_contents = [
+        updated_contents: list[dict[UUID, str | None] | None] = [
             None if x is None else x.validated_content for x in retval1.cases
         ]
 
@@ -915,6 +909,8 @@ class TestValidateAndTransformEndToEnd(BaseCaseValidatorTestCase):
         vc = case_res.validated_content
         assert vc[self.string_col_id] == str(self.string_concept1_id)
         assert vc[self.num_decimal_col_id] == "1.23"
+        assert vc[self.num_interval1_col_id] == str(self.interval1_a_id)
+        assert vc[self.num_interval2_col_id] == str(self.interval2_x_id)
         # Derived week present
         assert vc[self.time_week_col_id] == "2024-W09"
         # Case date set and logged

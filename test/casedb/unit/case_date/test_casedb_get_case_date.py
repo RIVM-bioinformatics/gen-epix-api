@@ -1,7 +1,7 @@
 import datetime
 from uuid import uuid4
 
-from gen_epix.casedb.domain.model.case.case_data import Case
+from gen_epix.casedb.domain.model.case.ops_data import Case
 from gen_epix.casedb.services.case.case_date import (
     case_service_calculate_case_date,
     convert_iso_date_to_datetime,
