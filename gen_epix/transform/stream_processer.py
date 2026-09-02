@@ -8,7 +8,7 @@ from gen_epix.transform.transform_result import TransformResult
 
 
 class StreamProcessor(ABC):
-    """Define the stream-processing contract used by pipeline implementations."""
+    """Encapsulates the stream-processing contract for pipelines."""
 
     @abstractmethod
     def process_stream(self, stream: Iterator[Any]) -> Iterator[TransformResult]:

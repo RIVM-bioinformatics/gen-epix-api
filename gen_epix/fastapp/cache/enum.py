@@ -4,7 +4,7 @@ from enum import Enum
 
 
 class CacheOperation(Enum):
-    """Identify the cache operation that produced an event or statistic."""
+    """Encapsulates identifying the cache operation that produced an event or statistic."""
 
     GET = "GET"
     SET = "SET"
@@ -16,7 +16,7 @@ class CacheOperation(Enum):
 
 
 class RemovalCause(Enum):
-    """Explain why an entry left a cache.
+    """Encapsulates explaining why an entry left a cache.
 
     The values mirror the removal causes used by Caffeine so that eviction
     listeners can distinguish capacity pressure from deliberate removal.
@@ -36,7 +36,7 @@ class RemovalCause(Enum):
 
 
 class EvictionPolicyType(Enum):
-    """Name the built-in eviction strategies selectable through configuration."""
+    """Encapsulates naming the built-in eviction strategies selectable through configuration."""
 
     LRU = "LRU"
     LFU = "LFU"
@@ -46,14 +46,14 @@ class EvictionPolicyType(Enum):
 
 
 class ExpiryMode(Enum):
-    """Specify whether an entry expires relative to its write or its last access."""
+    """Encapsulates specifying whether an entry expires relative to its write or its last access."""
 
     AFTER_WRITE = "AFTER_WRITE"
     AFTER_ACCESS = "AFTER_ACCESS"
 
 
 class InvalidationScope(Enum):
-    """Identify the breadth of an invalidation request."""
+    """Encapsulates identifying the breadth of an invalidation request."""
 
     KEY = "KEY"
     TAG = "TAG"
@@ -63,7 +63,7 @@ class InvalidationScope(Enum):
 
 
 class InvalidationMode(Enum):
-    """Specify whether invalidated values may still be served while refreshing.
+    """Encapsulates specifying whether invalidated values may still be served while refreshing.
 
     ``HARD`` forces every reader to wait for a regenerated value. ``SOFT`` lets
     readers keep the previous value until a refresh completes, which trades
@@ -75,7 +75,7 @@ class InvalidationMode(Enum):
 
 
 class FailureMode(Enum):
-    """Specify how a region reacts to a failing cache backend.
+    """Encapsulates specifying how a region reacts to a failing cache backend.
 
     ``FAIL_OPEN`` degrades to the origin loader and keeps the request working.
     ``FAIL_CLOSED`` propagates the backend error to the caller.
@@ -86,7 +86,7 @@ class FailureMode(Enum):
 
 
 class CircuitState(Enum):
-    """Identify the state of a circuit breaker guarding a cache backend."""
+    """Encapsulates identifying the state of a circuit breaker guarding a cache backend."""
 
     CLOSED = "CLOSED"
     OPEN = "OPEN"

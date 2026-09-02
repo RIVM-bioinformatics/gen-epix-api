@@ -10,7 +10,7 @@ from gen_epix.filter.enum import FilterType
 
 
 class NoFilter(Filter):
-    """Match and retain every value unless explicitly inverted."""
+    """Represents a filter retaining every value unless explicitly inverted."""
 
     key: Literal[False] = False
 
@@ -75,6 +75,6 @@ class NoFilter(Filter):
 
 
 class TypedNoFilter(NoFilter):
-    """Pass-through filter carrying its serialized filter type."""
+    """Represents a pass-through filter carrying its serialized filter type."""
 
     type: Literal[FilterType.NO_FILTER.value]  # type: ignore[name-defined]

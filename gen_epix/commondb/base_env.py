@@ -15,7 +15,7 @@ from gen_epix.fastapp.repository import BaseRepository
 
 
 class BaseAppComposer(abc.ABC):
-    """Define dependencies and repository construction for concrete app composers."""
+    """Encapsulates dependencies and repository construction for concrete app composers."""
 
     def __init__(self) -> None:
         """Initialize abstract composition state placeholders.

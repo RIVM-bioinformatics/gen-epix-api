@@ -8,7 +8,7 @@ from gen_epix.transform.enum import TransformResultType
 
 @dataclass
 class TransformResult:
-    """Describe a transformation outcome and retain its input and error context."""
+    """Encapsulates a transformation outcome with input and error context."""
 
     success: bool
     original_object: Any

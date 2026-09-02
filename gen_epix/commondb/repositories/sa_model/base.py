@@ -11,7 +11,7 @@ from gen_epix.fastapp.repositories.sa import ServerUtcCurrentTime, UTCDateTime
 
 @declarative_mixin
 class RowMetadataMixin:
-    """Add ID, creation, modification, and modifying-user fields to a row."""
+    """Encapsulates ID, creation, modification, and modifying-user fields to a row."""
 
     id: Mapped[UUID] = mapped_column(UUIDType(), primary_key=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
@@ -28,7 +28,7 @@ class RowMetadataMixin:
 
 @declarative_mixin
 class NoIdRowMetadataMixin:
-    """Add audit metadata fields to a row with a nonstandard primary key."""
+    """Encapsulates audit metadata fields to a row with a nonstandard primary key."""
 
     created_at: Mapped[datetime.datetime] = mapped_column(
         UTCDateTime, nullable=False, server_default=ServerUtcCurrentTime()

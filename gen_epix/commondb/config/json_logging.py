@@ -165,7 +165,7 @@ def _build_sensitive_re(sensitive_keys: tuple[str, ...]) -> re.Pattern[str]:
 
 class UvicornAccessLogFilter(logging.Filter):
     """
-    Logging filter for the ``uvicorn.access`` logger.
+    Encapsulates a logging filter for the ``uvicorn.access`` logger.
 
     Parses the structured args tuple that uvicorn emits
     (``(client, method, path, http_version, status_code)``) and injects them
@@ -306,7 +306,7 @@ class UvicornAccessLogFilter(logging.Filter):
 
 
 class JsonFormatter(logging.Formatter):
-    """Format application logs as redacted, monitoring-friendly JSON records."""
+    """Encapsulates formatting of application logs as redacted, monitoring-friendly JSON records."""
 
     def __init__(
         self,

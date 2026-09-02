@@ -14,7 +14,7 @@ from gen_epix.filter import Filter
 
 
 class BaseRepository(abc.ABC):
-    """Define the persistence contract used by application services."""
+    """Encapsulates defining the persistence contract used by application services."""
 
     def __init__(self, **kwargs: Any):
         """Initialize repository identity from optional keyword arguments."""

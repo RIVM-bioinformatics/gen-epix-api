@@ -6,13 +6,13 @@ from gen_epix.commondb.domain.command.base import Command
 
 
 class RetrieveOwnPermissionsCommand(Command):
-    """Retrieve the effective permissions of the executing user."""
+    """Represents a request to retrieve the effective permissions of the executing user."""
 
     pass
 
 
 class RetrieveSubRolesCommand(Command):
-    """Retrieve all roles inherited below the executing user's assigned roles.
+    """Represents a request to retrieve all roles inherited below the executing user's assigned roles.
 
     The result includes sub-roles that are also inherited through another
     assigned role.

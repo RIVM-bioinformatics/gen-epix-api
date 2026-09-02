@@ -8,9 +8,8 @@ from gen_epix.omopdb.domain.service import BaseOmopService as DomainBaseOmopServ
 
 class BaseOmopService(DomainBaseOmopService):
     """
-    Encapsulates the abstract base class for OMOP services defining the interface contract.
-    This additional base class allows splitting the implementation into
-    multiple modules while maintaining linter support.
+    Encapsulates an omopdb service, by providing additional
+    implementation details common to all omopdb services.
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:

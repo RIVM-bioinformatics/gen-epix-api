@@ -25,7 +25,7 @@ _DIGEST_SIZE = 32
 
 
 class Serializer(ABC):
-    """Convert payloads between their live and stored representations.
+    """Encapsulates converting payloads between their live and stored representations.
 
     Implementations must be symmetric: `loads` applied to the output of `dumps`
     returns an equal value. A subclass raises `CantDeserializeError` rather than
@@ -58,7 +58,7 @@ class Serializer(ABC):
 
 
 class IdentitySerializer(Serializer):
-    """Store live object references without conversion.
+    """Encapsulates storing live object references without conversion.
 
     This is the cheapest option for an in-process region, but callers share the
     cached object: mutating a returned value corrupts the cache. Use
@@ -76,7 +76,7 @@ class IdentitySerializer(Serializer):
 
 
 class DeepCopySerializer(Serializer):
-    """Store and return independent deep copies of every payload.
+    """Encapsulates storing and return independent deep copies of every payload.
 
     Copying on both write and read gives an in-process region the same isolation
     that a serializing remote store provides, at the cost of the copy.
@@ -120,7 +120,7 @@ class DeepCopySerializer(Serializer):
 
 
 class PickleSerializer(Serializer):
-    """Store payloads as pickled bytes.
+    """Encapsulates storing payloads as pickled bytes.
 
     Pickle accepts arbitrary Python objects but grants code execution to anyone
     who can write to the store. Wrap it in `SigningSerializer` whenever the
@@ -173,7 +173,7 @@ class PickleSerializer(Serializer):
 
 
 class JsonSerializer(Serializer):
-    """Store payloads as UTF-8 encoded JSON.
+    """Encapsulates storing payloads as UTF-8 encoded JSON.
 
     JSON is safe to read from an untrusted store and readable in a cache dump,
     but it only accepts JSON-compatible payloads and loses tuple and set types.
@@ -217,7 +217,7 @@ class JsonSerializer(Serializer):
 
 
 class CompressingSerializer(Serializer):
-    """Compress large payloads produced by a byte-oriented serializer.
+    """Encapsulates compressing large payloads produced by a byte-oriented serializer.
 
     A single leading flag byte records whether the body was compressed, so short
     values pay no compression cost and both forms remain readable.
@@ -279,7 +279,7 @@ class CompressingSerializer(Serializer):
 
 
 class SigningSerializer(Serializer):
-    """Prepend a keyed digest so that tampered entries are rejected.
+    """Encapsulates prepending a keyed digest so that tampered entries are rejected.
 
     Signing does not hide the payload; it guarantees that only holders of the
     secret can have written it. This is the minimum safeguard for a pickled
@@ -337,7 +337,7 @@ class SigningSerializer(Serializer):
 
 
 class EncryptingSerializer(Serializer):
-    """Encrypt payloads before they reach a shared store.
+    """Encapsulates encrypting payloads before they reach a shared store.
 
     Use this for regions holding personal or otherwise sensitive data, where
     operators of the cache store must not be able to read cached values.

@@ -67,7 +67,7 @@ _DISABLED_REGIONS: ContextVar[frozenset[str]] = ContextVar(
 
 
 class CachedError:
-    """Hold an exception that was cached instead of being retried.
+    """Encapsulates holding an exception that was cached instead of being retried.
 
     Caching a failure protects an origin that is already struggling, at the
     price of repeating the same error to every caller until the entry expires.
@@ -85,7 +85,7 @@ class CachedError:
 
 
 class CacheRegion:
-    """Apply one coherent caching policy to a named group of entries.
+    """Encapsulates applying one coherent caching policy to a named group of entries.
 
     A region is created with a `RegionConfig` and, optionally, replacements for
     each collaborator. It is safe for concurrent use. All keys handed to the

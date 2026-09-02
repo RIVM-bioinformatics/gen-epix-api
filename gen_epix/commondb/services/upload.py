@@ -27,7 +27,7 @@ from gen_epix.filter import (
 
 
 class BatchUploader:
-    """Coordinate batch-upload validation, persistence, rollback, and result status."""
+    """Encapsulates coordination of batch-upload validation, persistence, rollback, and result status."""
 
     def __init__(
         self,

@@ -10,7 +10,7 @@ from gen_epix.filter.range import RangeFilter
 
 
 class NumberRangeFilter(RangeFilter):
-    """Match numeric values within the configured range."""
+    """Represents a filter matching numeric values within the configured range."""
 
     lower_bound: (
         Annotated[
@@ -29,6 +29,6 @@ class NumberRangeFilter(RangeFilter):
 
 
 class TypedNumberRangeFilter(NumberRangeFilter):
-    """Numeric range filter carrying its serialized filter type."""
+    """Represents a numeric range filter carrying its serialized filter type."""
 
     type: Literal[FilterType.NUMBER_RANGE.value]  # type: ignore[name-defined]

@@ -14,9 +14,10 @@ from gen_epix.fastapp.model import Model
 
 class BaseSAMapper(abc.ABC):
     """
-    BaseSAMapper is an abstract base class for mappers between SQLAlchemy models
-    (rows) and Pydantic models. It defines the interface and common functionality
-    for mappers, but does not implement the actual mapping logic.
+    Encapsulates an abstract mapper between SQLAlchemy rows and Pydantic models.
+
+    It defines the interface and common functionality for mappers, but does not
+    implement the actual mapping logic.
     """
 
     def __init__(
@@ -148,7 +149,7 @@ class BaseSAMapper(abc.ABC):
 
 class BaseSAMapperFactory(abc.ABC):
     """
-    Abstract factory for creating SAMapper instances.
+    Encapsulates an abstract factory for creating SAMapper instances.
 
     Subclass this in each db layer (casedb, seqdb, etc.) to provide mappers with
     db-specific update logic. The factory is injected into SARepository at construction
@@ -168,7 +169,7 @@ class BaseSAMapperFactory(abc.ABC):
 
 class SAMapperFactory(BaseSAMapperFactory):
     """
-    Default factory that creates standard SAMapper instances with no special update
+    Encapsulates default factory that creates standard SAMapper instances with no special update
     logic.
     """
 
@@ -184,7 +185,7 @@ class SAMapperFactory(BaseSAMapperFactory):
 
 class SAMapper(BaseSAMapper):
     """
-    Standard SAMapper implementation that provides default mapping logic between model and
+    Encapsulates standard SAMapper implementation that provides default mapping logic between model and
     row fields based on field types and an optional field name map. The field name map
     is used to handle cases where model and row field names differ, but there is still
     a one-to-one mapping (e.g. created_by in model maps to created_by_id in row). The

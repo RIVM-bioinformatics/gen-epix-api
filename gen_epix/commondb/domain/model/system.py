@@ -17,7 +17,7 @@ from gen_epix.fastapp import Entity
 
 
 class Outage(Model):
-    """Represent an active or scheduled system outage and its visibility window."""
+    """Represents an active or scheduled system outage and its visibility window."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="outages",
@@ -51,7 +51,7 @@ class Outage(Model):
 
 
 class PackageMetadata(Model):
-    """Expose descriptive metadata for a package without persisting it."""
+    """Represents descriptive metadata for a package without persisting it."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="package_metadatas",

@@ -11,7 +11,9 @@ from gen_epix.filter.enum import FilterType
 
 class Filter(BaseModel):
     """
-    Base class for filters.
+    Represents a filter.
+
+    This is a base class from which all actual filter implementations inherit.
 
     Attributes:
         invert (bool): Whether to invert the filter.
@@ -293,6 +295,9 @@ class Filter(BaseModel):
 
 
 class TypedFilter(Filter):
-    """Base filter carrying an explicit serialized filter type."""
+    """Represents a filter carrying an explicit serialized filter type.
+
+    This is a base class from which all actual typed filter implementations inherit.
+    """
 
     type: Literal[FilterType.BASE.value]

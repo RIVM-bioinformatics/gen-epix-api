@@ -15,7 +15,7 @@ from gen_epix.fastapp.model import Policy
 
 
 class BaseAbacPolicy(Policy):
-    """Base policy that holds the ABAC service used for scope decisions."""
+    """Encapsulates a base policy that holds the ABAC service used for scope decisions."""
 
     def __init__(self, abac_service: BaseAbacService, **kwargs: Any):
         """Initialize the policy with its ABAC service and configuration properties.
@@ -30,7 +30,7 @@ class BaseAbacPolicy(Policy):
 
 
 class BaseIsOrganizationAdminPolicy(BaseAbacPolicy):
-    """Define organization-administration scope resolution for commands."""
+    """Encapsulates organization-administration scope resolution for commands."""
 
     @abc.abstractmethod
     def register_retrieve_organization_ids_handler(
@@ -66,24 +66,24 @@ class BaseIsOrganizationAdminPolicy(BaseAbacPolicy):
 
 
 class BaseReadOrganizationResultsOnlyPolicy(BaseAbacPolicy):
-    """Define a policy that limits reads to the user's organization results."""
+    """Encapsulates a policy that limits reads to the user's organization results."""
 
     pass
 
 
 class BaseReadSelfResultsOnlyPolicy(BaseAbacPolicy):
-    """Define a policy that limits reads to results owned by the current user."""
+    """Encapsulates a policy that limits reads to results owned by the current user."""
 
     pass
 
 
 class BaseReadUserPolicy(BaseAbacPolicy):
-    """Define a policy governing which user records a caller may read."""
+    """Encapsulates a policy governing which user records a caller may read."""
 
     pass
 
 
 class BaseUpdateUserPolicy(BaseAbacPolicy):
-    """Define a policy governing which user records a caller may update."""
+    """Encapsulates a policy governing which user records a caller may update."""
 
     pass

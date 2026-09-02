@@ -8,7 +8,7 @@ from gen_epix.filter.base import Filter
 
 
 class EqualsFilter(Filter):
-    """Match values equal to the configured value."""
+    """Represents a filter matching values equal to the configured value."""
 
     value: Any = Field(default=None, description="The value to match.", frozen=True)
 

@@ -14,20 +14,20 @@ import ulid
 
 
 class TimestampFactory(Enum):
-    """Provide supported factories for timestamps assigned to new domain data."""
+    """Encapsulates supported factories for timestamps assigned to new domain data."""
 
     DATETIME_NOW = lambda: datetime.datetime.now(datetime.timezone.utc)
 
 
 class IdFactory(Enum):
-    """Provide supported factories for identifiers assigned to new domain data."""
+    """Encapsulates supported factories for identifiers assigned to new domain data."""
 
     UUID4 = uuid.uuid4
     ULID = lambda: ulid.api.new().uuid
 
 
 class Role(Enum):
-    """Identify commondb roles used by command-centric authorization policies."""
+    """Encapsulates commondb roles used by command-centric authorization policies."""
 
     ROOT = "COMMONDB_ROOT"
     APP_ADMIN = "COMMONDB_APP_ADMIN"
@@ -39,7 +39,7 @@ class Role(Enum):
 
 
 class RoleSet(Enum):
-    """Group roles by privilege threshold or operational responsibility."""
+    """Encapsulates grouping of roles by privilege threshold or operational responsibility."""
 
     ALL = frozenset(
         {
@@ -80,7 +80,7 @@ class RoleSet(Enum):
 
 
 class ServiceType(Enum):
-    """Identify the commondb service responsible for a domain operation."""
+    """Encapsulates the commondb service responsible for a domain operation."""
 
     AUTH = "AUTH"
     ORGANIZATION = "ORGANIZATION"
@@ -90,7 +90,7 @@ class ServiceType(Enum):
 
 
 class UploadAction(Enum):
-    """Identify the action selected for one record during an upload."""
+    """Encapsulates the action selected for one record during an upload."""
 
     ERROR = "ERROR"
     UPDATE = "UPDATE"
@@ -99,7 +99,7 @@ class UploadAction(Enum):
 
 
 class RepositoryType(Enum):
-    """Identify persistence implementations available to composed applications."""
+    """Encapsulates persistence implementations available to composed applications."""
 
     DICT = "DICT"
     SA_SQLITE = "SA_SQLITE"
@@ -107,7 +107,7 @@ class RepositoryType(Enum):
 
 
 class AppType(Enum):
-    """Identify a Gen-EpiX application domain or the aggregate domain set."""
+    """Encapsulates a Gen-EpiX application domain or the aggregate domain set."""
 
     COMMONDB = "COMMONDB"
     CASEDB = "CASEDB"
@@ -117,13 +117,13 @@ class AppType(Enum):
 
 
 class AppTypeSet(Enum):
-    """Group application domains for configuration that applies everywhere."""
+    """Encapsulates grouping of application domains for configuration that applies everywhere."""
 
     ALL = frozenset({AppType.COMMONDB, AppType.CASEDB, AppType.SEQDB, AppType.OMOPDB})
 
 
 class AppConfigType(Enum):
-    """Identify configuration layers selected while composing an application."""
+    """Encapsulates configuration layers selected while composing an application."""
 
     IDPS = "idps"
     MOCK_IDPS = "mock_idps"
@@ -132,7 +132,7 @@ class AppConfigType(Enum):
 
 
 class DevIdpConfig(Enum):
-    """Identify identity-provider modes exposed by the development CLI."""
+    """Encapsulates identity-provider modes exposed by the development CLI."""
 
     IDPS = "IDPS"
     MOCK = "MOCK"
@@ -140,7 +140,7 @@ class DevIdpConfig(Enum):
 
 
 class DevRepositoryConfig(Enum):
-    """Identify repository modes exposed by the development CLI."""
+    """Encapsulates repository modes exposed by the development CLI."""
 
     DICT_DEMO = "DICT_DEMO"
     DICT_EMPTY = "DICT_EMPTY"
@@ -150,7 +150,7 @@ class DevRepositoryConfig(Enum):
 
 
 class DevRepositoryConfigSet(Enum):
-    """Group development repository modes by storage engine and seeded state."""
+    """Encapsulates grouping of development repository modes by storage engine and seeded state."""
 
     DICT = frozenset({DevRepositoryConfig.DICT_DEMO, DevRepositoryConfig.DICT_EMPTY})
     SA = frozenset(
@@ -173,7 +173,7 @@ class DevRepositoryConfigSet(Enum):
 
 
 class EtlStatus(Enum):
-    """Identify lifecycle outcomes for ETL and upload processing."""
+    """Encapsulates lifecycle outcomes for ETL and upload processing."""
 
     INITIALIZED = "INITIALIZED"
     PENDING = "PENDING"  # Yet to be processed
@@ -188,7 +188,7 @@ class EtlStatus(Enum):
 
 
 class UploadStatusSet(Enum):
-    """Group ETL statuses by failure and processing outcome."""
+    """Encapsulates grouping of ETL statuses by failure and processing outcome."""
 
     NOT_FAILED = frozenset(
         {
@@ -211,7 +211,7 @@ class UploadStatusSet(Enum):
 
 
 class DataIssueType(Enum):
-    """Classify data-quality issues emitted during validation and transformation."""
+    """Encapsulates classification of data-quality issues emitted during validation and transformation."""
 
     MISSING = "MISSING"
     INVALID = "INVALID"
@@ -222,7 +222,7 @@ class DataIssueType(Enum):
 
 
 class DataIssueTypeSet(Enum):
-    """Group data-quality issue types by severity for upload reporting."""
+    """Encapsulates grouping of data-quality issue types by severity for upload reporting."""
 
     ERROR = frozenset(
         {

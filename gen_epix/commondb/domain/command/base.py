@@ -22,7 +22,7 @@ from gen_epix.fastapp import UpdateAssociationCommand as ServiceUpdateAssociatio
 
 
 class Command(ServiceCommand):
-    """Carry commondb user context, audit metadata, and serializable properties."""
+    """Represents commondb user context, audit metadata, and serializable properties."""
 
     id: UUID = Field(default_factory=uuid.uuid4, description="The ID of the command")
     created_at: datetime.datetime = Field(
@@ -49,14 +49,14 @@ class Command(ServiceCommand):
 
 
 class CrudCommand(ServiceCrudCommand, Command):
-    """Extend a commondb command with target identifiers for CRUD operations."""
+    """Represents an extension of a commondb command with target identifiers for CRUD operations."""
 
     user: model.User | None = None
     obj_ids: UUID | list[UUID] | None = None  # type: ignore
 
 
 class UpdateAssociationCommand(ServiceUpdateAssociationCommand, Command):
-    """Extend a commondb command with identifiers and payloads for associations."""
+    """Represents an extension of a commondb command with identifiers and payloads for associations."""
 
     user: model.User | None = None
     obj_id1: UUID | list[UUID] | None = None
@@ -65,7 +65,7 @@ class UpdateAssociationCommand(ServiceUpdateAssociationCommand, Command):
 
 
 class UploadBatchCommandMixin:
-    """Provide batch-upload options and payload access for upload commands."""
+    """Encapsulates batch-upload options and payload access for upload commands."""
 
     # Must be set in child class
     # The BaseBatchForUpload child class that this command uploads

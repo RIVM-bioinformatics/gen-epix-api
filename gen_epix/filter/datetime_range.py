@@ -10,7 +10,7 @@ from gen_epix.filter.range import RangeFilter
 
 
 class DatetimeRangeFilter(RangeFilter):
-    """Match datetimes within the configured lower and upper bounds."""
+    """Represents a filter matching datetimes within the configured bounds."""
 
     lower_bound: datetime.datetime | None = Field(
         default=None, description="The lower bound of the range.", frozen=True
@@ -21,6 +21,6 @@ class DatetimeRangeFilter(RangeFilter):
 
 
 class TypedDatetimeRangeFilter(DatetimeRangeFilter):
-    """Datetime range filter carrying its serialized filter type."""
+    """Represents a datetime range filter carrying its serialized filter type."""
 
     type: Literal[FilterType.DATETIME_RANGE.value]  # type: ignore[name-defined]

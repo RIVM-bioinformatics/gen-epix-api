@@ -47,7 +47,7 @@ from gen_epix.filter import (
 
 
 class SARepository(BaseRepository):
-    """SQLAlchemy-backed repository."""
+    """Encapsulates a SQLAlchemy-backed repository."""
 
     DEFAULT_MAX_INSERT_BATCH_SIZE = 2000
     DEFAULT_MAX_PARAMETERS_IN_CLAUSE = 1000

@@ -11,7 +11,7 @@ from gen_epix.fastapp.model import Command
 
 
 class BaseAbacService(BaseService[BaseAbacRepository]):
-    """Provide ABAC operations that resolve organization administration and scope."""
+    """Encapsulates ABAC operations that resolve organization administration and scope."""
 
     SERVICE_TYPE = ServiceType.ABAC
 

@@ -10,7 +10,7 @@ from gen_epix.transform.transform_result import TransformResult
 
 
 class StreamingPipeline:
-    """Wrap a pipeline with outcome callbacks, error-rate limits, and batching."""
+    """Encapsulates a pipeline with callbacks, error limits, and batching."""
 
     def __init__(
         self,

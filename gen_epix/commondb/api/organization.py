@@ -23,7 +23,7 @@ CommandName = Enum("CommandName", {x: x for x in DOMAIN.command_names})  # type:
 
 
 class ApiPermission(PydanticBaseModel, frozen=True):
-    """Represent a domain permission in API request and response schemas."""
+    """Represents a domain permission in API request and response schemas."""
 
     command_name: CommandName = (  # pyright: ignore[reportInvalidTypeForm]
         copy_model_field(Permission, "command_name")

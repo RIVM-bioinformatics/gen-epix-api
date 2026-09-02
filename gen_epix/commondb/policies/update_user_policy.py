@@ -11,7 +11,7 @@ from gen_epix.fastapp import Command
 
 
 class UpdateUserPolicy(BaseUpdateUserPolicy):
-    """Apply BEFORE-phase role and organization checks to user mutations."""
+    """Encapsulates BEFORE-phase role and organization checks to user mutations."""
 
     def __init__(self, abac_service: BaseAbacService, **kwargs: Any):
         """Initialize mapped user type and configured role mappings.

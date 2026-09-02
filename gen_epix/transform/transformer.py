@@ -8,7 +8,7 @@ from gen_epix.transform.transform_result import TransformResult
 
 
 class Transformer(ABC):
-    """Transform one supported object while converting failures to results."""
+    """Encapsulates object transformation and failure conversion."""
 
     def __init__(self, name: str | None = None):
         """Set the transformer name used in transformation results."""

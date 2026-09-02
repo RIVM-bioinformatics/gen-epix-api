@@ -13,7 +13,7 @@ from gen_epix.fastapp.cache.model import NO_VALUE, CachedValue, NoValue
 
 
 class NullBackend(CacheBackend):
-    """Accept every write, report every read as a miss."""
+    """Encapsulates accepting every write, report every read as a miss."""
 
     def __init__(self, name: str = "null"):
         """Initialize a NullBackend instance."""

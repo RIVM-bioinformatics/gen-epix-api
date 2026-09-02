@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 
 class MultiLink(BaseModel, frozen=True):
-    """Describe a field that relates a model to multiple instances of another model."""
+    """Represents a field that relates a model to multiple instances of another model."""
 
     link_field_name: str
     link_model_class: type[BaseModel]
@@ -20,7 +20,7 @@ class MultiLink(BaseModel, frozen=True):
 
 
 class Link(BaseModel, frozen=True):
-    """Describe a field that relates a model to another model."""
+    """Represents a field that relates a model to another model."""
 
     link_field_name: str
     link_model_class: type[BaseModel]

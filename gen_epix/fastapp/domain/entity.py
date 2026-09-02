@@ -17,7 +17,7 @@ from gen_epix.fastapp.exc import DomainException
 
 
 class Entity(BaseModel):
-    """Describe a domain model's names, persistence, keys, and links.
+    """Represents a domain model's names, persistence, keys, and links.
 
     Model validation:
     Persistable entities without an explicit identifier field use the default

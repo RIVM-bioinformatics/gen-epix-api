@@ -30,7 +30,7 @@ from gen_epix.fastapp.services.auth.token_introspection_manager import (
 
 
 class OauthIdpClient(IdpClient, OpenIdConnect):
-    """OAuth identity-provider client that validates and obtains tokens."""
+    """Encapsulates OAuth identity-provider client that validates and obtains tokens."""
 
     DEFAULT_INTROSPECTION_REQUEST_HEADERS: dict[str, str] = {
         "Content-Type": "application/x-www-form-urlencoded",

@@ -24,8 +24,7 @@ from gen_epix.fastapp.user_manager import BaseUserManager
 
 
 class App:
-    """
-    Implementation of the Mediator pattern for handling Commands, which represent a
+    """Encapsulates a Mediator for handling Commands, which represent a
     unit of execution. Each Command class has one handler function that is called when
     the Command is executed. The handler needs to be registered, typically by a
     Service. As a result, a Service or any function that wants to execute a Command

@@ -9,12 +9,12 @@ from gen_epix.filter.equals import EqualsFilter
 
 
 class EqualsBooleanFilter(EqualsFilter):
-    """Match a boolean value."""
+    """Represents a filter matching a boolean value."""
 
     value: bool = Field(description="The boolean value to match.", frozen=True)
 
 
 class TypedEqualsBooleanFilter(EqualsBooleanFilter):
-    """Boolean equality filter carrying its serialized filter type."""
+    """Represents a boolean equality filter carrying its serialized filter type."""
 
     type: Literal[FilterType.EQUALS_BOOLEAN.value]  # type: ignore[name-defined]

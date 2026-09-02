@@ -8,7 +8,7 @@ from gen_epix.transform.transformer import Transformer
 
 
 class FieldTransformer(Transformer):
-    """Apply a callable to one existing field and update that field in place."""
+    """Encapsulates in-place transformation of one existing field."""
 
     def __init__(
         self,

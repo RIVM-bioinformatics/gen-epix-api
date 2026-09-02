@@ -26,7 +26,7 @@ from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 
 
 class CommondbRemoteApp(RemoteApp):
-    """Remote app client for the commondb service with OAuth2/NONE authentication."""
+    """Encapsulates a remote app client for the commondb service with OAuth2/NONE authentication."""
 
     DEFAULT_ROUTE_PREFIX = "/v1"
 

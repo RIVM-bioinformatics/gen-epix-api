@@ -148,7 +148,7 @@ class UpdateUserOwnOrganizationCommand(Command):
 
 class RetrieveInviteUserConstraintsCommand(Command):
     """
-    Retrieves the constraints for inviting a user, such as valid roles and organizations.
+    Represents retrieval of the constraints for inviting a user, such as valid roles and organizations.
 
     This command is used to gather the necessary information for the user invitation process.
     """
@@ -157,7 +157,7 @@ class RetrieveInviteUserConstraintsCommand(Command):
 
 
 class RetrieveOrganizationAdminNameEmailsCommand(Command):
-    """Retrieve organization administrator names and email addresses.
+    """Represents a request to retrieve organization administrator names and email addresses.
 
     Results include all administrators for the user's
     organization.
@@ -167,7 +167,7 @@ class RetrieveOrganizationAdminNameEmailsCommand(Command):
 
 
 class AnonymizeUserCommand(Command):
-    """Anonymize a target user according to GDPR requirements.
+    """Represents a request to anonymize a target user according to GDPR requirements.
 
     This removes the target user's name and replaces its key with the user ID (a random
     UUID), so that they can no longer be identified directly. Because the key is
@@ -181,73 +181,73 @@ class AnonymizeUserCommand(Command):
 
 
 class OrganizationCrudCommand(CrudCommand):
-    """Perform CRUD operations for organization records."""
+    """Represents CRUD operations for organization records."""
 
     MODEL_CLASS: ClassVar = model.Organization
 
 
 class UserCrudCommand(CrudCommand):
-    """Perform CRUD operations for user records."""
+    """Represents CRUD operations for user records."""
 
     MODEL_CLASS: ClassVar = model.User
 
 
 class UserInvitationCrudCommand(CrudCommand):
-    """Perform CRUD operations for user invitation records."""
+    """Represents CRUD operations for user invitation records."""
 
     MODEL_CLASS: ClassVar = model.UserInvitation
 
 
 class OrganizationSetCrudCommand(CrudCommand):
-    """Perform CRUD operations for organization-set records."""
+    """Represents CRUD operations for organization-set records."""
 
     MODEL_CLASS: ClassVar = model.OrganizationSet
 
 
 class OrganizationSetMemberCrudCommand(CrudCommand):
-    """Perform CRUD operations for organization-set membership records."""
+    """Represents CRUD operations for organization-set membership records."""
 
     MODEL_CLASS: ClassVar = model.OrganizationSetMember
 
 
 class SiteCrudCommand(CrudCommand):
-    """Perform CRUD operations for organization site records."""
+    """Represents CRUD operations for organization site records."""
 
     MODEL_CLASS: ClassVar = model.Site
 
 
 class ContactCrudCommand(CrudCommand):
-    """Perform CRUD operations for organization contact records."""
+    """Represents CRUD operations for organization contact records."""
 
     MODEL_CLASS: ClassVar = model.Contact
 
 
 class IdentifierIssuerCrudCommand(CrudCommand):
-    """Perform CRUD operations for identifier issuer records."""
+    """Represents CRUD operations for identifier issuer records."""
 
     MODEL_CLASS: ClassVar = model.IdentifierIssuer
 
 
 class DataCollectionCrudCommand(CrudCommand):
-    """Perform CRUD operations for data-collection records."""
+    """Represents CRUD operations for data-collection records."""
 
     MODEL_CLASS: ClassVar = model.DataCollection
 
 
 class DataCollectionSetCrudCommand(CrudCommand):
-    """Perform CRUD operations for data-collection-set records."""
+    """Represents CRUD operations for data-collection-set records."""
 
     MODEL_CLASS: ClassVar = model.DataCollectionSet
 
 
 class DataCollectionSetMemberCrudCommand(CrudCommand):
-    """Perform CRUD operations for data-collection-set membership records."""
+    """Represents CRUD operations for data-collection-set membership records."""
 
     MODEL_CLASS: ClassVar = model.DataCollectionSetMember
 
 
 class OrganizationIdentifierIssuerLinkCrudCommand(CrudCommand):
-    """Perform CRUD operations for organization-identifier issuer links."""
+    """Represents CRUD operations for organization-identifier issuer links."""
 
     MODEL_CLASS: ClassVar = model.OrganizationIdentifierIssuerLink
 
@@ -255,7 +255,7 @@ class OrganizationIdentifierIssuerLinkCrudCommand(CrudCommand):
 class OrganizationIdentifierIssuerLinkUpdateAssociationCommand(
     UpdateAssociationCommand
 ):
-    """Create or update organization-to-identifier issuer associations."""
+    """Represents a request to create or update organization-to-identifier issuer associations."""
 
     ASSOCIATION_CLASS: ClassVar = model.OrganizationIdentifierIssuerLink
     LINK_FIELD_NAME1: ClassVar = "organization_id"

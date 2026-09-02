@@ -8,7 +8,10 @@ from gen_epix.fastapp.services.auth.command import GetIdentityProvidersCommand
 
 
 class BaseAuthService(BaseService):
-    """Base class for authentication services."""
+    """Encapsulates a service that handles authentication logic.
+
+    This is a base class intended to be subclassed for specific authentication services.
+    """
 
     def register_handlers(self) -> None:
         """Register handlers."""

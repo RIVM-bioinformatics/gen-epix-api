@@ -12,7 +12,7 @@ from gen_epix.fastapp import CrudOperation, exc
 
 
 class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
-    """Apply organization-administrator ABAC checks before command execution."""
+    """Encapsulates organization-administrator ABAC checks before command execution."""
 
     def __init__(self, abac_service: BaseAbacService, **kwargs: Any):
         """Initialize role mappings and organization-ID resolvers.

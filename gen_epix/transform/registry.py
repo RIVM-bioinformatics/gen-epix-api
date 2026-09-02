@@ -9,7 +9,7 @@ TransformerType = TypeVar("TransformerType", bound=Transformer)
 
 
 class Registry:
-    """Store named constructors and create transformers from configuration."""
+    """Encapsulates named constructors for configured transformers."""
 
     _transformers: dict[str, type[Transformer]] = {}
     _factories: dict[str, Callable[..., Transformer]] = {}

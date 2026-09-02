@@ -29,7 +29,7 @@ from gen_epix.fastapp.cache.tag import render_tags
 
 @dataclass(slots=True, frozen=True)
 class Invalidation:
-    """Describe one invalidation request.
+    """Encapsulates describing one invalidation request.
 
     A request is a value object so that it can be buffered until a transaction
     commits, published over a bus, and applied idempotently on the far side.
@@ -145,7 +145,7 @@ class Invalidation:
 
 
 class InvalidationStrategy:
-    """Invalidate by timestamp instead of by deletion.
+    """Encapsulates invalidating by timestamp instead of by deletion.
 
     Recording a cut-off is constant time regardless of how many entries exist
     and works against a store whose keys cannot be enumerated. Entries written
@@ -209,7 +209,7 @@ class InvalidationStrategy:
 
 
 class InvalidationBus(ABC):
-    """Propagate invalidation requests to every holder of a local cache tier.
+    """Encapsulates propagating invalidation requests to every holder of a local cache tier.
 
     A process-local first tier only sees a deletion performed by its own
     process. Without a bus, invalidating from one worker leaves the other
@@ -231,7 +231,7 @@ class InvalidationBus(ABC):
 
 
 class LocalInvalidationBus(InvalidationBus):
-    """Deliver requests to subscribers inside this process.
+    """Encapsulates delivering requests to subscribers inside this process.
 
     Delivery is idempotent: the identifier of every applied request is
     remembered, so a request that arrives twice, as at-least-once transports
@@ -313,7 +313,7 @@ class LocalInvalidationBus(InvalidationBus):
 
 @dataclass(slots=True, frozen=True)
 class DependencyDeclaration:
-    """Record what should be invalidated when one dependency changes.
+    """Encapsulates recording what should be invalidated when one dependency changes.
 
     Attributes:
         tags: Tag templates rendered against the parameters of the change.
@@ -327,7 +327,7 @@ class DependencyDeclaration:
 
 
 class DependencyRegistry:
-    """Translate a changed thing into the invalidations it implies.
+    """Encapsulates translating a changed thing into the invalidations it implies.
 
     Readers, or the code that wires them, declare a dependency once. A writer
     then calls `resolve("case", case_id=...)` and receives the requests to

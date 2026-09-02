@@ -5,6 +5,6 @@ from gen_epix.fastapp.repositories import DictRepository
 
 
 class AbacDictRepository(DictRepository, BaseAbacRepository):
-    """Store ABAC policy records using FastApp's dictionary repository backend."""
+    """Encapsulates storage of ABAC policy records using FastApp's dictionary repository backend."""
 
     pass

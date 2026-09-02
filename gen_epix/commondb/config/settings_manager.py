@@ -10,7 +10,7 @@ from dynaconf import Dynaconf
 
 
 class SettingsManager:
-    """Manages application settings with environment variable overrides."""
+    """Encapsulates application settings with environment variable overrides."""
 
     DEFAULT_SETTINGS_FILES_ENVVAR = "SETTINGS_FILES"
     DEFAULT_ENVVAR_SEPARATOR = "__"

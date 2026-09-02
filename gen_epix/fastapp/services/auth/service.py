@@ -32,7 +32,7 @@ from gen_epix.fastapp.user_manager import BaseUserManager
 
 
 class AuthService(BaseAuthService):
-    """Resolve identity-provider claims to authenticated application users.
+    """Encapsulates resolving identity-provider claims to authenticated application users.
 
     The service initializes configured identity-provider clients, exposes only
     providers marked as public when requested, and creates FastAPI dependencies

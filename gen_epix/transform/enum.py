@@ -4,7 +4,7 @@ from enum import Enum
 
 
 class TimeUnit(Enum):
-    """Supported ISO time granularities for time transformations."""
+    """Encapsulates supported ISO time granularities."""
 
     YEAR = "YEAR"
     QUARTER = "QUARTER"
@@ -14,27 +14,27 @@ class TimeUnit(Enum):
 
 
 class TimeUnitTransformStrategy(Enum):
-    """Strategies for reducing an ISO time value to a coarser granularity."""
+    """Encapsulates strategies for reducing ISO time granularity."""
 
     EXACT_ONLY = "EXACT_ONLY"
     LARGEST_OVERLAP = "LARGEST_OVERLAP"
 
 
 class IntervalTransformStrategy(Enum):
-    """Strategies for mapping intervals between categorizations."""
+    """Encapsulates strategies for mapping interval categorizations."""
 
     CONTAINS_ONLY = "CONTAINS_ONLY"
     LARGEST_OVERLAP = "LARGEST_OVERLAP"
 
 
 class TransformType(Enum):
-    """High-level transformation categories."""
+    """Encapsulates high-level transformation categories."""
 
     BASE = "BASE"
 
 
 class TransformResultType(Enum):
-    """Classify a transformation as successful, failed, or skipped."""
+    """Encapsulates transformation outcome classifications."""
 
     SUCCESS = "SUCCESS"
     ERROR = "ERROR"

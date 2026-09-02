@@ -4,7 +4,7 @@ from enum import Enum
 
 
 class FilterType(Enum):
-    """Serialized type names for the available filter models."""
+    """Encapsulates serialized type names for the available filter models."""
 
     BASE = "BASE"
     EXISTS = "EXISTS"
@@ -27,7 +27,7 @@ class FilterType(Enum):
 
 
 class LogicalOperator(Enum):
-    """Boolean operators supported by composite filters."""
+    """Encapsulates boolean operators supported by composite filters."""
 
     AND = "AND"
     OR = "OR"
@@ -41,7 +41,7 @@ class LogicalOperator(Enum):
 
 
 class ComparisonOperator(Enum):
-    """Boundary comparison operators supported by range filters."""
+    """Encapsulates boundary comparison operators supported by range filters."""
 
     ST = "<"
     STE = "<="

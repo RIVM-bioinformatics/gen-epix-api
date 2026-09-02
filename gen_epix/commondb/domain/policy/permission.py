@@ -35,7 +35,7 @@ NO_RBAC_PERMISSIONS: set[tuple[type[fastapp.Command], PermissionType]] = {
 
 
 class RoleGenerator:
-    """Provide reusable commondb roles, permission sets, and hierarchy mappings."""
+    """Encapsulates reusable commondb roles, permission sets, and hierarchy mappings."""
 
     COMMON_ROLE_ENUM_MAP: dict[Role, Enum] = {x: x for x in Role}
 

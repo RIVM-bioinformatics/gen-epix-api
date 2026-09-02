@@ -10,7 +10,7 @@ from gen_epix.filter.enum import FilterType
 
 
 class UuidSetFilter(Filter):
-    """Match UUID values contained in an immutable set.
+    """Represents a filter matching UUID values in an immutable set.
 
     Model validation:
     Initializes a direct UUID membership matcher.
@@ -42,6 +42,6 @@ class UuidSetFilter(Filter):
 
 
 class TypedUuidSetFilter(UuidSetFilter):
-    """UUID set filter carrying its serialized filter type."""
+    """Represents a UUID set filter carrying its serialized filter type."""
 
     type: Literal[FilterType.UUID_SET.value]  # type: ignore[name-defined]
