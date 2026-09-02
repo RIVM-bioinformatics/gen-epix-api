@@ -5,6 +5,6 @@ from gen_epix.seqdb.domain.repository.file import BaseFileRepository
 
 
 class FileSARepository(SARepository, BaseFileRepository):
-    """Provide SQLAlchemy-backed persistence for seqdb uploaded files."""
+    """Encapsulates SQLAlchemy-backed persistence for seqdb uploaded files."""
 
     pass

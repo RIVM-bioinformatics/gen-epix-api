@@ -22,7 +22,7 @@ from gen_epix.seqdb.domain.model.seq.base import BaseSeq
 
 
 class Locus(Model):
-    """A genetic locus, e.g. a gene or other genomic region of interest. The locus can be
+    """Represents a genetic locus, e.g. a gene or other genomic region of interest. The locus can be
     defined on any taxonomic level, e.g. species, lineage, etc. As such, depending on
     the analysis, two loci may actually represent the same genomic region, but defined
     for lower taxonomic levels than the one used in the analysis. This information,
@@ -87,7 +87,7 @@ class Locus(Model):
 
 
 class LocusSet(Model):
-    """An ordered set of loci. This can be used to define e.g. schemes for wgMLST typing
+    """Represents an ordered set of loci. This can be used to define e.g. schemes for wgMLST typing
     or other locus-based analyses. Because the set is ordered, i.e. a list of unique
     locus IDS, it can also be used to define the order of loci in allele profiles and
     other analyses.
@@ -133,7 +133,7 @@ class LocusSet(Model):
 
 
 class LocusCodeMap(Model):
-    """Map external locus codes to seqdb locus identifiers."""
+    """Represents a map from external locus codes to seqdb locus identifiers."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="locus_code_maps",
@@ -168,7 +168,7 @@ class LocusCodeMap(Model):
 
 
 class RefAllele(BaseSeq):
-    """A reference allele for a locus. This can be an actual sequence or an
+    """Represents a reference allele for a locus. This can be an actual sequence or an
     artificial construct, typically then a consensus sequence. It can be used
     e.g. as a reference for alignment of other alleles for the locus or for
     reducing storage requirements of alleles.
@@ -200,7 +200,7 @@ class RefAllele(BaseSeq):
 
 
 class Allele(BaseSeq):
-    """An allele for a locus, i.e., a specific DNA sequence variant observed at that locus.
+    """Represents an allele for a locus, i.e., a specific DNA sequence variant observed at that locus.
     Any IUPAC ambiguity codes are allowed in the sequence. The locus only represents the
     first observed locus that the allele was observed for, but the allele can be
     observed for multiple loci, e.g. due to gene duplication or because the locus

@@ -5,6 +5,6 @@ from gen_epix.seqdb.domain.repository import BaseAbacRepository
 
 
 class AbacSARepository(SARepository, BaseAbacRepository):
-    """Provide SQLAlchemy-backed persistence for seqdb ABAC data."""
+    """Encapsulates SQLAlchemy-backed persistence for seqdb ABAC data."""
 
     pass

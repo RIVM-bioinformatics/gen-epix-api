@@ -19,7 +19,7 @@ class PcrMeasurement(
     ContentMixin[enum.PcrResultFormat],
     QualityMixin,
 ):
-    """Store a PCR measurement produced from a sample by a protocol.
+    """Represents a PCR measurement produced from a sample by a protocol.
 
     Model validation: Content-hash validation is not implemented yet, so the
     model currently accepts content unchanged after its inherited validation.
@@ -52,7 +52,7 @@ class AstMeasurement(
     ContentMixin[enum.PcrResultFormat],
     QualityMixin,
 ):
-    """Store an antimicrobial-susceptibility measurement from a sample.
+    """Represents an antimicrobial-susceptibility measurement from a sample.
 
     Model validation: Content-hash validation is not implemented yet, so the
     model currently accepts content unchanged after its inherited validation.

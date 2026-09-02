@@ -9,7 +9,7 @@ from gen_epix.fastapp.domain import Entity
 
 
 class File(Model):
-    """Represent a persisted biological file and its binary content."""
+    """Represents a persisted biological file and its binary content."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="files",

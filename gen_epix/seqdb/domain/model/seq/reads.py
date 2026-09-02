@@ -23,7 +23,7 @@ from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 
 
 class ReadSet(Model, HasSampleMixin, HasProtocolMixin, QualityMixin):
-    """A set of sequencing reads, either single-end or paired-end, that is the result
+    """Represents a set of sequencing reads, either single-end or paired-end, that is the result
     of sequencing a sample using a protocol. The reads data itself are
     not included in this model, but are referenced via either URIs or file links.
 
@@ -168,7 +168,7 @@ class ReadSet(Model, HasSampleMixin, HasProtocolMixin, QualityMixin):
 
 
 class ReadSetIdentifier(BaseIdentifier):
-    """Associate an external identifier with a read set."""
+    """Represents an external identifier associated with a read set."""
 
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         ReadSet,

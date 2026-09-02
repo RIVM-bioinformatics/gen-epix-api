@@ -9,7 +9,7 @@ from gen_epix.seqdb.domain.service import BaseAbacService
 
 
 class ReadOrganizationResultsOnlyPolicy(CommonReadOrganizationResultsOnlyPolicy):
-    """Restrict result reads to the caller's authorized organization scope."""
+    """Encapsulates restricting result reads to the caller's authorized organization scope."""
 
     def __init__(
         self,

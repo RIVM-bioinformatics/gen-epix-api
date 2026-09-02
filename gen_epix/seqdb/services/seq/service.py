@@ -92,7 +92,7 @@ from gen_epix.seqdb.services.seq.upload import seq_service_upload_samples
 
 
 class SeqService(BaseSeqService):
-    """Implement seqdb commands through specialized service operations."""
+    """Encapsulates seqdb commands through specialized service operations."""
 
     def upload_samples(
         self,

@@ -11,7 +11,7 @@ from gen_epix.seqdb.domain.enum import ServiceType
 
 
 class BaseSeqService(BaseService):
-    """Define seqdb command handlers implemented by concrete sequence services."""
+    """Encapsulates seqdb handlers implemented by concrete sequence services."""
 
     SERVICE_TYPE = ServiceType.SEQ
 

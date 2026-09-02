@@ -27,7 +27,7 @@ from gen_epix.util import chunk_list
 
 
 class _ParsedNextcladeProfile(BaseModel):
-    """Store normalized Nextclade variants and their aligned reference interval."""
+    """Represents normalized Nextclade variants and their aligned reference interval."""
 
     model_config = ConfigDict(frozen=True)
 

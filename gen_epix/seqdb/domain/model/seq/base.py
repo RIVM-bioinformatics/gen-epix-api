@@ -22,7 +22,7 @@ def str_uuid4() -> str:
 
 
 class ContentMixin[FormatType: IntEnum]:
-    """Add formatted content and a content hash to a model.
+    """Encapsulates formatted content and a content hash for a model.
 
     Model validation: Subclasses must validate the relationship between their
     content, format, and content hash.
@@ -83,7 +83,7 @@ class ContentMixin[FormatType: IntEnum]:
 
 
 class QualityMixin:
-    """Add qualitative and numeric quality-control data to a model."""
+    """Encapsulates qualitative and numeric quality-control data for a model."""
 
     qc_result: Annotated[
         enum.QualityControlResult,
@@ -137,7 +137,7 @@ class QualityMixin:
 
 
 class BaseSeq(Model):
-    """Represent a sequence with a validated representation, length, and hash.
+    """Represents a sequence with a validated representation, length, and hash.
 
     The class includes validation logic to ensure
     consistency between the sequence, its format, length, and derived sequence hash.

@@ -14,7 +14,7 @@ from gen_epix.seqdb.domain import enum, model
 
 
 class BaseSeqRepository(BaseRepository):
-    """Define backend-independent persistence operations for seqdb sequence data."""
+    """Encapsulates backend-independent persistence for seqdb sequence data."""
 
     @abc.abstractmethod
     def retrieve_seq_fasta(
