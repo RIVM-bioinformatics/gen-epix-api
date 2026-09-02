@@ -15,7 +15,7 @@ def _enum_to_str(x: Any) -> str:
 
 
 class StringSetFilter(Filter):
-    """Match strings from an immutable set with optional case sensitivity.
+    """Represents a filter matching strings with optional case sensitivity.
 
     Model validation:
     Case-insensitive members and matched enum names are normalized to lowercase
@@ -61,6 +61,6 @@ class StringSetFilter(Filter):
 
 
 class TypedStringSetFilter(StringSetFilter):
-    """String set filter carrying its serialized filter type."""
+    """Represents a string set filter carrying its serialized filter type."""
 
     type: Literal[FilterType.STRING_SET.value]  # type: ignore[name-defined]

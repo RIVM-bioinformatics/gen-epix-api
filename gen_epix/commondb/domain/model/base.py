@@ -20,7 +20,8 @@ from gen_epix.fastapp.enum import LogLevel
 class ModelNoId(fastapp.Model):
     """Represents creation and modification metadata to a FastApp domain model.
 
-    Intended as a base class for other models.
+    This model serves as a base class for other models in the different
+    applications.
 
     Services call the mutation helpers before persisting a model so audit
     timestamps and the responsible user ID remain synchronized.

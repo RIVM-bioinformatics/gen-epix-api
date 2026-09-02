@@ -558,7 +558,9 @@ class ParentUploadResult(UploadResultWithIdentifiers):
 
 
 class BaseBatchForUpload(Model):
-    """Represents a base class for batches of ParentForUpload objects to be uploaded.
+    """Represents a batch ParentForUpload objects to be uploaded.
+
+    This is a base class intended to be subclassed per application.
 
     A batch is intended as a single unit of work for an upload operation and as such to be
     processed atomically.

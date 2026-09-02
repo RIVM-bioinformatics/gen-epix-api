@@ -44,7 +44,10 @@ def _is_descendant_logger(logger_name: str, parent_logger_name: str) -> bool:
 
 
 class BaseAppCfg(abc.ABC):
-    """Encapsulates an abstract base class for application configuration."""
+    """Encapsulates application configuration.
+
+    This is a base class intended to be subclassed for specific applications.
+    """
 
     def __init__(self) -> None:
         """Declare instance attributes; subclasses must assign them in their own __init__."""

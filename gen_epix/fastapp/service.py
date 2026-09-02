@@ -30,7 +30,13 @@ from gen_epix.filter import CompositeFilter, LogicalOperator
 
 
 class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
-    """Encapsulates the base class for domain services that register command handlers."""
+    """Encapsulates a service that groups together related domain models
+    and logic, and which may have an associated repository for persistence.
+
+    Implement this class to provide specific domain service functionality
+    while cleanly separating business logic from other services through
+    the app instance's handle() method.
+    """
 
     SERVICE_TYPE: Hashable = None
 

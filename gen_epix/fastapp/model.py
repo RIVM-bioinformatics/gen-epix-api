@@ -32,8 +32,8 @@ from gen_epix.filter.base import Filter
 
 class Model(PydanticBaseModel):
     """
-    Represents the base class for all models in an application. Models are used to represent the
-    state of the application and are typically persisted in a database. Models can also
+    Represents a domain model in an application. Models are used to represent the
+    state of the application and are often persisted in a database. Models can also
     be used to represent the state of the application in memory, e.g. for caching or
     for passing data between services. Models can be immutable or mutable, depending on
     the use case.
@@ -237,10 +237,12 @@ class Command(PydanticBaseModel):
 
 class CrudCommand(Command):
     """
-    Represents a command base class for performing a CRUD operation on a model. The command
+    Represents a command for performing a CRUD operation on a model. The command
     includes the CRUD operation to perform, the identifier(s) of the object(s) to
     operate on and/or the object(s) to operate on, and optional filters for read or
     delete all operations and for access control.
+
+    This is a base class intended to be subclassed for specific CRUD commands.
 
     Model validation:
     The operation, identifiers, objects, filters, and pagination options must

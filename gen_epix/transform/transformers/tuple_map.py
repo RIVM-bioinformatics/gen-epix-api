@@ -10,7 +10,7 @@ from gen_epix.transform.transformer import Transformer
 
 class TupleMapTransformer(Transformer):
     """
-    Map a tuple of source fields to a tuple of target fields.
+    Encapsulates mapping source-field tuples to target-field tuples.
 
     The mapping is provided as rows containing source and target field values. Source
     and target field names can differ between input rows and mapping rows, and an

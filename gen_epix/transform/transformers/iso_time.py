@@ -12,7 +12,7 @@ from gen_epix.transform.transformer import Transformer
 
 
 class IsoTimeTransformer(Transformer):
-    """Map an ISO time field between supported units and precision strategies."""
+    """Encapsulates mapping ISO time between units and precision strategies."""
 
     DAY = TimeUnit.DAY
     WEEK = TimeUnit.WEEK

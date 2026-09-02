@@ -9,7 +9,7 @@ from gen_epix.filter.enum import ComparisonOperator, FilterType
 
 
 class RangeFilter(Filter):
-    """Match values using configurable lower and upper boundary operators.
+    """Represents a filter matching values with configurable boundary operators.
 
     Model validation:
     At least one bound is required; ordered bounds and compatible censor
@@ -137,6 +137,6 @@ class RangeFilter(Filter):
 
 
 class TypedRangeFilter(RangeFilter):
-    """Range filter carrying its serialized filter type."""
+    """Represents a range filter carrying its serialized filter type."""
 
     type: Literal[FilterType.RANGE.value]  # type: ignore[name-defined]

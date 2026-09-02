@@ -8,7 +8,7 @@ from gen_epix.filter.enum import FilterType
 
 
 class ExistsFilter(Filter):
-    """Match values that exist and are not null or excluded NA values."""
+    """Represents a filter matching non-null, non-excluded values."""
 
     def match_value(
         self,
@@ -101,6 +101,6 @@ class ExistsFilter(Filter):
 
 
 class TypedExistsFilter(ExistsFilter):
-    """Existence filter carrying its serialized filter type."""
+    """Represents an existence filter carrying its serialized filter type."""
 
     type: Literal[FilterType.EXISTS.value]  # type: ignore[name-defined]

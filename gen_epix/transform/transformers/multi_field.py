@@ -8,7 +8,7 @@ from gen_epix.transform.transformer import Transformer
 
 
 class MultiFieldTransformer(Transformer):
-    """Apply configured field callables in mapping order and mutate the adapter."""
+    """Encapsulates ordered field transformations that mutate an adapter."""
 
     def __init__(
         self,

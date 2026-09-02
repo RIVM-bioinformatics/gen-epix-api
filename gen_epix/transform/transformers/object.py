@@ -8,7 +8,7 @@ from gen_epix.transform.transformer import Transformer
 
 
 class ObjectTransformer(Transformer):
-    """Apply a callable to the unwrapped object and adapt the returned object."""
+    """Encapsulates transformation and adaptation of an unwrapped object."""
 
     def __init__(self, transform_fn: Callable[[Any], Any], name: str | None = None):
         """Store the callable that transforms the unwrapped object."""

@@ -8,7 +8,7 @@ from gen_epix.filter.base import Filter
 
 
 class HashableSetFilter(Filter):
-    """Match values contained in an immutable set of hashable members."""
+    """Represents a filter matching values in an immutable set of hashable members."""
 
     members: frozenset[Hashable] = Field(
         description="The values to match.", frozen=True
