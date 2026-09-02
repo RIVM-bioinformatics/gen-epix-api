@@ -1,3 +1,9 @@
+"""Define casedb geographic reference models.
+
+The module provides region sets, their shapes, individual regions, and directed
+relations between regions for persistence through the shared domain model layer.
+"""
+
 # pylint: disable=too-few-public-methods
 # This module defines base classes, methods are added later
 
@@ -13,10 +19,7 @@ from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
 
 class RegionSet(Model):
-    """
-    Set of regions that do not overlap geographically
-    or otherwise did not exist at the same moment in time.
-    """
+    """Represents a geographically and temporally non-overlapping region set."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="region_sets",
@@ -45,9 +48,7 @@ class RegionSet(Model):
 
 
 class RegionSetShape(Model):
-    """
-    Geographical shape representation for a region set.
-    """
+    """Represents a geographic shape for a region set at a given scale."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="region_set_shapes",
@@ -71,9 +72,7 @@ class RegionSetShape(Model):
 
 
 class Region(Model):
-    """
-    Geographical representation of a region.
-    """
+    """Represents a named geographic region within a region set."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="regions",
@@ -108,9 +107,7 @@ class Region(Model):
 
 
 class RegionRelation(Model):
-    """
-    Geographical relation between two regions.
-    """
+    """Represents a directed geographic relation between two regions."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="region_relations",
@@ -129,7 +126,10 @@ class RegionRelation(Model):
     to_region_id: UUID = Field(description="The ID of the target region. FOREIGN KEY")
     to_region: Region | None = Field(default=None, description="The target region.")
     relation: enum.RegionRelationType = Field(
-        description="The type of relation between the regions."
+        description=(
+            "The relation type. Accepts an enum member or its string value and "
+            "is serialized as that string value."
+        )
     )
 
     @field_validator("relation", mode="before")
@@ -137,10 +137,12 @@ class RegionRelation(Model):
     def _validate_relation(
         cls, value: enum.RegionRelationType | str
     ) -> enum.RegionRelationType:
+        """Normalize a string relation value to its enum member."""
         if isinstance(value, str):
             value = enum.RegionRelationType(value)
         return value
 
     @field_serializer("relation", mode="plain")
     def _serialize_relation(self, value: enum.RegionRelationType) -> str:
+        """Serialize the relation type as its string value."""
         return value.value

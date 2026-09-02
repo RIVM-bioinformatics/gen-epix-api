@@ -1,3 +1,11 @@
+"""Expose casedb repository implementations for application composition.
+
+The ``sa_model`` import initializes SQLAlchemy mappings. Casedb exports provide
+dictionary and SQLAlchemy repositories for ABAC, case, geography, ontology, and
+organization data; shared commondb exports provide organization and system
+repositories used by the same composition boundary.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix.casedb.repositories import sa_model as sa_model  # Initialize SA Models
 from gen_epix.casedb.repositories.abac_dict import (

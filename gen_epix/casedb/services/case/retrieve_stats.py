@@ -1,3 +1,5 @@
+"""Calculate access-aware case statistics by case type or case set."""
+
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, exc, model
@@ -12,6 +14,23 @@ def case_service_retrieve_case_stats(
     self: BaseCaseService,
     cmd: command.RetrieveCaseTypeStatsCommand | command.RetrieveCaseSetStatsCommand,
 ) -> list[model.CaseStats]:
+    """Calculate case statistics restricted by case and date-column access.
+
+    Case types are limited to those with READ_CASE access. For each case type, date
+    resolution is selected per data collection from the highest-resolution readable
+    case-date column. Case-set requests additionally restrict cases to requested sets.
+
+    Args:
+        self: Case service handling the statistics request.
+        cmd: Case-type or case-set statistics command.
+
+    Returns:
+        Statistics for each accessible requested case type or case set.
+
+    Raises:
+        UnauthorizedAuthError: If the user lacks READ_CASE access to any requested
+            case type or to the case type of any requested case set.
+    """
     user, repository = self._get_user_and_repository(cmd)
     assert isinstance(user, model.User) and user.id is not None
 

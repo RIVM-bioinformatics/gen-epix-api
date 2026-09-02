@@ -1,3 +1,14 @@
+"""Create and populate the casedb domain registry.
+
+Command exports provide service-grouped casedb commands and shared substitutions;
+model exports provide ordered service and model groups plus shared substitutions.
+``Domain`` and ``register_domain_entities`` supply the FastApp registration
+boundary.
+
+Importing this package creates ``DOMAIN`` and registers its models and commands,
+including schema-to-service assignments used by application composition.
+"""
+
 from gen_epix.casedb.domain.command import COMMANDS_BY_SERVICE_TYPE, COMMON_COMMAND_MAP
 from gen_epix.casedb.domain.model import (
     COMMON_MODEL_MAP,

@@ -1,3 +1,9 @@
+"""Define case, sequence, and read-set upload request and result models.
+
+The models coordinate casedb parent uploads with identifiers and seqdb children
+while retaining validation issues and per-item upload results.
+"""
+
 from typing import ClassVar, Self
 from uuid import UUID
 
@@ -29,14 +35,18 @@ from gen_epix.util import copy_model_field
 
 
 class ReadSetForUpload(Model):
-    """
-    A single read set to be uploaded and associated with both an existing case in
+    """Represents a read set to upload and associate with a case and sample.
+
+    A single read set is associated with both an existing case in
     casedb and a potentially existing sample in seqdb.
 
     The sample can be identified in seqdb either by its internal ID (sample_id) or
     by another identifier (other_sample_identifier). The ID of created read set is
     intended to be added to the corresponding case in casedb as the content of the
     given Col.
+
+    Model validation: A sample ID or alternate sample identifier and a protocol ID
+    or code must be provided. Missing pairs raise ``ValueError``.
     """
 
     ENTITY: ClassVar = Entity(persistable=False, id_field_name="id")
@@ -74,18 +84,23 @@ class ReadSetForUpload(Model):
 
     @field_serializer("id", "case_id", "col_id", "sample_id", "protocol_id")
     def _serialize_id(self, value: UUID | None) -> str | None:
+        """Serialize UUID identifiers as strings while retaining ``None``."""
         return str(value) if value is not None else None
 
 
 class SeqForUpload(Model):
-    """
-    A single sequence to be uploaded and associated with both an existing case in
+    """Represents a sequence to upload and associate with a case and sample.
+
+    A single sequence is associated with both an existing case in
     casedb and a potentially existing sample in seqdb.
 
     The sample can be identified in seqdb either by its internal ID (sample_id) or
     by another identifier (other_sample_identifier). The ID of created sequence is
     intended to be added to the corresponding case in casedb as the content of the
     given Col.
+
+    Model validation: A sample ID or alternate sample identifier and a protocol ID
+    or code must be provided. Missing pairs raise ``ValueError``.
     """
 
     ENTITY: ClassVar = Entity(persistable=False, id_field_name="id")
@@ -123,12 +138,17 @@ class SeqForUpload(Model):
 
     @field_serializer("id", "case_id", "col_id", "sample_id", "protocol_id")
     def _serialize_id(self, value: UUID | None) -> str | None:
+        """Serialize UUID identifiers as strings while retaining ``None``."""
         return str(value) if value is not None else None
 
 
 class CaseForUpload(ParentForUpload, IdentifiersMixin):
-    """
-    A case intended for upload, together with any relevant associated data.
+    """Represents a case upload with identifiers, read sets, and sequences.
+
+    Model validation: Read sets and sequences must each use unique column IDs,
+    cannot use the same column ID across both groups, and must map each alternate
+    sample identifier consistently to one non-null sample ID. Violations raise
+    ``ValueError``. Validation inspects the child lists without mutating them.
     """
 
     ENTITY: ClassVar = ParentForUpload.model_entity().clone()
@@ -167,11 +187,7 @@ class CaseForUpload(ParentForUpload, IdentifiersMixin):
 
     @model_validator(mode="after")
     def _validate_case_for_upload(self) -> Self:
-        """
-        Verify that read_sets and seqs contain no duplicate col_id, no overlapping
-        col_ids across read_sets and seqs, and no inconsistent
-        other_sample_identifier to sample ID mappings
-        """
+        """Validate column uniqueness and alternate sample identifier mappings."""
         self._validate_read_sets_or_seqs(self.read_sets)
         self._validate_read_sets_or_seqs(self.seqs)
         self._validate_no_col_id_overlap()
@@ -180,6 +196,15 @@ class CaseForUpload(ParentForUpload, IdentifiersMixin):
     def _validate_read_sets_or_seqs(
         self, values: list[ReadSetForUpload] | list[SeqForUpload] | None
     ) -> None:
+        """Validate one group of read sets or sequences.
+
+        Args:
+            values: Upload children to validate, or ``None`` when omitted.
+
+        Raises:
+            ValueError: If column IDs repeat or one alternate sample identifier maps
+                to different non-null sample IDs.
+        """
         if values is None:
             return
         if len(values) == 0:
@@ -212,7 +237,11 @@ class CaseForUpload(ParentForUpload, IdentifiersMixin):
                     sample_id_map[other_sample_identifier] = sample_id
 
     def _validate_no_col_id_overlap(self) -> None:
-        """Verify that col_ids in read_sets and seqs do not overlap."""
+        """Validate that read sets and sequences use disjoint columns.
+
+        Raises:
+            ValueError: If a column ID occurs in both child groups.
+        """
         read_set_col_ids = {x.col_id for x in self.read_sets or []}
         seq_col_ids = {x.col_id for x in self.seqs or []}
         overlap = read_set_col_ids & seq_col_ids
@@ -224,14 +253,13 @@ class CaseForUpload(ParentForUpload, IdentifiersMixin):
 
 
 class CaseDataIssue(DataIssue):
+    """Represents a case-content issue associated with a column."""
+
     col_id: UUID = Field(description="The ID of the column")
 
 
 class CaseUploadResult(ParentUploadResult):
-    """
-    The result of uploading a single case. The case content validation results as well
-    as the resulting cases are included as well.
-    """
+    """Represents one case upload result and its content validation issues."""
 
     ENTITY: ClassVar = ParentUploadResult.model_entity().clone()
     NAME: ClassVar = "CaseUploadResult"
@@ -276,9 +304,7 @@ class CaseUploadResult(ParentUploadResult):
 
 
 class CaseBatchForUpload(BaseBatchForUpload):
-    """
-    A number of unique cases intended for upload.
-    """
+    """Represents a batch of unique cases intended for upload."""
 
     ENTITY: ClassVar = BaseBatchForUpload.model_entity().clone(
         update={"persistable": False}
@@ -303,9 +329,7 @@ class CaseBatchForUpload(BaseBatchForUpload):
         return any(len(x.seqs or []) > 0 for x in self.cases)
 
     def has_samples(self) -> bool:
-        """
-        Determine if there are any seqdb samples in the cases to be uploaded.
-        """
+        """Return whether any case has read sets or sequences for a seqdb sample."""
         has_samples = False
         for case_for_upload in self.cases:
             if case_for_upload.read_sets or case_for_upload.seqs:
@@ -315,9 +339,7 @@ class CaseBatchForUpload(BaseBatchForUpload):
 
 
 class CaseBatchUploadResult(BaseBatchUploadResult):
-    """
-    The result of uploading a batch of cases.
-    """
+    """Represents the results of uploading a batch of cases."""
 
     ENTITY: ClassVar = BaseBatchForUpload.model_entity().clone(
         update={"persistable": False}

@@ -1,3 +1,5 @@
+"""Expose casedb ontology request models and endpoint registration."""
+
 from collections.abc import Callable
 from typing import Any, NoReturn
 from uuid import UUID
@@ -14,6 +16,8 @@ from gen_epix.util import copy_model_field
 
 
 class DiseaseEtiologicalAgentUpdateAssociationRequestBody(PydanticBaseModel):
+    """Represents etiological agents associated with a disease."""
+
     etiologies: list[model.Etiology] = copy_model_field(
         command.DiseaseEtiologicalAgentUpdateAssociationCommand,
         "association_objs",

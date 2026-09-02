@@ -381,7 +381,7 @@ def get_app_cfgs(
         general_cfg_path: Optional path to shared settings.
         cfg_path: Optional path to application settings.
         extra_settings_files: Optional extra settings paths.
-        seqdb_app_cfgs: Optional prebuilt seqdb configurations for CaseDB.
+        seqdb_app_cfgs: Optional prebuilt seqdb configurations for casedb.
         log_any: Whether created configurations enable logging.
         log_setup: Whether created configurations log setup.
         log_level: Logging level for created configurations.

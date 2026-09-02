@@ -1,3 +1,5 @@
+"""Define Casedb role permissions and their shared-role mappings."""
+
 from gen_epix.casedb.domain import command
 from gen_epix.casedb.domain.enum import Role
 from gen_epix.commondb.domain.enum import Role as CommonRole
@@ -7,6 +9,12 @@ from gen_epix.fastapp.services.rbac import BaseRbacService
 
 
 class RoleGenerator(CommonRoleGenerator):
+    """Encapsulates Casedb role inheritance and command permission expansion.
+
+    The class maps shared Commondb roles and commands into their Casedb
+    counterparts, adds domain-specific permissions, and exposes the expanded
+    role permissions consumed by RBAC services.
+    """
 
     COMMON_ROLE_ENUM_MAP = {x: Role[x.name] for x in CommonRole}
 

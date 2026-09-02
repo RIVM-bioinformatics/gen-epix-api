@@ -168980,7 +168980,7 @@
     },
     {
       "id": "docs_erm_casedb_rbac",
-      "label": "CaseDB RBAC Diagram",
+      "label": "casedb RBAC Diagram",
       "_origin": "semantic",
       "author": null,
       "captured_at": null,

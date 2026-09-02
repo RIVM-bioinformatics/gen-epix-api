@@ -1,5 +1,5 @@
-"""
-Common utilities and functions for CRUD operations across all case entities.
+"""Provide common utilities for CRUD operations across case entities.
+
 This module contains shared logic that can be used by multiple CRUD operations.
 """
 
@@ -63,7 +63,22 @@ def crud_with_access_filter(
     access_filter: Filter | None = None,
     cascade_if_delete: bool = False,
 ) -> list[model.Model] | model.Model | list[UUID] | UUID | list[bool] | bool | None:
-    """Execute CRUD operation with access filter applied."""
+    """Execute CRUD with an additional temporary access filter.
+
+    The command's access filter is replaced in place for delegation and restored
+    after a successful call. If delegated cascade or CRUD handling raises, this
+    function does not restore the original filter.
+
+    Args:
+        self: Case service handling the command.
+        uow: Unit of work used for optional cascade deletion.
+        cmd: CRUD command whose access filter is temporarily changed.
+        access_filter: Additional access restriction to combine with the query.
+        cascade_if_delete: Whether to delete configured linked models first.
+
+    Returns:
+        Result returned by delegated CRUD handling.
+    """
     # Set access filter if any and call generic crud
     orig_access_filter = cmd.access_filter
     if access_filter:
@@ -84,9 +99,15 @@ def crud_with_access_filter(
 def _crud_cascade_delete(
     self: BaseCaseService, uow: BaseUnitOfWork, cmd: command.CrudCommand
 ) -> None:
-    """
-    In case of a delete operation, cascade delete all instances of any
-    linked_model_classes that are linked to the instances in cmd.
+    """Delete configured linked entities before a primary delete operation.
+
+    The linked deletes use the supplied unit of work. Non-delete commands and model
+    classes without configured linked models are left unchanged.
+
+    Args:
+        self: Case service providing cascade metadata and repository access.
+        uow: Active unit of work for linked deletes.
+        cmd: Primary CRUD command whose target IDs determine linked rows.
     """
     if not cmd.is_delete():
         return
@@ -133,6 +154,16 @@ def _cascade_delete_linked_models(
     link_model_classes: tuple[type[model.Model], ...],
     obj_ids: set[UUID] | None,
 ) -> None:
+    """Delete association rows that link to the primary model.
+
+    Args:
+        self: Case service providing repository access.
+        uow: Active unit of work for all linked deletes.
+        cmd: Primary command providing the acting user.
+        model_class: Model class being deleted.
+        link_model_classes: Association model classes eligible for deletion.
+        obj_ids: Primary identifiers to constrain deletion, or ``None`` for all.
+    """
     for link_model_class in link_model_classes:
         entity: Entity = link_model_class.ENTITY  # type: ignore[assignment]
         for link in entity.links.values():
@@ -155,10 +186,19 @@ def _cascade_delete_linked_models(
 def get_ref_data_access_from_command(
     cmd: command.CrudCommand,
 ) -> model.RefDataAccess | None:
+    """Get reference-data access metadata attached by command policies."""
     return BaseCaseAbacPolicy.get_ref_data_access_from_command(cmd)
 
 
 def _verify_is_read_operation(cmd: command.CrudCommand) -> None:
+    """Require a read operation for restricted reference-data commands.
+
+    Args:
+        cmd: CRUD command to inspect.
+
+    Raises:
+        AssertionError: If the command is not a read operation.
+    """
     if not cmd.is_read():
         # Only read operations are allowed for metadata commands for these
         # users

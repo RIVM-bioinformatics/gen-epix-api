@@ -1,3 +1,5 @@
+"""Retrieve genetically similar cases while preserving case ABAC boundaries."""
+
 from uuid import UUID
 
 import gen_epix.seqdb.domain.command as seqdb_command
@@ -10,6 +12,23 @@ from gen_epix.fastapp.enum import CrudOperation
 def case_service_retrieve_similar_cases(
     self: BaseCaseService, cmd: command.RetrieveSimilarCasesCommand
 ) -> command.RetrieveSimilarCasesReturnValue:
+    """Retrieve accessible cases genetically similar to the query cases.
+
+    Profiles are extracted only from accessible, content-filtered cases. Query cases
+    are excluded from the result, and candidate cases are access-filtered again before
+    their identifiers and derived dates are returned.
+
+    Args:
+        self: Case service handling the retrieval.
+        cmd: Command defining query cases, distance column, and maximum distance.
+
+    Returns:
+        Accessible similar case identifiers and dates, or an empty result.
+
+    Raises:
+        InvalidArgumentsError: If the distance column belongs to another case type or
+            is not a genetic-distance column.
+    """
     case_type_id = cmd.case_type_id
     dist_col_id = cmd.genetic_distance_col_id
     case_ids = cmd.case_ids

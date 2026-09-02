@@ -1,3 +1,5 @@
+"""Compose casedb API routers from shared and domain endpoint factories."""
+
 from collections.abc import Callable
 from typing import Any, NoReturn
 
@@ -22,6 +24,7 @@ def create_routers(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     router_kwargs: dict = {},
 ) -> list[APIRouter]:
+    """Create the tagged routers that make up the casedb API."""
     assert app
     router_data: list[RouterData] = [
         # commondb routers
