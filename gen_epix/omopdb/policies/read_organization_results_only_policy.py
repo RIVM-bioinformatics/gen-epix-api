@@ -9,7 +9,7 @@ from gen_epix.omopdb.domain.service import BaseAbacService
 
 
 class ReadOrganizationResultsOnlyPolicy(CommonReadOrganizationResultsOnlyPolicy):
-    """Restrict shared organization results according to OmopDB command metadata."""
+    """Encapsulates restrictions on shared organization results according to OmopDB command metadata."""
 
     def __init__(
         self,

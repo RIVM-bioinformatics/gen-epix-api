@@ -9,7 +9,7 @@ from gen_epix.omopdb.domain.service import BaseAbacService
 
 
 class UpdateUserPolicy(CommonUpdateUserPolicy):
-    """Apply shared user-update checks with OmopDB role and user mappings."""
+    """Encapsulates shared user-update checks with OmopDB role and user mappings."""
 
     def __init__(
         self,

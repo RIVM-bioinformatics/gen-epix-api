@@ -9,7 +9,7 @@ from gen_epix.omopdb.domain.service import BaseAbacService
 
 
 class ReadUserPolicy(CommonReadUserPolicy):
-    """Apply shared user-read checks with OmopDB role and command mappings."""
+    """Encapsulates shared user-read checks with OmopDB role and command mappings."""
 
     def __init__(
         self,

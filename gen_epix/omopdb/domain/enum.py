@@ -12,7 +12,7 @@ from gen_epix.commondb.domain.enum import TimestampFactory as TimestampFactory
 
 
 class ServiceType(Enum):
-    """Identify OmopDB and shared service domains."""
+    """Encapsulates OmopDB and shared service domains."""
 
     AUTH = "AUTH"
     ORGANIZATION = "ORGANIZATION"
@@ -23,7 +23,7 @@ class ServiceType(Enum):
 
 
 class RepositoryType(Enum):
-    """Identify supported OmopDB repository implementations."""
+    """Encapsulates supported OmopDB repository implementations."""
 
     DICT = "DICT"
     SA_SQLITE = "SA_SQLITE"
@@ -31,7 +31,7 @@ class RepositoryType(Enum):
 
 
 class Role(Enum):
-    """Define roles recognized by OmopDB authorization policies."""
+    """Encapsulates roles recognized by OmopDB authorization policies."""
 
     ROOT = "OMOPDB_ROOT"
     APP_ADMIN = "OMOPDB_APP_ADMIN"
@@ -43,7 +43,7 @@ class Role(Enum):
 
 
 class AnonStrictness(Enum):
-    """Set the enforcement level for anonymization requirements."""
+    """Encapsulates the enforcement level for anonymization requirements."""
 
     IGNORE = "ignore"
     WARN = "warn"
@@ -51,7 +51,7 @@ class AnonStrictness(Enum):
 
 
 class AnonMethod(Enum):
-    """Identify available anonymization transformations."""
+    """Encapsulates available anonymization transformations."""
 
     MAKE_NULL = "make_null"
     SHIFT = "shift"

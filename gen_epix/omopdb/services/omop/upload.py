@@ -17,7 +17,7 @@ from gen_epix.omopdb.services.omop.person_validator import PersonValidator
 
 
 class PersonBatchUploader(BatchUploader):
-    """Validate and persist batches of persons and their associated OMOP data."""
+    """Encapsulates validation and persistence of person batches and associated data."""
 
     def __init__(self, service: BaseService) -> None:
         """Initialize the uploader for an OMOP service.

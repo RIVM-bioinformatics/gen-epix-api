@@ -9,7 +9,7 @@ from gen_epix.omopdb.domain.enum import Role
 
 
 class RoleGenerator(CommonRoleGenerator):
-    """Build hierarchical OmopDB role permissions for shared and local commands."""
+    """Encapsulates hierarchical OmopDB role permissions for shared and local commands."""
 
     COMMON_ROLE_ENUM_MAP = {x: Role[x.name] for x in CommonRole}
 
