@@ -7,6 +7,7 @@ from enum import Enum
 from typing import Any, NoReturn
 
 from fastapi import APIRouter, FastAPI
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel as PydanticBaseModel
 
 from gen_epix.commondb.api import exc
@@ -111,7 +112,9 @@ def create_system_endpoints(
         """Return the application's feature flags."""
         try:
             cmd = command.RetrieveFeatureFlagsCommand(user=None)
-            feature_flags: dict[Hashable, bool] = app.handle(cmd)
+            feature_flags: dict[Hashable, bool] = await run_in_threadpool(
+                app.handle, cmd
+            )
             retval = {
                 str(x.value) if isinstance(x, Enum) else str(x): y
                 for x, y in feature_flags.items()
@@ -143,7 +146,9 @@ def create_system_endpoints(
         """
         try:
             cmd = command.RetrieveLicensesCommand(user=None)
-            retval: list[model.PackageMetadata] = app.handle(cmd)
+            retval: list[model.PackageMetadata] = await run_in_threadpool(
+                app.handle, cmd
+            )
         except Exception as exception:
             handle_exception("6ba2c4ca", None, exception)
         return retval
@@ -183,7 +188,7 @@ def create_system_endpoints(
         """Retrieve configured system outage records."""
         try:
             cmd = command.RetrieveOutagesCommand(user=None)
-            retval: list[model.Outage] = app.handle(cmd)
+            retval: list[model.Outage] = await run_in_threadpool(app.handle, cmd)
         except Exception as exception:
             handle_exception("6b47b8b6", None, exception)
         return retval

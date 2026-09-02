@@ -675,6 +675,16 @@ class Run:
             ]
         )
 
+    def test_casedb_upload_deadlock(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/casedb/performance/deadlock",
+            ]
+        )
+
     def test_casedb_custom(self) -> None:
         import pytest
 

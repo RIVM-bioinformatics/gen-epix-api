@@ -60,9 +60,7 @@ from gen_epix.seqdb.services.seq.crud_seq_distance import seq_service_crud_seq_d
 from gen_epix.seqdb.services.seq.crud_seq_identifier import (
     seq_service_crud_seq_identifier,
 )
-from gen_epix.seqdb.services.seq.crud_seq_profile import (
-    seq_service_crud_seq_profile,
-)
+from gen_epix.seqdb.services.seq.crud_seq_profile import seq_service_crud_seq_profile
 from gen_epix.seqdb.services.seq.crud_seq_profile_identifier import (
     seq_service_crud_seq_profile_identifier,
 )
