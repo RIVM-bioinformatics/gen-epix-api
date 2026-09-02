@@ -8,7 +8,7 @@ from typing import Any
 
 class BaseLogItem(abc.ABC):
     """
-    BaseLogItem class for creating log messages. Defined as a regular class instead of a
+    Encapsulates a BaseLogItem class for creating log messages. Defined as a regular class instead of a
     dataclass for efficiency reasons. The `dumps` method is used to convert the object
     to a JSON string that can be inserted in a log.
     """
@@ -36,7 +36,7 @@ class BaseLogItem(abc.ABC):
 
 
 class LogItem(BaseLogItem):
-    """Serialize an application log code, message, and optional contextual fields."""
+    """Encapsulates serializing an application log code, message, and optional contextual fields."""
 
     def __init__(self, **kwargs: Any) -> None:
         """Initialize a LogItem instance."""

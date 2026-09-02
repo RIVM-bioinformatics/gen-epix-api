@@ -35,7 +35,7 @@ from gen_epix.filter import (
 
 
 class RemoteApp(App):
-    """Base class for remote application clients that forward commands as HTTP requests."""
+    """Encapsulates the base class for remote application clients that forward commands as HTTP requests."""
 
     DEFAULT_ROUTE_PREFIX = "/"
 

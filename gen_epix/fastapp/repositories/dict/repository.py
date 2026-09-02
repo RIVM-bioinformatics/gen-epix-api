@@ -22,7 +22,7 @@ from gen_epix.filter import CompositeFilter, Filter, LogicalOperator
 
 
 class DictRepository(BaseRepository):
-    """Repository that stores models in an in-memory dict, keyed by model class."""
+    """Encapsulates a repository that stores models in an in-memory dict, keyed by model class."""
 
     @staticmethod
     def _create_empty_db_for_entities(

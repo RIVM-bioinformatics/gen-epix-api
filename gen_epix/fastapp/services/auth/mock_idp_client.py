@@ -15,7 +15,7 @@ from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider
 
 
 class MockIDPClient(IdpClient):
-    """Identity-provider client that serves configured mock claims."""
+    """Encapsulates identity-provider client that serves configured mock claims."""
 
     def __init__(
         self,

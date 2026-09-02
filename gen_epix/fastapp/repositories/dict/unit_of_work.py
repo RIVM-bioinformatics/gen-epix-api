@@ -4,7 +4,7 @@ from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 
 class DictUnitOfWork(BaseUnitOfWork):
-    """Unit of work for the in-memory dictionary repository."""
+    """Encapsulates a unit of work for the in-memory dictionary repository."""
 
     def commit(self) -> None:
         """Commit the requested value."""

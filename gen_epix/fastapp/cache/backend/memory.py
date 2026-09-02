@@ -23,7 +23,7 @@ RemovalListener = Callable[[str, CachedValue, RemovalCause], None]
 
 
 class MemoryBackend(CacheBackend):
-    """Store envelopes in a dictionary bounded by a weight budget.
+    """Encapsulates storing envelopes in a dictionary bounded by a weight budget.
 
     Every mutation happens under one reentrant lock, which makes the store safe
     for concurrent use and lets the removal listener observe a consistent view.

@@ -10,7 +10,7 @@ from gen_epix.util import get_package_version
 
 
 class UpdateResponseHeaderMiddleware(BaseHTTPMiddleware):
-    """Add general or endpoint-specific headers to API responses."""
+    """Encapsulates adding general or endpoint-specific headers to API responses."""
 
     def __init__(
         self,

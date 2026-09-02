@@ -13,7 +13,7 @@ from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 class SAUnitOfWork(BaseUnitOfWork):
     """
-    Unit of work class wrapping the SQLAlchemy session.
+    Encapsulates a unit of work class wrapping the SQLAlchemy session.
 
     The context stack that can be passed during construction indicates whether work
     would be executed within another unit of work's context. If so, that context will

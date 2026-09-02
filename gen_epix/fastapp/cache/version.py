@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 
 
 class VersionStore(ABC):
-    """Hold the current generation number of each namespace.
+    """Encapsulates holding the current generation number of each namespace.
 
     Implementations must be safe for concurrent use. A store shared by several
     processes makes a bump visible to all of them; a process-local store only
@@ -54,7 +54,7 @@ class VersionStore(ABC):
 
 
 class MemoryVersionStore(VersionStore):
-    """Keep generation numbers in process memory.
+    """Encapsulates keeping generation numbers in process memory.
 
     This is exact for a process-local cache. With a shared backend, pair it with
     an invalidation bus so that a bump in one worker reaches the others.

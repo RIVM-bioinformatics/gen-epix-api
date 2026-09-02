@@ -20,7 +20,7 @@ from gen_epix.fastapp.cache.exc import CacheConfigurationError
 
 
 class NoValue(Enum):
-    """Describe the absence of a cached value.
+    """Encapsulates describing the absence of a cached value.
 
     A dedicated sentinel keeps a cached `None` distinguishable from a miss. The
     single member is exported as `NO_VALUE` and is falsy.
@@ -45,7 +45,7 @@ CacheReturn = Any | Literal[NoValue.NO_VALUE]
 
 @dataclass(slots=True, frozen=True)
 class EntryMetadata:
-    """Describe when and how a payload was cached.
+    """Encapsulates describing when and how a payload was cached.
 
     The metadata travels with the payload so that a shared backend can be read
     by any process without consulting local state. `generation` records the
@@ -106,7 +106,7 @@ class EntryMetadata:
 
 @dataclass(slots=True)
 class CachedValue:
-    """Pair a cached payload with the metadata a region needs to judge it.
+    """Encapsulates pairing a cached payload with the metadata a region needs to judge it.
 
     Backends store and return this envelope unchanged; only the region
     interprets expiry, staleness and generation.
@@ -130,7 +130,7 @@ class CachedValue:
 
 @dataclass(slots=True)
 class RegionConfig:
-    """Declare the behavior of a single cache region.
+    """Encapsulates declaring the behavior of a single cache region.
 
     One configuration object covers expiry, capacity, stampede protection,
     resilience and the security-relevant key composition rules, so that a region

@@ -23,7 +23,7 @@ from gen_epix.fastapp.domain.util import get_type_from_annotation
 # REVIEW 2953: double check
 class UTCDateTime(TypeDecorator):
     """
-    A DateTime column type that always returns timezone-aware datetimes (UTC).
+    Encapsulates a DateTime column type that always returns timezone-aware datetimes (UTC).
 
     SQLite stores datetimes as plain strings without timezone info. SQLAlchemy
     therefore returns naive datetimes when reading from SQLite, even when the
@@ -107,7 +107,7 @@ SA_METADATA_BY_TYPE: dict[type[TypeEngine], frozenset[str]] = {
 
 
 class ServerUtcTimestamp(expression.FunctionElement):
-    """SQLAlchemy type decorator that normalizes timestamps to UTC."""
+    """Encapsulates SQLAlchemy type decorator that normalizes timestamps to UTC."""
 
     type = sa.TIMESTAMP()
     inherit_cache = True
@@ -138,7 +138,7 @@ def sqlite_utc_timestamp(
 
 
 class ServerUtcCurrentTime(expression.FunctionElement):
-    """SQL expression that returns the database server's current UTC time."""
+    """Encapsulates SQL expression that returns the database server's current UTC time."""
 
     type = DateTime()
     inherit_cache = True

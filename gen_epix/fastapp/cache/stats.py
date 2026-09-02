@@ -18,7 +18,7 @@ from gen_epix.fastapp.cache.enum import CacheOperation, RemovalCause
 
 @dataclass(slots=True, frozen=True)
 class CacheStatistics:
-    """Summarize the observed behavior of one region.
+    """Encapsulates summarizing the observed behavior of one region.
 
     Attributes:
         hits: Reads served from the cache.
@@ -95,7 +95,7 @@ class CacheStatistics:
 
 
 class StatsRecorder(ABC):
-    """Accumulate cache events into a statistics snapshot.
+    """Encapsulates accumulating cache events into a statistics snapshot.
 
     Implementations must tolerate concurrent calls from request threads and
     from background refreshes.
@@ -120,7 +120,7 @@ class StatsRecorder(ABC):
 
 
 class NullStatsRecorder(StatsRecorder):
-    """Discard every event.
+    """Encapsulates discarding every event.
 
     Statistics cost a lock on every operation, so a region that is not being
     observed uses this recorder.
@@ -140,7 +140,7 @@ class NullStatsRecorder(StatsRecorder):
 
 
 class InMemoryStatsRecorder(StatsRecorder):
-    """Accumulate counters in process memory under a lock."""
+    """Encapsulates accumulating counters in process memory under a lock."""
 
     __slots__ = ("_lock", "_statistics")
 
@@ -172,7 +172,7 @@ class InMemoryStatsRecorder(StatsRecorder):
 
 @dataclass(slots=True, frozen=True)
 class CacheEvent:
-    """Describe one observable thing that happened in a region.
+    """Encapsulates describing one observable thing that happened in a region.
 
     Attributes:
         region: Name of the region that produced the event.
@@ -190,7 +190,7 @@ class CacheEvent:
 
 
 class CacheListener(ABC):
-    """Observe cache events without influencing them.
+    """Encapsulates observing cache events without influencing them.
 
     A listener must not raise; a region treats a failing listener as a defect
     in instrumentation and never lets it break a request.
@@ -206,7 +206,7 @@ class CacheListener(ABC):
 
 
 class CompositeListener(CacheListener):
-    """Fan one event out to several listeners.
+    """Encapsulates fanning one event out to several listeners.
 
     A failing listener is skipped so that one broken exporter cannot suppress
     the others.
@@ -235,7 +235,7 @@ class CompositeListener(CacheListener):
 
 
 class RecordingListener(CacheListener):
-    """Keep every event in memory for later inspection.
+    """Encapsulates keeping every event in memory for later inspection.
 
     Attributes:
         events: The events observed so far, in order.

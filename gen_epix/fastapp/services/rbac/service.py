@@ -20,7 +20,7 @@ from gen_epix.fastapp.services.rbac.policy import RbacPolicy
 
 class BaseRbacService(BaseService):
     """
-    Abstract base class for a Role-Based Access Control (RBAC) service. Implement this
+    Encapsulates an abstract base class for a Role-Based Access Control (RBAC) service. Implement this
     class to provide RBAC functionality to the application. Most methods already have
     an implementation, but the following methods must be implemented by the subclass:
     - retrieve_user_roles: retrieve the roles of a user.

@@ -30,7 +30,7 @@ from gen_epix.filter import CompositeFilter, LogicalOperator
 
 
 class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
-    """Base class for domain services that register command handlers."""
+    """Encapsulates the base class for domain services that register command handlers."""
 
     SERVICE_TYPE: Hashable = None
 

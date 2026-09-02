@@ -12,7 +12,7 @@ from gen_epix.filter import Filter
 
 
 class CrudEndpointSet(BaseModel):
-    """Describe the routes and models used for a CRUD API resource.
+    """Represents the routes and models used for a CRUD API resource.
 
     Model validation:
     Missing read and create API model classes are derived from `model_class`.

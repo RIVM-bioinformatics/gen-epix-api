@@ -24,7 +24,7 @@ _REQUEST_VALUES: ContextVar[dict[str, Any] | None] = ContextVar(
 
 
 class ScopeProvider(ABC):
-    """Supply the identity parts that partition a cache key."""
+    """Encapsulates supplying the identity parts that partition a cache key."""
 
     @abstractmethod
     def current(self) -> Mapping[str, str]:
@@ -57,7 +57,7 @@ class ScopeProvider(ABC):
 
 
 class NullScopeProvider(ScopeProvider):
-    """Provide no identity parts.
+    """Encapsulates providing no identity parts.
 
     This is correct only for regions whose values are identical for every
     caller.
@@ -71,7 +71,7 @@ class NullScopeProvider(ScopeProvider):
 
 
 class StaticScopeProvider(ScopeProvider):
-    """Provide a fixed set of identity parts.
+    """Encapsulates providing a fixed set of identity parts.
 
     Attributes:
         parts: The parts returned for every call.
@@ -89,7 +89,7 @@ class StaticScopeProvider(ScopeProvider):
 
 
 class ContextVarScopeProvider(ScopeProvider):
-    """Read identity parts from a context variable.
+    """Encapsulates reading identity parts from a context variable.
 
     Middleware binds the parts once per request with `bind`, after which every
     cached call made inside that request, including calls on worker threads
@@ -127,7 +127,7 @@ class ContextVarScopeProvider(ScopeProvider):
 
 
 class RequestScope:
-    """Memoize values for the duration of one request.
+    """Encapsulates memoizing values for the duration of one request.
 
     The scope sits above the shared cache. Entries written here are visible to
     the rest of the request immediately, which gives read-your-own-writes even

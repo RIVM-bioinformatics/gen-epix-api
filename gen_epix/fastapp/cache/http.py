@@ -57,7 +57,7 @@ def matches_etag(header_value: str | None, etag: str) -> bool:
 
 @dataclass(slots=True, frozen=True)
 class HttpCachePolicy:
-    """Describe how a response may be cached by clients and intermediaries.
+    """Encapsulates describing how a response may be cached by clients and intermediaries.
 
     Marking a response `private` is the transport-level counterpart of putting
     the principal in a cache key: it forbids a shared cache from serving the

@@ -6,7 +6,7 @@ from typing import Self
 
 
 class BaseUnitOfWork(abc.ABC):
-    """Base context manager for repository transaction boundaries."""
+    """Encapsulates the base context manager for repository transaction boundaries."""
 
     def __init__(self) -> None:
         """Initialize a BaseUnitOfWork instance."""

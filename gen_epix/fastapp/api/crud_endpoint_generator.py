@@ -61,7 +61,7 @@ def _default_validate_query_filter(
 
 
 class CrudEndpointGenerator:
-    """Generate command-backed CRUD routes for a configured domain resource.
+    """Encapsulates generating command-backed CRUD routes for a configured domain resource.
 
     Each generator method registers a FastAPI endpoint from a ``CrudEndpointSet``.
     The resulting handler builds the appropriate CRUD command, delegates its

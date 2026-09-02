@@ -8,7 +8,7 @@ from gen_epix.fastapp.model import Model
 
 class BaseDictModelModifier(abc.ABC):
     """
-    Hook applied to model objects before they are stored in DictRepository.
+    Encapsulates hooking applied to model objects before they are stored in DictRepository.
 
     Register per model class via DictRepository.register_model_modifier().
     Analogous to SAMapper's dump()/update() for the dict backend: the fastapp

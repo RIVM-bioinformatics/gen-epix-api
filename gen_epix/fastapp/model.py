@@ -32,7 +32,7 @@ from gen_epix.filter.base import Filter
 
 class Model(PydanticBaseModel):
     """
-    Base class for all models in an application. Models are used to represent the
+    Represents the base class for all models in an application. Models are used to represent the
     state of the application and are typically persisted in a database. Models can also
     be used to represent the state of the application in memory, e.g. for caching or
     for passing data between services. Models can be immutable or mutable, depending on
@@ -99,7 +99,7 @@ class Model(PydanticBaseModel):
 
 class User(PydanticBaseModel):
     """
-    A user of the application. This can represent an actual user, or a service
+    Represents a user of the application. This can represent an actual user, or a service
     account, or any other type of principal that can be authenticated and authorized to
     perform actions in the application. The key of the user is used to identify the
     user across systems, e.g. as a claim a in security token.
@@ -126,7 +126,7 @@ class User(PydanticBaseModel):
 
 class Permission(PydanticBaseModel, frozen=True):
     """
-    Implements a permission as a combination of (command_name, permission_type).
+    Represents a permission as a combination of (command_name, permission_type).
     The command_name is a string rather than the class of the command, to avoid
     issues with serialization such as for persistence and for API requests/responses.
     """
@@ -182,7 +182,7 @@ class Permission(PydanticBaseModel, frozen=True):
 
 class Policy(abc.ABC):
     """
-    A policy defines logic for a command to be executed before, during or after the
+    Encapsulates a policy defines logic for a command to be executed before, during or after the
     execution of the command. It can be used to implement e.g. authorization and other
     cross-cutting concerns.
     """
@@ -214,7 +214,7 @@ class Policy(abc.ABC):
 
 class Command(PydanticBaseModel):
     """
-    A command represents an action to be performed in the application. The logic for
+    Represents a command that an action to be performed in the application. The logic for
     executing commands is typically implemented by services in the application, which
     register the relevant handler function or method with the app.
     """
@@ -237,7 +237,7 @@ class Command(PydanticBaseModel):
 
 class CrudCommand(Command):
     """
-    A command base class for performing a CRUD operation on a model. The command
+    Represents a command base class for performing a CRUD operation on a model. The command
     includes the CRUD operation to perform, the identifier(s) of the object(s) to
     operate on and/or the object(s) to operate on, and optional filters for read or
     delete all operations and for access control.
@@ -454,7 +454,7 @@ class CrudCommand(Command):
 
 class UpdateAssociationCommand(Command):
     """
-    A command base class for updating a many-to-many association between two entities.
+    Represents a command base class for updating a many-to-many association between two entities.
     The command includes the identifiers of the two objects to associate, or the
     association objects themselves. The command also includes an optional props
     field for additional properties to pass to custom implementations.
@@ -526,7 +526,7 @@ class UpdateAssociationCommand(Command):
 
 class Role(PydanticBaseModel):
     """
-    A role represents a set of permissions that can be assigned to users e.g. for
+    Represents a role that defines a set of permissions that can be assigned to users e.g. for
     implementing role-based access control (RBAC).
     """
 
@@ -536,7 +536,7 @@ class Role(PydanticBaseModel):
 
 class ModelFieldProps(BaseModel):
     """
-    Additional properties of a model field. The application of these properties needs
+    Represents additional properties of a model field. The application of these properties needs
     to be implemented in the services using the model. Subclass as needed for specific
     additional properties.
 
