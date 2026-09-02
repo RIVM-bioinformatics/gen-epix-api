@@ -1,7 +1,7 @@
 # pylint: disable=wildcard-import, unused-import
 # because this is a package, and imported as such in other modules
 
-from enum import Enum
+from enum import Enum, StrEnum
 
 from gen_epix.commondb.domain.enum import RoleSet as RoleSet
 
@@ -166,6 +166,28 @@ class ConceptSetType(Enum):
     INTERVAL = "INTERVAL"
 
 
+class ConceptSetTypeSet(Enum):
+    LANGUAGE = frozenset(
+        {
+            ConceptSetType.CONTEXT_FREE_GRAMMAR_JSON,
+            ConceptSetType.CONTEXT_FREE_GRAMMAR_XML,
+            ConceptSetType.REGULAR_LANGUAGE,
+        }
+    )
+    STRING_SET = frozenset(
+        {
+            ConceptSetType.NOMINAL,
+            ConceptSetType.ORDINAL,
+            ConceptSetType.INTERVAL,
+        }
+    )
+    HAS_UNIT = frozenset(
+        {
+            ConceptSetType.INTERVAL,
+        }
+    )
+
+
 class ConceptRelationType(Enum):
     CONTAINS = "CONTAINS"
 
@@ -305,6 +327,18 @@ class ColTypeSet(Enum):
     )
     ORGANIZATION = frozenset({ColType.ORGANIZATION})
     OTHER = frozenset({ColType.OTHER})
+    HAS_UNIT = frozenset(
+        {
+            ColType.DECIMAL_0,
+            ColType.DECIMAL_1,
+            ColType.DECIMAL_2,
+            ColType.DECIMAL_3,
+            ColType.DECIMAL_4,
+            ColType.DECIMAL_5,
+            ColType.DECIMAL_6,
+            ColType.INTERVAL,
+        }
+    )
     HAS_CONCEPT_SET = frozenset(
         {
             ColType.NOMINAL,
@@ -340,6 +374,21 @@ class ColTypeSet(Enum):
             ColType.ORGANIZATION,
             ColType.OTHER,
         }
+    )
+
+
+class ColConceptSetType(Enum):
+    NOMINAL = (ColType.NOMINAL, ConceptSetType.NOMINAL)
+    ORDINAL = (ColType.ORDINAL, ConceptSetType.ORDINAL)
+    INTERVAL = (ColType.INTERVAL, ConceptSetType.INTERVAL)
+    REGULAR_LANGUAGE = (ColType.REGULAR_LANGUAGE, ConceptSetType.REGULAR_LANGUAGE)
+    CONTEXT_FREE_GRAMMAR_JSON = (
+        ColType.CONTEXT_FREE_GRAMMAR_JSON,
+        ConceptSetType.CONTEXT_FREE_GRAMMAR_JSON,
+    )
+    CONTEXT_FREE_GRAMMAR_XML = (
+        ColType.CONTEXT_FREE_GRAMMAR_XML,
+        ConceptSetType.CONTEXT_FREE_GRAMMAR_XML,
     )
 
 
@@ -383,3 +432,17 @@ class ColTypeOrder(Enum):
 class FeatureFlag(Enum):
     UPDATE_OWN_ORGANIZATION = "UPDATE_OWN_ORGANIZATION"
     DISABLE_UPLOAD = "UPLOAD_ENABLED"
+
+
+class Unit(StrEnum):
+    SECOND = "SECOND"
+    MINUTE = "MINUTE"
+    HOUR = "HOUR"
+    DAY = "DAY"
+    WEEK = "WEEK"
+    MONTH = "MONTH"
+    QUARTER = "QUARTER"
+    YEAR = "YEAR"
+    BASE_PAIR = "BASE_PAIR"
+    DOSE = "DOSE"
+    OTHER = "OTHER"

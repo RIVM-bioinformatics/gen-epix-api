@@ -209,6 +209,11 @@ class Cohort(Model):
         table_name="cohort",
         persistable=True,
         id_field_name="cohort_id",
+        links=create_links(
+            {
+                1: ("cohort_definition_id", CohortDefinition, None),
+            }
+        ),
     )
     cohort_definition_id: UUID = Field(
         description="User guidance:\nNone\nETL conventions:\nNone"

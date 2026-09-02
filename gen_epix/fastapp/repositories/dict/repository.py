@@ -38,6 +38,20 @@ class DictRepository(BaseRepository):
             db[model_class] = {}
         return db
 
+    @staticmethod
+    def _create_empty_db_for_entities(
+        entities: Iterable[Entity],
+    ) -> dict[type[Model], dict[Hashable, Model]]:
+        """Create an empty db map with one entry per persistable model class."""
+        db: dict[type[Model], dict[Hashable, Model]] = {}
+        for entity in entities:
+            if not entity.persistable:
+                continue
+            model_class = entity.model_class
+            assert issubclass(model_class, Model)
+            db[model_class] = {}
+        return db
+
     @classmethod
     def create_repository(cls, **kwargs: Any) -> BaseRepository:
         """Instantiate a DictRepository, optionally loading data from a pkl/zip file."""

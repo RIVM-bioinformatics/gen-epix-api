@@ -27,6 +27,9 @@ class ConceptSet(Model):
     code: str = Field(description="The code of the concept set", max_length=255)
     name: str = Field(description="The name of the concept set", max_length=255)
     type: enum.ConceptSetType = Field(description="The type of the concept set")
+    unit: enum.Unit | None = Field(
+        default=None, description="The unit of the concept set, if applicable."
+    )
     description: str | None = Field(
         default=None,
         description="The description of the concept set.",
@@ -40,9 +43,35 @@ class ConceptSet(Model):
             return enum.ConceptSetType(value)
         return value
 
+    @field_validator("unit", mode="before")
+    @classmethod
+    def _validate_unit(cls, value: Any) -> enum.Unit:
+        if isinstance(value, str):
+            return enum.Unit(value)
+        return value
+
+    @model_validator(mode="after")
+    def _validate_unit_for_type(self) -> Self:
+        if self.unit is None and self.type in enum.ConceptSetTypeSet.HAS_UNIT.value:
+            raise ValueError(
+                f"ConceptSet {self.code}: unit must be provided for quantitative concept sets."
+            )
+        elif (
+            self.unit is not None
+            and self.type not in enum.ConceptSetTypeSet.HAS_UNIT.value
+        ):
+            raise ValueError(
+                f"ConceptSet {self.code}: unit may not be provided for non-quantitative concept sets."
+            )
+        return self
+
     @field_serializer("type", mode="plain")
     def _serialize_type(self, value: enum.ConceptSetType) -> str:
         return value.value
+
+    @field_serializer("unit", mode="plain")
+    def _serialize_unit(self, value: enum.Unit | None) -> str | None:
+        return None if value is None else value.value
 
 
 class Concept(Model):
@@ -74,11 +103,41 @@ class Concept(Model):
 
     @field_validator("props", mode="before")
     @classmethod
-    def _validate_props(cls, value: dict[str, Any]) -> dict[str, Any]:
-        if isinstance(value, str):
+    def _validate_props(
+        cls, props_value: dict[str, Any] | str | None
+    ) -> dict[str, Any] | None:
+        """
+        Validate the props field, which is None, or a JSON string or dict with optional
+        keys:
+        - lb: lower bound (float)
+        - ub: upper bound (float)
+        - lb_in: lower bound inclusive (bool)
+        - ub_in: upper bound inclusive (bool)
+        """
+        if props_value is None:
+            return None
+        if isinstance(props_value, str):
             # Assume json
-            return json.loads(value)
-        return value
+            props = json.loads(props_value)
+        else:
+            props = props_value
+        for key in ("lb", "ub"):
+            if key not in props:
+                continue
+            value = props[key]
+            if isinstance(value, (int, float)):
+                props[key] = float(value)
+                continue
+            raise ValueError(f"Property {key} must be a number.")
+        for key in ("lb_in", "ub_in"):
+            if key not in props:
+                continue
+            value = props[key]
+            if isinstance(value, (bool, int)):
+                props[key] = bool(value)
+                continue
+            raise ValueError(f"Property {key} must be a boolean.")
+        return props
 
     @field_serializer("props", mode="plain")
     def _serialize_props(self, value: dict[str, Any] | None) -> str | None:

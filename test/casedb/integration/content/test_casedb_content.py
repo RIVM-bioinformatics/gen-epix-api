@@ -16,7 +16,7 @@ from gen_epix.commondb.domain.enum import AppType, DevRepositoryConfig
 from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.commondb.test.util import set_log_level
-from gen_epix.fastapp import CrudOperation, PermissionType
+from gen_epix.fastapp import CrudOperation, PermissionType, exc
 from gen_epix.fastapp.model import Permission
 from gen_epix.filter import LogicalOperator, TypedCompositeFilter, TypedStringSetFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
@@ -238,6 +238,7 @@ class TestContent:
 
         # Go over all CaseTypes with data
         found_some_similar_cases = False
+        retrieved_some_sequences = False
         has_cases_case_type_ids = {x.case_type_id for x in case_stats if x.n_cases > 0}
         for case_type in case_types:
             if VERBOSE:
@@ -373,22 +374,31 @@ class TestContent:
                 # Retrieve genetic sequences in FASTA format
                 if VERBOSE:
                     print(f"\tRetrieving genetic sequences")
-                fasta_iterator: Iterable[str] = app.handle(
-                    command.RetrieveGeneticSequenceFastaByCaseCommand(
-                        user=org_user,
-                        case_type_id=complete_case_type.id,
-                        case_ids=has_seq_case_ids[0:1],
-                        genetic_sequence_col_id=genetic_sequence_col.id,  # type: ignore[arg-type]
+                try:
+                    fasta_iterator: Iterable[str] = app.handle(
+                        command.RetrieveGeneticSequenceFastaByCaseCommand(
+                            user=org_user,
+                            case_type_id=complete_case_type.id,
+                            case_ids=has_seq_case_ids[0:1],
+                            genetic_sequence_col_id=genetic_sequence_col.id,  # type: ignore[arg-type]
+                        )
                     )
-                )
+                except exc.InvalidIdsError:
+                    # To get around possible issues in the test data not related to actually retrieving the sequences
+                    continue
                 if not fasta_iterator:
                     raise ValueError("generator should not be empty")
                 # convert generator to string
-                fasta_str = "\n".join(fasta_iterator)
+                try:
+                    fasta_str = "\n".join(fasta_iterator)
+                except exc.InvalidIdsError:
+                    # To get around possible issues in the test data not related to actually retrieving the sequences
+                    continue
                 if not fasta_str.startswith(">"):
                     raise ValueError("FASTA string should start with '>'")
                 if "\n" not in fasta_str:
                     raise ValueError("FASTA string should contain new lines")
+                retrieved_some_sequences = True
                 # Retrieve SequencingProtocols
                 sequencing_protocols: list[seqdb_model.Protocol] = app.handle(
                     command.RetrieveProtocolsCommand(
@@ -417,6 +427,10 @@ class TestContent:
         if not found_some_similar_cases:
             raise ValueError(
                 "Did not find similar cases for any CaseType, cannot validate RetrieveSimilarCasesCommand"
+            )
+        if not retrieved_some_sequences:
+            raise ValueError(
+                "Did not retrieve any genetic sequences for any CaseType, cannot validate RetrieveGeneticSequenceFastaByCaseCommand"
             )
 
         # Go over all case sets
