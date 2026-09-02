@@ -1,3 +1,10 @@
+"""Expose concrete casedb and shared services for application composition.
+
+Casedb exports implement ABAC, case, geography, ontology, and local or remote
+seqdb collaboration. Shared commondb exports provide authentication, organization,
+RBAC, system, and user-management services required by the composed application.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix.casedb.services.abac import AbacService as AbacService
 from gen_epix.casedb.services.case import CaseService as CaseService

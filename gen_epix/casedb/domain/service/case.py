@@ -1,3 +1,5 @@
+"""Define case command handlers implemented by Casedb case services."""
+
 import abc
 from collections.abc import Iterable
 from typing import Any
@@ -11,6 +13,20 @@ from gen_epix.seqdb.domain import model as seqdb_model
 
 
 class BaseCaseService(BaseService[BaseCaseRepository]):
+    """Encapsulates case command dispatch, limits, and persistence operations.
+
+    The service classifies commands by their ABAC requirements, registers CRUD
+    and specialized handlers, and defines the backend-independent interface
+    implemented by concrete case services. Cascade-delete metadata identifies
+    dependent association models removed with their parent objects.
+
+    Attributes:
+        NO_ABAC_COMMAND_CLASSES: Commands that do not require case ABAC data.
+        ABAC_REFDATA_COMMAND_CLASSES: Commands governed by reference-data access.
+        ABAC_DATA_COMMAND_CLASSES: Commands governed by case-data access.
+        CASCADE_DELETE_MODEL_CLASSES: Dependent models removed with each parent.
+    """
+
     SERVICE_TYPE = ServiceType.CASE
 
     DEFAULT_CREATE_MAX_N_CASES = 1000
@@ -70,6 +86,14 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         default_props: model.CaseTypeProps | None = None,
         **kwargs: Any,
     ) -> None:
+        """Initialize the service and its default case-type limits.
+
+        Args:
+            *args: Positional arguments forwarded to the base service.
+            default_props: Default limits for case create, read, update, delete,
+                and tree operations. Built-in limits are used when omitted.
+            **kwargs: Keyword arguments forwarded to the base service.
+        """
         super().__init__(*args, **kwargs)
 
         self._default_props = default_props or model.CaseTypeProps(
@@ -81,6 +105,12 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         )
 
     def register_handlers(self) -> None:
+        """Register case CRUD, association, retrieval, and file handlers.
+
+        This mutates the application dispatch table during service
+        initialization. Association commands use the shared association handler;
+        all other commands are bound to their specialized service methods.
+        """
         f = self.app.register_handler
         f(command.CaseCrudCommand, self.crud_case)
         f(command.CaseIdentifierCrudCommand, self.crud_case_identifier)
@@ -151,7 +181,18 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
     def crud_case(
         self, cmd: command.CaseCrudCommand
     ) -> list[model.Case] | model.Case | list[UUID] | UUID | list[bool] | bool | None:
-        """Handle CRUD operations for Case entities."""
+        """Handle a CRUD command for case entities.
+
+        Args:
+            cmd: Case CRUD command to execute.
+
+        Returns:
+            Cases, identifiers, booleans, or ``None`` according to the operation.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -166,7 +207,19 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseIdentifier entities."""
+        """Handle a CRUD command for case identifiers.
+
+        Args:
+            cmd: Case-identifier CRUD command to execute.
+
+        Returns:
+            Case identifiers, UUIDs, booleans, or ``None`` according to the
+            operation.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -181,7 +234,18 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseDataCollectionLink entities."""
+        """Handle a CRUD command for case data-collection links.
+
+        Args:
+            cmd: Case data-collection link CRUD command to execute.
+
+        Returns:
+            Link objects, UUIDs, booleans, or ``None`` according to the operation.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -196,7 +260,18 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseSetCategory entities."""
+        """Handle a CRUD command for case-set categories.
+
+        Args:
+            cmd: Case-set category CRUD command to execute.
+
+        Returns:
+            Categories, UUIDs, booleans, or ``None`` according to the operation.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -211,7 +286,18 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseSet entities."""
+        """Handle a CRUD command for case sets.
+
+        Args:
+            cmd: Case-set CRUD command to execute.
+
+        Returns:
+            Case sets, UUIDs, booleans, or ``None`` according to the operation.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -226,7 +312,18 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseSetDataCollectionLink entities."""
+        """Handle a CRUD command for case-set data-collection links.
+
+        Args:
+            cmd: Case-set data-collection link CRUD command to execute.
+
+        Returns:
+            Link objects, UUIDs, booleans, or ``None`` according to the operation.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -241,7 +338,18 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseSetMember entities."""
+        """Handle a CRUD command for case-set members.
+
+        Args:
+            cmd: Case-set member CRUD command to execute.
+
+        Returns:
+            Members, UUIDs, booleans, or ``None`` according to the operation.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -256,14 +364,36 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseSetStatus entities."""
+        """Handle a CRUD command for case-set statuses.
+
+        Args:
+            cmd: Case-set status CRUD command to execute.
+
+        Returns:
+            Statuses, UUIDs, booleans, or ``None`` according to the operation.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
     def crud_col(
         self, cmd: command.ColCrudCommand
     ) -> list[model.Col] | model.Col | list[UUID] | UUID | list[bool] | bool | None:
-        """Handle CRUD operations for Col entities."""
+        """Handle a CRUD command for case-type columns.
+
+        Args:
+            cmd: Column CRUD command to execute.
+
+        Returns:
+            Columns, UUIDs, booleans, or ``None`` according to the operation.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -272,7 +402,18 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
     ) -> (
         list[model.ColSet] | model.ColSet | list[UUID] | UUID | list[bool] | bool | None
     ):
-        """Handle CRUD operations for ColSet entities."""
+        """Handle a CRUD command for column sets.
+
+        Args:
+            cmd: Column-set CRUD command to execute.
+
+        Returns:
+            Column sets, UUIDs, booleans, or ``None`` according to the operation.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -287,7 +428,18 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         | bool
         | None
     ):
-        """Handle CRUD operations for ColSetMember entities."""
+        """Handle a CRUD command for column-set members.
+
+        Args:
+            cmd: Column-set member CRUD command to execute.
+
+        Returns:
+            Members, UUIDs, booleans, or ``None`` according to the operation.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -302,7 +454,18 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseType entities."""
+        """Handle a CRUD command for case types.
+
+        Args:
+            cmd: Case-type CRUD command to execute.
+
+        Returns:
+            Case types, UUIDs, booleans, or ``None`` according to the operation.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -317,7 +480,18 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseTypeSetCategory entities."""
+        """Handle a CRUD command for case-type-set categories.
+
+        Args:
+            cmd: Case-type-set category CRUD command to execute.
+
+        Returns:
+            Categories, UUIDs, booleans, or ``None`` according to the operation.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -332,7 +506,19 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseTypeSet entities."""
+        """Handle a CRUD command for case-type sets.
+
+        Args:
+            cmd: Case-type-set CRUD command to execute.
+
+        Returns:
+            Case-type sets, UUIDs, booleans, or ``None`` according to the
+            operation.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -347,14 +533,36 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseTypeSetMember entities."""
+        """Handle a CRUD command for case-type-set members.
+
+        Args:
+            cmd: Case-type-set member CRUD command to execute.
+
+        Returns:
+            Members, UUIDs, booleans, or ``None`` according to the operation.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
     def crud_dim(
         self, cmd: command.DimCrudCommand
     ) -> list[model.Dim] | model.Dim | list[UUID] | UUID | list[bool] | bool | None:
-        """Handle CRUD operations for Dim entities."""
+        """Handle a CRUD command for case-type dimensions.
+
+        Args:
+            cmd: Dimension CRUD command to execute.
+
+        Returns:
+            Dimensions, UUIDs, booleans, or ``None`` according to the operation.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -363,7 +571,19 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
     ) -> (
         list[model.RefCol] | model.RefCol | list[UUID] | UUID | list[bool] | bool | None
     ):
-        """Handle CRUD operations for RefCol entities."""
+        """Handle a CRUD command for reference columns.
+
+        Args:
+            cmd: Reference-column CRUD command to execute.
+
+        Returns:
+            Reference columns, UUIDs, booleans, or ``None`` according to the
+            operation.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -372,7 +592,19 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
     ) -> (
         list[model.RefDim] | model.RefDim | list[UUID] | UUID | list[bool] | bool | None
     ):
-        """Handle CRUD operations for RefDim entities."""
+        """Handle a CRUD command for reference dimensions.
+
+        Args:
+            cmd: Reference-dimension CRUD command to execute.
+
+        Returns:
+            Reference dimensions, UUIDs, booleans, or ``None`` according to the
+            operation.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -387,7 +619,18 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         | bool
         | None
     ):
-        """Handle CRUD operations for GeneticDistanceProtocol entities."""
+        """Handle a CRUD command for genetic-distance protocols.
+
+        Args:
+            cmd: Genetic-distance protocol CRUD command to execute.
+
+        Returns:
+            Protocols, UUIDs, booleans, or ``None`` according to the operation.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -402,7 +645,19 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         | bool
         | None
     ):
-        """Handle CRUD operations for TreeAlgorithmClass entities."""
+        """Handle a CRUD command for tree-algorithm classes.
+
+        Args:
+            cmd: Tree-algorithm class CRUD command to execute.
+
+        Returns:
+            Algorithm classes, UUIDs, booleans, or ``None`` according to the
+            operation.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -417,21 +672,58 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         | bool
         | None
     ):
-        """Handle CRUD operations for TreeAlgorithm entities."""
+        """Handle a CRUD command for tree algorithms.
+
+        Args:
+            cmd: Tree-algorithm CRUD command to execute.
+
+        Returns:
+            Algorithms, UUIDs, booleans, or ``None`` according to the operation.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
     def upload_cases(
         self, cmd: command.UploadCasesCommand
     ) -> model.CaseBatchUploadResult | None:
-        """Upload cases in batch."""
+        """Upload a batch of cases and related data.
+
+        Implementations may persist cases, identifiers, and associations.
+
+        Args:
+            cmd: Case-upload command containing the batch.
+
+        Returns:
+            The batch upload result, or ``None`` when no result is produced.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                upload.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
     def create_case_set(
         self, cmd: command.CreateCaseSetCommand
     ) -> model.CaseSet | None:
-        """Create a new case set."""
+        """Create a case set from the command selection.
+
+        Implementations persist the case set and its requested memberships.
+
+        Args:
+            cmd: Case-set creation command to execute.
+
+        Returns:
+            The created case set, or ``None`` when no set is created.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                creation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -439,7 +731,18 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         self,
         cmd: command.RetrieveCompleteCaseTypeCommand,
     ) -> model.CompleteCaseType:
-        """Retrieve complete case type with all associated data."""
+        """Retrieve a case type with its associated schema data.
+
+        Args:
+            cmd: Command identifying the case type to retrieve.
+
+        Returns:
+            The complete case-type definition visible to the command user.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                query.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -447,28 +750,72 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         self,
         cmd: command.RetrieveCaseTypeStatsCommand | command.RetrieveCaseSetStatsCommand,
     ) -> list[model.CaseStats]:
-        """Retrieve case statistics."""
+        """Retrieve access-filtered statistics by case type or case set.
+
+        Args:
+            cmd: Case-type or case-set statistics command to execute.
+
+        Returns:
+            Statistics for each accessible requested case type or case set.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                query.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
     def retrieve_cases_by_query(
         self, cmd: command.RetrieveCasesByQueryCommand
     ) -> model.CaseQueryResult:
-        """Retrieve cases matching query criteria."""
+        """Retrieve access-filtered cases matching query criteria.
+
+        Args:
+            cmd: Case query containing filters and result options.
+
+        Returns:
+            Matching cases and query result metadata.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                query.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
     def retrieve_case_cohort_links_by_case_type(
         self, cmd: command.RetrieveCaseCohortLinksByCaseTypeCommand
     ) -> list[model.CaseCohortLink]:
-        """Retrieve all CaseCohortLinks for a CaseType."""
+        """Retrieve case-cohort links for a case type.
+
+        Args:
+            cmd: Command identifying the case type.
+
+        Returns:
+            Case-cohort links belonging to the requested case type.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                query.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
     def retrieve_cases_by_id(
         self, cmd: command.RetrieveCasesByIdCommand
     ) -> list[model.Case]:
-        """Retrieve cases by their IDs."""
+        """Retrieve access-filtered cases by identifier.
+
+        Args:
+            cmd: Command containing the case identifiers to retrieve.
+
+        Returns:
+            Requested cases visible to the command user.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                query.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -476,7 +823,18 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         self,
         cmd: command.RetrieveCaseRightsCommand | command.RetrieveCaseSetRightsCommand,
     ) -> list[model.CaseRights] | list[model.CaseSetRights]:
-        """Retrieve access rights for cases or case sets."""
+        """Retrieve the command user's rights for cases or case sets.
+
+        Args:
+            cmd: Case-rights or case-set-rights command to execute.
+
+        Returns:
+            Rights aligned with the requested case or case-set identifiers.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                query.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -484,7 +842,18 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         self,
         cmd: command.RetrievePhylogeneticTreeByCasesCommand,
     ) -> model.PhylogeneticTree:
-        """Retrieve phylogenetic tree for specified cases."""
+        """Retrieve a phylogenetic tree for specified cases.
+
+        Args:
+            cmd: Tree command containing case identifiers and parameters.
+
+        Returns:
+            The phylogenetic tree generated from accessible case sequences.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -492,7 +861,18 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         self,
         cmd: command.RetrieveSimilarCasesCommand,
     ) -> command.RetrieveSimilarCasesReturnValue:
-        """Retrieve UUIDs of cases similar to specified case."""
+        """Retrieve cases genetically similar to a specified case.
+
+        Args:
+            cmd: Similarity command containing the reference case and parameters.
+
+        Returns:
+            Similar case identifiers and command-defined similarity metadata.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                query.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -500,7 +880,18 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         self,
         cmd: command.RetrieveGeneticSequenceFastaByCaseCommand,
     ) -> Iterable[str]:
-        """Retrieve genetic sequence data in FASTA format for case."""
+        """Retrieve genetic sequence data in FASTA format for cases.
+
+        Args:
+            cmd: FASTA retrieval command containing case identifiers.
+
+        Returns:
+            An iterable of FASTA-formatted text fragments.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                query.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -508,7 +899,20 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         self,
         cmd: command.CreateFileForReadSetCommand,
     ) -> UUID:
-        """Create file for read set and return file UUID."""
+        """Create a file for a case-linked read set.
+
+        Implementations persist file metadata or delegate creation to Seqdb.
+
+        Args:
+            cmd: Command identifying the case-linked read set.
+
+        Returns:
+            The identifier of the created file.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements file
+                creation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -516,7 +920,20 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         self,
         cmd: command.CreateFileForSeqCommand,
     ) -> UUID:
-        """Create file for sequence and return file UUID."""
+        """Create a file for a case-linked sequence.
+
+        Implementations persist file metadata or delegate creation to Seqdb.
+
+        Args:
+            cmd: Command identifying the case-linked sequence.
+
+        Returns:
+            The identifier of the created file.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements file
+                creation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -524,7 +941,18 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         self,
         cmd: command.RetrieveProtocolsCommand,
     ) -> list[seqdb_model.Protocol]:
-        """Retrieve available protocols."""
+        """Retrieve sequence protocols available to Casedb.
+
+        Args:
+            cmd: Protocol retrieval command to execute.
+
+        Returns:
+            Available sequence protocols.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                query.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -532,5 +960,16 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         self,
         cmd: command.RetrieveIsOwnCasesCommand,
     ) -> dict[UUID, bool]:
-        """Retrieve whether the user owns the specified cases."""
+        """Determine whether the command user owns specified cases.
+
+        Args:
+            cmd: Ownership command containing case identifiers.
+
+        Returns:
+            A mapping from each requested case identifier to its ownership flag.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                query.
+        """
         raise NotImplementedError()

@@ -10,7 +10,7 @@ from gen_epix.omopdb.domain import DOMAIN, command, model
 
 
 class OmopdbRemoteApp(CommondbRemoteApp):
-    """Route supported OmopDB commands to their remote HTTP endpoints."""
+    """Encapsulates routing of supported OmopDB commands to their remote HTTP endpoints."""
 
     DEFAULT_ROUTE_PREFIX = "/v1"
 

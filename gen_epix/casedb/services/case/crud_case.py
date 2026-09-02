@@ -1,6 +1,4 @@
-"""
-CRUD operations for Case entities.
-"""
+"""Handle CRUD operations for case entities."""
 
 from uuid import UUID
 
@@ -22,7 +20,6 @@ def case_service_crud_case(
     self: BaseCaseService, cmd: command.CaseCrudCommand
 ) -> list[model.Case] | model.Case | list[UUID] | UUID | list[bool] | bool | None:
     """Handle CRUD operations for Case entities."""
-
     # Start unit of work
     with self.repository.uow() as uow:
         _crud_cascade_delete(self, uow, cmd)
@@ -45,7 +42,25 @@ def _crud_case_with_abac(
     uow: BaseUnitOfWork,
     cmd: command.CaseCrudCommand,
 ) -> list[model.Case] | model.Case | list[UUID] | UUID | list[bool] | bool | None:
-    """Case user command handling, ABAC applied."""
+    """Handle case deletion after validating remove rights for every collection.
+
+    Commands without case ABAC metadata delegate directly. For deletion, every
+    requested case must be removable from its creation and linked collections before
+    cascade and primary deletes run in the active unit of work.
+
+    Args:
+        self: Case service handling the command.
+        uow: Active unit of work used for reads and cascade deletion.
+        cmd: Case CRUD command.
+
+    Returns:
+        Result returned by delegated CRUD handling.
+
+    Raises:
+        UnauthorizedAuthError: If bulk deletion is requested or remove access is
+            missing for any requested case.
+        AssertionError: If a non-delete operation reaches this handler.
+    """
     assert cmd.user is not None and cmd.user.id is not None
     # @ABAC: get case abac
     case_abac = get_case_abac_from_command(cmd)

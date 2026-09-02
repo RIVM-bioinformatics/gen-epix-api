@@ -13,7 +13,7 @@ from gen_epix.seqdb.domain.model.seq.protocol import Protocol
 
 
 class TreeAlgorithmClass(Model):
-    """A class (type) of phylogenetic tree algorithms."""
+    """Represents a class (type) of phylogenetic tree algorithms."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="tree_algorithm_classes",
@@ -40,10 +40,10 @@ class TreeAlgorithmClass(Model):
 
 
 class TreeAlgorithm(Model):
-    """See https://en.wikipedia.org/wiki/Hierarchical_clustering,
+    """Represents a phylogenetic tree algorithm; see https://en.wikipedia.org/wiki/Hierarchical_clustering,
     https://en.wikipedia.org/wiki/Neighbor_joining,
      https://en.wikipedia.org/wiki/Computational_phylogenetics,
-     https://en.wikipedia.org/wiki/Spanning_tree
+     https://en.wikipedia.org/wiki/Spanning_tree.
     """
 
     ENTITY: ClassVar = Entity(
@@ -83,7 +83,7 @@ class TreeAlgorithm(Model):
 
 
 class PhylogeneticTree(Model):
-    """Represent a non-persisted phylogenetic tree and its leaf metadata.
+    """Represents a non-persisted phylogenetic tree and its leaf metadata.
 
     Model validation: When provided, leaf names and profile identifiers must be
     unique. When both are provided, they must describe the same number of leaves.

@@ -5,6 +5,6 @@ from gen_epix.seqdb.domain.repository.file import BaseFileRepository
 
 
 class FileDictRepository(DictRepository, BaseFileRepository):
-    """Provide dictionary-backed persistence for seqdb uploaded files."""
+    """Encapsulates dictionary-backed persistence for seqdb uploaded files."""
 
     pass

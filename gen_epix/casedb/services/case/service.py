@@ -1,3 +1,10 @@
+"""Coordinate case commands, persistence, authorization, and seqdb operations.
+
+The module exposes :class:`CaseService`, the concrete facade that delegates command
+handling to focused case-service modules and implements shared repository, ABAC,
+association, rights, caching, and content-filtering helpers.
+"""
+
 import datetime
 from collections.abc import Callable, Iterable
 from typing import cast
@@ -100,6 +107,22 @@ from gen_epix.util import map_paired_elements
 
 
 class CaseService(BaseCaseService):
+    """Encapsulates case command handling and cross-service orchestration.
+
+    The service delegates public commands to focused handlers while supplying the
+    shared repository and authorization operations they require. Repository work is
+    scoped either to a handler-owned unit of work or to a unit supplied to a private
+    helper. Case access is evaluated from command-attached ABAC data; content
+    filtering mutates returned case models by removing inaccessible columns.
+
+    seqdb collaboration is performed through application commands. Those remote
+    operations are not atomic with casedb repository units of work. Complete case
+    types are cached by case type and user for the inherited cache lifetime.
+
+    Attributes:
+        role_map: Mapping of application roles by identifier.
+        role_set_map: Mapping of application role sets by identifier.
+    """
 
     _RETRIEVE_COMPLETE_CASE_TYPE_CACHE = (
         BaseCaseService._RETRIEVE_COMPLETE_CASE_TYPE_CACHE
@@ -108,19 +131,86 @@ class CaseService(BaseCaseService):
     def upload_cases(
         self, cmd: command.UploadCasesCommand
     ) -> model.CaseBatchUploadResult:
+        """Verify and persist a case batch and its seqdb samples.
+
+        Verification and persistence can mutate uploaded cases and the returned
+        batch result with normalized content, identifiers, statuses, and logs.
+        casedb and seqdb changes do not share one atomic transaction.
+
+        Args:
+            cmd: Case upload command and batch to process.
+
+        Returns:
+            Per-case upload outcomes and validation issues.
+
+        Raises:
+            FeatureDisabledServiceError: If case upload is disabled.
+        """
         return case_service_upload_cases(self, cmd)
 
     def create_case_set(
         self, cmd: command.CreateCaseSetCommand
     ) -> model.CaseSet | None:
+        """Create an authorized case set and its requested associations.
+
+        The case set and its collection and member links are persisted in one
+        casedb unit of work. Policies attached to ``cmd`` are propagated to the
+        nested association commands.
+
+        Args:
+            cmd: Case set, collection IDs, and optional member case IDs.
+
+        Returns:
+            The created case set.
+
+        Raises:
+            UnauthorizedAuthError: If the user cannot create the set in every
+                requested data collection.
+        """
         return case_service_create_case_set(self, cmd)
 
     def create_file_for_read_set(
         self, cmd: command.CreateFileForReadSetCommand
     ) -> UUID:
+        """Create or reuse a seqdb file for a case-linked read set.
+
+        casedb access validation and seqdb file creation and read-set update occur
+        through separate transactions. Re-uploading identical uncompressed content
+        returns the existing file identifier.
+
+        Args:
+            cmd: File content and linked case, column, and read-set direction.
+
+        Returns:
+            Existing or newly created seqdb file identifier.
+
+        Raises:
+            InvalidArgumentsError: If the link, column, case type, command, or
+                existing file content is invalid.
+            UnauthorizedAuthError: If the user lacks column-level write access.
+            ValueError: If an unsupported command branch is reached.
+        """
         return case_service_create_file_for_read_set_or_seq(self, cmd)
 
     def create_file_for_seq(self, cmd: command.CreateFileForSeqCommand) -> UUID:
+        """Create or reuse a seqdb file for a case-linked sequence.
+
+        casedb access validation and seqdb file creation and sequence update occur
+        through separate transactions. Re-uploading identical uncompressed content
+        returns the existing file identifier.
+
+        Args:
+            cmd: File content and linked case and sequence column.
+
+        Returns:
+            Existing or newly created seqdb file identifier.
+
+        Raises:
+            InvalidArgumentsError: If the link, column, case type, command, or
+                existing file content is invalid.
+            UnauthorizedAuthError: If the user lacks column-level write access.
+            ValueError: If an unsupported command branch is reached.
+        """
         return case_service_create_file_for_read_set_or_seq(self, cmd)
 
     @cached(
@@ -131,33 +221,110 @@ class CaseService(BaseCaseService):
         self,
         cmd: command.RetrieveCompleteCaseTypeCommand,
     ) -> model.CompleteCaseType:
+        """Retrieve accessible case-type metadata with a user-scoped cache.
+
+        Results are cached for the inherited TTL by case type and user identifier.
+        Internal commands without a user follow the full-access metadata path.
+        Callers must treat returned metadata as shared cached state.
+
+        Args:
+            cmd: Case type and optional user context.
+
+        Returns:
+            Complete case-type metadata and effective access mappings.
+        """
         return case_service_retrieve_complete_case_type(self, cmd)
 
     def retrieve_case_stats(
         self,
         cmd: command.RetrieveCaseTypeStatsCommand | command.RetrieveCaseSetStatsCommand,
     ) -> list[model.CaseStats]:
+        """Calculate access-aware statistics by case type or case set.
+
+        Args:
+            cmd: Statistics scope and optional date-range restriction.
+
+        Returns:
+            Statistics for each accessible requested case type or set.
+
+        Raises:
+            UnauthorizedAuthError: If READ_CASE access is missing for a requested
+                case type or the type of a requested case set.
+        """
         return case_service_retrieve_case_stats(self, cmd)
 
     def retrieve_cases_by_query(
         self, cmd: command.RetrieveCasesByQueryCommand
     ) -> model.CaseQueryResult:
+        """Retrieve case IDs after ABAC, case-set, date, and content filtering.
+
+        String content-filter keys in ``cmd.case_query`` are converted to UUIDs in
+        place. The configured limit is applied after all requested filters.
+
+        Args:
+            cmd: Case query and acting-user context.
+
+        Returns:
+            Matching case IDs and whether the result limit was exceeded.
+
+        Raises:
+            NotImplementedError: If an explicitly empty case-set selection is used.
+            UnauthorizedAuthError: If the user cannot read the case type or a
+                requested case set.
+            InvalidArgumentsError: If filter columns, members, or types are invalid.
+        """
         return case_service_retrieve_cases_by_query(self, cmd)
 
     def retrieve_case_cohort_links_by_case_type(
         self, cmd: command.RetrieveCaseCohortLinksByCaseTypeCommand
     ) -> list[model.CaseCohortLink]:
+        """Retrieve cohort links for every case of one case type.
+
+        Args:
+            cmd: Case type and whether cases without cohort metadata are included.
+
+        Returns:
+            Case-to-cohort links, with null placeholders for missing links when
+            requested.
+        """
         return case_service_retrieve_case_cohort_links_by_case_type(self, cmd)
 
     def retrieve_cases_by_id(
         self, cmd: command.RetrieveCasesByIdCommand
     ) -> list[model.Case]:
+        """Retrieve requested cases with ABAC-filtered content.
+
+        Returned case models are mutated by the filtering pipeline to remove columns
+        the user cannot read, and the configured case-type limit is enforced.
+
+        Args:
+            cmd: Case type and requested case identifiers.
+
+        Returns:
+            Accessible cases in repository result order.
+
+        Raises:
+            InvalidArgumentsError: If the case type or requested cases are invalid.
+            UnauthorizedAuthError: If a requested case is inaccessible.
+        """
         return case_service_retrieve_cases_by_id(self, cmd)
 
     def retrieve_case_or_set_rights(
         self,
         cmd: command.RetrieveCaseRightsCommand | command.RetrieveCaseSetRightsCommand,
     ) -> list[model.CaseRights] | list[model.CaseSetRights]:
+        """Resolve effective rights for requested cases or case sets.
+
+        Entities and collection links are read in one repository unit of work. Each
+        entity's creation collection is included in its effective rights. Empty
+        identifier input returns immediately.
+
+        Args:
+            cmd: Rights command and requested case or case-set identifiers.
+
+        Returns:
+            Rights objects in repository result order.
+        """
         is_case_set = isinstance(cmd, command.RetrieveCaseSetRightsCommand)
         case_or_set_ids = cmd.case_set_ids if is_case_set else cmd.case_ids  # type: ignore[union-attr]
         user, repository = self._get_user_and_repository(cmd)
@@ -232,34 +399,76 @@ class CaseService(BaseCaseService):
     def retrieve_phylogenetic_tree(
         self, cmd: command.RetrievePhylogeneticTreeByCasesCommand
     ) -> model.PhylogeneticTree:
+        """Build a seqdb phylogenetic tree from accessible case profiles.
+
+        Case content is filtered before profile IDs cross the service boundary, and
+        returned leaf profile IDs are mapped back to case IDs.
+
+        Args:
+            cmd: Cases, distance column, tree algorithm, and QC restrictions.
+
+        Returns:
+            Tree annotated with the casedb genetic-distance protocol identifier.
+
+        Raises:
+            InvalidArgumentsError: If the distance column has an incompatible case
+                type or column type.
+            UnauthorizedAuthError: If the selected tree algorithm is not allowed.
+        """
         return case_service_retrieve_phylogenetic_tree(self, cmd)
 
     def retrieve_similar_cases(
         self, cmd: command.RetrieveSimilarCasesCommand
     ) -> command.RetrieveSimilarCasesReturnValue:
+        """Retrieve accessible cases genetically similar to query cases.
+
+        Only profiles from ABAC-filtered cases are sent to seqdb. Query cases are
+        excluded, and candidates are filtered again before return.
+
+        Args:
+            cmd: Query cases, distance column, and maximum genetic distance.
+
+        Returns:
+            Accessible similar cases with derived dates, or an empty result.
+
+        Raises:
+            InvalidArgumentsError: If the distance column has an incompatible case
+                type or column type.
+        """
         return case_service_retrieve_similar_cases(self, cmd)
 
     def retrieve_genetic_sequence_fasta_by_case(
         self, cmd: command.RetrieveGeneticSequenceFastaByCaseCommand
     ) -> Iterable[str]:
-        """
-        Return a streaming iterable of FASTA formatted lines.
-        Path:
-        HTTP client
-        -> casedb endpoint
-        -> casedb service calls casedb seqdb command
-        -> seqdb command (inside casedb) calls ext_app with RetrieveSeqFastaCommand
-        -> seqdb service calls correct repository (dict or SA implementation) to stream Seq rows
-        -> seqdb service converts rows to FASTA lines on the fly
-        -> returns an iterator
-        -> casedb forwards that iterator
-        -> FastAPI wraps it in a StreamingResponse.
+        """Return lazy FASTA lines for accessible case-linked sequences.
+
+        The handler resolves and filters cases in casedb, then forwards sequence IDs
+        through the configured seqdb application. seqdb retains repository iteration
+        and FASTA conversion laziness so transport code can stream the result.
+
+        Args:
+            cmd: Cases and the genetic-sequence content column to retrieve.
+
+        Returns:
+            Lazy FASTA-formatted text lines produced by seqdb.
+
+        Raises:
+            InvalidArgumentsError: If no case identifiers are supplied.
+            NoResultsError: If an accessible requested case lacks a sequence value.
         """
         return case_service_retrieve_genetic_sequence_fasta_by_case(self, cmd)
 
     def retrieve_protocols(
         self, cmd: command.RetrieveProtocolsCommand
     ) -> list[seqdb_model.Protocol]:
+        """Retrieve seqdb protocols of the requested protocol type.
+
+        Args:
+            cmd: User context and protocol type restriction.
+
+        Returns:
+            seqdb protocols whose type matches the command.
+        """
         return case_service_retrieve_protocols(self, cmd)
 
     def _read_association_with_valid_ids(
@@ -275,6 +484,31 @@ class CaseService(BaseCaseService):
         uow: BaseUnitOfWork | None = None,
         user: model.User | None = None,
     ) -> list[model.Model] | list[UUID] | dict[UUID, set[UUID]]:
+        """Read associations constrained by valid endpoint identifiers.
+
+        An existing ``uow`` is reused when supplied; otherwise the handler owns a
+        repository unit of work. Empty valid-ID sets return without repository
+        access.
+
+        Args:
+            command_class: CRUD command class for the association model.
+            field_name1: First endpoint field name.
+            field_name2: Second endpoint field name.
+            valid_ids1: Optional accepted first-endpoint identifiers.
+            valid_ids2: Optional accepted second-endpoint identifiers.
+            match_all1: Require second endpoints to link to every first endpoint.
+            match_all2: Require first endpoints to link to every second endpoint.
+            return_type: Objects, endpoint IDs, or a directional association map.
+            uow: Caller-owned unit of work to reuse, if any.
+            user: Optional user attached to the generated read command.
+
+        Returns:
+            Association objects, endpoint IDs, or grouped endpoint IDs.
+
+        Raises:
+            ValueError: If the return mode or match-all combination is invalid.
+            AssertionError: If a validated mode reaches an unexpected branch.
+        """
         return case_service_read_association_with_valid_ids(
             self,
             command_class,
@@ -300,6 +534,33 @@ class CaseService(BaseCaseService):
         filter: Filter | None = None,
         on_invalid_case_set_id: str = "raise",
     ) -> list[model.CaseSet]:
+        """Retrieve case sets for which a user has a content right.
+
+        The caller owns ``uow``. Requested IDs are validated individually, while an
+        unrestricted read filters inaccessible sets. The creation collection is
+        included when evaluating access.
+
+        Args:
+            uow: Active repository unit of work.
+            user_id: User whose access is evaluated.
+            case_abac: Effective case access metadata.
+            right: Required case-set content right.
+            case_type_id: Optional case type restriction.
+            case_set_ids: Optional requested case-set identifiers.
+            filter: Repository filter used only when IDs are not supplied.
+            on_invalid_case_set_id: Whether inaccessible requested IDs raise or are
+                ignored.
+
+        Returns:
+            Accessible case sets satisfying the supplied restrictions.
+
+        Raises:
+            InvalidArgumentsError: If the right or invalid-ID mode is unsupported,
+                or requested sets have an incompatible case type.
+            UnauthorizedAuthError: If a requested set is inaccessible and raising is
+                configured.
+            AssertionError: If an unsupported invalid-ID mode reaches validation.
+        """
         # TODO: This is a temporary implementation, to be replaced by optimized query
         self.validate_case_right(right, on_invalid_case_set_id)
         case_sets: list[model.CaseSet] = self.repository.crud(
@@ -358,6 +619,16 @@ class CaseService(BaseCaseService):
         case_set_data_collections: dict[UUID, set[UUID]],
         has_access: dict[UUID, set[UUID]],
     ) -> bool:
+        """Check case-type and collection access for one case set.
+
+        Args:
+            case_set: Case set to evaluate.
+            case_set_data_collections: Collection IDs grouped by case-set ID.
+            has_access: Accessible collection IDs grouped by case-type ID.
+
+        Returns:
+            Whether an associated or creation collection grants access.
+        """
         if case_set.case_type_id not in has_access:
             return False
 
@@ -380,6 +651,25 @@ class CaseService(BaseCaseService):
         case_set_data_collections: dict[UUID, set[UUID]],
         has_access: dict[UUID, set[UUID]],
     ) -> bool:
+        """Check one case set and enforce requested-ID failure behavior.
+
+        Args:
+            case_set: Case set to authorize.
+            user_id: User identifier included in authorization errors.
+            case_set_ids: Requested IDs, or ``None`` for a filter-only read.
+            on_invalid_case_set_id: Whether inaccessible requested IDs raise or are
+                ignored.
+            case_set_data_collections: Collections grouped by case-set ID.
+            has_access: Accessible collections grouped by case-type ID.
+
+        Returns:
+            Whether the user has access to the case set.
+
+        Raises:
+            UnauthorizedAuthError: If a requested set is inaccessible and raising is
+                configured.
+            AssertionError: If inaccessible requested IDs use an unsupported mode.
+        """
         has_access_to_case_set = self._has_case_set_access(
             case_set, case_set_data_collections, has_access
         )
@@ -405,6 +695,22 @@ class CaseService(BaseCaseService):
         on_invalid_case_set_id: str,
         case_sets: list[model.CaseSet],
     ) -> list[model.CaseSet]:
+        """Restrict case sets to one case type and validate requested IDs.
+
+        Args:
+            case_type_id: Required case type identifier.
+            case_set_ids: Explicitly requested IDs, if any.
+            on_invalid_case_set_id: Failure behavior for incompatible requested sets.
+            case_sets: Retrieved case sets to filter.
+
+        Returns:
+            Case sets whose case type matches ``case_type_id``.
+
+        Raises:
+            InvalidArgumentsError: If a requested set has another case type and
+                raising is configured.
+            AssertionError: If explicit IDs use an unsupported failure mode.
+        """
         if case_set_ids:
             if on_invalid_case_set_id == "raise":
                 if not all(x.case_type_id == case_type_id for x in case_sets):
@@ -422,6 +728,15 @@ class CaseService(BaseCaseService):
     def validate_case_right(
         self, right: enum.CaseRight, on_invalid_case_set_id: str
     ) -> None:
+        """Validate case-set content access arguments.
+
+        Args:
+            right: Case-set content right to validate.
+            on_invalid_case_set_id: Requested-ID failure mode.
+
+        Raises:
+            InvalidArgumentsError: If the right or failure mode is unsupported.
+        """
         if right not in enum.CaseRightSet.CASE_SET_CONTENT.value:
             raise exc.InvalidArgumentsError(
                 "28123c2c", f"Invalid case abac right: {right.value}"
@@ -446,6 +761,40 @@ class CaseService(BaseCaseService):
         extra_access_col_ids: set[UUID] | None = None,
         apply_max_n_cases: bool = True,
     ) -> tuple[list[model.Case], bool]:
+        """Retrieve cases under case-level and column-level ABAC restrictions.
+
+        The caller owns ``uow``. The helper may normalize
+        ``datetime_range_filter.key`` to ``"case_date"`` in place and removes
+        inaccessible entries from each returned case's ``content`` mapping. Derived
+        case dates are calculated only after access filtering.
+
+        Args:
+            uow: Active repository unit of work.
+            user_id: User whose access is evaluated.
+            case_abac: Effective case access metadata.
+            right: Required READ_CASE or WRITE_CASE right.
+            case_type_id: Required case type identifier.
+            case_ids: Optional requested case identifiers.
+            datetime_range_filter: Optional case-date range restriction.
+            on_invalid_case_id: Whether inaccessible requested IDs raise or are
+                ignored.
+            filter_content: Whether inaccessible content columns are removed.
+            calculate_case_date: Whether accessible date columns populate case date.
+            extra_access_col_ids: Additional columns retained during filtering.
+            apply_max_n_cases: Whether configured request and result limits apply.
+
+        Returns:
+            Accessible cases and whether the configured result limit was exceeded.
+
+        Raises:
+            ValueError: If access or filtering arguments are incompatible.
+            InvalidArgumentsError: If the case type or date filter is invalid.
+            UnauthorizedAuthError: If case-type or requested-case access is missing.
+            RequestLimitExceededAuthError: If explicit IDs exceed the configured
+                maximum.
+            NotImplementedError: If limit resolution receives an unsupported right.
+            AssertionError: If content filtering finds no accessible columns.
+        """
         # TODO: This is a temporary implementation, to be replaced by optimized query
         self._validate_case_access_args(
             right, on_invalid_case_id, filter_content, calculate_case_date
@@ -526,6 +875,29 @@ class CaseService(BaseCaseService):
         max_n_cases: int,
         cases: list[model.Case],
     ) -> tuple[list[model.Case], bool]:
+        """Apply case access, weighted limits, and in-place content filtering.
+
+        Args:
+            uow: Active repository unit of work.
+            user_id: User whose access is evaluated.
+            right: Required case content right.
+            case_ids: Explicitly requested case IDs, if any.
+            on_invalid_case_id: Failure behavior for inaccessible requested cases.
+            filter_content: Whether returned content is filtered in place.
+            extra_access_col_ids: Additional columns retained in content.
+            access_data_collections: Collections granting case-level access.
+            data_collection_col_access: Column access by collection.
+            max_n_cases: Maximum weighted result count, or zero for unlimited.
+            cases: Retrieved cases to filter and potentially mutate.
+
+        Returns:
+            Accessible cases and whether filtering stopped at the result limit.
+
+        Raises:
+            UnauthorizedAuthError: If a requested case is inaccessible and raising is
+                configured.
+            AssertionError: If an accessible case has no permitted content columns.
+        """
         case_data_collections = self._retrieve_case_data_collections_map(uow, user_id)
         filtered_cases: list[model.Case] = []
         count = 0
@@ -578,6 +950,23 @@ class CaseService(BaseCaseService):
         user_id: UUID,
         case_access_cache: dict[frozenset[UUID], set[UUID]],
     ) -> None:
+        """Remove inaccessible columns from a case's content in place.
+
+        Accessible column sets are cached by collection combination for reuse during
+        one filtering pass.
+
+        Args:
+            case: Case whose content is replaced with an accessible subset.
+            data_collection_ids: Collections associated with the case.
+            data_collection_col_access: Column access by collection.
+            extra_access_col_ids: Additional columns to retain.
+            right: Right used to describe invalid zero-column access.
+            user_id: User identifier used in validation errors.
+            case_access_cache: Mutable cache of columns by collection combination.
+
+        Raises:
+            AssertionError: If no content column is accessible for the case.
+        """
         if data_collection_ids in case_access_cache:
             col_ids = case_access_cache[data_collection_ids]
         else:
@@ -605,7 +994,24 @@ class CaseService(BaseCaseService):
         case_data_collections: dict[UUID, set[UUID]],
         access_data_collections: set[UUID],
     ) -> frozenset[UUID] | None:
-        """Calculate the set of DataCollection ids in which the case is stored/accessible"""
+        """Resolve a case's collections when any collection grants access.
+
+        Args:
+            case: Case to authorize.
+            case_ids: Explicitly requested IDs, if any.
+            on_invalid_case_id: Failure behavior for inaccessible requested cases.
+            user_id: User identifier included in authorization errors.
+            case_data_collections: Collection IDs grouped by case ID.
+            access_data_collections: Collections granting the required access.
+
+        Returns:
+            All associated and creation collection IDs, or ``None`` when inaccessible
+            or when the case has no identifier.
+
+        Raises:
+            UnauthorizedAuthError: If a requested case is inaccessible and raising
+                is configured.
+        """
         case_id = case.id
         if case_id is None:
             return None
@@ -630,6 +1036,27 @@ class CaseService(BaseCaseService):
         datetime_range_filter: DatetimeRangeFilter | None = None,
         max_n_cases: int = 0,
     ) -> tuple[list[model.Case], bool]:
+        """Retrieve cases by explicit IDs or by case type and date range.
+
+        The caller owns ``uow``. Explicit-ID reads preserve repository result order;
+        unrestricted reads are truncated after the repository query.
+
+        Args:
+            uow: Active repository unit of work.
+            user_id: User identifier used for repository access.
+            case_type_id: Required case type identifier.
+            case_ids: Optional explicit case identifiers.
+            datetime_range_filter: Optional case-date restriction for type reads.
+            max_n_cases: Maximum returned cases, or zero for unlimited.
+
+        Returns:
+            Retrieved cases and whether a type read exceeded the result limit.
+
+        Raises:
+            RequestLimitExceededAuthError: If explicit IDs exceed the limit.
+            InvalidArgumentsError: If IDs are combined with a date filter or resolve
+                to cases of another case type.
+        """
         cases: list[model.Case]
         if case_ids:
             if max_n_cases > 0 and len(case_ids) > max_n_cases:
@@ -683,6 +1110,23 @@ class CaseService(BaseCaseService):
         apply_max_n_cases: bool,
         is_full_access: bool,
     ) -> tuple[dict[UUID, Callable[[str], datetime.datetime]] | None, int]:
+        """Resolve case-date converters and the effective case limit.
+
+        Args:
+            uow: Active repository unit of work.
+            user_id: User identifier used for metadata reads.
+            case_type: Case type supplying operation-specific limits.
+            right: READ_CASE or WRITE_CASE operation being limited.
+            apply_max_n_cases: Whether a configured limit should be resolved.
+            is_full_access: Whether ABAC date-column filtering can be skipped.
+
+        Returns:
+            Accessible date-column converters and the effective maximum case count.
+
+        Raises:
+            NotImplementedError: If limit resolution receives an unsupported right.
+            ValueError: If case-date metadata cannot use a temporal converter.
+        """
         case_date_col_mappers: dict[UUID, Callable[[str], datetime.datetime]] | None = (
             {}
         )
@@ -711,6 +1155,19 @@ class CaseService(BaseCaseService):
         user_id: UUID,
         case_type_id: UUID,
     ) -> model.CaseType:
+        """Load one case type in a caller-owned unit of work.
+
+        Args:
+            uow: Active repository unit of work.
+            user_id: User identifier used for repository access.
+            case_type_id: Case type identifier to load.
+
+        Returns:
+            The requested case type.
+
+        Raises:
+            InvalidArgumentsError: If the case type does not exist.
+        """
         case_types: list[model.CaseType] = self.repository.crud(
             uow,
             user_id,
@@ -732,6 +1189,21 @@ class CaseService(BaseCaseService):
         right: enum.CaseRight,
         case_type_id: UUID,
     ) -> tuple[set[UUID], dict[UUID, model.CaseTypeAccessAbac]]:
+        """Resolve case-level collections and column access for one case type.
+
+        Args:
+            user_id: User whose access is evaluated.
+            case_abac: Effective case access metadata.
+            right: Required case content right.
+            case_type_id: Case type whose access is resolved.
+
+        Returns:
+            Accessible collection IDs and per-collection column access.
+
+        Raises:
+            UnauthorizedAuthError: If a non-full-access user has no matching case
+                access for the case type.
+        """
         access_data_collections = case_abac.get_combinations_with_access_right(
             right
         ).get(case_type_id, set())
@@ -752,6 +1224,18 @@ class CaseService(BaseCaseService):
         filter_content: bool,
         calculate_case_date: bool,
     ) -> None:
+        """Validate case-content access and filtering arguments.
+
+        Args:
+            right: Required READ_CASE or WRITE_CASE right.
+            on_invalid_case_id: Requested-case failure behavior.
+            filter_content: Whether inaccessible content is removed.
+            calculate_case_date: Whether a derived case date is requested.
+
+        Raises:
+            ValueError: If the right or failure mode is unsupported, or case-date
+                calculation is requested without content filtering.
+        """
         if right not in enum.CaseRightSet.CASE_CONTENT.value:
             raise ValueError(f"Invalid case abac right: {right.value}")
         if on_invalid_case_id not in {"raise", "ignore"}:
@@ -766,6 +1250,17 @@ class CaseService(BaseCaseService):
         case_ids: Iterable[UUID] | None = None,
         data_collection_ids: Iterable[UUID] | None = None,
     ) -> dict[UUID, set[UUID]]:
+        """Retrieve data collection IDs grouped by case ID.
+
+        Args:
+            uow: Active repository unit of work.
+            user_id: User identifier used for repository access.
+            case_ids: Optional case IDs restricting association rows.
+            data_collection_ids: Optional collection IDs restricting rows.
+
+        Returns:
+            Data collection IDs grouped by case ID.
+        """
         return self._retrieve_association_map(
             uow,
             user_id,
@@ -783,6 +1278,17 @@ class CaseService(BaseCaseService):
         case_set_ids: Iterable[UUID] | None = None,
         data_collection_ids: Iterable[UUID] | None = None,
     ) -> dict[UUID, set[UUID]]:
+        """Retrieve data collection IDs grouped by case-set ID.
+
+        Args:
+            uow: Active repository unit of work.
+            user_id: User identifier used for repository access.
+            case_set_ids: Optional case-set IDs restricting association rows.
+            data_collection_ids: Optional collection IDs restricting rows.
+
+        Returns:
+            Data collection IDs grouped by case-set ID.
+        """
         return self._retrieve_association_map(
             uow,
             user_id,
@@ -800,6 +1306,17 @@ class CaseService(BaseCaseService):
         case_ids: Iterable[UUID] | None = None,
         case_set_ids: Iterable[UUID] | None = None,
     ) -> dict[UUID, set[UUID]]:
+        """Retrieve case-set IDs grouped by case ID.
+
+        Args:
+            uow: Active repository unit of work.
+            user_id: User identifier used for repository access.
+            case_ids: Optional case IDs restricting membership rows.
+            case_set_ids: Optional case-set IDs restricting membership rows.
+
+        Returns:
+            Case-set IDs grouped by case ID.
+        """
         return self._retrieve_association_map(
             uow,
             user_id,
@@ -820,8 +1337,22 @@ class CaseService(BaseCaseService):
         obj_ids1: frozenset[UUID] | None = None,
         obj_ids2: frozenset[UUID] | None = None,
     ) -> dict[UUID, set[UUID]]:
-        """
-        Get a dict[obj_id1, set[obj_ids]] based on the association stored in the association_class objs.
+        """Retrieve linked identifiers grouped by the first endpoint.
+
+        The caller owns ``uow``. When both endpoint restrictions are present, both
+        must match the same association row.
+
+        Args:
+            uow: Active repository unit of work.
+            user_id: Optional user identifier used for repository access.
+            association_class: Association model to query.
+            link_field_name1: First endpoint field name and result key.
+            link_field_name2: Second endpoint field name and grouped result value.
+            obj_ids1: Optional accepted first-endpoint IDs.
+            obj_ids2: Optional accepted second-endpoint IDs.
+
+        Returns:
+            Second-endpoint IDs grouped by first-endpoint ID.
         """
         # Create a filter to restrict the association objs if necessary
         filter: Filter | None
@@ -858,6 +1389,20 @@ class CaseService(BaseCaseService):
     def _retrieve_seq_column_data(
         self, uow: BaseUnitOfWork, user: model.User, seq_col_id: UUID
     ) -> tuple[model.Col, model.RefCol]:
+        """Retrieve and validate genetic-sequence column metadata.
+
+        Args:
+            uow: Active repository unit of work.
+            user: User performing repository reads.
+            seq_col_id: Sequence column identifier.
+
+        Returns:
+            The column and its genetic-sequence reference metadata.
+
+        Raises:
+            InvalidArgumentsError: If the reference column is not a genetic-sequence
+                column.
+        """
         repository = self.repository
         seq_col: model.Col = repository.crud(
             uow,
@@ -883,6 +1428,19 @@ class CaseService(BaseCaseService):
     def _verify_case_set_member_case_type(
         self, user: model.User, case_set_members: list[model.CaseSetMember]
     ) -> None:
+        """Verify that each case-set member links matching case types.
+
+        This helper owns a repository unit of work. It does not persist or mutate the
+        supplied membership models.
+
+        Args:
+            user: User performing repository reads.
+            case_set_members: Membership records to verify.
+
+        Raises:
+            InvalidArgumentsError: If any member links a case and case set with
+                different case types.
+        """
         with self.repository.uow() as uow:
             case_set_ids = {x.case_set_id for x in case_set_members}
             case_ids = {x.case_id for x in case_set_members}
@@ -920,14 +1478,41 @@ class CaseService(BaseCaseService):
         self,
         cmd: command.RetrieveIsOwnCasesCommand,
     ) -> dict[UUID, bool]:
-        """Retrieve whether the user owns the specified cases."""
+        """Map accessible requested cases to private-collection ownership.
+
+        Args:
+            cmd: Case type and case identifiers to evaluate.
+
+        Returns:
+            Ownership flags keyed by accessible case identifier.
+
+        Raises:
+            UnauthorizedAuthError: If the user cannot read the requested case type.
+        """
         return case_service_retrieve_is_own_cases(self, cmd)
 
     # CRUD method implementations
     def crud_case(
         self, cmd: command.CaseCrudCommand
     ) -> list[model.Case] | model.Case | list[UUID] | UUID | list[bool] | bool | None:
-        """Handle CRUD operations for Case entities."""
+        """Handle case CRUD under case-data ABAC in a repository unit of work.
+
+        Delete operations include configured dependent associations. Restricted
+        users cannot delete all cases and must have REMOVE_CASE access through every
+        collection associated with each requested case.
+
+        Args:
+            cmd: Case CRUD operation, inputs, and user context.
+
+        Returns:
+            Cases, identifiers, existence flags, or ``None`` for the operation.
+
+        Raises:
+            UnauthorizedAuthError: If deletion is too broad or remove access is
+                missing for a requested case.
+            AssertionError: If an unsupported restricted-user operation is routed to
+                the deletion handler.
+        """
         return case_service_crud_case(self, cmd)
 
     def crud_case_data_collection_link(
@@ -941,7 +1526,21 @@ class CaseService(BaseCaseService):
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseDataCollectionLink entities."""
+        """Handle case-collection link CRUD under case-data ABAC.
+
+        The delegated handler owns a repository unit of work and applies cascade and
+        restricted-user operation rules.
+
+        Args:
+            cmd: Link CRUD operation, inputs, and user context.
+
+        Returns:
+            Links, identifiers, existence flags, or ``None`` for the operation.
+
+        Raises:
+            UnauthorizedAuthError: If a restricted user requests an unsupported
+                bulk or mutation operation.
+        """
         return case_service_crud_case_data_collection_link(self, cmd)
 
     def crud_case_identifier(
@@ -955,7 +1554,21 @@ class CaseService(BaseCaseService):
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseIdentifier entities."""
+        """Handle case-identifier CRUD under case-data ABAC.
+
+        The delegated handler owns a repository unit of work and applies cascade and
+        restricted-user operation rules.
+
+        Args:
+            cmd: Identifier CRUD operation, inputs, and user context.
+
+        Returns:
+            Identifiers, UUIDs, existence flags, or ``None`` for the operation.
+
+        Raises:
+            UnauthorizedAuthError: If a restricted user requests an unsupported
+                bulk or mutation operation.
+        """
         return case_service_crud_case_identifier(self, cmd)
 
     def crud_case_set_category(
@@ -969,7 +1582,14 @@ class CaseService(BaseCaseService):
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseSetCategory entities."""
+        """Handle case-set-category CRUD in a repository unit of work.
+
+        Args:
+            cmd: Category CRUD operation, inputs, and user context.
+
+        Returns:
+            Categories, identifiers, existence flags, or ``None`` for the operation.
+        """
         return case_service_crud_case_set_category(self, cmd)
 
     def crud_case_set(
@@ -983,7 +1603,24 @@ class CaseService(BaseCaseService):
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseSet entities."""
+        """Handle case-set CRUD under case-data ABAC.
+
+        Delete operations include dependent collection links and memberships.
+        Restricted users cannot delete all sets and must have REMOVE_CASE_SET access
+        through every collection associated with each requested set.
+
+        Args:
+            cmd: Case-set CRUD operation, inputs, and user context.
+
+        Returns:
+            Case sets, identifiers, existence flags, or ``None`` for the operation.
+
+        Raises:
+            UnauthorizedAuthError: If deletion is too broad or remove access is
+                missing for a requested case set.
+            AssertionError: If an unsupported restricted-user operation is routed to
+                the deletion handler.
+        """
         return case_service_crud_case_set(self, cmd)
 
     def crud_case_set_data_collection_link(
@@ -997,7 +1634,21 @@ class CaseService(BaseCaseService):
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseSetDataCollectionLink entities."""
+        """Handle case-set-collection link CRUD under case-data ABAC.
+
+        The delegated handler owns a repository unit of work and applies cascade and
+        restricted-user operation rules.
+
+        Args:
+            cmd: Link CRUD operation, inputs, and user context.
+
+        Returns:
+            Links, identifiers, existence flags, or ``None`` for the operation.
+
+        Raises:
+            UnauthorizedAuthError: If a restricted user requests an unsupported
+                bulk or mutation operation.
+        """
         return case_service_crud_case_set_data_collection_link(self, cmd)
 
     def crud_case_set_member(
@@ -1011,7 +1662,22 @@ class CaseService(BaseCaseService):
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseSetMember entities."""
+        """Handle case-set membership CRUD under case-data ABAC.
+
+        The delegated handler owns a repository unit of work. Writes by an
+        unrestricted user verify that each case and case set share a case type;
+        restricted-user updates and bulk deletes are rejected.
+
+        Args:
+            cmd: Membership CRUD operation, inputs, and user context.
+
+        Returns:
+            Memberships, identifiers, existence flags, or ``None`` for the operation.
+
+        Raises:
+            InvalidArgumentsError: If a member links different case types.
+            UnauthorizedAuthError: If a restricted user updates or bulk deletes.
+        """
         return case_service_crud_case_set_member(self, cmd)
 
     def crud_case_set_status(
@@ -1025,13 +1691,34 @@ class CaseService(BaseCaseService):
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseSetStatus entities."""
+        """Handle case-set-status CRUD in a repository unit of work.
+
+        Args:
+            cmd: Status CRUD operation, inputs, and user context.
+
+        Returns:
+            Statuses, identifiers, existence flags, or ``None`` for the operation.
+        """
         return case_service_crud_case_set_status(self, cmd)
 
     def crud_col(
         self, cmd: command.ColCrudCommand
     ) -> list[model.Col] | model.Col | list[UUID] | UUID | list[bool] | bool | None:
-        """Handle CRUD operations for Col entities."""
+        """Handle case-type-column CRUD under reference-data ABAC.
+
+        Writes by reference-data administrators validate that each column, dimension,
+        reference column, and reference dimension are compatible. The delegated
+        handler owns a repository unit of work.
+
+        Args:
+            cmd: Column CRUD operation, inputs, and user context.
+
+        Returns:
+            Columns, identifiers, existence flags, or ``None`` for the operation.
+
+        Raises:
+            InvalidArgumentsError: If column and dimension metadata are incompatible.
+        """
         return case_service_crud_col(self, cmd)
 
     def crud_col_set(
@@ -1039,7 +1726,14 @@ class CaseService(BaseCaseService):
     ) -> (
         list[model.ColSet] | model.ColSet | list[UUID] | UUID | list[bool] | bool | None
     ):
-        """Handle CRUD operations for ColSet entities."""
+        """Handle column-set CRUD under reference-data ABAC.
+
+        Args:
+            cmd: Column-set CRUD operation, inputs, and user context.
+
+        Returns:
+            Column sets, identifiers, existence flags, or ``None`` for the operation.
+        """
         return case_service_crud_col_set(self, cmd)
 
     def crud_col_set_member(
@@ -1053,7 +1747,14 @@ class CaseService(BaseCaseService):
         | bool
         | None
     ):
-        """Handle CRUD operations for ColSetMember entities."""
+        """Handle column-set membership CRUD under reference-data ABAC.
+
+        Args:
+            cmd: Membership CRUD operation, inputs, and user context.
+
+        Returns:
+            Memberships, identifiers, existence flags, or ``None`` for the operation.
+        """
         return case_service_crud_col_set_member(self, cmd)
 
     def crud_case_type(
@@ -1067,7 +1768,17 @@ class CaseService(BaseCaseService):
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseType entities."""
+        """Handle case-type CRUD under reference-data ABAC.
+
+        The delegated handler owns a repository unit of work. Every non-read
+        operation clears the complete-case-type cache after repository handling.
+
+        Args:
+            cmd: Case-type CRUD operation, inputs, and user context.
+
+        Returns:
+            Case types, identifiers, existence flags, or ``None`` for the operation.
+        """
         return case_service_crud_case_type(self, cmd)
 
     def crud_case_type_set_category(
@@ -1081,7 +1792,14 @@ class CaseService(BaseCaseService):
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseTypeSetCategory entities."""
+        """Handle case-type-set-category CRUD in a repository unit of work.
+
+        Args:
+            cmd: Category CRUD operation, inputs, and user context.
+
+        Returns:
+            Categories, identifiers, existence flags, or ``None`` for the operation.
+        """
         return case_service_crud_case_type_set_category(self, cmd)
 
     def crud_case_type_set(
@@ -1095,7 +1813,14 @@ class CaseService(BaseCaseService):
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseTypeSet entities."""
+        """Handle case-type-set CRUD under reference-data ABAC.
+
+        Args:
+            cmd: Case-type-set CRUD operation, inputs, and user context.
+
+        Returns:
+            Case-type sets, IDs, existence flags, or ``None`` for the operation.
+        """
         return case_service_crud_case_type_set(self, cmd)
 
     def crud_case_type_set_member(
@@ -1109,13 +1834,34 @@ class CaseService(BaseCaseService):
         | bool
         | None
     ):
-        """Handle CRUD operations for CaseTypeSetMember entities."""
+        """Handle case-type-set membership CRUD under reference-data ABAC.
+
+        Args:
+            cmd: Membership CRUD operation, inputs, and user context.
+
+        Returns:
+            Memberships, identifiers, existence flags, or ``None`` for the operation.
+        """
         return case_service_crud_case_type_set_member(self, cmd)
 
     def crud_dim(
         self, cmd: command.DimCrudCommand
     ) -> list[model.Dim] | model.Dim | list[UUID] | UUID | list[bool] | bool | None:
-        """Handle CRUD operations for Dim entities."""
+        """Handle case-type-dimension CRUD under reference-data ABAC.
+
+        The delegated handler owns a repository unit of work and validates case-date
+        and reference-dimension invariants for writes.
+
+        Args:
+            cmd: Dimension CRUD operation, inputs, and user context.
+
+        Returns:
+            Dimensions, identifiers, existence flags, or ``None`` for the operation.
+
+        Raises:
+            InvalidArgumentsError: If case-date or reference-dimension metadata is
+                invalid.
+        """
         return case_service_crud_dim(self, cmd)
 
     def crud_ref_col(
@@ -1123,7 +1869,20 @@ class CaseService(BaseCaseService):
     ) -> (
         list[model.RefCol] | model.RefCol | list[UUID] | UUID | list[bool] | bool | None
     ):
-        """Handle CRUD operations for RefCol entities."""
+        """Handle reference-column CRUD with metadata validation.
+
+        Writes validate dimension, concept or region set, unit, and column-type
+        compatibility in repository units of work.
+
+        Args:
+            cmd: Reference-column CRUD operation, inputs, and user context.
+
+        Returns:
+            Reference columns, IDs, existence flags, or ``None`` for the operation.
+
+        Raises:
+            InvalidArgumentsError: If linked metadata or the operation is invalid.
+        """
         return case_service_crud_ref_col(self, cmd)
 
     def crud_ref_dim(
@@ -1131,7 +1890,14 @@ class CaseService(BaseCaseService):
     ) -> (
         list[model.RefDim] | model.RefDim | list[UUID] | UUID | list[bool] | bool | None
     ):
-        """Handle CRUD operations for RefDim entities."""
+        """Handle reference-dimension CRUD in a repository unit of work.
+
+        Args:
+            cmd: Reference-dimension CRUD operation, inputs, and user context.
+
+        Returns:
+            Reference dimensions, IDs, existence flags, or ``None`` for the operation.
+        """
         return case_service_crud_ref_dim(self, cmd)
 
     def crud_genetic_distance_protocol(
@@ -1145,7 +1911,14 @@ class CaseService(BaseCaseService):
         | bool
         | None
     ):
-        """Handle CRUD operations for Protocol entities."""
+        """Handle genetic-distance-protocol CRUD in a repository unit of work.
+
+        Args:
+            cmd: Protocol CRUD operation, inputs, and user context.
+
+        Returns:
+            Protocols, identifiers, existence flags, or ``None`` for the operation.
+        """
         return case_service_crud_genetic_distance_protocol(self, cmd)
 
     def crud_tree_algorithm_class(
@@ -1159,7 +1932,14 @@ class CaseService(BaseCaseService):
         | bool
         | None
     ):
-        """Handle CRUD operations for TreeAlgorithmClass entities."""
+        """Handle tree-algorithm-class CRUD in a repository unit of work.
+
+        Args:
+            cmd: Algorithm-class CRUD operation, inputs, and user context.
+
+        Returns:
+            Algorithm classes, IDs, existence flags, or ``None`` for the operation.
+        """
         return case_service_crud_tree_algorithm_class(self, cmd)
 
     def crud_tree_algorithm(
@@ -1173,11 +1953,26 @@ class CaseService(BaseCaseService):
         | bool
         | None
     ):
-        """Handle CRUD operations for TreeAlgorithm entities."""
+        """Handle tree-algorithm CRUD in a repository unit of work.
+
+        Args:
+            cmd: Tree-algorithm CRUD operation, inputs, and user context.
+
+        Returns:
+            Algorithms, identifiers, existence flags, or ``None`` for the operation.
+        """
         return case_service_crud_tree_algorithm(self, cmd)
 
     @staticmethod
     def _compose_id_filter(*key_and_ids: tuple[str, set[UUID]]) -> Filter:
+        """Compose an intersection filter from field and identifier pairs.
+
+        Args:
+            *key_and_ids: Field names paired with accepted identifier sets.
+
+        Returns:
+            A UUID-set filter for one pair, or an AND-composite for multiple pairs.
+        """
         if len(key_and_ids) == 1:
             key, ids = key_and_ids[0]
             return UuidSetFilter(key=key, members=ids)  # type: ignore[arg-type]

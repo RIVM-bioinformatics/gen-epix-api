@@ -1,3 +1,10 @@
+"""Verify and persist case batches and their linked seqdb samples.
+
+The module exposes :class:`CaseBatchUploader` and the case upload service handler.
+They coordinate case validation, ABAC filtering, case persistence, and read-set and
+sequence uploads while updating command and result models in place.
+"""
+
 from collections import defaultdict
 from hashlib import sha256
 from typing import cast
@@ -23,7 +30,25 @@ from gen_epix.filter.uuid_set import UuidSetFilter
 
 
 class CaseBatchUploader(BatchUploader):
+    """Encapsulates verification and persistence of case upload batches.
+
+    The uploader collaborates with the case repository and seqdb command handlers.
+    Verification and upsert mutate uploaded case models and batch results in place.
+    Case and seqdb operations do not form one cross-domain atomic transaction.
+
+    Attributes:
+        service: Case service used for repositories, dispatch, and access metadata.
+    """
+
     def __init__(self, service: BaseService) -> None:
+        """Initialize a case batch uploader for a case service.
+
+        Args:
+            service: Service used to handle case uploads.
+
+        Raises:
+            InvalidArgumentsError: If ``service`` is not a case service.
+        """
         super().__init__(
             command.UploadCasesCommand,
             model.STORED_MODEL_FIELD_PROPS,  # type: ignore[arg-type]
@@ -34,12 +59,19 @@ class CaseBatchUploader(BatchUploader):
         self.service: BaseCaseService = service
 
     def verify_user_rights(self, cmd: UploadBatchCommandMixin) -> None:
-        """
-        Implements user RBAC rights verification for uploading cases.
+        """Verify command type and RBAC rights for uploading cases.
+
         ABAC rights are not verified here since this requires knowing per case whether
         it already exists in the database and what data collection(s) it belongs to,
         which is only determined during batch verification. ABAC rights are therefore
         verified during batch verification.
+
+        Args:
+            cmd: Batch command to authorize.
+
+        Raises:
+            InvalidArgumentsError: If ``cmd`` is not an upload-cases command.
+            UnauthorizedAuthError: If the user lacks a case-data role.
         """
         # Verify command type
         if not isinstance(cmd, command.UploadCasesCommand):
@@ -60,9 +92,21 @@ class CaseBatchUploader(BatchUploader):
         batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
-        """
-        Extends batch verification to the case content as well as the read sets and
-        seqs, which are verified by seqdb.
+        """Verify cases, case content, read sets, sequences, and ABAC rights.
+
+        Verification mutates ``cmd`` and ``batch_result`` in place with resolved IDs,
+        defaults, normalized content, derived values, and validation issues.
+
+        Args:
+            cmd: Case batch command to verify.
+            batch_result: Batch result to update with verification outcomes.
+            uow: Active case repository unit of work.
+
+        Returns:
+            Whether all verification stages succeeded.
+
+        Raises:
+            InvalidArgumentsError: If the command or result has the wrong type.
         """
         if not isinstance(cmd, command.UploadCasesCommand):
             raise exc.InvalidArgumentsError("92bef72e", "Invalid command type")
@@ -97,9 +141,22 @@ class CaseBatchUploader(BatchUploader):
         batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
-        """
-        Extends batch upload to uploading the cases with this service, and the read
-        sets and seqs to seqdb.
+        """Upsert cases and then their linked read sets and sequences.
+
+        The method mutates shared case objects in ``cmd`` and statuses and identifiers
+        in ``batch_result``. Case persistence uses ``uow``; sample persistence is
+        dispatched separately to seqdb and is not atomic with the case transaction.
+
+        Args:
+            cmd: Verified case batch command to persist.
+            batch_result: Batch result to update during persistence.
+            uow: Active case repository unit of work.
+
+        Returns:
+            Whether all attempted case and sample upserts succeeded.
+
+        Raises:
+            InvalidArgumentsError: If the command or result has the wrong type.
         """
         if not isinstance(cmd, command.UploadCasesCommand):
             raise exc.InvalidArgumentsError("0935eb52", "Invalid command type")
@@ -206,10 +263,10 @@ class CaseBatchUploader(BatchUploader):
         batch_result: model.CaseBatchUploadResult,
         existing_content_by_id: dict[UUID, dict],
     ) -> None:
-        """
-        Re-validate each case's content merged with what is already in the
-        database, so inconsistencies in the resulting state are caught, not
-        just in the incoming change.
+        """Re-validate content merged with each case's stored content.
+
+        This catches inconsistencies in the resulting state, not just in the incoming
+        change.
 
         The merge and validation temporarily replace each case's content
         with the full merged state (existing content with the incoming
@@ -263,6 +320,19 @@ class CaseBatchUploader(BatchUploader):
         batch_result: model.CaseBatchUploadResult,
         verify_only: bool,
     ) -> bool:
+        """Verify or upload seqdb samples and map results back to cases.
+
+        The method mutates sample result IDs, statuses, and logs in ``batch_result``.
+        Successful child IDs are also written into case content in ``cmd``.
+
+        Args:
+            cmd: Case upload command containing read sets and sequences.
+            batch_result: Case batch result receiving mapped seqdb outcomes.
+            verify_only: Whether seqdb should verify without persisting samples.
+
+        Returns:
+            Whether sample preparation and seqdb handling completed without failures.
+        """
         success = True
         # Get UploadSamplesCommand for any samples to be created
         curr_success, upload_samples_cmd, sample_case_index_map = (
@@ -327,15 +397,23 @@ class CaseBatchUploader(BatchUploader):
         cmd: command.UploadCasesCommand,
         batch_result: model.CaseBatchUploadResult,
     ) -> bool:
-        """
-        Set the created_in_data_collection_id for each new case to the default value
-        if not provided.
+        """Apply the default creation collection to new cases in place.
+
+        Sets ``created_in_data_collection_id`` on eligible case objects and records
+        informational or error entries in ``batch_result``.
 
         This does not check that created_in_data_collection_id for an existing case
         would be altered: this is assumed to have been checked through immutability
         of fields. It also does not replace any
         created_in_data_collection_id=NULL_ID of an existing case with the actual
         created_in_data_collection_id.
+
+        Args:
+            cmd: Upload command containing cases and the optional default collection.
+            batch_result: Result receiving defaulting information or errors.
+
+        Returns:
+            Whether the default was valid and every new case obtained a collection.
         """
         success = True
 
@@ -393,8 +471,9 @@ class CaseBatchUploader(BatchUploader):
         batch_result: model.CaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
-        """
-        Verify ABAC rights for the cases to be uploaded. This requires knowing per case
+        """Filter uploaded values according to per-case ABAC rights.
+
+        This requires knowing per case
         whether it already exists in the database and what data collection(s) it
         belongs to, since ABAC rights are based on data collection membership. This
         information is only determined during batch verification, so ABAC rights are
@@ -403,6 +482,18 @@ class CaseBatchUploader(BatchUploader):
         This method assumes that the cases have already been verified to be valid in
         terms of existence of parents and children, and filling in
         case.created_in_data_collection_id.
+
+        Columns without write access are removed from command content in place and
+        recorded as unauthorized data issues. The method deliberately reports an
+        inaccessible column as unknown when the user also lacks read access.
+
+        Args:
+            cmd: Upload command whose case content is filtered in place.
+            batch_result: Result receiving authorization data issues.
+            uow: Active unit of work used to load existing case associations.
+
+        Returns:
+            Whether case-creation rights were valid for every new case.
         """
         success = True
         # Get complete CaseType with no ABAC applied to get all columns for validation
@@ -515,8 +606,14 @@ class CaseBatchUploader(BatchUploader):
         cmd: command.UploadCasesCommand,
         batch_result: model.CaseBatchUploadResult,
     ) -> bool:
-        """
-        Verify the case content and add any derived values.
+        """Validate case content and update result statuses in place.
+
+        Args:
+            cmd: Upload command whose case values and dates may be normalized.
+            batch_result: Result receiving validated content, issues, and statuses.
+
+        Returns:
+            Whether validation introduced no additional failed case results.
         """
         success = True
         # Initialize some
@@ -542,7 +639,15 @@ class CaseBatchUploader(BatchUploader):
     def _get_complete_case_type(
         self, cmd: command.UploadCasesCommand, ignore_abac: bool = False
     ) -> model.CompleteCaseType:
-        """Get complete CaseType"""
+        """Retrieve complete case-type metadata with optional ABAC bypass.
+
+        Args:
+            cmd: Upload command providing the case type, user, and policy instances.
+            ignore_abac: Whether to dispatch metadata retrieval without a user.
+
+        Returns:
+            Complete metadata for the command's case type.
+        """
         case_type_id = cmd.case_type_id
         user: model.User | None
         if ignore_abac:
@@ -566,10 +671,18 @@ class CaseBatchUploader(BatchUploader):
         batch_result: model.CaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> list[frozenset[UUID]]:
-        """
-        Get the data collection IDs associated with each case ID from the cases to be
-        uploaded, including both the created in data collection ID and any data
-        collection IDs from CaseDataCollectionLink if the case already exists.
+        """Get all data collections associated with each uploaded case.
+
+        Includes both the creation collection and persisted collection links for
+        existing cases. Results retain upload-case order.
+
+        Args:
+            cmd: Upload command containing the cases.
+            batch_result: Result indicating which cases already exist.
+            uow: Active unit of work used to retrieve persisted links.
+
+        Returns:
+            A collection-ID set for each uploaded case in matching order.
         """
         # Get case IDs, their created in data collection IDs and whether the case is existing
         case_id_created_in_data_collection_ids = []
@@ -630,7 +743,15 @@ class CaseBatchUploader(BatchUploader):
     def _get_case_validator(
         self, complete_case_type: model.CompleteCaseType, user_id: UUID
     ) -> CaseValidator:
-        """Get case validator for the given complete CaseType"""
+        """Create a validator for complete case-type metadata.
+
+        Args:
+            complete_case_type: Metadata against which content is validated.
+            user_id: Identifier associated with the validation context.
+
+        Returns:
+            Initialized case validator.
+        """
         return CaseValidator(self.service, complete_case_type, user_id)
 
     def _get_upload_samples_command(
@@ -642,11 +763,23 @@ class CaseBatchUploader(BatchUploader):
         seqdb_command.UploadSamplesCommand | None,
         dict[type[model.Model], dict[tuple[int, int], tuple[int, int]]],
     ]:
-        """
-        Extracts any samples to be created in seqdb from the cases to be uploaded and
-        create an UploadSamplesCommand. The batch_id of the latter command is set to
+        """Build a seqdb upload command and child-to-case index mappings.
+
+        The batch ID is set to
         the first 16 bytes of sha256 hash of the ID of the UploadCasesCommand, so that
         the link can be made between the two batches.
+
+        Missing parent cases mark affected child results failed in place.
+
+        Args:
+            cmd: Upload command from which samples are extracted.
+            batch_result: Result receiving missing-parent failures.
+
+        Returns:
+            Success, an optional seqdb upload command, and child index mappings.
+
+        Raises:
+            InvalidArgumentsError: If the command or result has the wrong type.
         """
         success = True
         if not isinstance(cmd, command.UploadCasesCommand):
@@ -669,6 +802,7 @@ class CaseBatchUploader(BatchUploader):
             sample_id: UUID | None,
             external_sample_id: IdentifierForUpload | None,
         ) -> int:
+            """Return a deduplicated sample index, creating the sample if needed."""
             has_id = not self.is_null(sample_id)
             has_external_id = external_sample_id is not None
             if has_id and sample_id in sample_id_to_index_map:
@@ -785,6 +919,18 @@ class CaseBatchUploader(BatchUploader):
 def case_service_upload_cases(
     self: BaseCaseService, cmd: command.UploadCasesCommand
 ) -> model.CaseBatchUploadResult:
+    """Upload a case batch unless case upload is disabled.
+
+    Args:
+        self: Case service handling the upload.
+        cmd: Case batch upload command.
+
+    Returns:
+        Batch result populated by verification and persistence.
+
+    Raises:
+        FeatureDisabledServiceError: If the case upload feature is disabled.
+    """
     if self.app.get_feature_flag(enum.FeatureFlag.DISABLE_UPLOAD.value):
         raise exc.FeatureDisabledServiceError("a756246d", "Upload is disabled")
     batch_uploader = CaseBatchUploader(cast(BaseService, self))

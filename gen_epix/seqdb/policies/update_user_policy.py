@@ -9,7 +9,7 @@ from gen_epix.seqdb.domain.service import BaseAbacService
 
 
 class UpdateUserPolicy(CommonUpdateUserPolicy):
-    """Authorize user updates with seqdb roles and user model mappings."""
+    """Encapsulates authorizing user updates with seqdb roles and user model mappings."""
 
     def __init__(
         self,

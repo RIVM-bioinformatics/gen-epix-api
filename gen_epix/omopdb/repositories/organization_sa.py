@@ -12,7 +12,7 @@ from gen_epix.omopdb.domain import model
 
 
 class OrganizationSARepository(CommonOrganizationSARepository):
-    """Use shared organization persistence with OmopDB SQLAlchemy model types."""
+    """Encapsulates shared organization persistence with OmopDB SQLAlchemy model types."""
 
     def __init__(
         self,

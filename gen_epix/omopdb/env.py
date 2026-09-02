@@ -11,7 +11,7 @@ from gen_epix.omopdb.services import RbacService
 
 
 class AppComposer(CommonAppComposer):
-    """Configure the shared application composer with OmopDB registrations."""
+    """Encapsulates configuration of the shared application composer with OmopDB registrations."""
 
     def __init__(
         self,

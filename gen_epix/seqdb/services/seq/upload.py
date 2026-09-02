@@ -16,7 +16,7 @@ from gen_epix.seqdb.services.seq.upload_verify_batch import (
 
 
 class SampleBatchUploader(BatchUploader):
-    """Coordinate validation and persistence of seqdb sample upload batches."""
+    """Encapsulates validation and persistence of seqdb sample upload batches."""
 
     def __init__(
         self,

@@ -11,7 +11,7 @@ from gen_epix.omopdb.domain.policy import COMMON_ROLE_MAP
 
 
 class IsOrganizationAdminPolicy(CommonIsOrganizationAdminPolicy):
-    """Apply organization-administrator checks using the OmopDB role map."""
+    """Encapsulates organization-administrator checks using the OmopDB role map."""
 
     def __init__(
         self,

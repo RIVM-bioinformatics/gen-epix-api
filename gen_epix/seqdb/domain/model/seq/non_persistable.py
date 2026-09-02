@@ -20,7 +20,7 @@ from gen_epix.seqdb.domain.model.seq.seq import Seq, SeqIdentifier
 
 
 class SampleQuery(Model):
-    """A query for retrieving samples. All constraints are optional, but at least one
+    """Represents a query for retrieving samples. All constraints are optional, but at least one
     criterion must be provided.
 
     Model validation: At least one datetime boundary must be provided. Labels do
@@ -56,7 +56,7 @@ class SampleQuery(Model):
 
 
 class SampleQueryResult(Model):
-    """Return a sample query, its matching identifiers, and any result truncation."""
+    """Represents a sample query, its matching identifiers, and any result truncation."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="sample_query_results",
@@ -72,7 +72,7 @@ class SampleQueryResult(Model):
 
 
 class FullSample(Model):
-    """A comprehensive sample view with all sample-linked data and identifiers."""
+    """Represents a comprehensive sample view with all sample-linked data and identifiers."""
 
     NAME: ClassVar = "FullSample"
     ENTITY: ClassVar = Entity(

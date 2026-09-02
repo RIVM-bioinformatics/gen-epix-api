@@ -1642,7 +1642,7 @@ class Death(Model, DataLineageMixin):
 
 
 class PersonIdentifier(BaseIdentifier):
-    """Associate an external identifier with a person record."""
+    """Represents an external identifier with a person record."""
 
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         Person,
@@ -1659,7 +1659,7 @@ class PersonIdentifier(BaseIdentifier):
 
 
 class ObservationPeriodIdentifier(BaseIdentifier):
-    """Associate an external identifier with an observation-period record."""
+    """Represents an external identifier with an observation-period record."""
 
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         ObservationPeriod,
@@ -1677,7 +1677,7 @@ class ObservationPeriodIdentifier(BaseIdentifier):
 
 
 class VisitOccurrenceIdentifier(BaseIdentifier):
-    """Associate an external identifier with a visit-occurrence record."""
+    """Represents an external identifier with a visit-occurrence record."""
 
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         VisitOccurrence,
@@ -1695,7 +1695,7 @@ class VisitOccurrenceIdentifier(BaseIdentifier):
 
 
 class VisitDetailIdentifier(BaseIdentifier):
-    """Associate an external identifier with a visit-detail record."""
+    """Represents an external identifier with a visit-detail record."""
 
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         VisitDetail,
@@ -1713,7 +1713,7 @@ class VisitDetailIdentifier(BaseIdentifier):
 
 
 class ConditionOccurrenceIdentifier(BaseIdentifier):
-    """Associate an external identifier with a condition-occurrence record."""
+    """Represents an external identifier with a condition-occurrence record."""
 
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         ConditionOccurrence,
@@ -1731,7 +1731,7 @@ class ConditionOccurrenceIdentifier(BaseIdentifier):
 
 
 class ProcedureOccurrenceIdentifier(BaseIdentifier):
-    """Associate an external identifier with a procedure-occurrence record."""
+    """Represents an external identifier with a procedure-occurrence record."""
 
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         ProcedureOccurrence,
@@ -1749,7 +1749,7 @@ class ProcedureOccurrenceIdentifier(BaseIdentifier):
 
 
 class DrugExposureIdentifier(BaseIdentifier):
-    """Associate an external identifier with a drug-exposure record."""
+    """Represents an external identifier with a drug-exposure record."""
 
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         DrugExposure,
@@ -1767,7 +1767,7 @@ class DrugExposureIdentifier(BaseIdentifier):
 
 
 class DeviceExposureIdentifier(BaseIdentifier):
-    """Associate an external identifier with a device-exposure record."""
+    """Represents an external identifier with a device-exposure record."""
 
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         DeviceExposure,
@@ -1785,7 +1785,7 @@ class DeviceExposureIdentifier(BaseIdentifier):
 
 
 class MeasurementIdentifier(BaseIdentifier):
-    """Associate an external identifier with a measurement record."""
+    """Represents an external identifier with a measurement record."""
 
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         Measurement,
@@ -1803,7 +1803,7 @@ class MeasurementIdentifier(BaseIdentifier):
 
 
 class ObservationIdentifier(BaseIdentifier):
-    """Associate an external identifier with an observation record."""
+    """Represents an external identifier with an observation record."""
 
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         Observation,
@@ -1821,7 +1821,7 @@ class ObservationIdentifier(BaseIdentifier):
 
 
 class SpecimenIdentifier(BaseIdentifier):
-    """Associate an external identifier with a specimen record."""
+    """Represents an external identifier with a specimen record."""
 
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         Specimen,
@@ -1839,7 +1839,7 @@ class SpecimenIdentifier(BaseIdentifier):
 
 
 class NoteIdentifier(BaseIdentifier):
-    """Associate an external identifier with a note record."""
+    """Represents an external identifier with a note record."""
 
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         Note,
@@ -1856,7 +1856,7 @@ class NoteIdentifier(BaseIdentifier):
 
 
 class NoteNlpIdentifier(BaseIdentifier):
-    """Associate an external identifier with a note-NLP record."""
+    """Represents an external identifier with a note-NLP record."""
 
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         NoteNlp,
@@ -1874,7 +1874,7 @@ class NoteNlpIdentifier(BaseIdentifier):
 
 
 class MeasurementRelationIdentifier(BaseIdentifier):
-    """Associate an external identifier with a measurement-relation record."""
+    """Represents an external identifier with a measurement-relation record."""
 
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         MeasurementRelation,
@@ -1892,7 +1892,7 @@ class MeasurementRelationIdentifier(BaseIdentifier):
 
 
 class DeathIdentifier(BaseIdentifier):
-    """Associate an external identifier with a death record."""
+    """Represents an external identifier with a death record."""
 
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         Death,

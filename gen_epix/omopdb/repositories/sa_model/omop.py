@@ -26,7 +26,7 @@ Base: type = orm.declarative_base(name=enum.ServiceType.OMOP.value)
 
 class Vocabulary(Base, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.Vocabulary)
@@ -53,7 +53,7 @@ class Vocabulary(Base, NoIdRowMetadataMixin):
 
 class Domain(Base, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.Domain)
@@ -70,7 +70,7 @@ class Domain(Base, NoIdRowMetadataMixin):
 
 class ConceptClass(Base, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.ConceptClass)
@@ -91,7 +91,7 @@ class ConceptClass(Base, NoIdRowMetadataMixin):
 
 class Concept(Base, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.Concept)
@@ -129,7 +129,7 @@ class Concept(Base, NoIdRowMetadataMixin):
 
 class Relationship(Base, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.Relationship)
@@ -162,7 +162,7 @@ class Relationship(Base, NoIdRowMetadataMixin):
 
 class ConceptRelationship(Base, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.ConceptRelationship)
@@ -192,7 +192,7 @@ class ConceptRelationship(Base, NoIdRowMetadataMixin):
 
 class ConceptAncestor(Base, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.ConceptAncestor)
@@ -216,7 +216,7 @@ class ConceptAncestor(Base, NoIdRowMetadataMixin):
 
 class ConceptSynonym(Base, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.ConceptSynonym)
@@ -237,7 +237,7 @@ class ConceptSynonym(Base, NoIdRowMetadataMixin):
 
 class SourceToConceptMap(Base, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.SourceToConceptMap)
@@ -276,7 +276,7 @@ class SourceToConceptMap(Base, NoIdRowMetadataMixin):
 
 class DrugStrength(Base, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.DrugStrength)
@@ -324,7 +324,7 @@ class DrugStrength(Base, NoIdRowMetadataMixin):
 
 class Location(Base, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.Location)
@@ -361,7 +361,7 @@ class Location(Base, NoIdRowMetadataMixin):
 
 class CareSite(Base, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.CareSite)
@@ -391,7 +391,7 @@ class CareSite(Base, NoIdRowMetadataMixin):
 
 class Provider(Base, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.Provider)
@@ -435,7 +435,7 @@ class Provider(Base, NoIdRowMetadataMixin):
 
 class CdmSource(Base, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.CdmSource)
@@ -480,7 +480,7 @@ class CdmSource(Base, NoIdRowMetadataMixin):
 
 class Metadata(Base, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.Metadata)
@@ -514,7 +514,7 @@ class Metadata(Base, NoIdRowMetadataMixin):
 
 class Person(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.Person)
@@ -581,7 +581,7 @@ class Person(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 class PersonIdentifier(Base, IdentifierMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.PersonIdentifier)
@@ -594,7 +594,7 @@ class PersonIdentifier(Base, IdentifierMixin):
 
 class ObservationPeriod(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.ObservationPeriod)
@@ -627,7 +627,7 @@ class ObservationPeriod(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 class ObservationPeriodIdentifier(Base, IdentifierMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.ObservationPeriodIdentifier)
@@ -642,7 +642,7 @@ class ObservationPeriodIdentifier(Base, IdentifierMixin):
 
 class VisitOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.VisitOccurrence)
@@ -705,7 +705,7 @@ class VisitOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 class VisitOccurrenceIdentifier(Base, IdentifierMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.VisitOccurrenceIdentifier)
@@ -720,7 +720,7 @@ class VisitOccurrenceIdentifier(Base, IdentifierMixin):
 
 class VisitDetail(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.VisitDetail)
@@ -789,7 +789,7 @@ class VisitDetail(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 class VisitDetailIdentifier(Base, IdentifierMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.VisitDetailIdentifier)
@@ -804,7 +804,7 @@ class VisitDetailIdentifier(Base, IdentifierMixin):
 
 class ConditionOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.ConditionOccurrence)
@@ -870,7 +870,7 @@ class ConditionOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 class ConditionOccurrenceIdentifier(Base, IdentifierMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(
@@ -887,7 +887,7 @@ class ConditionOccurrenceIdentifier(Base, IdentifierMixin):
 
 class ProcedureOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.ProcedureOccurrence)
@@ -950,7 +950,7 @@ class ProcedureOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 class ProcedureOccurrenceIdentifier(Base, IdentifierMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(
@@ -967,7 +967,7 @@ class ProcedureOccurrenceIdentifier(Base, IdentifierMixin):
 
 class DrugExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.DrugExposure)
@@ -1052,7 +1052,7 @@ class DrugExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 class DrugExposureIdentifier(Base, IdentifierMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.DrugExposureIdentifier)
@@ -1067,7 +1067,7 @@ class DrugExposureIdentifier(Base, IdentifierMixin):
 
 class DeviceExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.DeviceExposure)
@@ -1142,7 +1142,7 @@ class DeviceExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 class DeviceExposureIdentifier(Base, IdentifierMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.DeviceExposureIdentifier)
@@ -1157,7 +1157,7 @@ class DeviceExposureIdentifier(Base, IdentifierMixin):
 
 class Measurement(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.Measurement)
@@ -1244,7 +1244,7 @@ class Measurement(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 class MeasurementIdentifier(Base, IdentifierMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.MeasurementIdentifier)
@@ -1259,7 +1259,7 @@ class MeasurementIdentifier(Base, IdentifierMixin):
 
 class Observation(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.Observation)
@@ -1340,7 +1340,7 @@ class Observation(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 class ObservationIdentifier(Base, IdentifierMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.ObservationIdentifier)
@@ -1355,7 +1355,7 @@ class ObservationIdentifier(Base, IdentifierMixin):
 
 class Specimen(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.Specimen)
@@ -1419,7 +1419,7 @@ class Specimen(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 class SpecimenIdentifier(Base, IdentifierMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.SpecimenIdentifier)
@@ -1432,7 +1432,7 @@ class SpecimenIdentifier(Base, IdentifierMixin):
 
 class Note(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.Note)
@@ -1484,7 +1484,7 @@ class Note(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 class NoteIdentifier(Base, IdentifierMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.NoteIdentifier)
@@ -1497,7 +1497,7 @@ class NoteIdentifier(Base, IdentifierMixin):
 
 class NoteNlp(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.NoteNlp)
@@ -1540,7 +1540,7 @@ class NoteNlp(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 class NoteNlpIdentifier(Base, IdentifierMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.NoteNlpIdentifier)
@@ -1553,7 +1553,7 @@ class NoteNlpIdentifier(Base, IdentifierMixin):
 
 class FactRelationship(Base, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.FactRelationship)
@@ -1580,7 +1580,7 @@ class FactRelationship(Base, NoIdRowMetadataMixin):
 
 class Death(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.Death)
@@ -1610,7 +1610,7 @@ class Death(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 class DeathIdentifier(Base, IdentifierMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.DeathIdentifier)
@@ -1623,7 +1623,7 @@ class DeathIdentifier(Base, IdentifierMixin):
 
 class MeasurementRelation(Base, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.MeasurementRelation)
@@ -1647,7 +1647,7 @@ class MeasurementRelation(Base, NoIdRowMetadataMixin):
 
 class MeasurementRelationIdentifier(Base, IdentifierMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(
@@ -1664,7 +1664,7 @@ class MeasurementRelationIdentifier(Base, IdentifierMixin):
 
 class PayerPlanPeriod(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.PayerPlanPeriod)
@@ -1727,7 +1727,7 @@ class PayerPlanPeriod(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 class Cost(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.Cost)
@@ -1803,7 +1803,7 @@ class Cost(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 class ConditionEra(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.ConditionEra)
@@ -1830,7 +1830,7 @@ class ConditionEra(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 class DrugEra(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.DrugEra)
@@ -1864,7 +1864,7 @@ class DrugEra(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 class DoseEra(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.DoseEra)
@@ -1892,7 +1892,7 @@ class DoseEra(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 class CohortDefinition(Base, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.CohortDefinition)
@@ -1922,7 +1922,7 @@ class CohortDefinition(Base, NoIdRowMetadataMixin):
 
 class Cohort(Base, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.Cohort)
@@ -1942,7 +1942,7 @@ class Cohort(Base, NoIdRowMetadataMixin):
 
 class Episode(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.Episode)
@@ -1986,7 +1986,7 @@ class Episode(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 class EpisodeEvent(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
-    SQLAlchemy model for the corresponding persistable domain model.
+    Encapsulates a SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.EpisodeEvent)

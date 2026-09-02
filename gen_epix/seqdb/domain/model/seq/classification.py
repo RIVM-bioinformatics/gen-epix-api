@@ -25,7 +25,7 @@ class SeqClassification(
     ContentMixin[enum.SeqClassificationFormat],
     QualityMixin,
 ):
-    """Store a sequence classification produced by a protocol.
+    """Represents a sequence classification produced by a protocol.
 
     Model validation: Content-hash validation is not implemented yet, so the
     model currently accepts content unchanged after its inherited validation.
@@ -69,7 +69,7 @@ class AstPrediction(
     ContentMixin[enum.AstResultFormat],
     QualityMixin,
 ):
-    """Store an antimicrobial-susceptibility prediction for a sequence.
+    """Represents an antimicrobial-susceptibility prediction for a sequence.
 
     Model validation: Content-hash validation is not implemented yet, so the
     model currently accepts content unchanged after its inherited validation.
@@ -104,7 +104,7 @@ class SeqTaxonomy(
     ContentMixin[enum.SeqTaxonomyFormat],
     QualityMixin,
 ):
-    """Store a taxonomy assignment produced for a sequence by a protocol.
+    """Represents a taxonomy assignment produced for a sequence by a protocol.
 
     Model validation: Content-hash validation is not implemented yet, so the
     model currently accepts content unchanged after its inherited validation.

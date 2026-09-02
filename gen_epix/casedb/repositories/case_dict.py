@@ -1,3 +1,5 @@
+"""Provide dictionary-backed persistence for casedb case data."""
+
 import datetime
 from uuid import UUID
 
@@ -9,6 +11,8 @@ from gen_epix.filter.datetime_range import DatetimeRangeFilter
 
 
 class CaseDictRepository(DictRepository, BaseCaseRepository):
+    """Encapsulates dictionary-backed persistence for casedb case data."""
+
     def retrieve_case_stats(
         self,
         uow: BaseUnitOfWork,
@@ -18,7 +22,7 @@ class CaseDictRepository(DictRepository, BaseCaseRepository):
         case_ids: set[UUID] | None = None,
         datetime_range_filter: DatetimeRangeFilter | None = None,
     ) -> model.CaseStats:
-
+        """See base method."""
         # Initialize some
         case_stats = model.CaseStats(case_type_id=case_type_id)
         has_abac = data_collections_by_time_unit is not None

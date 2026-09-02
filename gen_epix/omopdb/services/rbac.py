@@ -5,7 +5,7 @@ from gen_epix.omopdb.domain import enum
 
 
 class RbacService(CommonRbacService):
-    """Handle RBAC commands using the OmopDB role enumeration."""
+    """Encapsulates handling of RBAC commands using the OmopDB role enumeration."""
 
     def __init__(self, app, logger=None, **kwargs):
         """Initialize the shared RBAC service with OmopDB roles."""

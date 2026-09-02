@@ -1,3 +1,5 @@
+"""Assemble complete case-type metadata filtered by the caller's ABAC access."""
+
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, model
@@ -6,13 +8,26 @@ from gen_epix.casedb.domain.repository.case import BaseCaseRepository
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.filter import UuidSetFilter
-from gen_epix.filter.string_set import StringSetFilter
 
 
 def case_service_retrieve_complete_case_type(
     self: BaseCaseService,
     cmd: command.RetrieveCompleteCaseTypeCommand,
 ) -> model.CompleteCaseType:
+    """Assemble case-type metadata and its effective collection access.
+
+    Columns and their dimensions and reference metadata are restricted to columns for
+    which the user has read or write access. Full-access policies expose all columns
+    and synthesize full rights for every data collection. Supplying no user follows
+    that full-access metadata path for internal callers.
+
+    Args:
+        self: Case service used for repository and application retrieval.
+        cmd: Command identifying the case type and optional user context.
+
+    Returns:
+        Complete accessible case-type metadata and effective ABAC mappings.
+    """
     # TODO: many calls are inefficient,
     # retrieving first all objs and then filtering.
     # To be improved with e.g. CQS.

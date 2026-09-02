@@ -1,3 +1,5 @@
+"""Provide SQLAlchemy-backed persistence for casedb case data."""
+
 from uuid import UUID
 
 from sqlalchemy import case as sa_case
@@ -13,6 +15,8 @@ from gen_epix.filter.datetime_range import DatetimeRangeFilter
 
 
 class CaseSARepository(SARepository, BaseCaseRepository):
+    """Encapsulates SQLAlchemy-backed persistence for casedb case data."""
+
     def retrieve_case_stats(
         self,
         uow: BaseUnitOfWork,
@@ -22,7 +26,7 @@ class CaseSARepository(SARepository, BaseCaseRepository):
         case_ids: set[UUID] | None = None,
         datetime_range_filter: DatetimeRangeFilter | None = None,
     ) -> model.CaseStats:
-
+        """See base method."""
         # Initialize some
         case_stats = model.CaseStats(case_type_id=case_type_id)
         has_abac = data_collections_by_time_unit is not None

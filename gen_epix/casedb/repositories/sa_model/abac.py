@@ -1,3 +1,5 @@
+"""Define SQLAlchemy persistence mappings for casedb ABAC policy models."""
+
 from uuid import UUID
 
 import sqlalchemy.orm as orm
@@ -14,6 +16,8 @@ Base: type = orm.declarative_base(name=enum.ServiceType.ABAC.value)
 
 
 class OrganizationAccessCasePolicy(Base, RowMetadataMixin):
+    """Persist the casedb OrganizationAccessCasePolicy domain model."""
+
     __tablename__, __table_args__ = create_table_args(
         model.OrganizationAccessCasePolicy
     )
@@ -60,6 +64,8 @@ class OrganizationAccessCasePolicy(Base, RowMetadataMixin):
 
 
 class UserAccessCasePolicy(Base, RowMetadataMixin):
+    """Persist the casedb UserAccessCasePolicy domain model."""
+
     __tablename__, __table_args__ = create_table_args(model.UserAccessCasePolicy)
 
     user_id: Mapped[UUID] = create_mapped_column(
@@ -101,6 +107,8 @@ class UserAccessCasePolicy(Base, RowMetadataMixin):
 
 
 class OrganizationShareCasePolicy(Base, RowMetadataMixin):
+    """Persist the casedb OrganizationShareCasePolicy domain model."""
+
     __tablename__, __table_args__ = create_table_args(model.OrganizationShareCasePolicy)
 
     organization_id: Mapped[UUID] = create_mapped_column(
@@ -133,6 +141,8 @@ class OrganizationShareCasePolicy(Base, RowMetadataMixin):
 
 
 class UserShareCasePolicy(Base, RowMetadataMixin):
+    """Persist the casedb UserShareCasePolicy domain model."""
+
     __tablename__, __table_args__ = create_table_args(model.UserShareCasePolicy)
 
     user_id: Mapped[UUID] = create_mapped_column(

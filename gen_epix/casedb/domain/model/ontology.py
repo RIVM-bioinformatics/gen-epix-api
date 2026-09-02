@@ -1,3 +1,9 @@
+"""Define casedb ontology and disease reference models.
+
+The module provides concept sets, concepts and their relations, plus disease,
+agent, and etiology models persisted through the shared domain model layer.
+"""
+
 # pylint: disable=too-few-public-methods
 # This module defines base classes, methods are added later
 
@@ -14,8 +20,10 @@ from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
 
 class ConceptSet(Model):
-    """
-    A set of concepts in the ontology.
+    """Represents a typed set of concepts in the ontology.
+
+    Model validation: Quantitative concept sets require a unit, while
+    non-quantitative concept sets must not specify one.
     """
 
     ENTITY: ClassVar = Entity(
@@ -26,9 +34,19 @@ class ConceptSet(Model):
     )
     code: str = Field(description="The code of the concept set", max_length=255)
     name: str = Field(description="The name of the concept set", max_length=255)
-    type: enum.ConceptSetType = Field(description="The type of the concept set")
+    type: enum.ConceptSetType = Field(
+        description=(
+            "The concept set type. Accepts an enum member or its string value "
+            "and is serialized as that string value."
+        )
+    )
     unit: enum.Unit | None = Field(
-        default=None, description="The unit of the concept set, if applicable."
+        default=None,
+        description=(
+            "The unit for a quantitative concept set, if applicable. Accepts an "
+            "enum member or its string value and is serialized as that string "
+            "value; None is preserved."
+        ),
     )
     description: str | None = Field(
         default=None,
@@ -39,6 +57,7 @@ class ConceptSet(Model):
     @field_validator("type", mode="before")
     @classmethod
     def _validate_type(cls, value: Any) -> enum.ConceptSetType:
+        """Normalize a string concept set type to its enum member."""
         if isinstance(value, str):
             return enum.ConceptSetType(value)
         return value
@@ -46,12 +65,14 @@ class ConceptSet(Model):
     @field_validator("unit", mode="before")
     @classmethod
     def _validate_unit(cls, value: Any) -> enum.Unit:
+        """Normalize a string unit to its enum member."""
         if isinstance(value, str):
             return enum.Unit(value)
         return value
 
     @model_validator(mode="after")
     def _validate_unit_for_type(self) -> Self:
+        """Enforce unit presence according to the concept set type."""
         if self.unit is None and self.type in enum.ConceptSetTypeSet.HAS_UNIT.value:
             raise ValueError(
                 f"ConceptSet {self.code}: unit must be provided for quantitative concept sets."
@@ -67,14 +88,18 @@ class ConceptSet(Model):
 
     @field_serializer("type", mode="plain")
     def _serialize_type(self, value: enum.ConceptSetType) -> str:
+        """Serialize the concept set type as its string value."""
         return value.value
 
     @field_serializer("unit", mode="plain")
     def _serialize_unit(self, value: enum.Unit | None) -> str | None:
+        """Serialize a unit as its string value while preserving None."""
         return None if value is None else value.value
 
 
 class Concept(Model):
+    """Represents a concept belonging to a typed ontology concept set."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="concepts",
         table_name="concept",
@@ -98,7 +123,14 @@ class Concept(Model):
         description="The rank of the concept within the set. Must be provided for ordinal sets, for other sets it is optional and can be used for sorting.",
     )
     props: dict[str, Any] | None = Field(
-        default=None, description="Additional properties of the concept."
+        default=None,
+        description=(
+            "Additional concept properties supplied as a mapping, JSON object "
+            "string, or None. The lb and ub values must be numeric and are "
+            "normalized to floats; lb_in and ub_in must be booleans or integers "
+            "and are normalized to booleans. The mapping is serialized as a JSON "
+            "object string, while None is preserved."
+        ),
     )
 
     @field_validator("props", mode="before")
@@ -106,14 +138,7 @@ class Concept(Model):
     def _validate_props(
         cls, props_value: dict[str, Any] | str | None
     ) -> dict[str, Any] | None:
-        """
-        Validate the props field, which is None, or a JSON string or dict with optional
-        keys:
-        - lb: lower bound (float)
-        - ub: upper bound (float)
-        - lb_in: lower bound inclusive (bool)
-        - ub_in: upper bound inclusive (bool)
-        """
+        """Normalize supported concept properties from a mapping or JSON string."""
         if props_value is None:
             return None
         if isinstance(props_value, str):
@@ -141,15 +166,14 @@ class Concept(Model):
 
     @field_serializer("props", mode="plain")
     def _serialize_props(self, value: dict[str, Any] | None) -> str | None:
+        """Serialize concept properties as JSON while preserving None."""
         if value is None:
             return None
         return json.dumps(value)
 
 
 class ConceptRelation(Model):
-    """
-    A relation between two concepts (analogous to RegionRelation).
-    """
+    """Represents a directed relation between two ontology concepts."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="concept_relations",
@@ -170,7 +194,10 @@ class ConceptRelation(Model):
     to_concept_id: UUID = Field(description="The ID of the second concept. FOREIGN KEY")
     to_concept: Concept | None = Field(default=None, description="The second concept.")
     relation: enum.ConceptRelationType = Field(
-        description="The relation between the two concepts."
+        description=(
+            "The relation type. Accepts an enum member or its string value and "
+            "is serialized as that string value."
+        )
     )
 
     @field_validator("relation")
@@ -178,19 +205,19 @@ class ConceptRelation(Model):
     def _validate_relation(
         cls, value: enum.ConceptRelationType | str
     ) -> enum.ConceptRelationType:
+        """Normalize a string relation value to its enum member."""
         if isinstance(value, str):
             value = enum.ConceptRelationType(value)
         return value
 
     @field_serializer("relation", mode="plain")
     def _serialize_relation(self, value: enum.ConceptRelationType) -> str:
+        """Serialize the relation type as its string value."""
         return value.value
 
 
 class Disease(Model):
-    """
-    A disease.
-    """
+    """Represents a disease and its optional ICD code."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="diseases",
@@ -207,9 +234,7 @@ class Disease(Model):
 
 
 class EtiologicalAgent(Model):
-    """
-    An etiological agent.
-    """
+    """Represents an agent that can cause a disease."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="etiological_agents",
@@ -222,9 +247,7 @@ class EtiologicalAgent(Model):
 
 
 class Etiology(Model):
-    """
-    The etiology of a disease based on an etiological agent.
-    """
+    """Represents a disease etiology associated with an etiological agent."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="etiologies",

@@ -14,7 +14,7 @@ from gen_epix.omopdb.repositories import sa_model as sa_model
 
 
 class OmopSARepository(SARepository, BaseOmopRepository):
-    """Implement OMOP query operations using SQLAlchemy model mappings."""
+    """Encapsulates implementation of OMOP query operations using SQLAlchemy model mappings."""
 
     def get_person_ids_modified_in_range(
         self,

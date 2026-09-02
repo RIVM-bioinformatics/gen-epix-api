@@ -8,7 +8,7 @@ from gen_epix.omopdb.domain.service import BaseOmopService as DomainBaseOmopServ
 
 class BaseOmopService(DomainBaseOmopService):
     """
-    Abstract base class for OMOP services defining the interface contract.
+    Encapsulates the abstract base class for OMOP services defining the interface contract.
     This additional base class allows splitting the implementation into
     multiple modules while maintaining linter support.
     """

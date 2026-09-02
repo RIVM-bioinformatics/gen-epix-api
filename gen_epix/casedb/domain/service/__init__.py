@@ -1,3 +1,10 @@
+"""Expose service contracts for casedb and shared application concerns.
+
+Casedb exports define ABAC, case, geographic, ontology, and seqdb command-handler
+interfaces. Shared exports provide authentication, organization, RBAC, and system
+service contracts used during application composition.
+"""
+
 # pylint: disable=useless-import-alias
 
 from gen_epix.casedb.domain.service.abac import BaseAbacService as BaseAbacService

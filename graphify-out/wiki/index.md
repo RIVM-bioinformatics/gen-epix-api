@@ -626,7 +626,7 @@
 - [CaseTools](CaseTools.md) — 1 nodes
 - [Casedb UserInvitationConstraints ERD](Casedb_UserInvitationConstraints_ERD.md) — 1 nodes
 - [Casedb UserNameEmail ERD](Casedb_UserNameEmail_ERD.md) — 1 nodes
-- [CaseDB RBAC Diagram](CaseDB_RBAC_Diagram.md) — 1 nodes
+- [casedb RBAC Diagram](CaseDB_RBAC_Diagram.md) — 1 nodes
 - [Casedb Outage ERD](Casedb_Outage_ERD.md) — 1 nodes
 - [Casedb PackageMetadata ERD](Casedb_PackageMetadata_ERD.md) — 1 nodes
 - [Omopdb Auth ERD (IdentityProvider)](Omopdb_Auth_ERD_IdentityProvider.md) — 1 nodes

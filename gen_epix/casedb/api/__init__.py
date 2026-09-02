@@ -1,3 +1,11 @@
+"""Expose casedb request models and shared API authorization representations.
+
+Case request exports cover associations, case sets, linked seqdb files, rights,
+queries, statistics, validation rules, and phylogenetic retrieval. The ontology
+request export updates disease-agent associations. Shared commondb exports provide
+user and organization request models plus ``ApiPermission`` for router contracts.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix.casedb.api.case import (
     CaseTypeSetCaseTypeUpdateAssociationRequestBody as CaseTypeSetCaseTypeUpdateAssociationRequestBody,

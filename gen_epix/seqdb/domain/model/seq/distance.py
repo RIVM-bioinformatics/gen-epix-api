@@ -18,7 +18,7 @@ from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 class SeqDistance(
     Model, HasSampleMixin, HasProtocolMixin, ContentMixin[enum.SeqDistanceFormat]
 ):
-    """Store profile-to-profile distances produced by a protocol.
+    """Represents profile-to-profile distances produced by a protocol.
 
     Model validation: The content must encode a JSON profile-distance map in
     ``PROFILE_DISTANCE_MAP`` format. Validation resets ``content_hash`` to its

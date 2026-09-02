@@ -1,3 +1,9 @@
+"""Provide an HTTP command client for remote casedb applications.
+
+The client extends commondb collaboration with casedb routes, request models,
+response conversion, streaming, and command-specific timeouts.
+"""
+
 import base64
 from collections.abc import Iterable
 from typing import Any
@@ -13,7 +19,13 @@ from gen_epix.seqdb.domain import model as seqdb_model
 
 
 class CasedbRemoteApp(CommondbRemoteApp):
-    """Remote app client for the casedb service."""
+    """Encapsulates remote casedb command dispatch over HTTP.
+
+    Initialization first registers inherited commondb collaboration and generated
+    CRUD handling, then adds casedb-specific routes and handlers. Handler methods
+    translate command data to API request bodies and convert responses back to
+    domain models.
+    """
 
     DEFAULT_ROUTE_PREFIX = "/v1"
 
@@ -52,7 +64,12 @@ class CasedbRemoteApp(CommondbRemoteApp):
     }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        """Register all casedb routes and command handlers."""
+        """Initialize the client and register casedb routes and command handlers.
+
+        Args:
+            *args: Positional remote-app connection and authentication settings.
+            **kwargs: Keyword remote-app connection and authentication settings.
+        """
         super().__init__(DOMAIN, *args, **kwargs)
 
         # Register routes

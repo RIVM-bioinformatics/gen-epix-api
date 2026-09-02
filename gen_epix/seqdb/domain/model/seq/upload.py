@@ -33,7 +33,7 @@ from gen_epix.util import copy_model_field
 
 
 class ValidateRefDataIdCodeMixin:
-    """Require upload reference data to be identified by an ID or a code.
+    """Encapsulates the requirement to identify upload reference data by an ID or a code.
 
     Model validation: Each configured ID-and-code field pair must contain a
     non-null ID or a code so reference data can be resolved during upload.
@@ -55,7 +55,7 @@ class ValidateRefDataIdCodeMixin:
 
 
 class ReadSetForUpload(ReadSet, IdentifiersMixin, ValidateRefDataIdCodeMixin):
-    """Represent a read set intended for upload."""
+    """Represents a read set intended for upload."""
 
     ENTITY: ClassVar = ReadSet.model_entity().clone(update={"persistable": False})
     NAME: ClassVar = "ReadSetForUpload"
@@ -81,7 +81,7 @@ class ReadSetForUpload(ReadSet, IdentifiersMixin, ValidateRefDataIdCodeMixin):
 
 
 class SeqForUpload(Seq, IdentifiersMixin, ValidateRefDataIdCodeMixin):
-    """Represent a sequence intended for upload."""
+    """Represents a sequence intended for upload."""
 
     ENTITY: ClassVar = Seq.model_entity().clone(update={"persistable": False})
     NAME: ClassVar = "SeqForUpload"
@@ -382,7 +382,7 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
 
 
 class AlleleForUpload(Allele):
-    """An allele intended for upload. Equal to an Allele, with
+    """Represents an allele intended for upload. Equal to an Allele, with
     additional variables.
     """
 
@@ -396,7 +396,7 @@ class AlleleForUpload(Allele):
 
 
 class SeqClassificationForUpload(SeqClassification, ValidateRefDataIdCodeMixin):
-    """A sequence classification intended for upload. Equal to a SeqClassification, with
+    """Represents a sequence classification intended for upload. Equal to a SeqClassification, with
     additional variables.
 
     Model validation: Content validation is not implemented yet, so classification
@@ -453,7 +453,7 @@ class SeqClassificationForUpload(SeqClassification, ValidateRefDataIdCodeMixin):
 
 
 class SampleForUpload(ParentForUpload):
-    """A sample intended for upload, together with any relevant associated data."""
+    """Represents a sample intended for upload, together with any relevant associated data."""
 
     ENTITY: ClassVar = ParentForUpload.model_entity().clone()
     NAME = "SampleForUpload"
@@ -527,11 +527,11 @@ class SampleForUpload(ParentForUpload):
 
 
 class SampleDataIssue(DataIssue):
-    """Describe an issue found while uploading a sample or its associated data."""
+    """Represents an issue found while uploading a sample or its associated data."""
 
 
 class SampleUploadResult(ParentUploadResult):
-    """Represent the outcome of uploading one sample and its associated data.
+    """Represents the outcome of uploading one sample and its associated data.
 
     Result field names match ``SampleForUpload`` fields to support caller processing.
     """
@@ -605,7 +605,7 @@ class SampleUploadResult(ParentUploadResult):
 
 
 class SampleBatchForUpload(BaseBatchForUpload):
-    """A set of samples intended for upload, together with any new reference data required
+    """Represents a set of samples intended for upload, together with any new reference data required
     for the storage of these data.
 
     The batch can include new alleles required to store its sample data.
@@ -690,7 +690,7 @@ class CalculateSeqDistancesResult(UploadResult):
 
 
 class SampleBatchUploadResult(BaseBatchUploadResult):
-    """Represent the result of uploading a batch of samples."""
+    """Represents the result of uploading a batch of samples."""
 
     ENTITY: ClassVar = SampleBatchForUpload.model_entity().clone()
     NAME: ClassVar = "SampleBatchUploadResult"

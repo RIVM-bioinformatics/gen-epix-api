@@ -1,3 +1,16 @@
+"""Expose and organize casedb and shared domain models for registration.
+
+ABAC exports describe case-policy records and effective rights. Case exports cover
+reference metadata, operational records, queries, rights, statistics, and uploads;
+geographic and ontology exports provide reference models, and the seqdb export
+provides phylogenetic trees. Shared commondb and FastApp exports provide common
+identity, organization, system, upload, authentication, and model metadata types.
+
+The package builds service-ordered model groups, shared model substitutions, and
+stored-model field properties. Importing it completes stored-field metadata and
+adds inherited documentation to casedb-specific model classes.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix import fastapp
 from gen_epix.casedb.domain import enum

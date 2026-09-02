@@ -1,3 +1,5 @@
+"""Define casedb commands that retrieve sequence data from seqdb."""
+
 from uuid import UUID
 
 from pydantic import Field
@@ -8,9 +10,7 @@ from gen_epix.commondb.domain.command import Command
 
 
 class RetrieveGeneticSequenceByIdCommand(Command):
-    """
-    Retrieve a genetic sequence by its ID.
-    """
+    """Represent a request for genetic sequences identified by ID."""
 
     seq_ids: list[UUID] = Field(
         description="The IDs of the genetic sequences to retrieve."
@@ -18,9 +18,10 @@ class RetrieveGeneticSequenceByIdCommand(Command):
 
 
 class RetrieveGeneticSequenceFastaByIdCommand(Command):
-    """
-    Retrieve a set of genetic sequences in FASTA format based on a set of sequence IDs.
-    An iterator is returned that yields the FASTA lines.
+    """Represent a request for genetic sequences in FASTA format.
+
+    The response is an iterator that yields FASTA lines for the requested
+    sequence IDs using the configured wrapping width.
     """
 
     seq_ids: list[UUID] = Field(

@@ -10,7 +10,7 @@ from gen_epix.omopdb.domain import model
 
 
 class BaseOmopRepository(BaseRepository):
-    """Define persistence operations for OmopDB person and specimen queries."""
+    """Encapsulates persistence operations for OmopDB person and specimen queries."""
 
     @abc.abstractmethod
     def get_person_ids_modified_in_range(

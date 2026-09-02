@@ -1,5 +1,5 @@
-"""
-CRUD operations for RefCol entities.
+"""Handle CRUD operations for reference-column entities.
+
 This is a simple metadata entity with no ABAC restrictions.
 """
 
@@ -25,7 +25,19 @@ _REF_COL_CONCEPT_SET_TYPE_MAP: dict[enum.ColType, enum.ConceptSetType] = {
 def case_service_crud_ref_col(
     self: BaseCaseService, cmd: command.RefColCrudCommand
 ) -> list[model.RefCol] | model.RefCol | list[UUID] | UUID | list[bool] | bool | None:
-    """Handle CRUD operations for RefCol entities."""
+    """Handle reference-column CRUD with access filtering and write validation.
+
+    Args:
+        self: Case service handling the command.
+        cmd: Reference-column CRUD command.
+
+    Returns:
+        Access-filtered read results or the delegated write result.
+
+    Raises:
+        InvalidArgumentsError: If a write uses incompatible dimension, concept-set,
+            unit, or immutable-field metadata, or the operation is unsupported.
+    """
     assert cmd.user is not None and cmd.user.id is not None
 
     if cmd.is_read():
@@ -119,6 +131,17 @@ def _verify_ref_col_concept_set_type_and_unit(
     cmd: command.RefColCrudCommand,
     ref_cols: list[model.RefCol],
 ) -> None:
+    """Validate concept-set type and unit compatibility for reference columns.
+
+    Args:
+        self: Case service used to retrieve concept sets.
+        cmd: Reference-column command providing user and policy context.
+        ref_cols: Reference columns to validate.
+
+    Raises:
+        InvalidArgumentsError: If a reference column's unit or column type conflicts
+            with its concept set.
+    """
     concept_set_ids = {
         x.concept_set_id for x in ref_cols if x.concept_set_id is not None
     }

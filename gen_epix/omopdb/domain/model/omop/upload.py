@@ -22,7 +22,7 @@ from gen_epix.util import copy_model_field
 
 class MeasurementForUpload(model.Measurement, IdentifiersMixin):
     """
-    An measurement record intended for upload. Equal to a Measurement, with
+    Represents a measurement record intended for upload. Equal to a Measurement, with
     additional variables.
     """
 
@@ -44,7 +44,7 @@ class MeasurementForUpload(model.Measurement, IdentifiersMixin):
 
 class ObservationForUpload(model.Observation, IdentifiersMixin):
     """
-    An observation record intended for upload. Equal to an Observation, with
+    Represents an observation record intended for upload. Equal to an Observation, with
     additional variables.
     """
 
@@ -66,7 +66,7 @@ class ObservationForUpload(model.Observation, IdentifiersMixin):
 
 class SpecimenForUpload(model.Specimen, IdentifiersMixin):
     """
-    A specimen record intended for upload. Equal to a Specimen, with
+    Represents a specimen record intended for upload. Equal to a Specimen, with
     additional variables.
     """
 
@@ -88,7 +88,7 @@ class SpecimenForUpload(model.Specimen, IdentifiersMixin):
 
 class MeasurementRelationForUpload(model.MeasurementRelation, IdentifiersMixin):
     """
-    A measurement relation record intended for upload. Equal to a MeasurementRelation, with
+    Represents a measurement relation record intended for upload. Equal to a MeasurementRelation, with
     additional variables.
     """
 
@@ -106,7 +106,7 @@ class MeasurementRelationForUpload(model.MeasurementRelation, IdentifiersMixin):
 
 class PersonForUpload(ParentForUpload):
     """
-    A person, together with any relevant associated data, intended for upload.
+    Represents a person, together with any relevant associated data, intended for upload.
     """
 
     ENTITY: ClassVar = ParentForUpload.model_entity().clone(
@@ -159,12 +159,12 @@ class PersonForUpload(ParentForUpload):
 
 
 class PersonDataIssue(DataIssue):
-    """Describe a validation or processing issue in an OMOP person upload."""
+    """Represents a validation or processing issue in an OMOP person upload."""
 
 
 class PersonUploadResult(ParentUploadResult):
     """
-    The result of uploading a single person.
+    Represents the result of uploading a single person.
     """
 
     ENTITY: ClassVar = ParentUploadResult.model_entity().clone()
@@ -216,7 +216,7 @@ class PersonUploadResult(ParentUploadResult):
 
 class PersonBatchForUpload(BaseBatchForUpload):
     """
-    A set of persons intended for upload, together with any new reference data required
+    Represents a set of persons intended for upload, together with any new reference data required
     for the storage of these data.
     """
 
@@ -313,7 +313,7 @@ class PersonBatchForUpload(BaseBatchForUpload):
 
 class PersonBatchUploadResult(BaseBatchUploadResult):
     """
-    The result of uploading a batch of persons.
+    Represents the result of uploading a batch of persons.
     """
 
     ENTITY: ClassVar = BaseBatchForUpload.model_entity().clone()

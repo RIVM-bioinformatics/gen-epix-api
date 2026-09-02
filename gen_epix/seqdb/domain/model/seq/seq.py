@@ -32,7 +32,7 @@ from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 
 class Contig(BaseSeq, QualityMixin):
     """
-    A contiguous DNA sequence. Any IUPAC ambiguity codes are allowed in the sequence.
+    Represents a contiguous DNA sequence. Any IUPAC ambiguity codes are allowed in the sequence.
 
     A contig is not persistable on its own, but is meant to be part of other objects
     through composition.
@@ -57,7 +57,7 @@ class Contig(BaseSeq, QualityMixin):
 
 
 class Seq(Model, HasSampleMixin, QualityMixin):
-    """A DNA sequence, typically representing an assembled genome or a part thereof. A
+    """Represents a DNA sequence, typically representing an assembled genome or a part thereof. A
     sequence consists of one or more contiguous sequences (contigs).
 
     The actual sequence data need not be provided on creation of this instance, to
@@ -399,7 +399,7 @@ class Seq(Model, HasSampleMixin, QualityMixin):
 
 
 class SeqIdentifier(BaseIdentifier):
-    """Associate an external identifier with a sequence."""
+    """Represents an external identifier associated with a sequence."""
 
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         Seq,
@@ -416,7 +416,7 @@ class SeqIdentifier(BaseIdentifier):
 
 
 class HasSeqMixin:
-    """Provide optional sequence relationship fields to derived result models."""
+    """Encapsulates optional sequence relationship fields for derived result models."""
 
     # Annotation-only: an assigned Field lingers as class attr -> pydantic shadow warning
     seq_id: Annotated[

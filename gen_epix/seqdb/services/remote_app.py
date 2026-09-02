@@ -14,7 +14,7 @@ from gen_epix.seqdb.domain import DOMAIN, command, enum, model
 
 
 class SeqdbRemoteApp(CommondbRemoteApp):
-    """Remote app client for the seqdb service."""
+    """Encapsulates the remote app client for the seqdb service."""
 
     DEFAULT_ROUTE_PREFIX = "/v1"
 

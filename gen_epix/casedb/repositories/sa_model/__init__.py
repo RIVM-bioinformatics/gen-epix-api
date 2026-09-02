@@ -1,3 +1,15 @@
+"""Expose and register SQLAlchemy persistence models for casedb entities.
+
+The ABAC exports map case access and sharing policies. Case, geographic, and
+ontology exports map their respective domain entities, while shared commondb
+exports map organization, system, and administrative entities and provide
+``RowMetadataMixin`` plus the registration helper.
+
+``SA_MODELS_BY_SERVICE_TYPE`` groups domain-to-persistence mappings by service.
+Importing this package registers those mappings on ``DOMAIN`` with the shared
+row-metadata mixin and field-name map.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix.casedb.domain import DOMAIN, enum, model
 from gen_epix.casedb.repositories.sa_model.abac import (
@@ -82,15 +94,11 @@ from gen_epix.commondb.repositories.sa_model import (
     OrganizationSetMember as OrganizationSetMember,
 )
 from gen_epix.commondb.repositories.sa_model import Outage as Outage
-from gen_epix.commondb.repositories.sa_model import (
-    RowMetadataMixin,
-)
+from gen_epix.commondb.repositories.sa_model import RowMetadataMixin
 from gen_epix.commondb.repositories.sa_model import Site as Site
 from gen_epix.commondb.repositories.sa_model import User as User
 from gen_epix.commondb.repositories.sa_model import UserInvitation as UserInvitation
-from gen_epix.commondb.repositories.sa_model import (
-    set_entity_repository_model_classes,
-)
+from gen_epix.commondb.repositories.sa_model import set_entity_repository_model_classes
 
 SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]] = {
     enum.ServiceType.ABAC: {
