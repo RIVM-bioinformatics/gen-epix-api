@@ -19,7 +19,7 @@ PolicyType = TypeVar("PolicyType", bound=fastapp.Policy)
 
 
 class AppImplDetails(BaseModel):
-    """Store validated service, repository, dependency, and authorization metadata.
+    """Represents validated service, repository, dependency, and authorization metadata.
 
     Model validation:
     Role maps must have unique values, service types must be unique, and mapped

@@ -12,7 +12,7 @@ from gen_epix.fastapp.model import UpdateAssociationCommand
 
 
 class BaseOrganizationService(BaseService[BaseOrganizationRepository]):
-    """Provide organization, invitation, and user lifecycle operations."""
+    """Encapsulates organization, invitation, and user lifecycle operations."""
 
     SERVICE_TYPE = ServiceType.ORGANIZATION
 

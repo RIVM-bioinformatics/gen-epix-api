@@ -22,7 +22,7 @@ from gen_epix.util import get_package_root
 
 
 class SystemService(BaseSystemService):
-    """Provide system configuration data and register global commondb policies."""
+    """Encapsulates system configuration data and register global commondb policies."""
 
     REQUIREMENTS_FILE_NAME = "pyproject.toml"
     _PARSE_AND_GET_PACKAGE_METADATA_CACHE: ClassVar[TTLCache] = TTLCache(

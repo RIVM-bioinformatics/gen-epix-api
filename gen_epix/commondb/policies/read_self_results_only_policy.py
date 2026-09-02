@@ -10,7 +10,7 @@ from gen_epix.fastapp import Command, CrudOperation
 
 
 class ReadSelfResultsOnlyPolicy(BaseReadSelfResultsOnlyPolicy):
-    """Apply AFTER-phase self-only filtering for non-administrative users."""
+    """Encapsulates AFTER-phase self-only filtering for non-administrative users."""
 
     def __init__(self, abac_service: BaseAbacService, **kwargs: Any):
         """Initialize role mappings and command attributes that identify ownership.

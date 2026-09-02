@@ -27,7 +27,7 @@ from gen_epix.filter import (
 
 
 class AbacService(BaseAbacService):
-    """Register commondb ABAC policies and resolve organization administration."""
+    """Encapsulates ABAC policy registration and organization administration resolution."""
 
     CACHE_INVALIDATION_COMMANDS: tuple[type[Command], ...] = (
         command.UpdateUserOwnOrganizationCommand,

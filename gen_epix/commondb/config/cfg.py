@@ -44,7 +44,7 @@ def _is_descendant_logger(logger_name: str, parent_logger_name: str) -> bool:
 
 
 class BaseAppCfg(abc.ABC):
-    """Abstract base class for application configuration."""
+    """Encapsulates an abstract base class for application configuration."""
 
     def __init__(self) -> None:
         """Declare instance attributes; subclasses must assign them in their own __init__."""
@@ -142,7 +142,7 @@ class BaseAppCfg(abc.ABC):
 
 
 class AppCfg(BaseAppCfg):
-    """Main application configuration class using Strategy Pattern."""
+    """Encapsulates the main application configuration class using Strategy Pattern."""
 
     @staticmethod
     def _prefix_envvar(

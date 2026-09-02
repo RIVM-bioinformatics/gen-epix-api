@@ -11,7 +11,7 @@ from gen_epix.fastapp import Command, CrudOperation
 
 
 class HasSystemOutagePolicy(BaseHasSystemOutagePolicy):
-    """Allow outage administration while restricting requests during active outages."""
+    """Encapsulates outage administration while restricting requests during active outages."""
 
     _IS_PERMITTED_CACHE: ClassVar[TTLCache] = TTLCache(maxsize=100, ttl=100)
     _IS_ALLOWED_CACHE: ClassVar[TTLCache] = TTLCache(maxsize=10, ttl=10)

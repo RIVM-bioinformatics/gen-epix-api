@@ -24,7 +24,7 @@ from gen_epix.fastapp.model import Command, Policy
 
 
 class ModelMetadataPolicy(Policy):
-    """Apply AFTER-phase masking to audit fields on returned domain models."""
+    """Encapsulates AFTER-phase masking to audit fields on returned domain models."""
 
     def __init__(
         self, role_set_map: dict[enum.RoleSet | enum.Enum, frozenset[str]]

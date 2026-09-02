@@ -19,7 +19,7 @@ from gen_epix.util import str_to_uuid
 
 
 class UserManager(BaseUserManager):
-    """Resolve authenticated users and create root, invited, and automatic users."""
+    """Encapsulates authenticated-user resolution and automatic user creation."""
 
     DEFAULT_KEY_CLAIM = "__key__"
     DEFAULT_NAME_CLAIMS: list[str | list[str]] = [

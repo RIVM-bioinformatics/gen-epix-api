@@ -7,7 +7,7 @@ from gen_epix.fastapp import BaseRepository, BaseUnitOfWork
 
 
 class BaseOrganizationRepository(BaseRepository):
-    """Provide organization-specific user lookup operations for services."""
+    """Encapsulates organization-specific user lookup operations for services."""
 
     def __init__(
         self,

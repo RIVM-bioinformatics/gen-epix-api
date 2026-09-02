@@ -15,7 +15,7 @@ from gen_epix.fastapp.app import App
 
 
 class RbacService(BaseRbacService):
-    """Resolve commondb roles and permissions for command authorization."""
+    """Encapsulates resolution of commondb roles and permissions for command authorization."""
 
     def __init__(self, app: App, **kwargs: Any) -> None:
         """Initialize configured role mappings and permissions exempt from RBAC.

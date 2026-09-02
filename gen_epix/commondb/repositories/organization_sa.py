@@ -13,7 +13,7 @@ from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork
 
 
 class OrganizationSARepository(SARepository, BaseOrganizationRepository):
-    """Store organization records and resolve users by normalized key in SQL."""
+    """Encapsulates SQL organization storage and normalized user lookup."""
 
     def __init__(
         self,

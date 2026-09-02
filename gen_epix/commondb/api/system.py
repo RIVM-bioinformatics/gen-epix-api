@@ -21,26 +21,26 @@ external_logger_fmap = exc.get_logger_fmap(logging.getLogger("commondb.external"
 
 
 class HealthStatus(Enum):
-    """Represent the externally reported application health state."""
+    """Encapsulates the externally reported application health state."""
 
     HEALTHY = "HEALTHY"
     UNHEALTHY = "UNHEALTHY"
 
 
 class HealthResponseBody(PydanticBaseModel):
-    """Return the current application health state."""
+    """Represents the current application health state."""
 
     status: HealthStatus
 
 
 class FeatureFlagsResponseBody(PydanticBaseModel):
-    """Return configured feature flags keyed by their public names."""
+    """Represents configured feature flags keyed by their public names."""
 
     feature_flags: dict[str, bool]
 
 
 class LogItem(PydanticBaseModel):
-    """Represent one externally submitted structured application log item."""
+    """Represents one externally submitted structured application log item."""
 
     level: LogLevel
     command_id: str
@@ -52,13 +52,13 @@ class LogItem(PydanticBaseModel):
 
 
 class LogRequestBody(PydanticBaseModel):
-    """Carry structured log items submitted to the commondb logging endpoint."""
+    """Represents structured log items submitted to the commondb logging endpoint."""
 
     log_items: list[LogItem]
 
 
 class LicensesResponseBody(PydanticBaseModel):
-    """Return metadata for application and dependency package licenses."""
+    """Represents metadata for application and dependency package licenses."""
 
     packages: list[PackageMetadata]
 

@@ -21,7 +21,7 @@ from gen_epix.fastapp import App, Command, CrudCommand, CrudOperation
 
 
 class EndpointTestClient:
-    """Translate supported commondb commands into FastAPI test-client requests."""
+    """Encapsulates translation of supported commondb commands into FastAPI test-client requests."""
 
     SECRET_KEY = str(uuid.uuid4())
     ENCRYPTION_ALGORITHM = "HS256"

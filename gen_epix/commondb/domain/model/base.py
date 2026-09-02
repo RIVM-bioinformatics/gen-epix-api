@@ -18,7 +18,9 @@ from gen_epix.fastapp.enum import LogLevel
 
 
 class ModelNoId(fastapp.Model):
-    """Add creation and modification metadata to a FastApp domain model.
+    """Represents creation and modification metadata to a FastApp domain model.
+
+    Intended as a base class for other models.
 
     Services call the mutation helpers before persisting a model so audit
     timestamps and the responsible user ID remain synchronized.
@@ -60,7 +62,7 @@ class ModelNoId(fastapp.Model):
 
 
 class Model(ModelNoId):
-    """Add an optional persistent identifier to commondb audit-aware models."""
+    """Represents an optional persistent identifier to commondb audit-aware models."""
 
     id: UUID | None = Field(
         default=None,
@@ -69,7 +71,7 @@ class Model(ModelNoId):
 
 
 class EtlLogItem(BaseModel):
-    """Represent one immutable, structured event in an ETL result accumulator."""
+    """Represents one immutable, structured event in an ETL result accumulator."""
 
     timestamp: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
@@ -108,7 +110,7 @@ class EtlLogItem(BaseModel):
 
 
 class BaseEtlResult(BaseModel):
-    """Accumulate structured ETL messages and expose severity-specific queries.
+    """Represents accumulated ETL messages with severity-specific queries.
 
     Pydantic subclasses declare their status field and override
     :meth:`set_error_status` to mark an error after :meth:`add_error` appends

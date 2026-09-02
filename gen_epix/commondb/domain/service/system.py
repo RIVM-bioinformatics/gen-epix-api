@@ -10,7 +10,7 @@ from gen_epix.fastapp import BaseService
 
 
 class BaseSystemService(BaseService[BaseSystemRepository]):
-    """Provide system-outage, package-license, and feature-flag operations."""
+    """Encapsulates system-outage, package-license, and feature-flag operations."""
 
     SERVICE_TYPE = ServiceType.SYSTEM
 

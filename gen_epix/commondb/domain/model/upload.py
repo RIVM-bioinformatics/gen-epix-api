@@ -31,7 +31,7 @@ UploadLogItem = EtlLogItem
 
 
 class IdentifiersMixin:
-    """Mixin that adds identifiers fields and validation.
+    """Encapsulates a mixin that adds identifiers fields and validation.
 
     Assumes that the inheriting model also has an 'identifiers' field.
     """
@@ -92,7 +92,7 @@ class IdentifiersMixin:
 
 
 class DataIssue(PydanticBaseModel):
-    """Describe a validation or transformation issue for one uploaded value."""
+    """Represents a validation or transformation issue for one uploaded value."""
 
     original_value: str | None = Field(description="The original value")
     updated_value: str | None = Field(
@@ -106,7 +106,7 @@ class DataIssue(PydanticBaseModel):
 
 
 class UploadResult(BaseEtlResult, Model):
-    """Represent the result of an upload operation for one object.
+    """Represents the result of an upload operation for one object.
 
     It includes upload status and logs.
 
@@ -168,7 +168,7 @@ class UploadResult(BaseEtlResult, Model):
 
 
 class UploadResultWithIdentifiers(UploadResult):
-    """Represent an upload result with nested identifier results.
+    """Represents an upload result with nested identifier results.
 
     It mirrors a for-upload class that has identifiers.
     """
@@ -208,7 +208,7 @@ class UploadResultWithIdentifiers(UploadResult):
 
 
 class ParentForUpload(Model, IdentifiersMixin):
-    """Represent a parent model and its linked child models for upload.
+    """Represents a parent model and its linked child models for upload.
 
     The term "parent" refers to a model that can have linked child models. Other identifiers
     can also be added here, in the "identifiers" field.
@@ -410,7 +410,7 @@ class ParentForUpload(Model, IdentifiersMixin):
 
 
 class ParentUploadResult(UploadResultWithIdentifiers):
-    """Record upload results for a parent payload and its children.
+    """Represents upload results for a parent payload and its children.
 
     Subclasses correspond to their ParentForUpload payload type.
     """
@@ -558,7 +558,7 @@ class ParentUploadResult(UploadResultWithIdentifiers):
 
 
 class BaseBatchForUpload(Model):
-    """Base class for batches of ParentForUpload objects to be uploaded.
+    """Represents a base class for batches of ParentForUpload objects to be uploaded.
 
     A batch is intended as a single unit of work for an upload operation and as such to be
     processed atomically.
@@ -777,7 +777,7 @@ class BaseBatchForUpload(Model):
 
 
 class BaseBatchUploadResult(UploadResult):
-    """Define the result for an atomic batch upload.
+    """Represents the result for an atomic batch upload.
 
     Subclasses use field names that match their BaseBatchForUpload payload.
     """

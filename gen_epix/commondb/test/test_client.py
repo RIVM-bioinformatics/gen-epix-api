@@ -23,7 +23,7 @@ BASE_MODEL_TYPE = TypeVar("BASE_MODEL_TYPE", bound=model.Model)
 
 
 class TestClient:
-    """Provide integration-test helpers for querying and verifying application state.
+    """Encapsulates integration-test helpers for querying and verifying application state.
 
     Helpers use commands and the in-memory object store.
     """

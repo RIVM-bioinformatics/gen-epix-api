@@ -15,7 +15,7 @@ from gen_epix.fastapp.user_manager import BaseUserManager as ServiceUserManager
 
 
 class BaseUserManager(ServiceUserManager):
-    """Resolve commondb users and validate root and automatic-user configuration."""
+    """Encapsulates user resolution and configuration validation."""
 
     DEFAULT_KEY_CLAIM = "__key__"
 
