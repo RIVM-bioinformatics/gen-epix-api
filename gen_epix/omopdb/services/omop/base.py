@@ -8,7 +8,7 @@ from gen_epix.omopdb.domain.service import BaseOmopService as DomainBaseOmopServ
 
 class BaseOmopService(DomainBaseOmopService):
     """
-    Encapsulates an omopdb service, by providing additional 
+    Encapsulates an omopdb service, by providing additional
     implementation details common to all omopdb services.
     """
 
