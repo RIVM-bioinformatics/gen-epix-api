@@ -34,6 +34,10 @@ class BaseSeqService(BaseService):
             self.retrieve_seq_fasta,
         )
         f(
+            command.ConvertSeqFormatCommand,
+            self.convert_seq_format,
+        )
+        f(
             command.UploadSamplesCommand,
             self.upload_samples,
         )
@@ -271,6 +275,23 @@ class BaseSeqService(BaseService):
 
         Returns:
             FASTA text chunks.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def convert_seq_format(
+        self,
+        cmd: command.ConvertSeqFormatCommand,
+    ) -> list[UUID]:
+        """Convert all contigs in the requested sequences to a new representation.
+
+        Args:
+            cmd: Sequence-format conversion command to execute.
+        Returns:
+            Identifiers of the converted sequences.
 
         Raises:
             NotImplementedError: Always, until a concrete sequence service implements it.

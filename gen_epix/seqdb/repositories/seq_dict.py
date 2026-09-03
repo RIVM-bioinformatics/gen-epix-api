@@ -106,7 +106,7 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
             Sequence identifiers paired with contig identifiers and DNA strings.
 
         Raises:
-            InitializationServiceError: A contig does not use the plain DNA format.
+            InitializationServiceError: A contig does not use a DNA format.
         """
         self.raise_on_duplicate_ids(seq_ids)
 
@@ -115,13 +115,13 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
             assert seq.id is not None
             contig_list: list[tuple[UUID, str]] = []
             for contig in seq.contigs:
-                if contig.seq_format != enum.SeqFormat.STR_DNA:
+                if contig.seq_format not in enum.SeqFormatSet.DNA.value:
                     raise exc.InitializationServiceError(
                         "37fd4cf1",
                         f"FASTA export not supported for {contig.seq_format.value} format",
                     )
                 assert contig.id is not None
-                contig_list.append((contig.id, contig.seq))
+                contig_list.append((contig.id, contig.get_nucleotide_seq()))
             yield (seq.id, contig_list)
 
     def retrieve_similar_profiles(

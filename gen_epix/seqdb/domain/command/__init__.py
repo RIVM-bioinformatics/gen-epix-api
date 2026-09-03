@@ -101,6 +101,9 @@ from gen_epix.seqdb.domain.command.seq import (
     CalculateSeqDistancesForNewProfilesCommand as CalculateSeqDistancesForNewProfilesCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
+    ConvertSeqFormatCommand as ConvertSeqFormatCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
     LocusCodeMapCrudCommand as LocusCodeMapCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import LocusCrudCommand as LocusCrudCommand
@@ -223,6 +226,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         RefAlleleCrudCommand,
         RefSeqCrudCommand,
         CalculatePhylogeneticTreeCommand,
+        ConvertSeqFormatCommand,
         RetrieveBestSeqClassificationPerSampleCommand,
         RetrieveBestSeqPerSampleCommand,
         RetrieveBestSeqProfilePerSampleCommand,
