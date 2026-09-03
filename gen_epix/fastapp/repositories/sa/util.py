@@ -69,6 +69,12 @@ PYTHON_SQL_TYPE_MAP = {
     Json: sa.JSON,
 }
 
+# SQL Server rejects NVARCHAR(n) for n > 4000 and VARCHAR(n) for n > 8000
+# (error 2717). Fields whose max_length exceeds these limits are mapped to an
+# unbounded text column type instead (NVARCHAR(MAX) / VARCHAR(MAX) / TEXT).
+MAX_UNICODE_COLUMN_LENGTH = 4000
+MAX_STRING_COLUMN_LENGTH = 8000
+
 PYDANTIC_SA_FIELD_METADATA_MAP: dict[str, str] = {
     "max_length": "length",
     "max_digits": "precision",
@@ -202,6 +208,28 @@ def create_sa_type_from_field_info(
         # Special case: Unicode without length becomes UnicodeText
         if sa_type_class is sa.Unicode and "length" not in new_kwargs:
             sa_type_class = sa.UnicodeText
+            new_kwargs = (
+                get_sa_type_kwargs_from_field_info(sa_type_class, field_info) | kwargs
+            )
+        # Special case: Unicode/String longer than the SQL Server NVARCHAR(n) /
+        # VARCHAR(n) limit (n <= 4000 / 8000) becomes an unbounded text type. On
+        # SQL Server this compiles to NVARCHAR(MAX) / VARCHAR(MAX); elsewhere to
+        # TEXT. The pydantic-level max_length validation is unaffected: only the
+        # DB column type changes, so a too-large length can no longer produce
+        # invalid DDL (SQL Server error 2717).
+        if (
+            sa_type_class is sa.Unicode
+            and new_kwargs.get("length", 0) > MAX_UNICODE_COLUMN_LENGTH
+        ):
+            sa_type_class = sa.UnicodeText
+            new_kwargs = (
+                get_sa_type_kwargs_from_field_info(sa_type_class, field_info) | kwargs
+            )
+        if (
+            sa_type_class is sa.String
+            and new_kwargs.get("length", 0) > MAX_STRING_COLUMN_LENGTH
+        ):
+            sa_type_class = sa.Text
             new_kwargs = (
                 get_sa_type_kwargs_from_field_info(sa_type_class, field_info) | kwargs
             )
