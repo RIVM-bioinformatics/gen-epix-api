@@ -22,7 +22,21 @@ from gen_epix.filter import CompositeFilter, Filter, LogicalOperator
 
 
 class DictRepository(BaseRepository):
-    """Repository that stores models in an in-memory dict, keyed by model class."""
+    """Encapsulates a repository that stores models in an in-memory dict, keyed by model class."""
+
+    @staticmethod
+    def _create_empty_db_for_entities(
+        entities: Iterable[Entity],
+    ) -> dict[type[Model], dict[Hashable, Model]]:
+        """Create an empty db map with one entry per persistable model class."""
+        db: dict[type[Model], dict[Hashable, Model]] = {}
+        for entity in entities:
+            if not entity.persistable:
+                continue
+            model_class = entity.model_class
+            assert issubclass(model_class, Model)
+            db[model_class] = {}
+        return db
 
     @staticmethod
     def _create_empty_db_for_entities(
@@ -92,9 +106,7 @@ class DictRepository(BaseRepository):
 
     @classmethod
     def clear_repository_content(cls, **kwargs: Any) -> None:
-        """
-        No action needed for DictRepository.
-        """
+        """No action needed for DictRepository."""
         return None
 
     @staticmethod
@@ -200,6 +212,7 @@ class DictRepository(BaseRepository):
 
     @property
     def db(self) -> dict[type[Model], dict[Hashable, Model]]:
+        """Db the requested value."""
         return self._db
 
     def _init_properties(
@@ -935,6 +948,7 @@ class DictRepository(BaseRepository):
         key_ids = list(keys.keys())
 
         def get_keys(obj: Any) -> Any:
+            """Return keys."""
             keys = keys_generator(obj)
             return tuple(keys[x] for x in key_ids)
 

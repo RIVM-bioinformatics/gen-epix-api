@@ -1,3 +1,11 @@
+"""Define commondb configuration, authorization, and upload enumerations.
+
+These enums supply stable values for application composition, development
+configuration, service routing, role-based access control, and data-upload
+outcomes. Set enums group related role, application, repository, or status
+members for policy and configuration checks.
+"""
+
 import datetime
 import uuid
 from enum import Enum
@@ -6,15 +14,21 @@ import ulid
 
 
 class TimestampFactory(Enum):
+    """Encapsulates supported factories for timestamps assigned to new domain data."""
+
     DATETIME_NOW = lambda: datetime.datetime.now(datetime.timezone.utc)
 
 
 class IdFactory(Enum):
+    """Encapsulates supported factories for identifiers assigned to new domain data."""
+
     UUID4 = uuid.uuid4
     ULID = lambda: ulid.api.new().uuid
 
 
 class Role(Enum):
+    """Encapsulates commondb roles used by command-centric authorization policies."""
+
     ROOT = "COMMONDB_ROOT"
     APP_ADMIN = "COMMONDB_APP_ADMIN"
     ORG_ADMIN = "COMMONDB_ORG_ADMIN"
@@ -25,6 +39,8 @@ class Role(Enum):
 
 
 class RoleSet(Enum):
+    """Encapsulates grouping of roles by privilege threshold or operational responsibility."""
+
     ALL = frozenset(
         {
             Role.ROOT,
@@ -64,6 +80,8 @@ class RoleSet(Enum):
 
 
 class ServiceType(Enum):
+    """Encapsulates the commondb service responsible for a domain operation."""
+
     AUTH = "AUTH"
     ORGANIZATION = "ORGANIZATION"
     SYSTEM = "SYSTEM"
@@ -72,6 +90,8 @@ class ServiceType(Enum):
 
 
 class UploadAction(Enum):
+    """Encapsulates the action selected for one record during an upload."""
+
     ERROR = "ERROR"
     UPDATE = "UPDATE"
     CREATE = "CREATE"
@@ -79,12 +99,16 @@ class UploadAction(Enum):
 
 
 class RepositoryType(Enum):
+    """Encapsulates persistence implementations available to composed applications."""
+
     DICT = "DICT"
     SA_SQLITE = "SA_SQLITE"
     SA_SQL = "SA_SQL"
 
 
 class AppType(Enum):
+    """Encapsulates a Gen-EpiX application domain or the aggregate domain set."""
+
     COMMONDB = "COMMONDB"
     CASEDB = "CASEDB"
     SEQDB = "SEQDB"
@@ -93,10 +117,14 @@ class AppType(Enum):
 
 
 class AppTypeSet(Enum):
+    """Encapsulates grouping of application domains for configuration that applies everywhere."""
+
     ALL = frozenset({AppType.COMMONDB, AppType.CASEDB, AppType.SEQDB, AppType.OMOPDB})
 
 
 class AppConfigType(Enum):
+    """Encapsulates configuration layers selected while composing an application."""
+
     IDPS = "idps"
     MOCK_IDPS = "mock_idps"
     NO_AUTH = "no_auth"
@@ -104,12 +132,16 @@ class AppConfigType(Enum):
 
 
 class DevIdpConfig(Enum):
+    """Encapsulates identity-provider modes exposed by the development CLI."""
+
     IDPS = "IDPS"
     MOCK = "MOCK"
     NONE = "NONE"
 
 
 class DevRepositoryConfig(Enum):
+    """Encapsulates repository modes exposed by the development CLI."""
+
     DICT_DEMO = "DICT_DEMO"
     DICT_EMPTY = "DICT_EMPTY"
     SA_SQLITE_DEMO = "SA_SQLITE_DEMO"
@@ -118,6 +150,8 @@ class DevRepositoryConfig(Enum):
 
 
 class DevRepositoryConfigSet(Enum):
+    """Encapsulates grouping of development repository modes by storage engine and seeded state."""
+
     DICT = frozenset({DevRepositoryConfig.DICT_DEMO, DevRepositoryConfig.DICT_EMPTY})
     SA = frozenset(
         {
@@ -139,6 +173,8 @@ class DevRepositoryConfigSet(Enum):
 
 
 class EtlStatus(Enum):
+    """Encapsulates lifecycle outcomes for ETL and upload processing."""
+
     INITIALIZED = "INITIALIZED"
     PENDING = "PENDING"  # Yet to be processed
     SKIPPED = "SKIPPED"  # No changes stored
@@ -152,6 +188,8 @@ class EtlStatus(Enum):
 
 
 class UploadStatusSet(Enum):
+    """Encapsulates grouping of ETL statuses by failure and processing outcome."""
+
     NOT_FAILED = frozenset(
         {
             EtlStatus.PENDING,
@@ -173,6 +211,8 @@ class UploadStatusSet(Enum):
 
 
 class DataIssueType(Enum):
+    """Encapsulates classification of data-quality issues emitted during validation and transformation."""
+
     MISSING = "MISSING"
     INVALID = "INVALID"
     UNAUTHORIZED = "UNAUTHORIZED"
@@ -182,6 +222,8 @@ class DataIssueType(Enum):
 
 
 class DataIssueTypeSet(Enum):
+    """Encapsulates grouping of data-quality issue types by severity for upload reporting."""
+
     ERROR = frozenset(
         {
             DataIssueType.INVALID,

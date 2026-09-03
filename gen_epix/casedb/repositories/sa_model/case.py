@@ -1,3 +1,5 @@
+"""Define SQLAlchemy persistence mappings for casedb case models."""
+
 # pylint: disable=too-few-public-methods
 from __future__ import (  # Resolves pylint not recognizing Mapped as subscriptable
     annotations,
@@ -23,9 +25,7 @@ Base: type = orm.declarative_base(name=enum.ServiceType.CASE.value)
 
 
 class TreeAlgorithmClass(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb TreeAlgorithmClass domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.TreeAlgorithmClass)
 
@@ -43,9 +43,7 @@ class TreeAlgorithmClass(Base, RowMetadataMixin):
 
 
 class TreeAlgorithm(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb TreeAlgorithm domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.TreeAlgorithm)
 
@@ -75,9 +73,7 @@ class TreeAlgorithm(Base, RowMetadataMixin):
 
 
 class GeneticDistanceProtocol(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb GeneticDistanceProtocol domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.GeneticDistanceProtocol)
 
@@ -109,9 +105,7 @@ class GeneticDistanceProtocol(Base, RowMetadataMixin):
 
 
 class RefDim(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb RefDim domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.RefDim)
 
@@ -131,9 +125,7 @@ class RefDim(Base, RowMetadataMixin):
 
 
 class RefCol(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb RefCol domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.RefCol)
 
@@ -171,9 +163,7 @@ class RefCol(Base, RowMetadataMixin):
 
 
 class CaseType(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb CaseType domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.CaseType)
 
@@ -193,9 +183,7 @@ class CaseType(Base, RowMetadataMixin):
 
 
 class CaseTypeSetCategory(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb CaseTypeSetCategory domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.CaseTypeSetCategory)
 
@@ -210,9 +198,7 @@ class CaseTypeSetCategory(Base, RowMetadataMixin):
 
 
 class CaseTypeSet(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb CaseTypeSet domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.CaseTypeSet)
 
@@ -231,9 +217,7 @@ class CaseTypeSet(Base, RowMetadataMixin):
 
 
 class CaseTypeSetMember(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb CaseTypeSetMember domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.CaseTypeSetMember)
 
@@ -251,6 +235,8 @@ class CaseTypeSetMember(Base, RowMetadataMixin):
 
 
 class Dim(Base, RowMetadataMixin):
+    """Persist the casedb Dim domain model."""
+
     __tablename__, __table_args__ = create_table_args(model.Dim)
 
     case_type_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Dim, "case_type_id")
@@ -270,9 +256,7 @@ class Dim(Base, RowMetadataMixin):
 
 
 class Col(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb Col domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.Col)
 
@@ -321,9 +305,7 @@ class Col(Base, RowMetadataMixin):
 
 
 class ColSet(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb ColSet domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.ColSet)
 
@@ -334,9 +316,7 @@ class ColSet(Base, RowMetadataMixin):
 
 
 class ColSetMember(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb ColSetMember domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.ColSetMember)
 
@@ -350,9 +330,7 @@ class ColSetMember(Base, RowMetadataMixin):
 
 
 class Case(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb Case domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.Case)
 
@@ -376,9 +354,7 @@ class Case(Base, RowMetadataMixin):
 
 
 class CaseIdentifier(Base, IdentifierMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb CaseIdentifier domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.CaseIdentifier)
 
@@ -389,9 +365,7 @@ class CaseIdentifier(Base, IdentifierMixin):
 
 
 class CaseDataCollectionLink(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb CaseDataCollectionLink domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.CaseDataCollectionLink)
 
@@ -406,9 +380,7 @@ class CaseDataCollectionLink(Base, RowMetadataMixin):
 
 
 class CaseSetCategory(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb CaseSetCategory domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.CaseSetCategory)
 
@@ -420,9 +392,7 @@ class CaseSetCategory(Base, RowMetadataMixin):
 
 
 class CaseSetStatus(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb CaseSetStatus domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.CaseSetStatus)
 
@@ -434,9 +404,7 @@ class CaseSetStatus(Base, RowMetadataMixin):
 
 
 class CaseSet(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb CaseSet domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.CaseSet)
 
@@ -471,9 +439,7 @@ class CaseSet(Base, RowMetadataMixin):
 
 
 class CaseSetMember(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb CaseSetMember domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.CaseSetMember)
 
@@ -490,9 +456,7 @@ class CaseSetMember(Base, RowMetadataMixin):
 
 
 class CaseSetDataCollectionLink(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb CaseSetDataCollectionLink domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.CaseSetDataCollectionLink)
 

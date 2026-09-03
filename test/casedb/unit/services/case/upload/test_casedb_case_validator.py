@@ -763,10 +763,32 @@ class TestNumberPairReverseDirectionGuard(BaseCaseValidatorTestCase):
     """
 
     def test_derived_interval_target_does_not_overwrite_source(self) -> None:
-        validator = self._create_validator()
+        concept_set_concepts_map, concepts, concept_contained_in = self._concept_data()
+        concepts[self.interval2_x_id].props = {
+            "lb": 0.0,
+            "ub": 40.0,
+            "lb_in": True,
+            "ub_in": False,
+        }
+        concepts[self.interval2_y_id].props = {
+            "lb": 40.0,
+            "ub": 80.0,
+            "lb_in": True,
+            "ub_in": True,
+        }
+        with patch.object(
+            self,
+            "_concept_data",
+            return_value=(
+                concept_set_concepts_map,
+                concepts,
+                concept_contained_in,
+            ),
+        ):
+            validator = self._create_validator()
 
-        # Content supplies interval1; interval2 is derived from it via the
-        # forward pair. The reverse pair must leave interval1 untouched.
+        # A [0,10) years maps to X [0,40) quarters. The reverse pair must
+        # leave the supplied A value untouched.
         contents: list[dict[UUID, str | None] | None] = [
             {self.num_interval1_col_id: str(self.interval1_a_id)}
         ]
@@ -804,12 +826,12 @@ class TestNumberPairReverseDirectionGuard(BaseCaseValidatorTestCase):
         col_pair = (self.num_interval2_col_id, self.num_interval1_col_id)
 
         contents: list[dict[UUID, str | None] | None] = [
-            {self.num_interval1_col_id: str(self.interval1_a_id)}
+            {self.num_interval1_col_id: str(self.interval1_b_id)}
         ]
         updated_contents: list[dict[UUID, str | None] | None] = [
             {
                 self.num_interval2_col_id: str(self.interval2_x_id),
-                self.num_interval1_col_id: str(self.interval1_a_id),
+                self.num_interval1_col_id: str(self.interval1_b_id),
             }
         ]
         data_issues_list: list[list[model.CaseDataIssue] | None] = [[]]
@@ -829,7 +851,7 @@ class TestNumberPairReverseDirectionGuard(BaseCaseValidatorTestCase):
         uc = updated_contents[0]
         assert uc is not None
         # Pre-populated interval1 value preserved, no derived/conflict logged.
-        assert uc[self.num_interval1_col_id] == str(self.interval1_a_id)
+        assert uc[self.num_interval1_col_id] == str(self.interval1_b_id)
         assert data_issues_list[0] == []
 
 

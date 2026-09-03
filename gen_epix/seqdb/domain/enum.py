@@ -1,3 +1,5 @@
+"""Provide seqdb functionality for domain.enum."""
+
 # pylint: disable=wildcard-import, unused-import
 # because this is a package, and imported as such in other modules
 from __future__ import annotations
@@ -18,9 +20,7 @@ if TYPE_CHECKING:
 
 
 class IntEnumWithJsonSchemaMixin:
-    """
-    An IntEnum that includes the enum member names in the JSON schema for better readability.
-    """
+    """Encapsulates enum member names in generated JSON schemas for readability."""
 
     @classmethod
     def __get_pydantic_json_schema__(
@@ -28,6 +28,7 @@ class IntEnumWithJsonSchemaMixin:
         core_schema: _cs.CoreSchema,
         handler: GetJsonSchemaHandler,
     ) -> JsonSchemaValue:
+        """Add enum member names to the generated Pydantic JSON schema."""
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
         enum_cls = cast(type[IntEnum], cls)
@@ -36,15 +37,21 @@ class IntEnumWithJsonSchemaMixin:
 
 
 class TimestampFactory(Enum):
+    """Encapsulates timestamp-generation strategies used by seqdb models."""
+
     DATETIME_NOW = lambda: datetime.datetime.now(datetime.timezone.utc)
 
 
 class IdFactory(Enum):
+    """Encapsulates identifier-generation strategies used by seqdb models."""
+
     UUID4 = uuid.uuid4
     ULID = lambda: ulid.api.new().uuid
 
 
 class ServiceType(Enum):
+    """Encapsulates services available within the seqdb application."""
+
     AUTH = "AUTH"
     ORGANIZATION = "ORGANIZATION"
     SYSTEM = "SYSTEM"
@@ -55,12 +62,16 @@ class ServiceType(Enum):
 
 
 class RepositoryType(Enum):
+    """Encapsulates supported seqdb persistence backend implementations."""
+
     DICT = "DICT"
     SA_SQLITE = "SA_SQLITE"
     SA_SQL = "SA_SQL"
 
 
 class Role(Enum):
+    """Encapsulates seqdb application roles for command-centric authorization."""
+
     ROOT = "SEQDB_ROOT"
     APP_ADMIN = "SEQDB_APP_ADMIN"
     ORG_ADMIN = "SEQDB_ORG_ADMIN"
@@ -71,6 +82,8 @@ class Role(Enum):
 
 
 class TreeAlgorithm(Enum):
+    """Encapsulates supported phylogenetic-tree and clustering algorithms."""
+
     # See https://en.wikipedia.org/wiki/Hierarchical_clustering
     SLINK = "SLINK"  # Single linkage clustering
     CLINK = "CLINK"  # Complete linkage clustering
@@ -100,6 +113,8 @@ class TreeAlgorithm(Enum):
 
 
 class TreeAlgorithmSet(Enum):
+    """Encapsulates tree algorithms grouped by their computational approach."""
+
     HIERARCHICAL_CLUSTERING = frozenset(
         {
             TreeAlgorithm.SLINK,
@@ -158,6 +173,8 @@ class TreeAlgorithmSet(Enum):
 
 
 class TaxonRank(Enum):
+    """Encapsulates supported ranks in a taxonomic hierarchy."""
+
     NO_RANK = "NO_RANK"
     ACELLULAR_ROOT = "ACELLULAR_ROOT"
     REALM = "REALM"
@@ -194,26 +211,29 @@ class TaxonRank(Enum):
 
 
 class QualityControlResult(IntEnumWithJsonSchemaMixin, IntEnum):
+    """Encapsulates ordered quality-control outcomes for sequence data."""
+
     PENDING = 1
     FAIL = 2
     WARN = 3
     PASS = 4
 
     def is_usable(self) -> bool:
+        """Return whether this result permits downstream use of the data."""
         return self in {QualityControlResult.PASS, QualityControlResult.WARN}
 
     def get_sort_key(self) -> int:
-        """
-        Return a sort key for sorting instances of QualityControlResult by the quality
-        level they represent. This is equal to the enum value, but provided as a method
-        for better readability and to encapsulate the logic. Higher values represent
-        better quality, while PENDING has the lowest quality as it is intended as a
-        temporary state.
+        """Return an ordering key for quality-control results.
+
+        The key equals the enum value. Higher values represent better quality, while
+        ``PENDING`` is the lowest-quality temporary state.
         """
         return self.value
 
 
 class QualityControlResultSet(Enum):
+    """Encapsulates quality-control results grouped into reusable result sets."""
+
     USABLE = frozenset(
         {
             QualityControlResult.PASS,
@@ -231,6 +251,8 @@ class QualityControlResultSet(Enum):
 
 
 class LocusType(Enum):
+    """Encapsulates the biological feature classification represented by a locus."""
+
     GENE = "GENE"
     INTERGENIC_REGION = "INTERGENIC_REGION"
     TANDEM_REPEAT = "TANDEM_REPEAT"
@@ -240,9 +262,7 @@ class LocusType(Enum):
 
 
 class SeqAlphabet(Enum):
-    """
-    Standard sequence alphabets and their variants.
-    """
+    """Encapsulates standard sequence alphabets and their variants."""
 
     DNA = frozenset("acgt")
     DNA_INCL_GAP = frozenset("acgt-")
@@ -264,9 +284,7 @@ class SeqAlphabet(Enum):
 
 
 class DnaAmbiguityMap(Enum):
-    """
-    Maps an ambiguity code to the set of nucleotides it represents.
-    """
+    """Encapsulates a DNA ambiguity code map to its represented nucleotides."""
 
     A = frozenset("a")
     C = frozenset("c")
@@ -286,9 +304,7 @@ class DnaAmbiguityMap(Enum):
 
 
 class DnaReverseAmbiguityMap(Enum):
-    """
-    Maps a nucleotide to itself and all ambiguity codes that include it.
-    """
+    """Encapsulates a nucleotide map to itself and ambiguity codes containing it."""
 
     A = frozenset("arwmdhvn")
     C = frozenset("cysmbhvn")
@@ -297,6 +313,8 @@ class DnaReverseAmbiguityMap(Enum):
 
 
 class SeqFormat(IntEnumWithJsonSchemaMixin, IntEnum):
+    """Encapsulates supported serialized representations of sequence content."""
+
     HASH_ONLY = 1  # Only the hash code of the sequence is known or stored
     STR_DNA = 2  # String of IUPAC DNA characters without gaps
     STR_DNA_INCL_GAP = 3  # String of IUPAC DNA characters including gaps
@@ -304,6 +322,8 @@ class SeqFormat(IntEnumWithJsonSchemaMixin, IntEnum):
 
 
 class SeqProfileFormat(IntEnumWithJsonSchemaMixin, IntEnum):
+    """Encapsulates supported serialized representations of sequence profiles."""
+
     LOCUS_PROFILE_FORMAT1 = 1
     NEXTCLADE = 2
     ORDERED_ALLELE_IDS = 3
@@ -312,22 +332,32 @@ class SeqProfileFormat(IntEnumWithJsonSchemaMixin, IntEnum):
 
 
 class SeqClassificationFormat(IntEnumWithJsonSchemaMixin, IntEnum):
+    """Encapsulates serialized representations of sequence classifications."""
+
     PRIMARY_CATEGORY_ONLY = 1
 
 
 class SeqTaxonomyFormat(IntEnumWithJsonSchemaMixin, IntEnum):
+    """Encapsulates serialized representations of sequence taxonomy results."""
+
     TAXONOMY_FORMAT1 = 1
 
 
 class PcrResultFormat(IntEnumWithJsonSchemaMixin, IntEnum):
+    """Encapsulates supported serialized representations of PCR results."""
+
     PCR_RESULT_FORMAT1 = 1
 
 
 class AstResultFormat(IntEnumWithJsonSchemaMixin, IntEnum):
+    """Encapsulates supported serialized representations of AST results."""
+
     AST_RESULT_FORMAT1 = 1
 
 
 class ProtocolType(IntEnumWithJsonSchemaMixin, IntEnum):
+    """Encapsulates the laboratory or analytical purpose of a protocol."""
+
     PCR_MEASUREMENT = 1
     AST_MEASUREMENT = 2
     SEQUENCING = 3
@@ -340,6 +370,8 @@ class ProtocolType(IntEnumWithJsonSchemaMixin, IntEnum):
 
 
 class ProtocolTypeSet(Enum):
+    """Encapsulates protocol types grouped by required reference-data relationships."""
+
     AST_MEASUREMENT = frozenset({ProtocolType.AST_MEASUREMENT})
     PCR_MEASUREMENT = frozenset({ProtocolType.PCR_MEASUREMENT})
     SEQUENCING = frozenset({ProtocolType.SEQUENCING})
@@ -381,6 +413,8 @@ class ProtocolTypeSet(Enum):
 
 
 class SeqProfileType(IntEnumWithJsonSchemaMixin, IntEnum):
+    """Encapsulates the biological representation used by a sequence profile."""
+
     SNP = 1
     LOCUS = 2
     ALLELE = 3
@@ -389,6 +423,8 @@ class SeqProfileType(IntEnumWithJsonSchemaMixin, IntEnum):
 
 
 class SeqProfileTypeSet(Enum):
+    """Encapsulates sequence-profile types grouped by required reference data."""
+
     ALLELE = frozenset({SeqProfileType.ALLELE})
     MLVA = frozenset({SeqProfileType.MLVA})
     SNP = frozenset({SeqProfileType.SNP})
@@ -409,6 +445,8 @@ class SeqProfileTypeSet(Enum):
 
 
 class SeqDistanceType(IntEnumWithJsonSchemaMixin, IntEnum):
+    """Encapsulates supported algorithms for calculating profile distances."""
+
     SNP_HAMMING = 1
     ALLELE_HAMMING = 2
     MLVA_HAMMING = 3
@@ -417,6 +455,8 @@ class SeqDistanceType(IntEnumWithJsonSchemaMixin, IntEnum):
 
 
 class SeqDistanceTypeSet(Enum):
+    """Encapsulates distance algorithms grouped by profile representation and metric."""
+
     ALLELE_PROFILE_BASED = frozenset({SeqDistanceType.ALLELE_HAMMING})
     SNP_PROFILE_BASED = frozenset({SeqDistanceType.SNP_HAMMING})
     KMER_PROFILE_BASED = frozenset({SeqDistanceType.KMER_EUCLIDEAN})
@@ -448,34 +488,50 @@ class SeqDistanceTypeSet(Enum):
 
 
 class SeqDistanceFormat(IntEnumWithJsonSchemaMixin, IntEnum):
+    """Encapsulates supported serialized representations of sequence distances."""
+
     PROFILE_DISTANCE_MAP = 1
 
 
 class ReadsFileFormat(IntEnumWithJsonSchemaMixin, IntEnum):
+    """Encapsulates supported read-file formats."""
+
     FASTQ = 1
 
 
 class SeqFileFormat(IntEnumWithJsonSchemaMixin, IntEnum):
+    """Encapsulates supported assembled-sequence file formats."""
+
     FASTA = 2
 
 
 class FileFormat(IntEnumWithJsonSchemaMixin, IntEnum):
+    """Encapsulates all supported biological file formats."""
+
     FASTQ = 1
     FASTA = 2
 
 
 class FileCompression(IntEnumWithJsonSchemaMixin, IntEnum):
+    """Encapsulates supported compression methods for biological files."""
+
     NONE = 1
     GZIP = 2
 
 
 class SeqRankingStrategy(Enum):
+    """Encapsulates how a representative sequence is selected per sample."""
+
     QC_RESULT_THEN_SCORE_THEN_CREATED = "QC_RESULT_THEN_SCORE_THEN_CREATED"
 
 
 class SeqProfileRankingStrategy(Enum):
+    """Encapsulates how a representative profile is selected per sample."""
+
     QC_RESULT_THEN_SCORE_THEN_CREATED = "QC_RESULT_THEN_SCORE_THEN_CREATED"
 
 
 class SeqClassificationRankingStrategy(Enum):
+    """Encapsulates how a representative classification is selected per sample."""
+
     QC_RESULT_THEN_SCORE_THEN_CREATED = "QC_RESULT_THEN_SCORE_THEN_CREATED"

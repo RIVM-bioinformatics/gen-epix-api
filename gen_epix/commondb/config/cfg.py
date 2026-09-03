@@ -44,7 +44,10 @@ def _is_descendant_logger(logger_name: str, parent_logger_name: str) -> bool:
 
 
 class BaseAppCfg(abc.ABC):
-    """Abstract base class for application configuration."""
+    """Encapsulates application configuration.
+
+    This is a base class intended to be subclassed for specific applications.
+    """
 
     def __init__(self) -> None:
         """Declare instance attributes; subclasses must assign them in their own __init__."""
@@ -61,7 +64,14 @@ class BaseAppCfg(abc.ABC):
 
     @property
     def name(self) -> str:
-        """Identifier for this configuration instance."""
+        """Return this configuration instance's identifier.
+
+        Returns:
+            Configured instance identifier.
+
+        Raises:
+            ValueError: If the configuration has no assigned name.
+        """
         if self._name is None:
             raise ValueError("name is not set")
         return self._name
@@ -119,14 +129,23 @@ class BaseAppCfg(abc.ABC):
         on_exist: str = "skip",
     ) -> None:
         """
-        Copy any repository files to a new folder and update the configuration
+        Copy repository files to a new folder and update the configuration.
+
         correspondingly.
+
+        Args:
+            tgt_dir: Target directory for copied repository files.
+            service_type: Optional service whose repository file is copied.
+            on_exist: Behavior when the destination file already exists.
+
+        Raises:
+            NotImplementedError: Always; concrete configuration supplies copying.
         """
         raise NotImplementedError()
 
 
 class AppCfg(BaseAppCfg):
-    """Main application configuration class using Strategy Pattern."""
+    """Encapsulates the main application configuration class using Strategy Pattern."""
 
     @staticmethod
     def _prefix_envvar(
@@ -262,7 +281,6 @@ class AppCfg(BaseAppCfg):
 
     def _init_load_settings(self) -> None:
         """Load settings using SettingsManager."""
-
         settings_manager = SettingsManager(
             prefix=self._envvar_prefix, settings_files=self._settings_files
         )
@@ -335,8 +353,17 @@ class AppCfg(BaseAppCfg):
         on_exist: str = "skip",
     ) -> None:
         """
-        Copy any repository files to a new folder and update the configuration
+        Copy repository files to a new folder and update the configuration.
+
         correspondingly. This is useful e.g. for creating isolated test environments.
+
+        Args:
+            tgt_dir: Existing target directory for copied repository files.
+            service_type: Optional service whose repository file is copied.
+            on_exist: Behavior when a destination file exists.
+
+        Raises:
+            ValueError: If the target is not a directory or ``on_exist`` is invalid.
         """
         # Parse input
         if isinstance(tgt_dir, str):
@@ -375,7 +402,18 @@ class AppCfg(BaseAppCfg):
         cfg["file"] = str(tgt_dir_path / curr_path.name)
 
     def _handle_file_copy(self, curr_path: Path, new_path: Path, on_exist: str) -> None:
-        """Copy curr_path to new_path, respecting the on_exist policy."""
+        """Copy a repository file while applying the destination-exists policy.
+
+        Args:
+            curr_path: Existing source repository file.
+            new_path: Destination file to create or overwrite.
+            on_exist: Behavior when the destination already exists.
+
+        Raises:
+            FileNotFoundError: If the source file does not exist.
+            FileExistsError: If the destination exists and ``on_exist`` is ``raise``.
+            NotImplementedError: If ``on_exist`` has an unsupported value.
+        """
         if not curr_path.exists():
             raise FileNotFoundError(f"Source file not found: {curr_path}")
         if new_path.exists():

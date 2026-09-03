@@ -1,3 +1,5 @@
+"""Compose commondb applications from configured services, repositories, and policies."""
+
 import datetime
 import logging
 import traceback
@@ -32,9 +34,9 @@ from gen_epix.fastapp.util import create_ssl_context
 
 
 class App(fastapp.App):
-    """
-    Application class for the GenEpix FastAPI application. Overrides some properties
-    to provide more specific types and linter support.
+    """Encapsulates the commondb FastAPI application with specialized property types.
+
+    The specialized properties provide more specific types and linter support.
     """
 
     @property
@@ -44,9 +46,7 @@ class App(fastapp.App):
 
 
 class AppComposer(BaseAppComposer):
-    """
-    Compose the commondb application by wiring services, repositories, and policies.
-    """
+    """Encapsulates composition of the commondb application by wiring services, repositories, and policies."""
 
     def __init__(
         self,
@@ -67,7 +67,26 @@ class AppComposer(BaseAppComposer):
         log_setup: bool = True,
         **kwargs: Any,
     ):
-        """Initialise the composer, parse configuration, and compose the application."""
+        """Initialize the composer, parse configuration, and compose the application.
+
+        Args:
+            app_cfg: Resolved configuration used to compose the application.
+            domain: Optional domain registration replacing the default commondb domain.
+            sorted_service_types: Optional service initialization order.
+            role_generator_class: Optional class that derives roles and permissions.
+            rbac_service_class: Optional RBAC service implementation.
+            user_manager_class: Optional user-manager implementation.
+            model_class_map: Optional mappings to derived model classes.
+            command_class_map: Optional mappings to derived command classes.
+            policy_class_map: Optional mappings to derived policy classes.
+            log_any: Whether any application logging is enabled.
+            log_setup: Whether composition lifecycle events are logged.
+            **kwargs: Additional options forwarded to application composition.
+
+        Raises:
+            ValueError: If setup logging is enabled while all logging is disabled.
+            InitializationServiceError: If a configured value cannot be converted.
+        """
         # Parse input
         if log_setup and not log_any:
             raise ValueError("log_setup can only be True if log_any is True")
@@ -104,11 +123,19 @@ class AppComposer(BaseAppComposer):
         self._idp_user_dependency: Callable = data["idp_user_dependency"]
 
     def compose_application(self, **kwargs: Any) -> dict[str, Any]:
-        """
-        Create the App instance, initialise all services and repositories, and register
-        policies.
-        """
+        """Create the application, initialize services and repositories, and register policies.
 
+        Composition returns the dependencies required by the API layer.
+
+        Args:
+            **kwargs: Additional options accepted by composed service constructors.
+
+        Returns:
+            Application, service, repository, and API dependency instances.
+
+        Raises:
+            Exception: Re-raises an error encountered while composing the application.
+        """
         # Get loggers
         cfg = self._app_cfg.cfg
         setup_logger = self._app_cfg.setup_logger
@@ -401,9 +428,13 @@ class AppComposer(BaseAppComposer):
         )
 
     def _parse_config(self) -> None:
-        """
-        Parse configuration values to test presence of expected values and convert any
-        values as necessary, such as feature flags.
+        """Validate configuration values and convert supported primitive types.
+
+        This includes feature flags and configured authentication properties.
+
+        Raises:
+            InitializationServiceError: If a configured value has an unsupported or
+                invalid type.
         """
         # TODO: expand with a framework for parsing and validating config values, potentially using Pydantic classes to define expected config structure and types, and to perform parsing and validation.
         cfg_content_types: list[tuple[Any, ...]] = [
@@ -453,7 +484,18 @@ class AppComposer(BaseAppComposer):
 
     @staticmethod
     def _verify_type(value: Any, content_type: type) -> Any:
-        """Verify and optionally convert a value to the expected type."""
+        """Verify and optionally convert a value to the expected type.
+
+        Args:
+            value: Configuration value to verify or convert.
+            content_type: Required primitive type.
+
+        Returns:
+            Tuple indicating validation success and the converted value.
+
+        Raises:
+            InitializationServiceError: If ``content_type`` is unsupported.
+        """
         if isinstance(value, content_type):
             return True, value
         if value is None:
@@ -471,7 +513,18 @@ class AppComposer(BaseAppComposer):
 
     @staticmethod
     def _get_enum_from_list(enums: Iterable[Enum], name: str) -> Enum:
-        """Return the enum member with the given name from an iterable of enums."""
+        """Return an enum member with the requested name.
+
+        Args:
+            enums: Enum members to search.
+            name: Member name to match.
+
+        Returns:
+            Matching enum member.
+
+        Raises:
+            ValueError: If no member has the requested name.
+        """
         for enum_item in enums:
             if enum_item.name == name:
                 return enum_item
@@ -479,9 +532,9 @@ class AppComposer(BaseAppComposer):
 
     @staticmethod
     def convert_to_bool(value: Any) -> tuple[bool, bool]:
-        """
-        Convert a value to boolean if possible. Returns a tuple of (success,
-        converted_value).
+        """Convert a value to boolean when possible.
+
+        Returns a tuple of ``(success, converted_value)``.
         Accepts boolean values and strings "true", "1", "false", "0" (case
         insensitive). If conversion is not possible, returns (False, False).
         """

@@ -1,3 +1,9 @@
+"""Define non-persistable case query, rights, statistics, and result models.
+
+These models carry computed case-domain data between commands, services, and
+transport layers without defining persistence entities.
+"""
+
 from datetime import datetime
 from typing import ClassVar, Self
 from uuid import UUID
@@ -13,6 +19,13 @@ from gen_epix.filter.uuid_set import UuidSetFilter
 
 
 class CaseStats(fastapp.Model):
+    """Represents aggregate statistics for cases or a case set.
+
+    Model validation: Own cases cannot exceed total cases. Empty statistics must
+    omit both date bounds; non-empty statistics require both bounds in chronological
+    order. Invalid combinations raise ``ValueError`` during model validation.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_set_stats",
         persistable=False,
@@ -38,6 +51,7 @@ class CaseStats(fastapp.Model):
 
     @model_validator(mode="after")
     def _validate_model(self) -> Self:
+        """Validate count and case-date invariants."""
         if self.n_own_cases > self.n_cases:
             raise ValueError("n_own_cases cannot be greater than n_cases")
         if self.n_cases == 0:
@@ -58,6 +72,8 @@ class CaseStats(fastapp.Model):
 
 
 class CaseQuery(Model):
+    """Represents criteria for querying cases of one case type."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_queries",
         persistable=False,
@@ -81,6 +97,8 @@ class CaseQuery(Model):
 
 
 class CaseSetQuery(Model):
+    """Represents labeled filter criteria for querying case sets."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_set_queries",
         persistable=False,
@@ -90,10 +108,7 @@ class CaseSetQuery(Model):
 
 
 class BaseCaseRights(Model):
-    """
-    Base class describing all the rights that a user has on one particular item,
-    based on the data collections in which it is currently shared.
-    """
+    """Represents a user's data-collection rights for one case-domain item."""
 
     created_in_data_collection_id: UUID = Field(
         description="The ID of the data collection where the item was created",
@@ -120,10 +135,7 @@ class BaseCaseRights(Model):
 
 
 class CaseRights(BaseCaseRights):
-    """
-    Describes all the rights that a user has on one particular case, based on the data
-    collections in which it is currently shared.
-    """
+    """Represents a user's rights to one case and its columns."""
 
     NAME: ClassVar = "CaseRights"
     ENTITY: ClassVar = Entity(
@@ -140,10 +152,7 @@ class CaseRights(BaseCaseRights):
 
 
 class CaseSetRights(BaseCaseRights):
-    """
-    Describes all the rights that a user has on one particular case set, based on the
-    data collections in which it is currently shared.
-    """
+    """Represents a user's rights to read, write, share, or delete one case set."""
 
     NAME: ClassVar = "CaseSetRights"
     ENTITY: ClassVar = Entity(
@@ -160,6 +169,8 @@ class CaseSetRights(BaseCaseRights):
 
 
 class CaseQueryResult(Model):
+    """Represents the case identifiers returned for an executed query."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_query_results",
         persistable=False,
@@ -176,6 +187,8 @@ class CaseQueryResult(Model):
 
 
 class CaseCohortLink(Model):
+    """Represents a non-persistable link from a case to an OMOP cohort."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_cohort_links",
         persistable=False,
@@ -189,16 +202,14 @@ class CaseCohortLink(Model):
     )
 
     def is_null(self) -> bool:
-        """
-        Whether the link is a null link, i.e. the case has no linked cohort. This is
+        """Return whether the link is a null link, i.e. the case has no linked cohort. This is
         indicated by NULL_ID as the cohort_id and cohort_definition_id.
         """
         return self.cohort_id == NULL_ID and self.cohort_definition_id == NULL_ID
 
 
 class RefDataAccess(Model):
-    """
-    Describes the reference data that a user has access to. This is a lightweight
+    """Encapsulates the reference data that a user has access to. This is a lightweight
     representation that can be cached and can e.g. be used to filter the reference
     data that the user can access.
     """
@@ -234,59 +245,35 @@ class RefDataAccess(Model):
     )
 
     def get_case_type_set_filter(self, field_name: str) -> UuidSetFilter | None:
-        """
-        Get a filter for the allowed CaseTypeSets. Returns None if the user has full
-        access to all CaseTypeSets.
-        """
+        """Return a CaseTypeSet filter, or ``None`` for full access."""
         return self._get_filter(field_name, self.case_type_set_ids)
 
     def get_case_type_filter(self, field_name: str) -> UuidSetFilter | None:
-        """
-        Get a filter for the allowed CaseTypes. Returns None if the user has full
-        access to all CaseTypes.
-        """
+        """Return a CaseType filter, or ``None`` for full access."""
         return self._get_filter(field_name, self.case_type_ids)
 
     def get_col_set_filter(self, field_name: str) -> UuidSetFilter | None:
-        """
-        Get a filter for the allowed column sets. Returns None if the user has full
-        access to all column sets.
-        """
+        """Return a column-set filter, or ``None`` for full access."""
         return self._get_filter(field_name, self.col_set_ids)
 
     def get_col_filter(self, field_name: str) -> UuidSetFilter | None:
-        """
-        Get a filter for the allowed columns. Returns None if the user has full
-        access to all columns.
-        """
+        """Return a column filter, or ``None`` for full access."""
         return self._get_filter(field_name, self.col_ids)
 
     def get_dim_filter(self, field_name: str) -> UuidSetFilter | None:
-        """
-        Get a filter for the allowed dimensions. Returns None if the user has full
-        access to all dimensions.
-        """
+        """Return a dimension filter, or ``None`` for full access."""
         return self._get_filter(field_name, self.dim_ids)
 
     def get_ref_dim_filter(self, field_name: str) -> UuidSetFilter | None:
-        """
-        Get a filter for the allowed reference dimensions. Returns None if the user has full
-        access to all reference dimensions.
-        """
+        """Return a reference-dimension filter, or ``None`` for full access."""
         return self._get_filter(field_name, self.ref_dim_ids)
 
     def get_ref_col_filter(self, field_name: str) -> UuidSetFilter | None:
-        """
-        Get a filter for the allowed reference columns. Returns None if the user has full
-        access to all reference columns.
-        """
+        """Return a reference-column filter, or ``None`` for full access."""
         return self._get_filter(field_name, self.ref_col_ids)
 
     def _get_filter(self, field_name: str, members: set[UUID]) -> UuidSetFilter | None:
-        """
-        Get a filter for the allowed members of a reference data type. Returns None if
-        the user has full access to all members of the reference data type.
-        """
+        """Return a UUID-membership filter, or ``None`` for full access."""
         if self.is_full_access:
             return None
         return UuidSetFilter(
@@ -296,9 +283,7 @@ class RefDataAccess(Model):
 
 
 class SimilarCase(BaseModel):
-    """
-    Represents a "similar case" search result with its ID, date, and ownership flag.
-    """
+    """Represents a similar-case result with its identifier and date."""
 
     id: UUID = Field(description="The case ID.")
     case_date: datetime = Field(description="The case date, if any.")

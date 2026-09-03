@@ -1,7 +1,11 @@
+"""HTTP exceptions returned by generated API routes."""
+
 from fastapi import HTTPException, status
 
 
 class BadRequest400HTTPException(HTTPException):
+    """HTTP 400 error for requests the API cannot process."""
+
     def __init__(
         self,
         detail: str = (
@@ -10,6 +14,7 @@ class BadRequest400HTTPException(HTTPException):
         ),
         headers: dict[str, str] | None = None,
     ):
+        """Construct an HTTP 400 exception with optional headers."""
         super().__init__(
             status_code=status.HTTP_400_BAD_REQUEST, detail=detail, headers=headers
         )
@@ -17,6 +22,8 @@ class BadRequest400HTTPException(HTTPException):
 
 class UnauthorizedUser401HTTPException(HTTPException):
     # User not logged in
+    """HTTP 401 error for requests without valid credentials."""
+
     def __init__(
         self,
         detail: str = (
@@ -25,6 +32,7 @@ class UnauthorizedUser401HTTPException(HTTPException):
         ),
         headers: dict[str, str] | None = None,
     ):
+        """Construct an HTTP 401 exception with optional headers."""
         super().__init__(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=detail, headers=headers
         )
@@ -32,6 +40,8 @@ class UnauthorizedUser401HTTPException(HTTPException):
 
 class Forbidden403HTTPException(HTTPException):
     # User does not have correct rights
+    """HTTP 403 error for requests the user is not authorized to make."""
+
     def __init__(
         self,
         detail: str = (
@@ -40,12 +50,15 @@ class Forbidden403HTTPException(HTTPException):
         ),
         headers: dict[str, str] | None = None,
     ):
+        """Construct an HTTP 403 exception with optional headers."""
         super().__init__(
             status_code=status.HTTP_403_FORBIDDEN, detail=detail, headers=headers
         )
 
 
 class ResourceNotFound404HTTPException(HTTPException):
+    """HTTP 404 error for unavailable resources."""
+
     def __init__(
         self,
         detail: str = (
@@ -54,12 +67,15 @@ class ResourceNotFound404HTTPException(HTTPException):
         ),
         headers: dict[str, str] | None = None,
     ):
+        """Construct an HTTP 404 exception with optional headers."""
         super().__init__(
             status_code=status.HTTP_404_NOT_FOUND, detail=detail, headers=headers
         )
 
 
 class MethodNotAllowed405HTTPException(HTTPException):
+    """HTTP 405 error for disabled request methods."""
+
     def __init__(
         self,
         detail: str = (
@@ -68,6 +84,7 @@ class MethodNotAllowed405HTTPException(HTTPException):
         ),
         headers: dict[str, str] | None = None,
     ):
+        """Construct an HTTP 405 exception with optional headers."""
         super().__init__(
             status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
             detail=detail,
@@ -76,35 +93,42 @@ class MethodNotAllowed405HTTPException(HTTPException):
 
 
 class ResourceConflict409HTTPException(HTTPException):
+    """HTTP 409 error for requests that conflict with resource state."""
 
     def __init__(
         self,
         detail: str = "Conflict with current resource state",
         headers: dict[str, str] | None = None,
     ):
+        """Construct an HTTP 409 exception with optional headers."""
         super().__init__(
             status_code=status.HTTP_409_CONFLICT, detail=detail, headers=headers
         )
 
 
 class ForeignKeyConstraint409HTTPException(HTTPException):
+    """HTTP 409 error when deletion would violate a foreign-key relationship."""
 
     def __init__(
         self,
         detail: str = "Resource cannot be deleted due to dependent entities",
         headers: dict[str, str] | None = None,
     ):
+        """Construct an HTTP 409 exception with optional headers."""
         super().__init__(
             status_code=status.HTTP_409_CONFLICT, detail=detail, headers=headers
         )
 
 
 class UnprocessableEntity422HTTPException(HTTPException):
+    """HTTP 422 error for syntactically valid requests with invalid data."""
+
     def __init__(
         self,
         detail: str = "Invalid data: The request contains invalid data",
         headers: dict[str, str] | None = None,
     ):
+        """Construct an HTTP 422 exception with optional headers."""
         super().__init__(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=detail,
@@ -113,6 +137,8 @@ class UnprocessableEntity422HTTPException(HTTPException):
 
 
 class InternalServerError500HTTPException(HTTPException):
+    """HTTP 500 error for unexpected server failures."""
+
     def __init__(
         self,
         detail: str = (
@@ -121,6 +147,7 @@ class InternalServerError500HTTPException(HTTPException):
         ),
         headers: dict[str, str] | None = None,
     ):
+        """Construct an HTTP 500 exception with optional headers."""
         super().__init__(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=detail,
@@ -129,6 +156,8 @@ class InternalServerError500HTTPException(HTTPException):
 
 
 class NotImplemented501HTTPException(HTTPException):
+    """HTTP 501 error for unsupported server functionality."""
+
     def __init__(
         self,
         detail: str = (
@@ -137,12 +166,15 @@ class NotImplemented501HTTPException(HTTPException):
         ),
         headers: dict[str, str] | None = None,
     ):
+        """Construct an HTTP 501 exception with optional headers."""
         super().__init__(
             status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=detail, headers=headers
         )
 
 
 class ServiceUnavailableError503HTTPException(HTTPException):
+    """HTTP 503 error for a service that cannot currently handle requests."""
+
     def __init__(
         self,
         detail: str = (
@@ -150,6 +182,7 @@ class ServiceUnavailableError503HTTPException(HTTPException):
         ),
         headers: dict[str, str] | None = None,
     ):
+        """Construct an HTTP 503 exception with optional headers."""
         super().__init__(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=detail,

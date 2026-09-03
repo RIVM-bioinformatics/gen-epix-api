@@ -1,3 +1,5 @@
+"""Provide commondb domain setup, test configuration, and model registration helpers."""
+
 import datetime
 import gzip
 import importlib
@@ -36,7 +38,19 @@ def set_env_variables(
     general_cfg_path: Path | None = None,
     cfg_path: Path | None = None,
 ) -> None:
-    """Set environment variables for the given app type, IDP, and repository config."""
+    """Set environment variables for an app type, IDP, and repository configuration.
+
+    Args:
+        app_type: Application type or its name.
+        dev_idp_config: Development identity-provider configuration or its name.
+        dev_repository_config: Development repository configuration or its name.
+        extra_settings_files: Optional additional settings files.
+        general_cfg_path: Optional path to shared settings.
+        cfg_path: Optional path to application settings.
+
+    Raises:
+        KeyError: If a supplied configuration name is not a valid enum member.
+    """
     # Parse input
     if isinstance(app_type, str):
         if app_type.upper() in AppType.__members__:
@@ -354,8 +368,29 @@ def get_app_cfgs(
     log_level: str | int = logging.ERROR,
 ) -> dict[str, AppCfg]:
     """
-    Create all casedb and seqdb app cfgs with a name for the given test type and
-    dev repository config so that they can be reused in tests
+    Create reusable casedb and seqdb application configurations for tests.
+
+    Each configuration is named for the test type and development repository config.
+
+    Args:
+        app_type: Application type for created configurations.
+        service_type_enum: Enum of application service types.
+        repository_type_enum: Enum of supported repository backends.
+        test_type: Test category used in configuration names.
+        dev_idp_config: Identity-provider configuration for the test.
+        general_cfg_path: Optional path to shared settings.
+        cfg_path: Optional path to application settings.
+        extra_settings_files: Optional extra settings paths.
+        seqdb_app_cfgs: Optional prebuilt seqdb configurations for casedb.
+        log_any: Whether created configurations enable logging.
+        log_setup: Whether created configurations log setup.
+        log_level: Logging level for created configurations.
+
+    Returns:
+        Created configurations keyed by test and repository configuration.
+
+    Raises:
+        ValueError: If an extra settings path has an invalid type or is not a file.
     """
     if isinstance(test_type, Enum):
         test_type = test_type.value
@@ -407,8 +442,14 @@ def complete_stored_model_field_props(
     stored_model_field_props: dict[type[fastapp.Model], dict[str, ModelFieldProps]],
     sorted_models_by_service_type: dict[Any, list[type[fastapp.Model]]],
 ) -> None:
-    """
-    Complete the stored_model_field_props with default props for all other models/fields
+    """Complete stored model field properties with defaults for missing fields.
+
+    Args:
+        stored_model_field_props: Mutable per-model persistence field properties.
+        sorted_models_by_service_type: Models grouped by service initialization order.
+
+    Raises:
+        ValueError: If a model lacks entity metadata or non-persisted model has props.
     """
     # Complete the stored model field props with default props for all other models/fields
     for model_classes in sorted_models_by_service_type.values():
@@ -448,8 +489,9 @@ def register_domain_entities(
     set_schema_to_service_type: bool = False,
 ) -> None:
     """
-    Register service types, models and commands with a domain. In case some
-    models or commands are subclassed from another domain and the provides
+    Register service types, models, and commands with a domain.
+
+    When models or commands are subclassed from another domain and the provided
     models and commands contain their parent classes, they can be substituted
     in the input and subsequently be registered as the actual classes, by
     providing a mapping.
@@ -457,6 +499,18 @@ def register_domain_entities(
     If `set_schema_to_service_type` is enabled, the schema name of the model
     will be set to the lower case service name for persistable entities, unless
     the schema name is already set.
+
+    Args:
+        domain: Domain receiving the registrations.
+        sorted_service_types: Service types in registration order.
+        sorted_models_by_service_type: Models grouped by service type.
+        commands_by_service_type: Commands grouped by service type.
+        common_model_map: Optional base-to-derived model substitutions.
+        common_command_map: Optional base-to-derived command substitutions.
+        set_schema_to_service_type: Whether to infer schemas for persisted models.
+
+    Raises:
+        ValueError: If a mapped model or command cannot be registered consistently.
     """
     if not common_model_map:
         common_model_map = {}

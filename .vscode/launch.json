@@ -992,6 +992,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.fastapp.unit.cache",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_fastapp_unit_cache"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.fastapp.unit.domain",
             "type": "debugpy",
             "request": "launch",
@@ -1089,6 +1100,13 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
+        },
+        {
+            "name": "test.r.remote_app",
+            "type": "R-Debugger",
+            "request": "launch",
+            "file": "${workspaceFolder}/test/r/test_remote_app.R",
+            "workingDirectory": "${workspaceFolder}"
         },
         {
             "name": "test.general.docs",

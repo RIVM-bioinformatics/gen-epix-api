@@ -1,3 +1,5 @@
+"""SQLAlchemy mapper interfaces and model conversion utilities."""
+
 import abc
 from collections.abc import Callable, Hashable, Iterable
 from typing import Any
@@ -12,9 +14,10 @@ from gen_epix.fastapp.model import Model
 
 class BaseSAMapper(abc.ABC):
     """
-    BaseSAMapper is an abstract base class for mappers between SQLAlchemy models
-    (rows) and Pydantic models. It defines the interface and common functionality
-    for mappers, but does not implement the actual mapping logic.
+    Encapsulates an abstract mapper between SQLAlchemy rows and Pydantic models.
+
+    It defines the interface and common functionality for mappers, but does not
+    implement the actual mapping logic.
     """
 
     def __init__(
@@ -23,6 +26,7 @@ class BaseSAMapper(abc.ABC):
         row_class: type[Row],
         **kwargs: Any,
     ):
+        """Initialize a BaseSAMapper instance."""
         if model_class.ENTITY is None:
             raise exc.RepositoryServiceError(
                 "e0c83ad7",
@@ -35,18 +39,22 @@ class BaseSAMapper(abc.ABC):
 
     @property
     def model_class(self) -> type[Model]:
+        """Model class."""
         return self._model_class
 
     @property
     def row_class(self) -> type:
+        """Row class."""
         return self._row_class
 
     @property
     def table_name(self) -> str:
+        """Table name."""
         return self._table_name
 
     @property
     def schema_name(self) -> str | None:
+        """Schema name."""
         return self._schema_name
 
     @abc.abstractmethod
@@ -63,6 +71,7 @@ class BaseSAMapper(abc.ABC):
         """
         Get a field name map between model and row fields. If one of the fields does
         not exist or there is no one-to-one mapping, it is excluded from the map.
+
         This is a naive implementation that can be overridden for performance.
         """
         return {
@@ -83,6 +92,7 @@ class BaseSAMapper(abc.ABC):
         """
         Get the mapped field name between model and row fields. If there is no
         equivalent or no one-to-one mapping, return None.
+
         This is a naive implementation that can be overridden for performance.
         """
         return self.get_field_name_map(reverse).get(field_name)
@@ -98,6 +108,7 @@ class BaseSAMapper(abc.ABC):
         raise NotImplementedError()
 
     def get_id(self, obj: Model) -> Hashable:
+        """Return id."""
         return obj.get_id()
 
     @abc.abstractmethod
@@ -138,7 +149,7 @@ class BaseSAMapper(abc.ABC):
 
 class BaseSAMapperFactory(abc.ABC):
     """
-    Abstract factory for creating SAMapper instances.
+    Encapsulates an abstract factory for creating SAMapper instances.
 
     Subclass this in each db layer (casedb, seqdb, etc.) to provide mappers with
     db-specific update logic. The factory is injected into SARepository at construction
@@ -158,7 +169,7 @@ class BaseSAMapperFactory(abc.ABC):
 
 class SAMapperFactory(BaseSAMapperFactory):
     """
-    Default factory that creates standard SAMapper instances with no special update
+    Encapsulates default factory that creates standard SAMapper instances with no special update
     logic.
     """
 
@@ -168,12 +179,13 @@ class SAMapperFactory(BaseSAMapperFactory):
         row_class: type,
         field_name_map: dict[str, str] | None = None,
     ) -> "SAMapper":
+        """Create mapper."""
         return SAMapper(model_class, row_class, field_name_map=field_name_map)
 
 
 class SAMapper(BaseSAMapper):
     """
-    Standard SAMapper implementation that provides default mapping logic between model and
+    Encapsulates standard SAMapper implementation that provides default mapping logic between model and
     row fields based on field types and an optional field name map. The field name map
     is used to handle cases where model and row field names differ, but there is still
     a one-to-one mapping (e.g. created_by in model maps to created_by_id in row). The
@@ -191,6 +203,7 @@ class SAMapper(BaseSAMapper):
         ) = None,
         **kwargs: Any,
     ):
+        """Initialize a SAMapper instance."""
         super().__init__(model_class, row_class, **kwargs)
         self.field_name_map = field_name_map or {}
         self.rev_field_name_map = {y: x for x, y in self.field_name_map.items()}
@@ -223,6 +236,7 @@ class SAMapper(BaseSAMapper):
         """
         The order of field names is guaranteed to be the same as the order of the row
         field names returned by the corresponding function.
+
         """
         return self._field_names_by_type[field_type]
 
@@ -230,6 +244,7 @@ class SAMapper(BaseSAMapper):
         """
         The order of field names is guaranteed to be the same as the order of the row
         field names returned by the corresponding function.
+
         """
         return self._field_names_by_set[field_type_set]
 
@@ -237,6 +252,7 @@ class SAMapper(BaseSAMapper):
         """
         Get a field name map between model and row fields. If one of the fields does not
         exist, it will be ignored.
+
         """
         if reverse:
             return self.rev_field_name_map
@@ -248,6 +264,7 @@ class SAMapper(BaseSAMapper):
         """
         Get the mapped field name between model and row fields. If the field does not
         exist, return None.
+
         """
         if self._is_identical_common_field_names:
             return field_name
@@ -259,6 +276,7 @@ class SAMapper(BaseSAMapper):
         """
         The order of field names is guaranteed to be the same as the order of the model
         field names returned by the corresponding function.
+
         """
         return self._row_field_names_by_type[field_type]
 
@@ -266,13 +284,12 @@ class SAMapper(BaseSAMapper):
         """
         The order of field names is guaranteed to be the same as the order of the model
         field names returned by the corresponding function.
+
         """
         return self._row_field_names_by_set[field_type_set]
 
     def get_id(self, obj: Model) -> Hashable:
-        """
-        Get the ID value from the given model object.
-        """
+        """Get the ID value from the given model object."""
         retval: Hashable = getattr(obj, self._id_field_name)
         return retval
 
@@ -282,9 +299,7 @@ class SAMapper(BaseSAMapper):
         return retval
 
     def get_row_id_column(self) -> MappedColumn:
-        """
-        Return the row ID column.
-        """
+        """Return the row ID column."""
         return self._row_id_field
 
     def dump(self, user_id: Hashable | None, obj: Model, **kwargs: Any) -> Any:
@@ -293,6 +308,7 @@ class SAMapper(BaseSAMapper):
         in the model object are included, preserving existing DB values for omitted
         fields. Override in subclasses to add db-specific rules (e.g. never touch
         created_at, stamp modified_by from user_id).
+
         """
         if self._is_identical_common_field_names:
             mapped_dict = obj.model_dump(exclude_none=True)
@@ -340,6 +356,7 @@ class SAMapper(BaseSAMapper):
         """
         Load a model object from the given row object. Override in subclasses to add
         db-specific rules (e.g. load related objects based on relationship fields).
+
         """
         if self._is_identical_common_field_names:
             mapped_dict = {
@@ -367,6 +384,7 @@ class SAMapper(BaseSAMapper):
         row fields in the field name map exist in the row class. The field name map is
         used to handle cases where model and row field names differ, but there is still
         a one-to-one mapping (e.g. created_by in model maps to created_by_id in row).
+
         """
         # Set model and row field names by field type
         valid_row_field_names = set(row_class.__table__.columns.keys())
@@ -418,6 +436,7 @@ class SAMapper(BaseSAMapper):
         Retrieve and validate field names for service metadata, db metadata, and actual
         row fields. The service and db metadata field names are optional and can be
         None. If provided, they must be tuples of strings.
+
         """
         row_field_names = set(
             self._row_field_names_by_set[FieldTypeSet.MODEL_DB_COMMON]
@@ -458,6 +477,7 @@ class SAMapper(BaseSAMapper):
         None. If field names is not an iterable of strings, raise an error. If any field
         names are not in the valid field names, raise an error. Otherwise, return the
         field names as a tuple.
+
         """
         if field_names is None:
             return None
@@ -481,6 +501,7 @@ class SAMapper(BaseSAMapper):
     ) -> None:
         """
         Initialize relationship field name mappings between model and row classes.
+
         Validates that all link fields in the model have corresponding relationship
         fields in the row. The field name map is used to handle cases where model and
         row field names differ, but there is still a one-to-one mapping (e.g. created_by
@@ -509,6 +530,7 @@ class SAMapper(BaseSAMapper):
     def _init_extract_primary_key(self, model_class: type[Model]) -> None:
         """
         Initialize functions to extract the primary key values from model and row objects.
+
         Validates that there is exactly one ID field in the model and row, and that they
         are mapped to each other.
         """

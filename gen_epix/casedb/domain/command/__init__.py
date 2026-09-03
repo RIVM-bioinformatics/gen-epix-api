@@ -1,3 +1,16 @@
+"""Expose and group casedb and shared commands for domain registration.
+
+ABAC exports manage case access and sharing policies. Case exports cover case
+metadata, content, sets, uploads, queries, rights, statistics, and seqdb-backed
+operations; geographic exports manage regions, and ontology exports manage
+concepts, diseases, agents, and etiologies. seqdb exports retrieve sequence data.
+Shared commondb exports provide authentication, system, RBAC, organization, and
+common command contracts used by casedb.
+
+``COMMANDS_BY_SERVICE_TYPE`` assigns these commands to casedb services, and
+``COMMON_COMMAND_MAP`` defines substitutions for shared command types.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix import fastapp
 from gen_epix.casedb.domain import enum

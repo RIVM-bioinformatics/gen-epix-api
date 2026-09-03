@@ -1,3 +1,5 @@
+"""Implement seqdb sequence service behavior for services.seq.retrieve_sample."""
+
 import gen_epix.seqdb.domain.command as command
 import gen_epix.seqdb.domain.model as model
 from gen_epix.fastapp import CrudOperation
@@ -10,9 +12,7 @@ def seq_service_retrieve_samples_by_id(
     self: BaseSeqService,
     cmd: command.RetrieveSamplesByIdCommand,
 ) -> list[model.FullSample]:
-    """
-    Retrieve all relevant FullSample records for the requested sample IDs.
-    """
+    """Retrieve all relevant FullSample records for the requested sample IDs."""
     sample_ids = cmd.sample_ids or []
     if not sample_ids:
         return []
@@ -24,9 +24,7 @@ def seq_service_retrieve_sample_identifiers_by_id(
     self: BaseSeqService,
     cmd: command.RetrieveSampleIdentifiersByIdCommand,
 ) -> list[model.SampleIdentifier]:
-    """
-    Retrieve only SampleIdentifier records for the requested sample IDs.
-    """
+    """Retrieve only SampleIdentifier records for the requested sample IDs."""
     sample_ids = cmd.sample_ids or []
     if not sample_ids:
         return []
@@ -46,9 +44,7 @@ def seq_service_retrieve_samples_by_query(
     self: BaseSeqService,
     cmd: command.RetrieveSamplesByQueryCommand,
 ) -> model.SampleQueryResult:
-    """
-    Retrieve sample IDs based on query filters.
-    """
+    """Retrieve sample IDs based on query filters."""
     sample_query = cmd.sample_query
     repository: BaseSeqRepository = self.repository  # type: ignore[assignment]
     with repository.uow() as uow:

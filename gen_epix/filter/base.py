@@ -1,3 +1,5 @@
+"""Base abstractions for scalar, column, and row filters."""
+
 import abc
 from collections.abc import Callable, Hashable, Iterable, Iterator
 from typing import Annotated, Any, Literal, Self
@@ -9,7 +11,9 @@ from gen_epix.filter.enum import FilterType
 
 class Filter(BaseModel):
     """
-    Base class for filters.
+    Represents a filter.
+
+    This is a base class from which all actual filter implementations inherit.
 
     Attributes:
         invert (bool): Whether to invert the filter.
@@ -29,12 +33,13 @@ class Filter(BaseModel):
 
     @property
     def is_composite(self) -> bool:
+        """Return whether this filter combines multiple child filters."""
         return self._is_composite
 
     def _get_row_value(
         self, row: dict | BaseModel, key: Hashable, is_model: bool
     ) -> Any:
-        """Helper method to get a attribute value from a row model"""
+        """Get a value from either a mapping row or a model row."""
         if is_model:
             return getattr(row, key, None)
         return row.get(key, None)
@@ -95,9 +100,7 @@ class Filter(BaseModel):
         na_values: set[Any] | None = None,
         map_fn: Callable[[Any], Any] | None = None,
     ) -> Iterator[Any | None]:
-        """
-        Analogous to match_column, but yields the values that match the filter instead of a bool.
-        """
+        """Yield column values that match the filter."""
         if not map_fn:
             map_fn = lambda x: x
         if na_values is None:
@@ -123,6 +126,7 @@ class Filter(BaseModel):
             row (dict[Hashable, Any | None]): The row to be checked.
             na_values (set[Any] | None, optional): Set of values to be considered as NA values. Defaults to None.
             map_fn (Callable[[Any], Any] | None, optional): Function to be applied to each value before matching. Defaults to None.
+            is_model (bool, optional): Whether each row is a model instance. Defaults to False.
 
         Returns:
             bool: True if the row matches the filter, False otherwise.
@@ -147,6 +151,7 @@ class Filter(BaseModel):
             rows (Iterable[dict[Hashable, Any | None]]): The collection of rows.
             na_values (set[Any] | None, optional): Set of values to be considered as NA values. Defaults to None.
             map_fn (Callable[[Any], Any] | None, optional): Function to be applied to each value before matching. Defaults to None.
+            is_model (bool, optional): Whether each row is a model instance. Defaults to False.
 
         Yields:
             bool: True if the row matches the filter, False otherwise.
@@ -167,9 +172,7 @@ class Filter(BaseModel):
         map_fn: Callable[[Any], Any] | None = None,
         is_model: bool = False,
     ) -> Iterator[dict[Hashable, Any | None] | BaseModel]:
-        """
-        Analogous to match_rows, but yields the rows that match the filter instead of a bool.
-        """
+        """Yield rows that match the filter."""
         map_fn, key = self._initialize_mapping(map_fn)
         for row in rows:
             if na_values is None:
@@ -188,6 +191,7 @@ class Filter(BaseModel):
         map_fn: Callable[[Any], Any],
         key: Hashable,
     ) -> bool:
+        """Return whether the configured key matches in a row without NA values."""
         if (
             (is_model or key in row)
             and self._get_row_value(row, key, is_model) is not None
@@ -204,6 +208,7 @@ class Filter(BaseModel):
         key: Hashable,
         na_values: set[Any],
     ) -> bool:
+        """Return whether the configured key matches while excluding NA values."""
         if (
             (is_model or key in row)
             and self._get_row_value(row, key, is_model) not in na_values
@@ -215,6 +220,17 @@ class Filter(BaseModel):
     def _initialize_mapping(
         self, map_fn: Callable[[Any], Any] | None
     ) -> tuple[Callable[[Any], Any], Hashable]:
+        """Validate the row key and return the mapping function and key.
+
+        Args:
+            map_fn: Optional mapping applied before matching a row value.
+
+        Returns:
+            The mapping function and configured row key.
+
+        Raises:
+            ValueError: If no row key is configured.
+        """
         if self.key is None:
             raise ValueError("Key must be set to apply filter to a row.")
         if not map_fn:
@@ -224,19 +240,21 @@ class Filter(BaseModel):
 
     @abc.abstractmethod
     def _match(self, value: Any) -> bool:
-        """
-        Abstract method to be implemented by subclasses.
-        Checks if a value matches the filter.
+        """Return whether a scalar value matches this filter.
 
         Args:
-            value (Any): The value to be checked.
+            value: The value to check.
 
         Returns:
-            bool: True if the value matches the filter, False otherwise.
+            Whether the value matches the filter.
+
+        Raises:
+            NotImplementedError: Always, because subclasses provide matching logic.
         """
         raise NotImplementedError()
 
     def set_key(self, key: Hashable | Callable[[Hashable], Hashable]) -> Self:
+        """Set the row key directly or transform the existing key."""
         if callable(key):
             self.key = key(self.key)
         else:
@@ -244,6 +262,7 @@ class Filter(BaseModel):
         return self
 
     def get_key(self) -> Hashable:
+        """Return the key configured for row matching."""
         return self.key
 
     def __call__(
@@ -263,7 +282,10 @@ class Filter(BaseModel):
             map_fn (Callable[[Any], Any] | None, optional): Function to be applied to each value before matching. Defaults to None.
 
         Returns:
-            Iterable[bool]: An iterable of booleans for each row, True if the data matches the filter, False otherwise.
+            An iterator containing the values that match this filter.
+
+        Raises:
+            ValueError: If `axis` is not zero or one.
         """
         if axis == 0:
             return self.filter_rows(data, na_values=na_values, map_fn=map_fn)
@@ -273,4 +295,9 @@ class Filter(BaseModel):
 
 
 class TypedFilter(Filter):
+    """Represents a filter carrying an explicit serialized filter type.
+
+    This is a base class from which all actual typed filter implementations inherit.
+    """
+
     type: Literal[FilterType.BASE.value]

@@ -1,3 +1,5 @@
+"""Numeric set-membership filter models."""
+
 from decimal import Decimal
 from typing import Literal
 
@@ -8,10 +10,14 @@ from gen_epix.filter.hashable_set import HashableSetFilter
 
 
 class NumberSetFilter(HashableSetFilter):
+    """Represents a filter matching numeric values in an immutable set."""
+
     members: frozenset[int | float | Decimal] = Field(
         description="The numbers to match.", frozen=True
     )
 
 
 class TypedNumberSetFilter(NumberSetFilter):
+    """Represents a numeric set filter carrying its serialized filter type."""
+
     type: Literal[FilterType.NUMBER_SET.value]  # type: ignore[name-defined]

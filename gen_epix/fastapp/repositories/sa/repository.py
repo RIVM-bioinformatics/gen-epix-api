@@ -1,3 +1,5 @@
+"""SQLAlchemy repository implementation."""
+
 import re
 import uuid
 import warnings
@@ -11,7 +13,6 @@ from sqlalchemy.exc import SAWarning
 from sqlalchemy.orm import Session, sessionmaker
 
 import gen_epix.fastapp.exc as exc
-from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import CrudOperation, IsolationLevel
 from gen_epix.fastapp.model import Model
@@ -46,9 +47,7 @@ from gen_epix.filter import (
 
 
 class SARepository(BaseRepository):
-    """
-    SQLAlchemy-backed repository
-    """
+    """Encapsulates a SQLAlchemy-backed repository."""
 
     DEFAULT_MAX_INSERT_BATCH_SIZE = 2000
     DEFAULT_MAX_PARAMETERS_IN_CLAUSE = 1000
@@ -71,6 +70,7 @@ class SARepository(BaseRepository):
     def create_repository(cls, **kwargs: Any) -> BaseRepository:
         """
         Create a repository instance from keyword arguments.
+
         Accepts either ``connection_string`` or ``file`` (SQLite path).
         """
         entities, connection_string, remaining_kwargs = cls._process_repository_params(
@@ -84,9 +84,7 @@ class SARepository(BaseRepository):
 
     @classmethod
     def clear_repository_content(cls, **kwargs: Any) -> None:
-        """
-        Delete all database objects associated with the repository.
-        """
+        """Delete all database objects associated with the repository."""
         entities, connection_string, remaining_kwargs = cls._process_repository_params(
             kwargs
         )
@@ -131,11 +129,7 @@ class SARepository(BaseRepository):
                 dialect_name = conn.dialect.name.lower()
                 transaction = conn.begin()
                 try:
-                    for (
-                        schema_name,
-                        table_name,
-                        constraint_name,
-                    ) in constraints:
+                    for schema_name, table_name, constraint_name in constraints:
                         try:
                             # NOTE: Only tested with MS SQL Server
                             if dialect_name == "mssql":
@@ -193,6 +187,7 @@ class SARepository(BaseRepository):
     def __init__(self, engine: Engine, **kwargs: Any):
         """
         Initialise the repository with the provided SQLAlchemy engine.
+
         Registers mappers for each persistable entity and creates per-
         isolation-level session factories.
         """
@@ -263,6 +258,7 @@ class SARepository(BaseRepository):
     ) -> BaseUnitOfWork:
         """
         Return a unit-of-work context manager backed by an SA session.
+
         Nests within the active UoW when already inside a context.
         """
         if self._uow_context_stack:
@@ -311,6 +307,7 @@ class SARepository(BaseRepository):
     ) -> None:
         """
         Create and register mappers for a list of entities using the given factory.
+
         The factory encapsulates all db-specific mapper construction, so SARepository
         has no knowledge of process fields or metadata field rules.
         """
@@ -338,9 +335,7 @@ class SARepository(BaseRepository):
         field_name_map: dict[type[Model], dict[str, str]] | None = None,
         **kwargs: Any,
     ) -> None:
-        """
-        Default implementation to register standard mappers for a list of entities.
-        """
+        """Default implementation to register standard mappers for a list of entities."""
         # Parse arguments
         entities = entities or []
         field_name_map = field_name_map or {}
@@ -536,6 +531,7 @@ class SARepository(BaseRepository):
         # Create rows
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
+            """Execute the requested value."""
             rows = self.to_sql(user_id, model_class, objs)
             n_rows = len(rows)
             n_batches = int(n_rows / max_batch_size) + (n_rows / max_batch_size > 0)
@@ -587,6 +583,7 @@ class SARepository(BaseRepository):
         optimize_parameter_handling = kwargs.get("optimize_parameter_handling", False)
 
         def _execute(session: Session) -> list[Model]:
+            """Execute the requested value."""
             rows, row_ids = SARepository._in_session_read_some(
                 mapper,
                 session,
@@ -626,6 +623,7 @@ class SARepository(BaseRepository):
     ) -> list[Model] | list[Hashable]:
         """
         Fetch all rows matching an optional filter, with limit/offset support.
+
         An ``obj_filter`` kwarg may apply additional Python-side filtering.
         """
         # Check arguments
@@ -638,6 +636,7 @@ class SARepository(BaseRepository):
         offset = offset or 0
 
         def _add_sql_limit_offset(stmt: sa.Select) -> sa.Select:
+            """Add sql limit offset."""
             if limit > 0:
                 stmt = stmt.limit(limit)
             if offset > 0:
@@ -645,6 +644,7 @@ class SARepository(BaseRepository):
             return stmt
 
         def _apply_obj_limit_offset(objs: list[Model]) -> list[Model]:
+            """Apply obj limit offset."""
             if limit > 0:
                 if offset > len(objs):
                     return []
@@ -656,6 +656,7 @@ class SARepository(BaseRepository):
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
             # Get either rows or row_ids
+            """Execute the requested value."""
             if return_id:
                 # Select only row_ids
                 stmt = select(mapper.get_row_id_column())
@@ -732,6 +733,7 @@ class SARepository(BaseRepository):
         row_class = mapper.row_class
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
+            """Execute the requested value."""
             obj_ids = [mapper.get_id(x) for x in objs]
             rows, row_ids = SARepository._in_session_read_some(
                 mapper,
@@ -778,6 +780,7 @@ class SARepository(BaseRepository):
     ) -> list[Model] | list[Hashable]:
         """
         Insert new objects and update existing ones in a single call.
+
         Existence is checked in batches to respect SQL Server's parameter limit.
         """
         objs = objs if isinstance(objs, list) else list(objs)
@@ -797,6 +800,7 @@ class SARepository(BaseRepository):
         row_class = mapper.row_class
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
+            """Execute the requested value."""
             obj_ids = [mapper.get_id(x) for x in objs]
 
             # Chunk the existence check to avoid SQL Server's 2100-parameter limit.
@@ -888,6 +892,7 @@ class SARepository(BaseRepository):
         row_class = mapper.row_class
 
         def _execute(session: Session) -> None:
+            """Execute the requested value."""
             is_existing = self.exists_some(model_class, row_ids)
             if not all(is_existing):
                 invalid_ids = [x for x, y in zip(row_ids, is_existing) if not y]
@@ -923,7 +928,7 @@ class SARepository(BaseRepository):
         obj_filter: Filter | None = kwargs.get("obj_filter", None)
 
         def _execute(session: Session) -> list[Hashable] | None:
-
+            """Execute the requested value."""
             row_ids: list[Hashable] | None = None
 
             # filter and/or obj_filter provided
@@ -1001,6 +1006,7 @@ class SARepository(BaseRepository):
         SARepository._verify_duplicate_ids(model_class, obj_ids)
 
         def _execute(session: Session) -> list[bool]:
+            """Execute the requested value."""
             row_id_col = mapper.get_row_id_column()
             rows: Sequence = session.execute(
                 select(row_id_col).where(row_id_col.in_(obj_ids))
@@ -1030,6 +1036,7 @@ class SARepository(BaseRepository):
         row_class = mapper.row_class
 
         def _execute(session: Session) -> Iterable[tuple[Any, ...]]:
+            """Execute the requested value."""
             stmt = select(*[getattr(row_class, x) for x in row_field_names])
             if filter:
                 # Convert filter to where clause and add to statement
@@ -1142,6 +1149,7 @@ class SARepository(BaseRepository):
         """
         Recursively partition a filter into a SQL-expressible subtree and
         a remainder to be evaluated in Python.
+
         """
         map_key_only_classes = [
             ExistsFilter,
@@ -1224,7 +1232,7 @@ class SARepository(BaseRepository):
         return None, filter
 
     def print_db_content(self, model_class: type[Model], **kwargs: Any) -> None:
-        """Helper method for debugging"""
+        """Helper method for debugging."""
         header = kwargs.get("header", "")
         mapper = self.get_mapper(model_class)
         tables_classes = [
@@ -1337,10 +1345,10 @@ class SARepository(BaseRepository):
         max_ids_in_clause: int = DEFAULT_MAX_PARAMETERS_IN_CLAUSE,
     ) -> sa.sql.Select:
         """Build a SELECT restricted to the given ids via a temp-table JOIN.
+
         Avoids ODBC 07002 errors on MSSQL for UNIQUEIDENTIFIER IN() queries.
         Falls back to a plain IN() clause on non-MSSQL dialects.
         """
-
         row_class = mapper.row_class
         table = cast(sa.Table, row_class.__table__)  # type: ignore[attr-defined]
         id_col = mapper.get_row_id_column()
@@ -1353,7 +1361,7 @@ class SARepository(BaseRepository):
             return select(row_class).where(id_col.in_(obj_ids))
 
         # TODO: check if temp table exists and take a different name in that case
-        temp_table_name = f"#temp_{str(uuid.uuid4()).replace('-','_')}"
+        temp_table_name = f"#temp_{str(uuid.uuid4()).replace('-', '_')}"
         id_col_name = id_col.name
         id_datatype = table.c[id_col_name].type
         id_datatype_sql = id_datatype.compile(dialect=dialect)
@@ -1512,9 +1520,9 @@ class SARepository(BaseRepository):
         recreate_sqlite_file = kwargs.pop("recreate_sqlite_file", False)
 
         # Handle sqlite separately
-        is_sqlite = connection_string is None or connection_string.lower().startswith(
-            "sqlite:///"
-        )
+        is_sqlite = connection_string is None or str(
+            connection_string
+        ).lower().startswith("sqlite:///")
         create_database_objects = kwargs.pop("create_database_objects", is_sqlite)
         schema_names = {x.schema_name for x in entities if x.persistable}
         if is_sqlite:
@@ -1535,9 +1543,7 @@ class SARepository(BaseRepository):
                 # so that multiple SARepository instances created in this way will not
                 # share the same database. This is important e.g. for testing, where
                 # multiple tests may create their own SARepository instances.
-                sqlite_target = (
-                    f"file:{uuid.uuid4()}?mode=memory&cache=shared&uri=true"
-                )
+                sqlite_target = f"file:{uuid.uuid4()}?mode=memory&cache=shared&uri=true"
                 sqlite_target_lower = sqlite_target.lower()
                 connection_string = f"sqlite:///{sqlite_target}"
 
@@ -1583,11 +1589,16 @@ class SARepository(BaseRepository):
             def set_sqlite_pragma(
                 dbapi_connection: Any, connection_record: Any
             ) -> None:
+                """Set sqlite pragma."""
                 cursor = dbapi_connection.cursor()
                 cursor.execute("PRAGMA foreign_keys=ON")
                 cursor.close()
 
             # Add each schema as a separate database, as sqlite does not support schemas
+            # Unique per repository instance, so schemas of the same name from
+            # different SARepository instances don't collide on sqlite's
+            # process-wide shared cache (which is keyed by URI).
+            memory_schema_namespace = uuid.uuid4().hex
             with engine.connect() as conn:
                 for schema_name in schema_names:
                     if not schema_name:
@@ -1597,7 +1608,8 @@ class SARepository(BaseRepository):
                     if is_memory_target:
                         # For in-memory sqlite, give each schema its own shared-memory db.
                         attach_target = (
-                            f"file:{schema_name}?mode=memory&cache=shared&uri=true"
+                            f"file:{schema_name}_{memory_schema_namespace}"
+                            "?mode=memory&cache=shared&uri=true"
                         )
                     else:
                         if len(schema_names) > 1:
@@ -1673,6 +1685,7 @@ class SARepository(BaseRepository):
         """
         Try to open a database connection; return None on success or the
         exception on failure.
+
         """
         try:
             connection = sa.create_engine(

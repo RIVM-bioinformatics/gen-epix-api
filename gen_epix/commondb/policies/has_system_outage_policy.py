@@ -1,3 +1,5 @@
+"""Restrict commondb commands during active system outages."""
+
 import time
 from typing import ClassVar
 
@@ -9,10 +11,23 @@ from gen_epix.fastapp import Command, CrudOperation
 
 
 class HasSystemOutagePolicy(BaseHasSystemOutagePolicy):
+    """Encapsulates outage administration while restricting requests during active outages."""
+
     _IS_PERMITTED_CACHE: ClassVar[TTLCache] = TTLCache(maxsize=100, ttl=100)
     _IS_ALLOWED_CACHE: ClassVar[TTLCache] = TTLCache(maxsize=10, ttl=10)
 
     def is_allowed(self, cmd: Command) -> bool:
+        """Determine whether a command may proceed under the current outage state.
+
+        Outage CRUD commands, unauthenticated commands, and users with the configured
+        outage-update permission remain allowed.
+
+        Args:
+            cmd: Command being evaluated by the policy lifecycle.
+
+        Returns:
+            True when the command is allowed during the current outage state.
+        """
         if isinstance(cmd, command.OutageCrudCommand):
             return True
         if self._is_allowed():
@@ -23,10 +38,23 @@ class HasSystemOutagePolicy(BaseHasSystemOutagePolicy):
         return self._is_permitted(cmd.user)  # type: ignore[arg-type]
 
     def get_is_denied_exception(self) -> type[Exception]:
+        """Return the exception type used when an outage denies a command.
+
+        Returns:
+            ServiceUnavailableError, indicating that service is temporarily unavailable.
+        """
         return exc.ServiceUnavailableError
 
     @cached(cache=_IS_PERMITTED_CACHE, key=lambda self, tgt_user: tgt_user.id)
     def _is_permitted(self, tgt_user: model.User) -> bool:
+        """Determine whether a user has permission to administer an outage.
+
+        Args:
+            tgt_user: User whose permissions are checked.
+
+        Returns:
+            True when the user holds the configured outage-update permission.
+        """
         return (
             self.outage_update_permission
             in self.system_service.app.user_manager.retrieve_user_permissions(tgt_user)
@@ -34,6 +62,11 @@ class HasSystemOutagePolicy(BaseHasSystemOutagePolicy):
 
     @cached(cache=_IS_ALLOWED_CACHE)
     def _is_allowed(self) -> bool:
+        """Determine whether no active outage currently restricts requests.
+
+        Returns:
+            True when no persisted outage is active in the current time window.
+        """
         outages: list[model.Outage] = self.system_service.crud(  # type: ignore[assignment]
             command.OutageCrudCommand(
                 user=None,

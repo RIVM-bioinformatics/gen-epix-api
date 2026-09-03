@@ -1,3 +1,5 @@
+"""Define seqdb domain models for domain.model.seq.tree."""
+
 from typing import ClassVar, Self
 from uuid import UUID
 
@@ -11,6 +13,8 @@ from gen_epix.seqdb.domain.model.seq.protocol import Protocol
 
 
 class TreeAlgorithmClass(Model):
+    """Represents a class (type) of phylogenetic tree algorithms."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="tree_algorithm_classes",
         table_name="tree_algorithm_class",
@@ -36,11 +40,10 @@ class TreeAlgorithmClass(Model):
 
 
 class TreeAlgorithm(Model):
-    """
-    See https://en.wikipedia.org/wiki/Hierarchical_clustering,
+    """Represents a phylogenetic tree algorithm; see https://en.wikipedia.org/wiki/Hierarchical_clustering,
     https://en.wikipedia.org/wiki/Neighbor_joining,
      https://en.wikipedia.org/wiki/Computational_phylogenetics,
-     https://en.wikipedia.org/wiki/Spanning_tree
+     https://en.wikipedia.org/wiki/Spanning_tree.
     """
 
     ENTITY: ClassVar = Entity(
@@ -80,6 +83,12 @@ class TreeAlgorithm(Model):
 
 
 class PhylogeneticTree(Model):
+    """Represents a non-persisted phylogenetic tree and its leaf metadata.
+
+    Model validation: When provided, leaf names and profile identifiers must be
+    unique. When both are provided, they must describe the same number of leaves.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="phylogenetic_trees",
         persistable=False,
@@ -101,6 +110,7 @@ class PhylogeneticTree(Model):
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
+        """Ensure tree leaf names and profile identifiers are consistent."""
         if self.leaf_names:
             if len(set(self.leaf_names)) < len(self.leaf_names):
                 raise ValueError("Duplicate leaf_codes")

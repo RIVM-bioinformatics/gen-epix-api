@@ -1,10 +1,10 @@
-# CaseDB RBAC Diagram
+# casedb RBAC Diagram
 
-> 1 nodes · cohesion 1.00
+> 1 nodes
 
 ## Key Concepts
 
-- **CaseDB RBAC Diagram** (0 connections) — `docs/erm/casedb.rbac.png`
+- **casedb RBAC Diagram** (0 connections) — `docs/erm/casedb.rbac.png`
 
 ## Relationships
 

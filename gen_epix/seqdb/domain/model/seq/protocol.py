@@ -1,3 +1,5 @@
+"""Define seqdb domain models for domain.model.seq.protocol."""
+
 import json
 import string
 from datetime import datetime, timezone
@@ -49,8 +51,7 @@ def _create_field_description(
 
 
 class Protocol(Model):
-    """
-    Represents an analytical method used to derive a result from source data. The class
+    """Represents an analytical method used to derive a result from source data. The class
     is conceptually polymorphic, with the protocol_type field determining which
     additional fields are required and which results it may be linked to. This design
     allows for a flexible and extensible representation of various analytical protocols
@@ -58,6 +59,13 @@ class Protocol(Model):
 
     The Protocol model includes optional fields for linking to Git repositories and
     commits, so that the exact analytical logic can be traced.
+
+    Model validation: Datetimes are normalized to UTC, enum fields accept their
+    integer representations, Git references and JSON properties are validated, and
+    type-dependent fields must be supplied only for compatible protocol types.
+
+    Model serialization: Enum fields are emitted as integer values and linked
+    reference-sequence and locus-set identifiers are emitted as strings.
     """
 
     ENTITY: ClassVar = Entity(
@@ -211,6 +219,7 @@ class Protocol(Model):
     def _validate_protocol_type(
         cls, value: str | int | float | ProtocolType
     ) -> ProtocolType:
+        """Normalize the protocol type from its accepted enum representation."""
         return validate_int_enum_value(ProtocolType, value)  # type: ignore[return-value]
 
     @field_validator("git_commit_hash", mode="after")
@@ -241,6 +250,7 @@ class Protocol(Model):
     def _validate_seq_profile_type(
         cls, value: str | int | float | SeqProfileType | None
     ) -> SeqProfileType | None:
+        """Normalize the optional sequence-profile type from its enum representation."""
         if value is None:
             return None
         return validate_int_enum_value(SeqProfileType, value)  # type: ignore[return-value]
@@ -250,6 +260,7 @@ class Protocol(Model):
     def _validate_seq_distance_type(
         cls, value: str | int | float | SeqDistanceType | None
     ) -> SeqDistanceType | None:
+        """Normalize the optional sequence-distance type from its enum representation."""
         if value is None:
             return None
         return validate_int_enum_value(SeqDistanceType, value)  # type: ignore[return-value]
@@ -257,9 +268,7 @@ class Protocol(Model):
     @field_validator("props", mode="before")
     @classmethod
     def _validate_props(cls, value: dict[str, Any] | str) -> dict[str, Any]:
-        """Allows props to be passed as a JSON string or a dictionary. Validates
-        that the JSON representation does not exceed PROPS_MAX_JSON_LENGTH characters.
-        """
+        """Normalize JSON properties and enforce their serialized length limit."""
         if isinstance(value, str):
             if len(value) > cls.PROPS_MAX_JSON_LENGTH:
                 raise ValueError(
@@ -277,12 +286,7 @@ class Protocol(Model):
 
     @model_validator(mode="after")
     def _validate_protocol_type_dependencies(self) -> Self:
-        """
-        Validates that the fields required for the specified protocol type are correctly
-        filled.For each field that has protocol type dependencies, checks if the current
-        protocol type requires it. If required, ensures the field is not None. If not
-        required, ensures the field is None.
-        """
+        """Enforce fields required or disallowed by the selected protocol type."""
         for (
             field_name,
             (required_protocol_types, optional_protocol_types),
@@ -323,7 +327,15 @@ class Protocol(Model):
     def get_seq_profile_type_for_distance_protocol(
         self,
     ) -> SeqProfileType:
-        """Given a distance protocol, return the SeqProfileType it applies to."""
+        """Return the sequence-profile type used by this distance protocol.
+
+        Returns:
+            The profile type associated with this protocol's distance type.
+
+        Raises:
+            ValueError: If this is not a distance protocol or its distance type has no
+                associated profile type.
+        """
         if self.protocol_type not in ProtocolTypeSet.IS_SEQ_DISTANCE.value:
             raise ValueError(
                 f"Protocol type {self.protocol_type} is not a sequence distance protocol, cannot determine SeqProfileType."
@@ -340,7 +352,7 @@ class Protocol(Model):
 
 
 class HasProtocolMixin:
-    """Mixin for models that have an associated Protocol. Provides a protocol_id field
+    """Encapsulates models that have an associated Protocol. Provides a protocol_id field
     and a method to retrieve the associated Protocol.
     """
 
@@ -356,10 +368,8 @@ class HasProtocolMixin:
 
 
 class ProtocolSet(Model):
-    """
-    A set of Protocol, for example a set of Protocol that are relevant for a specific
-    analysis or application.
-    """
+    """Represents a set of Protocols, for example a set of Protocol that are relevant for a specific
+    analysis or application."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="protocol_sets",

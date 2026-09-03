@@ -26,7 +26,7 @@ dependencies = [
     # For compatibility with apache-airflow-core 3.3.0 used in other repositories, fastapi must be pinned to <0.137.0
     # "fastapi[standard]==0.141.1",
     "fastapi[standard]>=0.129.0,<0.137.0", 
-    "gunicorn==26.1.*",
+    "gunicorn==26.2.*",
     "starlette==1.6.*",
     "httpx==0.28.1",
     "pyjwt==2.13.0",
@@ -35,7 +35,7 @@ dependencies = [
     "sqlalchemy==2.0.52",
     "sqlalchemy_utils==0.42.1",
     "alembic==1.19.1",
-    "pydantic==2.13.4",
+    "pydantic==2.13.5",
     "ulid-py==1.1.0",
     "fire==0.7.1",
     "dynaconf==3.3.3",
@@ -43,12 +43,12 @@ dependencies = [
     "scipy==1.18.1",
     "numpy==2.5.2",
     "biopython==1.88",
-    "cachetools==7.1.7",
+    "cachetools==7.1.8",
     "slowapi==0.1.10",
     "python-dateutil==2.9.0.post0",
     "types-python-dateutil==2.9.*",
     "types-setuptools==84.0.*",
-    "cryptography==50.0.0",
+    "cryptography==50.0.1",
     "oauthlib==3.3.1",
     "python-multipart==0.0.32",
     "pyinstrument==5.1.*",
@@ -85,3 +85,26 @@ target-version = ['py313']
 profile = "black"
 float_to_top = true
 line_length = 88
+
+[tool.ruff]
+line-length = 88
+target-version = "py314"
+
+[tool.ruff.lint]
+ignore = [
+    # The repository uses the PEP 257-compatible form where multi-line docstring
+    # summaries start on the second line after the opening quotes.
+    "D212",
+    # Parameter documentation is intentionally semantic and non-duplicative. Ruff
+    # cannot determine when an annotated parameter needs extra prose.
+    "D417",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Existing fastapp docstrings use summary prose followed immediately by the
+# detailed description; normalize this legacy style in a later lint phase.
+"gen_epix/fastapp/**/*.py" = ["D205"]
+"gen_epix/fastapp/*.py" = ["D205"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"

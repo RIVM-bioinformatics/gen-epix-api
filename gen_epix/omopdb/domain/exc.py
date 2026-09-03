@@ -1,3 +1,5 @@
+"""Re-export FastApp API and domain exceptions used by OmopDB."""
+
 # pylint: disable=wildcard-import, unused-wildcard-import
 # because this is a package, and imported as such in other modules
 

@@ -3,15 +3,16 @@ import os
 from pathlib import Path
 
 
-def set_envvar() -> None:
+def set_envvar(identity_provider_file: Path | None = None) -> None:
     path = Path(__file__).parent
+    identity_provider_file = identity_provider_file or path / "identity_provider.toml"
     casedb_settings_files: list[Path] = [
         path / "casedb.settings.toml",
         path / "casedb.feature_flags.toml",
         path / "casedb.settings.repository.toml",
         path / "casedb.secrets.service.toml",
         path / "casedb.secrets.repository.toml",
-        path / "identity_provider.toml",
+        identity_provider_file,
     ]
     seqdb_settings_files: list[Path] = [
         path / "seqdb.settings.toml",
@@ -19,7 +20,7 @@ def set_envvar() -> None:
         path / "seqdb.settings.repository.toml",
         path / "seqdb.secrets.service.toml",
         path / "seqdb.secrets.repository.toml",
-        path / "identity_provider.toml",
+        identity_provider_file,
     ]
     omop_settings_files: list[Path] = [
         path / "omopdb.settings.toml",
@@ -27,7 +28,7 @@ def set_envvar() -> None:
         path / "omopdb.settings.repository.toml",
         path / "omopdb.secrets.service.toml",
         path / "omopdb.secrets.repository.toml",
-        path / "identity_provider.toml",
+        identity_provider_file,
     ]
 
     log_config_file = path / "logging.yaml"

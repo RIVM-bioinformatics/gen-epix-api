@@ -1,3 +1,5 @@
+"""Define organization, user invitation, and authorization API request models and routes."""
+
 from collections.abc import Callable
 from enum import Enum
 from typing import Any, NoReturn, cast
@@ -21,9 +23,7 @@ CommandName = Enum("CommandName", {x: x for x in DOMAIN.command_names})  # type:
 
 
 class ApiPermission(PydanticBaseModel, frozen=True):
-    """
-    Represents a permission in the API layer, derived from the domain Permission model.
-    """
+    """Represents a domain permission in API request and response schemas."""
 
     command_name: CommandName = (  # pyright: ignore[reportInvalidTypeForm]
         copy_model_field(Permission, "command_name")
@@ -32,7 +32,7 @@ class ApiPermission(PydanticBaseModel, frozen=True):
 
 
 class InviteUserRequestBody(PydanticBaseModel):
-    """"""
+    """Define the request payload accepted by the user-invitation endpoint."""
 
     __doc__ = command.InviteUserCommand.__doc__
     key: str | None = copy_model_field(model.UserInvitation, "key")
@@ -44,7 +44,7 @@ class InviteUserRequestBody(PydanticBaseModel):
 
 
 class OrganizationSetOrganizationUpdateAssociationRequestBody(PydanticBaseModel):
-    """"""
+    """Define members submitted when updating an organization-set association."""
 
     __doc__ = command.OrganizationSetOrganizationUpdateAssociationCommand.__doc__
     organization_set_members: list[model.OrganizationSetMember] = copy_model_field(
@@ -55,7 +55,7 @@ class OrganizationSetOrganizationUpdateAssociationRequestBody(PydanticBaseModel)
 
 
 class DataCollectionSetDataCollectionUpdateAssociationRequestBody(PydanticBaseModel):
-    """"""
+    """Define members submitted when updating a data-collection-set association."""
 
     __doc__ = command.DataCollectionSetDataCollectionUpdateAssociationCommand.__doc__
     data_collection_set_members: list[model.DataCollectionSetMember] = copy_model_field(
@@ -66,7 +66,7 @@ class DataCollectionSetDataCollectionUpdateAssociationRequestBody(PydanticBaseMo
 
 
 class UpdateUserRequestBody(PydanticBaseModel):
-    """"""
+    """Define optional user fields accepted by the user-update endpoint."""
 
     __doc__ = command.UpdateUserCommand.__doc__
     is_active: bool | None = Field(
@@ -82,14 +82,14 @@ class UpdateUserRequestBody(PydanticBaseModel):
 
 
 class UpdateUserOwnOrganizationRequestBody(PydanticBaseModel):
-    """"""
+    """Define the organization change accepted by the self-service update endpoint."""
 
     __doc__ = command.UpdateUserOwnOrganizationCommand.__doc__
     organization_id: UUID = copy_model_field(model.User, "organization_id")
 
 
 class OrganizationIdentifierIssuerUpdateAssociationRequestBody(PydanticBaseModel):
-    """"""
+    """Define issuer links submitted when updating an organization association."""
 
     __doc__ = command.OrganizationIdentifierIssuerUpdateAssociationCommand.__doc__
     organization_identifier_issuer_links: list[
@@ -102,7 +102,7 @@ class OrganizationIdentifierIssuerUpdateAssociationRequestBody(PydanticBaseModel
 
 
 class RetrieveOrganizationContactsRequestBody(PydanticBaseModel):
-    """"""
+    """Define the organization whose contacts are requested from the API."""
 
     __doc__ = command.RetrieveOrganizationContactsCommand.__doc__
     organization_id: UUID = copy_model_field(

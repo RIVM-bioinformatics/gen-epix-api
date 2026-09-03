@@ -1,8 +1,8 @@
 # Model
 
-> God node · 159 connections · `gen_epix/fastapp/model.py`
+> God node · 153 connections · `gen_epix/fastapp/model.py`
 
-**Community:** [FastApp Domain Registration & UserManager](FastApp_Domain_Registration_&_UserManager.md)
+**Community:** [casedb/domain/model/__init__.py](casedb-domain-model-__init__.py.md)
 
 ## Connections by Relation
 
@@ -16,12 +16,10 @@
 - gen_epix/fastapp/__init__.py `EXTRACTED`
 - fastapp/app.py `EXTRACTED`
 - test_fastapp_dict_repository.py `EXTRACTED`
-- sa/repository.py `EXTRACTED`
-- test_fastapp_sa_repository.py `EXTRACTED`
 - test_fastapp_domain.py `EXTRACTED`
 - test_fastapp_remote_app.py `EXTRACTED`
 - gen_epix/fastapp/service.py `EXTRACTED`
-- test_fastapp_rbac_service.py `EXTRACTED`
+- [test_fastapp_rbac_service.py](test_fastapp_rbac_service.py.md) `EXTRACTED`
 - dict/repository.py `EXTRACTED`
 - domain.py `EXTRACTED`
 - auth/model.py `EXTRACTED`
@@ -33,6 +31,8 @@
 - mapper.py `EXTRACTED`
 - sa_mapper.py `EXTRACTED`
 - dict_modifier.py `EXTRACTED`
+- test_fastapp_dict_model_modifier.py `EXTRACTED`
+- modifier.py `EXTRACTED`
 
 ### inherits
 - PydanticBaseModel `EXTRACTED`
@@ -52,23 +52,23 @@
 - [Entity](Entity.md) `INFERRED`
 - [App](App.md) `INFERRED`
 - [DictRepository](DictRepository.md) `INFERRED`
-- [SARepository](SARepository.md) `INFERRED`
-- Domain `INFERRED`
-- BaseService `INFERRED`
-- BaseRepository `INFERRED`
+- [Domain](Domain.md) `INFERRED`
+- [BaseService](BaseService.md) `INFERRED`
+- [BaseRepository](BaseRepository.md) `INFERRED`
 - SeqProfile `INFERRED`
 - Protocol `INFERRED`
-- SAMapper `INFERRED`
-- BaseSAMapper `INFERRED`
+- [SAMapper](SAMapper.md) `INFERRED`
 - Seq `INFERRED`
 - OidcServerCfg `INFERRED`
+- [BaseSAMapper](BaseSAMapper.md) `INFERRED`
 - Claims `INFERRED`
-- TestRegistrationAndLookups `INFERRED`
+- [TestRegistrationAndLookups](TestRegistrationAndLookups.md) `INFERRED`
 - IdentityProvider `INFERRED`
-- ReadSet `INFERRED`
+- [ReadSet](ReadSet.md) `INFERRED`
 - RefDataAccess `INFERRED`
-- _DummyMapper `INFERRED`
-- RBACTestClient `INFERRED`
+- [_DummyMapper](_DummyMapper.md) `INFERRED`
+- [RBACTestClient](RBACTestClient.md) `INFERRED`
+- [BaseSeq](BaseSeq.md) `INFERRED`
 
 ---
 

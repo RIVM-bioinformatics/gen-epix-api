@@ -1,3 +1,5 @@
+"""Create transport-only system API endpoints and their request/response schemas."""
+
 import json
 import logging
 from collections.abc import Callable, Hashable
@@ -19,19 +21,27 @@ external_logger_fmap = exc.get_logger_fmap(logging.getLogger("commondb.external"
 
 
 class HealthStatus(Enum):
+    """Encapsulates the externally reported application health state."""
+
     HEALTHY = "HEALTHY"
     UNHEALTHY = "UNHEALTHY"
 
 
 class HealthResponseBody(PydanticBaseModel):
+    """Represents the current application health state."""
+
     status: HealthStatus
 
 
 class FeatureFlagsResponseBody(PydanticBaseModel):
+    """Represents configured feature flags keyed by their public names."""
+
     feature_flags: dict[str, bool]
 
 
 class LogItem(PydanticBaseModel):
+    """Represents one externally submitted structured application log item."""
+
     level: LogLevel
     command_id: str
     timestamp: str
@@ -42,10 +52,14 @@ class LogItem(PydanticBaseModel):
 
 
 class LogRequestBody(PydanticBaseModel):
+    """Represents structured log items submitted to the commondb logging endpoint."""
+
     log_items: list[LogItem]
 
 
 class LicensesResponseBody(PydanticBaseModel):
+    """Represents metadata for application and dependency package licenses."""
+
     packages: list[PackageMetadata]
 
 
@@ -56,7 +70,15 @@ def create_system_endpoints(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     **kwargs: Any,
 ) -> None:
+    """Register system health, feature-flag, license, logging, and CRUD endpoints.
 
+    Args:
+        router: Router or application receiving the endpoints.
+        app: Composed commondb application that dispatches commands.
+        service_type: Domain service type used to generate CRUD endpoints.
+        handle_exception: Exception adapter used by endpoint handlers.
+        **kwargs: Unused router composition options.
+    """
     assert handle_exception
     app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency
@@ -70,8 +92,9 @@ def create_system_endpoints(
     )
     @limiter.exempt
     async def get__health() -> HealthResponseBody:
-        """
-        Returns the health status of the service. If no response is received
+        """Return the service health status.
+
+        If no response is received
         within the timeout period, the service is considered unhealthy.
         """
         return HealthResponseBody(
@@ -85,9 +108,7 @@ def create_system_endpoints(
         description=command.RetrieveFeatureFlagsCommand.__doc__,
     )
     async def retrieve__feature_flags() -> FeatureFlagsResponseBody:
-        """
-        Returns the feature flags of the application.
-        """
+        """Return the application's feature flags."""
         try:
             cmd = command.RetrieveFeatureFlagsCommand(user=None)
             feature_flags: dict[Hashable, bool] = app.handle(cmd)
@@ -109,6 +130,17 @@ def create_system_endpoints(
     async def retrieve__licenses(
         idp_user: idp_user_dependency,  # type: ignore
     ) -> list[model.PackageMetadata]:
+        """Return package license metadata available to an IDP-authenticated user.
+
+        Args:
+            idp_user: Authenticated identity-provider user dependency.
+
+        Returns:
+            Package metadata containing license information.
+
+        Raises:
+            HTTPException: If license retrieval raises an application exception.
+        """
         try:
             cmd = command.RetrieveLicensesCommand(user=None)
             retval: list[model.PackageMetadata] = app.handle(cmd)
@@ -119,9 +151,7 @@ def create_system_endpoints(
     # Log
     @router.post("/log", operation_id="log")
     async def log(user: registered_user_dependency, request_body: LogRequestBody) -> None:  # type: ignore
-        """
-        Logs the provided log items.
-        """
+        """Log the provided log items."""
         try:
             user_id = str(user.id)  # type: ignore[attr-defined]
             for log_item in request_body.log_items:
@@ -150,6 +180,7 @@ def create_system_endpoints(
     async def retrieve__outages(
         idp_user: idp_user_dependency,  # type: ignore
     ) -> list[model.Outage]:
+        """Retrieve configured system outage records."""
         try:
             cmd = command.RetrieveOutagesCommand(user=None)
             retval: list[model.Outage] = app.handle(cmd)

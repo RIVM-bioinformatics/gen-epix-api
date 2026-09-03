@@ -1,3 +1,5 @@
+"""Provide seqdb persistence behavior for repositories.seq_sa."""
+
 from collections.abc import Iterable
 from collections.abc import Set as AbstractSet
 from datetime import datetime
@@ -15,6 +17,7 @@ from gen_epix.seqdb.domain.repository import BaseSeqRepository
 
 
 class SeqSARepository(SARepository, BaseSeqRepository):
+    """Encapsulates seqdb persistence behavior for sequence repositories using SQLAlchemy backends."""
 
     def get_sample_ids_modified_in_range(
         self,
@@ -22,6 +25,7 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         modified_since: datetime | None = None,
         modified_until: datetime | None = None,
     ) -> list[UUID]:
+        """Return samples modified directly or through linked records in a time range."""
         assert isinstance(uow, SAUnitOfWork)
         modified_sample_ids: set[UUID] = set()
         for model_class in [model.Sample] + model.FullSample.DATA_CLASSES:
@@ -45,6 +49,7 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         self,
         sample_ids: list[UUID],
     ) -> list[model.FullSample]:
+        """Construct complete sample aggregates from SQL-backed linked records."""
         if not sample_ids:
             return []
 
@@ -115,6 +120,18 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         uow: BaseUnitOfWork,
         seq_ids: list[UUID],
     ) -> Iterable[tuple[UUID, list[tuple[UUID, str]]]]:
+        """Yield requested sequences and their DNA contigs for FASTA generation.
+
+        Args:
+            uow: Unit of work used for the persistence operation.
+            seq_ids: Sequence identifiers to retrieve.
+
+        Returns:
+            Sequence identifiers paired with contig identifiers and DNA strings.
+
+        Raises:
+            InitializationServiceError: A contig does not use the plain DNA format.
+        """
         self.raise_on_duplicate_ids(seq_ids)
         assert isinstance(uow, SAUnitOfWork)
         mapper = self.get_mapper(model.Seq)
@@ -142,6 +159,7 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         max_distance: float,
         **kwargs: Any,
     ) -> list[UUID]:
+        """Return profile IDs connected by stored distances within the threshold."""
         if not profile_ids:
             return []
         assert isinstance(uow, SAUnitOfWork)
@@ -189,6 +207,7 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         protocol_id: UUID,
         profile_ids: list[UUID] | None = None,
     ) -> Iterable[model.SeqDistance]:
+        """Yield distance records for a protocol, optionally limited to profile IDs."""
         assert isinstance(uow, SAUnitOfWork)
         stmt = sa.select(sa_model.SeqDistance).where(
             sa_model.SeqDistance.protocol_id == protocol_id
@@ -223,6 +242,7 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         uow: BaseUnitOfWork,
         protocol_id: UUID,
     ) -> Iterable[UUID]:
+        """Yield unique profile IDs that have distance records for a protocol."""
         stmt = (
             sa.select(sa_model.SeqDistance.seq_profile_id)
             .distinct()
@@ -237,6 +257,7 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         uow: BaseUnitOfWork,
         protocol_id: UUID,
     ) -> datetime | None:
+        """Return the latest modification time among a protocol's distance records."""
         stmt = sa.select(sa.func.max(sa_model.SeqDistance.modified_at)).where(
             sa_model.SeqDistance.protocol_id == protocol_id
         )
@@ -249,6 +270,7 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         user_id: UUID | None,
         objs: list[model.SeqDistance],
     ) -> None:
+        """Batch-update distance content and modification metadata through SQL Core."""
         if not objs:
             return
         assert isinstance(uow, SAUnitOfWork)
@@ -294,6 +316,7 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         seq_profile_protocol_ids: list[UUID],
         limit: int | None = None,
     ) -> list[model.SeqProfile]:
+        """Return profiles missing a distance record for the given distance protocol."""
         if not seq_profile_protocol_ids:
             return []
         assert isinstance(uow, SAUnitOfWork)
@@ -338,6 +361,7 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         uow: BaseUnitOfWork,
         protocol_ids: list[UUID],
     ) -> list[model.SeqProfile]:
+        """Return profiles linked to one of the supplied profiling protocols."""
         if not protocol_ids:
             return []
         assert isinstance(uow, SAUnitOfWork)
@@ -371,7 +395,7 @@ class SeqSARepository(SARepository, BaseSeqRepository):
             enum.QualityControlResult
         ] = enum.QualityControlResultSet.USABLE.value,
     ) -> list[UUID]:
-
+        """Return requested profile IDs whose quality result is allowed."""
         if not seq_profile_ids or not allowed_qc_results:
             return []
         stmt = sa.select(sa_model.SeqProfile.id).where(

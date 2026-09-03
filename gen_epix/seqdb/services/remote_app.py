@@ -1,3 +1,5 @@
+"""Implement seqdb application service behavior for services.remote_app."""
+
 import base64
 from collections.abc import Iterable
 from datetime import datetime
@@ -12,7 +14,7 @@ from gen_epix.seqdb.domain import DOMAIN, command, enum, model
 
 
 class SeqdbRemoteApp(CommondbRemoteApp):
-    """Remote app client for the seqdb service."""
+    """Encapsulates the remote app client for the seqdb service."""
 
     DEFAULT_ROUTE_PREFIX = "/v1"
 
@@ -42,6 +44,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         command.RetrieveSampleIdentifiersByIdCommand: 45.0,
         command.RetrieveSamplesByIdCommand: 45.0,
         command.RetrieveSamplesByQueryCommand: 45.0,
+        command.LocusCrudCommand: 45.0,
         command.RetrieveBestSeqPerSampleCommand: 15.0,
         command.RetrieveBestSeqProfilePerSampleCommand: 15.0,
         command.RetrieveBestSeqClassificationPerSampleCommand: 15.0,

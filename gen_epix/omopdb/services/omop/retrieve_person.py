@@ -1,3 +1,5 @@
+"""Repository-backed workflows for retrieving OMOP persons and identifiers."""
+
 import gen_epix.omopdb.domain.command as command
 import gen_epix.omopdb.domain.model as model
 from gen_epix.omopdb.services.omop.base import BaseOmopService

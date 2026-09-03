@@ -1,3 +1,9 @@
+"""Define commondb role permissions and mappings for application domains.
+
+The module identifies commands that do not require RBAC and supplies the role hierarchy
+and permissions that domain-specific applications can map to their own enums.
+"""
+
 from enum import Enum
 
 from gen_epix import fastapp
@@ -29,6 +35,7 @@ NO_RBAC_PERMISSIONS: set[tuple[type[fastapp.Command], PermissionType]] = {
 
 
 class RoleGenerator:
+    """Encapsulates reusable commondb roles, permission sets, and hierarchy mappings."""
 
     COMMON_ROLE_ENUM_MAP: dict[Role, Enum] = {x: x for x in Role}
 
@@ -148,8 +155,9 @@ class RoleGenerator:
         common_role_enum_map: dict[Role, Enum],
         command_map: dict[type, type],
     ) -> dict[Enum, set[tuple[type, PermissionTypeSet]]]:
-        """
-        Helper method to map common permissions described using the commondb
+        """Map commondb role permissions to equivalent domain roles and commands.
+
+        The mapping translates common permissions described using the commondb
         role enum and command classes to the same permissions described using
         the domain role enum and command classes. This allows easy reuse of
         common permission definitions across different domains.
@@ -170,8 +178,9 @@ class RoleGenerator:
     def map_from_common_role_hierarchy(
         common_role_enum_map: dict[Role, Enum],
     ) -> dict[Enum, set[Enum]]:
-        """
-        Helper method to map common role hierarchy described using the commondb
+        """Map the commondb role hierarchy to equivalent domain roles.
+
+        The mapping translates common role hierarchy described using the commondb
         role enum to the same role hierarchy described using the domain role
         enum. This allows easy reuse of common role hierarchy definitions
         across different domains.
@@ -187,8 +196,9 @@ class RoleGenerator:
 
     @classmethod
     def get_role_map(cls) -> dict[Role | Enum, str]:
-        """
-        Get a mapping from domain role enum to role string value, whereby the
+        """Return string values for commondb and mapped domain roles.
+
+        The mapping returns domain role enum to role string value, whereby the
         domain role enums are replaced with their commondb equivalent where
         applicable. This allows use of commondb role enums in commondb code
         while still providing correct role string values for the domain.
@@ -202,8 +212,9 @@ class RoleGenerator:
 
     @classmethod
     def get_role_set_map(cls) -> dict[RoleSet | Enum, frozenset[str]]:
-        """
-        Get a mapping from domain role set enum to role set string value,
+        """Return string role sets for commondb and mapped domain role sets.
+
+        The mapping returns domain role set enum to role set string value,
         whereby the domain role set enums are replaced with their commondb
         equivalent where applicable. This allows use of commondb role set enums
         in commondb code while still providing correct role set string values
@@ -226,8 +237,9 @@ class RoleGenerator:
     def get_role_permissions_map(
         cls,
     ) -> dict[str, set[tuple[type[fastapp.Command], PermissionType]]]:
-        """
-        Get a mapping from domain role string value to role permissions, whereby
+        """Return permissions indexed by commondb or mapped domain role values.
+
+        The mapping returns domain role string value to role permissions, whereby
         the domain role enums are replaced with their commondb equivalent where
         applicable. This allows use of commondb role enums in commondb code while
         still providing correct role permissions for the domain.

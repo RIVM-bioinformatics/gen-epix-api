@@ -1,6 +1,4 @@
-"""
-CRUD operations for CaseTypeSetMember entities.
-"""
+"""Handle CRUD operations for case-type-set-member entities."""
 
 from uuid import UUID
 
@@ -27,7 +25,6 @@ def case_service_crud_case_type_set_member(
     | None
 ):
     """Handle CRUD operations for CaseTypeSetMember entities."""
-
     with self.repository.uow() as uow:
         assert cmd.user is not None
         _crud_cascade_delete(self, uow, cmd)

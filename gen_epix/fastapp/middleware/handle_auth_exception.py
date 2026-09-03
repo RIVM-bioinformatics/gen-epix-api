@@ -1,3 +1,5 @@
+"""Middleware that converts authentication errors to HTTP responses."""
+
 import logging
 from collections.abc import Callable
 
@@ -10,6 +12,8 @@ from gen_epix.fastapp.exc import AuthException
 
 
 class HandleAuthExceptionMiddleware(BaseHTTPMiddleware):
+    """Encapsulates logging authentication errors and return an HTTP 401 response."""
+
     def __init__(
         # Mandatory parameters put as kwargs to comply with the signature of
         # BaseHTTPMiddleware
@@ -18,11 +22,13 @@ class HandleAuthExceptionMiddleware(BaseHTTPMiddleware):
         fast_app: App = None,  # type: ignore[assignment]
         logger: logging.Logger | None = None,
     ):
+        """Initialize a HandleAuthExceptionMiddleware instance."""
         super().__init__(app)
         self._fast_app = fast_app
         self._logger = logger or fast_app.logger
 
     def _log_exception(self, exception: Exception) -> None:
+        """Log an authentication exception through the configured application logger."""
         if self._logger:
             self._logger.warning(
                 self._fast_app.create_log_message(
@@ -31,6 +37,7 @@ class HandleAuthExceptionMiddleware(BaseHTTPMiddleware):
             )
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        """Process a request and translate authentication exception groups to HTTP 401."""
         try:
             response: Response = await call_next(request)
             return response

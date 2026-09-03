@@ -1,94 +1,61 @@
 # App
 
-> God node · 126 connections · `gen_epix/fastapp/app.py`
+> 67 nodes
 
-**Community:** [Core App Base Class](Core_App_Base_Class.md)
+## Key Concepts
 
-## Connections by Relation
+- **App** (126 connections) — `gen_epix/fastapp/app.py`
+- **.create_log_message()** (18 connections) — `gen_epix/fastapp/app.py`
+- **Command** (18 connections)
+- **test_fastapp_app_cache.py** (14 connections) — `test/fastapp/unit/test_fastapp_app_cache.py`
+- **Any** (13 connections)
+- **.__init__()** (12 connections) — `gen_epix/fastapp/app.py`
+- **.handle()** (8 connections) — `gen_epix/fastapp/app.py`
+- **._execute_command()** (7 connections) — `gen_epix/fastapp/app.py`
+- **_Command** (6 connections) — `test/fastapp/unit/test_fastapp_app_cache.py`
+- **.register_listener()** (6 connections) — `gen_epix/fastapp/app.py`
+- **_OtherCommand** (5 connections) — `test/fastapp/unit/test_fastapp_app_cache.py`
+- **._get_command_handler()** (5 connections) — `gen_epix/fastapp/app.py`
+- **.register_policy()** (5 connections) — `gen_epix/fastapp/app.py`
+- **.unregister_listener()** (5 connections) — `gen_epix/fastapp/app.py`
+- **.unregister_policy()** (5 connections) — `gen_epix/fastapp/app.py`
+- **Hashable** (5 connections)
+- **.apply_handler()** (4 connections) — `gen_epix/fastapp/app.py`
+- **.create_static_log_message()** (4 connections) — `gen_epix/fastapp/app.py`
+- **._handle_initial_command()** (4 connections) — `gen_epix/fastapp/app.py`
+- **.invalidate_cache()** (4 connections) — `gen_epix/fastapp/app.py`
+- **._log_command_finish()** (4 connections) — `gen_epix/fastapp/app.py`
+- **._log_command_start()** (4 connections) — `gen_epix/fastapp/app.py`
+- **.register_cache_invalidator()** (4 connections) — `gen_epix/fastapp/app.py`
+- **._summarise_command_object_for_log()** (4 connections) — `gen_epix/fastapp/app.py`
+- **test_auto_invalidation_runs_after_success_only()** (4 connections) — `test/fastapp/unit/test_fastapp_app_cache.py`
+- *... and 42 more nodes in this community*
 
-### calls
-- .__init__() `EXTRACTED`
-- .__init__() `EXTRACTED`
-- .__init__() `EXTRACTED`
-- test_auto_invalidation_runs_after_success_only() `EXTRACTED`
-- test_auto_invalidation_runs_for_nested_commands() `EXTRACTED`
-- test_invalidate_cache_uses_exact_command_type_and_propagates_errors() `EXTRACTED`
-- test_app_starts_with_empty_cache_registries() `EXTRACTED`
-- test_register_cache_invalidator_allows_multiple_and_rejects_duplicates() `EXTRACTED`
-- test_register_cache_invalidator_logs_at_debug_level() `EXTRACTED`
-- test_set_auto_invalidate_cache_toggles_without_removing_registrations() `EXTRACTED`
+## Relationships
 
-### contains
-- fastapp/app.py `EXTRACTED`
+- [CrudOperation](CrudOperation.md) (22 shared connections)
+- [Permission](Permission.md) (17 shared connections)
+- [Policy](Policy.md) (6 shared connections)
+- [BaseLogItem](BaseLogItem.md) (4 shared connections)
+- [AuthTestClient](AuthTestClient.md) (3 shared connections)
+- [services/user_manager.py](services-user_manager.py.md) (3 shared connections)
+- [api/case.py](api-case.py.md) (3 shared connections)
+- [OrganizationService](OrganizationService.md) (3 shared connections)
+- [commondb/domain/model/__init__.py](commondb-domain-model-__init__.py.md) (2 shared connections)
+- [AppCfg](AppCfg.md) (2 shared connections)
+- [HandleNoResponseMiddleware](HandleNoResponseMiddleware.md) (2 shared connections)
+- [test_casedb_upload.py](test_casedb_upload.py.md) (2 shared connections)
 
-### imports
-- gen_epix/fastapp/__init__.py `EXTRACTED`
-- test_commondb_upload.py `EXTRACTED`
-- test_casedb_upload.py `EXTRACTED`
-- test_omopdb_upload.py `EXTRACTED`
-- crud_endpoint_generator.py `EXTRACTED`
-- test_commondb_auth.py `EXTRACTED`
-- test_seqdb_upload.py `EXTRACTED`
-- gen_epix/fastapp/service.py `EXTRACTED`
-- commondb/services/remote_app.py `EXTRACTED`
-- test_seqdb_upload_verify_batch_refdata.py `EXTRACTED`
-- fastapp/remote_app.py `EXTRACTED`
-- test_fastapp_app_log_summarise.py `EXTRACTED`
-- test_casedb_retrieve_similar_cases.py `EXTRACTED`
-- commondb/services/organization.py `EXTRACTED`
-- services/system.py `EXTRACTED`
-- auth_test_client.py `EXTRACTED`
-- commondb/services/rbac.py `EXTRACTED`
-- test_fastapp_app_cache.py `EXTRACTED`
-- service/rbac.py `EXTRACTED`
-- casedb_endpoint_test_client.py `EXTRACTED`
+## Source Files
 
-### method
-- .create_log_message() `EXTRACTED`
-- .__init__() `EXTRACTED`
-- .handle() `EXTRACTED`
-- ._execute_command() `EXTRACTED`
-- .register_listener() `EXTRACTED`
-- .register_policy() `EXTRACTED`
-- .unregister_policy() `EXTRACTED`
-- .unregister_listener() `EXTRACTED`
-- ._get_command_handler() `EXTRACTED`
-- .register_cache_invalidator() `EXTRACTED`
-- .invalidate_cache() `EXTRACTED`
-- ._log_command_finish() `EXTRACTED`
-- ._handle_initial_command() `EXTRACTED`
-- ._log_command_start() `EXTRACTED`
-- .apply_handler() `EXTRACTED`
-- ._summarise_command_object_for_log() `EXTRACTED`
-- .create_static_log_message() `EXTRACTED`
-- .user_manager() `EXTRACTED`
-- .logger() `EXTRACTED`
-- .log_item_class() `EXTRACTED`
+- `gen_epix/fastapp/app.py`
+- `test/fastapp/unit/test_fastapp_app_cache.py`
 
-### rationale_for
-- Implementation of the Mediator pattern for handling Commands, which represent a… `EXTRACTED`
+## Audit Trail
 
-### uses
-- [Model](Model.md) `INFERRED`
-- Domain `INFERRED`
-- Command `INFERRED`
-- CommondbRemoteApp `INFERRED`
-- BaseService `INFERRED`
-- CrudCommand `INFERRED`
-- RemoteApp `INFERRED`
-- CrudEndpointGenerator `INFERRED`
-- Policy `INFERRED`
-- AuthEnv `INFERRED`
-- BaseUploadTestCase `INFERRED`
-- BaseUploadTestCase `INFERRED`
-- LogItem `INFERRED`
-- BaseUploadTestCase `INFERRED`
-- BasePersonUploadTestCase `INFERRED`
-- OrganizationService `INFERRED`
-- AuthTestClient `INFERRED`
-- CrudEndpointSet `INFERRED`
-- RbacService `INFERRED`
-- BaseLogItem `INFERRED`
+- EXTRACTED: 189 (79%)
+- INFERRED: 50 (21%)
+- AMBIGUOUS: 0 (0%)
 
 ---
 

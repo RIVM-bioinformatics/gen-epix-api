@@ -1,6 +1,4 @@
-"""
-Stream processing interfaces and base classes.
-"""
+"""Abstract interface for components that transform iterables of objects."""
 
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
@@ -10,17 +8,16 @@ from gen_epix.transform.transform_result import TransformResult
 
 
 class StreamProcessor(ABC):
-    """Base interface for stream processing components."""
+    """Encapsulates the stream-processing contract for pipelines."""
 
     @abstractmethod
     def process_stream(self, stream: Iterator[Any]) -> Iterator[TransformResult]:
-        """
-        Process a stream of objects and yield transformation results.
+        """Process objects lazily and yield one result for each processed object.
 
         Args:
-            stream: Iterator of objects to process
+            stream: Iterator of objects to process.
 
         Yields:
-            TransformResult objects containing success/failure information
+            Transformation results in input order.
         """
         pass

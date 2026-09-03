@@ -1,3 +1,5 @@
+"""Conversion utilities for SQLAlchemy-compatible scalar values."""
+
 import datetime
 import ipaddress
 from decimal import Decimal
@@ -21,7 +23,7 @@ from gen_epix.fastapp.domain.util import get_type_from_annotation
 # REVIEW 2953: double check
 class UTCDateTime(TypeDecorator):
     """
-    A DateTime column type that always returns timezone-aware datetimes (UTC).
+    Encapsulates a DateTime column type that always returns timezone-aware datetimes (UTC).
 
     SQLite stores datetimes as plain strings without timezone info. SQLAlchemy
     therefore returns naive datetimes when reading from SQLite, even when the
@@ -36,6 +38,7 @@ class UTCDateTime(TypeDecorator):
     def process_result_value(
         self, value: datetime.datetime | None, dialect: Any
     ) -> datetime.datetime | None:
+        """Process result value."""
         if value is not None and value.tzinfo is None:
             return value.replace(tzinfo=datetime.timezone.utc)
         return value
@@ -104,6 +107,8 @@ SA_METADATA_BY_TYPE: dict[type[TypeEngine], frozenset[str]] = {
 
 
 class ServerUtcTimestamp(expression.FunctionElement):
+    """Encapsulates SQLAlchemy type decorator that normalizes timestamps to UTC."""
+
     type = sa.TIMESTAMP()
     inherit_cache = True
 
@@ -112,6 +117,7 @@ class ServerUtcTimestamp(expression.FunctionElement):
 def postgresql_utc_timestamp(
     _element: ServerUtcTimestamp, _compiler: SQLCompiler, **_kw: dict
 ) -> str:
+    """Postgresql utc timestamp."""
     return "TIMEZONE('utc', CURRENT_TIMESTAMP)"
 
 
@@ -119,6 +125,7 @@ def postgresql_utc_timestamp(
 def mssql_utc_timestamp(
     _element: ServerUtcTimestamp, _compiler: SQLCompiler, **_kw: dict
 ) -> str:
+    """Mssql utc timestamp."""
     return "GETUTCDATE()"
 
 
@@ -126,10 +133,13 @@ def mssql_utc_timestamp(
 def sqlite_utc_timestamp(
     _element: ServerUtcTimestamp, _compiler: SQLCompiler, **_kw: dict
 ) -> str:
+    """Sqlite utc timestamp."""
     return "STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')"
 
 
 class ServerUtcCurrentTime(expression.FunctionElement):
+    """Encapsulates SQL expression that returns the database server's current UTC time."""
+
     type = DateTime()
     inherit_cache = True
 
@@ -138,6 +148,7 @@ class ServerUtcCurrentTime(expression.FunctionElement):
 def postgresql_utc_current_time(
     _element: ServerUtcCurrentTime, _compiler: SQLCompiler, **_kw: dict
 ) -> str:
+    """Postgresql utc current time."""
     return "TIMEZONE('utc', CURRENT_TIMESTAMP)"
 
 
@@ -145,6 +156,7 @@ def postgresql_utc_current_time(
 def mssql_utc_current_time(
     _element: ServerUtcCurrentTime, _compiler: SQLCompiler, **_kw: dict
 ) -> str:
+    """Mssql utc current time."""
     return "GETUTCDATE()"
 
 
@@ -152,6 +164,7 @@ def mssql_utc_current_time(
 def sqlite_utc_current_time(
     _element: ServerUtcCurrentTime, _compiler: SQLCompiler, **_kw: dict
 ) -> str:
+    """Sqlite utc current time."""
     return "CURRENT_TIMESTAMP"
 
 
@@ -160,9 +173,7 @@ def create_sa_type_from_field_info(
     annotation: type[Any] | None,
     **kwargs: dict,
 ) -> TypeEngine:
-    """
-    Return a suitable SQLAlchemy type for a Pydantic field.
-    """
+    """Return a suitable SQLAlchemy type for a Pydantic field."""
     if isinstance(field_info, FieldInfo):
         type_ = get_type_from_annotation(annotation)
     else:
@@ -178,6 +189,7 @@ def create_sa_type_from_field_info(
 
     def _create_sa_type(sa_type_class: type[TypeEngine]) -> TypeEngine:
         # Get column kwargs for this type, overridden by kwargs
+        """Create sa type."""
         new_kwargs = (
             get_sa_type_kwargs_from_field_info(sa_type_class, field_info) | kwargs
         )
@@ -211,6 +223,7 @@ def get_sa_type_kwargs_from_field_info(
     sa_type_class: type[sa.types.TypeEngine], field_info: FieldInfo | ComputedFieldInfo
 ) -> dict[str, Any]:
     # Extract column kwargs from field metadata
+    """Return sa type kwargs from field info."""
     kwargs: dict[str, Any] = {}
     if isinstance(field_info, FieldInfo):
         for metadata in field_info.metadata:

@@ -1,3 +1,9 @@
+"""Define commands for seqdb sequence workflows and managed domain records.
+
+The command types carry input for upload, distance, tree, similarity, and
+sample retrieval operations, plus CRUD metadata for seqdb sequence models.
+"""
+
 # pylint: disable=too-few-public-methods
 # This module defines base classes, methods are added later
 
@@ -17,7 +23,9 @@ from gen_epix.seqdb.domain import enum, model
 
 class UploadSamplesCommand(Command, UploadBatchCommandMixin):
     """
-    Upload a batch of samples along with their associated data. The data are uploaded
+    Represents a batch upload of samples along with their associated data.
+
+    The data are uploaded
     as a single atomic unit of work, so that either all data are successfully
     uploaded or none are.
 
@@ -78,8 +86,9 @@ class UploadSamplesCommand(Command, UploadBatchCommandMixin):
 
 class RetrieveSeqDistanceLastModifiedCommand(Command):
     """
-    Retrieve the last modified datetime of any SeqDistance for a particular SeqDistance
-    protocol. This command is intended to be used in conjunction with the
+    Represents retrieval of the last modified datetime for a SeqDistance protocol.
+
+    This command is intended to be used in conjunction with the
     CalculateSeqDistancesForNewProfilesCommand command, which has a
     seq_distance_last_modified_at field that can be filled with the return value of this
     command to prevent concurrent modification conflicts by ensuring that no SeqDistance
@@ -94,8 +103,9 @@ class RetrieveSeqDistanceLastModifiedCommand(Command):
 
 class CalculateSeqDistancesForNewProfilesCommand(Command):
     """
-    Calculate sequence distances between the given new profiles and all existing
-    profiles based on the given sequence distance protocol, and store the calculated
+    Represents calculating and storing distances between new and existing sequence profiles.
+
+    The calculation uses the given sequence distance protocol and stores
     distances in the database. This command is intended to be used after new profiles
     have been added to the database, in order to calculate and store the distances
     between the new profiles and all existing profiles for later retrieval (e.g. for
@@ -131,8 +141,10 @@ class CalculateSeqDistancesForNewProfilesCommand(Command):
 
 class UpdateSeqDistancesCommand(Command):
     """
-    For a given distance protocol, find all profiles
-    that don't yet have a SeqDistance record, compute
+    Represents creating missing distances for profiles under a distance protocol.
+
+    The command finds all profiles
+    that do not yet have a SeqDistance record, computes
     the missing distances, and create the records while
     maintaining the symmetry invariant (every distance
     is stored in both directions).
@@ -169,12 +181,16 @@ class UpdateSeqDistancesCommand(Command):
 
 class CalculatePhylogeneticTreeCommand(Command):
     """
-    Calculate a phylogenetic tree based on the given protocol, tree algorithm, and query
-    profile IDs. The returned tree is expected to contain the query profiles as well as
+    Represents calculating a phylogenetic tree from query profiles and a configured protocol.
+
+    The returned tree contains the query profiles and
     any additional profiles that are within the maximum distance threshold specified in
     the protocol for at least one of the query profiles. The leaf names in the tree
     correspond to the profile IDs, but can optionally be replaced with custom leaf names
     provided in the command (e.g. for better readability of the tree).
+
+    Model validation: When provided, leaf names must have one entry per queried
+    sequence profile.
     """
 
     protocol_id: UUID = Field(
@@ -197,6 +213,7 @@ class CalculatePhylogeneticTreeCommand(Command):
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
+        """Require custom leaf names to align with the queried profile identifiers."""
         if self.leaf_names is not None and len(self.leaf_names) != len(
             self.seq_profile_ids
         ):
@@ -208,7 +225,9 @@ class CalculatePhylogeneticTreeCommand(Command):
 
 class RetrieveSamplesByQueryCommand(Command):
     """
-    Retrieve sample IDs based on a query. These IDs can then be used to retrieve
+    Represents retrieval of sample identifiers matching a query.
+
+    These identifiers can then be used to retrieve
     the corresponding samples.
     """
 
@@ -219,7 +238,9 @@ class RetrieveSamplesByQueryCommand(Command):
 
 class RetrieveSamplesByIdCommand(Command):
     """
-    Retrieve all data for a list of sample IDs, as a list of FullSample
+    Represents retrieval of complete data for sample identifiers.
+
+    The result contains FullSample
     objects in the same order.
     """
 
@@ -229,6 +250,7 @@ class RetrieveSamplesByIdCommand(Command):
 
     @field_validator("sample_ids", mode="after")
     def _validate_sample_ids(cls, sample_ids: list[UUID]) -> list[UUID]:
+        """Require every requested sample identifier to occur at most once."""
         if len(set(sample_ids)) != len(sample_ids):
             raise ValueError("sample_ids must be unique")
         return sample_ids
@@ -236,7 +258,8 @@ class RetrieveSamplesByIdCommand(Command):
 
 class RetrieveSampleIdentifiersByIdCommand(Command):
     """
-    Retrieve only the SampleIdentifier records for a list of sample IDs.
+    Represents retrieval of only SampleIdentifier records for sample identifiers.
+
     Lighter than RetrieveSamplesByIdCommand — no sequences or read sets.
     """
 
@@ -246,6 +269,7 @@ class RetrieveSampleIdentifiersByIdCommand(Command):
 
     @field_validator("sample_ids", mode="after")
     def _validate_sample_ids(cls, sample_ids: list[UUID]) -> list[UUID]:
+        """Require every requested sample identifier to occur at most once."""
         if len(set(sample_ids)) != len(sample_ids):
             raise ValueError("sample_ids must be unique")
         return sample_ids
@@ -253,7 +277,8 @@ class RetrieveSampleIdentifiersByIdCommand(Command):
 
 class RetrieveSeqFastaCommand(Command):
     """
-    Retrieve the sequences for the given sequence IDs in FASTA format
+    Represents retrieval of sequences in FASTA format.
+
     as an iterable that yields one contig at a time.
     """
 
@@ -268,7 +293,8 @@ class RetrieveSeqFastaCommand(Command):
 
 class RetrieveSimilarProfilesCommand(Command):
     """
-    Retrieve all profiles that match at least one of the given query profiles within
+    Represents retrieval of profiles similar to at least one query profile.
+
     the given maximum distance and based on the given seq distance protocol. The
     returned profiles do not contain the query profiles.
     """
@@ -286,7 +312,8 @@ class RetrieveSimilarProfilesCommand(Command):
 
 class RetrieveBestSeqPerSampleCommand(Command):
     """
-    Retrieve the best Seq ID for each sample among the given sample IDs and protocol
+    Represents retrieval of the best Seq ID for each requested sample.
+
     IDs, and using a particular ranking strategy.
     Returns a dict[sample_id, seq_id].
     """
@@ -306,7 +333,8 @@ class RetrieveBestSeqPerSampleCommand(Command):
 
 class RetrieveBestSeqProfilePerSampleCommand(Command):
     """
-    Retrieve the best SeqProfile ID for each sample among the given sample IDs and
+    Represents retrieval of the best SeqProfile ID for each requested sample.
+
     protocol IDs, and using a particular ranking strategy.
     Returns a dict[sample_id, seq_profile_id].
     """
@@ -326,7 +354,8 @@ class RetrieveBestSeqProfilePerSampleCommand(Command):
 
 class RetrieveBestSeqClassificationPerSampleCommand(Command):
     """
-    Retrieve the best SeqClassification ID for each sample among the given sample IDs and
+    Represents retrieval of the best SeqClassification ID for each requested sample.
+
     protocol IDs, and using a particular ranking strategy.
     Returns a dict[sample_id, seq_classification_id].
     """
@@ -352,124 +381,186 @@ class RetrieveBestSeqClassificationPerSampleCommand(Command):
 
 
 class ProtocolCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for sequence protocol records."""
+
     MODEL_CLASS: ClassVar = model.Protocol
 
 
 class ProtocolSetCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for sequence protocol-set records."""
+
     MODEL_CLASS: ClassVar = model.ProtocolSet
 
 
 class ProtocolSetMemberCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for sequence protocol-set memberships."""
+
     MODEL_CLASS: ClassVar = model.ProtocolSetMember
 
 
 class AlleleCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for allele records."""
+
     MODEL_CLASS: ClassVar = model.Allele
 
 
 class AstMeasurementCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for antimicrobial-susceptibility measurements."""
+
     MODEL_CLASS: ClassVar = model.AstMeasurement
 
 
 class AstPredictionCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for antimicrobial-susceptibility predictions."""
+
     MODEL_CLASS: ClassVar = model.AstPrediction
 
 
 class LocusCodeMapCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for locus-code mapping records."""
+
     MODEL_CLASS: ClassVar = model.LocusCodeMap
 
 
 class LocusCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for locus records."""
+
     MODEL_CLASS: ClassVar = model.Locus
 
 
 class LocusSetCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for locus-set records."""
+
     MODEL_CLASS: ClassVar = model.LocusSet
 
 
 class PcrMeasurementCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for PCR measurement records."""
+
     MODEL_CLASS: ClassVar = model.PcrMeasurement
 
 
 class ReadSetCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for read-set records."""
+
     MODEL_CLASS: ClassVar = model.ReadSet
 
 
 class ReadSetIdentifierCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for read-set identifier records."""
+
     MODEL_CLASS: ClassVar = model.ReadSetIdentifier
 
 
 class RefAlleleCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for reference allele records."""
+
     MODEL_CLASS: ClassVar = model.RefAllele
 
 
 class RefSeqCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for reference sequence records."""
+
     MODEL_CLASS: ClassVar = model.RefSeq
 
 
 class SampleCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for sample records."""
+
     MODEL_CLASS: ClassVar = model.Sample
 
 
 class SampleDataCollectionLinkCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for sample data-collection links."""
+
     MODEL_CLASS: ClassVar = model.SampleDataCollectionLink
 
 
 class SampleIdentifierCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for sample identifier records."""
+
     MODEL_CLASS: ClassVar = model.SampleIdentifier
 
 
 class SeqClassificationCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for sequence classification records."""
+
     MODEL_CLASS: ClassVar = model.SeqClassification
 
 
 class SeqCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for assembled sequence records."""
+
     MODEL_CLASS: ClassVar = model.Seq
 
 
 class SeqCategoryCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for sequence category records."""
+
     MODEL_CLASS: ClassVar = model.SeqCategory
 
 
 class SeqCategorySetCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for sequence category-set records."""
+
     MODEL_CLASS: ClassVar = model.SeqCategorySet
 
 
 class SeqDistanceCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for pairwise sequence-distance records."""
+
     MODEL_CLASS: ClassVar = model.SeqDistance
 
 
 class SeqIdentifierCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for sequence identifier records."""
+
     MODEL_CLASS: ClassVar = model.SeqIdentifier
 
 
 class SeqProfileCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for sequence profile records."""
+
     MODEL_CLASS: ClassVar = model.SeqProfile
 
 
 class SeqProfileIdentifierCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for sequence profile identifier records."""
+
     MODEL_CLASS: ClassVar = model.SeqProfileIdentifier
 
 
 class SeqTaxonomyCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for sequence taxonomy records."""
+
     MODEL_CLASS: ClassVar = model.SeqTaxonomy
 
 
 class TaxonCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for taxon records."""
+
     MODEL_CLASS: ClassVar = model.Taxon
 
 
 class TaxonSetCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for taxon-set records."""
+
     MODEL_CLASS: ClassVar = model.TaxonSet
 
 
 class TaxonSetMemberCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for taxon-set membership records."""
+
     MODEL_CLASS: ClassVar = model.TaxonSetMember
 
 
 class TreeAlgorithmCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for phylogenetic tree algorithm records."""
+
     MODEL_CLASS: ClassVar = model.TreeAlgorithm
 
 
 class TreeAlgorithmClassCrudCommand(CrudCommand):
+    """Represents CRUD command metadata for tree algorithm class records."""
+
     MODEL_CLASS: ClassVar = model.TreeAlgorithmClass

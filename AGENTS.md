@@ -43,6 +43,9 @@ Preserve these boundaries:
       `SA_SQL` implementations. Justify any backend-specific behavior.
 - In production, cross-domain communication uses HTTP. Search for an existing
       client abstraction before adding a new remote-call pattern.
+- Python docstrings and comments follow the repo standard in
+  `docs/standards/google-python-style-guide-3.8-comments-and-docstrings.md` and
+  the repo instruction file `.github/copilot-instructions.md`.
 
 ## Commands
 

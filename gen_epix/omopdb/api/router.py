@@ -1,3 +1,5 @@
+"""Compose shared and OMOP API routers for the OmopDB application."""
+
 from collections.abc import Callable
 from typing import Any, NoReturn
 
@@ -23,6 +25,7 @@ def create_routers(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     router_kwargs: dict = {},
 ) -> list[APIRouter]:
+    """Create the shared and OMOP routers mounted by the application."""
     assert app
     router_data: list[RouterData] = [
         # Common routers

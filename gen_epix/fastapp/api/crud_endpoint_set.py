@@ -1,3 +1,5 @@
+"""Configuration for generated CRUD API endpoints."""
+
 from collections.abc import Callable
 from typing import Any
 
@@ -10,6 +12,13 @@ from gen_epix.filter import Filter
 
 
 class CrudEndpointSet(BaseModel):
+    """Represents the routes and models used for a CRUD API resource.
+
+    Model validation:
+    Missing read and create API model classes are derived from `model_class`.
+    Non-mapping initialization data is rejected.
+    """
+
     model_config = ConfigDict(arbitrary_types_allowed=True, protected_namespaces=())
     model_class: type
     create_api_model_class: type | None = None
@@ -31,6 +40,7 @@ class CrudEndpointSet(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def _validate_args(cls, data: Any) -> Any:
+        """Normalize endpoint-set initialization data."""
         if isinstance(data, dict):
             if not data.get("read_api_model_class"):
                 data["read_api_model_class"] = data["model_class"]

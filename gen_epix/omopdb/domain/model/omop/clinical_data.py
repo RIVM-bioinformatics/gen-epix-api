@@ -1,3 +1,5 @@
+"""Persistable OMOP clinical person, encounter, event, and identifier models."""
+
 from datetime import date, datetime
 from typing import Any, ClassVar
 from uuid import UUID
@@ -131,6 +133,7 @@ class Person(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize person concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -183,6 +186,7 @@ class ObservationPeriod(Model, DataLineageMixin):
     @field_validator("period_type_concept_id", mode="before")
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize the observation-period type identifier to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -286,6 +290,7 @@ class VisitOccurrence(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize visit-occurrence concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -397,6 +402,7 @@ class VisitDetail(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize visit-detail concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -508,6 +514,7 @@ class ConditionOccurrence(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize condition-occurrence concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -613,6 +620,7 @@ class ProcedureOccurrence(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize procedure-occurrence concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -753,6 +761,7 @@ class DrugExposure(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize drug-exposure concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -875,6 +884,7 @@ class DeviceExposure(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize device-exposure concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -986,6 +996,7 @@ class Specimen(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize specimen concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -1134,6 +1145,7 @@ class Measurement(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize measurement concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
     @field_validator(
@@ -1286,6 +1298,7 @@ class Observation(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize observation concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -1383,6 +1396,7 @@ class Note(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize note concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -1469,6 +1483,7 @@ class NoteNlp(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize note-NLP concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -1512,6 +1527,7 @@ class FactRelationship(Model):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize fact-relationship identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -1553,6 +1569,7 @@ class MeasurementRelation(Model):
     @field_validator("measurement_relation_concept_id", mode="before")
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize measurement-relation identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -1620,10 +1637,13 @@ class Death(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize death concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
 class PersonIdentifier(BaseIdentifier):
+    """Represents an external identifier with a person record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         Person,
         relationship_field_name="person",
@@ -1639,6 +1659,8 @@ class PersonIdentifier(BaseIdentifier):
 
 
 class ObservationPeriodIdentifier(BaseIdentifier):
+    """Represents an external identifier with an observation-period record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         ObservationPeriod,
         relationship_field_name="observation_period",
@@ -1655,6 +1677,8 @@ class ObservationPeriodIdentifier(BaseIdentifier):
 
 
 class VisitOccurrenceIdentifier(BaseIdentifier):
+    """Represents an external identifier with a visit-occurrence record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         VisitOccurrence,
         relationship_field_name="visit_occurrence",
@@ -1671,6 +1695,8 @@ class VisitOccurrenceIdentifier(BaseIdentifier):
 
 
 class VisitDetailIdentifier(BaseIdentifier):
+    """Represents an external identifier with a visit-detail record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         VisitDetail,
         relationship_field_name="visit_detail",
@@ -1687,6 +1713,8 @@ class VisitDetailIdentifier(BaseIdentifier):
 
 
 class ConditionOccurrenceIdentifier(BaseIdentifier):
+    """Represents an external identifier with a condition-occurrence record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         ConditionOccurrence,
         relationship_field_name="condition_occurrence",
@@ -1703,6 +1731,8 @@ class ConditionOccurrenceIdentifier(BaseIdentifier):
 
 
 class ProcedureOccurrenceIdentifier(BaseIdentifier):
+    """Represents an external identifier with a procedure-occurrence record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         ProcedureOccurrence,
         relationship_field_name="procedure_occurrence",
@@ -1719,6 +1749,8 @@ class ProcedureOccurrenceIdentifier(BaseIdentifier):
 
 
 class DrugExposureIdentifier(BaseIdentifier):
+    """Represents an external identifier with a drug-exposure record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         DrugExposure,
         relationship_field_name="drug_exposure",
@@ -1735,6 +1767,8 @@ class DrugExposureIdentifier(BaseIdentifier):
 
 
 class DeviceExposureIdentifier(BaseIdentifier):
+    """Represents an external identifier with a device-exposure record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         DeviceExposure,
         relationship_field_name="device_exposure",
@@ -1751,6 +1785,8 @@ class DeviceExposureIdentifier(BaseIdentifier):
 
 
 class MeasurementIdentifier(BaseIdentifier):
+    """Represents an external identifier with a measurement record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         Measurement,
         relationship_field_name="measurement",
@@ -1767,6 +1803,8 @@ class MeasurementIdentifier(BaseIdentifier):
 
 
 class ObservationIdentifier(BaseIdentifier):
+    """Represents an external identifier with an observation record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         Observation,
         relationship_field_name="observation",
@@ -1783,6 +1821,8 @@ class ObservationIdentifier(BaseIdentifier):
 
 
 class SpecimenIdentifier(BaseIdentifier):
+    """Represents an external identifier with a specimen record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         Specimen,
         relationship_field_name="specimen",
@@ -1799,6 +1839,8 @@ class SpecimenIdentifier(BaseIdentifier):
 
 
 class NoteIdentifier(BaseIdentifier):
+    """Represents an external identifier with a note record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         Note,
         relationship_field_name="note",
@@ -1814,6 +1856,8 @@ class NoteIdentifier(BaseIdentifier):
 
 
 class NoteNlpIdentifier(BaseIdentifier):
+    """Represents an external identifier with a note-NLP record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         NoteNlp,
         relationship_field_name="note_nlp",
@@ -1830,6 +1874,8 @@ class NoteNlpIdentifier(BaseIdentifier):
 
 
 class MeasurementRelationIdentifier(BaseIdentifier):
+    """Represents an external identifier with a measurement-relation record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         MeasurementRelation,
         relationship_field_name="measurement_relation",
@@ -1846,6 +1892,8 @@ class MeasurementRelationIdentifier(BaseIdentifier):
 
 
 class DeathIdentifier(BaseIdentifier):
+    """Represents an external identifier with a death record."""
+
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         Death,
         relationship_field_name="death",

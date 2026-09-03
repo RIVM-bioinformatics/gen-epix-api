@@ -1,6 +1,11 @@
 # pylint: disable=too-few-public-methods
 # This module defines base classes, methods are added later
 
+"""Define commondb models for operational outages and package metadata.
+
+System services persist outage windows for availability messaging and expose
+non-persisted metadata about installed application packages.
+"""
 
 import datetime
 from typing import ClassVar
@@ -12,9 +17,7 @@ from gen_epix.fastapp import Entity
 
 
 class Outage(Model):
-    """
-    Represents a system outage.
-    """
+    """Represents an active or scheduled system outage and its visibility window."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="outages",
@@ -48,6 +51,8 @@ class Outage(Model):
 
 
 class PackageMetadata(Model):
+    """Represents descriptive metadata for a package without persisting it."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="package_metadatas",
         persistable=False,

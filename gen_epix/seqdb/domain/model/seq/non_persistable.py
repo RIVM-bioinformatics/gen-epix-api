@@ -1,3 +1,5 @@
+"""Define seqdb domain models for domain.model.seq.non_persistable."""
+
 from datetime import datetime
 from typing import ClassVar, Self
 from uuid import UUID
@@ -18,9 +20,11 @@ from gen_epix.seqdb.domain.model.seq.seq import Seq, SeqIdentifier
 
 
 class SampleQuery(Model):
-    """
-    A query for retrieving samples. All constraints are optional, but at least one
+    """Represents a query for retrieving samples. All constraints are optional, but at least one
     criterion must be provided.
+
+    Model validation: At least one datetime boundary must be provided. Labels do
+    not independently satisfy the criterion requirement.
     """
 
     ENTITY: ClassVar = Entity(
@@ -45,12 +49,15 @@ class SampleQuery(Model):
 
     @model_validator(mode="after")
     def _validate_some_criteria(self) -> Self:
+        """Require at least one last-modified datetime boundary."""
         if self.modified_since is None and self.modified_until is None:
             raise ValueError("At least one criterion must be provided")
         return self
 
 
 class SampleQueryResult(Model):
+    """Represents a sample query, its matching identifiers, and any result truncation."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="sample_query_results",
         persistable=False,
@@ -65,9 +72,7 @@ class SampleQueryResult(Model):
 
 
 class FullSample(Model):
-    """
-    A comprehensive sample view with all sample-linked data and identifiers.
-    """
+    """Represents a comprehensive sample view with all sample-linked data and identifiers."""
 
     NAME: ClassVar = "FullSample"
     ENTITY: ClassVar = Entity(

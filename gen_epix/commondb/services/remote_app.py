@@ -1,3 +1,9 @@
+"""Provide an HTTP command client for remote commondb applications.
+
+The client dispatches mapped commondb commands under ``/v1`` and supports either
+NONE-mode default headers or OAuth2 client-credentials authentication.
+"""
+
 import importlib
 from datetime import datetime, timezone
 from enum import Enum
@@ -20,7 +26,7 @@ from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 
 
 class CommondbRemoteApp(RemoteApp):
-    """Remote app client for the commondb service with OAuth2/NONE authentication."""
+    """Encapsulates a remote app client for the commondb service with OAuth2/NONE authentication."""
 
     DEFAULT_ROUTE_PREFIX = "/v1"
 
@@ -75,7 +81,33 @@ class CommondbRemoteApp(RemoteApp):
         log_item_class: type[LogItem] = LogItem,
         **kwargs: Any,
     ) -> None:
-        """Initialize with connection and authentication settings; register all commondb handlers."""
+        """Initialize remote commondb routes with connection and authentication settings.
+
+        Args:
+            domain: Domain defining supported remote command routes.
+            host: Remote application host.
+            port: Optional remote application port.
+            protocol: HTTP protocol used for requests.
+            default_route_prefix: Optional API route prefix.
+            default_headers: Optional headers included with every request.
+            ssl_cert_file: Optional CA certificate path.
+            auth_protocol: None or OAuth2 authentication protocol.
+            oauth_flow: Optional OAuth2 flow configuration.
+            oauth_discovery_url: OAuth2 discovery endpoint.
+            jwks_uri: Optional JSON Web Key Set endpoint.
+            oauth_client_id: OAuth2 client identifier.
+            oauth_client_secret: Optional OAuth2 client secret.
+            oauth_scope: OAuth2 scope requested for client credentials.
+            oauth_token_endpoint: Optional OAuth2 token endpoint override.
+            oauth_token_refresh_margin: Seconds before expiry to refresh a token.
+            logger: Optional logger for identity-provider requests.
+            log_item_class: Structured log item implementation.
+            **kwargs: Additional remote application configuration.
+
+        Raises:
+            InitializationServiceError: If authentication settings are unsupported or
+                required OAuth2 settings are missing.
+        """
         if isinstance(auth_protocol, str):
             auth_protocol = AuthProtocol(auth_protocol)
         if isinstance(oauth_flow, str):
@@ -196,7 +228,18 @@ class CommondbRemoteApp(RemoteApp):
         self._oauth_header_cache: tuple[int, dict[str, str]] | None = None
 
     def get_headers(self, cmd: Command) -> dict[str, str]:
-        """Return auth headers, retrieving a fresh OAuth token when needed."""
+        """Return request headers, refreshing an OAuth token when needed.
+
+        Args:
+            cmd: Command for which headers are requested.
+
+        Returns:
+            Default headers or headers containing a client-credentials bearer token.
+
+        Raises:
+            InitializationServiceError: If the configured authentication protocol cannot
+                provide request headers.
+        """
         # Call identity provider to get JWT
         if self._auth_protocol == AuthProtocol.NONE:
             return self._default_headers
@@ -411,7 +454,25 @@ class CommondbRemoteApp(RemoteApp):
         repository_type_enum: type[Enum] | None = None,
         logger: Logger | None = None,
     ) -> tuple[App, model.User | None]:
-        """Create either a local or remote app instance based on setup type."""
+        """Create a local or remote application instance for the requested setup type.
+
+        Args:
+            app_type: Application type to create locally.
+            app_setup_type: Setup mode, either ``LOCAL`` or ``REMOTE``.
+            local_app_props: Properties for local application construction.
+            remote_app_props: Properties for remote application construction.
+            app_composer_class: Composer class for local setup.
+            user_class: User model class for local setup.
+            service_type_enum: Service-type enum for local setup.
+            repository_type_enum: Repository-type enum for local setup.
+            logger: Optional logger for local setup.
+
+        Returns:
+            Created application and local user when applicable.
+
+        Raises:
+            InitializationServiceError: If the setup mode is invalid or incomplete.
+        """
         # Parse input
         app_setup_type = app_setup_type.upper()
         if app_setup_type not in ("LOCAL", "REMOTE"):
@@ -454,7 +515,23 @@ class CommondbRemoteApp(RemoteApp):
         repository_type_enum: type[Enum] | None,
         logger: Logger | None = None,
     ) -> tuple[App, model.User]:
-        """Instantiate a local app from configuration and a user definition."""
+        """Instantiate a local application from configuration and a user definition.
+
+        Args:
+            app_type: Application type to configure.
+            local_app_props: Local configuration containing user properties.
+            app_composer_class: Composer used to construct the local application.
+            user_class: User model used to construct the local user.
+            service_type_enum: Application service-type enum.
+            repository_type_enum: Application repository-type enum.
+            logger: Optional logger used to determine setup logging.
+
+        Returns:
+            Local application and constructed user.
+
+        Raises:
+            InitializationServiceError: If required local setup properties are missing.
+        """
         if (
             local_app_props is None
             or app_composer_class is None
@@ -488,7 +565,17 @@ class CommondbRemoteApp(RemoteApp):
     def _create_remote_app(
         cls, remote_app_props: dict[str, Any] | None
     ) -> tuple[App, None]:
-        """Instantiate a remote app from a module path and class name."""
+        """Instantiate a remote application from configured module and class names.
+
+        Args:
+            remote_app_props: Remote configuration including module and class names.
+
+        Returns:
+            Constructed remote application and no local user.
+
+        Raises:
+            InitializationServiceError: If remote properties or required keys are absent.
+        """
         if remote_app_props is None:
             raise exc.InitializationServiceError(
                 "4007b438", "remote_app_props must be provided for REMOTE app setup."

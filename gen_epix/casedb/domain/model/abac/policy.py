@@ -1,3 +1,10 @@
+"""Define persistent organization and user ABAC policy records for cases.
+
+Access policies grant rights within one data collection. Share policies grant
+additional rights to move cases or case sets to or from a target collection when
+they are already present in an allowed source collection.
+"""
+
 from typing import ClassVar
 from uuid import UUID
 
@@ -9,6 +16,8 @@ from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
 
 class BaseCasePolicy(common_model.Model):
+    """Represents common case and case-set rights for a case-type set."""
+
     data_collection_id: UUID = Field(
         description="The ID of the data collection. FOREIGN KEY"
     )
@@ -37,8 +46,8 @@ class BaseCasePolicy(common_model.Model):
 
 
 class OrganizationAccessCasePolicy(BaseCasePolicy):
-    """
-    Stores the access rights of an organization to a particular data collection.
+    """Represents an organization's access rights in one data collection.
+
     If an organization does not have a policy to a data collection, it has no
     access rights to that data collection.
 
@@ -111,8 +120,9 @@ class OrganizationAccessCasePolicy(BaseCasePolicy):
 
 
 class UserAccessCasePolicy(BaseCasePolicy):
-    """
-    Stores the maximum access rights of a user to a particular data collection,
+    """Represents a user's maximum access rights in one data collection.
+
+    The rights are
     analogous to the organization access case policy.
 
     The actual access rights of a user are derived as the intersection of their
@@ -179,10 +189,10 @@ class UserAccessCasePolicy(BaseCasePolicy):
 
 
 class OrganizationShareCasePolicy(BaseCasePolicy):
-    """
-    Stores any additional case or case set share rights of an organization to a
-    particular data collection, if the case or case set is already in a
-    particular other data collection.
+    """Represents an organization's additional source-to-target share rights.
+
+    Rights apply to the target ``data_collection_id`` when a case or case set is
+    already present in ``from_data_collection_id``.
 
     The share rights are limited to the CaseTypes in the CaseTypeSet. If a
     CaseType is not in the CaseTypeSet, the organization has no share rights
@@ -233,8 +243,9 @@ class OrganizationShareCasePolicy(BaseCasePolicy):
 
 
 class UserShareCasePolicy(BaseCasePolicy):
-    """
-    Stores the maximum share rights of a user to a particular data collection,
+    """Represents a user's maximum source-to-target share rights.
+
+    The rights are
     analogous to the organization share case policy.
 
     The actual share rights of a user are derived as the intersection of their
