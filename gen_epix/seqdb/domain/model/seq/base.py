@@ -29,22 +29,6 @@ def encode_gzip_base64(seq: str) -> str:
     return base64.b64encode(gzip.compress(seq.encode("ascii"), mtime=0)).decode("ascii")
 
 
-def _is_gzip_base64(value: str) -> bool:
-    """Check if a string is a valid gzip-compressed base64 sequence string."""
-    try:
-        compressed = base64.b64decode(value.encode("ascii"), validate=True)
-        gzip.decompress(compressed)
-        return True
-    except (
-        UnicodeEncodeError,
-        binascii.Error,
-        gzip.BadGzipFile,
-        EOFError,
-        OSError,
-    ):
-        return False
-
-
 def _decode_gzip_base64(value: str) -> str:
     """Decode a gzip-compressed base64 sequence string."""
     try:
@@ -233,10 +217,11 @@ class BaseSeq(Model):
                 if self.seq_format in enum.SeqFormatSet.GAP.value
                 else enum.SeqAlphabet.DNA_INCL_AMBIGUOUS
             )
-            if not _is_gzip_base64(self.seq):
-                seq = self.seq
-            else:
+            # Use the decode method in a try/except to validate and convert in one go
+            try:
                 seq = _decode_gzip_base64(self.seq)
+            except ValueError:
+                seq = self.seq
             computed_length = len(seq)
             seq = seq.lower()
             invalid_chars = set(seq) - alphabet.value
