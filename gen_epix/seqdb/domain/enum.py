@@ -319,6 +319,35 @@ class SeqFormat(IntEnumWithJsonSchemaMixin, IntEnum):
     STR_DNA = 2  # String of IUPAC DNA characters without gaps
     STR_DNA_INCL_GAP = 3  # String of IUPAC DNA characters including gaps
     NEXTCLADE = 4
+    STR_DNA_GZB64 = 5  # Gzip+base64 string of IUPAC DNA characters without gaps
+    STR_DNA_INCL_GAP_GZB64 = (
+        6  # Gzip+base64 string of IUPAC DNA characters including gaps
+    )
+
+
+class SeqFormatSet(Enum):
+    """Encapsulates sequence formats grouped by their content and representation."""
+
+    DNA = frozenset(
+        {
+            SeqFormat.STR_DNA,
+            SeqFormat.STR_DNA_INCL_GAP,
+            SeqFormat.STR_DNA_GZB64,
+            SeqFormat.STR_DNA_INCL_GAP_GZB64,
+        }
+    )
+    GAP = frozenset(
+        {
+            SeqFormat.STR_DNA_INCL_GAP,
+            SeqFormat.STR_DNA_INCL_GAP_GZB64,
+        }
+    )
+    GZB64 = frozenset(
+        {
+            SeqFormat.STR_DNA_GZB64,
+            SeqFormat.STR_DNA_INCL_GAP_GZB64,
+        }
+    )
 
 
 class SeqProfileFormat(IntEnumWithJsonSchemaMixin, IntEnum):

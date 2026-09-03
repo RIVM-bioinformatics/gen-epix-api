@@ -130,7 +130,7 @@ class SeqSARepository(SARepository, BaseSeqRepository):
             Sequence identifiers paired with contig identifiers and DNA strings.
 
         Raises:
-            InitializationServiceError: A contig does not use the plain DNA format.
+            InitializationServiceError: A contig does not use a DNA format.
         """
         self.raise_on_duplicate_ids(seq_ids)
         assert isinstance(uow, SAUnitOfWork)
@@ -141,13 +141,13 @@ class SeqSARepository(SARepository, BaseSeqRepository):
             seq: model.Seq = mapper.load(row[0])  # type: ignore[assignment]
             contig_list: list[tuple[UUID, str]] = []
             for contig in seq.contigs:
-                if contig.seq_format != enum.SeqFormat.STR_DNA:
+                if contig.seq_format not in enum.SeqFormatSet.DNA.value:
                     raise exc.InitializationServiceError(
                         "6672c6dd",
                         f"FASTA export not supported for {contig.seq_format.value} format",
                     )
                 assert contig.id is not None
-                contig_list.append((contig.id, contig.seq))
+                contig_list.append((contig.id, contig.get_nucleotide_seq()))
             assert seq.id is not None
             yield (seq.id, contig_list)
 

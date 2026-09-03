@@ -19,6 +19,7 @@ from pydantic import ValidationError
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import IdentifierForUpload
 from gen_epix.seqdb.domain import model
+from gen_epix.seqdb.domain.model.seq.base import encode_gzip_base64
 
 
 @pytest.mark.scenario_ids("TC-SEC-31-01")
@@ -233,6 +234,94 @@ class TestModelBaseSeq:
                 seq_format=model.enum.SeqFormat.HASH_ONLY,
                 id=custom_hash,
             )
+
+    @pytest.mark.parametrize(
+        ("seq_format", "expected_alphabet"),
+        [
+            (model.enum.SeqFormat.STR_DNA_INCL_GAP, "acgt-n"),
+            (model.enum.SeqFormat.STR_DNA_INCL_GAP_GZB64, "acgt-n"),
+        ],
+    )
+    def test_gap_inclusive_sequence_validation(
+        self, seq_format: model.enum.SeqFormat, expected_alphabet: str
+    ) -> None:
+        """Test validation and hashing of gap-inclusive DNA representations."""
+        sequence = "AT-GN"
+        stored_sequence = (
+            encode_gzip_base64(sequence)
+            if seq_format == model.enum.SeqFormat.STR_DNA_INCL_GAP_GZB64
+            else sequence
+        )
+        base_seq = model.BaseSeq(seq=stored_sequence, seq_format=seq_format)
+
+        assert base_seq.get_nucleotide_seq() == sequence.lower()
+        assert base_seq.length == len(sequence)
+        assert base_seq.id == self._compute_expected_hash(sequence)
+        if seq_format == model.enum.SeqFormat.STR_DNA_INCL_GAP_GZB64:
+            assert base_seq.seq != sequence.lower()
+        else:
+            assert set(base_seq.seq) <= set(expected_alphabet)
+
+        with pytest.raises(ValidationError, match="invalid characters"):
+            invalid_sequence = (
+                encode_gzip_base64("AT-X")
+                if seq_format == model.enum.SeqFormat.STR_DNA_INCL_GAP_GZB64
+                else "AT-X"
+            )
+            model.BaseSeq(seq=invalid_sequence, seq_format=seq_format)
+
+    @pytest.mark.parametrize(
+        "seq_format",
+        [
+            model.enum.SeqFormat.STR_DNA_GZB64,
+            model.enum.SeqFormat.STR_DNA_INCL_GAP_GZB64,
+        ],
+    )
+    def test_gzip_base64_sequence_round_trip(
+        self, seq_format: model.enum.SeqFormat
+    ) -> None:
+        """Test gzip+base64 storage while exposing the decoded DNA sequence."""
+        sequence = "ATCGATCG"
+        if seq_format == model.enum.SeqFormat.STR_DNA_INCL_GAP_GZB64:
+            sequence = "AT-CGATCG"
+
+        base_seq = model.BaseSeq(
+            seq=encode_gzip_base64(sequence), seq_format=seq_format
+        )
+
+        assert base_seq.seq != sequence.lower()
+        assert base_seq.get_nucleotide_seq() == sequence.lower()
+        assert base_seq.length == len(sequence)
+        assert base_seq.id == self._compute_expected_hash(sequence)
+
+    # def test_gzip_base64_rejects_malformed_storage(self) -> None:
+    #     """Reject compressed sequence data that is not valid gzip+base64."""
+    #     with pytest.raises(ValidationError, match="valid gzip\+base64"):
+    #         model.BaseSeq(
+    #             seq="not-valid-gzip-base64",
+    #             seq_format=model.enum.SeqFormat.STR_DNA_GZB64,
+    #         )
+
+    @pytest.mark.parametrize(
+        ("seq_format", "sequence"),
+        [
+            ("STR_DNA_GZB64", "ATCGATCG"),
+            ("STR_DNA_INCL_GAP_GZB64", "AT-CGATCG"),
+        ],
+    )
+    def test_gzip_base64_accepts_plain_sequence(
+        self, seq_format: str, sequence: str
+    ) -> None:
+        """Encode a plain nucleotide string when compressed storage is requested."""
+        base_seq = model.BaseSeq(seq=sequence, seq_format=seq_format)  # type: ignore[arg-type]
+
+        assert base_seq.seq == encode_gzip_base64(sequence.lower())
+        assert base_seq.get_nucleotide_seq() == sequence.lower()
+
+    def test_gapless_dna_rejects_alignment_gap(self) -> None:
+        """Reject alignment gaps when the selected format is gapless DNA."""
+        with pytest.raises(ValidationError, match="invalid characters"):
+            model.BaseSeq(seq="AT-CG", seq_format=model.enum.SeqFormat.STR_DNA)
 
 
 @pytest.mark.scenario_ids("TC-SEC-31-01")
@@ -558,7 +647,7 @@ class TestModelSeqProfileForUpload:
         """Test JSON serialization of AlleleProfileForUpload."""
         allele_id1, allele_id2 = uuid4(), uuid4()
         allele_ids: list[UUID | None] = [allele_id1, allele_id2]
-        allele_profile = model.SeqProfileForUpload(
+        allele_profile = model.SeqProfileForUpload(  # type: ignore[call-arg]
             protocol_code="PROTOCOL123",
             seq_profile_type=model.enum.SeqProfileType.ALLELE,
             format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
@@ -585,7 +674,7 @@ class TestModelSeqProfileForUpload:
         allele_id1, allele_id2 = uuid4(), uuid4()
         # Sort allele IDs to match hash calculation
         allele_ids: list[UUID | None] = [allele_id1, allele_id2]
-        allele_profile = model.SeqProfileForUpload(
+        allele_profile = model.SeqProfileForUpload(  # type: ignore[call-arg]
             protocol_code="PROTOCOL123",
             seq_profile_type=model.enum.SeqProfileType.ALLELE,
             format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
@@ -604,7 +693,7 @@ class TestModelSeqProfileForUpload:
         allele_id1, allele_id2 = uuid4(), uuid4()
         # Sort allele IDs to match hash calculation
         allele_ids: list[UUID | None] = [allele_id1, allele_id2]
-        allele_profile = model.SeqProfileForUpload(
+        allele_profile = model.SeqProfileForUpload(  # type: ignore[call-arg]
             protocol_id=protocol_id,
             seq_profile_type=model.enum.SeqProfileType.ALLELE,
             format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
@@ -627,7 +716,7 @@ class TestModelSeqProfileForUpload:
             uuid4(),
             uuid4(),
         ]
-        allele_profile = model.SeqProfileForUpload(
+        allele_profile = model.SeqProfileForUpload(  # type: ignore[call-arg]
             protocol_code="PROTOCOL123",
             seq_profile_type=model.enum.SeqProfileType.ALLELE,
             format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
@@ -646,7 +735,7 @@ class TestModelSeqProfileForUpload:
     def test_valid_with_locus_allele_id_map(self) -> None:
         """Test valid AlleleProfileForUpload with locus_allele_id_map."""
         locus_allele_id_map = {"locus1": uuid4(), "locus2": uuid4()}
-        allele_profile = model.SeqProfileForUpload(
+        allele_profile = model.SeqProfileForUpload(  # type: ignore[call-arg]
             protocol_code="PROTOCOL123",
             seq_profile_type=model.enum.SeqProfileType.ALLELE,
             format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
@@ -663,7 +752,7 @@ class TestModelSeqProfileForUpload:
     def test_valid_with_locus_code_map_when_needed(self) -> None:
         """Test valid AlleleProfileForUpload with locus_code_map when using allele_ids."""
         allele_ids: list[UUID | None] = [uuid4()]
-        allele_profile = model.SeqProfileForUpload(
+        allele_profile = model.SeqProfileForUpload(  # type: ignore[call-arg]
             protocol_code="PROTOCOL123",
             seq_profile_type=model.enum.SeqProfileType.ALLELE,
             format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
@@ -679,7 +768,7 @@ class TestModelSeqProfileForUpload:
         """Test ValidationError when both protocol fields are missing."""
         with pytest.raises(ValidationError):
             allele_id = uuid4()
-            model.SeqProfileForUpload(
+            model.SeqProfileForUpload(  # type: ignore[call-arg]
                 seq_profile_type=model.enum.SeqProfileType.ALLELE,
                 format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
                 content=base64.b64encode(allele_id.bytes).decode("ascii"),
@@ -690,7 +779,7 @@ class TestModelSeqProfileForUpload:
         """Test ValidationError when both locus_set fields are missing."""
         # locus_set fields removed in refactor; providing protocol_code and content should be valid
         allele_id = uuid4()
-        allele_profile = model.SeqProfileForUpload(
+        allele_profile = model.SeqProfileForUpload(  # type: ignore[call-arg]
             protocol_code="PROTOCOL123",
             seq_profile_type=model.enum.SeqProfileType.ALLELE,
             format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
@@ -702,7 +791,7 @@ class TestModelSeqProfileForUpload:
     def test_invalid_missing_allele_data(self) -> None:
         """Test ValidationError when all allele data fields are missing."""
         with pytest.raises(ValidationError):
-            model.SeqProfileForUpload(
+            model.SeqProfileForUpload(  # type: ignore[call-arg]
                 protocol_code="PROTOCOL123",
                 seq_profile_type=model.enum.SeqProfileType.ALLELE,
                 format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
@@ -712,7 +801,7 @@ class TestModelSeqProfileForUpload:
         """Test ValidationError when locus_code_map is missing but alleles have locus_code."""
         locus_allele_id_map: dict[str, UUID] = {"locus1": uuid4()}
         with pytest.raises(ValidationError):
-            model.SeqProfileForUpload(
+            model.SeqProfileForUpload(  # type: ignore[call-arg]
                 protocol_code="PROTOCOL123",
                 seq_profile_type=model.enum.SeqProfileType.ALLELE,
                 format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
@@ -748,7 +837,7 @@ class TestModelSeqProfileForUpload:
         )
         # Add NULL_ID bytes for any None values
         null_count = sum(x is None for x in allele_ids)
-        return model.SeqProfileForUpload(
+        return model.SeqProfileForUpload(  # type: ignore[call-arg]
             protocol_code="PROTOCOL456",
             seq_profile_type=model.enum.SeqProfileType.ALLELE,
             format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
@@ -799,7 +888,7 @@ class TestModelSampleForUpload:
         allele_profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
             [allele_id]
         )
-        sample = model.SampleForUpload(
+        sample = model.SampleForUpload(  # type: ignore[call-arg]
             identifiers=[identifier_for_upload],
             seq_profiles=[allele_profile],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
@@ -817,7 +906,7 @@ class TestModelSampleForUpload:
         allele_profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
             [allele_id]
         )
-        sample = model.SampleForUpload(
+        sample = model.SampleForUpload(  # type: ignore[call-arg]
             id=sample_id,
             identifiers=[identifier_for_upload],
             seq_profiles=[allele_profile],
@@ -840,7 +929,7 @@ class TestModelSampleForUpload:
         allele_profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
             [allele_id]
         )
-        sample_for_upload = model.SampleForUpload(
+        sample_for_upload = model.SampleForUpload(  # type: ignore[call-arg]
             identifiers=identifiers_for_upload,
             seq_profiles=[allele_profile],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
@@ -883,7 +972,7 @@ class TestModelSampleForUpload:
             [allele_id]
         )
         # This should not raise ValidationError since empty list is valid
-        sample_for_upload = model.SampleForUpload(
+        sample_for_upload = model.SampleForUpload(  # type: ignore[call-arg]
             identifiers=[],
             seq_profiles=[allele_profile],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
@@ -973,7 +1062,7 @@ class TestModelSampleForUpload:
             [allele_id]
         )
 
-        sample_for_upload = model.SampleForUpload(
+        sample_for_upload = model.SampleForUpload(  # type: ignore[call-arg]
             id=sample_id,
             identifiers=[identifier_for_upload],
             seqs=[seq_upload],

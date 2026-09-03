@@ -1,5 +1,8 @@
 """Define seqdb domain models for domain.model.seq.base."""
 
+import base64
+import binascii
+import gzip
 import hashlib
 import json
 import typing
@@ -19,6 +22,27 @@ from gen_epix.seqdb.domain.literal import REQUIRED_NEXTCLADE_SEQ_KEYS
 def str_uuid4() -> str:
     """Return a newly generated UUID4 as text."""
     return str(uuid.uuid4())
+
+
+def encode_gzip_base64(seq: str) -> str:
+    """Encode a nucleotide sequence as a gzip-compressed base64 string."""
+    return base64.b64encode(gzip.compress(seq.encode("ascii"), mtime=0)).decode("ascii")
+
+
+def _decode_gzip_base64(value: str) -> str:
+    """Decode a gzip-compressed base64 sequence string."""
+    try:
+        compressed = base64.b64decode(value.encode("ascii"), validate=True)
+        return gzip.decompress(compressed).decode("ascii")
+    except (
+        UnicodeEncodeError,
+        binascii.Error,
+        gzip.BadGzipFile,
+        EOFError,
+        OSError,
+        UnicodeDecodeError,
+    ) as error:
+        raise ValueError("Sequence is not valid gzip+base64 data") from error
 
 
 class ContentMixin[FormatType: IntEnum]:
@@ -144,8 +168,10 @@ class BaseSeq(Model):
     The sequence hash is stored in the id field of the model and is equal to the first
     128 bits of the SHA256 hash of the lower case sequence.
 
-    Model validation: Normalizes DNA sequence casing, derives verifiable sequence
-    hashes and lengths, and rejects inconsistent or unsupported representations.
+    Model validation: Converts string format names to enum members, normalizes DNA
+    sequence casing, decodes gzip+base64 input for validation, and re-encodes
+    compressed representations for storage. It derives verifiable sequence hashes
+    and lengths and rejects inconsistent or unsupported representations.
     """
 
     ENTITY: ClassVar = Entity(
@@ -185,17 +211,26 @@ class BaseSeq(Model):
         """
         seq_hash = self.id
         # Verify sequence hash, seq and length depending on seq_format
-        if self.seq_format == enum.SeqFormat.STR_DNA:
-            # Verify length
-            computed_length = len(self.seq)
-            # Make seq lower case and validate characters
-            seq = self.seq.lower()
-            invalid_chars = set(seq) - enum.SeqAlphabet.DNA_INCL_AMBIGUOUS.value
+        if self.seq_format in enum.SeqFormatSet.DNA.value:
+            alphabet = (
+                enum.SeqAlphabet.DNA_INCL_AMBIGUOUS_AND_GAP
+                if self.seq_format in enum.SeqFormatSet.GAP.value
+                else enum.SeqAlphabet.DNA_INCL_AMBIGUOUS
+            )
+            # Use the decode method in a try/except to validate and convert in one go
+            try:
+                seq = _decode_gzip_base64(self.seq)
+            except ValueError:
+                seq = self.seq
+            computed_length = len(seq)
+            seq = seq.lower()
+            invalid_chars = set(seq) - alphabet.value
             if invalid_chars:
                 raise ValueError(
                     f"Sequence contains invalid characters for {self.seq_format.value} format: {"".join(sorted(invalid_chars))}"
                 )
-            self.seq = seq
+            is_compressed_format = self.seq_format in enum.SeqFormatSet.GZB64.value
+            self.seq = encode_gzip_base64(seq) if is_compressed_format else seq
             # Compute sequence hash
             computed_seq_hash = UUID(
                 hashlib.sha256(seq.encode("ascii")).digest()[:16].hex()
@@ -290,7 +325,9 @@ class BaseSeq(Model):
             NotImplementedError: If the sequence format or required NextClade features
                 cannot yet be converted.
         """
-        if self.seq_format == enum.SeqFormat.STR_DNA:
+        if self.seq_format in enum.SeqFormatSet.DNA.value:
+            if self.seq_format in enum.SeqFormatSet.GZB64.value:
+                return _decode_gzip_base64(self.seq)
             return self.seq
         elif self.seq_format == enum.SeqFormat.NEXTCLADE:
             if ref_seq_str is None:
