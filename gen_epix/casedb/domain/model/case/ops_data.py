@@ -168,9 +168,7 @@ class CaseSet(Model):
     )
     name: str = Field(description="The name of a case set, UNIQUE", max_length=255)
     code: str = Field(description="The code of a case set, UNIQUE", max_length=255)
-    description: str = Field(
-        description="The description of a case set", max_length=8000
-    )
+    description: str = Field(description="The description of a case set")
     case_set_date: datetime = Field(
         description="The datetime of the case set creation",
         default_factory=datetime.now,
