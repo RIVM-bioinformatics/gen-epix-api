@@ -138,7 +138,14 @@ class Concept(Model):
     def _validate_props(
         cls, props_value: dict[str, Any] | str | None
     ) -> dict[str, Any] | None:
-        """Normalize supported concept properties from a mapping or JSON string."""
+        """
+        Validate the props field, which is None, or a JSON string or dict with optional
+        keys:
+        - lb: lower bound (float)
+        - ub: upper bound (float)
+        - lb_in: lower bound inclusive (bool)
+        - ub_in: upper bound inclusive (bool)
+        """
         if props_value is None:
             return None
         if isinstance(props_value, str):
