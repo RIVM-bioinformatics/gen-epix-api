@@ -26,6 +26,10 @@ class CasedbEndpointTestClient(EndpointTestClient):
             command.RetrieveCasesByIdCommand, self.handle_retrieve_cases_by_id
         )
         self.register_handler(command.UploadCasesCommand, self.handle_cases_create)
+        self.register_handler(
+            command.UpdateCaseCreatedInDataCollectionCommand,
+            self.handle_update_case_created_in_data_collection,
+        )
         self.register_handler(command.CreateCaseSetCommand, self.handle_case_set_create)
 
     def handle_update_user_own_organization(
@@ -78,7 +82,29 @@ class CasedbEndpointTestClient(EndpointTestClient):
             data_collection_ids=cmd.data_collection_ids,
         )
         response = self.test_client.post(
-            route_prefix + "/create/cases",
+            route_prefix + "/upload/cases",
+            headers=headers,
+            json=json.loads(request_body.model_dump_json()),
+        )
+        retval = self._content_to_obj(response, model.Case, is_list=True)
+        return retval, response
+
+    def handle_update_case_created_in_data_collection(
+        self,
+        cmd: command.UpdateCaseCreatedInDataCollectionCommand,
+        route_prefix: str,
+        headers: dict[str, str] | None,
+    ) -> tuple[Any, Response]:
+        # Import the request body model here so that the APP_COMPOSER is not created
+        # before the cfg is updated, since the APP_COMPOSER is imported in the routers
+        from gen_epix.casedb.api import UpdateCaseCreatedInDataCollectionRequestBody
+
+        request_body = UpdateCaseCreatedInDataCollectionRequestBody(
+            case_ids=cmd.case_ids,
+            data_collection_id=cmd.data_collection_id,
+        )
+        response = self.test_client.post(
+            route_prefix + "/update_case_created_in_data_collection",
             headers=headers,
             json=json.loads(request_body.model_dump_json()),
         )

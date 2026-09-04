@@ -44,6 +44,7 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         command.CaseSetStatusCrudCommand,
         command.RefDimCrudCommand,
         command.RefColCrudCommand,
+        command.UpdateCaseCreatedInDataCollectionCommand,
     }
     ABAC_REFDATA_COMMAND_CLASSES: set[type[command.Command]] = {
         command.CaseTypeCrudCommand,
@@ -148,6 +149,10 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         f(command.TreeAlgorithmClassCrudCommand, self.crud_tree_algorithm_class)
         f(command.TreeAlgorithmCrudCommand, self.crud_tree_algorithm)
         f(command.UploadCasesCommand, self.upload_cases)
+        f(
+            command.UpdateCaseCreatedInDataCollectionCommand,
+            self.update_case_created_in_data_collection,
+        )
         f(command.CreateCaseSetCommand, self.create_case_set)
         f(command.RetrieveCompleteCaseTypeCommand, self.retrieve_complete_case_type)
         f(command.RetrieveCaseSetStatsCommand, self.retrieve_case_stats)
@@ -703,6 +708,24 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         Raises:
             NotImplementedError: Always, until a concrete service implements the
                 upload.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def update_case_created_in_data_collection(
+        self, cmd: command.UpdateCaseCreatedInDataCollectionCommand
+    ) -> list[model.Case]:
+        """Update the creating data collection for existing cases.
+
+        Args:
+            cmd: Case IDs and the replacement data collection ID.
+
+        Returns:
+            The updated cases.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                update.
         """
         raise NotImplementedError()
 

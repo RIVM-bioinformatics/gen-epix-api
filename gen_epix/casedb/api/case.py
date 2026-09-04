@@ -65,6 +65,21 @@ class CreateCaseSetRequestBody(PydanticBaseModel):
     )
 
 
+class UpdateCaseCreatedInDataCollectionRequestBody(PydanticBaseModel):
+    """Docstring assigned automatically"""  # noqa: D415
+
+    __doc__ = command.UpdateCaseCreatedInDataCollectionCommand.__doc__
+    case_ids: list[UUID] = copy_model_field(
+        command.UpdateCaseCreatedInDataCollectionCommand,
+        "case_ids",
+        max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
+    )
+    data_collection_id: UUID = copy_model_field(
+        command.UpdateCaseCreatedInDataCollectionCommand,
+        "data_collection_id",
+    )
+
+
 class RetrieveCaseRightsRequestBody(PydanticBaseModel):
     """Docstring assigned automatically"""  # noqa: D415
 
@@ -319,6 +334,32 @@ def create_case_endpoints(
                 input_handle_exception=handle_exception,
                 input_command=command.RetrieveCompleteCaseTypeCommand(
                     user=user, case_type_id=case_type_id
+                ),
+            ),
+        )
+
+    @router.post(
+        "/update_case_created_in_data_collection",
+        operation_id="update__case_created_in_data_collection",
+        name="Update cases' creating data collection",
+        description=command.UpdateCaseCreatedInDataCollectionCommand.__doc__,
+    )
+    async def update__case_created_in_data_collection(
+        user: registered_user_dependency,  # type: ignore[valid-type]
+        request_body: UpdateCaseCreatedInDataCollectionRequestBody,
+    ) -> list[model.Case]:
+        """See router description."""
+        return cast(
+            list[model.Case],
+            handle_command(
+                app=app,
+                user=user,
+                exception_code="a7c1e5f9",
+                input_handle_exception=handle_exception,
+                input_command=command.UpdateCaseCreatedInDataCollectionCommand(
+                    user=user,
+                    case_ids=request_body.case_ids,
+                    data_collection_id=request_body.data_collection_id,
                 ),
             ),
         )
