@@ -198,7 +198,7 @@ class TestNonCrudHandlers:
             {
                 "case_type_id": str(case_type_id),
                 "created_in_data_collection_id": str(uuid4()),
-                "case_date": "2024-01-01T00:00:00Z",
+                "timed_at": "2024-01-01T00:00:00Z",
                 "content": {},
             }
         ]
@@ -314,7 +314,7 @@ class TestNonCrudHandlers:
             genetic_distance_col_id=genetic_distance_col_id,
             case_ids=[case_id],
         )
-        data = {"cases": [{"id": str(uuid4()), "case_date": "2024-01-01T00:00:00Z"}]}
+        data = {"cases": [{"id": str(uuid4()), "timed_at": "2024-01-01T00:00:00Z"}]}
         mock_client.request.return_value = _mock_response(data)
         result = app.retrieve_similar_cases(cmd)
         method, url = mock_client.request.call_args.args

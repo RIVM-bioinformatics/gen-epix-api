@@ -24,7 +24,7 @@ class TestModelCaseOpsData:
             content={},
         )
         assert case.count == 1
-        assert isinstance(case.case_date, datetime)
+        assert isinstance(case.timed_at, datetime)
 
         with pytest.raises(ValidationError):
             Case(

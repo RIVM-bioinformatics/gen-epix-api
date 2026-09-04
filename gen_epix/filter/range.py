@@ -16,6 +16,8 @@ class RangeFilter(Filter):
     operators are enforced before building the matching function.
     """
 
+    type: Literal[FilterType.RANGE.value] = FilterType.RANGE.value  # type: ignore[name-defined]
+
     lower_bound: Any | None = Field(
         default=None, description="The lower bound of the range.", frozen=True
     )
@@ -134,9 +136,3 @@ class RangeFilter(Filter):
         raise NotImplementedError(
             "Method is implemented dynamically in _validate_state"
         )
-
-
-class TypedRangeFilter(RangeFilter):
-    """Represents a range filter carrying its serialized filter type."""
-
-    type: Literal[FilterType.RANGE.value]  # type: ignore[name-defined]
