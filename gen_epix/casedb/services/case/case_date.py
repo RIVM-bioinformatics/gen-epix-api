@@ -220,7 +220,7 @@ def case_service_calculate_case_date(
     must remove ineligible case-date values before invoking this function.
 
     Args:
-        cases: Cases whose ``case_date`` values may be updated.
+        cases: Cases whose ``timed_at`` values may be updated.
         case_date_col_mappers: Ordered mapping of column IDs to ISO period
             converters, from highest to lowest temporal resolution.
     """
@@ -232,5 +232,5 @@ def case_service_calculate_case_date(
             iso_datetime_value: str | None = case.content.get(col_id)
             if iso_datetime_value is None:
                 continue
-            case.case_date = mapper(iso_datetime_value)
+            case.timed_at = mapper(iso_datetime_value)
             break  # cols are ordered by descending resolution; stop at the first (highest-resolution) non-None value

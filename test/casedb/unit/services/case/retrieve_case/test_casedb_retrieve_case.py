@@ -112,7 +112,7 @@ class BaseRetrieveCaseTestCase:
         self,
         case_id: UUID,
         content: dict[UUID, str | None],
-        case_date: datetime | None = None,
+        timed_at: datetime | None = None,
     ) -> model.Case:
         return model.Case(
             id=case_id,
@@ -120,7 +120,7 @@ class BaseRetrieveCaseTestCase:
             case_type_id=self.case_type_id,
             created_in_data_collection_id=self.data_collection_id,
             count=1,
-            case_date=case_date or datetime.now(timezone.utc),
+            timed_at=timed_at or datetime.now(timezone.utc),
             content=content,
         )
 

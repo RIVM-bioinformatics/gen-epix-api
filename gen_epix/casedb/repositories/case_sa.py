@@ -75,7 +75,7 @@ class CaseSARepository(SARepository, BaseCaseRepository):
         query1 = (
             session.query(
                 sa_model.Case.id,
-                sa_model.Case.case_date,
+                sa_model.Case.timed_at,
                 func.min(sa_case(*case_statement_args[0][0], else_=last_index)).label(
                     "data_collection_time_unit_index"
                 ),
@@ -88,7 +88,7 @@ class CaseSARepository(SARepository, BaseCaseRepository):
                 ),
             )
             .group_by(
-                sa_model.Case.case_date,
+                sa_model.Case.timed_at,
                 sa_model.Case.id,
             )
             .where(sa_model.Case.case_type_id == case_type_id)
@@ -98,7 +98,7 @@ class CaseSARepository(SARepository, BaseCaseRepository):
         query2 = (
             session.query(
                 sa_model.Case.id,
-                sa_model.Case.case_date,
+                sa_model.Case.timed_at,
                 func.min(sa_case(*case_statement_args[1][0], else_=last_index)).label(
                     "data_collection_time_unit_index"
                 ),
@@ -115,7 +115,7 @@ class CaseSARepository(SARepository, BaseCaseRepository):
                 sa_model.Case.id == sa_model.CaseDataCollectionLink.case_id,
             )
             .group_by(
-                sa_model.Case.case_date,
+                sa_model.Case.timed_at,
                 sa_model.Case.id,
             )
             .where(sa_model.Case.case_type_id == case_type_id)
@@ -126,7 +126,7 @@ class CaseSARepository(SARepository, BaseCaseRepository):
         query3 = (
             session.query(
                 combined_query.c[0],  # case_id
-                combined_query.c[1],  # case_date
+                combined_query.c[1],  # timed_at
                 func.min(combined_query.c[2]).label("data_collection_time_unit_index"),
                 func.max(combined_query.c[3]).label("is_in_private_data_collection"),
             )
@@ -151,10 +151,10 @@ class CaseSARepository(SARepository, BaseCaseRepository):
                 # Skip case IDs not in the given set, if applicable
                 continue
             # @ABAC: Adjust case date
-            case_date = row[1]
-            case_date = date_mappers[col_type_index](case_date)
+            timed_at = row[1]
+            timed_at = date_mappers[col_type_index](timed_at)
             if is_filter_by_datetime and not datetime_range_filter.match_value(
-                case_date
+                timed_at
             ):
                 # Skip cases not in the given datetime range after adjusting the case date, if applicable
                 continue
@@ -162,13 +162,13 @@ class CaseSARepository(SARepository, BaseCaseRepository):
             case_stats.n_cases += 1
             case_stats.n_own_cases += row[3]
             case_stats.first_case_date = (
-                case_date
+                timed_at
                 if not case_stats.first_case_date
-                else min(case_stats.first_case_date, case_date)
+                else min(case_stats.first_case_date, timed_at)
             )
             case_stats.last_case_date = (
-                case_date
+                timed_at
                 if not case_stats.last_case_date
-                else max(case_stats.last_case_date, case_date)
+                else max(case_stats.last_case_date, timed_at)
             )
         return case_stats

@@ -70,7 +70,7 @@ class BaseRetrieveStatsTestCase:
         case_id: UUID | None = None,
         case_type_id: UUID,
         created_in_data_collection_id: UUID,
-        case_date: datetime | None = None,
+        timed_at: datetime | None = None,
         count: int = 1,
     ) -> case_model.Case:
         return case_model.Case(
@@ -79,7 +79,7 @@ class BaseRetrieveStatsTestCase:
             case_type_id=case_type_id,
             created_in_data_collection_id=created_in_data_collection_id,
             count=count,
-            case_date=case_date or datetime.now(timezone.utc),
+            timed_at=timed_at or datetime.now(timezone.utc),
             content={},
         )
 

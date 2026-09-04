@@ -764,7 +764,7 @@ class CaseService(BaseCaseService):
         """Retrieve cases under case-level and column-level ABAC restrictions.
 
         The caller owns ``uow``. The helper may normalize
-        ``datetime_range_filter.key`` to ``"case_date"`` in place and removes
+        ``datetime_range_filter.key`` to ``"timed_at"`` in place and removes
         inaccessible entries from each returned case's ``content`` mapping. Derived
         case dates are calculated only after access filtering.
 
@@ -822,12 +822,12 @@ class CaseService(BaseCaseService):
 
         # Retrieve all cases, potentially filtered by datetime range
         if datetime_range_filter:
-            if datetime_range_filter.key and datetime_range_filter.key != "case_date":
+            if datetime_range_filter.key and datetime_range_filter.key != "timed_at":
                 raise exc.InvalidArgumentsError(
                     "c0adc8e0",
                     f"Invalid datetime range filter key: {datetime_range_filter.key}",
                 )
-            datetime_range_filter.key = "case_date"
+            datetime_range_filter.key = "timed_at"
         cases, is_max_results_exceeded = (
             self._retrieve_cases_by_ids_or_case_type_filter(
                 uow, user_id, case_type_id, case_ids, datetime_range_filter, max_n_cases

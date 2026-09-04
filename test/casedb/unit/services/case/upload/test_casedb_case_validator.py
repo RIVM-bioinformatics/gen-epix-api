@@ -553,7 +553,7 @@ class BaseCaseValidatorTestCase:
                 content=content,
             )
             cases_for_upload.append(model.CaseForUpload(case=c))
-            # Initialize validated_content with the original content so case_date
+            # Initialize validated_content with the original content so timed_at
             # calculation can operate on the expected updated values without
             # needing the full validation pipeline.
             case_results.append(
@@ -879,11 +879,11 @@ class TestCalculateCaseDate(BaseCaseValidatorTestCase):
         validator.calculate_case_date(cmd, retval, updated_contents)
         case = cmd.case_batch.cases[0].case
         assert case is not None
-        assert case.case_date == datetime.datetime(2024, 3, 15)
+        assert case.timed_at == datetime.datetime(2024, 3, 15)
 
     def test_case_date_updated_and_invalid_iso_raises(self) -> None:
         validator = self._create_validator()
-        # Valid ISO date -> updates case_date and logs derived
+        # Valid ISO date -> updates timed_at and logs derived
         cmd1, retval1 = self._make_cmd_and_result(
             [{self.time_day_col_id: "2024-02-02"}]
         )
