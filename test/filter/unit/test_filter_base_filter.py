@@ -3,7 +3,7 @@ from typing import Any, Iterable, Iterator, List, Set, Tuple
 import pytest
 from pydantic import BaseModel
 
-from gen_epix.filter.base import Filter, TypedFilter
+from gen_epix.filter.base import Filter
 from gen_epix.filter.enum import FilterType
 
 
@@ -32,8 +32,8 @@ class CompositeFilter(Filter):
         return True
 
 
-class TypedTrueFilter(TypedFilter):
-    """Concrete typed filter that matches any non-None value."""
+class BaseTrueFilter(Filter):
+    """Concrete base filter that matches any non-None value."""
 
     def _match(self, value: Any) -> bool:  # type: ignore[override]
         return True
@@ -51,9 +51,7 @@ class BaseFilterTestCase:
         self.true_filter = AlwaysTrueFilter()
         self.eq_filter = EqualsFilter(expected="x")
         self.composite_filter = CompositeFilter()
-        self.typed_true_filter = TypedTrueFilter(
-            type=FilterType.BASE.value,
-        )
+        self.base_true_filter = BaseTrueFilter()
 
     def make_rows_dict(
         self, values: List[Tuple[str, Any | None]]
@@ -523,8 +521,8 @@ class TestCallMethod(BaseFilterTestCase):
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-07")
-class TestCompositeAndTypedFilter(BaseFilterTestCase):
-    """Test scenarios related to composite filters and typed filters."""
+class TestCompositeAndBaseFilter(BaseFilterTestCase):
+    """Test scenarios related to composite filters and base filters."""
 
     def test_is_composite_property(self) -> None:
         # 1. Input
@@ -541,7 +539,7 @@ class TestCompositeAndTypedFilter(BaseFilterTestCase):
         assert default_is_composite is False
         assert composite_is_composite is True
 
-    def test_typed_filter_literal_type(self) -> None:
+    def test_filter_literal_type(self) -> None:
         # 1. Input
         # none
 
@@ -549,7 +547,7 @@ class TestCompositeAndTypedFilter(BaseFilterTestCase):
         # none
 
         # 3. Execute
-        literal_type: str = self.typed_true_filter.type
+        literal_type: str = self.base_true_filter.type
 
         # 4. Verify
         assert literal_type == FilterType.BASE.value

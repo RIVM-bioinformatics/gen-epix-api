@@ -31,21 +31,7 @@ from gen_epix.fastapp.model import Permission
 from gen_epix.filter import (
     CompositeFilter,
     Filter,
-    TypedCompositeFilter,
-    TypedDateRangeFilter,
-    TypedDatetimeRangeFilter,
-    TypedEqualsBooleanFilter,
-    TypedEqualsNumberFilter,
-    TypedEqualsStringFilter,
-    TypedEqualsUuidFilter,
-    TypedExistsFilter,
-    TypedNoFilter,
-    TypedNumberRangeFilter,
-    TypedNumberSetFilter,
-    TypedPartialDateRangeFilter,
-    TypedRegexFilter,
-    TypedStringSetFilter,
-    TypedUuidSetFilter,
+    FilterUnion,
 )
 
 
@@ -271,23 +257,7 @@ class CrudEndpointGenerator:
 
         async def endpoint_function(
             user: route.user_dependency,  # type: ignore
-            filter: (
-                TypedExistsFilter
-                | TypedEqualsBooleanFilter
-                | TypedEqualsNumberFilter
-                | TypedEqualsStringFilter
-                | TypedEqualsUuidFilter
-                | TypedNumberRangeFilter
-                | TypedDateRangeFilter
-                | TypedDatetimeRangeFilter
-                | TypedPartialDateRangeFilter
-                | TypedRegexFilter
-                | TypedNumberSetFilter
-                | TypedStringSetFilter
-                | TypedUuidSetFilter
-                | TypedNoFilter
-                | TypedCompositeFilter
-            ),
+            filter: FilterUnion | CompositeFilter,
             limit: int | None = None,
             offset: int | None = None,
         ) -> Any:

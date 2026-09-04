@@ -14,7 +14,7 @@ from gen_epix.commondb.domain.command import (
 )
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
+from gen_epix.filter.datetime_range import DatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
 
 # Non-CRUD
@@ -126,7 +126,7 @@ class RetrieveCaseTypeStatsCommand(Command):
         default=None,
         description="The CaseType IDs to retrieve stats for, if not all.",
     )
-    datetime_range_filter: TypedDatetimeRangeFilter | None = Field(
+    datetime_range_filter: DatetimeRangeFilter | None = Field(
         default=None,
         description="The datetime range to filter cases by, if any. The key attribute of the filter should be left empty.",
     )
@@ -142,7 +142,7 @@ class RetrieveCaseSetStatsCommand(Command):
         default=None,
         description="The case set IDs to retrieve stats for, if not all.",
     )
-    datetime_range_filter: TypedDatetimeRangeFilter | None = Field(
+    datetime_range_filter: DatetimeRangeFilter | None = Field(
         default=None,
         description="The datetime range to filter cases by, if any. The key attribute of the filter should be left empty.",
     )

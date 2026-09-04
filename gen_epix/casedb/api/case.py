@@ -20,7 +20,7 @@ from gen_epix.commondb.domain.literal import (
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
 from gen_epix.fastapp.services.auth.service import AuthService
-from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
+from gen_epix.filter.datetime_range import DatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.util import copy_model_field
@@ -158,7 +158,7 @@ class RetrieveCaseTypeStatsRequestBody(PydanticBaseModel):
         "case_type_ids",
         max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
     )
-    datetime_range_filter: TypedDatetimeRangeFilter | None = copy_model_field(
+    datetime_range_filter: DatetimeRangeFilter | None = copy_model_field(
         command.RetrieveCaseTypeStatsCommand, "datetime_range_filter"
     )
 
@@ -172,7 +172,7 @@ class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
         "case_set_ids",
         max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
     )
-    datetime_range_filter: TypedDatetimeRangeFilter | None = copy_model_field(
+    datetime_range_filter: DatetimeRangeFilter | None = copy_model_field(
         command.RetrieveCaseSetStatsCommand, "datetime_range_filter"
     )
 
