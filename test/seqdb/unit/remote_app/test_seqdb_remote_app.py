@@ -366,9 +366,9 @@ class TestSeqdbRemoteApp:
 
     def test_locus_crud_command_has_extended_timeout(self) -> None:
         """Use the extended timeout for large Locus CRUD batches."""
-        assert SeqdbRemoteApp.DEFAULT_HTTP_TIMEOUTS[
-            seqdb_command.LocusCrudCommand
-        ] == 45.0
+        assert (
+            SeqdbRemoteApp.DEFAULT_HTTP_TIMEOUTS[seqdb_command.LocusCrudCommand] == 45.0
+        )
 
 
 class TestRetrieveSeqDistanceLastModified:
