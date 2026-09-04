@@ -377,6 +377,15 @@ class RetrieveIsOwnCasesCommand(Command):
     )
 
 
+class UpdateCaseCreatedInDataCollectionCommand(Command):
+    """Represent a request to move cases to a different creating data collection."""
+
+    case_ids: list[UUID] = Field(description="The IDs of the cases to update.")
+    data_collection_id: UUID = Field(
+        description="The ID of the data collection to assign to the cases."
+    )
+
+
 # CRUD
 
 

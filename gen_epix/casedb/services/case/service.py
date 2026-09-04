@@ -95,6 +95,9 @@ from gen_epix.casedb.services.case.retrieve_similar_cases import (
 from gen_epix.casedb.services.case.retrieve_stats import (
     case_service_retrieve_case_stats,
 )
+from gen_epix.casedb.services.case.update_case_created_in_data_collection import (
+    case_service_update_case_created_in_data_collection,
+)
 from gen_epix.casedb.services.case.upload import case_service_upload_cases
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.filter import Filter, LogicalOperator, UuidSetFilter
@@ -147,6 +150,19 @@ class CaseService(BaseCaseService):
             FeatureDisabledServiceError: If case upload is disabled.
         """
         return case_service_upload_cases(self, cmd)
+
+    def update_case_created_in_data_collection(
+        self, cmd: command.UpdateCaseCreatedInDataCollectionCommand
+    ) -> list[model.Case]:
+        """Move existing cases to a different creating data collection.
+
+        Args:
+            cmd: Case IDs and the replacement data collection ID.
+
+        Returns:
+            The updated cases.
+        """
+        return case_service_update_case_created_in_data_collection(self, cmd)
 
     def create_case_set(
         self, cmd: command.CreateCaseSetCommand

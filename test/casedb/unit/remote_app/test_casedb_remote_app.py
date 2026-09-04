@@ -49,6 +49,39 @@ def mock_client() -> Any:
 class TestNonCrudHandlers:
     """Test the hand-written (non-CRUD) command handlers."""
 
+    def test_update_case_created_in_data_collection(
+        self, app: CasedbRemoteApp, mock_client: Any
+    ) -> None:
+        case_id = uuid4()
+        data_collection_id = uuid4()
+        cmd = command.UpdateCaseCreatedInDataCollectionCommand(
+            user=None,
+            case_ids=[case_id],
+            data_collection_id=data_collection_id,
+        )
+        data = [
+            {
+                "id": str(case_id),
+                "case_type_id": str(uuid4()),
+                "created_in_data_collection_id": str(data_collection_id),
+                "case_date": "2024-01-01T00:00:00Z",
+                "content": {},
+            }
+        ]
+        mock_client.request.return_value = _mock_response(data)
+
+        result = app.update_case_created_in_data_collection(cmd)
+
+        method, url = mock_client.request.call_args.args
+        json_body = mock_client.request.call_args.kwargs["json"]
+        assert method == "POST"
+        assert url == app._routes[command.UpdateCaseCreatedInDataCollectionCommand]
+        assert json_body == {
+            "case_ids": [str(case_id)],
+            "data_collection_id": str(data_collection_id),
+        }
+        assert result == [model.Case(**data[0])]
+
     def test_case_type_set_case_type_update_association(
         self, app: CasedbRemoteApp, mock_client: Any
     ) -> None:
