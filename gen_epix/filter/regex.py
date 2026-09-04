@@ -16,6 +16,8 @@ class RegexFilter(Filter):
     The configured pattern must compile as a Python regular expression.
     """
 
+    type: Literal[FilterType.REGEX.value] = FilterType.REGEX.value  # type: ignore[name-defined]
+
     pattern: str = Field(description="The regular expression to match.", frozen=True)
 
     @model_validator(mode="after")
@@ -30,9 +32,3 @@ class RegexFilter(Filter):
     def _match(self, value: Any) -> bool:
         """Return whether a value matches the compiled regular expression."""
         return self._pattern.match(value) is not None
-
-
-class TypedRegexFilter(RegexFilter):
-    """Represents a regular-expression filter carrying its serialized type."""
-
-    type: Literal[FilterType.REGEX.value]  # type: ignore[name-defined]

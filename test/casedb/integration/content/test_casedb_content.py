@@ -18,7 +18,7 @@ from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.commondb.test.util import set_log_level
 from gen_epix.fastapp import CrudOperation, PermissionType, exc
 from gen_epix.fastapp.model import Permission
-from gen_epix.filter import LogicalOperator, TypedCompositeFilter, TypedStringSetFilter
+from gen_epix.filter import CompositeFilter, LogicalOperator, StringSetFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 
@@ -264,7 +264,7 @@ class TestContent:
                 if ref_col.concept_set_id:
                     # Create a filter for a portion of the terms in the concept set
                     filters.append(
-                        TypedStringSetFilter(
+                        StringSetFilter(
                             type="STRING_SET",
                             key=str(col.id),
                             members={  # type: ignore[arg-type]
@@ -282,7 +282,7 @@ class TestContent:
                     case_query=model.CaseQuery(
                         case_type_id=complete_case_type.id,
                         filter=(
-                            TypedCompositeFilter(
+                            CompositeFilter(
                                 type="COMPOSITE",
                                 filters=filters,
                                 operator=LogicalOperator.OR,
