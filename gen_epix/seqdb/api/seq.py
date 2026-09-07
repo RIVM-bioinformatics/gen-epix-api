@@ -153,6 +153,24 @@ class RetrieveSeqFastaRequestBody(PydanticBaseModel):
     )
 
 
+class ConvertSeqFormatRequestBody(PydanticBaseModel):
+    """Docstring assigned automatically."""
+
+    __doc__ = command.ConvertSeqFormatCommand.__doc__
+
+    seq_ids: list[UUID] = copy_model_field(
+        command.ConvertSeqFormatCommand,
+        "seq_ids",
+        max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
+    )
+    from_format: enum.SeqFormat = copy_model_field(
+        command.ConvertSeqFormatCommand, "from_format"
+    )
+    to_format: enum.SeqFormat = copy_model_field(
+        command.ConvertSeqFormatCommand, "to_format"
+    )
+
+
 class RetrieveBestSeqPerSampleRequestBody(PydanticBaseModel):
     """Docstring assigned automatically."""
 
@@ -367,6 +385,32 @@ def create_seq_endpoints(
                 "Content-Disposition": f'attachment; filename="{request_body.file_name}"'
             },
         )
+
+    @router.post(
+        "/convert/seq_format",
+        operation_id="convert__seq_format",
+        name="ConvertSeqFormat",
+        description=command.ConvertSeqFormatCommand.__doc__,
+    )
+    async def convert__seq_format(
+        user: registered_user_dependency,  # type: ignore[valid-type]
+        request_body: ConvertSeqFormatRequestBody,
+    ) -> list[UUID]:
+        """See router description."""
+        try:
+            retval: list[UUID] = app.handle(
+                command.ConvertSeqFormatCommand(
+                    user=user,
+                    seq_ids=request_body.seq_ids,
+                    from_format=request_body.from_format,
+                    to_format=request_body.to_format,
+                )
+            )
+        except Exception as exception:
+            handle_exception(
+                "b8c4d2e1", user, exception, request_ids=request_body.seq_ids  # type: ignore[call-arg]
+            )
+        return retval
 
     @router.post(
         "/retrieve/seq_distance_last_modified/{protocol_id}",
