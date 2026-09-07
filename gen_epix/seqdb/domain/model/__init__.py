@@ -1,4 +1,8 @@
-"""Re-export seqdb domain model types."""
+"""Re-export seqdb domain model types and service registration metadata.
+
+``OPERATIONAL_MODELS`` lists reset targets in child-before-parent deletion order,
+preserving reusable alleles, reference data, and the separate file service.
+"""
 
 # pylint: disable=useless-import-alias
 from gen_epix import fastapp
@@ -173,6 +177,24 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             SampleBatchUploadResult,
         ],
     }
+)
+
+OPERATIONAL_MODELS: tuple[type[fastapp.Model], ...] = (
+    SeqDistance,
+    SeqProfileIdentifier,
+    SeqProfile,
+    SeqTaxonomy,
+    SeqClassification,
+    AstPrediction,
+    SeqIdentifier,
+    Seq,
+    ReadSetIdentifier,
+    ReadSet,
+    PcrMeasurement,
+    AstMeasurement,
+    SampleIdentifier,
+    SampleDataCollectionLink,
+    Sample,
 )
 
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())

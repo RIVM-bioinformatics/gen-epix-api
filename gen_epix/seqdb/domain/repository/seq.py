@@ -17,6 +17,22 @@ class BaseSeqRepository(BaseRepository):
     """Encapsulates backend-independent persistence for seqdb sequence data."""
 
     @abc.abstractmethod
+    def delete_operational_data(self, uow: BaseUnitOfWork) -> None:
+        """Delete all samples and their dependent operational records.
+
+        Reference data, reusable alleles, and files are retained. Writers must be
+        paused. SQL changes use the caller's transaction without committing;
+        dictionary implementations restore tables if clearing fails.
+
+        Args:
+            uow: Active unit of work owned by the service.
+
+        Raises:
+            NotImplementedError: Until implemented by a persistence backend.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def retrieve_seq_fasta(
         self,
         uow: BaseUnitOfWork,

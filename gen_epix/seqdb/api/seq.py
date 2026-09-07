@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, model_validator
 
+from gen_epix.commondb.api.operational_data import create_operational_data_endpoints
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain.literal import (
     MAX_CODE_FIELD_LENGTH,
@@ -237,6 +238,7 @@ def create_seq_endpoints(
 ) -> None:
     """Register all non-CRUD seqdb endpoints on the given router."""
     assert handle_exception
+    create_operational_data_endpoints(router, app, handle_exception)
     app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency
 

@@ -4,6 +4,8 @@ import datetime
 from collections.abc import Iterable
 from uuid import UUID
 
+from gen_epix.commondb.domain.enum import FeatureFlag
+from gen_epix.fastapp.exc import FeatureDisabledServiceError
 from gen_epix.seqdb.domain import command, model
 from gen_epix.seqdb.domain.repository import BaseSeqRepository
 from gen_epix.seqdb.domain.service import BaseSeqService
@@ -96,6 +98,24 @@ from gen_epix.seqdb.services.seq.upload import seq_service_upload_samples
 
 class SeqService(BaseSeqService):
     """Encapsulates seqdb commands through specialized service operations."""
+
+    def delete_operational_data(
+        self, cmd: command.DeleteOperationalDataCommand
+    ) -> None:
+        """Delete sample operational data in one repository unit of work.
+
+        Args:
+            cmd: Reset command authorized by the BEFORE RBAC policy.
+
+        Raises:
+            FeatureDisabledServiceError: If the reset flag is false or missing.
+        """
+        if not self.app.get_feature_flag(
+            FeatureFlag.ALLOW_DELETE_OPERATIONAL_DATA.value
+        ):
+            raise FeatureDisabledServiceError("386c790b")
+        with self.repository.uow() as uow:
+            self.repository.delete_operational_data(uow)
 
     def upload_samples(
         self,

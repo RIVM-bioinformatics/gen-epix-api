@@ -15,9 +15,24 @@ class BaseSeqService(BaseService):
 
     SERVICE_TYPE = ServiceType.SEQ
 
+    @abc.abstractmethod
+    def delete_operational_data(
+        self, cmd: command.DeleteOperationalDataCommand
+    ) -> None:
+        """Reset this app's operational data when the shared feature is enabled.
+
+        Args:
+            cmd: Authorized reset command; writers must already be paused.
+
+        Raises:
+            NotImplementedError: Until implemented by the domain service.
+        """
+        raise NotImplementedError()
+
     def register_handlers(self) -> None:
         """Register default CRUD and seqdb-specific sequence command handlers."""
         f = self.app.register_handler
+        f(command.DeleteOperationalDataCommand, self.delete_operational_data)
         self.register_default_crud_handlers()
         f(
             command.CalculatePhylogeneticTreeCommand,
