@@ -32,6 +32,9 @@ from gen_epix.commondb.domain.command import (
     DataCollectionSetMemberCrudCommand as DataCollectionSetMemberCrudCommand,
 )
 from gen_epix.commondb.domain.command import (
+    DeleteOperationalDataCommand as DeleteOperationalDataCommand,
+)
+from gen_epix.commondb.domain.command import (
     GetIdentityProvidersCommand as GetIdentityProvidersCommand,
 )
 from gen_epix.commondb.domain.command import (
@@ -255,6 +258,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
     )
     | set(),
     enum.ServiceType.OMOP: {
+        DeleteOperationalDataCommand,
         CareSiteCrudCommand,
         CdmSourceCrudCommand,
         CohortCrudCommand,
@@ -321,7 +325,8 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
     ),
     enum.ServiceType.SYSTEM: set(
         _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.SYSTEM]
-    ),
+    )
+    - {DeleteOperationalDataCommand},
     enum.ServiceType.RBAC: set(
         _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.RBAC]
     ),

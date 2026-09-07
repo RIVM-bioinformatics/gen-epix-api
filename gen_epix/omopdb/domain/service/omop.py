@@ -13,10 +13,25 @@ class BaseOmopService(BaseService[BaseOmopRepository]):
 
     SERVICE_TYPE = ServiceType.OMOP
 
+    @abstractmethod
+    def delete_operational_data(
+        self, cmd: command.DeleteOperationalDataCommand
+    ) -> None:
+        """Reset this app's operational data when the shared feature is enabled.
+
+        Args:
+            cmd: Authorized reset command; writers must already be paused.
+
+        Raises:
+            NotImplementedError: Until implemented by the domain service.
+        """
+        raise NotImplementedError()
+
     def register_handlers(self) -> None:
         """Register CRUD, upload, and person/specimen retrieval handlers."""
         self.register_default_crud_handlers()
         f = self.app.register_handler
+        f(command.DeleteOperationalDataCommand, self.delete_operational_data)
         f(command.UploadPersonsCommand, self.upload_persons)
         f(command.RetrievePersonsByIdCommand, self.retrieve_persons_by_id)
         f(command.RetrievePersonsByQueryCommand, self.retrieve_persons_by_query)
