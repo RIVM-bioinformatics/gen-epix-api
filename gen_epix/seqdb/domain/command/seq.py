@@ -276,10 +276,9 @@ class RetrieveSampleIdentifiersByIdCommand(Command):
 
 
 class RetrieveSeqFastaCommand(Command):
-    """
-    Represents retrieval of sequences in FASTA format.
+    """Represents retrieval of sequences in FASTA format.
 
-    as an iterable that yields one contig at a time.
+    The result is an iterable that yields one contig at a time.
     """
 
     seq_ids: list[UUID] = Field(
@@ -289,6 +288,48 @@ class RetrieveSeqFastaCommand(Command):
         default=80,
         description="Number of characters to wrap the sequence lines.",
     )
+
+
+class ConvertSeqFormatCommand(Command):
+    """Represents conversion of stored contig sequence representations.
+
+    Returns:
+      The IDs of the sequences converted to the target format.
+    """
+
+    seq_ids: list[UUID] = Field(
+        description="IDs of the sequences whose contigs should be converted.",
+    )
+    from_format: enum.SeqFormat = Field(
+        description="The current DNA representation format of all contigs.",
+    )
+    to_format: enum.SeqFormat = Field(
+        description="The target DNA representation format for all contigs.",
+    )
+
+    @field_validator("seq_ids", mode="after")
+    @classmethod
+    def _validate_seq_ids(cls, seq_ids: list[UUID]) -> list[UUID]:
+        """Require every requested sequence identifier to occur at most once."""
+        if len(set(seq_ids)) != len(seq_ids):
+            raise ValueError("seq_ids must be unique")
+        return seq_ids
+
+    @model_validator(mode="after")
+    def _validate_formats(self) -> Self:
+        """Require a supported, same-family DNA representation conversion."""
+        if (
+            self.from_format not in enum.SeqFormatSet.DNA_AS_STR.value
+            or self.to_format not in enum.SeqFormatSet.DNA_AS_STR.value
+        ):
+            raise ValueError("Only DNA sequence formats can be converted")
+        if (self.from_format in enum.SeqFormatSet.GAP.value) != (
+            self.to_format in enum.SeqFormatSet.GAP.value
+        ):
+            raise ValueError(
+                "Conversions between gapless and gap-inclusive formats are not supported"
+            )
+        return self
 
 
 class RetrieveSimilarProfilesCommand(Command):

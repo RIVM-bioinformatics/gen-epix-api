@@ -48,6 +48,7 @@ class RoleGenerator(CommonRoleGenerator):
             (command.AstMeasurementCrudCommand, PermissionTypeSet.CRUD),
             (command.AstPredictionCrudCommand, PermissionTypeSet.CRUD),
             (command.CalculateSeqDistancesForNewProfilesCommand, PermissionTypeSet.E),
+            (command.ConvertSeqFormatCommand, PermissionTypeSet.E),
             (command.UpdateSeqDistancesCommand, PermissionTypeSet.E),
             (command.CreateFileCommand, PermissionTypeSet.E),
             (command.FileCrudCommand, PermissionTypeSet.CRD),
