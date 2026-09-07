@@ -74,12 +74,13 @@ class BatchUploader:
         # to a sibling child is created/updated after that sibling, never before
         # (which would raise a DB foreign-key constraint error). Every child
         # iteration in this class goes through child_children_field_name_map, so
-        # reordering it here is enough.
+        # reordering it here is enough. get_child_order() returns exactly the
+        # CHILDREN_FIELD_NAME_MAP keys (or [] when there are none).
         children_field_name_map = self.parent_for_upload_class.CHILDREN_FIELD_NAME_MAP
         self.child_children_field_name_map = {
             child_model_class: children_field_name_map[child_model_class]
             for child_model_class in self.parent_for_upload_class.get_child_order()
-        } or children_field_name_map
+        }
         self.child_parent_id_field_name_map = (
             self.parent_for_upload_class.CHILD_PARENT_ID_FIELD_NAME_MAP
         )

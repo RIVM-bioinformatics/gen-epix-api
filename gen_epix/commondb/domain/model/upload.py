@@ -282,9 +282,13 @@ class ParentForUpload(Model, IdentifiersMixin):
         try:
             cls.CHILD_ORDER = cls._compute_child_order()
         except Exception:  # pylint: disable=broad-exception-caught
-            # A child model is not importable yet (circular import during class
-            # definition); get_child_order() derives it lazily on first use.
-            pass
+            # Expected case: a child model is not importable yet (circular import
+            # while the class body runs); get_child_order() derives it lazily on
+            # first use, and re-raises there if it is a genuine bug. Log at debug
+            # so a real failure still leaves a trace.
+            logger.debug(
+                "%s: CHILD_ORDER derivation deferred", cls.__name__, exc_info=True
+            )
 
     @classmethod
     def get_child_order(cls) -> list[type[Model]]:
