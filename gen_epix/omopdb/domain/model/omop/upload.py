@@ -116,16 +116,21 @@ class PersonForUpload(ParentForUpload):
     IDENTIFIER_CLASS: ClassVar = model.PersonIdentifier
     PARENT_CLASS: ClassVar = model.Person
     PARENT_FIELD_NAME: ClassVar = "person"
+    # Declared in foreign-key dependency order (Specimen before Measurement,
+    # which Measurement.derived_from_specimen_id references; MeasurementRelation
+    # last, as it references Measurement). ParentForUpload.CHILD_ORDER is
+    # auto-derived from the models' relations and matches this order; it is the
+    # fallback if that derivation ever cannot run.
     CHILDREN_FIELD_NAME_MAP: ClassVar = {
-        model.Measurement: "measurements",
-        model.Observation: "observations",
         model.Specimen: "specimens",
+        model.Observation: "observations",
+        model.Measurement: "measurements",
         model.MeasurementRelation: "measurement_relations",
     }
     CHILD_FOR_UPLOAD_CLASS_MAP: ClassVar = {
-        model.Measurement: MeasurementForUpload,
-        model.Observation: ObservationForUpload,
         model.Specimen: SpecimenForUpload,
+        model.Observation: ObservationForUpload,
+        model.Measurement: MeasurementForUpload,
         model.MeasurementRelation: MeasurementRelationForUpload,
     }
     CHILD_PARENT_ID_FIELD_NAME_MAP: ClassVar = {
@@ -138,18 +143,19 @@ class PersonForUpload(ParentForUpload):
         description="The person model itself, if to be created or updated as a whole.",
     )
 
-    # Children
-    measurements: list[MeasurementForUpload] | None = Field(
+    # Children (kept in the same foreign-key dependency order as
+    # CHILDREN_FIELD_NAME_MAP)
+    specimens: list[SpecimenForUpload] | None = Field(
         default=None,
-        description="The measurements. If None, this element is not taken into consideration during the upload.",
+        description="The specimens. If None, this element is not taken into consideration during the upload.",
     )
     observations: list[ObservationForUpload] | None = Field(
         default=None,
         description="The observations. If None, this element is not taken into consideration during the upload.",
     )
-    specimens: list[SpecimenForUpload] | None = Field(
+    measurements: list[MeasurementForUpload] | None = Field(
         default=None,
-        description="The specimens. If None, this element is not taken into consideration during the upload.",
+        description="The measurements. If None, this element is not taken into consideration during the upload.",
     )
     measurement_relations: list[MeasurementRelationForUpload] | None = Field(
         default=None,
@@ -176,17 +182,17 @@ class PersonUploadResult(ParentUploadResult):
         ParentUploadResult, "data_issues"
     )
 
-    measurements: list[UploadResult] | None = Field(
+    specimens: list[UploadResult] | None = Field(
         default=None,
-        description="The results of uploading the individual measurements, if any were provided, in the same order as provided.",
+        description="The results of uploading the individual specimens, if any were provided, in the same order as provided.",
     )
     observations: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the individual observations, if any were provided, in the same order as provided.",
     )
-    specimens: list[UploadResult] | None = Field(
+    measurements: list[UploadResult] | None = Field(
         default=None,
-        description="The results of uploading the individual specimens, if any were provided, in the same order as provided.",
+        description="The results of uploading the individual measurements, if any were provided, in the same order as provided.",
     )
     measurement_relations: list[UploadResult] | None = Field(
         default=None,
@@ -199,15 +205,15 @@ class PersonUploadResult(ParentUploadResult):
         if self.identifiers:
             for identifier_result in self.identifiers:
                 log_items.extend(identifier_result.get_errors())
-        if self.measurements:
-            for measurement_result in self.measurements:
-                log_items.extend(measurement_result.get_errors())
-        if self.observations:
-            for observation_result in self.observations:
-                log_items.extend(observation_result.get_errors())
         if self.specimens:
             for specimen_result in self.specimens:
                 log_items.extend(specimen_result.get_errors())
+        if self.observations:
+            for observation_result in self.observations:
+                log_items.extend(observation_result.get_errors())
+        if self.measurements:
+            for measurement_result in self.measurements:
+                log_items.extend(measurement_result.get_errors())
         if self.measurement_relations:
             for measurement_relation_result in self.measurement_relations:
                 log_items.extend(measurement_relation_result.get_errors())
