@@ -51,7 +51,7 @@ class TestChildOrderDerivation:
         # Declared Child2-first, but the FK forces Child1 first.
         assert ReversedParentForUpload.get_child_order() == [Child1, Child2]
 
-    def test_independent_children_keep_declaration_order(self) -> None:
+    def test_unconstrained_children_keep_relative_order_within_a_layer(self) -> None:
         class A(Model):
             ENTITY: ClassVar = Entity(persistable=True, id_field_name="a_id")
             NAME: ClassVar = "ChildOrderA"
@@ -63,22 +63,29 @@ class TestChildOrderDerivation:
             b_id: UUID | None = None
 
         class C(Model):
-            ENTITY: ClassVar = Entity(
-                persistable=True,
-                id_field_name="c_id",
-                links=create_links({1: ("a_id", A, None)}),
-            )
+            ENTITY: ClassVar = Entity(persistable=True, id_field_name="c_id")
             NAME: ClassVar = "ChildOrderC"
             c_id: UUID | None = None
-            a_id: UUID | None = None
+
+        class D(Model):
+            ENTITY: ClassVar = Entity(
+                persistable=True,
+                id_field_name="d_id",
+                links=create_links({1: ("b_id", B, None)}),
+            )
+            NAME: ClassVar = "ChildOrderD"
+            d_id: UUID | None = None
+            b_id: UUID | None = None
 
         class P(ParentForUpload):
-            NAME: ClassVar = "ChildOrderIndependentParent"
-            CHILDREN_FIELD_NAME_MAP: ClassVar = {A: "aa", B: "bb", C: "cc"}
-            CHILD_FOR_UPLOAD_CLASS_MAP: ClassVar = {A: A, B: B, C: C}
+            NAME: ClassVar = "ChildOrderLayerParent"
+            CHILDREN_FIELD_NAME_MAP: ClassVar = {A: "aa", D: "dd", B: "bb", C: "cc"}
+            CHILD_FOR_UPLOAD_CLASS_MAP: ClassVar = {A: A, D: D, B: B, C: C}
 
-        # Only C -> A is constrained; B keeps its declared slot.
-        assert P.get_child_order() == [A, B, C]
+        # graphlib emits one dependency layer at a time; within a layer the
+        # declaration order is kept. Layer 0 = {A, B, C} (declared A, B, C order),
+        # layer 1 = {D} (needs B). D is declared 2nd but lands last.
+        assert P.get_child_order() == [A, B, C, D]
 
     def test_explicit_override_is_returned_verbatim(self) -> None:
         class OverriddenParentForUpload(FixtureParentForUpload):

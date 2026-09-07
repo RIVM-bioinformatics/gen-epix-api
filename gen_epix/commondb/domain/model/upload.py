@@ -6,7 +6,7 @@ services and their API responses.
 """
 
 import datetime
-import heapq
+import graphlib
 import logging
 import uuid
 from typing import Annotated, Any, Callable, ClassVar, Self
@@ -354,51 +354,32 @@ class ParentForUpload(Model, IdentifiersMixin):
     def _compute_child_order(cls) -> list[type[Model]]:
         """Topologically sort the child model classes by their foreign-key links.
 
-        Ties are broken by ``CHILDREN_FIELD_NAME_MAP`` declaration order, so the
-        result is the minimal reordering of the declared list that satisfies the
-        foreign-key constraints (see ``_child_fk_dependencies``). A cycle logs a
-        warning and returns the declaration order unchanged.
+        Children are added to the sorter in ``CHILDREN_FIELD_NAME_MAP``
+        declaration order, so ``graphlib`` keeps that order within each dependency
+        layer (edges: see ``_child_fk_dependencies``). A cycle logs a warning and
+        returns the declaration order unchanged.
         """
         children: list[type[Model]] = list(cls.CHILDREN_FIELD_NAME_MAP)
         if len(children) <= 1:
             return children
-        declaration_index = {child: i for i, child in enumerate(children)}
-        dependencies: dict[type[Model], set[type[Model]]] = cls._child_fk_dependencies()
-
-        dependents: dict[type[Model], list[type[Model]]] = {
-            child: [] for child in children
-        }
-        in_degree = {child: len(dependencies[child]) for child in children}
+        dependencies = cls._child_fk_dependencies()
+        sorter: graphlib.TopologicalSorter[type[Model]] = graphlib.TopologicalSorter()
+        for child in children:
+            sorter.add(child)
         for child in children:
             for dependency in dependencies[child]:
-                dependents[dependency].append(child)
-
-        # Kahn's algorithm, always emitting the lowest declaration index first so
-        # that children not constrained by a foreign key keep their declared
-        # relative position.
-        ready = [declaration_index[c] for c in children if in_degree[c] == 0]
-        heapq.heapify(ready)
-        ordered: list[type[Model]] = []
-        while ready:
-            child = children[heapq.heappop(ready)]
-            ordered.append(child)
-            for dependent in dependents[child]:
-                in_degree[dependent] -= 1
-                if in_degree[dependent] == 0:
-                    heapq.heappush(ready, declaration_index[dependent])
-
-        if len(ordered) != len(children):
-            unresolved = ", ".join(
-                sorted(c.__name__ for c in children if c not in ordered)
-            )
+                sorter.add(child, dependency)
+        try:
+            return list(sorter.static_order())
+        except graphlib.CycleError as exception:
+            cycle = ", ".join(sorted({node.__name__ for node in exception.args[1]}))
             logger.warning(
                 "%s: cyclic foreign keys between child models (%s); falling back "
                 "to declaration order for child upload.",
                 cls.__name__,
-                unresolved,
+                cycle,
             )
             return children
-        return ordered
 
     id: UUID | None = Field(
         default=None,
