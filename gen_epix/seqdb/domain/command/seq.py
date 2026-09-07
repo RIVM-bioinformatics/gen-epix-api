@@ -276,10 +276,9 @@ class RetrieveSampleIdentifiersByIdCommand(Command):
 
 
 class RetrieveSeqFastaCommand(Command):
-    """
-    Represents retrieval of sequences in FASTA format.
+    """Represents retrieval of sequences in FASTA format.
 
-    as an iterable that yields one contig at a time.
+    The result is an iterable that yields one contig at a time.
     """
 
     seq_ids: list[UUID] = Field(
@@ -292,11 +291,14 @@ class RetrieveSeqFastaCommand(Command):
 
 
 class ConvertSeqFormatCommand(Command):
-    """Represent conversion of stored contig sequence representations."""
+    """Represents conversion of stored contig sequence representations.
+
+    Returns:
+      The IDs of the sequences converted to the target format.
+    """
 
     seq_ids: list[UUID] = Field(
         description="IDs of the sequences whose contigs should be converted.",
-        min_length=1,
     )
     from_format: enum.SeqFormat = Field(
         description="The current DNA representation format of all contigs.",
@@ -317,12 +319,10 @@ class ConvertSeqFormatCommand(Command):
     def _validate_formats(self) -> Self:
         """Require a supported, same-family DNA representation conversion."""
         if (
-            self.from_format not in enum.SeqFormatSet.DNA.value
-            or self.to_format not in enum.SeqFormatSet.DNA.value
+            self.from_format not in enum.SeqFormatSet.DNA_AS_STR.value
+            or self.to_format not in enum.SeqFormatSet.DNA_AS_STR.value
         ):
             raise ValueError("Only DNA sequence formats can be converted")
-        if self.from_format == self.to_format:
-            raise ValueError("from_format and to_format must be different")
         if (self.from_format in enum.SeqFormatSet.GAP.value) != (
             self.to_format in enum.SeqFormatSet.GAP.value
         ):

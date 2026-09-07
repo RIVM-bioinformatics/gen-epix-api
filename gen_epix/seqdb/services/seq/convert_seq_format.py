@@ -4,7 +4,7 @@ from uuid import UUID
 
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import command, model
-from gen_epix.seqdb.domain.model.seq.base import encode_gzip_base64
+from gen_epix.seqdb.domain.model.seq.base import encode_ascii_as_gzip_base64
 from gen_epix.seqdb.domain.service import BaseSeqService
 
 
@@ -13,6 +13,12 @@ def seq_service_convert_seq_format(
 ) -> list[UUID]:
     """Convert all contigs in the requested sequences to a new representation."""
     user_id = cmd.user.id if cmd.user else None
+
+    # Special cases: nothing to do
+    if cmd.from_format == cmd.to_format:
+        return cmd.seq_ids
+    if not cmd.seq_ids:
+        return []
 
     with self.repository.uow() as uow:
         seqs: list[model.Seq] = self.repository.crud(
@@ -23,7 +29,7 @@ def seq_service_convert_seq_format(
             obj_ids=cmd.seq_ids,
         )
 
-        # validate all contigs before performing any conversion
+        # Validate all contigs before performing any conversion
         for seq in seqs:
             for contig in seq.contigs:
                 if contig.seq_format != cmd.from_format:
@@ -34,8 +40,8 @@ def seq_service_convert_seq_format(
                     )
 
                 nucleotide_seq = contig.get_nucleotide_seq()
-                if cmd.to_format in model.enum.SeqFormatSet.GZB64.value:
-                    nucleotide_seq = encode_gzip_base64(nucleotide_seq)
+                if cmd.to_format in model.enum.SeqFormatSet.DNA_AS_STR_GZB64.value:
+                    nucleotide_seq = encode_ascii_as_gzip_base64(nucleotide_seq)
 
                 # modify the contig in place instead of creating a new contig object
                 contig.seq = nucleotide_seq

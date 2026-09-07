@@ -115,7 +115,7 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
             assert seq.id is not None
             contig_list: list[tuple[UUID, str]] = []
             for contig in seq.contigs:
-                if contig.seq_format not in enum.SeqFormatSet.DNA.value:
+                if contig.seq_format not in enum.SeqFormatSet.DNA_AS_STR.value:
                     raise exc.InitializationServiceError(
                         "37fd4cf1",
                         f"FASTA export not supported for {contig.seq_format.value} format",

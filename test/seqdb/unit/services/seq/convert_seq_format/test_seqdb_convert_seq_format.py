@@ -11,7 +11,7 @@ from pydantic import ValidationError
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import command, enum, model
-from gen_epix.seqdb.domain.model.seq.base import encode_gzip_base64
+from gen_epix.seqdb.domain.model.seq.base import encode_ascii_as_gzip_base64
 from gen_epix.seqdb.services.seq.convert_seq_format import (
     seq_service_convert_seq_format,
 )
@@ -78,7 +78,7 @@ def create_seq(sequence: str, seq_format: enum.SeqFormat) -> model.Seq:
         contigs=[
             model.Contig(
                 seq=(
-                    encode_gzip_base64(sequence)
+                    encode_ascii_as_gzip_base64(sequence)
                     if seq_format
                     in {
                         enum.SeqFormat.STR_DNA_GZB64,
@@ -134,7 +134,6 @@ def test_convert_seq_format_all_supported_directions(
 @pytest.mark.parametrize(
     ("from_format", "to_format"),
     [
-        (enum.SeqFormat.STR_DNA, enum.SeqFormat.STR_DNA),
         (enum.SeqFormat.STR_DNA, enum.SeqFormat.STR_DNA_INCL_GAP),
         (enum.SeqFormat.HASH_ONLY, enum.SeqFormat.STR_DNA),
     ],
@@ -142,21 +141,54 @@ def test_convert_seq_format_all_supported_directions(
 def test_convert_seq_format_rejects_invalid_format_pairs(
     from_format: enum.SeqFormat, to_format: enum.SeqFormat
 ) -> None:
-    """Reject no-op, cross-family, and non-DNA conversions."""
+    """Reject cross-family and non-DNA conversions at command level."""
     with pytest.raises(ValidationError):
         command.ConvertSeqFormatCommand(
             seq_ids=[uuid4()], from_format=from_format, to_format=to_format
         )
 
 
-def test_convert_seq_format_rejects_duplicate_or_empty_ids() -> None:
-    """Require a non-empty sequence batch with unique identifiers."""
-    with pytest.raises(ValidationError):
-        command.ConvertSeqFormatCommand(
-            seq_ids=[],
-            from_format=enum.SeqFormat.STR_DNA,
-            to_format=enum.SeqFormat.STR_DNA_GZB64,
-        )
+def test_convert_seq_format_same_format_no_op() -> None:
+    """Same format conversion returns seq_ids without modification."""
+    sequence = "ATCGATCG"
+    seq = create_seq(sequence, enum.SeqFormat.STR_DNA)
+    assert seq.id is not None
+    original_seq = seq.model_copy(deep=True)
+    repository = SequenceRepository([seq])
+    command_ = command.ConvertSeqFormatCommand(
+        seq_ids=[seq.id],
+        from_format=enum.SeqFormat.STR_DNA,
+        to_format=enum.SeqFormat.STR_DNA,
+    )
+
+    result = seq_service_convert_seq_format(
+        SimpleNamespace(repository=repository), command_  # type: ignore[arg-type]
+    )
+
+    assert result == [seq.id]
+    assert repository.seqs[seq.id] == original_seq  # Unchanged
+    assert repository.uow_instance.commits == 0  # No database write
+
+
+def test_convert_seq_format_empty_ids_no_op() -> None:
+    """Empty seq_ids list returns empty list without database access."""
+    command_ = command.ConvertSeqFormatCommand(
+        seq_ids=[],
+        from_format=enum.SeqFormat.STR_DNA,
+        to_format=enum.SeqFormat.STR_DNA_GZB64,
+    )
+    repository = SequenceRepository([])
+
+    result = seq_service_convert_seq_format(
+        SimpleNamespace(repository=repository), command_  # type: ignore[arg-type]
+    )
+
+    assert result == []
+    assert repository.uow_instance.commits == 0
+
+
+def test_convert_seq_format_rejects_duplicate_ids() -> None:
+    """Require unique identifiers."""
     seq_id = uuid4()
     with pytest.raises(ValidationError, match="seq_ids must be unique"):
         command.ConvertSeqFormatCommand(
@@ -191,3 +223,119 @@ def test_convert_seq_format_validates_batch_before_updating() -> None:
     )
     assert repository.uow_instance.commits == 0
     assert repository.uow_instance.rollbacks == 1
+
+
+def test_convert_seq_format_multiple_sequences() -> None:
+    """Convert multiple sequences in a single batch operation."""
+    seqs = [
+        create_seq("ATCG", enum.SeqFormat.STR_DNA),
+        create_seq("GCTA", enum.SeqFormat.STR_DNA),
+        create_seq("TTAA", enum.SeqFormat.STR_DNA),
+    ]
+    seq_ids = [seq.id for seq in seqs]
+    repository = SequenceRepository(seqs)
+    command_ = command.ConvertSeqFormatCommand(
+        seq_ids=seq_ids,  # type: ignore[arg-type]
+        from_format=enum.SeqFormat.STR_DNA,
+        to_format=enum.SeqFormat.STR_DNA_GZB64,
+    )
+
+    result = seq_service_convert_seq_format(
+        SimpleNamespace(repository=repository), command_  # type: ignore[arg-type]
+    )
+
+    assert result == seq_ids
+    for seq_id in seq_ids:
+        assert (
+            repository.seqs[seq_id].contigs[0].seq_format
+            == enum.SeqFormat.STR_DNA_GZB64
+        )
+    assert repository.uow_instance.commits == 1
+
+
+def test_convert_seq_format_preserves_contig_identity() -> None:
+    """Conversion preserves contig ID and other metadata."""
+    seq = create_seq("ATCGATCG", enum.SeqFormat.STR_DNA)
+    original_contig_id = seq.contigs[0].id
+    assert seq.id is not None
+    repository = SequenceRepository([seq])
+    command_ = command.ConvertSeqFormatCommand(
+        seq_ids=[seq.id],
+        from_format=enum.SeqFormat.STR_DNA,
+        to_format=enum.SeqFormat.STR_DNA_GZB64,
+    )
+
+    seq_service_convert_seq_format(
+        SimpleNamespace(repository=repository), command_  # type: ignore[arg-type]
+    )
+
+    converted = repository.seqs[seq.id]
+    assert converted.contigs[0].id == original_contig_id
+    assert converted.id == seq.id
+
+
+def test_convert_seq_format_case_normalization() -> None:
+    """Conversion normalizes case to lowercase during compression."""
+    # Create with uppercase sequence
+    seq = create_seq("ATCGATCG", enum.SeqFormat.STR_DNA)
+    assert seq.id is not None
+    repository = SequenceRepository([seq])
+    command_ = command.ConvertSeqFormatCommand(
+        seq_ids=[seq.id],
+        from_format=enum.SeqFormat.STR_DNA,
+        to_format=enum.SeqFormat.STR_DNA_GZB64,
+    )
+
+    seq_service_convert_seq_format(
+        SimpleNamespace(repository=repository), command_  # type: ignore[arg-type]
+    )
+
+    converted = repository.seqs[seq.id]
+    # Verify the nucleotide sequence is lowercase
+    assert converted.contigs[0].get_nucleotide_seq() == "atcgatcg"
+
+
+def test_convert_seq_format_with_gaps() -> None:
+    """Conversion works with gap-inclusive formats."""
+    sequence = "AT-CGATCG"
+    seq = create_seq(sequence, enum.SeqFormat.STR_DNA_INCL_GAP)
+    assert seq.id is not None
+    repository = SequenceRepository([seq])
+    command_ = command.ConvertSeqFormatCommand(
+        seq_ids=[seq.id],
+        from_format=enum.SeqFormat.STR_DNA_INCL_GAP,
+        to_format=enum.SeqFormat.STR_DNA_INCL_GAP_GZB64,
+    )
+
+    result = seq_service_convert_seq_format(
+        SimpleNamespace(repository=repository), command_  # type: ignore[arg-type]
+    )
+
+    assert result == [seq.id]
+    converted = repository.seqs[seq.id]
+    assert converted.contigs[0].seq_format == enum.SeqFormat.STR_DNA_INCL_GAP_GZB64
+    assert converted.contigs[0].get_nucleotide_seq() == sequence.lower()
+
+
+def test_convert_seq_format_bidirectional_gzb64_to_plain() -> None:
+    """Convert from compressed back to plain format."""
+    sequence = "ATCGATCG"
+    seq = create_seq(sequence, enum.SeqFormat.STR_DNA_GZB64)
+    assert seq.id is not None
+    repository = SequenceRepository([seq])
+    command_ = command.ConvertSeqFormatCommand(
+        seq_ids=[seq.id],
+        from_format=enum.SeqFormat.STR_DNA_GZB64,
+        to_format=enum.SeqFormat.STR_DNA,
+    )
+
+    result = seq_service_convert_seq_format(
+        SimpleNamespace(repository=repository), command_  # type: ignore[arg-type]
+    )
+
+    assert result == [seq.id]
+    converted = repository.seqs[seq.id]
+    assert converted.contigs[0].seq_format == enum.SeqFormat.STR_DNA
+    # Plain format stores lowercase directly
+    assert converted.contigs[0].seq == sequence.lower()
+    assert converted.contigs[0].get_nucleotide_seq() == sequence.lower()

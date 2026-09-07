@@ -328,7 +328,7 @@ class SeqFormat(IntEnumWithJsonSchemaMixin, IntEnum):
 class SeqFormatSet(Enum):
     """Encapsulates sequence formats grouped by their content and representation."""
 
-    DNA = frozenset(
+    DNA_AS_STR = frozenset(
         {
             SeqFormat.STR_DNA,
             SeqFormat.STR_DNA_INCL_GAP,
@@ -342,7 +342,7 @@ class SeqFormatSet(Enum):
             SeqFormat.STR_DNA_INCL_GAP_GZB64,
         }
     )
-    GZB64 = frozenset(
+    DNA_AS_STR_GZB64 = frozenset(
         {
             SeqFormat.STR_DNA_GZB64,
             SeqFormat.STR_DNA_INCL_GAP_GZB64,

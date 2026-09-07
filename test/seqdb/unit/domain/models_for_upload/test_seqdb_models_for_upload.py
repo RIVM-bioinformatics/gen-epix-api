@@ -19,7 +19,7 @@ from pydantic import ValidationError
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import IdentifierForUpload
 from gen_epix.seqdb.domain import model
-from gen_epix.seqdb.domain.model.seq.base import encode_gzip_base64
+from gen_epix.seqdb.domain.model.seq.base import encode_ascii_as_gzip_base64
 
 
 @pytest.mark.scenario_ids("TC-SEC-31-01")
@@ -235,6 +235,20 @@ class TestModelBaseSeq:
                 id=custom_hash,
             )
 
+    def test_hash_only_sequence_with_length(self) -> None:
+        """HASH_ONLY format accepts a sequence when length is provided."""
+        custom_hash = uuid4()
+        base_seq = model.BaseSeq(
+            seq="opaque_data",
+            seq_format=model.enum.SeqFormat.HASH_ONLY,
+            length=42,
+            id=custom_hash,
+        )
+        assert base_seq.id == custom_hash
+        assert base_seq.length == 42
+        assert base_seq.seq_format == model.enum.SeqFormat.HASH_ONLY
+        assert base_seq.seq == "opaque_data"
+
     @pytest.mark.parametrize(
         ("seq_format", "expected_alphabet"),
         [
@@ -248,7 +262,7 @@ class TestModelBaseSeq:
         """Test validation and hashing of gap-inclusive DNA representations."""
         sequence = "AT-GN"
         stored_sequence = (
-            encode_gzip_base64(sequence)
+            encode_ascii_as_gzip_base64(sequence)
             if seq_format == model.enum.SeqFormat.STR_DNA_INCL_GAP_GZB64
             else sequence
         )
@@ -264,7 +278,7 @@ class TestModelBaseSeq:
 
         with pytest.raises(ValidationError, match="invalid characters"):
             invalid_sequence = (
-                encode_gzip_base64("AT-X")
+                encode_ascii_as_gzip_base64("AT-X")
                 if seq_format == model.enum.SeqFormat.STR_DNA_INCL_GAP_GZB64
                 else "AT-X"
             )
@@ -286,7 +300,7 @@ class TestModelBaseSeq:
             sequence = "AT-CGATCG"
 
         base_seq = model.BaseSeq(
-            seq=encode_gzip_base64(sequence), seq_format=seq_format
+            seq=encode_ascii_as_gzip_base64(sequence), seq_format=seq_format
         )
 
         assert base_seq.seq != sequence.lower()
@@ -315,7 +329,7 @@ class TestModelBaseSeq:
         """Encode a plain nucleotide string when compressed storage is requested."""
         base_seq = model.BaseSeq(seq=sequence, seq_format=seq_format)  # type: ignore[arg-type]
 
-        assert base_seq.seq == encode_gzip_base64(sequence.lower())
+        assert base_seq.seq == encode_ascii_as_gzip_base64(sequence.lower())
         assert base_seq.get_nucleotide_seq() == sequence.lower()
 
     def test_gapless_dna_rejects_alignment_gap(self) -> None:

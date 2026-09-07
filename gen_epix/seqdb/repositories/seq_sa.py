@@ -141,7 +141,7 @@ class SeqSARepository(SARepository, BaseSeqRepository):
             seq: model.Seq = mapper.load(row[0])  # type: ignore[assignment]
             contig_list: list[tuple[UUID, str]] = []
             for contig in seq.contigs:
-                if contig.seq_format not in enum.SeqFormatSet.DNA.value:
+                if contig.seq_format not in enum.SeqFormatSet.DNA_AS_STR.value:
                     raise exc.InitializationServiceError(
                         "6672c6dd",
                         f"FASTA export not supported for {contig.seq_format.value} format",

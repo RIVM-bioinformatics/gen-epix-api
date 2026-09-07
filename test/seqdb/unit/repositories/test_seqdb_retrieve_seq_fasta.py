@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 
 from gen_epix.fastapp.repositories.sa import SAUnitOfWork
 from gen_epix.seqdb.domain import enum, model
-from gen_epix.seqdb.domain.model.seq.base import encode_gzip_base64
+from gen_epix.seqdb.domain.model.seq.base import encode_ascii_as_gzip_base64
 from gen_epix.seqdb.repositories.seq_dict import SeqDictRepository
 from gen_epix.seqdb.repositories.seq_sa import SeqSARepository
 
@@ -13,7 +13,7 @@ from gen_epix.seqdb.repositories.seq_sa import SeqSARepository
 def create_seq(sequence: str, seq_format: enum.SeqFormat) -> model.Seq:
     """Create an identified sequence with one contig in the requested format."""
     stored_sequence = (
-        encode_gzip_base64(sequence)
+        encode_ascii_as_gzip_base64(sequence)
         if seq_format
         in {
             enum.SeqFormat.STR_DNA_GZB64,
