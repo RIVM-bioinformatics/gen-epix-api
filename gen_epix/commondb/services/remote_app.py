@@ -10,6 +10,7 @@ from enum import Enum
 from logging import Logger
 from typing import Any, Literal
 
+import httpx
 import jwt
 
 from gen_epix.commondb import api
@@ -35,6 +36,7 @@ class CommondbRemoteApp(RemoteApp):
     DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {}
 
     ROUTE_MAP: dict[type[Command], str] = {
+        command.DeleteOperationalDataCommand: "/operational_data",
         command.GetIdentityProvidersCommand: "/identity_providers",
         command.InviteUserCommand: "/invite_user",
         command.RetrieveInviteUserConstraintsCommand: "/invite_user/constraints",
@@ -136,6 +138,9 @@ class CommondbRemoteApp(RemoteApp):
         for cmd_class, route in CommondbRemoteApp.ROUTE_MAP.items():
             self.register_route(cmd_class, route)
         # Register handlers
+        self.register_handler(
+            command.DeleteOperationalDataCommand, self.delete_operational_data
+        )
         self.register_handler(
             command.GetIdentityProvidersCommand, self.get_identity_providers
         )
@@ -419,6 +424,31 @@ class CommondbRemoteApp(RemoteApp):
         """Retrieve name and email for organization admins."""
         response_body: list[dict[str, Any]] = self.request(cmd, HttpMethod.GET)  # type: ignore[assignment]
         return [model.UserNameEmail(**x) for x in response_body]
+
+    def delete_operational_data(
+        self, cmd: command.DeleteOperationalDataCommand
+    ) -> None:
+        """Request deletion of all operational data from a domain application.
+
+        Args:
+            cmd: Authorized maintenance command forwarded without a request body.
+
+        Raises:
+            HTTPStatusError: If the endpoint is unavailable or the server rejects
+                the request. A 404 explains that the feature may be disabled or
+                unsupported by the server version.
+        """
+        try:
+            self.request(cmd, HttpMethod.DELETE)
+        except httpx.HTTPStatusError as error:
+            if error.response.status_code != 404:
+                raise
+            raise httpx.HTTPStatusError(
+                "Operational data deletion endpoint is unavailable; the feature "
+                "may be disabled or unsupported by the server version",
+                request=error.request,
+                response=error.response,
+            ) from error
 
     def retrieve_feature_flags(
         self, cmd: command.RetrieveFeatureFlagsCommand

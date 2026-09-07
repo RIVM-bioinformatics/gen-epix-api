@@ -17,6 +17,7 @@ from test.util.mock_compat import MagicMock, Mock, patch
 from typing import Any, cast
 from uuid import uuid4
 
+import httpx
 import jwt
 import pytest
 
@@ -970,6 +971,34 @@ class TestNonCrudHandlers:
         assert method == "GET"
         assert url == app._routes[command.RetrieveFeatureFlagsCommand]
         assert result == {"my_flag": True}
+
+    def test_delete_operational_data(
+        self, app: CommondbRemoteApp, mock_client: Any
+    ) -> None:
+        """Send the shared reset command as a bodyless DELETE request."""
+        mock_client.request.return_value = _mock_response(None, status_code=204)
+        result = app.delete_operational_data(
+            command.DeleteOperationalDataCommand(user=None)
+        )
+        method, url = mock_client.request.call_args.args
+        assert method == "DELETE"
+        assert url == app._routes[command.DeleteOperationalDataCommand]
+        assert mock_client.request.call_args.kwargs["json"] is None
+        assert result is None
+
+    def test_delete_operational_data_explains_missing_endpoint(
+        self, app: CommondbRemoteApp, mock_client: Any
+    ) -> None:
+        """Explain that a 404 can mean the guarded endpoint is unavailable."""
+        request = httpx.Request("DELETE", "https://example.org/v1/operational_data")
+        response = httpx.Response(404, request=request)
+        remote_response = _mock_response(None, status_code=404)
+        remote_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "Not found", request=request, response=response
+        )
+        mock_client.request.return_value = remote_response
+        with pytest.raises(httpx.HTTPStatusError, match="disabled or unsupported"):
+            app.delete_operational_data(command.DeleteOperationalDataCommand(user=None))
 
     def test_retrieve_licenses(self, app: CommondbRemoteApp, mock_client: Any) -> None:
         data = [{"name": "pkg", "version": "1.0"}]

@@ -40,6 +40,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
     }
 
     DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {
+        command.DeleteOperationalDataCommand: 300.0,
         command.UploadSamplesCommand: 45.0,
         command.UpdateSeqDistancesCommand: 300.0,
         command.RetrieveSampleIdentifiersByIdCommand: 45.0,
