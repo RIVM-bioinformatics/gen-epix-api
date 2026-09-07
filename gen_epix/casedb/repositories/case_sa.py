@@ -75,6 +75,7 @@ class CaseSARepository(SARepository, BaseCaseRepository):
         query1 = (
             session.query(
                 sa_model.Case.id,
+                sa_model.Case.count,
                 sa_model.Case.case_date,
                 func.min(sa_case(*case_statement_args[0][0], else_=last_index)).label(
                     "data_collection_time_unit_index"
@@ -98,6 +99,7 @@ class CaseSARepository(SARepository, BaseCaseRepository):
         query2 = (
             session.query(
                 sa_model.Case.id,
+                sa_model.Case.count,
                 sa_model.Case.case_date,
                 func.min(sa_case(*case_statement_args[1][0], else_=last_index)).label(
                     "data_collection_time_unit_index"
@@ -126,12 +128,13 @@ class CaseSARepository(SARepository, BaseCaseRepository):
         query3 = (
             session.query(
                 combined_query.c[0],  # case_id
-                combined_query.c[1],  # case_date
-                func.min(combined_query.c[2]).label("data_collection_time_unit_index"),
-                func.max(combined_query.c[3]).label("is_in_private_data_collection"),
+                combined_query.c[1],  # count
+                combined_query.c[2],  # case_date
+                func.min(combined_query.c[3]).label("data_collection_time_unit_index"),
+                func.max(combined_query.c[4]).label("is_in_private_data_collection"),
             )
             .group_by(
-                combined_query.c[1],
+                combined_query.c[2],
                 combined_query.c[0],
             )
             .order_by(combined_query.c[1].desc())
@@ -142,7 +145,7 @@ class CaseSARepository(SARepository, BaseCaseRepository):
             self.DATE_MAPPERS[x] for x in enum.ColTypeOrder.TIME_RESOLUTION_DESC.value
         ]
         for row in query3.all():
-            col_type_index = row[2]
+            col_type_index = row[3]
             if col_type_index == last_index:
                 # No relevant data collection found, skip
                 continue
@@ -151,7 +154,7 @@ class CaseSARepository(SARepository, BaseCaseRepository):
                 # Skip case IDs not in the given set, if applicable
                 continue
             # @ABAC: Adjust case date
-            case_date = row[1]
+            case_date = row[2]
             case_date = date_mappers[col_type_index](case_date)
             if is_filter_by_datetime and not datetime_range_filter.match_value(
                 case_date
@@ -159,8 +162,8 @@ class CaseSARepository(SARepository, BaseCaseRepository):
                 # Skip cases not in the given datetime range after adjusting the case date, if applicable
                 continue
             # Update case_type_stat
-            case_stats.n_cases += 1
-            case_stats.n_own_cases += row[3]
+            case_stats.n_cases += row[1]
+            case_stats.n_own_cases += row[4]
             case_stats.first_case_date = (
                 case_date
                 if not case_stats.first_case_date
