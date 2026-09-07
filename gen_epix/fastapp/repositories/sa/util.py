@@ -222,16 +222,22 @@ def create_sa_type_from_field_info(
             and new_kwargs.get("length", 0) > MAX_UNICODE_COLUMN_LENGTH
         ):
             sa_type_class = sa.UnicodeText
+            override_kwargs = dict(kwargs)
+            override_kwargs.pop("length", None)
             new_kwargs = (
-                get_sa_type_kwargs_from_field_info(sa_type_class, field_info) | kwargs
+                get_sa_type_kwargs_from_field_info(sa_type_class, field_info)
+                | override_kwargs
             )
         if (
             sa_type_class is sa.String
             and new_kwargs.get("length", 0) > MAX_STRING_COLUMN_LENGTH
         ):
             sa_type_class = sa.Text
+            override_kwargs = dict(kwargs)
+            override_kwargs.pop("length", None)
             new_kwargs = (
-                get_sa_type_kwargs_from_field_info(sa_type_class, field_info) | kwargs
+                get_sa_type_kwargs_from_field_info(sa_type_class, field_info)
+                | override_kwargs
             )
         return sa_type_class(**new_kwargs)
 
