@@ -6,6 +6,8 @@ services and their API responses.
 """
 
 import datetime
+import heapq
+import logging
 import uuid
 from typing import Annotated, Any, Callable, ClassVar, Self
 from uuid import UUID
@@ -28,6 +30,8 @@ from gen_epix.fastapp.enum import LogLevel, LogLevelSet
 
 # Backward-compatible alias: UploadLogItem is now ResultLogItem.
 UploadLogItem = EtlLogItem
+
+logger = logging.getLogger(__name__)
 
 
 class IdentifiersMixin:
@@ -263,6 +267,135 @@ class ParentForUpload(Model, IdentifiersMixin):
     CHILD_INTRA_PARENT_LINKS_MAP: ClassVar[
         dict[type[Model], list[tuple[str, type[Model]]]]
     ] = {}
+
+    # Child model classes in foreign-key dependency order: a child is always
+    # listed after every sibling child it links to. None => auto-derived (see
+    # get_child_order); set explicitly in a subclass only to override.
+    CHILD_ORDER: ClassVar[list[type[Model]] | None] = None
+
+    @classmethod
+    def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
+        """Eagerly derive CHILD_ORDER when the subclass is defined, if possible."""
+        super().__pydantic_init_subclass__(**kwargs)
+        if cls.__dict__.get("CHILD_ORDER") is not None:
+            return  # explicit override in the subclass body: leave it untouched
+        try:
+            cls.CHILD_ORDER = cls._compute_child_order()
+        except Exception:  # pylint: disable=broad-exception-caught
+            # A child model is not importable yet (circular import during class
+            # definition); get_child_order() derives it lazily on first use.
+            pass
+
+    @classmethod
+    def get_child_order(cls) -> list[type[Model]]:
+        """Return the child model classes in foreign-key dependency order.
+
+        A child is always ordered after every sibling child it links to, so that
+        processing children in this order never touches a foreign key pointing at
+        a not-yet-created row. Derived from the children's ``Entity.links`` and
+        ``CHILD_INTRA_PARENT_LINKS_MAP``, cached on ``CHILD_ORDER``.
+        """
+        if not cls.CHILDREN_FIELD_NAME_MAP:
+            return []
+        child_order = cls.__dict__.get("CHILD_ORDER")
+        if child_order is None:
+            child_order = cls._compute_child_order()
+            cls.CHILD_ORDER = child_order
+        mismatch = set(cls.CHILDREN_FIELD_NAME_MAP) ^ set(child_order)
+        if mismatch:
+            mismatch_str = ", ".join(sorted(x.__name__ for x in mismatch))
+            raise ValueError(
+                f"{cls.__name__}.CHILD_ORDER must contain exactly the "
+                f"CHILDREN_FIELD_NAME_MAP keys; mismatch: {mismatch_str}"
+            )
+        return list(child_order)
+
+    @classmethod
+    def _child_fk_dependencies(cls) -> dict[type[Model], set[type[Model]]]:
+        """Map each child model class to the sibling child classes it links to.
+
+        Edges come from each child's ``Entity.links`` (a foreign key to a sibling
+        child) and from ``CHILD_INTRA_PARENT_LINKS_MAP``. ``multi_links`` are
+        ignored: they are the reverse side of a link already owned by the other
+        entity. A link target given as either the domain model class or its
+        ForUpload wrapper is resolved to the matching ``CHILDREN_FIELD_NAME_MAP``
+        key.
+        """
+        children = list(cls.CHILDREN_FIELD_NAME_MAP)
+        normalize: dict[type, type[Model]] = {child: child for child in children}
+        for domain_class, wrapper_class in cls.CHILD_FOR_UPLOAD_CLASS_MAP.items():
+            normalize.setdefault(domain_class, domain_class)
+            normalize.setdefault(wrapper_class, domain_class)
+
+        dependencies: dict[type[Model], set[type[Model]]] = {}
+        for child in children:
+            entity: Entity | None = getattr(child, "ENTITY", None)
+            linked_classes = (
+                [link.link_model_class for link in entity.links.values()]
+                if entity is not None
+                else []
+            )
+            linked_classes += [
+                to_class
+                for _, to_class in cls.CHILD_INTRA_PARENT_LINKS_MAP.get(child, [])
+            ]
+            targets = {normalize.get(linked) for linked in linked_classes}
+            dependencies[child] = {
+                target
+                for target in targets
+                if target is not None and target is not child
+            }
+        return dependencies
+
+    @classmethod
+    def _compute_child_order(cls) -> list[type[Model]]:
+        """Topologically sort the child model classes by their foreign-key links.
+
+        Ties are broken by ``CHILDREN_FIELD_NAME_MAP`` declaration order, so the
+        result is the minimal reordering of the declared list that satisfies the
+        foreign-key constraints (see ``_child_fk_dependencies``). A cycle logs a
+        warning and returns the declaration order unchanged.
+        """
+        children: list[type[Model]] = list(cls.CHILDREN_FIELD_NAME_MAP)
+        if len(children) <= 1:
+            return children
+        declaration_index = {child: i for i, child in enumerate(children)}
+        dependencies: dict[type[Model], set[type[Model]]] = cls._child_fk_dependencies()
+
+        dependents: dict[type[Model], list[type[Model]]] = {
+            child: [] for child in children
+        }
+        in_degree = {child: len(dependencies[child]) for child in children}
+        for child in children:
+            for dependency in dependencies[child]:
+                dependents[dependency].append(child)
+
+        # Kahn's algorithm, always emitting the lowest declaration index first so
+        # that children not constrained by a foreign key keep their declared
+        # relative position.
+        ready = [declaration_index[c] for c in children if in_degree[c] == 0]
+        heapq.heapify(ready)
+        ordered: list[type[Model]] = []
+        while ready:
+            child = children[heapq.heappop(ready)]
+            ordered.append(child)
+            for dependent in dependents[child]:
+                in_degree[dependent] -= 1
+                if in_degree[dependent] == 0:
+                    heapq.heappush(ready, declaration_index[dependent])
+
+        if len(ordered) != len(children):
+            unresolved = ", ".join(
+                sorted(c.__name__ for c in children if c not in ordered)
+            )
+            logger.warning(
+                "%s: cyclic foreign keys between child models (%s); falling back "
+                "to declaration order for child upload.",
+                cls.__name__,
+                unresolved,
+            )
+            return children
+        return ordered
 
     id: UUID | None = Field(
         default=None,
