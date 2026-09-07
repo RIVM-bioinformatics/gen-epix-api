@@ -301,14 +301,17 @@ class ParentForUpload(Model, IdentifiersMixin):
         if child_order is None:
             child_order = cls._compute_child_order()
             cls.CHILD_ORDER = child_order
-        mismatch = set(cls.CHILDREN_FIELD_NAME_MAP) ^ set(child_order)
-        if mismatch:
-            mismatch_str = ", ".join(sorted(x.__name__ for x in mismatch))
+        child_order = list(child_order)
+        unique = set(child_order)
+        if len(unique) != len(child_order) or unique != set(
+            cls.CHILDREN_FIELD_NAME_MAP
+        ):
             raise ValueError(
-                f"{cls.__name__}.CHILD_ORDER must contain exactly the "
-                f"CHILDREN_FIELD_NAME_MAP keys; mismatch: {mismatch_str}"
+                f"{cls.__name__}.CHILD_ORDER must be a permutation of the "
+                f"CHILDREN_FIELD_NAME_MAP keys (no duplicates, nothing missing or "
+                f"extra); got [{', '.join(x.__name__ for x in child_order)}]"
             )
-        return list(child_order)
+        return child_order
 
     @classmethod
     def _child_fk_dependencies(cls) -> dict[type[Model], set[type[Model]]]:

@@ -87,13 +87,21 @@ class TestChildOrderDerivation:
 
         assert OverriddenParentForUpload.get_child_order() == [Child2, Child1]
 
-    def test_invalid_override_raises(self) -> None:
-        class BadOverrideParentForUpload(FixtureParentForUpload):
-            NAME: ClassVar = "BadOverrideParentForUpload"
+    def test_incomplete_override_raises(self) -> None:
+        class MissingChildParentForUpload(FixtureParentForUpload):
+            NAME: ClassVar = "MissingChildParentForUpload"
             CHILD_ORDER: ClassVar = [Child1]
 
-        with pytest.raises(ValueError, match="permutation|exactly"):
-            BadOverrideParentForUpload.get_child_order()
+        with pytest.raises(ValueError, match="permutation"):
+            MissingChildParentForUpload.get_child_order()
+
+    def test_override_with_duplicate_child_raises(self) -> None:
+        class DuplicateChildParentForUpload(FixtureParentForUpload):
+            NAME: ClassVar = "DuplicateChildParentForUpload"
+            CHILD_ORDER: ClassVar = [Child1, Child1, Child2]
+
+        with pytest.raises(ValueError, match="duplicates"):
+            DuplicateChildParentForUpload.get_child_order()
 
     def test_cycle_falls_back_to_declaration_order_with_warning(
         self, caplog: pytest.LogCaptureFixture
