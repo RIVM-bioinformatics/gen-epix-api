@@ -9,6 +9,8 @@ identity, organization, system, upload, authentication, and model metadata types
 The package builds service-ordered model groups, shared model substitutions, and
 stored-model field properties. Importing it completes stored-field metadata and
 adds inherited documentation to casedb-specific model classes.
+
+``OPERATIONAL_MODELS`` lists reset targets in child-before-parent deletion order.
 """
 
 # pylint: disable=useless-import-alias
@@ -210,6 +212,15 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
         ],
     }
 )
+OPERATIONAL_MODELS: tuple[type[fastapp.Model], ...] = (
+    CaseSetMember,
+    CaseSetDataCollectionLink,
+    CaseDataCollectionLink,
+    CaseIdentifier,
+    CaseSet,
+    Case,
+)
+
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
 
 COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}

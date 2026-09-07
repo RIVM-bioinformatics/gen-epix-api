@@ -76,6 +76,22 @@ class BaseCaseRepository(BaseRepository):
     DATE_MAPPERS = _get_date_mappers()
 
     @abstractmethod
+    def delete_operational_data(self, uow: BaseUnitOfWork) -> None:
+        """Delete all cases, case sets, identifiers, and operational links.
+
+        Reference and common organization data are retained. Writers must be
+        paused. SQL changes use the caller's transaction without committing;
+        dictionary implementations restore tables if clearing fails.
+
+        Args:
+            uow: Active unit of work owned by the service.
+
+        Raises:
+            NotImplementedError: Until implemented by a persistence backend.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
     def retrieve_case_stats(
         self,
         uow: BaseUnitOfWork,
