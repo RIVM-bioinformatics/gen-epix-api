@@ -8,6 +8,16 @@ from gen_epix.commondb.domain.command.base import Command, CrudCommand
 # Non-CRUD commands
 
 
+class DeleteOperationalDataCommand(Command):
+    """Represents a request to delete all operational data in one application.
+
+    Only ROOT and APP_ADMIN may execute this maintenance operation, and only
+    when ALLOW_DELETE_OPERATIONAL_DATA is enabled. Writers must be paused by
+    the operator. Reference data, common organization data, and external files
+    are retained. Each application supplies its own handler.
+    """
+
+
 class RetrieveOutagesCommand(Command):
     """Represents a request to retrieve current and scheduled system outages for public availability status."""
 

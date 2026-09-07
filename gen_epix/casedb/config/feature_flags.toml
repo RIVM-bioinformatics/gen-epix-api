@@ -1,3 +1,4 @@
 [feature_flags]
+allow_delete_operational_data = false
 update_own_organization = false
 disable_upload = false
