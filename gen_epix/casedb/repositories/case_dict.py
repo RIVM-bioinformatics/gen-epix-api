@@ -28,7 +28,6 @@ class CaseDictRepository(DictRepository, BaseCaseRepository):
         has_abac = data_collections_by_time_unit is not None
         is_filter_by_case_ids = case_ids is not None
         has_private_data_collections = bool(private_data_collection_ids)
-        is_filter_by_datetime = datetime_range_filter is not None
         if data_collections_by_time_unit is None:
             data_collections_by_time_unit = {}
         if private_data_collection_ids is None:
@@ -99,10 +98,11 @@ class CaseDictRepository(DictRepository, BaseCaseRepository):
 
         # Get case date results based on created_in_data_collection_id
         if has_abac:
-            rows: list[tuple[datetime.datetime, UUID, int, bool]] = [
+            rows: list[tuple[datetime.datetime, UUID, int, int, bool]] = [
                 (
                     x.case_date,
                     x.id,  # type: ignore[misc]
+                    x.count,
                     data_collection_time_unit_index_map[
                         x.created_in_data_collection_id
                     ],
@@ -121,6 +121,7 @@ class CaseDictRepository(DictRepository, BaseCaseRepository):
                 (
                     x.case_date,
                     x.id,
+                    x.count,
                     0,
                     (
                         (x.created_in_data_collection_id in private_data_collection_ids)
@@ -144,12 +145,10 @@ class CaseDictRepository(DictRepository, BaseCaseRepository):
                     (
                         case.case_date,
                         case_id,
+                        case.count,
                         0,
                         (
-                            (
-                                case.created_in_data_collection_id
-                                in private_data_collection_ids
-                            )
+                            (x.data_collection_id in private_data_collection_ids)
                             if has_private_data_collections
                             else False
                         ),
@@ -162,6 +161,7 @@ class CaseDictRepository(DictRepository, BaseCaseRepository):
                 (
                     case.case_date,
                     case_id,
+                    case.count,
                     data_collection_time_unit_index_map[x.data_collection_id],
                     (
                         (x.data_collection_id in private_data_collection_ids)
@@ -175,34 +175,34 @@ class CaseDictRepository(DictRepository, BaseCaseRepository):
         date_mappers = [
             self.DATE_MAPPERS[x] for x in enum.ColTypeOrder.TIME_RESOLUTION_DESC.value
         ]
-        seen_case_ids: dict[UUID, bool | None] = {}
-        for row in sorted(rows, key=lambda x: (x[1], x[2])):
+        own_case_counts: dict[UUID, int | None] = {}
+        for row in sorted(rows, key=lambda x: (x[1], x[3])):
             case_id = row[1]
-            if case_id in seen_case_ids:
+            if case_id in own_case_counts:
                 # Already processed this case_id for all but n_own_cases
-                seen_case_id_value = seen_case_ids[case_id]
-                if seen_case_id_value is not None:
-                    seen_case_ids[case_id] = seen_case_id_value or row[3]
-                else:
-                    # Case not to be counted due to datetime filter
-                    pass
+                if own_case_counts[case_id] is not None and row[4]:
+                    own_case_counts[case_id] = row[2]
                 continue
-            seen_case_ids[case_id] = seen_case_ids.get(case_id) or row[3]
+            own_case_counts[case_id] = row[2] if row[4] else 0
             # Get adjusted case_date based on col_type_index
-            col_type_index = row[2]
+            col_type_index = row[3]
             if has_abac:
                 case_date = date_mappers[col_type_index](row[0])
             else:
                 case_date = row[0]
-            if is_filter_by_datetime and not datetime_range_filter.match_value(
-                case_date
-            ):
-                # Skip cases not in the given datetime range after adjusting the case date, if applicable
-                # Set to None to skip counting in n_own_cases
-                seen_case_ids[case_id] = None
+            datetime_matcher = (
+                datetime_range_filter.match_value
+                if datetime_range_filter is not None
+                else None
+            )
+            if datetime_matcher is not None and not datetime_matcher(case_date):
+                # Set to None to skip counting in n_own_cases.
+                own_case_counts[case_id] = None
                 continue
             # Update case_type_stat
-            case_stats.n_cases += 1
+            case_stats.n_cases += row[2]
+            if row[2] == 0:
+                continue
             if (
                 case_stats.first_case_date is None
                 or case_date < case_stats.first_case_date
@@ -214,5 +214,5 @@ class CaseDictRepository(DictRepository, BaseCaseRepository):
             ):
                 case_stats.last_case_date = case_date
         # Calculate n_own_cases
-        case_stats.n_own_cases = sum(1 for x in seen_case_ids.values() if x)
+        case_stats.n_own_cases = sum(x for x in own_case_counts.values() if x)
         return case_stats
