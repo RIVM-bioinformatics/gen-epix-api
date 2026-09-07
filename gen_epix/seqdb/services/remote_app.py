@@ -22,6 +22,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
 
     ROUTE_MAP: dict[type[Command], str] = {
         command.CalculatePhylogeneticTreeCommand: "/calculate/phylogenetic_tree",
+        command.ConvertSeqFormatCommand: "/convert/seq_format",
         command.RetrieveBestSeqPerSampleCommand: "/retrieve/best_seq_per_sample",
         command.RetrieveBestSeqProfilePerSampleCommand: "/retrieve/best_seq_profile_per_sample",
         command.RetrieveBestSeqClassificationPerSampleCommand: "/retrieve/best_seq_classification_per_sample",
@@ -70,6 +71,10 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         self.register_handler(
             command.CalculatePhylogeneticTreeCommand,
             self.calculate_phylogenetic_tree,
+        )
+        self.register_handler(
+            command.ConvertSeqFormatCommand,
+            self.convert_seq_format,
         )
         self.register_handler(
             command.RetrieveSeqFastaCommand,
@@ -127,6 +132,21 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         if not response_body:
             return None
         return model.PhylogeneticTree(**response_body)
+
+    def convert_seq_format(
+        self,
+        cmd: command.ConvertSeqFormatCommand,
+    ) -> list[UUID]:
+        """Request conversion of stored sequence representations."""
+        request_body = api.ConvertSeqFormatRequestBody(
+            seq_ids=cmd.seq_ids,
+            from_format=cmd.from_format,
+            to_format=cmd.to_format,
+        )
+        response_body: list[str] = self.request(  # type: ignore[assignment]
+            cmd, HttpMethod.POST, model=request_body
+        )
+        return [UUID(x) for x in response_body]
 
     def retrieve_genetic_sequence_fasta_by_id(
         self,
