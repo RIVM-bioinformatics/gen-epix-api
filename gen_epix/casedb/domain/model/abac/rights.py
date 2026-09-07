@@ -97,10 +97,10 @@ class CaseAbac(BaseModel):
         description="Whether the user has full access, i.e. is not limited by any ABAC policies. If so, the other fields are empty and are to be ignored."
     )
     case_type_access_abacs: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = Field(
-        description="The CaseTypeAccessAbac objects for the user, keyed by CaseTypeSet ID and then data collection ID"
+        description="The CaseTypeAccessAbac objects for the user, keyed by CaseType ID and then data collection ID"
     )
     case_type_share_abacs: dict[UUID, dict[UUID, CaseTypeShareAbac]] = Field(
-        description="The CaseTypeShareAbac objects for the user, keyed by CaseTypeSet ID and then data collection ID"
+        description="The CaseTypeShareAbac objects for the user, keyed by CaseType ID and then data collection ID"
     )
 
     def get_case_rights(

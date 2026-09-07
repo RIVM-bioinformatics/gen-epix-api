@@ -48,7 +48,9 @@ for rules not covered here.
    `Yields:`, and `Raises:` sections. Treat command dispatch, authorization,
    persistence, generated interfaces, stateful orchestration, and multi-branch
    workflows as complex. Do not narrate internal statements; explain phases,
-   guarantees, mutations, and delegation that affect callers.
+   guarantees, mutations, and delegation that affect callers. Do not add type
+   information in the docstring that is not already captured in the type hints
+   of the signature.
 8. Any method that explicitly raises an exception must use a complete docstring.
    Describe relevant arguments and return values, and document each explicit,
    interface-relevant exception in `Raises:` with its triggering condition. Also

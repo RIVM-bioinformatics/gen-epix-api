@@ -2,7 +2,7 @@
 
 import abc
 
-from gen_epix.casedb.domain import command, model
+from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.enum import ServiceType
 from gen_epix.commondb.domain.command import Command
 from gen_epix.commondb.services import AbacService as CommonAbacService
@@ -88,6 +88,42 @@ class BaseAbacService(CommonAbacService):
         command.RetrieveSimilarCasesCommand,
         command.RetrieveGeneticSequenceFastaByCaseCommand,
         command.DimCrudCommand,
+    }
+
+    ABAC_EXEMPTED_ROLE_SET_MAP: dict[type[command.Command], enum.RoleSet] = {
+        command.RetrieveCompleteCaseTypeCommand: enum.RoleSet.GE_APP_ADMIN,
+        command.RetrieveCasesByQueryCommand: enum.RoleSet.GE_APP_ADMIN,
+        command.RetrieveCasesByIdCommand: enum.RoleSet.GE_APP_ADMIN,
+        command.RetrieveIsOwnCasesCommand: enum.RoleSet.GE_APP_ADMIN,
+        command.RetrieveCaseRightsCommand: enum.RoleSet.GE_APP_ADMIN,
+        command.RetrieveCaseSetRightsCommand: enum.RoleSet.GE_APP_ADMIN,
+        command.RetrieveCaseSetStatsCommand: enum.RoleSet.GE_APP_ADMIN,
+        command.RetrieveCaseTypeStatsCommand: enum.RoleSet.GE_APP_ADMIN,
+        command.CaseTypeCrudCommand: enum.RoleSet.GE_REFDATA_ADMIN,
+        command.CaseTypeSetMemberCrudCommand: enum.RoleSet.GE_REFDATA_ADMIN,
+        command.CaseTypeSetCrudCommand: enum.RoleSet.GE_REFDATA_ADMIN,
+        command.ColCrudCommand: enum.RoleSet.GE_REFDATA_ADMIN,
+        command.ColSetCrudCommand: enum.RoleSet.GE_REFDATA_ADMIN,
+        command.ColSetMemberCrudCommand: enum.RoleSet.GE_REFDATA_ADMIN,
+        command.CaseCrudCommand: enum.RoleSet.GE_APP_ADMIN,
+        command.CaseIdentifierCrudCommand: enum.RoleSet.GE_APP_ADMIN,
+        command.CreateFileForReadSetCommand: enum.RoleSet.GE_APP_ADMIN,
+        command.CreateFileForSeqCommand: enum.RoleSet.GE_APP_ADMIN,
+        # command.CaseDataCollectionUpdateAssociationCommand,
+        command.CreateCaseSetCommand: enum.RoleSet.GE_APP_ADMIN,
+        command.UploadCasesCommand: enum.RoleSet.GE_APP_ADMIN,
+        command.CaseSetCrudCommand: enum.RoleSet.GE_APP_ADMIN,
+        # command.CaseSetCaseUpdateAssociationCommand,
+        # command.CaseSetDataCollectionUpdateAssociationCommand,
+        command.CaseDataCollectionLinkCrudCommand: enum.RoleSet.GE_APP_ADMIN,
+        command.CaseSetDataCollectionLinkCrudCommand: enum.RoleSet.GE_APP_ADMIN,
+        command.DataCollectionCrudCommand: enum.RoleSet.GE_REFDATA_ADMIN,
+        command.RefColCrudCommand: enum.RoleSet.GE_REFDATA_ADMIN,
+        command.RefDimCrudCommand: enum.RoleSet.GE_REFDATA_ADMIN,
+        command.RetrievePhylogeneticTreeByCasesCommand: enum.RoleSet.GE_APP_ADMIN,
+        command.RetrieveSimilarCasesCommand: enum.RoleSet.GE_APP_ADMIN,
+        command.RetrieveGeneticSequenceFastaByCaseCommand: enum.RoleSet.GE_APP_ADMIN,
+        command.DimCrudCommand: enum.RoleSet.GE_REFDATA_ADMIN,
     }
 
     @abc.abstractmethod
