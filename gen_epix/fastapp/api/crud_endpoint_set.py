@@ -20,9 +20,9 @@ class CrudEndpointSet(BaseModel):
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True, protected_namespaces=())
-    model_class: type
-    create_api_model_class: type | None = None
-    read_api_model_class: type | None = None
+    model_class: type[BaseModel]
+    create_api_model_class: type[BaseModel] | None = None
+    read_api_model_class: type[BaseModel] | None = None
     endpoint_basename: str
     crud_command_class: type[CrudCommand]
     endpoint_types: set[CrudEndpointType]
@@ -31,9 +31,9 @@ class CrudEndpointSet(BaseModel):
     id_class: type
     operation_id_basename: str | None = None
     description: str | None = None
-    post_returns_id: bool | None = False
-    put_returns_id: bool | None = False
-    delete_all_returns_id: bool | None = False
+    post_returns_id: bool = False
+    put_returns_id: bool = False
+    delete_all_returns_id: bool = False
     response_model_exclude_none: bool | None = False
     query_filter_validator: Callable[[Filter], bool] | None = None
 
