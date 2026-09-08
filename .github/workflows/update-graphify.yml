@@ -6,8 +6,8 @@ on:
     branches:
       - dev
     paths-ignore:
-      - '.github/workflows/update-graphify.yml'
-      - 'graphify-out/**'
+      - ".github/workflows/update-graphify.yml"
+      - "graphify-out/**"
 
   # Allow manual trigger
   workflow_dispatch:
@@ -67,9 +67,9 @@ jobs:
           git add graphify-out/
           git commit -m "chore: update knowledge graph
 
-- Regenerate graph.json with latest codebase
-- Update GRAPH_REPORT.md and visualizations
-- Run by graphify post-merge pipeline"
+          - Regenerate graph.json with latest codebase
+          - Update GRAPH_REPORT.md and visualizations
+          - Run by graphify post-merge pipeline"
           git push
 
       - name: Create pull request for graph updates
@@ -80,11 +80,11 @@ jobs:
           title: "chore: update knowledge graph"
           body: |
             Automated knowledge graph regeneration.
-            
+
             - Regenerated `graph.json` with latest codebase structure
             - Updated `GRAPH_REPORT.md` with architectural analysis
             - Refreshed graph visualizations
-            
+
             This PR was created by the graphify update workflow.
           branch: graphify-update-${{ github.run_number }}
           delete-branch: true
