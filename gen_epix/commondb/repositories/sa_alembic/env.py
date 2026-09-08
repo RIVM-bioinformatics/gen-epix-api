@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import os
 
-from alembic import context
 import sqlalchemy as sa
+from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from gen_epix.commondb.repositories.sa_alembic.metadata import target_metadata
@@ -48,9 +48,7 @@ def run_migrations_online() -> None:
     with connectable.connect() as connection:
         if connection.dialect.name == "mssql":
             connection.execute(
-                sa.text(
-                    "IF SCHEMA_ID('alembic') IS NULL EXEC('CREATE SCHEMA alembic')"
-                )
+                sa.text("IF SCHEMA_ID('alembic') IS NULL EXEC('CREATE SCHEMA alembic')")
             )
             connection.commit()
         context.configure(
