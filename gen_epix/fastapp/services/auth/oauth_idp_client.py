@@ -273,7 +273,6 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                         code="0184bc35",
                         msg="No key ID found in token header",
                         scheme_name=self.scheme_name,
-                        jwt=jwt_token,
                     ).dumps()
                 )
             raise exc.UnauthorizedAuthError("d3d0bb67")
@@ -290,7 +289,6 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                         code="4cff1367",
                         msg="Unable to parse header from token",
                         scheme_name=self.scheme_name,
-                        jwt=jwt_token,
                         exception=e,
                     ).dumps()
                 )
