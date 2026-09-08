@@ -23,11 +23,10 @@ from gen_epix.seqdb.domain import enum, model
 
 class UploadSamplesCommand(Command, UploadBatchCommandMixin):
     """
-    Represents a batch upload of samples along with their associated data.
+    Represents a request to upload a batch of samples along with their associated data.
 
-    The data are uploaded
-    as a single atomic unit of work, so that either all data are successfully
-    uploaded or none are.
+    The data are uploaded as a single atomic unit of work, so that either all data are
+    successfully uploaded or none are.
 
     The upload process consists of the following steps:
     1) Check if the user has the rights to upload the data in question.
@@ -86,7 +85,7 @@ class UploadSamplesCommand(Command, UploadBatchCommandMixin):
 
 class RetrieveSeqDistanceLastModifiedCommand(Command):
     """
-    Represents retrieval of the last modified datetime for a SeqDistance protocol.
+    Represents a request to retrieve the last modified datetime for a SeqDistance protocol.
 
     This command is intended to be used in conjunction with the
     CalculateSeqDistancesForNewProfilesCommand command, which has a
@@ -103,7 +102,7 @@ class RetrieveSeqDistanceLastModifiedCommand(Command):
 
 class CalculateSeqDistancesForNewProfilesCommand(Command):
     """
-    Represents calculating and storing distances between new and existing sequence profiles.
+    Represents a request to calculate and store distances between new and existing sequence profiles.
 
     The calculation uses the given sequence distance protocol and stores
     distances in the database. This command is intended to be used after new profiles
@@ -141,7 +140,7 @@ class CalculateSeqDistancesForNewProfilesCommand(Command):
 
 class UpdateSeqDistancesCommand(Command):
     """
-    Represents creating missing distances for profiles under a distance protocol.
+    Represents a request to create missing distances for profiles under a distance protocol.
 
     The command finds all profiles
     that do not yet have a SeqDistance record, computes
@@ -181,7 +180,7 @@ class UpdateSeqDistancesCommand(Command):
 
 class CalculatePhylogeneticTreeCommand(Command):
     """
-    Represents calculating a phylogenetic tree from query profiles and a configured protocol.
+    Represents a request to calculate a phylogenetic tree from query profiles and a configured protocol.
 
     The returned tree contains the query profiles and
     any additional profiles that are within the maximum distance threshold specified in
@@ -225,7 +224,7 @@ class CalculatePhylogeneticTreeCommand(Command):
 
 class RetrieveSamplesByQueryCommand(Command):
     """
-    Represents retrieval of sample identifiers matching a query.
+    Represents a request to retrieve sample identifiers matching a query.
 
     These identifiers can then be used to retrieve
     the corresponding samples.
@@ -238,7 +237,7 @@ class RetrieveSamplesByQueryCommand(Command):
 
 class RetrieveSamplesByIdCommand(Command):
     """
-    Represents retrieval of complete data for sample identifiers.
+    Represents a request to retrieve complete data for sample identifiers.
 
     The result contains FullSample
     objects in the same order.
@@ -258,7 +257,7 @@ class RetrieveSamplesByIdCommand(Command):
 
 class RetrieveSampleIdentifiersByIdCommand(Command):
     """
-    Represents retrieval of only SampleIdentifier records for sample identifiers.
+    Represents a request to retrieve only SampleIdentifier records for sample identifiers.
 
     Lighter than RetrieveSamplesByIdCommand — no sequences or read sets.
     """
@@ -276,10 +275,9 @@ class RetrieveSampleIdentifiersByIdCommand(Command):
 
 
 class RetrieveSeqFastaCommand(Command):
-    """
-    Represents retrieval of sequences in FASTA format.
+    """Represents a request to retrieve sequences in FASTA format.
 
-    as an iterable that yields one contig at a time.
+    The result is an iterable that yields one contig at a time.
     """
 
     seq_ids: list[UUID] = Field(
@@ -291,9 +289,51 @@ class RetrieveSeqFastaCommand(Command):
     )
 
 
+class ConvertSeqFormatCommand(Command):
+    """Represents a request to convert stored contig sequence representations.
+
+    Returns:
+      The IDs of the sequences converted to the target format.
+    """
+
+    seq_ids: list[UUID] = Field(
+        description="IDs of the sequences whose contigs should be converted.",
+    )
+    from_format: enum.SeqFormat = Field(
+        description="The current DNA representation format of all contigs.",
+    )
+    to_format: enum.SeqFormat = Field(
+        description="The target DNA representation format for all contigs.",
+    )
+
+    @field_validator("seq_ids", mode="after")
+    @classmethod
+    def _validate_seq_ids(cls, seq_ids: list[UUID]) -> list[UUID]:
+        """Require every requested sequence identifier to occur at most once."""
+        if len(set(seq_ids)) != len(seq_ids):
+            raise ValueError("seq_ids must be unique")
+        return seq_ids
+
+    @model_validator(mode="after")
+    def _validate_formats(self) -> Self:
+        """Require a supported, same-family DNA representation conversion."""
+        if (
+            self.from_format not in enum.SeqFormatSet.DNA_AS_STR.value
+            or self.to_format not in enum.SeqFormatSet.DNA_AS_STR.value
+        ):
+            raise ValueError("Only DNA sequence formats can be converted")
+        if (self.from_format in enum.SeqFormatSet.GAP.value) != (
+            self.to_format in enum.SeqFormatSet.GAP.value
+        ):
+            raise ValueError(
+                "Conversions between gapless and gap-inclusive formats are not supported"
+            )
+        return self
+
+
 class RetrieveSimilarProfilesCommand(Command):
     """
-    Represents retrieval of profiles similar to at least one query profile.
+    Represents a request to retrieve profiles similar to at least one query profile.
 
     the given maximum distance and based on the given seq distance protocol. The
     returned profiles do not contain the query profiles.
@@ -312,7 +352,7 @@ class RetrieveSimilarProfilesCommand(Command):
 
 class RetrieveBestSeqPerSampleCommand(Command):
     """
-    Represents retrieval of the best Seq ID for each requested sample.
+    Represents a request to retrieve the best Seq ID for each requested sample.
 
     IDs, and using a particular ranking strategy.
     Returns a dict[sample_id, seq_id].
@@ -333,7 +373,7 @@ class RetrieveBestSeqPerSampleCommand(Command):
 
 class RetrieveBestSeqProfilePerSampleCommand(Command):
     """
-    Represents retrieval of the best SeqProfile ID for each requested sample.
+    Represents a request to retrieve the best SeqProfile ID for each requested sample.
 
     protocol IDs, and using a particular ranking strategy.
     Returns a dict[sample_id, seq_profile_id].
@@ -354,7 +394,7 @@ class RetrieveBestSeqProfilePerSampleCommand(Command):
 
 class RetrieveBestSeqClassificationPerSampleCommand(Command):
     """
-    Represents retrieval of the best SeqClassification ID for each requested sample.
+    Represents a request to retrieve the best SeqClassification ID for each requested sample.
 
     protocol IDs, and using a particular ranking strategy.
     Returns a dict[sample_id, seq_classification_id].
@@ -381,186 +421,186 @@ class RetrieveBestSeqClassificationPerSampleCommand(Command):
 
 
 class ProtocolCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for sequence protocol records."""
+    """Represents a request to perform a CRUD operation on Protocols."""
 
     MODEL_CLASS: ClassVar = model.Protocol
 
 
 class ProtocolSetCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for sequence protocol-set records."""
+    """Represents a request to perform a CRUD operation on ProtocolSets."""
 
     MODEL_CLASS: ClassVar = model.ProtocolSet
 
 
 class ProtocolSetMemberCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for sequence protocol-set memberships."""
+    """Represents a request to perform a CRUD operation on ProtocolSetMembers."""
 
     MODEL_CLASS: ClassVar = model.ProtocolSetMember
 
 
 class AlleleCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for allele records."""
+    """Represents a request to perform a CRUD operation on Alleles."""
 
     MODEL_CLASS: ClassVar = model.Allele
 
 
 class AstMeasurementCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for antimicrobial-susceptibility measurements."""
+    """Represents a request to perform a CRUD operation on AstMeasurements."""
 
     MODEL_CLASS: ClassVar = model.AstMeasurement
 
 
 class AstPredictionCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for antimicrobial-susceptibility predictions."""
+    """Represents a request to perform a CRUD operation on AstPredictions."""
 
     MODEL_CLASS: ClassVar = model.AstPrediction
 
 
 class LocusCodeMapCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for locus-code mapping records."""
+    """Represents a request to perform a CRUD operation on LocusCodeMaps."""
 
     MODEL_CLASS: ClassVar = model.LocusCodeMap
 
 
 class LocusCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for locus records."""
+    """Represents a request to perform a CRUD operation on Loci."""
 
     MODEL_CLASS: ClassVar = model.Locus
 
 
 class LocusSetCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for locus-set records."""
+    """Represents a request to perform a CRUD operation on LocusSets."""
 
     MODEL_CLASS: ClassVar = model.LocusSet
 
 
 class PcrMeasurementCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for PCR measurement records."""
+    """Represents a request to perform a CRUD operation on PcrMeasurements."""
 
     MODEL_CLASS: ClassVar = model.PcrMeasurement
 
 
 class ReadSetCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for read-set records."""
+    """Represents a request to perform a CRUD operation on ReadSets."""
 
     MODEL_CLASS: ClassVar = model.ReadSet
 
 
 class ReadSetIdentifierCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for read-set identifier records."""
+    """Represents a request to perform a CRUD operation on ReadSetIdentifiers."""
 
     MODEL_CLASS: ClassVar = model.ReadSetIdentifier
 
 
 class RefAlleleCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for reference allele records."""
+    """Represents a request to perform a CRUD operation on RefAlleles."""
 
     MODEL_CLASS: ClassVar = model.RefAllele
 
 
 class RefSeqCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for reference sequence records."""
+    """Represents a request to perform a CRUD operation on RefSeqs."""
 
     MODEL_CLASS: ClassVar = model.RefSeq
 
 
 class SampleCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for sample records."""
+    """Represents a request to perform a CRUD operation on Samples."""
 
     MODEL_CLASS: ClassVar = model.Sample
 
 
 class SampleDataCollectionLinkCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for sample data-collection links."""
+    """Represents a request to perform a CRUD operation on SampleDataCollectionLinks."""
 
     MODEL_CLASS: ClassVar = model.SampleDataCollectionLink
 
 
 class SampleIdentifierCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for sample identifier records."""
+    """Represents a request to perform a CRUD operation on SampleIdentifiers."""
 
     MODEL_CLASS: ClassVar = model.SampleIdentifier
 
 
 class SeqClassificationCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for sequence classification records."""
+    """Represents a request to perform a CRUD operation on SeqClassifications."""
 
     MODEL_CLASS: ClassVar = model.SeqClassification
 
 
 class SeqCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for assembled sequence records."""
+    """Represents a request to perform a CRUD operation on Seqs."""
 
     MODEL_CLASS: ClassVar = model.Seq
 
 
 class SeqCategoryCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for sequence category records."""
+    """Represents a request to perform a CRUD operation on SeqCategories."""
 
     MODEL_CLASS: ClassVar = model.SeqCategory
 
 
 class SeqCategorySetCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for sequence category-set records."""
+    """Represents a request to perform a CRUD operation on SeqCategorySets."""
 
     MODEL_CLASS: ClassVar = model.SeqCategorySet
 
 
 class SeqDistanceCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for pairwise sequence-distance records."""
+    """Represents a request to perform a CRUD operation on SeqDistances."""
 
     MODEL_CLASS: ClassVar = model.SeqDistance
 
 
 class SeqIdentifierCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for sequence identifier records."""
+    """Represents a request to perform a CRUD operation on SeqIdentifiers."""
 
     MODEL_CLASS: ClassVar = model.SeqIdentifier
 
 
 class SeqProfileCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for sequence profile records."""
+    """Represents a request to perform a CRUD operation on SeqProfiles."""
 
     MODEL_CLASS: ClassVar = model.SeqProfile
 
 
 class SeqProfileIdentifierCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for sequence profile identifier records."""
+    """Represents a request to perform a CRUD operation on SeqProfileIdentifiers."""
 
     MODEL_CLASS: ClassVar = model.SeqProfileIdentifier
 
 
 class SeqTaxonomyCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for sequence taxonomy records."""
+    """Represents a request to perform a CRUD operation on SeqTaxonomies."""
 
     MODEL_CLASS: ClassVar = model.SeqTaxonomy
 
 
 class TaxonCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for taxon records."""
+    """Represents a request to perform a CRUD operation on Taxa."""
 
     MODEL_CLASS: ClassVar = model.Taxon
 
 
 class TaxonSetCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for taxon-set records."""
+    """Represents a request to perform a CRUD operation on TaxonSets."""
 
     MODEL_CLASS: ClassVar = model.TaxonSet
 
 
 class TaxonSetMemberCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for taxon-set membership records."""
+    """Represents a request to perform a CRUD operation on TaxonSetMembers."""
 
     MODEL_CLASS: ClassVar = model.TaxonSetMember
 
 
 class TreeAlgorithmCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for phylogenetic tree algorithm records."""
+    """Represents a request to perform a CRUD operation on TreeAlgorithms."""
 
     MODEL_CLASS: ClassVar = model.TreeAlgorithm
 
 
 class TreeAlgorithmClassCrudCommand(CrudCommand):
-    """Represents CRUD command metadata for tree algorithm class records."""
+    """Represents a request to perform a CRUD operation on TreeAlgorithmClasses."""
 
     MODEL_CLASS: ClassVar = model.TreeAlgorithmClass

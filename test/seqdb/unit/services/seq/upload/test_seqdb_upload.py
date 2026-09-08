@@ -2531,3 +2531,19 @@ class TestVerifyBatchSeqClassifications(BaseUploadTestCase):
 
         assert success
         assert not retval.has_errors()
+
+
+class TestSampleChildOrder:
+    """SampleForUpload.CHILD_ORDER honours the seq foreign-key dependencies."""
+
+    def test_seq_dependents_come_after_seq(self) -> None:
+        child_order = model.SampleForUpload.get_child_order()
+        assert child_order.index(model.ReadSet) < child_order.index(model.Seq)
+        for dependent in (
+            model.SeqProfile,
+            model.SeqClassification,
+            model.SeqTaxonomy,
+        ):
+            assert child_order.index(model.Seq) < child_order.index(
+                dependent
+            ), f"{dependent.__name__} must be uploaded after Seq"
