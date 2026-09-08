@@ -1594,9 +1594,9 @@ class SARepository(BaseRepository):
                 cursor.execute("PRAGMA foreign_keys=ON")
                 cursor.close()
 
-            # Add each schema as a separate database, as sqlite does not support schemas
-            # Unique per repository instance, so schemas of the same name from
-            # different SARepository instances don't collide on sqlite's
+            # Add each schema as a separate attached database, since sqlite does not
+            # support schemas. Unique per repository instance, so schemas of the same
+            # name from different SARepository instances don't collide on sqlite's
             # process-wide shared cache (which is keyed by URI).
             memory_schema_namespace = uuid.uuid4().hex
             with engine.connect() as conn:
@@ -1638,9 +1638,8 @@ class SARepository(BaseRepository):
                 connection_string, echo, connect_args=connect_args
             )
 
+            # Create any non-existing schemas if allowed
             if create_database_objects:
-                # Explicit bootstrap path for non-SQLite tooling. Production SQL
-                # Server schema creation is performed by Alembic migrations.
                 for schema_name in schema_names:
                     if not schema_name:
                         continue
@@ -1662,9 +1661,7 @@ class SARepository(BaseRepository):
                 )
             metadata_set.add(cast(sa.MetaData, getattr(db_model_class, "metadata")))
 
-        # SQLite is used heavily by tests and local fixtures. SQL Server is
-        # deliberately managed by Alembic so an API process cannot introduce
-        # unreviewed schema changes at runtime.
+        # Create any non-existing database objects except schemas (done earlier), if allowed
         if create_database_objects:
             for metadata in metadata_set:
                 metadata.create_all(engine, checkfirst=True)

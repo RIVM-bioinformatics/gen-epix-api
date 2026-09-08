@@ -309,10 +309,6 @@ class RefCol(Model):
             "column type is numeric or interval."
         ),
     )
-    unit: enum.Unit | None = Field(
-        default=None,
-        description="The unit of the data stored in the column. Must be provided if the column type is numeric or interval.",
-    )
     concept_set_id: UUID | None = Field(
         default=None,
         description=(
