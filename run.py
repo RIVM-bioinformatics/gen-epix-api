@@ -182,6 +182,7 @@ class Run:
                 "test/filter/unit",
                 "test/transform/unit",
                 "test/fastapp/unit",
+                "test/fastapp/integration",
                 "test/commondb/unit",
                 "test/commondb/integration",
                 "test/casedb/unit",
@@ -282,6 +283,7 @@ class Run:
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
+                "test/fastapp/integration",
                 "test/commondb/integration",
                 "test/casedb/integration",
                 "test/seqdb/integration",
@@ -328,6 +330,16 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/fastapp/unit",
+            ]
+        )
+
+    def test_fastapp_integration(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/fastapp/integration",
             ]
         )
 

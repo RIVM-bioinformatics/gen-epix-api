@@ -34,7 +34,9 @@ def _verify_sample_children(
         uow,
     )
 
-    # Child model specific verifications
+    # Child model specific verifications, run seqs first so that seq_classifications
+    # and seq_profiles can resolve their seq_id links (same dependency order as
+    # SampleForUpload.CHILD_ORDER).
     success &= _verify_children_seqs(self, cmd, batch_result, uow)
     success &= _verify_children_seq_classifications(self, cmd, batch_result, uow)
     success &= _verify_children_seq_profiles(self, cmd, batch_result, uow)

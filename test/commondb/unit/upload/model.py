@@ -10,7 +10,7 @@ from gen_epix.commondb.domain import model as commondb_model
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import UploadResult
 from gen_epix.commondb.services.upload import BatchUploader
-from gen_epix.fastapp.domain import Entity
+from gen_epix.fastapp.domain import Entity, create_links
 from gen_epix.fastapp.service import BaseService
 
 
@@ -111,13 +111,22 @@ class Child1(fastapp.Model):
 
 
 class Child2(fastapp.Model):
-    ENTITY: ClassVar = Entity(persistable=True, id_field_name="child2_id")
+    ENTITY: ClassVar = Entity(
+        persistable=True,
+        id_field_name="child2_id",
+        links=create_links({1: ("child1_id", Child1, None)}),
+    )
     NAME: ClassVar = "Child2"
     child2_id: UUID | None = Field(
         default=None, description="The ID of the child model."
     )
     parent_id: UUID = Field(description="The ID of the parent model.")
     ref2_id: UUID | None = Field(description="The ID of the Ref2 model.")
+    child1_id: UUID | None = Field(
+        default=None,
+        description="Optional link to a sibling Child1 in the same parent. Forces "
+        "Child1 to be uploaded before Child2.",
+    )
     a: str = Field(
         default="",
         description="A single value that can always be mutated after first storage.",
@@ -210,6 +219,9 @@ class ParentForUpload(commondb_model.ParentForUpload):
     CHILD_PARENT_ID_FIELD_NAME_MAP: ClassVar = {
         Child1: "parent_id",
         Child2: "parent_id",
+    }
+    CHILD_INTRA_PARENT_LINKS_MAP: ClassVar = {
+        Child2: [("child1_id", Child1)],
     }
 
     parent: Parent | None = Field(
