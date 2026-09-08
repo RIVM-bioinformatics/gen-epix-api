@@ -1108,6 +1108,24 @@ class Run:
 
         start_server()
 
+    def other_graphify_update(self) -> None:
+        """Update the knowledge graph by running the graphify pipeline.
+        
+        Runs .agents/scripts/graphify_update.py to regenerate the graph.json,
+        GRAPH_REPORT.md, and related artifacts in graphify-out/.
+        
+        The script is idempotent and uses caching for performance.
+        """
+        import subprocess
+
+        script_path = Path(__file__).parent / ".agents" / "scripts" / "graphify_update.py"
+        result = subprocess.run(
+            [sys.executable, str(script_path)],
+            cwd=Path(__file__).parent,
+            capture_output=False,
+        )
+        sys.exit(result.returncode)
+
 
 if __name__ == "__main__":
     fire.Fire(Run)
