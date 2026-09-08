@@ -14,13 +14,23 @@ from gen_epix.commondb.domain import enum
 from gen_epix.commondb.domain.model.abac import (
     OrganizationAdminPolicy as OrganizationAdminPolicy,
 )
-from gen_epix.commondb.domain.model.base import BaseEtlResult as BaseEtlResult
+from gen_epix.commondb.domain.model.base import BaseResult as BaseResult
 from gen_epix.commondb.domain.model.base import EtlLogItem as EtlLogItem
 from gen_epix.commondb.domain.model.base import Model as Model
 from gen_epix.commondb.domain.model.base import ModelNoId as ModelNoId
 from gen_epix.commondb.domain.model.base import (
     validate_int_enum_value as validate_int_enum_value,
 )
+from gen_epix.commondb.domain.model.etl import AnyExtractResult as AnyExtractResult
+from gen_epix.commondb.domain.model.etl import AnyTransformResult as AnyTransformResult
+from gen_epix.commondb.domain.model.etl import AnyUploadResult as AnyUploadResult
+from gen_epix.commondb.domain.model.etl import EtlBatchResult as EtlBatchResult
+from gen_epix.commondb.domain.model.etl import EtlResult as EtlResult
+from gen_epix.commondb.domain.model.etl import ExtractResult as ExtractResult
+from gen_epix.commondb.domain.model.etl import (
+    SeqDistanceUpdateResult as SeqDistanceUpdateResult,
+)
+from gen_epix.commondb.domain.model.etl import TransformResult as TransformResult
 from gen_epix.commondb.domain.model.organization import BaseIdentifier as BaseIdentifier
 from gen_epix.commondb.domain.model.organization import Contact as Contact
 from gen_epix.commondb.domain.model.organization import DataCollection as DataCollection

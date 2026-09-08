@@ -18,7 +18,7 @@ from pydantic import Field, field_serializer, field_validator, model_validator
 from gen_epix.commondb.domain import enum
 from gen_epix.commondb.domain.enum import DataIssueTypeSet, EtlStatus, UploadStatusSet
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.base import BaseEtlResult, EtlLogItem
+from gen_epix.commondb.domain.model.base import BaseResult, EtlLogItem
 from gen_epix.commondb.domain.model.organization import (
     BaseIdentifier,
     IdentifierForUpload,
@@ -32,6 +32,12 @@ from gen_epix.fastapp.enum import LogLevel, LogLevelSet
 UploadLogItem = EtlLogItem
 
 logger = logging.getLogger(__name__)
+
+# Registry of concrete BaseBatchUploadResult subclasses, keyed by class name.
+# Populated via BaseBatchUploadResult.__pydantic_init_subclass__. Used to
+# reconstruct the concrete result type when deserialising a heterogeneous list of
+# upload results (see BaseBatchUploadResult.resolve_subclass).
+_UPLOAD_RESULT_REGISTRY: dict[str, type["BaseBatchUploadResult"]] = {}
 
 
 class IdentifiersMixin:
@@ -109,7 +115,7 @@ class DataIssue(PydanticBaseModel):
     message: str | None = Field(description="The details of the data issue")
 
 
-class UploadResult(BaseEtlResult, Model):
+class UploadResult(BaseResult, Model):
     """Represents the result of an upload operation for one object.
 
     It includes upload status and logs.
@@ -923,6 +929,52 @@ class BaseBatchUploadResult(UploadResult):
         default_factory=uuid.uuid4,
         description="The unique identifier for the upload batch that this result belongs to.",
     )
+    result_type: str = Field(
+        default="",
+        description=(
+            "The concrete result class name, set automatically on validation. "
+            "Used to reconstruct the correct subclass when deserialising a "
+            "heterogeneous list of upload results."
+        ),
+    )
+
+    @classmethod
+    def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
+        """Register each concrete subclass by name for polymorphic deserialisation."""
+        super().__pydantic_init_subclass__(**kwargs)
+        _UPLOAD_RESULT_REGISTRY[cls.__name__] = cls
+
+    @model_validator(mode="after")
+    def _ensure_result_type(self) -> Self:
+        """Populate result_type with the concrete class name when unset."""
+        if not self.result_type:
+            self.result_type = type(self).__name__
+        return self
+
+    @classmethod
+    def resolve_subclass(cls, data: dict[str, Any]) -> type[UploadResult] | None:
+        """Return the concrete UploadResult subclass a serialised dict represents.
+
+        Resolution order:
+
+        1. The ``result_type`` discriminator field, looked up in the registry.
+        2. Legacy fallback for payloads written before ``result_type`` existed:
+           the presence of a subclass-specific parent-results field
+           (``samples`` / ``cases`` / ``persons``).
+        3. ``None`` when nothing matches, so the caller can fall back to a plain
+           ``UploadResult``.
+        """
+        by_name = _UPLOAD_RESULT_REGISTRY.get(data.get("result_type", ""))
+        if by_name is not None:
+            return by_name
+        for field_name, class_name in (
+            ("samples", "SampleBatchUploadResult"),
+            ("cases", "CaseBatchUploadResult"),
+            ("persons", "PersonBatchUploadResult"),
+        ):
+            if field_name in data and class_name in _UPLOAD_RESULT_REGISTRY:
+                return _UPLOAD_RESULT_REGISTRY[class_name]
+        return None
 
     def get_parent_results(self) -> list[ParentUploadResult]:
         """Get the list of parent upload results in this batch upload result."""

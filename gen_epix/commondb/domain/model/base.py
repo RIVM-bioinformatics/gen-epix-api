@@ -110,7 +110,7 @@ class EtlLogItem(BaseModel):
         return value.value
 
 
-class BaseEtlResult(BaseModel):
+class BaseResult(BaseModel):
     """Represents accumulated ETL messages with severity-specific queries.
 
     Pydantic subclasses declare their status field and override

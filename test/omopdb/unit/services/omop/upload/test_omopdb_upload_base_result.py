@@ -12,7 +12,7 @@ Verifies that:
 import pytest
 
 from gen_epix.commondb.domain.enum import EtlStatus
-from gen_epix.commondb.domain.model.base import BaseEtlResult, EtlLogItem
+from gen_epix.commondb.domain.model.base import BaseResult, EtlLogItem
 from gen_epix.commondb.domain.model.upload import UploadLogItem, UploadResult
 from gen_epix.fastapp.enum import LogLevel
 
@@ -22,7 +22,7 @@ from gen_epix.fastapp.enum import LogLevel
 
 
 @pytest.mark.scenario_ids("TC-SEC-31-02")
-class _ConcreteResult(BaseEtlResult):
+class _ConcreteResult(BaseResult):
     """Minimal Pydantic model used to test BaseResult in isolation."""
 
     status: EtlStatus = EtlStatus.INITIALIZED

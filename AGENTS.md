@@ -22,7 +22,8 @@ The runtime package is under `gen_epix/`:
 - `fastapp/` is the shared application framework: commands, domain metadata,
       policies, application dispatch, services, repositories, and API utilities.
 - `commondb/` supplies shared users, organizations, authentication, policies,
-      configuration, composition, and routers.
+      configuration, composition, routers, and the shared ETL-run result
+      accumulator layer (`domain/model/etl.py`) used by ETL pipelines.
 - `casedb/`, `seqdb/`, and `omopdb/` are app-specific domains built on that
       foundation. `filter/` and `transform/` are shared support packages.
 - Each app is composed from configuration, repositories, services, policies,
