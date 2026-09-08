@@ -10,7 +10,6 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
-import sqlalchemy as sa
 
 from gen_epix.casedb.repositories.sa_alembic.metadata import (
     target_metadata as casedb_metadata,
@@ -43,37 +42,77 @@ def _migration_tables(
     for revision_file in revision_files:
         tree = ast.parse(revision_file.read_text())
         for node in ast.walk(tree):
-            if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+            if not isinstance(node, ast.Call) or not isinstance(
+                node.func, ast.Attribute
+            ):
                 continue
             if not isinstance(node.func.value, ast.Name) or node.func.value.id != "op":
                 continue
-            if node.func.attr != "create_table" or not node.args:
-                continue
-            if not isinstance(node.args[0], ast.Constant) or not isinstance(
-                node.args[0].value, str
-            ):
-                continue
-            schema = next(
-                (
-                    keyword.value.value
-                    for keyword in node.keywords
-                    if keyword.arg == "schema"
-                    and isinstance(keyword.value, ast.Constant)
-                    and isinstance(keyword.value.value, str)
-                ),
-                None,
-            )
-            columns = {
-                argument.args[0].value
-                for argument in node.args[1:]
-                if isinstance(argument, ast.Call)
-                and isinstance(argument.func, ast.Attribute)
-                and argument.func.attr == "Column"
-                and argument.args
-                and isinstance(argument.args[0], ast.Constant)
-                and isinstance(argument.args[0].value, str)
-            }
-            tables[(schema, node.args[0].value)] = columns
+
+            # Handle op.create_table(...) calls
+            if node.func.attr == "create_table" and node.args:
+                if not isinstance(node.args[0], ast.Constant) or not isinstance(
+                    node.args[0].value, str
+                ):
+                    continue
+                schema = next(
+                    (
+                        keyword.value.value
+                        for keyword in node.keywords
+                        if keyword.arg == "schema"
+                        and isinstance(keyword.value, ast.Constant)
+                        and isinstance(keyword.value.value, str)
+                    ),
+                    None,
+                )
+                columns = {
+                    argument.args[0].value
+                    for argument in node.args[1:]
+                    if isinstance(argument, ast.Call)
+                    and isinstance(argument.func, ast.Attribute)
+                    and argument.func.attr == "Column"
+                    and argument.args
+                    and isinstance(argument.args[0], ast.Constant)
+                    and isinstance(argument.args[0].value, str)
+                }
+                table_key = (schema, node.args[0].value)
+                if table_key not in tables:
+                    tables[table_key] = set()
+                tables[table_key].update(columns)
+
+            # Handle op.add_column(...) calls
+            elif node.func.attr == "add_column" and len(node.args) >= 2:
+                if not isinstance(node.args[0], ast.Constant) or not isinstance(
+                    node.args[0].value, str
+                ):
+                    continue
+                table_name = node.args[0].value
+                schema = next(
+                    (
+                        keyword.value.value
+                        for keyword in node.keywords
+                        if keyword.arg == "schema"
+                        and isinstance(keyword.value, ast.Constant)
+                        and isinstance(keyword.value.value, str)
+                    ),
+                    None,
+                )
+                # Extract column name from sa.Column() call (second argument)
+                column_node = node.args[1]
+                if (
+                    isinstance(column_node, ast.Call)
+                    and isinstance(column_node.func, ast.Attribute)
+                    and column_node.func.attr == "Column"
+                    and column_node.args
+                    and isinstance(column_node.args[0], ast.Constant)
+                    and isinstance(column_node.args[0].value, str)
+                ):
+                    column_name = column_node.args[0].value
+                    table_key = (schema, table_name)
+                    if table_key not in tables:
+                        tables[table_key] = set()
+                    tables[table_key].add(column_name)
+
     return tables
 
 
@@ -99,9 +138,9 @@ def test_models_have_migration_operations(service: str) -> None:
             if table_key not in migration_tables:
                 missing.append(f"table {table.fullname}")
                 continue
-            missing_columns = (
-                {column.name for column in table.columns} - migration_tables[table_key]
-            )
+            missing_columns = {
+                column.name for column in table.columns
+            } - migration_tables[table_key]
             missing.extend(
                 f"column {table.fullname}.{column_name}"
                 for column_name in sorted(missing_columns)
