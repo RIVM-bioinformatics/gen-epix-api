@@ -714,14 +714,15 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
     @abc.abstractmethod
     def update_case_created_in_data_collection(
         self, cmd: command.UpdateCaseCreatedInDataCollectionCommand
-    ) -> list[model.Case]:
+    ) -> list[UUID]:
         """Update the creating data collection for existing cases.
 
         Args:
             cmd: Case IDs and the replacement data collection ID.
 
         Returns:
-            The updated cases.
+            The IDs of the updated cases. If a case's created_in_data_collection_id was
+            already set to the target value, it will not be included.
 
         Raises:
             NotImplementedError: Always, until a concrete service implements the

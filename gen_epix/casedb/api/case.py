@@ -74,9 +74,9 @@ class UpdateCaseCreatedInDataCollectionRequestBody(PydanticBaseModel):
         "case_ids",
         max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
     )
-    data_collection_id: UUID = copy_model_field(
+    target_created_in_data_collection_id: UUID = copy_model_field(
         command.UpdateCaseCreatedInDataCollectionCommand,
-        "data_collection_id",
+        "target_created_in_data_collection_id",
     )
 
 
@@ -347,10 +347,10 @@ def create_case_endpoints(
     async def update__case_created_in_data_collection(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: UpdateCaseCreatedInDataCollectionRequestBody,
-    ) -> list[model.Case]:
+    ) -> list[UUID]:
         """See router description."""
         return cast(
-            list[model.Case],
+            list[UUID],
             handle_command(
                 app=app,
                 user=user,
@@ -359,7 +359,7 @@ def create_case_endpoints(
                 input_command=command.UpdateCaseCreatedInDataCollectionCommand(
                     user=user,
                     case_ids=request_body.case_ids,
-                    data_collection_id=request_body.data_collection_id,
+                    target_created_in_data_collection_id=request_body.target_created_in_data_collection_id,
                 ),
             ),
         )

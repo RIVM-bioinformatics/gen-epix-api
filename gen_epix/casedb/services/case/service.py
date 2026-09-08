@@ -153,7 +153,7 @@ class CaseService(BaseCaseService):
 
     def update_case_created_in_data_collection(
         self, cmd: command.UpdateCaseCreatedInDataCollectionCommand
-    ) -> list[model.Case]:
+    ) -> list[UUID]:
         """Move existing cases to a different creating data collection.
 
         Args:

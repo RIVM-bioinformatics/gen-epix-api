@@ -51,12 +51,12 @@ def test_updates_all_cases_in_one_batch(service):
     cmd = command.UpdateCaseCreatedInDataCollectionCommand(
         user=service._get_user_and_repository.return_value[0],
         case_ids=[case.id for case in cases],
-        data_collection_id=new_data_collection_id,
+        target_created_in_data_collection_id=new_data_collection_id,
     )
 
     result = case_service_update_case_created_in_data_collection(service, cmd)
 
-    assert result == cases
+    assert result == [x.id for x in cases]
     assert all(
         case.created_in_data_collection_id == new_data_collection_id for case in cases
     )
@@ -80,7 +80,7 @@ def test_does_not_update_when_read_fails(service):
     cmd = command.UpdateCaseCreatedInDataCollectionCommand(
         user=service._get_user_and_repository.return_value[0],
         case_ids=[uuid4()],
-        data_collection_id=uuid4(),
+        target_created_in_data_collection_id=uuid4(),
     )
 
     with pytest.raises(InvalidIdsError):
@@ -95,7 +95,7 @@ def test_rejects_users_below_app_admin(service):
     cmd = command.UpdateCaseCreatedInDataCollectionCommand(
         user=user,
         case_ids=[uuid4()],
-        data_collection_id=uuid4(),
+        target_created_in_data_collection_id=uuid4(),
     )
 
     with pytest.raises(AssertionError):

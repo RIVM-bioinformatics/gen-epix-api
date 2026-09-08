@@ -1,5 +1,6 @@
 import json
 from typing import Any
+from uuid import UUID
 
 from fastapi import FastAPI, Response
 
@@ -101,14 +102,14 @@ class CasedbEndpointTestClient(EndpointTestClient):
 
         request_body = UpdateCaseCreatedInDataCollectionRequestBody(
             case_ids=cmd.case_ids,
-            data_collection_id=cmd.data_collection_id,
+            target_created_in_data_collection_id=cmd.target_created_in_data_collection_id,
         )
         response = self.test_client.post(
             route_prefix + "/update_case_created_in_data_collection",
             headers=headers,
             json=json.loads(request_body.model_dump_json()),
         )
-        retval = self._content_to_obj(response, model.Case, is_list=True)
+        retval = self._content_to_obj(response, UUID, is_list=True)
         return retval, response
 
     def handle_case_set_create(

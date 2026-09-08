@@ -187,18 +187,18 @@ class CasedbRemoteApp(CommondbRemoteApp):
     def update_case_created_in_data_collection(
         self,
         cmd: command.UpdateCaseCreatedInDataCollectionCommand,
-    ) -> list[model.Case]:
+    ) -> list[UUID]:
         """Move cases to a different creating data collection over HTTP."""
         request_body = api.UpdateCaseCreatedInDataCollectionRequestBody(
             case_ids=cmd.case_ids,
-            data_collection_id=cmd.data_collection_id,
+            target_created_in_data_collection_id=cmd.target_created_in_data_collection_id,
         )
-        response_body: list[dict[str, Any]] = self.request(  # type: ignore[assignment]
+        response_body: list[str] = self.request(  # type: ignore[assignment]
             cmd,
             HttpMethod.POST,
             model=request_body,
         )
-        return [model.Case(**x) for x in response_body]
+        return [UUID(x) for x in response_body]
 
     def case_type_set_case_type_update_association(
         self,

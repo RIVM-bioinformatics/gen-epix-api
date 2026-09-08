@@ -57,18 +57,11 @@ class TestNonCrudHandlers:
         cmd = command.UpdateCaseCreatedInDataCollectionCommand(
             user=None,
             case_ids=[case_id],
-            data_collection_id=data_collection_id,
+            target_created_in_data_collection_id=data_collection_id,
         )
-        data = [
-            {
-                "id": str(case_id),
-                "case_type_id": str(uuid4()),
-                "created_in_data_collection_id": str(data_collection_id),
-                "case_date": "2024-01-01T00:00:00Z",
-                "content": {},
-            }
-        ]
-        mock_client.request.return_value = _mock_response(data)
+        # The API returns a list of UUID strings for updated case IDs
+        response_data = [str(case_id)]
+        mock_client.request.return_value = _mock_response(response_data)
 
         result = app.update_case_created_in_data_collection(cmd)
 
@@ -78,9 +71,9 @@ class TestNonCrudHandlers:
         assert url == app._routes[command.UpdateCaseCreatedInDataCollectionCommand]
         assert json_body == {
             "case_ids": [str(case_id)],
-            "data_collection_id": str(data_collection_id),
+            "target_created_in_data_collection_id": str(data_collection_id),
         }
-        assert result == [model.Case(**data[0])]
+        assert result == [case_id]
 
     def test_case_type_set_case_type_update_association(
         self, app: CasedbRemoteApp, mock_client: Any

@@ -102,16 +102,13 @@ class TestContent:
         update_command = command.UpdateCaseCreatedInDataCollectionCommand(
             user=root_user,
             case_ids=[case.id for case in target_cases],  # type: ignore[misc]
-            data_collection_id=replacement_data_collection_id,  # type: ignore[arg-type]
+            target_created_in_data_collection_id=replacement_data_collection_id,  # type: ignore[arg-type]
         )
 
-        updated_cases, response = env.handle(update_command, return_response=True)
+        updated_case_ids, response = env.handle(update_command, return_response=True)
 
         assert response.status_code == 200
-        assert [case.created_in_data_collection_id for case in updated_cases] == [
-            replacement_data_collection_id,
-            replacement_data_collection_id,
-        ]
+        assert set(updated_case_ids) == {case.id for case in target_cases}
         stored_cases: list[model.Case] = app.handle(
             command.CaseCrudCommand(
                 user=root_user,
@@ -121,8 +118,7 @@ class TestContent:
         )
         assert [case.created_in_data_collection_id for case in stored_cases] == [
             replacement_data_collection_id,
-            replacement_data_collection_id,
-        ]
+        ] * len(target_cases)
 
         users: list[model.User] = app.handle(
             command.UserCrudCommand(
@@ -145,7 +141,9 @@ class TestContent:
                 command.UpdateCaseCreatedInDataCollectionCommand(
                     user=root_user,
                     case_ids=[target_cases[0].id, UUID(int=0)],  # type: ignore[list-item]
-                    data_collection_id=original_data_collection_ids[0],
+                    target_created_in_data_collection_id=original_data_collection_ids[
+                        0
+                    ],
                 )
             )
         unchanged_cases: list[model.Case] = app.handle(
