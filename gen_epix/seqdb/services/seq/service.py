@@ -15,6 +15,9 @@ from gen_epix.seqdb.services.seq.calculate_seq_distance import (
     seq_service_retrieve_seq_distance_last_modified,
     seq_service_update_seq_distances,
 )
+from gen_epix.seqdb.services.seq.convert_seq_format import (
+    seq_service_convert_seq_format,
+)
 from gen_epix.seqdb.services.seq.crud_allele import seq_service_crud_allele
 from gen_epix.seqdb.services.seq.crud_ast_measurement import (
     seq_service_crud_ast_measurement,
@@ -142,6 +145,10 @@ class SeqService(BaseSeqService):
                         raw_seq[i * wrap : min((i + 1) * wrap, seq_length)]
                         for i in range(n_chunks)
                     )
+
+    def convert_seq_format(self, cmd: command.ConvertSeqFormatCommand) -> list[UUID]:
+        """Delegate stored sequence representation conversion."""
+        return seq_service_convert_seq_format(self, cmd)
 
     def retrieve_similar_profiles(
         self,
