@@ -4,10 +4,11 @@ Revision ID: 6f2f4fb9b3d1
 Revises: 973d81851aeb
 Create Date: 2026-08-24
 """
+
 from __future__ import annotations
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "6f2f4fb9b3d1"
@@ -32,9 +33,7 @@ def _drop_legacy_unique_constraint(table_name: str, constraint_name: str) -> Non
         {"object_name": object_name, "constraint_name": constraint_name},
     ).scalar()
     if constraint_exists:
-        op.drop_constraint(
-            constraint_name, table_name, schema="seq", type_="unique"
-        )
+        op.drop_constraint(constraint_name, table_name, schema="seq", type_="unique")
         return
 
     index_exists = connection.execute(
