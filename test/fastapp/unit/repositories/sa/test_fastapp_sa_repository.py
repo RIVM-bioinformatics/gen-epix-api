@@ -396,6 +396,26 @@ def test_create_sa_repository_sqlite_shared_memory_uri() -> None:
     assert isinstance(repo, SARepository)
 
 
+def test_create_sa_repository_does_not_create_non_sqlite_schema_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """SQL Server schema changes must go through Alembic, not API startup."""
+    engine = sa.create_engine("sqlite:///:memory:")
+    monkeypatch.setattr(
+        "gen_epix.fastapp.repositories.sa.repository.EngineFactory.create_engine",
+        lambda *args, **kwargs: engine,
+    )
+
+    repo = SARepository.create_sa_repository(
+        entities=[RepoModel.ENTITY],
+        connection_string="mssql+pyodbc://example.invalid/test",
+        register_mappers=False,
+    )
+
+    assert isinstance(repo, SARepository)
+    assert "repo_model" not in sa.inspect(engine).get_table_names()
+
+
 def test_create_sa_repository_default_sqlite_is_in_memory(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
