@@ -20,6 +20,7 @@
         "projectKey": "RIVM-bioinformatics_gen-epix-api"
     },
     "git.allowNoVerifyCommit": true,
+    "git.terminalAuthentication": false,
     "github.copilot.chat.commitMessageGeneration.instructions": [
     {
       "text": "Follow these rules when generating git commit messages:\n\n1. Message format: `type(scope): description`\n- **type**: Choose from `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `build`, `ci`, `style` based on what the diff actually does.\n- **scope**: Infer in this priority order:\n  1. Dominant directory/module in the diff (e.g. hooks, skills, etl).\n  2. Component/ticket implied by branch name (e.g. branch `lsp-3559-optimize-agentic-ai-...` -> scope like `agents`).\n  3. Reuse scope from the last two commits if this continues the same line of work.\n  Omit scope only when no meaningful one exists.\n- **description**: Lower-case, imperative sentence summarizing the change. No trailing period. Keep under ~72 chars.\n\n2. Body: Add ONE short body paragraph after a blank line only when it explains *why* or links the change to recent work.\n\n3. Relate to recent work: If continuing/fixing previous commits, reuse scope and phrase description as a continuation (e.g. 'extend', 'finish', 'follow up on'). Never fabricate relationships."
@@ -28,4 +29,7 @@
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "chat.agent.maxRequests": 50,
+    "python-envs.defaultEnvManager": "ms-python.python:conda",
+    "python-envs.defaultPackageManager": "ms-python.python:conda",
+    "chat.agentMerge.enabled": true
 }
