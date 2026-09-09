@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-
 from gen_epix.fastapp.api.openapi import (
     create_custom_openapi_function,
     fix_schema_nullable_and_single_element,

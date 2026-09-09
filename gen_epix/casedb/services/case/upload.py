@@ -273,7 +273,7 @@ class CaseBatchUploader(BatchUploader):
         change applied, so deleted keys are simply absent rather than
         explicitly None) directly on the real case object, since
         CaseValidator.validate_and_transform mutates the case in place for
-        more than just content (e.g. it recalculates case_date). Afterward,
+        more than just content (e.g. it recalculates timed_at). Afterward,
         only the deleted keys are put back as explicit None: the generic
         upsert that runs after this re-derives its own diff from a fresh DB
         read and can only detect a deletion via an explicit {key: None}

@@ -571,7 +571,9 @@ class TestCrudEndpointTypeOrder:
         """Verify batch routes are registered before single-item routes."""
         order = CrudEndpointGenerator.CRUD_ENDPOINT_TYPE_ORDER
         batch_types = [
-            t for t in order if t in {CrudEndpointType.GET_SOME, CrudEndpointType.POST_SOME}
+            t
+            for t in order
+            if t in {CrudEndpointType.GET_SOME, CrudEndpointType.POST_SOME}
         ]
         single_types = [t for t in order if t in {CrudEndpointType.GET_ONE}]
         if batch_types and single_types:

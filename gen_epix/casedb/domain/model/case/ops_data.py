@@ -6,7 +6,7 @@ The module provides cases, identifiers, case sets, memberships, and their links
 to data collections for use by the case domain and persistence layer.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import ClassVar
 from uuid import UUID
 
@@ -72,8 +72,8 @@ class Case(Model):
         description="The number of cases that this case represents, if not one. This can be used to store aggregated cases (n>1) as well as reference data (n=0).",
         ge=0,
     )
-    case_date: datetime = Field(
-        default_factory=datetime.now,
+    timed_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
         description="The datetime of the case used for sorting results, limiting results and statistics such as first and last case date. Normally re-calculated from the case content variables upon persisting. Default is the current datetime.",
     )
     content: dict[UUID, str | None] = Field(
