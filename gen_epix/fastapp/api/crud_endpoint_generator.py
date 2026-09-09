@@ -1129,7 +1129,11 @@ class CrudEndpointGenerator:
             endpoint_basename=endpoint_basename,
             crud_command_class=crud_command_class,
             endpoint_types=crud_endpoint_types,
-            operation_id_basename=entity.name,
+            # Plural snake_case regardless of endpoint_string_casing/is_plural.
+            operation_id_basename=entity.get_name_by_casing(
+                StringCasing.SNAKE_CASE, is_plural=True
+            )
+            or entity.name,
             description=crud_command_class.__doc__ or default_description,
             # description=model_class.model_json_schema().get(
             #     "description", default_description
