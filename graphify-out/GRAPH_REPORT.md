@@ -1378,7 +1378,7 @@ Nodes (50): Command, Define casedb commands that retrieve sequence data from seq
 
 ### Community 145 - "TestUpdate"
 Cohesion: 0.15
-Nodes (4): Env, scenario_ids, skipif, TestUpdate
+Nodes (17): Any, BaseModel, Hashable, model_validator, Self, Match a value using the function generated during validation. Args: value: The…, Match row values using the function generated during validation. Args:…, Yield child-value presence flags while treating `None` as absent. (+9 more)
 
 ### Community 146 - "SeqdbTestClient"
 Cohesion: 0.09
@@ -1386,7 +1386,7 @@ Nodes (25): FileCompression, FileFormat, Encapsulates all supported biological f
 
 ### Community 147 - "TestModelBaseSeq"
 Cohesion: 0.08
-Nodes (17): UUID, Test cases for BaseSeq model validation and functionality., Return a valid DNA sequence for testing., Return an invalid DNA sequence for testing., Compute the expected sequence hash for a given sequence., Test creating BaseSeq with valid DNA sequence., Test that DNA sequences are normalized to lowercase., Test that length is automatically calculated when set to 0. (+9 more)
+Nodes (28): declared_attr, Mapped, Organization, UUID, Map the owning organization ID column., Map the owning organization relationship., Map the optional site ID column., Map the optional site relationship. (+20 more)
 
 ### Community 148 - "CacheStatistics"
 Cohesion: 0.02
@@ -1602,11 +1602,11 @@ Nodes (4): Env, scenario_ids, skipif, TestCreate
 
 ### Community 201 - "BaseUploadTestCase"
 Cohesion: 0.10
-Nodes (17): BaseUploadTestCase, scenario_ids, Base test case with common fixtures and utilities., Set up test fixtures., Test upload with varying batch sizes., Test 8.1: Upload batch of n new parent objects., Test 8.2: Upload parent with varying number of Child1 objects., Focused edge-case tests for upload consistency and null semantics. (+9 more)
+Nodes (22): SeqForUpload, Helper to create a SeqForUpload with default or specified properties., Test the _verify_protocol helper., When no protocol IDs are present, no protocol-type query is needed., A protocol with ASSEMBLY type is accepted for Seq children., A non-ASSEMBLY protocol for Seq should be flagged with code a4c9e18b., Skipped children are ignored for per-child error annotation., Protocol lookup should use user_id=None when command user is None. (+14 more)
 
 ### Community 202 - "TestNumpyAlleleIntegration"
 Cohesion: 0.11
-Nodes (15): _make_mlva_profile(), parametrize, Protocol, SeqProfile, UUID, Return (existing_profiles, new_profiles, existing_ids, new_ids)., Unit tests for all new numpy ALLELE distance code paths (LSP-3529)., Run _calculate_and_store_distances directly for ALLELE profiles. Returns… (+7 more)
+Nodes (18): Run `operation`, giving up after the configured timeout. Args: operation: The…, Return the worker pool, creating it on first use., BaseSimilarCasesTestCase, Case, Col, GeneticDistanceProtocol, RefCol, scenario_ids (+10 more)
 
 ### Community 203 - "IdpClient"
 Cohesion: 0.05
@@ -1654,7 +1654,7 @@ Nodes (29): Response, Client application that requests access tokens and calls p
 
 ### Community 214 - "SeqGenerationSettings"
 Cohesion: 0.16
-Nodes (8): get_random_sequences(), BaseModel, computed_field, field_validator, Random, SeqGenerationSettings, scenario_ids, TestGenerateRandomSequences
+Nodes (10): Create a command-like object with a .user containing an id., Create a user-like object for get_case_abac cached reads., Test get_case_abac behavior., get_case_abac raises UnauthorizedAuthError when cmd.user is None., get_case_abac raises UnauthorizedAuthError when cmd.user.id is None., Full access users return is_full_access True and avoid repository calls., Repeated calls with same user id are memoized., Non-admin user with no policies yields empty ABAC mappings. (+2 more)
 
 ### Community 215 - "Development Guide"
 Cohesion: 0.16
@@ -1686,7 +1686,7 @@ Nodes (13): Test JSON serialization of AlleleProfileForUpload., Test valid Allel
 
 ### Community 222 - "fastapp shared application framework"
 Cohesion: 0.13
-Nodes (20): casedb domain, commondb shared package, Dynaconf-based configuration, fastapp shared application framework, filter and transform support packages, IDP modes (IDPS, MOCK, NONE), omopdb domain, Repository mode parity (DICT, SA_SQLITE, SA_SQL) (+12 more)
+Nodes (11): Test scenarios related to Identifiers for parent objects., Test 6.2.1.1: Existing Identifier with NULL parent ID - should set parent ID., Test 6.2.1.2.1: Existing Identifier with same parent ID - should succeed., Test 6.2.1.2.2: Existing Identifier with different parent ID - should fail., Test 6.2.2: New Identifier for new parent - should succeed., Test 6.2.3.1: Multiple Identifiers, some existing for same parent - should…, Test 6.2.3.1: Multiple Identifiers, some existing for different parent - should…, Test 6.2.3.2: Multiple Identifiers, all new but same issuer - should fail. (+3 more)
 
 ### Community 223 - "lock.py"
 Cohesion: 0.04
@@ -1910,7 +1910,7 @@ Nodes (10): Any, BaseAbacService, Command, User, UUID, Filter or reject results 
 
 ### Community 278 - "App (command dispatcher / PEP)"
 Cohesion: 0.17
-Nodes (13): Command-Based Execution Model, Policy Enforcement Timing (BEFORE/DURING/AFTER), App (command dispatcher / PEP), BaseRbacService, CrudEndpointGenerator, PolicyDecisionPoint, Policy (is_allowed/get_content/filter hooks), RbacPolicy (+5 more)
+Nodes (7): BaseModel, computed_field, field_validator, Random, SeqGenerationSettings, scenario_ids, TestGenerateRandomSequences
 
 ### Community 279 - "Organization (omopdb.organization entity)"
 Cohesion: 0.29
@@ -2226,11 +2226,11 @@ Nodes (4): Role, User, Tests for RBAC verification in CaseBatchUploader.verify_u
 
 ### Community 357 - "TestDelete"
 Cohesion: 0.33
-Nodes (5): Env, scenario_ids, skipif, RBAC permissions: - root: CRUD - app_admin: R - refdata_admin: R - org_admin: R…, TestDelete
+Nodes (6): OrganizationShareCasePolicy, UserShareCasePolicy, UUID, Expand sharing policies into rights by case type and destination. Args:…, Apply one policy's enabled sharing rights to an aggregate. Args: policy:…, Intersect organization and user case-sharing rights. Args:…
 
 ### Community 358 - "dependency"
 Cohesion: 0.22
-Nodes (9): dependency, ModuleTestCreate, ModuleTestDelete, ModuleTestRead, ModuleTestUpdate, TestCreate, TestDelete, TestRead (+1 more)
+Nodes (7): Any, BaseAbacService, CommonReadUserPolicy, Configure shared user-read policy behavior for OmopDB roles and commands., Encapsulates shared user-read checks with OmopDB role and command mappings., Initialize the user-read policy with OmopDB dependencies., ReadUserPolicy
 
 ### Community 359 - "test_logging_yaml.py"
 Cohesion: 0.47
@@ -2278,7 +2278,7 @@ Nodes (6): AuthorizationCode, AuthorizationCodeStore, datetime, Authorization Co
 
 ### Community 370 - "BaseRepository (abstract)"
 Cohesion: 0.25
-Nodes (8): Layer Boundaries principle, BaseRepository (abstract), BaseService, DictRepository (in-memory backend), SARepository (SQLAlchemy backend), Repository Modes (DICT_DEMO/EMPTY, SA_SQLITE_DEMO/EMPTY, SA_SQL), Architectural Constraints table, Copilot Chat + Repo Docs Guide
+Nodes (5): Exception, TracebackType, Commit the transaction managed by this unit of work. Subclasses implement…, Roll back the transaction managed by this unit of work. Subclasses implement…, Finish the managed transaction context. Commits when the context exits…
 
 ### Community 371 - "Contact (doc)"
 Cohesion: 0.32
@@ -2286,11 +2286,11 @@ Nodes (8): Contact, Contact (doc), Site (doc), Contact, Site, Site, Contact, Sit
 
 ### Community 372 - "seqdb Overview ERD"
 Cohesion: 0.25
-Nodes (8): seqdb Overview ERD, seqdb FILE Service ERD, seqdb ORGANIZATION Service ERD (Detailed), seqdb ORGANIZATION Service ERD (Simplified), seqdb SEQ Service ERD (Detailed), seqdb SEQ Service ERD (Simplified), seqdb SYSTEM Service ERD (Detailed), seqdb SYSTEM Service ERD (Simplified)
+Nodes (8): create_seq_endpoints(), Any, APIRouter, App, Exception, FastAPI, NoReturn, Register all non-CRUD seqdb endpoints on the given router.
 
 ### Community 373 - "IdentifierIssuer"
 Cohesion: 0.25
-Nodes (8): IdentifierIssuer, IdentifierIssuer (seqdb.md), OrganizationIdentifierIssuerLink (seqdb.md), SampleIdentifier (seqdb.md), SeqIdentifier (seqdb.md), OrganizationIdentifierIssuerLink, SampleIdentifier, SeqIdentifier
+Nodes (6): OrganizationService, Any, CommonOrganizationService, Implement seqdb application service behavior for services.organization., Encapsulates seqdb organization service behavior., Initialize organization operations with seqdb invitation constraints. Args:…
 
 ### Community 374 - "Taxon"
 Cohesion: 0.25
@@ -2398,7 +2398,7 @@ Nodes (12): _build_snp_upload_command(), _build_upload_command(), Any, Env, para
 
 ### Community 400 - "Subject"
 Cohesion: 0.40
-Nodes (6): DataCollection, IdentifierIssuer, Subject (doc concept), SubjectIdentifier (doc concept), Subject, SubjectIdentifier
+Nodes (4): model_validator, Self, Validate claim mappings and public-provider credentials., Validate public-provider credentials.
 
 ### Community 401 - "MeasurementRelation"
 Cohesion: 0.40
@@ -2414,7 +2414,7 @@ Nodes (6): ProcedureOccurrence (omopdb.md), ProcedureOccurrenceIdentifier (omopd
 
 ### Community 404 - "Locus"
 Cohesion: 0.33
-Nodes (6): Allele, Locus, Allele (seqdb.md), Locus (seqdb.md), RefAllele (seqdb.md), RefAllele
+Nodes (4): model_validator, Self, Validate bound presence, ordering, and compatible censor operators. Raises:…, Validate bounds and build the optimized range matching function.
 
 ### Community 405 - "ReadSet"
 Cohesion: 0.33
@@ -2482,7 +2482,7 @@ Nodes (3): parametrize, scenario_ids, TestCaseTypeProps
 
 ### Community 421 - "init-db one-shot database creation service"
 Cohesion: 0.50
-Nodes (5): casedb service (SA_SQL mode, embedded LOCAL seqdb), init-db one-shot database creation service, lsp_sql SQL Server service, omopdb service (SA_SQL mode), seqdb service (SA_SQL mode)
+Nodes (3): model_validator, Self, Require at least one last-modified datetime boundary.
 
 ### Community 422 - "DataCollection (commondb.organization entity)"
 Cohesion: 0.50
@@ -2574,7 +2574,7 @@ Nodes (4): App.handle() command dispatch, Command-centric authorization, BEFORE/
 
 ### Community 445 - "NoteNlp"
 Cohesion: 0.50
-Nodes (4): NoteNlp (omopdb.omop.md), NoteNlpIdentifier (omopdb.omop.md), NoteNlp, NoteNlpIdentifier
+Nodes (3): model_validator, Self, Validate column-type requirements and prohibited linked metadata.
 
 ### Community 446 - "TreeAlgorithm"
 Cohesion: 0.50
@@ -2638,11 +2638,11 @@ Nodes (3): Any, _PytestMockConfig, Minimal config shim needed by pytest-mock's b
 
 ### Community 463 - "Default App Ports (8000/8001/8002/8010)"
 Cohesion: 0.67
-Nodes (3): Default App Ports (8000/8001/8002/8010), run.py quickstart command (app_type/idp_mode/repo_mode), api subcommand group (api, api_platform_local_mock_*)
+Nodes (3): Available Tools, Read operations, Write operations
 
 ### Community 464 - "CohortDefinition (omopdb.md)"
 Cohesion: 0.67
-Nodes (3): CohortDefinition, CohortDefinition (omopdb.md), CohortDefinition
+Nodes (3): [8.1.0](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v8.0.0...v8.1.0) (2026-06-15), Bug Fixes, Features
 
 ### Community 465 - "Organization"
 Cohesion: 1.00
@@ -2650,7 +2650,7 @@ Nodes (3): Organization, OrganizationAdminPolicy, User
 
 ### Community 466 - "Locus (seqdb entity)"
 Cohesion: 0.67
-Nodes (3): Allele (seqdb entity), Locus (seqdb entity), RefAllele (seqdb entity)
+Nodes (3): Bug Fixes, Chores, v0.1.10 (2025-08-12)
 
 ### Community 467 - "SeqCategory"
 Cohesion: 1.00
@@ -2658,7 +2658,7 @@ Nodes (3): SeqCategory (seqdb.md), SeqCategory, SeqCategorySet
 
 ### Community 468 - "Locus"
 Cohesion: 0.67
-Nodes (3): Allele, Locus, RefAllele
+Nodes (3): Bug Fixes, Chores, v0.1.5 (2025-06-04)
 
 ### Community 469 - "Enum"
 Cohesion: 0.19
