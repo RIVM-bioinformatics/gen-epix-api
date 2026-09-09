@@ -11,7 +11,7 @@ from __future__ import annotations
 import itertools
 import json
 from collections.abc import Callable, Hashable
-from typing import Any
+from typing import Any, get_type_hints
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
@@ -588,7 +588,7 @@ class CrudEndpointGenerator:
                     objs=(
                         update_obj
                         if route.model_class is create_api_model_class
-                        else route.model_class.to_model(update_obj)  # type: ignore[attr-defined]
+                        else create_api_model_class.to_model(update_obj)  # type: ignore[attr-defined]
                     ),
                     return_id=route.put_returns_id,
                 )
@@ -698,7 +698,7 @@ class CrudEndpointGenerator:
             raise ValueError("User dependency must be provided")
         id_class = route.id_class
 
-        async def endpoint_function(user: user_dependency, object_id: Any) -> Any:  # type: ignore[valid-type]
+        async def endpoint_function(user: user_dependency, object_id: id_class) -> Any:  # type: ignore[valid-type]
             # TODO: distinguish between soft and hard delete through hard_delete:
             #  bool = False parameter
             """Endpoint function."""
@@ -860,6 +860,17 @@ class CrudEndpointGenerator:
         operation_id: str | None = None,
     ) -> None:
         """Add route."""
+        endpoint_fn.__annotations__ = get_type_hints(
+            endpoint_fn,
+            globalns=globals(),
+            localns={
+                "user_dependency": route.user_dependency,
+                "id_class": route.id_class,
+                "create_api_model_class": route.create_api_model_class,
+                "read_api_model_class": route.read_api_model_class,
+            },
+            include_extras=True,
+        )
         if not operation_id:
             tokens = endpoint.split("/")
             if tokens[-1] == "{object_id}" or method.value.upper() == "POST":

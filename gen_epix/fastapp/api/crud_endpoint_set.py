@@ -46,7 +46,7 @@ class CrudEndpointSet(BaseModel):
                 data["read_api_model_class"] = data["model_class"]
             if not data.get("create_api_model_class"):
                 data["create_api_model_class"] = data["read_api_model_class"]
-            if data.get("operation_id_basename"):
+            if not data.get("operation_id_basename"):
                 data["operation_id_basename"] = data["endpoint_basename"]
         else:
             raise NotImplementedError("Not implemented for non-dict data")
