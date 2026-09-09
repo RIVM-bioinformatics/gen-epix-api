@@ -27,16 +27,12 @@ for rules not covered here.
    the innermost functions and methods, then move to the containing classes,
    modules and packages. Make sure higher-level docstrings accurately summarize
    lower-level docstrings.
-4. Always add a docstring to every module, class, function, method, nested
-   function, private helper, property getter, static method, class method, and
-   async function in scope. Visibility, nesting, decorators, and an inline
-   `# type: ignore` on the signature never permit omitting a docstring. Use a
-   one-line docstring only for a small, obvious, non-public helper. Public APIs,
-   modules, packages, nontrivial code, and non-obvious behavior require a
-   complete docstring. Do not skip docstrings that add no information, such as
-   `"""Tests for foo.bar."""`, but keep them one line long. Test module
-   docstrings must be created, but can be very brief. This rule does not apply
-   to some specific cases that are documented further down in Step 10.
+4. Add docstrings to modules, classes, and functions that are public,
+   nontrivial, or non-obvious. Private helpers and nested functions need
+   docstrings only when their size or behavior meets those criteria. Test-module
+   docstrings are optional and should be added only when they explain unusual
+   setup, execution, or environment requirements; do not add placeholders such
+   as `"""Tests for foo.bar."""`.
 5. Describe what the code does and how callers should use it, not its internal
    implementation. Mention implementation details only when callers need to
    know them, such as whether an argument is mutated in place.
@@ -49,13 +45,11 @@ for rules not covered here.
    persistence, generated interfaces, stateful orchestration, and multi-branch
    workflows as complex. Do not narrate internal statements; explain phases,
    guarantees, mutations, and delegation that affect callers.
-8. Any method that explicitly raises an exception must use a complete docstring.
-   Describe relevant arguments and return values, and document each explicit,
-   interface-relevant exception in `Raises:` with its triggering condition. Also
-   document propagated exceptions when they are part of a public contract. Do
-   not restate obvious types. Use a consistent hanging indent of two or four
-   spaces within the file. This rule does not apply to some specific cases that
-   are documented further down in Step 10.
+8. Document exceptions in `Raises:` when they are relevant to the caller-facing
+   contract, including propagated exceptions when applicable. Do not document
+   exceptions raised only because a caller violated the documented API. Include
+   `Args:`, `Returns:`, and `Yields:` only when they add meaning beyond names and
+   annotations. Use a consistent hanging indent of two or four spaces.
 9. For public classes with multiple responsibilities or lifecycle behavior, use
    a summary followed by paragraphs explaining their role, collaboration
    boundaries, lifecycle, side effects, and security or trust implications where
@@ -80,9 +74,10 @@ for rules not covered here.
           description.
       iv. If model serializers are used, document their output representation, omitted 
           or derived values, and error conditions when applicable in a separate 
-          `Model serialization:` paragraph. Decorated validator and serializer methods
-          still need concise docstrings for coverage, but must not duplicate caller-
-          facing contracts or include Google-style sections.
+          `Model serialization:` paragraph. Add concise method docstrings to
+          decorated validators and serializers when their implementation is
+          nontrivial or non-obvious, but do not duplicate caller-facing contracts
+          or include Google-style sections.
       v. Do not change a field default, declaration form, or runtime behavior solely to
          add a description; use the existing `Field()` or `Annotated` metadata pattern.
    c. FastAPI route handlers: including nested handlers, always require a
@@ -106,15 +101,14 @@ for rules not covered here.
    before comments, nested definitions, or executable statements. Move
    explanatory comments below the docstring rather than placing a docstring
    after them.
-13. For overridden methods, put a one-line docstring `See base method.` when behavior
-   does not materially differ or there are no extra details, such as side effects.
-   Otherwise put a full docstring.
+13. An `@override` method does not need a redundant docstring when it preserves
+   the base contract. Document material contract differences and added side
+   effects. Without `@override`, provide the docstring required by the standard.
 14. Do not adjust inline comments. Do not update docstrings that are not within the
    requested scope.
-15. Before finishing a module, make a coverage pass over every `def` and `async
-   def`, including nested and underscore-prefixed definitions. Confirm each has
-   a docstring immediately after its signature; comments, decorators, and
-   type-checker directives do not count as documentation.
+15. Before finishing, review public, nontrivial, and non-obvious definitions in
+   scope for accurate docstrings. Comments, decorators other than `@override`,
+   and type-checker directives do not count as documentation.
 
 ## Audit Script
 
@@ -133,8 +127,10 @@ python .agents/skills/write-docstring/scripts/check_docstrings.py <target> \
 
 Available checks are:
 
-- `coverage`: missing module, class, and function docstrings, excluding overload
-   stubs.
+- `coverage`: missing production-module docstrings and missing docstrings on
+   structurally public top-level definitions and public methods. It excludes
+   repository test modules, overloads, `@override` methods, private helpers, and
+   nested definitions; review nontrivial or non-obvious excluded code manually.
 - `exception-class`: exception classes with missing or potentially misleading
    descriptions.
 - `pydantic`: Pydantic method contracts kept off validators and serializers, and
@@ -142,9 +138,10 @@ Available checks are:
 - `package`: non-blocking warnings for package docstrings that omit literal
    re-export names. Review them because a docstring may describe exports as a
    group.
-- `raises`: direct exception paths missing applicable `Args:`, `Returns:`, or
-   `Raises:` sections. It excludes Pydantic field/model validators and serializers
-   and overload stubs.
+- `raises`: non-blocking prompts to review public direct exception paths that
+   lack `Raises:`. It excludes overrides, Pydantic validators and serializers,
+   overloads, and private helpers; decide manually whether an exception is part
+   of the caller-facing contract.
 
 The audit is structural. It cannot determine whether a description accurately
 explains behavior, whether a field description fully covers decorator behavior,

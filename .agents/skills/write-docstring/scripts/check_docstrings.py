@@ -46,6 +46,24 @@ def is_overload(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
     return has_decorator(node, {"overload"})
 
 
+def is_override(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    """Return whether a function explicitly overrides a base method."""
+    return has_decorator(node, {"override"})
+
+
+def is_public_function(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    """Return whether a function is part of the structural public surface."""
+    return not node.name.startswith("_") or node.name == "__init__"
+
+
+def is_test_module(path: Path) -> bool:
+    """Return whether a path belongs to the repository test tree."""
+    parts = {part.lower() for part in path.parts}
+    return "gen_epix" not in parts and (
+        "test" in parts or path.name.startswith("test_")
+    )
+
+
 def is_exception_class(node: ast.ClassDef) -> bool:
     """Return whether a class directly declares an exception base."""
     return any(
@@ -97,40 +115,41 @@ def has_direct_raise(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
     return visitor.found
 
 
-def required_sections(node: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
-    """Return required Google-style sections for a direct exception path."""
-    required = {"Raises:"}
-    arguments = [*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs]
-    caller_arguments = [
-        argument for argument in arguments if argument.arg not in {"self", "cls"}
-    ]
-    if caller_arguments or node.args.vararg or node.args.kwarg:
-        required.add("Args:")
-    if isinstance(node.returns, ast.Name) and node.returns.id == "NoReturn":
-        return required
-    if isinstance(node.returns, ast.Attribute) and node.returns.attr == "NoReturn":
-        return required
-    if not (
-        node.returns is None
-        or isinstance(node.returns, ast.Constant)
-        and node.returns.value is None
-    ):
-        required.add("Returns:")
-    return required
-
-
 def check_coverage(tree: ast.Module) -> list[tuple[int, str]]:
-    """Return missing module, class, and function docstrings."""
+    """Return missing docstrings for the structural public surface."""
     findings: list[tuple[int, str]] = []
     if ast.get_docstring(tree) is None:
         findings.append((1, "coverage: module docstring is missing"))
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ClassDef) and ast.get_docstring(node) is None:
-            findings.append(
-                (node.lineno, f"coverage: class {node.name!r} docstring is missing")
-            )
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            if not is_overload(node) and ast.get_docstring(node) is None:
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef) and not node.name.startswith("_"):
+            if ast.get_docstring(node) is None:
+                findings.append(
+                    (
+                        node.lineno,
+                        f"coverage: class {node.name!r} docstring is missing",
+                    )
+                )
+            for method in node.body:
+                if not isinstance(method, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                if (
+                    is_public_function(method)
+                    and not is_overload(method)
+                    and not is_override(method)
+                    and ast.get_docstring(method) is None
+                ):
+                    findings.append(
+                        (
+                            method.lineno,
+                            f"coverage: function {method.name!r} docstring is missing",
+                        )
+                    )
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if (
+                is_public_function(node)
+                and not is_overload(node)
+                and ast.get_docstring(node) is None
+            ):
                 findings.append(
                     (
                         node.lineno,
@@ -221,24 +240,25 @@ def check_package(tree: ast.Module) -> list[tuple[int, str]]:
 
 
 def check_raises(tree: ast.Module) -> list[tuple[int, str]]:
-    """Return direct exception paths missing required Google-style sections."""
+    """Return advisory findings for undocumented public direct raises."""
     findings: list[tuple[int, str]] = []
     for node in ast.walk(tree):
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
-        if is_overload(node) or has_decorator(node, PYDANTIC_DECORATORS):
+        if (
+            not is_public_function(node)
+            or is_overload(node)
+            or is_override(node)
+            or has_decorator(node, PYDANTIC_DECORATORS)
+        ):
             continue
         if not has_direct_raise(node):
             continue
-        docstring = ast.get_docstring(node) or ""
-        missing = sorted(
-            section for section in required_sections(node) if section not in docstring
-        )
-        if missing:
+        if "Raises:" not in (ast.get_docstring(node) or ""):
             findings.append(
                 (
                     node.lineno,
-                    f"raises: function {node.name!r} is missing {', '.join(missing)}",
+                    f"raises: review whether function {node.name!r} needs Raises:",
                 )
             )
     return findings
@@ -252,13 +272,14 @@ def audit_file(path: Path, checks: set[str]) -> list[tuple[int, str]]:
         return [(1, f"parse: cannot parse file: {error}")]
 
     findings: list[tuple[int, str]] = []
-    if "coverage" in checks:
+    test_module = is_test_module(path)
+    if "coverage" in checks and not test_module:
         findings.extend(check_coverage(tree))
     if "exception-class" in checks:
         findings.extend(check_exception_classes(tree))
     if "pydantic" in checks:
         findings.extend(check_pydantic(tree))
-    if "package" in checks and path.name == "__init__.py":
+    if "package" in checks and path.name == "__init__.py" and not test_module:
         findings.extend(check_package(tree))
     if "raises" in checks:
         findings.extend(check_raises(tree))
@@ -286,7 +307,7 @@ def main() -> int:
     ]
     blocking_findings = []
     for path, line, message in findings:
-        if message.startswith("package:"):
+        if message.startswith(("package:", "raises:")):
             print(f"warning: {path}:{line}: {message}")
         else:
             blocking_findings.append((path, line, message))

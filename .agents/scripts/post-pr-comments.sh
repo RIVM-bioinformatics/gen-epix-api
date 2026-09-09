@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Post inline review comments to a GitHub PR via the REST API.
-# Shared by Claude Code, Codex, and GitHub Copilot.
+# Used by the repository's PR review skill.
 #
 # Input (stdin): JSON {pr_number, comments: [{file, line, start_line?, start_side?, side?, body}, ...]}
 #   - pr_number: the target PR number (required)

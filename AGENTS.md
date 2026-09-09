@@ -8,8 +8,6 @@ tests, and workflows are the final authority when they disagree with docs.
 
 - Start at the owning command, service, repository, router, or configuration
       module. Use nearby tests and existing implementations as the primary pattern.
-- For architecture or relationship questions, query `graphify-out/graph.json`
-      first when it exists. Then verify the relevant behavior in source code.
 - Do not invent endpoints, settings, ports, roles, repository modes, or module
       ownership. Search for missing references and report stale documentation.
 - Keep changes focused. Do not rewrite unrelated user changes or generated
@@ -44,8 +42,7 @@ Preserve these boundaries:
 - In production, cross-domain communication uses HTTP. Search for an existing
       client abstraction before adding a new remote-call pattern.
 - Python docstrings and comments follow the repo standard in
-  `docs/standards/google-python-style-guide-3.8-comments-and-docstrings.md` and
-  the repo instruction file `.github/copilot-instructions.md`.
+  `docs/standards/google-python-style-guide-3.8-comments-and-docstrings.md`.
 
 ## Commands
 
@@ -162,5 +159,3 @@ If `graphify-out/wiki/index.md` exists, use it for broad navigation. Read `graph
 only for broad architecture review or when query/path/explain do not surface enough context. Only read
 source files when (a) modifying/debugging specific code, (b) the graph lacks the needed detail, or
 (c) the graph is missing or stale.
-
-Type `/graphify` in Copilot Chat to build or update the graph.

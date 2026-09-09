@@ -16,6 +16,7 @@ applyTo: "gen_epix/**/*.py,test/**/*.py"
   in that same narrow slice.
 - Test behavior, not implementation details: cover expected errors, malformed
   input, empty input, and other important boundaries — not internal call sequences.
-- To run a specific suite, use the `test_*` methods defined in [run.py](../../run.py)
-  (e.g. `python run.py test_casedb_unit_services_case_upload`) rather than
-  reconstructing raw pytest paths from memory.
+- Use a `test_*` method defined in [run.py](../../run.py) for an existing named
+  or curated suite (for example,
+  `python run.py test_casedb_unit_services_case_upload`). Use direct `pytest`
+  for an exact file, node ID, or `-k` selection.
