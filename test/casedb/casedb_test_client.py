@@ -1212,7 +1212,7 @@ class CasedbTestClient(TestClient):
                 value = regions[0].id
             content[col.id] = str(value)
 
-        # Create the case, encoding the case_type_index and case_index in the case_date as resp. month and days since 1900-01-01
+        # Create the case, encoding the case_type_index and case_index in the timed_at as resp. month and days since 1900-01-01
         case_batch_upload_result: model.CaseBatchUploadResult = self.handle(
             command.UploadCasesCommand(
                 user=user,
@@ -1950,7 +1950,7 @@ class CasedbTestClient(TestClient):
             as_set=True,
         )
         for x in sorted(
-            cases, key=lambda x: self._convert_case_date_to_code(x.case_date)
+            cases, key=lambda x: self._convert_case_timed_at_to_code(x.timed_at)
         ):
             if x.id in case_data_collection_link_sets:
                 data_collection_str = ", ".join(
@@ -1962,7 +1962,7 @@ class CasedbTestClient(TestClient):
                         )
                     ]
                 )
-                case_name = self._convert_case_date_to_code(x.case_date)
+                case_name = self._convert_case_timed_at_to_code(x.timed_at)
 
                 print(f"{case_name}: {data_collection_str} ({x.id})")
 
@@ -2226,7 +2226,7 @@ class CasedbTestClient(TestClient):
             cases = [
                 x.code
                 for x in cases
-                # if self._convert_case_date_to_code(x.case_date) in case_codes
+                # if self._convert_case_date_to_code(x.timed_at) in case_codes
             ]
         case_data_collection_links: list[model.CaseDataCollectionLink] = self.read_all(  # type: ignore[assignment]
             root_user, model.CaseDataCollectionLink
@@ -2242,7 +2242,7 @@ class CasedbTestClient(TestClient):
             as_set=True,
         )
         print("\nCases:")
-        for x in sorted(cases, key=lambda x: x.case_date):
+        for x in sorted(cases, key=lambda x: x.timed_at):
             curr_data_collections = sorted(
                 [
                     data_collection_map[x].name
@@ -2253,7 +2253,7 @@ class CasedbTestClient(TestClient):
             curr_content = sorted([(col_map[x].code, y) for x, y in x.content.items()])
             curr_content = ", ".join([f"{x[0]}={x[1]}" for x in curr_content])
             print(
-                f"{self._convert_case_date_to_code(x.case_date)}: {curr_content}; {curr_data_collections} ({x.id})"
+                f"{self._convert_case_timed_at_to_code(x.timed_at)}: {curr_content}; {curr_data_collections} ({x.id})"
             )
 
     def get_obj(
@@ -2322,9 +2322,7 @@ class CasedbTestClient(TestClient):
         )
 
     @staticmethod
-    def _convert_case_date_to_code(case_date: datetime) -> str:
-        case_type_index = int(case_date.month)  # Get case_type_index from month
-        case_index = int(case_date.year - 1900)  # Get case_index from year offset
-        return f"case{case_type_index}_{case_index}"
-        return f"case{case_type_index}_{case_index}"
-        return f"case{case_type_index}_{case_index}"
+    def _convert_case_timed_at_to_code(timed_at: datetime) -> str:
+        case_type_index = int(timed_at.month)  # Get case_type_index from month
+        case_index = int(timed_at.year - 1900)  # Get case_index from year offset
+        return f"timed_at{case_type_index}_{case_index}"

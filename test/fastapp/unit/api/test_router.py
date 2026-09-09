@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 from gen_epix.fastapp.api.router import RouterData
 
 
