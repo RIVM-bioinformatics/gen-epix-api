@@ -27,12 +27,12 @@ for rules not covered here.
    the innermost functions and methods, then move to the containing classes,
    modules and packages. Make sure higher-level docstrings accurately summarize
    lower-level docstrings.
-4. Add docstrings to modules, classes, and functions that are public,
-   nontrivial, or non-obvious. Private helpers and nested functions need
-   docstrings only when their size or behavior meets those criteria. Test-module
-   docstrings are optional and should be added only when they explain unusual
-   setup, execution, or environment requirements; do not add placeholders such
-   as `"""Tests for foo.bar."""`.
+4. Add docstrings to production modules and classes. Add function and method
+   docstrings when they are public, nontrivial, or non-obvious. Private helpers
+   and nested functions need docstrings only when their size or behavior meets
+   those function criteria. Test-module docstrings are optional and should be
+   added only when they explain unusual setup, execution, or environment
+   requirements; do not add placeholders such as `"""Tests for foo.bar."""`.
 5. Describe what the code does and how callers should use it, not its internal
    implementation. Mention implementation details only when callers need to
    know them, such as whether an argument is mutated in place.
@@ -127,10 +127,11 @@ python .agents/skills/write-docstring/scripts/check_docstrings.py <target> \
 
 Available checks are:
 
-- `coverage`: missing production-module docstrings and missing docstrings on
-   structurally public top-level definitions and public methods. It excludes
-   repository test modules, overloads, `@override` methods, private helpers, and
-   nested definitions; review nontrivial or non-obvious excluded code manually.
+- `coverage`: missing production-module and class docstrings, plus missing
+   docstrings on structurally public top-level functions and public methods. It
+   checks private and nested classes, but excludes repository test modules,
+   overloads, `@override` methods, private functions, and nested functions;
+   review nontrivial or non-obvious excluded functions manually.
 - `exception-class`: exception classes with missing or potentially misleading
    descriptions.
 - `pydantic`: Pydantic method contracts kept off validators and serializers, and

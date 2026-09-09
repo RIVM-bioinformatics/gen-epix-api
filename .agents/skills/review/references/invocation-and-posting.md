@@ -44,9 +44,14 @@ The helper appends the required AI-generated attribution once. Do not post any
 comment before the user approves it. If only some posts fail, report the
 successful indexes and each failure; ask before retrying.
 
+Posting requires `bash`, `jq`, `git`, and an authenticated `gh` CLI. The helper
+returns a JSON failure with exit code 0 when `jq` is unavailable so callers can
+continue to inspect the documented result shape.
+
 ## Troubleshooting
 
 - No PR: pass `#<number>` or check out a branch with an open PR.
 - PR number treated as task text: add the required leading `#`.
+- Missing `jq`: install it before retrying the approved posting operation.
 - Authentication failure: run `gh auth status` and report the result.
 - Invalid position: refresh the diff and use a line on the correct side.

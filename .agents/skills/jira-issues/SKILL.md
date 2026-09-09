@@ -1,9 +1,10 @@
 ---
 name: jira-issues
 description: >-
-  Create, query, update, assign, transition, comment on, and link Jira issues
-  through the configured Atlassian MCP server. Use for Jira issue management;
-  use implement-jira-issue for end-to-end code delivery from a ticket.
+  Create, query, update, assign, transition, comment on, link, and log work on
+  Jira issues through the configured Atlassian MCP server. Use for Jira issue
+  management; use implement-jira-issue for end-to-end code delivery from a
+  ticket.
 ---
 
 # Jira Issues
@@ -54,6 +55,25 @@ existing collection, so read before adding to one.
 For status changes, call `getTransitionsForJiraIssue` and use the returned
 transition ID. Never hardcode transition IDs or force an unrelated transition.
 Resolve assignees with `lookupJiraAccountId`; ask when lookup is ambiguous.
+
+### Worklogs
+
+Use worklog tooling only when the user asks to log time or update a worklog.
+Read the issue first, then call `addWorklogToJiraIssue` when that tool name is
+exposed by the current client. A new worklog requires `cloudId`,
+`issueIdOrKey`, and `timeSpent` in Jira duration syntax such as `1h 30m`.
+Pass `commentBody` only when requested. To update an existing entry, also pass
+its `worklogId` and only the fields the user asked to change.
+
+`started` is optional. Preserve an explicit date, time, and UTC offset supplied
+by the user; when a local time is ambiguous, ask for its time zone. Otherwise
+omit `started` and let Jira default it to the current time. Never infer logged
+duration or start time from commits, issue activity, or elapsed wall-clock time.
+
+A worklog is a team-visible accounting write. Confirm the exact issue, duration,
+start time, and comment immediately before the call unless the user's current
+request already supplied and explicitly authorized those values. Report the
+created worklog and the duration recorded.
 
 ## Repository context and safety
 

@@ -116,19 +116,20 @@ def has_direct_raise(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
 
 
 def check_coverage(tree: ast.Module) -> list[tuple[int, str]]:
-    """Return missing docstrings for the structural public surface."""
+    """Return missing class and structural public-function docstrings."""
     findings: list[tuple[int, str]] = []
     if ast.get_docstring(tree) is None:
         findings.append((1, "coverage: module docstring is missing"))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef) and ast.get_docstring(node) is None:
+            findings.append(
+                (
+                    node.lineno,
+                    f"coverage: class {node.name!r} docstring is missing",
+                )
+            )
     for node in tree.body:
         if isinstance(node, ast.ClassDef) and not node.name.startswith("_"):
-            if ast.get_docstring(node) is None:
-                findings.append(
-                    (
-                        node.lineno,
-                        f"coverage: class {node.name!r} docstring is missing",
-                    )
-                )
             for method in node.body:
                 if not isinstance(method, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     continue
