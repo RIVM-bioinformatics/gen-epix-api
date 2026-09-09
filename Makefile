@@ -10,6 +10,9 @@
 #                           and the batch-size test skip themselves.
 #   stop-db                 Stop SQL Server (data kept in the Docker volume).
 #   test                    Run the full pytest suite.
+#   generate-schema-migration-docs
+#                           Generate the committed-friendly Alembic history
+#                           pages under docs/schema_migration/.
 #   calculate-distances-performance-mssql
 #                           Tear down the SQL Server volume, start only lsp_sql,
 #                           create the seqdb database, then run the seq-distance
@@ -23,8 +26,8 @@
 #   database: casedb / seqdb / omopdb
 # ─────────────────────────────────────────────────────────────────────────────
 
-.PHONY: restart-docker restart-docker-teardown start-db stop-db test \
-        calculate-distances-performance-mssql
+.PHONY: restart-docker restart-docker-teardown test \
+        generate-schema-migration-docs calculate-distances-performance-mssql
 
 COMPOSE_FILE = docker-compose.sql.idp.yml
 SQL_COMPOSE_FILE = docker-compose.sql.yml
@@ -52,6 +55,14 @@ stop-db:
 
 test:
 	pytest --capture=fd -q --tb=short
+
+generate-schema-migration-docs:
+	mkdir -p docs/schema_migration
+	for service in commondb casedb seqdb omopdb; do \
+		printf '# %s Alembic migration history\n\n```text\n' "$$service" > "docs/schema_migration/$$service.md"; \
+		alembic -c "gen_epix/$$service/repositories/alembic.ini" history --verbose | sed -e 's/[[:space:]]*$$//' -e 's|Path: .*/gen_epix/|Path: gen_epix/|' >> "docs/schema_migration/$$service.md"; \
+		printf '```\n' >> "docs/schema_migration/$$service.md"; \
+	done
 
 calculate-distances-performance-mssql:
 	docker compose -f $(COMPOSE_FILE) down -v

@@ -66,7 +66,9 @@ for rules not covered here.
    a. Exception classes: describe what the error represents rather than when
       it is raised.
    b. Pydantic models (classes):
-      i. Start the docstring with `Represents ...`.
+      i. Start the docstring with `Represents`. If the model is a subclass of `Command`,
+         i.e. representing an action, start the docstring with
+         `Represents a request to execute`.
       ii. Do not describe each field in an `Attributes:` section. Instead, make sure 
           that each field has an appropriate description. If field validators and/or
           serializers are used, document their purpose and behavior in the 
