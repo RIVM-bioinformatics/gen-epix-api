@@ -14,7 +14,7 @@ from gen_epix.casedb.services.case.retrieve_stats import (
 )
 from gen_epix.commondb.domain.model.organization import User
 from gen_epix.fastapp.enum import CrudOperation
-from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
+from gen_epix.filter.datetime_range import DatetimeRangeFilter
 from gen_epix.filter.enum import FilterType
 
 
@@ -143,7 +143,7 @@ class BaseRetrieveStatsTestCase:
         self,
         *,
         case_type_ids: set[UUID] | None,
-        datetime_range_filter: TypedDatetimeRangeFilter | None = None,
+        datetime_range_filter: DatetimeRangeFilter | None = None,
     ) -> case_command.RetrieveCaseTypeStatsCommand:
         return case_command.RetrieveCaseTypeStatsCommand(
             user=self.user,
@@ -155,7 +155,7 @@ class BaseRetrieveStatsTestCase:
         self,
         *,
         case_set_ids: set[UUID] | None = None,
-        datetime_range_filter: TypedDatetimeRangeFilter | None = None,
+        datetime_range_filter: DatetimeRangeFilter | None = None,
     ) -> case_command.RetrieveCaseSetStatsCommand:
         return case_command.RetrieveCaseSetStatsCommand(
             user=self.user,
@@ -180,7 +180,7 @@ class BaseRetrieveStatsTestCase:
 @pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestCaseTypeStats(BaseRetrieveStatsTestCase):
     def test_no_case_type_ids_full_access_reads_all(self) -> None:
-        dt_filter = TypedDatetimeRangeFilter(
+        dt_filter = DatetimeRangeFilter(
             type=FilterType.DATETIME_RANGE.value,
             lower_bound=datetime.now(timezone.utc) - timedelta(days=7),
             upper_bound=datetime.now(timezone.utc),

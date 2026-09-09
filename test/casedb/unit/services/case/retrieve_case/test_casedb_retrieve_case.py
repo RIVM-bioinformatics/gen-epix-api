@@ -22,11 +22,11 @@ from gen_epix.casedb.services.case.retrieve_case import (
     case_service_retrieve_cases_by_query,
 )
 from gen_epix.commondb.domain.enum import Role
-from gen_epix.filter.composite import TypedCompositeFilter
+from gen_epix.filter.composite import CompositeFilter
 from gen_epix.filter.enum import FilterType, LogicalOperator
-from gen_epix.filter.exists import TypedExistsFilter
-from gen_epix.filter.number_set import TypedNumberSetFilter
-from gen_epix.filter.string_set import TypedStringSetFilter
+from gen_epix.filter.exists import ExistsFilter
+from gen_epix.filter.number_set import NumberSetFilter
+from gen_epix.filter.string_set import StringSetFilter
 
 
 class _FakeCaseAbacPolicy(BaseCaseAbacPolicy):
@@ -183,15 +183,15 @@ class BaseRetrieveCaseTestCase:
 
     def create_typed_string_set_filter(
         self, key: UUID, members: set[str]
-    ) -> TypedStringSetFilter:
-        return TypedStringSetFilter(
+    ) -> StringSetFilter:
+        return StringSetFilter(
             type=FilterType.STRING_SET.value, key=str(key), members=frozenset(members)
         )
 
     def create_typed_number_set_filter(
         self, key: UUID, members: set[float]
-    ) -> TypedNumberSetFilter:
-        return TypedNumberSetFilter(
+    ) -> NumberSetFilter:
+        return NumberSetFilter(
             type=FilterType.NUMBER_SET.value, key=str(key), members=frozenset(members)
         )
 
@@ -211,8 +211,8 @@ class BaseRetrieveCaseTestCase:
         self,
         filters: list[Any],
         operator: LogicalOperator = LogicalOperator.AND,
-    ) -> TypedCompositeFilter:
-        return TypedCompositeFilter(
+    ) -> CompositeFilter:
+        return CompositeFilter(
             type=FilterType.COMPOSITE.value,
             filters=filters,
             operator=operator,
@@ -378,7 +378,7 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
             col_id, ref_col_id, enum.ColType.NOMINAL, concept_set_id=uuid4()
         )
         invalid_member: str = "invalid_member"
-        filter: TypedCompositeFilter = self.create_composite_filter(
+        filter: CompositeFilter = self.create_composite_filter(
             [self.create_typed_string_set_filter(col_id, {invalid_member})]
         )
         cq: model.CaseQuery = model.CaseQuery(
@@ -412,7 +412,7 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
         col, ref_col = self.create_col(
             col_id, ref_col_id, enum.ColType.NOMINAL, concept_set_id=uuid4()
         )
-        filter: TypedCompositeFilter = self.create_composite_filter(
+        filter: CompositeFilter = self.create_composite_filter(
             [self.create_typed_number_set_filter(col_id, {1.0})]
         )
         case_query: model.CaseQuery = model.CaseQuery(
@@ -465,10 +465,10 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
         )
 
         # Filters compatible with mapping
-        from gen_epix.filter.date_range import TypedDateRangeFilter
+        from gen_epix.filter.date_range import DateRangeFilter
 
         filters: list[Any] = [
-            TypedDateRangeFilter(
+            DateRangeFilter(
                 type=FilterType.DATE_RANGE.value,
                 key=str(time_col_id),
                 lower_bound=date(2024, 1, 1),
@@ -482,7 +482,7 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
                 reg_col_id, {"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"}
             ),
         ]
-        filt: TypedCompositeFilter = self.create_composite_filter(filters)
+        filt: CompositeFilter = self.create_composite_filter(filters)
 
         cq: model.CaseQuery = model.CaseQuery(
             label=None,
@@ -801,10 +801,10 @@ def test_mapping_branches_decimal_col_type() -> None:
     ref_col_id: UUID = uuid4()
     col, ref_col = base.create_col(col_id, ref_col_id, col_type)
     # Compose an OR with Exists to avoid filtering away matching rows
-    exists_filter: TypedExistsFilter = TypedExistsFilter(
+    exists_filter: ExistsFilter = ExistsFilter(
         type=FilterType.EXISTS.value, key=str(col_id)
     )
-    filter: TypedCompositeFilter = base.create_composite_filter(
+    filter: CompositeFilter = base.create_composite_filter(
         [filter_factory(base, col_id), exists_filter], operator=LogicalOperator.OR
     )
     cq: model.CaseQuery = model.CaseQuery(
@@ -851,10 +851,10 @@ def test_mapping_branches_text_col_type() -> None:
     ref_col_id: UUID = uuid4()
     col, ref_col = base.create_col(col_id, ref_col_id, col_type)
     # Compose an OR with Exists to avoid filtering away matching rows
-    exists_filter: TypedExistsFilter = TypedExistsFilter(
+    exists_filter: ExistsFilter = ExistsFilter(
         type=FilterType.EXISTS.value, key=str(col_id)
     )
-    filter: TypedCompositeFilter = base.create_composite_filter(
+    filter: CompositeFilter = base.create_composite_filter(
         [filter_factory(base, col_id), exists_filter], operator=LogicalOperator.OR
     )
     case_query: model.CaseQuery = model.CaseQuery(

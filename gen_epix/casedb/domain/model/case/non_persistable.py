@@ -14,7 +14,8 @@ from gen_epix import fastapp
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import Model
 from gen_epix.fastapp.domain import Entity
-from gen_epix.filter import TypedCompositeFilter, TypedDatetimeRangeFilter
+from gen_epix.filter import CompositeFilter
+from gen_epix.filter.datetime_range import DatetimeRangeFilter
 from gen_epix.filter.uuid_set import UuidSetFilter
 
 
@@ -86,12 +87,12 @@ class CaseQuery(Model):
         default=None,
         description="The IDs of the case set(s) that the case must belong to. Not applied if not provided. All case sets must belong to the same CaseType as case_type_id.",
     )
-    datetime_range_filter: TypedDatetimeRangeFilter | None = Field(
+    datetime_range_filter: DatetimeRangeFilter | None = Field(
         default=None,
         description="The datetime range filter to apply to the case date. Not applied if not provided.",
     )
     # TODO: add data_collection_id
-    filter: TypedCompositeFilter | None = Field(
+    filter: CompositeFilter | None = Field(
         default=None, description="The filter to apply. Not applied if not provided."
     )
 
@@ -104,7 +105,7 @@ class CaseSetQuery(Model):
         persistable=False,
     )
     label: str = Field(description="The label for the query.")
-    filter: TypedCompositeFilter = Field(description="The filter to apply.")
+    filter: CompositeFilter = Field(description="The filter to apply.")
 
 
 class BaseCaseRights(Model):

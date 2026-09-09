@@ -20,7 +20,7 @@ from gen_epix.commondb.config import AppCfg, BaseAppCfg
 from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.test.test_client import TestClient
 from gen_epix.fastapp import CrudOperation
-from gen_epix.filter import FilterType, TypedEqualsUuidFilter, TypedUuidSetFilter
+from gen_epix.filter import EqualsUuidFilter, FilterType, UuidSetFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.util import map_paired_elements
 
@@ -1258,7 +1258,7 @@ class CasedbTestClient(TestClient):
             command.CaseDataCollectionLinkCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ALL,
-                query_filter=TypedEqualsUuidFilter(
+                query_filter=EqualsUuidFilter(
                     type=FilterType.EQUALS_UUID.value,
                     key="case_id",
                     value=case.id,
@@ -1399,7 +1399,7 @@ class CasedbTestClient(TestClient):
             command.CaseSetDataCollectionLinkCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ALL,
-                query_filter=TypedEqualsUuidFilter(
+                query_filter=EqualsUuidFilter(
                     type=FilterType.EQUALS_UUID.value,
                     key="case_set_id",
                     value=case_set.id,
@@ -1414,7 +1414,7 @@ class CasedbTestClient(TestClient):
             command.CaseSetMemberCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ALL,
-                query_filter=TypedEqualsUuidFilter(
+                query_filter=EqualsUuidFilter(
                     type=FilterType.EQUALS_UUID.value,
                     key="case_set_id",
                     value=case_set.id,
@@ -1705,7 +1705,7 @@ class CasedbTestClient(TestClient):
             command.CaseDataCollectionLinkCrudCommand(
                 user=user,
                 operation=CrudOperation.READ_ALL,
-                query_filter=TypedUuidSetFilter(
+                query_filter=UuidSetFilter(
                     type=FilterType.UUID_SET.value,
                     key="case_id",
                     members=case_ids,
@@ -1748,7 +1748,7 @@ class CasedbTestClient(TestClient):
                 command.CaseDataCollectionLinkCrudCommand(
                     user=user,
                     operation=CrudOperation.READ_ALL,
-                    query_filter=TypedUuidSetFilter(
+                    query_filter=UuidSetFilter(
                         type=FilterType.UUID_SET.value,
                         key="case_id",
                         members=case_ids,

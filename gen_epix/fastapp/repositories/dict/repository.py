@@ -38,34 +38,6 @@ class DictRepository(BaseRepository):
             db[model_class] = {}
         return db
 
-    @staticmethod
-    def _create_empty_db_for_entities(
-        entities: Iterable[Entity],
-    ) -> dict[type[Model], dict[Hashable, Model]]:
-        """Create an empty db map with one entry per persistable model class."""
-        db: dict[type[Model], dict[Hashable, Model]] = {}
-        for entity in entities:
-            if not entity.persistable:
-                continue
-            model_class = entity.model_class
-            assert issubclass(model_class, Model)
-            db[model_class] = {}
-        return db
-
-    @staticmethod
-    def _create_empty_db_for_entities(
-        entities: Iterable[Entity],
-    ) -> dict[type[Model], dict[Hashable, Model]]:
-        """Create an empty db map with one entry per persistable model class."""
-        db: dict[type[Model], dict[Hashable, Model]] = {}
-        for entity in entities:
-            if not entity.persistable:
-                continue
-            model_class = entity.model_class
-            assert issubclass(model_class, Model)
-            db[model_class] = {}
-        return db
-
     @classmethod
     def create_repository(cls, **kwargs: Any) -> BaseRepository:
         """Instantiate a DictRepository, optionally loading data from a pkl/zip file."""
@@ -183,11 +155,13 @@ class DictRepository(BaseRepository):
         throws.  missing_data controls behaviour when entities have no db entry:
         ``ignore`` creates an empty dict, ``raise`` throws.
         """
+        BaseRepository.__init__(self, **kwargs)
         if extra_data not in {"ignore", "raise", "drop"}:
             raise ValueError(f"Invalid extra_data: {extra_data}")
         if missing_data not in {"raise", "ignore"}:
             raise ValueError(f"Invalid missing_data: {missing_data}")
         # Initialize properties
+        entities = list(entities)
         self._db = dict(db.items())
         self._timestamp_factory = timestamp_factory
         self._entities = set(entities)
@@ -202,7 +176,19 @@ class DictRepository(BaseRepository):
         self._model_modifiers: dict[type[Model], BaseDictModelModifier] = {}
         self._init_properties(entities, db, missing_data)
 
+        self._manage_extra_model_data(extra_data)
         self._verify_extra_models_and_extract_reverse_links(extra_data)
+
+    def _manage_extra_model_data(self, extra_data: str) -> None:
+        """Apply the configured behavior to stores for unregistered models."""
+        extra_model_classes = set(self._db) - set(self._links)
+        if not extra_model_classes or extra_data == "ignore":
+            return
+        if extra_data == "raise":
+            names = ", ".join(sorted(x.__name__ for x in extra_model_classes))
+            raise ValueError(f"Data provided for additional model(s): {names}")
+        for model_class in extra_model_classes:
+            self._db.pop(model_class)
 
     def register_model_modifier(
         self, model_class: type[Model], modifier: BaseDictModelModifier
@@ -414,7 +400,7 @@ class DictRepository(BaseRepository):
                 yield tuple(getattr(obj, x) for x in field_names)
 
     def uow(self, **kwargs: Any) -> BaseUnitOfWork:
-        """Return a no-op unit-of-work suitable for the in-memory backend."""
+        """Return a no-op unit of work for the in-memory backend."""
         return DictUnitOfWork()
 
     def split_filter(
@@ -435,6 +421,7 @@ class DictRepository(BaseRepository):
         verify_duplicate: bool = True,
     ) -> None:
         """Raise if any requested id is missing or duplicated in the store."""
+        obj_ids = list(obj_ids)
         if verify_exists:
             df = self._db[model_class]
             invalid_obj_ids = [x for x in obj_ids if x not in df]
@@ -489,7 +476,7 @@ class DictRepository(BaseRepository):
         if limit or offset:
             if offset >= len(objs):
                 return []
-            if offset + limit >= len(objs):
+            if limit == 0 or offset + limit >= len(objs):
                 return objs[offset:]
             objs = objs[offset : offset + limit]
         # Make copy of objects for returning if necessary
@@ -520,10 +507,11 @@ class DictRepository(BaseRepository):
         **kwargs: Any,
     ) -> list[Model]:
         """Return the objects with the given ids, preserving input order."""
+        obj_ids = list(obj_ids)
         return_copy = kwargs.get("return_copy", True)
         df = self._db[model_class]
         # Check input
-        invalid_obj_ids = list(set(list(obj_ids)) - set(df.keys()))
+        invalid_obj_ids = list(set(obj_ids) - set(df.keys()))
         if invalid_obj_ids:
             DictRepository._raise_invalid_ids(model_class, invalid_obj_ids)
         if not allow_duplicate_ids:
@@ -532,8 +520,6 @@ class DictRepository(BaseRepository):
         objs: list[Model | None] = [df.get(x) for x in obj_ids]
         # Verify input
         DictRepository._verify_valid_ids(model_class, obj_ids, objs)
-        if not allow_duplicate_ids:
-            DictRepository._verify_duplicate_ids(model_class, obj_ids)
 
         # Make copy of objects for returning
         if return_copy:
@@ -592,9 +578,14 @@ class DictRepository(BaseRepository):
 
         # Upsert objects
         value_field_names = self._value_field_names[model_class]
-        links: list[tuple[str, str | None, dict[Hashable, Model] | None]] = [
-            (x[0], x[2], x[4]) for x in self._links[model_class]
-        ]
+        links: list[
+            tuple[
+                str,
+                type[Model],
+                str | None,
+                dict[Hashable, Model] | None,
+            ]
+        ] = [(x[0], x[1], x[2], x[4]) for x in self._links[model_class]]
         self.upsert_model_objects(
             user_id, model_class, objs, df, get_id, df_objs, value_field_names, links
         )
@@ -614,52 +605,94 @@ class DictRepository(BaseRepository):
         get_id: Callable[[Model], Hashable],
         df_objs: list[Model | None],
         value_field_names: list[str],
-        links: list[tuple[str, str | None, dict[Hashable, Model] | None]],
+        links: list[
+            tuple[
+                str,
+                type[Model],
+                str | None,
+                dict[Hashable, Model] | None,
+            ]
+        ],
     ) -> None:
-        """Apply per-object insert-or-update logic, invoking the modifier if set."""
+        """Apply per-object inserts and updates after validating their links."""
         modifier = self._model_modifiers.get(model_class)
         for i, obj, df_obj in zip(range(len(df_objs)), objs, df_objs):
             if df_obj:
-                # Already existing -> let modifier fix obj before values are applied
                 if modifier:
                     modifier.on_update(user_id, obj, df_obj)
+                self._validate_link_updates(model_class, get_id, links, obj)
                 self._apply_value_updates(value_field_names, obj, df_obj)
-                self._apply_link_updates(model_class, get_id, links, obj, df_obj)
+                self._apply_link_updates(links, obj, df_obj)
             else:
-                # New -> insert copy of obj, then stamp metadata on the stored copy
-                df_objs[i] = self._insert_new(df, get_id, obj)
+                new_df_obj = obj.model_copy()
                 if modifier:
-                    modifier.on_create(user_id, cast(Model, df_objs[i]))
-
-    def _insert_new(
-        self,
-        df: dict[Hashable, Model],
-        get_id: Callable[[Model], Hashable],
-        obj: Model,
-    ) -> Model:
-        """Store a copy of obj in df and return the stored copy."""
-        new_df_obj: Model = obj.model_copy()
-        df[get_id(new_df_obj)] = new_df_obj
-        return new_df_obj
+                    modifier.on_create(user_id, new_df_obj)
+                self._validate_link_updates(model_class, get_id, links, new_df_obj)
+                self._apply_link_updates(links, new_df_obj, new_df_obj)
+                df[get_id(new_df_obj)] = new_df_obj
+                df_objs[i] = new_df_obj
 
     def _apply_link_updates(
         self,
-        model_class: type[Model],
-        get_id: Callable[[Model], Hashable],
-        links: list[tuple[str, str | None, dict[Hashable, Model] | None]],
+        links: list[
+            tuple[
+                str,
+                type[Model],
+                str | None,
+                dict[Hashable, Model] | None,
+            ]
+        ],
         obj: Model,
         df_obj: Model,
     ) -> None:
         """Sync all FK/relationship fields from obj onto the stored df_obj."""
-        for link_field_name, relationship_field_name, linked_df in links:
+        for (
+            link_field_name,
+            _,
+            relationship_field_name,
+            _,
+        ) in links:
             # Verify and update link
             linked_obj_id = getattr(obj, link_field_name)
-            if not linked_obj_id:
+            if linked_obj_id is None:
                 setattr(df_obj, link_field_name, None)
                 if relationship_field_name is not None:
                     setattr(df_obj, relationship_field_name, None)
                 continue
-            if linked_df is not None and linked_obj_id not in linked_df:
+            setattr(df_obj, link_field_name, linked_obj_id)
+            if relationship_field_name is None:
+                continue
+            linked_obj = getattr(obj, relationship_field_name)
+            if linked_obj is None:
+                setattr(df_obj, relationship_field_name, None)
+                continue
+            setattr(df_obj, relationship_field_name, linked_obj.model_copy(deep=True))
+
+    def _validate_link_updates(
+        self,
+        model_class: type[Model],
+        get_id: Callable[[Model], Hashable],
+        links: list[
+            tuple[
+                str,
+                type[Model],
+                str | None,
+                dict[Hashable, Model] | None,
+            ]
+        ],
+        obj: Model,
+    ) -> None:
+        """Validate foreign-key and relationship IDs without mutating stored data."""
+        for (
+            link_field_name,
+            link_model_class,
+            relationship_field_name,
+            linked_df,
+        ) in links:
+            linked_obj_id = getattr(obj, link_field_name)
+            if linked_obj_id is None:
+                continue
+            if linked_df and linked_obj_id not in linked_df:
                 raise exc.InvalidIdsError(
                     "8b5592ee",
                     (
@@ -668,18 +701,17 @@ class DictRepository(BaseRepository):
                     ),
                     ids=[linked_obj_id],
                 )
-            setattr(df_obj, link_field_name, linked_obj_id)
             if relationship_field_name is None:
                 continue
             linked_obj = getattr(obj, relationship_field_name)
-            if not linked_obj:
+            if linked_obj is None:
                 continue
-            get_link_id = self._get_id[linked_obj.__class__]
+            get_link_id = self._get_id[link_model_class]
             if get_link_id(linked_obj) != linked_obj_id:
                 raise exc.InvalidLinkIdsError(
                     "40205b3a",
                     (
-                        f"Model {model_class.__name__}: obj {get_link_id(obj)} has different id "
+                        f"Model {model_class.__name__}: obj {get_id(obj)} has different id "
                         f'in {link_field_name} ("{linked_obj_id}") versus '
                         f'{relationship_field_name} ("{get_link_id(linked_obj)}")'
                     ),
@@ -736,6 +768,7 @@ class DictRepository(BaseRepository):
         **kwargs: Any,
     ) -> list[Hashable]:
         """Delete the objects with the given ids, enforcing FK constraints."""
+        obj_ids = list(obj_ids)
         df = self._db[model_class]
         df_objs = [df.get(x) for x in obj_ids]
         back_links = self._back_links[model_class]
@@ -768,7 +801,7 @@ class DictRepository(BaseRepository):
         # Delete objects
         for obj_id in uq_obj_ids:
             df.pop(obj_id)
-        return list(obj_ids)
+        return obj_ids
 
     def delete_all(
         self,
@@ -792,9 +825,8 @@ class DictRepository(BaseRepository):
             query_filter = obj_filter
         else:
             query_filter = None
-        # Delete objects
+        # Select objects to delete
         if query_filter:
-            # Delete objects matching the query filter
             obj_ids = [
                 x
                 for x, y in zip(
@@ -802,12 +834,9 @@ class DictRepository(BaseRepository):
                 )
                 if y
             ]
-            for obj_id in obj_ids:
-                self._db[model_class].pop(obj_id)
         else:
-            # Delete all objects
-            obj_ids = list(self._db[model_class].keys())
-            self._db[model_class] = {}
+            obj_ids = list(df)
+        self.delete_some(model_class, obj_ids)
         return obj_ids if return_id else None
 
     def exists_one(self, model_class: type[Model], obj_id: Hashable) -> bool:
@@ -961,10 +990,12 @@ class DictRepository(BaseRepository):
             curr_obj_keys = set(curr_obj_keys_list)
             if len(curr_obj_keys) < len(curr_obj_keys_list):
                 seen: set[str] = set()
-                uq_obj_keys = {
-                    x for x in curr_obj_keys_list if x not in seen and not seen.add(x)  # type: ignore[func-returns-value]
-                }
-                duplicate_obj_keys = curr_obj_keys - uq_obj_keys
+                duplicate_obj_keys: set[str] = set()
+                for obj_key in curr_obj_keys_list:
+                    if obj_key in seen:
+                        duplicate_obj_keys.add(obj_key)
+                    else:
+                        seen.add(obj_key)
                 duplicate_objs += [
                     x
                     for x, y in zip(objs, curr_obj_keys_list)
