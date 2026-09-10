@@ -16,28 +16,26 @@ from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, field_serializer, field_validator, model_validator
 
 from gen_epix.commondb.domain import enum
-from gen_epix.commondb.domain.enum import DataIssueTypeSet, EtlStatus, UploadStatusSet
+from gen_epix.commondb.domain.enum import DataIssueTypeSet
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.base import BaseResult, EtlLogItem
 from gen_epix.commondb.domain.model.organization import (
     BaseIdentifier,
     IdentifierForUpload,
 )
+from gen_epix.etl.enum import EtlStatus, EtlStatusSet
+from gen_epix.etl.model import (
+    EtlLogItem,
+    LoadResult,
+)
 from gen_epix.fastapp import Model
 from gen_epix.fastapp.domain import Entity
 from gen_epix.fastapp.domain.entity import Entity
-from gen_epix.fastapp.enum import LogLevel, LogLevelSet
+from gen_epix.fastapp.enum import LogLevelSet
 
 # Backward-compatible alias: UploadLogItem is now ResultLogItem.
 UploadLogItem = EtlLogItem
 
 logger = logging.getLogger(__name__)
-
-# Registry of concrete BaseBatchUploadResult subclasses, keyed by class name.
-# Populated via BaseBatchUploadResult.__pydantic_init_subclass__. Used to
-# reconstruct the concrete result type when deserialising a heterogeneous list of
-# upload results (see BaseBatchUploadResult.resolve_subclass).
-_UPLOAD_RESULT_REGISTRY: dict[str, type["BaseBatchUploadResult"]] = {}
 
 
 class IdentifiersMixin:
@@ -115,7 +113,7 @@ class DataIssue(PydanticBaseModel):
     message: str | None = Field(description="The details of the data issue")
 
 
-class UploadResult(BaseResult, Model):
+class UploadResult(LoadResult, Model):
     """Represents the result of an upload operation for one object.
 
     It includes upload status and logs.
@@ -125,6 +123,7 @@ class UploadResult(BaseResult, Model):
     - If the status is failed, there must be at least one error log item.
     """
 
+    ID: ClassVar[str] = "c4f1a9e2"
     ENTITY: ClassVar = Entity(persistable=False)
 
     id: UUID | None = Field(
@@ -146,31 +145,12 @@ class UploadResult(BaseResult, Model):
         has_errors = any(
             x.severity in LogLevelSet.ERROR_OR_WORSE.value for x in self.logs
         )
-        if self.status in UploadStatusSet.NOT_FAILED.value:
+        if self.status in EtlStatusSet.NOT_FAILED.value:
             if has_errors:
                 raise ValueError("Successful results cannot have error information")
         elif not has_errors:
             raise ValueError("Failed results must include error information")
         return self
-
-    def set_error_status(self) -> None:
-        """Mark this individual upload result as failed after an error is recorded."""
-        self.status = EtlStatus.FAILED
-
-    def add_logs(self, upload_log_items: list[UploadLogItem] | UploadLogItem) -> None:
-        """Add log items to the upload result.
-
-        If any of the added log items has severity ERROR, the upload status is set to
-        FAILED.
-        """
-        if isinstance(upload_log_items, list):
-            self.logs.extend(upload_log_items)
-            if any(x.severity == LogLevel.ERROR for x in upload_log_items):
-                self.status = EtlStatus.FAILED
-        else:
-            self.logs.append(upload_log_items)
-            if upload_log_items.severity == LogLevel.ERROR:
-                self.status = EtlStatus.FAILED
 
     def get_identifier_upload_results(self) -> list["UploadResult"] | None:
         """Get the upload results for the identifiers associated with the model, if any."""
@@ -183,6 +163,7 @@ class UploadResultWithIdentifiers(UploadResult):
     It mirrors a for-upload class that has identifiers.
     """
 
+    ID: ClassVar[str] = "06e14d51"
     ENTITY: ClassVar = UploadResult.model_entity().clone()
     NAME: ClassVar = "UploadResultWithIdentifiers"
 
@@ -542,6 +523,7 @@ class ParentUploadResult(UploadResultWithIdentifiers):
     Subclasses correspond to their ParentForUpload payload type.
     """
 
+    ID: ClassVar[str] = "f354e913"
     ENTITY: ClassVar = UploadResultWithIdentifiers.model_entity().clone()
     NAME: ClassVar = "ParentUploadResult"
 
@@ -911,6 +893,7 @@ class BaseBatchUploadResult(UploadResult):
     Subclasses use field names that match their BaseBatchForUpload payload.
     """
 
+    ID: ClassVar[str] = "6d64fbc3"
     ENTITY: ClassVar = UploadResult.model_entity().clone()
     NAME: ClassVar = "BaseBatchUploadResult"
 
@@ -938,43 +921,12 @@ class BaseBatchUploadResult(UploadResult):
         ),
     )
 
-    @classmethod
-    def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
-        """Register each concrete subclass by name for polymorphic deserialisation."""
-        super().__pydantic_init_subclass__(**kwargs)
-        _UPLOAD_RESULT_REGISTRY[cls.__name__] = cls
-
     @model_validator(mode="after")
     def _ensure_result_type(self) -> Self:
         """Populate result_type with the concrete class name when unset."""
         if not self.result_type:
             self.result_type = type(self).__name__
         return self
-
-    @classmethod
-    def resolve_subclass(cls, data: dict[str, Any]) -> type[UploadResult] | None:
-        """Return the concrete UploadResult subclass a serialised dict represents.
-
-        Resolution order:
-
-        1. The ``result_type`` discriminator field, looked up in the registry.
-        2. Legacy fallback for payloads written before ``result_type`` existed:
-           the presence of a subclass-specific parent-results field
-           (``samples`` / ``cases`` / ``persons``).
-        3. ``None`` when nothing matches, so the caller can fall back to a plain
-           ``UploadResult``.
-        """
-        by_name = _UPLOAD_RESULT_REGISTRY.get(data.get("result_type", ""))
-        if by_name is not None:
-            return by_name
-        for field_name, class_name in (
-            ("samples", "SampleBatchUploadResult"),
-            ("cases", "CaseBatchUploadResult"),
-            ("persons", "PersonBatchUploadResult"),
-        ):
-            if field_name in data and class_name in _UPLOAD_RESULT_REGISTRY:
-                return _UPLOAD_RESULT_REGISTRY[class_name]
-        return None
 
     def get_parent_results(self) -> list[ParentUploadResult]:
         """Get the list of parent upload results in this batch upload result."""

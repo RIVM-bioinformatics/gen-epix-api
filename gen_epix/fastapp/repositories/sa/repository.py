@@ -1594,12 +1594,6 @@ class SARepository(BaseRepository):
                     # Remove existing file
                     if sqlite_file.is_file():
                         sqlite_file.unlink()
-                    # Create the file by creating a connection
-                    engine = sa.create_engine(
-                        f"sqlite:///{sqlite_file.as_posix()}", echo=echo
-                    )
-                    conn = engine.connect()
-                    conn.close()
                 elif not sqlite_file.is_file():
                     raise ValueError(
                         "Unable to derive file from connection string or file does not exist"

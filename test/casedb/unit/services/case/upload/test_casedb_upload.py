@@ -17,12 +17,12 @@ from gen_epix.casedb.services.case.upload import (
 )
 from gen_epix.commondb.domain.enum import (
     DataIssueType,
-    EtlStatus,
     RoleSet,
     UploadAction,
 )
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import IdentifierForUpload, User
+from gen_epix.etl.enum import EtlStatus
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork

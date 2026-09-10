@@ -7,7 +7,6 @@ from uuid import UUID
 from pydantic import Field, computed_field, model_validator
 
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.base import EtlLogItem
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
@@ -17,18 +16,24 @@ from gen_epix.commondb.domain.model.upload import (
     ParentUploadResult,
     UploadResult,
 )
-from gen_epix.fastapp.domain import Entity
+from gen_epix.etl.model import EtlLogItem
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.seq.classification import (
     SeqClassification,
     SeqTaxonomy,
+)
+from gen_epix.seqdb.domain.model.seq.distance import (
+    CalculateSeqDistancesEtlResult,
 )
 from gen_epix.seqdb.domain.model.seq.locus import Allele
 from gen_epix.seqdb.domain.model.seq.pheno import AstMeasurement, PcrMeasurement
 from gen_epix.seqdb.domain.model.seq.profile import SeqProfile, SeqProfileIdentifier
 from gen_epix.seqdb.domain.model.seq.reads import ReadSet, ReadSetIdentifier
 from gen_epix.seqdb.domain.model.seq.sample import Sample, SampleIdentifier
-from gen_epix.seqdb.domain.model.seq.seq import Seq, SeqIdentifier
+from gen_epix.seqdb.domain.model.seq.seq import (
+    Seq,
+    SeqIdentifier,
+)
 from gen_epix.util import copy_model_field
 
 
@@ -536,6 +541,7 @@ class SampleUploadResult(ParentUploadResult):
     Result field names match ``SampleForUpload`` fields to support caller processing.
     """
 
+    ID: ClassVar[str] = "d8f4cd68"
     ENTITY: ClassVar = ParentUploadResult.model_entity().clone()
     NAME: ClassVar = "SampleUploadResult"
 
@@ -671,27 +677,10 @@ class SampleBatchForUpload(BaseBatchForUpload):
         return any(len(x.ast_measurements or []) > 0 for x in self.samples)
 
 
-class CalculateSeqDistancesResult(UploadResult):
-    """Represents the result of calculating distances between existing profiles and new
-    profiles or between new profiles themselves, as part of the upload process.
-    The seq_distance_profile_id refers to the sequence distance profile (i.e.,
-    AlleleProfile or MlvaProfile).
-
-    ``seq_distance_profile_id`` identifies the profile containing these distances.
-    """
-
-    ENTITY: ClassVar = Entity(persistable=False)
-    NAME: ClassVar = "CalculateSeqDistancesResult"
-
-    # TODO: 3034 since profiles of different types and subtypes (locus set, ref seq) can be provided, there can be many different distance profiles that are relevant. TBD how to handle this in the result.
-    seq_distance_profile_id: UUID = Field(
-        description="The UUID of the sequence distance profile that contains the calculated distances.",
-    )
-
-
 class SampleBatchUploadResult(BaseBatchUploadResult):
     """Represents the result of uploading a batch of samples."""
 
+    ID: ClassVar = "0205001b"
     ENTITY: ClassVar = SampleBatchForUpload.model_entity().clone()
     NAME: ClassVar = "SampleBatchUploadResult"
 
@@ -701,7 +690,7 @@ class SampleBatchUploadResult(BaseBatchUploadResult):
     samples: list[SampleUploadResult] = Field(
         description="The results of uploading the individual samples, in the same order as provided."
     )
-    seq_distances: list[CalculateSeqDistancesResult] | None = Field(
+    seq_distances: list[CalculateSeqDistancesEtlResult] | None = Field(
         default=None,
         description="The results of calculating distances between sequences, if this was performed as part of the upload.",
     )

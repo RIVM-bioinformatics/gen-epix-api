@@ -1,5 +1,5 @@
 """
-Unit tests for BaseResult and ResultLogItem.
+Unit tests for BaseEtlResult and ResultLogItem.
 
 Verifies that:
 - add_error / add_warning / add_info append the correct log items.
@@ -11,24 +11,24 @@ Verifies that:
 
 import pytest
 
-from gen_epix.commondb.domain.enum import EtlStatus
-from gen_epix.commondb.domain.model.base import BaseResult, EtlLogItem
 from gen_epix.commondb.domain.model.upload import UploadLogItem, UploadResult
+from gen_epix.etl.enum import EtlStatus
+from gen_epix.etl.model import EtlLogItem, EtlResult
 from gen_epix.fastapp.enum import LogLevel
 
 # ---------------------------------------------------------------------------
-# Minimal concrete class for testing BaseResult in isolation
+# Minimal concrete class for testing BaseEtlResult in isolation
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.scenario_ids("TC-SEC-31-02")
-class _ConcreteResult(BaseResult):
-    """Minimal Pydantic model used to test BaseResult in isolation."""
+class _ConcreteResult(EtlResult):
+    """Minimal Pydantic model used to test BaseEtlResult in isolation."""
 
     status: EtlStatus = EtlStatus.INITIALIZED
 
-    def set_error_status(self) -> None:
-        self.status = EtlStatus.ERROR
+    def set_failed(self) -> None:
+        self.status = EtlStatus.FAILED
 
 
 # ---------------------------------------------------------------------------
@@ -53,12 +53,12 @@ class TestResultLogItem:
 
 
 # ---------------------------------------------------------------------------
-# Tests for BaseResult via _ConcreteResult
+# Tests for BaseEtlResult via _ConcreteResult
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.scenario_ids("TC-SEC-31-02")
-class TestBaseResult:
+class TestBaseEtlResult:
     def setup_method(self) -> None:
         self.result = _ConcreteResult()
 
@@ -71,9 +71,9 @@ class TestBaseResult:
         assert self.result.logs[0].code == "E001"
         assert self.result.logs[0].message == "an error"
 
-    def test_add_error_calls_set_error_status(self) -> None:
+    def test_add_error_calls_set_failed_status(self) -> None:
         self.result.add_error("E001", "an error")
-        assert self.result.status == EtlStatus.ERROR
+        assert self.result.status == EtlStatus.FAILED
 
     # -- add_warning ----------------------------------------------------------
 
