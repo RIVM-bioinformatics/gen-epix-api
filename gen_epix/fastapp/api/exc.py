@@ -130,7 +130,7 @@ class UnprocessableEntity422HTTPException(HTTPException):
     ):
         """Construct an HTTP 422 exception with optional headers."""
         super().__init__(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=detail,
             headers=headers,
         )
