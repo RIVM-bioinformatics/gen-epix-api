@@ -111,7 +111,8 @@ class EtlLogItem(BaseModel):
 
 
 class BaseResult(BaseModel):
-    """Represents accumulated ETL messages with severity-specific queries.
+    """Represents the result of an operation, including accumulated log messages with 
+    severity-specific queries.
 
     Pydantic subclasses declare their status field and override
     :meth:`set_error_status` to mark an error after :meth:`add_error` appends
@@ -220,6 +221,9 @@ def validate_int_enum_value(
 ) -> IntEnum:
     """Normalize a value to a member of an integer enumeration.
 
+    This function is intended to be used in model validators to ensure that values
+    assigned to integer-enum fields are correctly normalized.
+
     Args:
         enum_class: The enumeration that accepts the value.
         value: A member name, integer value, integral float, or member.
@@ -246,6 +250,9 @@ def validate_int_enum_value_or_none(
     enum_class: type[IntEnum], value: int | str | float | IntEnum | None
 ) -> IntEnum | None:
     """Normalize an optional value to a member of an integer enumeration.
+
+    This function is intended to be used in model validators to ensure that optional 
+    values assigned to integer-enum fields are correctly normalized.
 
     Args:
         enum_class: The enumeration that accepts non-null values.

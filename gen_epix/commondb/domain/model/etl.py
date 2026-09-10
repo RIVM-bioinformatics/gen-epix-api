@@ -38,16 +38,15 @@ _EXTRACT_REGISTRY: dict[str, type[Any]] = {}
 
 
 class BaseEtlResult(BaseResult):
-    """
-    Base class for ETL result accumulators.
+    """Represents an ETL result. Intended as the base class for specialised ETL
+    results.
 
     Inherits ``logs`` from ``BaseResult``; adds ``status``, ``source_id``,
     ``_SOURCE_ID_FIELD``, and the ``mark_completed`` / ``has_completed`` pattern
-    driven by per-subclass ``_COMPLETED_CODE`` / ``_COMPLETED_MESSAGE`` class variables.
-
-    ``source_id`` stores whichever source-system identifier is most relevant for
-    the concrete subclass as a string; ``_SOURCE_ID_FIELD`` records its origin as
-    ``"ClassName.field_name"`` so the value is always traceable.
+    driven by per-subclass ``_COMPLETED_CODE`` / ``_COMPLETED_MESSAGE`` class
+    variables. ``source_id`` stores whichever source-system identifier is most
+    relevant for the concrete subclass as a string; ``_SOURCE_ID_FIELD`` records
+    its origin as ``"ClassName.field_name"`` so the value is always traceable.
     """
 
     status: commondb_enum.EtlStatus = commondb_enum.EtlStatus.INITIALIZED
@@ -57,6 +56,7 @@ class BaseEtlResult(BaseResult):
     _SOURCE_ID_FIELD: ClassVar[str] = ""
 
     def set_error_status(self) -> None:
+        """Set status to ERROR."""
         self.status = commondb_enum.EtlStatus.ERROR
 
     def mark_completed(self) -> None:
@@ -76,16 +76,18 @@ class BaseEtlResult(BaseResult):
 
 
 class TransformResult(BaseEtlResult):
-    """
-    Generic transform-result accumulator.
+    """Represents a transform ETL result.
 
     Concrete subclasses should declare ``_SOURCE_ID_FIELD``, ``_TARGET_ID_FIELD``,
-    ``_COMPLETED_CODE``, and ``_COMPLETED_MESSAGE``; ``source_id`` is inherited from
-    ``BaseEtlResult``.
-    Status is set to ERROR automatically when add_error() is called.
-    ``result_type`` is set automatically to the concrete class name on every
-    instantiation and is used by ``AnyTransformResult`` to restore the correct
-    subclass when deserialising from a stored dict.
+    ``_COMPLETED_CODE``, and ``_COMPLETED_MESSAGE``; ``source_id`` is inherited
+    from ``BaseEtlResult``. Status is set to ERROR automatically when
+    ``add_error()`` is called. ``result_type`` is set automatically to the
+    concrete class name on every instantiation and is used by
+    ``AnyTransformResult`` to restore the correct subclass when deserialising
+    from a stored dict.
+
+    Model validation: After validation, ``_ensure_result_type`` ensures that
+    ``result_type`` is populated with the concrete class name if not already set.
     """
 
     _COMPLETED_CODE: ClassVar[str] = "3c4f5e6f"
@@ -107,15 +109,17 @@ class TransformResult(BaseEtlResult):
 
 
 class ExtractResult(BaseEtlResult):
-    """
-    Generic extract-result accumulator.
+    """Represents an extract-result accumulator.
 
-    Concrete subclasses should declare ``_SOURCE_ID_FIELD``, ``_COMPLETED_CODE``, and
-    ``_COMPLETED_MESSAGE``; ``source_id`` is inherited from ``BaseEtlResult``.
-    Status is set to ERROR automatically when add_error() is called.
+    Concrete subclasses should declare ``_SOURCE_ID_FIELD``, ``_COMPLETED_CODE``,
+    and ``_COMPLETED_MESSAGE``; ``source_id`` is inherited from ``BaseEtlResult``.
+    Status is set to ERROR automatically when ``add_error()`` is called.
     ``result_type`` is set automatically to the concrete class name on every
     instantiation and is used by ``AnyExtractResult`` to restore the correct
     subclass when deserialising from a stored dict.
+
+    Model validation: After validation, ``_ensure_result_type`` ensures that
+    ``result_type`` is populated with the concrete class name if not already set.
     """
 
     _COMPLETED_CODE: ClassVar[str] = "a5b6c7d8"
@@ -139,12 +143,12 @@ _T_Transform = TypeVar("_T_Transform", bound=TransformResult)
 
 
 class EtlBatchResult(BaseEtlResult):
-    """
-    Result of a single stored batch: tracks the stored batch ID and the
-    per-subject extract, transform, and load results that produced it.
+    """Represents a single stored batch result.
 
-    batch_id is None until the batch has been persisted by the repository.
-    Call update_status_from_transforms() once all TransformResults are added.
+    Tracks the stored batch ID and the per-subject extract, transform, and load
+    results that produced it. ``batch_id`` is ``None`` until the batch has been
+    persisted by the repository. Call ``update_status_from_transforms()`` once
+    all ``TransformResult``s are added.
     """
 
     _COMPLETED_CODE: ClassVar[str] = "4d5e6f7a"
@@ -282,7 +286,10 @@ class EtlBatchResult(BaseEtlResult):
 
     # TODO: rename to for_source()
     def for_subject(self, source_id: str) -> "EtlBatchResult":
-        """Return a copy of this EtlBatchResult filtered to results for a single subject."""
+        """Return a copy of this batch filtered to results for a single subject.
+
+        Note: This method is planned to be renamed to ``for_source()``.
+        """
         retval: EtlBatchResult = self.model_copy(
             update={
                 "extract_results": [
@@ -325,11 +332,11 @@ class EtlBatchResult(BaseEtlResult):
 
 
 class SeqDistanceUpdateResult(BaseEtlResult):
-    """Result accumulator for one deferred seq-distance update run (one protocol).
+    """Represents a seq-distance update run result.
 
     Holds one INFO log per processed batch and a final completion entry.
-    n_profiles_processed counts newly created SeqDistance records (CREATED status);
-    n_batches counts non-empty calls made.
+    ``n_profiles_processed`` counts newly created ``SeqDistance`` records with
+    CREATED status; ``n_batches`` counts non-empty calls made.
     """
 
     _COMPLETED_CODE: ClassVar[str] = "e3f1a2b4"
@@ -341,8 +348,13 @@ class SeqDistanceUpdateResult(BaseEtlResult):
 
 
 class EtlResult(BaseEtlResult):
-    """
-    Top-level ETL run accumulator. Collects EtlBatchResults as batches are stored.
+    """Represents a top-level ETL run result.
+
+    Collects ``EtlBatchResult``s as batches are stored, tracking the overall run
+    status, command ID, and batch type.
+
+    Model validation: Before validation, ``_coerce_command_id`` generates a new
+    UUID for ``etl_command_id`` if one is not provided.
     """
 
     etl_command_id: UUID = Field(default_factory=uuid.uuid4)
@@ -351,11 +363,12 @@ class EtlResult(BaseEtlResult):
     batches: list[EtlBatchResult] = Field(default_factory=list)
 
     def set_error_status(self) -> None:
+        """Set status to FAILED."""
         self.status = commondb_enum.EtlStatus.FAILED
 
     @model_validator(mode="before")
     @classmethod
-    def _coerce_command_id(cls, data: Any) -> Any:
+    def _coerce_command_id(cls, data: Any) -> Any:  # type: ignore[misc]
         if isinstance(data, dict) and data.get("etl_command_id") is None:
             data = {**data, "etl_command_id": uuid.uuid4()}
         return data
@@ -377,14 +390,12 @@ class EtlResult(BaseEtlResult):
         return batch
 
     def update_status_from_batches(self) -> None:
-        """
-        Set EtlResult status based on EtlBatchResult statuses.
-        Call this once the batching loop has completed normally.
-        If status is already FAILURE (set via add_error), this is a no-op.
+        """Set status based on ``EtlBatchResult`` statuses.
 
-        INITIALIZED batches (started but containing no subjects, e.g. the
-        terminal empty batch) are excluded from propagation and do not affect
-        the outcome.
+        Call this once the batching loop has completed normally. If status is
+        already FAILED (set via ``add_error()``), this is a no-op. INITIALIZED
+        batches (started but containing no subjects, e.g. the terminal empty
+        batch) are excluded from propagation and do not affect the outcome.
         """
         if self.status == commondb_enum.EtlStatus.FAILED:
             return
@@ -473,6 +484,13 @@ class EtlResult(BaseEtlResult):
 
 
 def _dispatch_transform(data: Any) -> Any:
+    """Restore the concrete TransformResult subclass when deserialising from a dict.
+
+    Delegates type resolution to the ``_TRANSFORM_REGISTRY`` (populated by
+    ``__init_subclass__``) using the ``result_type`` discriminator field.
+    Returns the data unchanged if it is already a ``TransformResult`` instance
+    or if the registry lookup fails.
+    """
     if isinstance(data, TransformResult):
         return data
     if isinstance(data, dict):
@@ -483,6 +501,13 @@ def _dispatch_transform(data: Any) -> Any:
 
 
 def _dispatch_extract(data: Any) -> Any:
+    """Restore the concrete ExtractResult subclass when deserialising from a dict.
+
+    Delegates type resolution to the ``_EXTRACT_REGISTRY`` (populated by
+    ``__init_subclass__``) using the ``result_type`` discriminator field.
+    Returns the data unchanged if it is already an ``ExtractResult`` instance
+    or if the registry lookup fails.
+    """
     if isinstance(data, ExtractResult):
         return data
     if isinstance(data, dict):
