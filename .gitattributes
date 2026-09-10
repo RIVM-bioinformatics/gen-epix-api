@@ -1,2 +1,3 @@
 # Set default line endings to LF (Linux style)
 * text=auto eol=lf
+graphify-out/graph.json merge=graphify

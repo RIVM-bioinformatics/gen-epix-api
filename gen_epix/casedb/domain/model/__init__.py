@@ -220,7 +220,7 @@ STORED_MODEL_FIELD_PROPS: dict[type[fastapp.Model], dict[str, ModelFieldProps]] 
         "cohort": ModelFieldProps(is_mutable_always=True, is_sub_field_dict=True),
         "content": ModelFieldProps(is_mutable_always=True, is_sub_field_dict=True),
         "created_in_data_collection_id": ModelFieldProps(),
-        "case_date": ModelFieldProps(is_mutable_always=True),
+        "timed_at": ModelFieldProps(is_mutable_always=True),
     },
 }
 complete_stored_model_field_props(

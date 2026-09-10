@@ -16,6 +16,8 @@ class UuidSetFilter(Filter):
     Initializes a direct UUID membership matcher.
     """
 
+    type: Literal[FilterType.UUID_SET.value] = FilterType.UUID_SET.value  # type: ignore[name-defined]
+
     members: frozenset[UUID] = Field(description="The UUIDs to match.", frozen=True)
 
     @model_validator(mode="after")
@@ -39,9 +41,3 @@ class UuidSetFilter(Filter):
         raise NotImplementedError(
             "Method is implemented dynamically in _validate_state"
         )
-
-
-class TypedUuidSetFilter(UuidSetFilter):
-    """Represents a UUID set filter carrying its serialized filter type."""
-
-    type: Literal[FilterType.UUID_SET.value]  # type: ignore[name-defined]

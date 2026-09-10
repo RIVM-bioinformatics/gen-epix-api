@@ -1289,6 +1289,17 @@
             "console": "integratedTerminal",
             "justMyCode": true
         },
+        {
+            "name": "other.graphify.update",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "other_graphify_update",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
         // Run current file
         {
             "name": "Run Current File",

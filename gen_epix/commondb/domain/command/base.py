@@ -49,19 +49,19 @@ class Command(ServiceCommand):
 
 
 class CrudCommand(ServiceCrudCommand, Command):
-    """Represents an extension of a commondb command with target identifiers for CRUD operations."""
+    """Extends parent CrudCommand with more narrowly typed properties."""
 
-    user: model.User | None = None
-    obj_ids: UUID | list[UUID] | None = None  # type: ignore
+    user: model.User | None = None  # type: ignore[misc]
+    obj_ids: UUID | list[UUID] | None = None  # type: ignore[misc]
 
 
 class UpdateAssociationCommand(ServiceUpdateAssociationCommand, Command):
-    """Represents an extension of a commondb command with identifiers and payloads for associations."""
+    """Extends parent UpdateAssociationCommand with more narrowly typed properties."""
 
-    user: model.User | None = None
-    obj_id1: UUID | list[UUID] | None = None
-    obj_id2: UUID | list[UUID] | None = None
-    association_objs: list[model.Model] | None = None
+    user: model.User | None = None  # type: ignore[misc]
+    obj_id1: UUID | list[UUID] | None = None  # type: ignore[misc]
+    obj_id2: UUID | list[UUID] | None = None  # type: ignore[misc]
+    association_objs: list[model.Model] | None = None  # type: ignore[misc]
 
 
 class UploadBatchCommandMixin:
