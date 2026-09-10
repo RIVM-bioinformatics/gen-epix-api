@@ -132,22 +132,22 @@ def _safe_json_loads(s: str) -> Any:
 def _normalise_sensitive_keys(
     sensitive_keys: list[str] | tuple[str, ...] | set[str] | None,
 ) -> tuple[str, ...]:
-    """Normalize configured sensitive keys or return the default redaction keys.
+    """Normalize configured sensitive keys and retain the default redaction keys.
 
     Args:
         sensitive_keys: Optional collection of key names requiring redaction.
 
     Returns:
-        Unique, lowercase sensitive keys, or the default key collection.
+        Unique, lowercase default keys followed by configured additions.
     """
     if sensitive_keys is None:
         return _DEFAULT_SENSITIVE_KEYS
-    deduped: list[str] = []
+    deduped: list[str] = list(_DEFAULT_SENSITIVE_KEYS)
     for key in sensitive_keys:
         normalized = str(key).strip().lower()
         if normalized and normalized not in deduped:
             deduped.append(normalized)
-    return tuple(deduped) if deduped else _DEFAULT_SENSITIVE_KEYS
+    return tuple(deduped)
 
 
 def _build_sensitive_re(sensitive_keys: tuple[str, ...]) -> re.Pattern[str]:
