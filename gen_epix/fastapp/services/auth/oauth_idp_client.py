@@ -214,7 +214,17 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
 
     async def get_jwk_from_jwt(self, jwt_token: str) -> jwt.PyJWK:
         """Return jwk from jwt."""
-        key_id: str = self._validate_key_id(jwt_token, self._parse_kid(jwt_token))
+        key_id = self._parse_kid(jwt_token)
+        if not key_id:
+            if self.logger:
+                self.logger.warning(
+                    self._log_item_class(
+                        code="0184bc35",
+                        msg="No key ID found in token header",
+                        scheme_name=self.scheme_name,
+                    ).dumps()
+                )
+            raise exc.UnauthorizedAuthError("d3d0bb67")
 
         # Verify that the signing key in this session is outdated, fetch new one if so
         # TODO: verify if fetching new signing keys is ok
@@ -264,21 +274,6 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             )
         self._load_keys()
 
-    def _validate_key_id(self, jwt_token: str, key_id: str | None) -> str:
-        """Validate key id."""
-        if not key_id:
-            if self.logger:
-                self.logger.warning(
-                    self._log_item_class(
-                        code="0184bc35",
-                        msg="No key ID found in token header",
-                        scheme_name=self.scheme_name,
-                        jwt=jwt_token,
-                    ).dumps()
-                )
-            raise exc.UnauthorizedAuthError("d3d0bb67")
-        return key_id
-
     def _parse_kid(self, jwt_token: str) -> str | None:
         """Parse kid."""
         try:
@@ -290,7 +285,6 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                         code="4cff1367",
                         msg="Unable to parse header from token",
                         scheme_name=self.scheme_name,
-                        jwt=jwt_token,
                         exception=e,
                     ).dumps()
                 )

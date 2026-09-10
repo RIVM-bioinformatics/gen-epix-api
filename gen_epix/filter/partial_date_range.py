@@ -18,6 +18,10 @@ class PartialDateRangeFilter(RangeFilter):
     Bound strings are expanded to their represented intervals before matching.
     """
 
+    type: Literal[FilterType.PARTIAL_DATE_RANGE.value] = (  # type: ignore[name-defined]
+        FilterType.PARTIAL_DATE_RANGE.value
+    )
+
     lower_bound: str | None = Field(
         default=None, description="The lower bound of the range.", frozen=True
     )
@@ -183,9 +187,3 @@ class PartialDateRangeFilter(RangeFilter):
 
         self._match = _match  # type: ignore
         return self
-
-
-class TypedPartialDateRangeFilter(PartialDateRangeFilter):
-    """Represents a partial date range filter carrying its serialized type."""
-
-    type: Literal[FilterType.PARTIAL_DATE_RANGE.value]  # type: ignore[name-defined]

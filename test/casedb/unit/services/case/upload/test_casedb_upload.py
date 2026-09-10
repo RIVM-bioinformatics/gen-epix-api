@@ -64,7 +64,7 @@ class BaseUploadTestCase:
         self.seq_col_id = UUID("550e8400-e29b-41d4-a716-446655440008")
         self.cohort_id = UUID("550e8400-e29b-41d4-a716-446655440009")
         self.cohort_definition_id = UUID("550e8400-e29b-41d4-a716-446655440010")
-        self.case_date = datetime.datetime(2026, 1, 1)
+        self.timed_at = datetime.datetime(2026, 1, 1)
 
         self.service = Mock(spec=BaseCaseService)
         self.service.generate_id = Mock(side_effect=uuid4)
@@ -87,7 +87,7 @@ class BaseUploadTestCase:
         case_type_id: UUID | None = None,
         created_in_data_collection_id: UUID | None = None,
         cohort: dict[UUID, UUID | None] | None = None,
-        case_date: datetime.datetime | None = None,
+        timed_at: datetime.datetime | None = None,
         content: dict[UUID, str | None] | None = None,
         read_sets: list[model.ReadSetForUpload] | None = None,
         seqs: list[model.SeqForUpload] | None = None,
@@ -97,7 +97,7 @@ class BaseUploadTestCase:
             case_type_id=case_type_id,
             created_in_data_collection_id=created_in_data_collection_id,
             cohort=cohort,
-            case_date=case_date,
+            timed_at=timed_at,
             content=content,
         )
         return model.CaseForUpload(
@@ -187,7 +187,7 @@ class BaseUploadTestCase:
         case_type_id: UUID | None = None,
         created_in_data_collection_id: UUID | None = None,
         cohort: dict[UUID, UUID | None] | None = None,
-        case_date: datetime.datetime | None = None,
+        timed_at: datetime.datetime | None = None,
         content: dict[UUID, str | None] | None = None,
     ) -> model.Case:
         return model.Case(
@@ -196,7 +196,7 @@ class BaseUploadTestCase:
             created_in_data_collection_id=created_in_data_collection_id
             or self.data_collection_id,
             cohort=cohort or {},
-            case_date=case_date or self.case_date,
+            timed_at=timed_at or self.timed_at,
             content=content or {},
         )
 
@@ -430,21 +430,21 @@ class TestCaseUploadSeqdbBridge(BaseUploadTestCase):
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
 class TestCaseDateMutability:
-    def test_case_date_is_mutable_always(self) -> None:
+    def test_timed_at_is_mutable_always(self) -> None:
         props = STORED_MODEL_FIELD_PROPS.get(model.Case, {})
-        case_date_props = props.get("case_date")
+        timed_at_props = props.get("timed_at")
         assert (
-            case_date_props is not None
-        ), "case_date missing from STORED_MODEL_FIELD_PROPS"
+            timed_at_props is not None
+        ), "timed_at missing from STORED_MODEL_FIELD_PROPS"
         assert (
-            case_date_props.is_mutable_always
-        ), "case_date.is_mutable_always must be True so updates persist"
+            timed_at_props.is_mutable_always
+        ), "timed_at.is_mutable_always must be True so updates persist"
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
 class TestUpsertBatchCaseDate(BaseUploadTestCase):
-    def test_calculated_case_date_preserved_for_existing_case(self) -> None:
-        """After re-validation, case_date set by calculate_case_date must not
+    def test_calculated_timed_at_preserved_for_existing_case(self) -> None:
+        """After re-validation, timed_at set by calculate_timed_at must not
         be reset to None."""
         uploader, service = self.create_uploader()
 
@@ -483,7 +483,7 @@ class TestUpsertBatchCaseDate(BaseUploadTestCase):
         def _set_date(inner_cmd: command.UploadCasesCommand, _result: object) -> None:
             for cfu in inner_cmd.case_batch.cases:
                 if cfu.case is not None:
-                    cfu.case.case_date = expected_date
+                    cfu.case.timed_at = expected_date
 
         mock_validator.validate_and_transform.side_effect = _set_date
 
@@ -497,7 +497,7 @@ class TestUpsertBatchCaseDate(BaseUploadTestCase):
         ):
             uploader.upsert_batch(cmd, batch_result, Mock())
 
-        assert case.case_date == expected_date
+        assert case.timed_at == expected_date
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
