@@ -15,7 +15,7 @@ from gen_epix.commondb.domain.model.upload import (
     ParentUploadResult,
     UploadResult,
 )
-from gen_epix.etl.model import EtlLogItem
+from gen_epix.etl.model import LogItem
 from gen_epix.omopdb.domain.model.omop import clinical_data as model
 from gen_epix.util import copy_model_field
 
@@ -200,7 +200,7 @@ class PersonUploadResult(ParentUploadResult):
         description="The results of uploading the individual measurement relations, if any were provided, in the same order as provided.",
     )
 
-    def get_errors(self) -> list[EtlLogItem]:
+    def get_errors(self) -> list[LogItem]:
         """Get all data issues that are errors."""
         log_items = super().get_errors()
         if self.identifiers:

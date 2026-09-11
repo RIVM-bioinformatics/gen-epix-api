@@ -16,7 +16,7 @@ from gen_epix.commondb.domain.model.upload import (
     ParentUploadResult,
     UploadResult,
 )
-from gen_epix.etl.model import EtlLogItem
+from gen_epix.etl.model import LogItem
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.seq.classification import (
     SeqClassification,
@@ -580,7 +580,7 @@ class SampleUploadResult(ParentUploadResult):
         description="The results of uploading the AST measurements associated with the sample, if any were provided, in the same order as provided.",
     )
 
-    def get_errors(self) -> list[EtlLogItem]:
+    def get_errors(self) -> list[LogItem]:
         """Get all data issues that are errors."""
         log_items = super().get_errors()
         if self.identifiers:

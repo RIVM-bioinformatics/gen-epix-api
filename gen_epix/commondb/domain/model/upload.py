@@ -24,8 +24,8 @@ from gen_epix.commondb.domain.model.organization import (
 )
 from gen_epix.etl.enum import EtlStatus, EtlStatusSet
 from gen_epix.etl.model import (
-    EtlLogItem,
     LoadResult,
+    LogItem,
 )
 from gen_epix.fastapp import Model
 from gen_epix.fastapp.domain import Entity
@@ -33,7 +33,7 @@ from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import LogLevelSet
 
 # Backward-compatible alias: UploadLogItem is now ResultLogItem.
-UploadLogItem = EtlLogItem
+UploadLogItem = LogItem
 
 logger = logging.getLogger(__name__)
 

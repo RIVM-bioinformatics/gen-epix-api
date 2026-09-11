@@ -8,12 +8,12 @@ import pytest
 
 from gen_epix.etl.enum import EtlStatus
 from gen_epix.etl.model import (
-    BatchEtlResult,
-    EtlLogItem,
-    EtlResult,
+    BatchResult,
     ExtractResult,
-    JobEtlResult,
+    JobResult,
     LoadResult,
+    LogItem,
+    Result,
     TransformResult,
 )
 from gen_epix.fastapp.enum import LogLevel
@@ -37,7 +37,7 @@ class _FooExtractResult(ExtractResult):
 class TestEtlLogItem:
     def test_normalizes_and_serializes_severity(self) -> None:
         timestamp = datetime(2026, 1, 2, tzinfo=UTC)
-        item = EtlLogItem.model_validate(
+        item = LogItem.model_validate(
             cast(
                 Any,
                 {
@@ -62,7 +62,7 @@ class TestEtlLogItem:
         }
 
     def test_accepts_log_level_instance(self) -> None:
-        item = EtlLogItem(code="code", message="message", severity=LogLevel.INFO)
+        item = LogItem(code="code", message="message", severity=LogLevel.INFO)
 
         assert item.severity is LogLevel.INFO
 
@@ -70,7 +70,7 @@ class TestEtlLogItem:
 @pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestEtlResult:
     def test_log_helpers_add_query_and_filter_logs(self) -> None:
-        result = EtlResult()
+        result = Result()
 
         result.add_info("info", "information", source="source")
         result.add_warning("warning", "warning", target="target")
@@ -90,8 +90,8 @@ class TestEtlResult:
     def test_add_logs_accepts_one_or_many_and_propagates_errors(
         self, as_list: bool, severity: LogLevel
     ) -> None:
-        result = EtlResult()
-        item = EtlLogItem(code="code", message="message", severity=severity)
+        result = Result()
+        item = LogItem(code="code", message="message", severity=severity)
 
         result.add_logs([item] if as_list else item)
 
@@ -129,9 +129,9 @@ class TestEtlResult:
             LoadResult(),
             TransformResult(target_id=uuid4()),
             ExtractResult(),
-            BatchEtlResult(),
+            BatchResult(),
             SeqDistanceUpdateResult(protocol_id=protocol_id),
-            JobEtlResult(etl_name="flow"),
+            JobResult(etl_name="flow"),
         ]
 
         assert [result.type for result in results] == [result.ID for result in results]
@@ -144,17 +144,17 @@ class TestEtlResult:
     def test_deserialize_handles_instances_non_dicts_and_registered_dicts(self) -> None:
         result = _FooExtractResult(source_id="source")
 
-        assert EtlResult._deserialize(result) is result
-        assert EtlResult._deserialize("value") == "value"
-        restored = EtlResult._deserialize(result.model_dump())
+        assert Result._deserialize(result) is result
+        assert Result._deserialize("value") == "value"
+        restored = Result._deserialize(result.model_dump())
         assert isinstance(restored, _FooExtractResult)
         assert restored.source_id == "source"
 
     def test_unknown_discriminator_is_rejected(self) -> None:
         with pytest.raises(ValueError, match="Unknown subclass ID: missing"):
-            EtlResult._deserialize({"type": "missing"})
+            Result._deserialize({"type": "missing"})
         with pytest.raises(ValueError, match="Unknown subclass ID: missing"):
-            EtlResult(type="missing")
+            Result(type="missing")
 
     def test_duplicate_discriminator_is_rejected(self) -> None:
         with pytest.raises(ValueError, match="Duplicate EtlResult subclass ID"):
@@ -177,7 +177,7 @@ class TestBatchEtlResult:
     def test_update_status_from_extractions(
         self, statuses: list[EtlStatus], expected: EtlStatus
     ) -> None:
-        batch = BatchEtlResult(
+        batch = BatchResult(
             extract_results=[ExtractResult(status=status) for status in statuses]
         )
 
@@ -197,7 +197,7 @@ class TestBatchEtlResult:
     def test_update_status_from_transforms(
         self, statuses: list[EtlStatus], expected: EtlStatus
     ) -> None:
-        batch = BatchEtlResult(
+        batch = BatchResult(
             transform_results=[TransformResult(status=status) for status in statuses]
         )
 
@@ -217,7 +217,7 @@ class TestBatchEtlResult:
     def test_update_status_from_loads(
         self, statuses: list[EtlStatus], expected: EtlStatus
     ) -> None:
-        batch = BatchEtlResult(
+        batch = BatchResult(
             load_results=[LoadResult(status=status) for status in statuses]
         )
 
@@ -230,7 +230,7 @@ class TestBatchEtlResult:
     def test_successful_later_phase_does_not_upgrade_failure(
         self, status: EtlStatus, phase: str
     ) -> None:
-        batch = BatchEtlResult(status=status)
+        batch = BatchResult(status=status)
         if phase == "transform":
             batch.transform_results = [TransformResult(status=EtlStatus.SUCCESS)]
             batch.update_status_from_transforms()
@@ -241,7 +241,7 @@ class TestBatchEtlResult:
         assert batch.status is status
 
     def test_set_completed_propagates_all_phases_and_adds_completion_log(self) -> None:
-        batch = BatchEtlResult(
+        batch = BatchResult(
             extract_results=[ExtractResult(status=EtlStatus.SUCCESS)],
             transform_results=[TransformResult(status=EtlStatus.SUCCESS)],
             load_results=[LoadResult(status=EtlStatus.FAILED)],
@@ -253,7 +253,7 @@ class TestBatchEtlResult:
         assert batch.is_completed()
 
     def test_empty_batch_completes_successfully(self) -> None:
-        batch = BatchEtlResult()
+        batch = BatchResult()
 
         batch.set_completed()
 
@@ -261,7 +261,7 @@ class TestBatchEtlResult:
 
     def test_start_helpers_register_results_and_completed_ids(self) -> None:
         target_id = uuid4()
-        batch = BatchEtlResult()
+        batch = BatchResult()
         completed_extract = batch.start_extract("extract", _FooExtractResult)
         cast(ExtractResult, batch.start_extract(None)).set_completed()
         completed_transform = batch.start_transform("transform", _FooTransformResult)
@@ -280,7 +280,7 @@ class TestBatchEtlResult:
 
     def test_deprecated_completed_id_aliases(self) -> None:
         target_id = uuid4()
-        batch = BatchEtlResult(
+        batch = BatchResult(
             extract_results=[ExtractResult(source_id="extract")],
             transform_results=[
                 TransformResult(source_id="transform", target_id=target_id)
@@ -298,7 +298,7 @@ class TestBatchEtlResult:
 
     def test_for_source_filters_subject_results_and_copies_loads(self) -> None:
         load = LoadResult(status=EtlStatus.PROCESSED)
-        batch = BatchEtlResult(load_results=[load])
+        batch = BatchResult(load_results=[load])
         batch.start_extract("a")
         batch.start_extract("b")
         batch.start_transform("a")
@@ -314,7 +314,7 @@ class TestBatchEtlResult:
             assert batch.for_subject("a").extract_results == filtered.extract_results
 
     def test_add_single_load_result_registers_result(self) -> None:
-        batch = BatchEtlResult()
+        batch = BatchResult()
         load = LoadResult(status=EtlStatus.PROCESSED)
 
         batch.add_results(load)
@@ -324,7 +324,7 @@ class TestBatchEtlResult:
         assert batch.transform_results == []
 
     def test_add_list_of_load_results_registers_all(self) -> None:
-        batch = BatchEtlResult()
+        batch = BatchResult()
         load1 = LoadResult(status=EtlStatus.PROCESSED)
         load2 = LoadResult(status=EtlStatus.SUCCESS)
         load3 = LoadResult(status=EtlStatus.FAILED)
@@ -336,7 +336,7 @@ class TestBatchEtlResult:
         assert batch.transform_results == []
 
     def test_add_single_extract_result_registers_result(self) -> None:
-        batch = BatchEtlResult()
+        batch = BatchResult()
         extract = ExtractResult(source_id="source1", status=EtlStatus.SUCCESS)
 
         batch.add_results(extract)
@@ -346,7 +346,7 @@ class TestBatchEtlResult:
         assert batch.load_results == []
 
     def test_add_list_of_extract_results_registers_all(self) -> None:
-        batch = BatchEtlResult()
+        batch = BatchResult()
         extract1 = ExtractResult(source_id="source1", status=EtlStatus.SUCCESS)
         extract2 = ExtractResult(source_id="source2", status=EtlStatus.FAILED)
         extract3 = ExtractResult(source_id="source3", status=EtlStatus.PROCESSED)
@@ -358,7 +358,7 @@ class TestBatchEtlResult:
         assert batch.load_results == []
 
     def test_add_single_transform_result_registers_result(self) -> None:
-        batch = BatchEtlResult()
+        batch = BatchResult()
         transform = TransformResult(source_id="source1", status=EtlStatus.SUCCESS)
 
         batch.add_results(transform)
@@ -368,7 +368,7 @@ class TestBatchEtlResult:
         assert batch.load_results == []
 
     def test_add_list_of_transform_results_registers_all(self) -> None:
-        batch = BatchEtlResult()
+        batch = BatchResult()
         transform1 = TransformResult(source_id="source1", status=EtlStatus.SUCCESS)
         transform2 = TransformResult(source_id="source2", status=EtlStatus.FAILED)
         transform3 = TransformResult(source_id="source3", status=EtlStatus.PROCESSED)
@@ -380,7 +380,7 @@ class TestBatchEtlResult:
         assert batch.load_results == []
 
     def test_add_mixed_results_registers_each_type(self) -> None:
-        batch = BatchEtlResult()
+        batch = BatchResult()
         extract1 = ExtractResult(source_id="source1", status=EtlStatus.SUCCESS)
         extract2 = ExtractResult(source_id="source2", status=EtlStatus.FAILED)
         transform1 = TransformResult(source_id="source1", status=EtlStatus.SUCCESS)
@@ -395,7 +395,7 @@ class TestBatchEtlResult:
         assert batch.load_results == [load1, load2]
 
     def test_add_mixed_results_with_custom_subclasses_registers_correctly(self) -> None:
-        batch = BatchEtlResult()
+        batch = BatchResult()
         custom_transform = _FooTransformResult(source_id="source1")
         custom_extract = _FooExtractResult(source_id="source1")
         load = LoadResult(status=EtlStatus.SUCCESS)
@@ -414,9 +414,9 @@ class TestRunEtlResult:
     def test_command_id_defaults_coerces_none_and_preserves_value(self) -> None:
         supplied = uuid4()
 
-        defaulted = JobEtlResult(etl_name="defaulted")
-        coerced = JobEtlResult.model_validate({"etl_name": "coerced", "id": None})
-        preserved = JobEtlResult(etl_name="preserved", id=supplied)
+        defaulted = JobResult(etl_name="defaulted")
+        coerced = JobResult.model_validate({"etl_name": "coerced", "id": None})
+        preserved = JobResult(etl_name="preserved", id=supplied)
 
         assert isinstance(defaulted.id, UUID)
         assert isinstance(coerced.id, UUID)
@@ -424,7 +424,7 @@ class TestRunEtlResult:
 
     def test_start_batch_registers_batch_and_batch_ids_skip_unstored(self) -> None:
         stored_id = uuid4()
-        result = JobEtlResult(etl_name="flow")
+        result = JobResult(etl_name="flow")
         stored = result.start_batch()
         stored.batch_id = stored_id
         unstored = result.start_batch()
@@ -454,10 +454,10 @@ class TestRunEtlResult:
         initial_status: EtlStatus,
         expected: EtlStatus,
     ) -> None:
-        result = JobEtlResult(
+        result = JobResult(
             etl_name="flow",
             status=initial_status,
-            batches=[BatchEtlResult(status=status) for status in statuses],
+            batches=[BatchResult(status=status) for status in statuses],
         )
 
         result.update_status_from_batches()
@@ -466,7 +466,7 @@ class TestRunEtlResult:
 
     def test_summary_fields_counts_all_outcomes_and_excludes_empty_batch(self) -> None:
         stored_id = uuid4()
-        processed = BatchEtlResult(
+        processed = BatchResult(
             batch_id=stored_id,
             status=EtlStatus.MIXED,
             extract_results=[
@@ -482,11 +482,11 @@ class TestRunEtlResult:
                 LoadResult(status=EtlStatus.FAILED),
             ],
         )
-        result = JobEtlResult(
+        result = JobResult(
             etl_name="flow",
             batch_type="batch-type",
             status=EtlStatus.MIXED,
-            batches=[processed, BatchEtlResult()],
+            batches=[processed, BatchResult()],
         )
 
         assert result.get_summary() == {
@@ -504,7 +504,7 @@ class TestRunEtlResult:
         }
 
     def test_summary_fields_uses_empty_batch_type(self) -> None:
-        result = JobEtlResult(etl_name="flow")
+        result = JobResult(etl_name="flow")
 
         assert result.get_summary()["batch_type"] == ""
 
@@ -512,13 +512,13 @@ class TestRunEtlResult:
 @pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestPolymorphicRoundTrip:
     def test_batch_restores_external_extract_transform_and_load_types(self) -> None:
-        batch = BatchEtlResult()
+        batch = BatchResult()
         transform = batch.start_transform("source", _FooTransformResult)
         transform.note = "hello"
         batch.start_extract("source", _FooExtractResult)
         batch.add_results(LoadResult(status=EtlStatus.PROCESSED))
 
-        restored = BatchEtlResult.model_validate_json(batch.model_dump_json())
+        restored = BatchResult.model_validate_json(batch.model_dump_json())
 
         assert isinstance(restored.transform_results[0], _FooTransformResult)
         assert restored.transform_results[0].note == "hello"
@@ -526,17 +526,17 @@ class TestPolymorphicRoundTrip:
         assert type(restored.load_results[0]) is LoadResult
 
     def test_base_constructor_restores_registered_subclass(self) -> None:
-        restored = EtlResult(**_FooExtractResult(source_id="source").model_dump())
+        restored = Result(**_FooExtractResult(source_id="source").model_dump())
 
         assert isinstance(restored, _FooExtractResult)
         assert restored.source_id == "source"
 
     def test_run_round_trip_restores_nested_results(self) -> None:
-        result = JobEtlResult(etl_name="flow")
+        result = JobResult(etl_name="flow")
         batch = result.start_batch()
         batch.start_transform("source", _FooTransformResult)
 
-        restored = JobEtlResult.model_validate_json(result.model_dump_json())
+        restored = JobResult.model_validate_json(result.model_dump_json())
 
-        assert isinstance(restored.batches[0], BatchEtlResult)
+        assert isinstance(restored.batches[0], BatchResult)
         assert isinstance(restored.batches[0].transform_results[0], _FooTransformResult)

@@ -37,7 +37,7 @@ from gen_epix.etl.enum import EtlStatus, EtlStatusSet
 from gen_epix.fastapp.enum import LogLevel
 
 
-class EtlLogItem(BaseModel):
+class LogItem(BaseModel):
     """Represents a single log item for inclusion in an ETL result."""
 
     timestamp: datetime = Field(
@@ -76,7 +76,7 @@ class EtlLogItem(BaseModel):
         return value.value
 
 
-class EtlResult(BaseModel):
+class Result(BaseModel):
     """Represents an ETL result, storing logs and status information for ETL operations.
 
     Intended as the base class for specialized ETL results.
@@ -92,7 +92,7 @@ class EtlResult(BaseModel):
     COMPLETED_CODE: ClassVar[str] = ""
     COMPLETED_MESSAGE: ClassVar[str] = ""
     SOURCE_ID_FIELD: ClassVar[str] = ""
-    _SUBCLASS_REGISTRY: ClassVar[dict[str, type["EtlResult"]]] = {}
+    _SUBCLASS_REGISTRY: ClassVar[dict[str, type["Result"]]] = {}
 
     type: str = Field(
         default="",
@@ -106,12 +106,12 @@ class EtlResult(BaseModel):
         default=None,
         description="The source-system identifier relevant for the concrete subclass.",
     )
-    logs: list[EtlLogItem] = Field(
+    logs: list[LogItem] = Field(
         default_factory=list,
         description="Log items capturing messages and events that occurred during the operation.",
     )
 
-    def add_logs(self, upload_log_items: list[EtlLogItem] | EtlLogItem) -> None:
+    def add_logs(self, upload_log_items: list[LogItem] | LogItem) -> None:
         """Add log items to the upload result.
 
         If any of the added log items has severity ERROR, the upload status is set to
@@ -135,7 +135,7 @@ class EtlResult(BaseModel):
     ) -> None:
         """Append an ERROR-severity log item and update the status."""
         self.logs.append(
-            EtlLogItem(
+            LogItem(
                 code=code,
                 message=message,
                 severity=LogLevel.ERROR,
@@ -154,7 +154,7 @@ class EtlResult(BaseModel):
     ) -> None:
         """Append a WARN-severity log item."""
         self.logs.append(
-            EtlLogItem(
+            LogItem(
                 code=code,
                 message=message,
                 severity=LogLevel.WARN,
@@ -172,7 +172,7 @@ class EtlResult(BaseModel):
     ) -> None:
         """Append an INFO-severity log item."""
         self.logs.append(
-            EtlLogItem(
+            LogItem(
                 code=code,
                 message=message,
                 severity=LogLevel.INFO,
@@ -197,15 +197,15 @@ class EtlResult(BaseModel):
         """Return True if any log item carries the given code."""
         return any(x.code == code for x in self.logs)
 
-    def get_errors(self) -> list[EtlLogItem]:
+    def get_errors(self) -> list[LogItem]:
         """Return a list of log items with ERROR severity."""
         return [x for x in self.logs if x.severity == LogLevel.ERROR]
 
-    def get_warnings(self) -> list[EtlLogItem]:
+    def get_warnings(self) -> list[LogItem]:
         """Return a list of log items with WARN severity."""
         return [x for x in self.logs if x.severity == LogLevel.WARN]
 
-    def get_infos(self) -> list[EtlLogItem]:
+    def get_infos(self) -> list[LogItem]:
         """Return a list of log items with INFO severity."""
         return [x for x in self.logs if x.severity == LogLevel.INFO]
 
@@ -254,14 +254,14 @@ class EtlResult(BaseModel):
         Otherwise, the ``type`` field is used to look up the appropriate subclass
         in the registry and the subclass's ``model_validate`` method is called.
         """
-        if isinstance(data, EtlResult):
+        if isinstance(data, Result):
             return data
         if not isinstance(data, dict):
             return data
         class_id = data["type"]
-        if class_id not in EtlResult._SUBCLASS_REGISTRY:
+        if class_id not in Result._SUBCLASS_REGISTRY:
             raise ValueError(f"Unknown subclass ID: {class_id}")
-        cls = EtlResult._SUBCLASS_REGISTRY[class_id]
+        cls = Result._SUBCLASS_REGISTRY[class_id]
         return cls.model_validate(data)
 
     @model_validator(mode="after")
@@ -270,7 +270,7 @@ class EtlResult(BaseModel):
         return self
 
     def __new__(cls, **data: Any) -> Any:
-        if cls is EtlResult and "type" in data:
+        if cls is Result and "type" in data:
             class_id = data["type"]
             subclass = cls._SUBCLASS_REGISTRY.get(class_id)
             if subclass is None:
@@ -281,14 +281,14 @@ class EtlResult(BaseModel):
     @classmethod
     def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
         super().__pydantic_init_subclass__(**kwargs)
-        if cls.ID in EtlResult._SUBCLASS_REGISTRY:
+        if cls.ID in Result._SUBCLASS_REGISTRY:
             raise ValueError(
-                f"Duplicate {EtlResult.__name__} subclass ID: {cls.ID} - possibly the subclass ID was not set for class with name {cls.__name__}"
+                f"Duplicate {Result.__name__} subclass ID: {cls.ID} - possibly the subclass ID was not set for class with name {cls.__name__}"
             )
-        EtlResult._SUBCLASS_REGISTRY[cls.ID] = cls
+        Result._SUBCLASS_REGISTRY[cls.ID] = cls
 
 
-class LoadResult(EtlResult):
+class LoadResult(Result):
     """Represents a load ETL result."""
 
     ID: ClassVar[str] = "7c2e9a5f"
@@ -296,7 +296,7 @@ class LoadResult(EtlResult):
     COMPLETED_MESSAGE: ClassVar[str] = "Load completed."
 
 
-class TransformResult(EtlResult):
+class TransformResult(Result):
     """Represents a transform ETL result."""
 
     ID: ClassVar[str] = "a1f6b3c9"
@@ -309,7 +309,7 @@ class TransformResult(EtlResult):
     )
 
 
-class ExtractResult(EtlResult):
+class ExtractResult(Result):
     """Represents an extract ETL result."""
 
     ID: ClassVar[str] = "e5d2f8a6"
@@ -322,17 +322,17 @@ _T_Transform = TypeVar("_T_Transform", bound=TransformResult)
 _T_Load = TypeVar("_T_Load", bound=LoadResult)
 
 AnyExtractResult = Annotated[
-    SerializeAsAny[ExtractResult], BeforeValidator(EtlResult._deserialize)
+    SerializeAsAny[ExtractResult], BeforeValidator(Result._deserialize)
 ]
 AnyTransformResult = Annotated[
-    SerializeAsAny[TransformResult], BeforeValidator(EtlResult._deserialize)
+    SerializeAsAny[TransformResult], BeforeValidator(Result._deserialize)
 ]
 AnyLoadResult = Annotated[
-    SerializeAsAny[LoadResult], BeforeValidator(EtlResult._deserialize)
+    SerializeAsAny[LoadResult], BeforeValidator(Result._deserialize)
 ]
 
 
-class BatchEtlResult(EtlResult):
+class BatchResult(Result):
     """Represents a single ETL batch result, consisting of extract, transform, and load
     results.
     """
@@ -340,7 +340,7 @@ class BatchEtlResult(EtlResult):
     ID: ClassVar[str] = "b9c3e7d1"
     COMPLETED_CODE: ClassVar[str] = "4d5e6f7a"
     COMPLETED_MESSAGE: ClassVar[str] = "Batch completed."
-    SOURCE_ID_FIELD: ClassVar[str] = "BatchEtlResult.batch_id"
+    SOURCE_ID_FIELD: ClassVar[str] = "BatchResult.batch_id"
 
     batch_id: str | None = Field(
         default=None,
@@ -536,12 +536,12 @@ class BatchEtlResult(EtlResult):
                 self.load_results.append(result)
 
     @deprecated("Use for_source() instead")  # type: ignore[misc]
-    def for_subject(self, source_id: str) -> "BatchEtlResult":
+    def for_subject(self, source_id: str) -> "BatchResult":
         return self.for_source(source_id)
 
-    def for_source(self, source_id: str) -> "BatchEtlResult":
+    def for_source(self, source_id: str) -> "BatchResult":
         """Return a copy of this batch filtered to results for a single source."""
-        retval: BatchEtlResult = self.model_copy(
+        retval: BatchResult = self.model_copy(
             update={
                 "extract_results": [
                     x for x in self.extract_results if x.source_id == source_id
@@ -557,12 +557,8 @@ class BatchEtlResult(EtlResult):
         return retval
 
 
-class JobEtlResult(EtlResult):
-    """Represents a top-level ETL job result.
-
-    Collects ``BatchEtlResult``s as batches are stored, tracking the overall run
-    status, command ID, and batch type.
-    """
+class JobResult(Result):
+    """Represents a top-level ETL job result consisting of multiple batches."""
 
     ID: ClassVar[str] = "7c1c2cce"
 
@@ -572,7 +568,7 @@ class JobEtlResult(EtlResult):
     )
     etl_name: str = Field(description="Name of the ETL process")
     batch_type: str | None = Field(default=None, description="Type of the batch")
-    batches: list[BatchEtlResult] = Field(
+    batches: list[BatchResult] = Field(
         default_factory=list, description="List of batches in this job"
     )
 
@@ -589,14 +585,14 @@ class JobEtlResult(EtlResult):
         """IDs of all successfully stored batches produced in this run, in order."""
         return [x.batch_id for x in self.batches if x.batch_id is not None]
 
-    def start_batch(self) -> BatchEtlResult:
+    def start_batch(self) -> BatchResult:
         """Create and register a new BatchEtlResult, then return it.
 
         Registering up-front ensures that any logs written to the batch are
         preserved in etl_result.batches even if an exception aborts the loop
         iteration before the batch reaches storage.
         """
-        batch = BatchEtlResult()
+        batch = BatchResult()
         self.batches.append(batch)
         return batch
 
