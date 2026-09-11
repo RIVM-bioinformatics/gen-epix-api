@@ -5,9 +5,9 @@ from typing import cast
 from uuid import UUID
 
 from gen_epix import fastapp
-from gen_epix.commondb.domain.enum import EtlStatus
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.services import BatchUploader
+from gen_epix.etl.enum import EtlStatus
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.filter.uuid_set import UuidSetFilter
 from gen_epix.seqdb.domain import command, enum, model

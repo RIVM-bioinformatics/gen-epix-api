@@ -973,7 +973,7 @@ class TestDistanceOptimizationBenchmark:
         service = env.app.impl.services[enum.ServiceType.SEQ]
 
         try:
-            results: list[model.CalculateSeqDistancesResult] = []
+            results: list[model.CalculateSeqDistancesEtlResult] = []
             profiler = pyinstrument.Profiler()
             profiler.start()
             try:
@@ -1223,7 +1223,7 @@ class _MssqlBenchmarkBase:
         service = env.app.impl.services[enum.ServiceType.SEQ]
 
         try:
-            results: list[model.CalculateSeqDistancesResult] = []
+            results: list[model.CalculateSeqDistancesEtlResult] = []
             profiler = pyinstrument.Profiler()
             profiler.start()
             try:

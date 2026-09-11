@@ -241,11 +241,14 @@ class ParentForUpload(commondb_model.ParentForUpload):
 class Child1UploadResult(commondb_model.UploadResult):
     """Result for uploading a single Child1 object."""
 
+    ID: ClassVar[str] = "f8d1e6a3"
     ENTITY: ClassVar = commondb_model.UploadResult.model_entity().clone()
     NAME: ClassVar = "Child1UploadResult"
 
 
 class ParentUploadResult(commondb_model.ParentUploadResult):
+
+    ID: ClassVar[str] = "6b4f92c7"
     ENTITY: ClassVar = commondb_model.ParentUploadResult.model_entity().clone()
     NAME: ClassVar = "ParentUploadResult"
     PARENT_FOR_UPLOAD_CLASS: ClassVar = ParentForUpload  # type: ignore[assignment]
@@ -273,6 +276,8 @@ class ParentBatchForUpload(commondb_model.BaseBatchForUpload):
 
 
 class ParentBatchUploadResult(commondb_model.BaseBatchUploadResult):
+
+    ID: ClassVar[str] = "a3e7f1b9"
     ENTITY: ClassVar = commondb_model.BaseBatchUploadResult.model_entity().clone()
     BATCH_FOR_UPLOAD_CLASS: ClassVar = ParentBatchForUpload  # type: ignore[assignment]
     PARENT_RESULT_CLASS: ClassVar = ParentUploadResult

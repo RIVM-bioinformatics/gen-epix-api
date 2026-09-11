@@ -1,210 +1,210 @@
-# Graph Report - gen-epix-api  (2026-09-08)
+# Graph Report - gen-epix-api  (2026-09-10)
 
 ## Corpus Check
-- 893 files · ~1,175,399 words
+- 906 files · ~1,189,157 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 17675 nodes · 38428 edges · 767 communities (604 shown, 163 thin omitted)
-- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 1574 edges (avg confidence: 0.61)
+- 18166 nodes · 40918 edges · 673 communities (475 shown, 180 thin omitted)
+- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 2825 edges (avg confidence: 0.93)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `222855a2`
+- Built from commit: `2f18ddb3`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- AppComposer
-- get_test_client
-- casedb/domain/command/__init__.py
-- model/omop/upload.py
-- .filter
-- TestRoleRegistration
-- .upload_batch
+- BaseAppComposer
+- CacheBackend
 - CrudOperation
+- ParentForUpload
+- .filter
+- DomainException
+- test_omopdb_upload.py
+- gen_epix/fastapp/model.py
 - AppCfg
 - Client
-- validate_str_key_args
-- command/seq.py
-- App
-- UUID
+- Enum
+- SeqdbEndpointTestClient
+- commondb/api/organization.py
+- api/case.py
 - omopdb/domain/model/__init__.py
 - JWKSManager
 - MockRequest
 - CaseService
 - crud_dim.py
-- case_service_crud_case_set
-- case/crud_common.py
-- commondb/domain/model/__init__.py
-- .create_log_message
-- SeqService
-- IsoTimeTransformer
-- casedb/repositories/__init__.py
-- JsonFormatter
-- Any
-- BatchUploader
-- TupleMapTransformer
-- TestSeqdbRemoteApp
+- BaseCrudTestCase
+- BaseCaseService
 - seqdb/domain/model/__init__.py
-- transform/__init__.py
-- casedb/domain/model/__init__.py
-- BaseCaseService
-- UUID
-- Run
-- composite.py
-- TestBaseResult
-- TokenIntrospectionManager
-- .create_claims
-- BaseCaseService
-- Token
+- App
+- SeqService
+- ._get_week_start
+- commondb/repositories/__init__.py
+- JsonFormatter
 - validate_int_for_uuid_field
+- EtlStatus
+- TupleMapTransformer
+- SeqdbRemoteApp
+- Model
+- TransformResult
+- test_casedb_case_validator.py
+- BaseCaseService
+- test_user_manager_auto_create.py
+- Run
+- Filter
+- test_fastapp_cache_key.py
+- TokenIntrospectionManager
+- Any
+- BaseUnitOfWork
+- TestToken
+- _uuid_field_name
 - ObjectAdapter
 - casedb CASE Simplified ERD
-- ._validate_args
-- fastapp/domain/__init__.py
-- TestCreate
-- Model
-- test_filter_base_filter.py
+- CrudEndpointSet
+- create_custom_openapi_function
+- CasedbTestClient
+- test_seqdb_convert_seq_format.py
+- BaseFilterTestCase
 - .__init__
 - SeqProfile
-- omopdb/repositories/sa_model/__init__.py
+- Base
 - profile_method
-- Any
-- Entity
-- command/omop.py
-- test_seqdb_retrieve_best.py
+- SARepository
+- Model
+- omopdb/domain/command/__init__.py
+- _get_best_id_per_sample
 - TestTokenStore
 - test_fastapp_rbac_service.py
 - Domain
-- sa/repository.py
-- DictRepository
-- OauthIdpClient
-- .__init__
-- RemoteApp
-- BaseUnitOfWork
-- BaseOntologyRepository
-- test_casedb_retrieve_case.py
-- Filter
-- Role
-- .create_command_and_result_for_samples
-- services/omop/upload.py
-- .create_client
-- BaseAbacTestCase
-- ErmGenerator
-- EdgeCaseSpec
 - ._validate_state
-- RbacService
-- _make_protocol
-- server.py
-- _verify_children_seq_classifications
+- DictRepository
+- gen_epix/fastapp/enum.py
+- test_alembic_migrations.py
+- RequestScope
+- omopdb/repositories/__init__.py
+- casedb/repositories/__init__.py
+- LogicalOperator
+- Any
+- token_endpoint
+- .create_command_and_result_for_samples
+- UploadPersonsCommand
+- .create_client
+- AbacService
+- ErmGenerator
+- command/case.py
+- Unit
+- seqdb/services/rbac.py
+- crud_endpoint_generator.py
+- test_fastapp_api.py
+- SeqProfileForUpload
 - define_edge_cases_reference.py
-- IntervalToIntervalTransformer
-- TestCreate
+- .__init__
+- SeqdbTestClient
 - .is_allowed
-- _verify_batch_refdata_snp_profiles
+- .rev_role_map
 - TestClientStore
-- sa_model/seq/__init__.py
-- SampleBatchUploadResult
+- test_seqdb_retrieve_seq_fasta.py
+- BaseUploadTestCase
 - EqualsUuidFilter
-- casedb/repositories/sa_model/__init__.py
+- TestCommondbDictModelModifier
 - calculate_seq_distance.py
-- UploadResult
-- .create_parent_for_upload
+- TestBaseEtlResult
+- TestConvertIdsStringToList
 - test_seqdb_distance_optimization_benchmark.py
-- sa_model/case.py
+- crud_protocol_set.py
 - ._serialize_int_enums
 - UUID
 - Hashable
-- test_commondb_upload.py
-- CasedbTestClient
+- .create_parent_for_upload
+- .get_obj
 - IntEnumWithJsonSchemaMixin
 - CaseAbac
 - make_assoc
-- OIDCProvider
-- EqualsStringFilter
-- UploadCasesCommand
+- Any
+- test_casedb_crud_common.py
+- CaseBatchUploader
 - test_seqdb_calculate_seq_distances_performance.py
-- SARepository
-- TestClient
+- sa/util.py
+- User
 - ImportGraphAnalyzer
 - CaseValidator
 - BaseService
-- BaseIsOwnCasesTestCase
+- case_service_retrieve_is_own_cases
 - Concept
-- .expectStatusCount
+- case_service_crud_case_set_data_collection_link
 - Concept (omopdb.omop / OMOP CDM entity)
-- UpdateUserPolicy
-- seq_service_calculate_seq_distances_for_new_profiles
+- test_update_user_policy.py
+- _make_crud_side_effect
 - test_fastapp_repository_performance.py
 - DummyCommand
 - CacheRegion
-- BaseRbacService
-- OAuth2Validator
+- Permission
+- Any
 - .create_case_for_upload
-- cache/__init__.py
-- BaseSAMapper
+- test_fastapp_cache_invalidation.py
+- SampleQueryResult
 - Person
-- PersonForUpload
-- UUID
+- PersonBatchForUpload
+- TestRouterData
 - ._get_allele_profile_for_ids
 - RBACTestClient
-- model_anonymizer.py
+- omopdb/domain/enum.py
 - Concept
-- test_fastapp_app_log_summarise.py
-- AuthService
+- LogItem
+- BaseOrganizationService
 - BaseRepository
-- Enum
+- TestFilterConstruction
 - .create_crud_cmd
-- .create_child2_for_upload
+- MemoryVersionStore
 - TestModelSampleBatchForUpload
-- .get_case_abac
-- SeqdbService
+- seq/crud_tree_algorithm_class.py
+- commondb/env.py
 - TestUpdate
-- SeqdbTestClient
+- User
 - TestModelBaseSeq
-- CacheStatistics
+- cache/__init__.py
 - Case Type
-- BaseSimilarCasesTestCase
-- case_service_retrieve_is_own_cases
-- .__init__
+- BaseCaseAbacPolicy
+- test/fastapp/model.py
+- OrganizationSARepository
 - Data Collection
-- test_fastapp_cache_region.py
-- CaseRight
-- test_seqdb_upload.py
+- .load
+- ._validate_state
+- omopdb/repositories/organization_sa.py
 - ServerManager
 - test_fastapp_cache_support.py
-- .upload_batch
+- TestParametrizedCRUD
 - TestModelSeq
 - CaseSet
 - CaseType
-- case_service_retrieve_case_stats
+- DatetimeRangeFilter
 - .create_local_or_remote_app
 - InMemoryOrganizationRepository
-- commondb/domain/policy/permission.py
+- Role
 - test_casedb_upload.py
-- MockIDPClient
+- env
 - DummyCmd
 - ._create_sample_seq_for_upload
 - OAuth2Client
-- ExistsFilter
-- create_mapped_column
+- Any
+- fastapp shared application framework
 - Protocol
 - Person
 - Protocol (seqdb entity)
-- PackageMetadata
-- TestCommondbDictModelModifier
+- OrganizationService
+- CommondbDictModelModifier
 - EndpointTestClient
-- User
+- .result_type
 - AuthEnv
-- _DummyMapper
+- RetrieveSeqFastaCommand
 - UUID
 - FakeResponse
 - Gen-EpiX README
 - casedb.organization.md
 - ._validate_model
-- case_date.py
-- _verify_sample_refdata
+- RetrieveSeqDistanceLastModifiedCommand
+- TestGetAllEndpoint
 - CommondbRemoteApp
 - computed_field
 - TestDelete
@@ -212,19 +212,19 @@
 - case_service_crud_ref_col
 - TestNonCrudHandlers
 - CompositeFilter
-- IntervalTransformer
-- run.py
-- map_paired_elements
-- TestCreate
-- BaseUploadTestCase
+- TestPostOneEndpoint
+- log_parser_v2.py
+- TrackingUnitOfWork
+- TestClient
+- Schema migrations
 - TestNumpyAlleleIntegration
-- IdpClient
+- DummyIdpClient
 - UUID
 - Registry
 - test_cfg_log_level.py
 - generate_seq_distances.py
-- test_seqdb_models_for_upload.py
-- model/case/upload.py
+- scenario_ids
+- model/case/__init__.py
 - EvictionStrategy
 - TestCreateUserFromToken
 - TestInitialization
@@ -232,66 +232,66 @@
 - SeqGenerationSettings
 - Development Guide
 - Linter
-- TestCaseUpload
-- TestCasedbEdgeCasesAccess
+- map_paired_elements
+- get_test_client
 - TestCommondbModelProcessMetadata
-- UserManager
+- ReadOrganizationResultsOnlyPolicy
 - TestModelSeqProfileForUpload
-- fastapp shared application framework
-- lock.py
-- TestCreate
-- validate_concept_or_region
+- Runtime dependencies (requirements.txt)
+- _Call
+- UpdateUserPolicy
+- retrieve_case.py
 - convert
-- .uow
-- CrudCommand
-- sa_model/geo.py
-- .__init__
+- TestSeqDistancePerformance
+- UpdateUserPolicy
+- 6f2f4fb9b3d1_drop_legacy_code_constraints.py
+- CaseUploadSetup
 - test_seqdb_calculate_seq_distance.py
-- Any
-- TestAuth
+- omop/ontology.py
+- make_cdb_user
 - TestCasedbMetadataMasking
-- CircuitBreaker
+- TimeoutGuard
 - test_read_config.py
 - TestDataLineageMixin
-- ClientStore
+- .get_client
 - Organization (commondb.organization entity)
-- CrudCommand
+- seq_service_crud_protocol
 - check_docstrings.py
-- crud_case.py
-- .create_specimen_for_upload
-- TestDuplicateIds
-- .create_measurement_for_upload
+- get_case_abac_from_command
+- TestClient
+- ThreadRefreshRunner
+- TestCaseDataCollectionIdHandling
 - `gen_epix.fastapp.cache`
 - Organization
 - IdentifierIssuer (omopdb.organization entity)
 - Organization
-- ConditionEra
-- User
-- TestCasedbModelProcessMetadata
+- UUID
+- UserManager
+- setup_reference_data
 - MemoryTagIndex
 - test_logging_runtime_contract.py
-- ReceiverApp
-- TokenStore
+- TestGetOneEndpoint
+- Token
 - test/conftest.py
 - Gen-EpiX Contributor Documentation Index
 - Organization
 - Sample
-- PersonBatchForUpload
+- TestPutOneEndpoint
 - ._make_user_cmd
 - SAUnitOfWork
 - _encode_to_int32
-- TestGetCasesForCreateReadSetsOrSeqs
+- case_service_create_file_for_read_set_or_seq
 - TestRead
-- _make_cmd
+- _make_user
 - UUID
-- test_rights.py
+- TestDeleteOneEndpoint
 - crud_allele.py
-- CaseStats
+- retrieve_case_type_stats_profiled
 - TestCommondbMetadataMasking
-- test_model.py
+- ModelNoId
 - TestHttpTimeoutConfiguration
 - test_error_code_unicity
-- omop/service.py
+- BaseOmopService
 - ._filter_users_by_organization
 - App (command dispatcher / PEP)
 - Organization (omopdb.organization entity)
@@ -299,70 +299,69 @@
 - crud_locus_code_map.py
 - casedb/domain/command/abac.py
 - HandleAuthExceptionMiddleware
-- ReadOrganizationResultsOnlyPolicy
-- ReadOrganizationResultsOnlyPolicy
+- DataIssue
+- NullMutex
 - seq/crud_tree_algorithm.py
-- CacheConfigurationError
+- TestBulkUpdateSeqDistanceContentSA
 - FullSample
 - JsonFormatter
 - crud_sample_data_collection_link.py
-- CalculatePhylogeneticTreeCommand
-- setup_case_data_operational
-- AuthTestClient
-- make_cdb_user
+- DependencyDeclaration
+- ._open
+- MockJWKAndToken
+- TestRootTokenTTL
 - OmopdbRemoteApp
-- crud_col_set.py
-- handle_command
+- DuplicateIdsError
+- commondb/api/exc.py
 - IdpClient hierarchy
 - Protocol
 - crud_seq_classification.py
 - crud_seq_profile_identifier.py
-- ServiceTestClient
-- sa_model/ontology.py
-- BaseRemoteService
-- PayerPlanPeriod
+- .default_isolation_level
+- ._validate_state
+- ._validate_ref1_fields
+- ._validate_int_for_uuid
 - Transformer Framework
 - .get_user
 - rewrite_parametrized_dependency_markers
-- TestRetrieveCompleteCaseType
-- Any
-- crud_sample_identifier.py
+- retrieve_complete_case_type.py
+- .data_collection_set_data_collection_update_association
+- command/seq.py
 - env
-- BaseRbacServiceTestCase
+- delete_client
 - LogParser2
 - AppComposer (Composition Root)
 - Region Set
 - Sample
 - SeqTaxonomy
-- ConcreteRbacService
-- CommondbSAMapper
-- TestUserPermissions
+- .__init__
+- .__init__
 - TestOIDCProviderIntegration
-- CdmSource
+- omop/metadata.py
 - renovate.json
 - TestUpdate
 - TestSQLInjection
 - BaseCommondbRemoteAppTestCase
 - TestAnonymizeUser
-- generate_scale_test_db
+- generate_seqdb_models.py
 - TestOIDCProvider
-- Ref Col
+- Concept Relation
 - Outage (commondb.system entity)
 - Protocol
 - 3.8 Comments and Docstrings
 - calculate_phylogenetic_tree.py
 - crud_ast_measurement.py
 - IdsError
-- crud_seq_profile.py
+- BaseSeqService
 - crud_locus.py
 - crud_locus_set.py
 - crud_pcr_measurement.py
-- BaseSeqService
+- services/seq/upload.py
 - crud_protocol_set_member.py
 - crud_ref_seq.py
-- Any
-- crud_read_set_identifier.py
-- crud_seq.py
+- .retrieve_cases_by_id
+- .get_setting
+- seq/service.py
 - crud_seq_category.py
 - crud_seq_category_set.py
 - crud_seq_distance.py
@@ -370,50 +369,49 @@
 - crud_taxon.py
 - crud_taxon_set.py
 - crud_taxon_set_member.py
-- dependency
+- ._match
 - TestVerifyUserRights
 - TestDelete
-- dependency
+- ._match
 - test_logging_yaml.py
 - TestDelete
-- dependency
-- OmopdbTestClient
-- TestDelete
-- dependency
-- SampleBatchForUpload
-- TestOauthIdpClientIntrospection
-- .extract_security_callable
-- .make_idp_client
+- ._match
+- omopdb/api/router.py
+- TestUpdate
+- .__init__
+- start-sql-stack.sh
+- TestSampleChildOrder
+- schema_migration/commondb.md
 - AuthorizationCodeStore
-- BaseRepository (abstract)
+- seqdb.md
 - Contact (doc)
 - seqdb Overview ERD
 - IdentifierIssuer
 - Taxon
 - Locus
-- Any
-- casedb/repositories/organization_dict.py
-- Contig
-- .create_sa_repository
-- omopdb/repositories/organization_dict.py
-- seqdb/repositories/organization_dict.py
-- TestRead
+- casedb/repositories/sa_alembic/__init__.py
+- commondb/repositories/sa_alembic/__init__.py
+- .retrieve_own_permissions
+- EngineFactory
+- .__init__
+- .__init__
+- .print_org_admin_policies
 - KeyedMutex
-- User
-- BaseAuthServiceTestCase
-- test_omopdb_upload.py
-- OAuth 2.0 Provider with OpenID Connect Support
+- .print_identifier_issuers
+- FeatureDisabledServiceError
+- .__init__
+- .__init__
 - .get_mapped_class
 - Entity descriptor
 - Specimen
 - DataCollection
 - Seq
-- .test_successful_request_without_leaf_ids
+- .__init__
 - JIRA Issues
-- casedb/repositories/sa_model/abac.py
+- ServiceUnavailableError
 - ._validate_content
 - AuthException
-- DataException
+- .__init__
 - set_service_repository
 - Subject
 - MeasurementRelation
@@ -423,17 +421,17 @@
 - ReadSet
 - SeqProfile
 - EtlLogItem
-- .create_file_for_read_set
-- IdentifierForUpload
+- UUID
+- ._validate_model
 - .create_unique_values_temp_table
-- ._validate_seq_format
+- ._serialize_seq_format
+- IsOrganizationAdminPolicy
+- omopdb/policies/read_user_policy.py
 - IsOrganizationAdminPolicy
 - ReadUserPolicy
-- IsOrganizationAdminPolicy
-- ReadUserPolicy
-- BaseFileRepository
-- seqdb/repositories/organization_sa.py
-- _parse_nextclade_profile_content
+- omopdb/repositories/sa_alembic/__init__.py
+- OrganizationSARepository
+- seqdb/repositories/sa_alembic/__init__.py
 - OAuth Client Credential Flow Test
 - TestCaseTypeProps
 - init-db one-shot database creation service
@@ -441,22 +439,22 @@
 - DataCollectionSetMember
 - DataCollectionSetMember
 - TreeAlgorithm
-- BaseEtlResult
+- integration/api/__init__.py
 - BrokenBackend
-- TestJWKSManagerIntegration
+- unit/api/__init__.py
 - pr.sh
-- OrganizationService
+- casedb/services/organization.py
 - Issue Templates
-- command/ontology.py
+- migrations/__init__.py
 - Any
 - ._validate_content
 - seqdb/services/organization.py
 - release-please-config.json
 - get_test_client
-- command/geo.py
+- casedb/domain/service/__init__.py
 - field_validator
 - test_debug_console_uses_json_formatter
-- TestcasedbEdgeCasesRefDataAccess
+- Encoder
 - DummyLogItem
 - App.handle() command dispatch
 - casedb SUBJECT Simplified ERD
@@ -464,19 +462,17 @@
 - TreeAlgorithm
 - SeqClassificationForUpload
 - ._validate_state
-- EtlLogItem
-- ._validate_state
+- .get_errors
+- TreeAlgorithm (seqdb entity)
 - .organization_identifier_issuer_link_update_association
 - test/enum.py
 - ._validate_some_criteria
 - ._validate_content
 - .__init__
 - .__init__
-- crud_case_set_member.py
-- erm_mermaid.py
-- .__init__
+- MermaidErmGenerator
 - _PytestMockConfig
-- .data_collection_set_data_collection_update_association
+- Links, Subtasks, and Dependencies
 - docker-entrypoint.sh
 - Default App Ports (8000/8001/8002/8010)
 - CohortDefinition (omopdb.md)
@@ -484,17 +480,13 @@
 - Locus (seqdb entity)
 - SeqCategory
 - Locus
-- Enum
-- .validate_model
 - crud_read_set.py
 - .case_type_set_case_type_update_association
-- crud_ref_allele.py
 - .create_case_set
-- DiseaseEtiologicalAgentUpdateAssociationCommand
+- .disease_etiological_agent_update_association
 - .__init__
 - CasedbRemoteApp
 - .retrieve_phylogenetic_tree_by_cases
-- .retrieve_protocols
 - .get_headers
 - .invite_user
 - .organization_set_organization_update_association
@@ -505,7 +497,7 @@
 - TestGetCaseDateColIds
 - test_seqdb_nextclade_get_ref_alignment.py
 - post-pr-comments.sh
-- CHANGELOG
+- Bug Fixes
 - Local Dev/Testing Compose Stack (DICT_EMPTY)
 - Authentication vs Authorization Separation
 - Model / Command / CrudCommand
@@ -533,56 +525,26 @@
 - Outage (seqdb.system.md concept)
 - docs/__init__.py
 - crud_seq_identifier.py
-- TestPermissionRegistration
-- ._exists_some_via_query_ids
-- TestHierarchicalRolePermissions
-- RegionRelation
+- RegionRelationType
 - .anonymize_user
 - .retrieve_feature_flags
-- .__init__
 - field_validator
-- .create_case_set
-- TestGeneratedCrudRoutes
-- TestEdgeCasesAndErrorConditions
-- case_service_crud_case_set_status
 - wait_for_mssql.py
-- .create_person_for_upload
 - Fields, Issue Types, and Transitions
-- abac/__init__.py
-- .crud
+- SeqdbService
 - .get_root_user
-- TestCalculateSeqDistancesForNewProfiles
-- sa_model/seq/base.py
-- create_fast_api
-- UUID
+- seq_service_calculate_seq_distances_for_new_profiles
+- UpdateResponseHeaderMiddleware
 - ._validate_int_for_uuid
-- GraphvizErmGenerator
-- test_omopdb_upload_base_result.py
+- BatchEtlResult
 - Implement JIRA Issue
-- Links, Subtasks, and Dependencies
-- .logger
-- .create_organization_identifier_issuer_link
-- ._make_user
 - Logger
-- TestServiceInitialization
-- TestRoleHierarchy
-- TestCommandPermissions
-- TestGetNewUserFromClaims
-- test_oidc_provider.py
-- BaseModel
 - ReadSelfResultsOnlyPolicy
-- .logger
-- case_service_crud_genetic_distance_protocol
-- .filter
-- .crud
 - seqdb_server
-- Hashable
 - ._custom_json_encoder
 - ReadSelfResultsOnlyPolicy
 - ReadSelfResultsOnlyPolicy
 - Commit Skill
-- TokenRetrieval
-- scenario_ids
 - casedb service (DICT_EMPTY, in-process LOCAL seqdb)
 - omopdb service (DICT_EMPTY, no auth)
 - seqdb service (DICT_EMPTY, no auth)
@@ -631,7 +593,6 @@
 - Outage
 - PackageMetadata
 - Config
-- TreeAlgorithm (seqdb entity)
 - UserInvitationConstraints
 - UserNameEmail
 - BaseSeq
@@ -644,77 +605,44 @@
 - casedb/__init__.py
 - Creating Issues
 - Pytest Run (capture once, inspect many times)
-- ConditionOccurrence
-- case/service.py
+- case_service_crud_case_type_set_member
 - test_general_dependency_list.py
-- patch
-- UUID
 - ParentUploadResult
-- AppComposer
-- TestRead
-- .filter
-- .retrieve_user_roles
+- .__init__
 - .is_invalidated
 - ._validate
-- OrganizationService
-- TestUpdate
-- TestRead
-- TestUpdate
-- ._serialize_created_at
 - fastapp/services/__init__.py
-- ModelFieldProps
 - omopdb/config/__init__.py
 - gen_epix/omopdb/__init__.py
 - seqdb/config/__init__.py
-- TestRootUserTokenTimeToLive
-- TestInitializationValidation
 - gen_epix/seqdb/__init__.py
-- Any
-- ._generate_key_pair
-- ._get_access_dict
-- .get_content
+- UUID
 - Gen-EpiX
-- RbacService
-- model/organization.py
-- UploadResultWithIdentifiers
-- CachedError
-- omopdb/repositories/sa_model/base.py
-- ._update_object_properties
+- casedb/services/rbac.py
+- .__init__
+- ._get_dummy_link_defaults
 - ._validate_state
 - Examples
 - gen-epix-api Version 6.1.0
-- Death
-- ._validate_unit_for_type
-- .__init__
-- .get_batch_for_upload
-- .add_error
-- .__init__
-- .__init__
-- .__init__
-- .__init__
 - .__init__
 - InvalidIdsError
 - InvalidLinkIdsError
 - InvalidModelIdsError
 - LinkConstraintViolationError
-- ._validate_state
-- .test_successful_request_with_full_response
+- UuidSetFilter
+- api/seq.py
 - ._validate_locus
 - ._validate_protocol_type_dependencies
 - ._validate_model
 - ._validate_state
-- File
-- CalculateSeqDistancesForNewProfilesCommand
+- CalculateSeqDistancesEtlResult
 - Available Tools
 - TestContent
-- ._serialize_severity
-- ._validate_severity
-- .setup
-- TestUnauthenticated
+- get_test_client
 - ._serialize_seq_profile_type
 - omopdb/integration/build_db/create.py
 - .__init__
-- casedb.md
+- erm/casedb.md
 - casedb.case.detailed.md
 - casedb.detailed.md
 - casedb.geo.md
@@ -726,66 +654,40 @@
 - casedb.subject.detailed.md
 - casedb.system.md
 - casedb.system.detailed.md
-- commondb.md
+- erm/commondb.md
 - commondb.abac.md
 - commondb.abac.detailed.md
 - commondb.auth.md
 - commondb.auth.detailed.md
 - commondb.detailed.md
-- CaseUploadResult
-- BaseAbacService
-- .set_created
-- .__del__
-- .set_auto_invalidate_cache
-- .__init__
-- RbacService
-- .get_key_id
 - casedb SEQDB Simplified ERD
-- ._validate_file_compression
-- .__init__
-- ._get_user_and_repository
-- _build_col_lookup
-- setup_test_users_and_organizations_operational
-- setup_test_users_and_organizations_reference
-- TestInitAndProperties
-- ._get_upload_samples_command
 - .col_set_col_update_association
-- OrganizationAdminPolicy
 - .__init__
-- .ssl_context
 - .n_loci
-- ._validate_props
 - .is_available
 - ._validate_model
-- EdgeCaseSpecOp
-- app
+- test_casedb_remote_app.py
 - TestOmopSpecification
 - schema_migration/casedb.md
 - omopdb.md
-- .has_any_rights
-- .resolve_status
-- .is_sub_role
-- .get_nucleotide_seq
-- .get_sort_key
-- str_uuid4
 
 ## God Nodes (most connected - your core abstractions)
-1. `BaseUnitOfWork` - 247 edges
-2. `Entity` - 217 edges
-3. `App` - 151 edges
-4. `BaseCaseService` - 150 edges
-5. `BaseSeqService` - 136 edges
-6. `CrudOperation` - 128 edges
-7. `CacheRegion` - 125 edges
-8. `DictRepository` - 123 edges
-9. `CasedbTestClient` - 120 edges
-10. `Domain` - 109 edges
+1. `BaseUnitOfWork` - 286 edges
+2. `CasedbTestClient` - 258 edges
+3. `Model` - 234 edges
+4. `CrudOperation` - 231 edges
+5. `App` - 202 edges
+6. `Entity` - 193 edges
+7. `TestClient` - 188 edges
+8. `BaseCaseService` - 154 edges
+9. `Command` - 149 edges
+10. `Base` - 143 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Review Skill` --semantically_similar_to--> `CI: Static Analysis and Testing Workflow`  [INFERRED] [semantically similar]
-  .agents/skills/review/SKILL.md → .github/workflows/main.yml
 - `PPR Test Docker Compose (Mock OIDC + CASEDB/SEQDB)` --semantically_similar_to--> `SQL + Mock OIDC Docker Compose (SEQDB/OMOPDB/CASEDB)`  [INFERRED] [semantically similar]
   docker-compose.ppr_test.yml → docker-compose.sql.idp.yml
+- `Review Skill` --semantically_similar_to--> `CI: Static Analysis and Testing Workflow`  [INFERRED] [semantically similar]
+  .agents/skills/review/SKILL.md → .github/workflows/main.yml
 - `pytest-run skill` --semantically_similar_to--> `Per-app test commands (test_{app}_{scope})`  [INFERRED] [semantically similar]
   .github/instructions/python-pytest.instructions.md → docs/06-Development-Guide.md
 - `casedb-seqdb-omopdb E2E Connection Test Logging Config` --semantically_similar_to--> `casedb Logging Config`  [INFERRED] [semantically similar]
@@ -810,631 +712,635 @@
 - **Shared Debug File+Console Logging Pattern (casedb/commondb/omopdb/seqdb)** — gen_epix_casedb_config_logging_debug_logging, gen_epix_commondb_config_logging_debug_logging, gen_epix_omopdb_config_logging_debug_logging, gen_epix_seqdb_config_logging_debug_logging [INFERRED 0.95]
 - **Shared Non-Debug JSON Logging Pattern (casedb/commondb/omopdb/seqdb)** — gen_epix_casedb_config_logging_logging, gen_epix_commondb_config_logging_logging, gen_epix_omopdb_config_logging_logging, gen_epix_seqdb_config_logging_logging [INFERRED 0.95]
 
-## Communities (767 total, 163 thin omitted)
+## Communities (673 total, 180 thin omitted)
 
-### Community 0 - "AppComposer"
-Cohesion: 0.04
-Nodes (48): AbacService, CommonRoleGenerator, Encapsulates Casedb role inheritance and command permission expansion. The…, RoleGenerator, BaseAppComposer, App, Dynaconf, Encapsulates dependencies and repository construction for concrete app… (+40 more)
+### Community 0 - "BaseAppComposer"
+Cohesion: 0.09
+Nodes (15): BaseAppComposer, Any, App, Dynaconf, Enum, Encapsulates dependencies and repository construction for concrete app…, Initialize abstract composition state placeholders. Raises:…, Return the application's resolved Dynaconf settings. (+7 more)
 
-### Community 1 - "get_test_client"
-Cohesion: 0.67
-Nodes (3): get_test_client(), Env, fixture
+### Community 1 - "CacheBackend"
+Cohesion: 0.03
+Nodes (35): CacheBackend, ProxyBackend, ABC, Return a store-provided mutex for regenerating `key`. Returns: A mutex when the…, Return the counters observed by this store., Release the resources held by the store., Encapsulates altering the behavior of another backend without subclassing it.…, Initialize a ProxyBackend instance. (+27 more)
 
-### Community 2 - "casedb/domain/command/__init__.py"
-Cohesion: 0.01
-Nodes (324): ETL (Extract, Transform, Load) script for Gen-EpiX genomic epidemiology…, CaseTypeCrudCommand, CaseTypeSetCaseTypeUpdateAssociationCommand, CaseTypeSetCategoryCrudCommand, ColSetColUpdateAssociationCommand, CreateCaseSetCommand, Command, UpdateAssociationCommand (+316 more)
+### Community 2 - "CrudOperation"
+Cohesion: 0.02
+Nodes (210): post-pr-comments.sh Script, Review Skill, ETL (Extract, Transform, Load) script for Gen-EpiX genomic epidemiology…, Compose and expose the configured casedb FastAPI application. This module forms…, # TODO: app variable added for backwards compatibility with startup code that…, Define casedb service, authorization, case, and schema enumerations. These…, Expose and organize casedb and shared domain models for registration. ABAC…, Define the Casedb ABAC service contract and command classifications. (+202 more)
 
-### Community 3 - "model/omop/upload.py"
-Cohesion: 0.04
-Nodes (53): CaseBatchForUpload, computed_field, Represents a batch of unique cases intended for upload., Indicates whether there are any read sets in the cases., Indicates whether there are any sequences in the cases., Return whether any case has read sets or sequences for a seqdb sample., BaseBatchForUpload, DataIssue (+45 more)
+### Community 3 - "ParentForUpload"
+Cohesion: 0.05
+Nodes (36): Get the batch for upload from the command., Get the number of parents in the batch for upload., BaseBatchForUpload, ParentForUpload, Any, field_serializer, field_validator, Model (+28 more)
 
 ### Community 4 - ".filter"
 Cohesion: 0.18
 Nodes (7): Any, Command, Return whether the command is allowed by this policy., Return policy content associated with a command., Return the type of content produced by this policy., Filter a command result according to this policy., Determine if a stored value for this field is mutable.
 
-### Community 5 - "TestRoleRegistration"
-Cohesion: 0.08
-Nodes (13): Test role registration and management., Test registering a new role with permissions., Test registering role with invalid permissions fails., Test registering existing role without update fails., Test updating existing role succeeds., Test registering multiple roles at once., Test registering roles with root role adds all missing permissions., Test registering roles with root role and missing permissions raises error. (+5 more)
+### Community 5 - "DomainException"
+Cohesion: 0.04
+Nodes (37): Any, BaseModel, Enum, field_validator, Hashable, Key, model_validator, Self (+29 more)
 
-### Community 6 - ".upload_batch"
-Cohesion: 0.10
-Nodes (21): ParentUploadResult, Test 8.1: Specimen without Identifiers - should succeed., Upload a batch of persons and return the upload result., Test 1.1: ID not provided or NULL_ID - person does not exist and needs to be…, Test 1.2: ID provided by batch creator (new_id); person does not exist yet -…, Test scenarios related to providing different combinations of child objects., Test 2.1: Person without any child objects., Test 2.2: Person with measurements only. (+13 more)
+### Community 6 - "test_omopdb_upload.py"
+Cohesion: 0.04
+Nodes (90): IdentifierForUpload, BaseModel, Represents an external identifier used in an upload operation. It is defined as…, Compare issuer references and external ID with another upload identifier., Return a hash of the issuer references and external identifier., ModelFieldProps, BaseModel, Represents additional properties of a model field. The application of these… (+82 more)
 
-### Community 7 - "CrudOperation"
-Cohesion: 0.01
-Nodes (243): Define casedb API representations for organization permissions., Re-export FastApp API and domain exceptions used by casedb contracts. Consumers…, BaseCaseAbacPolicy, Define policy helpers for attaching Casedb ABAC data to commands., Encapsulates command-scoped case and reference-data access resolution. Policy…, CaseAbacPolicy, Resolve case-specific ABAC content for casedb commands., Apply command-scoped casedb case access resolution. (+235 more)
+### Community 7 - "gen_epix/fastapp/model.py"
+Cohesion: 0.02
+Nodes (137): Provide an HTTP command client for remote commondb applications. The client…, Application command dispatch, policy enforcement, and event handling. The…, Domain registry for models, commands, services, and permissions., Domain metadata types and factory helpers., Key, BaseModel, Key definitions for domain model instances., Encapsulates generating a stable key from one or more model fields. (+129 more)
 
 ### Community 8 - "AppCfg"
 Cohesion: 0.04
-Nodes (51): AppComposer, Any, CommonAppComposer, Encapsulates casedb registrations for shared application composition. The…, Initialize and run casedb application composition. Construction delegates…, AppCfg, BaseAppCfg, _is_descendant_logger() (+43 more)
+Nodes (41): AppCfg, BaseAppCfg, _is_descendant_logger(), Dynaconf, Enum, Path, Refactored configuration management using Strategy Pattern., Loaded Dynaconf settings object. (+33 more)
 
 ### Community 9 - "Client"
 Cohesion: 0.04
-Nodes (35): Client, OAuth 2.0 Client representation., Hash the client secret for security., Hash a client secret using SHA-256., Verify a client secret against the stored hash., Validate and filter requested scopes against allowed scopes., Check if the client supports a specific grant type., Check if the redirect URI is registered for this client. (+27 more)
+Nodes (41): HTTPBasicCredentials, Client, List all active clients., Create a new client with auto-generated credentials., OAuth 2.0 Client representation., Hash the client secret for security., Hash a client secret using SHA-256., Verify a client secret against the stored hash. (+33 more)
 
-### Community 10 - "validate_str_key_args"
-Cohesion: 0.06
-Nodes (34): Validate and synchronize string-based primary key arguments. Mutates ``data``…, validate_str_key_args(), generate_ulid(), UUID, Derive a deterministic UUID from a UTF-8 string. The SHA-256 digest is…, Generate a new UUID backed by a ULID. Returns: A UUID whose underlying ULID…, str_to_uuid(), Tests for the validate_str_for_uuid_field function. (+26 more)
-
-### Community 11 - "command/seq.py"
+### Community 10 - "Enum"
 Cohesion: 0.04
-Nodes (40): Command, field_validator, UUID, Define commands for seqdb sequence workflows and managed domain records. The…, Represents creating missing distances for profiles under a distance protocol.…, Represents retrieval of sample identifiers matching a query. These identifiers…, Represents retrieval of complete data for sample identifiers. The result…, Require every requested sample identifier to occur at most once. (+32 more)
+Nodes (50): field_serializer, Serialize dim-type keys and col-type sets to plain string dicts., CaseClassification, CaseTypeSetCategoryPurpose, ColConceptSetType, ColRelation, ColType, ColTypeOrder (+42 more)
 
-### Community 12 - "App"
-Cohesion: 0.01
-Nodes (305): create_abac_endpoints(), Any, APIRouter, App, Exception, FastAPI, NoReturn, Register casedb ABAC endpoints through the shared commondb API adapter. (+297 more)
+### Community 11 - "SeqdbEndpointTestClient"
+Cohesion: 0.08
+Nodes (20): field_validator, UUID, Represents a request to retrieve complete data for sample identifiers. The…, Require every requested sample identifier to occur at most once., Represents a request to retrieve only SampleIdentifier records for sample…, Require every requested sample identifier to occur at most once., Require every requested sequence identifier to occur at most once., RetrieveSampleIdentifiersByIdCommand (+12 more)
 
-### Community 13 - "UUID"
-Cohesion: 0.06
-Nodes (22): Represents retrieval of profiles similar to at least one query profile. the…, Represents retrieval of the best Seq ID for each requested sample. IDs, and…, RetrieveBestSeqPerSampleCommand, RetrieveSimilarProfilesCommand, TreeAlgorithm, TreeAlgorithmClass, TreeAlgorithmClassCrudCommand, TreeAlgorithmCrudCommand (+14 more)
+### Community 12 - "commondb/api/organization.py"
+Cohesion: 0.02
+Nodes (165): create_abac_endpoints(), Any, APIRouter, App, Exception, FastAPI, NoReturn, Register casedb ABAC endpoints through the shared commondb API adapter. (+157 more)
+
+### Community 13 - "api/case.py"
+Cohesion: 0.05
+Nodes (52): CaseTypeSetCaseTypeUpdateAssociationRequestBody, ColSetColUpdateAssociationRequestBody, create_case_endpoints(), CreateCaseSetRequestBody, CreateFileForReadSetRequestBody, CreateFileForSeqRequestBody, Any, APIRouter (+44 more)
 
 ### Community 14 - "omopdb/domain/model/__init__.py"
-Cohesion: 0.06
-Nodes (102): BaseIdentifier, Represents an identifier generated outside the system for an entity. It records…, Expose shared and OMOP model types plus their domain registration metadata. The…, ConditionOccurrence, ConditionOccurrenceIdentifier, Death, DeathIdentifier, DeviceExposure (+94 more)
+Cohesion: 0.04
+Nodes (141): BaseIdentifier, Represents an identifier generated outside the system for an entity. It records…, IdentifiersMixin, Encapsulates a mixin that adds identifiers fields and validation. Assumes that…, Model, OmopDB base model with optional UUID identity metadata., Represents the shared model contract with an optional OmopDB object ID., Expose shared and OMOP model types plus their domain registration metadata. The… (+133 more)
 
 ### Community 15 - "JWKSManager"
-Cohesion: 0.05
-Nodes (34): JWKSManager, Get the public key in PEM format., Get the private key in PEM format (use with caution!)., Manages JSON Web Keys for JWT token operations., Test verification of a valid JWT token., Test verification of an invalid JWT token., Test verification fails with token signed by different key., Test getting public keys in JWKS format. (+26 more)
+Cohesion: 0.03
+Nodes (55): JWKSManager, Any, Get the current key ID., Generate a new key pair and return the new key ID., Create an OpenID Connect ID Token., Validate only the signature of a JWT token without checking claims., Decode JWT header without verification., Decode JWT payload without verification (use carefully!). (+47 more)
 
 ### Community 16 - "MockRequest"
 Cohesion: 0.03
-Nodes (52): MockRequest, Any, Test client authentication requirement for client credentials flow., Test client authentication requirement for other grant types., Test client authentication with valid credentials., Test client authentication with invalid client ID., Test client authentication with invalid secret., Test client authentication with missing credentials. (+44 more)
+Nodes (57): MockRequest, Any, Test OAuth2Validator initialization., Test client authentication requirement for client credentials flow., Test client authentication requirement for other grant types., Test client authentication with valid credentials., Test client authentication with invalid client ID., Test client authentication with invalid secret. (+49 more)
 
 ### Community 17 - "CaseService"
-Cohesion: 0.04
-Nodes (59): CaseService, BaseCaseService, Case, CaseIdentifier, CaseSet, CaseSetMember, CaseType, CaseTypeSet (+51 more)
+Cohesion: 0.03
+Nodes (62): Expose the concrete service that handles casedb case-domain commands.…, CaseService, CaseIdentifier, CaseSet, CaseSetCategory, CaseSetMember, CaseSetStatus, CaseType (+54 more)
 
 ### Community 18 - "crud_dim.py"
 Cohesion: 0.04
-Nodes (71): DimCrudCommand, Represent CRUD operations for dimensions that group case-type columns., case_service_crud_dim(), _crud_create_dim(), _crud_dim_with_abac(), _crud_dim_without_abac(), _crud_update_dim(), _get_existing_dim() (+63 more)
+Nodes (61): DimCrudCommand, Represents a request to execute a CRUD operation on Dims., case_service_crud_dim(), _crud_create_dim(), _crud_dim_with_abac(), _crud_dim_without_abac(), _crud_update_dim(), _get_existing_dim() (+53 more)
 
-### Community 19 - "case_service_crud_case_set"
-Cohesion: 0.08
-Nodes (31): CaseSetCrudCommand, Represent CRUD operations for case sets and their context., case_service_crud_case_set(), _crud_case_set_with_abac(), _crud_case_set_without_abac(), BaseCaseService, CaseSet, UUID (+23 more)
-
-### Community 20 - "case/crud_common.py"
+### Community 19 - "BaseCrudTestCase"
 Cohesion: 0.06
-Nodes (72): CaseTypeSetCrudCommand, ColCrudCommand, ColSetMemberCrudCommand, Represent CRUD operations for typed case-data columns., Represent CRUD operations for column-set membership., Represent CRUD operations for reusable sets of related case types., case_service_crud_case_type(), _crud_case_type_with_abac() (+64 more)
+Nodes (39): CaseSetCrudCommand, Represents a request to execute a CRUD operation on CaseSets., case_service_crud_case_set(), _crud_case_set_with_abac(), _crud_case_set_without_abac(), CaseSet, UUID, Handle CRUD operations for case-set entities. (+31 more)
 
-### Community 21 - "commondb/domain/model/__init__.py"
+### Community 20 - "BaseCaseService"
+Cohesion: 0.03
+Nodes (145): DomainBaseCaseService, Re-export FastApp API and domain exceptions used by casedb contracts. Consumers…, BaseCaseService, Define the shared interface and helpers required by case service handlers. The…, Encapsulates the interface contract shared by case service handlers. This…, case_service_create_case_set(), CaseSet, Create case sets together with their collection and case associations. The… (+137 more)
+
+### Community 21 - "seqdb/domain/model/__init__.py"
 Cohesion: 0.01
-Nodes (225): Expose casedb policy contracts and shared authorization policy bases.…, Expose casedb policy adapters and shared policy substitutions. Casedb exports…, Extend organization-admin authorization to casedb case policies., Extend organization-scoped result filtering to casedb case policies., Extend self-only result filtering to casedb user case policies., Expose concrete casedb and shared services for application composition. Casedb…, OntologyService, Implement casedb ontology association service behavior. (+217 more)
+Nodes (270): CrudCommand, Define casedb commands for geographic regions and region sets., Represent CRUD operations for geographic region sets., Represent CRUD operations for geographic regions., Represent CRUD operations for relationships between regions., Represent CRUD operations for shapes associated with region sets., RegionCrudCommand, RegionRelationCrudCommand (+262 more)
 
-### Community 22 - ".create_log_message"
-Cohesion: 0.16
-Nodes (9): Command, Register a lifecycle listener for a command class and timing. Listeners receive…, Register a cache invalidator for successful commands of an exact type. Args:…, Remove a previously registered command lifecycle listener. Args: command_class:…, Register the handler that executes a command class. The handler is resolved for…, Return the nearest registered handler for a command class. Searches the class…, Dispatch a command through its complete application lifecycle. For the initial…, Resolve a command handler while logging and unwinding a failed dispatch. Args:… (+1 more)
+### Community 22 - "App"
+Cohesion: 0.03
+Nodes (71): Any, Initialize role maps and configured root and guest role values. Args: app:…, Register ABAC policies at their required command lifecycle phases.…, Clear cached user lookups after a command changes ABAC-related state. Args:…, Implement commondb role-based access-control services and policy registration., App, Any, datetime (+63 more)
 
 ### Community 23 - "SeqService"
+Cohesion: 0.04
+Nodes (57): ConvertSeqFormatCommand, Command, Represents a request to convert stored contig sequence representations.…, Represents a request to retrieve profiles similar to at least one query…, Represents a request to retrieve the best Seq ID for each requested sample.…, Represents a request to retrieve the best SeqProfile ID for each requested…, Represents a request to retrieve the best SeqClassification ID for each…, RetrieveBestSeqClassificationPerSampleCommand (+49 more)
+
+### Community 24 - "._get_week_start"
+Cohesion: 0.13
+Nodes (10): date, Convert from WEEK to YEAR using exact mode., Convert from WEEK to YEAR using round mode., Convert from WEEK to QUARTER using exact mode., Convert from WEEK to QUARTER using round mode., Convert from WEEK to MONTH using exact mode., Convert from WEEK to MONTH using round mode., Calculate the start date of a given ISO week. (+2 more)
+
+### Community 25 - "commondb/repositories/__init__.py"
 Cohesion: 0.05
-Nodes (32): ProtocolSetCrudCommand, Represents CRUD command metadata for sequence protocol-set records., ProtocolSet, Handle a CRUD command for protocol-set entities. Args: cmd: Typed protocol-set…, TreeAlgorithmClass, TreeAlgorithmClassCrudCommand, UUID, Implement seqdb CRUD service operations for… (+24 more)
-
-### Community 24 - "IsoTimeTransformer"
-Cohesion: 0.03
-Nodes (49): IntervalTransformStrategy, Enum, Enumerations for temporal granularity, interval mapping, and result status., Encapsulates strategies for reducing ISO time granularity., Encapsulates strategies for mapping interval categorizations., Encapsulates high-level transformation categories., Encapsulates transformation outcome classifications., Encapsulates supported ISO time granularities. (+41 more)
-
-### Community 25 - "casedb/repositories/__init__.py"
-Cohesion: 0.03
-Nodes (92): CommonBaseAbacRepository, BaseGeoRepository, Define the repository contract for Casedb geographic reference data., Provide the shared repository base for geographic persistence., Expose backend-independent repository contracts used by casedb services. Casedb…, AbacDictRepository, BaseAbacRepository, Provide casedb dictionary persistence behavior for ABAC policy data. (+84 more)
+Nodes (45): BaseAbacRepository, Define the repository interface for commondb ABAC persistence., Encapsulates the persistence boundary for organization-administration policies., Re-export commondb repository interfaces. ABAC, organization, and system…, BaseSystemRepository, Define the repository interface for commondb system data., Encapsulates the persistence boundary for system outages and metadata., AbacDictRepository (+37 more)
 
 ### Community 26 - "JsonFormatter"
 Cohesion: 0.05
 Nodes (89): Formatter, _build_sensitive_re(), JsonFormatter, _normalise_sensitive_keys(), Any, LogRecord, Central JSON logging formatter for all GenEpix container applications. Ensures…, Format a Unix timestamp as a millisecond-precision UTC ISO 8601 value. Args:… (+81 more)
 
-### Community 27 - "Any"
-Cohesion: 0.10
-Nodes (20): Any, field_validator, UUID, Normalize measurement concept identifiers to UUID form., Truncate too long values with an ellipsis, as the database field is limited to…, Normalize observation concept identifiers to UUID form., Normalize person concept identifiers to UUID form., Normalize note concept identifiers to UUID form. (+12 more)
-
-### Community 28 - "BatchUploader"
+### Community 27 - "validate_int_for_uuid_field"
 Cohesion: 0.07
-Nodes (42): Encapsulates batch-upload options and payload access for upload commands., UploadBatchCommandMixin, BaseBatchUploadResult, Represents the result for an atomic batch upload. Subclasses use field names…, BatchUploader, Model, ParentForUpload, ParentUploadResult (+34 more)
+Nodes (29): Validate that the input value is either a UUID or an integer that can be…, validate_int_for_uuid_field(), Any, field_validator, UUID, Normalize measurement concept identifiers to UUID form., Truncate too long values with an ellipsis, as the database field is limited to…, Normalize observation concept identifiers to UUID form. (+21 more)
+
+### Community 28 - "EtlStatus"
+Cohesion: 0.02
+Nodes (155): Upload a batch of sequence samples. Implementations may persist samples and…, Model, Upsert cases and then their linked read sets and sequences. The method mutates…, Build a seqdb upload command and child-to-case index mappings. The batch ID is…, Upload samples to seqdb under the configured functional user. The command's…, Encapsulates batch-upload options and payload access for upload commands., UploadBatchCommandMixin, Encapsulates the action selected for one record during an upload. (+147 more)
 
 ### Community 29 - "TupleMapTransformer"
 Cohesion: 0.03
-Nodes (57): Any, Hashable, Replace the lookup map used by subsequent row transformations. Only active rows…, Encapsulates mapping source-field tuples to target-field tuples. The mapping is…, Update the row source and target fields. This allows row field names to change…, Transform an adapted object using the configured tuple mapping. Target fields…, Transform a dictionary row in place and return the same dictionary. This is the…, Return the configured source-field values for a row without transforming it.… (+49 more)
+Nodes (50): Any, Hashable, Replace the lookup map used by subsequent row transformations. Only active rows…, Encapsulates mapping source-field tuples to target-field tuples. The mapping is…, Update the row source and target fields. This allows row field names to change…, Transform an adapted object using the configured tuple mapping. Target fields…, Transform a dictionary row in place and return the same dictionary. This is the…, Return the configured source-field values for a row without transforming it.… (+42 more)
 
-### Community 30 - "TestSeqdbRemoteApp"
-Cohesion: 0.13
-Nodes (9): scenario_ids, Test the SeqdbRemoteApp class with focus on…, Test that the ROUTE_MAP contains the expected mapping., Test that the calculate_phylogenetic_tree method exists and is callable., Test that base URL is constructed correctly., Test that the remote app initializes correctly with default values., Use the extended timeout for large Locus CRUD batches., Test that the handler registers the correct route. (+1 more)
-
-### Community 31 - "seqdb/domain/model/__init__.py"
-Cohesion: 0.03
-Nodes (180): Normalize an integer enum value to a sequence-distance type., Define casedb geographic reference models. The module provides region sets,…, Define persisted attribute-based access-control models for commondb. The…, Model, IntEnum, Provide commondb base models and helpers for ETL result reporting. The models…, Normalize a value to a member of an integer enumeration. Args: enum_class: The…, Normalize an optional value to a member of an integer enumeration. Args:… (+172 more)
-
-### Community 32 - "transform/__init__.py"
+### Community 30 - "SeqdbRemoteApp"
 Cohesion: 0.04
-Nodes (50): Expose the public API for the transformation framework. `DictAdapter`,…, FallbackTransformer, Pipeline, Any, Synchronous transformer pipeline with ordered execution and error recovery., Run the wrapped transformer until it succeeds or retries are exhausted. Retries…, Encapsulates fallback transformation after a primary exception., Store the primary transformer and fallback transformer. (+42 more)
+Nodes (52): CalculatePhylogeneticTreeCommand, model_validator, Self, Represents a request to calculate a phylogenetic tree from query profiles and a…, Require custom leaf names to align with the queried profile identifiers., Require a supported, same-family DNA representation conversion., PhylogeneticTree, Calculate a phylogenetic tree. Args: cmd: Tree-calculation command to execute.… (+44 more)
 
-### Community 33 - "casedb/domain/model/__init__.py"
-Cohesion: 0.01
-Nodes (190): ConceptSetType, DimType, Classify the language or value scale represented by a concept set., Classify the kind of data grouped by a case-type dimension., Define supported phylogenetic-tree and clustering algorithms., Identify units supported by casedb column and concept metadata., TreeAlgorithmType, Unit (+182 more)
+### Community 31 - "Model"
+Cohesion: 0.02
+Nodes (218): Normalize an integer enum value to a sequence-distance type., Define persisted attribute-based access-control models for commondb. The…, Model, IntEnum, Provide commondb base models and helpers for ETL result reporting. The models…, Normalize an optional value to a member of an integer enumeration. This…, Represents an optional persistent identifier to commondb audit-aware models., Normalize a value to a member of an integer enumeration. This function is… (+210 more)
+
+### Community 32 - "TransformResult"
+Cohesion: 0.04
+Nodes (52): FallbackTransformer, Pipeline, Any, TransformResult, Synchronous transformer pipeline with ordered execution and error recovery., Run the wrapped transformer until it succeeds or retries are exhausted. Retries…, Encapsulates fallback transformation after a primary exception., Store the primary transformer and fallback transformer. (+44 more)
+
+### Community 33 - "test_casedb_case_validator.py"
+Cohesion: 0.04
+Nodes (56): CompleteCaseType, model_validator, Self, Define the complete, user-specific view of a case type. The module combines…, Represents a case type with its related entities and effective ABAC data. The…, Validate references and replace all derived ordering fields in place., Col, Dim (+48 more)
 
 ### Community 34 - "BaseCaseService"
 Cohesion: 0.03
-Nodes (60): BaseCaseService, Any, Case, CaseDataCollectionLink, CaseIdentifier, CaseSet, CaseSetCategory, CaseSetDataCollectionLink (+52 more)
+Nodes (59): BaseCaseService, Case, CaseDataCollectionLink, CaseIdentifier, CaseSet, CaseSetCategory, CaseSetDataCollectionLink, CaseSetMember (+51 more)
 
-### Community 35 - "UUID"
-Cohesion: 0.07
-Nodes (42): claims_basic(), make_user_manager(), mock_organization_service(), mock_rbac_service(), other_org(), other_org_id(), Any, fixture (+34 more)
+### Community 35 - "test_user_manager_auto_create.py"
+Cohesion: 0.08
+Nodes (43): claims_basic(), make_user_manager(), mock_organization_service(), mock_rbac_service(), other_org(), other_org_id(), Any, fixture (+35 more)
 
-### Community 37 - "composite.py"
+### Community 37 - "Filter"
 Cohesion: 0.05
-Nodes (62): Decimal, BaseCaseRepository, datetime, UUID, Define backend-independent persistence operations for Casedb case data., Encapsulates case persistence and aggregate statistics reads. Concrete…, Build temporal-resolution date normalization functions. Returns: A mapper for…, Read aggregate statistics for a case type within a unit of work.… (+54 more)
+Nodes (67): _default_validate_query_filter(), Allow query filters with at most one level of composite filters., Return (where_filter, None) — the full filter applies in-memory., Filter, Base abstractions for scalar, column, and row filters., Represents a filter. This is a base class from which all actual filter…, Return whether this filter combines multiple child filters., Logical composition of scalar and row filter expressions. (+59 more)
+
+### Community 38 - "test_fastapp_cache_key.py"
+Cohesion: 0.05
+Nodes (57): arg_key_generator(), bind_arguments(), function_namespace(), _has_receiver(), KeyGeneratorFactory, KeySpec, kwarg_key_generator(), Any (+49 more)
 
 ### Community 39 - "TokenIntrospectionManager"
 Cohesion: 0.04
-Nodes (44): Create static log message., BaseLogItem, Structured log message types and JSON serialization., Encapsulates a BaseLogItem class for creating log messages. Defined as a…, Convert the log item to a JSON string., # TODO: Provide more structured encoding of exception, OidcServerCfg, field_validator (+36 more)
+Nodes (42): Any, Logger, SSLContext, Return cached introspection endpoint., Prune expired introspection cache., Encapsulates managing token introspection and discovery-endpoint caching., Return whether cached introspection token inactive., Return whether recheck introspection. (+34 more)
 
-### Community 40 - ".create_claims"
-Cohesion: 0.16
-Nodes (11): Test scenarios for get_existing_user_from_claims., No user manager -> UnauthorizedAuthError., User found, name updated -> returns updated user., Update user name raises DomainException -> returns original user., No user key initially; after userinfo, key resolves -> returns user., User not found; claims match root -> create root user., User not found; auto-create -> success., User not found; auto-create returns None -> Unauthorized. (+3 more)
+### Community 40 - "Any"
+Cohesion: 0.05
+Nodes (35): AsyncCachedFunction, BoundCachedFunction, CachedFunction, make_cached_function(), Any, Return the logical cache key for one argument combination. A writer that wants…, Return the tags attached to the entry for one argument combination. Args:…, Return the cached result without computing it. Args: *args: Positional… (+27 more)
 
-### Community 41 - "BaseCaseService"
+### Community 41 - "BaseUnitOfWork"
 Cohesion: 0.04
-Nodes (61): DomainBaseCaseService, CreateFileForReadSetCommand, CreateFileForSeqCommand, Represent upload of a raw-reads file for a case read-set column. The command…, Represent upload of an assembled file for a case sequence column. The command…, BaseCaseService, Any, Case (+53 more)
+Nodes (44): Case, CaseSet, CaseSetMember, Col, CrudCommand, Model, RefCol, User (+36 more)
 
-### Community 42 - "Token"
-Cohesion: 0.05
-Nodes (34): Any, patch, Unit tests for OAuth 2.0 Token Store This module contains comprehensive pytest…, Test scopes property with multiple scopes., Test scopes property with single scope., Test scopes property with empty scope., Test scopes property handles extra whitespace., Test has_scope returns True for existing scopes. (+26 more)
+### Community 42 - "TestToken"
+Cohesion: 0.06
+Nodes (19): Any, patch, Test scopes property with multiple scopes., Test scopes property with single scope., Test scopes property with empty scope., Test scopes property handles extra whitespace., Test has_scope returns True for existing scopes., Test has_scope returns False for missing scopes. (+11 more)
 
-### Community 43 - "validate_int_for_uuid_field"
-Cohesion: 0.05
-Nodes (58): ModelNoId, Represents creation and modification metadata to a FastApp domain model. This…, Model, OmopDB base model with optional UUID identity metadata., Represents the shared model contract with an optional OmopDB object ID., DataLineageMixin, Any, UUID (+50 more)
+### Community 43 - "_uuid_field_name"
+Cohesion: 0.04
+Nodes (71): Any, UUID, Shared OMOP model mixins and primary-key normalization helpers., Validate that the input value is either a UUID or a string that can be…, Validate and synchronize string-based primary key arguments. Mutates ``data``…, Validate and synchronize integer-based primary key arguments. Mutates ``data``…, validate_int_key_args(), validate_str_for_uuid_field() (+63 more)
 
 ### Community 44 - "ObjectAdapter"
+Cohesion: 0.02
+Nodes (128): Decimal, Validate and normalize uploaded case content against case-type metadata. The…, # TODO: transform any other col_types, # TODO: replace by pre-calculated interval_relation_map for efficiency, ObjectAdapter, Adapters that expose a common field interface for row-like objects. The…, Encapsulates adapter selection for supported object representations. Supported…, IntervalTransformStrategy (+120 more)
+
+### Community 46 - "CrudEndpointSet"
+Cohesion: 0.03
+Nodes (105): CrudEndpointGenerator, Any, APIRouter, FastAPI, Hashable, Model, Create the CRUD endpoint configuration for one persistable entity. Determines…, Map CRUD permissions to the operations needed by generated endpoints. Args:… (+97 more)
+
+### Community 47 - "create_custom_openapi_function"
 Cohesion: 0.05
-Nodes (52): ObjectAdapter, Adapters that expose a common field interface for row-like objects. The…, Encapsulates adapter selection for supported object representations. Supported…, example_conditional_transformation(), example_usage(), Person, BaseModel, Executable examples of composing field, validation, and streaming transforms. (+44 more)
+Nodes (32): create_custom_openapi_function(), fix_schema_nullable_and_single_element(), Any, OpenAPI schema generation and compatibility fixes., # TODO: add a function to fix read-only fields, Create a cached OpenAPI schema factory with optional schema fixes., # TODO: add a fix for read-only fields, Fixes the schema by handling 'anyOf' constructs and setting the 'nullable'… (+24 more)
 
-### Community 46 - "._validate_args"
-Cohesion: 0.50
-Nodes (3): Any, model_validator, Normalize endpoint-set initialization data.
-
-### Community 47 - "fastapp/domain/__init__.py"
-Cohesion: 0.13
-Nodes (12): Domain metadata types and factory helpers., Key, BaseModel, Key definitions for domain model instances., Encapsulates generating a stable key from one or more model fields., Initialize a Key instance., Return the fields used to generate the key., Get the key generator callable. Returns: ------- Callable[[BaseModel], str] The… (+4 more)
-
-### Community 48 - "TestCreate"
+### Community 48 - "CasedbTestClient"
 Cohesion: 0.07
-Nodes (4): Env, scenario_ids, skipif, TestCreate
+Nodes (5): CasedbTestClient, scenario_ids, skipif, TestCreate, TestCaseUploadContentDeletion
 
-### Community 49 - "Model"
-Cohesion: 0.06
-Nodes (40): Hashable, Get the object IDs, either from the obj_ids field or from the objs field. In…, Get the ID of the model instance. If the ID is not set and raise_on_missing is…, Any, datetime, Hashable, Model, Initialise the repository. extra_data controls behaviour when db contains… (+32 more)
+### Community 49 - "test_seqdb_convert_seq_format.py"
+Cohesion: 0.07
+Nodes (43): Encapsulates supported serialized representations of sequence content., SeqFormat, encode_ascii_as_gzip_base64(), Encode a string as a gzip-compressed base64 string., UUID, Implement stored sequence representation conversion., Convert all contigs in the requested sequences to a new representation., seq_service_convert_seq_format() (+35 more)
 
-### Community 50 - "test_filter_base_filter.py"
+### Community 50 - "BaseFilterTestCase"
 Cohesion: 0.04
-Nodes (30): AlwaysTrueFilter, BaseFilterTestCase, BaseTrueFilter, CompositeFilter, EqualsFilter, Any, BaseModel, scenario_ids (+22 more)
+Nodes (26): AlwaysTrueFilter, BaseFilterTestCase, EqualsFilter, Any, BaseModel, scenario_ids, Concrete filter for testing equality matching., Test scenarios related to column matching and filtering. (+18 more)
 
 ### Community 51 - ".__init__"
-Cohesion: 0.13
-Nodes (14): Any, Initialize a NoResultsError instance., Initialize a ServiceException instance., Return http other props., Initialize http props., Initialize a FeatureDisabledServiceError instance., Initialize a CredentialsAuthError instance., Initialize a UnauthorizedAuthError instance. (+6 more)
+Cohesion: 0.15
+Nodes (13): Any, Initialize a ServiceException instance., Return http other props., Initialize http props., Initialize a FeatureDisabledServiceError instance., Initialize a CredentialsAuthError instance., Initialize a UnauthorizedAuthError instance., Initialize a UserNotFoundAuthError instance. (+5 more)
 
 ### Community 52 - "SeqProfile"
-Cohesion: 0.04
-Nodes (50): Any, field_validator, Model, model_validator, ndarray, QualityMixin, Self, UUID (+42 more)
+Cohesion: 0.06
+Nodes (32): Any, field_validator, model_validator, ndarray, Self, UUID, Normalize the profile type from its accepted enum representation., Validate that the content format matches the sequence profile type. (+24 more)
 
-### Community 53 - "omopdb/repositories/sa_model/__init__.py"
-Cohesion: 0.04
-Nodes (119): NoIdRowMetadataMixin, declarative_mixin, Encapsulates audit metadata fields to a row with a nonstandard primary key., IdentifierMixin, Encapsulates SQLAlchemy columns for external identifier-derived row models., Register and expose SQLAlchemy mappings for shared and OmopDB model types. The…, CareSite, CdmSource (+111 more)
+### Community 53 - "Base"
+Cohesion: 0.01
+Nodes (397): DeclarativeBase, declared_attr, OrganizationAccessCasePolicy, OrganizationShareCasePolicy, RowMetadataMixin, Define SQLAlchemy persistence mappings for casedb ABAC policy models., Persist the casedb OrganizationShareCasePolicy domain model., Persist the casedb UserShareCasePolicy domain model. (+389 more)
 
 ### Community 54 - "profile_method"
 Cohesion: 0.36
 Nodes (8): profile_method(), Path, Profile a callable and write its report to a timestamped log file. The returned…, test_async_returns_value(), test_async_writes_log_file(), test_sync_propagates_exception(), test_sync_returns_value(), test_sync_writes_log_file()
 
-### Community 55 - "Any"
-Cohesion: 0.07
-Nodes (35): Any, Hashable, Model, Session, Return a per-id existence flag list in the same order as obj_ids., Read a projection of specific fields, optionally filtered., Split a filter into a SQL where-clause part and a Python remainder., Recursively convert a Filter tree to a SQLAlchemy where-clause. (+27 more)
+### Community 55 - "SARepository"
+Cohesion: 0.04
+Nodes (89): CaptureFixture, IsolationLevel, Encapsulates specifying the transaction isolation level for a database session., Any, BaseException, Hashable, Session, Return True if the row for the given id exists. (+81 more)
 
-### Community 56 - "Entity"
-Cohesion: 0.02
-Nodes (86): Define persistent organization and user ABAC policy records for cases. Access…, Any, Create persistence metadata for a derived external-identifier model. Args:…, Entities the requested value., Entity, Any, BaseModel, Enum (+78 more)
+### Community 56 - "Model"
+Cohesion: 0.01
+Nodes (176): _annotation_to_mermaid_type(), _build_diagram(), _field_marker(), BaseModel, Mermaid-based ERM diagram generator. Produces Mermaid ``erDiagram`` markdown…, Return Mermaid column marker (PK / FK) or empty string., Return the Mermaid lines for a single entity block **with** attributes. Example…, Generate Mermaid relationship lines for a set of model classes. Each Link in an… (+168 more)
 
-### Community 57 - "command/omop.py"
+### Community 57 - "omopdb/domain/command/__init__.py"
 Cohesion: 0.03
-Nodes (112): CareSiteCrudCommand, CdmSourceCrudCommand, CohortCrudCommand, CohortDefinitionCrudCommand, ConceptAncestorCrudCommand, ConceptClassCrudCommand, ConceptCrudCommand, ConceptRelationshipCrudCommand (+104 more)
+Nodes (113): Expose shared and OMOP command types plus command-registration metadata.…, CareSiteCrudCommand, CdmSourceCrudCommand, CohortCrudCommand, CohortDefinitionCrudCommand, ConceptAncestorCrudCommand, ConceptClassCrudCommand, ConceptCrudCommand (+105 more)
 
-### Community 58 - "test_seqdb_retrieve_best.py"
-Cohesion: 0.11
-Nodes (26): Represents retrieval of the best SeqProfile ID for each requested sample.…, RetrieveBestSeqProfilePerSampleCommand, _get_best_id_per_sample(), Retrieve the best result identifier for each requested sample. Retrieves the…, _classification_cmd(), _make_user(), _mock_service(), _mock_uow() (+18 more)
+### Community 58 - "_get_best_id_per_sample"
+Cohesion: 0.12
+Nodes (24): _get_best_id_per_sample(), Retrieve the best result identifier for each requested sample. Retrieves the…, _classification_cmd(), _make_user(), _mock_service(), _mock_uow(), _profile_cmd(), Any (+16 more)
 
 ### Community 59 - "TestTokenStore"
 Cohesion: 0.03
-Nodes (35): Test cases for the TokenStore class., Test storing a basic token., Test storing a token with refresh token creates mapping., Test storing a token without refresh token., Test storing multiple tokens., Test retrieving an existing valid token., Test retrieving a non-existent token returns None., Test that retrieving expired token auto-cleans it. (+27 more)
+Nodes (36): Test cases for the TokenStore class., Test TokenStore initialization., Test storing a basic token., Test storing a token with refresh token creates mapping., Test storing a token without refresh token., Test storing multiple tokens., Test retrieving an existing valid token., Test retrieving a non-existent token returns None. (+28 more)
 
 ### Community 60 - "test_fastapp_rbac_service.py"
 Cohesion: 0.17
-Nodes (25): Base1, Base2, Model1_1CrudCommand, Model1_2CrudCommand, Model2_1CrudCommand, Model2_2CrudCommand, CrudCommand, Enum (+17 more)
+Nodes (24): Model1_1CrudCommand, Model1_2CrudCommand, Model2_1CrudCommand, Model2_2CrudCommand, Enum, ServiceType, TestType, env() (+16 more)
 
 ### Community 61 - "Domain"
 Cohesion: 0.03
-Nodes (57): Domain, Command, CrudCommand, Hashable, Model, RAISE, Initialize a Domain instance., Name the requested value. (+49 more)
+Nodes (59): Domain the requested value., Domain, Hashable, RAISE, Initialize a Domain instance., Name the requested value., Description the requested value., Entities the requested value. (+51 more)
 
-### Community 62 - "sa/repository.py"
-Cohesion: 0.05
-Nodes (40): SQLAlchemy repository implementation., # TODO: determine invalid obj_ids and pass them to the exception, # NOTE: Only tested with MS SQL Server, # TODO: check if temp table exists and take a different name in that case, # TODO: finalize this part, # TODO: finalize this part, remove the example, # TODO: 2953 remove register_mappers argument, # TODO: 2953 this can become a static "create_default_mappers" utility method… (+32 more)
+### Community 62 - "._validate_state"
+Cohesion: 0.18
+Nodes (8): datetime, model_validator, Self, Parse an ISO-formatted datetime string., Return the inclusive lower and exclusive upper datetime bounds., Derive bound intervals and build the partial-date matching function., Any, Match a value using the function generated during validation. Args: value: The…
 
 ### Community 63 - "DictRepository"
-Cohesion: 0.08
-Nodes (64): In-memory dictionary-backed repository exports., DictRepository, Load a DictRepository from a pickle file (plain or gzip-compressed)., Load a DictRepository from a zip archive containing per-entity JSON files., Encapsulates a repository that stores models in an in-memory dict, keyed by…, Return a no-op unit-of-work suitable for the in-memory backend., Return (where_filter, None) — the full filter applies in-memory., Instantiate a DictRepository, optionally loading data from a pkl/zip file. (+56 more)
+Cohesion: 0.04
+Nodes (103): Get the ID of the model instance. If the ID is not set and raise_on_missing is…, In-memory dictionary-backed repository exports., DictRepository, Any, Hashable, Load a DictRepository from a zip archive containing per-entity JSON files., Apply the configured behavior to stores for unregistered models., Db the requested value. (+95 more)
 
-### Community 64 - "OauthIdpClient"
+### Community 64 - "gen_epix/fastapp/enum.py"
+Cohesion: 0.01
+Nodes (211): Retrieve the list of configured identity providers., Initialize remote commondb routes with connection and authentication settings.…, AuthProtocol, FileExtension, LogLevelSet, OAuthFlow, Enum, Enumerations shared by the application framework. (+203 more)
+
+### Community 65 - "test_alembic_migrations.py"
 Cohesion: 0.05
-Nodes (30): OauthIdpClient, Any, Request, Response, Issuer the requested value., Audience the requested value., Scope the requested value., Update the OIDC configuration from the discovery URL or, if provided, the… (+22 more)
+Nodes (37): _configure_url(), Alembic environment for casedb., run_migrations_offline(), run_migrations_online(), _get_target_metadata(), MetaData, SQLAlchemy metadata managed by casedb migrations, including common models., _configure_url() (+29 more)
 
-### Community 65 - ".__init__"
-Cohesion: 0.50
-Nodes (3): Any, BaseRbacService, Initialize the policy with its RBAC service and configuration properties. Args:…
+### Community 66 - "RequestScope"
+Cohesion: 0.06
+Nodes (25): ContextVarScopeProvider, NullScopeProvider, ABC, Any, Request scope and principal partitioning. Two distinct concerns share this…, Bind identity parts for the duration of the block. Nested binds merge into the…, Encapsulates memoizing values for the duration of one request. The scope sits…, Open a fresh scope for the duration of the block. Yields: The mapping backing… (+17 more)
 
-### Community 66 - "RemoteApp"
-Cohesion: 0.10
-Nodes (17): App, Command, PydanticBaseModel, Remote port, or None if not specified., HTTP protocol (HTTP or HTTPS)., Full base URL including protocol, host, and port., Remove the registered route for the given command class., Return the registered URL for the given command, raising if not found. (+9 more)
-
-### Community 67 - "BaseUnitOfWork"
+### Community 67 - "omopdb/repositories/__init__.py"
 Cohesion: 0.03
-Nodes (78): Represent CRUD operations for reusable reference dimensions., RefDimCrudCommand, case_service_crud_ref_dim(), _crud_ref_dim_with_abac(), _crud_ref_dim_without_abac(), BaseCaseService, RefDim, UUID (+70 more)
+Nodes (63): CommonBaseAbacRepository, SQLAlchemy transaction and unit-of-work implementation., BaseAbacRepository, OmopDB specialization of the shared attribute-based access repository., Encapsulates the commondb ABAC repository contract for OmopDB composition., Expose OmopDB repository contracts for shared and OMOP persistence.…, BaseOmopRepository, datetime (+55 more)
 
-### Community 68 - "BaseOntologyRepository"
-Cohesion: 0.20
-Nodes (9): BaseOntologyRepository, Define the repository contract for Casedb ontology reference data., Provide the shared repository base for ontology persistence., OntologyDictRepository, Provide dictionary-backed persistence for casedb ontology data., Provide dictionary-backed persistence for casedb ontology data., OntologySARepository, Provide SQLAlchemy-backed persistence for casedb ontology data. (+1 more)
+### Community 68 - "casedb/repositories/__init__.py"
+Cohesion: 0.05
+Nodes (43): BaseGeoRepository, Define the repository contract for Casedb geographic reference data., Provide the shared repository base for geographic persistence., Expose backend-independent repository contracts used by casedb services. Casedb…, BaseOntologyRepository, Define the repository contract for Casedb ontology reference data., Provide the shared repository base for ontology persistence., AbacDictRepository (+35 more)
 
-### Community 69 - "test_casedb_retrieve_case.py"
-Cohesion: 0.08
-Nodes (34): CaseQueryResult, Represents the case identifiers returned for an executed query., Retrieve access-filtered cases matching query criteria. Args: cmd: Case query…, case_service_retrieve_cases_by_id(), case_service_retrieve_cases_by_query(), Case, Retrieve access-filtered cases by ID subject to case-type result limits.…, Retrieve case IDs for a query after ABAC, set, and content filtering. The… (+26 more)
+### Community 69 - "LogicalOperator"
+Cohesion: 0.07
+Nodes (38): CaseQueryResult, Represents the case identifiers returned for an executed query., Retrieve access-filtered cases matching query criteria. Args: cmd: Case query…, case_service_retrieve_cases_by_id(), case_service_retrieve_cases_by_query(), Case, Retrieve access-filtered cases by ID subject to case-type result limits.…, Retrieve case IDs for a query after ABAC, set, and content filtering. The… (+30 more)
 
-### Community 70 - "Filter"
-Cohesion: 0.10
-Nodes (27): _default_validate_query_filter(), Allow query filters with at most one level of composite filters., Filter, Any, BaseModel, Hashable, Self, Yield column values that match the filter. (+19 more)
+### Community 70 - "Any"
+Cohesion: 0.12
+Nodes (18): Any, BaseModel, Hashable, Self, Yield column values that match the filter., Check if a row matches the filter. Args: row (dict[Hashable, Any | None]): The…, Check if each row in a collection of rows matches the filter. Args: rows…, Yield rows that match the filter. (+10 more)
 
-### Community 71 - "Role"
-Cohesion: 0.17
-Nodes (10): Define casedb application roles for command-centric authorization., Role, scenario_ids, Test unsupported command types and non-read operations., Unsupported command type should raise NotImplementedError., Non-read operations should return results unchanged., Test APP_ADMIN users bypass ABAC filtering., APP_ADMIN should receive unmodified results for READ operations. (+2 more)
+### Community 71 - "token_endpoint"
+Cohesion: 0.06
+Nodes (37): Request, Response, Return HTTP 204 when a disconnected request has no response., get, JSONResponse, post, RedirectResponse, authenticate_client() (+29 more)
 
 ### Community 72 - ".create_command_and_result_for_samples"
-Cohesion: 0.10
-Nodes (33): Verify SeqProfile-specific rules. 1. Replace protocol code by ID when only code…, _verify_children_seq_profiles(), Any, SeqTaxonomy, Test the _verify_children_seq_profiles function., When sample is new, existing-profile checks are skipped., No existing rows means the profile is left untouched., A pre-skipped result should not be re-validated. (+25 more)
+Cohesion: 0.03
+Nodes (97): Represents a sequence classification intended for upload. Equal to a…, SeqClassificationForUpload, BaseUploadTestCase, create_allele_profile_base64(), Any, ReadSetForUpload, scenario_ids, SeqForUpload (+89 more)
 
-### Community 73 - "services/omop/upload.py"
-Cohesion: 0.06
-Nodes (37): Represents an upload of a batch of persons along with their associated data.…, UploadPersonsCommand, PersonBatchUploadResult, PersonDataIssue, Represents a validation or processing issue in an OMOP person upload., Represents the result of uploading a batch of persons., Upload a batch of persons. Args: cmd: Command containing people and upload…, PersonValidator (+29 more)
+### Community 73 - "UploadPersonsCommand"
+Cohesion: 0.09
+Nodes (23): Represents a request to upload of a batch of persons along with their…, UploadPersonsCommand, PersonBatchUploadResult, Represents the result of uploading a batch of persons., Upload a batch of persons. Args: cmd: Command containing people and upload…, PersonValidator, UUID, Person-upload validation and transformation extension points. (+15 more)
 
 ### Community 74 - ".create_client"
-Cohesion: 0.07
-Nodes (19): BaseOauthIdpClientTestCase, Any, scenario_ids, Tests for initialization and discovery configuration updates., Base test case with common fixtures and utilities for OauthIdpClient., Test decode raises ExpiredSignatureError and triggers CredentialsAuthError., Test decode raises PyJWTError and triggers CredentialsAuthError., Test decode raises RuntimeError and triggers CredentialsAuthError. (+11 more)
+Cohesion: 0.05
+Nodes (35): client(), Create a TestClient for the FastAPI app., assert_logged_with_code(), create_client(), DummyRequest, make_request(), parametrize, scenario_ids (+27 more)
 
-### Community 75 - "BaseAbacTestCase"
-Cohesion: 0.07
-Nodes (28): BaseAbacTestCase, OrgPolicyDumpStub, Any, scenario_ids, UUID, Create a command-like object with a .user containing an id., Create a user-like object for get_case_abac cached reads., Create a command-like object for update_user_own_organization. (+20 more)
+### Community 75 - "AbacService"
+Cohesion: 0.05
+Nodes (41): CaseAbacPolicy, Command, Model, Resolve case-specific ABAC content for casedb commands., Resolve the case access model for a command. Args: cmd: Command for which case…, Apply command-scoped casedb case access resolution., AbacService, Encapsulates casedb ABAC policy registration and effective-rights lookup. Case… (+33 more)
 
 ### Community 76 - "ErmGenerator"
-Cohesion: 0.11
-Nodes (14): ErmGenerator, Graphviz / erdantic-based ERM diagram generator. Produces PNG Entity-…, generate_hash_for_domain_models(), Domain, Path, Generates a SHA-256 hash for a list of sorted classes by pickling them to a…, ABC, Domain (+6 more)
+Cohesion: 0.09
+Nodes (19): ErmGenerator, GraphvizErmGenerator, Domain, Path, Graphviz / erdantic-based ERM diagram generator. Produces PNG Entity-…, Generates Entity-Relationship Model diagrams as PNG files via ``erdantic`` /…, Generate ERM diagrams (PNG) for every domain and its services. Also writes an…, generate_hash_for_domain_models() (+11 more)
 
-### Community 77 - "EdgeCaseSpec"
-Cohesion: 0.16
-Nodes (10): EdgeCaseSpec, Declarative specification for a single ABAC edge case. Captures all relevant…, parametrize, skip, For each edge case, assert that the set of accessible CaseTypes exactly matches…, For each edge case, assert that the set of accessible CaseTypeSets exactly…, For each edge case, assert that the set of accessible ColSets exactly matches…, For each edge case, assert that the set of accessible cols exactly matches the… (+2 more)
+### Community 77 - "command/case.py"
+Cohesion: 0.02
+Nodes (117): CaseIdentifierCrudCommand, CaseSetCategoryCrudCommand, CaseSetMemberCrudCommand, CaseSetStatusCrudCommand, CaseTypeCrudCommand, CaseTypeSetCaseTypeUpdateAssociationCommand, CaseTypeSetCategoryCrudCommand, CaseTypeSetCrudCommand (+109 more)
 
-### Community 78 - "._validate_state"
-Cohesion: 0.32
-Nodes (5): model_validator, Self, Validate the command's operation-specific state., Validate endpoint identifiers and association-object links., Validate compatible mutability settings.
+### Community 78 - "Unit"
+Cohesion: 0.08
+Nodes (21): ConceptRelationType, ConceptSetType, Classify the language or value scale represented by a concept set., Identify supported semantic relationships between concepts., Identify units supported by casedb column and concept metadata., Unit, Serialize a unit as a string while preserving null., ConceptRelation (+13 more)
 
-### Community 79 - "RbacService"
-Cohesion: 0.40
-Nodes (4): CommonRbacService, Initialize RBAC operations using the seqdb role enumeration. Args: app:…, Encapsulates seqdb RBAC service behavior., RbacService
+### Community 79 - "seqdb/services/rbac.py"
+Cohesion: 0.29
+Nodes (5): CommonRbacService, Implement seqdb application service behavior for services.rbac., Initialize RBAC operations using the seqdb role enumeration. Args: app:…, Encapsulates seqdb RBAC service behavior., RbacService
 
-### Community 80 - "_make_protocol"
+### Community 80 - "crud_endpoint_generator.py"
 Cohesion: 0.07
-Nodes (28): ProtocolType, Encapsulates the laboratory or analytical purpose of a protocol., _create_field_description(), Helper function to create field descriptions based on protocol type…, _make_protocol(), _minimal_protocol_data(), Any, parametrize (+20 more)
+Nodes (21): ApiPermission, BaseModel, Define casedb API representations for organization permissions., Represents a permission type granted for a casedb command., Command, Return permissions indexed by commondb or mapped domain role values. The…, Generate FastAPI routes that dispatch domain CRUD commands. The module…, Return the endpoint basename derived from entity naming metadata. Args: entity:… (+13 more)
 
-### Community 81 - "server.py"
-Cohesion: 0.03
-Nodes (78): delete, BadRequest400HTTPException, Forbidden403HTTPException, ForeignKeyConstraint409HTTPException, InternalServerError500HTTPException, MethodNotAllowed405HTTPException, NotImplemented501HTTPException, Construct an HTTP 409 exception with optional headers. (+70 more)
+### Community 81 - "test_fastapp_api.py"
+Cohesion: 0.02
+Nodes (101): BadRequest400HTTPException, Forbidden403HTTPException, ForeignKeyConstraint409HTTPException, InternalServerError500HTTPException, MethodNotAllowed405HTTPException, NotImplemented501HTTPException, HTTP exceptions returned by generated API routes., Construct an HTTP 409 exception with optional headers. (+93 more)
 
-### Community 82 - "_verify_children_seq_classifications"
+### Community 82 - "SeqProfileForUpload"
 Cohesion: 0.11
-Nodes (21): Verify SeqClassification-specific rules. 1. Replace protocol code by ID when…, _verify_children_seq_classifications(), A seq_id tied to another sample should fail validation., Primary category mismatch with unknown seq should emit f2a84c91., Primary category mismatch with seq_id should emit 9d3a4f1b., Fallback key (protocol, None) resolves identical classification., Temporary SeqClassification IDs are replaced by existing DB IDs., With seq_id=NULL_ID, mismatch is treated as keyed mismatch (9d3a4f1b). (+13 more)
+Nodes (15): Return ordered MLVA repeat numbers in their JSON profile representation., model_validator, Self, Represents a sequence profile record intended for upload. Equal to a…, Format representation names for a validation error message., Require exactly one named profile representation. Args: representations:…, Require a locus code map for a map-based profile representation. Args:…, Require non-empty content for a locus profile upload. Returns: The validated… (+7 more)
 
 ### Community 83 - "define_edge_cases_reference.py"
 Cohesion: 0.12
 Nodes (19): _compute_expected_case_type_sets(), _compute_expected_case_types(), _compute_expected_cases(), _compute_expected_col_sets(), _compute_expected_cols(), _compute_expected_ref_cols(), _compute_expected_ref_dims(), _get_case_type_from_col() (+11 more)
 
-### Community 84 - "IntervalToIntervalTransformer"
-Cohesion: 0.06
-Nodes (34): IntervalDict, IntervalToIntervalTransformer, Hashable, NoReturn, RAISE, TypedDict, Map a single numeric value according to the configured intervals. Args: value:…, Encapsulates normalized interval bounds and endpoint metadata. (+26 more)
+### Community 84 - ".__init__"
+Cohesion: 0.11
+Nodes (18): IntervalDict, Hashable, NoReturn, RAISE, TypedDict, Map a single numeric value according to the configured intervals. Args: value:…, Encapsulates normalized interval bounds and endpoint metadata., Return the interval name selected for `value` under no-match policy. (+10 more)
 
-### Community 85 - "TestCreate"
-Cohesion: 0.09
-Nodes (4): Env, scenario_ids, skipif, TestCreate
+### Community 85 - "SeqdbTestClient"
+Cohesion: 0.07
+Nodes (7): scenario_ids, skipif, TestCreate, Any, Path, Generate a random upload batch with Nextclade SNP profiles and seqs., SeqdbTestClient
 
 ### Community 86 - ".is_allowed"
 Cohesion: 0.29
 Nodes (6): cached, Command, User, Determine whether a command may proceed under the current outage state. Outage…, Determine whether a user has permission to administer an outage. Args:…, Determine whether no active outage currently restricts requests. Returns: True…
 
-### Community 87 - "_verify_batch_refdata_snp_profiles"
-Cohesion: 0.08
-Nodes (31): Verify SNP profiles specific rules., _verify_batch_refdata_snp_profiles(), BaseSnpUploadTestCase, scenario_ids, UUID, Create command and result for profiles. Uses model_construct to bypass pydantic…, Create a mock Protocol with ref_seq_id., Set up repository.crud side_effect. (+23 more)
+### Community 87 - ".rev_role_map"
+Cohesion: 0.11
+Nodes (14): Any, computed_field, Enum, field_validator, Role, User, Return the new-user dependency. Returns: Dependency that resolves a newly…, Return the identity-provider user dependency. Returns: Dependency that resolves… (+6 more)
 
 ### Community 88 - "TestClientStore"
 Cohesion: 0.04
-Nodes (27): Any, patch, Test cases for the ClientStore class., Test storing a client., Test storing multiple clients., Test that storing a client with same ID overwrites the previous one., Test retrieving an existing active client., Test retrieving an existing but inactive client returns None. (+19 more)
+Nodes (29): Any, patch, Test cases for the ClientStore class., Set up test fixtures before each test method., Test ClientStore initialization., Test storing a client., Test storing multiple clients., Test that storing a client with same ID overwrites the previous one. (+21 more)
 
-### Community 89 - "sa_model/seq/__init__.py"
-Cohesion: 0.06
-Nodes (73): ContentMixin, Encapsulates a SQLAlchemy model mixin for adding standard fields., SeqMixin, Re-export SQLAlchemy persistence models for seqdb sequence entities., AstMeasurement, AstPrediction, PcrMeasurement, Base (+65 more)
+### Community 89 - "test_seqdb_retrieve_seq_fasta.py"
+Cohesion: 0.13
+Nodes (18): create_seq(), expected_fasta(), FakeMapper, FakeSession, Any, Seq, UUID, Test FASTA retrieval for all supported DNA storage representations. (+10 more)
 
-### Community 90 - "SampleBatchUploadResult"
-Cohesion: 0.09
-Nodes (26): Upload a batch of sequence samples. Implementations may persist samples and…, Upload samples to seqdb under the configured functional user. The command's…, Represents a batch upload of samples along with their associated data. The data…, UploadSamplesCommand, Represents the result of uploading a batch of samples., SampleBatchUploadResult, Upload a batch of samples. Args: cmd: Sample-upload command to execute.…, Upload a batch of samples. (+18 more)
+### Community 90 - "BaseUploadTestCase"
+Cohesion: 0.15
+Nodes (10): BaseUploadTestCase, ReadSetForUpload, SeqForUpload, Tests for the has_case guard added to _get_upload_samples_command., Tests for CaseBatchForUpload.has_samples (the pure predicate on the batch…, Tests for the casedb-to-seqdb upload bridge in CaseBatchUploader., Base test case with common fixtures and utility methods., TestCaseBatchHasSamples (+2 more)
 
 ### Community 91 - "EqualsUuidFilter"
 Cohesion: 0.05
-Nodes (46): AbacService, BaseAbacService, cached, Command, OrganizationShareCasePolicy, User, UserShareCasePolicy, UUID (+38 more)
+Nodes (56): cached, User, Move a user to an organization and replace their case policies. Behaviour: -…, Compute effective case rights for a persisted user. Application administrators…, Compute reference-data access from roles and organization policies. Reference-…, case_service_calculate_case_date(), case_service_get_case_date_col_mappers(), case_service_get_case_date_col_mappers_from_cols() (+48 more)
 
-### Community 92 - "casedb/repositories/sa_model/__init__.py"
-Cohesion: 0.05
-Nodes (90): Expose and register SQLAlchemy persistence models for casedb entities. The ABAC…, OrganizationAdminPolicy, OrganizationAdminPolicyMixin, Base, declarative_mixin, RowMetadataMixin, Define SQLAlchemy rows and mixins for commondb ABAC policy persistence., Encapsulates SQLAlchemy columns for OrganizationAdminPolicy-derived row models.… (+82 more)
+### Community 92 - "TestCommondbDictModelModifier"
+Cohesion: 0.17
+Nodes (6): _fixed_factory(), _make_obj(), datetime, scenario_ids, Unit tests for CommondbDictModelModifier. Verifies that: - on_create stamps…, TestCommondbDictModelModifier
 
 ### Community 93 - "calculate_seq_distance.py"
 Cohesion: 0.06
-Nodes (50): ConcurrentModificationError, InvalidArgumentsError, Error for command arguments that fail validation., HTTP 409 error for a conflicting concurrent modification., Encapsulates the biological representation used by a sequence profile., SeqProfileType, Return the sequence-profile type used by this distance protocol. Returns: The…, CalculateSeqDistancesResult (+42 more)
+Nodes (56): ConcurrentModificationError, InvalidArgumentsError, Error for command arguments that fail validation., HTTP 409 error for a conflicting concurrent modification., Encapsulates the biological representation used by a sequence profile., SeqProfileType, Return the sequence-profile type used by this distance protocol. Returns: The…, _calculate_and_store_distances() (+48 more)
 
-### Community 94 - "UploadResult"
-Cohesion: 0.08
-Nodes (29): Represents the result of an upload operation for one object. It includes upload…, Mark this individual upload result as failed after an error is recorded., Add log items to the upload result. If any of the added log items has severity…, Get the upload results for the identifiers associated with the model, if any., UploadResult, Verify Seq-specific rules. 1. Replace protocol code by ID when only code is…, _handle_locus_allele_pair_mismatch(), UUID (+21 more)
-
-### Community 95 - ".create_parent_for_upload"
-Cohesion: 0.08
-Nodes (26): Parent, Test scenarios related to field mutability for existing objects., Test 5.1.1: Always mutable single value field - should be updated., Test 5.1.2: Always mutable list field - should be updated., Test 5.1.3.1: Dict field - add new key with non-None value., Test 5.1.3.2: Dict field - new key with None value should not be added., Test 5.1.3.3: Dict field - update existing key with new value., Test 5.1.3.4: Dict field - remove existing key when new value is None. (+18 more)
+### Community 95 - "TestConvertIdsStringToList"
+Cohesion: 0.15
+Nodes (10): Parse comma-separated or JSON-encoded identifiers for a route parameter. Args:…, Tests for ID parsing from comma-separated or JSON strings., Verify parsing of comma-separated IDs., Verify parsing of JSON-encoded IDs., Verify handling of invalid IDs in comma-separated format., Verify handling of JSON with some invalid IDs., Verify parsing of UUID comma-separated format., Verify handling of empty ID string. (+2 more)
 
 ### Community 96 - "test_seqdb_distance_optimization_benchmark.py"
 Cohesion: 0.08
-Nodes (48): _extract_protocol_info(), _extract_segments(), _filter(), _fmt_s(), generate_benchmark_charts(), _grouped_bars(), _init_profile_generator(), _make_realistic_profiles() (+40 more)
+Nodes (48): _extract_protocol_info(), _extract_segments(), _filter(), _fmt_s(), generate_benchmark_charts(), get_test_client(), _grouped_bars(), _init_profile_generator() (+40 more)
 
-### Community 97 - "sa_model/case.py"
-Cohesion: 0.08
-Nodes (45): Case, CaseDataCollectionLink, CaseIdentifier, CaseSet, CaseSetCategory, CaseSetDataCollectionLink, CaseSetMember, CaseSetStatus (+37 more)
+### Community 97 - "crud_protocol_set.py"
+Cohesion: 0.15
+Nodes (13): ProtocolSetCrudCommand, Represents a request to perform a CRUD operation on ProtocolSets., ProtocolSet, UUID, Implement seqdb CRUD service operations for services.seq.crud_protocol_set., Handle CRUD operations for protocol-set entities. Args: self: Sequence service…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added (+5 more)
 
 ### Community 98 - "._serialize_int_enums"
 Cohesion: 0.29
 Nodes (5): field_serializer, IntEnum, UUID, Serializes the IntEnums to their int value., Serializes UUID fields as strings. If the value is None, it returns None.
 
 ### Community 99 - "UUID"
-Cohesion: 0.08
-Nodes (17): Any, SeqDistance, SeqProfile, UUID, Yield profile identifiers having distance records for a protocol. Args: uow:…, Return profiles linked to any supplied profiling protocol. Args: uow: Unit of…, Return profiles lacking a record for a distance protocol. Args: uow: Unit of…, Construct complete sample aggregates for the supplied identifiers. Args:… (+9 more)
+Cohesion: 0.09
+Nodes (16): Any, datetime, SeqDistance, SeqProfile, UUID, Define seqdb domain interfaces and policies for domain.repository.seq., Yield profile identifiers having distance records for a protocol. Args: uow:…, Return the latest distance-record modification time for a protocol. Args: uow:… (+8 more)
 
 ### Community 100 - "Hashable"
 Cohesion: 0.06
 Nodes (27): DictAdapter, PolarsAdapter, Any, BaseModel, Hashable, Protocol, PydanticAdapter, Encapsulates adapting a Pydantic model to the field interface. (+19 more)
 
-### Community 101 - "test_commondb_upload.py"
-Cohesion: 0.07
-Nodes (35): Child1, Child1ForUpload, Child1UploadResult, Child2, Child2ForUpload, Child2Identifier, ParentBatchForUpload, ParentBatchUploader (+27 more)
+### Community 101 - ".create_parent_for_upload"
+Cohesion: 0.02
+Nodes (150): IdentifierIssuer, Represents a system or process that issues externally supplied identifiers. An…, Child1, Child1ForUpload, Child1UploadResult, Child2, Child2ForUpload, Child2Identifier (+142 more)
 
-### Community 102 - "CasedbTestClient"
-Cohesion: 0.07
-Nodes (31): ConceptSet, Contact, Disease, EtiologicalAgent, RegionSet, RegionSetShape, Site, CasedbTestClient (+23 more)
+### Community 102 - ".get_obj"
+Cohesion: 0.06
+Nodes (33): ConceptSet, Contact, Disease, EtiologicalAgent, RegionSet, RegionSetShape, Site, Case (+25 more)
 
 ### Community 103 - "IntEnumWithJsonSchemaMixin"
 Cohesion: 0.06
-Nodes (35): CoreSchema, AstResultFormat, IntEnumWithJsonSchemaMixin, PcrResultFormat, IntEnum, QualityControlResult, Encapsulates ordered quality-control outcomes for sequence data., Return whether this result permits downstream use of the data. (+27 more)
+Nodes (35): CoreSchema, AstResultFormat, FileFormat, IntEnumWithJsonSchemaMixin, PcrResultFormat, IntEnum, QualityControlResult, Encapsulates ordered quality-control outcomes for sequence data. (+27 more)
 
 ### Community 104 - "CaseAbac"
-Cohesion: 0.12
-Nodes (6): CaseAbac, CaseTypeAccessAbac, Represents effective access rights for one case type and data collection., Represents a user's effective case ABAC rights grouped by case type., This test expects is_allowed to return False because the access map does not…, TestCaseAbac
+Cohesion: 0.03
+Nodes (68): CaseRight, CaseRightSet, Group case access rights by protected resource and operation., Identify access rights granted for cases and case sets., Expose case ABAC policy records, rights models, and shared admin policy types.…, CaseAbac, CaseTypeAccessAbac, CaseTypeShareAbac (+60 more)
 
 ### Community 105 - "make_assoc"
+Cohesion: 0.21
+Nodes (6): BaseRepositoryTestCase, make_assoc(), Base test case with common fixtures and utilities., Tests for update_association covering all branches., Helper to create association objects., TestUpdateAssociation
+
+### Community 106 - "Any"
+Cohesion: 0.15
+Nodes (7): Any, Create an OpenID Connect ID Token., Validate and decode an ID token., Create userinfo endpoint response based on scopes., Create OpenID Connect discovery document., Create JWKS response., Create logout response.
+
+### Community 107 - "test_casedb_crud_common.py"
+Cohesion: 0.07
+Nodes (21): EqualsStringFilter, Represents a filter matching a string value., DataCmd, DummyCmd, DummyEntity, DummyLink, MetaCmd, NoAbacCmd (+13 more)
+
+### Community 108 - "CaseBatchUploader"
 Cohesion: 0.08
-Nodes (20): Raise an error when the iterable contains duplicate identifiers., AssocModel, BaseRepositoryTestCase, DummyRepository, make_assoc(), Any, Hashable, Model (+12 more)
-
-### Community 106 - "OIDCProvider"
-Cohesion: 0.10
-Nodes (14): OIDCProvider, Any, Create an OpenID Connect ID Token., Validate and decode an ID token., OpenID Connect provider implementation., Create userinfo endpoint response based on scopes., Initialize OIDC provider with JWKS manager., Create OpenID Connect discovery document. (+6 more)
-
-### Community 107 - "EqualsStringFilter"
-Cohesion: 0.06
-Nodes (21): EqualsStringFilter, EqualsFilter, Represents a filter matching a string value., DataCmd, DummyCmd, DummyEntity, DummyLink, MetaCmd (+13 more)
-
-### Community 108 - "UploadCasesCommand"
-Cohesion: 0.09
-Nodes (22): Represent an atomic batch upload of cases and associated data. The upload…, UploadCasesCommand, Upload a batch of cases and related data. Implementations may persist cases,…, Verify and persist a case batch and its seqdb samples. Verification and…, case_service_upload_cases(), CaseBatchUploader, BaseCaseService, UUID (+14 more)
+Nodes (26): Represents a request to perform an atomic batch upload of cases and associated…, UploadCasesCommand, CaseBatchUploadResult, Represents the results of uploading a batch of cases., Upload a batch of cases and related data. Implementations may persist cases,…, Validate and transform the cases in a batch upload command. Where applicable,…, Return mutable content and issue-list references for all batch cases. The…, Update uploaded cases' dates from the highest-resolution time value. The… (+18 more)
 
 ### Community 109 - "test_seqdb_calculate_seq_distances_performance.py"
-Cohesion: 0.09
-Nodes (40): BaseSeqRepository, Encapsulates backend-independent persistence for seqdb sequence data., Provide seqdb persistence behavior for repositories.seq_dict., Encapsulates seqdb persistence behavior for sequence repositories using in-…, SeqDictRepository, Provide seqdb persistence behavior for repositories.seq_sa., Encapsulates seqdb persistence behavior for sequence repositories using…, SeqSARepository (+32 more)
+Cohesion: 0.08
+Nodes (45): BaseSeqRepository, Encapsulates backend-independent persistence for seqdb sequence data., datetime, Provide seqdb persistence behavior for repositories.seq_dict., Encapsulates seqdb persistence behavior for sequence repositories using in-…, Return the latest modification time among a protocol's distance records., Return samples modified directly or through linked records in a time range., SeqDictRepository (+37 more)
 
-### Community 110 - "SARepository"
-Cohesion: 0.03
-Nodes (89): CaptureFixture, compiles, ComputedFieldInfo, get_type_from_annotation(), Any, Adapted from https://github.com/fastapi/sqlmodel v0.0.24., Repository implementations and unit-of-work exports., SQLAlchemy repository, mapper, and unit-of-work exports. (+81 more)
-
-### Community 111 - "TestClient"
+### Community 110 - "sa/util.py"
 Cohesion: 0.06
-Nodes (44): Any, Command, DataCollection, datetime, Model, User, UserInvitation, UUID (+36 more)
+Nodes (42): compiles, ComputedFieldInfo, _create_schemas(), upgrade(), _create_schemas(), upgrade(), get_type_from_annotation(), Any (+34 more)
+
+### Community 111 - "User"
+Cohesion: 0.05
+Nodes (47): Any, DataCollection, datetime, Model, Organization, OrganizationAdminPolicy, OrganizationIdentifierIssuerLink, User (+39 more)
 
 ### Community 112 - "ImportGraphAnalyzer"
 Cohesion: 0.07
 Nodes (30): Import, ImportFrom, analyze_imports(), ImportEdge, ImportGraphAnalyzer, ImportStatementVisitor, ModuleNode, Path (+22 more)
 
 ### Community 113 - "CaseValidator"
-Cohesion: 0.06
-Nodes (37): CaseBatchUploadResult, CaseDataIssue, Represents a case-content issue associated with a column., Represents the results of uploading a batch of cases., CaseValidator, BaseCaseService, Concept, NoReturn (+29 more)
+Cohesion: 0.07
+Nodes (31): CaseDataIssue, Represents a case-content issue associated with a column., CaseValidator, Concept, NoReturn, Organization, RefCol, Region (+23 more)
 
 ### Community 114 - "BaseService"
-Cohesion: 0.07
-Nodes (27): Initialize a case batch uploader for a case service. Args: service: Service…, Link, Represents a field that relates a model to another model., Return a unit of work for this repository., BaseService, Any, App, CrudCommand (+19 more)
+Cohesion: 0.04
+Nodes (40): Link, BaseModel, Return the tuple representation accepted by ``from_tuple``., Create a multi-link from its tuple representation., Represents a field that relates a model to another model., Return the tuple representation accepted by ``from_tuple``., Create a link from its tuple representation., model_validator (+32 more)
 
-### Community 115 - "BaseIsOwnCasesTestCase"
+### Community 115 - "case_service_retrieve_is_own_cases"
 Cohesion: 0.10
-Nodes (23): BaseIsOwnCasesTestCase, _FakeCaseAbacPolicy, Any, Case, Command, scenario_ids, UUID, Create a Case for tests, defaulting to the common data collection. (+15 more)
+Nodes (27): case_service_retrieve_is_own_cases(), UUID, Map accessible requested cases to private-collection ownership flags. Invalid…, BaseIsOwnCasesTestCase, _FakeCaseAbacPolicy, Any, Case, Command (+19 more)
 
 ### Community 116 - "Concept"
-Cohesion: 0.08
-Nodes (30): ConceptClass, ConceptRelationship, FactRelationship, ConceptClass (omopdb.md), ConceptRelationship (omopdb.md), EpisodeEvent (omopdb.md), FactRelationship (omopdb.md), Relationship (omopdb.md) (+22 more)
+Cohesion: 0.05
+Nodes (40): ConceptClass, ConceptSynonym, FactRelationship, ConceptClass (omopdb.md), ConceptSynonym (omopdb.md), EpisodeEvent (omopdb.md), FactRelationship (omopdb.md), Metadata (omopdb.md) (+32 more)
 
-### Community 117 - ".expectStatusCount"
-Cohesion: 0.09
-Nodes (22): ParentUploadResult, Test combinations of different scenarios., Test parent with both children and Identifiers., Test updating an existing parent with new child objects., Test complex reference data resolution across multiple children., Test Child2 with Identifiers in combination with parent relationships and other…, Create a test child1 for upload., Create a test Ref1 object. (+14 more)
+### Community 117 - "case_service_crud_case_set_data_collection_link"
+Cohesion: 0.24
+Nodes (12): CaseSetDataCollectionLinkCrudCommand, Represents a request to execute a CRUD operation on CaseSetDataCollectionLinks., case_service_crud_case_set_data_collection_link(), _crud_case_set_data_collection_link_with_abac(), _crud_case_set_data_collection_link_without_abac(), CaseSetDataCollectionLink, UUID, Handle CRUD operations for CaseSetDataCollectionLink entities. (+4 more)
 
 ### Community 118 - "Concept (omopdb.omop / OMOP CDM entity)"
 Cohesion: 0.13
 Nodes (39): CareSite (omopdb.omop / OMOP CDM entity), CdmSource (omopdb.omop / OMOP CDM entity), Cohort (omopdb.omop / OMOP CDM entity), CohortDefinition (omopdb.omop / OMOP CDM entity), Concept (omopdb.omop / OMOP CDM entity), ConceptAncestor (omopdb.omop / OMOP CDM entity), ConceptClass (omopdb.omop / OMOP CDM entity), ConceptRelationship (omopdb.omop / OMOP CDM entity) (+31 more)
 
-### Community 119 - "UpdateUserPolicy"
-Cohesion: 0.08
-Nodes (38): Any, BaseAbacService, Command, User, Determine whether a user strictly exceeds a target user's permissions. Args:…, Encapsulates BEFORE-phase role and organization checks to user mutations., Initialize mapped user type and configured role mappings. Args: abac_service:…, Determine whether a user may invite or update the target user. Root users may… (+30 more)
+### Community 119 - "test_update_user_policy.py"
+Cohesion: 0.26
+Nodes (14): _make_abac_service(), _make_invite_cmd(), _make_policy(), _make_role_set_map(), _make_update_cmd(), _make_user(), scenario_ids, User (+6 more)
 
-### Community 120 - "seq_service_calculate_seq_distances_for_new_profiles"
-Cohesion: 0.15
-Nodes (21): Calculate and persist distances for newly supplied sequence profiles. For each…, seq_service_calculate_seq_distances_for_new_profiles(), _CrudRecorder, _make_allele_profile(), _make_crud_side_effect(), _make_seq_distance(), _make_seq_distance_protocol_for_locus_set(), Any (+13 more)
+### Community 120 - "_make_crud_side_effect"
+Cohesion: 0.13
+Nodes (24): _CrudRecorder, _make_allele_profile(), _make_crud_side_effect(), _make_mlva_profile(), _make_seq_distance(), _make_seq_distance_protocol_for_locus_set(), Any, Model (+16 more)
 
 ### Community 121 - "test_fastapp_repository_performance.py"
 Cohesion: 0.08
-Nodes (25): parse_stats(), Any, Append profiler function statistics to a row-oriented result list. Args: df:…, Any, Create a test environment for the given test type and repository type. A single…, scenario_ids, TestRead, scenario_ids (+17 more)
+Nodes (22): parse_stats(), Any, Append profiler function statistics to a row-oriented result list. Args: df:…, Create a test environment for the given test type and repository type. A single…, scenario_ids, TestRead, env(), fixture (+14 more)
 
 ### Community 122 - "DummyCommand"
-Cohesion: 0.12
-Nodes (13): DummyCommand, Command, Test get_headers method for different auth protocols., get_headers returns default headers with NONE protocol., get_headers caches token when not expired., get_headers refreshes token past refresh margin., Minimal command for testing., get_headers caches long-lived tokens correctly. Note: Tokens without an 'exp'… (+5 more)
+Cohesion: 0.13
+Nodes (12): DummyCommand, Test get_headers method for different auth protocols., get_headers returns default headers with NONE protocol., get_headers caches token when not expired., get_headers refreshes token past refresh margin., Minimal command for testing., get_headers caches long-lived tokens correctly. Note: Tokens without an 'exp'…, Integration tests combining multiple features. (+4 more)
 
 ### Community 123 - "CacheRegion"
+Cohesion: 0.02
+Nodes (109): Return the envelope stored under `key`, or `NO_VALUE`. Args: key: The fully…, Return the envelopes for `keys` in the order given. Args: keys: The fully…, See base method. Only the keys missing from the near tier are requested…, MemoryBackend, See base method. Storing over an existing key reports the previous envelope as…, See base method. The snapshot is taken under the lock, so iteration is safe…, Remove every entry that passed its hard expiry. Lazy expiry only reclaims…, Evict entries until the weight budget is met. Args: candidate: The key that was… (+101 more)
+
+### Community 124 - "Permission"
 Cohesion: 0.01
-Nodes (140): CacheBackend, ProxyBackend, ABC, Abstract cache store contract. A backend is a dumb key-to-envelope store. It…, Return a store-provided mutex for regenerating `key`. Returns: A mutex when the…, Release the resources held by the store., Encapsulates altering the behavior of another backend without subclassing it.…, Initialize a ProxyBackend instance. (+132 more)
+Nodes (148): Permission, computed_field, field_serializer, PydanticBaseModel, Represents a user of the application. This can represent an actual user, or a…, Get the key of the user. The key is used to identify the user across systems,…, Represents a permission as a combination of (command_name, permission_type).…, Return the canonical permission name. (+140 more)
 
-### Community 124 - "BaseRbacService"
+### Community 125 - "Any"
 Cohesion: 0.06
-Nodes (31): BaseRbacService, Any, App, Command, Hashable, User, Register multiple roles with the associated permissions. This is a convenience…, Unregister a role. In case of dynamic roles, i.e. that can be changed at… (+23 more)
-
-### Community 125 - "OAuth2Validator"
-Cohesion: 0.07
-Nodes (22): RequestValidator, Test OAuth2Validator initialization., OAuth2Validator, Any, Save authorization code (not used in client credentials flow)., Validate authorization code (not used in client credentials flow)., Confirm redirect URI (not used in client credentials flow)., Validate that the grant type is supported by the client. (+14 more)
+Nodes (18): Any, Save authorization code (not used in client credentials flow)., Validate authorization code (not used in client credentials flow)., Confirm redirect URI (not used in client credentials flow)., Validate that the grant type is supported by the client., Validate bearer token and scopes., Get default redirect URI for a client., Validate redirect URI. (+10 more)
 
 ### Community 126 - ".create_case_for_upload"
-Cohesion: 0.09
-Nodes (17): ReadSetForUpload, SeqForUpload, Batch can contain cases from different DCs., Tests for ABAC column and creation-right verification in verify_abac_rights., Tests for the has_case guard added to _get_upload_samples_command., Tests for CaseBatchForUpload.has_samples (the pure predicate on the batch…, Tests for _get_case_data_collections in CaseBatchUploader., Tests for the casedb-to-seqdb upload bridge in CaseBatchUploader. (+9 more)
+Cohesion: 0.14
+Nodes (10): Tests for ABAC column and creation-right verification in verify_abac_rights., Tests for _get_case_data_collections in CaseBatchUploader., Tests for default_created_in_data_collection_id behavior. NOTE: Direct unit…, When new case has NULL_ID and no default, should add error., When case explicitly sets created_in_data_collection_id, don't override., Existing cases should not be modified by default setting., TestCaseServiceUploadCasesFeatureFlag, TestGetCaseDataCollections (+2 more)
 
-### Community 127 - "cache/__init__.py"
+### Community 127 - "test_fastapp_cache_invalidation.py"
 Cohesion: 0.02
-Nodes (169): Clock, Protocol, Time sources used by the cache framework. Every expiry decision in this package…, Encapsulates supplying the monotonic and wall-clock readings a cache needs., Return a strictly non-decreasing reading in seconds., Return the current wall-clock time as a Unix timestamp., Encapsulates reading time from the operating system. Expiry uses `monotonic` so…, SystemClock (+161 more)
+Nodes (120): CacheConfigurationError, Error for configuring a region that already has a backend., Error for requesting a region name that the manager does not know., Error for an invalid or contradictory cache configuration., RegionAlreadyConfiguredError, RegionNotFoundError, Invalidation, LocalInvalidationBus (+112 more)
 
-### Community 128 - "BaseSAMapper"
-Cohesion: 0.05
-Nodes (34): BaseSAMapper, Any, Hashable, MappedColumn, Model, Get row field names by field type., Get row field names by field type set., Get row ID from row object or row class. (+26 more)
+### Community 128 - "SampleQueryResult"
+Cohesion: 0.23
+Nodes (9): Represents a request to retrieve sample identifiers matching a query. These…, RetrieveSamplesByQueryCommand, Represents a sample query, its matching identifiers, and any result truncation., SampleQueryResult, Retrieve samples matching a query. Args: cmd: Sample-query command to execute.…, Retrieve samples matching the given query., Retrieve sample IDs based on query filters., seq_service_retrieve_samples_by_query() (+1 more)
 
 ### Community 129 - "Person"
-Cohesion: 0.08
-Nodes (40): ConditionEra, ConditionEra (omopdb.md), Observation (omopdb.md), VisitOccurrence (omopdb.md), CareSite, ConditionEra, DeviceExposure, DeviceExposureIdentifier (+32 more)
+Cohesion: 0.10
+Nodes (34): ConditionOccurrenceIdentifier (omopdb.md), Observation (omopdb.md), VisitOccurrence (omopdb.md), CareSite, ConditionOccurrence, ConditionOccurrenceIdentifier, DeviceExposure, DeviceExposureIdentifier (+26 more)
 
-### Community 130 - "PersonForUpload"
-Cohesion: 0.09
-Nodes (26): PersonForUpload, ParentForUpload, Represents a person, together with any relevant associated data, intended for…, get_test_client(), _make_person(), Env, fixture, MonkeyPatch (+18 more)
+### Community 130 - "PersonBatchForUpload"
+Cohesion: 0.05
+Nodes (45): PersonBatchForUpload, PersonForUpload, Any, computed_field, Represents a person, together with any relevant associated data, intended for…, Represents a set of persons intended for upload, together with any new…, Indicates whether there are any measurements in the person set., Indicates whether there are any observations in the person set. (+37 more)
 
-### Community 131 - "UUID"
-Cohesion: 0.07
-Nodes (24): CaseRightSet, Group case access rights by protected resource and operation., UUID, Compute effective case and case-set rights from resolved ABAC records. Access…, Return effective rights for a case in its current collections. Args: case_id:…, Return effective rights for a case set in its current collections. Args:…, Return case-type and target-collection pairs with any effective right. The…, Return case types with any access or share right in any collection. (+16 more)
+### Community 131 - "TestRouterData"
+Cohesion: 0.17
+Nodes (7): Verify RouterData creates with required name and create_endpoints_fn., Verify RouterData accepts optional endpoints_function_kwargs., Verify RouterData behaves like a standard dictionary., Verify stored function in RouterData can be called., Verify stored function can receive kwargs from endpoints_function_kwargs., Tests for RouterData TypedDict., TestRouterData
 
 ### Community 132 - "._get_allele_profile_for_ids"
 Cohesion: 0.08
-Nodes (17): Test that seqs property maintains proper structure for serialization., Test SampleForUpload without id where seqs can have their own sample_ids., Test SampleForUpload without id where seqs also have NULL_ID sample_ids., Test has_seqs computed field returns False when no samples have seqs., Test valid SampleForUpload with sample_id., Test valid SampleForUpload with Identifiers., Test valid SampleForUpload with both sample_id and sample_ids., Test valid SampleForUpload with multiple identifiers. (+9 more)
+Nodes (17): Test SampleForUpload with multiple SeqForUpload instances., Test SampleForUpload with empty seqs list., Test SampleForUpload with both seqs and Identifiers., Test SampleForUpload with seqs having different properties., Test that seqs property maintains proper structure for serialization., Test SampleForUpload without id where seqs can have their own sample_ids., Test SampleForUpload without id where seqs also have NULL_ID sample_ids., Test has_seqs computed field returns False when no samples have seqs. (+9 more)
 
 ### Community 133 - "RBACTestClient"
-Cohesion: 0.10
-Nodes (16): ServiceUser, get_test_client(), Any, BaseRbacService, CrudCommand, Enum, fixture, Hashable (+8 more)
+Cohesion: 0.11
+Nodes (12): get_test_client(), Any, BaseRbacService, Enum, fixture, Hashable, Logger, scenario_ids (+4 more)
 
-### Community 134 - "model_anonymizer.py"
+### Community 134 - "omopdb/domain/enum.py"
 Cohesion: 0.06
-Nodes (33): Collection, AnonMethod, AnonStrictness, Enum, Encapsulates OmopDB and shared service domains., Encapsulates supported OmopDB repository implementations., Encapsulates roles recognized by OmopDB authorization policies., Encapsulates the enforcement level for anonymization requirements. (+25 more)
+Nodes (37): Collection, AnonMethod, AnonStrictness, Enum, Enumerations configuring OmopDB services, persistence, roles, and anonymization., Encapsulates OmopDB and shared service domains., Encapsulates supported OmopDB repository implementations., Encapsulates roles recognized by OmopDB authorization policies. (+29 more)
 
 ### Community 135 - "Concept"
-Cohesion: 0.08
-Nodes (29): Concept, ConceptAncestor, ConceptSynonym, Cost, Domain, DoseEra, DrugEra, DrugStrength (+21 more)
-
-### Community 136 - "test_fastapp_app_log_summarise.py"
-Cohesion: 0.08
-Nodes (39): InitializationServiceError, Error while initializing an application service., Error while initializing a repository-backed service., RepositoryInitializationServiceError, _LargeListCommand, _make_user(), Command, scenario_ids (+31 more)
-
-### Community 137 - "AuthService"
 Cohesion: 0.07
-Nodes (24): BaseUserManager, BaseRbacService, User, UserInvitation, Validate optional defaults used to create previously unknown users. Args:…, Encapsulates user resolution and configuration validation., Initialize identity claim settings and user creation configuration. Args:…, Validate and construct the root organization and root user. Args: root_cfg:… (+16 more)
+Nodes (32): Concept, ConceptAncestor, ConceptRelationship, ConditionEra, Cost, Domain, DoseEra, DrugEra (+24 more)
+
+### Community 136 - "LogItem"
+Cohesion: 0.09
+Nodes (41): InitializationServiceError, Error while initializing an application service., Error while initializing a repository-backed service., RepositoryInitializationServiceError, LogItem, Encapsulates serializing an application log code, message, and optional…, Serialize this log item as JSON., _LargeListCommand (+33 more)
+
+### Community 137 - "BaseOrganizationService"
+Cohesion: 0.03
+Nodes (58): BaseIsPermissionSubsetNewRolePolicy, Any, Provide an RBAC policy contract for role creation and updates., Encapsulates prevention of creation or updates that would elevate a role's…, Initialize the policy with its RBAC service and configuration properties. Args:…, BaseOrganizationService, Any, User (+50 more)
 
 ### Community 138 - "BaseRepository"
-Cohesion: 0.09
-Nodes (21): Any, Enum, Return services keyed by their service type., Return repositories keyed by their service type., Create a repository using the configured persistence backend. Args: cls:…, BaseRepository, Any, Hashable (+13 more)
-
-### Community 139 - "Enum"
 Cohesion: 0.06
-Nodes (35): DnaAmbiguityMap, DnaReverseAmbiguityMap, IdFactory, LocusType, ProtocolTypeSet, Enum, QualityControlResultSet, Encapsulates tree algorithms grouped by their computational approach. (+27 more)
+Nodes (28): BaseRepository, Any, Hashable, Update association objects of the given model class that represent an…, Encapsulates defining the persistence contract used by application services., Initialize repository identity from optional keyword arguments., Return the repository's stable identifier., Return the repository's display name. (+20 more)
+
+### Community 139 - "TestFilterConstruction"
+Cohesion: 0.20
+Nodes (5): date, datetime, scenario_ids, TestFilterConstruction, Util
 
 ### Community 140 - ".create_crud_cmd"
-Cohesion: 0.08
-Nodes (23): Any, BaseAbacService, CommonReadOrganizationResultsOnlyPolicy, Filter casedb case-policy reads to visible organizations., Register casedb case-policy commands for organization filtering. Args:…, ReadOrganizationResultsOnlyPolicy, BasePolicyTestCase, CrudCommand (+15 more)
-
-### Community 141 - ".create_child2_for_upload"
 Cohesion: 0.11
-Nodes (17): Test scenarios related to Identifiers for Child2 objects., Test 9.1: No Identifiers provided for Child2 - should succeed., Test 9.2.1.1: Existing Identifier with NULL child2 ID - should set child2 ID., Test 9.2.1.2.1: Existing Identifier with same child2 ID - should succeed., Test 9.2.1.2.2: Existing Identifier with different child2 ID - should fail., Test 9.2.2: New Identifier for new child2 - should succeed., Test 9.2.3.1: Multiple Identifiers, some existing for same child2 - should…, Test 9.2.3.1: Multiple Identifiers, some existing for different child2 - should… (+9 more)
+Nodes (17): BasePolicyTestCase, CrudCommand, Model, OrganizationAdminPolicy, scenario_ids, User, UUID, Create a user with optional roles and organization. (+9 more)
+
+### Community 141 - "MemoryVersionStore"
+Cohesion: 0.18
+Nodes (5): MemoryVersionStore, Encapsulates keeping generation numbers in process memory. This is exact for a…, Initialize a MemoryVersionStore instance., Adopting a remote generation must not make orphans addressable again., test_a_generation_never_moves_backwards()
 
 ### Community 142 - "TestModelSampleBatchForUpload"
 Cohesion: 0.08
 Nodes (14): Create a SampleForUpload with specified number of SeqForUpload instances., Test reading sample_batch_for_upload1.json as SampleBatchForUpload model., Test reading sample_batch_for_upload2.json as SampleBatchForUpload model., Test valid SampleBatchForUpload with minimal data., Test valid SampleBatchForUpload with alleles., Test valid SampleBatchForUpload with multiple samples including seqs., Test valid SampleBatchForUpload with empty samples list., Test SampleBatchForUpload where all samples contain SeqForUpload instances. (+6 more)
 
-### Community 144 - "SeqdbService"
-Cohesion: 0.04
-Nodes (50): Command, Define casedb commands that retrieve sequence data from seqdb., Represent a request for genetic sequences identified by ID., Represent a request for genetic sequences in FASTA format. The response is an…, RetrieveGeneticSequenceByIdCommand, RetrieveGeneticSequenceFastaByIdCommand, UUID, Create a sequence file and return its identifier. Implementations persist file… (+42 more)
+### Community 143 - "seq/crud_tree_algorithm_class.py"
+Cohesion: 0.20
+Nodes (10): TreeAlgorithmClass, TreeAlgorithmClassCrudCommand, UUID, Implement seqdb CRUD service operations for…, Handle CRUD operations for tree-algorithm-class entities. Args: self: Sequence…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added, # TODO: Specific logic for update operation to be added (+2 more)
+
+### Community 144 - "commondb/env.py"
+Cohesion: 0.02
+Nodes (92): Create and populate the casedb domain registry. Command exports provide…, complete_stored_model_field_props(), Any, Command, Domain, Hashable, Model, Complete stored model field properties with defaults for missing fields. Args:… (+84 more)
 
 ### Community 145 - "TestUpdate"
-Cohesion: 0.15
-Nodes (17): Any, BaseModel, Hashable, model_validator, Self, Match a value using the function generated during validation. Args: value: The…, Match row values using the function generated during validation. Args:…, Yield child-value presence flags while treating `None` as absent. (+9 more)
-
-### Community 146 - "SeqdbTestClient"
 Cohesion: 0.09
-Nodes (25): FileCompression, FileFormat, Encapsulates all supported biological file formats., Encapsulates supported compression methods for biological files., UUID, Verify a FASTQ payload has valid DNA records and matching quality scores. Args:…, Validate file content and create its persisted file record. Args: cmd: File-…, Decode possibly gzip-compressed UTF-8 content into a text stream. Args:… (+17 more)
+Nodes (3): scenario_ids, skipif, TestUpdate
+
+### Community 146 - "User"
+Cohesion: 0.16
+Nodes (11): FileCompression, Encapsulates supported compression methods for biological files., DataCollection, File, Model, Protocol, ReadSet, Sample (+3 more)
 
 ### Community 147 - "TestModelBaseSeq"
-Cohesion: 0.08
-Nodes (28): declared_attr, Mapped, Organization, UUID, Map the owning organization ID column., Map the owning organization relationship., Map the optional site ID column., Map the optional site relationship. (+20 more)
+Cohesion: 0.07
+Nodes (20): UUID, Unit tests for IDSDB ETL model classes. Tests the Identifier, AlleleForUpload,…, Test cases for BaseSeq model validation and functionality., Return a valid DNA sequence for testing., Return an invalid DNA sequence for testing., Compute the expected sequence hash for a given sequence., Test creating BaseSeq with valid DNA sequence., Test that DNA sequences are normalized to lowercase. (+12 more)
 
-### Community 148 - "CacheStatistics"
+### Community 148 - "cache/__init__.py"
 Cohesion: 0.02
-Nodes (143): Return the counters observed by this store., AsyncCachedFunction, BoundCachedFunction, CachedFunction, make_cached_function(), Any, Declarative caching of function results. `CachedFunction` is what makes…, Return the logical cache key for one argument combination. A writer that wants… (+135 more)
+Nodes (170): Abstract cache store contract. A backend is a dumb key-to-envelope store. It…, Cache store implementations. The package exposes the abstract contract and the…, A near cache in front of a shared store. `LayeredBackend` reads from a fast…, In-process cache store with capacity management and expiry. `MemoryBackend` is…, Clock, Protocol, Time sources used by the cache framework. Every expiry decision in this package…, Encapsulates supplying the monotonic and wall-clock readings a cache needs. (+162 more)
 
 ### Community 149 - "Case Type"
-Cohesion: 0.08
-Nodes (26): ColSet, Disease, Etiology, CaseTypeSetMember (doc), ColSet (doc), ColSetMember (doc), Case Type, Case Type Set Member (+18 more)
+Cohesion: 0.07
+Nodes (30): ColSet, Disease, Etiology, CaseTypeSetMember (doc), ColSet (doc), ColSetMember (doc), Case Type, Case Type Set Member (+22 more)
 
-### Community 150 - "BaseSimilarCasesTestCase"
-Cohesion: 0.11
-Nodes (18): Run `operation`, giving up after the configured timeout. Args: operation: The…, Return the worker pool, creating it on first use., BaseSimilarCasesTestCase, Case, Col, GeneticDistanceProtocol, RefCol, scenario_ids (+10 more)
+### Community 150 - "BaseCaseAbacPolicy"
+Cohesion: 0.04
+Nodes (56): BaseModel, Represents the cases returned by a similar-case request., RetrieveSimilarCasesReturnValue, BaseCaseAbacPolicy, Any, BaseAbacService, Command, Define policy helpers for attaching Casedb ABAC data to commands. (+48 more)
 
-### Community 151 - "case_service_retrieve_is_own_cases"
-Cohesion: 0.05
-Nodes (36): BaseModel, Represent the cases returned by a similar-case request., Represent a request for cases owned by or accessible to the user. The response…, RetrieveIsOwnCasesCommand, RetrieveSimilarCasesReturnValue, Return the case access model produced by a command policy. Args: cmd: Command…, Retrieve cases genetically similar to a specified case. Args: cmd: Similarity…, case_service_retrieve_is_own_cases() (+28 more)
+### Community 151 - "test/fastapp/model.py"
+Cohesion: 0.39
+Nodes (8): Base1, Base2, declarative_mixin, RowMetadataMixin, SAModel1_1, SAModel1_2, SAModel2_1, SAModel2_2
 
-### Community 152 - ".__init__"
-Cohesion: 0.09
-Nodes (17): User, UserInvitation, Initialize the repository with its user and invitation model classes. Args:…, Retrieve the user associated with a normalized unique key. Args: uow: Unit of…, Any, Hashable, Model, User (+9 more)
+### Community 152 - "OrganizationSARepository"
+Cohesion: 0.06
+Nodes (28): BaseOrganizationRepository, User, UserInvitation, Define the repository interface for commondb organization data., Encapsulates organization-specific user lookup operations for services., Initialize the repository with its user and invitation model classes. Args:…, Determine whether a user exists for a normalized unique key. Args: uow: Unit of…, Retrieve the user associated with a normalized unique key. Args: uow: Unit of… (+20 more)
 
 ### Community 153 - "Data Collection"
 Cohesion: 0.12
 Nodes (28): ColSet, DataCollection, Organization, OrganizationAdminPolicy, User, CaseTypeSet (doc), Case Type Set, Col Set (+20 more)
 
-### Community 154 - "test_fastapp_cache_region.py"
-Cohesion: 0.02
-Nodes (138): ManualClock, Encapsulates advancing only when a test tells it to. Both readings start at…, Initialize a ManualClock instance., Move the clock forward and return the new reading. Args: seconds: A non-…, Set both readings to an absolute value. Args: value: The new reading. Raises:…, InlineRefreshRunner, Encapsulates refreshing stale entries on the calling thread. This makes a stale…, Random (+130 more)
+### Community 154 - ".load"
+Cohesion: 0.03
+Nodes (85): ManualClock, Encapsulates advancing only when a test tells it to. Both readings start at…, Initialize a ManualClock instance., Move the clock forward and return the new reading. Args: seconds: A non-…, Set both readings to an absolute value. Args: value: The new reading. Raises:…, fixture_region(), fixture, Tests for the cached callables produced by a region decorator. (+77 more)
 
-### Community 155 - "CaseRight"
-Cohesion: 0.09
-Nodes (18): CaseRight, Identify access rights granted for cases and case sets., CaseTypeShareAbac, BaseModel, Return an accessor for source collections granting a share right. Args: right:…, Return case-type and collection pairs granting an access right. The returned…, Return case types granting an access right in at least one collection., Return collections granting a read or write right on a column. Args: col_id:… (+10 more)
+### Community 155 - "._validate_state"
+Cohesion: 0.22
+Nodes (7): _enum_to_str(), Any, model_validator, Self, Return an enum member name or the supplied string-like value., Normalize members and build the optimized membership matcher., Match a value using the function generated during validation. Args: value: The…
 
-### Community 156 - "test_seqdb_upload.py"
-Cohesion: 0.09
-Nodes (21): Model, Verify and resolve child protocol IDs or codes in an upload batch. Args: self:…, _verify_protocol(), create_allele_profile_base64(), ReadSetForUpload, scenario_ids, UUID, Unit tests for seqdb sample upload functionality. Tests the… (+13 more)
+### Community 156 - "omopdb/repositories/organization_sa.py"
+Cohesion: 0.22
+Nodes (7): OrganizationSARepository, Any, CommonOrganizationSARepository, Engine, SQLAlchemy organization repository configured with OmopDB user models., Encapsulates shared organization persistence with OmopDB SQLAlchemy model types., Initialize shared SQL organization storage with OmopDB model classes.
 
 ### Community 157 - "ServerManager"
-Cohesion: 0.08
-Nodes (24): oauth_server(), fixture, Test OAuth OIDC Client Credential Authentication Flow This module implements a…, Start and manage ReceiverApp for the test session., Create RequestorApp instance., Start and manage OAuth server for the test session., receiver_app(), requestor_app() (+16 more)
+Cohesion: 0.06
+Nodes (34): oauth_server(), fixture, Test OAuth OIDC Client Credential Authentication Flow This module implements a…, Start and manage ReceiverApp for the test session., Create RequestorApp instance., Test OAuth Client Credentials flow with missing token., Test that OAuth discovery endpoint is working., Test that JWKS endpoint is working. (+26 more)
 
 ### Community 158 - "test_fastapp_cache_support.py"
 Cohesion: 0.03
-Nodes (93): CantDeserializeError, Error for a value that could not be converted to its stored form., Error for a stored value that the current code can no longer read. A region…, SerializationError, compute_etag(), HttpCachePolicy, matches_etag(), HTTP-level caching helpers. Caching at the transport boundary is a different… (+85 more)
+Nodes (101): CantDeserializeError, Error for a value that could not be converted to its stored form., Error for a stored value that the current code can no longer read. A region…, SerializationError, compute_etag(), HttpCachePolicy, matches_etag(), HTTP-level caching helpers. Caching at the transport boundary is a different… (+93 more)
 
-### Community 159 - ".upload_batch"
-Cohesion: 0.10
-Nodes (15): Test 6.2.1.2.2: Existing Identifier with different parent ID - should fail., Test 6.2.2: New Identifier for new parent - should succeed., Test 6.2.3.1: Multiple Identifiers, some existing for different parent - should…, Test scenarios related to the on_exists and on_new command parameters., Test 7.1: on_exists=ERROR with existing object - should fail., Test 7.2: on_exists=SKIP with existing object - should skip., Test 7.4: on_new=CREATE with new object having provided ID - should create., Test 7.5: on_new=SKIP with new object having provided ID - should skip. (+7 more)
+### Community 159 - "TestParametrizedCRUD"
+Cohesion: 0.22
+Nodes (6): parametrize, Parameterized tests for CRUD operations across models., Verify create then read cycle works for all models., Verify create then update cycle works for all models., Verify create then delete cycle works for all models., TestParametrizedCRUD
 
 ### Community 160 - "TestModelSeq"
 Cohesion: 0.09
@@ -1445,88 +1351,88 @@ Cohesion: 0.09
 Nodes (28): Case, Case, CaseAccessAbac, CaseRights, CaseSet, CaseSetAccessAbac, CaseSetForUpload, CaseSetRights (+20 more)
 
 ### Community 162 - "CaseType"
-Cohesion: 0.11
-Nodes (21): CaseQuery, CaseQueryResult, CaseSetQuery, CaseType, CaseTypeAccessAbac, CaseTypeCategory, CaseTypeCol, Col (+13 more)
+Cohesion: 0.08
+Nodes (28): CaseQuery, CaseQueryResult, CaseSetQuery, CaseType, CaseTypeAccessAbac, CaseTypeCategory, CaseTypeCol, Col (+20 more)
 
-### Community 163 - "case_service_retrieve_case_stats"
-Cohesion: 0.17
-Nodes (12): case_service_retrieve_case_stats(), BaseCaseService, Calculate case statistics restricted by case and date-column access. Case types…, Calculate access-aware statistics by case type or case set. Args: cmd:…, BaseRetrieveStatsTestCase, Case, CaseSet, datetime (+4 more)
+### Community 163 - "DatetimeRangeFilter"
+Cohesion: 0.08
+Nodes (32): CaseStats, model_validator, Self, Represents aggregate statistics for cases or a case set. Model validation: Own…, Validate count and case-date invariants., BaseCaseRepository, datetime, UUID (+24 more)
 
 ### Community 164 - ".create_local_or_remote_app"
-Cohesion: 0.09
-Nodes (19): Any, App, Domain, Enum, Logger, User, Register an invited user using their invitation token., Update a user's active status, roles, or organization. (+11 more)
+Cohesion: 0.11
+Nodes (15): Any, Enum, Logger, User, Register an invited user using their invitation token., Update a user's active status, roles, or organization., Update the authenticated user's own organization., Create a local or remote application instance for the requested setup type.… (+7 more)
 
 ### Community 165 - "InMemoryOrganizationRepository"
-Cohesion: 0.09
-Nodes (20): NoResultsError, Error for an operation that expected matching data but found none., InMemoryOrganizationRepository, make_commondb_user_manager(), make_idps_cfg(), make_mock_organization_service(), make_mock_rbac_service(), make_root_cfg() (+12 more)
+Cohesion: 0.10
+Nodes (13): InMemoryOrganizationRepository, make_commondb_user_manager(), make_mock_rbac_service(), make_root_cfg(), Any, Organization, User, UserManager (+5 more)
 
-### Community 166 - "commondb/domain/policy/permission.py"
-Cohesion: 0.11
-Nodes (17): Command, Enum, Role, Define commondb role permissions and mappings for application domains. The…, Map commondb role permissions to equivalent domain roles and commands. The…, Map the commondb role hierarchy to equivalent domain roles. The mapping…, Return string values for commondb and mapped domain roles. The mapping returns…, Return string role sets for commondb and mapped domain role sets. The mapping… (+9 more)
+### Community 166 - "Role"
+Cohesion: 0.04
+Nodes (59): Define casedb application roles for command-centric authorization., Role, Expose casedb policy contracts and shared authorization policy bases.…, CommonRoleGenerator, Define Casedb role permissions and their shared-role mappings., Encapsulates Casedb role inheritance and command permission expansion. The…, # TODO: remove UPDATE from association objects that do not have properties of…, RoleGenerator (+51 more)
 
 ### Community 167 - "test_casedb_upload.py"
-Cohesion: 0.08
-Nodes (32): BaseUploadTestCase, _mock_uow(), Case, datetime, parametrize, scenario_ids, UUID, Unit tests for casedb case upload functionality. (+24 more)
+Cohesion: 0.09
+Nodes (22): Case, datetime, parametrize, scenario_ids, UUID, Unit tests for casedb case upload functionality., Tests for existing case data collection handling, including NULL_ID edge case.…, Existing case should maintain its created_in_data_collection_id. (+14 more)
 
-### Community 168 - "MockIDPClient"
-Cohesion: 0.07
-Nodes (28): MockIDPClient, Any, Logger, Request, UUID, Encapsulates identity-provider client that serves configured mock claims., Initialize a MockIDPClient instance., Id the requested value. (+20 more)
+### Community 168 - "env"
+Cohesion: 0.36
+Nodes (5): env(), fixture, FixtureRequest, Return a test client configured for either DICT or SA_SQLITE demo repos. The…, TestRetrievePersons
 
 ### Community 169 - "DummyCmd"
-Cohesion: 0.17
-Nodes (7): BaseRemoteAppTestCase, DummyCmd, Command, scenario_ids, TestAutoRegistration, TestHeadersAndApplyHandler, TestRouteRegistration
+Cohesion: 0.24
+Nodes (3): DummyCmd, TestHeadersAndApplyHandler, TestRouteRegistration
 
 ### Community 170 - "._create_sample_seq_for_upload"
-Cohesion: 0.09
-Nodes (16): Create a sample SeqForUpload with default values and optional overrides., Test cases for SeqForUpload model functionality and upload-specific features., Test creating SeqForUpload with basic fields., Test that SeqForUpload inherits all Seq properties., Test SeqForUpload with NULL_ID for sample_id., Test that sample_id serialization handles NULL_ID correctly., Test upload-specific field handling., Test JSON serialization structure of SeqForUpload. (+8 more)
+Cohesion: 0.07
+Nodes (20): Any, SeqForUpload, Create a sample SeqForUpload with default values and optional overrides., Test cases for SeqForUpload model functionality and upload-specific features., Create a sample SeqForUpload with default values and optional overrides., Test creating SeqForUpload with basic fields., Test that SeqForUpload inherits all Seq properties., Test SeqForUpload with NULL_ID for sample_id. (+12 more)
 
 ### Community 171 - "OAuth2Client"
 Cohesion: 0.10
-Nodes (16): demo_client_credentials_flow(), OAuth2Client, Any, OAuth 2.0 Client Test Script This script demonstrates how to use the OAuth 2.0…, Create a new OAuth client., Delete an OAuth client., List all OAuth clients., Simple OAuth 2.0 client for testing. (+8 more)
+Nodes (15): demo_client_credentials_flow(), OAuth2Client, Any, Create a new OAuth client., Delete an OAuth client., List all OAuth clients., Simple OAuth 2.0 client for testing., Get a specific OAuth client. (+7 more)
 
-### Community 172 - "ExistsFilter"
-Cohesion: 0.09
-Nodes (14): ExistsFilter, Any, Hashable, Treat every supplied value as an existing value., Represents a filter matching non-null, non-excluded values., Return whether a scalar value exists, respecting inversion., Yield existence matches for each value in a column., Return whether the filter key exists in a row with a value. Args: row: Row to… (+6 more)
+### Community 172 - "Any"
+Cohesion: 0.18
+Nodes (7): Any, Hashable, Treat every supplied value as an existing value., Return whether a scalar value exists, respecting inversion., Yield existence matches for each value in a column., Return whether the filter key exists in a row with a value. Args: row: Row to…, Yield existence matches for each row. Args: rows: Rows to inspect. na_values:…
 
-### Community 173 - "create_mapped_column"
-Cohesion: 0.09
-Nodes (26): declared_attr, Mapped, Organization, UUID, Map the owning organization ID column., Map the owning organization relationship., Map the optional site ID column., Map the optional site relationship. (+18 more)
+### Community 173 - "fastapp shared application framework"
+Cohesion: 0.25
+Nodes (8): casedb domain, commondb shared package, fastapp shared application framework, filter and transform support packages, omopdb domain, seqdb domain, Shared /v1 router composition pattern, pydantic
 
 ### Community 174 - "Protocol"
 Cohesion: 0.12
 Nodes (28): Identifier Issuer, IdentifierIssuer, File, AstMeasurement, AstPrediction, LocusSet, PcrMeasurement, Protocol (+20 more)
 
 ### Community 175 - "Person"
-Cohesion: 0.16
-Nodes (24): CareSite, DeviceExposure, DrugExposure, Location, CareSite (omopdb.md), DeviceExposure (omopdb.md), DrugExposure (omopdb.md), Location (omopdb.md) (+16 more)
+Cohesion: 0.15
+Nodes (27): CareSite, ConditionOccurrence, ConditionOccurrenceIdentifier, DeviceExposure, DrugExposure, Location, CareSite (omopdb.md), ConditionOccurrence (omopdb.md) (+19 more)
 
 ### Community 176 - "Protocol (seqdb entity)"
 Cohesion: 0.13
 Nodes (27): AstMeasurement (seqdb entity), AstPrediction (seqdb entity), File (seqdb entity), IdentifierIssuer (seqdb entity), LocusSet (seqdb entity), OrganizationIdentifierIssuerLink (seqdb entity), PcrMeasurement (seqdb entity), Protocol (seqdb entity) (+19 more)
 
-### Community 177 - "PackageMetadata"
-Cohesion: 0.08
-Nodes (21): Command, Represents a request to retrieve license metadata for installed application…, Represents a request to retrieve feature flags exposed by the composed…, RetrieveFeatureFlagsCommand, RetrieveLicensesCommand, Outage, PackageMetadata, Model (+13 more)
+### Community 177 - "OrganizationService"
+Cohesion: 0.02
+Nodes (78): Expose concrete casedb and shared services for application composition. Casedb…, OntologyService, Implement casedb ontology association service behavior., Encapsulates CRUD and association command handling for ontologies., Expose local and remote seqdb collaborators used by casedb services.…, ModelMetadataPolicy, Any, Enum (+70 more)
 
-### Community 178 - "TestCommondbDictModelModifier"
-Cohesion: 0.06
-Nodes (29): CommondbDictModelModifier, datetime, Hashable, Model, Apply commondb audit metadata rules to in-memory persisted models., Encapsulates a DictRepository modifier for all databases that use…, Initialize the source of timezone-aware audit timestamps. Args:…, Stamp a new commondb model with creation and modification metadata. Args:… (+21 more)
+### Community 178 - "CommondbDictModelModifier"
+Cohesion: 0.07
+Nodes (21): CommondbDictModelModifier, datetime, Hashable, Apply commondb audit metadata rules to in-memory persisted models., Encapsulates a DictRepository modifier for all databases that use…, Initialize the source of timezone-aware audit timestamps. Args:…, Stamp a new commondb model with creation and modification metadata. Args:…, Refresh modification metadata while preserving the stored creation time. Args:… (+13 more)
 
 ### Community 179 - "EndpointTestClient"
-Cohesion: 0.09
-Nodes (23): EndpointTestClient, Any, Command, CrudCommand, Response, Register a command class with its endpoint-dispatch handler. Args:…, Dispatch a supported command to its corresponding API endpoint. Args: cmd:…, Request identity providers and deserialize the returned list. Args: cmd:… (+15 more)
+Cohesion: 0.13
+Nodes (18): EndpointTestClient, Any, Command, CrudCommand, Response, Register a command class with its endpoint-dispatch handler. Args:…, Dispatch a supported command to its corresponding API endpoint. Args: cmd:…, Request identity providers and deserialize the returned list. Args: cmd:… (+10 more)
 
-### Community 180 - "User"
-Cohesion: 0.09
-Nodes (14): Any, Hashable, User, Update the user's name in the user manager., Get the user key, which uniquely identifies the user across systems, from the…, Construct user instance from identity claims., Create root user from identity claims., Check if claims belong to root user. (+6 more)
+### Community 180 - ".result_type"
+Cohesion: 0.25
+Nodes (5): Create and register a new ExtractResult (or subclass), then return it.…, Create and register a new TransformResult (or subclass), then return it.…, Return the status enum implied by `success` and `error`., _T_Extract, _T_Transform
 
 ### Community 181 - "AuthEnv"
 Cohesion: 0.12
-Nodes (8): AuthEnv, scenario_ids, Self-contained, per-test auth environment built around the real…, Verify that unknown users are auto-created when the flag is on, and rejected…, Verify that a root user can log in for the first time (triggering…, Drive get_existing_user_from_claims directly (no HTTP stack)., TestAutoCreateUser, TestRootUserLogin
+Nodes (7): AuthEnv, Self-contained, per-test auth environment built around the real…, Verify that unknown users are auto-created when the flag is on, and rejected…, Verify that a root user can log in for the first time (triggering…, Drive get_existing_user_from_claims directly (no HTTP stack)., TestAutoCreateUser, TestRootUserLogin
 
-### Community 182 - "_DummyMapper"
-Cohesion: 0.10
-Nodes (13): BaseMapperTestCase, _DummyMapper, _make_entity(), _make_mapper(), _make_row_class(), _Model, Any, Hashable (+5 more)
+### Community 182 - "RetrieveSeqFastaCommand"
+Cohesion: 0.25
+Nodes (5): Represents a request to retrieve sequences in FASTA format. The result is an…, RetrieveSeqFastaCommand, Stream sequence data in FASTA format. Args: cmd: FASTA-retrieval command to…, Stream genetic sequence FASTA data by sequence IDs., Stream repository contigs as wrapped or unwrapped FASTA records.
 
 ### Community 183 - "UUID"
 Cohesion: 0.09
@@ -1545,19 +1451,19 @@ Cohesion: 0.13
 Nodes (25): Organization (doc), Organization Set (doc), User (doc), User Invitation (doc), casedb / ORGANIZATION — Simplified ERD, Organization Identifier Issuer Link, Organization, Organization Set (+17 more)
 
 ### Community 187 - "._validate_model"
-Cohesion: 0.40
-Nodes (4): model_validator, Self, Normalize and validate the sequence representation, length, and hash. Derives…, Validate that the content hash matches the content.
+Cohesion: 0.17
+Nodes (9): decode_ascii_from_gzip_base64(), model_validator, Self, UUID, Normalize and validate the sequence representation, length, and hash. Derives…, Return the nucleotide sequence represented by this model. Args: ref_seq_str:…, Decode a gzip-compressed base64 string., Compute a hash for the given string, which is expected to contain a nucleotide… (+1 more)
 
-### Community 188 - "case_date.py"
-Cohesion: 0.11
-Nodes (26): case_service_calculate_case_date(), case_service_get_case_date_col_mappers(), case_service_get_case_date_col_mappers_from_cols(), convert_iso_date_to_datetime(), convert_iso_month_to_first_day_datetime(), convert_iso_quarter_to_first_day_datetime(), convert_iso_week_to_first_day_datetime(), convert_iso_year_to_first_day_datetime() (+18 more)
+### Community 188 - "RetrieveSeqDistanceLastModifiedCommand"
+Cohesion: 0.25
+Nodes (6): Represents a request to retrieve the last modified datetime for a SeqDistance…, RetrieveSeqDistanceLastModifiedCommand, datetime, Retrieve the latest sequence-distance modification time. Args: cmd: Last-…, datetime, Delegate distance modification-time retrieval to the distance operation.
 
-### Community 189 - "_verify_sample_refdata"
-Cohesion: 0.10
-Nodes (15): Verify and complete reference data., _verify_sample_refdata(), Test the _verify_batch_sample_refdata function., Test that _verify_batch_sample_refdata succeeds with empty samples., Test that _verify_batch_sample_refdata succeeds with samples that have no…, Test successful verification when no allele profiles are provided., Test that _verify_refdata fails when new alleles are missing from batch., Test that _verify_refdata gives warning for superfluous alleles in batch. (+7 more)
+### Community 189 - "TestGetAllEndpoint"
+Cohesion: 0.25
+Nodes (5): Tests for GET_ALL CRUD endpoint., Verify GET /model1 returns empty list when no records exist., Verify GET /model2 returns empty list when no records exist., Verify GET /model1 returns all records., TestGetAllEndpoint
 
 ### Community 190 - "CommondbRemoteApp"
-Cohesion: 0.24
+Cohesion: 0.25
 Nodes (7): CommondbRemoteApp, Encapsulates a remote app client for the commondb service with OAuth2/NONE…, _mock_response(), Any, fixture, Test the hand-written (non-CRUD) command handlers., TestNonCrudHandlers
 
 ### Community 191 - "computed_field"
@@ -1565,76 +1471,76 @@ Cohesion: 0.13
 Nodes (8): computed_field, Return whether the sequence has at least one processed contig., Return the number of contigs in this sequence., Return the total contig length, or zero when no contigs are available., Return the longest contig length, or zero when no contigs are available., Return the shortest contig length, or zero when no contigs are available., Return the median contig length, or zero when no contigs are available., Return the assembly N50 contig length. Returns: The shortest contig length…
 
 ### Community 192 - "TestDelete"
-Cohesion: 0.17
-Nodes (4): Env, scenario_ids, skipif, TestDelete
+Cohesion: 0.11
+Nodes (3): scenario_ids, skipif, TestDelete
 
 ### Community 193 - "IdentifierIssuer"
 Cohesion: 0.08
 Nodes (24): Death, DeathIdentifier, DeviceExposureIdentifier, DrugExposureIdentifier, IdentifierIssuer, Death (omopdb.md), DeathIdentifier (omopdb.md), DeviceExposureIdentifier (omopdb.md) (+16 more)
 
 ### Community 194 - "case_service_crud_ref_col"
-Cohesion: 0.09
-Nodes (22): Represent CRUD operations for reusable reference-column definitions., RefColCrudCommand, case_service_crud_ref_col(), BaseCaseService, RefCol, UUID, Handle CRUD operations for reference-column entities. This is a simple metadata…, Validate concept-set type and unit compatibility for reference columns. Args:… (+14 more)
+Cohesion: 0.13
+Nodes (16): case_service_crud_ref_col(), RefCol, UUID, Validate concept-set type and unit compatibility for reference columns. Args:…, Handle reference-column CRUD with access filtering and write validation. Args:…, _verify_ref_col_concept_set_type_and_unit(), BaseRefColTestCase, Any (+8 more)
 
 ### Community 195 - "TestNonCrudHandlers"
-Cohesion: 0.25
+Cohesion: 0.24
 Nodes (4): _mock_response(), Any, Test the hand-written (non-CRUD) command handlers., TestNonCrudHandlers
 
 ### Community 196 - "CompositeFilter"
 Cohesion: 0.12
 Nodes (24): CompositeFilter, Any, BaseModel, Hashable, model_validator, Self, Match a value using the function generated during validation. Args: value: The…, Match row values using the function generated during validation. Args:… (+16 more)
 
-### Community 197 - "IntervalTransformer"
-Cohesion: 0.13
-Nodes (13): IntervalTransformer, Return whether `value` matches an interval without mutating an object., Encapsulates mapping a numeric field to its configured interval. Bounds may be…, scenario_ids, Test transform_value method for direct value transformation., Test with Decimal input values., Test cases for IntervalTransformer., Test basic number to interval mapping. (+5 more)
+### Community 197 - "TestPostOneEndpoint"
+Cohesion: 0.25
+Nodes (5): Tests for POST_ONE CRUD endpoint., Verify POST /model1 creates a new record., Verify POST /model2 creates a new record., Verify POST /model1 with invalid data returns error., TestPostOneEndpoint
 
-### Community 198 - "run.py"
+### Community 198 - "log_parser_v2.py"
 Cohesion: 0.04
-Nodes (58): post-pr-comments.sh Script, Review Skill, NoFilter, Represents a filter retaining every value unless explicitly inverted., Any, model_validator, Self, Represents a filter matching values with a regular expression. Model… (+50 more)
+Nodes (46): scenario_ids, skip, TestRead, AzureColumn, LogCode, LogParser, LogType, Any (+38 more)
 
-### Community 199 - "map_paired_elements"
-Cohesion: 0.09
-Nodes (13): map_paired_elements(), Any, Hashable, Group paired values by key while preserving input order for lists. With…, datetime, get_test_client(), Env, fixture (+5 more)
+### Community 199 - "TrackingUnitOfWork"
+Cohesion: 0.29
+Nodes (3): Seq, Track the transaction outcome for the conversion service test., TrackingUnitOfWork
 
-### Community 200 - "TestCreate"
-Cohesion: 0.17
-Nodes (4): Env, scenario_ids, skipif, TestCreate
+### Community 200 - "TestClient"
+Cohesion: 0.07
+Nodes (13): Encapsulates integration-test helpers for querying and verifying application…, Retrieve a user from the app's user manager by key., Determine whether one role is subordinate to another by permissions. Set…, TestClient, scenario_ids, skipif, TestCreate, scenario_ids (+5 more)
 
-### Community 201 - "BaseUploadTestCase"
-Cohesion: 0.10
-Nodes (22): SeqForUpload, Helper to create a SeqForUpload with default or specified properties., Test the _verify_protocol helper., When no protocol IDs are present, no protocol-type query is needed., A protocol with ASSEMBLY type is accepted for Seq children., A non-ASSEMBLY protocol for Seq should be flagged with code a4c9e18b., Skipped children are ignored for per-child error annotation., Protocol lookup should use user_id=None when command user is None. (+14 more)
+### Community 201 - "Schema migrations"
+Cohesion: 0.29
+Nodes (6): Developing a migration, Existing databases, Local clean bootstrap, PRD deployment, Schema migrations, SQL Server-specific choices
 
 ### Community 202 - "TestNumpyAlleleIntegration"
-Cohesion: 0.11
-Nodes (18): Run `operation`, giving up after the configured timeout. Args: operation: The…, Return the worker pool, creating it on first use., BaseSimilarCasesTestCase, Case, Col, GeneticDistanceProtocol, RefCol, scenario_ids (+10 more)
+Cohesion: 0.10
+Nodes (12): fixture, parametrize, Protocol, Unit tests for all new numpy ALLELE distance code paths (LSP-3529)., _decode_profile with use_numpy_allele=True returns (n_loci,) S16 array; null…, The isinstance(np.ndarray) branch in…, Each invalid variant-flag combination raises ValueError., numpy_batch path stores correct cross and intra-batch distances. (+4 more)
 
-### Community 203 - "IdpClient"
-Cohesion: 0.05
-Nodes (28): IdpClient, Request, SSLContext, UUID, Encapsulates the base client for an external identity provider., Initialize a IdpClient instance., Get identity provider configuration., Extract claims from JWT token. (+20 more)
+### Community 203 - "DummyIdpClient"
+Cohesion: 0.09
+Nodes (13): Request, Extract claims from JWT token., Returns the claims of the user from the request or None if claims cannot be…, DummyIdpClient, Any, Request, scenario_ids, Unit tests for IdpClient base class. Follows the reference test style for… (+5 more)
 
 ### Community 204 - "UUID"
 Cohesion: 0.15
 Nodes (9): field_serializer, field_validator, UUID, Normalize a JSON locus-ID list to UUID objects., Serialize ordered locus identifiers as strings., Normalize a JSON locus-code map and enforce its key length limit., Serialize locus-code-map identifier values as strings., Normalize an empty gene-product code to ``None``. (+1 more)
 
 ### Community 205 - "Registry"
-Cohesion: 0.10
-Nodes (15): Any, Decorator to register a transformer factory function., Encapsulates named constructors for configured transformers., Register a transformer class by name., Register a factory function for creating transformer instances., Create a named transformer, preferring a registered factory over a class. Args:…, List all available transformer names., Decorator for registering transformer classes. (+7 more)
+Cohesion: 0.08
+Nodes (19): Encapsulates an example registry-backed custom transformer., Initialize the example transformer with a registry-visible name., Return the example object unchanged., StringUpperTransformer, Any, Decorator to register a transformer factory function., Encapsulates named constructors for configured transformers., Register a transformer class by name. (+11 more)
 
 ### Community 206 - "test_cfg_log_level.py"
 Cohesion: 0.20
 Nodes (16): _build_test_fixture(), _DummyHandler, _DummyLogger, _extract_diagnostic_payload(), _patch_logging_get_logger(), _patch_runtime_logger_dict(), MonkeyPatch, scenario_ids (+8 more)
 
 ### Community 207 - "generate_seq_distances.py"
-Cohesion: 0.19
-Nodes (21): create_seq_distance_database(), get_allele_profile_ids(), get_allele_profiles(), get_data_collection(), get_locus_detection_protocol(), get_locus_set(), get_sample(), get_seq_distance_protocol() (+13 more)
-
-### Community 208 - "test_seqdb_models_for_upload.py"
 Cohesion: 0.09
-Nodes (13): scenario_ids, Unit tests for IDSDB ETL model classes. Tests the Identifier, AlleleForUpload,…, Test ValidationError when id doesn't match computed seq_hash., Test valid Identifier with identifier_issuer_code., Test valid Identifier with identifier_issuer_id., Test valid Identifier with both issuer fields., Test ValidationError when both issuer fields are missing., Test field length validation. (+5 more)
+Nodes (32): computed_field, Represents a set of samples intended for upload, together with any new…, Indicates whether there are any read sets in the sample set., Indicates whether there are any sequences in the sample set., Indicates whether there are any seq taxonomies in the sample set., Indicates whether there are any seq classifications in the sample set., Indicates whether there are any sequence profiles in the sample set., Indicates whether there are any PCR measurements in the sample set. (+24 more)
 
-### Community 209 - "model/case/upload.py"
-Cohesion: 0.06
-Nodes (37): Case, CaseDataCollectionLink, CaseIdentifier, CaseSetDataCollectionLink, CaseSetMember, field_serializer, Model, UUID (+29 more)
+### Community 208 - "scenario_ids"
+Cohesion: 0.10
+Nodes (12): scenario_ids, Test ValidationError when id doesn't match computed seq_hash., Test valid Identifier with identifier_issuer_code., Test valid Identifier with identifier_issuer_id., Test valid Identifier with both issuer fields., Test ValidationError when both issuer fields are missing., Test field length validation., Test valid AlleleForUpload with locus_id. (+4 more)
+
+### Community 209 - "model/case/__init__.py"
+Cohesion: 0.03
+Nodes (101): BaseCasePolicy, OrganizationAccessCasePolicy, OrganizationShareCasePolicy, Define persistent organization and user ABAC policy records for cases. Access…, Represents a user's maximum access rights in one data collection. The rights…, Represents common case and case-set rights for a case-type set., Represents an organization's additional source-to-target share rights. Rights…, Represents a user's maximum source-to-target share rights. The rights are… (+93 more)
 
 ### Community 210 - "EvictionStrategy"
 Cohesion: 0.02
@@ -1642,143 +1548,143 @@ Nodes (52): Initialize a MemoryBackend instance. Args: max_weight: Total weight 
 
 ### Community 211 - "TestCreateUserFromToken"
 Cohesion: 0.19
-Nodes (11): make_cdb_invitation(), make_cdb_organization(), parametrize, UserInvitation, UUID, Return a valid future-expiring UserInvitation., Verify that the commondb UserManager correctly creates a user from an…, Build an AuthEnv with a pre-stored creator (inviting) user. (+3 more)
+Nodes (12): make_cdb_invitation(), make_cdb_organization(), parametrize, scenario_ids, UserInvitation, UUID, Return a valid future-expiring UserInvitation., Verify that the commondb UserManager correctly creates a user from an… (+4 more)
 
 ### Community 212 - "TestInitialization"
 Cohesion: 0.09
 Nodes (12): Test CommondbRemoteApp initialization with various configurations., Initialize with NONE auth protocol as enum., Initialize with NONE auth protocol as string., Initialize with OAUTH2 auth protocol as enum., Initialize with OAUTH2 auth protocol as string., Initialize with OAuthFlow as enum., Initialize with OAuthFlow as string., Verify default route prefix is /v1. (+4 more)
 
 ### Community 213 - "RequestorApp"
-Cohesion: 0.05
-Nodes (29): Response, Client application that requests access tokens and calls protected endpoints., Initialize the OIDC client., Get an access token for the specified audience., Call a protected endpoint with the access token., Create a properly formatted but invalid JWT token for testing., RequestorApp, Any (+21 more)
+Cohesion: 0.07
+Nodes (25): Response, Client application that requests access tokens and calls protected endpoints., Initialize the OIDC client., Get an access token for the specified audience., Call a protected endpoint with the access token., Create a properly formatted but invalid JWT token for testing., RequestorApp, Any (+17 more)
 
 ### Community 214 - "SeqGenerationSettings"
-Cohesion: 0.16
-Nodes (10): Create a command-like object with a .user containing an id., Create a user-like object for get_case_abac cached reads., Test get_case_abac behavior., get_case_abac raises UnauthorizedAuthError when cmd.user is None., get_case_abac raises UnauthorizedAuthError when cmd.user.id is None., Full access users return is_full_access True and avoid repository calls., Repeated calls with same user id are memoized., Non-admin user with no policies yields empty ABAC mappings. (+2 more)
+Cohesion: 0.17
+Nodes (7): BaseModel, computed_field, field_validator, Random, SeqGenerationSettings, scenario_ids, TestGenerateRandomSequences
 
 ### Community 215 - "Development Guide"
-Cohesion: 0.16
+Cohesion: 0.17
 Nodes (21): Python & Pytest Conventions, Diagnose-before-editing workflow, test.util.mock_compat, pytest-run skill, Test behavior, not implementation details, Gen-EpiX Agent Guide, Graphify architecture query workflow, Claude Code Root Config (+13 more)
 
 ### Community 216 - "Linter"
 Cohesion: 0.19
 Nodes (5): Linter, Path, Runs the specified linting tool with the provided command-line arguments. This…, This class provides an interface to run linting tools like mypy, pylint, ruff,…, Runs a series of linting and formatting tools on the gen-epix project. This…
 
-### Community 217 - "TestCaseUpload"
-Cohesion: 0.09
-Nodes (20): CaseUploadSetup, get_test_client(), Any, Case, Env, fixture, scenario_ids, skip (+12 more)
+### Community 217 - "map_paired_elements"
+Cohesion: 0.08
+Nodes (14): map_paired_elements(), Any, Hashable, Group paired values by key while preserving input order for lists. With…, datetime, Any, Case, scenario_ids (+6 more)
 
-### Community 218 - "TestCasedbEdgeCasesAccess"
-Cohesion: 0.12
-Nodes (14): get_test_client(), Env, fixture, integration, scenario_ids, User, Test that a root user can create a case and that the created case is…, Test that a root user can create a case that belongs to 2 data collections and… (+6 more)
+### Community 218 - "get_test_client"
+Cohesion: 0.40
+Nodes (4): get_test_client(), fixture, Get a test client for casedb integration tests. This fixture initializes a test…, Auto-inject the env fixture into the class.
 
 ### Community 219 - "TestCommondbModelProcessMetadata"
 Cohesion: 0.10
-Nodes (14): Env, fixture, integration, scenario_ids, modified_at must be set by the backend on creation., modified_by must be set to the creating user's id., created_at must not change when a record is updated., modified_by must be stamped with the updating user, not the creating user. (+6 more)
+Nodes (13): fixture, integration, scenario_ids, modified_at must be set by the backend on creation., modified_by must be set to the creating user's id., created_at must not change when a record is updated., modified_by must be stamped with the updating user, not the creating user., modified_at supplied in the update payload must be ignored by the backend. (+5 more)
 
-### Community 220 - "UserManager"
-Cohesion: 0.18
-Nodes (7): MockUser, Any, BaseModel, BaseUserManager, Hashable, User, UserManager
+### Community 220 - "ReadOrganizationResultsOnlyPolicy"
+Cohesion: 0.29
+Nodes (6): Any, BaseAbacService, CommonReadOrganizationResultsOnlyPolicy, Filter casedb case-policy reads to visible organizations., Register casedb case-policy commands for organization filtering. Args:…, ReadOrganizationResultsOnlyPolicy
 
 ### Community 221 - "TestModelSeqProfileForUpload"
 Cohesion: 0.08
 Nodes (13): Test JSON serialization of AlleleProfileForUpload., Test valid AlleleProfileForUpload with codes., Test valid AlleleProfileForUpload with IDs., Test valid AlleleProfileForUpload with allele_ids., Test valid AlleleProfileForUpload with locus_allele_id_map., Test valid AlleleProfileForUpload with locus_code_map when using allele_ids., Test ValidationError when both protocol fields are missing., Test ValidationError when both locus_set fields are missing. (+5 more)
 
-### Community 222 - "fastapp shared application framework"
-Cohesion: 0.13
-Nodes (11): Test scenarios related to Identifiers for parent objects., Test 6.2.1.1: Existing Identifier with NULL parent ID - should set parent ID., Test 6.2.1.2.1: Existing Identifier with same parent ID - should succeed., Test 6.2.1.2.2: Existing Identifier with different parent ID - should fail., Test 6.2.2: New Identifier for new parent - should succeed., Test 6.2.3.1: Multiple Identifiers, some existing for same parent - should…, Test 6.2.3.1: Multiple Identifiers, some existing for different parent - should…, Test 6.2.3.2: Multiple Identifiers, all new but same issuer - should fail. (+3 more)
+### Community 222 - "Runtime dependencies (requirements.txt)"
+Cohesion: 0.25
+Nodes (11): Dynaconf-based configuration, IDP modes (IDPS, MOCK, NONE), Repository mode parity (DICT, SA_SQLITE, SA_SQL), run.py CLI entrypoint, Local Development Model, Staged startup troubleshooting, Runtime dependencies (requirements.txt), Alembic (+3 more)
 
-### Community 223 - "lock.py"
-Cohesion: 0.04
-Nodes (37): Executor, See base method. A process-local store needs no distributed mutex, so a plain…, AsyncSingleFlight, _Call, NullMutex, Any, Protocol, Concurrency primitives that keep one loader per key. Without coordination, the… (+29 more)
+### Community 223 - "_Call"
+Cohesion: 0.18
+Nodes (7): _Call, Any, Encapsulates holding the shared outcome of one in-flight load. Attributes:…, Initialize a _Call instance., Return the result of `loader`, executing it at most once per key. Args: key:…, Claim leadership for `key` without blocking. A stale-while-revalidate read uses…, Return the result of awaiting `loader`, running it once per key. Args: key: The…
 
-### Community 224 - "TestCreate"
-Cohesion: 0.21
-Nodes (4): Env, scenario_ids, skipif, TestCreate
+### Community 224 - "UpdateUserPolicy"
+Cohesion: 0.29
+Nodes (6): Any, BaseAbacService, CommonUpdateUserPolicy, Encapsulates shared user-update checks with OmopDB role and user mappings., Initialize the user-update policy with OmopDB dependencies., UpdateUserPolicy
 
-### Community 225 - "validate_concept_or_region"
+### Community 225 - "retrieve_case.py"
 Cohesion: 0.14
-Nodes (25): _get_map_function_for_col(), _get_map_functions_for_filters(), _get_valid_concepts(), _get_valid_region_values(), Any, BaseCaseService, Col, CompositeFilter (+17 more)
+Nodes (26): _get_map_function_for_col(), _get_map_functions_for_filters(), _get_valid_concepts(), _get_valid_region_values(), Any, Col, RefCol, User (+18 more)
 
 ### Community 226 - "convert"
 Cohesion: 0.20
 Nodes (5): Any, Reconstruct a nucleotide sequence from a NextClade representation. Args:…, convert(), parametrize, TestNextcladeSequenceConversion
 
-### Community 227 - ".uow"
-Cohesion: 0.13
-Nodes (13): scenario_ids, Verify update_some_seq_distance_content against a real SA_SQLITE database., TestBulkUpdateSeqDistanceContentSA, BaseSeqDistancePerformance, ensure_datasets_exist_and_valid(), get_test_client(), Env, fixture (+5 more)
+### Community 227 - "TestSeqDistancePerformance"
+Cohesion: 0.20
+Nodes (8): BaseSeqDistancePerformance, ensure_datasets_exist_and_valid(), get_test_client(), fixture, parametrize, RepositoryType, scenario_ids, TestSeqDistancePerformance
 
-### Community 228 - "CrudCommand"
-Cohesion: 0.11
-Nodes (24): CaseIdentifierCrudCommand, CaseSetCategoryCrudCommand, CrudCommand, Represent CRUD operations for alternate and external case identifiers., Represent CRUD operations for categories used to tag case sets., case_service_crud_case_identifier(), _crud_case_identifier_with_abac(), _crud_case_identifier_without_abac() (+16 more)
+### Community 228 - "UpdateUserPolicy"
+Cohesion: 0.29
+Nodes (6): Any, BaseAbacService, CommonUpdateUserPolicy, Encapsulates authorizing user updates with seqdb roles and user model mappings., Configure the shared policy with seqdb role and user mappings., UpdateUserPolicy
 
-### Community 229 - "sa_model/geo.py"
-Cohesion: 0.26
-Nodes (11): Base, RowMetadataMixin, Define SQLAlchemy persistence mappings for casedb geographic models., Persist the casedb RegionSet domain model., Persist the casedb RegionSetShape domain model., Persist the casedb Region domain model., Persist the casedb RegionRelation domain model., Region (+3 more)
-
-### Community 230 - ".__init__"
+### Community 229 - "6f2f4fb9b3d1_drop_legacy_code_constraints.py"
 Cohesion: 0.33
-Nodes (5): Any, App, BaseAbacRepository, Logger, Initialize ABAC model, command, policy, and role mappings. Args: app:…
+Nodes (6): downgrade(), _drop_legacy_unique_constraint(), Drop a legacy unique constraint or index if it is present on SQL Server., Remove LSP-3497 legacy uniqueness for operational sequence entities., Do not recreate constraints: duplicate codes may already exist., upgrade()
+
+### Community 230 - "CaseUploadSetup"
+Cohesion: 0.38
+Nodes (4): CaseUploadSetup, get_test_client(), fixture, Add sequencing and assembly protocols to seqdb, as well as identifier issuers.
 
 ### Community 231 - "test_seqdb_calculate_seq_distance.py"
 Cohesion: 0.19
-Nodes (12): BaseCalculateSeqDistanceTestCase, _iterable(), _mock_uow(), fixture, ndarray, scenario_ids, Return an (n_loci,) S16 array where every locus has the same UUID byte., Base test case with common fixtures and utilities. (+4 more)
+Nodes (12): Provide seqdb functionality for domain.literal., BaseCalculateSeqDistanceTestCase, _iterable(), _mock_uow(), ndarray, scenario_ids, Return an (n_loci,) S16 array where every locus has the same UUID byte., Base test case with common fixtures and utilities. (+4 more)
 
-### Community 232 - "Any"
+### Community 232 - "omop/ontology.py"
 Cohesion: 0.07
-Nodes (35): ConceptAncestor, ConceptClass, ConceptRelationship, ConceptSynonym, Domain, DrugStrength, Any, field_validator (+27 more)
+Nodes (36): ConceptAncestor, ConceptClass, ConceptRelationship, ConceptSynonym, Domain, DrugStrength, Any, field_validator (+28 more)
 
-### Community 233 - "TestAuth"
-Cohesion: 0.18
-Nodes (6): get_name_from_claims(), Any, Get the name from the claims, checking against a list of possible name claims., Pure unit tests for claim name-extraction helpers and update_user_name., Verify the real UserManager writes the name change to the repo., TestAuth
+### Community 233 - "make_cdb_user"
+Cohesion: 0.20
+Nodes (7): get_name_from_claims(), Get the name from the claims, checking against a list of possible name claims., make_cdb_user(), Pure unit tests for claim name-extraction helpers and update_user_name., Verify the real UserManager writes the name change to the repo., Return a fresh commondb User with the given attributes., TestAuth
 
 ### Community 234 - "TestCasedbMetadataMasking"
 Cohesion: 0.14
-Nodes (13): CaseType, Env, fixture, integration, scenario_ids, User, Verifies that MaskModelProcessMetadataPolicy is correctly wired in casedb. Root…, Root user must see all three metadata fields populated — superusers bypass… (+5 more)
+Nodes (12): CaseType, fixture, integration, scenario_ids, User, Verifies that MaskModelProcessMetadataPolicy is correctly wired in casedb. Root…, Root user must see all three metadata fields populated — superusers bypass…, Org admin must see all three metadata fields masked to None by… (+4 more)
 
-### Community 235 - "CircuitBreaker"
-Cohesion: 0.04
-Nodes (40): Return the default failure policy implied by the configuration. A configured…, CircuitBreaker, FailurePolicy, BaseException, Return the state, moving an expired open breaker to half open., Open the breaker and start its reset timer., Encapsulates bounding the wall-clock duration of a backend call. The call runs…, Initialize a TimeoutGuard instance. Args: timeout: Seconds allowed for one… (+32 more)
+### Community 235 - "TimeoutGuard"
+Cohesion: 0.10
+Nodes (16): Return the default failure policy implied by the configuration. A configured…, BaseException, Encapsulates bounding the wall-clock duration of a backend call. The call runs…, Initialize a TimeoutGuard instance. Args: timeout: Seconds allowed for one…, Shut down the worker pool if one was created., Initialize a FailurePolicy instance., Run a backend operation under the configured protections. The breaker is…, Absorb or re-raise a failure according to the configured mode. Args: exception:… (+8 more)
 
 ### Community 236 - "test_read_config.py"
 Cohesion: 0.29
 Nodes (17): _assert_default_import_payload(), _assert_string_override_payload(), override_tmp_dir(), fixture, parametrize, Path, scenario_ids, Construct and compose an app config, returning key config/auth values. (+9 more)
 
 ### Community 237 - "TestDataLineageMixin"
-Cohesion: 0.13
-Nodes (11): FieldInfo, scenario_ids, Tests for the DataLineageMixin class. DataLineageMixin is a plain mixin (not a…, DataLineageMixin should declare a provenance_id annotation., DataLineageMixin should declare a source_traceback annotation., The provenance_id Field should have a default of None., The source_traceback Field should have a default of None., The source_traceback Field should enforce max_length=255. (+3 more)
+Cohesion: 0.14
+Nodes (10): FieldInfo, Tests for the DataLineageMixin class. DataLineageMixin is a plain mixin (not a…, DataLineageMixin should declare a provenance_id annotation., DataLineageMixin should declare a source_traceback annotation., The provenance_id Field should have a default of None., The source_traceback Field should have a default of None., The source_traceback Field should enforce max_length=255., The provenance_id annotation should allow UUID | None. (+2 more)
 
-### Community 238 - "ClientStore"
-Cohesion: 0.06
-Nodes (23): ClientStore, Any, OAuth 2.0 Client Store This module manages OAuth 2.0 client registration and…, Retrieve a client by client ID., Delete a client from the store., Deactivate a client (soft delete)., List all active clients., Check if a client exists and is active. (+15 more)
+### Community 238 - ".get_client"
+Cohesion: 0.29
+Nodes (4): Any, Retrieve a client by client ID., Check if a client exists and is active., Update client properties.
 
 ### Community 239 - "Organization (commondb.organization entity)"
 Cohesion: 0.22
 Nodes (17): Contact (commondb.organization entity), IdentifierIssuer (commondb.organization entity), Organization (commondb.organization entity), OrganizationIdentifierIssuerLink (commondb.organization entity), Site (commondb.organization entity), User (commondb.organization entity), UserInvitation (commondb.organization entity), commondb / ORGANIZATION — Simplified ERD (+9 more)
 
-### Community 240 - "CrudCommand"
-Cohesion: 0.11
-Nodes (17): ProtocolCrudCommand, CrudCommand, Represents CRUD command metadata for sequence protocol records., Represents CRUD command metadata for phylogenetic tree algorithm records., Represents CRUD command metadata for tree algorithm class records., TreeAlgorithmClassCrudCommand, TreeAlgorithmCrudCommand, Protocol (+9 more)
+### Community 240 - "seq_service_crud_protocol"
+Cohesion: 0.18
+Nodes (10): ProtocolCrudCommand, Represents a request to perform a CRUD operation on Protocols., Protocol, Handle a CRUD command for protocol entities. Args: cmd: Typed protocol CRUD…, Protocol, UUID, Handle CRUD operations for protocol entities. Args: self: Sequence service…, seq_service_crud_protocol() (+2 more)
 
 ### Community 241 - "check_docstrings.py"
 Cohesion: 0.09
 Nodes (37): audit_file(), check_coverage(), check_exception_classes(), check_package(), check_pydantic(), check_raises(), decorator_name(), has_decorator() (+29 more)
 
-### Community 242 - "crud_case.py"
-Cohesion: 0.07
-Nodes (47): CaseCrudCommand, CaseDataCollectionLinkCrudCommand, CaseSetDataCollectionLinkCrudCommand, Represent CRUD operations for typed cases in data collections., Represent CRUD operations for case-to-data-collection links., Represent CRUD operations for case-set-to-data-collection links., case_service_crud_case(), _crud_case_with_abac() (+39 more)
+### Community 242 - "get_case_abac_from_command"
+Cohesion: 0.08
+Nodes (38): CaseCrudCommand, CaseDataCollectionLinkCrudCommand, Represents a request to execute a CRUD operation on Cases., Represents a request to execute a CRUD operation on CaseDataCollection links., case_service_crud_case(), _crud_case_with_abac(), _crud_case_without_abac(), case_service_crud_case_data_collection_link() (+30 more)
 
-### Community 243 - ".create_specimen_for_upload"
-Cohesion: 0.11
-Nodes (18): SpecimenIdentifier, Test scenarios related to Identifiers for Specimen objects., Test 8.2.1.1: Existing Identifier with NULL specimen ID - should set specimen…, Test 8.2.1.2.1: Existing Identifier with same specimen ID - should succeed., Test 8.2.1.2.2: Existing Identifier with different specimen ID - should fail., A retried derived-specimen chain (e.g. a repeat culture attempt) that carries…, Test 8.2.2: New Identifier for new specimen - should succeed., Test 8.2.3.1: Multiple Identifiers, some existing for same specimen - should… (+10 more)
+### Community 243 - "TestClient"
+Cohesion: 0.33
+Nodes (5): TestClient, Tests for DELETE_ALL CRUD endpoint., Verify DELETE /model1 deletes all records., Verify DELETE /model1 succeeds even when no records exist., TestDeleteAllEndpoint
 
-### Community 244 - "TestDuplicateIds"
-Cohesion: 0.21
-Nodes (10): ParentForUpload, Duplicate-ID detection converts per-item hard failures into soft FAILED results., Construct a Child1ForUpload bypassing Pydantic validators (for dup-ID tests)., Construct a ParentForUpload bypassing Pydantic validators., Build an UploadParentsCommand bypassing all Pydantic batch validators., Duplicate parent UUID → both occurrences FAILED, distinct parent unaffected., Two children with the same UUID inside one parent → parent FAILED., Same child UUID in two distinct parents → both parents FAILED, message names… (+2 more)
+### Community 244 - "ThreadRefreshRunner"
+Cohesion: 0.33
+Nodes (4): Executor, Encapsulates refreshing stale entries on a daemon thread or a supplied…, Initialize a ThreadRefreshRunner instance., ThreadRefreshRunner
 
-### Community 245 - ".create_measurement_for_upload"
-Cohesion: 0.16
-Nodes (11): date, datetime, Test combinations of different scenarios., Test person with all child types and Identifiers., Test batch with multiple persons having different child type combinations., Create a test MeasurementForUpload with integer concept IDs. Required concept…, Create a test ObservationForUpload with integer concept IDs. Required concept…, Create a test MeasurementRelationForUpload. (+3 more)
+### Community 245 - "TestCaseDataCollectionIdHandling"
+Cohesion: 0.33
+Nodes (4): Batch can contain cases from different DCs., Tests for handling cases with different created_in_data_collection_id values., New case with explicit DC ID should use that DC for ABAC., TestCaseDataCollectionIdHandling
 
 ### Community 246 - "`gen_epix.fastapp.cache`"
 Cohesion: 0.06
@@ -1796,17 +1702,17 @@ Nodes (16): ConditionOccurrenceIdentifier (omopdb.omop / OMOP CDM entity), Death
 Cohesion: 0.14
 Nodes (16): Contact, IdentifierIssuer, Contact (omopdb.organization.md), IdentifierIssuer (omopdb.organization.md), Organization (omopdb.organization.md), OrganizationSetMember (omopdb.organization.md), Site (omopdb.organization.md), User (omopdb.organization.md) (+8 more)
 
-### Community 250 - "ConditionEra"
-Cohesion: 0.11
-Nodes (25): Cohort, CohortDefinition, ConditionEra, DoseEra, DrugEra, Episode, EpisodeEvent, Any (+17 more)
+### Community 250 - "UUID"
+Cohesion: 0.23
+Nodes (9): Any, field_validator, UUID, Normalize the drug concept identifier to UUID form., Normalize dose-era concept identifiers to UUID form., Normalize cohort-definition concept identifiers to UUID form., Normalize episode concept identifiers to UUID form., Normalize the episode-event field concept identifier to UUID form. (+1 more)
 
-### Community 251 - "User"
-Cohesion: 0.09
-Nodes (16): Any, User, UUID, Construct a user from claims and configured automatic-user defaults. Args:…, Determine whether identity claims belong to the configured root user. Args:…, Determine whether a user has the configured root role. Args: user: User whose…, Create or retrieve the configured root organization and user. The operation is…, Create a user from configured defaults when automatic provisioning is enabled.… (+8 more)
+### Community 251 - "UserManager"
+Cohesion: 0.08
+Nodes (25): Any, BaseRbacService, BaseUserManager, User, UUID, Construct a user from claims and configured automatic-user defaults. Args:…, Determine whether identity claims belong to the configured root user. Args:…, Determine whether a user has the configured root role. Args: user: User whose… (+17 more)
 
-### Community 252 - "TestCasedbModelProcessMetadata"
-Cohesion: 0.12
-Nodes (12): Env, fixture, integration, scenario_ids, created_at, modified_at, and modified_by must all be set by the backend on…, created_at must not change when a record is updated., modified_at supplied in the update payload must be ignored by the backend., modified_by must be stamped with the updating user, not the creating user. (+4 more)
+### Community 252 - "setup_reference_data"
+Cohesion: 0.50
+Nodes (3): fixture, Register root1_1 + org1, invite root1_2, and create minimum CaseType…, setup_reference_data()
 
 ### Community 253 - "MemoryTagIndex"
 Cohesion: 0.07
@@ -1816,13 +1722,13 @@ Nodes (16): MemoryTagIndex, ABC, Forget `key` and remove it from every tag., Rem
 Cohesion: 0.28
 Nodes (15): JSONDict, _emit_log_level_resolution_payloads(), _emit_log_level_resolution_payloads_for_both_modes(), _emit_runtime_payloads_for_all_yaml_paths(), _emit_runtime_payloads_via_dictconfig(), _has_message(), _load_class(), parametrize (+7 more)
 
-### Community 255 - "ReceiverApp"
-Cohesion: 0.16
-Nodes (11): main(), ReceiverApp CLI Module This module provides a command-line interface for…, Command-line interface for ReceiverApp., Start the ReceiverApp server. Args: port: Port to run the server on (default:…, Main entry point for the CLI., ReceiverAppCLI, FastAPI, FastAPI app that receives and validates access tokens. (+3 more)
+### Community 255 - "TestGetOneEndpoint"
+Cohesion: 0.33
+Nodes (4): Tests for GET_ONE CRUD endpoint., Verify GET /model1/{id} returns the correct record., Verify GET /model1/{id} returns 404 when record not found., TestGetOneEndpoint
 
-### Community 256 - "TokenStore"
-Cohesion: 0.05
-Nodes (26): Set up test fixtures before each test method., Test TokenStore initialization., Integration tests for OAuth2Validator with real stores., Set up test fixtures., Test complete client credentials flow validation., Test scope validation with various edge cases., Test complete token lifecycle: create, validate, revoke., Test comprehensive redirect URI validation scenarios. (+18 more)
+### Community 256 - "Token"
+Cohesion: 0.03
+Nodes (69): RequestValidator, FastAPI, ClientStore, OAuth 2.0 Client Store This module manages OAuth 2.0 client registration and…, Delete a client from the store., Deactivate a client (soft delete)., Clear all clients (for testing)., Get the number of stored clients. (+61 more)
 
 ### Community 257 - "test/conftest.py"
 Cohesion: 0.18
@@ -1840,13 +1746,13 @@ Nodes (15): Contact, Contact (seqdb.md), Organization (seqdb.md), OrganizationAd
 Cohesion: 0.24
 Nodes (15): DataCollection, File, IdentifierForUpload, PcrMeasurement (seqdb.seq.md), ReadSet (seqdb.seq.md), Sample (seqdb.seq.md), SampleDataCollectionLink (seqdb.seq.md), PcrMeasurement (+7 more)
 
-### Community 261 - "PersonBatchForUpload"
-Cohesion: 0.10
-Nodes (15): PersonBatchForUpload, Any, computed_field, Represents a set of persons intended for upload, together with any new…, Indicates whether there are any measurements in the person set., Indicates whether there are any observations in the person set., Indicates whether there are any specimens in the person set., Total number of persons in the batch. (+7 more)
+### Community 261 - "TestPutOneEndpoint"
+Cohesion: 0.33
+Nodes (4): Tests for PUT_ONE CRUD endpoint., Verify PUT /model1/{id} updates an existing record., Verify PUT /model1/{id} returns 404 when record not found., TestPutOneEndpoint
 
 ### Community 262 - "._make_user_cmd"
-Cohesion: 0.12
-Nodes (16): Any, Test organization admin read behavior., READ_ALL for org admin should include users in admin orgs and admins, including…, READ_SOME for org admin should authorize when all users are within admin orgs., READ_SOME should raise when any user is outside admin orgs., READ_ONE for org admin allows inactive user in admin orgs., Test regular user read behavior., READ_ALL for regular user should include self and active admins of own org. (+8 more)
+Cohesion: 0.08
+Nodes (21): Any, User, UUID, Non-read operations should return results unchanged., None user should assert., User without id should assert., APP_ADMIN should receive unmodified results for READ operations., READ_ALL for org admin should include users in admin orgs and admins, including… (+13 more)
 
 ### Community 263 - "SAUnitOfWork"
 Cohesion: 0.12
@@ -1856,53 +1762,49 @@ Nodes (14): Exception, Self, Session, TracebackType, Enter the managed context.,
 Cohesion: 0.22
 Nodes (10): _encode_to_int32(), _hamming_allele_int32_batch(), _hamming_allele_numpy(), _hamming_allele_numpy_batch(), ndarray, Hamming distances from one existing int32 profile to all M new int32 profiles.…, Hamming distance between two (n_loci,) S16 allele arrays. S16 is a no-uint128…, Hamming distances from one existing S16 profile to all M new profiles.… (+2 more)
 
-### Community 265 - "TestGetCasesForCreateReadSetsOrSeqs"
-Cohesion: 0.06
-Nodes (24): fixture, scenario_ids, UUID, Comprehensive test suite for the create_seq.py module in…, Create a mock user for testing., Test _get_cases_for_create_file_for_read_sets_or_seqs function., Create a mock UnitOfWork for testing., Create a mock repository for testing. (+16 more)
+### Community 265 - "case_service_create_file_for_read_set_or_seq"
+Cohesion: 0.04
+Nodes (54): CreateFileForReadSetCommand, CreateFileForSeqCommand, Represents a request to upload a raw-reads file for a case read-set column. The…, Represents a request to upload an assembled file for a case sequence column.…, case_service_create_file_for_read_set_or_seq(), _create_file(), _get_cases_for_create_file_for_read_sets_or_seqs(), _get_hash_uuid() (+46 more)
 
 ### Community 266 - "TestRead"
-Cohesion: 0.28
-Nodes (4): Env, scenario_ids, skipif, TestRead
-
-### Community 267 - "_make_cmd"
-Cohesion: 0.25
-Nodes (6): _make_cmd(), _make_user(), scenario_ids, User, Build a UserCrudCommand bypassing field validation., TestModelMetadataPolicy
+Cohesion: 0.13
+Nodes (8): scenario_ids, skipif, TestRead, dependency, TestCreate, TestDelete, TestRead, TestUpdate
 
 ### Community 268 - "UUID"
-Cohesion: 0.11
-Nodes (13): datetime, SeqDistance, SeqProfile, UUID, Yield distance records for a protocol, optionally limited to profile IDs., Yield unique profile IDs that have distance records for a protocol., Return the latest modification time among a protocol's distance records., Persist changed distance records and update their modification metadata. (+5 more)
+Cohesion: 0.09
+Nodes (15): Add distance-map profiles no farther than the supplied threshold., Any, SeqDistance, SeqProfile, UUID, Return profile IDs connected by stored distances within the threshold., Yield distance records for a protocol, optionally limited to profile IDs., Yield unique profile IDs that have distance records for a protocol. (+7 more)
 
-### Community 269 - "test_rights.py"
-Cohesion: 0.14
-Nodes (8): Return an accessor for source collections granting a share right. Args: right:…, BaseCaseAbacTestCase, scenario_ids, UUID, Base test case with common fixtures for ABAC rights., TestCaseTypeAccessAbac, TestCaseTypeShareAbac, TestHelperFunctions
+### Community 269 - "TestDeleteOneEndpoint"
+Cohesion: 0.33
+Nodes (4): Tests for DELETE_ONE CRUD endpoint., Verify DELETE /model1/{id} deletes an existing record., Verify DELETE /model1/{id} returns 404 when record not found., TestDeleteOneEndpoint
 
 ### Community 270 - "crud_allele.py"
-Cohesion: 0.12
-Nodes (15): AlleleCrudCommand, Represents CRUD command metadata for allele records., Allele, Handle a CRUD command for allele entities. Args: cmd: Typed allele CRUD command…, Allele, UUID, Implement seqdb CRUD service operations for services.seq.crud_allele., Handle CRUD operations for allele entities. Args: self: Sequence service… (+7 more)
+Cohesion: 0.22
+Nodes (9): Allele, UUID, Implement seqdb CRUD service operations for services.seq.crud_allele., Handle CRUD operations for allele entities. Args: self: Sequence service…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added, # TODO: Specific logic for update operation to be added, # TODO: Specific logic for delete operation to be added, e.g. check for foreign… (+1 more)
 
-### Community 271 - "CaseStats"
-Cohesion: 0.17
-Nodes (19): CaseStats, model_validator, Self, Represents aggregate statistics for cases or a case set. Model validation: Own…, Validate count and case-date invariants., get_all_case_type_ids(), get_test_client(), get_user_for_test() (+11 more)
+### Community 271 - "retrieve_case_type_stats_profiled"
+Cohesion: 0.26
+Nodes (13): get_all_case_type_ids(), get_test_client(), get_user_for_test(), fixture, parametrize, User, UUID, Profiled version of retrieve_case_type_stats. (+5 more)
 
 ### Community 272 - "TestCommondbMetadataMasking"
-Cohesion: 0.15
-Nodes (13): get_test_client(), DataCollection, Env, fixture, FixtureRequest, integration, scenario_ids, User (+5 more)
+Cohesion: 0.17
+Nodes (10): DataCollection, fixture, integration, scenario_ids, User, Only APP_ADMIN or ROOT users can see created_at, modified_at, and modified_by,…, Register root1_1 + org1, then invite an org_user and an org_admin., Verifies that commondb does NOT mask metadata fields for any user role. In… (+2 more)
 
-### Community 273 - "test_model.py"
-Cohesion: 0.15
-Nodes (5): scenario_ids, Unit tests for ModelNoId.set_modified and ModelNoId.set_created. Test coverage:…, # TODO: check scenario ids, how are they determined?, TestSetCreated, TestSetModified
+### Community 273 - "ModelNoId"
+Cohesion: 0.09
+Nodes (15): ModelNoId, UUID, Represents creation and modification metadata to a FastApp domain model. This…, Record the current UTC time and user as the latest modification., Record the current UTC time and user as both creation and modification., Dictionary-backed organization repository configured with OmopDB user models., scenario_ids, Unit tests for ModelNoId.set_modified and ModelNoId.set_created. Test coverage:… (+7 more)
 
 ### Community 274 - "TestHttpTimeoutConfiguration"
-Cohesion: 0.15
-Nodes (9): DerivedRemoteApp, Minimal subclass of CommondbRemoteApp for testing timeout configuration., Test HTTP timeout configuration per command class., DerivedRemoteApp has DEFAULT_HTTP_TIMEOUTS configured., DerivedRemoteApp can be initialized., _create_remote_app applies DEFAULT_HTTP_TIMEOUTS to remote app., Base CommondbRemoteApp has empty DEFAULT_HTTP_TIMEOUTS., Timeout configuration works independently of auth protocol. (+1 more)
+Cohesion: 0.17
+Nodes (7): Test HTTP timeout configuration per command class., DerivedRemoteApp has DEFAULT_HTTP_TIMEOUTS configured., DerivedRemoteApp can be initialized., _create_remote_app applies DEFAULT_HTTP_TIMEOUTS to remote app., Base CommondbRemoteApp has empty DEFAULT_HTTP_TIMEOUTS., Timeout configuration works independently of auth protocol., TestHttpTimeoutConfiguration
 
 ### Community 275 - "test_error_code_unicity"
 Cohesion: 0.25
 Nodes (13): _extract_hex_strings_from_file(), _get_all_seen_codes(), _get_python_files(), _get_repo_root(), _hanlde_duplicate_hex_codes(), _is_long_hex_string(), Path, scenario_ids (+5 more)
 
-### Community 276 - "omop/service.py"
-Cohesion: 0.06
-Nodes (29): DomainBaseOmopService, field_validator, UUID, Represents a request to retrieve person IDs based on a query. These IDs can…, Represents a request to retrieve all data for a list of person IDs, as a list…, Validate that requested person identifiers are unique., RetrievePersonsByIdCommand, RetrievePersonsByQueryCommand (+21 more)
+### Community 276 - "BaseOmopService"
+Cohesion: 0.09
+Nodes (21): DomainBaseOmopService, Represents a request to retrieve person IDs based on a query. These IDs can…, RetrievePersonsByQueryCommand, Retrieve persons matching a query. Args: cmd: Command containing person-query…, BaseOmopService, Any, Implementation base that supplies OmopDB runtime metadata to OMOP services., Encapsulates an omopdb service, by providing additional implementation details… (+13 more)
 
 ### Community 277 - "._filter_users_by_organization"
 Cohesion: 0.18
@@ -1910,43 +1812,39 @@ Nodes (10): Any, BaseAbacService, Command, User, UUID, Filter or reject results 
 
 ### Community 278 - "App (command dispatcher / PEP)"
 Cohesion: 0.17
-Nodes (7): BaseModel, computed_field, field_validator, Random, SeqGenerationSettings, scenario_ids, TestGenerateRandomSequences
+Nodes (13): Command-Based Execution Model, Policy Enforcement Timing (BEFORE/DURING/AFTER), App (command dispatcher / PEP), BaseRbacService, CrudEndpointGenerator, PolicyDecisionPoint, Policy (is_allowed/get_content/filter hooks), RbacPolicy (+5 more)
 
 ### Community 279 - "Organization (omopdb.organization entity)"
 Cohesion: 0.29
 Nodes (13): OrganizationAdminPolicy (omopdb.abac entity), omopdb / ABAC — Simplified ERD, omopdb — Full Database ERD (detailed, 69 entities), omopdb — Full Database ERD (simplified, 69 entities), Contact (omopdb.organization entity), Organization (omopdb.organization entity), OrganizationIdentifierIssuerLink (omopdb.organization entity), Site (omopdb.organization entity) (+5 more)
 
 ### Community 280 - "crud_ast_prediction.py"
-Cohesion: 0.12
-Nodes (15): AstPredictionCrudCommand, Represents CRUD command metadata for antimicrobial-susceptibility predictions., AstPrediction, Handle a CRUD command for AST prediction entities. Args: cmd: Typed AST-…, AstPrediction, UUID, Implement seqdb CRUD service operations for services.seq.crud_ast_prediction., Handle CRUD operations for AST prediction entities. Args: self: Sequence… (+7 more)
+Cohesion: 0.15
+Nodes (13): AstPredictionCrudCommand, Represents a request to perform a CRUD operation on AstPredictions., AstPrediction, UUID, Implement seqdb CRUD service operations for services.seq.crud_ast_prediction., Handle CRUD operations for AST prediction entities. Args: self: Sequence…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added (+5 more)
 
 ### Community 281 - "crud_locus_code_map.py"
-Cohesion: 0.12
-Nodes (15): LocusCodeMapCrudCommand, Represents CRUD command metadata for locus-code mapping records., LocusCodeMap, Handle a CRUD command for locus-code-map entities. Args: cmd: Typed locus-code-…, LocusCodeMap, UUID, Implement seqdb CRUD service operations for services.seq.crud_locus_code_map., Handle CRUD operations for locus-code-map entities. Args: self: Sequence… (+7 more)
+Cohesion: 0.15
+Nodes (13): LocusCodeMapCrudCommand, Represents a request to perform a CRUD operation on LocusCodeMaps., LocusCodeMap, UUID, Implement seqdb CRUD service operations for services.seq.crud_locus_code_map., Handle CRUD operations for locus-code-map entities. Args: self: Sequence…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added (+5 more)
 
 ### Community 282 - "casedb/domain/command/abac.py"
 Cohesion: 0.11
 Nodes (19): OrganizationAccessCasePolicyCrudCommand, OrganizationShareCasePolicyCrudCommand, CrudCommand, Define casedb commands for case access and sharing policies., Represent CRUD operations for organization-level case access policies. Policies…, Represent CRUD operations for per-user case access policies. Effective rights…, Represent CRUD operations for organization case-sharing policies. Policies…, Represent CRUD operations for per-user case-sharing policies. User permissions… (+11 more)
 
 ### Community 283 - "HandleAuthExceptionMiddleware"
-Cohesion: 0.06
-Nodes (30): HandleAuthExceptionMiddleware, App, BaseHTTPMiddleware, Exception, FastAPI, Logger, Request, Response (+22 more)
+Cohesion: 0.07
+Nodes (25): HandleAuthExceptionMiddleware, BaseHTTPMiddleware, Exception, FastAPI, Logger, Request, Response, Middleware that converts authentication errors to HTTP responses. (+17 more)
 
-### Community 284 - "ReadOrganizationResultsOnlyPolicy"
-Cohesion: 0.29
-Nodes (6): Any, BaseAbacService, CommonReadOrganizationResultsOnlyPolicy, Encapsulates restrictions on shared organization results according to OmopDB…, Initialize organization-scoped command metadata for OmopDB., ReadOrganizationResultsOnlyPolicy
-
-### Community 285 - "ReadOrganizationResultsOnlyPolicy"
-Cohesion: 0.29
-Nodes (6): Any, BaseAbacService, CommonReadOrganizationResultsOnlyPolicy, Encapsulates restricting result reads to the caller's authorized organization…, Initialize the shared policy with seqdb command-attribute mappings., ReadOrganizationResultsOnlyPolicy
+### Community 284 - "DataIssue"
+Cohesion: 0.40
+Nodes (4): DataIssue, PydanticBaseModel, Represents a validation or transformation issue for one uploaded value., Get all data issues that are errors.
 
 ### Community 286 - "seq/crud_tree_algorithm.py"
-Cohesion: 0.14
-Nodes (13): TreeAlgorithm, TreeAlgorithmCrudCommand, UUID, Implement seqdb CRUD service operations for services.seq.crud_tree_algorithm., Handle CRUD operations for tree-algorithm entities. Args: self: Sequence…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added, # TODO: Specific logic for update operation to be added (+5 more)
+Cohesion: 0.20
+Nodes (10): TreeAlgorithm, TreeAlgorithmCrudCommand, UUID, Implement seqdb CRUD service operations for services.seq.crud_tree_algorithm., Handle CRUD operations for tree-algorithm entities. Args: self: Sequence…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added, # TODO: Specific logic for update operation to be added (+2 more)
 
-### Community 287 - "CacheConfigurationError"
-Cohesion: 0.13
-Nodes (16): CacheConfigurationError, Error for an invalid or contradictory cache configuration., Return the field names referenced by a format string. Args: template: The…, _template_field_names(), _as_scope_parts(), Any, Build a region, register it and return it. Args: config: The declarative policy…, Create every region described by a settings mapping. Args: settings: Region… (+8 more)
+### Community 287 - "TestBulkUpdateSeqDistanceContentSA"
+Cohesion: 0.40
+Nodes (3): scenario_ids, Verify update_some_seq_distance_content against a real SA_SQLITE database., TestBulkUpdateSeqDistanceContentSA
 
 ### Community 288 - "FullSample"
 Cohesion: 0.21
@@ -1957,108 +1855,100 @@ Cohesion: 0.41
 Nodes (12): casedb Debug Logging Config, casedb Logging Config, commondb Debug Logging Config, JsonFormatter, commondb Logging Config, Log Level Tuning Rationale (sqlalchemy/httpx/asyncio), UvicornAccessLogFilter, omopdb Debug Logging Config (+4 more)
 
 ### Community 290 - "crud_sample_data_collection_link.py"
-Cohesion: 0.12
-Nodes (15): Represents CRUD command metadata for sample data-collection links., SampleDataCollectionLinkCrudCommand, SampleDataCollectionLink, Handle a CRUD command for sample-data-collection link entities. Args: cmd:…, SampleDataCollectionLink, UUID, Implement seqdb CRUD service operations for…, Handle CRUD operations for sample-data-collection link entities. Args: self:… (+7 more)
+Cohesion: 0.15
+Nodes (13): Represents a request to perform a CRUD operation on SampleDataCollectionLinks., SampleDataCollectionLinkCrudCommand, SampleDataCollectionLink, UUID, Implement seqdb CRUD service operations for…, Handle CRUD operations for sample-data-collection link entities. Args: self:…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added (+5 more)
 
-### Community 291 - "CalculatePhylogeneticTreeCommand"
-Cohesion: 0.13
-Nodes (11): CalculatePhylogeneticTreeCommand, model_validator, Self, Represents calculating a phylogenetic tree from query profiles and a configured…, Require custom leaf names to align with the queried profile identifiers., PhylogeneticTree, Calculate a phylogenetic tree. Args: cmd: Tree-calculation command to execute.…, PhylogeneticTree (+3 more)
-
-### Community 292 - "setup_case_data_operational"
+### Community 291 - "DependencyDeclaration"
 Cohesion: 0.50
-Nodes (4): Env, fixture, Create case types, col infrastructure, data collections, cases, and access…, setup_case_data_operational()
+Nodes (3): DependencyDeclaration, Encapsulates recording what should be invalidated when one dependency changes.…, Register what a change to `dependency` invalidates. Declarations accumulate, so…
 
-### Community 293 - "AuthTestClient"
-Cohesion: 0.08
-Nodes (17): AuthTestClient, MockJWKAndToken, get_test_client(), fixture, parametrize, patch, scenario_ids, Test the OidcClient retrieve_jwt_with_client_credentials_flow method. (+9 more)
+### Community 293 - "MockJWKAndToken"
+Cohesion: 0.43
+Nodes (3): make_idps_cfg(), Return IDP config list derived from the given mock JWK/token., MockJWKAndToken
 
-### Community 294 - "make_cdb_user"
-Cohesion: 0.23
-Nodes (5): make_cdb_user(), Verify the root-token time-to-live enforcement. A *very* short TTL (1 second)…, Build an AuthEnv with a pre-stored root user., Return a fresh commondb User with the given attributes., TestRootTokenTTL
+### Community 294 - "TestRootTokenTTL"
+Cohesion: 0.24
+Nodes (3): Verify the root-token time-to-live enforcement. A *very* short TTL (1 second)…, Build an AuthEnv with a pre-stored root user., TestRootTokenTTL
 
 ### Community 295 - "OmopdbRemoteApp"
-Cohesion: 0.12
-Nodes (14): Command, Represents a request to retrieve specimen IDs (equivalent to SEQDB sample IDs)…, RetrieveSpecimenIdsByCohortIdsCommand, Retrieve specimen IDs grouped by cohort ID., OmopdbRemoteApp, Any, Retrieve specimen IDs for the given cohort IDs., Encapsulates routing of supported OmopDB commands to their remote HTTP… (+6 more)
+Cohesion: 0.09
+Nodes (21): Command, field_validator, UUID, Represents a request to retrieve all data for a list of person IDs, as a list…, Validate that requested person identifiers are unique., Represents a request to retrieve specimen IDs (equivalent to SEQDB sample IDs)…, RetrievePersonsByIdCommand, RetrieveSpecimenIdsByCohortIdsCommand (+13 more)
 
-### Community 296 - "crud_col_set.py"
-Cohesion: 0.22
-Nodes (14): ColSetCrudCommand, Represent CRUD operations for reusable column sets., case_service_crud_col_set(), _crud_col_set_with_abac(), _crud_col_set_without_abac(), BaseCaseService, ColSet, UUID (+6 more)
+### Community 296 - "DuplicateIdsError"
+Cohesion: 0.50
+Nodes (3): DuplicateIdsError, Error for duplicate object identifiers in one operation., Initialize a DuplicateIdsError instance.
 
-### Community 297 - "handle_command"
-Cohesion: 0.21
-Nodes (17): generate_handle_exception_function(), _handle_auth_exception(), handle_command(), handle_exception(), _handle_service_exception(), Any, App, Command (+9 more)
+### Community 297 - "commondb/api/exc.py"
+Cohesion: 0.17
+Nodes (21): generate_handle_exception_function(), get_logger_fmap(), _handle_auth_exception(), handle_command(), handle_exception(), _handle_service_exception(), Any, App (+13 more)
 
 ### Community 298 - "IdpClient hierarchy"
-Cohesion: 0.20
-Nodes (11): AuthService (concrete), IdpClient hierarchy, MockIDPClient (no-auth dev/CI), OauthIdpClient (real OIDC), BaseUserManager, Authentication (Identity Resolution Layer), User Resolution (claims -> local User), Add New IDP Configuration (+3 more)
+Cohesion: 0.18
+Nodes (12): AuthService (concrete), IdpClient hierarchy, MockIDPClient (no-auth dev/CI), OauthIdpClient (real OIDC), BaseUserManager, Authentication (Identity Resolution Layer), User Resolution (claims -> local User), Add New IDP Configuration (+4 more)
 
 ### Community 299 - "Protocol"
 Cohesion: 0.20
 Nodes (11): AstMeasurement, LocusSet, AstMeasurement (seqdb.md), LocusSet (seqdb.md), PcrMeasurement (seqdb.md), Protocol (seqdb.md), ProtocolSetMember (seqdb.md), PcrMeasurement (+3 more)
 
 ### Community 300 - "crud_seq_classification.py"
-Cohesion: 0.12
-Nodes (15): Represents CRUD command metadata for sequence classification records., SeqClassificationCrudCommand, SeqClassification, Handle a CRUD command for sequence-classification entities. Args: cmd: Typed…, SeqClassification, UUID, Implement seqdb CRUD service operations for…, Handle CRUD operations for sequence-classification entities. Args: self:… (+7 more)
+Cohesion: 0.15
+Nodes (13): Represents a request to perform a CRUD operation on SeqClassifications., SeqClassificationCrudCommand, SeqClassification, UUID, Implement seqdb CRUD service operations for…, Handle CRUD operations for sequence-classification entities. Args: self:…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added (+5 more)
 
 ### Community 301 - "crud_seq_profile_identifier.py"
-Cohesion: 0.12
-Nodes (15): Represents CRUD command metadata for sequence profile identifier records., SeqProfileIdentifierCrudCommand, SeqProfileIdentifier, Handle a CRUD command for sequence-profile identifier entities. Args: cmd:…, SeqProfileIdentifier, UUID, Implement seqdb CRUD service operations for…, Handle CRUD operations for sequence-profile identifier entities. Args: self:… (+7 more)
-
-### Community 302 - "ServiceTestClient"
 Cohesion: 0.15
-Nodes (10): Service1, Any, Model, ServiceType, ServiceTestClient, env(), fixture, FixtureRequest (+2 more)
+Nodes (13): Represents a request to perform a CRUD operation on SeqProfileIdentifiers., SeqProfileIdentifierCrudCommand, SeqProfileIdentifier, UUID, Implement seqdb CRUD service operations for…, Handle CRUD operations for sequence-profile identifier entities. Args: self:…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added (+5 more)
 
-### Community 303 - "sa_model/ontology.py"
-Cohesion: 0.21
-Nodes (15): Concept, ConceptRelation, ConceptSet, Disease, EtiologicalAgent, Etiology, Base, RowMetadataMixin (+7 more)
+### Community 302 - ".default_isolation_level"
+Cohesion: 0.50
+Nodes (3): setter, Return the default isolation level for new sessions., Set the default isolation level for new sessions.
 
-### Community 304 - "BaseRemoteService"
-Cohesion: 0.15
-Nodes (9): Remote application service exports., BaseRemoteService, Any, App, Command, setter, Encapsulates the base service that forwards commands to a remote application., Initialize a BaseRemoteService instance. (+1 more)
+### Community 303 - "._validate_state"
+Cohesion: 0.50
+Nodes (3): model_validator, Self, Compile the configured regular-expression pattern.
 
-### Community 305 - "PayerPlanPeriod"
-Cohesion: 0.21
-Nodes (11): Cost, PayerPlanPeriod, Any, DataLineageMixin, field_validator, Model, UUID, Normalize payer-plan-period concept identifiers to UUID form. (+3 more)
+### Community 304 - "._validate_ref1_fields"
+Cohesion: 0.50
+Nodes (3): model_validator, Self, Validate that either ref1_id or ref1_code is provided.
+
+### Community 305 - "._validate_int_for_uuid"
+Cohesion: 0.38
+Nodes (5): Any, field_validator, UUID, Normalize payer-plan-period concept identifiers to UUID form., Normalize cost concept identifiers to UUID form.
 
 ### Community 306 - "Transformer Framework"
 Cohesion: 0.25
 Nodes (11): FallbackTransformer, FieldTransformer, ObjectAdapter, RetryTransformer, Streaming Pipeline Performance Rationale, StreamingPipeline, Transformer, Transformer Framework (+3 more)
 
 ### Community 307 - ".get_user"
-Cohesion: 0.19
-Nodes (12): Set the log level for the application logger., Set the configured level on commondb and HTTP client loggers. Args: prefix:…, set_log_level(), get_test_client(), Env, fixture, skip, User (+4 more)
+Cohesion: 0.40
+Nodes (4): skip, User, UUID, TestManual
 
 ### Community 308 - "rewrite_parametrized_dependency_markers"
 Cohesion: 0.33
 Nodes (6): pytest_collection_modifyitems(), pytest_collection_modifyitems(), pytest_collection_modifyitems(), pytest_collection_modifyitems(), Rewrite class-level dependency 'depends' markers to include parametrize IDs.…, rewrite_parametrized_dependency_markers()
 
-### Community 309 - "TestRetrieveCompleteCaseType"
-Cohesion: 0.31
-Nodes (3): Any, User, TestRetrieveCompleteCaseType
+### Community 309 - "retrieve_complete_case_type.py"
+Cohesion: 0.09
+Nodes (16): case_service_retrieve_complete_case_type(), Assemble complete case-type metadata filtered by the caller's ABAC access., # TODO: performance improvement, commented out for now to preserve baseline, # TODO: performance improvement, commented out for now to preserve baseline, Assemble case-type metadata and its effective collection access. Columns and…, # TODO: performance improvement, commented out for now to preserve baseline, # TODO: performance improvement, commented out for now to preserve baseline, # TODO: add geo_dim flag if needed (+8 more)
 
-### Community 310 - "Any"
-Cohesion: 0.13
-Nodes (8): Any, Return application configuration required by configured services. Returns: The…, Return application-specific implementation details. Returns: The configured…, Execute cache invalidators registered for the exact command type., Execute a resolved command handler and its remaining lifecycle phases. Runs…, Recursively walk *data* and replace any list or mapping longer than their…, Parse a boolean command-log configuration value. Args: value: Boolean or case-…, Parse an integer command-log configuration value. Args: value: Value accepted…
-
-### Community 311 - "crud_sample_identifier.py"
-Cohesion: 0.12
-Nodes (14): Represents CRUD command metadata for sample identifier records., SampleIdentifierCrudCommand, SampleIdentifier, Retrieve identifiers associated with samples. Args: cmd: Sample-identifier…, Handle a CRUD command for sample identifier entities. Args: cmd: Typed sample-…, SampleIdentifier, UUID, Implement seqdb CRUD service operations for services.seq.crud_sample_identifier. (+6 more)
+### Community 311 - "command/seq.py"
+Cohesion: 0.09
+Nodes (32): AlleleCrudCommand, AstMeasurementCrudCommand, LocusCrudCommand, CrudCommand, Define commands for seqdb sequence workflows and managed domain records. The…, Represents a request to perform a CRUD operation on Alleles., Represents a request to perform a CRUD operation on AstMeasurements., Represents a request to perform a CRUD operation on Loci. (+24 more)
 
 ### Community 312 - "env"
 Cohesion: 0.31
 Nodes (5): env(), fixture, FixtureRequest, Return a test client configured for either DICT or SA_SQLITE demo repos. The…, TestRetrieveSamples
 
-### Community 313 - "BaseRbacServiceTestCase"
-Cohesion: 0.14
-Nodes (10): BaseRbacServiceTestCase, Base test case with common fixtures and utilities., Set up test fixtures., Create a test command., Test user authorization behavior methods., Test that retrieve_user_is_root returns False by default., Test that retrieve_user_is_root can be overridden in concrete implementation., Test that retrieve_user_is_non_rbac_authorized returns False by default in… (+2 more)
+### Community 313 - "delete_client"
+Cohesion: 0.67
+Nodes (3): delete, delete_client(), Delete an OAuth client.
 
 ### Community 314 - "LogParser2"
 Cohesion: 0.24
 Nodes (5): LogParser2, DataFrame, A class to parse and export logsas produced directly by the application or as…, Parses the log file and sorts the user journey logs. This method reads the log…, Exports the sorted user journey logs to a CSV and a pickle file. This method…
 
 ### Community 315 - "AppComposer (Composition Root)"
-Cohesion: 0.22
-Nodes (10): System Composition (four FastAPI apps sharing a model), AppCfg (logger init, settings load, settings validation), AppComposer (Composition Root), AppImplDetails (state bag), create_fast_api Assembly (lifespan, middleware, routers, OpenAPI), Entry Point app.py (SCHEMA_KWARGS, APP_CFG, APP_COMPOSER, FAST_API), Exception Handling (api/exc.py, handle_exception/handle_command), Repository + Service Loop (compose_application/_initialize_repository) (+2 more)
+Cohesion: 0.12
+Nodes (17): Layer Boundaries principle, System Composition (four FastAPI apps sharing a model), BaseRepository (abstract), BaseService, DictRepository (in-memory backend), SARepository (SQLAlchemy backend), Repository Modes (DICT_DEMO/EMPTY, SA_SQLITE_DEMO/EMPTY, SA_SQL), AppCfg (logger init, settings load, settings validation) (+9 more)
 
 ### Community 316 - "Region Set"
 Cohesion: 0.22
@@ -2072,57 +1962,45 @@ Nodes (10): AstPrediction, AstPrediction (seqdb.md), Sample (seqdb.md), Seq (seq
 Cohesion: 0.20
 Nodes (10): RefSeq (seqdb.seq.md), SeqTaxonomy (seqdb.seq.md), Taxon (seqdb.seq.md), TaxonSet (seqdb.seq.md), TaxonSetMember (seqdb.seq.md), RefSeq, SeqTaxonomy, Taxon (+2 more)
 
-### Community 319 - "ConcreteRbacService"
-Cohesion: 0.17
-Nodes (11): ConcreteRbacService, Any, App, BaseRbacService, Hashable, UUID, Concrete implementation of BaseRbacService for testing., Retrieve roles for a user. (+3 more)
-
-### Community 320 - "CommondbSAMapper"
-Cohesion: 0.25
-Nodes (8): CommondbSAMapper, Any, Hashable, Model, Create a mapper that enforces commondb audit metadata behavior. Args:…, Encapsulates a SAMapper subclass for all databases that use RowMetadataMixin.…, Update a SQLAlchemy row from a domain model using commondb metadata rules.…, Dump a domain model while hiding protected audit metadata. For users without…
-
-### Community 321 - "TestUserPermissions"
-Cohesion: 0.12
-Nodes (9): Test user permission retrieval and authorization checks., Test that user permissions are union of all their role permissions., Test that user with no roles has no permissions., Test that user has all RBAC permissions when they actually do., Test that user doesn't have all RBAC permissions when missing some., Test checking if user has more permissions than another user., Test checking if user has more permissions than a set of roles., Test that user doesn't have more permissions when they're a subset. (+1 more)
-
 ### Community 322 - "TestOIDCProviderIntegration"
 Cohesion: 0.12
 Nodes (9): Integration tests for OIDCProvider with real JWKSManager., Set up test fixtures., Test complete ID token creation and validation workflow., Test discovery document and JWKS endpoint integration., Test userinfo endpoint with scope-based claim filtering., Test nonce validation integrated with ID token workflow., Test claims extraction integrated with userinfo response., Test logout workflow integration. (+1 more)
 
-### Community 323 - "CdmSource"
-Cohesion: 0.21
-Nodes (10): CdmSource, Metadata, Any, field_validator, Model, UUID, Normalize metadata concept identifiers to UUID form., The CDM_SOURCE table contains detail about the source database and the process… (+2 more)
+### Community 323 - "omop/metadata.py"
+Cohesion: 0.20
+Nodes (11): CdmSource, Metadata, Any, field_validator, Model, UUID, Metadata domain - OMOP CDM v6.0 metadata tables. This module contains classes…, Normalize metadata concept identifiers to UUID form. (+3 more)
 
 ### Community 324 - "renovate.json"
-Cohesion: 0.20
-Nodes (9): config:best-practices, dev, automerge, baseBranchPatterns, extends, packageRules, prConcurrentLimit, prHourlyLimit (+1 more)
+Cohesion: 0.22
+Nodes (8): config:best-practices, automerge, baseBranchPatterns, extends, packageRules, prConcurrentLimit, prHourlyLimit, $schema
 
 ### Community 325 - "TestUpdate"
-Cohesion: 0.29
-Nodes (5): Env, scenario_ids, skipif, Anonymize and deactivate a user's personal information., TestUpdate
+Cohesion: 0.11
+Nodes (11): scenario_ids, skipif, TestRead, dependency, TestCreate, TestRead, TestUpdate, scenario_ids (+3 more)
 
 ### Community 326 - "TestSQLInjection"
 Cohesion: 0.31
-Nodes (6): get_test_client(), Env, fixture, scenario_ids, Session, TestSQLInjection
+Nodes (5): get_test_client(), fixture, scenario_ids, Session, TestSQLInjection
 
 ### Community 327 - "BaseCommondbRemoteAppTestCase"
-Cohesion: 0.11
-Nodes (13): BaseCommondbRemoteAppTestCase, scenario_ids, Test OAuth2 configuration validation during initialization., Raise error when OAuth2 requires discovery URL., Raise error when OAuth2 requires client ID., Raise error when OAuth2 requires scope., Raise error for OIDC auth protocol (not yet supported)., Test create_local_or_remote_app class method. (+5 more)
+Cohesion: 0.10
+Nodes (14): BaseCommondbRemoteAppTestCase, scenario_ids, Test OAuth2 configuration validation during initialization., Raise error when OAuth2 requires discovery URL., Raise error when OAuth2 requires client ID., Raise error when OAuth2 requires scope., Raise error for OIDC auth protocol (not yet supported)., Test create_local_or_remote_app class method. (+6 more)
 
 ### Community 328 - "TestAnonymizeUser"
 Cohesion: 0.18
 Nodes (7): scenario_ids, Include each user ID so forgotten users in one organization remain unique., Verify anonymization of the target user., Set up test fixtures., Anonymize personal fields and deactivate the anonymized user., Anonymize personal fields and deactivate the anonymized user., TestAnonymizeUser
 
-### Community 329 - "generate_scale_test_db"
-Cohesion: 0.26
-Nodes (12): build_random_nextclade_fields(), generate_demo_seqdb_models(), generate_scale_test_db(), _generate_snp_objects(), Any, ndarray, Random, Sample (+4 more)
+### Community 329 - "generate_seqdb_models.py"
+Cohesion: 0.33
+Nodes (9): build_random_nextclade_fields(), generate_demo_seqdb_models(), _generate_snp_objects(), Any, Random, Sample, UUID, Generate demo seqdb models. When snp_seq_length > 0, SNP-specific reference… (+1 more)
 
 ### Community 330 - "TestOIDCProvider"
 Cohesion: 0.03
-Nodes (37): Test discovery document includes correct supported claims., Test discovery document includes correct authentication methods., Test discovery document includes correct signing algorithms., Test discovery document includes additional OIDC features., Test creating a basic ID token., Test creating ID token with nonce., Test creating ID token with explicit auth_time., Test creating ID token with additional claims. (+29 more)
+Nodes (38): Test discovery document includes correct supported claims., Test discovery document includes correct authentication methods., Test discovery document includes correct signing algorithms., Test discovery document includes additional OIDC features., Test creating a basic ID token., Test creating ID token with nonce., Test creating ID token with explicit auth_time., Test creating ID token with additional claims. (+30 more)
 
-### Community 331 - "Ref Col"
-Cohesion: 0.11
-Nodes (20): Concept, Concept Relation, Concept Set, Genetic Distance Protocol, Concept (doc), Concept Relation (doc), Ref Col (doc), Ref Dim (doc) (+12 more)
+### Community 331 - "Concept Relation"
+Cohesion: 0.28
+Nodes (9): Concept, Concept Relation, Concept Set, Concept (doc), Concept Relation (doc), Concept, ConceptSet, Concept (doc concept) (+1 more)
 
 ### Community 332 - "Outage (commondb.system entity)"
 Cohesion: 0.25
@@ -2137,148 +2015,104 @@ Cohesion: 0.13
 Nodes (13): Audit Script, Preferred Structure, Procedure, Write Python Docstrings, 3.8.1 Docstrings, 3.8.2.1 Test modules, 3.8.2 Modules, 3.8.3.1 Overridden Methods (+5 more)
 
 ### Community 335 - "calculate_phylogenetic_tree.py"
-Cohesion: 0.11
-Nodes (23): ClusterNode, _correct_nj_tree_negative_branch_lengths_recursion(), _get_newick_repr_recursion(), Any, PhylogeneticTree, Implement seqdb sequence service behavior for…, # TODO: this should be parameterised, so that such higher, # TODO: convert condensed distance matrix directly to lower triangle (+15 more)
+Cohesion: 0.10
+Nodes (24): ClusterNode, _correct_nj_tree_negative_branch_lengths_recursion(), _get_newick_repr_recursion(), Any, PhylogeneticTree, Implement seqdb sequence service behavior for…, # TODO: this should be parameterised, so that such higher, # TODO: convert condensed distance matrix directly to lower triangle (+16 more)
 
 ### Community 336 - "crud_ast_measurement.py"
-Cohesion: 0.12
-Nodes (15): AstMeasurementCrudCommand, Represents CRUD command metadata for antimicrobial-susceptibility measurements., AstMeasurement, Handle a CRUD command for AST measurement entities. Args: cmd: Typed AST-…, AstMeasurement, UUID, Implement seqdb CRUD service operations for services.seq.crud_ast_measurement., Handle CRUD operations for AST measurement entities. Args: self: Sequence… (+7 more)
+Cohesion: 0.22
+Nodes (9): AstMeasurement, UUID, Implement seqdb CRUD service operations for services.seq.crud_ast_measurement., Handle CRUD operations for AST measurement entities. Args: self: Sequence…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added, # TODO: Specific logic for update operation to be added, # TODO: Specific logic for delete operation to be added, e.g. check for foreign… (+1 more)
 
 ### Community 337 - "IdsError"
 Cohesion: 0.17
 Nodes (13): __extract_invalid_ids(), _handle_invalid_ids_exception(), log_and_raise_invalid_ids_exception(), Hashable, Translate an ID exception into a validation or conflict HTTP response. Args:…, Log invalid IDs and raise an HTTP response with their public details. Args:…, Return request IDs that are also reported by an ID exception. Args: exception:…, AlreadyExistingIdsError (+5 more)
 
-### Community 338 - "crud_seq_profile.py"
-Cohesion: 0.12
-Nodes (16): Represents CRUD command metadata for sequence profile records., SeqProfileCrudCommand, SeqProfile, Handle a CRUD command for sequence-profile entities. Args: cmd: Typed sequence-…, _get_not_implemented_message(), CrudCommand, Format an unsupported CRUD-operation message including the caller's roles., SeqProfile (+8 more)
+### Community 338 - "BaseSeqService"
+Cohesion: 0.02
+Nodes (76): BaseSeqService, Allele, AstMeasurement, AstPrediction, Locus, LocusCodeMap, LocusSet, PcrMeasurement (+68 more)
 
 ### Community 339 - "crud_locus.py"
-Cohesion: 0.12
-Nodes (15): LocusCrudCommand, Represents CRUD command metadata for locus records., Locus, Handle a CRUD command for locus entities. Args: cmd: Typed locus CRUD command…, Locus, UUID, Implement seqdb CRUD service operations for services.seq.crud_locus., Handle CRUD operations for locus entities. Args: self: Sequence service… (+7 more)
+Cohesion: 0.22
+Nodes (9): Locus, UUID, Implement seqdb CRUD service operations for services.seq.crud_locus., Handle CRUD operations for locus entities. Args: self: Sequence service…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added, # TODO: Specific logic for update operation to be added, # TODO: Specific logic for delete operation to be added, e.g. check for foreign… (+1 more)
 
 ### Community 340 - "crud_locus_set.py"
-Cohesion: 0.12
-Nodes (15): LocusSetCrudCommand, Represents CRUD command metadata for locus-set records., LocusSet, Handle a CRUD command for locus-set entities. Args: cmd: Typed locus-set CRUD…, LocusSet, UUID, Implement seqdb CRUD service operations for services.seq.crud_locus_set., Handle CRUD operations for locus-set entities. Args: self: Sequence service… (+7 more)
+Cohesion: 0.15
+Nodes (13): LocusSetCrudCommand, Represents a request to perform a CRUD operation on LocusSets., LocusSet, UUID, Implement seqdb CRUD service operations for services.seq.crud_locus_set., Handle CRUD operations for locus-set entities. Args: self: Sequence service…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added (+5 more)
 
 ### Community 341 - "crud_pcr_measurement.py"
-Cohesion: 0.12
-Nodes (15): PcrMeasurementCrudCommand, Represents CRUD command metadata for PCR measurement records., PcrMeasurement, Handle a CRUD command for PCR measurement entities. Args: cmd: Typed PCR-…, PcrMeasurement, UUID, Implement seqdb CRUD service operations for services.seq.crud_pcr_measurement., Handle CRUD operations for PCR measurement entities. Args: self: Sequence… (+7 more)
+Cohesion: 0.15
+Nodes (13): PcrMeasurementCrudCommand, Represents a request to perform a CRUD operation on PcrMeasurements., PcrMeasurement, UUID, Implement seqdb CRUD service operations for services.seq.crud_pcr_measurement., Handle CRUD operations for PCR measurement entities. Args: self: Sequence…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added (+5 more)
 
-### Community 342 - "BaseSeqService"
-Cohesion: 0.06
-Nodes (40): BaseSeqService, Encapsulates seqdb handlers implemented by concrete sequence services., Register default CRUD and seqdb-specific sequence command handlers., ProtocolSet, UUID, Implement seqdb CRUD service operations for services.seq.crud_protocol_set., Handle CRUD operations for protocol-set entities. Args: self: Sequence service…, # TODO: Specific logic for create operation to be added (+32 more)
+### Community 342 - "services/seq/upload.py"
+Cohesion: 0.10
+Nodes (14): Re-export concrete seqdb sequence service types., Delegate a sample-upload command to the upload operation., Implement seqdb sequence service behavior for services.seq.upload., See command.UploadSamplesCommand for details., Encapsulates validation and persistence of seqdb sample upload batches., Configure upload processing for seqdb stored model fields., Verify that the command user may upload the supplied sample batch. Args: cmd:…, # TODO: Implement ABAC rights retrieval when policies are available (+6 more)
 
 ### Community 343 - "crud_protocol_set_member.py"
-Cohesion: 0.12
-Nodes (15): ProtocolSetMemberCrudCommand, Represents CRUD command metadata for sequence protocol-set memberships., ProtocolSetMember, Handle a CRUD command for protocol-set membership entities. Args: cmd: Typed…, ProtocolSetMember, UUID, Implement seqdb CRUD service operations for…, Handle CRUD operations for protocol-set membership entities. Args: self:… (+7 more)
+Cohesion: 0.15
+Nodes (13): ProtocolSetMemberCrudCommand, Represents a request to perform a CRUD operation on ProtocolSetMembers., ProtocolSetMember, UUID, Implement seqdb CRUD service operations for…, Handle CRUD operations for protocol-set membership entities. Args: self:…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added (+5 more)
 
 ### Community 344 - "crud_ref_seq.py"
 Cohesion: 0.12
-Nodes (15): Represents CRUD command metadata for reference sequence records., RefSeqCrudCommand, RefSeq, Handle a CRUD command for reference-sequence entities. Args: cmd: Typed…, RefSeq, UUID, Implement seqdb CRUD service operations for services.seq.crud_ref_seq., Handle CRUD operations for reference-sequence entities. Args: self: Sequence… (+7 more)
+Nodes (15): Represents a request to perform a CRUD operation on RefSeqs., RefSeqCrudCommand, RefSeq, Handle a CRUD command for reference-sequence entities. Args: cmd: Typed…, RefSeq, UUID, Implement seqdb CRUD service operations for services.seq.crud_ref_seq., Handle CRUD operations for reference-sequence entities. Args: self: Sequence… (+7 more)
 
-### Community 345 - "Any"
-Cohesion: 0.23
-Nodes (6): Any, fixture, Test the retrieve_seq_distance_last_modified handler., Create a SeqdbRemoteApp instance for testing., Create sample response data for testing., TestRetrieveSeqDistanceLastModified
-
-### Community 346 - "crud_read_set_identifier.py"
-Cohesion: 0.12
-Nodes (15): Represents CRUD command metadata for read-set identifier records., ReadSetIdentifierCrudCommand, ReadSetIdentifier, Handle a CRUD command for read-set identifier entities. Args: cmd: Typed read-…, ReadSetIdentifier, UUID, Implement seqdb CRUD service operations for…, Handle CRUD operations for read-set identifier entities. Args: self: Sequence… (+7 more)
-
-### Community 347 - "crud_seq.py"
-Cohesion: 0.12
-Nodes (15): Represents CRUD command metadata for assembled sequence records., SeqCrudCommand, Seq, Handle a CRUD command for sequence entities. Args: cmd: Typed sequence CRUD…, Seq, UUID, Implement seqdb CRUD service operations for services.seq.crud_seq., Handle CRUD operations for sequence entities. Args: self: Sequence service… (+7 more)
+### Community 347 - "seq/service.py"
+Cohesion: 0.05
+Nodes (45): Represents a request to perform a CRUD operation on Seqs., SeqCrudCommand, ReadSetIdentifier, UUID, Implement seqdb CRUD service operations for…, Handle CRUD operations for read-set identifier entities. Args: self: Sequence…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added (+37 more)
 
 ### Community 348 - "crud_seq_category.py"
-Cohesion: 0.12
-Nodes (15): Represents CRUD command metadata for sequence category records., SeqCategoryCrudCommand, SeqCategory, Handle a CRUD command for sequence-category entities. Args: cmd: Typed…, SeqCategory, UUID, Implement seqdb CRUD service operations for services.seq.crud_seq_category., Handle CRUD operations for sequence-category entities. Args: self: Sequence… (+7 more)
+Cohesion: 0.15
+Nodes (13): Represents a request to perform a CRUD operation on SeqCategories., SeqCategoryCrudCommand, SeqCategory, UUID, Implement seqdb CRUD service operations for services.seq.crud_seq_category., Handle CRUD operations for sequence-category entities. Args: self: Sequence…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added (+5 more)
 
 ### Community 349 - "crud_seq_category_set.py"
 Cohesion: 0.12
-Nodes (15): Represents CRUD command metadata for sequence category-set records., SeqCategorySetCrudCommand, SeqCategorySet, Handle a CRUD command for sequence-category-set entities. Args: cmd: Typed…, SeqCategorySet, UUID, Implement seqdb CRUD service operations for services.seq.crud_seq_category_set., Handle CRUD operations for sequence-category-set entities. Args: self: Sequence… (+7 more)
+Nodes (15): Represents a request to perform a CRUD operation on SeqCategorySets., SeqCategorySetCrudCommand, SeqCategorySet, Handle a CRUD command for sequence-category-set entities. Args: cmd: Typed…, SeqCategorySet, UUID, Implement seqdb CRUD service operations for services.seq.crud_seq_category_set., Handle CRUD operations for sequence-category-set entities. Args: self: Sequence… (+7 more)
 
 ### Community 350 - "crud_seq_distance.py"
-Cohesion: 0.12
-Nodes (15): Represents CRUD command metadata for pairwise sequence-distance records., SeqDistanceCrudCommand, SeqDistance, Handle a CRUD command for sequence-distance entities. Args: cmd: Typed…, SeqDistance, UUID, Implement seqdb CRUD service operations for services.seq.crud_seq_distance., Handle CRUD operations for sequence-distance entities. Args: self: Sequence… (+7 more)
+Cohesion: 0.22
+Nodes (9): SeqDistance, UUID, Implement seqdb CRUD service operations for services.seq.crud_seq_distance., Handle CRUD operations for sequence-distance entities. Args: self: Sequence…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added, # TODO: Specific logic for update operation to be added, # TODO: Specific logic for delete operation to be added, e.g. check for foreign… (+1 more)
 
 ### Community 351 - "crud_seq_taxonomy.py"
-Cohesion: 0.12
-Nodes (15): Represents CRUD command metadata for sequence taxonomy records., SeqTaxonomyCrudCommand, SeqTaxonomy, Handle a CRUD command for sequence-taxonomy entities. Args: cmd: Typed…, SeqTaxonomy, UUID, Implement seqdb CRUD service operations for services.seq.crud_seq_taxonomy., Handle CRUD operations for sequence-taxonomy entities. Args: self: Sequence… (+7 more)
+Cohesion: 0.15
+Nodes (13): Represents a request to perform a CRUD operation on SeqTaxonomies., SeqTaxonomyCrudCommand, SeqTaxonomy, UUID, Implement seqdb CRUD service operations for services.seq.crud_seq_taxonomy., Handle CRUD operations for sequence-taxonomy entities. Args: self: Sequence…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added (+5 more)
 
 ### Community 352 - "crud_taxon.py"
-Cohesion: 0.12
-Nodes (15): Represents CRUD command metadata for taxon records., TaxonCrudCommand, Taxon, Handle a CRUD command for taxon entities. Args: cmd: Typed taxon CRUD command…, Taxon, UUID, Implement seqdb CRUD service operations for services.seq.crud_taxon., Handle CRUD operations for taxon entities. Args: self: Sequence service… (+7 more)
+Cohesion: 0.15
+Nodes (13): Represents a request to perform a CRUD operation on Taxa., TaxonCrudCommand, Taxon, UUID, Implement seqdb CRUD service operations for services.seq.crud_taxon., Handle CRUD operations for taxon entities. Args: self: Sequence service…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added (+5 more)
 
 ### Community 353 - "crud_taxon_set.py"
 Cohesion: 0.12
-Nodes (15): Represents CRUD command metadata for taxon-set records., TaxonSetCrudCommand, TaxonSet, Handle a CRUD command for taxon-set entities. Args: cmd: Typed taxon-set CRUD…, TaxonSet, UUID, Implement seqdb CRUD service operations for services.seq.crud_taxon_set., Handle CRUD operations for taxon-set entities. Args: self: Sequence service… (+7 more)
+Nodes (15): Represents a request to perform a CRUD operation on TaxonSets., TaxonSetCrudCommand, TaxonSet, Handle a CRUD command for taxon-set entities. Args: cmd: Typed taxon-set CRUD…, TaxonSet, UUID, Implement seqdb CRUD service operations for services.seq.crud_taxon_set., Handle CRUD operations for taxon-set entities. Args: self: Sequence service… (+7 more)
 
 ### Community 354 - "crud_taxon_set_member.py"
-Cohesion: 0.12
-Nodes (15): Represents CRUD command metadata for taxon-set membership records., TaxonSetMemberCrudCommand, TaxonSetMember, Handle a CRUD command for taxon-set membership entities. Args: cmd: Typed…, TaxonSetMember, UUID, Implement seqdb CRUD service operations for services.seq.crud_taxon_set_member., Handle CRUD operations for taxon-set membership entities. Args: self: Sequence… (+7 more)
-
-### Community 355 - "dependency"
 Cohesion: 0.22
-Nodes (9): dependency, ModuleTestCreate, ModuleTestDelete, ModuleTestRead, ModuleTestUpdate, TestCreate, TestDelete, TestRead (+1 more)
+Nodes (9): TaxonSetMember, UUID, Implement seqdb CRUD service operations for services.seq.crud_taxon_set_member., Handle CRUD operations for taxon-set membership entities. Args: self: Sequence…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added, # TODO: Specific logic for update operation to be added, # TODO: Specific logic for delete operation to be added, e.g. check for foreign… (+1 more)
 
 ### Community 356 - "TestVerifyUserRights"
-Cohesion: 0.36
-Nodes (4): Role, User, Tests for RBAC verification in CaseBatchUploader.verify_user_rights., TestVerifyUserRights
+Cohesion: 0.21
+Nodes (7): _mock_uow(), Role, User, Map commondb role enums to casedb role strings with CASEDB_ prefix., Tests for RBAC verification in CaseBatchUploader.verify_user_rights., TestVerifyUserRights, _to_casedb_role_set()
 
 ### Community 357 - "TestDelete"
-Cohesion: 0.33
-Nodes (6): OrganizationShareCasePolicy, UserShareCasePolicy, UUID, Expand sharing policies into rights by case type and destination. Args:…, Apply one policy's enabled sharing rights to an aggregate. Args: policy:…, Intersect organization and user case-sharing rights. Args:…
-
-### Community 358 - "dependency"
-Cohesion: 0.22
-Nodes (7): Any, BaseAbacService, CommonReadUserPolicy, Configure shared user-read policy behavior for OmopDB roles and commands., Encapsulates shared user-read checks with OmopDB role and command mappings., Initialize the user-read policy with OmopDB dependencies., ReadUserPolicy
+Cohesion: 0.25
+Nodes (5): scenario_ids, skipif, RBAC permissions: - root: CRUD - app_admin: R - refdata_admin: R - org_admin: R…, TestDelete, TestDelete
 
 ### Community 359 - "test_logging_yaml.py"
 Cohesion: 0.47
 Nodes (8): parametrize, Path, scenario_ids, Contract tests for all production logging.yaml configuration files. These tests…, test_console_handler_uses_json_formatter(), test_root_logger_is_present_and_uses_console_handler(), test_third_party_loggers_explicitly_configured(), test_uvicorn_access_has_structured_filter()
 
 ### Community 360 - "TestDelete"
-Cohesion: 0.33
-Nodes (5): Env, scenario_ids, skipif, RBAC permissions: - root: CRUD - app_admin: R - refdata_admin: R - org_admin: R…, TestDelete
+Cohesion: 0.11
+Nodes (12): scenario_ids, skipif, RBAC permissions: - root: CRUD - app_admin: R - refdata_admin: R - org_admin: R…, TestDelete, scenario_ids, skipif, TestRead, dependency (+4 more)
 
-### Community 361 - "dependency"
-Cohesion: 0.22
-Nodes (9): dependency, ModuleTestCreate, ModuleTestDelete, ModuleTestRead, ModuleTestUpdate, TestCreate, TestDelete, TestRead (+1 more)
+### Community 362 - "omopdb/api/router.py"
+Cohesion: 0.06
+Nodes (36): Expose OmopDB API request schemas used by shared router composition. The facade…, create_omop_endpoints(), Any, APIRouter, App, Exception, FastAPI, NoReturn (+28 more)
 
-### Community 362 - "OmopdbTestClient"
-Cohesion: 0.10
-Nodes (19): get_test_client(), Env, fixture, get_test_client(), Env, fixture, env(), fixture (+11 more)
-
-### Community 363 - "TestDelete"
-Cohesion: 0.33
-Nodes (5): Env, scenario_ids, skipif, RBAC permissions: - root: CRUD - app_admin: R - refdata_admin: R - org_admin: R…, TestDelete
-
-### Community 364 - "dependency"
-Cohesion: 0.22
-Nodes (9): dependency, ModuleTestCreate, ModuleTestDelete, ModuleTestRead, ModuleTestUpdate, TestCreate, TestDelete, TestRead (+1 more)
-
-### Community 365 - "SampleBatchForUpload"
-Cohesion: 0.16
-Nodes (10): computed_field, Represents a set of samples intended for upload, together with any new…, Indicates whether there are any read sets in the sample set., Indicates whether there are any sequences in the sample set., Indicates whether there are any seq taxonomies in the sample set., Indicates whether there are any seq classifications in the sample set., Indicates whether there are any sequence profiles in the sample set., Indicates whether there are any PCR measurements in the sample set. (+2 more)
-
-### Community 366 - "TestOauthIdpClientIntrospection"
-Cohesion: 0.25
-Nodes (3): Any, scenario_ids, TestOauthIdpClientIntrospection
-
-### Community 367 - ".extract_security_callable"
-Cohesion: 0.15
-Nodes (10): Any, Test create_user_dependencies with no IDP clients configured., Dummy deps return user or new user, and fallback to no-auth user., Dummy new-user dep raises when claims missing., Test create_user_dependencies with IDP clients configured., Resolve current user via first and second IDPs, and IDP user from claims., No claims provided -> UnauthorizedAuthError., Extract the callable function from Annotated[*, Security(...)] (+2 more)
-
-### Community 368 - ".make_idp_client"
-Cohesion: 0.15
-Nodes (10): UUID, Test scenarios for get_existing_user_from_token., First IDP unauthorized, second IDP succeeds., No IDP yields a valid user -> UnauthorizedAuthError., Test scenarios for get_identity_providers., Filter public providers and ignore retry errors., Retry initializes a pending client and adds it to service., Create an IdpClient mock with minimal interface. (+2 more)
+### Community 363 - "TestUpdate"
+Cohesion: 0.08
+Nodes (15): scenario_ids, skipif, RBAC permissions: - root: CRUD - app_admin: R - refdata_admin: R - org_admin: R…, TestDelete, scenario_ids, skipif, TestRead, dependency (+7 more)
 
 ### Community 369 - "AuthorizationCodeStore"
 Cohesion: 0.18
 Nodes (6): AuthorizationCode, AuthorizationCodeStore, datetime, Authorization Code Store In-memory storage for OAuth 2.0 Authorization Codes…, Representation of an OAuth 2.0 authorization code., In-memory store managing authorization codes.
-
-### Community 370 - "BaseRepository (abstract)"
-Cohesion: 0.25
-Nodes (5): Exception, TracebackType, Commit the transaction managed by this unit of work. Subclasses implement…, Roll back the transaction managed by this unit of work. Subclasses implement…, Finish the managed transaction context. Commits when the context exits…
 
 ### Community 371 - "Contact (doc)"
 Cohesion: 0.32
@@ -2286,11 +2120,11 @@ Nodes (8): Contact, Contact (doc), Site (doc), Contact, Site, Site, Contact, Sit
 
 ### Community 372 - "seqdb Overview ERD"
 Cohesion: 0.25
-Nodes (8): create_seq_endpoints(), Any, APIRouter, App, Exception, FastAPI, NoReturn, Register all non-CRUD seqdb endpoints on the given router.
+Nodes (8): seqdb Overview ERD, seqdb FILE Service ERD, seqdb ORGANIZATION Service ERD (Detailed), seqdb ORGANIZATION Service ERD (Simplified), seqdb SEQ Service ERD (Detailed), seqdb SEQ Service ERD (Simplified), seqdb SYSTEM Service ERD (Detailed), seqdb SYSTEM Service ERD (Simplified)
 
 ### Community 373 - "IdentifierIssuer"
 Cohesion: 0.25
-Nodes (6): OrganizationService, Any, CommonOrganizationService, Implement seqdb application service behavior for services.organization., Encapsulates seqdb organization service behavior., Initialize organization operations with seqdb invitation constraints. Args:…
+Nodes (8): IdentifierIssuer, IdentifierIssuer (seqdb.md), OrganizationIdentifierIssuerLink (seqdb.md), SampleIdentifier (seqdb.md), SeqIdentifier (seqdb.md), OrganizationIdentifierIssuerLink, SampleIdentifier, SeqIdentifier
 
 ### Community 374 - "Taxon"
 Cohesion: 0.25
@@ -2300,53 +2134,21 @@ Nodes (8): RefSeq (seqdb.md), Taxon (seqdb.md), TaxonSet (seqdb.md), TaxonSetMem
 Cohesion: 0.25
 Nodes (8): Allele, AlleleForUpload, Locus, Allele (seqdb.seq.md), Locus (seqdb.seq.md), RefAllele (seqdb.seq.md), RefAllele, SampleBatchForUpload
 
-### Community 376 - "Any"
-Cohesion: 0.14
-Nodes (8): Any, Create an OpenID Connect ID Token., Validate only the signature of a JWT token without checking claims., Decode JWT header without verification., Decode JWT payload without verification (use carefully!)., Create a JWT token with the given payload., Verify and decode a JWT token., Get the public keys in JWKS format.
+### Community 379 - "EngineFactory"
+Cohesion: 0.22
+Nodes (6): EngineFactory, Engine, Thread-safe SQLAlchemy engine factory., Encapsulates creation and management of SQLAlchemy engines., Initialize a EngineFactory instance., Create a new SQLAlchemy engine or return an existing one for the given…
 
-### Community 377 - "casedb/repositories/organization_dict.py"
-Cohesion: 0.20
-Nodes (8): OrganizationDictRepository, Any, CommonOrganizationDictRepository, Hashable, Model, Provide casedb dictionary persistence behavior for organization data., Encapsulates casedb persistence behavior for organization dictionaries., Initialize the repository with casedb user and invitation model types. Args:…
+### Community 380 - ".__init__"
+Cohesion: 0.25
+Nodes (7): OrganizationDictRepository, Any, CommonOrganizationDictRepository, Hashable, Model, Encapsulates shared organization persistence with OmopDB user model types., Initialize shared organization storage with OmopDB model classes.
 
-### Community 378 - "Contig"
-Cohesion: 0.13
-Nodes (11): Contig, field_serializer, field_validator, QualityMixin, UUID, Normalize the sequence-file format from its accepted enum representation., Normalize sequence-file compression from its accepted enum representation., Normalize JSON contigs and reject duplicate contig identifiers. (+3 more)
-
-### Community 379 - ".create_sa_repository"
-Cohesion: 0.09
-Nodes (19): EngineFactory, Engine, Thread-safe SQLAlchemy engine factory., Encapsulates creation and management of SQLAlchemy engines., Initialize a EngineFactory instance., Create a new SQLAlchemy engine or return an existing one for the given…, Create an SARepository, setting up engine, schemas, and DDL. When…, Helper method to process common repository parameters and handle connection… (+11 more)
-
-### Community 380 - "omopdb/repositories/organization_dict.py"
-Cohesion: 0.20
-Nodes (8): OrganizationDictRepository, Any, CommonOrganizationDictRepository, Hashable, Model, Dictionary-backed organization repository configured with OmopDB user models., Encapsulates shared organization persistence with OmopDB user model types., Initialize shared organization storage with OmopDB model classes.
-
-### Community 381 - "seqdb/repositories/organization_dict.py"
+### Community 381 - ".__init__"
 Cohesion: 0.20
 Nodes (8): OrganizationDictRepository, Any, CommonOrganizationDictRepository, Hashable, Model, Provide seqdb persistence behavior for repositories.organization_dict., Encapsulates seqdb persistence behavior for organization dictionaries., Initialize the repository with seqdb user and invitation model types. Args:…
-
-### Community 382 - "TestRead"
-Cohesion: 0.39
-Nodes (4): Env, scenario_ids, skipif, TestRead
 
 ### Community 383 - "KeyedMutex"
 Cohesion: 0.16
 Nodes (9): KeyedMutex, Acquire the mutex belonging to `key`. Args: key: The cache key being…, Release the mutex belonging to `key`. Args: key: The key whose mutex is held.…, Return whether a regeneration is in progress for `key`., Decrement the user count of `key` and forget an unused mutex., Encapsulates handing out one mutex per key and discarding it when unused.…, Initialize a KeyedMutex instance., A per-key lock registry must not grow with the key space. (+1 more)
-
-### Community 384 - "User"
-Cohesion: 0.16
-Nodes (9): Command, User, Check if user is authorized via non-RBAC mechanism., Create another test command., Test command for testing. Name starts with _ to avoid warning due to pytest…, Another test command for testing. Name starts with _ to avoid warning due to…, Check if user is root., _TestCommand (+1 more)
-
-### Community 385 - "BaseAuthServiceTestCase"
-Cohesion: 0.15
-Nodes (10): BaseAuthServiceTestCase, scenario_ids, Test idp_clients property., idp_clients property returns a copy, not the original list., Base test case with common fixtures and utilities., Set up test fixtures., Test get_idp_user_from_claims., Should parse issuer and sub from claims. (+2 more)
-
-### Community 386 - "test_omopdb_upload.py"
-Cohesion: 0.07
-Nodes (29): MeasurementForUpload, MeasurementRelationForUpload, ObservationForUpload, Represents a measurement record intended for upload. Equal to a Measurement,…, Represents an observation record intended for upload. Equal to an Observation,…, Represents a specimen record intended for upload. Equal to a Specimen, with…, Represents a measurement relation record intended for upload. Equal to a…, SpecimenForUpload (+21 more)
-
-### Community 387 - "OAuth 2.0 Provider with OpenID Connect Support"
-Cohesion: 0.43
-Nodes (8): client_store.py, demo_client.py, OAuth 2.0 Provider with OpenID Connect Support, jwks.py, oidc_provider.py, server.py (OAuth FastAPI app), token_store.py, validators.py
 
 ### Community 388 - ".get_mapped_class"
 Cohesion: 0.29
@@ -2368,37 +2170,25 @@ Nodes (7): DataCollection, DataCollectionSet, DataCollectionSetMember, DataColle
 Cohesion: 0.29
 Nodes (7): AstPrediction, Contig, AstPrediction (seqdb.seq.md), Seq (seqdb.seq.md), SeqClassification (seqdb.seq.md), Seq, SeqClassification
 
-### Community 393 - ".test_successful_request_without_leaf_ids"
-Cohesion: 0.29
-Nodes (4): User, Test successful HTTP request with response data missing leaf_ids., Create a mock user for testing., Create a sample command for testing.
-
 ### Community 394 - "JIRA Issues"
 Cohesion: 0.17
 Nodes (12): Assigning Issues, Comments and Worklogs, Common Fields, Extended Capabilities, JIRA Issues, Prerequisite: Resolve `cloudId`, Repository Context, Safety Rules (+4 more)
-
-### Community 395 - "casedb/repositories/sa_model/abac.py"
-Cohesion: 0.26
-Nodes (11): OrganizationAccessCasePolicy, OrganizationShareCasePolicy, Base, RowMetadataMixin, Define SQLAlchemy persistence mappings for casedb ABAC policy models., Persist the casedb OrganizationShareCasePolicy domain model., Persist the casedb UserShareCasePolicy domain model., Persist the casedb OrganizationAccessCasePolicy domain model. (+3 more)
 
 ### Community 396 - "._validate_content"
 Cohesion: 0.29
 Nodes (5): model_validator, Self, UUID, Validate the profile-distance-map content and reset its unused hash., Decode the stored JSON profile-distance map. Returns: Distances keyed by…
 
 ### Community 397 - "AuthException"
-Cohesion: 0.17
+Cohesion: 0.15
 Nodes (12): AuthException, CredentialsAuthError, Base error for authentication and authorization failures., HTTP 401 error for credentials that cannot be validated., HTTP 403 error for credentials without the required authorization., HTTP 404 error for an identity with no application user., HTTP 409 error for an identity that already has an application user., HTTP 429 error for an authentication request that exceeds its limit. (+4 more)
 
-### Community 398 - "DataException"
-Cohesion: 0.17
-Nodes (9): DataException, NotNullConstraintViolationError, Initialize a UniqueConstraintViolationError instance., Error for data that omits a required field., Initialize a NotNullConstraintViolationError instance., Domain error associated with one or more data identifiers., Initialize a DataException instance., Error for data that violates a unique constraint. (+1 more)
-
 ### Community 399 - "set_service_repository"
-Cohesion: 0.23
-Nodes (12): _build_snp_upload_command(), _build_upload_command(), Any, Env, parametrize, RepositoryType, UUID, Given a created dict dataset, build a UploadSamplesCommand. db_index selects… (+4 more)
+Cohesion: 0.22
+Nodes (10): _build_snp_upload_command(), _build_upload_command(), Any, parametrize, RepositoryType, UUID, Given a created dict dataset, build a UploadSamplesCommand. db_index selects…, Build an UploadSamplesCommand for SNP profiles using the SNP protocol from the… (+2 more)
 
 ### Community 400 - "Subject"
 Cohesion: 0.40
-Nodes (4): model_validator, Self, Validate claim mappings and public-provider credentials., Validate public-provider credentials.
+Nodes (6): DataCollection, IdentifierIssuer, Subject (doc concept), SubjectIdentifier (doc concept), Subject, SubjectIdentifier
 
 ### Community 401 - "MeasurementRelation"
 Cohesion: 0.40
@@ -2414,7 +2204,7 @@ Nodes (6): ProcedureOccurrence (omopdb.md), ProcedureOccurrenceIdentifier (omopd
 
 ### Community 404 - "Locus"
 Cohesion: 0.33
-Nodes (4): model_validator, Self, Validate bound presence, ordering, and compatible censor operators. Raises:…, Validate bounds and build the optimized range matching function.
+Nodes (6): Allele, Locus, Allele (seqdb.md), Locus (seqdb.md), RefAllele (seqdb.md), RefAllele
 
 ### Community 405 - "ReadSet"
 Cohesion: 0.33
@@ -2428,29 +2218,29 @@ Nodes (6): SeqDistance (seqdb.md), SeqProfile (seqdb.md), SeqProfileIdentifier (
 Cohesion: 0.53
 Nodes (6): CalculateSeqDistancesResult, EtlLogItem, SampleBatchUploadResult, SampleDataIssue, SampleUploadResult, UploadResult
 
-### Community 408 - ".create_file_for_read_set"
-Cohesion: 0.29
-Nodes (4): UUID, Create a file associated with a read set column., Create a file associated with a sequence column., Check whether the user owns each of the given cases.
+### Community 408 - "UUID"
+Cohesion: 0.22
+Nodes (5): UUID, Move cases to a different creating data collection over HTTP., Create a file associated with a read set column., Create a file associated with a sequence column., Check whether the user owns each of the given cases.
 
-### Community 409 - "IdentifierForUpload"
-Cohesion: 0.14
-Nodes (10): IdentifierForUpload, BaseModel, model_validator, Self, Derive or validate the deterministic identifier UUID., Represents an external identifier used in an upload operation. It is defined as…, Require an issuer UUID or code., Compare issuer references and external ID with another upload identifier. (+2 more)
+### Community 409 - "._validate_model"
+Cohesion: 0.40
+Nodes (4): model_validator, Self, Derive or validate the deterministic identifier UUID., Require an issuer UUID or code.
 
 ### Community 410 - ".create_unique_values_temp_table"
 Cohesion: 0.33
-Nodes (5): TypeEngine, UUID, Create an SQL temp table with a single columns with unique values. This can be…, MetaData, Table
+Nodes (5): MetaData, TypeEngine, UUID, Create an SQL temp table with a single columns with unique values. This can be…, Table
 
-### Community 411 - "._validate_seq_format"
-Cohesion: 0.13
-Nodes (9): FormatType, field_serializer, field_validator, Convert a supplied quality result, defaulting missing values to pending., Serialize the quality result as its stable integer representation., Convert a supplied value to a supported sequence representation format., Serialize the seq_format enum to its integer value., Convert the supplied value to the content format enum used by the subclass. (+1 more)
+### Community 411 - "._serialize_seq_format"
+Cohesion: 0.25
+Nodes (5): FormatType, field_serializer, Serialize the format enum to its integer value., Serialize the quality result as its stable integer representation., Serialize the seq_format enum to its integer value.
 
 ### Community 412 - "IsOrganizationAdminPolicy"
 Cohesion: 0.29
 Nodes (6): IsOrganizationAdminPolicy, Any, BaseAbacService, CommonIsOrganizationAdminPolicy, Encapsulates organization-administrator checks using the OmopDB role map., Initialize the policy with OmopDB users and role mappings.
 
-### Community 413 - "ReadUserPolicy"
-Cohesion: 0.29
-Nodes (6): Any, BaseAbacService, CommonReadUserPolicy, Encapsulates shared user-read checks with OmopDB role and command mappings., Initialize the user-read policy with OmopDB dependencies., ReadUserPolicy
+### Community 413 - "omopdb/policies/read_user_policy.py"
+Cohesion: 0.22
+Nodes (7): Any, BaseAbacService, CommonReadUserPolicy, Configure shared user-read policy behavior for OmopDB roles and commands., Encapsulates shared user-read checks with OmopDB role and command mappings., Initialize the user-read policy with OmopDB dependencies., ReadUserPolicy
 
 ### Community 414 - "IsOrganizationAdminPolicy"
 Cohesion: 0.29
@@ -2460,17 +2250,9 @@ Nodes (6): IsOrganizationAdminPolicy, Any, BaseAbacService, CommonIsOrganization
 Cohesion: 0.29
 Nodes (6): Any, BaseAbacService, CommonReadUserPolicy, Encapsulates authorizing user reads with seqdb roles and organization-admin…, Configure the shared policy with seqdb authorization dependencies., ReadUserPolicy
 
-### Community 416 - "BaseFileRepository"
-Cohesion: 0.23
-Nodes (9): BaseFileRepository, Define seqdb domain interfaces and policies for domain.repository.file., Encapsulates the shared repository base for seqdb file persistence., FileDictRepository, Provide seqdb persistence behavior for repositories.file_dict., Encapsulates dictionary-backed persistence for seqdb uploaded files., FileSARepository, Provide seqdb persistence behavior for repositories.file_sa. (+1 more)
-
-### Community 417 - "seqdb/repositories/organization_sa.py"
-Cohesion: 0.22
-Nodes (7): OrganizationSARepository, Any, CommonOrganizationSARepository, Engine, Provide seqdb persistence behavior for repositories.organization_sa., Encapsulates seqdb persistence behavior for SQL-based organization repositories., Initialize the repository with seqdb SQLAlchemy model types. Args: engine:…
-
-### Community 418 - "_parse_nextclade_profile_content"
-Cohesion: 0.21
-Nodes (12): _parse_nextclade_non_acgtns(), _parse_nextclade_position_token(), _parse_nextclade_profile_content(), _parse_nextclade_ranges(), _parse_nextclade_substitutions(), Split a comma-separated Nextclade field into trimmed nonempty tokens., Parse one Nextclade position or inclusive position range. Args: token: Position…, Parse Nextclade substitution tokens into normalized bases by position. Args:… (+4 more)
+### Community 417 - "OrganizationSARepository"
+Cohesion: 0.29
+Nodes (6): OrganizationSARepository, Any, CommonOrganizationSARepository, Engine, Encapsulates seqdb persistence behavior for SQL-based organization repositories., Initialize the repository with seqdb SQLAlchemy model types. Args: engine:…
 
 ### Community 419 - "OAuth Client Credential Flow Test"
 Cohesion: 0.53
@@ -2482,7 +2264,7 @@ Nodes (3): parametrize, scenario_ids, TestCaseTypeProps
 
 ### Community 421 - "init-db one-shot database creation service"
 Cohesion: 0.50
-Nodes (3): model_validator, Self, Require at least one last-modified datetime boundary.
+Nodes (5): casedb service (SA_SQL mode, embedded LOCAL seqdb), init-db one-shot database creation service, lsp_sql SQL Server service, omopdb service (SA_SQL mode), seqdb service (SA_SQL mode)
 
 ### Community 422 - "DataCollection (commondb.organization entity)"
 Cohesion: 0.50
@@ -2500,33 +2282,21 @@ Nodes (5): DataCollection, DataCollectionSet, DataCollectionSetMember, DataColle
 Cohesion: 0.40
 Nodes (5): TreeAlgorithm (seqdb.seq.md), TreeAlgorithmClass (seqdb.seq.md), PhylogeneticTree, TreeAlgorithm, TreeAlgorithmClass
 
-### Community 426 - "BaseEtlResult"
-Cohesion: 0.10
-Nodes (12): BaseEtlResult, BaseModel, Represents accumulated ETL messages with severity-specific queries. Pydantic…, Append a WARN-severity log item., Append an INFO-severity log item., Return True if any log item has ERROR severity., Return True if any log item has WARN severity., Return True if any log item has INFO severity. (+4 more)
-
 ### Community 427 - "BrokenBackend"
-Cohesion: 0.17
-Nodes (6): BrokenBackend, Backend that fails every operation, to exercise the failure policy., Fail instead of reading. Args: key: The requested key. Returns: Never returns.…, Fail instead of writing. Args: key: The key to write. value: The envelope to…, Fail instead of deleting. Args: key: The key to remove. Raises:…, Fail instead of clearing. Raises: CacheBackendError: Always.
-
-### Community 428 - "TestJWKSManagerIntegration"
-Cohesion: 0.17
-Nodes (7): Integration tests for JWKSManager functionality., Test complete JWT creation and verification workflow., Test that JWKS output is compatible with standard libraries., Test that multiple JWKSManager instances are independent., Test complete key rotation workflow., Test complete OpenID Connect ID token workflow., TestJWKSManagerIntegration
+Cohesion: 0.14
+Nodes (8): BrokenBackend, Backend that fails every operation, to exercise the failure policy., Fail instead of reading. Args: key: The requested key. Returns: Never returns.…, A broken cache must cost throughput, not availability., Fail instead of writing. Args: key: The key to write. value: The envelope to…, Fail instead of deleting. Args: key: The key to remove. Raises:…, Fail instead of clearing. Raises: CacheBackendError: Always., test_a_backend_failure_degrades_to_the_loader()
 
 ### Community 429 - "pr.sh"
-Cohesion: 0.25
-Nodes (5): generated_body(), print_ready_command(), require_command(), pr.sh script, usage()
+Cohesion: 0.38
+Nodes (10): branch_title(), first_plan_line(), generated_body(), plan_file_for_ticket(), print_ready_command(), require_command(), pr.sh script, ticket_id_from_branch() (+2 more)
 
-### Community 430 - "OrganizationService"
-Cohesion: 0.33
-Nodes (5): OrganizationService, Any, CommonOrganizationService, Encapsulates organization operations using casedb user model types., Initialize organization handling with casedb model specializations. Args:…
+### Community 430 - "casedb/services/organization.py"
+Cohesion: 0.25
+Nodes (6): OrganizationService, Any, CommonOrganizationService, Configure organization services with casedb-specific user models., Encapsulates organization operations using casedb user model types., Initialize organization handling with casedb model specializations. Args:…
 
 ### Community 431 - "Issue Templates"
 Cohesion: 0.20
 Nodes (6): Bug Report Template, Comment Template, Feature Request / Story Template, Issue Templates, Minimal Template, Task Template
-
-### Community 432 - "command/ontology.py"
-Cohesion: 0.18
-Nodes (14): ConceptCrudCommand, ConceptRelationCrudCommand, ConceptSetCrudCommand, DiseaseCrudCommand, EtiologicalAgentCrudCommand, EtiologyCrudCommand, CrudCommand, Define casedb commands for concepts, diseases, and etiologies. (+6 more)
 
 ### Community 433 - "Any"
 Cohesion: 0.17
@@ -2544,13 +2314,9 @@ Nodes (6): OrganizationService, Any, CommonOrganizationService, Implement seqdb 
 Cohesion: 0.40
 Nodes (4): include-component-in-tag, packages, pull-request-title-pattern, $schema
 
-### Community 437 - "get_test_client"
-Cohesion: 0.40
-Nodes (4): get_test_client(), Env, fixture, TestCaseUploadContentDeletion
-
-### Community 438 - "command/geo.py"
-Cohesion: 0.09
-Nodes (22): Command, CrudCommand, Define casedb commands for geographic regions and region sets., Represent a request for regions containing specified regions., Represent CRUD operations for geographic region sets., Represent CRUD operations for geographic regions., Represent CRUD operations for relationships between regions., Represent CRUD operations for shapes associated with region sets. (+14 more)
+### Community 438 - "casedb/domain/service/__init__.py"
+Cohesion: 0.06
+Nodes (32): Command, Represent a request for regions containing specified regions., RetrieveContainingRegionCommand, Identify services available within the casedb application., ServiceType, BaseAbacService, CommonAbacService, Encapsulates Casedb access resolution and command scope metadata. The command… (+24 more)
 
 ### Community 439 - "field_validator"
 Cohesion: 0.18
@@ -2559,10 +2325,6 @@ Nodes (6): field_validator, Normalize a supplied user key to lower case., Normal
 ### Community 440 - "test_debug_console_uses_json_formatter"
 Cohesion: 0.40
 Nodes (4): parametrize, Path, scenario_ids, test_debug_console_uses_json_formatter()
-
-### Community 441 - "TestcasedbEdgeCasesRefDataAccess"
-Cohesion: 0.16
-Nodes (10): integration, scenario_ids, User, Helper method to retrieve a user by name from the test client environment., Root user should have access to all CaseTypes regardless of policies (superuser…, take first edge case spec as a representative case (since disease access is not…, similar to test_disease_access_matches_all but for etiological agents instead…, Assert that all created CaseTypeSet categories are accessible to any user,… (+2 more)
 
 ### Community 442 - "DummyLogItem"
 Cohesion: 0.40
@@ -2574,7 +2336,7 @@ Nodes (4): App.handle() command dispatch, Command-centric authorization, BEFORE/
 
 ### Community 445 - "NoteNlp"
 Cohesion: 0.50
-Nodes (3): model_validator, Self, Validate column-type requirements and prohibited linked metadata.
+Nodes (4): NoteNlp (omopdb.omop.md), NoteNlpIdentifier (omopdb.omop.md), NoteNlp, NoteNlpIdentifier
 
 ### Community 446 - "TreeAlgorithm"
 Cohesion: 0.50
@@ -2587,14 +2349,6 @@ Nodes (4): SeqCategory (seqdb.seq.md), SeqCategory, SeqCategorySet, SeqClassific
 ### Community 448 - "._validate_state"
 Cohesion: 0.40
 Nodes (4): model_validator, Self, Ensure every supplied case belongs to the command's case type., Remove the creating data collection from additional associations.
-
-### Community 449 - "EtlLogItem"
-Cohesion: 0.16
-Nodes (5): EtlLogItem, Represents one immutable, structured event in an ETL result accumulator., Get all data issues that are errors., Get all data issues that are errors., TestUploadResult
-
-### Community 450 - "._validate_state"
-Cohesion: 0.50
-Nodes (3): model_validator, Self, Validate column-type requirements and prohibited linked metadata.
 
 ### Community 451 - ".organization_identifier_issuer_link_update_association"
 Cohesion: 0.50
@@ -2620,29 +2374,25 @@ Nodes (3): Any, Hashable, Configure the field and callable used for in-place fie
 Cohesion: 0.50
 Nodes (3): Any, Hashable, Configure per-field transformation callables.
 
-### Community 457 - "crud_case_set_member.py"
-Cohesion: 0.26
-Nodes (13): CaseSetMemberCrudCommand, Represent CRUD operations for classified case-set membership., case_service_crud_case_set_member(), _crud_case_set_member_with_abac(), _crud_case_set_member_without_abac(), BaseCaseService, CaseSetMember, UUID (+5 more)
-
-### Community 458 - "erm_mermaid.py"
-Cohesion: 0.15
-Nodes (19): _annotation_to_mermaid_type(), _build_diagram(), _field_marker(), MermaidErmGenerator, BaseModel, Domain, Path, Mermaid-based ERM diagram generator. Produces Mermaid ``erDiagram`` markdown… (+11 more)
-
-### Community 459 - ".__init__"
-Cohesion: 0.22
-Nodes (5): datetime, Domain, Domain the requested value., Initialize command-object log summarization from runtime configuration. Uses…, Initialize an application command mediator and its runtime dependencies.…
+### Community 458 - "MermaidErmGenerator"
+Cohesion: 0.36
+Nodes (7): MermaidErmGenerator, Domain, Path, Write a Markdown file wrapping a Mermaid diagram., Generates Mermaid ``erDiagram`` markdown files from domain model definitions.…, Generate Mermaid ERD markdown files into *dir*., _write_md()
 
 ### Community 460 - "_PytestMockConfig"
 Cohesion: 0.50
 Nodes (3): Any, _PytestMockConfig, Minimal config shim needed by pytest-mock's backend resolver.
 
+### Community 461 - "Links, Subtasks, and Dependencies"
+Cohesion: 0.25
+Nodes (8): Common link types, Direction, Epics and parents, Issue links, Links, Subtasks, and Dependencies, Reading links, Remote links, Subtasks
+
 ### Community 463 - "Default App Ports (8000/8001/8002/8010)"
 Cohesion: 0.67
-Nodes (3): Available Tools, Read operations, Write operations
+Nodes (3): Default App Ports (8000/8001/8002/8010), run.py quickstart command (app_type/idp_mode/repo_mode), api subcommand group (api, api_platform_local_mock_*)
 
 ### Community 464 - "CohortDefinition (omopdb.md)"
 Cohesion: 0.67
-Nodes (3): [8.1.0](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v8.0.0...v8.1.0) (2026-06-15), Bug Fixes, Features
+Nodes (3): CohortDefinition, CohortDefinition (omopdb.md), CohortDefinition
 
 ### Community 465 - "Organization"
 Cohesion: 1.00
@@ -2650,7 +2400,7 @@ Nodes (3): Organization, OrganizationAdminPolicy, User
 
 ### Community 466 - "Locus (seqdb entity)"
 Cohesion: 0.67
-Nodes (3): Bug Fixes, Chores, v0.1.10 (2025-08-12)
+Nodes (3): Allele (seqdb entity), Locus (seqdb entity), RefAllele (seqdb entity)
 
 ### Community 467 - "SeqCategory"
 Cohesion: 1.00
@@ -2658,35 +2408,19 @@ Nodes (3): SeqCategory (seqdb.md), SeqCategory, SeqCategorySet
 
 ### Community 468 - "Locus"
 Cohesion: 0.67
-Nodes (3): Bug Fixes, Chores, v0.1.5 (2025-06-04)
-
-### Community 469 - "Enum"
-Cohesion: 0.19
-Nodes (8): Enum, Path, Copy repository files to a new folder and update the configuration.…, Copy repository files to a new folder and update the configuration.…, Copy the repository file for one service type to tgt_dir., Copy a repository file while applying the destination-exists policy. Args:…, Enum class for the service types of this application., Enum class for the repository types of this application.
-
-### Community 470 - ".validate_model"
-Cohesion: 0.50
-Nodes (3): model_validator, Self, Validate references and replace all derived ordering fields in place.
+Nodes (3): Allele, Locus, RefAllele
 
 ### Community 471 - "crud_read_set.py"
-Cohesion: 0.12
-Nodes (15): Represents CRUD command metadata for read-set records., ReadSetCrudCommand, ReadSet, Handle a CRUD command for read-set entities. Args: cmd: Typed read-set CRUD…, ReadSet, UUID, Implement seqdb CRUD service operations for services.seq.crud_read_set., Handle CRUD operations for read-set entities. Args: self: Sequence service… (+7 more)
-
-### Community 473 - "crud_ref_allele.py"
-Cohesion: 0.12
-Nodes (15): Represents CRUD command metadata for reference allele records., RefAlleleCrudCommand, RefAllele, Handle a CRUD command for reference-allele entities. Args: cmd: Typed…, RefAllele, UUID, Implement seqdb CRUD service operations for services.seq.crud_ref_allele., Handle CRUD operations for reference-allele entities. Args: self: Sequence… (+7 more)
-
-### Community 475 - "DiseaseEtiologicalAgentUpdateAssociationCommand"
-Cohesion: 0.33
-Nodes (5): DiseaseEtiologicalAgentUpdateAssociationCommand, UpdateAssociationCommand, Represent replacement of the etiological agents for a disease. Existing…, Etiology, Update etiological agent associations for a disease.
+Cohesion: 0.22
+Nodes (9): ReadSet, UUID, Implement seqdb CRUD service operations for services.seq.crud_read_set., Handle CRUD operations for read-set entities. Args: self: Sequence service…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added, # TODO: Specific logic for update operation to be added, # TODO: Specific logic for delete operation to be added, e.g. check for foreign… (+1 more)
 
 ### Community 477 - "CasedbRemoteApp"
-Cohesion: 0.10
-Nodes (11): CasedbRemoteApp, Case, Retrieve cases matching the given query., Encapsulates remote casedb command dispatch over HTTP. Initialization first…, Retrieve statistics per case type., Retrieve statistics per case set., Retrieve cases by their IDs., Retrieve access rights for cases. (+3 more)
+Cohesion: 0.09
+Nodes (12): CasedbRemoteApp, Protocol, Retrieve cohort links for a given case type., Retrieve cases matching the given query., Encapsulates remote casedb command dispatch over HTTP. Initialization first…, Retrieve the full definition of a case type., Retrieve statistics per case type., Retrieve statistics per case set. (+4 more)
 
 ### Community 484 - "crud_sample.py"
-Cohesion: 0.12
-Nodes (15): Represents CRUD command metadata for sample records., SampleCrudCommand, Sample, Handle a CRUD command for sample entities. Args: cmd: Typed sample CRUD command…, Sample, UUID, Implement seqdb CRUD service operations for services.seq.crud_sample., Handle CRUD operations for sample entities. Args: self: Sequence service… (+7 more)
+Cohesion: 0.22
+Nodes (9): Sample, UUID, Implement seqdb CRUD service operations for services.seq.crud_sample., Handle CRUD operations for sample entities. Args: self: Sequence service…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added, # TODO: Specific logic for update operation to be added, # TODO: Specific logic for delete operation to be added, e.g. check for foreign… (+1 more)
 
 ### Community 485 - "._validate_some_criteria"
 Cohesion: 0.50
@@ -2697,172 +2431,60 @@ Cohesion: 0.50
 Nodes (3): model_validator, Self, Ensure tree leaf names and profile identifiers are consistent.
 
 ### Community 517 - "crud_seq_identifier.py"
-Cohesion: 0.12
-Nodes (15): Represents CRUD command metadata for sequence identifier records., SeqIdentifierCrudCommand, SeqIdentifier, Handle a CRUD command for sequence-identifier entities. Args: cmd: Typed…, SeqIdentifier, UUID, Implement seqdb CRUD service operations for services.seq.crud_seq_identifier., Handle CRUD operations for sequence-identifier entities. Args: self: Sequence… (+7 more)
+Cohesion: 0.22
+Nodes (9): SeqIdentifier, UUID, Implement seqdb CRUD service operations for services.seq.crud_seq_identifier., Handle CRUD operations for sequence-identifier entities. Args: self: Sequence…, # TODO: Specific logic for create operation to be added, # TODO: Specific logic for read operation to be added, # TODO: Specific logic for update operation to be added, # TODO: Specific logic for delete operation to be added, e.g. check for foreign… (+1 more)
 
-### Community 518 - "TestPermissionRegistration"
-Cohesion: 0.20
-Nodes (6): Test permission registration functionality., Test registering a permission without RBAC., Test registering permission without RBAC fails when roles exist., Test unregistering a permission without RBAC., Test unregistering non-registered permission fails., TestPermissionRegistration
-
-### Community 519 - "._exists_some_via_query_ids"
-Cohesion: 0.19
-Nodes (8): Any, Model, Response, Execute a CRUD command by dispatching to the appropriate HTTP method., Check existence of multiple IDs using a query-by-IDs endpoint., Return the id kind ('uuid', 'string', 'int', 'float', 'decimal', or 'mixed')., Check existence of each ID via individual GET requests., Deserialize an HTTP response body into the expected model or UUID type.
-
-### Community 520 - "TestHierarchicalRolePermissions"
-Cohesion: 0.20
-Nodes (6): Test hierarchical role permission expansion., Test that hierarchical role permissions are expanded correctly., Test that redundant permissions in hierarchy are detected., Test that redundant permissions are allowed when verification is disabled., Test that PermissionTypeSet is properly expanded to individual PermissionTypes., TestHierarchicalRolePermissions
-
-### Community 521 - "RegionRelation"
-Cohesion: 0.15
-Nodes (11): field_serializer, field_validator, Model, Represents a directed geographic relation between two regions., Normalize a string relation value to its enum member., Serialize the relation type as its string value., Represents a geographic shape for a region set at a given scale., Represents a named geographic region within a region set. (+3 more)
-
-### Community 524 - ".__init__"
-Cohesion: 0.18
-Nodes (8): CrudCommand, Domain, Path, Registers the route that is able to handle the command after it is converted…, Derive the CRUD route from the model entity name and register it., Return a partial handler that maps CRUD operations to HTTP requests., Initialize connection parameters, SSL context, routes, and optional CRUD…, Configure the SSL context based on protocol and certificate settings.
+### Community 521 - "RegionRelationType"
+Cohesion: 0.22
+Nodes (8): Identify spatial relationships between geographic regions., RegionRelationType, field_serializer, field_validator, Represents a directed geographic relation between two regions., Normalize a string relation value to its enum member., Serialize the relation type as its string value., RegionRelation
 
 ### Community 525 - "field_validator"
 Cohesion: 0.15
 Nodes (8): field_serializer, field_validator, UUID, Normalize an NCBI taxon identifier, accepting its standard prefix., Normalize JSON or prefixed NCBI ancestor identifiers to integers., Normalize a JSON ancestor identifier list to UUID objects., Normalize a taxon rank, accepting spaced NCBI rank names., Serialize ancestor taxon identifiers as strings.
 
-### Community 526 - ".create_case_set"
-Cohesion: 0.23
-Nodes (5): Case, CaseDataCollectionLink, CaseSetCategory, CaseSetStatus, DataCollection
-
-### Community 527 - "TestGeneratedCrudRoutes"
-Cohesion: 0.23
-Nodes (8): DummyCrud, DummyModel, DummyQueryFilter, CrudCommand, Model, set_fake_response(), TestGeneratedCrudRoutes, UnsupportedCrud
-
-### Community 528 - "TestEdgeCasesAndErrorConditions"
-Cohesion: 0.20
-Nodes (6): Test edge cases and error conditions., Test that invalid on_missing_root_permissions value raises error., Test that root role is created when missing from role_permissions., Test that empty role hierarchy is handled gracefully., Test that role with no sub-roles returns empty set., TestEdgeCasesAndErrorConditions
-
-### Community 529 - "case_service_crud_case_set_status"
-Cohesion: 0.20
-Nodes (10): CaseSetStatusCrudCommand, Represent CRUD operations for case-set lifecycle statuses., case_service_crud_case_set_status(), BaseCaseService, CaseSetStatus, UUID, Handle CRUD operations for case-set-status entities. This is a simple metadata…, Handle CRUD operations for CaseSetStatus entities. (+2 more)
-
-### Community 531 - ".create_person_for_upload"
-Cohesion: 0.14
-Nodes (12): PersonIdentifier, Person, UUID, Create a test Person domain model., Create a test PersonForUpload. A default Person is created unless person=None., Get the Person model contained in a PersonForUpload model, with optional…, Get an Identifier from an IdentifierForUpload, with optional overrides., Test 4.2.2: Child person_id matches parent - should succeed. (+4 more)
-
 ### Community 532 - "Fields, Issue Types, and Transitions"
 Cohesion: 0.22
 Nodes (9): Clearing and replacing, Discovering fields, Discovering projects and issue types, Field shapes, Fields, Issue Types, and Transitions, Releases instead of milestones, Setting fields, Transition rules (+1 more)
 
-### Community 533 - "abac/__init__.py"
-Cohesion: 0.21
-Nodes (11): Expose case ABAC policy records, rights models, and shared admin policy types.…, BaseCasePolicy, OrganizationAccessCasePolicy, OrganizationShareCasePolicy, Represents a user's maximum access rights in one data collection. The rights…, Represents common case and case-set rights for a case-type set., Represents an organization's additional source-to-target share rights. Rights…, Represents a user's maximum source-to-target share rights. The rights are… (+3 more)
-
-### Community 534 - ".crud"
-Cohesion: 0.22
-Nodes (6): Any, App, CrudCommand, Forward a CRUD command to seqdb under the configured functional user. The…, Initialize command handlers and the configured seqdb collaborator. Args: app:…, Return the local seqdb application or remote command client.
+### Community 534 - "SeqdbService"
+Cohesion: 0.09
+Nodes (18): Any, App, CrudCommand, PhylogeneticTree, Seq, UUID, Retrieve sequence objects from seqdb by ID., Return seqdb's FASTA iterator for the requested sequence IDs. Args: cmd: Casedb… (+10 more)
 
 ### Community 535 - ".get_root_user"
 Cohesion: 0.17
 Nodes (6): Print all organisations to stdout., Print all data collections to stdout., Print all users with their organisations and roles to stdout., Retrieve all users via the app as the root user., Retrieve all users that have the given role., Retrieve the root user from the app's user manager.
 
-### Community 536 - "TestCalculateSeqDistancesForNewProfiles"
-Cohesion: 0.36
-Nodes (6): _make_nextclade_content(), _make_seq_distance_protocol_for_snp(), _make_snp_profile_for_upload(), Helper: compute SNP distance between two profiles via the service., Identical profiles are zero-distance and Nextclade states mismatch., TestCalculateSeqDistancesForNewProfiles
+### Community 536 - "seq_service_calculate_seq_distances_for_new_profiles"
+Cohesion: 0.30
+Nodes (8): Calculate and persist distances for newly supplied sequence profiles. For each…, seq_service_calculate_seq_distances_for_new_profiles(), _make_nextclade_content(), _make_seq_distance_protocol_for_snp(), _make_snp_profile_for_upload(), Helper: compute SNP distance between two profiles via the service., Identical profiles are zero-distance and Nextclade states mismatch., TestCalculateSeqDistancesForNewProfiles
 
-### Community 537 - "sa_model/seq/base.py"
+### Community 538 - "UpdateResponseHeaderMiddleware"
 Cohesion: 0.18
-Nodes (10): get_mixin_mapped_column(), Any, Mapped, TypeEngine, Create a mapped column from a Pydantic model-mixin field. The helper derives…, ContentMixin, QualityMixin, Define SQLAlchemy persistence mappings for seqdb repositories.sa_model.seq.base. (+2 more)
-
-### Community 538 - "create_fast_api"
-Cohesion: 0.06
-Nodes (37): Compose and expose the configured casedb FastAPI application. This module forms…, # TODO: app variable added for backwards compatibility with startup code that…, Compose and expose the commondb FastAPI application and OpenAPI metadata., # TODO: app variable added for backwards compatibility with startup code that…, create_fast_api(), Any, App, Exception (+29 more)
-
-### Community 539 - "UUID"
-Cohesion: 0.20
-Nodes (7): UUID, Create a test Ref2 object., Test scenarios related to providing different combinations of child objects., Test 2.1: Parent without any Child1 or Child2 objects., Test 2.3: Parent with Child2 objects only., Test 2.4: Parent with both Child1 and Child2 objects., Test2ChildObjectProvision
+Nodes (9): BaseHTTPMiddleware, FastAPI, Request, Response, Middleware that adds configured and version response headers., Encapsulates adding general or endpoint-specific headers to API responses., Initialize a UpdateResponseHeaderMiddleware instance., Process a request and add the configured response headers. (+1 more)
 
 ### Community 540 - "._validate_int_for_uuid"
 Cohesion: 0.33
 Nodes (6): Any, field_validator, UUID, Normalize the place-of-service concept identifier to UUID form., Normalize provider concept identifiers to UUID form., Normalize the country concept identifier to UUID form.
 
-### Community 541 - "GraphvizErmGenerator"
-Cohesion: 0.33
-Nodes (5): GraphvizErmGenerator, Domain, Path, Generates Entity-Relationship Model diagrams as PNG files via ``erdantic`` /…, Generate ERM diagrams (PNG) for every domain and its services. Also writes an…
-
-### Community 542 - "test_omopdb_upload_base_result.py"
-Cohesion: 0.15
-Nodes (8): _ConcreteResult, _make_pending_upload_result(), scenario_ids, Unit tests for BaseResult and ResultLogItem. Verifies that: - add_error /…, Construct an UploadResult in PENDING state (no logs required)., Minimal Pydantic model used to test BaseResult in isolation., UploadLogItem must be the same class as ResultLogItem (alias)., TestResultLogItem
+### Community 542 - "BatchEtlResult"
+Cohesion: 0.02
+Nodes (78): deprecated, BatchEtlResult, EtlLogItem, EtlResult, ExtractResult, JobEtlResult, LoadResult, Any (+70 more)
 
 ### Community 543 - "Implement JIRA Issue"
 Cohesion: 0.25
 Nodes (7): 1. Retrieve and Assess the Issue, 2. Create the Work Branch, 3. Establish the Test Baseline, 4. Implement Incrementally, 5. Final Validation and Delivery, Implement JIRA Issue, Safety Rules
 
-### Community 544 - "Links, Subtasks, and Dependencies"
-Cohesion: 0.25
-Nodes (8): Common link types, Direction, Epics and parents, Issue links, Links, Subtasks, and Dependencies, Reading links, Remote links, Subtasks
-
-### Community 545 - ".logger"
-Cohesion: 0.25
-Nodes (6): BaseUserManager, Logger, setter, Return the user manager used by authorization policies. Returns: The user…, Logger the requested value., Logger the requested value.
-
-### Community 546 - ".create_organization_identifier_issuer_link"
-Cohesion: 0.20
-Nodes (7): Organization, OrganizationAdminPolicy, OrganizationIdentifierIssuerLink, Create an organization and store it in the local object store., Create an organization admin policy and store it in the local object store., Create an organization-identifier issuer link and store it in the local object…, IdentifierIssuer
-
-### Community 547 - "._make_user"
-Cohesion: 0.29
-Nodes (7): BaseReadUserPolicyTestCase, User, UUID, Base test case with common fixtures and utilities., Set up test fixtures., Create a domain User., Create a list of Users from tuples: (id, org_id, roles, is_active).
-
 ### Community 548 - "Logger"
 Cohesion: 0.22
 Nodes (5): Logger, Logger used during application setup., Logger for API layer messages., Logger for application layer messages., Logger for service layer messages.
-
-### Community 549 - "TestServiceInitialization"
-Cohesion: 0.25
-Nodes (5): Test service initialization and basic properties., Test that service initialization creates empty collections., Test that properties return the correct internal collections., Test that register_handlers does nothing in base implementation., TestServiceInitialization
-
-### Community 550 - "TestRoleHierarchy"
-Cohesion: 0.25
-Nodes (5): Test role hierarchy and sub-role calculations., Test that sub-roles are calculated correctly based on permission subsets., Test that sub-role calculations are cached., Test that sub-role cache is cleared when roles are updated., TestRoleHierarchy
-
-### Community 551 - "TestCommandPermissions"
-Cohesion: 0.25
-Nodes (5): Test command-related permission functionality., Test getting RBAC permissions for a command class excludes non-RBAC permissions., Test getting command classes that have RBAC permissions., Test that get_root_permissions returns all domain permissions., TestCommandPermissions
-
-### Community 552 - "TestGetNewUserFromClaims"
-Cohesion: 0.25
-Nodes (5): Test scenarios for get_new_user_from_claims., With userinfo and user manager -> returns instance., User manager unable to create -> UnauthorizedAuthError., No user manager -> construct model.User from claims., TestGetNewUserFromClaims
-
-### Community 553 - "test_oidc_provider.py"
-Cohesion: 0.29
-Nodes (4): JSON Web Key Set (JWKS) Manager This module handles JWT token generation,…, OpenID Connect Provider This module implements OpenID Connect (OIDC)…, Unit tests for JWKS Manager This module contains comprehensive unit tests for…, Unit tests for OpenID Connect Provider This module contains comprehensive…
-
-### Community 554 - "BaseModel"
-Cohesion: 0.22
-Nodes (5): BaseModel, Return the tuple representation accepted by ``from_tuple``., Create a multi-link from its tuple representation., Return the tuple representation accepted by ``from_tuple``., Create a link from its tuple representation.
 
 ### Community 555 - "ReadSelfResultsOnlyPolicy"
 Cohesion: 0.29
 Nodes (6): Any, BaseAbacService, CommonReadSelfResultsOnlyPolicy, Filter casedb user case-policy reads to the current user's records., Register ownership attributes for casedb user case-policy commands. Args:…, ReadSelfResultsOnlyPolicy
 
-### Community 556 - ".logger"
-Cohesion: 0.22
-Nodes (7): Logger, setter, Logger the requested value., Logger the requested value., Repository the requested value., Repository the requested value., Repository
-
-### Community 557 - "case_service_crud_genetic_distance_protocol"
-Cohesion: 0.20
-Nodes (10): GeneticDistanceProtocolCrudCommand, Represent CRUD operations for genetic-distance protocols., case_service_crud_genetic_distance_protocol(), BaseCaseService, GeneticDistanceProtocol, UUID, Handle CRUD operations for genetic-distance protocol entities. This is a simple…, Handle CRUD operations for GeneticDistanceProtocol entities. (+2 more)
-
-### Community 558 - ".filter"
-Cohesion: 0.29
-Nodes (5): Any, BaseAbacService, Command, Initialize role mappings and command attributes that identify ownership. Args:…, Filter or reject read results that are not owned by the current user.…
-
-### Community 559 - ".crud"
-Cohesion: 0.29
-Nodes (5): Any, App, CrudCommand, Initialize mapped user models and cache invalidation handlers. Args: app:…, Execute CRUD while preventing root users from deleting themselves or home.…
-
 ### Community 560 - "seqdb_server"
 Cohesion: 0.08
 Nodes (25): create_root_user_from_claims(), get_existing_root_user(), App, Dynaconf, User, Retrieve the configured root user from an initialized application. Args: cfg:…, Create the configured root user through the application's claim workflow. Args:…, Path (+17 more)
-
-### Community 561 - "Hashable"
-Cohesion: 0.29
-Nodes (3): Hashable, Return a copy of the feature flags dict to prevent external mutation., Set the enabled state for a feature flag. Args: key: Identifier used to…
 
 ### Community 562 - "._custom_json_encoder"
 Cohesion: 0.29
@@ -2876,14 +2498,6 @@ Nodes (6): Any, BaseAbacService, CommonReadSelfResultsOnlyPolicy, Encapsulates r
 Cohesion: 0.29
 Nodes (6): Any, BaseAbacService, CommonReadSelfResultsOnlyPolicy, Encapsulates restricting eligible result reads to resources owned by the caller., Initialize the shared policy with seqdb identifier-attribute mappings., ReadSelfResultsOnlyPolicy
 
-### Community 566 - "TokenRetrieval"
-Cohesion: 0.33
-Nodes (3): Response, Simple client for the retrieval of tokens Input variables are passed to the…, TokenRetrieval
-
-### Community 567 - "scenario_ids"
-Cohesion: 0.29
-Nodes (5): scenario_ids, Test RBAC policy registration., Test that RBAC policies are registered for all RBAC command classes., Test registering RBAC policies with custom override functions., TestRbacPolicyRegistration
-
 ### Community 626 - "JQL Search"
 Cohesion: 0.33
 Nodes (6): Calling the tool, Common queries, JQL Search, Operators, Universal search, Values and quoting
@@ -2896,45 +2510,17 @@ Nodes (6): Content format, Creating Issues, Description structure, Issue types, 
 Cohesion: 0.33
 Nodes (5): Method, Notes, Pytest Run (capture once, inspect many times), When NOT to use (rerun for real), When to use
 
-### Community 631 - "ConditionOccurrence"
-Cohesion: 0.40
-Nodes (6): ConditionOccurrence, ConditionOccurrenceIdentifier, ConditionOccurrence (omopdb.md), ConditionOccurrenceIdentifier (omopdb.md), ConditionOccurrence, ConditionOccurrenceIdentifier
-
-### Community 632 - "case/service.py"
-Cohesion: 0.05
-Nodes (48): CaseTypeSetMemberCrudCommand, Represent CRUD operations for case-type-set membership., case_service_crud_case_type_set_category(), BaseCaseService, CaseTypeSetCategory, UUID, Handle CRUD operations for case-type-set-category entities. This is a simple…, Handle CRUD operations for CaseTypeSetCategory entities. (+40 more)
+### Community 632 - "case_service_crud_case_type_set_member"
+Cohesion: 0.23
+Nodes (12): CaseTypeSetMemberCrudCommand, Represents a request to execute a CRUD operation on CaseTypeSetMembers., case_service_crud_case_type_set_member(), _crud_case_type_set_member_with_abac(), _crud_case_type_set_member_without_abac(), CaseTypeSetMember, UUID, Handle CRUD operations for CaseTypeSetMember entities. (+4 more)
 
 ### Community 633 - "test_general_dependency_list.py"
 Cohesion: 0.36
 Nodes (8): _parse_pyproject_dependency(), _parse_requirements_line(), Path, scenario_ids, Ensure requirements.txt and pyproject.toml dependencies are identical., _read_pyproject_dependencies(), _read_requirements(), test_dependency_list_matches()
 
-### Community 634 - "patch"
-Cohesion: 0.22
-Nodes (5): patch, Test that empty/null response data returns None., Test that empty dict response returns None., Test that HTTP errors are properly propagated., Test that authentication headers are properly included in requests.
-
-### Community 635 - "UUID"
-Cohesion: 0.32
-Nodes (5): field_validator, UUID, Ensure the requested case IDs are unique., Ensure the case IDs used for access lookup are unique., Ensure the case-set IDs used for access lookup are unique.
-
 ### Community 636 - "ParentUploadResult"
-Cohesion: 0.16
-Nodes (9): ParentUploadResult, Represents upload results for a parent payload and its children. Subclasses…, Count status occurrences across this result and its nested results. Args:…, Mark this result as failed when nested results have failed. It includes nested…, Update this result's status and logs from its data issues. Corresponding log…, Replace one status with another across this result and nested results. Child,…, Return fields on this result that contain child result lists. The fields…, Get the list of parent upload results in this batch upload result. (+1 more)
-
-### Community 637 - "AppComposer"
-Cohesion: 0.25
-Nodes (6): AppComposer, Any, CommonAppComposer, Encapsulates shared infrastructure composition with seqdb dependencies., Initialize composition with seqdb models, commands, policies, and roles. Args:…, Path
-
-### Community 638 - "TestRead"
-Cohesion: 0.39
-Nodes (4): Env, scenario_ids, skipif, TestRead
-
-### Community 639 - ".filter"
-Cohesion: 0.40
-Nodes (4): Any, Command, Mask audit fields unless the command user has a privileged role. If the user…, Recursively clear audit metadata on models nested in a result. Args: obj:…
-
-### Community 640 - ".retrieve_user_roles"
-Cohesion: 0.33
-Nodes (4): Hashable, User, Retrieve the roles assigned directly to a commondb user. Args: user: User whose…, Determine whether a user has the configured root role. Args: user: User whose…
+Cohesion: 0.09
+Nodes (16): CaseUploadResult, Represents one case upload result and its content validation issues., Get all data issues that are errors., ParentUploadResult, Represents upload results for a parent payload and its children. Subclasses…, Count status occurrences across this result and its nested results. Args:…, Mark this result as failed when nested results have failed. It includes nested…, Update this result's status and logs from its data issues. Corresponding log… (+8 more)
 
 ### Community 641 - ".is_invalidated"
 Cohesion: 0.33
@@ -2944,77 +2530,13 @@ Nodes (3): Return whether an entry written at `created_at` is affected., Return 
 Cohesion: 0.40
 Nodes (4): model_validator, Self, Validate claim mappings and public-provider credentials., Validate public-provider credentials.
 
-### Community 643 - "OrganizationService"
-Cohesion: 0.33
-Nodes (5): OrganizationService, Any, CommonOrganizationService, Encapsulates handling of organization commands using OmopDB user and invitation…, Initialize the shared service with OmopDB model classes.
+### Community 658 - "UUID"
+Cohesion: 0.19
+Nodes (10): OrganizationAccessCasePolicy, OrganizationShareCasePolicy, UserAccessCasePolicy, UserShareCasePolicy, UUID, Expand access policies into rights by case type and data collection. Args:…, Intersect organization and user case-access rights. Args:…, Expand sharing policies into rights by case type and destination. Args:… (+2 more)
 
-### Community 644 - "TestUpdate"
-Cohesion: 0.36
-Nodes (4): Env, scenario_ids, skipif, TestUpdate
-
-### Community 645 - "TestRead"
-Cohesion: 0.39
-Nodes (4): Env, scenario_ids, skipif, TestRead
-
-### Community 646 - "TestUpdate"
-Cohesion: 0.36
-Nodes (4): Env, scenario_ids, skipif, TestUpdate
-
-### Community 647 - "._serialize_created_at"
+### Community 661 - "casedb/services/rbac.py"
 Cohesion: 0.29
-Nodes (5): Any, datetime, field_serializer, Serialize the creation timestamp as ISO 8601., Omit callable properties from serialized command data.
-
-### Community 649 - "ModelFieldProps"
-Cohesion: 0.29
-Nodes (7): complete_stored_model_field_props(), Any, Model, Complete stored model field properties with defaults for missing fields. Args:…, ModelFieldProps, BaseModel, Represents additional properties of a model field. The application of these…
-
-### Community 653 - "TestRootUserTokenTimeToLive"
-Cohesion: 0.33
-Nodes (4): Test root token TTL enforcement helper., Root token younger than configured TTL should pass., Root token older than configured TTL should raise UnauthorizedAuthError., TestRootUserTokenTimeToLive
-
-### Community 654 - "TestInitializationValidation"
-Cohesion: 0.33
-Nodes (4): Test IDP configuration validation during initialization., Duplicate names raise InitializationServiceError., If IDP init returns None, it is added to pending list., TestInitializationValidation
-
-### Community 656 - "Any"
-Cohesion: 0.40
-Nodes (4): Any, SeqForUpload, Create a sample SeqForUpload with default values and optional overrides., Create a sample SeqForUpload with default values and optional overrides.
-
-### Community 657 - "._generate_key_pair"
-Cohesion: 0.33
-Nodes (3): Generate a new key pair and return the new key ID., Initialize JWKS manager with a new RSA key pair., Generate a new RSA key pair.
-
-### Community 658 - "._get_access_dict"
-Cohesion: 0.40
-Nodes (4): OrganizationAccessCasePolicy, UserAccessCasePolicy, Expand access policies into rights by case type and data collection. Args:…, Intersect organization and user case-access rights. Args:…
-
-### Community 659 - ".get_content"
-Cohesion: 0.40
-Nodes (3): Command, Model, Resolve the case access model for a command. Args: cmd: Command for which case…
-
-### Community 661 - "RbacService"
-Cohesion: 0.40
-Nodes (4): CommonRbacService, Initialize inherited RBAC policy handling with casedb roles. Args: app:…, Encapsulates casedb RBAC using the domain's role enumeration., RbacService
-
-### Community 662 - "model/organization.py"
-Cohesion: 0.04
-Nodes (43): Contact, DataCollection, DataCollectionSet, DataCollectionSetMember, IdentifierIssuer, OrganizationContacts, OrganizationIdentifierIssuerLink, OrganizationSet (+35 more)
-
-### Community 667 - "UploadResultWithIdentifiers"
-Cohesion: 0.33
-Nodes (4): Represents an upload result with nested identifier results. It mirrors a for-…, Return the nested upload results for this object's identifiers., Mark this result as failed when an identifier result has failed. This ensures a…, UploadResultWithIdentifiers
-
-### Community 668 - "CachedError"
-Cohesion: 0.40
-Nodes (4): CachedError, BaseException, Encapsulates holding an exception that was cached instead of being retried.…, Initialize a CachedError instance.
-
-### Community 669 - "omopdb/repositories/sa_model/base.py"
-Cohesion: 0.40
-Nodes (4): DataLineageMixin, declarative_mixin, Shared SQLAlchemy mixins used by OmopDB table mappings., Encapsulates a SQLAlchemy model mixin for adding a number of standard fields.
-
-### Community 670 - "._update_object_properties"
-Cohesion: 0.33
-Nodes (3): Apply update properties and linked-object IDs to a model. All field-value pairs…, Build a mapping from relationship field names to (link field, model class)…, Normalise the set_dummy_link parameter into a per-field dict and a default flag.
+Nodes (5): CommonRbacService, Configure role-based authorization for the casedb role hierarchy., Initialize inherited RBAC policy handling with casedb roles. Args: app:…, Encapsulates casedb RBAC using the domain's role enumeration., RbacService
 
 ### Community 671 - "._validate_state"
 Cohesion: 0.33
@@ -3024,41 +2546,13 @@ Nodes (4): model_validator, Self, Validate bound presence, ordering, and compati
 Cohesion: 0.50
 Nodes (4): Example 1: Bug report, Example 2: Feature request with priority, Example 3: Mark an issue as blocked, Examples
 
-### Community 681 - "Death"
-Cohesion: 0.50
-Nodes (4): Death, DeathIdentifier, Death (omopdb.omop.md), DeathIdentifier (omopdb.omop.md)
-
-### Community 682 - "._validate_unit_for_type"
-Cohesion: 0.50
-Nodes (3): model_validator, Self, Enforce unit presence according to the concept set type.
-
-### Community 683 - ".__init__"
-Cohesion: 0.50
-Nodes (3): Any, BaseAbacService, Initialize the policy with an ABAC service and policy properties. Args:…
-
-### Community 686 - ".__init__"
-Cohesion: 0.50
-Nodes (3): Any, BaseAbacService, Initialize the policy with its ABAC service and configuration properties. Args:…
-
-### Community 687 - ".__init__"
-Cohesion: 0.50
-Nodes (3): Any, App, Initialize role maps and configured root and guest role values. Args: app:…
-
 ### Community 688 - ".__init__"
 Cohesion: 0.50
 Nodes (3): Any, BaseAbacService, Initialize role mappings and organization-ID resolvers. Args: abac_service:…
 
-### Community 689 - ".__init__"
-Cohesion: 0.50
-Nodes (3): Any, App, Initialize configured role mappings and permissions exempt from RBAC. Args:…
-
-### Community 690 - ".__init__"
-Cohesion: 0.50
-Nodes (3): Any, App, Initialize configured concrete policy classes. Args: app: Application that owns…
-
 ### Community 691 - "InvalidIdsError"
-Cohesion: 0.50
-Nodes (3): InvalidIdsError, Error for malformed or unknown object identifiers., Initialize a InvalidIdsError instance.
+Cohesion: 0.40
+Nodes (4): InvalidIdsError, Error for malformed or unknown object identifiers., Initialize a InvalidIdsError instance., test_does_not_update_when_read_fails()
 
 ### Community 692 - "InvalidLinkIdsError"
 Cohesion: 0.50
@@ -3072,13 +2566,13 @@ Nodes (3): InvalidModelIdsError, Error for identifiers belonging to an unexpecte
 Cohesion: 0.50
 Nodes (3): LinkConstraintViolationError, Error for a relationship constraint violation between model instances., Initialize a LinkConstraintViolationError instance.
 
-### Community 695 - "._validate_state"
-Cohesion: 0.50
-Nodes (3): model_validator, Self, Build the optimized UUID membership matcher.
+### Community 695 - "UuidSetFilter"
+Cohesion: 0.04
+Nodes (44): CaseCohortLink, CaseQuery, CaseSetQuery, BaseModel, Model, UUID, Define non-persistable case query, rights, statistics, and result models. These…, Represents labeled filter criteria for querying case sets. (+36 more)
 
-### Community 696 - ".test_successful_request_with_full_response"
-Cohesion: 0.33
-Nodes (4): CalculatePhylogeneticTreeRequestBody, Docstring assigned automatically., Test that RetrievePhylogeneticTreeRequestBody is constructed correctly., Test successful HTTP request with complete response data.
+### Community 696 - "api/seq.py"
+Cohesion: 0.05
+Nodes (52): Expose seqdb API request representations for router composition., CalculatePhylogeneticTreeRequestBody, ConvertSeqFormatRequestBody, create_seq_endpoints(), Any, APIRouter, App, Exception (+44 more)
 
 ### Community 697 - "._validate_locus"
 Cohesion: 0.50
@@ -3096,13 +2590,9 @@ Nodes (3): model_validator, Self, Validate mutually exclusive read links and pai
 Cohesion: 0.50
 Nodes (3): model_validator, Self, Validate sequence links and derive a hash from available contigs.
 
-### Community 701 - "File"
-Cohesion: 0.50
-Nodes (4): File, Base, RowMetadataMixin, Encapsulates the SQLAlchemy model for the persistable domain model.
-
-### Community 702 - "CalculateSeqDistancesForNewProfilesCommand"
-Cohesion: 0.33
-Nodes (4): CalculateSeqDistancesForNewProfilesCommand, Represents calculating and storing distances between new and existing sequence…, Calculate distances for profiles without distance records. Args: cmd: New-…, Delegate missing-profile distance calculation to the distance operation.
+### Community 702 - "CalculateSeqDistancesEtlResult"
+Cohesion: 0.14
+Nodes (13): CalculateSeqDistancesForNewProfilesCommand, Represents a request to calculate and store distances between new and existing…, Represents a request to create missing distances for profiles under a distance…, UpdateSeqDistancesCommand, CalculateSeqDistancesEtlResult, Represents the result of calculating distances between existing profiles and…, Calculate distances for profiles without distance records. Args: cmd: New-…, Update stored sequence-distance calculations. Args: cmd: Distance-update… (+5 more)
 
 ### Community 703 - "Available Tools"
 Cohesion: 0.67
@@ -3110,67 +2600,19 @@ Nodes (3): Available Tools, Read operations, Write operations
 
 ### Community 704 - "TestContent"
 Cohesion: 0.40
-Nodes (4): Env, scenario_ids, Happy-path test for RetrieveIsOwnCasesCommand. Finds an org user whose…, TestContent
+Nodes (3): scenario_ids, Happy-path test for RetrieveIsOwnCasesCommand. Finds an org user whose…, TestContent
 
-### Community 707 - ".setup"
-Cohesion: 0.33
-Nodes (4): Env, fixture, Print the active edge cases once per class run when VERBOSE is enabled., Auto-inject the env fixture into the class.
-
-### Community 708 - "TestUnauthenticated"
-Cohesion: 0.33
-Nodes (4): Test unauthenticated user conditions., None user should assert., User without id should assert., TestUnauthenticated
+### Community 707 - "get_test_client"
+Cohesion: 0.29
+Nodes (5): get_test_client(), fixture, Print the active edge cases once per class run when VERBOSE is enabled., Auto-inject the env fixture into the class., Get a test client for casedb integration tests. This fixture initializes a test…
 
 ### Community 710 - "omopdb/integration/build_db/create.py"
 Cohesion: 0.33
 Nodes (5): # TODO: test_create_site, # TODO: test_create_site_raise, # TODO: test_create_contact, # TODO: test_create_contact_raise, # TODO: OrganizationAdminPolicy.user does not exist
 
-### Community 730 - "CaseUploadResult"
-Cohesion: 0.40
-Nodes (4): CaseUploadResult, ParentUploadResult, Represents one case upload result and its content validation issues., Get all data issues that are errors.
-
-### Community 731 - "BaseAbacService"
-Cohesion: 0.40
-Nodes (4): BaseAbacService, CommonAbacService, Resolve reference-data access control for a command. Args: cmd: Command whose…, Encapsulates Casedb access resolution and command scope metadata. The command…
-
-### Community 732 - ".set_created"
-Cohesion: 0.40
-Nodes (3): UUID, Record the current UTC time and user as the latest modification., Record the current UTC time and user as both creation and modification.
-
-### Community 736 - "RbacService"
-Cohesion: 0.40
-Nodes (4): CommonRbacService, Initialize the shared RBAC service with OmopDB roles., Encapsulates handling of RBAC commands using the OmopDB role enumeration., RbacService
-
-### Community 739 - "._validate_file_compression"
-Cohesion: 0.40
-Nodes (3): field_validator, Normalize the read-file format from its accepted enum representation., Normalize read-file compression from its accepted enum representation.
-
-### Community 740 - ".__init__"
+### Community 757 - "test_casedb_remote_app.py"
 Cohesion: 0.50
-Nodes (3): Any, BaseAbacService, Initialize organization-admin query support and configured role mappings. Args:…
-
-### Community 741 - "._get_user_and_repository"
-Cohesion: 0.50
-Nodes (3): Command, User, Return user and repository.
-
-### Community 742 - "_build_col_lookup"
-Cohesion: 0.50
-Nodes (4): _build_col_lookup(), _compute_expected_cases_op(), Build (case_type, dc) → union of col codes from all matching policies., Return {case_code: sorted accessible col_codes} for this policy combination.…
-
-### Community 743 - "setup_test_users_and_organizations_operational"
-Cohesion: 0.50
-Nodes (4): Env, fixture, Set up test users and organizations for operational data edge case tests.…, setup_test_users_and_organizations_operational()
-
-### Community 744 - "setup_test_users_and_organizations_reference"
-Cohesion: 0.50
-Nodes (4): Env, fixture, Set up common test users and organizations driven by EDGE_CASES. Creates: -…, setup_test_users_and_organizations_reference()
-
-### Community 749 - "OrganizationAdminPolicy"
-Cohesion: 0.67
-Nodes (3): OrganizationAdminPolicy, Model, Represents whether a user administers an organization. If the user has the role…
-
-### Community 757 - "app"
-Cohesion: 0.67
-Nodes (3): app(), mock_client(), fixture
+Nodes (4): app(), mock_client(), fixture, Unit tests for the non-CRUD command handlers on CasedbRemoteApp. Each test…
 
 ## Ambiguous Edges - Review These
 - `Case` → `CaseRights`  [AMBIGUOUS]
@@ -3189,9 +2631,9 @@ Nodes (3): app(), mock_client(), fixture
   docs/erm/seqdb.detailed.md · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **517 isolated node(s):** `casedb Alembic migration history`, `omopdb Alembic migration history`, `DataCmd`, `MetaCmd`, `NoAbacCmd` (+512 more)
-  These have ≤1 connection - possible missing edges or undocumented components.
-- **163 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **523 isolated node(s):** `post-pr-comments.sh script`, `docker-entrypoint.sh script`, `PYTHONPATH`, `Gen-EpiX`, `$schema` (+518 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 8296 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **180 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_

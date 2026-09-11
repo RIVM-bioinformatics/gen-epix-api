@@ -443,10 +443,10 @@ def create_seq_endpoints(
     async def update__seq_distances(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: UpdateSeqDistancesRequestBody,
-    ) -> list[model.CalculateSeqDistancesResult]:
+    ) -> list[model.CalculateSeqDistancesEtlResult]:
         """See router description."""
         try:
-            retval: list[model.CalculateSeqDistancesResult] = app.handle(
+            retval: list[model.CalculateSeqDistancesEtlResult] = app.handle(
                 command.UpdateSeqDistancesCommand(
                     user=user,
                     protocol_id=request_body.protocol_id,

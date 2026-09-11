@@ -1,7 +1,8 @@
 """Implement seqdb sequence service behavior for services.seq.upload_upsert_batch."""
 
-from gen_epix.commondb.domain.enum import EtlStatus, UploadAction
+from gen_epix.commondb.domain.enum import UploadAction
 from gen_epix.commondb.services import BatchUploader
+from gen_epix.etl.enum import EtlStatus
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.exc import ConcurrentModificationError
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
@@ -76,7 +77,7 @@ def _update_profile_distances(
         return success
 
     try:
-        calculate_seq_distance_result: list[model.CalculateSeqDistancesResult] = (
+        calculate_seq_distance_result: list[model.CalculateSeqDistancesEtlResult] = (
             self.service.app.handle(
                 command.CalculateSeqDistancesForNewProfilesCommand(
                     user=user,

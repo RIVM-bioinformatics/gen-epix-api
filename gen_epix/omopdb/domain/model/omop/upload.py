@@ -6,7 +6,6 @@ from uuid import UUID
 from pydantic import Field, computed_field
 
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.base import EtlLogItem
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
@@ -16,6 +15,7 @@ from gen_epix.commondb.domain.model.upload import (
     ParentUploadResult,
     UploadResult,
 )
+from gen_epix.etl.model import LogItem
 from gen_epix.omopdb.domain.model.omop import clinical_data as model
 from gen_epix.util import copy_model_field
 
@@ -173,6 +173,7 @@ class PersonUploadResult(ParentUploadResult):
     Represents the result of uploading a single person.
     """
 
+    ID: ClassVar[str] = "c6dd271e"
     ENTITY: ClassVar = ParentUploadResult.model_entity().clone()
     NAME: ClassVar = "PersonUploadResult"
 
@@ -199,7 +200,7 @@ class PersonUploadResult(ParentUploadResult):
         description="The results of uploading the individual measurement relations, if any were provided, in the same order as provided.",
     )
 
-    def get_errors(self) -> list[EtlLogItem]:
+    def get_errors(self) -> list[LogItem]:
         """Get all data issues that are errors."""
         log_items = super().get_errors()
         if self.identifiers:
@@ -322,6 +323,7 @@ class PersonBatchUploadResult(BaseBatchUploadResult):
     Represents the result of uploading a batch of persons.
     """
 
+    ID: ClassVar[str] = "3d81faf1"
     ENTITY: ClassVar = BaseBatchForUpload.model_entity().clone()
     NAME: ClassVar = "PersonBatchUploadResult"
 

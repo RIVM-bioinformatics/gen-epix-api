@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from pathlib import Path
 from typing import Any, ClassVar, cast
+from unittest.mock import Mock
 
 import pytest
 import sqlalchemy as sa
@@ -66,7 +67,7 @@ def _make_obj(idx: int, *, value: int | None = None) -> RepoModel:
 
 
 @pytest.fixture
-def repo() -> SARepository:
+def repo() -> Iterator[SARepository]:
     engine = sa.create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
     repository = SARepository(
@@ -76,7 +77,10 @@ def repo() -> SARepository:
         register_mappers=False,
     )
     repository.register_mapper(SAMapper(RepoModel, SARepoModel))
-    return repository
+    try:
+        yield repository
+    finally:
+        engine.dispose(close=True)
 
 
 def test_repository_properties_and_session(repo: SARepository) -> None:
@@ -94,11 +98,18 @@ def test_repository_properties_and_session(repo: SARepository) -> None:
 
 def test_uow_nested_and_invalid_nested_kwargs(repo: SARepository) -> None:
     with repo.uow() as outer_uow:
+        session = cast(SAUnitOfWork, outer_uow).session
+        close = Mock(wraps=session.close)
+        session.close = close
         nested_uow = repo.uow()
         assert isinstance(nested_uow, SAUnitOfWork)
-        assert nested_uow.session is cast(SAUnitOfWork, outer_uow).session
+        assert nested_uow.session is session
+        with nested_uow:
+            pass
+        close.assert_not_called()
         with pytest.raises(exc.RepositoryServiceError, match="b78b8c87"):
             repo.uow(invalid=True)
+    close.assert_called_once_with()
 
 
 def test_register_get_mapper_and_duplicate_errors(repo: SARepository) -> None:
@@ -486,7 +497,10 @@ def test_create_sa_repository(tmp_path: Path) -> None:
         recreate_sqlite_file=True,
         register_mappers=False,
     )
-    assert isinstance(repo, SARepository)
+    try:
+        assert isinstance(repo, SARepository)
+    finally:
+        repo._engine.dispose(close=True)
 
 
 def test_create_sa_repository_sqlite_shared_memory_uri() -> None:
@@ -496,7 +510,10 @@ def test_create_sa_repository_sqlite_shared_memory_uri() -> None:
         connection_string="sqlite:///file:test_mem?mode=memory&cache=shared",
         register_mappers=False,
     )
-    assert isinstance(repo, SARepository)
+    try:
+        assert isinstance(repo, SARepository)
+    finally:
+        repo._engine.dispose(close=True)
 
 
 def test_create_sa_repository_does_not_create_non_sqlite_schema_by_default(
