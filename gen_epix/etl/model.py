@@ -361,7 +361,7 @@ class ExtractResult(Result):
     """Represents an extract ETL result."""
 
     ID: ClassVar[str] = "e5d2f8a6"
-    COMPLETED_CODE: ClassVar[str] = "a5b6c7d8"
+    COMPLETED_CODE: ClassVar[str] = "d3ca1f37"
     COMPLETED_MESSAGE: ClassVar[str] = "Extract completed."
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
