@@ -451,7 +451,6 @@ class BaseUploadTestCase:
         n_failed: int = 0,
         n_pending: int = 0,
         n_processed: int = 0,
-        n_initialized: int = 0,
         n_mixed: int = 0,
         n_success: int = 0,
         include_self: bool = False,
@@ -464,7 +463,6 @@ class BaseUploadTestCase:
             EtlStatus.FAILED: n_failed,
             EtlStatus.PENDING: n_pending,
             EtlStatus.PROCESSED: n_processed,
-            EtlStatus.INITIALIZED: n_initialized,
             EtlStatus.MIXED: n_mixed,
             EtlStatus.SUCCESS: n_success,
         }

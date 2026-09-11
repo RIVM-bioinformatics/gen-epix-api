@@ -25,7 +25,7 @@ from gen_epix.fastapp.enum import LogLevel
 class _ConcreteResult(EtlResult):
     """Minimal Pydantic model used to test BaseEtlResult in isolation."""
 
-    status: EtlStatus = EtlStatus.INITIALIZED
+    status: EtlStatus = EtlStatus.PENDING
 
     def set_failed(self) -> None:
         self.status = EtlStatus.FAILED
@@ -84,7 +84,7 @@ class TestBaseEtlResult:
 
     def test_add_warning_does_not_change_status(self) -> None:
         self.result.add_warning("W001", "a warning")
-        assert self.result.status == EtlStatus.INITIALIZED
+        assert self.result.status == EtlStatus.PENDING
 
     # -- add_info -------------------------------------------------------------
 
@@ -95,7 +95,7 @@ class TestBaseEtlResult:
 
     def test_add_info_does_not_change_status(self) -> None:
         self.result.add_info("I001", "some info")
-        assert self.result.status == EtlStatus.INITIALIZED
+        assert self.result.status == EtlStatus.PENDING
 
     # -- has_errors / has_warnings / has_infos --------------------------------
 

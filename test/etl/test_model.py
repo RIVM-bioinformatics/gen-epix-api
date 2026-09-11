@@ -96,9 +96,7 @@ class TestEtlResult:
         result.add_logs([item] if as_list else item)
 
         assert result.logs == [item]
-        expected = (
-            EtlStatus.FAILED if severity is LogLevel.ERROR else EtlStatus.INITIALIZED
-        )
+        expected = EtlStatus.FAILED if severity is LogLevel.ERROR else EtlStatus.PENDING
         assert result.status is expected
 
     def test_completion_marks_initialized_result_and_preserves_failure(self) -> None:
@@ -170,9 +168,9 @@ class TestBatchEtlResult:
     @pytest.mark.parametrize(
         ("statuses", "expected"),
         [
-            ([], EtlStatus.INITIALIZED),
+            ([], EtlStatus.PENDING),
             ([EtlStatus.SUCCESS], EtlStatus.SUCCESS),
-            ([EtlStatus.INITIALIZED], EtlStatus.FAILED),
+            ([EtlStatus.PENDING], EtlStatus.FAILED),
             ([EtlStatus.SUCCESS, EtlStatus.FAILED], EtlStatus.MIXED),
         ],
     )
@@ -190,9 +188,9 @@ class TestBatchEtlResult:
     @pytest.mark.parametrize(
         ("statuses", "expected"),
         [
-            ([], EtlStatus.INITIALIZED),
+            ([], EtlStatus.PENDING),
             ([EtlStatus.SUCCESS], EtlStatus.SUCCESS),
-            ([EtlStatus.INITIALIZED], EtlStatus.FAILED),
+            ([EtlStatus.PENDING], EtlStatus.FAILED),
             ([EtlStatus.SUCCESS, EtlStatus.FAILED], EtlStatus.MIXED),
         ],
     )
@@ -210,7 +208,7 @@ class TestBatchEtlResult:
     @pytest.mark.parametrize(
         ("statuses", "expected"),
         [
-            ([], EtlStatus.INITIALIZED),
+            ([], EtlStatus.PENDING),
             ([EtlStatus.PROCESSED], EtlStatus.SUCCESS),
             ([EtlStatus.SUCCESS], EtlStatus.FAILED),
             ([EtlStatus.PROCESSED, EtlStatus.FAILED], EtlStatus.MIXED),
@@ -315,12 +313,99 @@ class TestBatchEtlResult:
         with pytest.warns(DeprecationWarning):
             assert batch.for_subject("a").extract_results == filtered.extract_results
 
-    def test_add_load_result_registers_result(self) -> None:
+    def test_add_single_load_result_registers_result(self) -> None:
         batch = BatchEtlResult()
         load = LoadResult(status=EtlStatus.PROCESSED)
 
-        batch.add_load_result(load)
+        batch.add_results(load)
 
+        assert batch.load_results == [load]
+        assert batch.extract_results == []
+        assert batch.transform_results == []
+
+    def test_add_list_of_load_results_registers_all(self) -> None:
+        batch = BatchEtlResult()
+        load1 = LoadResult(status=EtlStatus.PROCESSED)
+        load2 = LoadResult(status=EtlStatus.SUCCESS)
+        load3 = LoadResult(status=EtlStatus.FAILED)
+
+        batch.add_results([load1, load2, load3])
+
+        assert batch.load_results == [load1, load2, load3]
+        assert batch.extract_results == []
+        assert batch.transform_results == []
+
+    def test_add_single_extract_result_registers_result(self) -> None:
+        batch = BatchEtlResult()
+        extract = ExtractResult(source_id="source1", status=EtlStatus.SUCCESS)
+
+        batch.add_results(extract)
+
+        assert batch.extract_results == [extract]
+        assert batch.transform_results == []
+        assert batch.load_results == []
+
+    def test_add_list_of_extract_results_registers_all(self) -> None:
+        batch = BatchEtlResult()
+        extract1 = ExtractResult(source_id="source1", status=EtlStatus.SUCCESS)
+        extract2 = ExtractResult(source_id="source2", status=EtlStatus.FAILED)
+        extract3 = ExtractResult(source_id="source3", status=EtlStatus.PROCESSED)
+
+        batch.add_results([extract1, extract2, extract3])
+
+        assert batch.extract_results == [extract1, extract2, extract3]
+        assert batch.transform_results == []
+        assert batch.load_results == []
+
+    def test_add_single_transform_result_registers_result(self) -> None:
+        batch = BatchEtlResult()
+        transform = TransformResult(source_id="source1", status=EtlStatus.SUCCESS)
+
+        batch.add_results(transform)
+
+        assert batch.transform_results == [transform]
+        assert batch.extract_results == []
+        assert batch.load_results == []
+
+    def test_add_list_of_transform_results_registers_all(self) -> None:
+        batch = BatchEtlResult()
+        transform1 = TransformResult(source_id="source1", status=EtlStatus.SUCCESS)
+        transform2 = TransformResult(source_id="source2", status=EtlStatus.FAILED)
+        transform3 = TransformResult(source_id="source3", status=EtlStatus.PROCESSED)
+
+        batch.add_results([transform1, transform2, transform3])
+
+        assert batch.transform_results == [transform1, transform2, transform3]
+        assert batch.extract_results == []
+        assert batch.load_results == []
+
+    def test_add_mixed_results_registers_each_type(self) -> None:
+        batch = BatchEtlResult()
+        extract1 = ExtractResult(source_id="source1", status=EtlStatus.SUCCESS)
+        extract2 = ExtractResult(source_id="source2", status=EtlStatus.FAILED)
+        transform1 = TransformResult(source_id="source1", status=EtlStatus.SUCCESS)
+        transform2 = TransformResult(source_id="source2", status=EtlStatus.PROCESSED)
+        load1 = LoadResult(status=EtlStatus.SUCCESS)
+        load2 = LoadResult(status=EtlStatus.FAILED)
+
+        batch.add_results([extract1, extract2, transform1, transform2, load1, load2])
+
+        assert batch.extract_results == [extract1, extract2]
+        assert batch.transform_results == [transform1, transform2]
+        assert batch.load_results == [load1, load2]
+
+    def test_add_mixed_results_with_custom_subclasses_registers_correctly(self) -> None:
+        batch = BatchEtlResult()
+        custom_transform = _FooTransformResult(source_id="source1")
+        custom_extract = _FooExtractResult(source_id="source1")
+        load = LoadResult(status=EtlStatus.SUCCESS)
+
+        batch.add_results([custom_extract, custom_transform, load])
+
+        assert batch.extract_results == [custom_extract]
+        assert isinstance(batch.extract_results[0], _FooExtractResult)
+        assert batch.transform_results == [custom_transform]
+        assert isinstance(batch.transform_results[0], _FooTransformResult)
         assert batch.load_results == [load]
 
 
@@ -330,14 +415,12 @@ class TestRunEtlResult:
         supplied = uuid4()
 
         defaulted = JobEtlResult(etl_name="defaulted")
-        coerced = JobEtlResult.model_validate(
-            {"etl_name": "coerced", "etl_command_id": None}
-        )
-        preserved = JobEtlResult(etl_name="preserved", etl_command_id=supplied)
+        coerced = JobEtlResult.model_validate({"etl_name": "coerced", "id": None})
+        preserved = JobEtlResult(etl_name="preserved", id=supplied)
 
-        assert isinstance(defaulted.etl_command_id, UUID)
-        assert isinstance(coerced.etl_command_id, UUID)
-        assert preserved.etl_command_id == supplied
+        assert isinstance(defaulted.id, UUID)
+        assert isinstance(coerced.id, UUID)
+        assert preserved.id == supplied
 
     def test_start_batch_registers_batch_and_batch_ids_skip_unstored(self) -> None:
         stored_id = uuid4()
@@ -352,14 +435,14 @@ class TestRunEtlResult:
     @pytest.mark.parametrize(
         ("statuses", "initial_status", "expected"),
         [
-            ([], EtlStatus.INITIALIZED, EtlStatus.SUCCESS),
-            ([EtlStatus.INITIALIZED], EtlStatus.INITIALIZED, EtlStatus.SUCCESS),
-            ([EtlStatus.SUCCESS], EtlStatus.INITIALIZED, EtlStatus.SUCCESS),
-            ([EtlStatus.FAILED], EtlStatus.INITIALIZED, EtlStatus.FAILED),
-            ([EtlStatus.MIXED], EtlStatus.INITIALIZED, EtlStatus.FAILED),
+            ([], EtlStatus.PENDING, EtlStatus.SUCCESS),
+            ([EtlStatus.PENDING], EtlStatus.PENDING, EtlStatus.SUCCESS),
+            ([EtlStatus.SUCCESS], EtlStatus.PENDING, EtlStatus.SUCCESS),
+            ([EtlStatus.FAILED], EtlStatus.PENDING, EtlStatus.FAILED),
+            ([EtlStatus.MIXED], EtlStatus.PENDING, EtlStatus.FAILED),
             (
                 [EtlStatus.SUCCESS, EtlStatus.FAILED],
-                EtlStatus.INITIALIZED,
+                EtlStatus.PENDING,
                 EtlStatus.MIXED,
             ),
             ([EtlStatus.SUCCESS], EtlStatus.FAILED, EtlStatus.FAILED),
@@ -406,7 +489,7 @@ class TestRunEtlResult:
             batches=[processed, BatchEtlResult()],
         )
 
-        assert result.summary_fields() == {
+        assert result.get_summary() == {
             "flow": "flow",
             "batch_type": "batch-type",
             "status": "MIXED",
@@ -423,7 +506,7 @@ class TestRunEtlResult:
     def test_summary_fields_uses_empty_batch_type(self) -> None:
         result = JobEtlResult(etl_name="flow")
 
-        assert result.summary_fields()["batch_type"] == ""
+        assert result.get_summary()["batch_type"] == ""
 
 
 @pytest.mark.scenario_ids("TC-SEC-31-02")
@@ -433,7 +516,7 @@ class TestPolymorphicRoundTrip:
         transform = batch.start_transform("source", _FooTransformResult)
         transform.note = "hello"
         batch.start_extract("source", _FooExtractResult)
-        batch.add_load_result(LoadResult(status=EtlStatus.PROCESSED))
+        batch.add_results(LoadResult(status=EtlStatus.PROCESSED))
 
         restored = BatchEtlResult.model_validate_json(batch.model_dump_json())
 

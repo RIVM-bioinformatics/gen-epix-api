@@ -4,7 +4,6 @@ from enum import Enum
 class EtlStatus(Enum):
     """Encapsulates lifecycle outcomes for ETL and upload processing."""
 
-    INITIALIZED = "INITIALIZED"
     PENDING = "PENDING"  # Yet to be processed
     SKIPPED = "SKIPPED"  # No changes stored
     FAILED = "FAILED"

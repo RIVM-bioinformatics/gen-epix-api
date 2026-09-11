@@ -96,10 +96,10 @@ class EtlResult(BaseModel):
 
     type: str = Field(
         default="",
-        description="The class ID representing the specific ETL result subclass. This allows polymorphic deserialization of ETL results. The value is set to ID.",
+        description="The class ID representing the specific ETL result subclass. This allows polymorphic deserialization of ETL results. The value is set equal to the ID class variable.",
     )
     status: EtlStatus = Field(
-        default=EtlStatus.INITIALIZED,
+        default=EtlStatus.PENDING,
         description="The current status of the ETL operation.",
     )
     source_id: str | None = Field(
@@ -225,14 +225,14 @@ class EtlResult(BaseModel):
         return self.set_completed()
 
     def set_completed(self) -> None:
-        """Write the completion log entry and set status to SUCCESS if still INITIALIZED.
+        """Write the completion log entry and set status to SUCCESS if still PENDING.
 
-        Uses ``== INITIALIZED`` rather than ``!= ERROR`` so that subclasses can call
+        Uses ``== PENDING`` rather than ``!= ERROR`` so that subclasses can call
         their own status-propagation logic before calling super(), without the base
         method overwriting an already-set MIXED or ERROR status.
         """
         self.add_info(self.COMPLETED_CODE, self.COMPLETED_MESSAGE)
-        if self.status == EtlStatus.INITIALIZED:
+        if self.status == EtlStatus.PENDING:
             self.status = EtlStatus.SUCCESS
 
     @deprecated(reason="Use is_completed() instead.")  # type: ignore[misc]
@@ -304,7 +304,9 @@ class TransformResult(EtlResult):
     COMPLETED_MESSAGE: ClassVar[str] = "Transform completed."
     TARGET_ID_FIELD: ClassVar[str] = ""
 
-    target_id: UUID | None = None
+    target_id: UUID | None = Field(
+        default=None, description="Target ID for the transform result"
+    )
 
 
 class ExtractResult(EtlResult):
@@ -331,12 +333,8 @@ AnyLoadResult = Annotated[
 
 
 class BatchEtlResult(EtlResult):
-    """Represents a single stored batch result.
-
-    Tracks the stored batch ID and the per-subject extract, transform, and load
-    results that produced it. ``batch_id`` is ``None`` until the batch has been
-    persisted by the repository. Call ``update_status_from_transforms()`` once
-    all ``TransformResult``s are added.
+    """Represents a single ETL batch result, consisting of extract, transform, and load
+    results.
     """
 
     ID: ClassVar[str] = "b9c3e7d1"
@@ -344,17 +342,32 @@ class BatchEtlResult(EtlResult):
     COMPLETED_MESSAGE: ClassVar[str] = "Batch completed."
     SOURCE_ID_FIELD: ClassVar[str] = "BatchEtlResult.batch_id"
 
-    batch_id: UUID | None = None
-    extract_results: list[AnyExtractResult] = Field(default_factory=list)
-    transform_results: list[AnyTransformResult] = Field(default_factory=list)
-    load_results: list[AnyLoadResult] = Field(default_factory=list)
+    batch_id: str | None = Field(
+        default=None,
+        description="Identifier of the stored batch, if this result was persisted",
+    )
+    extract_results: list[AnyExtractResult] = Field(
+        default_factory=list, description="List of extract results for the batch"
+    )
+    transform_results: list[AnyTransformResult] = Field(
+        default_factory=list, description="List of transform results for the batch"
+    )
+    load_results: list[AnyLoadResult] = Field(
+        default_factory=list, description="List of load results for the batch"
+    )
+
+    @field_validator("batch_id", mode="before")
+    def _validate_batch_id(cls, value):
+        if value is not None and not isinstance(value, str):
+            return str(value)
+        return value
 
     def set_completed(self) -> None:
         """Propagate child statuses, then write the completion log entry.
 
         Calls update_status_from_extractions(), update_status_from_transforms(), and
         update_status_from_loads() first so that the final status reflects the actual
-        outcomes before the base class sets SUCCESS for any still-INITIALIZED batch
+        outcomes before the base class sets SUCCESS for any still-PENDING batch
         (i.e. one with no subjects).
         """
         self.update_status_from_extractions()
@@ -453,10 +466,6 @@ class BatchEtlResult(EtlResult):
         else:
             self.status = EtlStatus.MIXED
 
-    def add_load_result(self, result: LoadResult) -> None:
-        """Register a load result returned by the remote app."""
-        self.load_results.append(result)
-
     def update_status_from_loads(self) -> None:
         """Propagate LoadResult statuses to batch status: SUCCESS / MIXED / ERROR.
 
@@ -480,27 +489,6 @@ class BatchEtlResult(EtlResult):
             self.status = EtlStatus.FAILED
         else:
             self.status = EtlStatus.MIXED
-
-    @deprecated("Use for_source() instead")  # type: ignore[misc]
-    def for_subject(self, source_id: str) -> "BatchEtlResult":
-        return self.for_source(source_id)
-
-    def for_source(self, source_id: str) -> "BatchEtlResult":
-        """Return a copy of this batch filtered to results for a single source."""
-        retval: BatchEtlResult = self.model_copy(
-            update={
-                "extract_results": [
-                    x for x in self.extract_results if x.source_id == source_id
-                ],
-                "transform_results": [
-                    x for x in self.transform_results if x.source_id == source_id
-                ],
-                "load_results": list(
-                    self.load_results
-                ),  # LoadResult has no source_id to filter by
-            }
-        )
-        return retval
 
     def update_status_from_transforms(self) -> None:
         """Propagate TransformResult statuses: SUCCESS / MIXED / ERROR.
@@ -527,34 +515,78 @@ class BatchEtlResult(EtlResult):
         else:
             self.status = EtlStatus.MIXED
 
+    def add_results(
+        self,
+        results: (
+            list[ExtractResult | TransformResult | LoadResult]
+            | ExtractResult
+            | TransformResult
+            | LoadResult
+        ),
+    ) -> None:
+        """Add one or more ETL results (extract, transform, or load) to this batch."""
+        if not isinstance(results, list):
+            results = [results]
+        for result in results:
+            if isinstance(result, ExtractResult):
+                self.extract_results.append(result)
+            elif isinstance(result, TransformResult):
+                self.transform_results.append(result)
+            elif isinstance(result, LoadResult):
+                self.load_results.append(result)
+
+    @deprecated("Use for_source() instead")  # type: ignore[misc]
+    def for_subject(self, source_id: str) -> "BatchEtlResult":
+        return self.for_source(source_id)
+
+    def for_source(self, source_id: str) -> "BatchEtlResult":
+        """Return a copy of this batch filtered to results for a single source."""
+        retval: BatchEtlResult = self.model_copy(
+            update={
+                "extract_results": [
+                    x for x in self.extract_results if x.source_id == source_id
+                ],
+                "transform_results": [
+                    x for x in self.transform_results if x.source_id == source_id
+                ],
+                "load_results": list(
+                    self.load_results
+                ),  # LoadResult has no source_id to filter by
+            }
+        )
+        return retval
+
 
 class JobEtlResult(EtlResult):
     """Represents a top-level ETL job result.
 
     Collects ``BatchEtlResult``s as batches are stored, tracking the overall run
     status, command ID, and batch type.
-
-    Model validation: Before validation, ``_coerce_command_id`` generates a new
-    UUID for ``etl_command_id`` if one is not provided.
     """
 
     ID: ClassVar[str] = "7c1c2cce"
 
-    etl_command_id: UUID = Field(default_factory=uuid.uuid4)
-    etl_name: str
-    batch_type: str | None = None
-    batches: list[BatchEtlResult] = Field(default_factory=list)
+    job_id: str = Field(
+        default_factory=lambda: str(uuid.uuid4()),
+        description="Unique identifier for the job",
+    )
+    etl_name: str = Field(description="Name of the ETL process")
+    batch_type: str | None = Field(default=None, description="Type of the batch")
+    batches: list[BatchEtlResult] = Field(
+        default_factory=list, description="List of batches in this job"
+    )
 
-    @model_validator(mode="before")
-    @classmethod
-    def _coerce_command_id(cls, data: Any) -> Any:  # type: ignore[misc]
-        if isinstance(data, dict) and data.get("etl_command_id") is None:
-            data = {**data, "etl_command_id": uuid.uuid4()}
-        return data
+    @field_validator("job_id", mode="before")
+    def _validate_job_id(cls, value):
+        if value is None:
+            return str(uuid.uuid4())
+        elif not isinstance(value, str):
+            return str(value)
+        return value
 
     @property
-    def batch_ids(self) -> list[UUID]:
-        """UUIDs of all successfully stored batches produced in this run, in order."""
+    def batch_ids(self) -> list[str]:
+        """IDs of all successfully stored batches produced in this run, in order."""
         return [x.batch_id for x in self.batches if x.batch_id is not None]
 
     def start_batch(self) -> BatchEtlResult:
@@ -572,13 +604,13 @@ class JobEtlResult(EtlResult):
         """Set status based on ``BatchEtlResult`` statuses.
 
         Call this once the batching loop has completed normally. If status is
-        already FAILED (set via ``add_error()``), this is a no-op. INITIALIZED
+        already FAILED (set via ``add_error()``), this is a no-op. PENDING
         batches (started but containing no subjects, e.g. the terminal empty
         batch) are excluded from propagation and do not affect the outcome.
         """
         if self.status == EtlStatus.FAILED:
             return
-        processed = [x for x in self.batches if x.status != EtlStatus.INITIALIZED]
+        processed = [x for x in self.batches if x.status != EtlStatus.PENDING]
         if not processed:
             self.status = EtlStatus.SUCCESS
             return
@@ -592,18 +624,18 @@ class JobEtlResult(EtlResult):
         else:
             self.status = EtlStatus.MIXED
 
-    def summary_fields(self) -> dict[str, str | int]:
+    def get_summary(self) -> dict[str, str | int]:
         """Flatten this result into the key/value fields of a one-line run summary.
 
         Pure derived state: counts of extract / transform / load outcomes across
-        all non-INITIALIZED batches, plus the overall status and stored-batch
+        all non-PENDING batches, plus the overall status and stored-batch
         count. Intended for a uniform, machine-parseable ``run-summary`` log line
         that any ETL flow can emit regardless of its source or target system.
 
-        INITIALIZED batches (started but never given a subject, e.g. the terminal
+        PENDING batches (started but never given a subject, e.g. the terminal
         empty batch that ends a paging loop) are excluded.
         """
-        batches = [x for x in self.batches if x.status != EtlStatus.INITIALIZED]
+        batches = [x for x in self.batches if x.status != EtlStatus.PENDING]
         not_failed_load = EtlStatusSet.NOT_FAILED.value
         n_extracted_ok = n_extracted_failed = 0
         n_transformed_ok = n_transformed_failed = 0
@@ -625,7 +657,8 @@ class JobEtlResult(EtlResult):
                 else:
                     n_loaded_failed += 1
         return {
-            "flow": self.etl_name,
+            "etl_name": self.etl_name,
+            "job_id": self.job_id,
             "batch_type": self.batch_type or "",
             "status": self.status.value,
             "n_batches": len(batches),
