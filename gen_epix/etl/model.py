@@ -219,6 +219,30 @@ class Result(BaseModel):
         """Set status to FAILED."""
         self.status = EtlStatus.FAILED
 
+    def set_mixed(self) -> None:
+        """Set status to MIXED."""
+        self.status = EtlStatus.MIXED
+
+    def set_success(self) -> None:
+        """Set status to SUCCESS."""
+        self.status = EtlStatus.SUCCESS
+
+    def is_success(self) -> bool:
+        """Return True if status is SUCCESS."""
+        return self.status == EtlStatus.SUCCESS
+
+    def is_failed(self) -> bool:
+        """Return True if status is FAILED."""
+        return self.status == EtlStatus.FAILED
+
+    def is_pending(self) -> bool:
+        """Return True if status is PENDING."""
+        return self.status == EtlStatus.PENDING
+
+    def is_mixed(self) -> bool:
+        """Return True if status is MIXED."""
+        return self.status == EtlStatus.MIXED
+
     @deprecated(reason="Use set_completed() instead.")  # type: ignore[misc]
     def mark_completed(self) -> None:
         """Set the status to completed (deprecated)."""
@@ -296,6 +320,26 @@ class LoadResult(Result):
     COMPLETED_MESSAGE: ClassVar[str] = "Load completed."
 
 
+def _require_own_completed_code(cls: type) -> None:
+    """Raise if a subclass doesn't declare its own COMPLETED_CODE/COMPLETED_MESSAGE.
+
+    Without this, a subclass that misspells or forgets to override these
+    silently inherits the parent's generic completion code/message instead
+    of erroring — the bug found in idsdb's and lsp-data's own subclasses
+    after the ClassVar names were changed out from under them.
+    """
+    missing = [
+        name
+        for name in ("COMPLETED_CODE", "COMPLETED_MESSAGE")
+        if name not in cls.__dict__
+    ]
+    if missing:
+        raise TypeError(
+            f"{cls.__name__} must define its own {' and '.join(missing)} "
+            f"(inherited from {cls.__mro__[1].__name__} is not enough)."
+        )
+
+
 class TransformResult(Result):
     """Represents a transform ETL result."""
 
@@ -308,6 +352,10 @@ class TransformResult(Result):
         default=None, description="Target ID for the transform result"
     )
 
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        _require_own_completed_code(cls)
+
 
 class ExtractResult(Result):
     """Represents an extract ETL result."""
@@ -315,6 +363,10 @@ class ExtractResult(Result):
     ID: ClassVar[str] = "e5d2f8a6"
     COMPLETED_CODE: ClassVar[str] = "a5b6c7d8"
     COMPLETED_MESSAGE: ClassVar[str] = "Extract completed."
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        _require_own_completed_code(cls)
 
 
 _T_Extract = TypeVar("_T_Extract", bound=ExtractResult)
@@ -458,13 +510,13 @@ class BatchResult(Result):
         if not self.extract_results:
             return
         # Extractions that were initialized but never completed are assumed to have failed.
-        n_errors = sum(1 for x in self.extract_results if x.status != EtlStatus.SUCCESS)
+        n_errors = sum(1 for x in self.extract_results if not x.is_success())
         if n_errors == 0:
-            self.status = EtlStatus.SUCCESS
+            self.set_success()
         elif n_errors == len(self.extract_results):
-            self.status = EtlStatus.FAILED
+            self.set_failed()
         else:
-            self.status = EtlStatus.MIXED
+            self.set_mixed()
 
     def update_status_from_loads(self) -> None:
         """Propagate LoadResult statuses to batch status: SUCCESS / MIXED / ERROR.
@@ -480,15 +532,12 @@ class BatchResult(Result):
             if x.status not in EtlStatusSet.NOT_FAILED.value
         )
         if n_errors == 0:
-            if self.status not in (
-                EtlStatus.MIXED,
-                EtlStatus.FAILED,
-            ):
-                self.status = EtlStatus.SUCCESS
+            if not (self.is_mixed() or self.is_failed()):
+                self.set_success()
         elif n_errors == len(self.load_results):
-            self.status = EtlStatus.FAILED
+            self.set_failed()
         else:
-            self.status = EtlStatus.MIXED
+            self.set_mixed()
 
     def update_status_from_transforms(self) -> None:
         """Propagate TransformResult statuses: SUCCESS / MIXED / ERROR.
@@ -499,21 +548,14 @@ class BatchResult(Result):
         if not self.transform_results:
             return
         # Note that transforms that were started but never completed are assumed to have failed.
-        n_errors = sum(
-            1
-            for x in self.transform_results
-            if x.status not in EtlStatusSet.NOT_FAILED.value
-        )
+        n_errors = sum(1 for x in self.transform_results if not x.is_success())
         if n_errors == 0:
-            if self.status not in (
-                EtlStatus.MIXED,
-                EtlStatus.FAILED,
-            ):
-                self.status = EtlStatus.SUCCESS
+            if not (self.is_mixed() or self.is_failed()):
+                self.set_success()
         elif n_errors == len(self.transform_results):
-            self.status = EtlStatus.FAILED
+            self.set_failed()
         else:
-            self.status = EtlStatus.MIXED
+            self.set_mixed()
 
     def add_results(
         self,
@@ -561,6 +603,8 @@ class JobResult(Result):
     """Represents a top-level ETL job result consisting of multiple batches."""
 
     ID: ClassVar[str] = "7c1c2cce"
+    COMPLETED_CODE: ClassVar[str] = "d4e5f6a7"
+    COMPLETED_MESSAGE: ClassVar[str] = "Job completed."
 
     job_id: str = Field(
         default_factory=lambda: str(uuid.uuid4()),
@@ -604,21 +648,19 @@ class JobResult(Result):
         batches (started but containing no subjects, e.g. the terminal empty
         batch) are excluded from propagation and do not affect the outcome.
         """
-        if self.status == EtlStatus.FAILED:
+        if self.is_failed():
             return
-        processed = [x for x in self.batches if x.status != EtlStatus.PENDING]
+        processed = [x for x in self.batches if not x.is_pending()]
         if not processed:
-            self.status = EtlStatus.SUCCESS
+            self.set_success()
             return
-        n_error_or_mixed = sum(
-            1 for x in processed if x.status in (EtlStatus.FAILED, EtlStatus.MIXED)
-        )
+        n_error_or_mixed = sum(1 for x in processed if x.is_failed() or x.is_mixed())
         if n_error_or_mixed == 0:
-            self.status = EtlStatus.SUCCESS
+            self.set_success()
         elif n_error_or_mixed == len(processed):
-            self.status = EtlStatus.FAILED
+            self.set_failed()
         else:
-            self.status = EtlStatus.MIXED
+            self.set_mixed()
 
     def get_summary(self) -> dict[str, str | int]:
         """Flatten this result into the key/value fields of a one-line run summary.
@@ -631,19 +673,19 @@ class JobResult(Result):
         PENDING batches (started but never given a subject, e.g. the terminal
         empty batch that ends a paging loop) are excluded.
         """
-        batches = [x for x in self.batches if x.status != EtlStatus.PENDING]
+        batches = [x for x in self.batches if not x.is_pending()]
         not_failed_load = EtlStatusSet.NOT_FAILED.value
         n_extracted_ok = n_extracted_failed = 0
         n_transformed_ok = n_transformed_failed = 0
         n_loaded_ok = n_loaded_failed = 0
         for batch in batches:
             for extract in batch.extract_results:
-                if extract.status == EtlStatus.SUCCESS:
+                if extract.is_success():
                     n_extracted_ok += 1
                 else:
                     n_extracted_failed += 1
             for transform in batch.transform_results:
-                if transform.status == EtlStatus.SUCCESS:
+                if transform.is_success():
                     n_transformed_ok += 1
                 else:
                     n_transformed_failed += 1
