@@ -71,6 +71,32 @@ def _get_query_call_arg_ids(tree: ast.AST) -> set[int]:
     return excluded
 
 
+# Alembic migration files (gen_epix/*/repositories/sa_alembic/versions/*.py)
+# declare `revision = "<id>"` (this file's own id - a real definition, still
+# checked) and `down_revision = "<id>"` (a reference to the *previous*
+# migration's own `revision` value, by design - every migration but the
+# first in a service is expected to match an earlier file's `revision`).
+# That's the same reference-vs-definition shape as the has_log_code() case
+# above, just via assignment instead of a call - exclude only the
+# `down_revision` side.
+_REFERENCE_ASSIGNMENT_TARGETS = {"down_revision"}
+
+
+def _get_reference_assignment_value_ids(tree: ast.AST) -> set[int]:
+    """Return id() of every string-constant assigned to a reference target."""
+    excluded: set[int] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(
+            isinstance(target, ast.Name) and target.id in _REFERENCE_ASSIGNMENT_TARGETS
+            for target in node.targets
+        ):
+            continue
+        excluded.add(id(node.value))
+    return excluded
+
+
 def _extract_hex_strings_from_file(file_path: Path) -> list[tuple[str, int]]:
     """
     Parse a python file and find all string literals that match the hex criteria.
@@ -88,7 +114,9 @@ def _extract_hex_strings_from_file(file_path: Path) -> list[tuple[str, int]]:
             print(f"Skipping {file_path}: SyntaxError")
             return []
 
-        excluded_ids = _get_query_call_arg_ids(tree)
+        excluded_ids = _get_query_call_arg_ids(
+            tree
+        ) | _get_reference_assignment_value_ids(tree)
 
         # Walk AST for string literals
         for node in ast.walk(tree):
