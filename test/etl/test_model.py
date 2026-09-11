@@ -142,6 +142,19 @@ class TestEtlResult:
         assert result.is_failed()
         assert not result.is_mixed()
 
+    def test_is_unsuccessful_true_only_for_failed_and_mixed(self) -> None:
+        result = LoadResult()
+        assert not result.is_unsuccessful()  # PENDING
+
+        result.set_success()
+        assert not result.is_unsuccessful()
+
+        result.set_failed()
+        assert result.is_unsuccessful()
+
+        result.set_mixed()
+        assert result.is_unsuccessful()
+
     def test_extract_transform_subclass_missing_completed_code_raises(self) -> None:
         with pytest.raises(TypeError, match="COMPLETED_CODE and COMPLETED_MESSAGE"):
 

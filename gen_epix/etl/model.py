@@ -243,6 +243,17 @@ class Result(BaseModel):
         """Return True if status is MIXED."""
         return self.status == EtlStatus.MIXED
 
+    def is_unsuccessful(self) -> bool:
+        """Return True if status is FAILED or MIXED.
+
+        PENDING is deliberately excluded: a result that hasn't concluded yet
+        isn't unsuccessful, it's undetermined. Equivalent to
+        ``is_failed() or is_mixed()``, the recurring "did this batch/result
+        fail at least partially" check duplicated across every consumer
+        before this method existed.
+        """
+        return self.status in (EtlStatus.FAILED, EtlStatus.MIXED)
+
     @deprecated(reason="Use set_completed() instead.")  # type: ignore[misc]
     def mark_completed(self) -> None:
         """Set the status to completed (deprecated)."""
