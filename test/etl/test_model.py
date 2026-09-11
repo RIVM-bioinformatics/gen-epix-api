@@ -111,18 +111,6 @@ class TestEtlResult:
         assert failed.status is EtlStatus.FAILED
         assert failed.is_completed()
 
-    def test_deprecated_status_and_completion_aliases(self) -> None:
-        result = LoadResult()
-
-        with pytest.warns(DeprecationWarning):
-            result.mark_completed()
-        with pytest.warns(DeprecationWarning):
-            assert result.has_completed()
-        with pytest.warns(DeprecationWarning):
-            result.set_error_status()
-
-        assert result.status is EtlStatus.FAILED
-
     def test_status_predicates_reflect_current_status(self) -> None:
         result = LoadResult()
         assert result.is_pending()
@@ -325,24 +313,6 @@ class TestBatchEtlResult:
         assert batch.get_completed_transform_source_ids() == frozenset({"transform"})
         assert batch.get_completed_transform_target_ids() == frozenset({target_id})
 
-    def test_deprecated_completed_id_aliases(self) -> None:
-        target_id = uuid4()
-        batch = BatchResult(
-            extract_results=[ExtractResult(source_id="extract")],
-            transform_results=[
-                TransformResult(source_id="transform", target_id=target_id)
-            ],
-        )
-        batch.extract_results[0].set_completed()
-        batch.transform_results[0].set_completed()
-
-        with pytest.warns(DeprecationWarning):
-            assert batch.get_completed_extract_source_values() == frozenset({"extract"})
-        with pytest.warns(DeprecationWarning):
-            assert batch.get_completed_source_values() == frozenset({"transform"})
-        with pytest.warns(DeprecationWarning):
-            assert batch.get_completed_target_values() == frozenset({target_id})
-
     def test_for_source_filters_subject_results_and_copies_loads(self) -> None:
         load = LoadResult(status=EtlStatus.PROCESSED)
         batch = BatchResult(load_results=[load])
@@ -357,8 +327,6 @@ class TestBatchEtlResult:
         assert [result.source_id for result in filtered.transform_results] == ["a"]
         assert filtered.load_results == [load]
         assert filtered.load_results is not batch.load_results
-        with pytest.warns(DeprecationWarning):
-            assert batch.for_subject("a").extract_results == filtered.extract_results
 
     def test_add_single_load_result_registers_result(self) -> None:
         batch = BatchResult()

@@ -22,7 +22,6 @@ from datetime import UTC, datetime
 from typing import Annotated, Any, ClassVar, Self, TypeVar
 from uuid import UUID
 
-from deprecated import deprecated
 from pydantic import (
     BaseModel,
     BeforeValidator,
@@ -209,12 +208,6 @@ class Result(BaseModel):
         """Return a list of log items with INFO severity."""
         return [x for x in self.logs if x.severity == LogLevel.INFO]
 
-    # TODO: method kept for backwards compatibility, remove in future versions
-    @deprecated(reason="Use set_failed() instead.")  # type: ignore[misc]
-    def set_error_status(self) -> None:
-        """Set status to ERROR."""
-        return self.set_failed()
-
     def set_failed(self) -> None:
         """Set status to FAILED."""
         self.status = EtlStatus.FAILED
@@ -254,11 +247,6 @@ class Result(BaseModel):
         """
         return self.status in (EtlStatus.FAILED, EtlStatus.MIXED)
 
-    @deprecated(reason="Use set_completed() instead.")  # type: ignore[misc]
-    def mark_completed(self) -> None:
-        """Set the status to completed (deprecated)."""
-        return self.set_completed()
-
     def set_completed(self) -> None:
         """Write the completion log entry and set status to SUCCESS if still PENDING.
 
@@ -269,11 +257,6 @@ class Result(BaseModel):
         self.add_info(self.COMPLETED_CODE, self.COMPLETED_MESSAGE)
         if self.status == EtlStatus.PENDING:
             self.status = EtlStatus.SUCCESS
-
-    @deprecated(reason="Use is_completed() instead.")  # type: ignore[misc]
-    def has_completed(self) -> bool:
-        """Return True if the completion log code is present (deprecated)."""
-        return self.is_completed()
 
     def is_completed(self) -> bool:
         """Return True if the completion log code is present."""
@@ -454,10 +437,6 @@ class BatchResult(Result):
         extract_result.add_info("b6c7d8e9", "Extract started.")
         return extract_result
 
-    @deprecated("Use get_completed_extract_source_ids() instead.")
-    def get_completed_extract_source_values(self) -> frozenset[str]:
-        return self.get_completed_extract_source_ids()
-
     def get_completed_extract_source_ids(self) -> frozenset[str]:
         """Return the source_ids of all successfully completed ExtractResults."""
         return frozenset(
@@ -482,10 +461,6 @@ class BatchResult(Result):
         transform_result.add_info("d7a3f9c2", "Transform started.")
         return transform_result
 
-    @deprecated("Use get_completed_transform_source_ids() instead.")
-    def get_completed_source_values(self) -> frozenset[str]:
-        return self.get_completed_transform_source_ids()
-
     def get_completed_transform_source_ids(self) -> frozenset[str]:
         """Return the source_ids of all successfully completed TransformResults."""
         return frozenset(
@@ -493,10 +468,6 @@ class BatchResult(Result):
             for x in self.transform_results
             if x.is_completed() and x.source_id is not None
         )
-
-    @deprecated("Use get_completed_transform_target_ids() instead.")
-    def get_completed_target_values(self) -> frozenset[UUID]:
-        return self.get_completed_transform_target_ids()
 
     def get_completed_transform_target_ids(self) -> frozenset[UUID]:
         """Return the target_ids of all successfully completed TransformResults.
@@ -587,10 +558,6 @@ class BatchResult(Result):
                 self.transform_results.append(result)
             elif isinstance(result, LoadResult):
                 self.load_results.append(result)
-
-    @deprecated("Use for_source() instead")  # type: ignore[misc]
-    def for_subject(self, source_id: str) -> "BatchResult":
-        return self.for_source(source_id)
 
     def for_source(self, source_id: str) -> "BatchResult":
         """Return a copy of this batch filtered to results for a single source."""
