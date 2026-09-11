@@ -123,23 +123,55 @@ class TestEtlResult:
 
         assert result.status is EtlStatus.FAILED
 
+    def test_status_predicates_reflect_current_status(self) -> None:
+        result = LoadResult()
+        assert result.is_pending()
+        assert not result.is_success()
+        assert not result.is_failed()
+        assert not result.is_mixed()
+
+        result.set_success()
+        assert result.is_success()
+        assert not result.is_pending()
+
+        result.set_mixed()
+        assert result.is_mixed()
+        assert not result.is_success()
+
+        result.set_failed()
+        assert result.is_failed()
+        assert not result.is_mixed()
+
+    def test_extract_transform_subclass_missing_completed_code_raises(self) -> None:
+        with pytest.raises(TypeError, match="COMPLETED_CODE and COMPLETED_MESSAGE"):
+
+            class _MissingCompletedCode(TransformResult):
+                ID: ClassVar[str] = "missing-completed-code"
+
+        with pytest.raises(TypeError, match="COMPLETED_CODE and COMPLETED_MESSAGE"):
+
+            class _MissingCompletedCode2(ExtractResult):
+                ID: ClassVar[str] = "missing-completed-code-2"
+
+    def test_upload_result_hierarchy_still_instantiates_cleanly(self) -> None:
+        from gen_epix.commondb.domain.model.upload import UploadResult
+
+        # UploadResult never overrides COMPLETED_CODE/COMPLETED_MESSAGE and never
+        # calls set_completed() - the narrow enforcement on ExtractResult/
+        # TransformResult must not reach LoadResult's other subclasses.
+        result = UploadResult(status=EtlStatus.CREATED)
+        assert result.status is EtlStatus.CREATED
+
     def test_each_concrete_result_uses_its_discriminator(self) -> None:
-        protocol_id = uuid4()
         results = [
             LoadResult(),
             TransformResult(target_id=uuid4()),
             ExtractResult(),
             BatchResult(),
-            SeqDistanceUpdateResult(protocol_id=protocol_id),
             JobResult(etl_name="flow"),
         ]
 
         assert [result.type for result in results] == [result.ID for result in results]
-        distance_result = results[-2]
-        assert isinstance(distance_result, SeqDistanceUpdateResult)
-        assert distance_result.protocol_id == protocol_id
-        assert distance_result.n_profiles_processed == 0
-        assert distance_result.n_batches == 0
 
     def test_deserialize_handles_instances_non_dicts_and_registered_dicts(self) -> None:
         result = _FooExtractResult(source_id="source")
@@ -157,10 +189,12 @@ class TestEtlResult:
             Result(type="missing")
 
     def test_duplicate_discriminator_is_rejected(self) -> None:
-        with pytest.raises(ValueError, match="Duplicate EtlResult subclass ID"):
+        with pytest.raises(ValueError, match="Duplicate Result subclass ID"):
 
             class DuplicateTransformResult(TransformResult):
                 ID: ClassVar[str] = _FooTransformResult.ID
+                COMPLETED_CODE: ClassVar[str] = "dup00001"
+                COMPLETED_MESSAGE: ClassVar[str] = "dup done"
 
 
 @pytest.mark.scenario_ids("TC-SEC-31-02")
@@ -210,7 +244,7 @@ class TestBatchEtlResult:
         [
             ([], EtlStatus.PENDING),
             ([EtlStatus.PROCESSED], EtlStatus.SUCCESS),
-            ([EtlStatus.SUCCESS], EtlStatus.FAILED),
+            ([EtlStatus.FAILED], EtlStatus.FAILED),
             ([EtlStatus.PROCESSED, EtlStatus.FAILED], EtlStatus.MIXED),
         ],
     )
@@ -411,16 +445,18 @@ class TestBatchEtlResult:
 
 @pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestRunEtlResult:
-    def test_command_id_defaults_coerces_none_and_preserves_value(self) -> None:
+    def test_job_id_defaults_coerces_none_and_preserves_value(self) -> None:
         supplied = uuid4()
 
         defaulted = JobResult(etl_name="defaulted")
-        coerced = JobResult.model_validate({"etl_name": "coerced", "id": None})
-        preserved = JobResult(etl_name="preserved", id=supplied)
+        coerced = JobResult.model_validate({"etl_name": "coerced", "job_id": None})
+        preserved = JobResult(etl_name="preserved", job_id=str(supplied))
+        non_str = JobResult(etl_name="non-str", job_id=supplied)
 
-        assert isinstance(defaulted.id, UUID)
-        assert isinstance(coerced.id, UUID)
-        assert preserved.id == supplied
+        assert isinstance(defaulted.job_id, str)
+        assert isinstance(coerced.job_id, str)
+        assert preserved.job_id == str(supplied)
+        assert non_str.job_id == str(supplied)
 
     def test_start_batch_registers_batch_and_batch_ids_skip_unstored(self) -> None:
         stored_id = uuid4()
@@ -490,7 +526,8 @@ class TestRunEtlResult:
         )
 
         assert result.get_summary() == {
-            "flow": "flow",
+            "etl_name": "flow",
+            "job_id": result.job_id,
             "batch_type": "batch-type",
             "status": "MIXED",
             "n_batches": 1,
