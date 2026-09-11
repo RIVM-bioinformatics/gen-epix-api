@@ -603,7 +603,7 @@ class JobResult(Result):
     """Represents a top-level ETL job result consisting of multiple batches."""
 
     ID: ClassVar[str] = "7c1c2cce"
-    COMPLETED_CODE: ClassVar[str] = "d4e5f6a7"
+    COMPLETED_CODE: ClassVar[str] = "fd6d5984"
     COMPLETED_MESSAGE: ClassVar[str] = "Job completed."
 
     job_id: str = Field(
