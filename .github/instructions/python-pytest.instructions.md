@@ -4,7 +4,7 @@ applyTo: "gen_epix/**/*.py,test/**/*.py"
 ---
 # Python & Pytest Conventions
 
-- Use the `pytest-run` skill when available: capture a run once to a log file and
+- Use the `run-pytest` skill when available: capture a run once to a log file and
   re-inspect that file for follow-up questions instead of re-running pytest.
 - Import `MagicMock`, `Mock`, `patch` from `test.util.mock_compat`, never from
   `unittest.mock` directly.

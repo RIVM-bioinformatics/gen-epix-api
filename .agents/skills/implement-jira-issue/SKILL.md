@@ -14,7 +14,7 @@ their detailed mechanics in the owning skills.
 
 ## 1. Retrieve and assess
 
-1. Use the `jira-issues` skill to retrieve the exact issue, including its
+1. Use the `manage-jira-issues` skill to retrieve the exact issue, including its
    description, acceptance criteria, status, links, comments, and attachments
    when relevant. State the issue ID, summary, status, and requested outcome.
 2. Read the smallest relevant source, tests, configuration, documentation, and
@@ -39,30 +39,32 @@ Only after assessment:
    `git push -u origin HEAD:refs/heads/<branch-name>` and verify that it tracks
    the matching remote branch.
 
-## 3. Baseline and implement
+## 3. Create baseline and implement and test
 
-1. Unless the user declines a baseline, use the `pytest-run` skill to capture
+1. Unless the user declines a baseline, use the `run-pytest` skill to capture
    `python run.py test_all --include_e2e=False`. Record its exit status, summary,
    and existing failures. Run E2E or specialized external-service tests only
    when the issue requires them.
 2. Stop for related baseline failures. Continue past unrelated failures only
    when they can be preserved and reported explicitly.
-3. Implement the smallest coherent work items. Add focused tests for changed
-   behavior and important error paths, following `AGENTS.md`.
+3. Determine the smallest coherent work items. Implement each work item separately.
+   Add focused tests for changed behavior and important error paths, following 
+   `AGENTS.md`.
 4. After each work item, run the narrowest relevant named suite or precise
-   pytest selection using the `pytest-run` skill. Repair failures in that slice
-   before continuing.
+   pytest selection using the `run-pytest` skill. Repair failures in that slice
+   before continuing. Commit each work item separately with a clear message once
+   relevant tests pass.
 
-## 4. Validate and deliver
+## 4. Deliver
 
-1. Run focused tests and applicable quality checks from `AGENTS.md`, then
-   repeat the baseline suite unless the user declined it. Preserve every
-   baseline pass and report any unchanged unrelated failures.
+1. Repeat the baseline suite unless the user declined it. Preserve every baseline
+   pass and report any unchanged unrelated failures.
 2. Review the final diff and worktree. Use the `commit` skill for cohesive
    commits; stage only ticket work.
-3. Use the `pr` skill to create or update one draft PR targeting `dev`. Include
-   the Jira ID, behavior summary, actual validation, and baseline failures.
-4. Only after PR creation succeeds, use the `jira-issues` skill to retrieve
+3. Use the `create-or-update-pr` skill to create or update one draft PR targeting
+   `dev`. Include the Jira ID, behavior summary, actual validation, and baseline 
+   failures.
+4. Only after PR creation succeeds, use the `manage-jira-issues` skill to retrieve
    available transitions and move the issue to `In Test` when that transition
    exists. If it does not, report the available transitions instead of choosing
    a different status.

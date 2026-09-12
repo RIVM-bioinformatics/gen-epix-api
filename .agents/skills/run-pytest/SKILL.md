@@ -43,7 +43,7 @@ that file.
    whole `test/` folder:
 
    ```bash
-   python run.py test_all --include_e2e=False > tmp/pytest-run.log 2>&1; echo "exit: $?"
+   python run.py test_all --include_e2e=False > tmp/run-pytest.log 2>&1; echo "exit: $?"
    ```
 
    For an existing named or curated suite, use its `run.py` method. For a
@@ -51,7 +51,7 @@ that file.
    that target (a file, `-k EXPR`, a marker) — this is still a single capture:
 
    ```bash
-   pytest test/fastapp/unit/services/auth/test_fastapp_oauth_idp_client.py -v --tb=long -ra > tmp/pytest-run.log 2>&1; echo "exit: $?"
+   pytest test/fastapp/unit/services/auth/test_fastapp_oauth_idp_client.py -v --tb=long -ra > tmp/run-pytest.log 2>&1; echo "exit: $?"
    ```
 
    - `-v` prints one PASSED/FAILED/ERROR line per test (needed to grep by test
@@ -69,21 +69,21 @@ that file.
 
    ```bash
    # overall result + summary block (bottom of output)
-   tail -40 tmp/pytest-run.log
+   tail -40 tmp/run-pytest.log
 
    # just the failed/errored test node IDs
-   grep -E "^(FAILED|ERROR) " tmp/pytest-run.log
+   grep -E "^(FAILED|ERROR) " tmp/run-pytest.log
 
    # full traceback for one test
-   grep -n "test_upload_batch_success" tmp/pytest-run.log
-   sed -n '120,180p' tmp/pytest-run.log   # use the line number from the grep above
+   grep -n "test_upload_batch_success" tmp/run-pytest.log
+   sed -n '120,180p' tmp/run-pytest.log   # use the line number from the grep above
 
    # warnings
-   grep -A3 "warnings summary" tmp/pytest-run.log
+   grep -A3 "warnings summary" tmp/run-pytest.log
 
    # pass/fail/error counts only
-   grep -E "^[0-9]+ (passed|failed|error|skipped)" tmp/pytest-run.log
-   tail -1 tmp/pytest-run.log
+   grep -E "^[0-9]+ (passed|failed|error|skipped)" tmp/run-pytest.log
+   tail -1 tmp/run-pytest.log
    ```
 
 3. **Only re-run pytest** when you've made a code change, need a different test
@@ -111,9 +111,9 @@ confirm that teardown is intended before running it.
 
 ## Notes
 
-- One fixed filename (`tmp/pytest-run.log`) is intentional: it's per-session scratch,
+- One fixed filename (`tmp/run-pytest.log`) is intentional: it's per-session scratch,
   not a history — each new capture overwrites the last, and there's nothing to clean
-  up. Use `pytest-run-<topic>.log` only if two runs genuinely need to be compared
+  up. Use `run-pytest-<topic>.log` only if two runs genuinely need to be compared
   side by side.
 - `pyproject.toml` declares `scenario_ids`, `integration`, `performance`, and
   `e2e`; it does not declare `live`. Its `addopts` is only `-v -s`, so it does
