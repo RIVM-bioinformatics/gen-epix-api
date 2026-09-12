@@ -62,7 +62,7 @@ Useful verified commands:
 | Curated suite with coverage | `python run.py test_all --include_e2e=False` |
 | Curated suite including E2E | `python run.py test_all` |
 | Fast pytest discovery | `make test` |
-| Targeted app/scope tests | `python run.py test_<app>_<scope>` |
+| Specific test folder | `python run.py run_test "test/casedb/unit"` |
 | Format check | `isort --check-only --diff --profile black --float-to-top --line-length=88 .` and `black -l 88 --check --diff .` |
 | Autoformat | `isort --profile black .` and `black .` |
 | Pylint | `pylint ./gen_epix --disable=C0301` |
@@ -70,6 +70,7 @@ Useful verified commands:
 
 `run.py test_all` is the CI-style curated suite and writes reports below
 `test/output/`; it excludes performance tests and, when requested, E2E tests.
+`run.py run_test` targets specific test folders via the `test/` directory tree.
 `make test` is a separate raw pytest invocation. Performance tests require the
 `performance` marker, and E2E tests require their external services/configuration.
 
