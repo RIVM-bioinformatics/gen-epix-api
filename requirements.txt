@@ -8,7 +8,7 @@ gunicorn==26.2.*
 starlette==1.6.*
 httpx==0.28.1
 urllib3==2.7.0
-pyjwt==2.13.0
+pyjwt==2.14.0
 
 #database handling
 sqlalchemy==2.0.52
