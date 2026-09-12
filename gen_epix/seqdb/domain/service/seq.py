@@ -371,7 +371,7 @@ class BaseSeqService(BaseService):
     def calculate_seq_distances_for_new_profiles(
         self,
         cmd: command.CalculateSeqDistancesForNewProfilesCommand,
-    ) -> list[model.CalculateSeqDistancesResult]:
+    ) -> list[model.CalculateSeqDistancesEtlResult]:
         """Calculate distances for profiles without distance records.
 
         Args:
@@ -389,7 +389,7 @@ class BaseSeqService(BaseService):
     def update_seq_distances(
         self,
         cmd: command.UpdateSeqDistancesCommand,
-    ) -> list[model.CalculateSeqDistancesResult]:
+    ) -> list[model.CalculateSeqDistancesEtlResult]:
         """Update stored sequence-distance calculations.
 
         Args:

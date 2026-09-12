@@ -22,6 +22,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     gnupg \
     ca-certificates \
+    build-essential \
+    libstdc++6 \
     && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
         | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
     && curl -fsSL https://packages.microsoft.com/config/debian/12/prod.list \
@@ -48,7 +50,7 @@ RUN adduser \
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
-    python -m pip install -r requirements.txt pyodbc==5.2.* --no-cache-dir
+    CC=g++ CXX=g++ python -m pip install -r requirements.txt pyodbc==5.2.* --no-cache-dir
 
 COPY . /app
 

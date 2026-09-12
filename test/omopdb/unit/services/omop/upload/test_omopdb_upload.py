@@ -73,7 +73,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.commondb.domain.enum import EtlStatus, Role, UploadAction, UploadStatusSet
+from gen_epix.commondb.domain.enum import Role, UploadAction
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import (
     IdentifierForUpload,
@@ -81,6 +81,7 @@ from gen_epix.commondb.domain.model.organization import (
     User,
 )
 from gen_epix.commondb.domain.model.upload import ParentUploadResult, UploadResult
+from gen_epix.etl.enum import EtlStatus, EtlStatusSet
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.model import ModelFieldProps
@@ -91,7 +92,6 @@ from gen_epix.omopdb.domain.model import (
     MeasurementForUpload,
     MeasurementRelation,
     MeasurementRelationForUpload,
-    Observation,
     ObservationForUpload,
     Person,
     PersonBatchForUpload,
@@ -467,13 +467,13 @@ class BasePersonUploadTestCase:
     # -- Assertion helpers ---------------------------------------------------
 
     def expectBatchProcessed(self, upload_result: UploadResult) -> None:
-        if upload_result.status not in UploadStatusSet.PROCESSED.value:
+        if upload_result.status not in EtlStatusSet.SUCCEEDED.value:
             pytest.fail(
                 f"Upload was not processed, status: {upload_result.status.value}",
             )
 
     def expectBatchFailed(self, upload_result: UploadResult) -> None:
-        if upload_result.status not in UploadStatusSet.FAILED.value:
+        if upload_result.status not in EtlStatusSet.FAILED.value:
             pytest.fail(
                 f"Upload did not fail, status: {upload_result.status.value}",
             )
@@ -484,11 +484,10 @@ class BasePersonUploadTestCase:
         n_skipped: int = 0,
         n_created: int = 0,
         n_updated: int = 0,
+        n_deleted: int = 0,
         n_failed: int = 0,
         n_pending: int = 0,
         n_processed: int = 0,
-        n_initialized: int = 0,
-        n_error: int = 0,
         n_mixed: int = 0,
         n_success: int = 0,
         include_self: bool = False,
@@ -497,11 +496,10 @@ class BasePersonUploadTestCase:
             EtlStatus.SKIPPED: n_skipped,
             EtlStatus.CREATED: n_created,
             EtlStatus.UPDATED: n_updated,
+            EtlStatus.DELETED: n_deleted,
             EtlStatus.FAILED: n_failed,
             EtlStatus.PENDING: n_pending,
             EtlStatus.PROCESSED: n_processed,
-            EtlStatus.INITIALIZED: n_initialized,
-            EtlStatus.ERROR: n_error,
             EtlStatus.MIXED: n_mixed,
             EtlStatus.SUCCESS: n_success,
         }

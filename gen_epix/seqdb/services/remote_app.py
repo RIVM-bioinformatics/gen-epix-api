@@ -219,10 +219,10 @@ class SeqdbRemoteApp(CommondbRemoteApp):
     def update_seq_distances(
         self,
         cmd: command.UpdateSeqDistancesCommand,
-    ) -> list[model.CalculateSeqDistancesResult]:
+    ) -> list[model.CalculateSeqDistancesEtlResult]:
         """Trigger sequence distance calculation and return results."""
         response_body: list[dict[str, Any]] = self.request(cmd, HttpMethod.POST, model=cmd, exclude={"user"})  # type: ignore[assignment]
-        return [model.CalculateSeqDistancesResult(**x) for x in response_body]
+        return [model.CalculateSeqDistancesEtlResult(**x) for x in response_body]
 
     def retrieve_seq_distance_protocol_ids(self) -> list[UUID]:
         """Return IDs of all seq distance protocols."""

@@ -208,6 +208,40 @@ fallback remains `AGENTS.md`, which tells agents to use
 See the upstream Graphify documentation for platform-specific details:
 [Graphify README](https://github.com/Graphify-Labs/graphify/blob/v8/README.md).
 
+### Maintaining the knowledge graph
+
+The repository knowledge graph (`graphify-out/graph.json`, `GRAPH_REPORT.md`, and visualizations)
+is automatically regenerated after each merge to `dev` by the **Update Graphify Graph** CI workflow.
+
+**Manual update (local or pre-PR):**
+
+```bash
+python run.py other_graphify_update
+```
+
+This runs `graphify-out/graphify_update.py`, which regenerates the full graph (16,389 nodes,
+38,034 edges, 452 communities) in approximately **1.5 minutes**. The pipeline:
+
+1. Detects files (code + docs)
+2. Extracts code structure via AST (deterministic, cached)
+3. Merges extraction results
+4. Builds and clusters the graph
+5. Generates reports, HTML visualization, and JSON
+6. Saves cache for incremental updates
+
+**Workflow automation:**
+
+- **Post-merge to `dev`**: Graph updates are committed automatically after each successful merge
+- **On-demand**: Manually trigger via [Actions tab](../../actions/workflows/update-graphify.yml)
+- **Caching**: Graphify uses `.graphify_cache/` to speed up incremental runs on large corpora
+
+The repository exposes shared Graphify guidance through `AGENTS.md` and
+Copilot-specific `/graphify` invocation through
+`.github/copilot-instructions.md`. Other clients can reuse the generated
+artifacts when they support these conventions, but this repository does not
+configure a separate Cursor integration. (Source: `AGENTS.md#L146-L161`;
+Source: `.github/copilot-instructions.md#L29-L32`)
+
 ---
 
 ## 6. Troubleshooting Local Development

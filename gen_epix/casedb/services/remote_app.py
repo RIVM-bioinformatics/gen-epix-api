@@ -33,6 +33,9 @@ class CasedbRemoteApp(CommondbRemoteApp):
 
     ROUTE_MAP: dict[type[Command], str] = {
         command.UploadCasesCommand: "/upload/cases",
+        command.UpdateCaseCreatedInDataCollectionCommand: (
+            "/update_case_created_in_data_collection"
+        ),
         command.RetrieveCasesByQueryCommand: "/retrieve/case_ids_by_query",
         command.RetrieveCaseCohortLinksByCaseTypeCommand: "/retrieve/case_cohort_links_by_case_type",
         command.CaseTypeSetCaseTypeUpdateAssociationCommand: "/case_type_sets",
@@ -80,6 +83,10 @@ class CasedbRemoteApp(CommondbRemoteApp):
         self.register_handler(
             command.UploadCasesCommand,
             self.upload_cases,
+        )
+        self.register_handler(
+            command.UpdateCaseCreatedInDataCollectionCommand,
+            self.update_case_created_in_data_collection,
         )
         self.register_handler(
             command.RetrieveCasesByQueryCommand,
@@ -177,6 +184,22 @@ class CasedbRemoteApp(CommondbRemoteApp):
             cmd, HttpMethod.POST, model=cmd, exclude={"user"}
         )
         return model.CaseBatchUploadResult(**response_body)
+
+    def update_case_created_in_data_collection(
+        self,
+        cmd: command.UpdateCaseCreatedInDataCollectionCommand,
+    ) -> list[UUID]:
+        """Move cases to a different creating data collection over HTTP."""
+        request_body = api.UpdateCaseCreatedInDataCollectionRequestBody(
+            case_ids=cmd.case_ids,
+            target_created_in_data_collection_id=cmd.target_created_in_data_collection_id,
+        )
+        response_body: list[str] = self.request(  # type: ignore[assignment]
+            cmd,
+            HttpMethod.POST,
+            model=request_body,
+        )
+        return [UUID(x) for x in response_body]
 
     def case_type_set_case_type_update_association(
         self,

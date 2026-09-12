@@ -21,7 +21,7 @@ from gen_epix.commondb.domain.literal import (
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
 from gen_epix.fastapp.services.auth.service import AuthService
-from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
+from gen_epix.filter.datetime_range import DatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.util import copy_model_field
@@ -63,6 +63,21 @@ class CreateCaseSetRequestBody(PydanticBaseModel):
         command.CreateCaseSetCommand,
         "case_ids",
         max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
+    )
+
+
+class UpdateCaseCreatedInDataCollectionRequestBody(PydanticBaseModel):
+    """Docstring assigned automatically"""  # noqa: D415
+
+    __doc__ = command.UpdateCaseCreatedInDataCollectionCommand.__doc__
+    case_ids: list[UUID] = copy_model_field(
+        command.UpdateCaseCreatedInDataCollectionCommand,
+        "case_ids",
+        max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
+    )
+    target_created_in_data_collection_id: UUID = copy_model_field(
+        command.UpdateCaseCreatedInDataCollectionCommand,
+        "target_created_in_data_collection_id",
     )
 
 
@@ -159,7 +174,7 @@ class RetrieveCaseTypeStatsRequestBody(PydanticBaseModel):
         "case_type_ids",
         max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
     )
-    datetime_range_filter: TypedDatetimeRangeFilter | None = copy_model_field(
+    datetime_range_filter: DatetimeRangeFilter | None = copy_model_field(
         command.RetrieveCaseTypeStatsCommand, "datetime_range_filter"
     )
 
@@ -173,7 +188,7 @@ class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
         "case_set_ids",
         max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
     )
-    datetime_range_filter: TypedDatetimeRangeFilter | None = copy_model_field(
+    datetime_range_filter: DatetimeRangeFilter | None = copy_model_field(
         command.RetrieveCaseSetStatsCommand, "datetime_range_filter"
     )
 
@@ -321,6 +336,32 @@ def create_case_endpoints(
                 input_handle_exception=handle_exception,
                 input_command=command.RetrieveCompleteCaseTypeCommand(
                     user=user, case_type_id=case_type_id
+                ),
+            ),
+        )
+
+    @router.post(
+        "/update_case_created_in_data_collection",
+        operation_id="update__case_created_in_data_collection",
+        name="Update cases' creating data collection",
+        description=command.UpdateCaseCreatedInDataCollectionCommand.__doc__,
+    )
+    async def update__case_created_in_data_collection(
+        user: registered_user_dependency,  # type: ignore[valid-type]
+        request_body: UpdateCaseCreatedInDataCollectionRequestBody,
+    ) -> list[UUID]:
+        """See router description."""
+        return cast(
+            list[UUID],
+            handle_command(
+                app=app,
+                user=user,
+                exception_code="a7c1e5f9",
+                input_handle_exception=handle_exception,
+                input_command=command.UpdateCaseCreatedInDataCollectionCommand(
+                    user=user,
+                    case_ids=request_body.case_ids,
+                    target_created_in_data_collection_id=request_body.target_created_in_data_collection_id,
                 ),
             ),
         )

@@ -1,0 +1,91 @@
+name: Update Graphify Graph
+
+on:
+  # Run after successful merge to dev branch
+  push:
+    branches:
+      - dev
+    paths-ignore:
+      - ".github/workflows/update-graphify.yml"
+      - "graphify-out/**"
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+concurrency:
+  group: graphify-update-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  update-graphify:
+    name: Regenerate knowledge graph
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: 3.14
+
+      - name: Cache pip dependencies
+        id: cache-pip
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.venv
+          key: ${{ runner.os }}-graphify-pip-${{ hashFiles('**/requirements.txt') }}
+
+      - name: Install graphify
+        run: |
+          python -m pip install --upgrade pip
+          pip install graphifyy
+
+      - name: Run graphify update
+        run: |
+          python graphify-out/graphify_update.py
+
+      - name: Check for changes
+        id: check-changes
+        run: |
+          if git diff --quiet graphify-out/; then
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has-changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push graphify updates
+        if: steps.check-changes.outputs.has-changes == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add graphify-out/
+          git commit -m "chore: update knowledge graph
+
+          - Regenerate graph.json with latest codebase
+          - Update GRAPH_REPORT.md and visualizations
+          - Run by graphify post-merge pipeline"
+          git push
+
+      - name: Create pull request for graph updates
+        if: steps.check-changes.outputs.has-changes == 'true' && github.event_name == 'workflow_dispatch'
+        uses: peter-evans/create-pull-request@6d6857d36972b65feb161a90e484f2984215f83e3 # v5
+        with:
+          commit-message: "chore: update knowledge graph"
+          title: "chore: update knowledge graph"
+          body: |
+            Automated knowledge graph regeneration.
+
+            - Regenerated `graph.json` with latest codebase structure
+            - Updated `GRAPH_REPORT.md` with architectural analysis
+            - Refreshed graph visualizations
+
+            This PR was created by the graphify update workflow.
+          branch: graphify-update-${{ github.run_number }}
+          delete-branch: true
+          labels: "documentation,automated"

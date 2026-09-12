@@ -164,7 +164,7 @@ class SeqService(BaseSeqService):
                     yield header + "\n".join(
                         raw_seq[i * wrap : min((i + 1) * wrap, seq_length)]
                         for i in range(n_chunks)
-                    )
+                    ) + "\n"
 
     def convert_seq_format(self, cmd: command.ConvertSeqFormatCommand) -> list[UUID]:
         """Delegate stored sequence representation conversion."""
@@ -198,14 +198,14 @@ class SeqService(BaseSeqService):
     def calculate_seq_distances_for_new_profiles(
         self,
         cmd: command.CalculateSeqDistancesForNewProfilesCommand,
-    ) -> list[model.CalculateSeqDistancesResult]:
+    ) -> list[model.CalculateSeqDistancesEtlResult]:
         """Delegate missing-profile distance calculation to the distance operation."""
         return seq_service_calculate_seq_distances_for_new_profiles(self, cmd)
 
     def update_seq_distances(
         self,
         cmd: command.UpdateSeqDistancesCommand,
-    ) -> list[model.CalculateSeqDistancesResult]:
+    ) -> list[model.CalculateSeqDistancesEtlResult]:
         """Delegate distance updates to the distance operation."""
         return seq_service_update_seq_distances(self, cmd)
 

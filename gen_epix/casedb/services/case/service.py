@@ -95,6 +95,9 @@ from gen_epix.casedb.services.case.retrieve_similar_cases import (
 from gen_epix.casedb.services.case.retrieve_stats import (
     case_service_retrieve_case_stats,
 )
+from gen_epix.casedb.services.case.update_case_created_in_data_collection import (
+    case_service_update_case_created_in_data_collection,
+)
 from gen_epix.casedb.services.case.upload import case_service_upload_cases
 from gen_epix.commondb.domain.enum import FeatureFlag
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
@@ -168,6 +171,19 @@ class CaseService(BaseCaseService):
             FeatureDisabledServiceError: If case upload is disabled.
         """
         return case_service_upload_cases(self, cmd)
+
+    def update_case_created_in_data_collection(
+        self, cmd: command.UpdateCaseCreatedInDataCollectionCommand
+    ) -> list[UUID]:
+        """Move existing cases to a different creating data collection.
+
+        Args:
+            cmd: Case IDs and the replacement data collection ID.
+
+        Returns:
+            The updated cases.
+        """
+        return case_service_update_case_created_in_data_collection(self, cmd)
 
     def create_case_set(
         self, cmd: command.CreateCaseSetCommand
@@ -785,7 +801,7 @@ class CaseService(BaseCaseService):
         """Retrieve cases under case-level and column-level ABAC restrictions.
 
         The caller owns ``uow``. The helper may normalize
-        ``datetime_range_filter.key`` to ``"case_date"`` in place and removes
+        ``datetime_range_filter.key`` to ``"timed_at"`` in place and removes
         inaccessible entries from each returned case's ``content`` mapping. Derived
         case dates are calculated only after access filtering.
 
@@ -843,12 +859,12 @@ class CaseService(BaseCaseService):
 
         # Retrieve all cases, potentially filtered by datetime range
         if datetime_range_filter:
-            if datetime_range_filter.key and datetime_range_filter.key != "case_date":
+            if datetime_range_filter.key and datetime_range_filter.key != "timed_at":
                 raise exc.InvalidArgumentsError(
                     "c0adc8e0",
                     f"Invalid datetime range filter key: {datetime_range_filter.key}",
                 )
-            datetime_range_filter.key = "case_date"
+            datetime_range_filter.key = "timed_at"
         cases, is_max_results_exceeded = (
             self._retrieve_cases_by_ids_or_case_type_filter(
                 uow, user_id, case_type_id, case_ids, datetime_range_filter, max_n_cases

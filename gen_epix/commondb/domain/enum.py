@@ -178,44 +178,6 @@ class DevRepositoryConfigSet(Enum):
     )
 
 
-class EtlStatus(Enum):
-    """Encapsulates lifecycle outcomes for ETL and upload processing."""
-
-    INITIALIZED = "INITIALIZED"
-    PENDING = "PENDING"  # Yet to be processed
-    SKIPPED = "SKIPPED"  # No changes stored
-    FAILED = "FAILED"
-    ERROR = "ERROR"  # TODO: should likely be merged with FAILED, or at least clarify the distinction
-    CREATED = "CREATED"
-    UPDATED = "UPDATED"
-    MIXED = "MIXED"  # TODO: should likely be merged with PROCESSED, or at least clarify the distinction
-    PROCESSED = "PROCESSED"  # Skipped, created or updated (not failed)
-    SUCCESS = "SUCCESS"
-
-
-class UploadStatusSet(Enum):
-    """Encapsulates grouping of ETL statuses by failure and processing outcome."""
-
-    NOT_FAILED = frozenset(
-        {
-            EtlStatus.PENDING,
-            EtlStatus.SKIPPED,
-            EtlStatus.CREATED,
-            EtlStatus.UPDATED,
-            EtlStatus.PROCESSED,
-        }
-    )
-    FAILED = frozenset({EtlStatus.FAILED})
-    PROCESSED = frozenset(
-        {
-            EtlStatus.SKIPPED,
-            EtlStatus.CREATED,
-            EtlStatus.UPDATED,
-            EtlStatus.PROCESSED,
-        }
-    )
-
-
 class DataIssueType(Enum):
     """Encapsulates classification of data-quality issues emitted during validation and transformation."""
 

@@ -155,7 +155,7 @@ def case_service_retrieve_similar_cases(
             cases=[
                 model.SimilarCase(
                     id=x.id,
-                    case_date=x.case_date,
+                    timed_at=x.timed_at,
                 )
                 for x in similar_cases
                 if x.id is not None
