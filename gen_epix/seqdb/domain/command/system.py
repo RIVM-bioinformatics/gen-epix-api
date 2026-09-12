@@ -23,4 +23,5 @@ class DeleteAllOperationalDataCommand(CommonDeleteAllOperationalDataCommand):
         model.SampleIdentifier,
         model.SampleDataCollectionLink,
         model.Sample,
+        model.File,
     ]
