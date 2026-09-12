@@ -1,5 +1,5 @@
 ---
-name: hex-code
+name: generate-hex-code
 description: "Generate cryptographically random, collision-checked 8-hex-char codes for this codebase's short-code conventions - log/diagnostic message codes (App.create_log_message, create_static_log_message, exception codes like exc.NoResultsError), and gen_epix.etl.model.Result subclass discriminators (ID, COMPLETED_CODE). Use whenever a new one of these codes is needed - never hand-type or pattern-invent one (e.g. sequential nibbles like \"d4e5f6a7\") since low-entropy hand-made codes are easy to collide or reuse by accident, and this codebase already has hundreds of them."
 argument-hint: "Optional: number of codes needed (default 5)"
 ---
