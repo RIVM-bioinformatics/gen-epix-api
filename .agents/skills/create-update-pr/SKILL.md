@@ -1,5 +1,5 @@
 ---
-name: pr
+name: create-or-update-pr
 description: >-
   Create or update GitHub pull requests from the current git branch using the
   GitHub CLI. Use when the user asks to open a PR, create a pull request, update

@@ -1,5 +1,5 @@
 ---
-name: review
+name: review-pr
 description: >-
   Review a GitHub PR for logical soundness and repo convention adherence, optionally
   checking the changes against a stated task description. Runs repository quality gates

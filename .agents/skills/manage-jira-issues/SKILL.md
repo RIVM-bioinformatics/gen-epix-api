@@ -1,5 +1,5 @@
 ---
-name: jira-issues
+name: manage-jira-issues
 description: 'Create, update, and manage JIRA issues using the Atlassian MCP tools. Use this skill when users want to create bug reports, feature requests, or task issues, update existing issues, set fields (priority, labels, components, fix versions, due dates, custom fields), assign issues, set issue types, transition issue status, add comments or worklogs, link issues, or track blocked-by/blocking relationships. Triggers on requests like "create a JIRA issue", "file a bug in JIRA", "raise a ticket", "update LSP-1234", "set the priority", "move it to In Test", "assign the ticket", "link issues", "blocked by", "blocking", or any JIRA issue management task.'
 ---
 
