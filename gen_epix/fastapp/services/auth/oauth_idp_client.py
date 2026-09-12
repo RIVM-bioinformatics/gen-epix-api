@@ -408,7 +408,12 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
 
     def _decode_jwt_unverified(self, jwt_token: str) -> dict[str, Any]:
         """Decode jwt unverified."""
-        return jwt.decode(jwt_token, options={"verify_signature": False})  # type: ignore[no-any-return]
+        try:
+            return jwt.decode(jwt_token, options={"verify_signature": False})
+        except jwt.PyJWTError as exception:
+            raise exc.CredentialsAuthError(
+                "f6ec5507", http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+            ) from exception
 
     def retrieve_jwt_with_client_credentials_flow(
         self,

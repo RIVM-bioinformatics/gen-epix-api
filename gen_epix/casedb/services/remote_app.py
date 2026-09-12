@@ -60,7 +60,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
     }
 
     DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {
-        command.DeleteOperationalDataCommand: 300.0,
+        command.DeleteAllOperationalDataCommand: 300.0,
         command.UploadCasesCommand: 45.0,
         command.RetrieveCasesByIdCommand: 45.0,
         command.RetrieveCasesByQueryCommand: 45.0,

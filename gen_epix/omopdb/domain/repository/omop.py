@@ -13,22 +13,6 @@ class BaseOmopRepository(BaseRepository):
     """Encapsulates persistence operations for OmopDB person and specimen queries."""
 
     @abc.abstractmethod
-    def delete_operational_data(self, uow: BaseUnitOfWork) -> None:
-        """Delete all person-related and other agreed operational records.
-
-        OMOP vocabulary, health-system, metadata, and cohort-definition reference
-        records are retained. Writers must be paused. SQL changes use the caller's
-        transaction; dictionary implementations restore tables if clearing fails.
-
-        Args:
-            uow: Active unit of work owned by the service.
-
-        Raises:
-            NotImplementedError: Until implemented by a persistence backend.
-        """
-        raise NotImplementedError()
-
-    @abc.abstractmethod
     def get_person_ids_modified_in_range(
         self,
         uow: BaseUnitOfWork,

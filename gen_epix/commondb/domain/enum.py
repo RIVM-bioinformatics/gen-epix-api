@@ -29,7 +29,7 @@ class IdFactory(Enum):
 class FeatureFlag(Enum):
     """Encapsulates feature-flag keys shared by the application domains."""
 
-    ALLOW_DELETE_OPERATIONAL_DATA = "allow_delete_operational_data"
+    ALLOW_DELETE_OPERATIONAL_DATA = "ALLOW_DELETE_OPERATIONAL_DATA"
 
 
 class Role(Enum):

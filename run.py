@@ -889,6 +889,16 @@ class Run:
             ]
         )
 
+    def test_omopdb_integration_content(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/omopdb/integration/content",
+            ]
+        )
+
     def test_omopdb_integration_retrieve_persons(self) -> None:
         import pytest
 

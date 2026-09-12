@@ -3,7 +3,7 @@
 from uuid import UUID
 
 from sqlalchemy import case as sa_case
-from sqlalchemy import delete, func, union_all
+from sqlalchemy import func, union_all
 
 from gen_epix.casedb.domain import enum, model
 from gen_epix.casedb.domain.repository import BaseCaseRepository
@@ -16,13 +16,6 @@ from gen_epix.filter.datetime_range import DatetimeRangeFilter
 
 class CaseSARepository(SARepository, BaseCaseRepository):
     """Encapsulates SQLAlchemy-backed persistence for casedb case data."""
-
-    def delete_operational_data(self, uow: BaseUnitOfWork) -> None:
-        """See base method."""
-        assert isinstance(uow, SAUnitOfWork)
-        for model_class in model.OPERATIONAL_MODELS:
-            row_class = self.get_mapper(model_class).row_class
-            uow.session.execute(delete(row_class))
 
     def retrieve_case_stats(
         self,

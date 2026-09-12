@@ -12,7 +12,6 @@ from pydantic import Field, field_serializer
 
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.api.exc import handle_command
-from gen_epix.commondb.api.operational_data import create_operational_data_endpoints
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain.literal import (
     MAX_REQUEST_BODY_FILE_CONTENT_LENGTH,
@@ -257,7 +256,6 @@ def create_case_endpoints(
 ) -> None:
     """Register all non-CRUD case endpoints on the given router."""
     assert handle_exception
-    create_operational_data_endpoints(router, app, handle_exception)
     app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency
 
@@ -831,7 +829,7 @@ def create_case_endpoints(
         name="RefCol validation rules",
         description=RefColValidationRulesResponseBody.__doc__,
     )
-    async def get__ref_col__validation_rules(
+    async def ref_col__validation_rules__get(
         user: registered_user_dependency,  # type: ignore[valid-type]
     ) -> RefColValidationRulesResponseBody:
         """See router description."""

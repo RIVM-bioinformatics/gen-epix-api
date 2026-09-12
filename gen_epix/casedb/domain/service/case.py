@@ -105,20 +105,6 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
             delete_max_n_cases=self.DEFAULT_DELETE_MAX_N_CASES,
         )
 
-    @abc.abstractmethod
-    def delete_operational_data(
-        self, cmd: command.DeleteOperationalDataCommand
-    ) -> None:
-        """Reset this app's operational data when the shared feature is enabled.
-
-        Args:
-            cmd: Authorized reset command; writers must already be paused.
-
-        Raises:
-            NotImplementedError: Until implemented by the domain service.
-        """
-        raise NotImplementedError()
-
     def register_handlers(self) -> None:
         """Register case CRUD, association, retrieval, and file handlers.
 
@@ -127,7 +113,6 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
         all other commands are bound to their specialized service methods.
         """
         f = self.app.register_handler
-        f(command.DeleteOperationalDataCommand, self.delete_operational_data)
         f(command.CaseCrudCommand, self.crud_case)
         f(command.CaseIdentifierCrudCommand, self.crud_case_identifier)
         f(

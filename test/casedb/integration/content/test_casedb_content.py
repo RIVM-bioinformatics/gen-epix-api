@@ -724,3 +724,31 @@ class TestContent:
         raise ValueError(
             "No cases in a private data collection found for any case type"
         )
+
+    def test_delete_all_operational_data(self, env: Env) -> None:
+        """Delete operational content after all content scenarios have completed."""
+        root_user = env.get_root_user()
+        result = env.handle(
+            command.DeleteAllOperationalDataCommand(user=root_user),
+            use_endpoint=False,
+        )
+
+        assert result.success, {
+            key: value[:300]
+            for key, value in result.details.items()
+            if isinstance(value, str)
+        }
+        assert set(result.details) == {
+            model_class.ENTITY.name
+            for model_class in command.DeleteAllOperationalDataCommand.SORTED_OPERATIONAL_DATA_MODEL_CLASSES
+        }
+        assert (
+            env.handle(
+                command.CaseCrudCommand(
+                    user=root_user,
+                    operation=CrudOperation.READ_ALL,
+                ),
+                use_endpoint=False,
+            )
+            == []
+        )

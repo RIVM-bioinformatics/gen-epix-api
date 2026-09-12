@@ -99,9 +99,7 @@ from gen_epix.casedb.services.case.update_case_created_in_data_collection import
     case_service_update_case_created_in_data_collection,
 )
 from gen_epix.casedb.services.case.upload import case_service_upload_cases
-from gen_epix.commondb.domain.enum import FeatureFlag
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
-from gen_epix.fastapp.exc import FeatureDisabledServiceError
 from gen_epix.filter import Filter, LogicalOperator, UuidSetFilter
 from gen_epix.filter.composite import CompositeFilter
 from gen_epix.filter.datetime_range import DatetimeRangeFilter
@@ -132,25 +130,6 @@ class CaseService(BaseCaseService):
     _RETRIEVE_COMPLETE_CASE_TYPE_CACHE = (
         BaseCaseService._RETRIEVE_COMPLETE_CASE_TYPE_CACHE
     )
-
-    def delete_operational_data(
-        self, cmd: command.DeleteOperationalDataCommand
-    ) -> None:
-        """Delete case operational data in one repository unit of work.
-
-        Args:
-            cmd: Reset command authorized by the BEFORE RBAC policy.
-
-        Raises:
-            FeatureDisabledServiceError: If the reset flag is false or missing.
-        """
-        if not self.app.get_feature_flag(
-            FeatureFlag.ALLOW_DELETE_OPERATIONAL_DATA.value
-        ):
-            raise FeatureDisabledServiceError("9c154be6")
-        with self.repository.uow() as uow:
-            self.repository.delete_operational_data(uow)
-        self._RETRIEVE_COMPLETE_CASE_TYPE_CACHE.clear()
 
     def upload_cases(
         self, cmd: command.UploadCasesCommand
@@ -254,7 +233,7 @@ class CaseService(BaseCaseService):
         cache=_RETRIEVE_COMPLETE_CASE_TYPE_CACHE,
         key=lambda self, cmd: (cmd.case_type_id, cmd.user.id if cmd.user else None),
     )
-    def retrieve_complete_case_type(
+    def retrieve_complete_case_type(  # type: ignore[override]
         self,
         cmd: command.RetrieveCompleteCaseTypeCommand,
     ) -> model.CompleteCaseType:

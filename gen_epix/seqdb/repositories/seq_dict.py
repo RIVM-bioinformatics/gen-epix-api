@@ -6,7 +6,6 @@ from datetime import datetime
 from typing import Any, cast
 from uuid import UUID
 
-from gen_epix.commondb.repositories.operational_data import delete_dict_operational_data
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.repositories import DictRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
@@ -16,10 +15,6 @@ from gen_epix.seqdb.domain.repository import BaseSeqRepository
 
 class SeqDictRepository(DictRepository, BaseSeqRepository):
     """Encapsulates seqdb persistence behavior for sequence repositories using in-memory dictionaries."""
-
-    def delete_operational_data(self, uow: BaseUnitOfWork) -> None:
-        """See base method."""
-        delete_dict_operational_data(self.db, model.OPERATIONAL_MODELS)
 
     def get_sample_ids_modified_in_range(
         self,

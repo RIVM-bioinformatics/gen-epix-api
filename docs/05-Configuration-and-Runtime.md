@@ -1,4 +1,4 @@
-Creation Date: March 1, 2026
+Creation Date: 2026-03-01
 
 # Configuration & Runtime
 
@@ -30,11 +30,11 @@ Missing settings files fail fast (`FileNotFoundError`). This makes misconfigurat
 
 ### Operational-data reset
 
-`allow_delete_operational_data` defaults to `false`. When enabled for casedb,
+`allow_delete_all_operational_data` defaults to `false`. When enabled for casedb,
 seqdb, or omopdb, that application's OpenAPI document includes
-`DELETE /v1/operational_data`. Only ROOT and APP_ADMIN may call it. The operation
-deletes that application's operational records and retains common organization
-data and app-specific reference data.
+`DELETE /v1/operational_data`. Only ROOT may call it. The operation deletes that
+application's operational records and retains common organization data and
+app-specific reference data.
 
 Treat reset as a maintenance operation: pause uploads, imports, background jobs,
 and other writers; call the endpoint; then resume writers after a successful 204

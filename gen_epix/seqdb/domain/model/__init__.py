@@ -1,13 +1,9 @@
-"""Re-export seqdb domain model types and service registration metadata.
-
-``OPERATIONAL_MODELS`` lists reset targets in child-before-parent deletion order,
-preserving reusable alleles, reference data, and the separate file service.
-"""
+"""Re-export seqdb domain model types and service registration metadata."""
 
 # pylint: disable=useless-import-alias
 from gen_epix import fastapp
 from gen_epix.commondb.domain import enum as common_enum
-from gen_epix.commondb.domain import model as common_model
+from gen_epix.commondb.domain import model as commondb_model
 from gen_epix.commondb.domain.model import (
     SORTED_MODELS_BY_SERVICE_TYPE as _COMMON_SORTED_MODELS_BY_SERVICE_TYPE,
 )
@@ -178,31 +174,13 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
     }
 )
 
-OPERATIONAL_MODELS: tuple[type[fastapp.Model], ...] = (
-    SeqDistance,
-    SeqProfileIdentifier,
-    SeqProfile,
-    SeqTaxonomy,
-    SeqClassification,
-    AstPrediction,
-    SeqIdentifier,
-    Seq,
-    ReadSetIdentifier,
-    ReadSet,
-    PcrMeasurement,
-    AstMeasurement,
-    SampleIdentifier,
-    SampleDataCollectionLink,
-    Sample,
-)
-
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
 
 COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {
-    common_model.User: User,
-    common_model.UserInvitation: UserInvitation,
-    common_model.UserInvitationConstraints: UserInvitationConstraints,
-    common_model.OrganizationAdminPolicy: OrganizationAdminPolicy,
+    commondb_model.User: User,
+    commondb_model.UserInvitation: UserInvitation,
+    commondb_model.UserInvitationConstraints: UserInvitationConstraints,
+    commondb_model.OrganizationAdminPolicy: OrganizationAdminPolicy,
 }
 
 # Additional field properties for models that have already been stored (persisted)

@@ -3,7 +3,6 @@
 from datetime import date, datetime
 from uuid import UUID
 
-from gen_epix.commondb.repositories.operational_data import delete_dict_operational_data
 from gen_epix.fastapp.repositories import DictRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.omopdb.domain import model
@@ -12,10 +11,6 @@ from gen_epix.omopdb.domain.repository.omop import BaseOmopRepository
 
 class OmopDictRepository(DictRepository, BaseOmopRepository):
     """Encapsulates implementation of OMOP query operations using in-memory model collections."""
-
-    def delete_operational_data(self, uow: BaseUnitOfWork) -> None:
-        """See base method."""
-        delete_dict_operational_data(self.db, model.OPERATIONAL_MODELS)
 
     def get_person_ids_modified_in_range(
         self,

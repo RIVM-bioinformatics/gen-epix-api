@@ -245,6 +245,8 @@ class DictRepository(BaseRepository):
         """Validate that all linked model classes are known and build back-link index."""
         # Verify extra Models in db and extract reverse links
         for model_class, links in self._links.items():
+            if model_class not in self._db:
+                continue
             to_pop: list[int] = []
             self.validate_links_and_manage_extras(
                 extra_data, model_class, links, to_pop

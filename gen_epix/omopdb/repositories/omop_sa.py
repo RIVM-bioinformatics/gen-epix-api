@@ -16,13 +16,6 @@ from gen_epix.omopdb.repositories import sa_model as sa_model
 class OmopSARepository(SARepository, BaseOmopRepository):
     """Encapsulates implementation of OMOP query operations using SQLAlchemy model mappings."""
 
-    def delete_operational_data(self, uow: BaseUnitOfWork) -> None:
-        """See base method."""
-        assert isinstance(uow, SAUnitOfWork)
-        for model_class in model.OPERATIONAL_MODELS:
-            row_class = self.get_mapper(model_class).row_class
-            uow.session.execute(sa.delete(row_class))
-
     def get_person_ids_modified_in_range(
         self,
         uow: BaseUnitOfWork,

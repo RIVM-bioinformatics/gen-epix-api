@@ -5,7 +5,6 @@ from uuid import UUID
 
 from gen_epix.casedb.domain import enum, model
 from gen_epix.casedb.domain.repository import BaseCaseRepository
-from gen_epix.commondb.repositories.operational_data import delete_dict_operational_data
 from gen_epix.fastapp.repositories import DictRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.filter.datetime_range import DatetimeRangeFilter
@@ -13,10 +12,6 @@ from gen_epix.filter.datetime_range import DatetimeRangeFilter
 
 class CaseDictRepository(DictRepository, BaseCaseRepository):
     """Encapsulates dictionary-backed persistence for casedb case data."""
-
-    def delete_operational_data(self, uow: BaseUnitOfWork) -> None:
-        """See base method."""
-        delete_dict_operational_data(self.db, model.OPERATIONAL_MODELS)
 
     def retrieve_case_stats(
         self,

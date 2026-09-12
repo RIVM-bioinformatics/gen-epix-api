@@ -4,7 +4,7 @@ from test.util.mock_compat import Mock
 from typing import Any, Iterable
 from uuid import UUID, uuid4
 
-from gen_epix.casedb.domain import model as case_model
+from gen_epix.casedb.domain import model as casedb_model
 from gen_epix.commondb.domain.enum import Role
 from gen_epix.commondb.domain.model.organization import User
 from gen_epix.fastapp import CrudOperation
@@ -103,7 +103,7 @@ class BaseCrudTestCase:
         """Create mocked CaseSet objects with required attributes."""
         case_sets: list[Mock] = []
         for _ in range(n):
-            case_set: Mock = Mock(spec=case_model.CaseSet)
+            case_set: Mock = Mock(spec=casedb_model.CaseSet)
             case_set.id = uuid4()
             case_set.case_type_id = uuid4()
             case_set.created_in_data_collection_id = uuid4()

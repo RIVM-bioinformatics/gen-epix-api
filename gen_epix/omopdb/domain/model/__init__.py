@@ -4,12 +4,11 @@ The facade re-exports commondb identity, organization, authorization, and
 system models alongside OMOP clinical, ontology, metadata, and upload models.
 `SORTED_MODELS_BY_SERVICE_TYPE`, `SORTED_SERVICE_TYPES`, and
 `STORED_MODEL_FIELD_PROPS` describe their application composition.
-
-``OPERATIONAL_MODELS`` lists reset targets in child-before-parent deletion order.
 """
 
-# pylint: disable=useless-import-alias
 from gen_epix import fastapp
+
+# pylint: disable=useless-import-alias
 from gen_epix.commondb.domain import enum as common_enum
 from gen_epix.commondb.domain.model import (
     SORTED_MODELS_BY_SERVICE_TYPE as _COMMON_SORTED_MODELS_BY_SERVICE_TYPE,
@@ -250,48 +249,6 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             SpecimenIdsByCohortResult,
         ],
     }
-)
-
-OPERATIONAL_MODELS: tuple[type[fastapp.Model], ...] = (
-    Cohort,
-    ConditionEra,
-    ConditionOccurrenceIdentifier,
-    Cost,
-    DeathIdentifier,
-    DeviceExposureIdentifier,
-    DoseEra,
-    DrugEra,
-    DrugExposureIdentifier,
-    EpisodeEvent,
-    FactRelationship,
-    MeasurementIdentifier,
-    MeasurementRelationIdentifier,
-    NoteNlpIdentifier,
-    NoteNlp,
-    NoteIdentifier,
-    ObservationIdentifier,
-    ObservationPeriodIdentifier,
-    PayerPlanPeriod,
-    PersonIdentifier,
-    ProcedureOccurrenceIdentifier,
-    SpecimenIdentifier,
-    VisitDetailIdentifier,
-    VisitOccurrenceIdentifier,
-    ConditionOccurrence,
-    Death,
-    DeviceExposure,
-    DrugExposure,
-    Episode,
-    MeasurementRelation,
-    Note,
-    Observation,
-    ObservationPeriod,
-    ProcedureOccurrence,
-    Measurement,
-    Specimen,
-    VisitDetail,
-    VisitOccurrence,
-    Person,
 )
 
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())

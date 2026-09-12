@@ -12,7 +12,9 @@ from pydantic import BaseModel, Field, model_validator
 
 from gen_epix import fastapp
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model import Model
+from gen_epix.commondb.domain.model import (
+    Model,
+)
 from gen_epix.fastapp.domain import Entity
 from gen_epix.filter import CompositeFilter
 from gen_epix.filter.datetime_range import DatetimeRangeFilter

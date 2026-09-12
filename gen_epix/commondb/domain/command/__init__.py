@@ -100,7 +100,7 @@ from gen_epix.commondb.domain.command.rbac import (
     RetrieveSubRolesCommand as RetrieveSubRolesCommand,
 )
 from gen_epix.commondb.domain.command.system import (
-    DeleteOperationalDataCommand as DeleteOperationalDataCommand,
+    DeleteAllOperationalDataCommand as DeleteAllOperationalDataCommand,
 )
 from gen_epix.commondb.domain.command.system import (
     OutageCrudCommand as OutageCrudCommand,
@@ -159,11 +159,12 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[type[fastapp.Command]
     ),
     enum.ServiceType.SYSTEM: frozenset(
         {
-            DeleteOperationalDataCommand,
+            DeleteAllOperationalDataCommand,
             OutageCrudCommand,
             RetrieveFeatureFlagsCommand,
             RetrieveOutagesCommand,
             RetrieveLicensesCommand,
+            DeleteAllOperationalDataCommand,
         }
     ),
     enum.ServiceType.ABAC: frozenset(

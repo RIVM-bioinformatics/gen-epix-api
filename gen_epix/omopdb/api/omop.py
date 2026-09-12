@@ -8,7 +8,6 @@ from fastapi import APIRouter, FastAPI
 from pydantic import BaseModel as PydanticBaseModel
 
 from gen_epix.commondb.api.exc import handle_command
-from gen_epix.commondb.api.operational_data import create_operational_data_endpoints
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
@@ -43,7 +42,6 @@ def create_omop_endpoints(
 ) -> None:
     """Register OMOP upload, retrieval, and generated CRUD transport endpoints."""
     assert handle_exception
-    create_operational_data_endpoints(router, app, handle_exception)
     app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency
 

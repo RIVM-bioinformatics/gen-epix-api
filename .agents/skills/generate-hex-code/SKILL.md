@@ -12,9 +12,9 @@ places:
 - **Log/diagnostic/exception codes** — the first argument to
   `App.create_log_message(...)`, `App.create_static_log_message(...)`,
   `app.logger.info(app.create_log_message(code, msg, ...))`, and exception
-  constructors like `exc.NoResultsError(code)`, `exc.ServiceException(code,
-  msg)`. Used throughout `gen_epix/` (600+ occurrences outside `gen_epix/etl/`
-  alone) so each log line / raised exception can be grepped by its code.
+  constructors like `exc.NoResultsError(code)`, 
+  `exc.ServiceException(code, msg)`. Used throughout `gen_epix/` so each 
+  log line / raised exception can be grepped by its code.
 - **`gen_epix.etl.model.Result` subclass discriminators** —
   `ID: ClassVar[str]`, the polymorphic-deserialization key registered in
   `Result._SUBCLASS_REGISTRY` (must be globally unique across every `Result`
