@@ -11,10 +11,10 @@ from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.test.test_client import TestClient as Env
 from gen_epix.fastapp import CrudOperation
 from gen_epix.filter import (
+    CompositeFilter,
     FilterType,
     LogicalOperator,
-    TypedCompositeFilter,
-    TypedStringSetFilter,
+    StringSetFilter,
 )
 
 
@@ -71,10 +71,10 @@ class TestManual:
                 user=user,
                 case_query=model.CaseQuery(
                     case_type_id="018b8a3f-dd6e-b080-f0fb-ff724c3cb00a",
-                    filter=TypedCompositeFilter(
+                    filter=CompositeFilter(
                         type=FilterType.COMPOSITE.value,
                         filters=[
-                            TypedStringSetFilter(
+                            StringSetFilter(
                                 type=FilterType.STRING_SET.value,
                                 key=UUID("018d074d-ea0c-44bf-c104-1f8a70c02ff4"),
                                 members=["018eff72-39aa-ff2a-110c-fff954f3dc56"],

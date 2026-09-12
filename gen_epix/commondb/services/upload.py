@@ -6,7 +6,7 @@ from uuid import UUID
 
 from gen_epix import fastapp
 from gen_epix.commondb.domain import command, exc, model
-from gen_epix.commondb.domain.enum import EtlStatus, UploadAction
+from gen_epix.commondb.domain.enum import UploadAction
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import BaseIdentifier
 from gen_epix.commondb.domain.model.upload import (
@@ -16,6 +16,7 @@ from gen_epix.commondb.domain.model.upload import (
     UploadResult,
     UploadResultWithIdentifiers,
 )
+from gen_epix.etl.enum import EtlStatus
 from gen_epix.fastapp import BaseService, BaseUnitOfWork, CrudOperation, Model
 from gen_epix.fastapp.exc import DuplicateIdsError
 from gen_epix.filter import (

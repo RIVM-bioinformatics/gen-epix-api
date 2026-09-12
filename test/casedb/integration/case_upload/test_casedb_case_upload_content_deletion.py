@@ -22,10 +22,10 @@ from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.domain.enum import (
     AppType,
     DevRepositoryConfig,
-    EtlStatus,
     UploadAction,
 )
 from gen_epix.commondb.domain.util import get_app_cfgs
+from gen_epix.etl.enum import EtlStatus
 from gen_epix.fastapp import CrudOperation
 from gen_epix.seqdb.domain import enum as seqdb_enum
 

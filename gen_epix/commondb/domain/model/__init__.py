@@ -1,7 +1,8 @@
 """Re-export commondb domain models and model metadata.
 
-Base and ETL exports provide audit fields, structured result logs, and enum
-normalization. Organization exports represent organizations, users, contacts,
+Base exports provide audit fields and enum normalization helpers. ETL exports
+include logging and status-tracking accumulators for extract, transform, and load
+operations. Organization exports represent organizations, users, contacts,
 collections, invitations, and external identifiers. System and ABAC exports
 provide outage metadata and organization-administrator policies. Upload exports
 define nested upload payloads and outcomes. Model maps group persisted models
@@ -14,12 +15,13 @@ from gen_epix.commondb.domain import enum
 from gen_epix.commondb.domain.model.abac import (
     OrganizationAdminPolicy as OrganizationAdminPolicy,
 )
-from gen_epix.commondb.domain.model.base import BaseEtlResult as BaseEtlResult
-from gen_epix.commondb.domain.model.base import EtlLogItem as EtlLogItem
 from gen_epix.commondb.domain.model.base import Model as Model
 from gen_epix.commondb.domain.model.base import ModelNoId as ModelNoId
 from gen_epix.commondb.domain.model.base import (
     validate_int_enum_value as validate_int_enum_value,
+)
+from gen_epix.commondb.domain.model.base import (
+    validate_int_enum_value_or_none as validate_int_enum_value_or_none,
 )
 from gen_epix.commondb.domain.model.organization import BaseIdentifier as BaseIdentifier
 from gen_epix.commondb.domain.model.organization import Contact as Contact

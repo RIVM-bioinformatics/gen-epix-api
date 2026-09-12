@@ -273,6 +273,7 @@ class TestJwkFetching(BaseOauthIdpClientTestCase):
     def test_get_jwk_from_jwt_parsing_error_raises(self) -> None:
         # 1. Input
         client: OauthIdpClient = self.create_client()
+        jwt_token = "raw.jwt.parsing-error-canary"
 
         # 2. Mocks
         with patch(
@@ -282,12 +283,17 @@ class TestJwkFetching(BaseOauthIdpClientTestCase):
 
             # 3. Execute / 4. Verify
             with pytest.raises(exc.UnauthorizedAuthError):
-                asyncio.run(client.get_jwk_from_jwt("token"))
-        assert self.logger.warning.called is True
+                asyncio.run(client.get_jwk_from_jwt(jwt_token))
+        warning = json.loads(self.logger.warning.call_args.args[0])
+        assert warning["code"] == "4cff1367"
+        assert warning["scheme_name"] == client.scheme_name
+        assert "jwt" not in warning
+        assert jwt_token not in json.dumps(warning)
 
     def test_get_jwk_from_jwt_missing_kid_raises(self) -> None:
         # 1. Input
         client: OauthIdpClient = self.create_client()
+        jwt_token = "raw.jwt.missing-kid-canary"
 
         # 2. Mocks
         with patch(
@@ -297,7 +303,12 @@ class TestJwkFetching(BaseOauthIdpClientTestCase):
 
             # 3. Execute / 4. Verify
             with pytest.raises(exc.UnauthorizedAuthError):
-                asyncio.run(client.get_jwk_from_jwt("token"))
+                asyncio.run(client.get_jwk_from_jwt(jwt_token))
+        warning = json.loads(self.logger.warning.call_args.args[0])
+        assert warning["code"] == "0184bc35"
+        assert warning["scheme_name"] == client.scheme_name
+        assert "jwt" not in warning
+        assert jwt_token not in json.dumps(warning)
 
     def test_get_jwk_from_jwt_loads_keys_and_finds_key(self) -> None:
         # 1. Input
