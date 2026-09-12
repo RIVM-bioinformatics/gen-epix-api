@@ -12,7 +12,7 @@ from gen_epix.seqdb.services import RbacService
 
 
 class AppComposer(CommonAppComposer):
-    """Compose shared application infrastructure with seqdb domain dependencies."""
+    """Encapsulates shared infrastructure composition with seqdb dependencies."""
 
     def __init__(
         self,

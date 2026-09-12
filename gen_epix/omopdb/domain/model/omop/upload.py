@@ -6,7 +6,6 @@ from uuid import UUID
 from pydantic import Field, computed_field
 
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.base import EtlLogItem
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
@@ -16,13 +15,14 @@ from gen_epix.commondb.domain.model.upload import (
     ParentUploadResult,
     UploadResult,
 )
+from gen_epix.etl.model import LogItem
 from gen_epix.omopdb.domain.model.omop import clinical_data as model
 from gen_epix.util import copy_model_field
 
 
 class MeasurementForUpload(model.Measurement, IdentifiersMixin):
     """
-    An measurement record intended for upload. Equal to a Measurement, with
+    Represents a measurement record intended for upload. Equal to a Measurement, with
     additional variables.
     """
 
@@ -44,7 +44,7 @@ class MeasurementForUpload(model.Measurement, IdentifiersMixin):
 
 class ObservationForUpload(model.Observation, IdentifiersMixin):
     """
-    An observation record intended for upload. Equal to an Observation, with
+    Represents an observation record intended for upload. Equal to an Observation, with
     additional variables.
     """
 
@@ -66,7 +66,7 @@ class ObservationForUpload(model.Observation, IdentifiersMixin):
 
 class SpecimenForUpload(model.Specimen, IdentifiersMixin):
     """
-    A specimen record intended for upload. Equal to a Specimen, with
+    Represents a specimen record intended for upload. Equal to a Specimen, with
     additional variables.
     """
 
@@ -88,7 +88,7 @@ class SpecimenForUpload(model.Specimen, IdentifiersMixin):
 
 class MeasurementRelationForUpload(model.MeasurementRelation, IdentifiersMixin):
     """
-    A measurement relation record intended for upload. Equal to a MeasurementRelation, with
+    Represents a measurement relation record intended for upload. Equal to a MeasurementRelation, with
     additional variables.
     """
 
@@ -106,7 +106,7 @@ class MeasurementRelationForUpload(model.MeasurementRelation, IdentifiersMixin):
 
 class PersonForUpload(ParentForUpload):
     """
-    A person, together with any relevant associated data, intended for upload.
+    Represents a person, together with any relevant associated data, intended for upload.
     """
 
     ENTITY: ClassVar = ParentForUpload.model_entity().clone(
@@ -116,16 +116,21 @@ class PersonForUpload(ParentForUpload):
     IDENTIFIER_CLASS: ClassVar = model.PersonIdentifier
     PARENT_CLASS: ClassVar = model.Person
     PARENT_FIELD_NAME: ClassVar = "person"
+    # Declared in foreign-key dependency order (Specimen before Measurement,
+    # which Measurement.derived_from_specimen_id references; MeasurementRelation
+    # last, as it references Measurement). ParentForUpload.CHILD_ORDER is
+    # auto-derived from the models' relations and matches this order; it is the
+    # fallback if that derivation ever cannot run.
     CHILDREN_FIELD_NAME_MAP: ClassVar = {
-        model.Measurement: "measurements",
-        model.Observation: "observations",
         model.Specimen: "specimens",
+        model.Observation: "observations",
+        model.Measurement: "measurements",
         model.MeasurementRelation: "measurement_relations",
     }
     CHILD_FOR_UPLOAD_CLASS_MAP: ClassVar = {
-        model.Measurement: MeasurementForUpload,
-        model.Observation: ObservationForUpload,
         model.Specimen: SpecimenForUpload,
+        model.Observation: ObservationForUpload,
+        model.Measurement: MeasurementForUpload,
         model.MeasurementRelation: MeasurementRelationForUpload,
     }
     CHILD_PARENT_ID_FIELD_NAME_MAP: ClassVar = {
@@ -138,18 +143,19 @@ class PersonForUpload(ParentForUpload):
         description="The person model itself, if to be created or updated as a whole.",
     )
 
-    # Children
-    measurements: list[MeasurementForUpload] | None = Field(
+    # Children (kept in the same foreign-key dependency order as
+    # CHILDREN_FIELD_NAME_MAP)
+    specimens: list[SpecimenForUpload] | None = Field(
         default=None,
-        description="The measurements. If None, this element is not taken into consideration during the upload.",
+        description="The specimens. If None, this element is not taken into consideration during the upload.",
     )
     observations: list[ObservationForUpload] | None = Field(
         default=None,
         description="The observations. If None, this element is not taken into consideration during the upload.",
     )
-    specimens: list[SpecimenForUpload] | None = Field(
+    measurements: list[MeasurementForUpload] | None = Field(
         default=None,
-        description="The specimens. If None, this element is not taken into consideration during the upload.",
+        description="The measurements. If None, this element is not taken into consideration during the upload.",
     )
     measurement_relations: list[MeasurementRelationForUpload] | None = Field(
         default=None,
@@ -159,14 +165,15 @@ class PersonForUpload(ParentForUpload):
 
 
 class PersonDataIssue(DataIssue):
-    """Describe a validation or processing issue in an OMOP person upload."""
+    """Represents a validation or processing issue in an OMOP person upload."""
 
 
 class PersonUploadResult(ParentUploadResult):
     """
-    The result of uploading a single person.
+    Represents the result of uploading a single person.
     """
 
+    ID: ClassVar[str] = "c6dd271e"
     ENTITY: ClassVar = ParentUploadResult.model_entity().clone()
     NAME: ClassVar = "PersonUploadResult"
 
@@ -176,38 +183,38 @@ class PersonUploadResult(ParentUploadResult):
         ParentUploadResult, "data_issues"
     )
 
-    measurements: list[UploadResult] | None = Field(
+    specimens: list[UploadResult] | None = Field(
         default=None,
-        description="The results of uploading the individual measurements, if any were provided, in the same order as provided.",
+        description="The results of uploading the individual specimens, if any were provided, in the same order as provided.",
     )
     observations: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the individual observations, if any were provided, in the same order as provided.",
     )
-    specimens: list[UploadResult] | None = Field(
+    measurements: list[UploadResult] | None = Field(
         default=None,
-        description="The results of uploading the individual specimens, if any were provided, in the same order as provided.",
+        description="The results of uploading the individual measurements, if any were provided, in the same order as provided.",
     )
     measurement_relations: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the individual measurement relations, if any were provided, in the same order as provided.",
     )
 
-    def get_errors(self) -> list[EtlLogItem]:
+    def get_errors(self) -> list[LogItem]:
         """Get all data issues that are errors."""
         log_items = super().get_errors()
         if self.identifiers:
             for identifier_result in self.identifiers:
                 log_items.extend(identifier_result.get_errors())
-        if self.measurements:
-            for measurement_result in self.measurements:
-                log_items.extend(measurement_result.get_errors())
-        if self.observations:
-            for observation_result in self.observations:
-                log_items.extend(observation_result.get_errors())
         if self.specimens:
             for specimen_result in self.specimens:
                 log_items.extend(specimen_result.get_errors())
+        if self.observations:
+            for observation_result in self.observations:
+                log_items.extend(observation_result.get_errors())
+        if self.measurements:
+            for measurement_result in self.measurements:
+                log_items.extend(measurement_result.get_errors())
         if self.measurement_relations:
             for measurement_relation_result in self.measurement_relations:
                 log_items.extend(measurement_relation_result.get_errors())
@@ -216,7 +223,7 @@ class PersonUploadResult(ParentUploadResult):
 
 class PersonBatchForUpload(BaseBatchForUpload):
     """
-    A set of persons intended for upload, together with any new reference data required
+    Represents a set of persons intended for upload, together with any new reference data required
     for the storage of these data.
     """
 
@@ -313,9 +320,10 @@ class PersonBatchForUpload(BaseBatchForUpload):
 
 class PersonBatchUploadResult(BaseBatchUploadResult):
     """
-    The result of uploading a batch of persons.
+    Represents the result of uploading a batch of persons.
     """
 
+    ID: ClassVar[str] = "3d81faf1"
     ENTITY: ClassVar = BaseBatchForUpload.model_entity().clone()
     NAME: ClassVar = "PersonBatchUploadResult"
 

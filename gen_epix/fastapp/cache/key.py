@@ -21,7 +21,7 @@ SELF_PARAMETER_NAMES: frozenset[str] = frozenset({"self", "cls"})
 
 @runtime_checkable
 class KeyGeneratorFactory(Protocol):
-    """Produce the key generator for one decorated function."""
+    """Encapsulates producing the key generator for one decorated function."""
 
     def __call__(
         self,
@@ -288,7 +288,7 @@ def length_conditional_mangler(
 
 @dataclass(slots=True)
 class KeySpec:
-    """Declare how the keys of one cached function are composed.
+    """Encapsulates declaring how the keys of one cached function are composed.
 
     Attributes:
         namespace: Extra discriminator appended to the function namespace.

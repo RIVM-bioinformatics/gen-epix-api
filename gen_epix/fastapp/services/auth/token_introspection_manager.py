@@ -15,7 +15,7 @@ from gen_epix.fastapp.services.auth.model import OidcServerCfg
 
 
 class TokenIntrospectionManager:
-    """Manage token introspection and discovery-endpoint caching."""
+    """Encapsulates managing token introspection and discovery-endpoint caching."""
 
     DEFAULT_INTROSPECTION_REQUEST_HEADERS: dict[str, str] = {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -61,14 +61,14 @@ class TokenIntrospectionManager:
         self._validate_discovery_url()
 
         class IntrospectionCacheEntry(TypedDict):
-            """Cache entry for a token introspection response."""
+            """Encapsulates caching entry for a token introspection response."""
 
             active: bool | None
             last_checked: int
             exp: int
 
         class IntrospectionEndpointRetrievalCacheEntry(TypedDict):
-            """Cache entry for an identity provider's introspection endpoint."""
+            """Encapsulates caching entry for an identity provider's introspection endpoint."""
 
             endpoint: str | None
             last_checked: int

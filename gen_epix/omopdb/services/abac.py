@@ -7,6 +7,6 @@ from gen_epix.omopdb.domain.service import BaseAbacService
 
 
 class AbacService(BaseAbacService):
-    """Provide the OmopDB ABAC service with no extra cache invalidation commands."""
+    """Encapsulates the OmopDB ABAC service with no extra cache invalidation commands."""
 
     CACHE_INVALIDATION_COMMANDS: tuple[type[Command], ...] = tuple()

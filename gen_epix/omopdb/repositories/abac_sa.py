@@ -5,4 +5,4 @@ from gen_epix.omopdb.domain.repository import BaseAbacRepository
 
 
 class AbacSARepository(SARepository, BaseAbacRepository):
-    """Implement the OmopDB ABAC repository contract with SQLAlchemy storage."""
+    """Encapsulates implementation of the OmopDB ABAC repository contract with SQLAlchemy storage."""

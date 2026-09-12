@@ -17,8 +17,8 @@ from gen_epix.util import copy_model_field
 
 
 class OrganizationSetOrganizationUpdateAssociationCommand(UpdateAssociationCommand):
-    """
-    Updates the association between an {organization_set}s and {organization}s.
+    """Represents a request to update the association between an OrganizationSet and
+    Organizations.
 
     This command manages the many-to-many relationship by creating or updating
     {organization_set_member} associations between organization sets and
@@ -41,8 +41,8 @@ class OrganizationSetOrganizationUpdateAssociationCommand(UpdateAssociationComma
 
 
 class DataCollectionSetDataCollectionUpdateAssociationCommand(UpdateAssociationCommand):
-    """
-    Updates the association between {data_collection_set}s and {data_collection}s.
+    """Represents a request to update the association between a DataCollectionSet and
+    DataCollections.
 
     This command manages the many-to-many relationship by creating or updating
     {data_collection_set_member} associations between data collection sets and
@@ -65,7 +65,7 @@ class DataCollectionSetDataCollectionUpdateAssociationCommand(UpdateAssociationC
 
 
 class InviteUserCommand(Command):
-    """Create and return a {user_invitation} for a new user.
+    """Represents a request to create and return a {user_invitation} for a new user.
 
     The invitation records a particular user key claim (e.g. email address),
     organization and initial role(s).
@@ -85,7 +85,7 @@ class InviteUserCommand(Command):
 
 
 class RegisterInvitedUserCommand(Command):
-    """Register the user represented by an existing {user_invitation}.
+    """Represents a request to register the user represented by an existing {user_invitation}.
 
     The token must match
     that of an existing {user_invitation}. The newly registered user is assigned
@@ -98,8 +98,7 @@ class RegisterInvitedUserCommand(Command):
 
 
 class RetrieveOrganizationContactsCommand(Command):
-    """
-    Retrieves {contact}s associated with organizations, sites, or specific contacts.
+    """Represents a request to retrieve {contact}s associated with organizations, sites, or specific contacts.
 
     Exactly one of organization_ids, site_ids, or contact_ids must be provided.
     Returns a list of contacts with their associated site and organization data
@@ -114,7 +113,7 @@ class RetrieveOrganizationContactsCommand(Command):
 
 
 class UpdateUserCommand(Command):
-    """Update an existing {user}'s status, roles, and organization membership.
+    """Represents a request to update an existing {user}'s status, roles, and organization membership.
 
     The target user is identified by tgt_user_id. Any field set to None will
     leave that property unchanged. Roles cannot be set to an empty set.
@@ -132,8 +131,7 @@ class UpdateUserCommand(Command):
 
 
 class UpdateUserOwnOrganizationCommand(Command):
-    """
-    Updates the current user's {organization} membership.
+    """Represents a request to update the current user's {organization} membership.
 
     This command allows a user to change their own organization association.
     The is_new_user flag indicates whether this is part of a new user
@@ -147,8 +145,8 @@ class UpdateUserOwnOrganizationCommand(Command):
 
 
 class RetrieveInviteUserConstraintsCommand(Command):
-    """
-    Retrieves the constraints for inviting a user, such as valid roles and organizations.
+    """Represents a request to retrieve the constraints for inviting a user, such as
+    valid roles and organizations.
 
     This command is used to gather the necessary information for the user invitation process.
     """
@@ -157,7 +155,8 @@ class RetrieveInviteUserConstraintsCommand(Command):
 
 
 class RetrieveOrganizationAdminNameEmailsCommand(Command):
-    """Retrieve organization administrator names and email addresses.
+    """Represents a request to retrieve the names and email addresses of organization
+    administrators.
 
     Results include all administrators for the user's
     organization.
@@ -167,7 +166,7 @@ class RetrieveOrganizationAdminNameEmailsCommand(Command):
 
 
 class AnonymizeUserCommand(Command):
-    """Anonymize a target user according to GDPR requirements.
+    """Represents a request to anonymize a target user according to GDPR requirements.
 
     This removes the target user's name and replaces its key with the user ID (a random
     UUID), so that they can no longer be identified directly. Because the key is
@@ -181,73 +180,73 @@ class AnonymizeUserCommand(Command):
 
 
 class OrganizationCrudCommand(CrudCommand):
-    """Perform CRUD operations for organization records."""
+    """Represents a request to perform a CRUD operation on Organizations."""
 
     MODEL_CLASS: ClassVar = model.Organization
 
 
 class UserCrudCommand(CrudCommand):
-    """Perform CRUD operations for user records."""
+    """Represents a request to perform a CRUD operation on Users."""
 
     MODEL_CLASS: ClassVar = model.User
 
 
 class UserInvitationCrudCommand(CrudCommand):
-    """Perform CRUD operations for user invitation records."""
+    """Represents a request to perform a CRUD operation on UserInvitations."""
 
     MODEL_CLASS: ClassVar = model.UserInvitation
 
 
 class OrganizationSetCrudCommand(CrudCommand):
-    """Perform CRUD operations for organization-set records."""
+    """Represents a request to perform a CRUD operation on OrganizationSets."""
 
     MODEL_CLASS: ClassVar = model.OrganizationSet
 
 
 class OrganizationSetMemberCrudCommand(CrudCommand):
-    """Perform CRUD operations for organization-set membership records."""
+    """Represents a request to perform a CRUD operation on OrganizationSetMembers."""
 
     MODEL_CLASS: ClassVar = model.OrganizationSetMember
 
 
 class SiteCrudCommand(CrudCommand):
-    """Perform CRUD operations for organization site records."""
+    """Represents a request to perform a CRUD operation on Sites."""
 
     MODEL_CLASS: ClassVar = model.Site
 
 
 class ContactCrudCommand(CrudCommand):
-    """Perform CRUD operations for organization contact records."""
+    """Represents a request to perform a CRUD operation on Contacts."""
 
     MODEL_CLASS: ClassVar = model.Contact
 
 
 class IdentifierIssuerCrudCommand(CrudCommand):
-    """Perform CRUD operations for identifier issuer records."""
+    """Represents a request to perform a CRUD operation on IdentifierIssuers."""
 
     MODEL_CLASS: ClassVar = model.IdentifierIssuer
 
 
 class DataCollectionCrudCommand(CrudCommand):
-    """Perform CRUD operations for data-collection records."""
+    """Represents a request to perform a CRUD operation on DataCollections."""
 
     MODEL_CLASS: ClassVar = model.DataCollection
 
 
 class DataCollectionSetCrudCommand(CrudCommand):
-    """Perform CRUD operations for data-collection-set records."""
+    """Represents a request to perform a CRUD operation on DataCollectionSets."""
 
     MODEL_CLASS: ClassVar = model.DataCollectionSet
 
 
 class DataCollectionSetMemberCrudCommand(CrudCommand):
-    """Perform CRUD operations for data-collection-set membership records."""
+    """Represents a request to perform a CRUD operation on DataCollectionSetMembers."""
 
     MODEL_CLASS: ClassVar = model.DataCollectionSetMember
 
 
 class OrganizationIdentifierIssuerLinkCrudCommand(CrudCommand):
-    """Perform CRUD operations for organization-identifier issuer links."""
+    """Represents a request to perform a CRUD operation on OrganizationIdentifierIssuerLinks."""
 
     MODEL_CLASS: ClassVar = model.OrganizationIdentifierIssuerLink
 
@@ -255,7 +254,8 @@ class OrganizationIdentifierIssuerLinkCrudCommand(CrudCommand):
 class OrganizationIdentifierIssuerLinkUpdateAssociationCommand(
     UpdateAssociationCommand
 ):
-    """Create or update organization-to-identifier issuer associations."""
+    """Represents a request to update the association between an Organization and
+    IdentifierIssuers."""
 
     ASSOCIATION_CLASS: ClassVar = model.OrganizationIdentifierIssuerLink
     LINK_FIELD_NAME1: ClassVar = "organization_id"

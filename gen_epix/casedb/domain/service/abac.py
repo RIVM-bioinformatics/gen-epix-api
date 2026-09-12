@@ -1,3 +1,5 @@
+"""Define the Casedb ABAC service contract and command classifications."""
+
 import abc
 
 from gen_epix.casedb.domain import command, model
@@ -7,6 +9,13 @@ from gen_epix.commondb.services import AbacService as CommonAbacService
 
 
 class BaseAbacService(CommonAbacService):
+    """Encapsulates Casedb access resolution and command scope metadata.
+
+    The command sets extend shared Commondb ABAC classifications with Casedb
+    policy and case operations. Concrete services resolve case and reference
+    data access for policies in the command lifecycle.
+    """
+
     SERVICE_TYPE = ServiceType.ABAC
 
     ORGANIZATION_ADMIN_WRITE_COMMANDS: set[type[Command]] = {  # type: ignore[assignment]
@@ -83,10 +92,32 @@ class BaseAbacService(CommonAbacService):
 
     @abc.abstractmethod
     def get_case_abac(self, cmd: command.Command) -> model.CaseAbac:
-        """Get case access control permissions for command."""
+        """Resolve case access control for a command.
+
+        Args:
+            cmd: Command whose user and operation determine access.
+
+        Returns:
+            Effective case access for the command.
+
+        Raises:
+            NotImplementedError: Always, until a concrete ABAC service
+                implements the resolution.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
     def get_ref_data_access(self, cmd: command.Command) -> model.RefDataAccess:
-        """Get reference data access permissions for command."""
+        """Resolve reference-data access control for a command.
+
+        Args:
+            cmd: Command whose user determines reference-data access.
+
+        Returns:
+            Effective reference-data access for the command.
+
+        Raises:
+            NotImplementedError: Always, until a concrete ABAC service
+                implements the resolution.
+        """
         raise NotImplementedError()

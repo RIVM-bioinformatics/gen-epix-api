@@ -15,6 +15,9 @@ from gen_epix.seqdb.services.seq.calculate_seq_distance import (
     seq_service_retrieve_seq_distance_last_modified,
     seq_service_update_seq_distances,
 )
+from gen_epix.seqdb.services.seq.convert_seq_format import (
+    seq_service_convert_seq_format,
+)
 from gen_epix.seqdb.services.seq.crud_allele import seq_service_crud_allele
 from gen_epix.seqdb.services.seq.crud_ast_measurement import (
     seq_service_crud_ast_measurement,
@@ -90,7 +93,7 @@ from gen_epix.seqdb.services.seq.upload import seq_service_upload_samples
 
 
 class SeqService(BaseSeqService):
-    """Implement seqdb commands through specialized service operations."""
+    """Encapsulates seqdb commands through specialized service operations."""
 
     def upload_samples(
         self,
@@ -139,7 +142,11 @@ class SeqService(BaseSeqService):
                     yield header + "\n".join(
                         raw_seq[i * wrap : min((i + 1) * wrap, seq_length)]
                         for i in range(n_chunks)
-                    )
+                    ) + "\n"
+
+    def convert_seq_format(self, cmd: command.ConvertSeqFormatCommand) -> list[UUID]:
+        """Delegate stored sequence representation conversion."""
+        return seq_service_convert_seq_format(self, cmd)
 
     def retrieve_similar_profiles(
         self,
@@ -169,14 +176,14 @@ class SeqService(BaseSeqService):
     def calculate_seq_distances_for_new_profiles(
         self,
         cmd: command.CalculateSeqDistancesForNewProfilesCommand,
-    ) -> list[model.CalculateSeqDistancesResult]:
+    ) -> list[model.CalculateSeqDistancesEtlResult]:
         """Delegate missing-profile distance calculation to the distance operation."""
         return seq_service_calculate_seq_distances_for_new_profiles(self, cmd)
 
     def update_seq_distances(
         self,
         cmd: command.UpdateSeqDistancesCommand,
-    ) -> list[model.CalculateSeqDistancesResult]:
+    ) -> list[model.CalculateSeqDistancesEtlResult]:
         """Delegate distance updates to the distance operation."""
         return seq_service_update_seq_distances(self, cmd)
 

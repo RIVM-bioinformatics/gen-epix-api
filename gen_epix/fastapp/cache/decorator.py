@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 
 class CachedFunction:
-    """Wrap a function so that its results are cached and can be invalidated.
+    """Encapsulates wrapping a function so that its results are cached and can be invalidated.
 
     An instance behaves like the wrapped function and additionally acts as a
     descriptor, so it can decorate a plain function or a method. The receiver of
@@ -221,7 +221,7 @@ class CachedFunction:
 
 
 class AsyncCachedFunction(CachedFunction):
-    """Cache the results of a coroutine function.
+    """Encapsulates caching the results of a coroutine function.
 
     Only the call path differs from `CachedFunction`: it awaits the wrapped
     function and coordinates concurrent awaits for the same key. `refresh` and
@@ -286,7 +286,7 @@ class AsyncCachedFunction(CachedFunction):
 
 
 class BoundCachedFunction:
-    """Forward the receiver of a cached method to every cache operation.
+    """Encapsulates forwarding the receiver of a cached method to every cache operation.
 
     Accessing a `CachedFunction` on an instance yields one of these, so that
     ``instance.method.invalidate(x)`` reaches the same entry as

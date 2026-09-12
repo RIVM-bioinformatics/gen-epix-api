@@ -18,7 +18,7 @@ from gen_epix.fastapp.model import Command, CrudCommand, Model, Permission
 
 
 class Domain:
-    """Register the metadata that defines an application's domain."""
+    """Encapsulates registering the metadata that defines an application's domain."""
 
     CRUD_PERMISSION_TYPE_MAP: dict[CrudOperation, PermissionType] = {
         CrudOperation.CREATE_ONE: PermissionType.CREATE,

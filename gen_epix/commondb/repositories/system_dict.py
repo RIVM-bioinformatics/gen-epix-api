@@ -5,6 +5,6 @@ from gen_epix.fastapp.repositories import DictRepository
 
 
 class SystemDictRepository(DictRepository, BaseSystemRepository):
-    """Store system records using FastApp's dictionary repository backend."""
+    """Encapsulates storage of system records using FastApp's dictionary repository backend."""
 
     pass

@@ -13,7 +13,7 @@ from gen_epix.transform.transformer import Transformer
 
 # TODO: make this a regular class and add methods like __in__ that take another interval, a number or None; __eq__, __lt__, __gt__, __le__, __ge__, __str__, __repr__ etc., moving this logic from the two tranformer classes here
 class IntervalDict(TypedDict):
-    """Normalized interval bounds and endpoint-inclusivity metadata."""
+    """Encapsulates normalized interval bounds and endpoint metadata."""
 
     name: Hashable
     lb: float
@@ -23,7 +23,7 @@ class IntervalDict(TypedDict):
 
 
 class IntervalTransformer(Transformer):
-    """Map a numeric field to the name of its configured interval.
+    """Encapsulates mapping a numeric field to its configured interval.
 
     Bounds may be open or closed and `None` represents an unbounded endpoint.
     """
@@ -205,7 +205,7 @@ class IntervalTransformer(Transformer):
 
 
 class IntervalToIntervalTransformer(Transformer):
-    """Map an interval label from one categorization to another.
+    """Encapsulates mapping interval labels between categorizations.
 
     Source intervals are mapped to contained target intervals, or to the target
     with the largest overlap when that strategy is configured.

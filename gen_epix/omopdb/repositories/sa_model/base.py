@@ -14,7 +14,7 @@ from gen_epix.commondb.repositories.sa_model import (
 @declarative_mixin
 class DataLineageMixin:
     """
-    SQLAlchemy model mixin for adding a number of standard fields.
+    Encapsulates a SQLAlchemy model mixin for adding a number of standard fields.
     """
 
     provenance_id: Mapped[UUID | None] = mapped_column(UUIDType(), nullable=True)

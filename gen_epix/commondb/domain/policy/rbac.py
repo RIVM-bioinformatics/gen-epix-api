@@ -7,7 +7,7 @@ from gen_epix.fastapp import Policy
 
 
 class BaseIsPermissionSubsetNewRolePolicy(Policy):
-    """Prevent creation or updates that would elevate a role's permissions.
+    """Encapsulates prevention of creation or updates that would elevate a role's permissions.
 
     The policy checks whether the user has the required permissions to create or update a
     role.

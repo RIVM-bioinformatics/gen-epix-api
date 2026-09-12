@@ -41,6 +41,7 @@ class DummyCmd:
         )
         self.is_update = Mock(return_value=operation in CrudOperationSet.UPDATE.value)
         self.is_delete = Mock(return_value=operation in CrudOperationSet.DELETE.value)
+        self.is_delete_all = Mock(return_value=operation == CrudOperation.DELETE_ALL)
 
     def get_obj_ids(self, as_set: bool = False) -> set[UUID] | None:
         return self._obj_ids if as_set else (self._obj_ids or set())
@@ -402,6 +403,31 @@ class TestCrudWithAccessFilter(BaseCrudTestCase):
             operation=CrudOperation.DELETE_ALL,
             user_id=self.user_id,
             obj_ids={uuid4()},
+        )
+
+        # 2. Execute
+        _ = crud_common.crud_with_access_filter(
+            self.service, self.uow, cmd, access_filter=None, cascade_if_delete=True  # type: ignore[arg-type]
+        )
+
+        # 3. Verify
+        self.service.repository.crud.assert_not_called()
+
+    def test_delete_all_skips_cascade(self) -> None:
+        # 1. Input
+        model_class = type("ModelA", (), {})
+        link_model_class = type("LinkModel", (), {})
+        entity = DummyEntity(
+            links={
+                "l1": DummyLink(link_model_class=model_class, link_field_name="fk_id")
+            }
+        )
+        setattr(link_model_class, "ENTITY", entity)
+        self.service.CASCADE_DELETE_MODEL_CLASSES[model_class] = (link_model_class,)
+        cmd: DummyCmd = DummyCmd(
+            model_class=model_class,
+            operation=CrudOperation.DELETE_ALL,
+            user_id=self.user_id,
         )
 
         # 2. Execute

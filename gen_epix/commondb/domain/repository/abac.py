@@ -4,6 +4,6 @@ from gen_epix.fastapp import BaseRepository
 
 
 class BaseAbacRepository(BaseRepository):
-    """Provide the persistence boundary for organization-administration policies."""
+    """Encapsulates the persistence boundary for organization-administration policies."""
 
     pass

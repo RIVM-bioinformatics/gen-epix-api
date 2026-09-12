@@ -11,7 +11,9 @@ from gen_epix.filter.enum import FilterType
 
 class Filter(BaseModel):
     """
-    Base class for filters.
+    Represents a filter.
+
+    This is a base class from which all actual filter implementations inherit.
 
     Attributes:
         invert (bool): Whether to invert the filter.
@@ -27,6 +29,7 @@ class Filter(BaseModel):
         description="The column key to apply the filter to, when applied to a row. If None, the filter cannot be applied to a row, only to a column.",
         json_schema_extra={"type": "string"},
     )
+    type: Literal[FilterType.BASE.value] = FilterType.BASE.value  # type: ignore[name-defined]
     _is_composite: bool = False
 
     @property
@@ -290,9 +293,3 @@ class Filter(BaseModel):
         if axis == 1:
             return self.filter_column(data, na_values=na_values, map_fn=map_fn)
         raise ValueError("Axis must be 0 or 1.")
-
-
-class TypedFilter(Filter):
-    """Base filter carrying an explicit serialized filter type."""
-
-    type: Literal[FilterType.BASE.value]

@@ -16,7 +16,7 @@ from gen_epix.fastapp.cache.exc import CacheConfigurationError
 
 
 class EvictionStrategy(ABC):
-    """Track access order or frequency and nominate eviction victims.
+    """Encapsulates tracking access order or frequency and nominate eviction victims.
 
     A backend calls `record_write` for every stored entry, `record_access` for
     every hit and `record_removal` whenever an entry leaves, then asks for a
@@ -67,7 +67,7 @@ class EvictionStrategy(ABC):
 
 
 class LRUEviction(EvictionStrategy):
-    """Evict the least recently used entry."""
+    """Encapsulates evicting the least recently used entry."""
 
     __slots__ = ("_order",)
 
@@ -103,7 +103,7 @@ class LRUEviction(EvictionStrategy):
 
 
 class FIFOEviction(EvictionStrategy):
-    """Evict the entry that was written first, ignoring reads."""
+    """Encapsulates evicting the entry that was written first, ignoring reads."""
 
     __slots__ = ("_order",)
 
@@ -140,7 +140,7 @@ class FIFOEviction(EvictionStrategy):
 
 
 class LFUEviction(EvictionStrategy):
-    """Evict the entry that has been read least often.
+    """Encapsulates evicting the entry that has been read least often.
 
     Selecting a victim scans the tracked keys, so this strategy suits caches of
     moderate size where retention should follow long-term popularity.
@@ -181,7 +181,7 @@ class LFUEviction(EvictionStrategy):
 
 
 class RandomEviction(EvictionStrategy):
-    """Evict an arbitrary entry.
+    """Encapsulates evicting an arbitrary entry.
 
     Random replacement keeps bookkeeping to a minimum and degrades gracefully
     under workloads without temporal locality.
@@ -224,7 +224,7 @@ class RandomEviction(EvictionStrategy):
 
 
 class CountMinSketch:
-    """Estimate access frequencies in fixed memory.
+    """Encapsulates estimating access frequencies in fixed memory.
 
     Counters are shared between keys, so an estimate never underreports but may
     overreport. Halving all counters once a sample budget is reached ages out
@@ -296,7 +296,7 @@ class CountMinSketch:
 
 
 class TinyLFUEviction(EvictionStrategy):
-    """Combine recency ordering with frequency-based admission.
+    """Encapsulates combining recency ordering with frequency-based admission.
 
     Victims are chosen by recency, but a candidate is only admitted when the
     sketch believes it is at least as popular as the victim. This preserves a

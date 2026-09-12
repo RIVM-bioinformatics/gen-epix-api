@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Post inline review comments to a GitHub PR via the REST API.
-# Shared by Claude Code, Codex, and GitHub Copilot.
+# Used by the repository's PR review skill.
 #
 # Input (stdin): JSON {pr_number, comments: [{file, line, start_line?, start_side?, side?, body}, ...]}
 #   - pr_number: the target PR number (required)
@@ -11,10 +11,16 @@
 #   - comments[].side: "RIGHT" (default, new code) or "LEFT" (old code) — optional
 #   - comments[].body: markdown comment body (required)
 # Output (stdout): JSON {success, posted: [idx...], failed: [{index, file, line, error}], error}
+# Dependencies: bash, jq, git, and an authenticated gh CLI.
 # Exit 0 always; the caller inspects the JSON.
 set -euo pipefail
 
 ai_attribution='*AI-generated comment; not written by the person posting this review.*'
+
+if ! command -v jq >/dev/null 2>&1; then
+  printf '%s\n' '{"success":false,"posted":[],"failed":[],"error":"jq is required but was not found"}'
+  exit 0
+fi
 
 input=$(cat)
 if ! jq -e . >/dev/null 2>&1 <<<"$input"; then

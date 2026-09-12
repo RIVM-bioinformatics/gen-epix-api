@@ -553,7 +553,7 @@ class BaseCaseValidatorTestCase:
                 content=content,
             )
             cases_for_upload.append(model.CaseForUpload(case=c))
-            # Initialize validated_content with the original content so case_date
+            # Initialize validated_content with the original content so timed_at
             # calculation can operate on the expected updated values without
             # needing the full validation pipeline.
             case_results.append(
@@ -763,10 +763,32 @@ class TestNumberPairReverseDirectionGuard(BaseCaseValidatorTestCase):
     """
 
     def test_derived_interval_target_does_not_overwrite_source(self) -> None:
-        validator = self._create_validator()
+        concept_set_concepts_map, concepts, concept_contained_in = self._concept_data()
+        concepts[self.interval2_x_id].props = {
+            "lb": 0.0,
+            "ub": 40.0,
+            "lb_in": True,
+            "ub_in": False,
+        }
+        concepts[self.interval2_y_id].props = {
+            "lb": 40.0,
+            "ub": 80.0,
+            "lb_in": True,
+            "ub_in": True,
+        }
+        with patch.object(
+            self,
+            "_concept_data",
+            return_value=(
+                concept_set_concepts_map,
+                concepts,
+                concept_contained_in,
+            ),
+        ):
+            validator = self._create_validator()
 
-        # Content supplies interval1; interval2 is derived from it via the
-        # forward pair. The reverse pair must leave interval1 untouched.
+        # A [0,10) years maps to X [0,40) quarters. The reverse pair must
+        # leave the supplied A value untouched.
         contents: list[dict[UUID, str | None] | None] = [
             {self.num_interval1_col_id: str(self.interval1_a_id)}
         ]
@@ -804,12 +826,12 @@ class TestNumberPairReverseDirectionGuard(BaseCaseValidatorTestCase):
         col_pair = (self.num_interval2_col_id, self.num_interval1_col_id)
 
         contents: list[dict[UUID, str | None] | None] = [
-            {self.num_interval1_col_id: str(self.interval1_a_id)}
+            {self.num_interval1_col_id: str(self.interval1_b_id)}
         ]
         updated_contents: list[dict[UUID, str | None] | None] = [
             {
                 self.num_interval2_col_id: str(self.interval2_x_id),
-                self.num_interval1_col_id: str(self.interval1_a_id),
+                self.num_interval1_col_id: str(self.interval1_b_id),
             }
         ]
         data_issues_list: list[list[model.CaseDataIssue] | None] = [[]]
@@ -829,7 +851,7 @@ class TestNumberPairReverseDirectionGuard(BaseCaseValidatorTestCase):
         uc = updated_contents[0]
         assert uc is not None
         # Pre-populated interval1 value preserved, no derived/conflict logged.
-        assert uc[self.num_interval1_col_id] == str(self.interval1_a_id)
+        assert uc[self.num_interval1_col_id] == str(self.interval1_b_id)
         assert data_issues_list[0] == []
 
 
@@ -857,11 +879,11 @@ class TestCalculateCaseDate(BaseCaseValidatorTestCase):
         validator.calculate_case_date(cmd, retval, updated_contents)
         case = cmd.case_batch.cases[0].case
         assert case is not None
-        assert case.case_date == datetime.datetime(2024, 3, 15)
+        assert case.timed_at == datetime.datetime(2024, 3, 15)
 
     def test_case_date_updated_and_invalid_iso_raises(self) -> None:
         validator = self._create_validator()
-        # Valid ISO date -> updates case_date and logs derived
+        # Valid ISO date -> updates timed_at and logs derived
         cmd1, retval1 = self._make_cmd_and_result(
             [{self.time_day_col_id: "2024-02-02"}]
         )

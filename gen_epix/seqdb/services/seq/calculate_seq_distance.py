@@ -10,7 +10,7 @@ from uuid import UUID
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
-from gen_epix.commondb.domain.enum import EtlStatus
+from gen_epix.etl.enum import EtlStatus
 from gen_epix.fastapp import BaseUnitOfWork
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.exc import ConcurrentModificationError
@@ -27,7 +27,7 @@ from gen_epix.util import chunk_list
 
 
 class _ParsedNextcladeProfile(BaseModel):
-    """Store normalized Nextclade variants and their aligned reference interval."""
+    """Represents normalized Nextclade variants and their aligned reference interval."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -174,7 +174,7 @@ def seq_service_retrieve_seq_distance_last_modified(
 def seq_service_calculate_seq_distances_for_new_profiles(
     self: BaseSeqService,
     cmd: command.CalculateSeqDistancesForNewProfilesCommand,
-) -> list[model.CalculateSeqDistancesResult]:
+) -> list[model.CalculateSeqDistancesEtlResult]:
     """Calculate and persist distances for newly supplied sequence profiles.
 
     For each new profile, finds applicable distance protocols, computes distances
@@ -194,7 +194,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
     """
     user_id = cmd.user.id if cmd.user else None
     seq_profiles = cmd.seq_profiles
-    results: list[model.CalculateSeqDistancesResult] = []
+    results: list[model.CalculateSeqDistancesEtlResult] = []
     if not seq_profiles:
         return results
 
@@ -329,7 +329,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
 def seq_service_update_seq_distances(
     self: BaseSeqService,
     cmd: command.UpdateSeqDistancesCommand,
-) -> list[model.CalculateSeqDistancesResult]:
+) -> list[model.CalculateSeqDistancesEtlResult]:
     """Calculate and persist records missing from a distance protocol.
 
     For a given distance protocol, finds profiles without a record, computes missing
@@ -349,7 +349,7 @@ def seq_service_update_seq_distances(
     repository: BaseSeqRepository = self.repository  # type: ignore[assignment]
     log = self.logger
     user_id = cmd.user.id if cmd.user else None
-    results: list[model.CalculateSeqDistancesResult] = []
+    results: list[model.CalculateSeqDistancesEtlResult] = []
 
     t0 = time.perf_counter()
     if log:
@@ -532,7 +532,7 @@ def _calculate_and_store_distances(
     protocol: model.Protocol,
     seq_profile_type: enum.SeqProfileType,
     new_seq_profiles: list[model.SeqProfile],
-    results: list[model.CalculateSeqDistancesResult],
+    results: list[model.CalculateSeqDistancesEtlResult],
     seq_distance_last_modified_at: datetime | None = None,
     known_existing_profile_ids: list[UUID] | None = None,
     existing_chunk_size: int | None = None,
@@ -925,7 +925,7 @@ def _calculate_and_store_distances(
     if all_modified_existing:
         repository.update_some_seq_distance_content(uow, user_id, all_modified_existing)
         results.extend(
-            model.CalculateSeqDistancesResult.model_construct(
+            model.CalculateSeqDistancesEtlResult.model_construct(
                 id=sd.id,
                 status=EtlStatus.UPDATED,
                 seq_distance_profile_id=sd.seq_profile_id,
@@ -952,7 +952,7 @@ def _calculate_and_store_distances(
     )
     for created_seq_distance in created_seq_distances:
         results.append(
-            model.CalculateSeqDistancesResult.model_construct(
+            model.CalculateSeqDistancesEtlResult.model_construct(
                 id=created_seq_distance.id,
                 status=EtlStatus.CREATED,
                 seq_distance_profile_id=(created_seq_distance.seq_profile_id),

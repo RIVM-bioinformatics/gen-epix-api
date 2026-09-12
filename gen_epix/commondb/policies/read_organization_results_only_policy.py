@@ -11,7 +11,7 @@ from gen_epix.fastapp import CrudOperation, exc
 
 
 class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
-    """Apply AFTER-phase organization-scope filtering to supported read commands."""
+    """Encapsulates AFTER-phase organization-scope filtering to supported read commands."""
 
     def __init__(self, abac_service: BaseAbacService, **kwargs: Any):
         """Initialize role mappings and the command types supported by each filter.

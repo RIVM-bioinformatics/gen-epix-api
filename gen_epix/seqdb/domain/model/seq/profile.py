@@ -37,7 +37,7 @@ class SeqProfile(
     ContentMixin[enum.SeqProfileFormat],
     QualityMixin,
 ):
-    """Store a typed sequence profile derived from a sequence and protocol.
+    """Represents a typed sequence profile derived from a sequence and protocol.
 
     Model validation: The content format must match the profile type. Content is
     parsed according to that type, and its hash is derived or verified.
@@ -592,7 +592,7 @@ class SeqProfile(
 
 
 class SeqProfileIdentifier(BaseIdentifier):
-    """Associate an external identifier with a sequence profile."""
+    """Represents an external identifier associated with a sequence profile."""
 
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         SeqProfile,

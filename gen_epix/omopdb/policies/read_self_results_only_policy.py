@@ -9,7 +9,7 @@ from gen_epix.commondb.policies import (
 
 
 class ReadSelfResultsOnlyPolicy(CommonReadSelfResultsOnlyPolicy):
-    """Restrict shared self-result reads according to OmopDB command metadata."""
+    """Encapsulates restrictions on shared self-result reads according to OmopDB command metadata."""
 
     def __init__(
         self,

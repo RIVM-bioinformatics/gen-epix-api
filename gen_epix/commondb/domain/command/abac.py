@@ -9,7 +9,7 @@ from gen_epix.commondb.domain.command.base import Command, CrudCommand
 
 
 class RetrieveOrganizationsUnderAdminCommand(Command):
-    """Retrieve IDs of organizations administered by the executing user."""
+    """Represents a request to retrieve IDs of organizations administered by the executing user."""
 
     pass
 
@@ -18,6 +18,6 @@ class RetrieveOrganizationsUnderAdminCommand(Command):
 
 
 class OrganizationAdminPolicyCrudCommand(CrudCommand):
-    """Manage policies that grant organization-administration rights to users."""
+    """Represents a request to manage policies that grant organization-administration rights to users."""
 
     MODEL_CLASS: ClassVar = model.OrganizationAdminPolicy

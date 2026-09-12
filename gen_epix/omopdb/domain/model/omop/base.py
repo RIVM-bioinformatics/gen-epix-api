@@ -10,7 +10,7 @@ from gen_epix.util import int_to_uuid, str_to_uuid
 
 class DataLineageMixin:
     """
-    Add optional provenance and source-traceback fields to an OMOP model.
+    Encapsulates optional provenance and source-traceback fields to an OMOP model.
     """
 
     # Annotation-only: an assigned Field lingers as class attr -> pydantic shadow warning

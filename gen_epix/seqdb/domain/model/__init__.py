@@ -1,9 +1,9 @@
-"""Re-export seqdb domain model types."""
+"""Re-export seqdb domain model types and service registration metadata."""
 
 # pylint: disable=useless-import-alias
 from gen_epix import fastapp
 from gen_epix.commondb.domain import enum as common_enum
-from gen_epix.commondb.domain import model as common_model
+from gen_epix.commondb.domain import model as commondb_model
 from gen_epix.commondb.domain.model import (
     SORTED_MODELS_BY_SERVICE_TYPE as _COMMON_SORTED_MODELS_BY_SERVICE_TYPE,
 )
@@ -49,7 +49,7 @@ from gen_epix.seqdb.domain.model.seq import AstMeasurement as AstMeasurement
 from gen_epix.seqdb.domain.model.seq import AstPrediction as AstPrediction
 from gen_epix.seqdb.domain.model.seq import BaseSeq as BaseSeq
 from gen_epix.seqdb.domain.model.seq import (
-    CalculateSeqDistancesResult as CalculateSeqDistancesResult,
+    CalculateSeqDistancesEtlResult as CalculateSeqDistancesEtlResult,
 )
 from gen_epix.seqdb.domain.model.seq import ContentMixin as ContentMixin
 from gen_epix.seqdb.domain.model.seq import Contig as Contig
@@ -67,6 +67,7 @@ from gen_epix.seqdb.domain.model.seq import ReadSet as ReadSet
 from gen_epix.seqdb.domain.model.seq import ReadSetForUpload as ReadSetForUpload
 from gen_epix.seqdb.domain.model.seq import ReadSetIdentifier as ReadSetIdentifier
 from gen_epix.seqdb.domain.model.seq import RefAllele as RefAllele
+from gen_epix.seqdb.domain.model.seq import RefSeq as RefSeq
 from gen_epix.seqdb.domain.model.seq import Sample as Sample
 from gen_epix.seqdb.domain.model.seq import SampleBatchForUpload as SampleBatchForUpload
 from gen_epix.seqdb.domain.model.seq import (
@@ -82,6 +83,8 @@ from gen_epix.seqdb.domain.model.seq import SampleQuery as SampleQuery
 from gen_epix.seqdb.domain.model.seq import SampleQueryResult as SampleQueryResult
 from gen_epix.seqdb.domain.model.seq import SampleUploadResult as SampleUploadResult
 from gen_epix.seqdb.domain.model.seq import Seq as Seq
+from gen_epix.seqdb.domain.model.seq import SeqCategory as SeqCategory
+from gen_epix.seqdb.domain.model.seq import SeqCategorySet as SeqCategorySet
 from gen_epix.seqdb.domain.model.seq import SeqClassification as SeqClassification
 from gen_epix.seqdb.domain.model.seq import (
     SeqClassificationForUpload as SeqClassificationForUpload,
@@ -98,9 +101,6 @@ from gen_epix.seqdb.domain.model.seq import TaxonSet as TaxonSet
 from gen_epix.seqdb.domain.model.seq import TaxonSetMember as TaxonSetMember
 from gen_epix.seqdb.domain.model.seq import TreeAlgorithm as TreeAlgorithm
 from gen_epix.seqdb.domain.model.seq import TreeAlgorithmClass as TreeAlgorithmClass
-from gen_epix.seqdb.domain.model.seq.category import SeqCategory as SeqCategory
-from gen_epix.seqdb.domain.model.seq.category import SeqCategorySet as SeqCategorySet
-from gen_epix.seqdb.domain.model.seq.ref_seq import RefSeq as RefSeq
 from gen_epix.util import add_parent_class_docs
 
 # List up model classes per service and sorted according to links topology
@@ -169,7 +169,6 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             SampleQueryResult,
             SampleBatchForUpload,
             SampleUploadResult,
-            CalculateSeqDistancesResult,
             SampleBatchUploadResult,
         ],
     }
@@ -178,10 +177,10 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
 
 COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {
-    common_model.User: User,
-    common_model.UserInvitation: UserInvitation,
-    common_model.UserInvitationConstraints: UserInvitationConstraints,
-    common_model.OrganizationAdminPolicy: OrganizationAdminPolicy,
+    commondb_model.User: User,
+    commondb_model.UserInvitation: UserInvitation,
+    commondb_model.UserInvitationConstraints: UserInvitationConstraints,
+    commondb_model.OrganizationAdminPolicy: OrganizationAdminPolicy,
 }
 
 # Additional field properties for models that have already been stored (persisted)

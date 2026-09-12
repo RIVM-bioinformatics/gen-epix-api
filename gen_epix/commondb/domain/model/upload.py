@@ -6,6 +6,8 @@ services and their API responses.
 """
 
 import datetime
+import graphlib
+import logging
 import uuid
 from typing import Annotated, Any, Callable, ClassVar, Self
 from uuid import UUID
@@ -14,24 +16,30 @@ from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, field_serializer, field_validator, model_validator
 
 from gen_epix.commondb.domain import enum
-from gen_epix.commondb.domain.enum import DataIssueTypeSet, EtlStatus, UploadStatusSet
+from gen_epix.commondb.domain.enum import DataIssueTypeSet
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.base import BaseEtlResult, EtlLogItem
 from gen_epix.commondb.domain.model.organization import (
     BaseIdentifier,
     IdentifierForUpload,
 )
+from gen_epix.etl.enum import EtlStatus, EtlStatusSet
+from gen_epix.etl.model import (
+    LoadResult,
+    LogItem,
+)
 from gen_epix.fastapp import Model
 from gen_epix.fastapp.domain import Entity
 from gen_epix.fastapp.domain.entity import Entity
-from gen_epix.fastapp.enum import LogLevel, LogLevelSet
+from gen_epix.fastapp.enum import LogLevelSet
 
 # Backward-compatible alias: UploadLogItem is now ResultLogItem.
-UploadLogItem = EtlLogItem
+UploadLogItem = LogItem
+
+logger = logging.getLogger(__name__)
 
 
 class IdentifiersMixin:
-    """Mixin that adds identifiers fields and validation.
+    """Encapsulates a mixin that adds identifiers fields and validation.
 
     Assumes that the inheriting model also has an 'identifiers' field.
     """
@@ -92,7 +100,7 @@ class IdentifiersMixin:
 
 
 class DataIssue(PydanticBaseModel):
-    """Describe a validation or transformation issue for one uploaded value."""
+    """Represents a validation or transformation issue for one uploaded value."""
 
     original_value: str | None = Field(description="The original value")
     updated_value: str | None = Field(
@@ -105,8 +113,8 @@ class DataIssue(PydanticBaseModel):
     message: str | None = Field(description="The details of the data issue")
 
 
-class UploadResult(BaseEtlResult, Model):
-    """Represent the result of an upload operation for one object.
+class UploadResult(LoadResult, Model):
+    """Represents the result of an upload operation for one object.
 
     It includes upload status and logs.
 
@@ -115,6 +123,7 @@ class UploadResult(BaseEtlResult, Model):
     - If the status is failed, there must be at least one error log item.
     """
 
+    ID: ClassVar[str] = "c4f1a9e2"
     ENTITY: ClassVar = Entity(persistable=False)
 
     id: UUID | None = Field(
@@ -136,31 +145,12 @@ class UploadResult(BaseEtlResult, Model):
         has_errors = any(
             x.severity in LogLevelSet.ERROR_OR_WORSE.value for x in self.logs
         )
-        if self.status in UploadStatusSet.NOT_FAILED.value:
+        if self.status in EtlStatusSet.NOT_FAILED.value:
             if has_errors:
                 raise ValueError("Successful results cannot have error information")
         elif not has_errors:
             raise ValueError("Failed results must include error information")
         return self
-
-    def set_error_status(self) -> None:
-        """Mark this individual upload result as failed after an error is recorded."""
-        self.status = EtlStatus.FAILED
-
-    def add_logs(self, upload_log_items: list[UploadLogItem] | UploadLogItem) -> None:
-        """Add log items to the upload result.
-
-        If any of the added log items has severity ERROR, the upload status is set to
-        FAILED.
-        """
-        if isinstance(upload_log_items, list):
-            self.logs.extend(upload_log_items)
-            if any(x.severity == LogLevel.ERROR for x in upload_log_items):
-                self.status = EtlStatus.FAILED
-        else:
-            self.logs.append(upload_log_items)
-            if upload_log_items.severity == LogLevel.ERROR:
-                self.status = EtlStatus.FAILED
 
     def get_identifier_upload_results(self) -> list["UploadResult"] | None:
         """Get the upload results for the identifiers associated with the model, if any."""
@@ -168,11 +158,12 @@ class UploadResult(BaseEtlResult, Model):
 
 
 class UploadResultWithIdentifiers(UploadResult):
-    """Represent an upload result with nested identifier results.
+    """Represents an upload result with nested identifier results.
 
     It mirrors a for-upload class that has identifiers.
     """
 
+    ID: ClassVar[str] = "06e14d51"
     ENTITY: ClassVar = UploadResult.model_entity().clone()
     NAME: ClassVar = "UploadResultWithIdentifiers"
 
@@ -208,7 +199,7 @@ class UploadResultWithIdentifiers(UploadResult):
 
 
 class ParentForUpload(Model, IdentifiersMixin):
-    """Represent a parent model and its linked child models for upload.
+    """Represents a parent model and its linked child models for upload.
 
     The term "parent" refers to a model that can have linked child models. Other identifiers
     can also be added here, in the "identifiers" field.
@@ -263,6 +254,123 @@ class ParentForUpload(Model, IdentifiersMixin):
     CHILD_INTRA_PARENT_LINKS_MAP: ClassVar[
         dict[type[Model], list[tuple[str, type[Model]]]]
     ] = {}
+
+    # Child model classes in foreign-key dependency order: a child is always
+    # listed after every sibling child it links to. None => auto-derived (see
+    # get_child_order); set explicitly in a subclass only to override.
+    CHILD_ORDER: ClassVar[list[type[Model]] | None] = None
+
+    @classmethod
+    def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
+        """Eagerly derive CHILD_ORDER when the subclass is defined, if possible."""
+        super().__pydantic_init_subclass__(**kwargs)
+        if cls.__dict__.get("CHILD_ORDER") is not None:
+            return  # explicit override in the subclass body: leave it untouched
+        try:
+            cls.CHILD_ORDER = cls._compute_child_order()
+        except Exception:  # pylint: disable=broad-exception-caught
+            # Expected case: a child model is not importable yet (circular import
+            # while the class body runs); get_child_order() derives it lazily on
+            # first use, and re-raises there if it is a genuine bug. Log at debug
+            # so a real failure still leaves a trace.
+            logger.debug(
+                "%s: CHILD_ORDER derivation deferred", cls.__name__, exc_info=True
+            )
+
+    @classmethod
+    def get_child_order(cls) -> list[type[Model]]:
+        """Return the child model classes in foreign-key dependency order.
+
+        A child is always ordered after every sibling child it links to, so that
+        processing children in this order never touches a foreign key pointing at
+        a not-yet-created row. Derived from the children's ``Entity.links`` and
+        ``CHILD_INTRA_PARENT_LINKS_MAP``, cached on ``CHILD_ORDER``.
+        """
+        if not cls.CHILDREN_FIELD_NAME_MAP:
+            return []
+        child_order = cls.__dict__.get("CHILD_ORDER")
+        if child_order is None:
+            child_order = cls._compute_child_order()
+            cls.CHILD_ORDER = child_order
+        child_order = list(child_order)
+        unique = set(child_order)
+        if len(unique) != len(child_order) or unique != set(
+            cls.CHILDREN_FIELD_NAME_MAP
+        ):
+            raise ValueError(
+                f"{cls.__name__}.CHILD_ORDER must be a permutation of the "
+                f"CHILDREN_FIELD_NAME_MAP keys (no duplicates, nothing missing or "
+                f"extra); got [{', '.join(x.__name__ for x in child_order)}]"
+            )
+        return child_order
+
+    @classmethod
+    def _child_fk_dependencies(cls) -> dict[type[Model], set[type[Model]]]:
+        """Map each child model class to the sibling child classes it links to.
+
+        Edges come from each child's ``Entity.links`` (a foreign key to a sibling
+        child) and from ``CHILD_INTRA_PARENT_LINKS_MAP``. ``multi_links`` are
+        ignored: they are the reverse side of a link already owned by the other
+        entity. A link target given as either the domain model class or its
+        ForUpload wrapper is resolved to the matching ``CHILDREN_FIELD_NAME_MAP``
+        key.
+        """
+        children = list(cls.CHILDREN_FIELD_NAME_MAP)
+        normalize: dict[type, type[Model]] = {child: child for child in children}
+        for domain_class, wrapper_class in cls.CHILD_FOR_UPLOAD_CLASS_MAP.items():
+            normalize.setdefault(domain_class, domain_class)
+            normalize.setdefault(wrapper_class, domain_class)
+
+        dependencies: dict[type[Model], set[type[Model]]] = {}
+        for child in children:
+            entity: Entity | None = getattr(child, "ENTITY", None)
+            linked_classes = (
+                [link.link_model_class for link in entity.links.values()]
+                if entity is not None
+                else []
+            )
+            linked_classes += [
+                to_class
+                for _, to_class in cls.CHILD_INTRA_PARENT_LINKS_MAP.get(child, [])
+            ]
+            targets = {normalize.get(linked) for linked in linked_classes}
+            dependencies[child] = {
+                target
+                for target in targets
+                if target is not None and target is not child
+            }
+        return dependencies
+
+    @classmethod
+    def _compute_child_order(cls) -> list[type[Model]]:
+        """Topologically sort the child model classes by their foreign-key links.
+
+        Children are added to the sorter in ``CHILDREN_FIELD_NAME_MAP``
+        declaration order, so ``graphlib`` keeps that order within each dependency
+        layer (edges: see ``_child_fk_dependencies``). A cycle logs a warning and
+        returns the declaration order unchanged.
+        """
+        children: list[type[Model]] = list(cls.CHILDREN_FIELD_NAME_MAP)
+        if len(children) <= 1:
+            return children
+        dependencies = cls._child_fk_dependencies()
+        sorter: graphlib.TopologicalSorter[type[Model]] = graphlib.TopologicalSorter()
+        for child in children:
+            sorter.add(child)
+        for child in children:
+            for dependency in dependencies[child]:
+                sorter.add(child, dependency)
+        try:
+            return list(sorter.static_order())
+        except graphlib.CycleError as exception:
+            cycle = ", ".join(sorted({node.__name__ for node in exception.args[1]}))
+            logger.warning(
+                "%s: cyclic foreign keys between child models (%s); falling back "
+                "to declaration order for child upload.",
+                cls.__name__,
+                cycle,
+            )
+            return children
 
     id: UUID | None = Field(
         default=None,
@@ -410,11 +518,12 @@ class ParentForUpload(Model, IdentifiersMixin):
 
 
 class ParentUploadResult(UploadResultWithIdentifiers):
-    """Record upload results for a parent payload and its children.
+    """Represents upload results for a parent payload and its children.
 
     Subclasses correspond to their ParentForUpload payload type.
     """
 
+    ID: ClassVar[str] = "f354e913"
     ENTITY: ClassVar = UploadResultWithIdentifiers.model_entity().clone()
     NAME: ClassVar = "ParentUploadResult"
 
@@ -558,7 +667,9 @@ class ParentUploadResult(UploadResultWithIdentifiers):
 
 
 class BaseBatchForUpload(Model):
-    """Base class for batches of ParentForUpload objects to be uploaded.
+    """Represents a batch ParentForUpload objects to be uploaded.
+
+    This is a base class intended to be subclassed per application.
 
     A batch is intended as a single unit of work for an upload operation and as such to be
     processed atomically.
@@ -777,11 +888,12 @@ class BaseBatchForUpload(Model):
 
 
 class BaseBatchUploadResult(UploadResult):
-    """Define the result for an atomic batch upload.
+    """Represents the result for an atomic batch upload.
 
     Subclasses use field names that match their BaseBatchForUpload payload.
     """
 
+    ID: ClassVar[str] = "6d64fbc3"
     ENTITY: ClassVar = UploadResult.model_entity().clone()
     NAME: ClassVar = "BaseBatchUploadResult"
 
@@ -800,6 +912,21 @@ class BaseBatchUploadResult(UploadResult):
         default_factory=uuid.uuid4,
         description="The unique identifier for the upload batch that this result belongs to.",
     )
+    result_type: str = Field(
+        default="",
+        description=(
+            "The concrete result class name, set automatically on validation. "
+            "Used to reconstruct the correct subclass when deserialising a "
+            "heterogeneous list of upload results."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _ensure_result_type(self) -> Self:
+        """Populate result_type with the concrete class name when unset."""
+        if not self.result_type:
+            self.result_type = type(self).__name__
+        return self
 
     def get_parent_results(self) -> list[ParentUploadResult]:
         """Get the list of parent upload results in this batch upload result."""

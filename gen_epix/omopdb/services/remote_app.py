@@ -10,7 +10,7 @@ from gen_epix.omopdb.domain import DOMAIN, command, model
 
 
 class OmopdbRemoteApp(CommondbRemoteApp):
-    """Route supported OmopDB commands to their remote HTTP endpoints."""
+    """Encapsulates routing of supported OmopDB commands to their remote HTTP endpoints."""
 
     DEFAULT_ROUTE_PREFIX = "/v1"
 
@@ -26,6 +26,7 @@ class OmopdbRemoteApp(CommondbRemoteApp):
     }
 
     DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {
+        command.DeleteAllOperationalDataCommand: 300.0,
         command.UploadPersonsCommand: 45.0,
         command.RetrievePersonsByIdCommand: 45.0,
         command.RetrievePersonsByQueryCommand: 45.0,

@@ -18,7 +18,7 @@ Base: type = orm.declarative_base(name=enum.ServiceType.ORGANIZATION.value)
 
 @declarative_mixin
 class OrganizationMixin(RowMetadataMixin):
-    """Provide SQLAlchemy columns for Organization-derived row models."""
+    """Encapsulates SQLAlchemy columns for Organization-derived row models."""
 
     code: Mapped[str] = create_mapped_column(DOMAIN, model.Organization, "code")
     name: Mapped[str] = create_mapped_column(DOMAIN, model.Organization, "name")
@@ -29,7 +29,7 @@ class OrganizationMixin(RowMetadataMixin):
 
 @declarative_mixin
 class UserMixin(RowMetadataMixin):
-    """Provide SQLAlchemy columns and organization relationship for user rows."""
+    """Encapsulates SQLAlchemy columns and organization relationship for user rows."""
 
     key: Mapped[str] = create_mapped_column(DOMAIN, model.User, "key")
     email: Mapped[str | None] = create_mapped_column(DOMAIN, model.User, "email")
@@ -53,7 +53,7 @@ class UserMixin(RowMetadataMixin):
 
 @declarative_mixin
 class OrganizationSetMixin(RowMetadataMixin):
-    """Provide SQLAlchemy columns for OrganizationSet-derived row models."""
+    """Encapsulates SQLAlchemy columns for OrganizationSet-derived row models."""
 
     name: Mapped[str] = create_mapped_column(DOMAIN, model.OrganizationSet, "name")
     description: Mapped[str | None] = create_mapped_column(
@@ -63,7 +63,7 @@ class OrganizationSetMixin(RowMetadataMixin):
 
 @declarative_mixin
 class OrganizationSetMemberMixin(RowMetadataMixin):
-    """Provide columns and relationships for organization-set membership rows."""
+    """Encapsulates columns and relationships for organization-set membership rows."""
 
     @declared_attr
     def organization_set_id(cls) -> Mapped[UUID]:
@@ -97,7 +97,7 @@ class OrganizationSetMemberMixin(RowMetadataMixin):
 
 @declarative_mixin
 class SiteMixin(RowMetadataMixin):
-    """Provide SQLAlchemy columns and organization relationship for site rows."""
+    """Encapsulates SQLAlchemy columns and organization relationship for site rows."""
 
     @declared_attr
     def organization_id(cls) -> Mapped[UUID]:
@@ -114,7 +114,7 @@ class SiteMixin(RowMetadataMixin):
 
 @declarative_mixin
 class ContactMixin(RowMetadataMixin):
-    """Provide SQLAlchemy columns and site relationship for contact rows."""
+    """Encapsulates SQLAlchemy columns and site relationship for contact rows."""
 
     @declared_attr
     def site_id(cls) -> Mapped[UUID | None]:
@@ -133,7 +133,7 @@ class ContactMixin(RowMetadataMixin):
 
 @declarative_mixin
 class DataCollectionMixin(RowMetadataMixin):
-    """Provide SQLAlchemy columns for DataCollection-derived row models."""
+    """Encapsulates SQLAlchemy columns for DataCollection-derived row models."""
 
     name: Mapped[str] = create_mapped_column(DOMAIN, model.DataCollection, "name")
     description: Mapped[str | None] = create_mapped_column(
@@ -143,7 +143,7 @@ class DataCollectionMixin(RowMetadataMixin):
 
 @declarative_mixin
 class DataCollectionSetMixin(RowMetadataMixin):
-    """Provide SQLAlchemy columns for DataCollectionSet-derived row models."""
+    """Encapsulates SQLAlchemy columns for DataCollectionSet-derived row models."""
 
     name: Mapped[str] = create_mapped_column(DOMAIN, model.DataCollectionSet, "name")
     description: Mapped[str | None] = create_mapped_column(
@@ -153,7 +153,7 @@ class DataCollectionSetMixin(RowMetadataMixin):
 
 @declarative_mixin
 class DataCollectionSetMemberMixin(RowMetadataMixin):
-    """Provide columns and relationships for data-collection-set membership rows."""
+    """Encapsulates columns and relationships for data-collection-set membership rows."""
 
     @declared_attr
     def data_collection_set_id(cls) -> Mapped[UUID]:
@@ -191,7 +191,7 @@ class DataCollectionSetMemberMixin(RowMetadataMixin):
 
 @declarative_mixin
 class UserInvitationMixin(RowMetadataMixin):
-    """Provide SQLAlchemy columns and relationships for user invitation rows."""
+    """Encapsulates SQLAlchemy columns and relationships for user invitation rows."""
 
     key: Mapped[str | None] = create_mapped_column(DOMAIN, model.UserInvitation, "key")
     email: Mapped[str | None] = create_mapped_column(
@@ -236,7 +236,7 @@ class UserInvitationMixin(RowMetadataMixin):
 
 @declarative_mixin
 class IdentifierIssuerMixin(RowMetadataMixin):
-    """Provide SQLAlchemy columns for IdentifierIssuer-derived row models."""
+    """Encapsulates SQLAlchemy columns for IdentifierIssuer-derived row models."""
 
     code: Mapped[str] = create_mapped_column(DOMAIN, model.IdentifierIssuer, "code")
     name: Mapped[str] = create_mapped_column(DOMAIN, model.IdentifierIssuer, "name")
@@ -247,7 +247,7 @@ class IdentifierIssuerMixin(RowMetadataMixin):
 
 @declarative_mixin
 class OrganizationIdentifierIssuerLinkMixin(RowMetadataMixin):
-    """Provide columns for organization-to-identifier issuer link row models."""
+    """Encapsulates columns for organization-to-identifier issuer link row models."""
 
     organization_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.OrganizationIdentifierIssuerLink, "organization_id"
@@ -259,7 +259,7 @@ class OrganizationIdentifierIssuerLinkMixin(RowMetadataMixin):
 
 @declarative_mixin
 class IdentifierMixin(RowMetadataMixin):
-    """Provide SQLAlchemy columns for external identifier-derived row models."""
+    """Encapsulates SQLAlchemy columns for external identifier-derived row models."""
 
     @declared_attr
     def identifier_issuer_id(cls) -> Mapped[UUID]:
@@ -274,73 +274,73 @@ class IdentifierMixin(RowMetadataMixin):
 
 
 class Organization(Base, OrganizationMixin):
-    """Persist the commondb Organization domain model."""
+    """Encapsulates persistence of the commondb Organization domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.Organization)
 
 
 class User(Base, UserMixin):
-    """Persist the commondb User domain model."""
+    """Encapsulates persistence of the commondb User domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.User)
 
 
 class OrganizationSet(Base, OrganizationSetMixin):
-    """Persist the commondb OrganizationSet domain model."""
+    """Encapsulates persistence of the commondb OrganizationSet domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.OrganizationSet)
 
 
 class OrganizationSetMember(Base, OrganizationSetMemberMixin):
-    """Persist the commondb OrganizationSetMember domain model."""
+    """Encapsulates persistence of the commondb OrganizationSetMember domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.OrganizationSetMember)
 
 
 class Site(Base, SiteMixin):
-    """Persist the commondb Site domain model."""
+    """Encapsulates persistence of the commondb Site domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.Site)
 
 
 class Contact(Base, ContactMixin):
-    """Persist the commondb Contact domain model."""
+    """Encapsulates persistence of the commondb Contact domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.Contact)
 
 
 class DataCollection(Base, DataCollectionMixin):
-    """Persist the commondb DataCollection domain model."""
+    """Encapsulates persistence of the commondb DataCollection domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.DataCollection)
 
 
 class DataCollectionSet(Base, DataCollectionSetMixin):
-    """Persist the commondb DataCollectionSet domain model."""
+    """Encapsulates persistence of the commondb DataCollectionSet domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.DataCollectionSet)
 
 
 class DataCollectionSetMember(Base, DataCollectionSetMemberMixin):
-    """Persist the commondb DataCollectionSetMember domain model."""
+    """Encapsulates persistence of the commondb DataCollectionSetMember domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.DataCollectionSetMember)
 
 
 class UserInvitation(Base, UserInvitationMixin):
-    """Persist the commondb UserInvitation domain model."""
+    """Encapsulates persistence of the commondb UserInvitation domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.UserInvitation)
 
 
 class IdentifierIssuer(Base, IdentifierIssuerMixin):
-    """Persist the commondb IdentifierIssuer domain model."""
+    """Encapsulates persistence of the commondb IdentifierIssuer domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.IdentifierIssuer)
 
 
 class OrganizationIdentifierIssuerLink(Base, OrganizationIdentifierIssuerLinkMixin):
-    """Persist the commondb OrganizationIdentifierIssuerLink domain model."""
+    """Encapsulates persistence of the commondb OrganizationIdentifierIssuerLink domain model."""
 
     __tablename__, __table_args__ = create_table_args(
         model.OrganizationIdentifierIssuerLink

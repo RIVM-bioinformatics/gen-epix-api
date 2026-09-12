@@ -12,7 +12,7 @@ DEFAULT_POOL_RECYCLE = 230
 
 
 class EngineFactory:
-    """Static factory class to create and manage SQLAlchemy engine objs."""
+    """Encapsulates creation and management of SQLAlchemy engines."""
 
     _LOCK = threading.Lock()
     _ENGINE_MAP: dict[tuple, Engine] = {}

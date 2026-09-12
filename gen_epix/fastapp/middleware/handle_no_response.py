@@ -12,7 +12,7 @@ from gen_epix.fastapp.app import App
 
 class HandleNoResponseMiddleware(BaseHTTPMiddleware):
     """
-    Middleware to handle cases where no response is returned from the endpoint.
+    Encapsulates middleware to handle cases where no response is returned from the endpoint.
 
     This is a workaround for a known issue in FastAPI where a RuntimeError is raised
     when the request is disconnected before a response is returned.

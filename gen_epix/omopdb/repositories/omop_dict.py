@@ -10,7 +10,7 @@ from gen_epix.omopdb.domain.repository.omop import BaseOmopRepository
 
 
 class OmopDictRepository(DictRepository, BaseOmopRepository):
-    """Implement OMOP query operations using in-memory model collections."""
+    """Encapsulates implementation of OMOP query operations using in-memory model collections."""
 
     def get_person_ids_modified_in_range(
         self,

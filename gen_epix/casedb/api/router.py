@@ -1,3 +1,5 @@
+"""Compose casedb API routers from shared and domain endpoint factories."""
+
 from collections.abc import Callable
 from typing import Any, NoReturn
 
@@ -8,7 +10,7 @@ from gen_epix.casedb.api.case import create_case_endpoints
 from gen_epix.casedb.api.geo import create_geo_endpoints
 from gen_epix.casedb.api.ontology import create_ontology_endpoints
 from gen_epix.casedb.api.organization import ApiPermission
-from gen_epix.casedb.domain import enum
+from gen_epix.casedb.domain import command, enum
 from gen_epix.commondb.api.auth import create_auth_endpoints
 from gen_epix.commondb.api.organization import create_organization_endpoints
 from gen_epix.commondb.api.rbac import create_rbac_endpoints
@@ -22,6 +24,7 @@ def create_routers(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     router_kwargs: dict = {},
 ) -> list[APIRouter]:
+    """Create the tagged routers that make up the casedb API."""
     assert app
     router_data: list[RouterData] = [
         # commondb routers
@@ -46,7 +49,10 @@ def create_routers(
         {
             "name": "system",
             "create_endpoints_fn": create_system_endpoints,
-            "endpoints_function_kwargs": {"service_type": enum.ServiceType.SYSTEM},
+            "endpoints_function_kwargs": {
+                "service_type": enum.ServiceType.SYSTEM,
+                "delete_all_operational_data_command_class": command.DeleteAllOperationalDataCommand,
+            },
         },
         # Specific routers
         {

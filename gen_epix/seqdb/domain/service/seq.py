@@ -11,7 +11,7 @@ from gen_epix.seqdb.domain.enum import ServiceType
 
 
 class BaseSeqService(BaseService):
-    """Define seqdb command handlers implemented by concrete sequence services."""
+    """Encapsulates seqdb handlers implemented by concrete sequence services."""
 
     SERVICE_TYPE = ServiceType.SEQ
 
@@ -32,6 +32,10 @@ class BaseSeqService(BaseService):
         f(
             command.RetrieveSeqFastaCommand,
             self.retrieve_seq_fasta,
+        )
+        f(
+            command.ConvertSeqFormatCommand,
+            self.convert_seq_format,
         )
         f(
             command.UploadSamplesCommand,
@@ -278,6 +282,23 @@ class BaseSeqService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def convert_seq_format(
+        self,
+        cmd: command.ConvertSeqFormatCommand,
+    ) -> list[UUID]:
+        """Convert all contigs in the requested sequences to a new representation.
+
+        Args:
+            cmd: Sequence-format conversion command to execute.
+        Returns:
+            Identifiers of the converted sequences.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def upload_samples(
         self,
         cmd: command.UploadSamplesCommand,
@@ -335,7 +356,7 @@ class BaseSeqService(BaseService):
     def calculate_seq_distances_for_new_profiles(
         self,
         cmd: command.CalculateSeqDistancesForNewProfilesCommand,
-    ) -> list[model.CalculateSeqDistancesResult]:
+    ) -> list[model.CalculateSeqDistancesEtlResult]:
         """Calculate distances for profiles without distance records.
 
         Args:
@@ -353,7 +374,7 @@ class BaseSeqService(BaseService):
     def update_seq_distances(
         self,
         cmd: command.UpdateSeqDistancesCommand,
-    ) -> list[model.CalculateSeqDistancesResult]:
+    ) -> list[model.CalculateSeqDistancesEtlResult]:
         """Update stored sequence-distance calculations.
 
         Args:

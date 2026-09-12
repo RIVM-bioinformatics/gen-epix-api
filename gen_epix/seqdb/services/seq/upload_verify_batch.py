@@ -5,9 +5,9 @@ from typing import cast
 from uuid import UUID
 
 from gen_epix import fastapp
-from gen_epix.commondb.domain.enum import EtlStatus
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.services import BatchUploader
+from gen_epix.etl.enum import EtlStatus
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.filter.uuid_set import UuidSetFilter
 from gen_epix.seqdb.domain import command, enum, model
@@ -34,7 +34,9 @@ def _verify_sample_children(
         uow,
     )
 
-    # Child model specific verifications
+    # Child model specific verifications, run seqs first so that seq_classifications
+    # and seq_profiles can resolve their seq_id links (same dependency order as
+    # SampleForUpload.CHILD_ORDER).
     success &= _verify_children_seqs(self, cmd, batch_result, uow)
     success &= _verify_children_seq_classifications(self, cmd, batch_result, uow)
     success &= _verify_children_seq_profiles(self, cmd, batch_result, uow)

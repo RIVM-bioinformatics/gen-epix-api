@@ -6,7 +6,7 @@ from gen_epix.omopdb.domain import command
 
 
 class BaseAbacService(CommonAbacService):
-    """Map shared ABAC command groups to their OmopDB command equivalents."""
+    """Encapsulates mapping of shared ABAC command groups to their OmopDB command equivalents."""
 
     ORGANIZATION_ADMIN_WRITE_COMMANDS: set[type[Command]] = {  # type: ignore[assignment]
         command.COMMON_COMMAND_MAP.get(x, x)

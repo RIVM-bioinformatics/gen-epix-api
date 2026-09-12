@@ -11,7 +11,7 @@ from typing import Protocol, runtime_checkable
 
 @runtime_checkable
 class Clock(Protocol):
-    """Supply the monotonic and wall-clock readings a cache needs."""
+    """Encapsulates supplying the monotonic and wall-clock readings a cache needs."""
 
     def monotonic(self) -> float:
         """Return a strictly non-decreasing reading in seconds."""
@@ -23,7 +23,7 @@ class Clock(Protocol):
 
 
 class SystemClock:
-    """Read time from the operating system.
+    """Encapsulates reading time from the operating system.
 
     Expiry uses `monotonic` so that wall-clock adjustments cannot resurrect or
     prematurely expire entries, while `time` supplies timestamps that remain
@@ -42,7 +42,7 @@ class SystemClock:
 
 
 class ManualClock:
-    """Advance only when a test tells it to.
+    """Encapsulates advancing only when a test tells it to.
 
     Both readings start at `start` and move together, so an entry written at
     monotonic time `t` also carries a wall-clock timestamp of `t`.

@@ -6,7 +6,7 @@ from gen_epix.seqdb.domain import command
 
 
 class BaseAbacService(CommonAbacService):
-    """Define seqdb command handlers implemented by concrete abac services."""
+    """Encapsulates seqdb handlers implemented by concrete ABAC services."""
 
     ORGANIZATION_ADMIN_WRITE_COMMANDS: set[type[Command]] = {  # type: ignore[assignment]
         command.COMMON_COMMAND_MAP.get(x, x)

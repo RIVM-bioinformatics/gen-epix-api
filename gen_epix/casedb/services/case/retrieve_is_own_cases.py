@@ -1,3 +1,5 @@
+"""Determine whether accessible cases belong to the user's private collections."""
+
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, exc, model
@@ -8,6 +10,22 @@ from gen_epix.casedb.services.case.base import BaseCaseService
 def case_service_retrieve_is_own_cases(
     self: BaseCaseService, cmd: command.RetrieveIsOwnCasesCommand
 ) -> dict[UUID, bool]:
+    """Map accessible requested cases to private-collection ownership flags.
+
+    Invalid or inaccessible case IDs are omitted. A case is considered owned when its
+    creation collection or any linked collection is private in the user's case-type
+    access metadata.
+
+    Args:
+        self: Case service handling the retrieval.
+        cmd: Command containing the case type and requested case identifiers.
+
+    Returns:
+        Ownership flags keyed by each accessible case identifier.
+
+    Raises:
+        UnauthorizedAuthError: If the user cannot read the requested case type.
+    """
     case_type_id = cmd.case_type_id
     user: model.User
     user, repository = self._get_user_and_repository(cmd)  # type: ignore[assignment]

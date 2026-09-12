@@ -9,7 +9,7 @@ from gen_epix.omopdb.domain.repository.omop import BaseOmopRepository
 
 
 class BaseOmopService(BaseService[BaseOmopRepository]):
-    """Define OmopDB command handlers and person-query operations."""
+    """Encapsulates OmopDB command handlers and person-query operations."""
 
     SERVICE_TYPE = ServiceType.OMOP
 

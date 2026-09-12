@@ -8,7 +8,7 @@ from gen_epix.fastapp.enum import EventTiming
 
 class PolicyDecisionPoint:
     """
-    Policy Decision Point (PDP). This is the central point where policies are
+    Encapsulates a policy Decision Point (PDP). This is the central point where policies are
     registered and applied. They are executed in order of registration.
 
     Policies must be registered for a particular command and timing (BEFORE, DURING

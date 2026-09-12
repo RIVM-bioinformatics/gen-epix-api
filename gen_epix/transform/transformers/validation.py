@@ -7,7 +7,7 @@ from gen_epix.transform.transformer import Transformer
 
 
 class ValidationTransformer(Transformer):
-    """Pass an object through when its validator returns true."""
+    """Encapsulates passing objects whose validator returns true."""
 
     def __init__(
         self, validator: Callable[[ObjectAdapter], bool], name: str | None = None

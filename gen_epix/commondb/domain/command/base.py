@@ -22,7 +22,7 @@ from gen_epix.fastapp import UpdateAssociationCommand as ServiceUpdateAssociatio
 
 
 class Command(ServiceCommand):
-    """Carry commondb user context, audit metadata, and serializable properties."""
+    """Represents commondb user context, audit metadata, and serializable properties."""
 
     id: UUID = Field(default_factory=uuid.uuid4, description="The ID of the command")
     created_at: datetime.datetime = Field(
@@ -49,23 +49,23 @@ class Command(ServiceCommand):
 
 
 class CrudCommand(ServiceCrudCommand, Command):
-    """Extend a commondb command with target identifiers for CRUD operations."""
+    """Extends parent CrudCommand with more narrowly typed properties."""
 
-    user: model.User | None = None
-    obj_ids: UUID | list[UUID] | None = None  # type: ignore
+    user: model.User | None = None  # type: ignore[misc]
+    obj_ids: UUID | list[UUID] | None = None  # type: ignore[misc]
 
 
 class UpdateAssociationCommand(ServiceUpdateAssociationCommand, Command):
-    """Extend a commondb command with identifiers and payloads for associations."""
+    """Extends parent UpdateAssociationCommand with more narrowly typed properties."""
 
-    user: model.User | None = None
-    obj_id1: UUID | list[UUID] | None = None
-    obj_id2: UUID | list[UUID] | None = None
-    association_objs: list[model.Model] | None = None
+    user: model.User | None = None  # type: ignore[misc]
+    obj_id1: UUID | list[UUID] | None = None  # type: ignore[misc]
+    obj_id2: UUID | list[UUID] | None = None  # type: ignore[misc]
+    association_objs: list[model.Model] | None = None  # type: ignore[misc]
 
 
 class UploadBatchCommandMixin:
-    """Provide batch-upload options and payload access for upload commands."""
+    """Encapsulates batch-upload options and payload access for upload commands."""
 
     # Must be set in child class
     # The BaseBatchForUpload child class that this command uploads

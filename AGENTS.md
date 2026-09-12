@@ -8,8 +8,6 @@ tests, and workflows are the final authority when they disagree with docs.
 
 - Start at the owning command, service, repository, router, or configuration
       module. Use nearby tests and existing implementations as the primary pattern.
-- For architecture or relationship questions, query `graphify-out/graph.json`
-      first when it exists. Then verify the relevant behavior in source code.
 - Do not invent endpoints, settings, ports, roles, repository modes, or module
       ownership. Search for missing references and report stale documentation.
 - Keep changes focused. Do not rewrite unrelated user changes or generated
@@ -22,7 +20,8 @@ The runtime package is under `gen_epix/`:
 - `fastapp/` is the shared application framework: commands, domain metadata,
       policies, application dispatch, services, repositories, and API utilities.
 - `commondb/` supplies shared users, organizations, authentication, policies,
-      configuration, composition, and routers.
+      configuration, composition, routers, and the shared ETL-run result
+      accumulator layer (`domain/model/etl.py`) used by ETL pipelines.
 - `casedb/`, `seqdb/`, and `omopdb/` are app-specific domains built on that
       foundation. `filter/` and `transform/` are shared support packages.
 - Each app is composed from configuration, repositories, services, policies,
@@ -44,8 +43,7 @@ Preserve these boundaries:
 - In production, cross-domain communication uses HTTP. Search for an existing
       client abstraction before adding a new remote-call pattern.
 - Python docstrings and comments follow the repo standard in
-  `docs/standards/google-python-style-guide-3.8-comments-and-docstrings.md` and
-  the repo instruction file `.github/copilot-instructions.md`.
+  `docs/standards/google-python-style-guide-3.8-comments-and-docstrings.md`.
 
 ## Commands
 
@@ -64,7 +62,7 @@ Useful verified commands:
 | Curated suite with coverage | `python run.py test_all --include_e2e=False` |
 | Curated suite including E2E | `python run.py test_all` |
 | Fast pytest discovery | `make test` |
-| Targeted app/scope tests | `python run.py test_<app>_<scope>` |
+| Specific test folder | `python run.py run_test "test/casedb/unit"` |
 | Format check | `isort --check-only --diff --profile black --float-to-top --line-length=88 .` and `black -l 88 --check --diff .` |
 | Autoformat | `isort --profile black .` and `black .` |
 | Pylint | `pylint ./gen_epix --disable=C0301` |
@@ -72,6 +70,7 @@ Useful verified commands:
 
 `run.py test_all` is the CI-style curated suite and writes reports below
 `test/output/`; it excludes performance tests and, when requested, E2E tests.
+`run.py run_test` targets specific test folders via the `test/` directory tree.
 `make test` is a separate raw pytest invocation. Performance tests require the
 `performance` marker, and E2E tests require their external services/configuration.
 
@@ -162,5 +161,3 @@ If `graphify-out/wiki/index.md` exists, use it for broad navigation. Read `graph
 only for broad architecture review or when query/path/explain do not surface enough context. Only read
 source files when (a) modifying/debugging specific code, (b) the graph lacks the needed detail, or
 (c) the graph is missing or stale.
-
-Type `/graphify` in Copilot Chat to build or update the graph.

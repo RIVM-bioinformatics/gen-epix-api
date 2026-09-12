@@ -13,7 +13,7 @@ CommandName = Enum("CommandName", {x: x for x in DOMAIN.command_names})  # type:
 
 
 class ApiPermission(BaseModel, frozen=True):
-    """Represent a seqdb command permission in organization API payloads."""
+    """Represents a seqdb command permission in organization API payloads."""
 
     command_name: CommandName = (  # pyright: ignore[reportInvalidTypeForm]
         copy_model_field(Permission, "command_name")

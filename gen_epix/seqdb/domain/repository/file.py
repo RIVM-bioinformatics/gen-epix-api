@@ -4,6 +4,6 @@ from gen_epix.fastapp.repository import BaseRepository
 
 
 class BaseFileRepository(BaseRepository):
-    """Provide the shared repository base for seqdb file persistence."""
+    """Encapsulates the shared repository base for seqdb file persistence."""
 
     pass

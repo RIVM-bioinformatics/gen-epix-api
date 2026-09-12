@@ -1,3 +1,5 @@
+"""Expose casedb case request models and endpoint registration."""
+
 import base64
 from collections.abc import Callable
 from typing import Annotated, Any, NoReturn, cast
@@ -19,14 +21,14 @@ from gen_epix.commondb.domain.literal import (
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
 from gen_epix.fastapp.services.auth.service import AuthService
-from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
+from gen_epix.filter.datetime_range import DatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.util import copy_model_field
 
 
 class CaseTypeSetCaseTypeUpdateAssociationRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically"""  # noqa: D415
 
     __doc__ = command.CaseTypeSetCaseTypeUpdateAssociationCommand.__doc__
     case_type_set_members: list[model.CaseTypeSetMember] = copy_model_field(
@@ -37,7 +39,7 @@ class CaseTypeSetCaseTypeUpdateAssociationRequestBody(PydanticBaseModel):
 
 
 class ColSetColUpdateAssociationRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically"""  # noqa: D415
 
     __doc__ = command.ColSetColUpdateAssociationCommand.__doc__
     col_set_members: list[model.ColSetMember] = copy_model_field(
@@ -48,7 +50,7 @@ class ColSetColUpdateAssociationRequestBody(PydanticBaseModel):
 
 
 class CreateCaseSetRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically"""  # noqa: D415
 
     __doc__ = command.CreateCaseSetCommand.__doc__
     case_set: model.CaseSet = copy_model_field(command.CreateCaseSetCommand, "case_set")
@@ -64,8 +66,23 @@ class CreateCaseSetRequestBody(PydanticBaseModel):
     )
 
 
+class UpdateCaseCreatedInDataCollectionRequestBody(PydanticBaseModel):
+    """Docstring assigned automatically"""  # noqa: D415
+
+    __doc__ = command.UpdateCaseCreatedInDataCollectionCommand.__doc__
+    case_ids: list[UUID] = copy_model_field(
+        command.UpdateCaseCreatedInDataCollectionCommand,
+        "case_ids",
+        max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
+    )
+    target_created_in_data_collection_id: UUID = copy_model_field(
+        command.UpdateCaseCreatedInDataCollectionCommand,
+        "target_created_in_data_collection_id",
+    )
+
+
 class RetrieveCaseRightsRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically"""  # noqa: D415
 
     __doc__ = command.RetrieveCaseRightsCommand.__doc__
     case_type_id: UUID = copy_model_field(
@@ -79,7 +96,7 @@ class RetrieveCaseRightsRequestBody(PydanticBaseModel):
 
 
 class RetrieveCasesByIdRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically"""  # noqa: D415
 
     __doc__ = command.RetrieveCasesByIdCommand.__doc__
     case_type_id: UUID = copy_model_field(
@@ -93,7 +110,7 @@ class RetrieveCasesByIdRequestBody(PydanticBaseModel):
 
 
 class RetrieveCaseCohortLinksByCaseTypeRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically"""  # noqa: D415
 
     __doc__ = command.RetrieveCaseCohortLinksByCaseTypeCommand.__doc__
     case_type_id: UUID = copy_model_field(
@@ -102,7 +119,7 @@ class RetrieveCaseCohortLinksByCaseTypeRequestBody(PydanticBaseModel):
 
 
 class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically"""  # noqa: D415
 
     __doc__ = command.RetrievePhylogeneticTreeByCasesCommand.__doc__
     case_type_id: UUID = copy_model_field(
@@ -123,7 +140,7 @@ class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
 
 
 class RetrieveSimilarCasesRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically"""  # noqa: D415
 
     __doc__ = command.RetrieveSimilarCasesCommand.__doc__
     case_type_id: UUID = copy_model_field(
@@ -143,13 +160,13 @@ class RetrieveSimilarCasesRequestBody(PydanticBaseModel):
 
 
 class RetrieveSimilarCasesResponseBody(command.RetrieveSimilarCasesReturnValue):
-    """"""
+    """Docstring assigned automatically"""  # noqa: D415
 
     __doc__ = command.RetrieveSimilarCasesReturnValue.__doc__
 
 
 class RetrieveCaseTypeStatsRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically"""  # noqa: D415
 
     __doc__ = command.RetrieveCaseTypeStatsCommand.__doc__
     case_type_ids: set[UUID] | None = copy_model_field(
@@ -157,13 +174,13 @@ class RetrieveCaseTypeStatsRequestBody(PydanticBaseModel):
         "case_type_ids",
         max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
     )
-    datetime_range_filter: TypedDatetimeRangeFilter | None = copy_model_field(
+    datetime_range_filter: DatetimeRangeFilter | None = copy_model_field(
         command.RetrieveCaseTypeStatsCommand, "datetime_range_filter"
     )
 
 
 class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically"""  # noqa: D415
 
     __doc__ = command.RetrieveCaseSetStatsCommand.__doc__
     case_set_ids: set[UUID] | None = copy_model_field(
@@ -171,13 +188,13 @@ class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
         "case_set_ids",
         max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
     )
-    datetime_range_filter: TypedDatetimeRangeFilter | None = copy_model_field(
+    datetime_range_filter: DatetimeRangeFilter | None = copy_model_field(
         command.RetrieveCaseSetStatsCommand, "datetime_range_filter"
     )
 
 
 class CreateFileForReadSetRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically"""  # noqa: D415
 
     __doc__ = command.CreateFileForReadSetCommand.__doc__
     file_content: str = Field(
@@ -196,7 +213,7 @@ class CreateFileForReadSetRequestBody(PydanticBaseModel):
 
 
 class CreateFileForSeqRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically"""  # noqa: D415
 
     __doc__ = command.CreateFileForSeqCommand.__doc__
     file_content: str = Field(
@@ -212,8 +229,11 @@ class CreateFileForSeqRequestBody(PydanticBaseModel):
 
 
 class RefColValidationRulesResponseBody(PydanticBaseModel):
-    """
-    The additional validation rules that a RefCol instance must comply with.
+    """Represents additional validation rules for reference columns.
+
+    Model serialization:
+        Dimension and column type enum values are serialized as strings, and
+        each set of valid column types is serialized as a list.
     """
 
     valid_col_types_by_dim_type: dict[enum.DimType, set[enum.ColType]] = Field(
@@ -315,6 +335,32 @@ def create_case_endpoints(
                 input_handle_exception=handle_exception,
                 input_command=command.RetrieveCompleteCaseTypeCommand(
                     user=user, case_type_id=case_type_id
+                ),
+            ),
+        )
+
+    @router.post(
+        "/update_case_created_in_data_collection",
+        operation_id="update__case_created_in_data_collection",
+        name="Update cases' creating data collection",
+        description=command.UpdateCaseCreatedInDataCollectionCommand.__doc__,
+    )
+    async def update__case_created_in_data_collection(
+        user: registered_user_dependency,  # type: ignore[valid-type]
+        request_body: UpdateCaseCreatedInDataCollectionRequestBody,
+    ) -> list[UUID]:
+        """See router description."""
+        return cast(
+            list[UUID],
+            handle_command(
+                app=app,
+                user=user,
+                exception_code="a7c1e5f9",
+                input_handle_exception=handle_exception,
+                input_command=command.UpdateCaseCreatedInDataCollectionCommand(
+                    user=user,
+                    case_ids=request_body.case_ids,
+                    target_created_in_data_collection_id=request_body.target_created_in_data_collection_id,
                 ),
             ),
         )
@@ -785,7 +831,7 @@ def create_case_endpoints(
         name="RefCol validation rules",
         description=RefColValidationRulesResponseBody.__doc__,
     )
-    async def get__ref_col__validation_rules(
+    async def ref_col__validation_rules__get(
         user: registered_user_dependency,  # type: ignore[valid-type]
     ) -> RefColValidationRulesResponseBody:
         """See router description."""

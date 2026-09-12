@@ -9,7 +9,7 @@ from gen_epix.seqdb.domain.service import BaseAbacService
 
 
 class ReadUserPolicy(CommonReadUserPolicy):
-    """Authorize user reads with seqdb roles and organization-admin commands."""
+    """Encapsulates authorizing user reads with seqdb roles and organization-admin commands."""
 
     def __init__(
         self,

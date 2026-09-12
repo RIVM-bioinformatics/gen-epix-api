@@ -8,7 +8,7 @@ from gen_epix.fastapp import PermissionType, Policy
 
 
 class BaseHasSystemOutagePolicy(Policy):
-    """Define a policy that restricts commands while a system outage is active."""
+    """Encapsulates a policy that restricts commands while a system outage is active."""
 
     def __init__(
         self,

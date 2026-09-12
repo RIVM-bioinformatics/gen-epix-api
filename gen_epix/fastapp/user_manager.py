@@ -10,7 +10,7 @@ from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 class BaseUserManager(abc.ABC):
     """
-    Class that defines the interface for a user manager. This class should be
+    Encapsulates a class that defines the interface for a user manager. This class should be
     subclassed and the methods implemented to provide the necessary functionality for
     the user manager to work with the system. The user manager is responsible for
     creating, retrieving, and managing users in the system.

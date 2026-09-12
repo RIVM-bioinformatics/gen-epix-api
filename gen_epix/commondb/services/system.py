@@ -2,6 +2,7 @@
 
 import importlib
 import importlib.metadata
+import json
 import re
 import string
 import tomllib
@@ -22,7 +23,7 @@ from gen_epix.util import get_package_root
 
 
 class SystemService(BaseSystemService):
-    """Provide system configuration data and register global commondb policies."""
+    """Encapsulates system configuration data and register global commondb policies."""
 
     REQUIREMENTS_FILE_NAME = "pyproject.toml"
     _PARSE_AND_GET_PACKAGE_METADATA_CACHE: ClassVar[TTLCache] = TTLCache(
@@ -112,6 +113,41 @@ class SystemService(BaseSystemService):
         """
         packages = SystemService._parse_and_get_package_metadata()
         return packages
+
+    def delete_all_operational_data(
+        self, cmd: command.DeleteAllOperationalDataCommand
+    ) -> model.DeleteAllOperationalDataResult:
+        """Delete all operational data from the system.
+
+        Args:
+            cmd: Command requesting deletion of all operational data.
+
+        Returns:
+            DeleteAllOperationalDataResult. The `success` attribute indicates overall
+            success, and `details` provides the IDs of deleted records per-model-class
+            as a JSON-encoded list of IDs. If an error occurred during deletion,
+            the `details` entry for the model class will contain the error message.
+
+        Raises:
+            NotImplementedError: Always; concrete services implement deletion.
+        """
+        retval = model.DeleteAllOperationalDataResult(success=True)
+        for model_class in cmd.SORTED_OPERATIONAL_DATA_MODEL_CLASSES:
+            crud_command_class = self.app.domain.get_crud_command_for_model(model_class)
+            try:
+
+                deleted_ids = self.app.handle(
+                    crud_command_class(
+                        operation=CrudOperation.DELETE_ALL, return_id=True
+                    )
+                )
+                retval.details[model_class.ENTITY.name] = json.dumps(
+                    [str(x) for x in deleted_ids]
+                )
+            except Exception as e:
+                retval.success = False
+                retval.details[model_class.ENTITY.name] = f"{type(e).__name__}: {e}"
+        return retval
 
     @staticmethod
     @cached(cache=_PARSE_AND_GET_PACKAGE_METADATA_CACHE)

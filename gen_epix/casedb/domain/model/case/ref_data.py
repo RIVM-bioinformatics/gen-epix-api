@@ -1,3 +1,10 @@
+"""Define reference-data models used to configure case data structures.
+
+The module provides reusable dimensions and columns, case-type configuration,
+tree and genetic-distance metadata, and grouping models. These Pydantic models
+also define persistence metadata and normalize database-facing representations.
+"""
+
 import json
 from collections.abc import Iterable
 from datetime import datetime
@@ -23,6 +30,7 @@ from gen_epix.util import copy_model_field
 
 
 class GeneticDistanceProtocol(Model):
+    """Represents a protocol for calculating and storing genetic distances."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="genetic_distance_protocols",
@@ -34,7 +42,10 @@ class GeneticDistanceProtocol(Model):
         description="The ID of the protocol in seqdb"
     )
     seqdb_seq_distance_type: seqdb_enum.SeqDistanceType = Field(
-        description="The type of the genetic distance in seqdb"
+        description=(
+            "The genetic-distance type in seqdb. Integer enum values are accepted "
+            "during validation and the type is serialized as its integer value."
+        )
     )
     name: str = Field(description="The name of the protocol", max_length=255)
     description: str | None = Field(
@@ -54,16 +65,20 @@ class GeneticDistanceProtocol(Model):
     def _validate_seqdb_seq_distance_type(
         cls, value: Any
     ) -> seqdb_enum.SeqDistanceType:
+        """Normalize an integer enum value to a sequence-distance type."""
         return validate_int_enum_value(seqdb_enum.SeqDistanceType, value)  # type: ignore[return-value]
 
     @field_serializer("seqdb_seq_distance_type", mode="plain")
     def _serialize_seqdb_seq_distance_type(
         self, value: seqdb_enum.SeqDistanceType
     ) -> int:
+        """Serialize the sequence-distance type as its integer value."""
         return value.value
 
 
 class TreeAlgorithmClass(Model):
+    """Represents a category of algorithms used to construct trees."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="tree_algorithm_classes",
         table_name="tree_algorithm_class",
@@ -89,7 +104,8 @@ class TreeAlgorithmClass(Model):
 
 
 class TreeAlgorithm(Model):
-    """
+    """Represents an algorithm used to construct a tree.
+
     See https://en.wikipedia.org/wiki/Hierarchical_clustering,
     https://en.wikipedia.org/wiki/Neighbor_joining,
      https://en.wikipedia.org/wiki/Computational_phylogenetics,
@@ -120,7 +136,12 @@ class TreeAlgorithm(Model):
     seqdb_tree_algorithm_id: UUID = Field(
         description="The ID of the tree algorithm in seqdb"
     )
-    code: enum.TreeAlgorithmType = Field(description="The code of the tree algorithm")
+    code: enum.TreeAlgorithmType = Field(
+        description=(
+            "The code of the tree algorithm. String values are converted to "
+            "TreeAlgorithmType and serialized as strings."
+        )
+    )
     name: str = Field(description="The name of the tree algorithm", max_length=255)
     description: str | None = Field(
         default=None,
@@ -136,21 +157,23 @@ class TreeAlgorithm(Model):
     @field_validator("code", mode="before")
     @classmethod
     def _validate_code(cls, value: Any) -> enum.TreeAlgorithmType:
+        """Normalize a string code to a tree-algorithm type."""
         if isinstance(value, str):
             return enum.TreeAlgorithmType(value)
         return value
 
     @field_serializer("code", mode="plain")
     def _serialize_code(self, value: enum.TreeAlgorithmType) -> str:
+        """Serialize the tree-algorithm code as a string."""
         return value.value
 
 
 class RefDim(Model):
-    """
-    A reference dimension that is not linked to a specific CaseType, to promote reuse
-    and consistency. The reference dimension groups a number of reference columns that
-    logically belong together and contains part of the information needed to define a
-    dimension in a case, such as the code and label.
+    """Represents a reusable dimension that is not linked to a specific CaseType.
+
+    The reference dimension promotes reuse and consistency. It groups reference
+    columns that logically belong together and contains part of the information
+    needed to define a case dimension, such as its code and label.
     """
 
     ENTITY: ClassVar = Entity(
@@ -159,8 +182,16 @@ class RefDim(Model):
         persistable=True,
         keys=create_keys({1: "code"}),
     )
-    dim_type: enum.DimType = Field(description="The type of dimension.")
-    code: str = Field(description="The code for the dimension.", max_length=255)
+    dim_type: enum.DimType = Field(
+        description=(
+            "The type of dimension. String values are converted to DimType and "
+            "serialized as strings."
+        )
+    )
+    code: str = Field(
+        description="The code for the dimension, normalized to a string.",
+        max_length=255,
+    )
     label: str = Field(description="The label for the dimension.")
     rank: int = Field(
         default=0,
@@ -183,27 +214,34 @@ class RefDim(Model):
     @field_validator("code", mode="before")
     @classmethod
     def validate_code(cls, value: Any) -> str:
-        """Ensure that the code is always a string."""
+        """Normalize the dimension code to a string."""
         return str(value)
 
     @field_validator("dim_type", mode="before")
     @classmethod
     def _validate_dim_type(cls, value: Any) -> enum.DimType:
+        """Normalize a string value to a dimension type."""
         if isinstance(value, str):
             return enum.DimType(value)
         return value
 
     @field_serializer("dim_type", mode="plain")
     def _serialize_dim_type(self, value: enum.DimType) -> str:
+        """Serialize the dimension type as a string."""
         return value.value
 
 
 class RefCol(Model):
-    """
-    A reference column that is not linked to a specific CaseType, to promote reuse
-    and consistency. The reference column belongs to a reference dimension and contains
-    part of the information needed to define a column in a case, such as the code, type
-    and possible concept set.
+    """Represents a reusable column that is not linked to a specific CaseType.
+
+    The reference column promotes reuse and consistency. It belongs to a reference
+    dimension and contains part of the information needed to define a case column,
+    such as its code, type, and possible concept set.
+
+    Model validation: The column type determines whether a unit, concept set,
+    region set, genetic-distance protocol, regular expression, or schema is required
+    or prohibited. Schema-backed columns require exactly one schema source. Invalid
+    combinations raise ``InvalidArgumentsError``.
     """
 
     ENTITY: ClassVar = Entity(
@@ -244,7 +282,8 @@ class RefCol(Model):
         description=(
             "The code for the column, "
             "equal to the dimension column code prefix dot code_suffix"
-            " (dot code_suffix only if the latter is not null)."
+            " (dot code_suffix only if the latter is not null). Numeric values are "
+            "normalized to strings."
         ),
         max_length=255,
     )
@@ -257,11 +296,18 @@ class RefCol(Model):
         description="The label for the column, if different from the code.",
     )
     col_type: enum.ColType = Field(
-        description="The type of the data stored in the column."
+        description=(
+            "The type of data stored in the column. String values are converted to "
+            "ColType and serialized as strings."
+        )
     )
     unit: enum.Unit | None = Field(
         default=None,
-        description="The unit of the data stored in the column. Must be provided if the column type is numeric or interval.",
+        description=(
+            "The unit of data stored in the column. String values are converted to "
+            "Unit and serialized as strings; null remains null. Required when the "
+            "column type is numeric or interval."
+        ),
     )
     concept_set_id: UUID | None = Field(
         default=None,
@@ -317,7 +363,7 @@ class RefCol(Model):
     @field_validator("code", mode="before")
     @classmethod
     def _validate_code(cls, value: Any) -> Any:
-        """Ensure that numbers are converted to strings."""
+        """Normalize a numeric column code to a string."""
         if isinstance(value, (int, float)):
             return str(value)
         return value
@@ -325,6 +371,7 @@ class RefCol(Model):
     @field_validator("col_type", mode="before")
     @classmethod
     def _validate_col_type(cls, value: Any) -> enum.ColType:
+        """Normalize a string value to a column type."""
         if isinstance(value, str):
             return enum.ColType(value)
         return value
@@ -332,13 +379,14 @@ class RefCol(Model):
     @field_validator("unit", mode="before")
     @classmethod
     def _validate_unit(cls, value: Any) -> enum.Unit:
+        """Normalize a string value to a unit."""
         if isinstance(value, str):
             return enum.Unit(value)
         return value
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
-        """Validate the consistency of the RefCol based on its type and linked entities."""
+        """Validate column-type requirements and prohibited linked metadata."""
         if self.col_type in enum.ColTypeSet.HAS_UNIT.value:
             if self.unit is None:
                 raise exc.InvalidArgumentsError(
@@ -419,16 +467,17 @@ class RefCol(Model):
 
     @field_serializer("col_type", mode="plain")
     def _serialize_col_type(self, value: enum.ColType) -> str:
+        """Serialize the column type as a string."""
         return value.value
 
     @field_serializer("unit", mode="plain")
     def _serialize_unit(self, value: enum.Unit | None) -> str | None:
+        """Serialize a unit as a string while preserving null."""
         return None if value is None else value.value
 
 
 class CaseTypeProps(BaseModel):
-    """
-    Operational settings for a CaseType, stored as a single JSON column.
+    """Represents operational settings stored as one CaseType JSON column.
 
     A value of 0 for any field means "use the service-level default" rather than
     "no restriction". The service applies its configured default when it encounters 0.
@@ -477,11 +526,11 @@ class CaseTypeProps(BaseModel):
 
 
 class CaseType(Model):
-    """
-    A CaseType is the data equivalent of an epidemiological case definition. By
-    extension, it can also include non-cases that are relevant for the case definition,
-    e.g. controls or samples from non-human origin. In addition, the CaseType contains
-    some operational settings information.
+    """Represents the data equivalent of an epidemiological case definition.
+
+    By extension, it can also include non-cases that are relevant for the case
+    definition, e.g. controls or samples from non-human origin. In addition, the
+    CaseType contains some operational settings information.
 
     Columns and dimensions are linked to CaseTypes.
     """
@@ -514,12 +563,17 @@ class CaseType(Model):
     )
     props: CaseTypeProps = Field(
         default_factory=CaseTypeProps,
-        description="Operational settings for this CaseType, stored as JSON.",
+        description=(
+            "Operational settings for this CaseType, stored as JSON. Input may be a "
+            "CaseTypeProps instance, a mapping, or a JSON object string. Other input "
+            "types raise ValueError. The settings serialize as a dictionary."
+        ),
     )
 
     @field_validator("props", mode="before")
     @classmethod
     def _validate_props(cls, value: Any) -> CaseTypeProps:
+        """Normalize supported JSON-compatible input to CaseTypeProps."""
         if isinstance(value, CaseTypeProps):
             return value
         if isinstance(value, dict):
@@ -530,10 +584,13 @@ class CaseType(Model):
 
     @field_serializer("props", mode="plain")
     def _serialize_props(self, value: CaseTypeProps) -> dict[str, Any]:
+        """Serialize CaseType properties as a dictionary."""
         return value.model_dump()
 
 
 class CaseTypeSetCategory(Model):
+    """Represents a category that groups CaseType sets by purpose."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_type_set_categories",
         table_name="case_type_set_category",
@@ -551,17 +608,21 @@ class CaseTypeSetCategory(Model):
     rank: int = Field(description="The rank of the CaseTypeSet category")
     purpose: enum.CaseTypeSetCategoryPurpose = Field(
         default=enum.CaseTypeSetCategoryPurpose.CONTENT,
-        description="The purpose of the CaseTypeSet category",
+        description=(
+            "The purpose of the CaseTypeSet category, serialized as its string value."
+        ),
     )
 
     @field_serializer("purpose", mode="plain")
     def _serialize_purpose(self, value: enum.CaseTypeSetCategoryPurpose) -> str:
+        """Serialize the category purpose as a string."""
         return value.value
 
 
 class Dim(Model):
-    """
-    A dimension of a CaseType, logically grouping a number of columns. It is derived
+    """Represents a CaseType dimension that logically groups columns.
+
+    It is derived
     from a reference dimension and possibly occurs multiple times in the same case
     type. Multiple occurrences can capture e.g. multiple vaccinations or multiple
     samples taken during the time span of the case.
@@ -624,10 +685,10 @@ class Dim(Model):
 
 
 class Col(Model):
-    """
-    A column of a CaseType, part of a Dim, and containing the actual data for
-    the case. It is derived from a RefCol, from which it takes its
-    properties such as the column type.
+    """Represents a CaseType column containing case data within a dimension.
+
+    It is derived from a RefCol, from which it takes properties such as the column
+    type.
     """
 
     ENTITY: ClassVar = Entity(
@@ -654,7 +715,8 @@ class Col(Model):
             "The code for the Col, "
             "equal to the RefCol code and, if present, dot 'x' occurrence. "
             "E.g. 'Host.Vaccination.Date.COVID19.x1' for occurrence=1, "
-            "'Specimen.Sampling.Date' for occurrence=0"
+            "'Specimen.Sampling.Date' for occurrence=0. Numeric values are "
+            "normalized to strings."
         ),
         max_length=255,
     )
@@ -715,7 +777,11 @@ class Col(Model):
     )
     tree_algorithm_codes: set[enum.TreeAlgorithmType] | None = Field(
         default=None,
-        description=("The set of tree algorithms that can be used for the Col"),
+        description=(
+            "The tree algorithms usable for the Col. A set is preserved, a JSON "
+            "array string is decoded, and other iterables are converted to a set. "
+            "Values serialize as a sorted list of string codes; null remains null."
+        ),
     )
     props: dict[str, Any] = Field(
         default_factory=dict,
@@ -725,7 +791,7 @@ class Col(Model):
     @field_validator("code", mode="before")
     @classmethod
     def _validate_code(cls, value: Any) -> Any:
-        """Ensure that numbers are converted to strings."""
+        """Normalize a numeric column code to a string."""
         if isinstance(value, (int, float)):
             return str(value)
         return value
@@ -735,6 +801,7 @@ class Col(Model):
     def validate_tree_algorithm_codes(
         cls, value: Iterable[enum.TreeAlgorithmType] | str | None
     ) -> set[enum.TreeAlgorithmType] | None:
+        """Normalize supported algorithm-code collections to a set."""
         if value is None or isinstance(value, set):
             return value
         if isinstance(value, str):
@@ -745,10 +812,13 @@ class Col(Model):
     def _serialize_tree_algorithm_codes(
         self, value: list[enum.TreeAlgorithmType] | None
     ) -> list[str] | None:
+        """Serialize algorithm codes as a sorted string list or null."""
         return None if value is None else sorted(x.value for x in value)
 
 
 class ColSet(Model):
+    """Represents a named set of CaseType columns."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="col_sets",
         table_name="col_set",
@@ -764,6 +834,8 @@ class ColSet(Model):
 
 
 class ColSetMember(Model):
+    """Represents membership of a column in a column set."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="col_set_members",
         table_name="col_set_member",
@@ -783,6 +855,8 @@ class ColSetMember(Model):
 
 
 class CaseSetCategory(Model):
+    """Represents an ordered category used to group case sets."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_set_categories",
         table_name="case_set_category",
@@ -802,6 +876,8 @@ class CaseSetCategory(Model):
 
 
 class CaseSetStatus(Model):
+    """Represents an ordered status assignable to a case set."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_set_statuses",
         table_name="case_set_status",
@@ -821,6 +897,8 @@ class CaseSetStatus(Model):
 
 
 class CaseTypeSet(Model):
+    """Represents an ordered, categorized set of CaseTypes."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_type_sets",
         table_name="case_type_set",
@@ -854,6 +932,8 @@ class CaseTypeSet(Model):
 
 
 class CaseTypeSetMember(Model):
+    """Represents membership of a CaseType in a CaseType set."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_type_set_members",
         table_name="case_type_set_member",

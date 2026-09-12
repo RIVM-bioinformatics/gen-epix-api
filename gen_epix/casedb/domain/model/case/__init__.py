@@ -1,3 +1,13 @@
+"""Expose case-domain models for metadata, operations, queries, and uploads.
+
+``CompleteCaseType`` provides the user-specific case-type view. Non-persistable
+exports cover case rights, links, queries, statistics, and similar-case results;
+operational exports represent cases, identifiers, sets, memberships, and data
+collection links. Reference-data exports define case types, dimensions, columns,
+sets, statuses, and sequence-analysis configuration, while upload exports describe
+case batches and their linked sequence or read-set inputs and results.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix.casedb.domain.model.case.complete_case_type import (
     CompleteCaseType as CompleteCaseType,

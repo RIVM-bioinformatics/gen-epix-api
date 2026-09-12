@@ -17,7 +17,7 @@ from gen_epix.fastapp.cache.stats import CacheStatistics
 
 
 class LayeredBackend(CacheBackend):
-    """Combine a local near tier with a shared remote tier.
+    """Encapsulates combining a local near tier with a shared remote tier.
 
     Reads consult the near tier first and promote a remote hit into it. Writes
     and deletions are applied to both tiers, near tier first on deletion so

@@ -30,7 +30,7 @@ from gen_epix.fastapp.services.auth.token_introspection_manager import (
 
 
 class OauthIdpClient(IdpClient, OpenIdConnect):
-    """OAuth identity-provider client that validates and obtains tokens."""
+    """Encapsulates OAuth identity-provider client that validates and obtains tokens."""
 
     DEFAULT_INTROSPECTION_REQUEST_HEADERS: dict[str, str] = {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -214,7 +214,17 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
 
     async def get_jwk_from_jwt(self, jwt_token: str) -> jwt.PyJWK:
         """Return jwk from jwt."""
-        key_id: str = self._validate_key_id(jwt_token, self._parse_kid(jwt_token))
+        key_id = self._parse_kid(jwt_token)
+        if not key_id:
+            if self.logger:
+                self.logger.warning(
+                    self._log_item_class(
+                        code="0184bc35",
+                        msg="No key ID found in token header",
+                        scheme_name=self.scheme_name,
+                    ).dumps()
+                )
+            raise exc.UnauthorizedAuthError("d3d0bb67")
 
         # Verify that the signing key in this session is outdated, fetch new one if so
         # TODO: verify if fetching new signing keys is ok
@@ -264,21 +274,6 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             )
         self._load_keys()
 
-    def _validate_key_id(self, jwt_token: str, key_id: str | None) -> str:
-        """Validate key id."""
-        if not key_id:
-            if self.logger:
-                self.logger.warning(
-                    self._log_item_class(
-                        code="0184bc35",
-                        msg="No key ID found in token header",
-                        scheme_name=self.scheme_name,
-                        jwt=jwt_token,
-                    ).dumps()
-                )
-            raise exc.UnauthorizedAuthError("d3d0bb67")
-        return key_id
-
     def _parse_kid(self, jwt_token: str) -> str | None:
         """Parse kid."""
         try:
@@ -290,7 +285,6 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                         code="4cff1367",
                         msg="Unable to parse header from token",
                         scheme_name=self.scheme_name,
-                        jwt=jwt_token,
                         exception=e,
                     ).dumps()
                 )
@@ -414,7 +408,12 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
 
     def _decode_jwt_unverified(self, jwt_token: str) -> dict[str, Any]:
         """Decode jwt unverified."""
-        return jwt.decode(jwt_token, options={"verify_signature": False})  # type: ignore[no-any-return]
+        try:
+            return jwt.decode(jwt_token, options={"verify_signature": False})
+        except jwt.PyJWTError as exception:
+            raise exc.CredentialsAuthError(
+                "f6ec5507", http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+            ) from exception
 
     def retrieve_jwt_with_client_credentials_flow(
         self,

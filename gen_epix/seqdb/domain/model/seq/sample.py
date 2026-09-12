@@ -13,7 +13,7 @@ from gen_epix.fastapp.domain.util import create_links
 
 
 class Sample(Model):
-    """The original physical sample (specimen) on which all measurements were performed
+    """Represents the original physical sample (specimen) on which all measurements were performed
     either directly or through some derived samples. Derived samples such as cultures
     or library preps for sequencing are not modelled.
 
@@ -67,7 +67,7 @@ class Sample(Model):
 
 
 class HasSampleMixin:
-    """Provide sample relationship fields to models derived from a sample."""
+    """Encapsulates sample relationship fields for models derived from a sample."""
 
     # Annotation-only: an assigned Field lingers as class attr -> pydantic shadow warning
     sample_id: Annotated[
@@ -80,7 +80,7 @@ class HasSampleMixin:
 
 
 class SampleDataCollectionLink(Model):
-    """Association between a sample and a data collection. A sample can thus be part
+    """Represents an association between a sample and a data collection. A sample can thus be part
     of multiple data collections."""
 
     ENTITY: ClassVar = Entity(
@@ -112,7 +112,7 @@ class SampleDataCollectionLink(Model):
 
 
 class SampleIdentifier(BaseIdentifier):
-    """Associate an external identifier with a sample."""
+    """Represents an external identifier associated with a sample."""
 
     ENTITY: ClassVar = BaseIdentifier.create_entity(
         Sample,

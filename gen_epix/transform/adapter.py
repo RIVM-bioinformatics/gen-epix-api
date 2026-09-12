@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 @runtime_checkable
 class RowLike(Protocol):
-    """Structural interface required by row-oriented transformation code."""
+    """Encapsulates the structural interface for row-oriented transformations."""
 
     def get(self, key: Hashable, default: Any = None) -> Any:
         """Return the value for a key, or a fallback when it is absent.
@@ -85,7 +85,7 @@ class RowLike(Protocol):
 
 
 class DictAdapter:
-    """Adapt a mutable dictionary to the transformer field interface."""
+    """Encapsulates adapting a mutable dictionary to the field interface."""
 
     def __init__(self, obj: dict):
         """Wrap a mutable mapping so transformers can read and update it."""
@@ -109,7 +109,7 @@ class DictAdapter:
 
 
 class PydanticAdapter:
-    """Adapt a Pydantic model to the transformer field interface."""
+    """Encapsulates adapting a Pydantic model to the field interface."""
 
     def __init__(self, obj: BaseModel):
         """Wrap a Pydantic model and expose fields through adapter methods."""
@@ -133,7 +133,7 @@ class PydanticAdapter:
 
 
 class PolarsAdapter:
-    """Adapt a Polars-like object with column access to the field interface."""
+    """Encapsulates adapting a Polars-like object to the field interface."""
 
     def __init__(self, obj: Any):
         """Wrap a Polars-like object that exposes column access."""
@@ -160,7 +160,7 @@ class PolarsAdapter:
 
 
 class ObjectAdapter:
-    """Select and delegate to an adapter for a supported object representation.
+    """Encapsulates adapter selection for supported object representations.
 
     Supported values are dictionaries, Pydantic models, and objects exposing a
     Polars-style `columns` attribute or dataframe protocol.

@@ -1,3 +1,5 @@
+"""Retrieve phylogenetic, FASTA, and protocol data through seqdb commands."""
+
 from collections.abc import Iterable
 from uuid import UUID
 
@@ -13,6 +15,25 @@ from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 def case_service_retrieve_phylogenetic_tree(
     self: BaseCaseService, cmd: command.RetrievePhylogeneticTreeByCasesCommand
 ) -> model.PhylogeneticTree:
+    """Build a phylogenetic tree for accessible case-linked profiles.
+
+    The distance column must belong to the requested case type, represent genetic
+    distance, and permit the selected tree algorithm. Case access and content are
+    filtered before profile IDs are sent to seqdb. Tree leaf profile IDs are mapped
+    back to case IDs.
+
+    Args:
+        self: Case service handling the retrieval.
+        cmd: Command defining cases, distance column, algorithm, and QC restrictions.
+
+    Returns:
+        Phylogenetic tree annotated with the case genetic-distance protocol ID.
+
+    Raises:
+        InvalidArgumentsError: If the distance column has the wrong case or column
+            type.
+        UnauthorizedAuthError: If the selected tree algorithm is not allowed.
+    """
     case_type_id = cmd.case_type_id
     dist_col_id = cmd.genetic_distance_col_id
     tree_algorithm_code = cmd.tree_algorithm
@@ -124,8 +145,8 @@ def case_service_retrieve_phylogenetic_tree(
 def case_service_retrieve_genetic_sequence_fasta_by_case(
     self: BaseCaseService, cmd: command.RetrieveGeneticSequenceFastaByCaseCommand
 ) -> Iterable[str]:
-    """
-    Return a streaming iterable of FASTA formatted lines.
+    """Return a streaming iterable of FASTA-formatted lines.
+
     Path:
     HTTP client
     -> casedb endpoint
@@ -136,6 +157,17 @@ def case_service_retrieve_genetic_sequence_fasta_by_case(
     -> returns an iterator
     -> casedb forwards that iterator
     -> FastAPI wraps it in a StreamingResponse.
+
+    Args:
+        self: Case service handling the retrieval.
+        cmd: Command identifying cases and the genetic-sequence column.
+
+    Returns:
+        Lazy FASTA text lines produced by seqdb.
+
+    Raises:
+        InvalidArgumentsError: If no case IDs are supplied.
+        NoResultsError: If any accessible requested case lacks a sequence value.
     """
     case_type_id = cmd.case_type_id
     seq_col_id = cmd.genetic_sequence_col_id
@@ -173,6 +205,15 @@ def case_service_retrieve_genetic_sequence_fasta_by_case(
 def case_service_retrieve_protocols(
     self: BaseCaseService, cmd: command.RetrieveProtocolsCommand
 ) -> list[seqdb_model.Protocol]:
+    """Retrieve seqdb protocols filtered to the requested protocol type.
+
+    Args:
+        self: Case service dispatching the seqdb command.
+        cmd: Command containing user context and the requested protocol type.
+
+    Returns:
+        Protocols whose type equals the requested type.
+    """
     user, repository = self._get_user_and_repository(cmd)
     assert isinstance(user, model.User) and user.id is not None
 
@@ -195,6 +236,20 @@ def _get_seq_ids_from_cases(
     case_ids: list[UUID],
     seq_col_id: UUID,
 ) -> list[UUID | None]:
+    """Retrieve accessible cases and extract populated sequence identifiers.
+
+    Args:
+        self: Case service used for access-filtered case retrieval.
+        uow: Active case repository unit of work.
+        user: User whose case access is applied.
+        case_abac: Case access metadata for the user.
+        case_type_id: Case type shared by requested cases.
+        case_ids: Case identifiers to retrieve.
+        seq_col_id: Content column containing sequence identifiers.
+
+    Returns:
+        UUIDs parsed from populated sequence values in accessible result order.
+    """
     # @ABAC: Get cases and sequence_ids
     cases, is_max_results_exceeded = self._retrieve_cases_with_content_right(
         uow,

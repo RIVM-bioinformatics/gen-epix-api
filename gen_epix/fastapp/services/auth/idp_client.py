@@ -12,7 +12,7 @@ from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider
 
 
 class IdpClient(abc.ABC):
-    """Base client for an external identity provider."""
+    """Encapsulates the base client for an external identity provider."""
 
     DEFAULT_TOKEN = "id_token"
 

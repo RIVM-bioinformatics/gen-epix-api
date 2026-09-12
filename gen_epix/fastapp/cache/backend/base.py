@@ -16,7 +16,7 @@ from gen_epix.fastapp.cache.stats import CacheStatistics
 
 
 class CacheBackend(ABC):
-    """Store cache envelopes under string keys.
+    """Encapsulates storing cache envelopes under string keys.
 
     Implementations must be safe for concurrent use and must treat `delete` and
     `clear` as idempotent. Multi-key operations have working defaults expressed
@@ -121,7 +121,7 @@ class CacheBackend(ABC):
 
 
 class ProxyBackend(CacheBackend):
-    """Alter the behavior of another backend without subclassing it.
+    """Encapsulates altering the behavior of another backend without subclassing it.
 
     Proxies stack, so cross-cutting concerns such as logging, metrics or key
     rewriting can be composed independently of the store. Every method

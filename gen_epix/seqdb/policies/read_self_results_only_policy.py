@@ -9,7 +9,7 @@ from gen_epix.commondb.policies import (
 
 
 class ReadSelfResultsOnlyPolicy(CommonReadSelfResultsOnlyPolicy):
-    """Restrict eligible result reads to resources owned by the caller."""
+    """Encapsulates restricting eligible result reads to resources owned by the caller."""
 
     def __init__(
         self,

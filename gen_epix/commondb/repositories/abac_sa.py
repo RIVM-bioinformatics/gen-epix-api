@@ -5,6 +5,6 @@ from gen_epix.fastapp.repositories import SARepository
 
 
 class AbacSARepository(SARepository, BaseAbacRepository):
-    """Store ABAC policy records using FastApp's SQLAlchemy repository backend."""
+    """Encapsulates storage of ABAC policy records using FastApp's SQLAlchemy repository backend."""
 
     pass

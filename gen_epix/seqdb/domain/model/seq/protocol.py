@@ -352,7 +352,7 @@ class Protocol(Model):
 
 
 class HasProtocolMixin:
-    """Mixin for models that have an associated Protocol. Provides a protocol_id field
+    """Encapsulates models that have an associated Protocol. Provides a protocol_id field
     and a method to retrieve the associated Protocol.
     """
 
@@ -368,7 +368,7 @@ class HasProtocolMixin:
 
 
 class ProtocolSet(Model):
-    """A set of Protocols, for example a set of Protocol that are relevant for a specific
+    """Represents a set of Protocols, for example a set of Protocol that are relevant for a specific
     analysis or application."""
 
     ENTITY: ClassVar = Entity(

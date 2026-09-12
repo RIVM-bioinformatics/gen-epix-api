@@ -34,7 +34,7 @@ from gen_epix.fastapp.util import create_ssl_context
 
 
 class App(fastapp.App):
-    """Provide the commondb FastAPI application with specialized property types.
+    """Encapsulates the commondb FastAPI application with specialized property types.
 
     The specialized properties provide more specific types and linter support.
     """
@@ -46,7 +46,7 @@ class App(fastapp.App):
 
 
 class AppComposer(BaseAppComposer):
-    """Compose the commondb application by wiring services, repositories, and policies."""
+    """Encapsulates composition of the commondb application by wiring services, repositories, and policies."""
 
     def __init__(
         self,

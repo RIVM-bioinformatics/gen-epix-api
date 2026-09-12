@@ -4,6 +4,6 @@ from gen_epix.fastapp import BaseRepository
 
 
 class BaseSystemRepository(BaseRepository):
-    """Provide the persistence boundary for system outages and metadata."""
+    """Encapsulates the persistence boundary for system outages and metadata."""
 
     pass

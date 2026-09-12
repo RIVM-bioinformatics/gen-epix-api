@@ -9,7 +9,7 @@ from gen_epix.seqdb.domain.enum import ServiceType
 
 
 class BaseFileService(BaseService):
-    """Define seqdb command handlers implemented by concrete file services."""
+    """Encapsulates seqdb handlers implemented by concrete file services."""
 
     SERVICE_TYPE = ServiceType.FILE
 

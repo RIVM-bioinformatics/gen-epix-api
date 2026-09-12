@@ -12,7 +12,7 @@ from gen_epix.fastapp.exc import AuthException
 
 
 class HandleAuthExceptionMiddleware(BaseHTTPMiddleware):
-    """Log authentication errors and return an HTTP 401 response."""
+    """Encapsulates logging authentication errors and return an HTTP 401 response."""
 
     def __init__(
         # Mandatory parameters put as kwargs to comply with the signature of

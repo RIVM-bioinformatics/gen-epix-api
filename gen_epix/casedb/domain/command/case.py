@@ -1,3 +1,5 @@
+"""Define casedb commands for case schemas, content, sets, and sequence links."""
+
 from typing import ClassVar, Self
 from uuid import UUID
 
@@ -12,16 +14,18 @@ from gen_epix.commondb.domain.command import (
 )
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
+from gen_epix.filter.datetime_range import DatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
 
 # Non-CRUD
 
 
 class CaseTypeSetCaseTypeUpdateAssociationCommand(UpdateAssociationCommand):
-    """
-    Replace the CaseTypes in a CaseTypeSet with the provided list of members,
-    keeping the set in sync for downstream access policies and presets.
+    """Represents a request to replace the association between a case type set and its
+    case types.
+
+    The provided members keep the set synchronized for downstream access
+    policies and presets.
     """
 
     ASSOCIATION_CLASS: ClassVar = model.CaseTypeSetMember
@@ -34,9 +38,10 @@ class CaseTypeSetCaseTypeUpdateAssociationCommand(UpdateAssociationCommand):
 
 
 class ColSetColUpdateAssociationCommand(UpdateAssociationCommand):
-    """
-    Replace the columns in a ColSet with the provided members so
-    read/write scopes and UI column groupings stay aligned.
+    """Represents a request to replace the association between a column set and its columns.
+
+    The provided members keep read/write scopes and user-interface column
+    groupings aligned.
     """
 
     ASSOCIATION_CLASS: ClassVar = model.ColSetMember
@@ -49,9 +54,11 @@ class ColSetColUpdateAssociationCommand(UpdateAssociationCommand):
 
 
 class CreateCaseSetCommand(Command):
-    """
-    Create a new case set and associate it with the specified data collections and
-    cases.
+    """Represents a request to create a case set and its initial associations.
+
+    Model validation:
+        The creating data collection is removed from the additional data
+        collections because it is already associated through the case set.
     """
 
     case_set: model.CaseSet = Field(description="The case set to create.")
@@ -66,19 +73,23 @@ class CreateCaseSetCommand(Command):
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
+        """Remove the creating data collection from additional associations."""
         self.data_collection_ids.discard(self.case_set.created_in_data_collection_id)
         return self
 
 
 class UploadCasesCommand(Command, UploadBatchCommandMixin):
-    """
-    Upload a batch of cases along with their associated data and return an upload
-    result. The upload can be stopped after the verification step by setting the
-    'verify_only' property to True, so that the returned upload result only contains
-    the verification results.
+    """Represents a request to perform an atomic batch upload of cases and associated data.
+
+    The upload returns an upload result. Setting ``verify_only`` stops processing
+    after verification, so the result contains only verification outcomes.
 
     The data are uploaded as a single atomic unit of work, so that
     either all data are successfully uploaded or none are.
+
+    Model validation:
+        Every supplied case must belong to the command's case type. A mismatched
+        case causes validation to fail.
     """
 
     BATCH_FOR_UPLOAD_CLASS: ClassVar = model.CaseBatchForUpload
@@ -98,6 +109,7 @@ class UploadCasesCommand(Command, UploadBatchCommandMixin):
 
     @model_validator(mode="after")
     def _validate_cases(self) -> Self:
+        """Ensure every supplied case belongs to the command's case type."""
         cases_for_upload = self.case_batch.cases
         cases = [x.case for x in cases_for_upload if x.case is not None]
         if any(x.case_type_id != self.case_type_id for x in cases):
@@ -106,59 +118,54 @@ class UploadCasesCommand(Command, UploadBatchCommandMixin):
 
 
 class RetrieveCaseTypeStatsCommand(Command):
-    """
-    Retrieve statistics for a set of CaseTypes. Each of the parameters, when
-    provided, will further filter the cases that are considered for the
-    statistics.
+    """Represents a request to retrieve statistics about case types.
+
+    Optional parameters further filter the cases considered for the statistics.
     """
 
     case_type_ids: set[UUID] | None = Field(
         default=None,
         description="The CaseType IDs to retrieve stats for, if not all.",
     )
-    datetime_range_filter: TypedDatetimeRangeFilter | None = Field(
+    datetime_range_filter: DatetimeRangeFilter | None = Field(
         default=None,
         description="The datetime range to filter cases by, if any. The key attribute of the filter should be left empty.",
     )
 
 
 class RetrieveCaseSetStatsCommand(Command):
-    """
-    Retrieve statistics for a set of CaseSets. Each of the parameters, when
-    provided, will further filter the cases that are considered for the
-    statistics.
+    """Represents a request to retrieve statistics about case sets.
+
+    Optional parameters further filter the cases considered for the statistics.
     """
 
     case_set_ids: set[UUID] | None = Field(
         default=None,
         description="The case set IDs to retrieve stats for, if not all.",
     )
-    datetime_range_filter: TypedDatetimeRangeFilter | None = Field(
+    datetime_range_filter: DatetimeRangeFilter | None = Field(
         default=None,
         description="The datetime range to filter cases by, if any. The key attribute of the filter should be left empty.",
     )
 
 
 class RetrieveCompleteCaseTypeCommand(Command):
-    """
-    Retrieve a complete CaseType.
-    """
+    """Represents a request to retrieve a complete case type."""
 
     case_type_id: UUID = Field(description="The ID of the CaseType to retrieve.")
 
 
 class RetrieveCasesByQueryCommand(Command):
-    """
-    Retrieve cases based on a query.
-    """
+    """Represents a request to retrieve cases matching a case query."""
 
     case_query: model.CaseQuery = Field(description="The query to filter cases by.")
 
 
 class RetrieveCaseCohortLinksByCaseTypeCommand(Command):
-    """
-    Retrieve all (case_id, cohort_ids) pairs for a given CaseType.
-    Returns every case without pagination. Restricted to APP_ADMIN.
+    """Represents a request to retrieve case-to-cohort links for a case type.
+
+    The request returns every case without pagination and is restricted to the
+    application administrator role.
     """
 
     case_type_id: UUID = Field(description="The CaseType ID to retrieve pairs for.")
@@ -169,9 +176,7 @@ class RetrieveCaseCohortLinksByCaseTypeCommand(Command):
 
 
 class RetrieveCasesByIdCommand(Command):
-    """
-    Retrieve cases by their IDs.
-    """
+    """Represents a request to retrieve cases identified by unique IDs."""
 
     case_type_id: UUID = Field(description="The CaseType ID to retrieve cases for.")
     case_ids: list[UUID] = Field(
@@ -181,15 +186,14 @@ class RetrieveCasesByIdCommand(Command):
     @field_validator("case_ids", mode="after")
     @classmethod
     def _validate_case_ids(cls, value: list[UUID]) -> list[UUID]:
+        """Ensure the requested case IDs are unique."""
         if len(set(value)) < len(value):
             raise ValueError("Duplicate case ids")
         return value
 
 
 class RetrieveCaseRightsCommand(Command):
-    """
-    Retrieve access rights for a set of cases.
-    """
+    """Represents a request to retrieve access rights to specified cases."""
 
     case_type_id: UUID = Field(
         description="The CaseType ID to retrieve case access for."
@@ -201,15 +205,14 @@ class RetrieveCaseRightsCommand(Command):
     @field_validator("case_ids", mode="after")
     @classmethod
     def _validate_case_ids(cls, value: list[UUID]) -> list[UUID]:
+        """Ensure the case IDs used for access lookup are unique."""
         if len(set(value)) < len(value):
             raise ValueError("Duplicate case ids")
         return value
 
 
 class RetrieveCaseSetRightsCommand(Command):
-    """
-    Retrieve access rights for a set of case sets.
-    """
+    """Represents a request to retrieve access rights to specified case sets."""
 
     case_set_ids: list[UUID] = Field(
         description="The CaseSet IDs to retrieve access for. UNIQUE"
@@ -218,16 +221,14 @@ class RetrieveCaseSetRightsCommand(Command):
     @field_validator("case_set_ids", mode="after")
     @classmethod
     def _validate_case_set_ids(cls, value: list[UUID]) -> list[UUID]:
+        """Ensure the case-set IDs used for access lookup are unique."""
         if len(set(value)) < len(value):
             raise ValueError("Duplicate CaseSet IDs")
         return value
 
 
 class RetrievePhylogeneticTreeByProfilesCommand(Command):
-    """
-    Calculate a phylogenetic tree based on a set of profile IDs, a tree algorithm, and
-    a protocol.
-    """
+    """Represents a request to calculate a phylogenetic tree from sequence profiles."""
 
     tree_algorithm_code: enum.TreeAlgorithmType = Field(
         description="The algorithm to use for constructing the phylogenetic tree."
@@ -243,10 +244,7 @@ class RetrievePhylogeneticTreeByProfilesCommand(Command):
 
 
 class RetrievePhylogeneticTreeByCasesCommand(Command):
-    """
-    Retrieve a phylogenetic tree based on a set of case IDs, a tree algorithm, and
-    a genetic distance Col.
-    """
+    """Represents a request to calculate a phylogenetic tree from cases and genetic distances."""
 
     case_type_id: UUID = Field(
         description="The CaseType ID that all the cases must belong to."
@@ -267,9 +265,10 @@ class RetrievePhylogeneticTreeByCasesCommand(Command):
 
 
 class RetrieveSimilarCasesCommand(Command):
-    """
-    Retrieve cases that are (genetically) similar to a given list of case_ids,
-    based on the genetic distance values in a specified genetic distance Col and a maximum distance threshold.
+    """Represents a request to retrieve genetically similar cases.
+
+    Similarity is based on a genetic-distance column and a maximum distance
+    threshold applied to the supplied case IDs.
     """
 
     case_type_id: UUID = Field(
@@ -289,7 +288,7 @@ class RetrieveSimilarCasesCommand(Command):
 
 
 class RetrieveSimilarCasesReturnValue(BaseModel):
-    """The return value for the RetrieveSimilarCasesCommand."""
+    """Represents the cases returned by a similar-case request."""
 
     cases: list[model.SimilarCase] = Field(
         description="The similar cases that were found, limited to their IDs and case dates."
@@ -297,9 +296,10 @@ class RetrieveSimilarCasesReturnValue(BaseModel):
 
 
 class RetrieveGeneticSequenceFastaByCaseCommand(Command):
-    """
-    Retrieve a set of genetic sequences in FASTA format based on a set of case IDs and a genetic
-    sequence Col. An iterator is returned that yields the FASTA lines.
+    """Represents a request for case-linked sequences in FASTA format.
+
+    The response is an iterator that yields FASTA lines for sequences selected
+    through the specified genetic-sequence column.
     """
 
     case_type_id: UUID = Field(
@@ -314,10 +314,10 @@ class RetrieveGeneticSequenceFastaByCaseCommand(Command):
 
 
 class CreateFileForReadSetCommand(Command):
-    """
-    Upload a raw reads file (e.g., FASTQ) for a case's read-set column and return
-    the stored file ID. Accepts base64 content, optional compression, and marks
-    whether the payload is forward or reverse reads.
+    """Represents a request to upload a raw-reads file for a case read-set column.
+
+    The command accepts base64 content with optional compression, distinguishes
+    forward from reverse reads, and returns the stored file ID.
     """
 
     is_fwd: bool = Field(
@@ -337,10 +337,10 @@ class CreateFileForReadSetCommand(Command):
 
 
 class CreateFileForSeqCommand(Command):
-    """
-    Upload an assembled sequence file (e.g., FASTA) for a case's sequence column
-    and return the stored file ID. Accepts base64 content with optional
-    compression.
+    """Represents a request to upload an assembled file for a case sequence column.
+
+    The command accepts base64 content with optional compression and returns the
+    stored file ID.
     """
 
     case_id: UUID = Field(description="The ID of the case the sequence belongs to.")
@@ -357,10 +357,7 @@ class CreateFileForSeqCommand(Command):
 
 
 class RetrieveProtocolsCommand(Command):
-    """
-    Retrieve the protocols registered in seqdb for downstream sequence
-    processing and provenance.
-    """
+    """Represents a request to retrieve seqdb protocols by protocol type."""
 
     protocol_type: seqdb_enum.ProtocolType = Field(
         description="The type of protocols to retrieve."
@@ -368,9 +365,9 @@ class RetrieveProtocolsCommand(Command):
 
 
 class RetrieveIsOwnCasesCommand(Command):
-    """
-    Given a list of case IDs, check which of the cases are owned by the user or the user has access to.
-    Returns a list of case IDs that the user owns or has access to.
+    """Represents a request to retrieve cases owned by or accessible to the user.
+
+    The response contains the supplied case IDs that the user owns or may access.
     """
 
     case_type_id: UUID = Field(
@@ -381,130 +378,139 @@ class RetrieveIsOwnCasesCommand(Command):
     )
 
 
+class UpdateCaseCreatedInDataCollectionCommand(Command):
+    """Represents a request to assign a different created_in_data_collection_id to a list of cases."""
+
+    case_ids: list[UUID] = Field(description="The IDs of the cases to update.")
+    target_created_in_data_collection_id: UUID = Field(
+        description="The ID of the data collection to assign to the cases as created_in_data_collection_id."
+    )
+
+
 # CRUD
 
 
 class CaseCrudCommand(CrudCommand):
-    """Manage cases (list/get/create/update/delete) with typed content tied to a CaseType and data collection."""
+    """Represents a request to execute a CRUD operation on Cases."""
 
     MODEL_CLASS: ClassVar = model.Case
 
 
 class CaseIdentifierCrudCommand(CrudCommand):
-    """Manage case identifiers that link cases to external systems or provide alternate lookup keys."""
+    """Represents a request to execute a CRUD operation on CaseIdentifiers."""
 
     MODEL_CLASS: ClassVar = model.CaseIdentifier
 
 
 class CaseDataCollectionLinkCrudCommand(CrudCommand):
-    """Manage links that associate cases with additional data collections to widen or restrict sharing beyond their origin."""
+    """Represents a request to execute a CRUD operation on CaseDataCollection links."""
 
     MODEL_CLASS: ClassVar = model.CaseDataCollectionLink
 
 
 class CaseSetCategoryCrudCommand(CrudCommand):
-    """Maintain the categories used to tag case sets (e.g., outbreak, surveillance, QA)."""
+    """Represents a request to execute a CRUD operation on CaseSetCategories."""
 
     MODEL_CLASS: ClassVar = model.CaseSetCategory
 
 
 class CaseSetCrudCommand(CrudCommand):
-    """Manage case sets (list/get/create/update/delete) including type, category, status, and data-collection context."""
+    """Represents a request to execute a CRUD operation on CaseSets."""
 
     MODEL_CLASS: ClassVar = model.CaseSet
 
 
 class CaseSetDataCollectionLinkCrudCommand(CrudCommand):
-    """Manage links that share case sets into additional data collections for cross-group collaboration."""
+    """Represents a request to execute a CRUD operation on CaseSetDataCollectionLinks."""
 
     MODEL_CLASS: ClassVar = model.CaseSetDataCollectionLink
 
 
 class CaseSetMemberCrudCommand(CrudCommand):
-    """Manage membership of cases in a case set, including per-member classification when present."""
+    """Represents a request to execute a CRUD operation on CaseSetMembers."""
 
     MODEL_CLASS: ClassVar = model.CaseSetMember
 
 
 class CaseSetStatusCrudCommand(CrudCommand):
-    """Maintain lifecycle/status values for case sets (e.g., draft, active, closed)."""
+    """Represents a request to execute a CRUD operation on CaseSetStatuses."""
 
     MODEL_CLASS: ClassVar = model.CaseSetStatus
 
 
 class ColCrudCommand(CrudCommand):
-    """Manage case-type columns: datatype, vocab/region bindings, and genetic-distance settings."""
+    """Represents a request to execute a CRUD operation on Cols."""
 
     MODEL_CLASS: ClassVar = model.Col
 
 
 class ColSetCrudCommand(CrudCommand):
-    """Manage column sets used for read/write scopes and default column groupings."""
+    """Represents a request to execute a CRUD operation on ColSets."""
 
     MODEL_CLASS: ClassVar = model.ColSet
 
 
 class ColSetMemberCrudCommand(CrudCommand):
-    """Manage which columns belong to a column set used in policies or UI presets."""
+    """Represents a request to execute a CRUD operation on ColSetMembers."""
 
     MODEL_CLASS: ClassVar = model.ColSetMember
 
 
 class CaseTypeCrudCommand(CrudCommand):
-    """Manage CaseTypes—the structural and default definitions cases must follow."""
+    """Represents a request to execute a CRUD operation on CaseTypes."""
 
     MODEL_CLASS: ClassVar = model.CaseType
 
 
 class DimCrudCommand(CrudCommand):
-    """Manage dimensions that group case-type columns (e.g., demographics, sample, sequencing)."""
+    """Represents a request to execute a CRUD operation on Dims."""
 
     MODEL_CLASS: ClassVar = model.Dim
 
 
 class CaseTypeSetCategoryCrudCommand(CrudCommand):
-    """Maintain categories used to organize case-type sets for policy scoping."""
+    """Represents a request to execute a CRUD operation on CaseTypeSetCategories."""
 
     MODEL_CLASS: ClassVar = model.CaseTypeSetCategory
 
 
 class CaseTypeSetCrudCommand(CrudCommand):
-    """Manage sets of related CaseTypes reused in access policies and presets."""
+    """Represents a request to execute a CRUD operation on CaseTypeSets."""
 
     MODEL_CLASS: ClassVar = model.CaseTypeSet
 
 
 class CaseTypeSetMemberCrudCommand(CrudCommand):
-    """Manage which CaseTypes belong to a case-type set."""
+    """Represents a request to execute a CRUD operation on CaseTypeSetMembers."""
 
     MODEL_CLASS: ClassVar = model.CaseTypeSetMember
 
 
 class RefColCrudCommand(CrudCommand):
-    """Manage reusable column definitions (code/label/type) referenced by case-type columns and vocabularies."""
+    """Represents a request to execute a CRUD operation on RefCols."""
 
     MODEL_CLASS: ClassVar = model.RefCol
 
 
 class RefDimCrudCommand(CrudCommand):
-    """Manage column dimensions, including code prefixes and ordering, reused across CaseTypes."""
+    """Represents a request to execute a CRUD operation on RefDims."""
 
     MODEL_CLASS: ClassVar = model.RefDim
 
 
 class GeneticDistanceProtocolCrudCommand(CrudCommand):
-    """Manage genetic distance protocols available for sequence comparisons in phylogenetic analyses."""
+    """Represents a request to execute a CRUD operation on GeneticDistanceProtocols."""
 
     MODEL_CLASS: ClassVar = model.GeneticDistanceProtocol
 
 
 class TreeAlgorithmClassCrudCommand(CrudCommand):
-    """Manage categories of phylogenetic algorithms and whether they require sequences vs. distance matrices."""
+    """Represents a request to execute a CRUD operation on TreeAlgorithmClasses."""
 
     MODEL_CLASS: ClassVar = model.TreeAlgorithmClass
 
 
 class TreeAlgorithmCrudCommand(CrudCommand):
-    """Manage specific phylogenetic tree algorithms linked to seqdb implementations and parameters."""
+    """Represents a request to execute a CRUD operation on TreeAlgorithms."""
 
     MODEL_CLASS: ClassVar = model.TreeAlgorithm

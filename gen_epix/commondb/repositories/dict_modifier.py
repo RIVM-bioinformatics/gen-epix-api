@@ -12,7 +12,7 @@ from gen_epix.fastapp.repositories.dict.modifier import BaseDictModelModifier
 
 class CommondbDictModelModifier(BaseDictModelModifier):
     """
-    DictRepository modifier for all databases that use RowMetadataMixin.
+    Encapsulates a DictRepository modifier for all databases that use RowMetadataMixin.
 
     Mirrors CommondbSAMapper's create/update semantics for the dict backend:
     - on_create : stamps created_at and modified_at with current time;

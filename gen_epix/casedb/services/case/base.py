@@ -1,3 +1,10 @@
+"""Define the shared interface and helpers required by case service handlers.
+
+The module exposes :class:`BaseCaseService`, which supplies shared conversion
+metadata and declares the retrieval, association, and validation operations used
+by the case service implementation modules.
+"""
+
 from abc import abstractmethod
 from collections.abc import Iterable
 from typing import Any, ClassVar
@@ -15,10 +22,14 @@ from gen_epix.filter import DatetimeRangeFilter, Filter
 
 
 class BaseCaseService(DomainBaseCaseService):
-    """
-    Abstract base class for case services defining the interface contract.
+    """Encapsulates the interface contract shared by case service handlers.
+
     This additional base class allows splitting the implementation into
     multiple modules while maintaining linter support.
+
+    Attributes:
+        role_map: Mapping of application roles by identifier.
+        role_set_map: Mapping of application role sets by identifier.
     """
 
     _RETRIEVE_COMPLETE_CASE_TYPE_CACHE: ClassVar[TTLCache] = TTLCache(
@@ -63,6 +74,12 @@ class BaseCaseService(DomainBaseCaseService):
     }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize the domain service and cache application role metadata.
+
+        Args:
+            *args: Positional arguments forwarded to the domain base service.
+            **kwargs: Keyword arguments forwarded to the domain base service.
+        """
         super().__init__(*args, **kwargs)
         app_impl: AppImplDetails = self.app.impl
         self.role_map = app_impl.role_map
@@ -82,7 +99,26 @@ class BaseCaseService(DomainBaseCaseService):
         uow: BaseUnitOfWork | None = None,
         user: model.User | None = None,
     ) -> list[model.Model] | list[UUID] | dict[UUID, set[UUID]]:
-        """Read association entities with ID validation."""
+        """Read association entities constrained by valid endpoint identifiers.
+
+        Args:
+            command_class: CRUD command used to read the association model.
+            field_name1: Name of the first association endpoint field.
+            field_name2: Name of the second association endpoint field.
+            valid_ids1: Valid identifiers for the first endpoint, if constrained.
+            valid_ids2: Valid identifiers for the second endpoint, if constrained.
+            match_all1: Whether every first-endpoint identifier must be present.
+            match_all2: Whether every second-endpoint identifier must be present.
+            return_type: Requested objects, endpoint IDs, or association mapping.
+            uow: Existing unit of work to use, if supplied.
+            user: User on whose behalf the command is handled, if supplied.
+
+        Returns:
+            Association objects, endpoint identifiers, or an endpoint mapping.
+
+        Raises:
+            NotImplementedError: Always; subclasses must implement this operation.
+        """
         raise NotImplementedError()
 
     @abstractmethod
@@ -97,7 +133,24 @@ class BaseCaseService(DomainBaseCaseService):
         filter: Filter | None = None,
         on_invalid_case_set_id: str = "raise",
     ) -> list[model.CaseSet]:
-        """Retrieve case sets that the user has specific content rights for."""
+        """Retrieve case sets for which a user has a content right.
+
+        Args:
+            uow: Unit of work used for repository access.
+            user_id: Identifier of the user whose access is evaluated.
+            case_abac: Case access policy data for the user.
+            right: Required case-set content right.
+            case_type_id: Optional case type restriction.
+            case_set_ids: Optional identifiers of requested case sets.
+            filter: Optional repository query filter.
+            on_invalid_case_set_id: Whether invalid requested IDs raise or are ignored.
+
+        Returns:
+            Case sets that satisfy the request and access constraints.
+
+        Raises:
+            NotImplementedError: Always; subclasses must implement this operation.
+        """
         raise NotImplementedError()
 
     @abstractmethod
@@ -116,10 +169,28 @@ class BaseCaseService(DomainBaseCaseService):
         extra_access_col_ids: set[UUID] | None = None,
         apply_max_n_cases: bool = True,
     ) -> tuple[list[model.Case], bool]:
-        """
-        Retrieve cases that the user has specific content rights for. The boolean in
-        the return value indicates whether the number of cases exceeds the maximum
-        allowed.
+        """Retrieve cases for which a user has a content right.
+
+        Args:
+            uow: Unit of work used for repository access.
+            user_id: Identifier of the user whose access is evaluated.
+            case_abac: Case access policy data for the user.
+            right: Required case content right.
+            case_type_id: Identifier of the requested case type.
+            case_ids: Optional identifiers of requested cases.
+            datetime_range_filter: Optional case-date range restriction.
+            on_invalid_case_id: Whether invalid requested IDs raise or are ignored.
+            filter_content: Whether inaccessible content columns are removed.
+            calculate_case_date: Whether the derived case date is populated.
+            extra_access_col_ids: Additional column identifiers retained in content.
+            apply_max_n_cases: Whether the configured result limit is applied.
+
+        Returns:
+            A pair containing accessible cases and whether the result limit was
+            exceeded.
+
+        Raises:
+            NotImplementedError: Always; subclasses must implement this operation.
         """
         raise NotImplementedError()
 
@@ -131,7 +202,20 @@ class BaseCaseService(DomainBaseCaseService):
         case_ids: Iterable[UUID] | None = None,
         data_collection_ids: Iterable[UUID] | None = None,
     ) -> dict[UUID, set[UUID]]:
-        """Retrieve mapping of cases to their data collections."""
+        """Retrieve the data collections linked to cases.
+
+        Args:
+            uow: Unit of work used for repository access.
+            user_id: Identifier of the user performing the retrieval.
+            case_ids: Optional case identifiers to constrain the mapping.
+            data_collection_ids: Optional collection identifiers to constrain it.
+
+        Returns:
+            Data collection identifiers grouped by case identifier.
+
+        Raises:
+            NotImplementedError: Always; subclasses must implement this operation.
+        """
         raise NotImplementedError()
 
     @abstractmethod
@@ -142,7 +226,20 @@ class BaseCaseService(DomainBaseCaseService):
         case_set_ids: Iterable[UUID] | None = None,
         data_collection_ids: Iterable[UUID] | None = None,
     ) -> dict[UUID, set[UUID]]:
-        """Retrieve mapping of case sets to their data collections."""
+        """Retrieve the data collections linked to case sets.
+
+        Args:
+            uow: Unit of work used for repository access.
+            user_id: Identifier of the user performing the retrieval.
+            case_set_ids: Optional case-set identifiers to constrain the mapping.
+            data_collection_ids: Optional collection identifiers to constrain it.
+
+        Returns:
+            Data collection identifiers grouped by case-set identifier.
+
+        Raises:
+            NotImplementedError: Always; subclasses must implement this operation.
+        """
         raise NotImplementedError()
 
     @abstractmethod
@@ -153,7 +250,20 @@ class BaseCaseService(DomainBaseCaseService):
         case_ids: Iterable[UUID] | None = None,
         case_set_ids: Iterable[UUID] | None = None,
     ) -> dict[UUID, set[UUID]]:
-        """Retrieve mapping of cases to their case sets."""
+        """Retrieve the case sets linked to cases.
+
+        Args:
+            uow: Unit of work used for repository access.
+            user_id: Identifier of the user performing the retrieval.
+            case_ids: Optional case identifiers to constrain the mapping.
+            case_set_ids: Optional case-set identifiers to constrain the mapping.
+
+        Returns:
+            Case-set identifiers grouped by case identifier.
+
+        Raises:
+            NotImplementedError: Always; subclasses must implement this operation.
+        """
         raise NotImplementedError()
 
     @abstractmethod
@@ -167,8 +277,22 @@ class BaseCaseService(DomainBaseCaseService):
         obj_ids1: frozenset[UUID] | None = None,
         obj_ids2: frozenset[UUID] | None = None,
     ) -> dict[UUID, set[UUID]]:
-        """
-        Get a dict[obj_id1, set[obj_ids]] based on the association stored in the association_class objs.
+        """Retrieve linked identifiers grouped by the first association endpoint.
+
+        Args:
+            uow: Unit of work used for repository access.
+            user_id: Optional identifier of the user performing the retrieval.
+            association_class: Association model to query.
+            link_field_name1: Name of the first endpoint field.
+            link_field_name2: Name of the second endpoint field.
+            obj_ids1: Optional first-endpoint identifiers to constrain the mapping.
+            obj_ids2: Optional second-endpoint identifiers to constrain the mapping.
+
+        Returns:
+            Second-endpoint identifiers grouped by first-endpoint identifier.
+
+        Raises:
+            NotImplementedError: Always; subclasses must implement this operation.
         """
         raise NotImplementedError()
 
@@ -176,18 +300,48 @@ class BaseCaseService(DomainBaseCaseService):
     def _retrieve_seq_column_data(
         self, uow: BaseUnitOfWork, user: model.User, seq_col_id: UUID
     ) -> tuple[model.Col, model.RefCol]:
-        """Retrieve sequence column data and validate it's a genetic sequence column."""
+        """Retrieve and validate genetic-sequence column metadata.
+
+        Args:
+            uow: Unit of work used for repository access.
+            user: User performing the retrieval.
+            seq_col_id: Identifier of the sequence column.
+
+        Returns:
+            The column and its reference-column metadata.
+
+        Raises:
+            NotImplementedError: Always; subclasses must implement this operation.
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def _verify_case_set_member_case_type(
         self, user: model.User, case_set_members: list[model.CaseSetMember]
     ) -> None:
-        """Verify that case set members have matching CaseTypes with their case sets."""
+        """Verify that members and their case sets have matching case types.
+
+        Args:
+            user: User performing the operation.
+            case_set_members: Membership records to verify.
+
+        Raises:
+            NotImplementedError: Always; subclasses must implement this operation.
+        """
         raise NotImplementedError()
 
     @staticmethod
     @abstractmethod
     def _compose_id_filter(*key_and_ids: tuple[str, set[UUID]]) -> Filter:
-        """Compose filter for ID-based filtering."""
+        """Compose a filter from field names and accepted identifiers.
+
+        Args:
+            *key_and_ids: Field-name and accepted-identifier pairs.
+
+        Returns:
+            A filter matching the supplied identifier constraints.
+
+        Raises:
+            NotImplementedError: Always; subclasses must implement this operation.
+        """
         raise NotImplementedError()

@@ -24,7 +24,7 @@ _T = TypeVar("_T")
 
 
 class CircuitBreaker:
-    """Stop calling a backend that fails repeatedly.
+    """Encapsulates stopping calling a backend that fails repeatedly.
 
     After `failure_threshold` consecutive failures the breaker opens and every
     call is refused without touching the backend. Once `reset_timeout` has
@@ -117,7 +117,7 @@ class CircuitBreaker:
 
 
 class TimeoutGuard:
-    """Bound the wall-clock duration of a backend call.
+    """Encapsulates bounding the wall-clock duration of a backend call.
 
     The call runs on a worker thread so that a store that never answers cannot
     block a request thread. A timed-out call is abandoned rather than
@@ -189,7 +189,7 @@ class TimeoutGuard:
 
 
 class FailurePolicy:
-    """Decide what happens when a cache backend call fails.
+    """Encapsulates deciding what happens when a cache backend call fails.
 
     The policy wraps every backend interaction of a region. In `FAIL_OPEN` mode
     a failure is absorbed and the region behaves as if the entry were absent,

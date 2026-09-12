@@ -11,7 +11,7 @@ from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
 
 class SeqCategorySet(Model):
-    """Group related sequence categories under a stable code and name."""
+    """Represents related sequence categories grouped under a stable code and name."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="seq_category_sets",
@@ -24,7 +24,7 @@ class SeqCategorySet(Model):
 
 
 class SeqCategory(Model):
-    """Classify a sequence within a named sequence category set."""
+    """Represents a sequence classification within a named sequence category set."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="seq_categories",

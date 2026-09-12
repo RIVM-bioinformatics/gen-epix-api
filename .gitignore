@@ -199,4 +199,4 @@ graphify-out/????-??-??/
 # Ruff linter
 .ruff_cache/
 
-.github/docs/
+.github/docs

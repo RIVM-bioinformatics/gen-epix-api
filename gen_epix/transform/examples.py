@@ -15,7 +15,7 @@ from gen_epix.transform.transformer import Transformer
 
 
 class Person(BaseModel):
-    """Example Pydantic model accepted by the object adapter."""
+    """Represents an example Pydantic model accepted by the object adapter."""
 
     name: str
     age: int
@@ -24,7 +24,7 @@ class Person(BaseModel):
 
 @register_transformer("string_upper")
 class StringUpperTransformer(Transformer):
-    """Example registry-backed custom transformer."""
+    """Encapsulates an example registry-backed custom transformer."""
 
     def __init__(self, name: str = "StringUpperTransformer"):
         """Initialize the example transformer with a registry-visible name."""

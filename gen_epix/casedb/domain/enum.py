@@ -1,3 +1,10 @@
+"""Define casedb service, authorization, case, and schema enumerations.
+
+These enums provide stable values for application composition, persistence,
+case access, ontology metadata, column schemas, phylogenetic algorithms, and
+units. Set enums group related members for validation and policy checks.
+"""
+
 # pylint: disable=wildcard-import, unused-import
 # because this is a package, and imported as such in other modules
 
@@ -7,6 +14,8 @@ from gen_epix.commondb.domain.enum import RoleSet as RoleSet
 
 
 class ServiceType(Enum):
+    """Identify services available within the casedb application."""
+
     AUTH = "AUTH"
     ORGANIZATION = "ORGANIZATION"
     SYSTEM = "SYSTEM"
@@ -19,12 +28,16 @@ class ServiceType(Enum):
 
 
 class RepositoryType(Enum):
+    """Identify supported casedb persistence backend implementations."""
+
     DICT = "DICT"
     SA_SQLITE = "SA_SQLITE"
     SA_SQL = "SA_SQL"
 
 
 class RegionRelationType(Enum):
+    """Identify spatial relationships between geographic regions."""
+
     IS_SEPARATE_FROM = "IS_SEPARATE_FROM"
     IS_ADJACENT_TO = "IS_ADJACENT_TO"
     OVERLAPS_WITH = "OVERLAPS_WITH"
@@ -32,6 +45,8 @@ class RegionRelationType(Enum):
 
 
 class TreeAlgorithmType(Enum):
+    """Define supported phylogenetic-tree and clustering algorithms."""
+
     # See https://en.wikipedia.org/wiki/Hierarchical_clustering
     SLINK = "SLINK"  # Single linkage clustering
     CLINK = "CLINK"  # Complete linkage clustering
@@ -61,12 +76,16 @@ class TreeAlgorithmType(Enum):
 
 
 class ColRelation(Enum):
+    """Classify how one case-data column relates to another."""
+
     IS_UNRELATED_TO = 0
     AGGREGATES_VALUE = 1
     AGGREGATES_COLUMN = 2
 
 
 class Role(Enum):
+    """Define casedb application roles for command-centric authorization."""
+
     ROOT = "CASEDB_ROOT"
     APP_ADMIN = "CASEDB_APP_ADMIN"
     ORG_ADMIN = "CASEDB_ORG_ADMIN"
@@ -77,6 +96,8 @@ class Role(Enum):
 
 
 class CaseRight(Enum):
+    """Identify access rights granted for cases and case sets."""
+
     ADD_CASE = "ADD_CASE"
     REMOVE_CASE = "REMOVE_CASE"
     READ_CASE = "READ_CASE"
@@ -88,6 +109,8 @@ class CaseRight(Enum):
 
 
 class CaseRightSet(Enum):
+    """Group case access rights by protected resource and operation."""
+
     SHARE = frozenset(
         {
             CaseRight.ADD_CASE,
@@ -147,17 +170,23 @@ class CaseRightSet(Enum):
 
 
 class CaseClassification(Enum):
+    """Classify the diagnostic certainty assigned to a case."""
+
     POSSIBLE = "POSSIBLE"
     PROBABLE = "PROBABLE"
     CONFIRMED = "CONFIRMED"
 
 
 class CaseTypeSetCategoryPurpose(Enum):
+    """Identify whether a case-type-set category serves content or security."""
+
     CONTENT = "CONTENT"
     SECURITY = "SECURITY"
 
 
 class ConceptSetType(Enum):
+    """Classify the language or value scale represented by a concept set."""
+
     CONTEXT_FREE_GRAMMAR_JSON = "CONTEXT_FREE_GRAMMAR_JSON"
     CONTEXT_FREE_GRAMMAR_XML = "CONTEXT_FREE_GRAMMAR_XML"
     REGULAR_LANGUAGE = "REGULAR_LANGUAGE"
@@ -167,6 +196,8 @@ class ConceptSetType(Enum):
 
 
 class ConceptSetTypeSet(Enum):
+    """Group concept-set types by representation and unit support."""
+
     LANGUAGE = frozenset(
         {
             ConceptSetType.CONTEXT_FREE_GRAMMAR_JSON,
@@ -189,10 +220,14 @@ class ConceptSetTypeSet(Enum):
 
 
 class ConceptRelationType(Enum):
+    """Identify supported semantic relationships between concepts."""
+
     CONTAINS = "CONTAINS"
 
 
 class DimType(Enum):
+    """Classify the kind of data grouped by a case-type dimension."""
+
     TEXT = "TEXT"
     IDENTIFIER = "IDENTIFIER"
     NUMBER = "NUMBER"
@@ -203,6 +238,8 @@ class DimType(Enum):
 
 
 class ColType(Enum):
+    """Classify the representation and semantics of a case-data column."""
+
     TEXT = "TEXT"
     CONTEXT_FREE_GRAMMAR_JSON = "CONTEXT_FREE_GRAMMAR_JSON"
     CONTEXT_FREE_GRAMMAR_XML = "CONTEXT_FREE_GRAMMAR_XML"
@@ -238,6 +275,8 @@ class ColType(Enum):
 
 
 class ColTypeSet(Enum):
+    """Group column types by representation, semantics, and metadata needs."""
+
     ID = frozenset(
         {
             ColType.ID_PERSON,
@@ -378,6 +417,8 @@ class ColTypeSet(Enum):
 
 
 class ColConceptSetType(Enum):
+    """Map column types to compatible concept-set types."""
+
     NOMINAL = (ColType.NOMINAL, ConceptSetType.NOMINAL)
     ORDINAL = (ColType.ORDINAL, ConceptSetType.ORDINAL)
     INTERVAL = (ColType.INTERVAL, ConceptSetType.INTERVAL)
@@ -394,6 +435,8 @@ class ColConceptSetType(Enum):
 
 # !FIXME: make sure the data reflects these definitions or these definitions are changed accordingly
 class DimColTypeSet(Enum):
+    """Map each dimension type to its compatible column types."""
+
     TEXT = frozenset(
         ColTypeSet.LANGUAGE.value.union(
             {ColType.TEXT},
@@ -419,6 +462,8 @@ class DimColTypeSet(Enum):
 
 
 class ColTypeOrder(Enum):
+    """Define ordering metadata for related column types."""
+
     # Relies on dict order guaranteed
     TIME_RESOLUTION_DESC = {
         ColType.TIME_DAY: 1,
@@ -430,11 +475,15 @@ class ColTypeOrder(Enum):
 
 
 class FeatureFlag(Enum):
+    """Identify feature flags that alter casedb command behavior."""
+
     UPDATE_OWN_ORGANIZATION = "UPDATE_OWN_ORGANIZATION"
     DISABLE_UPLOAD = "UPLOAD_ENABLED"
 
 
 class Unit(StrEnum):
+    """Identify units supported by casedb column and concept metadata."""
+
     SECOND = "SECOND"
     MINUTE = "MINUTE"
     HOUR = "HOUR"

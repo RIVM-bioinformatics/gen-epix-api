@@ -13,7 +13,7 @@ from gen_epix.seqdb.domain.model.seq.taxon import Taxon
 
 class RefSeq(BaseSeq):
     """
-    Represent an immutable reference sequence for a taxon.
+    Represents an immutable reference sequence for a taxon.
 
     A reference sequence represents a single chromosome, viral segment, plasmid, or
     other contiguous DNA molecule belonging to a particular taxon. This can be an actual

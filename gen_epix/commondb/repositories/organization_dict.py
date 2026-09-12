@@ -12,7 +12,7 @@ from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 
 class OrganizationDictRepository(DictRepository, BaseOrganizationRepository):
-    """Store organization records and resolve users by normalized key in memory."""
+    """Encapsulates in-memory organization storage and normalized user lookup."""
 
     def __init__(
         self,

@@ -18,7 +18,7 @@ from gen_epix.fastapp.cache.exc import CacheConfigurationError
 
 @dataclass(slots=True, frozen=True)
 class TagTemplate:
-    """Render one tag from the arguments of a cached call.
+    """Encapsulates rendering one tag from the arguments of a cached call.
 
     A template such as ``"case:{case_id}"`` produces a tag per identifier, while
     a constant such as ``"case"`` produces one tag covering every entry of the
@@ -81,7 +81,7 @@ def render_tags(
 
 
 class TagIndex(ABC):
-    """Map tags to the cache keys that carry them.
+    """Encapsulates mapping tags to the cache keys that carry them.
 
     A backend without native tag support needs this index to translate a tag
     invalidation into concrete key deletions. Implementations must be safe for
@@ -114,7 +114,7 @@ class TagIndex(ABC):
 
 
 class MemoryTagIndex(TagIndex):
-    """Keep tag associations in process memory.
+    """Encapsulates keeping tag associations in process memory.
 
     The index holds both directions so that removing a key does not require a
     scan over all tags. It is exact for a process-local backend; for a shared

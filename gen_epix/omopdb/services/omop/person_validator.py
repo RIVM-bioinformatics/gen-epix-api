@@ -7,7 +7,7 @@ from gen_epix.omopdb.services.omop.base import BaseOmopService
 
 
 class PersonValidator:
-    """Validate and transform person-upload content for an OmopDB service."""
+    """Encapsulates validation and transformation of person-upload content."""
 
     def __init__(
         self,

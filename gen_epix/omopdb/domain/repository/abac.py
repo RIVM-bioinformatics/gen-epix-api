@@ -6,4 +6,4 @@ from gen_epix.commondb.domain.repository import (
 
 
 class BaseAbacRepository(CommonBaseAbacRepository):
-    """Provide the commondb ABAC repository contract for OmopDB composition."""
+    """Encapsulates the commondb ABAC repository contract for OmopDB composition."""

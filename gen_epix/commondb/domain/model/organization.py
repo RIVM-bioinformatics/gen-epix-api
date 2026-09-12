@@ -28,7 +28,7 @@ from gen_epix.util import copy_model_field
 
 
 class Organization(Model):
-    """Represent an organization that owns users and related domain data."""
+    """Represents an organization that owns users and related domain data."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="organizations",
@@ -50,7 +50,7 @@ class Organization(Model):
 
 
 class UserNameEmail(fastapp.Model):
-    """Expose a non-persisted user identity for display and lookup responses."""
+    """Represents a non-persisted user identity for display and lookup responses."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="user_name_emails",
@@ -66,7 +66,7 @@ class UserNameEmail(fastapp.Model):
 
 
 class User(fastapp.User, Model):
-    """Represent an authenticated commondb user and their organization membership.
+    """Represents an authenticated commondb user and their organization membership.
 
     The user key is stored lower case for unique lookup. Inactive users retain
     their data but cannot perform operations that require authorization.
@@ -148,7 +148,7 @@ class User(fastapp.User, Model):
 
 
 class OrganizationSet(Model):
-    """Represent a named, persisted collection of organizations."""
+    """Represents a named, persisted collection of organizations."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="organization_sets",
@@ -163,7 +163,7 @@ class OrganizationSet(Model):
 
 
 class OrganizationSetMember(Model):
-    """Associate one organization with a persisted organization set."""
+    """Represents one organization with a persisted organization set."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="organization_set_members",
@@ -188,7 +188,7 @@ class OrganizationSetMember(Model):
 
 
 class Site(Model):
-    """Represent a physical site belonging to an organization."""
+    """Represents a physical site belonging to an organization."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="sites",
@@ -209,7 +209,7 @@ class Site(Model):
 
 
 class Contact(Model):
-    """Represent contact information associated with an organization site."""
+    """Represents contact information associated with an organization site."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="contacts",
@@ -239,7 +239,7 @@ class Contact(Model):
 
 
 class IdentifierIssuer(Model):
-    """Represent a system or process that issues externally supplied identifiers.
+    """Represents a system or process that issues externally supplied identifiers.
 
     An identifier issuer combined with an identifier issued by it is a universally
     unique value.
@@ -261,7 +261,7 @@ class IdentifierIssuer(Model):
 
 
 class DataCollection(Model):
-    """Represent a named collection of data managed by commondb."""
+    """Represents a named collection of data managed by commondb."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="data_collections",
@@ -281,7 +281,7 @@ class DataCollection(Model):
 
 
 class DataCollectionSet(Model):
-    """Represent a named, persisted collection of data collections."""
+    """Represents a named, persisted collection of data collections."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="data_collection_sets",
@@ -298,7 +298,7 @@ class DataCollectionSet(Model):
 
 
 class DataCollectionSetMember(Model):
-    """Associate one data collection with a persisted data-collection set."""
+    """Represents one data collection with a persisted data-collection set."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="data_collection_set_members",
@@ -329,7 +329,7 @@ class DataCollectionSetMember(Model):
 
 
 class UserInvitation(Model):
-    """Represent an expiring invitation with a user's initial organization and roles."""
+    """Represents an expiring invitation with a user's initial organization and roles."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="user_invitations",
@@ -399,7 +399,7 @@ class UserInvitation(Model):
 
 
 class UserInvitationConstraints(Model):
-    """Constrain roles and organizations an inviting user may assign."""
+    """Represents constraints on roles and organizations an inviting user may assign."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="user_invitation_constraints",
@@ -417,7 +417,7 @@ class UserInvitationConstraints(Model):
 
 
 class OrganizationIdentifierIssuerLink(Model):
-    """Associate an organization with an identifier issuer it may use.
+    """Represents an organization with an identifier issuer it may use.
 
     Services can use these links to restrict identifier issuers available to users
     of a particular organization.
@@ -448,7 +448,7 @@ class OrganizationIdentifierIssuerLink(Model):
 
 
 class BaseIdentifier(Model):
-    """Represent an identifier generated outside the system for an entity.
+    """Represents an identifier generated outside the system for an entity.
 
     It records an identifier issuer and the system's own
     identifier.
@@ -550,7 +550,7 @@ class BaseIdentifier(Model):
 
 
 class IdentifierForUpload(BaseModel, frozen=True):
-    """Represent an external identifier used in an upload operation.
+    """Represents an external identifier used in an upload operation.
 
     It is defined as the combination of an identifier issuer and identifier.
     The identifier issuer can be given either as its code or ID to facilitate the
@@ -601,7 +601,7 @@ class IdentifierForUpload(BaseModel, frozen=True):
 
 
 class OrganizationContacts(BaseModel):
-    """Group an organization with its sites and site-specific contacts."""
+    """Represents an organization with its sites and site-specific contacts."""
 
     organization: Organization = Field(
         description="The organization corresponding to the contacts"

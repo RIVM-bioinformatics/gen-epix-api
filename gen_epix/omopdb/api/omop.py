@@ -16,7 +16,7 @@ from gen_epix.util import copy_model_field
 
 
 class RetrievePersonsByIdsRequestBody(PydanticBaseModel):
-    """Carry unique person identifiers for a full-person retrieval request."""
+    """Represents unique person identifiers for a full-person retrieval request."""
 
     person_ids: list[UUID] = copy_model_field(
         command.RetrievePersonsByIdCommand, "person_ids"
@@ -24,7 +24,7 @@ class RetrievePersonsByIdsRequestBody(PydanticBaseModel):
 
 
 class RetrieveSpecimenIdsByCohortIdsRequestBody(PydanticBaseModel):
-    """Carry cohort identifiers for a cohort-to-specimen retrieval request."""
+    """Represents cohort identifiers for a cohort-to-specimen retrieval request."""
 
     cohort_definition_id: UUID = copy_model_field(
         command.RetrieveSpecimenIdsByCohortIdsCommand, "cohort_definition_id"

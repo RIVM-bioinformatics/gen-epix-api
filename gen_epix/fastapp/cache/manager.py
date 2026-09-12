@@ -130,7 +130,7 @@ def _as_scope_parts(region_name: str, value: Any) -> tuple[str, ...]:
 
 
 class CacheManager:
-    """Own the regions of an application and the operations that span them.
+    """Encapsulates owning the regions of an application and the operations that span them.
 
     The manager is created once during composition and is safe for concurrent
     use. Regions created through it share the clock, the invalidation bus and

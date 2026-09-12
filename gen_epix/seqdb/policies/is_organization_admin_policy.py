@@ -11,7 +11,7 @@ from gen_epix.seqdb.domain.policy import COMMON_ROLE_MAP
 
 
 class IsOrganizationAdminPolicy(CommonIsOrganizationAdminPolicy):
-    """Apply organization-admin checks using seqdb roles and user models."""
+    """Encapsulates organization-admin checks using seqdb roles and user models."""
 
     def __init__(
         self,

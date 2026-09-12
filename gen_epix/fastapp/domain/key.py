@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 
 class Key:
-    """Generate a stable key from one or more model fields."""
+    """Encapsulates generating a stable key from one or more model fields."""
 
     DEFAULT_KEY_GENERATOR_SEPARATOR = "|"
 

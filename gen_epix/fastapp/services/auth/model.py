@@ -11,7 +11,7 @@ from gen_epix.fastapp.model import Model
 
 
 class IDPUser(Model):
-    """Normalized user identity returned by an identity provider."""
+    """Represents a normalized user identity returned by an identity provider."""
 
     ENTITY: ClassVar = Entity()
 
@@ -20,7 +20,7 @@ class IDPUser(Model):
 
 
 class IdentityProvider(Model):
-    """Configuration for an external identity provider.
+    """Represents configuration for an external identity provider.
 
     Model validation:
     Public providers require both a client ID and an OIDC scope.
@@ -67,7 +67,7 @@ class IdentityProvider(Model):
 
 
 class Claims(Model):
-    """Typed identity claims returned by an identity provider."""
+    """Represents typed identity claims returned by an identity provider."""
 
     ENTITY: ClassVar = Entity()
 
@@ -82,7 +82,7 @@ class Claims(Model):
 
 
 class OidcServerCfg(Model):
-    """OpenID Connect Provider Configuration model.
+    """Represents OpenID Connect Provider Configuration model.
 
     This model represents the OpenID Provider Metadata as defined in Section 3 of the
     OpenID Connect Discovery 1.0 specification. It includes all required, recommended,

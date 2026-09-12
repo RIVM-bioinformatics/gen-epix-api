@@ -13,7 +13,7 @@ from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 class SAUnitOfWork(BaseUnitOfWork):
     """
-    Unit of work class wrapping the SQLAlchemy session.
+    Encapsulates a unit of work class wrapping the SQLAlchemy session.
 
     The context stack that can be passed during construction indicates whether work
     would be executed within another unit of work's context. If so, that context will
@@ -129,17 +129,20 @@ class SAUnitOfWork(BaseUnitOfWork):
                 # Nested context since stack is not empty -> do not commit or rollback,
                 # let the outer context handle it instead
                 return
-        # Commit or rollback based on exception
-        if exception_class is None:
-            try:
-                self.commit()
-            except Exception as exception:
+        try:
+            # Commit or rollback based on exception
+            if exception_class is None:
+                try:
+                    self.commit()
+                except Exception as exception:
+                    self.rollback()
+                    # Propagate exception
+                    SAUnitOfWork._handle_exception(
+                        type(exception), exception, exception.__traceback__
+                    )
+            else:
                 self.rollback()
                 # Propagate exception
-                SAUnitOfWork._handle_exception(
-                    type(exception), exception, exception.__traceback__
-                )
-        else:
-            self.rollback()
-            # Propagate exception
-            SAUnitOfWork._handle_exception(exception_class, exception_value, traceback)  # type: ignore[arg-type]
+                SAUnitOfWork._handle_exception(exception_class, exception_value, traceback)  # type: ignore[arg-type]
+        finally:
+            self._session.close()

@@ -14,7 +14,7 @@ from gen_epix.seqdb.domain import DOMAIN, enum, model
 
 
 class ContentMixin[FormatType: IntEnum]:
-    """SQLAlchemy model mixin for adding content-related fields to a model."""
+    """Encapsulates a SQLAlchemy model mixin for adding content-related fields."""
 
     format: Mapped[FormatType] = get_mixin_mapped_column(
         model.ContentMixin, "format", sa.Integer
@@ -31,7 +31,7 @@ class ContentMixin[FormatType: IntEnum]:
 
 
 class QualityMixin:
-    """SQLAlchemy model mixin for adding a number of standard fields."""
+    """Encapsulates a SQLAlchemy model mixin for adding standard fields."""
 
     qc_result: Mapped[enum.QualityControlResult] = get_mixin_mapped_column(
         model.QualityMixin, "qc_result", sa.String
@@ -45,7 +45,7 @@ class QualityMixin:
 
 
 class SeqMixin:
-    """SQLAlchemy model mixin for adding a number of standard fields."""
+    """Encapsulates a SQLAlchemy model mixin for adding standard fields."""
 
     seq: Mapped[str] = create_mapped_column(DOMAIN, model.BaseSeq, "seq")
     seq_format: Mapped[enum.SeqFormat] = create_mapped_column(

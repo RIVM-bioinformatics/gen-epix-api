@@ -21,7 +21,7 @@ _CURRENT: ContextVar["InvalidationTransaction | None"] = ContextVar(
 
 
 class InvalidationTransaction:
-    """Collect invalidation requests and apply them on commit.
+    """Encapsulates collecting invalidation requests and applying them on commit.
 
     Requests that are identical apart from their message identifier collapse
     into one, so a loop that touches many objects of the same kind does not

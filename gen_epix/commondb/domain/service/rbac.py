@@ -11,7 +11,7 @@ from gen_epix.fastapp.services.rbac import BaseRbacService as ServiceBaseRbacSer
 
 
 class BaseRbacService(ServiceBaseRbacService):
-    """Provide role maps and command handlers for commondb RBAC operations."""
+    """Encapsulates role maps and command handlers for commondb RBAC operations."""
 
     SERVICE_TYPE = enum.ServiceType.RBAC
 

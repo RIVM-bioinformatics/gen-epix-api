@@ -1,3 +1,5 @@
+"""Register casedb geography CRUD endpoints with the shared API generator."""
+
 from collections.abc import Callable
 from typing import Any, NoReturn
 
@@ -15,6 +17,7 @@ def create_geo_endpoints(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     **kwargs: Any,
 ) -> None:
+    """Register geography CRUD endpoints on the given router."""
     assert handle_exception
     app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency

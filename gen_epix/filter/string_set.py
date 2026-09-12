@@ -15,12 +15,14 @@ def _enum_to_str(x: Any) -> str:
 
 
 class StringSetFilter(Filter):
-    """Match strings from an immutable set with optional case sensitivity.
+    """Represents a filter matching strings with optional case sensitivity.
 
     Model validation:
     Case-insensitive members and matched enum names are normalized to lowercase
     before membership is evaluated.
     """
+
+    type: Literal[FilterType.STRING_SET.value] = FilterType.STRING_SET.value  # type: ignore[name-defined]
 
     members: frozenset[str] = Field(description="The strings to match.", frozen=True)
     case_sensitive: bool = Field(
@@ -58,9 +60,3 @@ class StringSetFilter(Filter):
         raise NotImplementedError(
             "Method is implemented dynamically in _validate_state"
         )
-
-
-class TypedStringSetFilter(StringSetFilter):
-    """String set filter carrying its serialized filter type."""
-
-    type: Literal[FilterType.STRING_SET.value]  # type: ignore[name-defined]

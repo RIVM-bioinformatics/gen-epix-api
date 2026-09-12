@@ -48,7 +48,7 @@ from gen_epix.filter import (
 
 
 class SARepository(BaseRepository):
-    """SQLAlchemy-backed repository."""
+    """Encapsulates a SQLAlchemy-backed repository."""
 
     DEFAULT_MAX_INSERT_BATCH_SIZE = 2000
     DEFAULT_MAX_PARAMETERS_IN_CLAUSE = 1000
@@ -89,16 +89,16 @@ class SARepository(BaseRepository):
         entities, connection_string, remaining_kwargs = cls._process_repository_params(
             kwargs
         )
+        if connection_string is None:
+            raise ValueError("connection_string is required to clear an SARepository")
         # Get engine
         engine = EngineFactory.create_engine(connection_string, echo=False)
 
         # Get all actual table names from the database using schema names
         inspector = inspect(engine)
-        actual_tables = set()
+        actual_tables: set[tuple[str | None, str]] = set()
         schema_names = {x.schema_name for x in entities if x.persistable}
         for schema_name in schema_names:
-            if not schema_name:
-                continue
             try:
                 # Get all table names in this schema from the database
                 table_names = inspector.get_table_names(schema=schema_name)
@@ -117,7 +117,11 @@ class SARepository(BaseRepository):
                 ):
                     if foreign_key.get("name"):
                         constraints.append(
-                            (schema_name, table_name, foreign_key["name"])
+                            (
+                                schema_name,
+                                table_name,
+                                cast(str, foreign_key["name"]),
+                            )
                         )
             except Exception:  # pylint: disable=broad-except
                 # Skip tables that can't be inspected
@@ -128,30 +132,47 @@ class SARepository(BaseRepository):
             with engine.connect() as conn:
                 # Detect database dialect for proper syntax
                 dialect_name = conn.dialect.name.lower()
+                identifier_preparer = conn.dialect.identifier_preparer
                 transaction = conn.begin()
                 try:
                     for schema_name, table_name, constraint_name in constraints:
                         try:
+                            quoted_table_name = identifier_preparer.quote(table_name)
+                            if schema_name is None:
+                                qualified_table_name = quoted_table_name
+                            else:
+                                qualified_table_name = (
+                                    f"{identifier_preparer.quote(schema_name)}."
+                                    f"{quoted_table_name}"
+                                )
+                            quoted_constraint_name = identifier_preparer.quote(
+                                constraint_name
+                            )
                             # NOTE: Only tested with MS SQL Server
                             if dialect_name == "mssql":
-                                # SQL Server syntax with square brackets
-                                sql = f"ALTER TABLE [{schema_name}].[{table_name}] DROP CONSTRAINT [{constraint_name}]"
+                                sql = (
+                                    f"ALTER TABLE {qualified_table_name} "
+                                    f"DROP CONSTRAINT {quoted_constraint_name}"
+                                )
                             elif dialect_name in (
                                 "postgresql",
                                 "postgres",
                                 "redshift",
                             ):
-                                # PostgreSQL/Redshift syntax with double quotes
-                                sql = f'ALTER TABLE "{schema_name}"."{table_name}" DROP CONSTRAINT "{constraint_name}"'
+                                sql = (
+                                    f"ALTER TABLE {qualified_table_name} "
+                                    f"DROP CONSTRAINT {quoted_constraint_name}"
+                                )
                             elif dialect_name in ("mysql", "mariadb"):
-                                # MySQL/MariaDB syntax with backticks and DROP FOREIGN KEY
-                                sql = f"ALTER TABLE `{schema_name}`.`{table_name}` DROP FOREIGN KEY `{constraint_name}`"
-                            elif dialect_name in ("oracle", "db2"):
-                                # Oracle and DB2 syntax
-                                sql = f"ALTER TABLE {schema_name}.{table_name} DROP CONSTRAINT {constraint_name}"
+                                sql = (
+                                    f"ALTER TABLE {qualified_table_name} "
+                                    f"DROP FOREIGN KEY {quoted_constraint_name}"
+                                )
                             else:
-                                # Generic SQL syntax (fallback for other databases)
-                                sql = f"ALTER TABLE {schema_name}.{table_name} DROP CONSTRAINT {constraint_name}"
+                                sql = (
+                                    f"ALTER TABLE {qualified_table_name} "
+                                    f"DROP CONSTRAINT {quoted_constraint_name}"
+                                )
 
                             conn.execute(sa.text(sql))
                         except Exception:  # pylint: disable=broad-except
@@ -166,7 +187,9 @@ class SARepository(BaseRepository):
         with engine.connect() as conn:
             for schema_name, table_name in actual_tables:
                 try:
-                    conn.execute(sa.text(f"DROP TABLE [{schema_name}].[{table_name}]"))
+                    sa.Table(table_name, sa.MetaData(), schema=schema_name).drop(
+                        conn, checkfirst=True
+                    )
                 except Exception:  # pylint: disable=broad-except
                     # Table might already be dropped, continue
                     continue
@@ -184,6 +207,7 @@ class SARepository(BaseRepository):
                 except Exception:  # pylint: disable=broad-except
                     # Schema might not exist or have other issues
                     continue
+            engine.dispose()
 
     def __init__(self, engine: Engine, **kwargs: Any):
         """
@@ -532,6 +556,10 @@ class SARepository(BaseRepository):
         # Check objs
         if not all(isinstance(x, model_class) for x in objs):
             raise ValueError(f"Not all objs are of type {model_class.__name__}")
+        mapper = self.get_mapper(model_class)
+        SARepository._verify_duplicate_ids(
+            model_class, [mapper.get_id(obj) for obj in objs]
+        )
 
         # Create rows
 
@@ -539,7 +567,7 @@ class SARepository(BaseRepository):
             """Execute the requested value."""
             rows = self.to_sql(user_id, model_class, objs)
             n_rows = len(rows)
-            n_batches = int(n_rows / max_batch_size) + (n_rows / max_batch_size > 0)
+            n_batches = (n_rows + max_batch_size - 1) // max_batch_size
             if not flush and n_batches > 1:
                 raise exc.RepositoryServiceError(
                     "fa00ce85",
@@ -555,7 +583,6 @@ class SARepository(BaseRepository):
                 if flush:
                     session.flush()
             if return_id:
-                mapper = self.get_mapper(model_class)
                 return [mapper.get_row_id(x) for x in rows]
             return self.from_sql(model_class, rows)
 
@@ -736,6 +763,9 @@ class SARepository(BaseRepository):
         # Retrieve row
         mapper = self.get_mapper(model_class)
         row_class = mapper.row_class
+        SARepository._verify_duplicate_ids(
+            model_class, [mapper.get_id(obj) for obj in objs]
+        )
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
             """Execute the requested value."""
@@ -803,6 +833,9 @@ class SARepository(BaseRepository):
 
         mapper = self.get_mapper(model_class)
         row_class = mapper.row_class
+        SARepository._verify_duplicate_ids(
+            model_class, [mapper.get_id(obj) for obj in objs]
+        )
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
             """Execute the requested value."""
@@ -860,7 +893,8 @@ class SARepository(BaseRepository):
                 if flush:
                     session.flush()
 
-            all_rows = new_rows + updated_rows
+            row_by_id = {mapper.get_row_id(row): row for row in new_rows + updated_rows}
+            all_rows = [row_by_id[obj_id] for obj_id in obj_ids]
             if return_id:
                 return [mapper.get_row_id(x) for x in all_rows]
             return self.from_sql(model_class, all_rows)
@@ -890,6 +924,7 @@ class SARepository(BaseRepository):
         """Delete the specified rows after confirming they exist."""
         # Check arguments
         row_ids = row_ids if isinstance(row_ids, list) else list(row_ids)
+        SARepository._verify_duplicate_ids(model_class, row_ids)
         session: Session = kwargs.get("session")  # type: ignore[assignment]
         flush = kwargs.get("flush", True)
         # Delete rows
@@ -1131,12 +1166,12 @@ class SARepository(BaseRepository):
             )
         elif isinstance(filter, RangeFilter):
             args = []
-            if filter.lower_bound:
+            if filter.lower_bound is not None:
                 if filter.lower_bound_censor == ComparisonOperator.GT:
                     args.append(result_column > filter.lower_bound)
                 elif filter.lower_bound_censor == ComparisonOperator.GTE:
                     args.append(result_column >= filter.lower_bound)
-            if filter.upper_bound:
+            if filter.upper_bound is not None:
                 if filter.upper_bound_censor == ComparisonOperator.ST:
                     args.append(result_column < filter.upper_bound)
                 elif filter.upper_bound_censor == ComparisonOperator.STE:
@@ -1274,10 +1309,9 @@ class SARepository(BaseRepository):
         obj_ids_set = set(obj_ids)
         if verify_duplicate and len(obj_ids) != len(obj_ids_set):
             seen = set()
-            uq_obj_ids = set(
-                x for x in obj_ids if x not in seen and not seen.add(x)  # type: ignore[func-returns-value]
-            )
-            duplicate_obj_ids = obj_ids_set - uq_obj_ids
+            duplicate_obj_ids = [
+                x for x in obj_ids if x in seen or seen.add(x)  # type: ignore[func-returns-value]
+            ]
             raise exc.DuplicateIdsError(
                 "aac3e2af", "obj_ids is not unique", ids=duplicate_obj_ids
             )
@@ -1490,17 +1524,16 @@ class SARepository(BaseRepository):
         if not isinstance(obj_ids, list) and not isinstance(obj_ids, set):
             obj_ids = list(obj_ids)
         seen = set()
-        uq_obj_ids = set(
-            x for x in obj_ids if x not in seen and not seen.add(x)  # type: ignore
-        )
-        if len(uq_obj_ids) == len(obj_ids):
+        duplicate_ids = [
+            x for x in obj_ids if x in seen or seen.add(x)  # type: ignore[func-returns-value]
+        ]
+        if not duplicate_ids:
             return
-        duplicate_ids = set(obj_ids) - uq_obj_ids
         duplicate_ids_str = ", ".join([str(x) for x in duplicate_ids])
         raise exc.DuplicateIdsError(
             "bba17339",
             f"Model {model_class.__name__}: object ids are not unique: {duplicate_ids_str}",
-            ids=duplicate_ids_str,
+            ids=duplicate_ids,
         )
 
     @classmethod
@@ -1511,21 +1544,25 @@ class SARepository(BaseRepository):
         **kwargs: Any,
     ) -> "SARepository":
         """
-        Create an SARepository, setting up engine, schemas, and DDL.
+        Create an SARepository and its database engine.
 
         When connection_string is None, an in-memory SQLite database will be created. When
-        connection_string is provided, it will be used to create the engine.
+        connection_string is provided, it will be used to create the engine. SQLite
+        repositories retain their convenient automatic schema setup. Other databases
+        are migration-managed by default; pass ``create_database_objects=True`` only
+        for explicit bootstrap tooling.
         """
         # Parse arguments
         echo = kwargs.pop("echo", False)
         register_mappers = kwargs.pop("register_mappers", True)
         recreate_sqlite_file = kwargs.pop("recreate_sqlite_file", False)
-        schema_names = {x.schema_name for x in entities if x.persistable}
 
         # Handle sqlite separately
         is_sqlite = connection_string is None or str(
             connection_string
         ).lower().startswith("sqlite:///")
+        create_database_objects = kwargs.pop("create_database_objects", is_sqlite)
+        schema_names = {x.schema_name for x in entities if x.persistable}
         if is_sqlite:
             sqlite_target = (
                 None
@@ -1562,12 +1599,6 @@ class SARepository(BaseRepository):
                     # Remove existing file
                     if sqlite_file.is_file():
                         sqlite_file.unlink()
-                    # Create the file by creating a connection
-                    engine = sa.create_engine(
-                        f"sqlite:///{sqlite_file.as_posix()}", echo=echo
-                    )
-                    conn = engine.connect()
-                    conn.close()
                 elif not sqlite_file.is_file():
                     raise ValueError(
                         "Unable to derive file from connection string or file does not exist"
@@ -1595,9 +1626,9 @@ class SARepository(BaseRepository):
                 cursor.execute("PRAGMA foreign_keys=ON")
                 cursor.close()
 
-            # Add each schema as a separate database, as sqlite does not support schemas
-            # Unique per repository instance, so schemas of the same name from
-            # different SARepository instances don't collide on sqlite's
+            # Add each schema as a separate attached database, since sqlite does not
+            # support schemas. Unique per repository instance, so schemas of the same
+            # name from different SARepository instances don't collide on sqlite's
             # process-wide shared cache (which is keyed by URI).
             memory_schema_namespace = uuid.uuid4().hex
             with engine.connect() as conn:
@@ -1639,19 +1670,15 @@ class SARepository(BaseRepository):
                 connection_string, echo, connect_args=connect_args
             )
 
-            # Create schemas if not exists
-            for schema_name in schema_names:
-                if not schema_name:
-                    continue
-                with engine.connect() as conn:
-                    # print(conn)
-                    result = conn.execute(sa.text("SELECT name FROM sys.schemas"))
-                    schemas = [x[0] for x in result]
-                    # print(schemas)
-                    conn.dialect
-                    if not conn.dialect.has_schema(conn, schema_name):
-                        conn.execute(sa.schema.CreateSchema(schema_name))
-                        conn.commit()
+            # Create any non-existing schemas if allowed
+            if create_database_objects:
+                for schema_name in schema_names:
+                    if not schema_name:
+                        continue
+                    with engine.connect() as conn:
+                        if not conn.dialect.has_schema(conn, schema_name):
+                            conn.execute(sa.schema.CreateSchema(schema_name))
+                            conn.commit()
 
         # Get all metadata instances
         metadata_set: set[sa.MetaData] = set()
@@ -1666,9 +1693,10 @@ class SARepository(BaseRepository):
                 )
             metadata_set.add(cast(sa.MetaData, getattr(db_model_class, "metadata")))
 
-        # Create all tables, if necessary, for each metadata instance
-        for metadata in metadata_set:
-            metadata.create_all(engine, checkfirst=True)
+        # Create any non-existing database objects except schemas (done earlier), if allowed
+        if create_database_objects:
+            for metadata in metadata_set:
+                metadata.create_all(engine, checkfirst=True)
 
         # Create repository
         repository = cls(

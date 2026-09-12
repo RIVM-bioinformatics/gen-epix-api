@@ -7,7 +7,7 @@ from gen_epix.omopdb.domain import model
 
 
 class OrganizationService(CommonOrganizationService):
-    """Handle organization commands using OmopDB user and invitation models."""
+    """Encapsulates handling of organization commands using OmopDB user and invitation models."""
 
     def __init__(
         self,

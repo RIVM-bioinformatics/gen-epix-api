@@ -8,7 +8,7 @@ from gen_epix.commondb.domain.model.base import ModelNoId as ModelNoId
 
 
 class Model(ModelNoId):
-    """Provide the shared model contract with an optional OmopDB object ID."""
+    """Represents the shared model contract with an optional OmopDB object ID."""
 
     id: UUID | None = Field(
         default=None,

@@ -16,7 +16,7 @@ from typing import Any, Protocol, runtime_checkable
 
 @runtime_checkable
 class Mutex(Protocol):
-    """Describe a lock with explicit acquire and release semantics."""
+    """Encapsulates describing a lock with explicit acquire and release semantics."""
 
     def acquire(self, wait: bool = True) -> bool:
         """Acquire the lock.
@@ -39,7 +39,7 @@ class Mutex(Protocol):
 
 
 class ThreadMutex:
-    """Adapt `threading.Lock` to the `Mutex` protocol."""
+    """Encapsulates adapting `threading.Lock` to the `Mutex` protocol."""
 
     __slots__ = ("_lock",)
 
@@ -61,7 +61,7 @@ class ThreadMutex:
 
 
 class NullMutex:
-    """Grant every acquisition immediately.
+    """Encapsulates granting every acquisition immediately.
 
     Use this to disable coordination in a region that is provably accessed by a
     single thread, or to measure the cost of locking.
@@ -82,7 +82,7 @@ class NullMutex:
 
 
 class KeyedMutex:
-    """Hand out one mutex per key and discard it when nobody holds it.
+    """Encapsulates handing out one mutex per key and discarding it when unused.
 
     Locking per key lets regeneration of different keys proceed in parallel,
     unlike a single region-wide mutex. Entries are reference counted so that the
@@ -150,7 +150,7 @@ class KeyedMutex:
 
 
 class _Call:
-    """Hold the shared outcome of one in-flight load.
+    """Encapsulates holding the shared outcome of one in-flight load.
 
     Attributes:
         event: Signalled by the leader once the outcome is known.
@@ -168,7 +168,7 @@ class _Call:
 
 
 class SingleFlight:
-    """Collapse concurrent loads of the same key into one execution.
+    """Encapsulates collapsing concurrent loads of the same key into one execution.
 
     The first caller for a key runs the loader; later callers block until it
     finishes and then receive the same value or the same exception. Different
@@ -255,7 +255,7 @@ class SingleFlight:
 
 
 class AsyncSingleFlight:
-    """Collapse concurrent awaited loads of the same key into one execution.
+    """Encapsulates collapsing concurrent awaited loads of the same key into one execution.
 
     The instance is bound to the running event loop of its callers and is not
     safe to share across loops.
@@ -306,7 +306,7 @@ class AsyncSingleFlight:
 
 @runtime_checkable
 class RefreshRunner(Protocol):
-    """Decide where the refresh of a stale entry executes."""
+    """Encapsulates deciding where the refresh of a stale entry executes."""
 
     def submit(self, work: Callable[[], None]) -> None:
         """Schedule `work` for execution.
@@ -318,7 +318,7 @@ class RefreshRunner(Protocol):
 
 
 class InlineRefreshRunner:
-    """Refresh stale entries on the calling thread.
+    """Encapsulates refreshing stale entries on the calling thread.
 
     This makes a stale read as slow as a miss but adds no threads, which suits
     tests and single-threaded deployments.
@@ -332,7 +332,7 @@ class InlineRefreshRunner:
 
 
 class ThreadRefreshRunner:
-    """Refresh stale entries on a daemon thread or a supplied executor.
+    """Encapsulates refreshing stale entries on a daemon thread or a supplied executor.
 
     Attributes:
         executor: The executor used when one was supplied, otherwise None and

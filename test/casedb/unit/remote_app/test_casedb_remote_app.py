@@ -49,6 +49,32 @@ def mock_client() -> Any:
 class TestNonCrudHandlers:
     """Test the hand-written (non-CRUD) command handlers."""
 
+    def test_update_case_created_in_data_collection(
+        self, app: CasedbRemoteApp, mock_client: Any
+    ) -> None:
+        case_id = uuid4()
+        data_collection_id = uuid4()
+        cmd = command.UpdateCaseCreatedInDataCollectionCommand(
+            user=None,
+            case_ids=[case_id],
+            target_created_in_data_collection_id=data_collection_id,
+        )
+        # The API returns a list of UUID strings for updated case IDs
+        response_data = [str(case_id)]
+        mock_client.request.return_value = _mock_response(response_data)
+
+        result = app.update_case_created_in_data_collection(cmd)
+
+        method, url = mock_client.request.call_args.args
+        json_body = mock_client.request.call_args.kwargs["json"]
+        assert method == "POST"
+        assert url == app._routes[command.UpdateCaseCreatedInDataCollectionCommand]
+        assert json_body == {
+            "case_ids": [str(case_id)],
+            "target_created_in_data_collection_id": str(data_collection_id),
+        }
+        assert result == [case_id]
+
     def test_case_type_set_case_type_update_association(
         self, app: CasedbRemoteApp, mock_client: Any
     ) -> None:
@@ -198,7 +224,7 @@ class TestNonCrudHandlers:
             {
                 "case_type_id": str(case_type_id),
                 "created_in_data_collection_id": str(uuid4()),
-                "case_date": "2024-01-01T00:00:00Z",
+                "timed_at": "2024-01-01T00:00:00Z",
                 "content": {},
             }
         ]
@@ -314,7 +340,7 @@ class TestNonCrudHandlers:
             genetic_distance_col_id=genetic_distance_col_id,
             case_ids=[case_id],
         )
-        data = {"cases": [{"id": str(uuid4()), "case_date": "2024-01-01T00:00:00Z"}]}
+        data = {"cases": [{"id": str(uuid4()), "timed_at": "2024-01-01T00:00:00Z"}]}
         mock_client.request.return_value = _mock_response(data)
         result = app.retrieve_similar_cases(cmd)
         method, url = mock_client.request.call_args.args

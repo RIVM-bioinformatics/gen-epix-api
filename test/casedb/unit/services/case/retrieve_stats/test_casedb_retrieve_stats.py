@@ -5,16 +5,16 @@ from uuid import UUID, uuid4
 
 import pytest
 
-import gen_epix.casedb.domain.command as case_command
+import gen_epix.casedb.domain.command as casedb_command
 import gen_epix.casedb.domain.enum as case_enum
-import gen_epix.casedb.domain.model as case_model
+import gen_epix.casedb.domain.model as casedb_model
 from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.retrieve_stats import (
     case_service_retrieve_case_stats,
 )
 from gen_epix.commondb.domain.model.organization import User
 from gen_epix.fastapp.enum import CrudOperation
-from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
+from gen_epix.filter.datetime_range import DatetimeRangeFilter
 from gen_epix.filter.enum import FilterType
 
 
@@ -70,16 +70,16 @@ class BaseRetrieveStatsTestCase:
         case_id: UUID | None = None,
         case_type_id: UUID,
         created_in_data_collection_id: UUID,
-        case_date: datetime | None = None,
+        timed_at: datetime | None = None,
         count: int = 1,
-    ) -> case_model.Case:
-        return case_model.Case(
+    ) -> casedb_model.Case:
+        return casedb_model.Case(
             id=case_id or uuid4(),
             code=None,
             case_type_id=case_type_id,
             created_in_data_collection_id=created_in_data_collection_id,
             count=count,
-            case_date=case_date or datetime.now(timezone.utc),
+            timed_at=timed_at or datetime.now(timezone.utc),
             content={},
         )
 
@@ -87,10 +87,12 @@ class BaseRetrieveStatsTestCase:
         self,
         *,
         case_type_id: UUID,
-        case_type_access_abacs: dict[UUID, case_model.CaseTypeAccessAbac] | None = None,
+        case_type_access_abacs: (
+            dict[UUID, casedb_model.CaseTypeAccessAbac] | None
+        ) = None,
         case_date_col_type_map: dict[case_enum.ColType, UUID] | None = None,
-    ) -> case_model.CompleteCaseType:
-        return case_model.CompleteCaseType(
+    ) -> casedb_model.CompleteCaseType:
+        return casedb_model.CompleteCaseType(
             id=case_type_id,
             user_id=self.user.id,
             name="Test CaseType",
@@ -107,7 +109,7 @@ class BaseRetrieveStatsTestCase:
             case_type_share_abacs={},
             case_date_col_type_map=case_date_col_type_map or {},
             case_date_dim_id=None,  # Add this required field
-            props=case_model.CaseTypeProps(
+            props=casedb_model.CaseTypeProps(
                 create_max_n_cases=1000,
                 read_max_n_cases=1000,
                 read_max_tree_size=1000,
@@ -125,8 +127,8 @@ class BaseRetrieveStatsTestCase:
         code: str = "cs",
         description: str = "desc",
         created_in_data_collection_id: UUID | None = None,
-    ) -> case_model.CaseSet:
-        return case_model.CaseSet(
+    ) -> casedb_model.CaseSet:
+        return casedb_model.CaseSet(
             id=case_set_id or uuid4(),
             case_type_id=case_type_id,
             created_in_data_collection_id=(
@@ -143,9 +145,9 @@ class BaseRetrieveStatsTestCase:
         self,
         *,
         case_type_ids: set[UUID] | None,
-        datetime_range_filter: TypedDatetimeRangeFilter | None = None,
-    ) -> case_command.RetrieveCaseTypeStatsCommand:
-        return case_command.RetrieveCaseTypeStatsCommand(
+        datetime_range_filter: DatetimeRangeFilter | None = None,
+    ) -> casedb_command.RetrieveCaseTypeStatsCommand:
+        return casedb_command.RetrieveCaseTypeStatsCommand(
             user=self.user,
             case_type_ids=case_type_ids,
             datetime_range_filter=datetime_range_filter,
@@ -155,9 +157,9 @@ class BaseRetrieveStatsTestCase:
         self,
         *,
         case_set_ids: set[UUID] | None = None,
-        datetime_range_filter: TypedDatetimeRangeFilter | None = None,
-    ) -> case_command.RetrieveCaseSetStatsCommand:
-        return case_command.RetrieveCaseSetStatsCommand(
+        datetime_range_filter: DatetimeRangeFilter | None = None,
+    ) -> casedb_command.RetrieveCaseSetStatsCommand:
+        return casedb_command.RetrieveCaseSetStatsCommand(
             user=self.user,
             case_set_ids=case_set_ids,
             datetime_range_filter=datetime_range_filter,
@@ -180,7 +182,7 @@ class BaseRetrieveStatsTestCase:
 @pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestCaseTypeStats(BaseRetrieveStatsTestCase):
     def test_no_case_type_ids_full_access_reads_all(self) -> None:
-        dt_filter = TypedDatetimeRangeFilter(
+        dt_filter = DatetimeRangeFilter(
             type=FilterType.DATETIME_RANGE.value,
             lower_bound=datetime.now(timezone.utc) - timedelta(days=7),
             upper_bound=datetime.now(timezone.utc),
@@ -202,13 +204,13 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
         )
 
         # Mock repository.retrieve_case_stats
-        stats_1 = case_model.CaseStats(
+        stats_1 = casedb_model.CaseStats(
             case_type_id=self.case_type_id1,
             n_cases=4,
             first_case_date=datetime(2024, 1, 1, 12, 0, 0),
             last_case_date=datetime(2024, 1, 1, 12, 0, 0),
         )
-        stats_2 = case_model.CaseStats(
+        stats_2 = casedb_model.CaseStats(
             case_type_id=self.case_type_id2,
             n_cases=0,
         )
@@ -224,13 +226,13 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
             cmd = self.case_type_stats_cmd(
                 case_type_ids=None, datetime_range_filter=dt_filter
             )
-            result: list[case_model.CaseStats] = case_service_retrieve_case_stats(
+            result: list[casedb_model.CaseStats] = case_service_retrieve_case_stats(
                 self.service, cmd
             )
 
         # Verify
         assert len(result) == 2
-        result_by_id: dict[UUID, case_model.CaseStats] = {
+        result_by_id: dict[UUID, casedb_model.CaseStats] = {
             x.case_type_id: x for x in result
         }
         assert result_by_id[self.case_type_id1].n_cases == 4
@@ -249,7 +251,7 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
         self.repository.crud.assert_called_once()
         # Assert repository.crud called with expected parameters
         _, _, model_class, operation = self.repository.crud.call_args[0][:6]
-        assert model_class is case_model.CaseType
+        assert model_class is casedb_model.CaseType
         assert operation == CrudOperation.READ_ALL
 
         # Assert retrieve_complete_case_type interactions
@@ -275,13 +277,13 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
         )
 
         # Mock repository.retrieve_case_stats
-        stats_1 = case_model.CaseStats(
+        stats_1 = casedb_model.CaseStats(
             case_type_id=self.case_type_id1,
             n_cases=1,
             first_case_date=datetime(2023, 6, 1, 0, 0, 0),
             last_case_date=datetime(2023, 6, 1, 0, 0, 0),
         )
-        stats_2 = case_model.CaseStats(
+        stats_2 = casedb_model.CaseStats(
             case_type_id=self.case_type_id2,
             n_cases=2,
             first_case_date=datetime(2023, 6, 2, 0, 0, 0),
@@ -297,7 +299,7 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
             return_value=abac,
         ):
             cmd = self.case_type_stats_cmd(case_type_ids=None)
-            result: list[case_model.CaseStats] = case_service_retrieve_case_stats(
+            result: list[casedb_model.CaseStats] = case_service_retrieve_case_stats(
                 self.service, cmd
             )
 
@@ -342,7 +344,7 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
         )
 
         # Mock repository.retrieve_case_stats
-        stats_1 = case_model.CaseStats(
+        stats_1 = casedb_model.CaseStats(
             case_type_id=self.case_type_id1,
             n_cases=6,  # 1 + 4 + 1
             first_case_date=datetime(2022, 5, 1, 0, 0, 0),
@@ -356,7 +358,7 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
             return_value=abac,
         ):
             cmd = self.case_type_stats_cmd(case_type_ids=requested_ids)
-            result: list[case_model.CaseStats] = case_service_retrieve_case_stats(
+            result: list[casedb_model.CaseStats] = case_service_retrieve_case_stats(
                 self.service, cmd
             )
 
@@ -392,12 +394,12 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
         # Mock repository.read_fields to return case set info
         def mock_read_fields(*args: Any, **kwargs: Any) -> list[tuple]:
             model_class = args[2]
-            if model_class == case_model.CaseSet:
+            if model_class == casedb_model.CaseSet:
                 return [
                     (self.case_set_id1, self.case_type_id1),
                     (self.case_set_id2, self.case_type_id1),
                 ]
-            elif model_class == case_model.CaseSetMember:
+            elif model_class == casedb_model.CaseSetMember:
                 filter_arg = kwargs.get("filter")
                 if hasattr(filter_arg, "value"):
                     if filter_arg.value == self.case_set_id1:
@@ -421,7 +423,7 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
         )
 
         # Mock repository.retrieve_case_stats
-        stats_1 = case_model.CaseStats(
+        stats_1 = casedb_model.CaseStats(
             case_type_id=self.case_type_id1,
             case_set_id=self.case_set_id1,
             n_cases=2,
@@ -429,7 +431,7 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
             first_case_date=datetime(2024, 1, 1),
             last_case_date=datetime(2024, 1, 2),
         )
-        stats_2 = case_model.CaseStats(
+        stats_2 = casedb_model.CaseStats(
             case_type_id=self.case_type_id1,
             case_set_id=self.case_set_id2,
             n_cases=2,
@@ -453,13 +455,13 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
             "get_case_abac_from_command",
             return_value=abac,
         ):
-            result: list[case_model.CaseStats] = case_service_retrieve_case_stats(
+            result: list[casedb_model.CaseStats] = case_service_retrieve_case_stats(
                 self.service, cmd
             )
 
         # Verify result for both case sets
         assert len(result) == 2
-        by_id: dict[UUID, case_model.CaseStats] = {x.case_set_id: x for x in result}
+        by_id: dict[UUID, casedb_model.CaseStats] = {x.case_set_id: x for x in result}
         assert by_id[self.case_set_id1].n_cases == 2
         assert by_id[self.case_set_id1].n_own_cases == 1
         assert by_id[self.case_set_id1].first_case_date == datetime(2024, 1, 1)
@@ -485,7 +487,7 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
             "get_case_abac_from_command",
             return_value=abac,
         ):
-            result: list[case_model.CaseStats] = case_service_retrieve_case_stats(
+            result: list[casedb_model.CaseStats] = case_service_retrieve_case_stats(
                 self.service, cmd
             )
 
@@ -501,9 +503,9 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
         # Mock repository.read_fields to return case set info but no members
         def mock_read_fields(*args: Any, **kwargs: Any) -> list[tuple]:
             model_class = args[2]
-            if model_class == case_model.CaseSet:
+            if model_class == casedb_model.CaseSet:
                 return [(self.case_set_id1, self.case_type_id1)]
-            elif model_class == case_model.CaseSetMember:
+            elif model_class == casedb_model.CaseSetMember:
                 return []  # No members
             return []
 
@@ -521,7 +523,7 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
         )
 
         # Mock repository.retrieve_case_stats to return zero stats for empty case set
-        stats_empty = case_model.CaseStats(
+        stats_empty = casedb_model.CaseStats(
             case_type_id=self.case_type_id1,
             case_set_id=self.case_set_id1,
             n_cases=0,
@@ -541,7 +543,7 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
             "get_case_abac_from_command",
             return_value=abac,
         ):
-            result: list[case_model.CaseStats] = case_service_retrieve_case_stats(
+            result: list[casedb_model.CaseStats] = case_service_retrieve_case_stats(
                 self.service, cmd
             )
 

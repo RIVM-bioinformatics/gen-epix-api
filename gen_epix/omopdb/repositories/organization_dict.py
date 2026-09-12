@@ -12,7 +12,7 @@ from gen_epix.omopdb.domain.model import Model
 
 
 class OrganizationDictRepository(CommonOrganizationDictRepository):
-    """Use shared organization persistence with OmopDB user model types."""
+    """Encapsulates shared organization persistence with OmopDB user model types."""
 
     def __init__(
         self,

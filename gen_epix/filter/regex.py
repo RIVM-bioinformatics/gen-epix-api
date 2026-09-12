@@ -10,11 +10,13 @@ from gen_epix.filter.enum import FilterType
 
 
 class RegexFilter(Filter):
-    """Match values whose string representation matches a regular expression.
+    """Represents a filter matching values with a regular expression.
 
     Model validation:
     The configured pattern must compile as a Python regular expression.
     """
+
+    type: Literal[FilterType.REGEX.value] = FilterType.REGEX.value  # type: ignore[name-defined]
 
     pattern: str = Field(description="The regular expression to match.", frozen=True)
 
@@ -30,9 +32,3 @@ class RegexFilter(Filter):
     def _match(self, value: Any) -> bool:
         """Return whether a value matches the compiled regular expression."""
         return self._pattern.match(value) is not None
-
-
-class TypedRegexFilter(RegexFilter):
-    """Regular-expression filter carrying its serialized filter type."""
-
-    type: Literal[FilterType.REGEX.value]  # type: ignore[name-defined]

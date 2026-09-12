@@ -16,7 +16,7 @@ Base: type = orm.declarative_base(name=enum.ServiceType.FILE.value)
 
 
 class File(Base, RowMetadataMixin):
-    """SQLAlchemy model for the corresponding persistable domain model."""
+    """Encapsulates the SQLAlchemy model for the persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.File)
 

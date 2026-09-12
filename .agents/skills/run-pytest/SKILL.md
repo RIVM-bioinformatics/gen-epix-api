@@ -1,5 +1,5 @@
 ---
-name: pytest-run
+name: run-pytest
 description: >-
   Run pytest ONCE to a captured log file, then inspect that file repeatedly with
   grep/sed/awk instead of re-running pytest for every question (which failed, why,
@@ -9,7 +9,7 @@ description: >-
   failures, tracebacks, or warnings after a run. Do NOT use to decide whether a
   fresh run is needed — rerun pytest for real whenever source or test code changed
   since the last capture.
-argument-hint: 'Optional: pytest target/args, e.g. "test/etl/test_batch_uploader.py -k upload"'
+argument-hint: 'Optional: pytest target/args, e.g. "test/fastapp/unit/services/auth -k oauth"'
 ---
 
 # Pytest Run (capture once, inspect many times)
@@ -43,19 +43,20 @@ that file.
    whole `test/` folder:
 
    ```bash
-   python run.py test_all --include_e2e=False > tmp/pytest-run.log 2>&1; echo "exit: $?"
+   python run.py test_all --include_e2e=False > tmp/run-pytest.log 2>&1; echo "exit: $?"
    ```
 
-   For a **single unit test or a narrow slice**, pytest may be invoked directly on
+   For an existing named or curated suite, use its `run.py` method. For a
+   **single test or narrow slice**, pytest may be invoked directly on
    that target (a file, `-k EXPR`, a marker) — this is still a single capture:
 
    ```bash
-   pytest test/etl/test_batch_uploader.py -v --tb=long -ra > tmp/pytest-run.log 2>&1; echo "exit: $?"
+   pytest test/fastapp/unit/services/auth/test_fastapp_oauth_idp_client.py -v --tb=long -ra > tmp/run-pytest.log 2>&1; echo "exit: $?"
    ```
 
    - `-v` prints one PASSED/FAILED/ERROR line per test (needed to grep by test
      name). `--tb=long` keeps full tracebacks in the file so a second run isn't
-     needed just to see more context. `-ra` (already a project default) adds the
+     needed just to see more context. `-ra` adds the
      short summary block at the end with reasons for skips/xfails.
    - The `> ... 2>&1` redirect is not in the pre-approved command allowlist, so
      expect one permission prompt on first use per session — this is expected, not
@@ -68,35 +69,56 @@ that file.
 
    ```bash
    # overall result + summary block (bottom of output)
-   tail -40 tmp/pytest-run.log
+   tail -40 tmp/run-pytest.log
 
    # just the failed/errored test node IDs
-   grep -E "^(FAILED|ERROR) " tmp/pytest-run.log
+   grep -E "^(FAILED|ERROR) " tmp/run-pytest.log
 
    # full traceback for one test
-   grep -n "test_upload_batch_success" tmp/pytest-run.log
-   sed -n '120,180p' tmp/pytest-run.log   # use the line number from the grep above
+   grep -n "test_upload_batch_success" tmp/run-pytest.log
+   sed -n '120,180p' tmp/run-pytest.log   # use the line number from the grep above
 
    # warnings
-   grep -A3 "warnings summary" tmp/pytest-run.log
+   grep -A3 "warnings summary" tmp/run-pytest.log
 
    # pass/fail/error counts only
-   grep -E "^[0-9]+ (passed|failed|error|skipped)" tmp/pytest-run.log
-   tail -1 tmp/pytest-run.log
+   grep -E "^[0-9]+ (passed|failed|error|skipped)" tmp/run-pytest.log
+   tail -1 tmp/run-pytest.log
    ```
 
 3. **Only re-run pytest** when you've made a code change, need a different test
    selection, or the log file doesn't exist yet.
 
+## SQL Server checks
+
+Use this workflow only for MSSQL schema or backend-parity work; ordinary tests
+do not require SQL Server:
+
+```bash
+make start-db
+pytest test/fastapp/integration/repositories/sa/test_fastapp_sa_schema_mssql.py
+make stop-db
+```
+
+The file's dialect-compilation checks always run. Its live schema test uses
+`FASTAPP_MSSQL_TEST_URL` when set, otherwise probes the local service started
+by `make start-db`, and skips when SQL Server or its driver is unavailable.
+
+For the optional seq-distance MSSQL performance benchmark, use the dedicated
+`make calculate-distances-performance-mssql` target. It sets
+`SEQDB_MSSQL_TEST_URL` for that test and deletes Docker database volumes, so
+confirm that teardown is intended before running it.
+
 ## Notes
 
-- One fixed filename (`tmp/pytest-run.log`) is intentional: it's per-session scratch,
+- One fixed filename (`tmp/run-pytest.log`) is intentional: it's per-session scratch,
   not a history — each new capture overwrites the last, and there's nothing to clean
-  up. Use `pytest-run-<topic>.log` only if two runs genuinely need to be compared
+  up. Use `run-pytest-<topic>.log` only if two runs genuinely need to be compared
   side by side.
-- Still respect existing markers: `live` and `integration` are deselected by default
-  (`pyproject.toml` `addopts`). Add `-m "integration"` etc. explicitly if the task
-  requires them, same as any normal invocation.
+- `pyproject.toml` declares `scenario_ids`, `integration`, `performance`, and
+  `e2e`; it does not declare `live`. Its `addopts` is only `-v -s`, so it does
+  not deselect integration tests. `test/conftest.py` skips performance tests
+  unless the `-m` expression includes `performance`.
 - Still finish with the repo's real verification step before calling work done —
   this skill is for *iterating*, not a replacement for a clean final
   `python run.py test_all --include_e2e=False` run per the session conventions.

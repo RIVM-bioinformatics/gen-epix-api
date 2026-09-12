@@ -9,12 +9,14 @@ from gen_epix.filter.enum import ComparisonOperator, FilterType
 
 
 class RangeFilter(Filter):
-    """Match values using configurable lower and upper boundary operators.
+    """Represents a filter matching values with configurable boundary operators.
 
     Model validation:
     At least one bound is required; ordered bounds and compatible censor
     operators are enforced before building the matching function.
     """
+
+    type: Literal[FilterType.RANGE.value] = FilterType.RANGE.value  # type: ignore[name-defined]
 
     lower_bound: Any | None = Field(
         default=None, description="The lower bound of the range.", frozen=True
@@ -134,9 +136,3 @@ class RangeFilter(Filter):
         raise NotImplementedError(
             "Method is implemented dynamically in _validate_state"
         )
-
-
-class TypedRangeFilter(RangeFilter):
-    """Range filter carrying its serialized filter type."""
-
-    type: Literal[FilterType.RANGE.value]  # type: ignore[name-defined]

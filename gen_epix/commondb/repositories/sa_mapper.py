@@ -14,7 +14,7 @@ from gen_epix.fastapp.repositories.sa.mapper import (
 
 class CommondbSAMapper(SAMapper):
     """
-    SAMapper subclass for all databases that use RowMetadataMixin.
+    Encapsulates a SAMapper subclass for all databases that use RowMetadataMixin.
 
     Overrides `update()` to enforce the following rules on every UPDATE:
     - `created_at`  — never written; the DB server_default owns it.
@@ -97,7 +97,7 @@ class CommondbSAMapper(SAMapper):
 
 
 class CommondbSAMapperFactory(BaseSAMapperFactory):
-    """Create commondb SQLAlchemy mappers for audit-metadata-enabled databases.
+    """Encapsulates creation of commondb SQLAlchemy mappers for audit-metadata-enabled databases.
 
     The factory supports databases that inherit from RowMetadataMixin (casedb,
     seqdb, omopdb, …).

@@ -15,7 +15,7 @@ from gen_epix.fastapp.model import CrudCommand
 
 
 class OrganizationService(BaseOrganizationService):
-    """Handle organization records, invitations, user updates, and anonymization."""
+    """Encapsulates handling of organization records, invitations, user updates, and anonymization."""
 
     DEFAULT_CFG = {
         "user_invitation_time_to_live": 86400,  # 1 day

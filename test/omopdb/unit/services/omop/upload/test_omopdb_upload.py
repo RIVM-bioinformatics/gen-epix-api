@@ -73,7 +73,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.commondb.domain.enum import EtlStatus, Role, UploadAction, UploadStatusSet
+from gen_epix.commondb.domain.enum import Role, UploadAction
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import (
     IdentifierForUpload,
@@ -81,12 +81,16 @@ from gen_epix.commondb.domain.model.organization import (
     User,
 )
 from gen_epix.commondb.domain.model.upload import ParentUploadResult, UploadResult
+from gen_epix.etl.enum import EtlStatus, EtlStatusSet
 from gen_epix.fastapp.app import App
+from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.model import ModelFieldProps
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.omopdb.domain.command import UploadPersonsCommand
 from gen_epix.omopdb.domain.model import (
+    Measurement,
     MeasurementForUpload,
+    MeasurementRelation,
     MeasurementRelationForUpload,
     ObservationForUpload,
     Person,
@@ -463,13 +467,13 @@ class BasePersonUploadTestCase:
     # -- Assertion helpers ---------------------------------------------------
 
     def expectBatchProcessed(self, upload_result: UploadResult) -> None:
-        if upload_result.status not in UploadStatusSet.PROCESSED.value:
+        if upload_result.status not in EtlStatusSet.SUCCEEDED.value:
             pytest.fail(
                 f"Upload was not processed, status: {upload_result.status.value}",
             )
 
     def expectBatchFailed(self, upload_result: UploadResult) -> None:
-        if upload_result.status not in UploadStatusSet.FAILED.value:
+        if upload_result.status not in EtlStatusSet.FAILED.value:
             pytest.fail(
                 f"Upload did not fail, status: {upload_result.status.value}",
             )
@@ -480,11 +484,10 @@ class BasePersonUploadTestCase:
         n_skipped: int = 0,
         n_created: int = 0,
         n_updated: int = 0,
+        n_deleted: int = 0,
         n_failed: int = 0,
         n_pending: int = 0,
         n_processed: int = 0,
-        n_initialized: int = 0,
-        n_error: int = 0,
         n_mixed: int = 0,
         n_success: int = 0,
         include_self: bool = False,
@@ -493,11 +496,10 @@ class BasePersonUploadTestCase:
             EtlStatus.SKIPPED: n_skipped,
             EtlStatus.CREATED: n_created,
             EtlStatus.UPDATED: n_updated,
+            EtlStatus.DELETED: n_deleted,
             EtlStatus.FAILED: n_failed,
             EtlStatus.PENDING: n_pending,
             EtlStatus.PROCESSED: n_processed,
-            EtlStatus.INITIALIZED: n_initialized,
-            EtlStatus.ERROR: n_error,
             EtlStatus.MIXED: n_mixed,
             EtlStatus.SUCCESS: n_success,
         }
@@ -653,15 +655,18 @@ class Test2ChildObjectProvision(BasePersonUploadTestCase):
             measurement_relations=[measurement_relation],
         )
         created_person_id = self.random_ids[0]
-        created_measurement_id = self.random_ids[1]
+        created_specimen_id = self.random_ids[1]
         created_observation_id = self.random_ids[2]
-        created_specimen_id = self.random_ids[3]
+        created_measurement_id = self.random_ids[3]
         created_measurement_relation_id = self.random_ids[4]
+        # Children are created in foreign-key dependency order
+        # (PersonForUpload.CHILD_ORDER): specimens, observations, measurements,
+        # then measurement_relations.
         self.service.repository.crud.side_effect = [
             [created_person_id],  # Create persons returned IDs
-            [created_measurement_id],  # Create measurements returned IDs
-            [created_observation_id],  # Create observations returned IDs
             [created_specimen_id],  # Create specimens returned IDs
+            [created_observation_id],  # Create observations returned IDs
+            [created_measurement_id],  # Create measurements returned IDs
             [created_measurement_relation_id],  # Create measurement relations IDs
         ]
         batch_result = self.upload_batch(person_for_upload)
@@ -675,6 +680,43 @@ class Test2ChildObjectProvision(BasePersonUploadTestCase):
             batch_result.persons[0].measurement_relations[0].id
             == created_measurement_relation_id
         )  # type: ignore[index]
+
+    def test_2_7_child_order_respects_foreign_key_dependencies(self) -> None:
+        """CHILD_ORDER creates Specimen before Measurement (which references it).
+
+        Measurement.derived_from_specimen_id -> Specimen and
+        MeasurementRelation.from/to_measurement_id -> Measurement, so a batch
+        with a new measurement referencing a new specimen must not insert the
+        measurement first.
+        """
+        child_order = PersonForUpload.get_child_order()
+        assert child_order.index(Specimen) < child_order.index(Measurement)
+        assert child_order.index(Measurement) < child_order.index(MeasurementRelation)
+
+        measurement = self.create_measurement_for_upload()
+        specimen = self.create_specimen_for_upload()
+        person_for_upload = self.create_person_for_upload(
+            measurements=[measurement],
+            specimens=[specimen],
+        )
+        created_person_id = self.random_ids[0]
+        created_specimen_id = self.random_ids[1]
+        created_measurement_id = self.random_ids[2]
+        self.service.repository.crud.side_effect = [
+            [created_person_id],
+            [created_specimen_id],
+            [created_measurement_id],
+        ]
+        self.upload_batch(person_for_upload)
+
+        created_model_classes = [
+            call.args[2]
+            for call in self.service.repository.crud.call_args_list
+            if len(call.args) > 3 and call.args[3] == CrudOperation.CREATE_SOME
+        ]
+        assert created_model_classes.index(Specimen) < created_model_classes.index(
+            Measurement
+        )
 
 
 # ---------------------------------------------------------------------------

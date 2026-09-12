@@ -15,7 +15,7 @@ from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
 
 class OrganizationAdminPolicy(Model):
-    """Define whether a user administers an organization.
+    """Represents whether a user administers an organization.
 
     If the user has the role ORG_ADMIN, they will be able to:
     1) Invite new users of this organization.

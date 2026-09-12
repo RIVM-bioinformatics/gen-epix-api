@@ -9,7 +9,7 @@ from gen_epix.seqdb.domain.enum import Role
 
 
 class RoleGenerator(CommonRoleGenerator):
-    """Generate seqdb role permissions from common and domain command mappings."""
+    """Encapsulates seqdb role generation from common and domain command mappings."""
 
     COMMON_ROLE_ENUM_MAP = {x: Role[x.name] for x in CommonRole}
 
@@ -48,6 +48,7 @@ class RoleGenerator(CommonRoleGenerator):
             (command.AstMeasurementCrudCommand, PermissionTypeSet.CRUD),
             (command.AstPredictionCrudCommand, PermissionTypeSet.CRUD),
             (command.CalculateSeqDistancesForNewProfilesCommand, PermissionTypeSet.E),
+            (command.ConvertSeqFormatCommand, PermissionTypeSet.E),
             (command.UpdateSeqDistancesCommand, PermissionTypeSet.E),
             (command.CreateFileCommand, PermissionTypeSet.E),
             (command.FileCrudCommand, PermissionTypeSet.CRD),

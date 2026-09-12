@@ -16,7 +16,7 @@ from gen_epix.filter.equals_uuid import EqualsUuidFilter
 
 
 class ReadUserPolicy(BaseReadUserPolicy):
-    """Apply AFTER-phase filtering to user records visible to the command user."""
+    """Encapsulates AFTER-phase filtering to user records visible to the command user."""
 
     # TODO: replace by get_content implementation for more efficient application DURING execution
 

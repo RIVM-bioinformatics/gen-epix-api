@@ -1,18 +1,27 @@
+"""Define persistent organization and user ABAC policy records for cases.
+
+Access policies grant rights within one data collection. Share policies grant
+additional rights to move cases or case sets to or from a target collection when
+they are already present in an allowed source collection.
+"""
+
 from typing import ClassVar
 from uuid import UUID
 
 from pydantic import Field
 
 from gen_epix.casedb.domain.model.case import CaseTypeSet, ColSet
-from gen_epix.commondb.domain import model as common_model
+from gen_epix.commondb.domain import model as commondb_model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
 
-class BaseCasePolicy(common_model.Model):
+class BaseCasePolicy(commondb_model.Model):
+    """Represents common case and case-set rights for a case-type set."""
+
     data_collection_id: UUID = Field(
         description="The ID of the data collection. FOREIGN KEY"
     )
-    data_collection: common_model.DataCollection | None = Field(
+    data_collection: commondb_model.DataCollection | None = Field(
         default=None, description="The data collection"
     )
     case_type_set_id: UUID = Field(
@@ -37,8 +46,8 @@ class BaseCasePolicy(common_model.Model):
 
 
 class OrganizationAccessCasePolicy(BaseCasePolicy):
-    """
-    Stores the access rights of an organization to a particular data collection.
+    """Represents an organization's access rights in one data collection.
+
     If an organization does not have a policy to a data collection, it has no
     access rights to that data collection.
 
@@ -61,10 +70,10 @@ class OrganizationAccessCasePolicy(BaseCasePolicy):
         ),
         links=create_links(
             {
-                1: ("organization_id", common_model.Organization, "organization"),
+                1: ("organization_id", commondb_model.Organization, "organization"),
                 2: (
                     "data_collection_id",
-                    common_model.DataCollection,
+                    commondb_model.DataCollection,
                     "data_collection",
                 ),
                 3: ("case_type_set_id", CaseTypeSet, "case_type_set"),
@@ -82,7 +91,7 @@ class OrganizationAccessCasePolicy(BaseCasePolicy):
         ),
     )
     organization_id: UUID = Field(description="The ID of the organization. FOREIGN KEY")
-    organization: common_model.Organization | None = Field(
+    organization: commondb_model.Organization | None = Field(
         default=None, description="The organization"
     )
     is_private: bool = Field(
@@ -111,8 +120,9 @@ class OrganizationAccessCasePolicy(BaseCasePolicy):
 
 
 class UserAccessCasePolicy(BaseCasePolicy):
-    """
-    Stores the maximum access rights of a user to a particular data collection,
+    """Represents a user's maximum access rights in one data collection.
+
+    The rights are
     analogous to the organization access case policy.
 
     The actual access rights of a user are derived as the intersection of their
@@ -134,10 +144,10 @@ class UserAccessCasePolicy(BaseCasePolicy):
         ),
         links=create_links(
             {
-                1: ("user_id", common_model.User, "user"),
+                1: ("user_id", commondb_model.User, "user"),
                 2: (
                     "data_collection_id",
-                    common_model.DataCollection,
+                    commondb_model.DataCollection,
                     "data_collection",
                 ),
                 3: ("case_type_set_id", CaseTypeSet, "case_type_set"),
@@ -155,7 +165,7 @@ class UserAccessCasePolicy(BaseCasePolicy):
         ),
     )
     user_id: UUID = Field(description="The ID of the user. FOREIGN KEY")
-    user: common_model.User | None = Field(default=None, description="The user")
+    user: commondb_model.User | None = Field(default=None, description="The user")
     read_col_set_id: UUID | None = Field(
         default=None,
         description="The ID of the column set for which values can be read, limited to the CaseTypes in the CaseTypeSet.  If empty, there are no read rights. FOREIGN KEY",
@@ -179,10 +189,10 @@ class UserAccessCasePolicy(BaseCasePolicy):
 
 
 class OrganizationShareCasePolicy(BaseCasePolicy):
-    """
-    Stores any additional case or case set share rights of an organization to a
-    particular data collection, if the case or case set is already in a
-    particular other data collection.
+    """Represents an organization's additional source-to-target share rights.
+
+    Rights apply to the target ``data_collection_id`` when a case or case set is
+    already present in ``from_data_collection_id``.
 
     The share rights are limited to the CaseTypes in the CaseTypeSet. If a
     CaseType is not in the CaseTypeSet, the organization has no share rights
@@ -204,37 +214,38 @@ class OrganizationShareCasePolicy(BaseCasePolicy):
         ),
         links=create_links(
             {
-                1: ("organization_id", common_model.Organization, "organization"),
+                1: ("organization_id", commondb_model.Organization, "organization"),
                 2: (
                     "data_collection_id",
-                    common_model.DataCollection,
+                    commondb_model.DataCollection,
                     "data_collection",
                 ),
                 3: ("case_type_set_id", CaseTypeSet, "case_type_set"),
                 4: (
                     "from_data_collection_id",
-                    common_model.DataCollection,
+                    commondb_model.DataCollection,
                     "from_data_collection",
                 ),
             }
         ),
     )
     organization_id: UUID = Field(description="The ID of the organization. FOREIGN KEY")
-    organization: common_model.Organization | None = Field(
+    organization: commondb_model.Organization | None = Field(
         default=None, description="The organization"
     )
     from_data_collection_id: UUID = Field(
         description="The ID of the data collection from which the CaseTypeSet is shared. FOREIGN KEY"
     )
-    from_data_collection: common_model.DataCollection | None = Field(
+    from_data_collection: commondb_model.DataCollection | None = Field(
         default=None,
         description="The data collection from which the CaseTypeSet is shared",
     )
 
 
 class UserShareCasePolicy(BaseCasePolicy):
-    """
-    Stores the maximum share rights of a user to a particular data collection,
+    """Represents a user's maximum source-to-target share rights.
+
+    The rights are
     analogous to the organization share case policy.
 
     The actual share rights of a user are derived as the intersection of their
@@ -257,27 +268,27 @@ class UserShareCasePolicy(BaseCasePolicy):
         ),
         links=create_links(
             {
-                1: ("user_id", common_model.User, "user"),
+                1: ("user_id", commondb_model.User, "user"),
                 2: (
                     "data_collection_id",
-                    common_model.DataCollection,
+                    commondb_model.DataCollection,
                     "data_collection",
                 ),
                 3: ("case_type_set_id", CaseTypeSet, "case_type_set"),
                 4: (
                     "from_data_collection_id",
-                    common_model.DataCollection,
+                    commondb_model.DataCollection,
                     "from_data_collection",
                 ),
             }
         ),
     )
     user_id: UUID = Field(description="The ID of the user. FOREIGN KEY")
-    user: common_model.User | None = Field(default=None, description="The user")
+    user: commondb_model.User | None = Field(default=None, description="The user")
     from_data_collection_id: UUID = Field(
         description="The ID of the data collection from which the CaseTypeSet is shared. FOREIGN KEY"
     )
-    from_data_collection: common_model.DataCollection | None = Field(
+    from_data_collection: commondb_model.DataCollection | None = Field(
         default=None,
         description="The data collection from which the CaseTypeSet is shared",
     )

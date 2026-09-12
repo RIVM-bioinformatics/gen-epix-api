@@ -5,7 +5,7 @@ from typing import Any, NotRequired, TypedDict
 
 
 class RouterData(TypedDict):
-    """Describe a router factory registered by an application."""
+    """Encapsulates describing a router factory registered by an application."""
 
     name: str
     create_endpoints_fn: Callable[..., Any]

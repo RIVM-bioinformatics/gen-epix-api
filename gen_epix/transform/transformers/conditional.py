@@ -7,7 +7,7 @@ from gen_epix.transform.transformer import Transformer
 
 
 class ConditionalTransformer(Transformer):
-    """Apply a wrapped transformer only when its predicate accepts the object."""
+    """Encapsulates predicate-controlled transformation."""
 
     def __init__(
         self,

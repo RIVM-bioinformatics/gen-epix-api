@@ -10,7 +10,7 @@ from gen_epix.transform.transform_result import TransformResult
 
 
 class StreamingPipeline:
-    """Advanced streaming pipeline with backpressure handling."""
+    """Encapsulates an advanced streaming pipeline with backpressure handling."""
 
     def __init__(
         self,

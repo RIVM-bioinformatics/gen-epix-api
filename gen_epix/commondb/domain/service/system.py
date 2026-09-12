@@ -10,7 +10,7 @@ from gen_epix.fastapp import BaseService
 
 
 class BaseSystemService(BaseService[BaseSystemRepository]):
-    """Provide system-outage, package-license, and feature-flag operations."""
+    """Encapsulates system-outage, package-license, and feature-flag operations."""
 
     SERVICE_TYPE = ServiceType.SYSTEM
 
@@ -18,6 +18,7 @@ class BaseSystemService(BaseService[BaseSystemRepository]):
         """Register CRUD, outage, package-license, and feature-flag handlers."""
         f = self.app.register_handler
         self.register_default_crud_handlers()
+        f(command.DeleteAllOperationalDataCommand, self.delete_all_operational_data)
         f(command.RetrieveOutagesCommand, self.retrieve_outages)
         f(command.RetrieveLicensesCommand, self.retrieve_licenses)
         f(command.RetrieveFeatureFlagsCommand, self.retrieve_feature_flags)
@@ -79,5 +80,19 @@ class BaseSystemService(BaseService[BaseSystemRepository]):
 
         Raises:
             NotImplementedError: Always; concrete services implement retrieval.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def delete_all_operational_data(
+        self, cmd: command.DeleteAllOperationalDataCommand
+    ) -> model.DeleteAllOperationalDataResult:
+        """Delete all operational data from the system.
+
+        Args:
+            cmd: Command requesting deletion of all operational data.
+
+        Raises:
+            NotImplementedError: Always; concrete services implement deletion.
         """
         raise NotImplementedError()

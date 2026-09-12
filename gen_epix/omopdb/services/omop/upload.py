@@ -5,10 +5,10 @@ from uuid import UUID
 import gen_epix.omopdb.domain.command as command
 import gen_epix.omopdb.domain.model as model
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
-from gen_epix.commondb.domain.enum import EtlStatus
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import BaseBatchUploadResult
 from gen_epix.commondb.services.upload import BatchUploader
+from gen_epix.etl.enum import EtlStatus
 from gen_epix.fastapp.service import BaseService
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.omopdb.domain import exc
@@ -17,7 +17,7 @@ from gen_epix.omopdb.services.omop.person_validator import PersonValidator
 
 
 class PersonBatchUploader(BatchUploader):
-    """Validate and persist batches of persons and their associated OMOP data."""
+    """Encapsulates validation and persistence of person batches and associated data."""
 
     def __init__(self, service: BaseService) -> None:
         """Initialize the uploader for an OMOP service.

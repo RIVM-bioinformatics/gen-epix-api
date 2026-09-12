@@ -11,7 +11,7 @@ from gen_epix.transform.transformer import Transformer
 
 
 class Pipeline(StreamProcessor):
-    """Apply transformers in order and stop processing an object after failure."""
+    """Encapsulates ordered transformation with failure short-circuiting."""
 
     def __init__(self, transformers: list[Transformer] | None = None):
         """Initialize the pipeline with an optional ordered transformer list."""
@@ -84,7 +84,7 @@ class Pipeline(StreamProcessor):
 
 
 class RetryTransformer(Transformer):
-    """Wrap a transformer and retry raised exceptions with exponential backoff."""
+    """Encapsulates transformer retries with exponential backoff."""
 
     def __init__(
         self,
@@ -131,7 +131,7 @@ class RetryTransformer(Transformer):
 
 
 class FallbackTransformer(Transformer):
-    """Use a fallback transformer when the primary raises an exception."""
+    """Encapsulates fallback transformation after a primary exception."""
 
     def __init__(
         self, primary: Transformer, fallback: Transformer, name: str | None = None

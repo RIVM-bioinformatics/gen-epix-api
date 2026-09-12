@@ -8,7 +8,7 @@ from gen_epix.fastapp.model import Command, Permission, Policy, User
 
 class RbacPolicy(Policy):
     """
-    Policy that checks if the user has the required permission to
+    Encapsulates a policy that checks if the user has the required permission to
     execute a command through the role(s) they have been assigned.
     """
 

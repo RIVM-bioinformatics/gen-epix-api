@@ -81,10 +81,9 @@ final message and its resulting short hash.
 
 ## Examples
 
-- Branch `lsp-3559-optimize-agentic-ai-usage-in-lsp-data-repo`; last commit
-  `feat: add hooks for conventions reminder...`; staged diff touches `.agents/scripts/`
-  and `.claude/settings.json` →
-  `feat(agents): share guardrail hooks across Claude Code, Codex, and Copilot`
+- Branch `LSP-3559-cache-oidc-keys`; last commit
+  `feat(auth): add OIDC key cache`; staged diff updates the cache and tests →
+  `fix(auth): refresh expired OIDC keys`
 - Last commit `feat(skills): add refdata-troubleshooting skill`; staged diff only fixes a
   broken path in that skill →
   `fix(skills): correct the loader path in refdata-troubleshooting`

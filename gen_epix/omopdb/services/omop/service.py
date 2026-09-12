@@ -10,7 +10,7 @@ from gen_epix.omopdb.services.omop.upload import omop_service_upload_persons
 
 
 class OmopService(BaseOmopService):
-    """Handle OMOP person-upload and person-retrieval commands."""
+    """Encapsulates handling of OMOP person-upload and person-retrieval commands."""
 
     def upload_persons(
         self, cmd: command.UploadPersonsCommand
