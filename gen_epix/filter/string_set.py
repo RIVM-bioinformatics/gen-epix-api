@@ -22,6 +22,8 @@ class StringSetFilter(Filter):
     before membership is evaluated.
     """
 
+    type: Literal[FilterType.STRING_SET.value] = FilterType.STRING_SET.value  # type: ignore[name-defined]
+
     members: frozenset[str] = Field(description="The strings to match.", frozen=True)
     case_sensitive: bool = Field(
         default=False, description="Whether the match is case sensitive.", frozen=True
@@ -58,9 +60,3 @@ class StringSetFilter(Filter):
         raise NotImplementedError(
             "Method is implemented dynamically in _validate_state"
         )
-
-
-class TypedStringSetFilter(StringSetFilter):
-    """Represents a string set filter carrying its serialized filter type."""
-
-    type: Literal[FilterType.STRING_SET.value]  # type: ignore[name-defined]

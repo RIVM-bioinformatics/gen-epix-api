@@ -12,23 +12,37 @@ from pydantic import BaseModel, Field, model_validator
 
 from gen_epix.filter import enum
 from gen_epix.filter.base import Filter
-from gen_epix.filter.date_range import DateRangeFilter, TypedDateRangeFilter
-from gen_epix.filter.datetime_range import DatetimeRangeFilter, TypedDatetimeRangeFilter
-from gen_epix.filter.equals_boolean import EqualsBooleanFilter, TypedEqualsBooleanFilter
-from gen_epix.filter.equals_number import EqualsNumberFilter, TypedEqualsNumberFilter
-from gen_epix.filter.equals_string import EqualsStringFilter, TypedEqualsStringFilter
-from gen_epix.filter.equals_uuid import EqualsUuidFilter, TypedEqualsUuidFilter
-from gen_epix.filter.exists import ExistsFilter, TypedExistsFilter
-from gen_epix.filter.no_filter import NoFilter, TypedNoFilter
-from gen_epix.filter.number_range import NumberRangeFilter, TypedNumberRangeFilter
-from gen_epix.filter.number_set import NumberSetFilter, TypedNumberSetFilter
-from gen_epix.filter.partial_date_range import (
-    PartialDateRangeFilter,
-    TypedPartialDateRangeFilter,
+from gen_epix.filter.date_range import DateRangeFilter
+from gen_epix.filter.datetime_range import DatetimeRangeFilter
+from gen_epix.filter.equals_boolean import EqualsBooleanFilter
+from gen_epix.filter.equals_number import EqualsNumberFilter
+from gen_epix.filter.equals_string import EqualsStringFilter
+from gen_epix.filter.equals_uuid import EqualsUuidFilter
+from gen_epix.filter.exists import ExistsFilter
+from gen_epix.filter.no_filter import NoFilter
+from gen_epix.filter.number_range import NumberRangeFilter
+from gen_epix.filter.number_set import NumberSetFilter
+from gen_epix.filter.partial_date_range import PartialDateRangeFilter
+from gen_epix.filter.regex import RegexFilter
+from gen_epix.filter.string_set import StringSetFilter
+from gen_epix.filter.uuid_set import UuidSetFilter
+
+FilterUnion = (
+    ExistsFilter
+    | EqualsBooleanFilter
+    | EqualsNumberFilter
+    | EqualsStringFilter
+    | EqualsUuidFilter
+    | NumberRangeFilter
+    | DateRangeFilter
+    | DatetimeRangeFilter
+    | PartialDateRangeFilter
+    | RegexFilter
+    | NumberSetFilter
+    | StringSetFilter
+    | UuidSetFilter
+    | NoFilter
 )
-from gen_epix.filter.regex import RegexFilter, TypedRegexFilter
-from gen_epix.filter.string_set import StringSetFilter, TypedStringSetFilter
-from gen_epix.filter.uuid_set import TypedUuidSetFilter, UuidSetFilter
 
 
 class CompositeFilter(Filter):
@@ -39,24 +53,10 @@ class CompositeFilter(Filter):
     operators other than `AND` and `OR` support no more than two children.
     """
 
-    filters: list[
-        ExistsFilter
-        | EqualsBooleanFilter
-        | EqualsNumberFilter
-        | EqualsStringFilter
-        | EqualsUuidFilter
-        | NumberRangeFilter
-        | DateRangeFilter
-        | DatetimeRangeFilter
-        | PartialDateRangeFilter
-        | RegexFilter
-        | NumberSetFilter
-        | StringSetFilter
-        | UuidSetFilter
-        | NoFilter
-        | CompositeFilter
-        | Filter,
-    ] = Field(description="The list of filters.", min_length=1, frozen=True)
+    type: Literal[enum.FilterType.COMPOSITE.value] = enum.FilterType.COMPOSITE.value  # type: ignore[name-defined]
+    filters: list[FilterUnion | Filter] = Field(
+        description="The list of filters.", min_length=1, frozen=True
+    )
     key: str | None = Field(default=None)
     operator: enum.LogicalOperator = Field(
         default=enum.LogicalOperator.AND,
@@ -503,28 +503,3 @@ class CompositeFilter(Filter):
             else:
                 filter.set_key(key_map)
         return self
-
-
-class TypedCompositeFilter(CompositeFilter):
-    """Represents a composite filter carrying its serialized filter type."""
-
-    type: Literal[enum.FilterType.COMPOSITE.value]  # type: ignore[name-defined]
-    filters: list[
-        TypedExistsFilter
-        | TypedEqualsBooleanFilter
-        | TypedEqualsNumberFilter
-        | TypedEqualsStringFilter
-        | TypedEqualsUuidFilter
-        | TypedNumberRangeFilter
-        | TypedDateRangeFilter
-        | TypedDatetimeRangeFilter
-        | TypedPartialDateRangeFilter
-        | TypedRegexFilter
-        | TypedNumberSetFilter
-        | TypedStringSetFilter
-        | TypedUuidSetFilter
-        | TypedNoFilter
-        | TypedCompositeFilter,
-    ] = Field(
-        description="The list of filters."
-    )  # type: ignore

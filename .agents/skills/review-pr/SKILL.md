@@ -1,5 +1,5 @@
 ---
-name: review
+name: review-pr
 description: >-
   Review a GitHub pull request for correctness, task fulfillment, repository
   conventions, and test coverage. Use when asked to review a PR or branch;

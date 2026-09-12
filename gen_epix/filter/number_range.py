@@ -12,6 +12,8 @@ from gen_epix.filter.range import RangeFilter
 class NumberRangeFilter(RangeFilter):
     """Represents a filter matching numeric values within the configured range."""
 
+    type: Literal[FilterType.NUMBER_RANGE.value] = FilterType.NUMBER_RANGE.value  # type: ignore[name-defined]
+
     lower_bound: (
         Annotated[
             int | float | Decimal,
@@ -26,9 +28,3 @@ class NumberRangeFilter(RangeFilter):
         ]
         | None
     ) = Field(default=None, description="The upper bound of the range.", frozen=True)
-
-
-class TypedNumberRangeFilter(NumberRangeFilter):
-    """Represents a numeric range filter carrying its serialized filter type."""
-
-    type: Literal[FilterType.NUMBER_RANGE.value]  # type: ignore[name-defined]

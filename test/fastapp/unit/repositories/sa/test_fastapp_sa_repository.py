@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from pathlib import Path
 from typing import Any, ClassVar, cast
+from unittest.mock import Mock
 
 import pytest
 import sqlalchemy as sa
@@ -20,6 +21,7 @@ from gen_epix.filter import (
     EqualsNumberFilter,
     EqualsStringFilter,
     LogicalOperator,
+    NumberRangeFilter,
 )
 
 Base: Any = declarative_base()
@@ -65,7 +67,7 @@ def _make_obj(idx: int, *, value: int | None = None) -> RepoModel:
 
 
 @pytest.fixture
-def repo() -> SARepository:
+def repo() -> Iterator[SARepository]:
     engine = sa.create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
     repository = SARepository(
@@ -75,7 +77,10 @@ def repo() -> SARepository:
         register_mappers=False,
     )
     repository.register_mapper(SAMapper(RepoModel, SARepoModel))
-    return repository
+    try:
+        yield repository
+    finally:
+        engine.dispose(close=True)
 
 
 def test_repository_properties_and_session(repo: SARepository) -> None:
@@ -93,11 +98,18 @@ def test_repository_properties_and_session(repo: SARepository) -> None:
 
 def test_uow_nested_and_invalid_nested_kwargs(repo: SARepository) -> None:
     with repo.uow() as outer_uow:
+        session = cast(SAUnitOfWork, outer_uow).session
+        close = Mock(wraps=session.close)
+        session.close = close
         nested_uow = repo.uow()
         assert isinstance(nested_uow, SAUnitOfWork)
-        assert nested_uow.session is cast(SAUnitOfWork, outer_uow).session
+        assert nested_uow.session is session
+        with nested_uow:
+            pass
+        close.assert_not_called()
         with pytest.raises(exc.RepositoryServiceError, match="b78b8c87"):
             repo.uow(invalid=True)
+    close.assert_called_once_with()
 
 
 def test_register_get_mapper_and_duplicate_errors(repo: SARepository) -> None:
@@ -275,6 +287,15 @@ def test_read_some_raises_invalid_ids(repo: SARepository) -> None:
         repo.read_some(RepoModel, ["missing-id"])
 
 
+def test_read_some_reports_duplicate_ids(repo: SARepository) -> None:
+    repo.create_one(RepoModel, "user", _make_obj(1))
+
+    with pytest.raises(exc.DuplicateIdsError, match="bba17339") as error:
+        repo.read_some(RepoModel, ["id-1", "id-1"])
+
+    assert error.value.ids == ["id-1"]
+
+
 def test_create_some_and_upsert_some_validation(repo: SARepository) -> None:
     with pytest.raises(ValueError, match="Not all objs are of type RepoModel"):
         repo.create_some(RepoModel, "user", cast(Iterable[Model], [object()]))
@@ -283,6 +304,77 @@ def test_create_some_and_upsert_some_validation(repo: SARepository) -> None:
         repo.upsert_some(RepoModel, "user", cast(Iterable[Model], [object()]))
 
     assert repo.upsert_some(RepoModel, "user", []) == []
+
+
+def test_mutating_batches_reject_duplicate_ids(repo: SARepository) -> None:
+    duplicate_objs = [_make_obj(1), _make_obj(1)]
+
+    with pytest.raises(exc.DuplicateIdsError):
+        repo.create_some(RepoModel, "user", duplicate_objs)
+
+    repo.create_one(RepoModel, "user", _make_obj(1))
+    with pytest.raises(exc.DuplicateIdsError):
+        repo.update_some(RepoModel, "user", duplicate_objs)
+    with pytest.raises(exc.DuplicateIdsError):
+        repo.upsert_some(RepoModel, "user", duplicate_objs)
+    with pytest.raises(exc.DuplicateIdsError):
+        repo.delete_some(RepoModel, "user", ["id-1", "id-1"])
+
+
+def test_create_some_exact_batch_without_flush(repo: SARepository) -> None:
+    repo._max_insert_batch_size = 2  # pylint: disable=protected-access
+
+    created = [
+        cast(RepoModel, obj)
+        for obj in repo.create_some(
+            RepoModel, "user", [_make_obj(1), _make_obj(2)], flush=False
+        )
+    ]
+
+    assert [obj.id for obj in created] == ["id-1", "id-2"]
+    assert repo.exists_some(RepoModel, ["id-1", "id-2"]) == [True, True]
+
+
+def test_read_all_applies_zero_range_bound(repo: SARepository) -> None:
+    repo.create_some(RepoModel, "user", [_make_obj(-1), _make_obj(0), _make_obj(1)])
+
+    objs = [
+        cast(RepoModel, obj)
+        for obj in repo.read_all(
+            RepoModel,
+            NumberRangeFilter(key="value", lower_bound=0, upper_bound=1),
+        )
+    ]
+
+    assert [obj.id for obj in objs] == ["id-0"]
+
+
+def test_crud_return_ids_pagination_and_object_filter(repo: SARepository) -> None:
+    repo.create_some(RepoModel, "user", [_make_obj(1), _make_obj(2), _make_obj(3)])
+
+    updated_ids = repo.update_some(
+        RepoModel, "user", [_make_obj(1, value=10)], return_id=True
+    )
+    assert updated_ids == ["id-1"]
+
+    upserted_ids = repo.upsert_some(
+        RepoModel,
+        "user",
+        [_make_obj(2, value=20), _make_obj(4, value=40)],
+        return_id=True,
+    )
+    assert upserted_ids == ["id-2", "id-4"]
+
+    page = repo.read_all(RepoModel, filter=None, limit=2, offset=1)
+    assert len(page) == 2
+
+    filtered_ids = repo.read_all(
+        RepoModel,
+        filter=None,
+        return_id=True,
+        obj_filter=EqualsNumberFilter(key="value", value=20),
+    )
+    assert filtered_ids == ["id-2"]
 
 
 def test_read_fields(repo: SARepository) -> None:
@@ -341,8 +433,9 @@ def test_verify_valid_ids(repo: SARepository) -> None:
     with repo.uow() as uow:
         repo.verify_valid_ids(uow, "user", RepoModel, ["id-1", "id-2"])
 
-        with pytest.raises(exc.DuplicateIdsError, match="aac3e2af"):
+        with pytest.raises(exc.DuplicateIdsError, match="aac3e2af") as error:
             repo.verify_valid_ids(uow, "user", RepoModel, ["id-1", "id-1"])
+        assert error.value.ids == ["id-1"]
 
         with pytest.raises(exc.InvalidIdsError, match="e1eb6e15"):
             repo.verify_valid_ids(uow, "user", RepoModel, ["id-1", "missing"])
@@ -375,6 +468,27 @@ def test_clear_repository_content_smoke_in_memory() -> None:
     )
 
 
+def test_clear_repository_content_drops_default_schema_tables(tmp_path: Path) -> None:
+    sqlite_file = tmp_path / "clear.sqlite"
+    connection_string = f"sqlite:///{sqlite_file.as_posix()}"
+    repo = SARepository.create_sa_repository(
+        entities=[RepoModel.ENTITY],
+        connection_string=connection_string,
+        recreate_sqlite_file=True,
+    )
+    repo._engine.dispose()  # pylint: disable=protected-access
+
+    SARepository.clear_repository_content(
+        entities=[RepoModel.ENTITY], connection_string=connection_string
+    )
+
+    engine = sa.create_engine(connection_string)
+    try:
+        assert "repo_model" not in sa.inspect(engine).get_table_names()
+    finally:
+        engine.dispose()
+
+
 def test_create_sa_repository(tmp_path: Path) -> None:
     sqlite_file = tmp_path / "repo.sqlite"
     repo = SARepository.create_sa_repository(
@@ -383,7 +497,10 @@ def test_create_sa_repository(tmp_path: Path) -> None:
         recreate_sqlite_file=True,
         register_mappers=False,
     )
-    assert isinstance(repo, SARepository)
+    try:
+        assert isinstance(repo, SARepository)
+    finally:
+        repo._engine.dispose(close=True)
 
 
 def test_create_sa_repository_sqlite_shared_memory_uri() -> None:
@@ -393,7 +510,10 @@ def test_create_sa_repository_sqlite_shared_memory_uri() -> None:
         connection_string="sqlite:///file:test_mem?mode=memory&cache=shared",
         register_mappers=False,
     )
-    assert isinstance(repo, SARepository)
+    try:
+        assert isinstance(repo, SARepository)
+    finally:
+        repo._engine.dispose(close=True)
 
 
 def test_create_sa_repository_does_not_create_non_sqlite_schema_by_default(

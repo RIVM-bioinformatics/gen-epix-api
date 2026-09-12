@@ -1,5 +1,5 @@
 ---
-name: jira-issues
+name: manage-jira-issues
 description: >-
   Create, query, update, assign, transition, comment on, link, and log work on
   Jira issues through the configured Atlassian MCP server. Use for Jira issue

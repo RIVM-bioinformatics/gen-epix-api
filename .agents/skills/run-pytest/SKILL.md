@@ -1,5 +1,5 @@
 ---
-name: pytest-run
+name: run-pytest
 description: >-
   Run pytest ONCE to a captured log file, then inspect that file repeatedly with
   grep/sed/awk instead of re-running pytest for every question (which failed, why,
