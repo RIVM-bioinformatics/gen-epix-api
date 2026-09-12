@@ -235,9 +235,12 @@ This runs `graphify-out/graphify_update.py`, which regenerates the full graph (1
 - **On-demand**: Manually trigger via [Actions tab](../../actions/workflows/update-graphify.yml)
 - **Caching**: Graphify uses `.graphify_cache/` to speed up incremental runs on large corpora
 
-The graph is used by coding agents (Copilot, Codex, Cursor) to answer architecture and
-relationship questions via `/graphify` commands or the `$graphify` skill. (Source:
-`.agents/skills/graphify/SKILL.md#L1-L50`; Source: `AGENTS.md#L112-L122`)
+The repository exposes shared Graphify guidance through `AGENTS.md` and
+Copilot-specific `/graphify` invocation through
+`.github/copilot-instructions.md`. Other clients can reuse the generated
+artifacts when they support these conventions, but this repository does not
+configure a separate Cursor integration. (Source: `AGENTS.md#L146-L161`;
+Source: `.github/copilot-instructions.md#L29-L32`)
 
 ---
 

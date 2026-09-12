@@ -1112,7 +1112,7 @@ class Run:
     def other_graphify_update(self) -> None:
         """Update the knowledge graph by running the graphify pipeline.
 
-        Runs .agents/scripts/graphify_update.py to regenerate the graph.json,
+        Runs graphify-out/graphify_update.py to regenerate the graph.json,
         GRAPH_REPORT.md, and related artifacts in graphify-out/.
 
         The script is idempotent and uses caching for performance.

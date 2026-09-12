@@ -20,7 +20,7 @@ preflight checks, a concise PR body, and a clear validation summary.
    - `git remote -v`
    - `git branch --show-current`
    - `git branch --show-current | grep -oiE 'lsp-[0-9]+' || true`
-   - `git log dev..HEAD --pretty=format:"---%ncommit: %h%nsubject: %s%n%n%b%n"` for `lsp-data`
+   - `git log <base>..HEAD --pretty=format:"---%ncommit: %h%nsubject: %s%n%n%b%n"`
    - `git diff --stat <base>...HEAD`
    - `gh auth status`
    - `gh repo view --json nameWithOwner,defaultBranchRef,url,viewerPermission`
@@ -32,35 +32,27 @@ preflight checks, a concise PR body, and a clear validation summary.
      with a dirty worktree.
    - The branch has no commits ahead of the chosen base.
 3. Choose the base branch:
-   - For `lsp-data`, default to `dev`.
-   - Otherwise use `gh repo view --json defaultBranchRef`.
+   - Use `gh repo view --json defaultBranchRef` unless the user supplied a base.
    - Respect any user-provided base branch.
 4. Build the PR title:
    - Prefer the user-provided title.
    - Otherwise use the latest commit subject when the branch has one cohesive
      commit.
    - Otherwise summarize the branch name in sentence case.
-5. Look for plan notes:
-   - Extract the ticket ID from the branch case-insensitively, normalizing it to
-     uppercase `LSP-XXXX`.
-   - If a ticket ID exists, search `notes/plans/<LSP-ID>-*.md` relative to the
-     repo root.
-   - If a matching plan file exists, read it and prefer it over commit messages
-     when generating the PR description.
-6. Build the PR body:
+5. Build the PR body:
    - Keep it concise; default to 20 lines maximum unless the user asks for more.
    - Use this structure for command-only output:
      `## Summary`, `## Changes`, `## Notes`.
    - For actual PR creation/update, include `## Validation` when validation
      commands were run or need to be reported as not run.
-   - Ground claims in the plan file, full commit messages, and changed files.
+   - Ground claims in full commit messages and changed files.
    - Do not invent validation results.
-7. Push and create/update the PR only after the preflight is clean:
+6. Push and create/update the PR only after the preflight is clean:
    - Push with `git push -u origin HEAD`.
    - Use `gh pr create --base <base> --head <branch> --title <title> --body-file <file>`.
    - If a PR already exists for the branch, use `gh pr edit` instead of opening
      a duplicate.
-8. Report the PR URL and useful next command:
+7. Report the PR URL and useful next command:
    - `gh pr checks --watch` for CI status.
    - `gh pr view --web` when the user wants to review in the browser.
 
@@ -71,7 +63,7 @@ PR. Produce one ready-to-run shell command:
 
 ```bash
 gh pr create \
-  --base dev \
+  --base <base> \
   --head <current-branch> \
   --title "<one-line goal summary>" \
   --body "<generated markdown description>"
@@ -86,31 +78,16 @@ Use `.agents/scripts/pr.sh` for the standard workflow. Read or patch
 it first if the requested behavior differs from its options.
 
 ```bash
-.agents/scripts/pr.sh --base dev
-.agents/scripts/pr.sh --base dev --draft
-.agents/scripts/pr.sh --base dev --dry-run
-.agents/scripts/pr.sh --base dev --print-command
-.agents/scripts/pr.sh --base dev --body-only
+.agents/scripts/pr.sh
+.agents/scripts/pr.sh --draft
+.agents/scripts/pr.sh --dry-run
+.agents/scripts/pr.sh --print-command
+.agents/scripts/pr.sh --body-only
 .agents/scripts/pr.sh --base test --title "fix(etl): handle empty batches"
 ```
 
 The script prints the generated PR body path during dry runs and removes its
 temporary body file after successful create/update.
-
-## lsp-data Defaults
-
-For this repository:
-
-- Use `dev` as the default PR base.
-- Extract ticket IDs with case-insensitive `LSP-XXXX` matching; this repo often
-  uses lower-case ticket IDs in branch names.
-- Search for planning notes at `notes/plans/<LSP-ID>-*.md`; if present, use the
-  plan content first, then supplement with commits and changed files.
-- Mention cross-repo impact when changes touch shared `gen_epix` models, remote
-  app clients, API contracts, or ETL behavior that depends on `../gen-epix-api`.
-- Prefer validation commands from `AGENTS.md`: `pytest`, `python run.py test_all`,
-  `ruff check --fix`, `ruff format`, and `ty check .`.
-- Do not invent validation results. If a command was not run, say so directly.
 
 ## Safety Rules
 
