@@ -366,7 +366,7 @@
 - crud_seq_category_set.py
 - crud_seq_distance.py
 - crud_seq_taxonomy.py
-- crud_taxon.py
+- TestOauthIdpClientIntrospection
 - crud_taxon_set.py
 - crud_taxon_set_member.py
 - ._match

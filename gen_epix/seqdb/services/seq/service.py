@@ -144,7 +144,7 @@ class SeqService(BaseSeqService):
                     yield header + "\n".join(
                         raw_seq[i * wrap : min((i + 1) * wrap, seq_length)]
                         for i in range(n_chunks)
-                    )
+                    ) + "\n"
 
     def convert_seq_format(self, cmd: command.ConvertSeqFormatCommand) -> list[UUID]:
         """Delegate stored sequence representation conversion."""
