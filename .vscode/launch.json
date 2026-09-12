@@ -4,1310 +4,1961 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        // api.casedb
-        {
-            "name": "api.casedb.local.idps.dict_demo",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+{
+        "name": "api.casedb.local.idps.dict_demo",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "api",
                 "CASEDB",
                 "IDPS",
                 "DICT_DEMO"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.casedb.local.idps.sa_sqlite_demo",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+        ],
+        "justMyCode": true
+},
+{
+        "name": "api.casedb.local.idps.sa_sqlite_demo",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "api",
                 "CASEDB",
                 "IDPS",
                 "SA_SQLITE_DEMO"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.casedb.local.mock.sa_sqlite_empty",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+        ],
+        "justMyCode": true
+},
+{
+        "name": "api.casedb.local.mock.sa_sqlite_empty",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "api",
                 "CASEDB",
                 "MOCK",
                 "SA_SQLITE_EMPTY"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.casedb.local.idps.sa_sql",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+        ],
+        "justMyCode": true
+},
+{
+        "name": "api.casedb.local.idps.sa_sql",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "api",
                 "CASEDB",
                 "IDPS",
                 "SA_SQL"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.casedb.local.mock.dict_demo",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+        ],
+        "justMyCode": true
+},
+{
+        "name": "api.casedb.local.mock.dict_demo",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "api",
                 "CASEDB",
                 "MOCK",
                 "DICT_DEMO"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.casedb.local.mock.remote_seqdb",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+        ],
+        "justMyCode": true
+},
+{
+        "name": "api.casedb.local.mock.remote_seqdb",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "api",
                 "CASEDB",
                 "MOCK",
                 "DICT_DEMO"
-            ],
-            "justMyCode": true,
-            "env": {
+        ],
+        "justMyCode": true,
+        "env": {
                 "CASEDB_SERVICE__SEQDB__PROPS__SEQDB_APP_TYPE": "REMOTE"
-            }
-        },
-        // api.seqdb
-        {
-            "name": "api.seqdb.local.idps.dict_demo",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+        }
+},
+{
+        "name": "api.seqdb.local.idps.dict_demo",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "api",
                 "SEQDB",
                 "IDPS",
                 "DICT_DEMO"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.seqdb.local.idps.sa_sqlite_demo",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+        ],
+        "justMyCode": true
+},
+{
+        "name": "api.seqdb.local.idps.sa_sqlite_demo",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "api",
                 "SEQDB",
                 "IDPS",
                 "SA_SQLITE_DEMO"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.seqdb.local.mock.sa_sqlite_empty",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+        ],
+        "justMyCode": true
+},
+{
+        "name": "api.seqdb.local.mock.sa_sqlite_empty",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "api",
                 "SEQDB",
                 "MOCK",
                 "SA_SQLITE_EMPTY"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.seqdb.local.idps.sa_sql",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+        ],
+        "justMyCode": true
+},
+{
+        "name": "api.seqdb.local.idps.sa_sql",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "api",
                 "SEQDB",
                 "IDPS",
                 "SA_SQL"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.seqdb.local.mock.dict_demo",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+        ],
+        "justMyCode": true
+},
+{
+        "name": "api.seqdb.local.mock.dict_demo",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "api",
                 "SEQDB",
                 "MOCK",
                 "DICT_DEMO"
-            ],
-            "justMyCode": true
-        },
-        // api.omopdb
-        {
-            "name": "api.omopdb.local.idps.dict_demo",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+        ],
+        "justMyCode": true
+},
+{
+        "name": "api.omopdb.local.idps.dict_demo",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "api",
                 "OMOPDB",
                 "IDPS",
                 "DICT_DEMO"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.omopdb.local.idps.sa_sqlite_demo",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+        ],
+        "justMyCode": true
+},
+{
+        "name": "api.omopdb.local.idps.sa_sqlite_demo",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "api",
                 "OMOPDB",
                 "IDPS",
                 "SA_SQLITE_DEMO"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.omopdb.local.mock.sa_sqlite_empty",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+        ],
+        "justMyCode": true
+},
+{
+        "name": "api.omopdb.local.mock.sa_sqlite_empty",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "api",
                 "OMOPDB",
                 "MOCK",
                 "SA_SQLITE_EMPTY"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.omopdb.local.mock.dict_demo",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+        ],
+        "justMyCode": true
+},
+{
+        "name": "api.omopdb.local.mock.dict_demo",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "api",
                 "OMOPDB",
                 "MOCK",
                 "DICT_DEMO"
-            ],
-            "justMyCode": true
-        },
-        // api.commondb
-        {
-            "name": "api.commondb.local.idps.dict_demo",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+        ],
+        "justMyCode": true
+},
+{
+        "name": "api.commondb.local.idps.dict_demo",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "api",
                 "COMMONDB",
                 "IDPS",
                 "DICT_DEMO"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.commondb.local.idps.sa_sqlite_demo",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+        ],
+        "justMyCode": true
+},
+{
+        "name": "api.commondb.local.idps.sa_sqlite_demo",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "api",
                 "COMMONDB",
                 "IDPS",
                 "SA_SQLITE_DEMO"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.commondb.local.mock.dict_demo",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+        ],
+        "justMyCode": true
+},
+{
+        "name": "api.commondb.local.mock.dict_demo",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "api",
                 "COMMONDB",
                 "MOCK",
                 "DICT_DEMO"
-            ],
-            "justMyCode": true
-        },
-        // api.platform
-        {
-            "name": "api.platform.local.mock.dict_demo",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "api_platform_local_mock_dict_demo",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "api.platform.local.mock.sa_sql_demo",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "api_platform_local_mock_sa_sql_demo",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        // env
-        {
-            "name": "env.casedb",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "env_casedb",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "env.seqdb",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "env_seqdb",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "env.omopdb",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "env_omopdb",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "env.commondb",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "env_commondb",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        // etl
-        {
-            "name": "etl.all.load_data",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+        ],
+        "justMyCode": true
+},
+{
+        "name": "api.platform.local.mock.dict_demo",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "api_platform_local_mock_dict_demo"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "api.platform.local.mock.sa_sql_demo",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "api_platform_local_mock_sa_sql_demo"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "env.casedb",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "env_casedb"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "env.seqdb",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "env_seqdb"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "env.omopdb",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "env_omopdb"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "env.commondb",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "env_commondb"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "etl.all.load_data",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "etl_load_demo_data",
-                "all",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "etl.casedb.load_data",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+                "all"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "etl.casedb.load_data",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "etl_load_demo_data",
-                "casedb",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "etl.seqdb.load_data",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+                "casedb"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "etl.seqdb.load_data",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "etl_load_demo_data",
-                "seqdb",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "etl.omopdb.load_data",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+                "seqdb"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "etl.omopdb.load_data",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "etl_load_demo_data",
-                "omopdb",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "etl.commondb.load_data",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+                "omopdb"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "etl.commondb.load_data",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "etl_load_demo_data",
-                "commondb",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        // test
-        {
-            "name": "test.all",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_all",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.all.unit",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_all_unit"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.all.integration",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_all_integration"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.all.performance",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_all_performance"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.all_incl_performance",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_all_incl_performance",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.casedb.unit",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_casedb_unit"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.casedb.unit.domain",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_casedb_unit_domain"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.casedb.unit.services",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_casedb_unit_services"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.casedb.unit.services.case",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_casedb_unit_services_case"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.casedb.unit.services.case.upload",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_casedb_unit_services_case_upload"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.casedb.integration",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_casedb_integration"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.casedb.integration.build_db",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_casedb_integration_build_db"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.casedb.integration.case_upload",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_casedb_integration_case_upload"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.casedb.integration.content",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_casedb_integration_content"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.casedb.integration.data_access",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_casedb_integration_data_access"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.casedb.performance",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_casedb_performance"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.casedb.performance.user_journey",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_casedb_performance_user_journey"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.casedb.performance.repository",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_casedb_performance_repository"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.casedb.performance.startup",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_casedb_performance_startup"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.casedb.performance.retrieve_stats",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_casedb_performance_retrieve_stats"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.casedb.custom",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_casedb_custom"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.seqdb.unit",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_seqdb_unit"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.seqdb.unit.seqdb_remote_app",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_unit_seqdb_remote_app"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.seqdb.unit.domain",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_seqdb_unit_domain"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.seqdb.unit.domain.models_for_upload",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_seqdb_unit_domain_models_for_upload"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.seqdb.unit.services.seq.upload",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_seqdb_unit_services_seq_upload"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.seqdb.unit.services.seq.calculate_seq_distance",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_seqdb_unit_services_seq_calculate_seq_distance"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.seqdb.unit.services.seq.retrieve_best",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_seqdb_unit_services_seq_retrieve_best"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.seqdb.integration",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_seqdb_integration"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.seqdb.integration.build_db",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_seqdb_integration_build_db"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.seqdb.integration.content",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_seqdb_integration_content"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.seqdb.integration.retrieve_samples",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_seqdb_integration_retrieve_samples"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.seqdb.performance.calculate_seq_distances",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_seqdb_performance_calculate_seq_distances"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.seqdb.performance.retrieve_similar_profiles",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_seqdb_performance_retrieve_similar_profiles"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.omopdb.unit",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_omopdb_unit"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "test.omopdb.unit.domain",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_omopdb_unit_domain"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "test.omopdb.unit.services",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_omopdb_unit_services"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "test.omopdb.unit.services.omop",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_omopdb_unit_services_omop"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "test.omopdb.unit.services.omop.upload",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_omopdb_unit_services_omop_upload"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "test.omopdb.integration",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_omopdb_integration"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.omopdb.integration.build_db",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_omopdb_integration_build_db"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.omopdb.integration.retrieve_persons",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_omopdb_integration_retrieve_persons"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.commondb.unit",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_commondb_unit"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.commondb.unit.auth",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_commondb_unit_auth"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.commondb.unit.config",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_commondb_unit_config"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.commondb.unit.logging",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_commondb_unit_logging"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.commondb.unit.upload",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_commondb_unit_upload"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.commondb.unit.policies",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_commondb_unit_policies"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.commondb.integration",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_commondb_integration"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.commondb.integration.build_db",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_commondb_integration_build_db"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.commondb.integration.metadata",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_commondb_integration_metadata"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.commondb.integration.sql_injection",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_commondb_integration_sql_injection"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "test.filter.unit",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_filter_unit"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.transform.unit",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_transform_unit"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.fastapp.unit",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_fastapp_unit"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.fastapp.unit.auth",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_fastapp_unit_auth"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.fastapp.unit.cache",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_fastapp_unit_cache"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.fastapp.unit.domain",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_fastapp_unit_domain"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.fastapp.unit.services",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_fastapp_unit_services"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.fastapp.unit.services.rbac",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_fastapp_unit_services_rbac"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.fastapp.unit.repository",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_fastapp_unit_repository"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.fastapp.unit.repositories",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_fastapp_unit_repositories"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.fastapp.performance.repository",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_fastapp_performance_repository"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.end_to_end",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_end_to_end"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.end_to_end.casedb_seqdb_connection",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_end_to_end_casedb_seqdb_connection"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.end_to_end.client_credential_flow",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_end_to_end_client_credential_flow"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.r.remote_app",
-            "type": "R-Debugger",
-            "request": "launch",
-            "file": "${workspaceFolder}/test/r/test_remote_app.R",
-            "workingDirectory": "${workspaceFolder}"
-        },
-        {
-            "name": "test.general.docs",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_general_docs"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.general.code",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_general_code"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.general.code.test.model.field.properties",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_general_code_test_model_field_properties"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.general.code.test.error.code.unicity",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_general_code_test_error_code_unicity"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.test_client.authorization_code_flow",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_test_client_authorization_code_flow"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "other.general.generate_uuids",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+                "commondb"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "other.general.generate_uuids",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "other_general_generate_uuids",
-                "1000",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "other.general.generate_hex_strings",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "other_general_generate_hex_strings",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "other.general.run_linters",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "other_general_run_linters",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "other.general.run_pylint",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "other_general_run_pylint",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "other.general.analyse_pylint_code_impact",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "other_general_analyse_pylint_code_impact",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "other.general.run_mypy",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "other_general_run_mypy",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "other.general.generate_erm_diagrams",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "other_general_generate_erm_diagrams",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "other.casedb.parse_user_journey_v2",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+                "1000"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "other.general.generate_hex_strings",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "other_general_generate_hex_strings"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "other.general.run_linters",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "other_general_run_linters"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "other.general.run_pylint",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "other_general_run_pylint"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "other.general.analyse_pylint_code_impact",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "other_general_analyse_pylint_code_impact"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "other.general.run_mypy",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "other_general_run_mypy"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "other.general.generate_erm_diagrams",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "other_general_generate_erm_diagrams"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "other.casedb.parse_user_journey_v2",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "other_casedb_parse_user_journey_from_debug_log",
                 "./test/output/log.debug.txt",
-                "2",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "other.casedb.parse_user_journey_v1",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
+                "2"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "other.casedb.parse_user_journey_v1",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
                 "other_casedb_parse_user_journey_from_debug_log",
                 "./test/output/log.debug.txt",
-                "1",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "other.oauth_server.start",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "other_oauth_server_start",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "other.oauth_server.client_demo",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "other_oauth_server_client_demo",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "other.graphify.update",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "other_graphify_update",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        // Run current file
-        {
-            "name": "Run Current File",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
+                "1"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "other.oauth_server.start",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "other_oauth_server_start"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "other.oauth_server.client_demo",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "other_oauth_server_client_demo"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "other.graphify.update",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "other_graphify_update"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.all",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "test_all"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.all.unit",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "test_all_unit"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.all.integration",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "test_all_integration"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.all.performance",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "test_all_performance"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.custom",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/custom"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.integration",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/integration"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.integration.build_db",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/integration/build_db"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.integration.case_upload",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/integration/case_upload"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.integration.content",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/integration/content"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.integration.data_access",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/integration/data_access"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.integration.metadata",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/integration/metadata"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.performance",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/performance"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.performance.repository",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/performance/repository"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.performance.retrieve_stats",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/performance/retrieve_stats"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.performance.startup",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/performance/startup"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.performance.user_journey",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/performance/user_journey"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.unit",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.unit.case_date",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/case_date"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.unit.domain",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/domain"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.unit.domain.model",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/domain/model"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.unit.domain.model.abac",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/domain/model/abac"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.unit.domain.model.case",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/domain/model/case"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.unit.remote_app",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/remote_app"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.unit.services",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/services"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.unit.services.abac",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/services/abac"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.unit.services.case",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/services/case"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.unit.services.case.crud",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/services/case/crud"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.unit.services.case.retrieve_case",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/services/case/retrieve_case"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.unit.services.case.retrieve_stats",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/services/case/retrieve_stats"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.unit.services.case.update_case_created_in_data_collection",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/services/case/update_case_created_in_data_collection"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.unit.services.case.upload",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/services/case/upload"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.commondb",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/commondb"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.commondb.integration",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/commondb/integration"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.commondb.integration.build_db",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/commondb/integration/build_db"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.commondb.integration.metadata",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/commondb/integration/metadata"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.commondb.integration.sql_injection",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/commondb/integration/sql_injection"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.commondb.test_client",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/commondb/test_client"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.commondb.unit",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/commondb/unit"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.commondb.unit.auth",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/commondb/unit/auth"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.commondb.unit.config",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/commondb/unit/config"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.commondb.unit.logging",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/commondb/unit/logging"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.commondb.unit.model",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/commondb/unit/model"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.commondb.unit.policies",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/commondb/unit/policies"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.commondb.unit.remote_app",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/commondb/unit/remote_app"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.commondb.unit.repositories",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/commondb/unit/repositories"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.commondb.unit.services",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/commondb/unit/services"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.commondb.unit.upload",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/commondb/unit/upload"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.end_to_end",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/end_to_end"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.end_to_end.casedb_seqdb_connection",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/end_to_end/casedb_seqdb_connection"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.end_to_end.client_credential_flow",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/end_to_end/client_credential_flow"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.end_to_end.client_credential_flow.apps",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/end_to_end/client_credential_flow/apps"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.etl",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/etl"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.fastapp",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/fastapp"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.fastapp.integration",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/fastapp/integration"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.fastapp.integration.api",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/fastapp/integration/api"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.fastapp.integration.repository",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/fastapp/integration/repository"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.fastapp.performance",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/fastapp/performance"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.fastapp.performance.repository",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/fastapp/performance/repository"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.fastapp.unit",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/fastapp/unit"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.fastapp.unit.api",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/fastapp/unit/api"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.fastapp.unit.auth",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/fastapp/unit/auth"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.fastapp.unit.cache",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/fastapp/unit/cache"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.fastapp.unit.domain",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/fastapp/unit/domain"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.fastapp.unit.repositories",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/fastapp/unit/repositories"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.fastapp.unit.repositories.dict",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/fastapp/unit/repositories/dict"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.fastapp.unit.repositories.sa",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/fastapp/unit/repositories/sa"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.fastapp.unit.services",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/fastapp/unit/services"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.fastapp.unit.services.auth",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/fastapp/unit/services/auth"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.fastapp.unit.services.rbac",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/fastapp/unit/services/rbac"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.filter",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/filter"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.filter.unit",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/filter/unit"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.general",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/general"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.general.code",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/general/code"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.general.docs",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/general/docs"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.general.migrations",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/general/migrations"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.omopdb",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/omopdb"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.omopdb.integration",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/omopdb/integration"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.omopdb.integration.build_db",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/omopdb/integration/build_db"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.omopdb.integration.content",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/omopdb/integration/content"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.omopdb.integration.person_upload",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/omopdb/integration/person_upload"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.omopdb.integration.retrieve_persons",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/omopdb/integration/retrieve_persons"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.omopdb.test_client",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/omopdb/test_client"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.omopdb.unit",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/omopdb/unit"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.omopdb.unit.domain",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/omopdb/unit/domain"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.omopdb.unit.repositories",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/omopdb/unit/repositories"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.omopdb.unit.services",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/omopdb/unit/services"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.omopdb.unit.services.omop",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/omopdb/unit/services/omop"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.omopdb.unit.services.omop.upload",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/omopdb/unit/services/omop/upload"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.omopdb.unit.upload",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/omopdb/unit/upload"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.r",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/r"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.integration",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/integration"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.integration.build_db",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/integration/build_db"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.integration.content",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/integration/content"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.integration.retrieve_samples",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/integration/retrieve_samples"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.performance",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/performance"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.performance.calculate_seq_distances",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/performance/calculate_seq_distances"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.performance.retrieve_similar_profiles",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/performance/retrieve_similar_profiles"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.unit",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.unit.calculate_seq_distance",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit/calculate_seq_distance"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.unit.domain",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit/domain"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.unit.domain.models_for_upload",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit/domain/models_for_upload"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.unit.models_for_upload",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit/models_for_upload"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.unit.remote_app",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit/remote_app"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.unit.repositories",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit/repositories"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.unit.services",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit/services"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.unit.services.seq",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit/services/seq"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.unit.services.seq.calculate_phylogenetic_tree",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit/services/seq/calculate_phylogenetic_tree"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.unit.services.seq.calculate_seq_distance",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit/services/seq/calculate_seq_distance"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.unit.services.seq.convert_seq_format",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit/services/seq/convert_seq_format"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.unit.services.seq.retrieve_best",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit/services/seq/retrieve_best"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.unit.services.seq.upload",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit/services/seq/upload"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.unit.upload",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit/upload"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.test_client",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/test_client"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.test_client.end_to_end",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/test_client/end_to_end"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.test_client.end_to_end.auth_code_flow",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/test_client/end_to_end/auth_code_flow"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.test_client.oauth",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/test_client/oauth"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.transform",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/transform"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.transform.unit",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/transform/unit"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.util",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/util"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "Run Current File",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${file}",
+        "console": "integratedTerminal",
+        "justMyCode": true
+}
     ]
 }

@@ -35,6 +35,7 @@ class CommondbRemoteApp(RemoteApp):
     DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {}
 
     ROUTE_MAP: dict[type[Command], str] = {
+        command.DeleteAllOperationalDataCommand: "/operational_data",
         command.GetIdentityProvidersCommand: "/identity_providers",
         command.InviteUserCommand: "/invite_user",
         command.RetrieveInviteUserConstraintsCommand: "/invite_user/constraints",
@@ -136,6 +137,9 @@ class CommondbRemoteApp(RemoteApp):
         for cmd_class, route in CommondbRemoteApp.ROUTE_MAP.items():
             self.register_route(cmd_class, route)
         # Register handlers
+        self.register_handler(
+            command.DeleteAllOperationalDataCommand, self.delete_all_operational_data
+        )
         self.register_handler(
             command.GetIdentityProvidersCommand, self.get_identity_providers
         )
@@ -419,6 +423,18 @@ class CommondbRemoteApp(RemoteApp):
         """Retrieve name and email for organization admins."""
         response_body: list[dict[str, Any]] = self.request(cmd, HttpMethod.GET)  # type: ignore[assignment]
         return [model.UserNameEmail(**x) for x in response_body]
+
+    def delete_all_operational_data(
+        self, cmd: command.DeleteAllOperationalDataCommand
+    ) -> model.DeleteAllOperationalDataResult:
+        """Delete all the operational data.
+
+        Returns a specific subclass of `model.DeleteAllOperationalDataResult`
+        containing the result of the deletion operation.
+        """
+
+        response_body: dict[str, Any] = self.request(cmd, HttpMethod.DELETE)  # type: ignore[assignment]
+        return model.DeleteAllOperationalDataResult(**response_body)
 
     def retrieve_feature_flags(
         self, cmd: command.RetrieveFeatureFlagsCommand

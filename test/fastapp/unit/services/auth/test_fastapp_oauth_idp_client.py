@@ -407,6 +407,12 @@ class TestJwkFetching(BaseOauthIdpClientTestCase):
 @pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestClaimsFromJwt(BaseOauthIdpClientTestCase):
 
+    def test_get_claims_from_malformed_jwt_raises_credentials(self) -> None:
+        client: OauthIdpClient = self.create_client()
+
+        with pytest.raises(exc.CredentialsAuthError):
+            asyncio.run(client.get_claims_from_jwt("invalid-token"))
+
     def test_get_claims_from_jwt_issuer_mismatch_returns_none(self) -> None:
         # 1. Input
         client: OauthIdpClient = self.create_client()

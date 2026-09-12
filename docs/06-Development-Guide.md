@@ -31,20 +31,26 @@ python run.py test_all
 
 This runs curated test directories via `coverage` and writes HTML/XML reports to `test/output/`. Performance and code-quality test folders are intentionally excluded from the default run. (Source: `run.py#L163-L200`; Source: `.github/workflows/main.yml#L167-L170`)
 
-### Per-app test commands
+### Specific test folders
 
-Test methods follow `test_{app}_{scope}` naming, directly mirroring the `test/` directory tree:
+Use the `run_test` command to run tests in any folder:
 
-| Command pattern | Example |
-|----------------|---------|
-| `test_{app}_unit` | `python run.py test_casedb_unit` |
-| `test_{app}_integration` | `python run.py test_seqdb_integration` |
-| `test_{app}_performance` | `python run.py test_fastapp_performance` |
+```
+python run.py run_test "test/casedb/unit"
+```
 
-Available apps: `fastapp`, `commondb`, `casedb`, `seqdb`, `omopdb`.
-Shared module tests: `test_filter_unit`, `test_transform_unit`, `test_general_docs`, `test_general_code`.
+Available folders mirror the `test/` directory tree:
+- **Apps**: `casedb`, `commondb`, `fastapp`, `omopdb`, `seqdb`
+- **Scopes**: `unit`, `integration`, `performance`, `custom`
+- **Submodules**: `data_access`, `services`, `domain`, `repositories`, `policies`, `routers`, etc.
 
-Per-app test commands use `pytest.main()` in-process (faster, no coverage overhead). (Source: `run.py#L163-L887`)
+Examples:
+- `python run.py run_test "test/casedb/unit"` — all unit tests for casedb
+- `python run.py run_test "test/fastapp/integration"` — fastapp integration tests
+- `python run.py run_test "test/general/code"` — code quality tests
+
+The `run_test` command uses `pytest.main()` in-process. For VS Code debugging, launch
+configurations automatically call `run_test` with the appropriate folder path.
 
 ### End-to-end tests
 

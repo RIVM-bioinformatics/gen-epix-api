@@ -233,7 +233,7 @@ class CaseService(BaseCaseService):
         cache=_RETRIEVE_COMPLETE_CASE_TYPE_CACHE,
         key=lambda self, cmd: (cmd.case_type_id, cmd.user.id if cmd.user else None),
     )
-    def retrieve_complete_case_type(
+    def retrieve_complete_case_type(  # type: ignore[override]
         self,
         cmd: command.RetrieveCompleteCaseTypeCommand,
     ) -> model.CompleteCaseType:

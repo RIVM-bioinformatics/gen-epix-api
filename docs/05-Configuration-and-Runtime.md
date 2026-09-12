@@ -1,4 +1,4 @@
-Creation Date: March 1, 2026
+Creation Date: 2026-03-01
 
 # Configuration & Runtime
 
@@ -27,6 +27,20 @@ Missing settings files fail fast (`FileNotFoundError`). This makes misconfigurat
 | `.example.secrets.*` files | Connection strings, file paths, IdP tokens — never checked in; supplied per environment |
 
 (Source: `gen_epix/casedb/config/settings.toml#L1-L4`; Source: `gen_epix/casedb/config/settings.repository.dict.toml#L1-L27`; Source: `gen_epix/casedb/config/feature_flags.toml#L1-L3`)
+
+### Operational-data reset
+
+`allow_delete_all_operational_data` defaults to `false`. When enabled for casedb,
+seqdb, or omopdb, that application's OpenAPI document includes
+`DELETE /v1/operational_data`. Only ROOT may call it. The operation deletes that
+application's operational records and retains common organization data and
+app-specific reference data.
+
+Treat reset as a maintenance operation: pause uploads, imports, background jobs,
+and other writers; call the endpoint; then resume writers after a successful 204
+response. The endpoint is synchronous and idempotent. A missing endpoint means the
+flag is disabled or the server version does not support this feature. Each app is
+reset independently; the endpoint does not call the other applications.
 
 ---
 

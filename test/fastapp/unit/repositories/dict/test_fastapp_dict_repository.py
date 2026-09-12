@@ -784,6 +784,23 @@ def test_delete_all_no_filter(pc_repo: DictRepository) -> None:
     assert pc_repo.db[ChildModel] == {}
 
 
+def test_delete_all_ignores_links_from_non_persistable_models(
+    parent_id: UUID,
+) -> None:
+    """Non-stored model metadata must not create reverse-link constraints."""
+    parent = ParentModel(id=parent_id, value="p1")
+    child_entity = make_child_entity()
+    child_entity.persistable = False
+    repository = make_repo(
+        [make_parent_entity(), child_entity],
+        {ParentModel: {parent_id: parent}},
+    )
+
+    repository.delete_all(ParentModel)
+
+    assert repository.db[ParentModel] == {}
+
+
 @pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_delete_all_enforces_links_and_preserves_link_cache(
     pc_repo: DictRepository, parent_id: UUID, child_id: UUID

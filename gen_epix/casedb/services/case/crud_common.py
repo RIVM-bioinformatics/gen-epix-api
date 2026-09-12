@@ -109,7 +109,7 @@ def _crud_cascade_delete(
         uow: Active unit of work for linked deletes.
         cmd: Primary CRUD command whose target IDs determine linked rows.
     """
-    if not cmd.is_delete():
+    if not cmd.is_delete() or cmd.is_delete_all():
         return
 
     # Find linked model classes for cascade delete

@@ -71,6 +71,7 @@ class RoleGenerator:
                 PermissionTypeSet.CUD,
             ),
             # system
+            (command.DeleteAllOperationalDataCommand, PermissionTypeSet.E),
             (command.OutageCrudCommand, PermissionTypeSet.CRUD),
         },
         Role.REFDATA_ADMIN: {

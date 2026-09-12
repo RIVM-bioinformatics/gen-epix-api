@@ -16,7 +16,38 @@ applyTo: "gen_epix/**/*.py,test/**/*.py"
   in that same narrow slice.
 - Test behavior, not implementation details: cover expected errors, malformed
   input, empty input, and other important boundaries — not internal call sequences.
-- Use a `test_*` method defined in [run.py](../../run.py) for an existing named
-  or curated suite (for example,
-  `python run.py test_casedb_unit_services_case_upload`). Use direct `pytest`
-  for an exact file, node ID, or `-k` selection.
+- To run tests in a specific folder or suite, use one of these approaches:
+  - **Named suites** (preferred): Call the `test_all` methods or use run.py methods
+    for curated suites, e.g., `python run.py test_all` or `python run.py test_all_unit`.
+  - **Specific folders**: Use `run_test` with the folder path, e.g.,
+    `python run.py run_test "test/casedb/unit"` or VS Code's launch configs.
+  - **Exact test selection**: Use direct `pytest` for precise targeting:
+    `pytest test/casedb/unit -k oauth` or `pytest test/file.py::test_name`.
+
+## Adding a New Test Folder
+
+When creating a new test folder, add a corresponding launch configuration in
+[`.vscode/launch.json`](.vscode/launch.json):
+
+1. **Name** the config using the pattern `test.<dotted.path>` matching the folder
+   path with dots: `test/casedb/unit/domain` → `test.casedb.unit.domain`.
+2. **Set args** to call `run_test` with the folder path:
+   ```json
+   "args": ["run_test", "test/casedb/unit/domain"]
+   ```
+3. **Place the config** in lexicographic order among the test configs in the
+   `configurations` array (after all API/env/ETL configs but within the test group).
+4. Use a simple template:
+   ```json
+   {
+       "name": "test.casedb.unit.domain",
+       "type": "debugpy",
+       "request": "launch",
+       "program": "run.py",
+       "args": ["run_test", "test/casedb/unit/domain"],
+       "console": "integratedTerminal",
+       "justMyCode": true
+   }
+   ```
+
+Then you can launch the new test folder directly from VS Code's debug view.

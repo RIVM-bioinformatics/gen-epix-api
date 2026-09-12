@@ -829,7 +829,7 @@ def create_case_endpoints(
         name="RefCol validation rules",
         description=RefColValidationRulesResponseBody.__doc__,
     )
-    async def get__ref_col__validation_rules(
+    async def ref_col__validation_rules__get(
         user: registered_user_dependency,  # type: ignore[valid-type]
     ) -> RefColValidationRulesResponseBody:
         """See router description."""

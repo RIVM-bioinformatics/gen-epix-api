@@ -210,6 +210,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
         ],
     }
 )
+
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
 
 COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
