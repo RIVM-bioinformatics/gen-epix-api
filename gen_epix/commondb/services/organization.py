@@ -1,3 +1,5 @@
+"""Implement commondb organization, invitation, and user lifecycle operations."""
+
 from datetime import datetime, timedelta, timezone
 from typing import Any, ClassVar
 from uuid import UUID
@@ -13,6 +15,8 @@ from gen_epix.fastapp.model import CrudCommand
 
 
 class OrganizationService(BaseOrganizationService):
+    """Encapsulates handling of organization records, invitations, user updates, and anonymization."""
+
     DEFAULT_CFG = {
         "user_invitation_time_to_live": 86400,  # 1 day
     }
@@ -28,6 +32,12 @@ class OrganizationService(BaseOrganizationService):
         app: App,
         **kwargs: Any,
     ) -> None:
+        """Initialize mapped user models and cache invalidation handlers.
+
+        Args:
+            app: Application that owns this service.
+            **kwargs: Additional base-service configuration.
+        """
         super().__init__(app, **kwargs)
 
         for command_class in self.CACHE_INVALIDATION_COMMANDS:
@@ -47,6 +57,18 @@ class OrganizationService(BaseOrganizationService):
         self,
         cmd: CrudCommand,
     ) -> Any:
+        """Execute CRUD while preventing root users from deleting themselves or home.
+
+        Args:
+            cmd: CRUD command to dispatch to the base service.
+
+        Returns:
+            Result from the base CRUD operation.
+
+        Raises:
+            UnauthorizedAuthError: If a root user deletes itself or its organization.
+            NotImplementedError: If a root-user deletion operation is unsupported.
+        """
         # ABAC: ROOT may not delete self or own organization
         if (
             issubclass(
@@ -79,10 +101,23 @@ class OrganizationService(BaseOrganizationService):
         return super().crud(cmd)
 
     def _invalidate_cache(self, _cmd: Command) -> None:
+        """Clear cached user-key lookups after organization state changes.
+
+        Args:
+            _cmd: Completed command that triggered cache invalidation.
+        """
         self.retrieve_user_by_key.cache_clear()
 
     @cached(cache=_RETRIEVE_USER_BY_KEY_CACHE)
     def retrieve_user_by_key(self, user_key: str) -> model.User:
+        """Retrieve and cache a user by normalized key.
+
+        Args:
+            user_key: User key to resolve.
+
+        Returns:
+            Matching persisted user.
+        """
         with self.repository.uow() as uow:
             return self.repository.retrieve_user_by_key(uow, user_key)
 
@@ -90,6 +125,22 @@ class OrganizationService(BaseOrganizationService):
         self,
         cmd: command.InviteUserCommand,
     ) -> model.UserInvitation:
+        """Create an invitation after validating the inviter and target organization.
+
+        Replaces prior key-based invitations for the same user key and assigns a
+        configured expiration time.
+
+        Args:
+            cmd: Invitation command containing the target key, roles, and organization.
+
+        Returns:
+            Newly persisted user invitation.
+
+        Raises:
+            UnauthorizedAuthError: If the command user or user ID is absent.
+            UserAlreadyExistsAuthError: If the target key identifies an existing user.
+            InvalidIdsError: If the target organization does not exist.
+        """
         user = cmd.user
         if user is None:
             raise exc.UnauthorizedAuthError("97e65b72", "Command has no user")
@@ -185,6 +236,14 @@ class OrganizationService(BaseOrganizationService):
     def retrieve_invite_user_constraints(
         self, cmd: command.RetrieveInviteUserConstraintsCommand
     ) -> model.UserInvitationConstraints:
+        """Retrieve roles and organizations available for a user invitation.
+
+        Args:
+            cmd: Command carrying the prospective inviter.
+
+        Returns:
+            Invitation constraints derived from ABAC and RBAC service results.
+        """
         sub_cmd = command.RetrieveOrganizationsUnderAdminCommand(user=cmd.user)
         sub_cmd._policies = cmd._policies
         organization_ids = self.app.handle(sub_cmd)
@@ -197,6 +256,20 @@ class OrganizationService(BaseOrganizationService):
     def register_invited_user(
         self, cmd: command.RegisterInvitedUserCommand
     ) -> model.User:
+        """Register an invited user and consume related active and expired invitations.
+
+        Args:
+            cmd: Registration command containing the new user and invitation token.
+
+        Returns:
+            Newly persisted user with invitation-supplied roles and organization.
+
+        Raises:
+            AssertionError: If the command has no user.
+            InvalidArgumentsError: If the application has no user manager.
+            ServiceException: If multiple valid invitations share the supplied token.
+            UnauthorizedAuthError: If no valid invitation matches the user and token.
+        """
         new_user = cmd.user
         if new_user is None:
             # Should not happen
@@ -295,6 +368,17 @@ class OrganizationService(BaseOrganizationService):
         self,
         cmd: command.UpdateUserCommand,
     ) -> model.User:
+        """Update a user's active state, roles, and organization membership.
+
+        Args:
+            cmd: Command carrying the target user ID and replacement field values.
+
+        Returns:
+            Updated user, or the original user when no values change.
+
+        Raises:
+            InvalidArgumentsError: If roles are explicitly set to an empty set.
+        """
         assert cmd.user
         if cmd.roles is not None and len(cmd.roles) == 0:
             raise exc.InvalidArgumentsError("8ac5ab63", "Roles cannot be empty")
@@ -350,6 +434,14 @@ class OrganizationService(BaseOrganizationService):
         self,
         cmd: command.RetrieveOrganizationContactsCommand,
     ) -> model.OrganizationContacts:
+        """Retrieve an organization with its sites and associated contacts.
+
+        Args:
+            cmd: Command identifying the organization to retrieve.
+
+        Returns:
+            Organization, its sites, and contacts belonging to those sites.
+        """
         user, repository = self._get_user_and_repository(cmd)
 
         sites: list[model.Site]
@@ -387,7 +479,17 @@ class OrganizationService(BaseOrganizationService):
         )
 
     def anonymize_user(self, cmd: command.AnonymizeUserCommand) -> model.User:
-        """Forget user information."""
+        """Anonymize a target user and deactivate their account.
+
+        Args:
+            cmd: Command identifying the target user to anonymize.
+
+        Returns:
+            Persisted anonymized user.
+
+        Raises:
+            UnauthorizedAuthError: If a user attempts to anonymize themselves.
+        """
         user, repository = self._get_user_and_repository(cmd)
         assert isinstance(user, model.User)
         if user.id == cmd.tgt_user_id:

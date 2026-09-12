@@ -1,3 +1,5 @@
+"""Thread-safe SQLAlchemy engine factory."""
+
 import threading
 
 import sqlalchemy as sa
@@ -10,14 +12,13 @@ DEFAULT_POOL_RECYCLE = 230
 
 
 class EngineFactory:
-    """
-    Static factory class to create and manage SQLAlchemy engine objs.
-    """
+    """Encapsulates creation and management of SQLAlchemy engines."""
 
     _LOCK = threading.Lock()
     _ENGINE_MAP: dict[tuple, Engine] = {}
 
     def __init__(self) -> None:
+        """Initialize a EngineFactory instance."""
         raise ValueError(
             "EngineFactory is a static class and should not be instantiated."
         )
@@ -69,5 +70,6 @@ class EngineFactory:
         pool_recycle: int = DEFAULT_POOL_RECYCLE,
         connect_args: dict | None = None,
     ) -> tuple:
+        """Compose key."""
         frozen = tuple(sorted(connect_args.items())) if connect_args else ()
         return (connection_string, echo, pool_recycle, frozen)

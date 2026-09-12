@@ -1,3 +1,5 @@
+"""Create transport-only system API endpoints and their request/response schemas."""
+
 import json
 import logging
 from collections.abc import Callable, Hashable
@@ -10,6 +12,7 @@ from pydantic import BaseModel as PydanticBaseModel
 from gen_epix.commondb.api import exc
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, enum, model
+from gen_epix.commondb.domain.command.base import Command
 from gen_epix.commondb.domain.model.system import PackageMetadata
 from gen_epix.fastapp import App, LogLevel
 from gen_epix.fastapp.api import CrudEndpointGenerator
@@ -19,19 +22,27 @@ external_logger_fmap = exc.get_logger_fmap(logging.getLogger("commondb.external"
 
 
 class HealthStatus(Enum):
+    """Encapsulates the externally reported application health state."""
+
     HEALTHY = "HEALTHY"
     UNHEALTHY = "UNHEALTHY"
 
 
 class HealthResponseBody(PydanticBaseModel):
+    """Represents the current application health state."""
+
     status: HealthStatus
 
 
 class FeatureFlagsResponseBody(PydanticBaseModel):
+    """Represents configured feature flags keyed by their public names."""
+
     feature_flags: dict[str, bool]
 
 
 class LogItem(PydanticBaseModel):
+    """Represents one externally submitted structured application log item."""
+
     level: LogLevel
     command_id: str
     timestamp: str
@@ -42,10 +53,14 @@ class LogItem(PydanticBaseModel):
 
 
 class LogRequestBody(PydanticBaseModel):
+    """Represents structured log items submitted to the commondb logging endpoint."""
+
     log_items: list[LogItem]
 
 
 class LicensesResponseBody(PydanticBaseModel):
+    """Represents metadata for application and dependency package licenses."""
+
     packages: list[PackageMetadata]
 
 
@@ -54,9 +69,23 @@ def create_system_endpoints(
     app: App,
     service_type: enum.ServiceType = enum.ServiceType.SYSTEM,
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
+    delete_all_operational_data_command_class: type[Command] | None = None,
+    delete_all_operational_data_result_class: type[PydanticBaseModel] | None = None,
     **kwargs: Any,
 ) -> None:
+    """Register system health, feature-flag, license, logging, and CRUD endpoints.
 
+    Args:
+        router: Router or application receiving the endpoints.
+        app: Composed commondb application that dispatches commands.
+        service_type: Domain service type used to generate CRUD endpoints.
+        handle_exception: Exception adapter used by endpoint handlers.
+        delete_all_operational_data_command_class: Command class used to delete
+          operational data. Must be provided if the corresponding feature flag is enabled.
+        delete_all_operational_data_result_class: Result class returned after deleting
+          operational data. Must be provided if the corresponding feature flag is enabled.
+        **kwargs: Unused router composition options.
+    """
     assert handle_exception
     app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency
@@ -68,10 +97,11 @@ def create_system_endpoints(
         operation_id="health",
         name="Health",
     )
-    @limiter.exempt
+    @limiter.exempt  # type: ignore[misc]
     async def get__health() -> HealthResponseBody:
-        """
-        Returns the health status of the service. If no response is received
+        """Return the service health status.
+
+        If no response is received
         within the timeout period, the service is considered unhealthy.
         """
         return HealthResponseBody(
@@ -85,9 +115,7 @@ def create_system_endpoints(
         description=command.RetrieveFeatureFlagsCommand.__doc__,
     )
     async def retrieve__feature_flags() -> FeatureFlagsResponseBody:
-        """
-        Returns the feature flags of the application.
-        """
+        """Return the application's feature flags."""
         try:
             cmd = command.RetrieveFeatureFlagsCommand(user=None)
             feature_flags: dict[Hashable, bool] = app.handle(cmd)
@@ -109,6 +137,17 @@ def create_system_endpoints(
     async def retrieve__licenses(
         idp_user: idp_user_dependency,  # type: ignore
     ) -> list[model.PackageMetadata]:
+        """Return package license metadata available to an IDP-authenticated user.
+
+        Args:
+            idp_user: Authenticated identity-provider user dependency.
+
+        Returns:
+            Package metadata containing license information.
+
+        Raises:
+            HTTPException: If license retrieval raises an application exception.
+        """
         try:
             cmd = command.RetrieveLicensesCommand(user=None)
             retval: list[model.PackageMetadata] = app.handle(cmd)
@@ -119,9 +158,7 @@ def create_system_endpoints(
     # Log
     @router.post("/log", operation_id="log")
     async def log(user: registered_user_dependency, request_body: LogRequestBody) -> None:  # type: ignore
-        """
-        Logs the provided log items.
-        """
+        """Log the provided log items."""
         try:
             user_id = str(user.id)  # type: ignore[attr-defined]
             for log_item in request_body.log_items:
@@ -150,12 +187,42 @@ def create_system_endpoints(
     async def retrieve__outages(
         idp_user: idp_user_dependency,  # type: ignore
     ) -> list[model.Outage]:
+        """Retrieve configured system outage records."""
         try:
             cmd = command.RetrieveOutagesCommand(user=None)
             retval: list[model.Outage] = app.handle(cmd)
         except Exception as exception:
             handle_exception("6b47b8b6", None, exception)
         return retval
+
+    # Optional endpoints depending on feature flags
+    if app.get_feature_flag(enum.FeatureFlag.ALLOW_DELETE_OPERATIONAL_DATA.value):
+        assert (
+            delete_all_operational_data_command_class is not None
+        ), "delete_all_command_class must be provided"
+        assert (
+            delete_all_operational_data_result_class is not None
+        ), "delete_all_result_class must be provided"
+
+        @router.delete(
+            "/operational_data",
+            operation_id="operational_data__delete",
+            name="Delete all operational data",
+            description=delete_all_operational_data_command_class.__doc__,
+            status_code=204,
+        )
+        async def operational_data__delete(
+            user: registered_user_dependency,  # type: ignore[valid-type]
+        ) -> delete_all_operational_data_result_class:  # type: ignore[valid-type]
+            """Delete operational data using the authenticated command lifecycle."""
+            retval: delete_all_operational_data_result_class = exc.handle_command(  # type: ignore[valid-type]
+                app=app,
+                user=user,
+                exception_code="12b97ab6",
+                input_command=delete_all_operational_data_command_class(user=user),
+                input_handle_exception=handle_exception,
+            )
+            return retval
 
     # CRUD
     crud_endpoint_sets = CrudEndpointGenerator.create_crud_endpoint_set_for_domain(

@@ -1,3 +1,10 @@
+"""Register the commondb domain's models and commands with FastApp.
+
+``DOMAIN`` is the shared commondb domain registration. It groups service types,
+their dependency-sorted models, and dispatchable commands while assigning each
+model schema to its owning service type.
+"""
+
 from gen_epix.commondb.domain.command import COMMANDS_BY_SERVICE_TYPE
 from gen_epix.commondb.domain.model import (
     SORTED_MODELS_BY_SERVICE_TYPE,

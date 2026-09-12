@@ -1,3 +1,5 @@
+"""Client for dispatching commands to a remote application instance."""
+
 import json
 import ssl
 from collections.abc import Callable, Generator
@@ -26,14 +28,14 @@ from gen_epix.fastapp.model import Command, CrudCommand, Policy
 from gen_epix.fastapp.util import create_ssl_context
 from gen_epix.filter import (
     FilterType,
-    TypedNumberSetFilter,
-    TypedStringSetFilter,
-    TypedUuidSetFilter,
+    NumberSetFilter,
+    StringSetFilter,
+    UuidSetFilter,
 )
 
 
 class RemoteApp(App):
-    """Base class for remote application clients that forward commands as HTTP requests."""
+    """Encapsulates a remote application client that forwards commands as HTTP requests."""
 
     DEFAULT_ROUTE_PREFIX = "/"
 
@@ -148,6 +150,7 @@ class RemoteApp(App):
         """
         Registers the route that is able to handle the command after it is
         converted into a request by the handler.
+
         """
         if command_class in self._routes:
             raise ServiceException(
@@ -180,9 +183,7 @@ class RemoteApp(App):
         return route
 
     def get_headers(self, cmd: Command) -> dict[str, str]:
-        """
-        Get headers for the command. Override to include e.g. authorization header.
-        """
+        """Get headers for the command. Override to include e.g. authorization header."""
         return self._default_headers
 
     def apply_handler(
@@ -223,18 +224,14 @@ class RemoteApp(App):
         return retval
 
     def get_timeout(self, command_class: type[Command]) -> float:
-        """
-        Get the timeout in seconds for a specific command class. Returns the custom timeout if set, otherwise returns the default timeout.
-        """
+        """Get the timeout in seconds for a specific command class. Returns the custom timeout if set, otherwise returns the default timeout."""
         return self._timeouts.get(
             command_class,
             self._default_request_timeout,
         )
 
     def set_timeout(self, command_class: type[Command], timeout_seconds: float) -> None:
-        """
-        Set a custom timeout for a specific command class. This will be used instead of the default timeout when making requests for that command.
-        """
+        """Set a custom timeout for a specific command class. This will be used instead of the default timeout when making requests for that command."""
         if timeout_seconds <= 0:
             raise exc.ServiceException("7f3a9c2e", "Timeout must be a positive integer")
         self._timeouts[command_class] = timeout_seconds
@@ -398,7 +395,6 @@ class RemoteApp(App):
         cmd: CrudCommand,
     ) -> Any:
         """Execute a CRUD command by dispatching to the appropriate HTTP method."""
-
         headers = self.get_headers(cmd)
         model_class = cmd.MODEL_CLASS
         return_model_class: type = model_class
@@ -542,23 +538,23 @@ class RemoteApp(App):
 
         id_type = self._classify_exists_id_type(obj_ids)
         number_id_types = {"int", "float", "decimal"}
-        query_filter: TypedUuidSetFilter | TypedStringSetFilter | TypedNumberSetFilter
+        query_filter: UuidSetFilter | StringSetFilter | NumberSetFilter
 
         if id_type == "uuid":
-            query_filter = TypedUuidSetFilter(
+            query_filter = UuidSetFilter(
                 type=FilterType.UUID_SET.value,
                 key=id_field_name,
                 members=frozenset(obj_ids),
             )
         elif id_type == "string":
-            query_filter = TypedStringSetFilter(
+            query_filter = StringSetFilter(
                 type=FilterType.STRING_SET.value,
                 key=id_field_name,
                 members=frozenset(obj_ids),
                 case_sensitive=True,
             )
         elif id_type in number_id_types:
-            query_filter = TypedNumberSetFilter(
+            query_filter = NumberSetFilter(
                 type=FilterType.NUMBER_SET.value,
                 key=id_field_name,
                 members=frozenset(obj_ids),

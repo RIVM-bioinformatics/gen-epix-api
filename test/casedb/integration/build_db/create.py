@@ -414,13 +414,10 @@ class TestCreate:
                 elif col_type == enum.ColType.INTERVAL:
                     concept_set = "concept_set3_interval"
                 elif col_type == enum.ColType.REGULAR_LANGUAGE:
-                    concept_set = "concept_set4_regular_language"
                     regex = r"^ST(\d*)$"
                 elif col_type == enum.ColType.CONTEXT_FREE_GRAMMAR_JSON:
-                    concept_set = "concept_set5_context_free_grammar_json"
                     schema_definition = "{}"
                 elif col_type == enum.ColType.CONTEXT_FREE_GRAMMAR_XML:
-                    concept_set = "concept_set6_context_free_grammar_xml"
                     schema_definition = "<schema></schema>"
                 elif col_type in enum.ColTypeSet.HAS_REGION_SET.value:
                     region_set = f"region_set{j}"

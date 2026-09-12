@@ -1,3 +1,12 @@
+"""Re-export commondb commands and their service-type registrations.
+
+Base exports support CRUD, association updates, and batch uploads. Organization
+exports manage organizations, users, invitations, collections, and identifiers.
+System, RBAC, and ABAC exports retrieve operational, permission, and
+organization-administration data. ``COMMANDS_BY_SERVICE_TYPE`` groups commands
+for application dispatch; ``COMMON_COMMAND_MAP`` supports cross-service mapping.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix import fastapp
 from gen_epix.commondb.domain import enum
@@ -91,6 +100,9 @@ from gen_epix.commondb.domain.command.rbac import (
     RetrieveSubRolesCommand as RetrieveSubRolesCommand,
 )
 from gen_epix.commondb.domain.command.system import (
+    DeleteAllOperationalDataCommand as DeleteAllOperationalDataCommand,
+)
+from gen_epix.commondb.domain.command.system import (
     OutageCrudCommand as OutageCrudCommand,
 )
 from gen_epix.commondb.domain.command.system import (
@@ -147,10 +159,12 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[type[fastapp.Command]
     ),
     enum.ServiceType.SYSTEM: frozenset(
         {
+            DeleteAllOperationalDataCommand,
             OutageCrudCommand,
             RetrieveFeatureFlagsCommand,
             RetrieveOutagesCommand,
             RetrieveLicensesCommand,
+            DeleteAllOperationalDataCommand,
         }
     ),
     enum.ServiceType.ABAC: frozenset(

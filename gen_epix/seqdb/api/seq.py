@@ -1,3 +1,5 @@
+"""Expose seqdb api.seq API adapters and request representations."""
+
 from collections.abc import Callable, Iterable
 from datetime import datetime
 from typing import Any, NoReturn, Self
@@ -20,7 +22,7 @@ from gen_epix.util import copy_model_field
 
 
 class UploadSamplesRequestBody(command.UploadSamplesCommand):
-    """"""
+    """Docstring assigned automatically."""
 
     __doc__ = command.UploadSamplesCommand.__doc__
 
@@ -45,9 +47,10 @@ class UploadSamplesRequestBody(command.UploadSamplesCommand):
 
 
 class CalculatePhylogeneticTreeRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically."""
 
     __doc__ = command.CalculatePhylogeneticTreeCommand.__doc__
+
     protocol_id: UUID = copy_model_field(
         command.CalculatePhylogeneticTreeCommand, "protocol_id"
     )
@@ -67,9 +70,10 @@ class CalculatePhylogeneticTreeRequestBody(PydanticBaseModel):
 
 
 class RetrieveSimilarProfilesRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically."""
 
     __doc__ = command.RetrieveSimilarProfilesCommand.__doc__
+
     protocol_id: UUID = copy_model_field(
         command.RetrieveSimilarProfilesCommand, "protocol_id"
     )
@@ -84,7 +88,7 @@ class RetrieveSimilarProfilesRequestBody(PydanticBaseModel):
 
 
 class UpdateSeqDistancesRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically."""
 
     __doc__ = command.UpdateSeqDistancesCommand.__doc__
     protocol_id: UUID = copy_model_field(
@@ -105,13 +109,14 @@ class UpdateSeqDistancesRequestBody(PydanticBaseModel):
     # TODO: remove max_new_profiles usage and replace by limit
     @model_validator(mode="after")
     def validate_limit(self) -> Self:
+        """Normalize the deprecated maximum-profile field into ``limit``."""
         if self.limit is None:
             self.limit = self.max_new_profiles
         return self
 
 
 class RetrieveSamplesByIdsRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically."""
 
     __doc__ = command.RetrieveSamplesByIdCommand.__doc__
     sample_ids: list[UUID] = copy_model_field(
@@ -122,7 +127,7 @@ class RetrieveSamplesByIdsRequestBody(PydanticBaseModel):
 
 
 class RetrieveSampleIdentifiersByIdsRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically."""
 
     __doc__ = command.RetrieveSampleIdentifiersByIdCommand.__doc__
     sample_ids: list[UUID] = copy_model_field(
@@ -133,7 +138,7 @@ class RetrieveSampleIdentifiersByIdsRequestBody(PydanticBaseModel):
 
 
 class RetrieveSeqFastaRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically."""
 
     __doc__ = command.RetrieveSeqFastaCommand.__doc__
 
@@ -148,8 +153,26 @@ class RetrieveSeqFastaRequestBody(PydanticBaseModel):
     )
 
 
+class ConvertSeqFormatRequestBody(PydanticBaseModel):
+    """Docstring assigned automatically."""
+
+    __doc__ = command.ConvertSeqFormatCommand.__doc__
+
+    seq_ids: list[UUID] = copy_model_field(
+        command.ConvertSeqFormatCommand,
+        "seq_ids",
+        max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
+    )
+    from_format: enum.SeqFormat = copy_model_field(
+        command.ConvertSeqFormatCommand, "from_format"
+    )
+    to_format: enum.SeqFormat = copy_model_field(
+        command.ConvertSeqFormatCommand, "to_format"
+    )
+
+
 class RetrieveBestSeqPerSampleRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically."""
 
     __doc__ = command.RetrieveBestSeqPerSampleCommand.__doc__
 
@@ -166,7 +189,7 @@ class RetrieveBestSeqPerSampleRequestBody(PydanticBaseModel):
 
 
 class RetrieveBestSeqProfilePerSampleRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically."""
 
     __doc__ = command.RetrieveBestSeqProfilePerSampleCommand.__doc__
 
@@ -183,7 +206,7 @@ class RetrieveBestSeqProfilePerSampleRequestBody(PydanticBaseModel):
 
 
 class RetrieveBestSeqClassificationPerSampleRequestBody(PydanticBaseModel):
-    """"""
+    """Docstring assigned automatically."""
 
     __doc__ = command.RetrieveBestSeqClassificationPerSampleCommand.__doc__
 
@@ -364,6 +387,32 @@ def create_seq_endpoints(
         )
 
     @router.post(
+        "/convert/seq_format",
+        operation_id="convert__seq_format",
+        name="ConvertSeqFormat",
+        description=command.ConvertSeqFormatCommand.__doc__,
+    )
+    async def convert__seq_format(
+        user: registered_user_dependency,  # type: ignore[valid-type]
+        request_body: ConvertSeqFormatRequestBody,
+    ) -> list[UUID]:
+        """See router description."""
+        try:
+            retval: list[UUID] = app.handle(
+                command.ConvertSeqFormatCommand(
+                    user=user,
+                    seq_ids=request_body.seq_ids,
+                    from_format=request_body.from_format,
+                    to_format=request_body.to_format,
+                )
+            )
+        except Exception as exception:
+            handle_exception(
+                "b8c4d2e1", user, exception, request_ids=request_body.seq_ids  # type: ignore[call-arg]
+            )
+        return retval
+
+    @router.post(
         "/retrieve/seq_distance_last_modified/{protocol_id}",
         operation_id="retrieve__seq_distance_last_modified",
         name="RetrieveSeqDistanceLastModified",
@@ -394,10 +443,10 @@ def create_seq_endpoints(
     async def update__seq_distances(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: UpdateSeqDistancesRequestBody,
-    ) -> list[model.CalculateSeqDistancesResult]:
+    ) -> list[model.CalculateSeqDistancesEtlResult]:
         """See router description."""
         try:
-            retval: list[model.CalculateSeqDistancesResult] = app.handle(
+            retval: list[model.CalculateSeqDistancesEtlResult] = app.handle(
                 command.UpdateSeqDistancesCommand(
                     user=user,
                     protocol_id=request_body.protocol_id,

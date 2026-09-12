@@ -480,6 +480,47 @@ class TestCasedbCaseCreateSeq:
                     ):
                         case_service_create_file_for_read_set_or_seq(mock_service, cmd)
 
+        def test_seq_reuploading_same_content_returns_existing_file(
+            self, mock_service: Mock, mock_user: Mock
+        ) -> None:
+            """Test that an identical Seq upload is handled idempotently."""
+            cmd = Mock(spec=command.CreateFileForSeqCommand)
+            cmd.user = mock_user
+            cmd.case_id = uuid4()
+            cmd.col_id = uuid4()
+            cmd.file_format = seqdb_enum.SeqFileFormat.FASTA
+            cmd.file_compression = seqdb_enum.FileCompression.NONE
+            cmd.file_content = b"same sequence content"
+            file_hash = UUID(hashlib.sha256(cmd.file_content).digest()[:16].hex())
+            cmd.seq_hash = file_hash
+            cmd._policies = []
+
+            mock_case = Mock(spec=model.Case)
+            mock_case.content = {cmd.col_id: str(uuid4())}
+            existing_file_id = uuid4()
+            mock_seq = Mock(spec=model.SeqForUpload)
+            mock_seq.file_id = existing_file_id
+            mock_seq.file_hash = file_hash
+
+            with (
+                patch(
+                    "gen_epix.casedb.services.case.create_seq.BaseCaseAbacPolicy.get_case_abac_from_command"
+                ),
+                patch(
+                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_file_for_read_sets_or_seqs",
+                    return_value=[mock_case],
+                ),
+            ):
+                mock_service.app.handle.return_value = mock_seq
+
+                result = case_service_create_file_for_read_set_or_seq(mock_service, cmd)
+
+            assert result == existing_file_id
+            mock_service.app.handle.assert_called_once()
+            handled_command = mock_service.app.handle.call_args.args[0]
+            assert isinstance(handled_command, seqdb_command.SeqCrudCommand)
+            assert handled_command.operation == CrudOperation.READ_ONE
+
         def test_invalid_command_type_raises_error(self, mock_service: Mock) -> None:
             """Test that invalid command type raises InvalidArgumentsError."""
             cmd = Mock()  # Not a valid command type

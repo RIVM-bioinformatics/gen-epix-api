@@ -1,3 +1,9 @@
+"""Compose OmopDB domain metadata from shared and OMOP-specific registrations.
+
+The module exposes `DOMAIN` and registers the ordered service types, model
+types, command types, and shared-model mappings used by the application.
+"""
+
 from gen_epix.commondb.domain.util import register_domain_entities
 from gen_epix.fastapp import Domain
 from gen_epix.omopdb.domain.command import COMMANDS_BY_SERVICE_TYPE, COMMON_COMMAND_MAP

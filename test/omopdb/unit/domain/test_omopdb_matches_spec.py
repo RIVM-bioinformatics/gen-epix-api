@@ -254,6 +254,9 @@ class TestOmopSpecification:
             table_actual_description = re.sub(
                 r"PARENT CLASS DOCUMENTATION[\s\S]*", "", table_actual_description
             )
+            table_actual_description = re.sub(
+                r"\n\s*Model validation:[\s\S]*", "", table_actual_description
+            )
             if re.sub(r"\s+", "", table_expected_description) != re.sub(
                 r"\s+", "", table_actual_description
             ):

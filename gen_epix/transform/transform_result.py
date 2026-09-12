@@ -1,6 +1,4 @@
-"""
-Transform result types for tracking success/failure in transformation pipelines.
-"""
+"""Result value returned by transformers and pipelines."""
 
 from dataclasses import dataclass
 from typing import Any
@@ -10,7 +8,7 @@ from gen_epix.transform.enum import TransformResultType
 
 @dataclass
 class TransformResult:
-    """Result of a transformation operation, containing success/failure information."""
+    """Encapsulates a transformation outcome with input and error context."""
 
     success: bool
     original_object: Any
@@ -21,7 +19,7 @@ class TransformResult:
 
     @property
     def result_type(self) -> TransformResultType:
-        """Get the result type based on success status."""
+        """Return the status enum implied by `success` and `error`."""
         if self.success:
             return TransformResultType.SUCCESS
         elif self.error:
@@ -30,7 +28,7 @@ class TransformResult:
             return TransformResultType.SKIPPED
 
     def __str__(self) -> str:
-        """String representation of the transform result."""
+        """Return a concise status string including transformer and error details."""
         if self.success:
             return f"TransformResult(SUCCESS, transformer={self.transformer_name})"
         else:

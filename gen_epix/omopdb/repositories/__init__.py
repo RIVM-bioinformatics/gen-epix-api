@@ -1,3 +1,9 @@
+"""Expose OmopDB dictionary and SQLAlchemy repository implementations.
+
+The facade imports SQLAlchemy models for registration and exports shared system
+and organization repositories together with OmopDB ABAC and OMOP repositories.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix.commondb.repositories import (
     OrganizationDictRepository as OrganizationDictRepository,

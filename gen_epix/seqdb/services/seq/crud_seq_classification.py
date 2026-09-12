@@ -1,3 +1,5 @@
+"""Implement seqdb CRUD service operations for services.seq.crud_seq_classification."""
+
 from uuid import UUID
 
 from gen_epix.seqdb.domain import command, model
@@ -15,7 +17,18 @@ def seq_service_crud_seq_classification(
     | bool
     | None
 ):
-    """Handle CRUD operations for SeqClassification entities."""
+    """Handle CRUD operations for sequence-classification entities.
+
+    Args:
+        self: Sequence service executing the command.
+        cmd: Typed sequence-classification CRUD command.
+
+    Returns:
+        The action-specific sequence-classification result.
+
+    Raises:
+        AssertionError: The command operation is unsupported.
+    """
     user_id = cmd.user.id if cmd.user else None
     seq_classifications: list[model.SeqClassification] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():

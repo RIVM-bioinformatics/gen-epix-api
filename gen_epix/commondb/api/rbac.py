@@ -1,3 +1,5 @@
+"""Create transport-only API endpoints for commondb RBAC commands."""
+
 from collections.abc import Callable
 from typing import Any, NoReturn
 
@@ -16,7 +18,15 @@ def create_rbac_endpoints(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     **kwargs: Any,
 ) -> None:
+    """Register generated CRUD endpoints for the commondb RBAC service.
 
+    Args:
+        router: Router or application receiving the endpoints.
+        app: Composed commondb application that dispatches commands.
+        service_type: Domain service type used to generate CRUD endpoints.
+        handle_exception: Exception adapter used by endpoint handlers.
+        **kwargs: Unused router composition options.
+    """
     assert handle_exception
     app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency

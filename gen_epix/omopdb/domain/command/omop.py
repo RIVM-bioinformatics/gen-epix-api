@@ -1,3 +1,5 @@
+"""Commands for OMOP CRUD operations, person upload, and retrieval."""
+
 from typing import ClassVar
 from uuid import UUID
 
@@ -11,7 +13,7 @@ from gen_epix.omopdb.domain import model
 # Non-CRUD commands
 class UploadPersonsCommand(Command, UploadBatchCommandMixin):
     """
-    Upload a batch of persons along with their associated data.
+    Represents a request to upload of a batch of persons along with their associated data.
     The data are uploaded as a single atomic unit of work, so that
     either all data are successfully uploaded or none are.
     """
@@ -27,7 +29,7 @@ class UploadPersonsCommand(Command, UploadBatchCommandMixin):
 
 class RetrievePersonsByQueryCommand(Command):
     """
-    Retrieve person IDs based on a query. These IDs can then be used to retrieve the
+    Represents a request to retrieve person IDs based on a query. These IDs can then be used to retrieve the
     actual data for these persons.
     """
 
@@ -38,7 +40,7 @@ class RetrievePersonsByQueryCommand(Command):
 
 class RetrievePersonsByIdCommand(Command):
     """
-    Retrieve all data for a list of person IDs, as a list of FullPerson objects in the
+    Represents a request to retrieve all data for a list of person IDs, as a list of FullPerson objects in the
     same order.
     """
 
@@ -48,6 +50,7 @@ class RetrievePersonsByIdCommand(Command):
 
     @field_validator("person_ids", mode="after")
     def _validate_person_ids(cls, person_ids: list[UUID]) -> list[UUID]:
+        """Validate that requested person identifiers are unique."""
         if len(set(person_ids)) != len(person_ids):
             raise ValueError("person_ids must be unique")
         return person_ids
@@ -55,9 +58,9 @@ class RetrievePersonsByIdCommand(Command):
 
 class RetrieveSpecimenIdsByCohortIdsCommand(Command):
     """
-    Given a set of cohort IDs (equivalent to CASEDB case IDs) and a cohort
-    definition ID, retrieve the specimen IDs (equivalent to SEQDB sample IDs)
-    for the persons belonging to those cohorts.
+    Represents a request to retrieve specimen IDs (equivalent to SEQDB sample IDs)
+    for persons belonging to a set of cohort IDs (equivalent to CASEDB case IDs)
+    and a cohort definition ID.
     """
 
     cohort_definition_id: UUID = Field(description="The cohort definition ID.")
@@ -66,220 +69,330 @@ class RetrieveSpecimenIdsByCohortIdsCommand(Command):
 
 # CRUD commands
 class CareSiteCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP care-site records."""
+
     MODEL_CLASS: ClassVar = model.CareSite
 
 
 class CdmSourceCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP CDM-source records."""
+
     MODEL_CLASS: ClassVar = model.CdmSource
 
 
 class CohortCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP cohort records."""
+
     MODEL_CLASS: ClassVar = model.Cohort
 
 
 class CohortDefinitionCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP cohort-definition records."""
+
     MODEL_CLASS: ClassVar = model.CohortDefinition
 
 
 class ConceptAncestorCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP concept-ancestor records."""
+
     MODEL_CLASS: ClassVar = model.ConceptAncestor
 
 
 class ConceptClassCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP concept-class records."""
+
     MODEL_CLASS: ClassVar = model.ConceptClass
 
 
 class ConceptCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP concept records."""
+
     MODEL_CLASS: ClassVar = model.Concept
 
 
 class ConceptRelationshipCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP concept-relationship records."""
+
     MODEL_CLASS: ClassVar = model.ConceptRelationship
 
 
 class ConceptSynonymCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP concept-synonym records."""
+
     MODEL_CLASS: ClassVar = model.ConceptSynonym
 
 
 class ConditionEraCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP condition-era records."""
+
     MODEL_CLASS: ClassVar = model.ConditionEra
 
 
 class ConditionOccurrenceCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP condition-occurrence records."""
+
     MODEL_CLASS: ClassVar = model.ConditionOccurrence
 
 
 class ConditionOccurrenceIdentifierCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on condition-occurrence identifiers."""
+
     MODEL_CLASS: ClassVar = model.ConditionOccurrenceIdentifier
 
 
 class CostCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP cost records."""
+
     MODEL_CLASS: ClassVar = model.Cost
 
 
 class DeviceExposureCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP device-exposure records."""
+
     MODEL_CLASS: ClassVar = model.DeviceExposure
 
 
 class DeviceExposureIdentifierCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on device-exposure identifiers."""
+
     MODEL_CLASS: ClassVar = model.DeviceExposureIdentifier
 
 
 class DeathCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP death records."""
+
     MODEL_CLASS: ClassVar = model.Death
 
 
 class DeathIdentifierCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on death identifiers."""
+
     MODEL_CLASS: ClassVar = model.DeathIdentifier
 
 
 class DomainCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP domain records."""
+
     MODEL_CLASS: ClassVar = model.Domain
 
 
 class DoseEraCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP dose-era records."""
+
     MODEL_CLASS: ClassVar = model.DoseEra
 
 
 class DrugEraCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP drug-era records."""
+
     MODEL_CLASS: ClassVar = model.DrugEra
 
 
 class DrugExposureCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP drug-exposure records."""
+
     MODEL_CLASS: ClassVar = model.DrugExposure
 
 
 class DrugExposureIdentifierCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on drug-exposure identifiers."""
+
     MODEL_CLASS: ClassVar = model.DrugExposureIdentifier
 
 
 class DrugStrengthCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP drug-strength records."""
+
     MODEL_CLASS: ClassVar = model.DrugStrength
 
 
 class EpisodeCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP episode records."""
+
     MODEL_CLASS: ClassVar = model.Episode
 
 
 class EpisodeEventCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP episode-event records."""
+
     MODEL_CLASS: ClassVar = model.EpisodeEvent
 
 
 class FactRelationshipCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP fact-relationship records."""
+
     MODEL_CLASS: ClassVar = model.FactRelationship
 
 
 class LocationCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP location records."""
+
     MODEL_CLASS: ClassVar = model.Location
 
 
 class MeasurementCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP measurement records."""
+
     MODEL_CLASS: ClassVar = model.Measurement
 
 
 class MeasurementIdentifierCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on measurement identifiers."""
+
     MODEL_CLASS: ClassVar = model.MeasurementIdentifier
 
 
 class MeasurementRelationCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP measurement-relation records."""
+
     MODEL_CLASS: ClassVar = model.MeasurementRelation
 
 
 class MeasurementRelationIdentifierCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on measurement-relation identifiers."""
+
     MODEL_CLASS: ClassVar = model.MeasurementRelationIdentifier
 
 
 class MetadataCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP metadata records."""
+
     MODEL_CLASS: ClassVar = model.Metadata
 
 
 class NoteCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP note records."""
+
     MODEL_CLASS: ClassVar = model.Note
 
 
 class NoteIdentifierCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on note identifiers."""
+
     MODEL_CLASS: ClassVar = model.NoteIdentifier
 
 
 class NoteNlpCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP note-NLP records."""
+
     MODEL_CLASS: ClassVar = model.NoteNlp
 
 
 class NoteNlpIdentifierCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on note-NLP identifiers."""
+
     MODEL_CLASS: ClassVar = model.NoteNlpIdentifier
 
 
 class ObservationCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP observation records."""
+
     MODEL_CLASS: ClassVar = model.Observation
 
 
 class ObservationIdentifierCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on observation identifiers."""
+
     MODEL_CLASS: ClassVar = model.ObservationIdentifier
 
 
 class ObservationPeriodCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP observation-period records."""
+
     MODEL_CLASS: ClassVar = model.ObservationPeriod
 
 
 class ObservationPeriodIdentifierCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on observation-period identifiers."""
+
     MODEL_CLASS: ClassVar = model.ObservationPeriodIdentifier
 
 
 class PayerPlanPeriodCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP payer-plan-period records."""
+
     MODEL_CLASS: ClassVar = model.PayerPlanPeriod
 
 
 class PersonCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP person records."""
+
     MODEL_CLASS: ClassVar = model.Person
 
 
 class PersonIdentifierCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on person identifiers."""
+
     MODEL_CLASS: ClassVar = model.PersonIdentifier
 
 
 class ProcedureOccurrenceCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP procedure-occurrence records."""
+
     MODEL_CLASS: ClassVar = model.ProcedureOccurrence
 
 
 class ProcedureOccurrenceIdentifierCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on procedure-occurrence identifiers."""
+
     MODEL_CLASS: ClassVar = model.ProcedureOccurrenceIdentifier
 
 
 class ProviderCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP provider records."""
+
     MODEL_CLASS: ClassVar = model.Provider
 
 
 class RelationshipCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP relationship records."""
+
     MODEL_CLASS: ClassVar = model.Relationship
 
 
 class SourceToConceptMapCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP source-to-concept mappings."""
+
     MODEL_CLASS: ClassVar = model.SourceToConceptMap
 
 
 class SpecimenCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP specimen records."""
+
     MODEL_CLASS: ClassVar = model.Specimen
 
 
 class SpecimenIdentifierCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on specimen identifiers."""
+
     MODEL_CLASS: ClassVar = model.SpecimenIdentifier
 
 
 class VisitDetailCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP visit-detail records."""
+
     MODEL_CLASS: ClassVar = model.VisitDetail
 
 
 class VisitDetailIdentifierCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on visit-detail identifiers."""
+
     MODEL_CLASS: ClassVar = model.VisitDetailIdentifier
 
 
 class VisitOccurrenceCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP visit-occurrence records."""
+
     MODEL_CLASS: ClassVar = model.VisitOccurrence
 
 
 class VisitOccurrenceIdentifierCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on visit-occurrence identifiers."""
+
     MODEL_CLASS: ClassVar = model.VisitOccurrenceIdentifier
 
 
 class VocabularyCrudCommand(CrudCommand):
+    """Represents a request to perform a CRUD operation on OMOP vocabulary records."""
+
     MODEL_CLASS: ClassVar = model.Vocabulary

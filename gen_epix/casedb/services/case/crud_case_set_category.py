@@ -1,5 +1,5 @@
-"""
-CRUD operations for CaseSetCategory entities.
+"""Handle CRUD operations for case-set-category entities.
+
 This is a simple metadata entity with no ABAC restrictions.
 """
 

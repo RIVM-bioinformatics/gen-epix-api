@@ -1,3 +1,5 @@
+"""Define casedb commands for geographic regions and region sets."""
+
 from typing import ClassVar
 from uuid import UUID
 
@@ -10,9 +12,7 @@ from gen_epix.commondb.domain.command import Command, CrudCommand
 
 
 class RetrieveContainingRegionCommand(Command):
-    """
-    Retrieve the regions that contain the specified regions.
-    """
+    """Represent a request for regions containing specified regions."""
 
     region_ids: list[UUID] = Field(
         description="The IDs of the regions to retrieve containing regions for."
@@ -27,16 +27,24 @@ class RetrieveContainingRegionCommand(Command):
 
 
 class RegionSetCrudCommand(CrudCommand):
+    """Represent CRUD operations for geographic region sets."""
+
     MODEL_CLASS: ClassVar = model.RegionSet
 
 
 class RegionCrudCommand(CrudCommand):
+    """Represent CRUD operations for geographic regions."""
+
     MODEL_CLASS: ClassVar = model.Region
 
 
 class RegionRelationCrudCommand(CrudCommand):
+    """Represent CRUD operations for relationships between regions."""
+
     MODEL_CLASS: ClassVar = model.RegionRelation
 
 
 class RegionSetShapeCrudCommand(CrudCommand):
+    """Represent CRUD operations for shapes associated with region sets."""
+
     MODEL_CLASS: ClassVar = model.RegionSetShape

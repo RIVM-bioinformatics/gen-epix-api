@@ -1,3 +1,5 @@
+"""Create and configure the FastAPI transport application for a commondb app."""
+
 import logging
 import os
 from collections.abc import Callable
@@ -34,12 +36,33 @@ def create_fast_api(
     debug: bool = False,
     **kwargs: Any,
 ) -> FastAPI:
+    """Build a FastAPI app with commondb routers, middleware, and lifecycle hooks.
 
+    Args:
+        app: Composed domain application serving command requests.
+        create_routers_fn: Factory that creates commondb API routers.
+        handle_exception: Optional adapter that translates command exceptions.
+        setup_logger: Optional logger for application lifecycle events.
+        api_logger: Optional logger for API exception and authentication events.
+        debug: Whether to omit production security middleware.
+        **kwargs: Optional OpenAPI tag and schema customization settings.
+
+    Returns:
+        Configured FastAPI application mounted with versioned commondb routers.
+    """
     cfg: dict | Dynaconf = app.cfg
 
     # Set up lifespan
     @asynccontextmanager
     async def lifespan(fast_api: FastAPI) -> Any:
+        """Log application start and shutdown around the FastAPI lifespan.
+
+        Args:
+            fast_api: FastAPI instance whose lifespan is being managed.
+
+        Yields:
+            Control while the FastAPI application serves requests.
+        """
         if setup_logger:
             setup_logger.info(
                 app.create_log_message(
@@ -129,6 +152,11 @@ def create_fast_api(
     # Redirect root to default route
     @fast_api.get("/")
     async def redirect() -> Response:
+        """Redirect the root path to the configured default API route.
+
+        Returns:
+            Redirect response targeting the configured default route.
+        """
         response = RedirectResponse(url=cfg["api"]["default_route"])
         return response
 

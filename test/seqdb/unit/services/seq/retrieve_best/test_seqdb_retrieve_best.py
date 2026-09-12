@@ -210,8 +210,8 @@ class TestFilterConstruction:
 
 class TestRankingLogic:
     """
-    The sort key is (sample_id, qc_result_sort_key, qc_score, created_at) ascending.
-    The first entry per sample after sorting is selected as the "best".
+    The sort key is (sample_id, qc_result_sort_key, qc_score, created_at).
+    Higher qc_result, higher qc_score, and newer created_at values are better.
     """
 
     def test_single_entry_per_sample_is_selected(self) -> None:
@@ -224,8 +224,8 @@ class TestRankingLogic:
         result = _get_best_id_per_sample(svc, cmd)
         assert result == {s1: e1, s2: e2}
 
-    def test_lower_qc_result_sort_key_wins(self) -> None:
-        # Ascending sort → lowest qc_result value wins per sample.
+    def test_higher_qc_result_sort_key_wins(self) -> None:
+        # Higher qc_result values represent better quality.
         sample_id = uuid4()
         id_pending = uuid4()
         id_pass = uuid4()
@@ -244,10 +244,9 @@ class TestRankingLogic:
         svc = _mock_service(rows)
         cmd = _profile_cmd(sample_ids={sample_id})
         result = _get_best_id_per_sample(svc, cmd)
-        # PENDING (sort key 1) < PASS (sort key 4), so PENDING wins
-        assert result[sample_id] == id_pending
+        assert result[sample_id] == id_pass
 
-    def test_lower_qc_score_wins_when_qc_result_equal(self) -> None:
+    def test_higher_qc_score_wins_when_qc_result_equal(self) -> None:
         sample_id = uuid4()
         id_low_score = uuid4()
         id_high_score = uuid4()
@@ -258,9 +257,9 @@ class TestRankingLogic:
         svc = _mock_service(rows)
         cmd = _profile_cmd(sample_ids={sample_id})
         result = _get_best_id_per_sample(svc, cmd)
-        assert result[sample_id] == id_low_score
+        assert result[sample_id] == id_high_score
 
-    def test_earlier_created_at_wins_when_qc_result_and_score_equal(self) -> None:
+    def test_later_created_at_wins_when_qc_result_and_score_equal(self) -> None:
         sample_id = uuid4()
         id_old = uuid4()
         id_new = uuid4()
@@ -271,7 +270,7 @@ class TestRankingLogic:
         svc = _mock_service(rows)
         cmd = _profile_cmd(sample_ids={sample_id})
         result = _get_best_id_per_sample(svc, cmd)
-        assert result[sample_id] == id_old
+        assert result[sample_id] == id_new
 
     def test_multiple_samples_each_gets_independent_best(self) -> None:
         s1, s2 = uuid4(), uuid4()
@@ -282,12 +281,12 @@ class TestRankingLogic:
             _row(
                 entry_id=worst_s1,
                 sample_id=s1,
-                qc_result=enum.QualityControlResult.PASS,
+                qc_result=enum.QualityControlResult.PENDING,
             ),
             _row(
                 entry_id=best_s1,
                 sample_id=s1,
-                qc_result=enum.QualityControlResult.PENDING,
+                qc_result=enum.QualityControlResult.PASS,
             ),
             _row(
                 entry_id=best_s2, sample_id=s2, qc_result=enum.QualityControlResult.FAIL

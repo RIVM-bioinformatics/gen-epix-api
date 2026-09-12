@@ -1,12 +1,18 @@
+"""Enumerations shared by the application framework."""
+
 from enum import Enum
 
 
 class SortOrder(Enum):
+    """Encapsulates specifying ascending or descending ordering."""
+
     ASCENDING = "ASCENDING"
     DESCENDING = "DESCENDING"
 
 
 class PermissionType(Enum):
+    """Encapsulates specifying the action authorized by a permission."""
+
     CREATE = "CREATE"
     READ = "READ"
     UPDATE = "UPDATE"
@@ -15,6 +21,8 @@ class PermissionType(Enum):
 
 
 class PermissionTypeSet(Enum):
+    """Encapsulates providing named combinations of permission types."""
+
     E = frozenset({PermissionType.EXECUTE})
     CRUD = frozenset(
         {
@@ -66,6 +74,8 @@ class PermissionTypeSet(Enum):
 
 
 class CrudOperation(Enum):
+    """Encapsulates identifying a supported create, read, update, delete, or existence operation."""
+
     CREATE_ONE = "CREATE_ONE"
     CREATE_SOME = "CREATE_SOME"
     READ_ALL = "READ_ALL"
@@ -86,6 +96,8 @@ class CrudOperation(Enum):
 
 
 class CrudOperationSet(Enum):
+    """Encapsulates providing named combinations of CRUD operations."""
+
     CREATE = frozenset({CrudOperation.CREATE_ONE, CrudOperation.CREATE_SOME})
     READ = frozenset(
         {
@@ -223,11 +235,15 @@ class CrudOperationSet(Enum):
 
 
 class HttpProtocol(Enum):
+    """Encapsulates specifying an HTTP transport protocol."""
+
     HTTP = "HTTP"
     HTTPS = "HTTPS"
 
 
 class CrudEndpointType(Enum):
+    """Encapsulates identifying a generated CRUD endpoint shape."""
+
     POST_ONE = "POST_ONE"
     POST_SOME = "POST_SOME"
     GET_ALL = "GET_ALL"
@@ -243,6 +259,8 @@ class CrudEndpointType(Enum):
 
 
 class IsolationLevel(Enum):
+    """Encapsulates specifying the transaction isolation level for a database session."""
+
     READ_UNCOMMITED = "READ_UNCOMMITED"
     READ_COMMITED = "READ_COMMITED"
     REPEATABLE_READ = "REPEATABLE_READ"
@@ -250,6 +268,8 @@ class IsolationLevel(Enum):
 
 
 class LogLevel(Enum):
+    """Encapsulates specifying a supported logging severity."""
+
     FATAL = "FATAL"
     ERROR = "ERROR"
     WARN = "WARN"
@@ -259,6 +279,8 @@ class LogLevel(Enum):
 
 
 class LogLevelSet(Enum):
+    """Encapsulates providing named combinations of logging severities."""
+
     ERROR_OR_WORSE = frozenset({LogLevel.ERROR, LogLevel.FATAL})
     WARN_OR_WORSE = frozenset({LogLevel.WARN, LogLevel.ERROR, LogLevel.FATAL})
     INFO_OR_WORSE = frozenset(
@@ -280,18 +302,24 @@ class LogLevelSet(Enum):
 
 
 class EventTiming(Enum):
+    """Encapsulates identifying a phase in command execution."""
+
     BEFORE = "BEFORE"
     DURING = "DURING"
     AFTER = "AFTER"
 
 
 class AuthProtocol(Enum):
+    """Encapsulates identifying an authentication protocol supported by an identity provider."""
+
     NONE = "NONE"
     OAUTH2 = "OAUTH2"
     OIDC = "OIDC"
 
 
 class OAuthFlow(Enum):
+    """Encapsulates identifying an OAuth authorization flow."""
+
     AUTHORIZATION_CODE = "AUTHORIZATION_CODE"
     CLIENT_CREDENTIALS = "CLIENT_CREDENTIALS"
     RESOURCE_OWNER = "RESOURCE_OWNER"
@@ -301,6 +329,8 @@ class OAuthFlow(Enum):
 
 
 class HttpMethod(Enum):
+    """Encapsulates identifying an HTTP request method."""
+
     GET = "GET"
     POST = "POST"
     PUT = "PUT"
@@ -313,6 +343,8 @@ class HttpMethod(Enum):
 
 
 class StringCasing(Enum):
+    """Encapsulates identifying a string naming convention."""
+
     SNAKE_CASE = "SNAKE_CASE"
     CAMEL_CASE = "CAMEL_CASE"
     PASCAL_CASE = "PASCAL_CASE"
@@ -321,10 +353,10 @@ class StringCasing(Enum):
 
 class FieldType(Enum):
     """
-    This enumeration is used to categorize the different types of fields that can be
+    Encapsulates this enumeration is used to categorize the different types of fields that can be
     present in a model as well as in its persisted version.
 
-    Attributes
+    Attributes:
     ----------
     ID : Enum
         Represents an identifier field in the model.
@@ -351,7 +383,8 @@ class FieldType(Enum):
 
 class FieldTypeSet(Enum):
     """
-    Different sets of field types that can be used to categorize the fields in a model.
+    Encapsulates different sets of field types that can be used to categorize the fields in a model.
+
     The value is a tuple instead of a frozenset to guarantee the order of the elements.
     """
 
@@ -388,6 +421,8 @@ class FieldTypeSet(Enum):
 
 
 class OnException(Enum):
+    """Encapsulates specifying how command execution responds to an exception."""
+
     RAISE = "RAISE"
     IGNORE = "IGNORE"
     SKIP = "SKIP"
@@ -398,6 +433,8 @@ class OnException(Enum):
 
 
 class FileExtension(Enum):
+    """Encapsulates identifying a supported file extension."""
+
     PKL = ".pkl"
     JSON = ".json"
     ZIP = ".zip"

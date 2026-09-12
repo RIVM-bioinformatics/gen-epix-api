@@ -15,6 +15,7 @@ from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import command, enum, model
+from gen_epix.util import get_package_root
 
 seqdb_APP_CFGS = get_app_cfgs(
     AppType.SEQDB,
@@ -24,13 +25,24 @@ seqdb_APP_CFGS = get_app_cfgs(
     log_any=False,
 )
 
+# Removed from the repo (too large); may be re-added in a future commit.
+_SA_SQLITE_DEMO_FILE = (
+    get_package_root() / "data" / "seqdb" / "demo" / "seqdb.sa_sqlite.seq.full.sqlite"
+)
+
 
 @pytest.fixture(
     scope="module",
     name="env",
     params=[
         commondb_enum.DevRepositoryConfig.DICT_DEMO,
-        commondb_enum.DevRepositoryConfig.SA_SQLITE_DEMO,
+        pytest.param(
+            commondb_enum.DevRepositoryConfig.SA_SQLITE_DEMO,
+            marks=pytest.mark.skipif(
+                not _SA_SQLITE_DEMO_FILE.is_file(),
+                reason=f"SA_SQLITE demo file not found: {_SA_SQLITE_DEMO_FILE}",
+            ),
+        ),
     ],
     ids=lambda x: x.value,
 )

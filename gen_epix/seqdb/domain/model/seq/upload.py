@@ -1,3 +1,5 @@
+"""Define seqdb domain models for domain.model.seq.upload."""
+
 import json
 from typing import ClassVar, Self
 from uuid import UUID
@@ -5,7 +7,6 @@ from uuid import UUID
 from pydantic import Field, computed_field, model_validator
 
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.base import EtlLogItem
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
@@ -15,27 +16,39 @@ from gen_epix.commondb.domain.model.upload import (
     ParentUploadResult,
     UploadResult,
 )
-from gen_epix.fastapp.domain import Entity
+from gen_epix.etl.model import LogItem
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.seq.classification import (
     SeqClassification,
     SeqTaxonomy,
+)
+from gen_epix.seqdb.domain.model.seq.distance import (
+    CalculateSeqDistancesEtlResult,
 )
 from gen_epix.seqdb.domain.model.seq.locus import Allele
 from gen_epix.seqdb.domain.model.seq.pheno import AstMeasurement, PcrMeasurement
 from gen_epix.seqdb.domain.model.seq.profile import SeqProfile, SeqProfileIdentifier
 from gen_epix.seqdb.domain.model.seq.reads import ReadSet, ReadSetIdentifier
 from gen_epix.seqdb.domain.model.seq.sample import Sample, SampleIdentifier
-from gen_epix.seqdb.domain.model.seq.seq import Seq, SeqIdentifier
+from gen_epix.seqdb.domain.model.seq.seq import (
+    Seq,
+    SeqIdentifier,
+)
 from gen_epix.util import copy_model_field
 
 
 class ValidateRefDataIdCodeMixin:
+    """Encapsulates the requirement to identify upload reference data by an ID or a code.
+
+    Model validation: Each configured ID-and-code field pair must contain a
+    non-null ID or a code so reference data can be resolved during upload.
+    """
+
     REFDATA_FIELD_ID_CODE_PAIRS: ClassVar[list[tuple[str, str]]] = []
 
     @model_validator(mode="after")
     def _validate_refdata(self) -> Self:
-        """Validate that either refdata code or refdata id is provided."""
+        """Require a code or non-null ID for every configured reference-data pair."""
         for refdata_id_field, refdata_code_field in self.REFDATA_FIELD_ID_CODE_PAIRS:
             refdata_code = getattr(self, refdata_code_field)
             refdata_id = getattr(self, refdata_id_field)
@@ -47,9 +60,7 @@ class ValidateRefDataIdCodeMixin:
 
 
 class ReadSetForUpload(ReadSet, IdentifiersMixin, ValidateRefDataIdCodeMixin):
-    """
-    A read set intended for upload.
-    """
+    """Represents a read set intended for upload."""
 
     ENTITY: ClassVar = ReadSet.model_entity().clone(update={"persistable": False})
     NAME: ClassVar = "ReadSetForUpload"
@@ -75,9 +86,7 @@ class ReadSetForUpload(ReadSet, IdentifiersMixin, ValidateRefDataIdCodeMixin):
 
 
 class SeqForUpload(Seq, IdentifiersMixin, ValidateRefDataIdCodeMixin):
-    """
-    A sequence intended for upload.
-    """
+    """Represents a sequence intended for upload."""
 
     ENTITY: ClassVar = Seq.model_entity().clone(update={"persistable": False})
     NAME: ClassVar = "SeqForUpload"
@@ -102,9 +111,12 @@ class SeqForUpload(Seq, IdentifiersMixin, ValidateRefDataIdCodeMixin):
 
 
 class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMixin):
-    """
-    A sequence profile record intended for upload. Equal to a SeqProfile, with
-    additional variables.
+    """Represents a sequence profile record intended for upload. Equal to a SeqProfile,
+    with additional variables.
+
+    Model validation: Exactly one representation is accepted for allele, MLVA,
+    and k-mer profiles. Ordered representations derive content and its hash;
+    code-map representations require a locus code map.
     """
 
     ENTITY: ClassVar = SeqProfile.model_entity().clone(update={"persistable": False})
@@ -172,6 +184,7 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
 
     @staticmethod
     def _get_representation_list(field_names: tuple[str, ...]) -> str:
+        """Format representation names for a validation error message."""
         if len(field_names) == 1:
             return field_names[0]
         if len(field_names) == 2:
@@ -182,6 +195,14 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
         self,
         representations: tuple[tuple[str, bool], ...],
     ) -> None:
+        """Require exactly one named profile representation.
+
+        Args:
+            representations: Representation names paired with their presence flags.
+
+        Raises:
+            ValueError: If none or more than one representation is provided.
+        """
         if sum(is_provided for _, is_provided in representations) != 1:
             raise ValueError(
                 "Exactly one of "
@@ -190,6 +211,14 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
             )
 
     def _require_locus_code_map(self, representation_name: str) -> None:
+        """Require a locus code map for a map-based profile representation.
+
+        Args:
+            representation_name: The representation that requires the code map.
+
+        Raises:
+            ValueError: If neither a locus code-map ID nor code is provided.
+        """
         if (
             self.locus_code_map_id is None or self.locus_code_map_id == NULL_ID
         ) and self.locus_code_map_code is None:
@@ -199,11 +228,27 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
             )
 
     def _validate_locus_profile_upload(self) -> Self:
+        """Require non-empty content for a locus profile upload.
+
+        Returns:
+            The validated upload model.
+
+        Raises:
+            ValueError: If profile content is empty.
+        """
         if self.content == "":
             raise ValueError("content must be provided.")
         return self
 
     def _validate_snp_profile_upload(self) -> Self:
+        """Require content or an aligned sequence for an SNP profile upload.
+
+        Returns:
+            The validated upload model.
+
+        Raises:
+            ValueError: If neither SNP representation is provided.
+        """
         if self.content == "" and self.aligned_nucleotide_seq is None:
             raise ValueError(
                 "content or aligned_nucleotide_seq must be provided for SNP profiles."
@@ -218,6 +263,15 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
         return self
 
     def _validate_allele_profile_upload(self) -> Self:
+        """Validate and normalize an allele-profile upload representation.
+
+        Returns:
+            The validated upload model.
+
+        Raises:
+            ValueError: If representations conflict, map data lacks a code map, or a
+                supplied hash differs from the derived allele-profile hash.
+        """
         # Already normalized (content was derived from allele_ids on a prior validation pass)
         if self.content != "" and self.allele_ids is not None:
             return self
@@ -245,6 +299,15 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
         return self
 
     def _validate_mlva_profile_upload(self) -> Self:
+        """Validate and normalize an MLVA-profile upload representation.
+
+        Returns:
+            The validated upload model.
+
+        Raises:
+            ValueError: If representations conflict, map data lacks a code map, or a
+                supplied hash differs from the derived MLVA-profile hash.
+        """
         # Already normalized (content was derived from repeat_numbers on a prior validation pass)
         if self.content != "" and self.repeat_numbers is not None:
             return self
@@ -277,6 +340,15 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
         return self
 
     def _validate_kmer_profile_upload(self) -> Self:
+        """Validate and normalize a k-mer-profile upload representation.
+
+        Returns:
+            The validated upload model.
+
+        Raises:
+            ValueError: If representations conflict or a supplied hash differs from
+                the derived k-mer-profile hash.
+        """
         # Already normalized (content was derived from kmer_frequency_map on a prior validation pass)
         if self.content != "" and self.kmer_frequency_map is not None:
             return self
@@ -303,6 +375,7 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
     # Validate upload representations per profile type and normalize the ordered ones.
     @model_validator(mode="after")
     def _validate_model(self) -> Self:
+        """Apply validation for the selected sequence-profile type."""
         validators = {
             enum.SeqProfileType.LOCUS: self._validate_locus_profile_upload,
             enum.SeqProfileType.ALLELE: self._validate_allele_profile_upload,
@@ -314,8 +387,7 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
 
 
 class AlleleForUpload(Allele):
-    """
-    An allele intended for upload. Equal to an Allele, with
+    """Represents an allele intended for upload. Equal to an Allele, with
     additional variables.
     """
 
@@ -329,9 +401,11 @@ class AlleleForUpload(Allele):
 
 
 class SeqClassificationForUpload(SeqClassification, ValidateRefDataIdCodeMixin):
-    """
-    A sequence classification intended for upload. Equal to a SeqClassification, with
+    """Represents a sequence classification intended for upload. Equal to a SeqClassification, with
     additional variables.
+
+    Model validation: Content validation is not implemented yet, so classification
+    content is accepted unchanged after inherited validation.
     """
 
     ENTITY: ClassVar = SeqClassification.model_entity().clone(
@@ -372,6 +446,7 @@ class SeqClassificationForUpload(SeqClassification, ValidateRefDataIdCodeMixin):
 
     @model_validator(mode="after")
     def _validate_content(self) -> Self:
+        """Reserve post-validation for future classification-content verification."""
         # TODO: add validation
         return self
 
@@ -383,9 +458,7 @@ class SeqClassificationForUpload(SeqClassification, ValidateRefDataIdCodeMixin):
 
 
 class SampleForUpload(ParentForUpload):
-    """
-    A sample intended for upload, together with any relevant associated data.
-    """
+    """Represents a sample intended for upload, together with any relevant associated data."""
 
     ENTITY: ClassVar = ParentForUpload.model_entity().clone()
     NAME = "SampleForUpload"
@@ -459,15 +532,16 @@ class SampleForUpload(ParentForUpload):
 
 
 class SampleDataIssue(DataIssue):
-    pass
+    """Represents an issue found while uploading a sample or its associated data."""
 
 
 class SampleUploadResult(ParentUploadResult):
-    """
-    The result of uploading a single sample. The field names for the results for
-    the associated data match those in SampleForUpload to facilitate processing.
+    """Represents the outcome of uploading one sample and its associated data.
+
+    Result field names match ``SampleForUpload`` fields to support caller processing.
     """
 
+    ID: ClassVar[str] = "d8f4cd68"
     ENTITY: ClassVar = ParentUploadResult.model_entity().clone()
     NAME: ClassVar = "SampleUploadResult"
 
@@ -506,7 +580,7 @@ class SampleUploadResult(ParentUploadResult):
         description="The results of uploading the AST measurements associated with the sample, if any were provided, in the same order as provided.",
     )
 
-    def get_errors(self) -> list[EtlLogItem]:
+    def get_errors(self) -> list[LogItem]:
         """Get all data issues that are errors."""
         log_items = super().get_errors()
         if self.identifiers:
@@ -537,9 +611,10 @@ class SampleUploadResult(ParentUploadResult):
 
 
 class SampleBatchForUpload(BaseBatchForUpload):
-    """
-    A set of samples intended for upload, together with any new reference data required
+    """Represents a set of samples intended for upload, together with any new reference data required
     for the storage of these data.
+
+    The batch can include new alleles required to store its sample data.
     """
 
     ENTITY: ClassVar = SampleForUpload.model_entity().clone()
@@ -602,28 +677,10 @@ class SampleBatchForUpload(BaseBatchForUpload):
         return any(len(x.ast_measurements or []) > 0 for x in self.samples)
 
 
-class CalculateSeqDistancesResult(UploadResult):
-    """
-    Represents the result of calculating distances between existing profiles and new
-    profiles or between new profiles themselves, as part of the upload process.
-    The seq_distance_profile_id refers to the sequence distance profile (i.e.,
-    AlleleProfile or MlvaProfile).
-    """
-
-    ENTITY: ClassVar = Entity(persistable=False)
-    NAME: ClassVar = "CalculateSeqDistancesResult"
-
-    # TODO: 3034 since profiles of different types and subtypes (locus set, ref seq) can be provided, there can be many different distance profiles that are relevant. TBD how to handle this in the result.
-    seq_distance_profile_id: UUID = Field(
-        description="The UUID of the sequence distance profile that contains the calculated distances.",
-    )
-
-
 class SampleBatchUploadResult(BaseBatchUploadResult):
-    """
-    The result of uploading a batch of cases.
-    """
+    """Represents the result of uploading a batch of samples."""
 
+    ID: ClassVar = "0205001b"
     ENTITY: ClassVar = SampleBatchForUpload.model_entity().clone()
     NAME: ClassVar = "SampleBatchUploadResult"
 
@@ -633,7 +690,7 @@ class SampleBatchUploadResult(BaseBatchUploadResult):
     samples: list[SampleUploadResult] = Field(
         description="The results of uploading the individual samples, in the same order as provided."
     )
-    seq_distances: list[CalculateSeqDistancesResult] | None = Field(
+    seq_distances: list[CalculateSeqDistancesEtlResult] | None = Field(
         default=None,
         description="The results of calculating distances between sequences, if this was performed as part of the upload.",
     )

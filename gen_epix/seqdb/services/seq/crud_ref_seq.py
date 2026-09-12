@@ -1,3 +1,5 @@
+"""Implement seqdb CRUD service operations for services.seq.crud_ref_seq."""
+
 from uuid import UUID
 
 from gen_epix.seqdb.domain import command, model
@@ -7,7 +9,18 @@ from gen_epix.seqdb.domain.service import BaseSeqService
 def seq_service_crud_ref_seq(
     self: BaseSeqService, cmd: command.RefSeqCrudCommand
 ) -> list[model.RefSeq] | model.RefSeq | list[UUID] | UUID | list[bool] | bool | None:
-    """Handle CRUD operations for RefSeq entities."""
+    """Handle CRUD operations for reference-sequence entities.
+
+    Args:
+        self: Sequence service executing the command.
+        cmd: Typed reference-sequence CRUD command.
+
+    Returns:
+        The action-specific reference-sequence result.
+
+    Raises:
+        AssertionError: The command operation is unsupported.
+    """
     user_id = cmd.user.id if cmd.user else None
     ref_seqs: list[model.RefSeq] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():

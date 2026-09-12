@@ -1,3 +1,17 @@
+"""Compose and expose the configured casedb FastAPI application.
+
+This module forms the transport boundary around the application assembled by
+``AppComposer``. It loads casedb configuration, composes repositories, services,
+and policies, then passes the resulting application to the shared FastAPI factory.
+The factory mounts the casedb and shared routers under the configured API prefix
+and configures middleware, lifespan logging, exception handling, and OpenAPI.
+
+Importing this module performs that configuration and composition eagerly. It
+therefore initializes configured repositories and services, registers roles and
+policies, creates authentication dependencies, and constructs ``FAST_API``. The
+``app`` alias exposes the same FastAPI instance for compatible startup imports.
+"""
+
 from gen_epix.casedb.api.router import create_routers
 from gen_epix.casedb.domain import enum
 from gen_epix.casedb.env import AppComposer

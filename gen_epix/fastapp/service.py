@@ -1,3 +1,5 @@
+"""Base service lifecycle and application integration abstractions."""
+
 from __future__ import annotations
 
 import abc
@@ -28,6 +30,14 @@ from gen_epix.filter import CompositeFilter, LogicalOperator
 
 
 class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
+    """Encapsulates a service that groups together related domain models
+    and logic, and which may have an associated repository for persistence.
+
+    Implement this class to provide specific domain service functionality
+    while cleanly separating business logic from other services through
+    the app instance's handle() method.
+    """
+
     SERVICE_TYPE: Hashable = None
 
     def __init__(
@@ -46,6 +56,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         **kwargs: Any,
     ):
         # Set input members
+        """Initialize a BaseService instance."""
         self._id_factory: Callable[[], Hashable] = id_factory or app.generate_id
         self._timestamp_factory: Callable[[], datetime.datetime] = (
             timestamp_factory or app.generate_timestamp
@@ -83,44 +94,54 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
 
     @property
     def id(self) -> str:
+        """Id the requested value."""
         return self._id
 
     @property
     def service_type(self) -> Hashable:
+        """Service type."""
         return self._service_type
 
     @property
     def name(self) -> str:
+        """Name the requested value."""
         return self._name
 
     @property
     def created_at(self) -> datetime.datetime:
+        """Created at."""
         return self._created_at
 
     @property
     def app(self) -> App:
+        """App the requested value."""
         return self._app
 
     @property
     def logger(self) -> logging.Logger | None:
+        """Logger the requested value."""
         return self._logger
 
     @logger.setter
     def logger(self, logger: logging.Logger | None) -> None:
+        """Logger the requested value."""
         self._logger = logger
 
     @property
     def repository(self) -> Repository:
+        """Repository the requested value."""
         if not self._repository:
             raise exc.ServiceException("529122a8", "Repository not set")
         return self._repository
 
     @repository.setter
     def repository(self, repository: Repository) -> None:
+        """Repository the requested value."""
         self._repository = repository
 
     @property
     def props(self) -> dict[str, Any]:
+        """Props the requested value."""
         return self._props
 
     @abc.abstractmethod
@@ -130,6 +151,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         during service initialization, and should be used to register handlers for
         commands that this service should handle. The app.register_handler method can be
         used to register a handler for a specific command class.
+
         """
         raise NotImplementedError()
 
@@ -140,6 +162,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         Register the crud method as the handler for all registered CRUD
         commands. The exclude parameter can be used to exclude specific CRUD
         commands from being registered.
+
         """
         for crud_command_class in self.app.domain.get_crud_commands_for_service_type(
             self.service_type
@@ -149,9 +172,11 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
             self.app.register_handler(crud_command_class, self.crud)
 
     def generate_id(self) -> Hashable:
+        """Generate id."""
         return self._id_factory()
 
     def generate_timestamp(self) -> datetime.datetime:
+        """Generate timestamp."""
         return self._timestamp_factory()
 
     def register_crud_listener(
@@ -165,6 +190,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         the CRUD operation is executed. The listener should take the command obj
         and the return value of the CRUD operation. The listener should return a
         tuple of the command obj and the return value of the CRUD operation.
+
         Listeners registered for BEFORE timing can modify the command obj before
         the CRUD operation is executed. Listeners registered for AFTER timing
         can modify the return value of the CRUD operation.
@@ -185,6 +211,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         timing: EventTiming,
         listener: Callable[[BaseService, CrudCommand, Any], tuple[CrudCommand, Any]],
     ) -> None:
+        """Unregister crud listener."""
         key = (command_class, timing)
         if key not in self._crud_listeners:
             raise ValueError(f"Listener not registered for {key}")
@@ -193,6 +220,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         self._crud_listeners[key].remove(listener)
 
     def crud(self, cmd: CrudCommand) -> Any:
+        """Crud the requested value."""
         assert cmd.MODEL_CLASS.ENTITY is not None
         id_field_name = cmd.MODEL_CLASS.ENTITY.id_field_name
         if self._logger and self._logger.level <= logging.DEBUG:
@@ -269,6 +297,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         links: dict[int, Link] | None = None,
     ) -> Any:
         # Get filters depending on the operation
+        """Crud repository."""
         if cmd.operation in CrudOperationSet.ANY_ALL.value:
             # Query filter is applied, access filter is added to query filter
             query_filter = cmd.query_filter
@@ -339,6 +368,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
     def update_association(
         self, cmd: UpdateAssociationCommand, **kwargs: Any
     ) -> list[Hashable] | list[Model] | None:
+        """Update association."""
         if self._logger and self._logger.level <= logging.DEBUG:
             self._logger.debug(
                 self.create_log_message(
@@ -389,6 +419,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
     def set_object_id(
         self, obj: Model, id_field_name: str, on_id_set: OnException = OnException.RAISE
     ) -> None:
+        """Set object id."""
         if getattr(obj, id_field_name):
             if on_id_set == OnException.RAISE:
                 raise exc.InvalidArgumentsError(
@@ -413,6 +444,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         add_debug_info: bool = True,
         **kwargs: Any,
     ) -> str:
+        """Create log message."""
         if add_debug_info:
             service = kwargs.pop("service", {}) | {"id": self.id, "name": self.name}
             return self.app.create_log_message(
@@ -430,6 +462,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         dict[int, Link],
         dict[int, Link],
     ]:
+        """Return model links."""
         if isinstance(cmd, CrudCommand):
             model_class = cmd.MODEL_CLASS
         elif isinstance(cmd, UpdateAssociationCommand):
@@ -445,6 +478,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         return same_service_links, other_service_links
 
     def _get_user_and_repository(self, cmd: Command) -> tuple[User, BaseRepository]:
+        """Return user and repository."""
         user = cmd.user
         if user is None:
             raise exc.UnauthorizedAuthError("a621f6fc", "No user provided")
@@ -458,6 +492,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         objs: Iterable[Model],
         other_service_links: dict[int, Link],
     ) -> None:
+        """Verify other service links."""
         if not cmd.verify_other_service_links or not other_service_links:
             return
         for link in other_service_links.values():
@@ -492,6 +527,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         objs: Iterable[Model],
         same_service_links: dict[int, Link],
     ) -> None:
+        """Verify same service links."""
         if not self.repository:
             raise exc.ServiceException("63baf129", "Repository not set")
         if not cmd.verify_same_service_links or not same_service_links:
@@ -520,6 +556,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
                     )
 
     def __del__(self) -> None:
+        """Del the requested value."""
         if getattr(self, "_setup_logger", None):
             self._setup_logger.info(
                 self.create_log_message("d84f9d21", "STOPPING_SERVICE")

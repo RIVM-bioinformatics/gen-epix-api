@@ -1,3 +1,4 @@
+from gen_epix import etl as etl
 from gen_epix import fastapp as fastapp
 from gen_epix import filter as filter
 from gen_epix import util as util
@@ -20,6 +21,7 @@ from gen_epix.commondb.domain import model as commondb_model
 from gen_epix.commondb.domain.literal import NULL_ID as NULL_ID
 from gen_epix.commondb.env import AppComposer as AppComposer
 from gen_epix.commondb.services.remote_app import CommondbRemoteApp as CommondbRemoteApp
+from gen_epix.etl import model as etl_model
 from gen_epix.omopdb.domain import DOMAIN as OMOPDB_DOMAIN
 from gen_epix.omopdb.domain import command as omopdb_command
 from gen_epix.omopdb.domain import enum as omopdb_enum
@@ -51,6 +53,7 @@ __all__ = [
     "commondb_command",
     "commondb_enum",
     "commondb_model",
+    "etl_model",
     "CASEDB_DOMAIN",
     "CasedbAppComposer",
     "CasedbRemoteApp",

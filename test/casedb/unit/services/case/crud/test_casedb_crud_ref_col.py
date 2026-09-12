@@ -1,12 +1,11 @@
 """Unit tests for RefCol CRUD service behavior and model state validation."""
 
 from test.casedb.unit.services.case.base import BaseCrudTestCase
-from test.util.mock_compat import patch
-from typing import ClassVar
+from test.util.mock_compat import Mock, patch
+from typing import Any, ClassVar, cast
 from uuid import UUID, uuid4
 
 import pytest
-from pydantic import ValidationError
 
 from gen_epix.casedb.domain import enum, exc, model
 from gen_epix.casedb.services.case.crud_ref_col import case_service_crud_ref_col
@@ -23,15 +22,16 @@ class BaseRefColTestCase(BaseCrudTestCase):
         *,
         ref_dim_id: UUID | None = None,
         col_type: enum.ColType = enum.ColType.TEXT,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> model.RefCol:
-        return model.RefCol(
-            id=self.ref_col_id,
-            ref_dim_id=ref_dim_id or self.ref_dim_id,
-            code="test.code",
-            col_type=col_type,
-            **kwargs,
-        )
+        payload: dict[str, Any] = {
+            "id": self.ref_col_id,
+            "ref_dim_id": ref_dim_id or self.ref_dim_id,
+            "code": "test.code",
+            "col_type": col_type,
+        }
+        payload.update(kwargs)
+        return model.RefCol.model_validate(payload)
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")
@@ -138,6 +138,99 @@ class TestRefColCreateAndUpdate(BaseRefColTestCase):
 
         self.service.crud.assert_not_called()
 
+    def test_create_with_matching_concept_set_type_and_unit_returns_crud_result(
+        self,
+    ) -> None:
+        concept_set_id = uuid4()
+        ref_col = self.create_ref_col(
+            col_type=enum.ColType.INTERVAL,
+            concept_set_id=concept_set_id,
+            unit=enum.Unit.YEAR,
+        )
+        ref_dim = model.RefDim(
+            id=self.ref_dim_id,
+            dim_type=enum.DimType.NUMBER,
+            code="test",
+            label="Test",
+        )
+        concept_set = model.ConceptSet(
+            id=concept_set_id,
+            code="concept.set",
+            name="Concept Set",
+            type=enum.ConceptSetType.INTERVAL,
+            unit=enum.Unit.YEAR,
+        )
+        cmd = self.create_crud_command(CrudOperation.CREATE_ONE, objs=[ref_col])
+        expected = [self.ref_col_id]
+        self.service.crud.return_value = expected
+        self.service.repository.crud.return_value = [ref_dim]
+        self.service.app = Mock()
+        self.service.app.handle.return_value = [concept_set]
+
+        retval = case_service_crud_ref_col(self.service, cmd)
+
+        assert retval == expected
+        self.service.app.handle.assert_called_once()
+        self.service.crud.assert_called_once_with(cmd)
+
+    def test_create_with_mismatched_concept_set_unit_raises(self) -> None:
+        concept_set_id = uuid4()
+        ref_col = self.create_ref_col(
+            col_type=enum.ColType.INTERVAL,
+            concept_set_id=concept_set_id,
+            unit=enum.Unit.DAY,
+        )
+        ref_dim = model.RefDim(
+            id=self.ref_dim_id,
+            dim_type=enum.DimType.NUMBER,
+            code="test",
+            label="Test",
+        )
+        concept_set = model.ConceptSet(
+            id=concept_set_id,
+            code="concept.set",
+            name="Concept Set",
+            type=enum.ConceptSetType.INTERVAL,
+            unit=enum.Unit.YEAR,
+        )
+        cmd = self.create_crud_command(CrudOperation.CREATE_ONE, objs=[ref_col])
+        self.service.repository.crud.return_value = [ref_dim]
+        self.service.app = Mock()
+        self.service.app.handle.return_value = [concept_set]
+
+        with pytest.raises(exc.InvalidArgumentsError, match="does not correspond"):
+            case_service_crud_ref_col(self.service, cmd)
+
+        self.service.crud.assert_not_called()
+
+    def test_create_with_mismatched_concept_set_type_raises(self) -> None:
+        concept_set_id = uuid4()
+        ref_col = self.create_ref_col(
+            col_type=enum.ColType.NOMINAL,
+            concept_set_id=concept_set_id,
+        )
+        ref_dim = model.RefDim(
+            id=self.ref_dim_id,
+            dim_type=enum.DimType.NUMBER,
+            code="test",
+            label="Test",
+        )
+        concept_set = model.ConceptSet(
+            id=concept_set_id,
+            code="concept.set",
+            name="Concept Set",
+            type=enum.ConceptSetType.ORDINAL,
+        )
+        cmd = self.create_crud_command(CrudOperation.CREATE_ONE, objs=[ref_col])
+        self.service.repository.crud.return_value = [ref_dim]
+        self.service.app = Mock()
+        self.service.app.handle.return_value = [concept_set]
+
+        with pytest.raises(exc.InvalidArgumentsError, match="does not correspond"):
+            case_service_crud_ref_col(self.service, cmd)
+
+        self.service.crud.assert_not_called()
+
     @pytest.mark.parametrize("field", ["ref_dim_id", "col_type"])
     def test_update_immutable_field_raises(self, field: str) -> None:
         updated = self.create_ref_col(
@@ -198,16 +291,18 @@ class TestRefColStateValidation:
                 col_type=col_type,
             )
 
-        valid = model.RefCol(
-            ref_dim_id=self.ref_dim_id,
-            code="test.code",
-            col_type=col_type,
-            **{field: uuid4()},
+        valid = model.RefCol.model_validate(
+            {
+                "ref_dim_id": self.ref_dim_id,
+                "code": "test.code",
+                "col_type": col_type,
+                **cast(dict[str, Any], {field: uuid4()}),
+            }
         )
         assert valid.col_type is col_type
 
     def test_regex_requires_regex_value(self) -> None:
-        with pytest.raises(ValidationError, match="requires regex"):
+        with pytest.raises(exc.InvalidArgumentsError, match="requires regex"):
             model.RefCol(
                 ref_dim_id=self.ref_dim_id,
                 code="test.code",
@@ -232,14 +327,16 @@ class TestRefColStateValidation:
     def test_schema_type_requires_one_schema_source(
         self, col_type: enum.ColType
     ) -> None:
-        with pytest.raises(ValidationError, match="requires schema"):
+        with pytest.raises(exc.InvalidArgumentsError, match="requires schema"):
             model.RefCol(
                 ref_dim_id=self.ref_dim_id,
                 code="test.code",
                 col_type=col_type,
             )
 
-        with pytest.raises(ValidationError, match="Only one"):
+        with pytest.raises(
+            exc.InvalidArgumentsError, match="only one of schema_definition"
+        ):
             model.RefCol(
                 ref_dim_id=self.ref_dim_id,
                 code="test.code",

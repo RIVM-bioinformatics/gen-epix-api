@@ -182,6 +182,7 @@ class Run:
                 "test/filter/unit",
                 "test/transform/unit",
                 "test/fastapp/unit",
+                "test/fastapp/integration",
                 "test/commondb/unit",
                 "test/commondb/integration",
                 "test/casedb/unit",
@@ -191,6 +192,7 @@ class Run:
                 "test/omopdb/unit",
                 "test/omopdb/integration",
                 "test/general/docs",
+                "test/general/migrations",
             ]
             + (["test/end_to_end"] if include_e2e else [])
             + [
@@ -281,6 +283,7 @@ class Run:
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
+                "test/fastapp/integration",
                 "test/commondb/integration",
                 "test/casedb/integration",
                 "test/seqdb/integration",
@@ -300,664 +303,27 @@ class Run:
             ]
         )
 
-    def test_filter_unit(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/filter/unit/",
-            ]
-        )
-
-    def test_transform_unit(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/transform/unit",
-            ]
-        )
-
-    def test_fastapp_unit(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/fastapp/unit",
-            ]
-        )
-
-    def test_fastapp_unit_auth(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/fastapp/unit/auth/",
-            ]
-        )
-
-    def test_fastapp_unit_domain(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/fastapp/unit/domain",
-            ]
-        )
-
-    def test_fastapp_unit_services(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/fastapp/unit/services/",
-            ]
-        )
-
-    def test_fastapp_unit_services_rbac(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/fastapp/unit/services/rbac",
-            ]
-        )
-
-    def test_fastapp_unit_repository(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/fastapp/unit/repository",
-            ]
-        )
-
-    def test_fastapp_unit_repositories(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/fastapp/unit/repositories",
-            ]
-        )
-
-    def test_fastapp_performance(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/fastapp/performance",
-            ]
-        )
-
-    def test_fastapp_performance_repository(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/fastapp/performance/repository",
-            ]
-        )
-
-    def test_commondb_unit(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/commondb/unit/",
-            ]
-        )
-
-    def test_commondb_unit_auth(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/commondb/unit/auth/",
-            ]
-        )
-
-    def test_commondb_unit_config(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/commondb/unit/config/",
-            ]
-        )
-
-    def test_commondb_unit_logging(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/commondb/unit/logging/",
-            ]
-        )
-
-    def test_commondb_unit_upload(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/commondb/unit/upload/",
-            ]
-        )
-
-    def test_commondb_unit_policies(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/commondb/unit/policies/",
-            ]
-        )
-
-    def test_commondb_integration(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/commondb/integration/build_db",
-            ]
-        )
-
-    def test_commondb_integration_build_db(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/commondb/integration/build_db",
-            ]
-        )
-
-    def test_commondb_integration_metadata(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/commondb/integration/metadata",
-            ]
-        )
-
-    def test_commondb_integration_sql_injection(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS + ["test/commondb/integration/sql_injection"]
-        )
-
-    def test_casedb_unit(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/unit/",
-            ]
-        )
-
-    def test_casedb_unit_domain(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/unit/domain",
-            ]
-        )
-
-    def test_casedb_unit_services(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/unit/services",
-            ]
-        )
-
-    def test_casedb_unit_services_case(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/unit/services/case",
-            ]
-        )
-
-    def test_casedb_unit_services_case_upload(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/unit/services/case/upload",
-            ]
-        )
-
-    def test_unit_seqdb_remote_app(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + ["test/seqdb/unit/services/test_seqdb_remote_app.py"]
-        )
-
-    def test_casedb_integration(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/integration",
-            ]
-        )
-
-    def test_casedb_integration_build_db(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/integration/build_db",
-            ]
-        )
-
-    def test_casedb_integration_case_upload(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/integration/case_upload",
-            ]
-        )
-
-    def test_casedb_integration_content(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/integration/content",
-            ]
-        )
-
-    def test_casedb_integration_data_access(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/integration/data_access",
-            ]
-        )
-
-    def test_casedb_performance(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/performance",
-            ]
-        )
-
-    def test_casedb_performance_repository(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/performance/repository",
-            ]
-        )
-
-    def test_casedb_performance_user_journey(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/performance/user_journey",
-            ]
-        )
-
-    def test_casedb_performance_startup(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/performance/startup",
-            ]
-        )
-
-    def test_casedb_performance_retrieve_stats(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/performance/retrieve_stats",
-            ]
-        )
-
-    def test_casedb_custom(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/custom",
-            ]
-        )
-
-    def test_seqdb_unit(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/seqdb/unit",
-            ]
-        )
-
-    def test_seqdb_unit_domain(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/seqdb/unit/domain",
-            ]
-        )
-
-    def test_seqdb_unit_domain_models_for_upload(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/seqdb/unit/domain/models_for_upload",
-            ]
-        )
-
-    def test_seqdb_unit_services_seq_upload(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/seqdb/unit/services/seq/upload",
-            ]
-        )
-
-    def test_seqdb_unit_services_seq_calculate_seq_distance(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/seqdb/unit/services/seq/calculate_seq_distance",
-            ]
-        )
-
-    def test_seqdb_unit_services_seq_retrieve_best(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/seqdb/unit/services/seq/retrieve_best",
-            ]
-        )
-
-    def test_seqdb_integration(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/seqdb/integration",
-            ]
-        )
-
-    def test_seqdb_integration_build_db(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/seqdb/integration/build_db",
-            ]
-        )
-
-    def test_seqdb_integration_content(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/seqdb/integration/content",
-            ]
-        )
-
-    def test_seqdb_integration_retrieve_samples(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/seqdb/integration/retrieve_samples",
-            ]
-        )
-
-    def test_seqdb_performance_calculate_seq_distances(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + ["-m performance"]
-            + [
-                "test/seqdb/performance/calculate_seq_distances",
-            ]
-        )
-
-    def test_seqdb_performance_retrieve_similar_profiles(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/seqdb/performance/retrieve_similar_profiles",
-            ]
-        )
-
-    def test_omopdb_unit(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/omopdb/unit/",
-            ]
-        )
-
-    def test_omopdb_unit_domain(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/omopdb/unit/domain",
-            ]
-        )
-
-    def test_omopdb_unit_services(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/omopdb/unit/services",
-            ]
-        )
-
-    def test_omopdb_unit_services_omop(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/omopdb/unit/services/omop",
-            ]
-        )
-
-    def test_omopdb_unit_services_omop_upload(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/omopdb/unit/services/omop/upload",
-            ]
-        )
-
-    def test_omopdb_integration(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/omopdb/integration",
-            ]
-        )
-
-    def test_omopdb_integration_build_db(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/omopdb/integration/build_db",
-            ]
-        )
-
-    def test_omopdb_integration_retrieve_persons(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/omopdb/integration/retrieve_persons",
-            ]
-        )
-
-    def test_general_docs(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/general/docs",
-            ]
-        )
-
-    def test_general_code(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/general/code",
-            ]
-        )
-
-    def test_general_code_test_model_field_properties(self) -> None:
-
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/general/code/test_model_field_properties.py",
-            ]
-        )
-
-    def test_general_code_test_error_code_unicity(self) -> None:
-
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/general/code/test_error_code_unicity.py",
-            ]
-        )
-
-    def test_end_to_end(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/end_to_end/casedb_seqdb_connection",
-                "test/end_to_end/client_credential_flow",
-            ]
-        )
-
-    def test_end_to_end_casedb_seqdb_connection(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/end_to_end/casedb_seqdb_connection",
-            ]
-        )
-
-    def test_end_to_end_client_credential_flow(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/end_to_end/client_credential_flow",
-            ]
-        )
-
-    def test_test_client_authorization_code_flow(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/test_client/end_to_end/auth_code_flow/test_authorization_code_flow.py",
-            ]
-        )
+    def run_test(self, folders: str) -> None:
+        """Run tests in specified folder(s).
+
+        Args:
+            folders: Either a single folder path or JSON-encoded list of folder paths.
+                    Examples: "test/casedb" or '["test/casedb", "test/commondb"]'
+        """
+        import json
+
+        import pytest
+
+        # Try to parse as JSON (list of folders)
+        try:
+            folder_list = json.loads(folders)
+            if not isinstance(folder_list, list):
+                folder_list = [folders]
+        except (json.JSONDecodeError, TypeError):
+            # If not JSON, treat as single folder
+            folder_list = [folders]
+
+        pytest.main(Run.DEFAULT_PYTEST_ARGS + folder_list)
 
     ## Other
 
@@ -1000,12 +366,23 @@ class Run:
             Path(__file__).parent / "test" / "output" / f"linter.{now_str}.pylint.txt"
         )
         linter = Linter()
-        linter.run_pylint(file=file, filter_on_codes=filter_on_codes)
-        file2.write_text(file.read_text(encoding="utf-8"), encoding="utf-8")
+        output = linter.run_pylint(file=file, filter_on_codes=filter_on_codes)
+        file2.write_text(output, encoding="utf-8")
         for line in linter.parse_pylint_for_issue_lines(
             file, filter_on_codes=filter_on_codes
         ):
             print(line)
+
+    def other_general_run_ruff(self) -> None:
+        from test.test_client.linter import Linter
+
+        file = Path(__file__).parent / "test" / "output" / "linter.ruff.txt"
+        now_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        file2 = Path(__file__).parent / "test" / "output" / f"linter.{now_str}.ruff.txt"
+        linter = Linter()
+        output = linter.run_ruff(file=file)
+        file2.write_text(output, encoding="utf-8")
+        print(output, end="")
 
     def other_general_analyse_pylint_code_impact(self) -> None:
 
@@ -1074,6 +451,24 @@ class Run:
         from test.test_client.oauth.start_server import start_server
 
         start_server()
+
+    def other_graphify_update(self) -> None:
+        """Update the knowledge graph by running the graphify pipeline.
+
+        Runs graphify-out/graphify_update.py to regenerate the graph.json,
+        GRAPH_REPORT.md, and related artifacts in graphify-out/.
+
+        The script is idempotent and uses caching for performance.
+        """
+        import subprocess
+
+        script_path = Path(__file__).parent / "graphify-out" / "graphify_update.py"
+        result = subprocess.run(
+            [sys.executable, str(script_path)],
+            cwd=Path(__file__).parent,
+            capture_output=False,
+        )
+        sys.exit(result.returncode)
 
 
 if __name__ == "__main__":

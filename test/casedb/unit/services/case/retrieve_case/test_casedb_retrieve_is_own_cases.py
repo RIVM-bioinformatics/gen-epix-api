@@ -109,7 +109,7 @@ class BaseIsOwnCasesTestCase(TestCase):
             created_in_data_collection_id=(
                 created_in_data_collection_id or self.data_collection_id
             ),
-            count=None,
+            count=1,
             content={},
         )
 

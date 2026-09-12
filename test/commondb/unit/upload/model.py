@@ -10,7 +10,7 @@ from gen_epix.commondb.domain import model as commondb_model
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import UploadResult
 from gen_epix.commondb.services.upload import BatchUploader
-from gen_epix.fastapp.domain import Entity
+from gen_epix.fastapp.domain import Entity, create_links
 from gen_epix.fastapp.service import BaseService
 
 
@@ -111,13 +111,22 @@ class Child1(fastapp.Model):
 
 
 class Child2(fastapp.Model):
-    ENTITY: ClassVar = Entity(persistable=True, id_field_name="child2_id")
+    ENTITY: ClassVar = Entity(
+        persistable=True,
+        id_field_name="child2_id",
+        links=create_links({1: ("child1_id", Child1, None)}),
+    )
     NAME: ClassVar = "Child2"
     child2_id: UUID | None = Field(
         default=None, description="The ID of the child model."
     )
     parent_id: UUID = Field(description="The ID of the parent model.")
     ref2_id: UUID | None = Field(description="The ID of the Ref2 model.")
+    child1_id: UUID | None = Field(
+        default=None,
+        description="Optional link to a sibling Child1 in the same parent. Forces "
+        "Child1 to be uploaded before Child2.",
+    )
     a: str = Field(
         default="",
         description="A single value that can always be mutated after first storage.",
@@ -211,6 +220,9 @@ class ParentForUpload(commondb_model.ParentForUpload):
         Child1: "parent_id",
         Child2: "parent_id",
     }
+    CHILD_INTRA_PARENT_LINKS_MAP: ClassVar = {
+        Child2: [("child1_id", Child1)],
+    }
 
     parent: Parent | None = Field(
         default=None,
@@ -229,11 +241,14 @@ class ParentForUpload(commondb_model.ParentForUpload):
 class Child1UploadResult(commondb_model.UploadResult):
     """Result for uploading a single Child1 object."""
 
+    ID: ClassVar[str] = "f8d1e6a3"
     ENTITY: ClassVar = commondb_model.UploadResult.model_entity().clone()
     NAME: ClassVar = "Child1UploadResult"
 
 
 class ParentUploadResult(commondb_model.ParentUploadResult):
+
+    ID: ClassVar[str] = "6b4f92c7"
     ENTITY: ClassVar = commondb_model.ParentUploadResult.model_entity().clone()
     NAME: ClassVar = "ParentUploadResult"
     PARENT_FOR_UPLOAD_CLASS: ClassVar = ParentForUpload  # type: ignore[assignment]
@@ -261,6 +276,8 @@ class ParentBatchForUpload(commondb_model.BaseBatchForUpload):
 
 
 class ParentBatchUploadResult(commondb_model.BaseBatchUploadResult):
+
+    ID: ClassVar[str] = "a3e7f1b9"
     ENTITY: ClassVar = commondb_model.BaseBatchUploadResult.model_entity().clone()
     BATCH_FOR_UPLOAD_CLASS: ClassVar = ParentBatchForUpload  # type: ignore[assignment]
     PARENT_RESULT_CLASS: ClassVar = ParentUploadResult

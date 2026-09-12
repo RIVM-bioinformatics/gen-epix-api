@@ -1,3 +1,9 @@
+"""Retrieve cases and validate case-content query filters under ABAC constraints.
+
+The handlers return only cases and content visible to the acting user before applying
+case-set, content, date, and configured result-limit restrictions.
+"""
+
 import datetime
 from collections.abc import Callable, Iterable
 from decimal import Decimal
@@ -21,8 +27,22 @@ def case_service_retrieve_cases_by_query(
     """Retrieve case IDs for a query after ABAC, set, and content filtering.
 
     The command currently targets one case type and may include case-set and
-    column-content filters. Access checks are applied first, then case IDs are
-    limited by the configured maximum for that case type.
+    column-content filters. Access checks and content filtering are applied before
+    query matching, then case IDs are limited by the configured maximum. Filter keys
+    are normalized from strings to UUIDs in place.
+
+    Args:
+        self: Case service handling the query.
+        cmd: Query command containing case-type, set, date, and content restrictions.
+
+    Returns:
+        Matching accessible case IDs and a result-limit indicator.
+
+    Raises:
+        NotImplementedError: If an explicitly empty case-set selection is supplied.
+        UnauthorizedAuthError: If the user cannot read the case type or a requested
+            case set.
+        InvalidArgumentsError: If filter columns, members, or types are invalid.
     """
     # TODO: This is an inefficient call first loading all cases, then filtering them and then keeping only the ids. To be replaced by optimized query.
     user, repository = self._get_user_and_repository(cmd)
@@ -174,7 +194,17 @@ def _verify_filter_validity(
     case_query: model.CaseQuery,
     uow: BaseUnitOfWork,
 ) -> list[model.RefCol]:
-    """Validate filter keys and members and return matching reference columns."""
+    """Normalize and validate content-filter keys and members.
+
+    Args:
+        self: Case service used for metadata retrieval.
+        user: User whose command context is used for retrieval.
+        case_query: Query whose filter keys are converted to UUIDs in place.
+        uow: Active unit of work for metadata reads.
+
+    Returns:
+        Reference columns corresponding to filter order.
+    """
     assert case_query.filter is not None
     case_query.filter.set_keys(lambda x: UUID(x) if isinstance(x, str) else x)
     cols = _verify_case_filter(self, uow, user, case_query.filter)
@@ -189,7 +219,19 @@ def _verify_case_set_access(
     case_abac: model.CaseAbac,
     uow: BaseUnitOfWork,
 ) -> None:
-    """Ensure the user can read or write every requested case set."""
+    """Ensure the user can read or write every requested case set.
+
+    Args:
+        self: Case service used for access-filtered retrieval.
+        user: User whose case-set rights are checked.
+        case_set_ids: Requested case-set identifiers.
+        case_type_id: Required case type of the requested sets.
+        case_abac: Case access metadata used for retrieval.
+        uow: Active unit of work for access checks.
+
+    Raises:
+        UnauthorizedAuthError: If any requested case set is inaccessible.
+    """
     case_sets = self._retrieve_case_sets_with_content_right(
         uow,
         user.id,  # type: ignore[arg-type]
@@ -220,7 +262,26 @@ def case_service_retrieve_cases_by_id(
     cmd: command.RetrieveCasesByIdCommand,
     on_invalid_case_id: str = "raise",
 ) -> list[model.Case]:
-    """Retrieve cases by IDs with ABAC checks and per-case-type max limits."""
+    """Retrieve access-filtered cases by ID subject to case-type result limits.
+
+    Inaccessible content columns are removed from returned cases. Invalid or
+    unauthorized case IDs either raise or are ignored according to
+    ``on_invalid_case_id``.
+
+    Args:
+        self: Case service handling the retrieval.
+        cmd: Command containing case type and requested identifiers.
+        on_invalid_case_id: Whether invalid requested IDs raise or are ignored.
+
+    Returns:
+        Accessible cases, truncated to the configured case-type limit.
+
+    Raises:
+        InvalidArgumentsError: If the case type is invalid or invalid-ID handling is
+            unsupported.
+        UnauthorizedAuthError: If requested cases are inaccessible and raising is
+            configured.
+    """
     case_type_id = cmd.case_type_id
     case_ids = cmd.case_ids
     user, repository = self._get_user_and_repository(cmd)
@@ -274,7 +335,21 @@ def _verify_case_filter(
     user: model.User,
     composite_filter: CompositeFilter,
 ) -> list[model.RefCol]:
-    """Resolve filter column metadata and validate concept/region filter values."""
+    """Resolve filter metadata and validate concept and region members.
+
+    Args:
+        self: Case service used for metadata retrieval.
+        uow: Active unit of work for column reads.
+        user: User associated with reference-data commands.
+        composite_filter: Content filter to validate.
+
+    Returns:
+        Reference columns in the same order as filter columns.
+
+    Raises:
+        InvalidArgumentsError: If a set-backed column uses a non-string-set filter or
+            contains a member outside its configured domain.
+    """
     # Retrieve Cols corresponding to filter keys
     filter_col_ids = composite_filter.get_keys()
     filter_cols: list[model.Col] = self.repository.crud(
@@ -351,7 +426,16 @@ def _validate_filter_members(
     col: model.Col,
     valid_values: set[str],
 ) -> None:
-    """Raise an error when a StringSet filter contains values outside a domain."""
+    """Require every string-set filter member to belong to a valid domain.
+
+    Args:
+        stringset_filter: Filter whose members are validated case-insensitively.
+        col: Column used to identify an invalid filter in the error.
+        valid_values: Lowercase valid values for the column domain.
+
+    Raises:
+        InvalidArgumentsError: If any filter member is outside the valid domain.
+    """
     invalid_values = [
         str(x) for x in stringset_filter.members if str(x).lower() not in valid_values
     ]
@@ -413,7 +497,6 @@ def _get_map_functions_for_filters(
     ref_cols: Iterable[model.RefCol],
 ) -> list[Callable[[Any], Any]]:
     """Build value-normalization functions in the same order as filter columns."""
-
     # Check validity of filter and generate map_fns
     map_fns: list[Callable[[Any], Any]] = []
     for ref_col in ref_cols:
@@ -425,7 +508,15 @@ def _get_map_function_for_col(
     map_fns: list[Callable[[Any], Any]],
     ref_col: model.RefCol,
 ) -> None:
-    """Append a converter used to coerce filter values for one column type."""
+    """Append a value converter for one filter column type.
+
+    Args:
+        map_fns: Converter list to mutate in place.
+        ref_col: Reference column determining conversion behavior.
+
+    Raises:
+        InvalidArgumentsError: If the column type has no supported converter.
+    """
     mapping: dict[enum.ColType, Callable[[Any], Any]] = {
         enum.ColType.TIME_DAY: lambda x: (
             datetime.date.fromisoformat(x) if isinstance(x, str) else x

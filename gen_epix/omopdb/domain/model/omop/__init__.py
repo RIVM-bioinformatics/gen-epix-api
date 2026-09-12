@@ -1,3 +1,11 @@
+"""Expose OMOP clinical, ontology, metadata, upload, and result model types.
+
+Clinical models represent people and care events; ontology and metadata models
+define reference data; derived and health-system models represent aggregated
+and provider context. Upload and non-persistable models carry batch input and
+retrieval results, while `DataLineageMixin` adds provenance fields.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix.omopdb.domain.model.omop.base import DataLineageMixin as DataLineageMixin
 

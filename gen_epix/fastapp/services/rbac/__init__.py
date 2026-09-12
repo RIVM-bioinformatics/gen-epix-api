@@ -1,3 +1,5 @@
+"""Role-based access-control policy and service exports."""
+
 # pylint: disable=useless-import-alias
 from gen_epix.fastapp.services.rbac.policy import RbacPolicy as RbacPolicy
 from gen_epix.fastapp.services.rbac.service import BaseRbacService as BaseRbacService

@@ -1,3 +1,5 @@
+"""Resolve casedb attribute-based case and reference-data authorization."""
+
 from __future__ import annotations
 
 from typing import ClassVar
@@ -22,6 +24,13 @@ from gen_epix.util import map_paired_elements
 
 
 class AbacService(BaseAbacService):
+    """Encapsulates casedb ABAC policy registration and effective-rights lookup.
+
+    Case authorization intersects active organization and user policies by case
+    type and data collection. Reference-data authorization derives the metadata
+    visible through active organization policies. Cached results are invalidated
+    after commands that can change those effective rights.
+    """
 
     CACHE_INVALIDATION_COMMANDS: tuple[type[Command], ...] = (
         command.UserAccessCasePolicyCrudCommand,
@@ -34,6 +43,11 @@ class AbacService(BaseAbacService):
     _GET_REF_DATA_ACCESS_CACHE: ClassVar[TTLCache] = TTLCache(maxsize=1024, ttl=300)
 
     def _invalidate_cache(self, _cmd: Command) -> None:
+        """Clear inherited user caches and casedb effective-rights caches.
+
+        Args:
+            _cmd: Completed command that triggered cache invalidation.
+        """
         super()._invalidate_cache(_cmd)
         self._get_case_abac_cached.cache_clear()
         self._get_ref_data_access_cached.cache_clear()
@@ -46,6 +60,17 @@ class AbacService(BaseAbacService):
         read_organization_results_only_commands: set[type[Command]] | None = None,
         read_self_results_only_commands: set[type[Command]] | None = None,
     ) -> None:
+        """Register common ABAC policies and DURING-phase case authorization.
+
+        Args:
+            organization_admin_write_commands: Commands restricted to organization
+                administrators for writes.
+            read_user_commands: Commands allowed to read user information.
+            update_user_commands: Commands allowed to update user information.
+            read_organization_results_only_commands: Read commands whose results are
+                restricted to the user's organization scope.
+            read_self_results_only_commands: Read commands restricted to the user.
+        """
         super().register_policies(
             organization_admin_write_commands=organization_admin_write_commands,
             read_user_commands=read_user_commands,
@@ -59,6 +84,17 @@ class AbacService(BaseAbacService):
             f(command_class, policy, EventTiming.DURING)
 
     def get_case_abac(self, cmd: command.Command) -> model.CaseAbac:
+        """Return effective case rights for the command's authenticated user.
+
+        Args:
+            cmd: Command whose user determines the effective case rights.
+
+        Returns:
+            Cached intersection of organization and user case policies.
+
+        Raises:
+            UnauthorizedAuthError: If the command has no persisted user.
+        """
         if cmd.user is None or cmd.user.id is None:
             raise exc.UnauthorizedAuthError("94c7218c", "Command has no user")
         user_id = cmd.user.id
@@ -68,7 +104,8 @@ class AbacService(BaseAbacService):
         self,
         cmd: command.UpdateUserOwnOrganizationCommand,
     ) -> model.User:
-        """
+        """Move a user to an organization and replace their case policies.
+
         Behaviour:
         - Update User.organization
         - Create UserAccessCasePolicies for the user and their new organization, that
@@ -84,6 +121,15 @@ class AbacService(BaseAbacService):
           each CaseTypeSet and rights from the user's UserAccessCasePolicies from
           the previous organization. Analogous for OrganizationShareCasePolicy and
           UserShareCasePolicy.
+
+        Args:
+            cmd: Organization update command carrying the target organization.
+
+        Returns:
+            The updated user, or the original user when no change is required.
+
+        Raises:
+            FeatureDisabledServiceError: If own-organization updates are disabled.
         """
         if not self.app.get_feature_flag("update_own_organization"):
             raise exc.FeatureDisabledServiceError(
@@ -220,6 +266,19 @@ class AbacService(BaseAbacService):
         self,
         user_id: UUID,
     ) -> model.CaseAbac:
+        """Compute effective case rights for a persisted user.
+
+        Application administrators receive full access. Other users receive only
+        rights present in both their active user policies and their organization's
+        active policies, with column rights limited to the case type's columns.
+
+        Args:
+            user_id: Identifier of the user whose rights are resolved.
+
+        Returns:
+            Effective case access and sharing rights grouped by case type and data
+            collection.
+        """
         user = self._get_user_by_id_cached(user_id)
         organization_id = user.organization_id
         # @ABAC: Special case: user has full access, defined as all active private data collection policies and all active organization access and share case policies
@@ -389,9 +448,22 @@ class AbacService(BaseAbacService):
         col_map: dict[UUID, set[UUID]],
         col_set_member_map: dict[UUID, set[UUID]],
     ) -> dict[UUID, dict[UUID, model.CaseTypeAccessAbac]]:
+        """Expand access policies into rights by case type and data collection.
+
+        Args:
+            case_policies: Organization or user access policies to expand.
+            case_type_set_member_map: Case types belonging to each case type set.
+            col_map: Columns belonging to each case type.
+            col_set_member_map: Columns belonging to each column set.
+
+        Returns:
+            Expanded access rights keyed by case type and data collection.
+        """
+
         def _get_col_ids(
             col_set_id: UUID | None,
         ) -> set[UUID]:
+            """Return column IDs in a configured set, or an empty set."""
             return col_set_member_map.get(col_set_id, set()) if col_set_id else set()
 
         dict_: dict[UUID, dict[UUID, model.CaseTypeAccessAbac]] = {}
@@ -429,6 +501,18 @@ class AbacService(BaseAbacService):
         col_map: dict[UUID, set[UUID]],
         col_set_member_map: dict[UUID, set[UUID]],
     ) -> dict[UUID, dict[UUID, model.CaseTypeAccessAbac]]:
+        """Intersect organization and user case-access rights.
+
+        Args:
+            organization_access_case_policies: Organization-level access limits.
+            user_access_case_policies: User-level access limits.
+            case_type_set_member_map: Case types belonging to each case type set.
+            col_map: Columns belonging to each case type.
+            col_set_member_map: Columns belonging to each column set.
+
+        Returns:
+            Nonempty rights shared by both policy levels.
+        """
         dict1: dict[UUID, dict[UUID, model.CaseTypeAccessAbac]] = (
             AbacService._get_access_dict(
                 organization_access_case_policies,  # type: ignore[arg-type]
@@ -483,6 +567,15 @@ class AbacService(BaseAbacService):
         ],
         case_type_set_member_map: dict[UUID, set[UUID]],
     ) -> dict[UUID, dict[UUID, model.CaseTypeShareAbac]]:
+        """Expand sharing policies into rights by case type and destination.
+
+        Args:
+            case_policies: Organization or user sharing policies to expand.
+            case_type_set_member_map: Case types belonging to each case type set.
+
+        Returns:
+            Sharing rights keyed by case type and destination data collection.
+        """
         dict_: dict[UUID, dict[UUID, model.CaseTypeShareAbac]] = {}
         for policy in case_policies:
             # Create CaseType share abac object for each CaseType id
@@ -520,6 +613,18 @@ class AbacService(BaseAbacService):
         case_type_id: UUID,
         case_type_share_abac: model.CaseTypeShareAbac,
     ) -> model.CaseTypeShareAbac:
+        """Apply one policy's enabled sharing rights to an aggregate.
+
+        Args:
+            policy: Sharing policy whose enabled rights are applied.
+            data_collection_id: Destination data collection for the aggregate.
+            from_data_collection_id: Source data collection granted by the policy.
+            case_type_id: Case type represented by the aggregate.
+            case_type_share_abac: Mutable aggregate to update.
+
+        Returns:
+            The same aggregate after applying the policy rights.
+        """
         if policy.add_case:
             case_type_share_abac.add_case_from_data_collection_ids.add(
                 from_data_collection_id
@@ -545,6 +650,16 @@ class AbacService(BaseAbacService):
         user_share_case_policies: list[model.UserShareCasePolicy],
         case_type_set_member_map: dict[UUID, set[UUID]],
     ) -> dict[UUID, dict[UUID, model.CaseTypeShareAbac]]:
+        """Intersect organization and user case-sharing rights.
+
+        Args:
+            organization_share_case_policies: Organization-level sharing limits.
+            user_share_case_policies: User-level sharing limits.
+            case_type_set_member_map: Case types belonging to each case type set.
+
+        Returns:
+            Nonempty sharing rights shared by both policy levels.
+        """
         dict1: dict[UUID, dict[UUID, model.CaseTypeShareAbac]] = (
             AbacService._get_share_dict(
                 organization_share_case_policies,  # type: ignore[arg-type]
@@ -591,6 +706,17 @@ class AbacService(BaseAbacService):
         return dict3
 
     def get_ref_data_access(self, cmd: command.Command) -> model.RefDataAccess:
+        """Return the reference-data scope for the command user.
+
+        Unauthenticated internal commands receive unrestricted access. Authenticated
+        users receive their cached role- and organization-derived scope.
+
+        Args:
+            cmd: Command whose user determines reference-data visibility.
+
+        Returns:
+            Effective reference-data access for the command.
+        """
         user = cmd.user
         if user is None:
             return model.RefDataAccess(
@@ -608,7 +734,19 @@ class AbacService(BaseAbacService):
 
     @cached(cache=_GET_REF_DATA_ACCESS_CACHE, key=lambda self, user: user.id)
     def _get_ref_data_access_cached(self, user: model.User) -> model.RefDataAccess:
+        """Compute reference-data access from roles and organization policies.
 
+        Reference-data administrators receive full access. Organization
+        administrators include every organization covered by an active admin policy;
+        other users use only their own organization. Visible case types, columns, and
+        dimensions are then derived from active organization case policies.
+
+        Args:
+            user: Persisted user whose scope is resolved.
+
+        Returns:
+            Effective reference-data access identifiers for the user.
+        """
         if not self.role_set_map[CommonRoleSet.GE_REFDATA_ADMIN].isdisjoint(user.roles):
             # REFDATA_ADMIN or above has full access, return unrestricted
             # (the is_full_access check in individual handlers will handle this)

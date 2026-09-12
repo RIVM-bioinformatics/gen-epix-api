@@ -1,112 +1,30 @@
 # Gen-EpiX Copilot Instructions
 
-Always preserve these repository invariants. Use task prompts for output
-format, planning style, and detailed workflow guidance.
+Follow [AGENTS.md](../AGENTS.md) for the shared repository-wide invariants.
+That file is the source of truth; do not maintain a second copy here. When a
+path-specific file under `.github/instructions/` applies, follow it in addition
+to `AGENTS.md`.
 
-## Source of Truth
+## VS Code code-review compatibility
 
-- Docs guide; code decides.
-- If task-relevant docs and code conflict, report both: "Docs say X, code shows Y."
-  Recommend whether docs or code should change.
-- Treat doc creation dates only as hints for which docs to inspect first.
-  Verify claims in code or config before relying on them.
-- Do not invent endpoints, ports, config keys, roles, module ownership,
-  domain rules, or replacements for missing symbols.
-- If a referenced path, symbol, config key, endpoint, role, or command is
-  missing, use targeted search and report it under
-  `### Suspected Stale Documentation` with concise search evidence.
+VS Code Copilot code review consumes this file but does not currently list
+`AGENTS.md` as a supported instruction source. The following minimal fallback
+is intentionally duplicated for that surface; `AGENTS.md` remains authoritative:
 
-## Architecture
+- Treat current source, configuration, tests, and workflows as stronger evidence
+  than prose. Keep changes and review advice focused on the requested scope.
+- Preserve the architecture boundaries: routes are transport adapters, business
+  rules belong in commands, policies, or services, persistence stays behind
+  repository interfaces, and authorization remains in `App.handle()` policy
+  phases rather than FastAPI handlers.
+- Preserve behavior across `DICT`, `SA_SQLITE`, and `SA_SQL` repositories unless
+  a backend-specific difference is justified. Do not treat the no-IDP `NONE`
+  mode as production-equivalent authentication.
+- Require focused tests or other targeted verification for affected behavior.
+  For authorization or repository changes, check policy-phase/security impact
+  and backend parity respectively.
 
-- Business logic must not live in API routes.
-- API routes are transport only: parse requests, construct a `Command`,
-  call `app.handle(command)`, and return the result.
-- Do not call repositories directly from routes.
-- Do not enforce RBAC or ABAC in FastAPI handlers.
-- Do not add domain rules in API handlers.
-- Justify exceptions for tests, ETL/CLI code, bootstrapping, or migrations.
+## Copilot-specific behavior
 
-Layer ownership:
-
-- `api/`: transport only
-- `domain/`: domain objects, commands, permissions, and base classes
-- `policies/`: policy implementations
-- `services/`: service implementations
-- `repositories/`: persistence implementations
-
-Policies run in the command lifecycle: BEFORE, DURING, or AFTER.
-
-When changing behavior, identify the command involved. State role, RBAC/ABAC,
-and BEFORE/DURING/AFTER impact only when changed or when a risk exists.
-
-## Security
-
-- Supported IDP modes are `IDPS`, `MOCK`, and `NONE`.
-- `NONE` mode changes trust posture through root fallback.
-- When changing auth dependencies, user resolution, IDP configuration, or root
-  behavior, state the implications for `NONE`, root users, and OIDC-only
-  assumptions.
-- Never weaken security implicitly.
-
-## Repositories
-
-- Repository behavior must remain equivalent across `DICT`, `SA_SQLITE`, and
-  `SA_SQL`.
-- If repository logic changes, update the relevant DICT and SQL
-  implementations or justify why parity is unaffected.
-- Do not introduce SQL-only behavior without justification.
-
-## Routers
-
-- Routers must mount under `/v1`.
-- Avoid duplicate router registration.
-- Ensure OpenAPI reflects router changes.
-- Endpoints must delegate to commands.
-
-## Application Domains
-
-- Application domains are `casedb`, `seqdb`, `omopdb`, and `commondb`.
-- `commondb` provides shared models and cross-cutting services.
-- In production, cross-domain communication uses HTTP, not direct imports.
-- Before adding a new HTTP pattern, use targeted search for existing client
-  abstractions and reuse precedent where it exists.
-
-## Configuration
-
-- Configuration is Dynaconf-based.
-- Settings are discovered through the environment stack.
-- Repository type is config-driven.
-- Do not hardcode config paths.
-- Do not assume ports; verify them in config.
-
-## Agent Workflow
-
-- Optimize for correctness first and token efficiency second.
-- Prefer Ask or Plan mode before Agent mode for unclear investigations.
-- Read targeted files first; expand to related commands, policies,
-  repositories, routers, config, and tests when the change crosses those
-  boundaries.
-- Avoid broad workspace scans when file, symbol, or path searches suffice.
-- Keep diffs focused and avoid unrelated refactors.
-- Use targeted tests before full suites when appropriate.
-- When a command failure blocks or materially affects the result, report the
-  command, exit code, first error block, and last relevant lines instead of
-  full logs.
-
-## graphify
-
-For any question about this repo's architecture, structure, components, or how to add/modify/find
-code, your first action should be `graphify query "<question>"` when `graphify-out/graph.json`
-exists. Use `graphify path "<A>" "<B>"` for relationship questions and `graphify explain "<concept>"`
-for focused-concept questions. These return a scoped subgraph, usually much smaller than the full
-report or raw grep output.
-
-Triggers: "how do I…", "where is…", "what does … do", "add/modify a <component>",
-"explain the architecture", or anything that depends on how files or classes relate.
-
-If `graphify-out/wiki/index.md` exists, use it for broad navigation. Read `graphify-out/GRAPH_REPORT.md`
-only for broad architecture review or when query/path/explain do not surface enough context. Only read
-source files when (a) modifying/debugging specific code, (b) the graph lacks the needed detail, or
-(c) the graph is missing or stale.
-
-Type `/graphify` in Copilot Chat to build or update the graph.
+- Type `/graphify` in Copilot Chat to build or update the graph. When a graph
+  already exists, follow the shared Graphify workflow in `AGENTS.md`.

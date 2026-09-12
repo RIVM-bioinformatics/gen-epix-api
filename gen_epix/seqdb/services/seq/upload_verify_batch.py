@@ -1,11 +1,13 @@
+"""Implement seqdb sequence service behavior for services.seq.upload_verify_batch."""
+
 from collections import defaultdict
 from typing import cast
 from uuid import UUID
 
 from gen_epix import fastapp
-from gen_epix.commondb.domain.enum import EtlStatus
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.services import BatchUploader
+from gen_epix.etl.enum import EtlStatus
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.filter.uuid_set import UuidSetFilter
 from gen_epix.seqdb.domain import command, enum, model
@@ -23,7 +25,7 @@ def _verify_sample_children(
     batch_result: model.SampleBatchUploadResult,
     uow: fastapp.BaseUnitOfWork,
 ) -> bool:
-    """Check child model existence and consistency"""
+    """Check child model existence and consistency."""
     success = True
     # Generic child model verifications
     success &= self.verify_children(
@@ -32,7 +34,9 @@ def _verify_sample_children(
         uow,
     )
 
-    # Child model specific verifications
+    # Child model specific verifications, run seqs first so that seq_classifications
+    # and seq_profiles can resolve their seq_id links (same dependency order as
+    # SampleForUpload.CHILD_ORDER).
     success &= _verify_children_seqs(self, cmd, batch_result, uow)
     success &= _verify_children_seq_classifications(self, cmd, batch_result, uow)
     success &= _verify_children_seq_profiles(self, cmd, batch_result, uow)
@@ -47,7 +51,21 @@ def _verify_protocol(
     uow: fastapp.BaseUnitOfWork,
     child_model_class: type[model.Model],
 ) -> bool:
-    """Verify that protocols provided by ID or code exist, and resolve codes to IDs."""
+    """Verify and resolve child protocol IDs or codes in an upload batch.
+
+    Args:
+        self: Batch uploader providing linked-record validation.
+        cmd: Upload command whose child records are validated.
+        batch_result: Result collection updated with validation errors.
+        uow: Active persistence unit of work.
+        child_model_class: Child model type with protocol references.
+
+    Returns:
+        Whether all supplied protocol references are valid.
+
+    Raises:
+        ValueError: Child model metadata does not define a protocol field mapping.
+    """
     children_field_name = model.SampleForUpload.CHILDREN_FIELD_NAME_MAP[
         child_model_class
     ]
@@ -127,8 +145,8 @@ def _verify_children_seqs(
     batch_result: model.SampleBatchUploadResult,
     uow: fastapp.BaseUnitOfWork,
 ) -> bool:
-    """
-    Verify Seq specific rules:
+    """Verify Seq-specific rules.
+
     1. Replace protocol code by ID when only code is provided, and verify that the
        referenced Protocol exists and has the correct protocol_type.
     2. Verify that read_set_id and read_set2_id link to a ReadSet within the same
@@ -309,8 +327,8 @@ def _verify_children_seq_classifications(
     batch_result: model.SampleBatchUploadResult,
     uow: fastapp.BaseUnitOfWork,
 ) -> bool:
-    """
-    Verify SeqClassification specific rules:
+    """Verify SeqClassification-specific rules.
+
     1. Replace protocol code by ID when only code is provided, and verify that the
        referenced Protocol exists and has the correct protocol_type.
     2. Verify that seq_id links to a Seq within the same sample.
@@ -498,8 +516,8 @@ def _verify_children_seq_profiles(
     batch_result: model.SampleBatchUploadResult,
     uow: fastapp.BaseUnitOfWork,
 ) -> bool:
-    """
-    Verify SeqProfile specific rules:
+    """Verify SeqProfile-specific rules.
+
     1. Replace protocol code by ID when only code is provided, and verify that the
        referenced Protocol exists and has the correct protocol_type.
     2. Verify that seq_id links to a Seq within the same sample.
@@ -687,9 +705,7 @@ def _verify_sample_refdata(
     batch_result: model.SampleBatchUploadResult,
     uow: fastapp.BaseUnitOfWork,
 ) -> bool:
-    """
-    Verify and complete reference data.
-    """
+    """Verify and complete reference data."""
     success = True
     # Read sets: nothing to do
     # Sequences: nothing to do

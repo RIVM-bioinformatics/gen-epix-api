@@ -1,3 +1,5 @@
+"""Apply commondb audit metadata rules to in-memory persisted models."""
+
 import datetime
 from collections.abc import Callable, Hashable
 from functools import partial
@@ -10,7 +12,7 @@ from gen_epix.fastapp.repositories.dict.modifier import BaseDictModelModifier
 
 class CommondbDictModelModifier(BaseDictModelModifier):
     """
-    DictRepository modifier for all databases that use RowMetadataMixin.
+    Encapsulates a DictRepository modifier for all databases that use RowMetadataMixin.
 
     Mirrors CommondbSAMapper's create/update semantics for the dict backend:
     - on_create : stamps created_at and modified_at with current time;
@@ -26,9 +28,20 @@ class CommondbDictModelModifier(BaseDictModelModifier):
             datetime.datetime.now, datetime.timezone.utc
         ),
     ) -> None:
+        """Initialize the source of timezone-aware audit timestamps.
+
+        Args:
+            timestamp_factory: Callable that returns the current audit timestamp.
+        """
         self._timestamp_factory = timestamp_factory
 
     def on_create(self, user_id: Hashable | None, obj: Model) -> None:
+        """Stamp a new commondb model with creation and modification metadata.
+
+        Args:
+            user_id: ID of the user creating the model, if known.
+            obj: New persisted domain model to modify in place.
+        """
         assert user_id is None or isinstance(user_id, UUID)
         assert isinstance(obj, ModelNoId)
         now = self._timestamp_factory()
@@ -39,6 +52,13 @@ class CommondbDictModelModifier(BaseDictModelModifier):
     def on_update(
         self, user_id: Hashable | None, obj: Model, stored_obj: Model
     ) -> None:
+        """Refresh modification metadata while preserving the stored creation time.
+
+        Args:
+            user_id: ID of the user updating the model, if known.
+            obj: Incoming domain model to modify in place.
+            stored_obj: Existing persisted model that provides its creation timestamp.
+        """
         assert user_id is None or isinstance(user_id, UUID)
         assert isinstance(obj, ModelNoId)
         assert isinstance(stored_obj, ModelNoId)

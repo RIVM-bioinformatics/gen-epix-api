@@ -1,3 +1,10 @@
+"""Compute effective case and case-set rights from resolved ABAC records.
+
+Access records grant rights within collections where an item is present. Share
+records grant add or remove rights on a target collection when the item is present
+in at least one configured source collection.
+"""
+
 from collections.abc import Callable
 from uuid import UUID
 
@@ -9,6 +16,8 @@ from gen_epix.fastapp import exc
 
 
 class CaseTypeAccessAbac(BaseModel):
+    """Represents effective access rights for one case type and data collection."""
+
     case_type_id: UUID = Field(description="The ID of the CaseType")
     data_collection_id: UUID = Field(description="The ID of the data collection")
     is_private: bool = Field(
@@ -40,9 +49,7 @@ class CaseTypeAccessAbac(BaseModel):
     )
 
     def has_any_rights(self) -> bool:
-        """
-        Determine if at least one of the rights is set.
-        """
+        """Return whether at least one access right is granted."""
         return (
             self.add_case
             or self.remove_case
@@ -56,6 +63,8 @@ class CaseTypeAccessAbac(BaseModel):
 
 
 class CaseTypeShareAbac(BaseModel):
+    """Represents source-dependent share rights into one target collection."""
+
     case_type_id: UUID = Field(description="The ID of the CaseType")
     data_collection_id: UUID = Field(description="The ID of the data collection")
     add_case_from_data_collection_ids: set[UUID] = Field(
@@ -72,9 +81,7 @@ class CaseTypeShareAbac(BaseModel):
     )
 
     def has_any_rights(self) -> bool:
-        """
-        Determine if at least one of the rights is set.
-        """
+        """Return whether at least one source collection grants a share right."""
         return (
             len(self.add_case_from_data_collection_ids) > 0
             or len(self.remove_case_from_data_collection_ids) > 0
@@ -84,6 +91,8 @@ class CaseTypeShareAbac(BaseModel):
 
 
 class CaseAbac(BaseModel):
+    """Represents a user's effective case ABAC rights grouped by case type."""
+
     is_full_access: bool = Field(
         description="Whether the user has full access, i.e. is not limited by any ABAC policies. If so, the other fields are empty and are to be ignored."
     )
@@ -101,14 +110,19 @@ class CaseAbac(BaseModel):
         created_in_data_collection_id: UUID,
         data_collection_ids: set[UUID],
     ) -> CaseRights:
-        """
-        Get the CaseRights for the given case.
+        """Return effective rights for a case in its current collections.
 
-        Arguments:
+        Args:
             case_id: The ID of the case.
             case_type_id: The ID of the CaseType that the case belongs to.
-            created_in_data_collection_id: The ID of the data collection where the case was created.
-            data_collection_ids: The IDs of the data collections in which the case is currently shared.
+            created_in_data_collection_id: The collection where the case was
+                created.
+            data_collection_ids: Collections containing the case, including its
+                creation collection.
+
+        Returns:
+            Rights aggregated from applicable access and source-to-target share
+            records.
         """
         case_rights: CaseRights = (
             self._get_case_or_set_rights(  # type: ignore[assignment]
@@ -128,14 +142,19 @@ class CaseAbac(BaseModel):
         created_in_data_collection_id: UUID,
         data_collection_ids: set[UUID],
     ) -> CaseSetRights:
-        """
-        Get the CaseSetRights for the given case set.
+        """Return effective rights for a case set in its current collections.
 
-        Arguments:
+        Args:
             case_set_id: The ID of the case set.
             case_type_id: The ID of the CaseType that the case set belongs to.
-            created_in_data_collection_id: The ID of the data collection where the case set was created.
-            data_collection_ids: The IDs of the data collections in which the case set is currently shared.
+            created_in_data_collection_id: The collection where the case set was
+                created.
+            data_collection_ids: Collections containing the case set, including its
+                creation collection.
+
+        Returns:
+            Rights aggregated from applicable access and source-to-target share
+            records.
         """
         case_set_rights: CaseSetRights = (
             self._get_case_or_set_rights(  # type: ignore[assignment]
@@ -149,9 +168,10 @@ class CaseAbac(BaseModel):
         return case_set_rights
 
     def get_combinations_with_any_rights(self) -> dict[UUID, set[UUID]]:
-        """
-        Get the dict[case_type_id, set[data_collection_ids]] combinations for which
-        there is any access or share right. The sets are guaranteed to be non-empty.
+        """Return case-type and target-collection pairs with any effective right.
+
+        The returned collection sets are non-empty and include targets with an
+        access or source-dependent share right.
         """
         case_type_data_collections_map: dict[UUID, set[UUID]] = {}
         for (
@@ -187,9 +207,9 @@ class CaseAbac(BaseModel):
         self,
         right: CaseRight,
     ) -> dict[UUID, set[UUID]]:
-        """
-        Get the dict[case_type_id, set[data_collection_ids]] combinations for which
-        there is the given right. The sets are guaranteed to be non-empty.
+        """Return case-type and collection pairs granting an access right.
+
+        The returned collection sets are non-empty. Share rights are not considered.
         """
         retval = {}
         has_right_fn = self._get_has_right_function(right)
@@ -200,10 +220,7 @@ class CaseAbac(BaseModel):
         return retval
 
     def get_case_types_with_any_rights(self) -> set[UUID]:
-        """
-        Get the set[case_type_id] for which there is any access or share right in at
-        least one of the data collections.
-        """
+        """Return case types with any access or share right in any collection."""
         retval = set()
         for (
             case_type_id,
@@ -226,10 +243,7 @@ class CaseAbac(BaseModel):
         return retval
 
     def get_case_types_with_access_right(self, right: CaseRight) -> set[UUID]:
-        """
-        Get the set[case_type_id] for which there is the given right in at least one of
-        the data collections.
-        """
+        """Return case types granting an access right in at least one collection."""
         retval = set()
         has_right_fn = self._get_has_right_function(right)
         for case_type_id, data in self.case_type_access_abacs.items():
@@ -239,9 +253,10 @@ class CaseAbac(BaseModel):
         return retval
 
     def get_cols_with_any_rights(self, case_type_id: UUID | None = None) -> set[UUID]:
-        """
-        Get the set[col_id] for which there is any read or write access in at
-        least one of the data collections. Optionally limited to the given CaseType.
+        """Return columns with read or write access in any collection.
+
+        Results can be limited to one case type. Share rights do not grant column
+        access and are not considered.
         """
         col_ids: set[UUID] = set()
         if case_type_id is not None:
@@ -261,9 +276,10 @@ class CaseAbac(BaseModel):
     def get_cols_with_access_rights(
         self, right: CaseRight, case_type_id: UUID | None = None
     ) -> set[UUID]:
-        """
-        Get the set[col_id] for which there is any read or write access in at
-        least one of the data collections. Optionally limited to the given CaseType.
+        """Return columns granting the requested read or write access right.
+
+        Results can be limited to one case type and are unioned across its access
+        collections.
         """
         col_ids: set[UUID] = set()
         if case_type_id is not None:
@@ -277,8 +293,10 @@ class CaseAbac(BaseModel):
         return col_ids
 
     def get_data_collections_with_any_rights(self) -> set[UUID]:
-        """
-        Get the set[data_collection_id] for which there is any access or share right.
+        """Return all collections participating in any access or share right.
+
+        For share rights, both target collections and configured source collections
+        are returned.
         """
         data_collection_ids: set[UUID] = set()
         # Check access case rights
@@ -313,9 +331,18 @@ class CaseAbac(BaseModel):
     def get_data_collections_with_access_right_for_col(
         self, col_id: UUID, right: CaseRight
     ) -> set[UUID]:
-        """
-        Get the set[data_collection_id] for which there is the given right on the
-        given Col.
+        """Return collections granting a read or write right on a column.
+
+        Args:
+            col_id: Column whose access collections are requested.
+            right: ``READ_CASE`` or ``WRITE_CASE``.
+
+        Returns:
+            Data collection IDs granting the requested column right across all case
+            types.
+
+        Raises:
+            InvalidArgumentsError: If ``right`` is not a case read or write right.
         """
         if right == CaseRight.READ_CASE:
             return {
@@ -343,9 +370,10 @@ class CaseAbac(BaseModel):
         access: dict[UUID, CaseTypeAccessAbac],
         is_own_private: bool,
     ) -> set[UUID]:
-        """
-        Get the IDs of the data collections from which the case or case set can be
-        removed.
+        """Return current collections removable through private-owner access.
+
+        Direct access contributes removal rights only when the item was created in a
+        private collection controlled by the user. Share rights are added separately.
         """
         remove_data_collection_ids: set[UUID] = (
             {
@@ -367,9 +395,10 @@ class CaseAbac(BaseModel):
         access: dict[UUID, CaseTypeAccessAbac],
         is_own_private: bool,
     ) -> set[UUID]:
-        """
-        Get the IDs of the data collections to which the case or case set can be
-        added.
+        """Return absent collections addable through private-owner access.
+
+        Direct access contributes add rights only when the item was created in a
+        private collection controlled by the user. Share rights are added separately.
         """
         add_data_collection_ids: set[UUID] = (
             {
@@ -393,15 +422,29 @@ class CaseAbac(BaseModel):
         current_data_collection_ids: set[UUID] | None = None,
         tgt_data_collection_ids: set[UUID] | None = None,
     ) -> bool:
-        """
-        Determine if the given right is allowed for the given CaseType and data
-        collections. This covers the following rights:
-        - ADD_CASE/SET: create a case or case set and/or add it to all the given data
-          collections
-        - REMOVE_CASE/SET: delete a case or case set and/or remove it from all the
-          given data collections
-        - READ/WRITE_CASE/SET: read a case or case set from at least one of the given
-          data collections
+        """Return whether a right is allowed for the requested collection change.
+
+        Add and remove operations must be allowed for every applicable target.
+        Content access succeeds when at least one current collection grants it. A
+        create or delete additionally requires access to the private creation
+        collection. Full access bypasses these checks.
+
+        Args:
+            case_type_id: Case type to which the item belongs.
+            created_in_data_collection_id: Collection where the item was created.
+            right: Case or case-set operation to authorize.
+            is_create_or_delete: Whether the operation creates or deletes the item,
+            rather than only changing sharing or accessing content.
+            current_data_collection_ids: Collections currently containing the item.
+            tgt_data_collection_ids: Collections to add to or remove from.
+
+        Returns:
+            Whether the requested operation is authorized.
+
+        Raises:
+            InvalidArgumentsError: If the right is unsupported or its collection
+            arguments are inconsistent with the requested operation.
+            NotImplementedError: If a recognized right has no access/share mapping.
         """
         # Special case: full access
         if self.is_full_access:
@@ -456,9 +499,22 @@ class CaseAbac(BaseModel):
         current_data_collection_ids: set[UUID],
         tgt_data_collection_ids: set[UUID],
     ) -> bool:
-        """
-        Determine if the case or case set content can be accessed from at least one of
-        the current data collections.
+        """Return whether any current collection grants the content right.
+
+        Args:
+            right: Read or write right to test.
+            access_abac: Effective access records keyed by collection ID.
+            is_create_or_delete: Must be ``False`` for content access.
+            current_data_collection_ids: Collections currently containing the item.
+            tgt_data_collection_ids: Must be empty for content access.
+
+        Returns:
+            Whether at least one current collection grants the right.
+
+        Raises:
+            InvalidArgumentsError: If content access is combined with create/delete
+                mode or target collections.
+            NotImplementedError: If ``right`` has no access mapping.
         """
         if is_create_or_delete:
             raise exc.InvalidArgumentsError(
@@ -482,7 +538,19 @@ class CaseAbac(BaseModel):
     def _update_access_rights(
         self, right: CaseRight, retval: set[UUID], data: dict[UUID, CaseTypeAccessAbac]
     ) -> set[UUID]:
-        """Helper to update the set of Col IDs based on the given right."""
+        """Add columns granting the requested access right to a set in place.
+
+        Args:
+            right: ``READ_CASE`` or ``WRITE_CASE``.
+            retval: Set to mutate with matching column IDs.
+            data: Access records to aggregate.
+
+        Returns:
+            The same mutated ``retval`` set.
+
+        Raises:
+            InvalidArgumentsError: If ``right`` is not a case read or write right.
+        """
         for access_abac in data.values():
             if right == CaseRight.READ_CASE:
                 retval.update(access_abac.read_col_ids)
@@ -500,9 +568,19 @@ class CaseAbac(BaseModel):
         created_in_data_collection_id: UUID,
         access_abac: dict[UUID, CaseTypeAccessAbac],
     ) -> bool:
-        """
-        Validate that the creation or deletion in a private data collection is
-        allowed.
+        """Return whether creation or deletion uses an accessible private collection.
+
+        Args:
+            right: Create or delete right being evaluated.
+            created_in_data_collection_id: Collection where the item is created.
+            access_abac: Effective access records keyed by collection ID.
+
+        Returns:
+            ``True`` for an accessible private creation collection; ``False`` when
+            access is absent or the collection is not private.
+
+        Raises:
+            InvalidArgumentsError: If the creation collection is not provided.
         """
         if created_in_data_collection_id is None:
             raise exc.InvalidArgumentsError(
@@ -526,9 +604,7 @@ class CaseAbac(BaseModel):
         share_abac: dict[UUID, CaseTypeShareAbac],
         current_data_collection_ids: set[UUID],
     ) -> bool:
-        """
-        Check if there is either access or share right for the given data collection.
-        """
+        """Return whether a target grants direct access or source-based sharing."""
         has_right_fn = self._get_has_right_function(right)
         get_share_from_data_collections_fn = (
             self._get_get_share_from_data_collections_function(right)
@@ -563,8 +639,29 @@ class CaseAbac(BaseModel):
         current_data_collection_ids: set[UUID],
         tgt_data_collection_ids: set[UUID],
     ) -> bool:
-        """
-        Determine if the case or case set can be added to all the target data collections
+        """Return whether an item can be added to every applicable target.
+
+        The creation collection and collections already containing the item are
+        excluded from target checks. Source matching uses a local set augmented with
+        the creation collection and does not mutate caller-owned sets.
+
+        Args:
+            right: Case or case-set add right to evaluate.
+            access_abac: Effective access records keyed by target collection ID.
+            share_abac: Effective share records keyed by target collection ID.
+            is_create_or_delete: Whether this add creates the item.
+            created_in_data_collection_id: Collection where the item is created.
+            current_data_collection_ids: Collections currently containing the item.
+            tgt_data_collection_ids: Requested target collections.
+
+        Returns:
+            Whether every applicable target grants direct access or a share right
+            from a current source collection.
+
+        Raises:
+            InvalidArgumentsError: If creation has no creation collection or is
+                supplied with current collections.
+            NotImplementedError: If ``right`` has no access or share mapping.
         """
         # Check if the case or case set can be added to all the target data collections
         if is_create_or_delete:
@@ -610,6 +707,30 @@ class CaseAbac(BaseModel):
         current_data_collection_ids: set[UUID],
         tgt_data_collection_ids: set[UUID],
     ) -> bool:
+        """Return whether an item can be removed from every applicable target.
+
+        Deletion evaluates every current collection as a target after validating the
+        private creation collection. The creation collection itself is excluded from
+        share checks.
+
+        Args:
+            right: Case or case-set remove right to evaluate.
+            access_abac: Effective access records keyed by target collection ID.
+            share_abac: Effective share records keyed by target collection ID.
+            is_create_or_delete: Whether this remove deletes the item.
+            created_in_data_collection_id: Collection where the item was created.
+            current_data_collection_ids: Collections currently containing the item.
+            tgt_data_collection_ids: Requested collections to remove from.
+
+        Returns:
+            Whether every applicable target grants direct access or a share right
+            from a current source collection.
+
+        Raises:
+            InvalidArgumentsError: If deletion has no creation collection, includes
+                explicit targets, or a target is not a current collection.
+            NotImplementedError: If ``right`` has no access or share mapping.
+        """
         # Check if the case or case set can be deleted from all the target data collections
         if is_create_or_delete:
             if not self._validate_private_creation_or_deletion(
@@ -650,9 +771,10 @@ class CaseAbac(BaseModel):
         created_in_data_collection_id: UUID,
         data_collection_ids: set[UUID],
     ) -> CaseRights | CaseSetRights:
-        """
-        Create a CaseRights or CaseSetRights object for the case/case set for a user
-        with full access.
+        """Create case or case-set rights for a user with full access.
+
+        Full access grants deletion and all content rights; empty column and sharing
+        sets act as unrestricted sentinels rather than denials.
         """
         shared_in_data_collection_ids: set[UUID] = data_collection_ids - {
             created_in_data_collection_id
@@ -693,9 +815,11 @@ class CaseAbac(BaseModel):
         created_in_data_collection_id: UUID,
         data_collection_ids: set[UUID],
     ) -> CaseRights | CaseSetRights:
-        """
-        Create a CaseRights or CaseSetRights object for the case/case set for a user
-        under ABAC.
+        """Create case or case-set rights from effective ABAC records.
+
+        Read and write rights are unioned only across collections containing the
+        item. Add and remove rights combine private-owner access with source-matched
+        share records, and deletion requires removal from every current collection.
         """
         shared_in_data_collection_ids = data_collection_ids - {
             created_in_data_collection_id
@@ -795,11 +919,11 @@ class CaseAbac(BaseModel):
         add_data_collection_ids: set[UUID],
         remove_data_collection_ids: set[UUID],
     ) -> None:
-        """
-        Update the add_data_collection_ids and remove_data_collection_ids based on
-        the share rights. When a share right exists from a data collection in
-        data_collection_ids to another data collection, the latter is added to
-        add_data_collection_ids. Analogous for remove_data_collection_ids.
+        """Update addable and removable collection sets in place from share rights.
+
+        A target is addable when absent and at least one configured add source is
+        current. It is removable when present and at least one configured remove
+        source is current. Both result sets are mutated; inputs are not removed.
         """
         for to_data_collection_id, case_type_share_abac in share.items():
             # Update add_data_collection_ids
@@ -833,16 +957,17 @@ class CaseAbac(BaseModel):
         created_in_data_collection_id: UUID,
         data_collection_ids: set[UUID],
     ) -> CaseRights | CaseSetRights:
-        """
-        Create a CaseRights or CaseSetRights object for the case/case set with the
-        given ID.
+        """Create effective rights for a case or case set.
 
-        Arguments:
+        Args:
             case_or_set_id: The ID of the case or case set.
             is_case_set: Whether the ID is for a case set.
             case_type_id: The ID of the CaseType that the case or case set belongs to.
-            created_in_data_collection_id: The ID of the data collection where the case or case set was created.
-            data_collection_ids: The IDs of the data collections in which the case or case set is currently shared.
+            created_in_data_collection_id: The collection where the item was created.
+            data_collection_ids: Collections currently containing the item.
+
+        Returns:
+            Full-access or ABAC-limited rights for the requested item kind.
         """
         # Parse input
         if self.is_full_access:
@@ -866,9 +991,16 @@ class CaseAbac(BaseModel):
     def _get_has_right_function(
         right: CaseRight,
     ) -> Callable[[CaseTypeAccessAbac | CaseTypeShareAbac], bool]:
-        """
-        Get a function that checks if the given right is present in a
-        CaseTypeAccessAbac or CaseTypeShareAbac.
+        """Return a predicate for an access right.
+
+        Args:
+            right: Right whose access attribute should be tested.
+
+        Returns:
+            Predicate accepting an effective ABAC record.
+
+        Raises:
+            NotImplementedError: If ``right`` has no access mapping.
         """
         if right == CaseRight.ADD_CASE:
             has_right_fn = lambda x: x.add_case
@@ -894,9 +1026,16 @@ class CaseAbac(BaseModel):
     def _get_get_share_from_data_collections_function(
         right: CaseRight,
     ) -> Callable[[CaseTypeShareAbac], set[UUID]]:
-        """
-        Get a function that retrieves the from_data_collection_ids for the given
-        right from a CaseTypeShareAbac.
+        """Return an accessor for source collections granting a share right.
+
+        Args:
+            right: Add or remove right whose source collections are requested.
+
+        Returns:
+            Accessor accepting a share record and returning its source IDs.
+
+        Raises:
+            NotImplementedError: If ``right`` has no share-source mapping.
         """
         if right == CaseRight.ADD_CASE:
             get_share_from_data_collections_fn = (
@@ -922,9 +1061,16 @@ class CaseAbac(BaseModel):
     def _get_from_data_collections_for_right_function(
         right: CaseRight,
     ) -> Callable[[CaseTypeShareAbac], set[UUID]]:
-        """
-        Get a function that retrieves the from_data_collection_ids for the given
-        right from a CaseTypeShareAbac.
+        """Return an accessor for source collections granting a share right.
+
+        Args:
+            right: Add or remove right whose source collections are requested.
+
+        Returns:
+            Accessor accepting a share record and returning its source IDs.
+
+        Raises:
+            NotImplementedError: If ``right`` has no share-source mapping.
         """
         if right == CaseRight.ADD_CASE:
             get_from_data_collections_fn = lambda x: x.add_case_from_data_collection_ids

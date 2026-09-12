@@ -1,3 +1,13 @@
+"""Expose the built-in transformation implementations.
+
+`FieldTransformer` and `ObjectTransformer` update selected values or whole
+objects. `ConditionalTransformer` and `ValidationTransformer` control whether
+a transformation continues. `IntervalTransformer` and `IsoTimeTransformer` map
+domain ranges and temporal granularities. `MultiFieldTransformer` and
+`TupleMapTransformer` coordinate related fields through supplied functions or
+lookup mappings.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix.transform.transformers.conditional import (
     ConditionalTransformer as ConditionalTransformer,

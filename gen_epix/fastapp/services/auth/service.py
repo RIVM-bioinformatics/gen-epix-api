@@ -1,3 +1,10 @@
+"""Authentication service coordinating users, tokens, and identity providers.
+
+The service creates FastAPI security dependencies, resolves identity-provider
+claims to application users, and publishes configured providers. It also
+supports the no-identity-provider mode through a root-user dependency.
+"""
+
 import logging
 import ssl
 import threading
@@ -25,6 +32,17 @@ from gen_epix.fastapp.user_manager import BaseUserManager
 
 
 class AuthService(BaseAuthService):
+    """Encapsulates resolving identity-provider claims to authenticated application users.
+
+    The service initializes configured identity-provider clients, exposes only
+    providers marked as public when requested, and creates FastAPI dependencies
+    for existing users, new users, and provider identities. When no identity
+    provider is configured, it creates dependencies around the root-user path.
+
+    Root tokens expire after the configured time-to-live by default. Setting the
+    time-to-live to zero or a negative value disables that check and weakens the
+    trust posture for root-user access.
+    """
 
     DEFAULT_IS_PUBLIC_IDP = False  # Security: IDPs are not public by default
     DEFAULT_ROOT_TOKEN_TIME_TO_LIVE = (
@@ -47,6 +65,24 @@ class AuthService(BaseAuthService):
         repository: None = None,
         **kwargs: Any,
     ):
+        """Initialize authentication, identity-provider clients, and API dependencies.
+
+        Configured providers are initialized immediately where possible and failed
+        initializations are retained for later retry. Without providers, generated
+        dependencies use the root-user fallback. Non-positive root-token TTL values
+        disable root-token expiry.
+
+        Args:
+            app: Application supplying users, logging, and feature flags.
+            auto_create_new_users: Whether identities without users may create users.
+            root_token_time_to_live: Maximum root-token age in seconds, or a
+                non-positive value to disable expiry.
+            logger: Logger for authentication runtime events.
+            setup_logger: Logger for service setup events.
+            idps_cfg: Identity-provider client configurations.
+            ssl_context: SSL context or enabled flag for provider requests.
+            repository: Optional repository supplied through the base service.
+        """
         super().__init__(
             app,
             repository=repository,
@@ -90,11 +126,26 @@ class AuthService(BaseAuthService):
 
     @property
     def idp_clients(self) -> list[IdpClient]:
+        """Idp clients."""
         return list(self._idp_clients)
 
     async def get_existing_user_from_token(self, token: str) -> model.User | None:
-        """Get existing user based on provided token,
-        return None if token is invalid or user does not exist"""
+        """Resolve an existing application user from an identity-provider token.
+
+        Tries each configured provider and rejects a token when none yields an
+        authorized existing user. Root-user tokens are also checked against the
+        configured maximum lifetime.
+
+        Args:
+            token: Bearer token supplied by a client.
+
+        Returns:
+            The authenticated existing user.
+
+        Raises:
+            UnauthorizedAuthError: If no configured provider can authenticate an
+                existing user from ``token``.
+        """
         for idp_client in self._idp_clients:
             jwt_claims = await idp_client.get_claims_from_jwt(token)
             if jwt_claims:
@@ -116,7 +167,19 @@ class AuthService(BaseAuthService):
     def create_user_dependencies(
         self,
     ) -> tuple[model.User, model.User, IDPUser]:
+        """Create FastAPI dependencies for existing, new, and provider users.
 
+        When no providers are configured, dependencies follow the root-user fallback
+        path. Provider-backed dependencies support at most five configured clients.
+
+        Returns:
+            Dependencies for existing users, newly provisioned users, and provider
+            identities, respectively.
+
+        Raises:
+            InitializationServiceError: If more than five identity providers are
+                configured.
+        """
         if not self._idp_clients:
             # No authentication -> create/retrieve root user
             return self._create_no_auth_dependencies()
@@ -150,6 +213,7 @@ class AuthService(BaseAuthService):
             _security_scopes: SecurityScopes,
             claims_0: Claims = Depends(idp_client_list[0]),
         ) -> model.User:
+            """Return current user1."""
             if claims_0:
                 return await self.get_existing_user_from_claims(claims_0)
             self._warn_too_many_idps(request)
@@ -160,6 +224,7 @@ class AuthService(BaseAuthService):
             _security_scopes: SecurityScopes,
             claims_0: Claims = Depends(idp_client_list[0]),
         ) -> model.User:
+            """Return new user1."""
             if claims_0:
                 return await self.get_new_user_from_claims(claims_0)
             self._warn_too_many_idps(request)
@@ -170,6 +235,7 @@ class AuthService(BaseAuthService):
             _security_scopes: SecurityScopes,
             claims_0: Claims = Depends(idp_client_list[0]),
         ) -> IDPUser:
+            """Return idp user1."""
             if claims_0:
                 return await self.get_idp_user_from_claims(claims_0)
             self._warn_too_many_idps(request)
@@ -181,6 +247,7 @@ class AuthService(BaseAuthService):
             claims_0: Claims = Depends(idp_client_list[0]),
             claims_1: Claims = Depends(idp_client_list[1]),
         ) -> model.User:
+            """Return current user2."""
             if claims_0:
                 return await self.get_existing_user_from_claims(claims_0)
             if claims_1:
@@ -194,6 +261,7 @@ class AuthService(BaseAuthService):
             claims_0: Claims = Depends(idp_client_list[0]),
             claims_1: Claims = Depends(idp_client_list[1]),
         ) -> model.User:
+            """Return new user2."""
             if claims_0:
                 return await self.get_new_user_from_claims(claims_0)
             if claims_1:
@@ -207,6 +275,7 @@ class AuthService(BaseAuthService):
             claims_0: Claims = Depends(idp_client_list[0]),
             claims_1: Claims = Depends(idp_client_list[1]),
         ) -> IDPUser:
+            """Return idp user2."""
             if claims_0:
                 return await self.get_idp_user_from_claims(claims_0)
             if claims_1:
@@ -221,6 +290,7 @@ class AuthService(BaseAuthService):
             claims_1: Claims = Depends(idp_client_list[1]),
             claims_2: Claims = Depends(idp_client_list[2]),
         ) -> model.User:
+            """Return current user3."""
             if claims_0:
                 return await self.get_existing_user_from_claims(claims_0)
             if claims_1:
@@ -237,6 +307,7 @@ class AuthService(BaseAuthService):
             claims_1: Claims = Depends(idp_client_list[1]),
             claims_2: Claims = Depends(idp_client_list[2]),
         ) -> model.User:
+            """Return new user3."""
             if claims_0:
                 return await self.get_new_user_from_claims(claims_0)
             if claims_1:
@@ -253,6 +324,7 @@ class AuthService(BaseAuthService):
             claims_1: Claims = Depends(idp_client_list[1]),
             claims_2: Claims = Depends(idp_client_list[2]),
         ) -> IDPUser:
+            """Return idp user3."""
             if claims_0:
                 return await self.get_idp_user_from_claims(claims_0)
             if claims_1:
@@ -270,6 +342,7 @@ class AuthService(BaseAuthService):
             claims_2: Claims = Depends(idp_client_list[2]),
             claims_3: Claims = Depends(idp_client_list[3]),
         ) -> model.User:
+            """Return current user4."""
             if claims_0:
                 return await self.get_existing_user_from_claims(claims_0)
             if claims_1:
@@ -289,6 +362,7 @@ class AuthService(BaseAuthService):
             claims_2: Claims = Depends(idp_client_list[2]),
             claims_3: Claims = Depends(idp_client_list[3]),
         ) -> model.User:
+            """Return new user4."""
             if claims_0:
                 return await self.get_new_user_from_claims(claims_0)
             if claims_1:
@@ -308,6 +382,7 @@ class AuthService(BaseAuthService):
             claims_2: Claims = Depends(idp_client_list[2]),
             claims_3: Claims = Depends(idp_client_list[3]),
         ) -> IDPUser:
+            """Return idp user4."""
             if claims_0:
                 return await self.get_idp_user_from_claims(claims_0)
             if claims_1:
@@ -328,6 +403,7 @@ class AuthService(BaseAuthService):
             claims_3: Claims = Depends(idp_client_list[3]),
             claims_4: Claims = Depends(idp_client_list[4]),
         ) -> model.User:
+            """Return current user5."""
             if claims_0:
                 return await self.get_existing_user_from_claims(claims_0)
             if claims_1:
@@ -350,6 +426,7 @@ class AuthService(BaseAuthService):
             claims_3: Claims = Depends(idp_client_list[3]),
             claims_4: Claims = Depends(idp_client_list[4]),
         ) -> model.User:
+            """Return new user5."""
             if claims_0:
                 return await self.get_new_user_from_claims(claims_0)
             if claims_1:
@@ -372,6 +449,7 @@ class AuthService(BaseAuthService):
             claims_3: Claims = Depends(idp_client_list[3]),
             claims_4: Claims = Depends(idp_client_list[4]),
         ) -> IDPUser:
+            """Return idp user5."""
             if claims_0:
                 return await self.get_idp_user_from_claims(claims_0)
             if claims_1:
@@ -416,6 +494,19 @@ class AuthService(BaseAuthService):
         )
 
     def _create_no_auth_dependencies(self) -> tuple[model.User, model.User, IDPUser]:
+        """Create FastAPI dependencies for the no-identity-provider fallback.
+
+        Existing-user requests receive the root user if request claims cannot resolve
+        an application user. New-user requests still require usable claims.
+
+        Returns:
+            Dependencies for existing users, newly provisioned users, and provider
+            identities, respectively.
+
+        Raises:
+            InitializationServiceError: If the application has no user manager to
+                create the root user.
+        """
         user_manager = self.app.user_manager
         if not user_manager:
             raise exc.InitializationServiceError(
@@ -427,6 +518,7 @@ class AuthService(BaseAuthService):
         async def dummy_get_existing_user(
             request: Request, _security_scopes: SecurityScopes
         ) -> model.User:
+            """Dummy get existing user."""
             claims = await self._no_auth_idp_client(request)
             if claims:
                 user = await self.get_existing_user_from_claims(
@@ -439,6 +531,7 @@ class AuthService(BaseAuthService):
         async def dummy_get_new_user(
             request: Request, _security_scopes: SecurityScopes
         ) -> model.User:
+            """Dummy get new user."""
             claims = await self._no_auth_idp_client(request)
             if claims:
                 user = await self.get_new_user_from_claims(
@@ -466,6 +559,7 @@ class AuthService(BaseAuthService):
         return registered_user_dependency, new_user_dependency, idp_user_dependency
 
     def _warn_too_many_idps(self, request: Request) -> None:
+        """Warn too many idps."""
         if self._logger:
             self._logger.warning(
                 self.create_log_message(
@@ -482,6 +576,22 @@ class AuthService(BaseAuthService):
         get_current_user_functions: list[Callable],
         get_new_user_functions: list[Callable],
     ) -> tuple[model.User, model.User, IDPUser]:
+        """Build security dependencies from provider-specific resolver callables.
+
+        Args:
+            n_idp_clients: Number of configured identity providers.
+            get_idp_user_functions: Provider identity resolver functions.
+            get_current_user_functions: Existing-user resolver functions.
+            get_new_user_functions: New-user resolver functions.
+
+        Returns:
+            Dependencies for existing users, newly provisioned users, and provider
+            identities, respectively.
+
+        Raises:
+            InitializationServiceError: If no resolver exists for the configured
+                number of identity providers.
+        """
         if n_idp_clients > len(get_current_user_functions):
             msg = (
                 f"More than {len(get_current_user_functions)} "
@@ -518,6 +628,7 @@ class AuthService(BaseAuthService):
         self,
         cmd: GetIdentityProvidersCommand,
     ) -> list[IdentityProvider]:
+        """Return identity providers."""
         try:
             self._retry_pending_idp_clients()
         except Exception as e:
@@ -536,6 +647,7 @@ class AuthService(BaseAuthService):
         return identity_providers
 
     async def get_idp_user_from_claims(self, claims: Claims) -> IDPUser:
+        """Return idp user from claims."""
         claims_dict = claims.claims
         issuer: str = claims_dict["iss"]  # type: ignore
         sub: str = claims_dict["sub"]  # type: ignore
@@ -545,6 +657,21 @@ class AuthService(BaseAuthService):
     async def get_new_user_from_claims(
         self, claims: Claims, request_userinfo: bool = True
     ) -> model.User:
+        """Construct a new application user from provider claims.
+
+        Optionally enriches claims from the provider userinfo endpoint before asking
+        the configured user manager to construct the user.
+
+        Args:
+            claims: Validated identity-provider claims and token metadata.
+            request_userinfo: Whether to request additional provider userinfo claims.
+
+        Returns:
+            Newly constructed application user.
+
+        Raises:
+            UnauthorizedAuthError: If the user manager cannot construct a user.
+        """
         # Get userinfo
         if request_userinfo:
             claims.claims.update(
@@ -577,10 +704,17 @@ class AuthService(BaseAuthService):
     def _verify_root_user_for_token_time_to_live(
         self, claims: Claims, user: model.User
     ) -> None:
-        """
-        Verify that if the user is a root user, the token is not too old based on the
-        configured root token time to live, to mitigate risk of leaked root tokens
-        being used by attackers.
+        """Reject expired root-user tokens when root-token expiry is enabled.
+
+        Non-root users are unaffected. A zero TTL disables this check, which weakens
+        the root-user trust posture and is logged during service initialization.
+
+        Args:
+            claims: Claims containing the token issue-at timestamp.
+            user: Authenticated user represented by the claims.
+
+        Raises:
+            UnauthorizedAuthError: If a root token exceeds the configured TTL.
         """
         if self._root_token_time_to_live == 0:
             # No root token time to live configured, no need to verify
@@ -612,6 +746,7 @@ class AuthService(BaseAuthService):
     async def get_existing_user_from_claims(
         self, claims: Claims, request_userinfo: bool = True
     ) -> model.User:
+        """Return existing user from claims."""
         issuer: str = claims.claims["iss"]  # type: ignore
         sub: str = claims.claims["sub"]  # type: ignore
         user_manager: BaseUserManager = self.app.user_manager
@@ -691,6 +826,7 @@ class AuthService(BaseAuthService):
         user_manager: BaseUserManager,
         user_key: str,
     ) -> model.User:
+        """Auto create new user."""
         try:
             user = user_manager.auto_create_new_user(claims.claims)
             if user is None:
@@ -731,6 +867,20 @@ class AuthService(BaseAuthService):
         sub: str,
         user_manager: BaseUserManager | None,
     ) -> str:
+        """Derive the user-manager lookup key from identity-provider claims.
+
+        Args:
+            claims: Claims used to derive the user key.
+            request_userinfo: Whether userinfo may be used to fill missing claims.
+            sub: Provider subject logged when no key can be derived.
+            user_manager: User manager responsible for deriving the key.
+
+        Returns:
+            Stable user lookup key derived from claims.
+
+        Raises:
+            UnauthorizedAuthError: If no user manager or user key is available.
+        """
         if not user_manager:
             # No user generator configured
             raise exc.UnauthorizedAuthError("cd3d76d6")
@@ -759,9 +909,21 @@ class AuthService(BaseAuthService):
     def _init_idp_client(
         self, idp_cfg: dict[str, str | list], ssl_context: ssl.SSLContext | bool = True
     ) -> IdpClient | None:
-        """
-        Try to initialize a single IDP client from its configuration.
-        If unsuccessful, log and return None.
+        """Initialize one identity-provider client from its configuration.
+
+        Unsupported protocols are configuration errors and propagate. Other provider
+        initialization failures are logged and returned as ``None`` for retry.
+
+        Args:
+            idp_cfg: Identity-provider configuration.
+            ssl_context: Default SSL context or enabled flag for provider requests.
+
+        Returns:
+            Initialized provider client, or ``None`` for a retryable setup failure.
+
+        Raises:
+            NotImplementedError: If the configured authentication protocol is not
+                supported.
         """
         try:
             protocol = enum.AuthProtocol[str(idp_cfg["protocol"])]
@@ -811,6 +973,17 @@ class AuthService(BaseAuthService):
         idp_cfgs: list[dict[str, str | list]] | None,
         ssl_context: ssl.SSLContext | bool,
     ) -> None:
+        """Initialize configured identity-provider clients and queue retryable failures.
+
+        Args:
+            app: Application used for logging and configuration validation.
+            idp_cfgs: Identity-provider configurations, if any.
+            ssl_context: Default SSL context or enabled flag for provider requests.
+
+        Raises:
+            InitializationServiceError: If provider names or labels are duplicated.
+            NotImplementedError: If a configured protocol is unsupported.
+        """
         # Parse input
         logger = app.logger
         if not idp_cfgs:
@@ -845,9 +1018,14 @@ class AuthService(BaseAuthService):
     def _validate_idp_cfgs(
         self, app: App, idp_cfgs: list[dict[str, str | list]]
     ) -> None:
-        """
-        Verify non-unique names and labels in the provided IDP configurations and
-        raise InitializationServiceError if duplicates are found
+        """Validate that configured provider names and labels are unique.
+
+        Args:
+            app: Application used to log invalid configuration.
+            idp_cfgs: Identity-provider configurations to validate.
+
+        Raises:
+            InitializationServiceError: If a provider name or label is duplicated.
         """
         for key in ["name", "label"]:
             duplicate_values: set[str] = set()
@@ -866,6 +1044,7 @@ class AuthService(BaseAuthService):
                 raise exc.InitializationServiceError("85447b4a", msg)
 
     def _retry_pending_idp_clients(self) -> None:
+        """Retry pending idp clients."""
         with self._pending_idp_clients_lock:
             if not self._pending_idp_client_cfgs:
                 return

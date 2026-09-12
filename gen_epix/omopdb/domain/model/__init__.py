@@ -1,5 +1,14 @@
-# pylint: disable=useless-import-alias
+"""Expose shared and OMOP model types plus their domain registration metadata.
+
+The facade re-exports commondb identity, organization, authorization, and
+system models alongside OMOP clinical, ontology, metadata, and upload models.
+`SORTED_MODELS_BY_SERVICE_TYPE`, `SORTED_SERVICE_TYPES`, and
+`STORED_MODEL_FIELD_PROPS` describe their application composition.
+"""
+
 from gen_epix import fastapp
+
+# pylint: disable=useless-import-alias
 from gen_epix.commondb.domain import enum as common_enum
 from gen_epix.commondb.domain.model import (
     SORTED_MODELS_BY_SERVICE_TYPE as _COMMON_SORTED_MODELS_BY_SERVICE_TYPE,

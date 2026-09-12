@@ -1,3 +1,9 @@
+"""Re-export commondb API endpoint factories and request/response schemas.
+
+The package exposes endpoint builders for authentication, RBAC, organization, and
+system commands plus request/response models used by remote commondb clients.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix.commondb.api.auth import create_auth_endpoints as create_auth_endpoints
 from gen_epix.commondb.api.organization import ApiPermission as ApiPermission

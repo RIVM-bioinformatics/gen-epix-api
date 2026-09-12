@@ -1,3 +1,5 @@
+"""Shared OMOP model mixins and primary-key normalization helpers."""
+
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -8,7 +10,7 @@ from gen_epix.util import int_to_uuid, str_to_uuid
 
 class DataLineageMixin:
     """
-    Mixin class to add fields to a model for data lineage tracking.
+    Encapsulates optional provenance and source-traceback fields to an OMOP model.
     """
 
     # Annotation-only: an assigned Field lingers as class attr -> pydantic shadow warning
@@ -36,6 +38,9 @@ def validate_str_key_args(data: Any, uuid_field_name: str, str_field_name: str) 
 
     Raises:
         ValueError: If the input data is not a dictionary or if the primary key fields are invalid.
+
+    Returns:
+        The normalized input data after in-place primary-key synchronization.
     """
     if not isinstance(data, dict):
         raise ValueError("Input is not a dict")
@@ -77,6 +82,9 @@ def validate_int_key_args(data: Any, uuid_field_name: str, int_field_name: str) 
 
     Raises:
         ValueError: If the input data is not a dictionary or if the primary key fields are invalid.
+
+    Returns:
+        The normalized input data after in-place primary-key synchronization.
     """
     if not isinstance(data, dict):
         raise ValueError("Input is not a dict")

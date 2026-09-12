@@ -1,3 +1,5 @@
+"""Datetime-valued inclusive and exclusive range filters."""
+
 import datetime
 from typing import Literal
 
@@ -8,13 +10,13 @@ from gen_epix.filter.range import RangeFilter
 
 
 class DatetimeRangeFilter(RangeFilter):
+    """Represents a filter matching datetimes within the configured bounds."""
+
+    type: Literal[FilterType.DATETIME_RANGE.value] = FilterType.DATETIME_RANGE.value  # type: ignore[name-defined]
+
     lower_bound: datetime.datetime | None = Field(
         default=None, description="The lower bound of the range.", frozen=True
     )
     upper_bound: datetime.datetime | None = Field(
         default=None, description="The upper bound of the range.", frozen=True
     )
-
-
-class TypedDatetimeRangeFilter(DatetimeRangeFilter):
-    type: Literal[FilterType.DATETIME_RANGE.value]  # type: ignore[name-defined]

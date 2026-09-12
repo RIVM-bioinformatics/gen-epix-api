@@ -1,3 +1,5 @@
+"""Define seqdb domain models for domain.model.seq.ref_seq."""
+
 from typing import ClassVar
 from uuid import UUID
 
@@ -11,8 +13,10 @@ from gen_epix.seqdb.domain.model.seq.taxon import Taxon
 
 class RefSeq(BaseSeq):
     """
-    A reference sequence for a single chromosome, viral segment, plasmid or other
-    contiguous DNA molecule belonging to a particular taxon. This can be an actual
+    Represents an immutable reference sequence for a taxon.
+
+    A reference sequence represents a single chromosome, viral segment, plasmid, or
+    other contiguous DNA molecule belonging to a particular taxon. This can be an actual
     sequence or an artificial construct, typically then a consensus sequence. It can
     be used e.g. as a reference for alignment of other sequences or for optimising
     storage requirements of sequences. Any IUPAC ambiguity codes are allowed in the

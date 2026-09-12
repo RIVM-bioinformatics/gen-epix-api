@@ -1,3 +1,5 @@
+"""HTTP client adapter for invoking OmopDB commands in a remote application."""
+
 from typing import Any
 
 from gen_epix.commondb.services import CommondbRemoteApp as CommondbRemoteApp
@@ -8,7 +10,7 @@ from gen_epix.omopdb.domain import DOMAIN, command, model
 
 
 class OmopdbRemoteApp(CommondbRemoteApp):
-    """Remote app client for the omopdb service."""
+    """Encapsulates routing of supported OmopDB commands to their remote HTTP endpoints."""
 
     DEFAULT_ROUTE_PREFIX = "/v1"
 
@@ -24,6 +26,7 @@ class OmopdbRemoteApp(CommondbRemoteApp):
     }
 
     DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {
+        command.DeleteAllOperationalDataCommand: 300.0,
         command.UploadPersonsCommand: 45.0,
         command.RetrievePersonsByIdCommand: 45.0,
         command.RetrievePersonsByQueryCommand: 45.0,
@@ -31,7 +34,7 @@ class OmopdbRemoteApp(CommondbRemoteApp):
     }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        """Register all omopdb routes and command handlers."""
+        """Register remote OmopDB routes and command handlers."""
         super().__init__(DOMAIN, *args, **kwargs)
 
         # Register routes

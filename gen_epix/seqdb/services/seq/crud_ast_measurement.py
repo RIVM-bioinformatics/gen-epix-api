@@ -1,3 +1,5 @@
+"""Implement seqdb CRUD service operations for services.seq.crud_ast_measurement."""
+
 from uuid import UUID
 
 from gen_epix.seqdb.domain import command, model
@@ -15,7 +17,18 @@ def seq_service_crud_ast_measurement(
     | bool
     | None
 ):
-    """Handle CRUD operations for AstMeasurement entities."""
+    """Handle CRUD operations for AST measurement entities.
+
+    Args:
+        self: Sequence service executing the command.
+        cmd: Typed AST-measurement CRUD command.
+
+    Returns:
+        The action-specific AST-measurement result.
+
+    Raises:
+        AssertionError: The command operation is unsupported.
+    """
     user_id = cmd.user.id if cmd.user else None
     ast_measurements: list[model.AstMeasurement] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():

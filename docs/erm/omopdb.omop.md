@@ -10,6 +10,7 @@ erDiagram
     Concept }o--|| Domain : "domain_id"
     Concept }o--|| Vocabulary : "vocabulary_id"
     Concept }o--|| ConceptClass : "concept_class_id"
+    Cohort }o--|| CohortDefinition : "cohort_definition_id"
     Relationship }o--|| Concept : "relationship_concept_id"
     ConceptAncestor }o--|| Concept : "ancestor_concept_id"
     ConceptAncestor }o--|| Concept : "descendant_concept_id"
@@ -197,12 +198,6 @@ erDiagram
     MeasurementRelationIdentifier }o--|| MeasurementRelation : "internal_id"
 
     CdmSource {
-    }
-
-    CohortDefinition {
-    }
-
-    Cohort {
     }
 
 ```

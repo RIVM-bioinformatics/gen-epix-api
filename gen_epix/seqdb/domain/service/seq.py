@@ -1,3 +1,5 @@
+"""Define seqdb domain interfaces and policies for domain.service.seq."""
+
 import abc
 import datetime
 from collections.abc import Iterable
@@ -9,9 +11,12 @@ from gen_epix.seqdb.domain.enum import ServiceType
 
 
 class BaseSeqService(BaseService):
+    """Encapsulates seqdb handlers implemented by concrete sequence services."""
+
     SERVICE_TYPE = ServiceType.SEQ
 
     def register_handlers(self) -> None:
+        """Register default CRUD and seqdb-specific sequence command handlers."""
         f = self.app.register_handler
         self.register_default_crud_handlers()
         f(
@@ -27,6 +32,10 @@ class BaseSeqService(BaseService):
         f(
             command.RetrieveSeqFastaCommand,
             self.retrieve_seq_fasta,
+        )
+        f(
+            command.ConvertSeqFormatCommand,
+            self.convert_seq_format,
         )
         f(
             command.UploadSamplesCommand,
@@ -190,7 +199,17 @@ class BaseSeqService(BaseService):
     def calculate_phylogenetic_tree(
         self, cmd: command.CalculatePhylogeneticTreeCommand
     ) -> model.PhylogeneticTree | None:
-        """Calculate phylogenetic tree for given parameters."""
+        """Calculate a phylogenetic tree.
+
+        Args:
+            cmd: Tree-calculation command to execute.
+
+        Returns:
+            The calculated tree, if one can be produced.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -198,7 +217,17 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.RetrieveSamplesByIdCommand,
     ) -> list[model.FullSample]:
-        """Retrieve samples by their IDs."""
+        """Retrieve complete samples by identifier.
+
+        Args:
+            cmd: Sample-retrieval command to execute.
+
+        Returns:
+            Complete samples matching the command identifiers.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -206,7 +235,17 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.RetrieveSampleIdentifiersByIdCommand,
     ) -> list[model.SampleIdentifier]:
-        """Retrieve only sample identifiers for the given sample IDs."""
+        """Retrieve identifiers associated with samples.
+
+        Args:
+            cmd: Sample-identifier retrieval command to execute.
+
+        Returns:
+            Identifiers linked to the requested samples.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -214,12 +253,49 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.RetrieveSamplesByQueryCommand,
     ) -> model.SampleQueryResult:
-        """Retrieve samples matching query criteria."""
+        """Retrieve samples matching a query.
+
+        Args:
+            cmd: Sample-query command to execute.
+
+        Returns:
+            Matching sample identifiers and result-limit information.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
     def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
-        """Retrieve sequence data in FASTA format."""
+        """Stream sequence data in FASTA format.
+
+        Args:
+            cmd: FASTA-retrieval command to execute.
+
+        Returns:
+            FASTA text chunks.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def convert_seq_format(
+        self,
+        cmd: command.ConvertSeqFormatCommand,
+    ) -> list[UUID]:
+        """Convert all contigs in the requested sequences to a new representation.
+
+        Args:
+            cmd: Sequence-format conversion command to execute.
+        Returns:
+            Identifiers of the converted sequences.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -227,7 +303,17 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.UploadSamplesCommand,
     ) -> model.SampleBatchUploadResult:
-        """Upload samples in batch."""
+        """Upload a batch of samples.
+
+        Args:
+            cmd: Sample-upload command to execute.
+
+        Returns:
+            Per-sample upload results and data issues.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -235,7 +321,17 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.RetrieveSimilarProfilesCommand,
     ) -> list[UUID]:
-        """Retrieve UUIDs of profiles similar to specified profile."""
+        """Retrieve profiles similar to the command's source profiles.
+
+        Args:
+            cmd: Similar-profile retrieval command to execute.
+
+        Returns:
+            Similar profile identifiers.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -243,23 +339,53 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.RetrieveSeqDistanceLastModifiedCommand,
     ) -> datetime.datetime | None:
-        """Retrieve last modification timestamp of sequence distances."""
+        """Retrieve the latest sequence-distance modification time.
+
+        Args:
+            cmd: Last-modified retrieval command to execute.
+
+        Returns:
+            Latest modification time, if distance records exist.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
     def calculate_seq_distances_for_new_profiles(
         self,
         cmd: command.CalculateSeqDistancesForNewProfilesCommand,
-    ) -> list[model.CalculateSeqDistancesResult]:
-        """Calculate sequence distances for new profiles."""
+    ) -> list[model.CalculateSeqDistancesEtlResult]:
+        """Calculate distances for profiles without distance records.
+
+        Args:
+            cmd: New-profile distance-calculation command to execute.
+
+        Returns:
+            Results for processed profiling protocols.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
     def update_seq_distances(
         self,
         cmd: command.UpdateSeqDistancesCommand,
-    ) -> list[model.CalculateSeqDistancesResult]:
-        """Update sequence distance calculations."""
+    ) -> list[model.CalculateSeqDistancesEtlResult]:
+        """Update stored sequence-distance calculations.
+
+        Args:
+            cmd: Distance-update command to execute.
+
+        Returns:
+            Results for processed profiling protocols.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -267,7 +393,17 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.RetrieveBestSeqPerSampleCommand,
     ) -> dict[UUID, UUID]:
-        """Retrieve best sequence per sample mapping."""
+        """Retrieve the best sequence selected for each sample.
+
+        Args:
+            cmd: Best-sequence retrieval command to execute.
+
+        Returns:
+            Mapping from sample IDs to sequence IDs.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -275,7 +411,17 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.RetrieveBestSeqProfilePerSampleCommand,
     ) -> dict[UUID, UUID]:
-        """Retrieve best sequence profile per sample mapping."""
+        """Retrieve the best sequence profile selected for each sample.
+
+        Args:
+            cmd: Best-profile retrieval command to execute.
+
+        Returns:
+            Mapping from sample IDs to sequence-profile IDs.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -283,7 +429,17 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.RetrieveBestSeqClassificationPerSampleCommand,
     ) -> dict[UUID, UUID]:
-        """Retrieve best sequence classification per sample mapping."""
+        """Retrieve the best sequence classification selected for each sample.
+
+        Args:
+            cmd: Best-classification retrieval command to execute.
+
+        Returns:
+            Mapping from sample IDs to sequence-classification IDs.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -299,7 +455,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for Protocol entities."""
+        """Handle a CRUD command for protocol entities.
+
+        Args:
+            cmd: Typed protocol CRUD command to execute.
+
+        Returns:
+            The action-specific protocol result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -315,7 +481,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for ProtocolSet entities."""
+        """Handle a CRUD command for protocol-set entities.
+
+        Args:
+            cmd: Typed protocol-set CRUD command to execute.
+
+        Returns:
+            The action-specific protocol-set result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -331,7 +507,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for ProtocolSetMember entities."""
+        """Handle a CRUD command for protocol-set membership entities.
+
+        Args:
+            cmd: Typed protocol-set-member CRUD command to execute.
+
+        Returns:
+            The action-specific protocol-set-member result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -341,7 +527,17 @@ class BaseSeqService(BaseService):
     ) -> (
         model.Allele | list[model.Allele] | UUID | list[UUID] | bool | list[bool] | None
     ):
-        """Handle CRUD operations for Allele entities."""
+        """Handle a CRUD command for allele entities.
+
+        Args:
+            cmd: Typed allele CRUD command to execute.
+
+        Returns:
+            The action-specific allele result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -357,7 +553,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for AstMeasurement entities."""
+        """Handle a CRUD command for AST measurement entities.
+
+        Args:
+            cmd: Typed AST-measurement CRUD command to execute.
+
+        Returns:
+            The action-specific AST-measurement result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -373,7 +579,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for AstPrediction entities."""
+        """Handle a CRUD command for AST prediction entities.
+
+        Args:
+            cmd: Typed AST-prediction CRUD command to execute.
+
+        Returns:
+            The action-specific AST-prediction result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -381,7 +597,17 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.LocusCrudCommand,
     ) -> model.Locus | list[model.Locus] | UUID | list[UUID] | bool | list[bool] | None:
-        """Handle CRUD operations for Locus entities."""
+        """Handle a CRUD command for locus entities.
+
+        Args:
+            cmd: Typed locus CRUD command to execute.
+
+        Returns:
+            The action-specific locus result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -397,7 +623,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for LocusCodeMap entities."""
+        """Handle a CRUD command for locus-code-map entities.
+
+        Args:
+            cmd: Typed locus-code-map CRUD command to execute.
+
+        Returns:
+            The action-specific locus-code-map result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -413,7 +649,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for SeqProfile entities."""
+        """Handle a CRUD command for sequence-profile entities.
+
+        Args:
+            cmd: Typed sequence-profile CRUD command to execute.
+
+        Returns:
+            The action-specific sequence-profile result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -429,7 +675,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for SeqProfileIdentifier entities."""
+        """Handle a CRUD command for sequence-profile identifier entities.
+
+        Args:
+            cmd: Typed sequence-profile-identifier CRUD command to execute.
+
+        Returns:
+            The action-specific sequence-profile-identifier result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -445,7 +701,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for LocusSet entities."""
+        """Handle a CRUD command for locus-set entities.
+
+        Args:
+            cmd: Typed locus-set CRUD command to execute.
+
+        Returns:
+            The action-specific locus-set result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -461,7 +727,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for PcrMeasurement entities."""
+        """Handle a CRUD command for PCR measurement entities.
+
+        Args:
+            cmd: Typed PCR-measurement CRUD command to execute.
+
+        Returns:
+            The action-specific PCR-measurement result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -477,7 +753,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for ReadSet entities."""
+        """Handle a CRUD command for read-set entities.
+
+        Args:
+            cmd: Typed read-set CRUD command to execute.
+
+        Returns:
+            The action-specific read-set result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -493,7 +779,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for ReadSetIdentifier entities."""
+        """Handle a CRUD command for read-set identifier entities.
+
+        Args:
+            cmd: Typed read-set-identifier CRUD command to execute.
+
+        Returns:
+            The action-specific read-set-identifier result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -509,7 +805,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for RefAllele entities."""
+        """Handle a CRUD command for reference-allele entities.
+
+        Args:
+            cmd: Typed reference-allele CRUD command to execute.
+
+        Returns:
+            The action-specific reference-allele result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -519,7 +825,17 @@ class BaseSeqService(BaseService):
     ) -> (
         model.RefSeq | list[model.RefSeq] | UUID | list[UUID] | bool | list[bool] | None
     ):
-        """Handle CRUD operations for RefSeq entities."""
+        """Handle a CRUD command for reference-sequence entities.
+
+        Args:
+            cmd: Typed reference-sequence CRUD command to execute.
+
+        Returns:
+            The action-specific reference-sequence result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -529,7 +845,17 @@ class BaseSeqService(BaseService):
     ) -> (
         model.Sample | list[model.Sample] | UUID | list[UUID] | bool | list[bool] | None
     ):
-        """Handle CRUD operations for Sample entities."""
+        """Handle a CRUD command for sample entities.
+
+        Args:
+            cmd: Typed sample CRUD command to execute.
+
+        Returns:
+            The action-specific sample result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -545,7 +871,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for SampleDataCollectionLink entities."""
+        """Handle a CRUD command for sample-data-collection link entities.
+
+        Args:
+            cmd: Typed sample-data-collection-link CRUD command to execute.
+
+        Returns:
+            The action-specific sample-data-collection-link result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -561,7 +897,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for SampleIdentifier entities."""
+        """Handle a CRUD command for sample identifier entities.
+
+        Args:
+            cmd: Typed sample-identifier CRUD command to execute.
+
+        Returns:
+            The action-specific sample-identifier result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -569,7 +915,17 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.SeqCrudCommand,
     ) -> model.Seq | list[model.Seq] | UUID | list[UUID] | bool | list[bool] | None:
-        """Handle CRUD operations for Seq entities."""
+        """Handle a CRUD command for sequence entities.
+
+        Args:
+            cmd: Typed sequence CRUD command to execute.
+
+        Returns:
+            The action-specific sequence result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -585,7 +941,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for SeqCategory entities."""
+        """Handle a CRUD command for sequence-category entities.
+
+        Args:
+            cmd: Typed sequence-category CRUD command to execute.
+
+        Returns:
+            The action-specific sequence-category result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -601,7 +967,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for SeqCategorySet entities."""
+        """Handle a CRUD command for sequence-category-set entities.
+
+        Args:
+            cmd: Typed sequence-category-set CRUD command to execute.
+
+        Returns:
+            The action-specific sequence-category-set result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -617,7 +993,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for SeqClassification entities."""
+        """Handle a CRUD command for sequence-classification entities.
+
+        Args:
+            cmd: Typed sequence-classification CRUD command to execute.
+
+        Returns:
+            The action-specific sequence-classification result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -633,7 +1019,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for SeqDistance entities."""
+        """Handle a CRUD command for sequence-distance entities.
+
+        Args:
+            cmd: Typed sequence-distance CRUD command to execute.
+
+        Returns:
+            The action-specific sequence-distance result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -649,7 +1045,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for SeqIdentifier entities."""
+        """Handle a CRUD command for sequence-identifier entities.
+
+        Args:
+            cmd: Typed sequence-identifier CRUD command to execute.
+
+        Returns:
+            The action-specific sequence-identifier result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -665,7 +1071,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for SeqTaxonomy entities."""
+        """Handle a CRUD command for sequence-taxonomy entities.
+
+        Args:
+            cmd: Typed sequence-taxonomy CRUD command to execute.
+
+        Returns:
+            The action-specific sequence-taxonomy result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -673,7 +1089,17 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.TaxonCrudCommand,
     ) -> model.Taxon | list[model.Taxon] | UUID | list[UUID] | bool | list[bool] | None:
-        """Handle CRUD operations for Taxon entities."""
+        """Handle a CRUD command for taxon entities.
+
+        Args:
+            cmd: Typed taxon CRUD command to execute.
+
+        Returns:
+            The action-specific taxon result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -689,7 +1115,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for TaxonSet entities."""
+        """Handle a CRUD command for taxon-set entities.
+
+        Args:
+            cmd: Typed taxon-set CRUD command to execute.
+
+        Returns:
+            The action-specific taxon-set result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -705,7 +1141,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for TaxonSetMember entities."""
+        """Handle a CRUD command for taxon-set membership entities.
+
+        Args:
+            cmd: Typed taxon-set-member CRUD command to execute.
+
+        Returns:
+            The action-specific taxon-set-member result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -721,7 +1167,17 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for TreeAlgorithm entities."""
+        """Handle a CRUD command for tree-algorithm entities.
+
+        Args:
+            cmd: Typed tree-algorithm CRUD command to execute.
+
+        Returns:
+            The action-specific tree-algorithm result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -737,5 +1193,15 @@ class BaseSeqService(BaseService):
         | list[bool]
         | None
     ):
-        """Handle CRUD operations for TreeAlgorithmClass entities."""
+        """Handle a CRUD command for tree-algorithm-class entities.
+
+        Args:
+            cmd: Typed tree-algorithm-class CRUD command to execute.
+
+        Returns:
+            The action-specific tree-algorithm-class result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
         raise NotImplementedError()

@@ -1,7 +1,11 @@
+"""Enumerations used to identify filters and comparison semantics."""
+
 from enum import Enum
 
 
 class FilterType(Enum):
+    """Encapsulates serialized type names for the available filter models."""
+
     BASE = "BASE"
     EXISTS = "EXISTS"
     EQUALS_BOOLEAN = "EQUALS_BOOLEAN"
@@ -23,6 +27,8 @@ class FilterType(Enum):
 
 
 class LogicalOperator(Enum):
+    """Encapsulates boolean operators supported by composite filters."""
+
     AND = "AND"
     OR = "OR"
     NOT = "NOT"
@@ -35,6 +41,8 @@ class LogicalOperator(Enum):
 
 
 class ComparisonOperator(Enum):
+    """Encapsulates boundary comparison operators supported by range filters."""
+
     ST = "<"
     STE = "<="
     EQ = "="

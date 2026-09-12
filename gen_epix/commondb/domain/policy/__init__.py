@@ -1,3 +1,10 @@
+"""Re-export commondb ABAC, RBAC, and system-outage policy contracts.
+
+ABAC exports constrain operations by organization or user ownership. RBAC
+exports define role-permission mappings and prevent privilege escalation.
+System exports apply outage restrictions during command handling.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix.commondb.domain.policy.abac import (
     BaseIsOrganizationAdminPolicy as BaseIsOrganizationAdminPolicy,

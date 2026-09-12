@@ -1,3 +1,5 @@
+"""Provide the SQLAlchemy repository implementation for commondb organizations."""
+
 from typing import Any
 
 from sqlalchemy import Engine, select
@@ -11,6 +13,8 @@ from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork
 
 
 class OrganizationSARepository(SARepository, BaseOrganizationRepository):
+    """Encapsulates SQL organization storage and normalized user lookup."""
+
     def __init__(
         self,
         engine: Engine,
@@ -20,6 +24,16 @@ class OrganizationSARepository(SARepository, BaseOrganizationRepository):
         sa_user_invitation_class: type[UserInvitation] = UserInvitation,
         **kwargs: Any,
     ):
+        """Initialize the SQL backend and commondb domain and SQL model types.
+
+        Args:
+            engine: SQLAlchemy engine used to create unit-of-work sessions.
+            user_class: Domain model representing users.
+            user_invitation_class: Domain model representing user invitations.
+            sa_user_class: SQLAlchemy row model representing users.
+            sa_user_invitation_class: SQLAlchemy row model representing invitations.
+            **kwargs: Additional SQL repository configuration.
+        """
         self.sa_user_class = sa_user_class
         self.sa_user_invitation_class = sa_user_invitation_class
         BaseOrganizationRepository.__init__(
@@ -30,6 +44,15 @@ class OrganizationSARepository(SARepository, BaseOrganizationRepository):
     def is_existing_user_by_key(
         self, uow: BaseUnitOfWork, user_key: str | None
     ) -> bool:
+        """Determine whether a user exists for a case-insensitive key.
+
+        Args:
+            uow: Active SQLAlchemy unit of work for the lookup.
+            user_key: Candidate user key, or None when no key is available.
+
+        Returns:
+            True when the normalized key identifies a stored user; otherwise False.
+        """
         if user_key is None:
             return False
         assert isinstance(uow, SAUnitOfWork)
@@ -41,6 +64,18 @@ class OrganizationSARepository(SARepository, BaseOrganizationRepository):
         return True if user_row else False
 
     def retrieve_user_by_key(self, uow: BaseUnitOfWork, user_key: str) -> model.User:
+        """Retrieve a user by a case-insensitive key.
+
+        Args:
+            uow: Active SQLAlchemy unit of work for the lookup.
+            user_key: User key to normalize and resolve.
+
+        Returns:
+            The matching user.
+
+        Raises:
+            NoResultsError: If no stored user has the normalized key.
+        """
         # TODO: add filter to crud method instead of retrieving all users
         users: list[model.User] = self.crud(  # type: ignore[assignment]
             uow,

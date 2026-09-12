@@ -1,4 +1,13 @@
+"""Define upload payloads, validation, and structured result models.
+
+These base models represent nested parent-child upload batches, enforce identifier and
+relationship consistency, and accumulate data issues and ETL outcomes for upload
+services and their API responses.
+"""
+
 import datetime
+import graphlib
+import logging
 import uuid
 from typing import Annotated, Any, Callable, ClassVar, Self
 from uuid import UUID
@@ -7,30 +16,32 @@ from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, field_serializer, field_validator, model_validator
 
 from gen_epix.commondb.domain import enum
-from gen_epix.commondb.domain.enum import DataIssueTypeSet, EtlStatus, UploadStatusSet
+from gen_epix.commondb.domain.enum import DataIssueTypeSet
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.base import BaseEtlResult, EtlLogItem
 from gen_epix.commondb.domain.model.organization import (
     BaseIdentifier,
     IdentifierForUpload,
 )
+from gen_epix.etl.enum import EtlStatus, EtlStatusSet
+from gen_epix.etl.model import (
+    LoadResult,
+    LogItem,
+)
 from gen_epix.fastapp import Model
 from gen_epix.fastapp.domain import Entity
 from gen_epix.fastapp.domain.entity import Entity
-from gen_epix.fastapp.enum import LogLevel, LogLevelSet
+from gen_epix.fastapp.enum import LogLevelSet
 
 # Backward-compatible alias: UploadLogItem is now ResultLogItem.
-UploadLogItem = EtlLogItem
+UploadLogItem = LogItem
+
+logger = logging.getLogger(__name__)
 
 
 class IdentifiersMixin:
-    """
-    Mixin that adds identifiers fields and validation. Assumes that the
-    inheriting model also has an 'identifiers' field.
+    """Encapsulates a mixin that adds identifiers fields and validation.
 
-    Additional validation:
-    - All identifiers must have the same identifier type.
-    - All identifiers must have unique values.
+    Assumes that the inheriting model also has an 'identifiers' field.
     """
 
     # Must be set in child class
@@ -41,7 +52,7 @@ class IdentifiersMixin:
         list[IdentifierForUpload] | None,
         Field(
             default=None,
-            description="Identifiers for the model, if any. Must be a unique values.",
+            description="Optional identifiers with unique issuer IDs and codes; a code must map to one issuer ID.",
         ),
     ]
 
@@ -50,10 +61,7 @@ class IdentifiersMixin:
     def _validate_identifiers(
         cls, identifiers: list[IdentifierForUpload] | None
     ) -> list[IdentifierForUpload] | None:
-        """
-        Validate identifiers consistency. Assumes that the inheriting model
-        also has an 'identifiers' field.
-        """
+        """Validate identifier issuer uniqueness and consistency."""
         if identifiers is None:
             return identifiers
         if len(identifiers) == 1:
@@ -92,9 +100,7 @@ class IdentifiersMixin:
 
 
 class DataIssue(PydanticBaseModel):
-    """
-    Describes an issue with a single value
-    """
+    """Represents a validation or transformation issue for one uploaded value."""
 
     original_value: str | None = Field(description="The original value")
     updated_value: str | None = Field(
@@ -107,16 +113,17 @@ class DataIssue(PydanticBaseModel):
     message: str | None = Field(description="The details of the data issue")
 
 
-class UploadResult(BaseEtlResult, Model):
-    """
-    Represents the result of an upload operation for a particular object, including
-    upload status and logs.
+class UploadResult(LoadResult, Model):
+    """Represents the result of an upload operation for one object.
 
-    Additional validation:
+    It includes upload status and logs.
+
+    Model validation:
     - If the status is successful (NOT_FAILED), there must be no error log items.
     - If the status is failed, there must be at least one error log item.
     """
 
+    ID: ClassVar[str] = "c4f1a9e2"
     ENTITY: ClassVar = Entity(persistable=False)
 
     id: UUID | None = Field(
@@ -125,7 +132,7 @@ class UploadResult(BaseEtlResult, Model):
     )
     status: EtlStatus = Field(
         default=EtlStatus.PENDING,
-        description="The status of the upload operation. If not successful, error information must be provided in the logs.",
+        description="Upload status; successful states require no error logs and failed states require an error log.",
     )
     is_new: bool = Field(
         default=False,
@@ -134,47 +141,29 @@ class UploadResult(BaseEtlResult, Model):
 
     @model_validator(mode="after")
     def _validate_upload_result(self) -> Self:
-        """Validate upload result consistency."""
+        """Validate consistency between upload status and error logs."""
         has_errors = any(
             x.severity in LogLevelSet.ERROR_OR_WORSE.value for x in self.logs
         )
-        if self.status in UploadStatusSet.NOT_FAILED.value:
+        if self.status in EtlStatusSet.NOT_FAILED.value:
             if has_errors:
                 raise ValueError("Successful results cannot have error information")
         elif not has_errors:
             raise ValueError("Failed results must include error information")
         return self
 
-    def set_error_status(self) -> None:
-        self.status = EtlStatus.FAILED
-
-    def add_logs(self, upload_log_items: list[UploadLogItem] | UploadLogItem) -> None:
-        """
-        Add log items to the upload result. If any of the added log items has severity
-        ERROR, the upload status is set to FAILED.
-        """
-        if isinstance(upload_log_items, list):
-            self.logs.extend(upload_log_items)
-            if any(x.severity == LogLevel.ERROR for x in upload_log_items):
-                self.status = EtlStatus.FAILED
-        else:
-            self.logs.append(upload_log_items)
-            if upload_log_items.severity == LogLevel.ERROR:
-                self.status = EtlStatus.FAILED
-
     def get_identifier_upload_results(self) -> list["UploadResult"] | None:
-        """
-        Get the upload results for the identifiers associated with the model, if any.
-        """
+        """Get the upload results for the identifiers associated with the model, if any."""
         return None
 
 
 class UploadResultWithIdentifiers(UploadResult):
-    """
-    Represents an upload result that also includes upload results for
-    identifiers, mirroring a for upload class that has identifiers.
+    """Represents an upload result with nested identifier results.
+
+    It mirrors a for-upload class that has identifiers.
     """
 
+    ID: ClassVar[str] = "06e14d51"
     ENTITY: ClassVar = UploadResult.model_entity().clone()
     NAME: ClassVar = "UploadResultWithIdentifiers"
 
@@ -184,15 +173,13 @@ class UploadResultWithIdentifiers(UploadResult):
     )
 
     def get_identifier_upload_results(self) -> list["UploadResult"] | None:
-        """
-        Get the upload results for the identifiers associated with the model, if any.
-        """
+        """Return the nested upload results for this object's identifiers."""
         return self.identifiers
 
     def propagate_identifier_failures(self) -> None:
-        """
-        Mark this result as FAILED if any of its own identifier results is
-        FAILED, so that a client checking only this result's own status does
+        """Mark this result as failed when an identifier result has failed.
+
+        This ensures a client checking only this result's own status does
         not miss a failure that was only recorded on a nested identifier.
         """
         if self.status == EtlStatus.FAILED:
@@ -212,9 +199,9 @@ class UploadResultWithIdentifiers(UploadResult):
 
 
 class ParentForUpload(Model, IdentifiersMixin):
-    """
-    Represents a parent model for upload, where the term "parent" refers to a model
-    that can have child models associated with it through a link. Other identifiers
+    """Represents a parent model and its linked child models for upload.
+
+    The term "parent" refers to a model that can have linked child models. Other identifiers
     can also be added here, in the "identifiers" field.
 
     This class must be subclassed for specific parent models, adding the following
@@ -227,7 +214,7 @@ class ParentForUpload(Model, IdentifiersMixin):
     Metadata on the parent and child models, allowing introspection, must be provided
     through the class variables.
 
-    Additional validation:
+    Model validation:
     - NULL_ID in the id field is converted to None.
     - If both the ParentForUpload id and the contained Parent model id are provided,
       they must match.
@@ -268,9 +255,126 @@ class ParentForUpload(Model, IdentifiersMixin):
         dict[type[Model], list[tuple[str, type[Model]]]]
     ] = {}
 
+    # Child model classes in foreign-key dependency order: a child is always
+    # listed after every sibling child it links to. None => auto-derived (see
+    # get_child_order); set explicitly in a subclass only to override.
+    CHILD_ORDER: ClassVar[list[type[Model]] | None] = None
+
+    @classmethod
+    def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
+        """Eagerly derive CHILD_ORDER when the subclass is defined, if possible."""
+        super().__pydantic_init_subclass__(**kwargs)
+        if cls.__dict__.get("CHILD_ORDER") is not None:
+            return  # explicit override in the subclass body: leave it untouched
+        try:
+            cls.CHILD_ORDER = cls._compute_child_order()
+        except Exception:  # pylint: disable=broad-exception-caught
+            # Expected case: a child model is not importable yet (circular import
+            # while the class body runs); get_child_order() derives it lazily on
+            # first use, and re-raises there if it is a genuine bug. Log at debug
+            # so a real failure still leaves a trace.
+            logger.debug(
+                "%s: CHILD_ORDER derivation deferred", cls.__name__, exc_info=True
+            )
+
+    @classmethod
+    def get_child_order(cls) -> list[type[Model]]:
+        """Return the child model classes in foreign-key dependency order.
+
+        A child is always ordered after every sibling child it links to, so that
+        processing children in this order never touches a foreign key pointing at
+        a not-yet-created row. Derived from the children's ``Entity.links`` and
+        ``CHILD_INTRA_PARENT_LINKS_MAP``, cached on ``CHILD_ORDER``.
+        """
+        if not cls.CHILDREN_FIELD_NAME_MAP:
+            return []
+        child_order = cls.__dict__.get("CHILD_ORDER")
+        if child_order is None:
+            child_order = cls._compute_child_order()
+            cls.CHILD_ORDER = child_order
+        child_order = list(child_order)
+        unique = set(child_order)
+        if len(unique) != len(child_order) or unique != set(
+            cls.CHILDREN_FIELD_NAME_MAP
+        ):
+            raise ValueError(
+                f"{cls.__name__}.CHILD_ORDER must be a permutation of the "
+                f"CHILDREN_FIELD_NAME_MAP keys (no duplicates, nothing missing or "
+                f"extra); got [{', '.join(x.__name__ for x in child_order)}]"
+            )
+        return child_order
+
+    @classmethod
+    def _child_fk_dependencies(cls) -> dict[type[Model], set[type[Model]]]:
+        """Map each child model class to the sibling child classes it links to.
+
+        Edges come from each child's ``Entity.links`` (a foreign key to a sibling
+        child) and from ``CHILD_INTRA_PARENT_LINKS_MAP``. ``multi_links`` are
+        ignored: they are the reverse side of a link already owned by the other
+        entity. A link target given as either the domain model class or its
+        ForUpload wrapper is resolved to the matching ``CHILDREN_FIELD_NAME_MAP``
+        key.
+        """
+        children = list(cls.CHILDREN_FIELD_NAME_MAP)
+        normalize: dict[type, type[Model]] = {child: child for child in children}
+        for domain_class, wrapper_class in cls.CHILD_FOR_UPLOAD_CLASS_MAP.items():
+            normalize.setdefault(domain_class, domain_class)
+            normalize.setdefault(wrapper_class, domain_class)
+
+        dependencies: dict[type[Model], set[type[Model]]] = {}
+        for child in children:
+            entity: Entity | None = getattr(child, "ENTITY", None)
+            linked_classes = (
+                [link.link_model_class for link in entity.links.values()]
+                if entity is not None
+                else []
+            )
+            linked_classes += [
+                to_class
+                for _, to_class in cls.CHILD_INTRA_PARENT_LINKS_MAP.get(child, [])
+            ]
+            targets = {normalize.get(linked) for linked in linked_classes}
+            dependencies[child] = {
+                target
+                for target in targets
+                if target is not None and target is not child
+            }
+        return dependencies
+
+    @classmethod
+    def _compute_child_order(cls) -> list[type[Model]]:
+        """Topologically sort the child model classes by their foreign-key links.
+
+        Children are added to the sorter in ``CHILDREN_FIELD_NAME_MAP``
+        declaration order, so ``graphlib`` keeps that order within each dependency
+        layer (edges: see ``_child_fk_dependencies``). A cycle logs a warning and
+        returns the declaration order unchanged.
+        """
+        children: list[type[Model]] = list(cls.CHILDREN_FIELD_NAME_MAP)
+        if len(children) <= 1:
+            return children
+        dependencies = cls._child_fk_dependencies()
+        sorter: graphlib.TopologicalSorter[type[Model]] = graphlib.TopologicalSorter()
+        for child in children:
+            sorter.add(child)
+        for child in children:
+            for dependency in dependencies[child]:
+                sorter.add(child, dependency)
+        try:
+            return list(sorter.static_order())
+        except graphlib.CycleError as exception:
+            cycle = ", ".join(sorted({node.__name__ for node in exception.args[1]}))
+            logger.warning(
+                "%s: cyclic foreign keys between child models (%s); falling back "
+                "to declaration order for child upload.",
+                cls.__name__,
+                cycle,
+            )
+            return children
+
     id: UUID | None = Field(
         default=None,
-        description="The unique identifier for the Parent object. If NULL_ID is provided, it will be set to None. The id must match that of the contained Parent model, if provided, and be consistent with the parent ID in the child models, if provided. The contained Parent model may have a different ID field than 'id', but this class uses 'id' instead.",
+        description="Parent identifier; NULL_ID becomes None and must match the contained parent and child parent IDs when provided.",
     )
 
     @field_validator("id", mode="before")
@@ -283,9 +387,7 @@ class ParentForUpload(Model, IdentifiersMixin):
 
     @model_validator(mode="after")
     def validate_parent_id(self) -> Self:
-        """
-        Validate consistency of IDs with the parent (self) field, if provided.
-        """
+        """Synchronize this upload ID with the contained parent model ID."""
         parent: Model | None = getattr(self, self.PARENT_FIELD_NAME)
         if parent is None:
             return self
@@ -312,10 +414,7 @@ class ParentForUpload(Model, IdentifiersMixin):
 
     @model_validator(mode="after")
     def validate_child_parent_id(self) -> Self:
-        """
-        Validate consistency of child parent ID their actual parent ID.
-        Validate unicity of child IDs.
-        """
+        """Validate child-parent references and uniqueness within this parent."""
         has_id = self.id is not None and self.id != NULL_ID
         for (
             child_model_class,
@@ -369,22 +468,18 @@ class ParentForUpload(Model, IdentifiersMixin):
         return self
 
     def get_parent(self) -> Model | None:
-        """
-        Get the actual model contained in this for-upload model, if set.
-        """
+        """Get the actual model contained in this for-upload model, if set."""
         parent: Model | None = getattr(self, self.PARENT_FIELD_NAME)
         return parent
 
     def get_identifiers(self) -> list[IdentifierForUpload] | None:
-        """
-        Get the list of identifiers for upload, or an empty list if none are set.
-        """
+        """Get the list of identifiers for upload, or an empty list if none are set."""
         return self.identifiers
 
     def replace_child_id(self, child_for_upload: Model, new_id: UUID) -> None:
-        """
-        Replace the ID of a child model assumed to be in this ParentForUpload, for a
-        given child model class and old ID to be replaced by a new ID. Any children that
+        """Replace a child model ID and update its linked child references.
+
+        This replaces an old ID with a new ID for a child model. Any children that
         linked to this child will have their references updated as well. This can be
         used to replace temporary IDs by actual existing IDs after verification.
         """
@@ -423,11 +518,12 @@ class ParentForUpload(Model, IdentifiersMixin):
 
 
 class ParentUploadResult(UploadResultWithIdentifiers):
-    """
-    Represents the upload result for a Parent model upload. This class must be
-    subclassed analogous to the ParentForUpload model it corresponds to.
+    """Represents upload results for a parent payload and its children.
+
+    Subclasses correspond to their ParentForUpload payload type.
     """
 
+    ID: ClassVar[str] = "f354e913"
     ENTITY: ClassVar = UploadResultWithIdentifiers.model_entity().clone()
     NAME: ClassVar = "ParentUploadResult"
 
@@ -441,9 +537,13 @@ class ParentUploadResult(UploadResultWithIdentifiers):
     )
 
     def get_status_count(self, include_self: bool = True) -> dict[EtlStatus, int]:
-        """
-        Count the number of occurrences of each EtlStatus in this result (if
-        include_self) and that of its child results.
+        """Count status occurrences across this result and its nested results.
+
+        Args:
+            include_self: Whether to include this parent result's status.
+
+        Returns:
+            A count for every ETL status.
         """
         status_count_map: dict[EtlStatus, int] = {x: 0 for x in EtlStatus}
         if include_self:
@@ -463,9 +563,9 @@ class ParentUploadResult(UploadResultWithIdentifiers):
         return status_count_map
 
     def propagate_child_failures(self) -> None:
-        """
-        Mark this result, and each of its own children, as FAILED if any
-        nested child or identifier result has FAILED, so that a client
+        """Mark this result as failed when nested results have failed.
+
+        It includes nested children so that a client
         checking only a given result's own status does not miss a failure
         that was only recorded on a result nested underneath it.
         """
@@ -487,9 +587,9 @@ class ParentUploadResult(UploadResultWithIdentifiers):
         )
 
     def update_status_with_data_issues(self) -> None:
-        """
-        Update the upload status of this result based on the data issues found, adding
-        corresponding log items.
+        """Update this result's status and logs from its data issues.
+
+        Corresponding log items are added.
         """
         data_issues = self.data_issues
         # Errors
@@ -530,9 +630,9 @@ class ParentUploadResult(UploadResultWithIdentifiers):
             )
 
     def convert_status(self, from_status: EtlStatus, to_status: EtlStatus) -> None:
-        """
-        Convert all occurrences of from_status to to_status in this result and all
-        its child and identifier results.
+        """Replace one status with another across this result and nested results.
+
+        Child, parent, and identifier outcomes are updated in place.
         """
         if self.status == from_status:
             self.status = to_status
@@ -550,9 +650,7 @@ class ParentUploadResult(UploadResultWithIdentifiers):
                 identifier_result.status = to_status
 
     def get_error_data_issues(self) -> list[DataIssue]:
-        """
-        Get all data issues that are errors.
-        """
+        """Get all data issues that are errors."""
         return [
             issue
             for issue in self.data_issues
@@ -561,21 +659,24 @@ class ParentUploadResult(UploadResultWithIdentifiers):
 
     @classmethod
     def get_child_results_field_names(cls) -> list[str]:
-        """
-        Get the list of field names in this result class that contain lists of child results.
+        """Return fields on this result that contain child result lists.
+
+        The fields correspond to the associated ParentForUpload child mappings.
         """
         return list(cls.PARENT_FOR_UPLOAD_CLASS.CHILDREN_FIELD_NAME_MAP.values())
 
 
 class BaseBatchForUpload(Model):
-    """
-    Base class for batches of ParentForUpload objects to be uploaded. A batch is
-    intended as a single unit of work for an upload operation and as such to be
+    """Represents a batch ParentForUpload objects to be uploaded.
+
+    This is a base class intended to be subclassed per application.
+
+    A batch is intended as a single unit of work for an upload operation and as such to be
     processed atomically.
 
-    Additional validation:
-    - All ParentForUpload objects must have unique IDs (if provided)
-    - All ParentForUpload objects must have unique other identifiers
+    Model validation:
+    Parent and child IDs and external identifiers must be unique within the
+    batch. Intra-parent child links may not point to children of another parent.
     """
 
     ENTITY: ClassVar = Entity(persistable=False, id_field_name="id")
@@ -591,7 +692,7 @@ class BaseBatchForUpload(Model):
 
     id: UUID = Field(
         default_factory=uuid.uuid4,
-        description="The unique identifier for the upload batch.",
+        description="Unique upload batch identifier, serialized as a string UUID.",
     )
     created_at: datetime.datetime = Field(
         default_factory=lambda: datetime.datetime.now(datetime.timezone.utc),
@@ -602,17 +703,14 @@ class BaseBatchForUpload(Model):
     def _serialize_id_fields(
         self, value: UUID | None, serializer: Callable[[Any], str]
     ) -> str:
-        """Generic UUID field serializer for the id field and all *_id fields."""
+        """Serialize batch identifier fields as string UUIDs."""
         if isinstance(value, UUID):
             return str(value)
         return serializer(value)
 
     @model_validator(mode="after")
     def _validate_parent_ids(self) -> Self:
-        """
-        Validate that all parents for upload in the batch have unique IDs and other
-        identifiers.
-        """
+        """Validate unique parent IDs and external identifiers."""
         # Verify duplicate parent IDs
         parents_for_upload = self.get_parents_for_upload()
         parent_ids = [
@@ -640,10 +738,7 @@ class BaseBatchForUpload(Model):
 
     @model_validator(mode="after")
     def _validate_child_ids(self) -> Self:
-        """
-        Validate that all children for upload in the batch have unique IDs and other
-        identifiers.
-        """
+        """Validate unique child IDs and external identifiers."""
         # Verify duplicate child IDs and identifiers across all types of children
         seen_child_ids: set[UUID] = set()
         for (
@@ -690,9 +785,7 @@ class BaseBatchForUpload(Model):
 
     @model_validator(mode="after")
     def _validate_intra_parent_links(self) -> Self:
-        """
-        Validate that all links between children are within the same parent.
-        """
+        """Validate that all links between children are within the same parent."""
         children_for_upload: list[Model]
         # Get all child model classes that have intra-parent links to them
         to_child_model_classes: set[type[Model]] = set()
@@ -756,9 +849,7 @@ class BaseBatchForUpload(Model):
         return self
 
     def get_parents_for_upload(self) -> list[ParentForUpload]:
-        """
-        Get the list of objects to be uploaded in this batch.
-        """
+        """Get the list of objects to be uploaded in this batch."""
         parents_for_upload: list[ParentForUpload] = getattr(
             self, self.PARENTS_FOR_UPLOAD_FIELD_NAME
         )
@@ -771,9 +862,13 @@ class BaseBatchForUpload(Model):
     def get_all_children_for_upload(
         self, child_model_class: type[Model]
     ) -> list[Model]:
-        """
-        Get a list of all children for upload in this batch for a particular child model
-        class, across all parents.
+        """Return all uploaded children of one model class across the batch.
+
+        Args:
+            child_model_class: The domain child model class to collect.
+
+        Returns:
+            The child upload payloads for the requested model class.
         """
         all_children = []
         children_field_name = self.PARENT_FOR_UPLOAD_CLASS.CHILDREN_FIELD_NAME_MAP[
@@ -788,19 +883,17 @@ class BaseBatchForUpload(Model):
 
     @classmethod
     def get_parent_class(cls) -> type[ParentForUpload]:
-        """
-        Get the ParentForUpload class corresponding to this batch class.
-        """
+        """Get the ParentForUpload class corresponding to this batch class."""
         return cls.PARENT_FOR_UPLOAD_CLASS
 
 
 class BaseBatchUploadResult(UploadResult):
-    """
-    Base class for upload results corresponding to a complete batch of objects
-    uploaded. The names of the fields in any child class must be exactly identical to
-    those in the corresponding BaseBatchForUpload child class.
+    """Represents the result for an atomic batch upload.
+
+    Subclasses use field names that match their BaseBatchForUpload payload.
     """
 
+    ID: ClassVar[str] = "6d64fbc3"
     ENTITY: ClassVar = UploadResult.model_entity().clone()
     NAME: ClassVar = "BaseBatchUploadResult"
 
@@ -819,20 +912,37 @@ class BaseBatchUploadResult(UploadResult):
         default_factory=uuid.uuid4,
         description="The unique identifier for the upload batch that this result belongs to.",
     )
+    result_type: str = Field(
+        default="",
+        description=(
+            "The concrete result class name, set automatically on validation. "
+            "Used to reconstruct the correct subclass when deserialising a "
+            "heterogeneous list of upload results."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _ensure_result_type(self) -> Self:
+        """Populate result_type with the concrete class name when unset."""
+        if not self.result_type:
+            self.result_type = type(self).__name__
+        return self
 
     def get_parent_results(self) -> list[ParentUploadResult]:
-        """
-        Get the list of parent upload results in this batch upload result.
-        """
+        """Get the list of parent upload results in this batch upload result."""
         parent_results: list[ParentUploadResult] = getattr(
             self, self.BATCH_FOR_UPLOAD_CLASS.PARENTS_FOR_UPLOAD_FIELD_NAME
         )
         return parent_results
 
     def get_status_count(self, include_self: bool = True) -> dict[EtlStatus, int]:
-        """
-        Count the number of occurrences of each EtlStatus in this result (if
-        include_self) and that of its child results.
+        """Count statuses across this batch result and its parent results.
+
+        Args:
+            include_self: Whether to include this batch result's status.
+
+        Returns:
+            A count for every ETL status.
         """
         status_count_map: dict[EtlStatus, int] = {x: 0 for x in EtlStatus}
         if include_self:
@@ -844,8 +954,8 @@ class BaseBatchUploadResult(UploadResult):
         return status_count_map
 
     def resolve_status(self) -> None:
-        """
-        Set this batch result's status based on the aggregate of its children.
+        """Set this batch result's status based on the aggregate of its children.
+
         Only has effect when status is still PENDING.
         """
         if self.status != EtlStatus.PENDING:

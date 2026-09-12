@@ -1,3 +1,10 @@
+"""Define shared bounds and validation patterns for commondb domain values.
+
+The module provides the null UUID sentinel, datetime and request-size limits,
+and compiled regular expressions used to validate numeric and ISO-like temporal
+representations across commondb models and services.
+"""
+
 import datetime
 import re
 from uuid import UUID

@@ -1,3 +1,5 @@
+"""SQLAlchemy repository implementation."""
+
 import re
 import uuid
 import warnings
@@ -11,7 +13,6 @@ from sqlalchemy.exc import SAWarning
 from sqlalchemy.orm import Session, sessionmaker
 
 import gen_epix.fastapp.exc as exc
-from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import CrudOperation, IsolationLevel
 from gen_epix.fastapp.model import Model
@@ -46,9 +47,7 @@ from gen_epix.filter import (
 
 
 class SARepository(BaseRepository):
-    """
-    SQLAlchemy-backed repository
-    """
+    """Encapsulates a SQLAlchemy-backed repository."""
 
     DEFAULT_MAX_INSERT_BATCH_SIZE = 2000
     DEFAULT_MAX_PARAMETERS_IN_CLAUSE = 1000
@@ -71,6 +70,7 @@ class SARepository(BaseRepository):
     def create_repository(cls, **kwargs: Any) -> BaseRepository:
         """
         Create a repository instance from keyword arguments.
+
         Accepts either ``connection_string`` or ``file`` (SQLite path).
         """
         entities, connection_string, remaining_kwargs = cls._process_repository_params(
@@ -84,22 +84,20 @@ class SARepository(BaseRepository):
 
     @classmethod
     def clear_repository_content(cls, **kwargs: Any) -> None:
-        """
-        Delete all database objects associated with the repository.
-        """
+        """Delete all database objects associated with the repository."""
         entities, connection_string, remaining_kwargs = cls._process_repository_params(
             kwargs
         )
+        if connection_string is None:
+            raise ValueError("connection_string is required to clear an SARepository")
         # Get engine
         engine = EngineFactory.create_engine(connection_string, echo=False)
 
         # Get all actual table names from the database using schema names
         inspector = inspect(engine)
-        actual_tables = set()
+        actual_tables: set[tuple[str | None, str]] = set()
         schema_names = {x.schema_name for x in entities if x.persistable}
         for schema_name in schema_names:
-            if not schema_name:
-                continue
             try:
                 # Get all table names in this schema from the database
                 table_names = inspector.get_table_names(schema=schema_name)
@@ -118,7 +116,11 @@ class SARepository(BaseRepository):
                 ):
                     if foreign_key.get("name"):
                         constraints.append(
-                            (schema_name, table_name, foreign_key["name"])
+                            (
+                                schema_name,
+                                table_name,
+                                cast(str, foreign_key["name"]),
+                            )
                         )
             except Exception:  # pylint: disable=broad-except
                 # Skip tables that can't be inspected
@@ -129,34 +131,47 @@ class SARepository(BaseRepository):
             with engine.connect() as conn:
                 # Detect database dialect for proper syntax
                 dialect_name = conn.dialect.name.lower()
+                identifier_preparer = conn.dialect.identifier_preparer
                 transaction = conn.begin()
                 try:
-                    for (
-                        schema_name,
-                        table_name,
-                        constraint_name,
-                    ) in constraints:
+                    for schema_name, table_name, constraint_name in constraints:
                         try:
+                            quoted_table_name = identifier_preparer.quote(table_name)
+                            if schema_name is None:
+                                qualified_table_name = quoted_table_name
+                            else:
+                                qualified_table_name = (
+                                    f"{identifier_preparer.quote(schema_name)}."
+                                    f"{quoted_table_name}"
+                                )
+                            quoted_constraint_name = identifier_preparer.quote(
+                                constraint_name
+                            )
                             # NOTE: Only tested with MS SQL Server
                             if dialect_name == "mssql":
-                                # SQL Server syntax with square brackets
-                                sql = f"ALTER TABLE [{schema_name}].[{table_name}] DROP CONSTRAINT [{constraint_name}]"
+                                sql = (
+                                    f"ALTER TABLE {qualified_table_name} "
+                                    f"DROP CONSTRAINT {quoted_constraint_name}"
+                                )
                             elif dialect_name in (
                                 "postgresql",
                                 "postgres",
                                 "redshift",
                             ):
-                                # PostgreSQL/Redshift syntax with double quotes
-                                sql = f'ALTER TABLE "{schema_name}"."{table_name}" DROP CONSTRAINT "{constraint_name}"'
+                                sql = (
+                                    f"ALTER TABLE {qualified_table_name} "
+                                    f"DROP CONSTRAINT {quoted_constraint_name}"
+                                )
                             elif dialect_name in ("mysql", "mariadb"):
-                                # MySQL/MariaDB syntax with backticks and DROP FOREIGN KEY
-                                sql = f"ALTER TABLE `{schema_name}`.`{table_name}` DROP FOREIGN KEY `{constraint_name}`"
-                            elif dialect_name in ("oracle", "db2"):
-                                # Oracle and DB2 syntax
-                                sql = f"ALTER TABLE {schema_name}.{table_name} DROP CONSTRAINT {constraint_name}"
+                                sql = (
+                                    f"ALTER TABLE {qualified_table_name} "
+                                    f"DROP FOREIGN KEY {quoted_constraint_name}"
+                                )
                             else:
-                                # Generic SQL syntax (fallback for other databases)
-                                sql = f"ALTER TABLE {schema_name}.{table_name} DROP CONSTRAINT {constraint_name}"
+                                sql = (
+                                    f"ALTER TABLE {qualified_table_name} "
+                                    f"DROP CONSTRAINT {quoted_constraint_name}"
+                                )
 
                             conn.execute(sa.text(sql))
                         except Exception:  # pylint: disable=broad-except
@@ -171,7 +186,9 @@ class SARepository(BaseRepository):
         with engine.connect() as conn:
             for schema_name, table_name in actual_tables:
                 try:
-                    conn.execute(sa.text(f"DROP TABLE [{schema_name}].[{table_name}]"))
+                    sa.Table(table_name, sa.MetaData(), schema=schema_name).drop(
+                        conn, checkfirst=True
+                    )
                 except Exception:  # pylint: disable=broad-except
                     # Table might already be dropped, continue
                     continue
@@ -189,10 +206,12 @@ class SARepository(BaseRepository):
                 except Exception:  # pylint: disable=broad-except
                     # Schema might not exist or have other issues
                     continue
+            engine.dispose()
 
     def __init__(self, engine: Engine, **kwargs: Any):
         """
         Initialise the repository with the provided SQLAlchemy engine.
+
         Registers mappers for each persistable entity and creates per-
         isolation-level session factories.
         """
@@ -263,6 +282,7 @@ class SARepository(BaseRepository):
     ) -> BaseUnitOfWork:
         """
         Return a unit-of-work context manager backed by an SA session.
+
         Nests within the active UoW when already inside a context.
         """
         if self._uow_context_stack:
@@ -311,6 +331,7 @@ class SARepository(BaseRepository):
     ) -> None:
         """
         Create and register mappers for a list of entities using the given factory.
+
         The factory encapsulates all db-specific mapper construction, so SARepository
         has no knowledge of process fields or metadata field rules.
         """
@@ -338,9 +359,7 @@ class SARepository(BaseRepository):
         field_name_map: dict[type[Model], dict[str, str]] | None = None,
         **kwargs: Any,
     ) -> None:
-        """
-        Default implementation to register standard mappers for a list of entities.
-        """
+        """Default implementation to register standard mappers for a list of entities."""
         # Parse arguments
         entities = entities or []
         field_name_map = field_name_map or {}
@@ -532,13 +551,18 @@ class SARepository(BaseRepository):
         # Check objs
         if not all(isinstance(x, model_class) for x in objs):
             raise ValueError(f"Not all objs are of type {model_class.__name__}")
+        mapper = self.get_mapper(model_class)
+        SARepository._verify_duplicate_ids(
+            model_class, [mapper.get_id(obj) for obj in objs]
+        )
 
         # Create rows
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
+            """Execute the requested value."""
             rows = self.to_sql(user_id, model_class, objs)
             n_rows = len(rows)
-            n_batches = int(n_rows / max_batch_size) + (n_rows / max_batch_size > 0)
+            n_batches = (n_rows + max_batch_size - 1) // max_batch_size
             if not flush and n_batches > 1:
                 raise exc.RepositoryServiceError(
                     "fa00ce85",
@@ -554,7 +578,6 @@ class SARepository(BaseRepository):
                 if flush:
                     session.flush()
             if return_id:
-                mapper = self.get_mapper(model_class)
                 return [mapper.get_row_id(x) for x in rows]
             return self.from_sql(model_class, rows)
 
@@ -587,6 +610,7 @@ class SARepository(BaseRepository):
         optimize_parameter_handling = kwargs.get("optimize_parameter_handling", False)
 
         def _execute(session: Session) -> list[Model]:
+            """Execute the requested value."""
             rows, row_ids = SARepository._in_session_read_some(
                 mapper,
                 session,
@@ -626,6 +650,7 @@ class SARepository(BaseRepository):
     ) -> list[Model] | list[Hashable]:
         """
         Fetch all rows matching an optional filter, with limit/offset support.
+
         An ``obj_filter`` kwarg may apply additional Python-side filtering.
         """
         # Check arguments
@@ -638,6 +663,7 @@ class SARepository(BaseRepository):
         offset = offset or 0
 
         def _add_sql_limit_offset(stmt: sa.Select) -> sa.Select:
+            """Add sql limit offset."""
             if limit > 0:
                 stmt = stmt.limit(limit)
             if offset > 0:
@@ -645,6 +671,7 @@ class SARepository(BaseRepository):
             return stmt
 
         def _apply_obj_limit_offset(objs: list[Model]) -> list[Model]:
+            """Apply obj limit offset."""
             if limit > 0:
                 if offset > len(objs):
                     return []
@@ -656,6 +683,7 @@ class SARepository(BaseRepository):
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
             # Get either rows or row_ids
+            """Execute the requested value."""
             if return_id:
                 # Select only row_ids
                 stmt = select(mapper.get_row_id_column())
@@ -730,8 +758,12 @@ class SARepository(BaseRepository):
         # Retrieve row
         mapper = self.get_mapper(model_class)
         row_class = mapper.row_class
+        SARepository._verify_duplicate_ids(
+            model_class, [mapper.get_id(obj) for obj in objs]
+        )
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
+            """Execute the requested value."""
             obj_ids = [mapper.get_id(x) for x in objs]
             rows, row_ids = SARepository._in_session_read_some(
                 mapper,
@@ -778,6 +810,7 @@ class SARepository(BaseRepository):
     ) -> list[Model] | list[Hashable]:
         """
         Insert new objects and update existing ones in a single call.
+
         Existence is checked in batches to respect SQL Server's parameter limit.
         """
         objs = objs if isinstance(objs, list) else list(objs)
@@ -795,8 +828,12 @@ class SARepository(BaseRepository):
 
         mapper = self.get_mapper(model_class)
         row_class = mapper.row_class
+        SARepository._verify_duplicate_ids(
+            model_class, [mapper.get_id(obj) for obj in objs]
+        )
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
+            """Execute the requested value."""
             obj_ids = [mapper.get_id(x) for x in objs]
 
             # Chunk the existence check to avoid SQL Server's 2100-parameter limit.
@@ -851,7 +888,8 @@ class SARepository(BaseRepository):
                 if flush:
                     session.flush()
 
-            all_rows = new_rows + updated_rows
+            row_by_id = {mapper.get_row_id(row): row for row in new_rows + updated_rows}
+            all_rows = [row_by_id[obj_id] for obj_id in obj_ids]
             if return_id:
                 return [mapper.get_row_id(x) for x in all_rows]
             return self.from_sql(model_class, all_rows)
@@ -881,6 +919,7 @@ class SARepository(BaseRepository):
         """Delete the specified rows after confirming they exist."""
         # Check arguments
         row_ids = row_ids if isinstance(row_ids, list) else list(row_ids)
+        SARepository._verify_duplicate_ids(model_class, row_ids)
         session: Session = kwargs.get("session")  # type: ignore[assignment]
         flush = kwargs.get("flush", True)
         # Delete rows
@@ -888,6 +927,7 @@ class SARepository(BaseRepository):
         row_class = mapper.row_class
 
         def _execute(session: Session) -> None:
+            """Execute the requested value."""
             is_existing = self.exists_some(model_class, row_ids)
             if not all(is_existing):
                 invalid_ids = [x for x, y in zip(row_ids, is_existing) if not y]
@@ -923,7 +963,7 @@ class SARepository(BaseRepository):
         obj_filter: Filter | None = kwargs.get("obj_filter", None)
 
         def _execute(session: Session) -> list[Hashable] | None:
-
+            """Execute the requested value."""
             row_ids: list[Hashable] | None = None
 
             # filter and/or obj_filter provided
@@ -1001,6 +1041,7 @@ class SARepository(BaseRepository):
         SARepository._verify_duplicate_ids(model_class, obj_ids)
 
         def _execute(session: Session) -> list[bool]:
+            """Execute the requested value."""
             row_id_col = mapper.get_row_id_column()
             rows: Sequence = session.execute(
                 select(row_id_col).where(row_id_col.in_(obj_ids))
@@ -1030,6 +1071,7 @@ class SARepository(BaseRepository):
         row_class = mapper.row_class
 
         def _execute(session: Session) -> Iterable[tuple[Any, ...]]:
+            """Execute the requested value."""
             stmt = select(*[getattr(row_class, x) for x in row_field_names])
             if filter:
                 # Convert filter to where clause and add to statement
@@ -1119,12 +1161,12 @@ class SARepository(BaseRepository):
             )
         elif isinstance(filter, RangeFilter):
             args = []
-            if filter.lower_bound:
+            if filter.lower_bound is not None:
                 if filter.lower_bound_censor == ComparisonOperator.GT:
                     args.append(result_column > filter.lower_bound)
                 elif filter.lower_bound_censor == ComparisonOperator.GTE:
                     args.append(result_column >= filter.lower_bound)
-            if filter.upper_bound:
+            if filter.upper_bound is not None:
                 if filter.upper_bound_censor == ComparisonOperator.ST:
                     args.append(result_column < filter.upper_bound)
                 elif filter.upper_bound_censor == ComparisonOperator.STE:
@@ -1142,6 +1184,7 @@ class SARepository(BaseRepository):
         """
         Recursively partition a filter into a SQL-expressible subtree and
         a remainder to be evaluated in Python.
+
         """
         map_key_only_classes = [
             ExistsFilter,
@@ -1224,7 +1267,7 @@ class SARepository(BaseRepository):
         return None, filter
 
     def print_db_content(self, model_class: type[Model], **kwargs: Any) -> None:
-        """Helper method for debugging"""
+        """Helper method for debugging."""
         header = kwargs.get("header", "")
         mapper = self.get_mapper(model_class)
         tables_classes = [
@@ -1261,10 +1304,9 @@ class SARepository(BaseRepository):
         obj_ids_set = set(obj_ids)
         if verify_duplicate and len(obj_ids) != len(obj_ids_set):
             seen = set()
-            uq_obj_ids = set(
-                x for x in obj_ids if x not in seen and not seen.add(x)  # type: ignore[func-returns-value]
-            )
-            duplicate_obj_ids = obj_ids_set - uq_obj_ids
+            duplicate_obj_ids = [
+                x for x in obj_ids if x in seen or seen.add(x)  # type: ignore[func-returns-value]
+            ]
             raise exc.DuplicateIdsError(
                 "aac3e2af", "obj_ids is not unique", ids=duplicate_obj_ids
             )
@@ -1337,10 +1379,10 @@ class SARepository(BaseRepository):
         max_ids_in_clause: int = DEFAULT_MAX_PARAMETERS_IN_CLAUSE,
     ) -> sa.sql.Select:
         """Build a SELECT restricted to the given ids via a temp-table JOIN.
+
         Avoids ODBC 07002 errors on MSSQL for UNIQUEIDENTIFIER IN() queries.
         Falls back to a plain IN() clause on non-MSSQL dialects.
         """
-
         row_class = mapper.row_class
         table = cast(sa.Table, row_class.__table__)  # type: ignore[attr-defined]
         id_col = mapper.get_row_id_column()
@@ -1353,7 +1395,7 @@ class SARepository(BaseRepository):
             return select(row_class).where(id_col.in_(obj_ids))
 
         # TODO: check if temp table exists and take a different name in that case
-        temp_table_name = f"#temp_{str(uuid.uuid4()).replace('-','_')}"
+        temp_table_name = f"#temp_{str(uuid.uuid4()).replace('-', '_')}"
         id_col_name = id_col.name
         id_datatype = table.c[id_col_name].type
         id_datatype_sql = id_datatype.compile(dialect=dialect)
@@ -1477,17 +1519,16 @@ class SARepository(BaseRepository):
         if not isinstance(obj_ids, list) and not isinstance(obj_ids, set):
             obj_ids = list(obj_ids)
         seen = set()
-        uq_obj_ids = set(
-            x for x in obj_ids if x not in seen and not seen.add(x)  # type: ignore
-        )
-        if len(uq_obj_ids) == len(obj_ids):
+        duplicate_ids = [
+            x for x in obj_ids if x in seen or seen.add(x)  # type: ignore[func-returns-value]
+        ]
+        if not duplicate_ids:
             return
-        duplicate_ids = set(obj_ids) - uq_obj_ids
         duplicate_ids_str = ", ".join([str(x) for x in duplicate_ids])
         raise exc.DuplicateIdsError(
             "bba17339",
             f"Model {model_class.__name__}: object ids are not unique: {duplicate_ids_str}",
-            ids=duplicate_ids_str,
+            ids=duplicate_ids,
         )
 
     @classmethod
@@ -1498,21 +1539,25 @@ class SARepository(BaseRepository):
         **kwargs: Any,
     ) -> "SARepository":
         """
-        Create an SARepository, setting up engine, schemas, and DDL.
+        Create an SARepository and its database engine.
 
         When connection_string is None, an in-memory SQLite database will be created. When
-        connection_string is provided, it will be used to create the engine.
+        connection_string is provided, it will be used to create the engine. SQLite
+        repositories retain their convenient automatic schema setup. Other databases
+        are migration-managed by default; pass ``create_database_objects=True`` only
+        for explicit bootstrap tooling.
         """
         # Parse arguments
         echo = kwargs.pop("echo", False)
         register_mappers = kwargs.pop("register_mappers", True)
         recreate_sqlite_file = kwargs.pop("recreate_sqlite_file", False)
-        schema_names = {x.schema_name for x in entities if x.persistable}
 
         # Handle sqlite separately
         is_sqlite = connection_string is None or str(
             connection_string
         ).lower().startswith("sqlite:///")
+        create_database_objects = kwargs.pop("create_database_objects", is_sqlite)
+        schema_names = {x.schema_name for x in entities if x.persistable}
         if is_sqlite:
             sqlite_target = (
                 None
@@ -1549,12 +1594,6 @@ class SARepository(BaseRepository):
                     # Remove existing file
                     if sqlite_file.is_file():
                         sqlite_file.unlink()
-                    # Create the file by creating a connection
-                    engine = sa.create_engine(
-                        f"sqlite:///{sqlite_file.as_posix()}", echo=echo
-                    )
-                    conn = engine.connect()
-                    conn.close()
                 elif not sqlite_file.is_file():
                     raise ValueError(
                         "Unable to derive file from connection string or file does not exist"
@@ -1577,13 +1616,14 @@ class SARepository(BaseRepository):
             def set_sqlite_pragma(
                 dbapi_connection: Any, connection_record: Any
             ) -> None:
+                """Set sqlite pragma."""
                 cursor = dbapi_connection.cursor()
                 cursor.execute("PRAGMA foreign_keys=ON")
                 cursor.close()
 
-            # Add each schema as a separate database, as sqlite does not support schemas
-            # Unique per repository instance, so schemas of the same name from
-            # different SARepository instances don't collide on sqlite's
+            # Add each schema as a separate attached database, since sqlite does not
+            # support schemas. Unique per repository instance, so schemas of the same
+            # name from different SARepository instances don't collide on sqlite's
             # process-wide shared cache (which is keyed by URI).
             memory_schema_namespace = uuid.uuid4().hex
             with engine.connect() as conn:
@@ -1625,19 +1665,15 @@ class SARepository(BaseRepository):
                 connection_string, echo, connect_args=connect_args
             )
 
-            # Create schemas if not exists
-            for schema_name in schema_names:
-                if not schema_name:
-                    continue
-                with engine.connect() as conn:
-                    # print(conn)
-                    result = conn.execute(sa.text("SELECT name FROM sys.schemas"))
-                    schemas = [x[0] for x in result]
-                    # print(schemas)
-                    conn.dialect
-                    if not conn.dialect.has_schema(conn, schema_name):
-                        conn.execute(sa.schema.CreateSchema(schema_name))
-                        conn.commit()
+            # Create any non-existing schemas if allowed
+            if create_database_objects:
+                for schema_name in schema_names:
+                    if not schema_name:
+                        continue
+                    with engine.connect() as conn:
+                        if not conn.dialect.has_schema(conn, schema_name):
+                            conn.execute(sa.schema.CreateSchema(schema_name))
+                            conn.commit()
 
         # Get all metadata instances
         metadata_set: set[sa.MetaData] = set()
@@ -1652,9 +1688,10 @@ class SARepository(BaseRepository):
                 )
             metadata_set.add(cast(sa.MetaData, getattr(db_model_class, "metadata")))
 
-        # Create all tables, if necessary, for each metadata instance
-        for metadata in metadata_set:
-            metadata.create_all(engine, checkfirst=True)
+        # Create any non-existing database objects except schemas (done earlier), if allowed
+        if create_database_objects:
+            for metadata in metadata_set:
+                metadata.create_all(engine, checkfirst=True)
 
         # Create repository
         repository = cls(
@@ -1672,6 +1709,7 @@ class SARepository(BaseRepository):
         """
         Try to open a database connection; return None on success or the
         exception on failure.
+
         """
         try:
             connection = sa.create_engine(
