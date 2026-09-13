@@ -6,7 +6,7 @@ implementations alongside FastApp's authentication service.
 
 # pylint: disable=useless-import-alias
 from gen_epix.commondb.services.abac import AbacService as AbacService
-from gen_epix.commondb.services.client import CommondbRemoteApp as CommondbRemoteApp
+from gen_epix.commondb.services.client import CommondbClient as CommondbClient
 from gen_epix.commondb.services.organization import (
     OrganizationService as OrganizationService,
 )

@@ -6,15 +6,15 @@
 # - Mock OIDC server at https://localhost:5443
 #
 # Run from the gen-epix-api repository root:
-# Rscript test/r/test_remote_app_e2e.R
+# Rscript test/r/test_client_e2e.R
 
 repo_root <- normalizePath(".")
 certificate_path <- normalizePath(file.path(repo_root, "cert", "cert.pem"))
 
 Sys.setenv(CURL_CA_BUNDLE = certificate_path)
 
-source(file.path(repo_root, "gen_epix", "commondb", "services", "remote_app.R"))
-source(file.path(repo_root, "gen_epix", "casedb", "services", "remote_app.R"))
+source(file.path(repo_root, "gen_epix", "commondb", "services", "client.R"))
+source(file.path(repo_root, "gen_epix", "casedb", "services", "client.R"))
 
 CASEDB_URL <- "https://127.0.0.1:8000"
 CASEDB_LOGIN_URL <- "https://localhost:5010"

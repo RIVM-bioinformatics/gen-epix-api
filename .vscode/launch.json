@@ -777,13 +777,13 @@
         "justMyCode": true
 },
 {
-        "name": "test.casedb.unit.remote_app",
+        "name": "test.casedb.unit.client",
         "type": "debugpy",
         "request": "launch",
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/casedb/unit/remote_app"
+                "test/casedb/unit/client"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1029,13 +1029,13 @@
         "justMyCode": true
 },
 {
-        "name": "test.commondb.unit.remote_app",
+        "name": "test.commondb.unit.client",
         "type": "debugpy",
         "request": "launch",
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/commondb/unit/remote_app"
+                "test/commondb/unit/client"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1749,13 +1749,13 @@
         "justMyCode": true
 },
 {
-        "name": "test.seqdb.unit.remote_app",
+        "name": "test.seqdb.unit.client",
         "type": "debugpy",
         "request": "launch",
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/seqdb/unit/remote_app"
+                "test/seqdb/unit/client"
         ],
         "console": "integratedTerminal",
         "justMyCode": true

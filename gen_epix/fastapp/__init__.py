@@ -9,7 +9,7 @@ identity-provider models. Applications normally import these types from
 
 # pylint: disable=useless-import-alias
 from gen_epix.fastapp.app import App as App
-from gen_epix.fastapp.client import RemoteApp as RemoteApp
+from gen_epix.fastapp.client import Client as Client
 from gen_epix.fastapp.domain import Domain as Domain
 from gen_epix.fastapp.domain import Entity as Entity
 from gen_epix.fastapp.domain import Key as Key

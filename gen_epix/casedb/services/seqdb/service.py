@@ -14,7 +14,7 @@ from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.seqdb.domain.model import User as SeqdbUser
 from gen_epix.seqdb.env import AppComposer as SeqdbAppComposer
-from gen_epix.seqdb.services.client import SeqdbRemoteApp
+from gen_epix.seqdb.services.client import SeqdbClient
 
 
 class SeqdbService(BaseSeqdbService):
@@ -50,13 +50,13 @@ class SeqdbService(BaseSeqdbService):
             **kwargs: Service configuration, including local or remote app settings.
         """
         seqdb_local_app_props = kwargs.pop("seqdb_local_app", {})
-        seqdb_remote_app_props = kwargs.pop("seqdb_remote_app", {})
+        seqdb_client_props = kwargs.pop("seqdb_client", {})
         super().__init__(app, **kwargs)
-        seqdb_app, seqdb_user = SeqdbRemoteApp.create_local_or_remote_app(
+        seqdb_app, seqdb_user = SeqdbClient.create_local_or_client(
             AppType.SEQDB,
             app_setup_type=seqdb_app_type,
             local_app_props=seqdb_local_app_props,
-            remote_app_props=seqdb_remote_app_props,
+            client_props=seqdb_client_props,
             user_class=SeqdbUser,
             app_composer_class=SeqdbAppComposer,
             service_type_enum=seqdb_enum.ServiceType,

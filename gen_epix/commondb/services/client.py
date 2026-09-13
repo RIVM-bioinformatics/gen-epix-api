@@ -15,7 +15,7 @@ import jwt
 from gen_epix.commondb import api
 from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.domain import command, enum, model
-from gen_epix.fastapp import HttpProtocol, RemoteApp, exc
+from gen_epix.fastapp import Client, HttpProtocol, exc
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.enum import AuthProtocol, HttpMethod, OAuthFlow
@@ -25,7 +25,7 @@ from gen_epix.fastapp.services.auth.model import OidcServerCfg
 from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 
 
-class CommondbRemoteApp(RemoteApp):
+class CommondbClient(Client):
     """Encapsulates a remote app client for the commondb service with OAuth2/NONE authentication."""
 
     DEFAULT_ROUTE_PREFIX = "/v1"
@@ -130,11 +130,11 @@ class CommondbRemoteApp(RemoteApp):
             **kwargs,
         )
 
-        # Register routes. CommondbRemoteApp.ROUTE_MAP is referenced explicitly
+        # Register routes. CommondbClient.ROUTE_MAP is referenced explicitly
         # (not self.ROUTE_MAP) because subclasses override ROUTE_MAP with their
         # own dict rather than merging it, so self.ROUTE_MAP would resolve to the
         # subclass's dict here and cause double registration in its own __init__.
-        for cmd_class, route in CommondbRemoteApp.ROUTE_MAP.items():
+        for cmd_class, route in CommondbClient.ROUTE_MAP.items():
             self.register_route(cmd_class, route)
         # Register handlers
         self.register_handler(
@@ -458,12 +458,12 @@ class CommondbRemoteApp(RemoteApp):
         return [model.Outage(**x) for x in response_body]
 
     @classmethod
-    def create_local_or_remote_app(
+    def create_local_or_client(
         cls,
         app_type: enum.AppType,
         app_setup_type: str,  # "LOCAL" or "REMOTE"
         local_app_props: dict[str, Any] | None = None,
-        remote_app_props: dict[str, Any] | None = None,
+        client_props: dict[str, Any] | None = None,
         app_composer_class: type | None = None,
         user_class: type[model.User] | None = None,
         service_type_enum: type[Enum] | None = None,
@@ -476,7 +476,7 @@ class CommondbRemoteApp(RemoteApp):
             app_type: Application type to create locally.
             app_setup_type: Setup mode, either ``LOCAL`` or ``REMOTE``.
             local_app_props: Properties for local application construction.
-            remote_app_props: Properties for remote application construction.
+            client_props: Properties for remote application construction.
             app_composer_class: Composer class for local setup.
             user_class: User model class for local setup.
             service_type_enum: Service-type enum for local setup.
@@ -512,7 +512,7 @@ class CommondbRemoteApp(RemoteApp):
             )
         elif app_setup_type == "REMOTE":
             # Parse remote app props
-            app, user = CommondbRemoteApp._create_remote_app(remote_app_props)
+            app, user = CommondbClient._create_client(client_props)
         else:
             raise exc.InitializationServiceError(
                 "84a87605",
@@ -578,13 +578,11 @@ class CommondbRemoteApp(RemoteApp):
         return app, user
 
     @classmethod
-    def _create_remote_app(
-        cls, remote_app_props: dict[str, Any] | None
-    ) -> tuple[App, None]:
+    def _create_client(cls, client_props: dict[str, Any] | None) -> tuple[App, None]:
         """Instantiate a remote application from configured module and class names.
 
         Args:
-            remote_app_props: Remote configuration including module and class names.
+            client_props: Remote configuration including module and class names.
 
         Returns:
             Constructed remote application and no local user.
@@ -592,22 +590,22 @@ class CommondbRemoteApp(RemoteApp):
         Raises:
             InitializationServiceError: If remote properties or required keys are absent.
         """
-        if remote_app_props is None:
+        if client_props is None:
             raise exc.InitializationServiceError(
-                "4007b438", "remote_app_props must be provided for REMOTE app setup."
+                "4007b438", "client_props must be provided for REMOTE app setup."
             )
-        if "module" not in remote_app_props or "class_name" not in remote_app_props:
+        if "module" not in client_props or "class_name" not in client_props:
             raise exc.InitializationServiceError(
                 "0c268454",
-                "remote_app_props must contain 'module' and 'class_name' keys for REMOTE app setup.",
+                "client_props must contain 'module' and 'class_name' keys for REMOTE app setup.",
             )
             # Create remote app
-        remote_app_module = remote_app_props.pop("module")
-        remote_app_class_name = remote_app_props.pop("class_name")
-        remote_app_class: type[RemoteApp] = getattr(
-            importlib.import_module(remote_app_module), remote_app_class_name
+        client_module = client_props.pop("module")
+        client_class_name = client_props.pop("class_name")
+        client_class: type[Client] = getattr(
+            importlib.import_module(client_module), client_class_name
         )
-        app = remote_app_class(**remote_app_props)
+        app = client_class(**client_props)
         for command_class, timeout in cls.DEFAULT_HTTP_TIMEOUTS.items():
             app.set_timeout(command_class, timeout)
         # No user for remote app, this is handled via authentication to the actual remote service

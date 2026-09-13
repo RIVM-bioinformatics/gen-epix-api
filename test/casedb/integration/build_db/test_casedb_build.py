@@ -48,7 +48,7 @@ CASEDB_APP_CFGS = get_app_cfgs(
 # shared SQLite connection.
 #
 # Note: with_endpoints + DICT_EMPTY would share the same underlying cfg dict as
-# skip_endpoints + DICT_EMPTY (copy.copy is shallow). CommondbRemoteApp._create_local_app
+# skip_endpoints + DICT_EMPTY (copy.copy is shallow). CommondbClient._create_local_app
 # calls local_app_props.pop("app_cfg"), which removes seqdb's AppCfg from the shared
 # dict. The second fixture call would then fall back to constructing a new seqdb AppCfg
 # from the current env vars, which may point to SA_SQL → MSSQL connection error.
@@ -81,7 +81,7 @@ def get_test_client(request: pytest.FixtureRequest) -> Env:
     cfg_key = f"{TEST_TYPE.value}__{params.dev_repository_config.value}"
     app_cfg = copy.copy(CASEDB_APP_CFGS[cfg_key])
     app_cfg._name = f"{TEST_TYPE.value}__{params.id}"
-    # CommondbRemoteApp._create_local_app pops "app_cfg" from the seqdb_local_app dict.
+    # CommondbClient._create_local_app pops "app_cfg" from the seqdb_local_app dict.
     # Because copy.copy is shallow, that pop mutates the shared underlying cfg dict and
     # removes the key for any subsequent fixture call using the same dev_repository_config.
     # Without this restore, the next call would create a new seqdb AppCfg from env vars,
