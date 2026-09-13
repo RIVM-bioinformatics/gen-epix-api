@@ -17,7 +17,7 @@ from uuid import uuid4
 import pytest
 
 from gen_epix.casedb.domain import command, enum, model
-from gen_epix.casedb.services.remote_app import CasedbRemoteApp
+from gen_epix.casedb.services.client import CasedbRemoteApp
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 

@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any, cast
 from uuid import UUID
 
-from gen_epix.commondb.services.remote_app import CommondbRemoteApp
+from gen_epix.commondb.services.client import CommondbRemoteApp
 from gen_epix.fastapp.enum import CrudOperation, HttpMethod
 from gen_epix.fastapp.model import Command
 from gen_epix.seqdb import api

@@ -14,7 +14,7 @@ from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.seqdb.domain.model import User as SeqdbUser
 from gen_epix.seqdb.env import AppComposer as SeqdbAppComposer
-from gen_epix.seqdb.services.remote_app import SeqdbRemoteApp
+from gen_epix.seqdb.services.client import SeqdbRemoteApp
 
 
 class SeqdbService(BaseSeqdbService):

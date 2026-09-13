@@ -8,7 +8,9 @@ from gen_epix.fastapp.service import BaseService
 
 
 class BaseRemoteService(BaseService):
-    """Encapsulates the base service that forwards commands to a remote application."""
+    """Encapsulates the base service that forwards commands to a remote application
+    through a client for that application.
+    """
 
     def __init__(self, app: App, remote_app: App, use_endpoints: bool = True) -> None:
         """Initialize a BaseRemoteService instance."""

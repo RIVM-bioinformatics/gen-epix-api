@@ -21,7 +21,7 @@ import jwt
 import pytest
 
 from gen_epix.commondb.domain import DOMAIN, command, model
-from gen_epix.commondb.services.remote_app import CommondbRemoteApp
+from gen_epix.commondb.services.client import CommondbRemoteApp
 from gen_epix.fastapp import RemoteApp, exc
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow

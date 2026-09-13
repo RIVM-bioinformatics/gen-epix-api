@@ -15,7 +15,7 @@ from gen_epix.seqdb.api import CalculatePhylogeneticTreeRequestBody
 from gen_epix.seqdb.domain import command as seqdb_command
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
-from gen_epix.seqdb.services.remote_app import SeqdbRemoteApp
+from gen_epix.seqdb.services.client import SeqdbRemoteApp
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-06")

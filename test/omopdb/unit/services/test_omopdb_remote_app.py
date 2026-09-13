@@ -5,7 +5,7 @@ from uuid import UUID
 
 from gen_epix.fastapp.enum import AuthProtocol
 from gen_epix.omopdb.domain import command, model
-from gen_epix.omopdb.services.remote_app import OmopdbRemoteApp
+from gen_epix.omopdb.services.client import OmopdbRemoteApp
 
 
 def _fake_app_init(self: object, domain: object, **kwargs: object) -> None:
