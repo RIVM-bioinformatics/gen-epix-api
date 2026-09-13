@@ -16,6 +16,7 @@ from gen_epix.casedb.repositories.case_sa import CaseSARepository
 from gen_epix.fastapp.repositories.dict.unit_of_work import DictUnitOfWork
 from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
+from gen_epix.filter.datetime_range import DatetimeRangeFilter
 
 _CASE_TYPE_ID = UUID("00000000-0000-0000-0000-000000000001")
 _CASE_ID_ZERO = UUID("00000000-0000-0000-0000-000000000010")
@@ -36,7 +37,7 @@ def _make_cases(target_count: int) -> list[model.Case]:
             case_type_id=_CASE_TYPE_ID,
             created_in_data_collection_id=_PUBLIC_DATA_COLLECTION_ID,
             count=0,
-            case_date=_ZERO_DATE,
+            timed_at=_ZERO_DATE,
             content={},
         ),
         model.Case(
@@ -44,7 +45,7 @@ def _make_cases(target_count: int) -> list[model.Case]:
             case_type_id=_CASE_TYPE_ID,
             created_in_data_collection_id=_PUBLIC_DATA_COLLECTION_ID,
             count=1,
-            case_date=_ONE_DATE,
+            timed_at=_ONE_DATE,
             content={},
         ),
         model.Case(
@@ -52,7 +53,7 @@ def _make_cases(target_count: int) -> list[model.Case]:
             case_type_id=_CASE_TYPE_ID,
             created_in_data_collection_id=_PUBLIC_DATA_COLLECTION_ID,
             count=target_count,
-            case_date=_TARGET_DATE,
+            timed_at=_TARGET_DATE,
             content={},
         ),
     ]
@@ -116,7 +117,7 @@ def _persist_sa_rows(
                 created_in_data_collection_id=case.created_in_data_collection_id,
                 cohort={},
                 count=case.count,
-                case_date=case.case_date,
+                timed_at=case.timed_at,
                 content={},
                 code=None,
             )
@@ -140,11 +141,13 @@ def _persist_sa_rows(
 @pytest.mark.parametrize("target_count", [0, 1, 3])
 @pytest.mark.parametrize("is_date_restricted", [False, True])
 @pytest.mark.parametrize("is_private", [False, True])
+@pytest.mark.parametrize("is_datetime_filtered", [False, True])
 def test_retrieve_case_stats_count_access_and_private_matrix(
     repository_type: str,
     target_count: int,
     is_date_restricted: bool,
     is_private: bool,
+    is_datetime_filtered: bool,
     sa_session: Session,
 ) -> None:
     cases = _make_cases(target_count)
@@ -176,13 +179,24 @@ def test_retrieve_case_stats_count_access_and_private_matrix(
         case_type_id=_CASE_TYPE_ID,
         data_collections_by_time_unit=data_collections_by_time_unit,
         private_data_collection_ids=private_ids,
+        datetime_range_filter=(
+            DatetimeRangeFilter(lower_bound=datetime(2022, 1, 1))
+            if is_datetime_filtered
+            else None
+        ),
     )
 
     expected_target_date = datetime(2022, 1, 1) if is_date_restricted else _TARGET_DATE
     expected_one_date = datetime(2021, 1, 1) if is_date_restricted else _ONE_DATE
-    assert stats.n_cases == 1 + target_count
+    expected_count = target_count if is_datetime_filtered else 1 + target_count
+    assert stats.n_cases == expected_count
     assert stats.n_own_cases == (target_count if is_private else 0)
-    assert stats.first_case_date == expected_one_date
-    assert stats.last_case_date == (
-        expected_target_date if target_count > 0 else expected_one_date
-    )
+    if is_datetime_filtered:
+        expected_filtered_date = expected_target_date if target_count > 0 else None
+        assert stats.first_case_date == expected_filtered_date
+        assert stats.last_case_date == expected_filtered_date
+    else:
+        assert stats.first_case_date == expected_one_date
+        assert stats.last_case_date == (
+            expected_target_date if target_count > 0 else expected_one_date
+        )
