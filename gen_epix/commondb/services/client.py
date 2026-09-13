@@ -458,12 +458,12 @@ class CommondbClient(Client):
         return [model.Outage(**x) for x in response_body]
 
     @classmethod
-    def create_local_or_client(
+    def create_local_or_remote(
         cls,
         app_type: enum.AppType,
-        app_setup_type: str,  # "LOCAL" or "REMOTE"
-        local_app_props: dict[str, Any] | None = None,
-        client_props: dict[str, Any] | None = None,
+        app_setup_type: Literal["LOCAL", "REMOTE"],
+        local_client_props: dict[str, Any] | None = None,
+        remote_client_props: dict[str, Any] | None = None,
         app_composer_class: type | None = None,
         user_class: type[model.User] | None = None,
         service_type_enum: type[Enum] | None = None,
@@ -475,8 +475,8 @@ class CommondbClient(Client):
         Args:
             app_type: Application type to create locally.
             app_setup_type: Setup mode, either ``LOCAL`` or ``REMOTE``.
-            local_app_props: Properties for local application construction.
-            client_props: Properties for remote application construction.
+            local_client_props: Properties for local client (app) construction.
+            remote_client_props: Properties for remote client construction.
             app_composer_class: Composer class for local setup.
             user_class: User model class for local setup.
             service_type_enum: Service-type enum for local setup.
@@ -490,7 +490,7 @@ class CommondbClient(Client):
             InitializationServiceError: If the setup mode is invalid or incomplete.
         """
         # Parse input
-        app_setup_type = app_setup_type.upper()
+        app_setup_type = app_setup_type.upper()  # type: ignore[assignment]
         if app_setup_type not in ("LOCAL", "REMOTE"):
             raise exc.InitializationServiceError(
                 "2ceb9c7c",
@@ -503,7 +503,7 @@ class CommondbClient(Client):
             # Parse local app props
             app, user = cls._create_local_app(
                 app_type,
-                local_app_props,
+                local_client_props,
                 app_composer_class,
                 user_class,
                 service_type_enum,
@@ -512,7 +512,7 @@ class CommondbClient(Client):
             )
         elif app_setup_type == "REMOTE":
             # Parse remote app props
-            app, user = CommondbClient._create_client(client_props)
+            app, user = CommondbClient._create_client(remote_client_props)
         else:
             raise exc.InitializationServiceError(
                 "84a87605",

@@ -1,7 +1,7 @@
 """Coordinate casedb commands with a local or remote seqdb application."""
 
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, model
@@ -41,22 +41,24 @@ class SeqdbService(BaseSeqdbService):
         if x.value == y.value
     }
 
-    def __init__(self, app: App, seqdb_app_type: str, **kwargs: Any) -> None:
+    def __init__(
+        self, app: App, seqdb_client_type: Literal["LOCAL", "REMOTE"], **kwargs: Any
+    ) -> None:
         """Initialize command handlers and the configured seqdb collaborator.
 
         Args:
             app: Casedb application that owns this service.
-            seqdb_app_type: Configuration value selecting local or remote seqdb.
+            seqdb_client_type: Configuration value selecting local or remote seqdb.
             **kwargs: Service configuration, including local or remote app settings.
         """
-        seqdb_local_app_props = kwargs.pop("seqdb_local_app", {})
-        seqdb_client_props = kwargs.pop("seqdb_client", {})
+        local_client_props = kwargs.pop("local_client", {})
+        remote_client_props = kwargs.pop("remote_client", {})
         super().__init__(app, **kwargs)
-        seqdb_app, seqdb_user = SeqdbClient.create_local_or_client(
+        seqdb_app, seqdb_user = SeqdbClient.create_local_or_remote(
             AppType.SEQDB,
-            app_setup_type=seqdb_app_type,
-            local_app_props=seqdb_local_app_props,
-            client_props=seqdb_client_props,
+            app_setup_type=seqdb_client_type,
+            local_client_props=local_client_props,
+            remote_client_props=remote_client_props,
             user_class=SeqdbUser,
             app_composer_class=SeqdbAppComposer,
             service_type_enum=seqdb_enum.ServiceType,

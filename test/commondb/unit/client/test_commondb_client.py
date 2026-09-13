@@ -479,12 +479,12 @@ class TestGetHeaders(BaseCommondbClientTestCase):
 
 @pytest.mark.scenario_ids("TC-LSP-3238-04")
 class TestCreateLocalOrClient(BaseCommondbClientTestCase):
-    """Test create_local_or_client class method."""
+    """Test create_local_or_remote class method."""
 
     def test_invalid_app_setup_type_rejected(self) -> None:
         """Raise error for invalid app_setup_type."""
         with pytest.raises(exc.InitializationServiceError) as exc_info:
-            CommondbClient.create_local_or_client(
+            CommondbClient.create_local_or_remote(
                 app_type=Mock(),
                 app_setup_type="INVALID",
             )
@@ -495,7 +495,7 @@ class TestCreateLocalOrClient(BaseCommondbClientTestCase):
         with patch.object(
             CommondbClient, "_create_local_app", return_value=(Mock(), Mock())
         ) as mock_local:
-            CommondbClient.create_local_or_client(
+            CommondbClient.create_local_or_remote(
                 app_type=Mock(),
                 app_setup_type="local",  # lowercase
                 local_app_props={"user": {}},
