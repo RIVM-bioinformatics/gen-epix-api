@@ -501,7 +501,7 @@ class CommondbClient(Client):
         user: user_class | None  # type: ignore[valid-type]
         if app_setup_type == "LOCAL":
             # Parse local app props
-            app, user = cls._create_local_app(
+            app, user = cls._create_local_client(
                 app_type,
                 local_client_props,
                 app_composer_class,
@@ -521,10 +521,10 @@ class CommondbClient(Client):
         return app, user
 
     @classmethod
-    def _create_local_app(
+    def _create_local_client(
         cls,
         app_type: enum.AppType,
-        local_app_props: dict[str, Any] | None,
+        local_client_props: dict[str, Any] | None,
         app_composer_class: type | None,
         user_class: type[model.User] | None,
         service_type_enum: type[Enum] | None,
@@ -535,7 +535,7 @@ class CommondbClient(Client):
 
         Args:
             app_type: Application type to configure.
-            local_app_props: Local configuration containing user properties.
+            local_client_props: Local configuration containing user properties.
             app_composer_class: Composer used to construct the local application.
             user_class: User model used to construct the local user.
             service_type_enum: Application service-type enum.
@@ -549,7 +549,7 @@ class CommondbClient(Client):
             InitializationServiceError: If required local setup properties are missing.
         """
         if (
-            local_app_props is None
+            local_client_props is None
             or app_composer_class is None
             or user_class is None
             or service_type_enum is None
@@ -557,23 +557,23 @@ class CommondbClient(Client):
         ):
             raise exc.InitializationServiceError(
                 "6451025d",
-                "local_app_props, app_composer_class, user_class, service_type_enum, and repository_type_enum must be provided for LOCAL app setup.",
+                "local_client_props, app_composer_class, user_class, service_type_enum, and repository_type_enum must be provided for LOCAL app setup.",
             )
-        if "user" not in local_app_props:
+        if "user" not in local_client_props:
             raise exc.InitializationServiceError(
                 "80bc4360",
-                "local_app_props must contain 'user' key for LOCAL app setup.",
+                "local_client_props must contain 'user' key for LOCAL app setup.",
             )
             # Get app config
-        if "app_cfg" in local_app_props:
-            app_cfg = local_app_props.pop("app_cfg")
+        if "app_cfg" in local_client_props:
+            app_cfg = local_client_props.pop("app_cfg")
         else:
             app_cfg = AppCfg(app_type, service_type_enum, repository_type_enum)
-        log_setup = local_app_props.get("log_setup", logger is not None)
+        log_setup = local_client_props.get("log_setup", logger is not None)
         # Create local app and user
         app_composer = app_composer_class(app_cfg, log_setup=log_setup)
         app = app_composer.app
-        user = user_class(**local_app_props["user"])
+        user = user_class(**local_client_props["user"])
 
         return app, user
 

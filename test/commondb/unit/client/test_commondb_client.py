@@ -493,12 +493,12 @@ class TestCreateLocalOrClient(BaseCommondbClientTestCase):
     def test_app_setup_type_case_insensitive(self) -> None:
         """app_setup_type is case-insensitive."""
         with patch.object(
-            CommondbClient, "_create_local_app", return_value=(Mock(), Mock())
+            CommondbClient, "_create_local_client", return_value=(Mock(), Mock())
         ) as mock_local:
             CommondbClient.create_local_or_remote(
                 app_type=Mock(),
                 app_setup_type="local",  # lowercase
-                local_app_props={"user": {}},
+                local_client_props={"user": {}},
                 app_composer_class=Mock,
                 user_class=Mock,
                 service_type_enum=Mock,
