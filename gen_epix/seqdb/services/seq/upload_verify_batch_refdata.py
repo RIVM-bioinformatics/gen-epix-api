@@ -3,10 +3,10 @@
 from typing import Any
 from uuid import UUID
 
-from gen_epix.commondb.domain.enum import EtlStatus
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import UploadResult
 from gen_epix.commondb.services import BatchUploader
+from gen_epix.etl.enum import EtlStatus
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.domain.literal import MLVA_NO_LOCUS_REPEAT_NUMBER

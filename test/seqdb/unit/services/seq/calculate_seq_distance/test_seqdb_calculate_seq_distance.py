@@ -8,8 +8,9 @@ from uuid import UUID, uuid4
 import numpy as np
 import pytest
 
-from gen_epix.commondb.domain.enum import EtlStatus, Role
+from gen_epix.commondb.domain.enum import Role
 from gen_epix.commondb.domain.model.organization import User
+from gen_epix.etl.enum import EtlStatus
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.exc import ConcurrentModificationError, InvalidArgumentsError
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
@@ -388,7 +389,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         )
         _setup_distance_mocks(self.service, [])
 
-        results: list[model.CalculateSeqDistancesResult] = (
+        results: list[model.CalculateSeqDistancesEtlResult] = (
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
         )
 
@@ -480,7 +481,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         self.service.repository.crud.side_effect = _crud
         _setup_distance_mocks(self.service, [])
 
-        results: list[model.CalculateSeqDistancesResult] = (
+        results: list[model.CalculateSeqDistancesEtlResult] = (
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
         )
 
@@ -535,7 +536,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         )
         _setup_distance_mocks(self.service, [existing_seq_distance], recorder=recorder)
 
-        results: list[model.CalculateSeqDistancesResult] = (
+        results: list[model.CalculateSeqDistancesEtlResult] = (
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
         )
 
@@ -611,7 +612,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         )
         _setup_distance_mocks(self.service, [existing_seq_distance])
 
-        results: list[model.CalculateSeqDistancesResult] = (
+        results: list[model.CalculateSeqDistancesEtlResult] = (
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
         )
 
@@ -670,7 +671,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         )
         _setup_distance_mocks(self.service, [existing_seq_distance], recorder=recorder)
 
-        results: list[model.CalculateSeqDistancesResult] = (
+        results: list[model.CalculateSeqDistancesEtlResult] = (
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
         )
 
@@ -833,7 +834,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         )
         _setup_distance_mocks(self.service, [])
 
-        results: list[model.CalculateSeqDistancesResult] = (
+        results: list[model.CalculateSeqDistancesEtlResult] = (
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
         )
 
@@ -850,7 +851,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         max_stored_distance: float = 100.0,
     ) -> tuple[
         _CrudRecorder,
-        list[model.CalculateSeqDistancesResult],
+        list[model.CalculateSeqDistancesEtlResult],
     ]:
         """Helper: compute SNP distance between two
         profiles via the service."""
@@ -1635,7 +1636,7 @@ class TestUpdateSeqDistances(
 
         self.service.repository.crud.side_effect = _crud
 
-        results: list[model.CalculateSeqDistancesResult] = []
+        results: list[model.CalculateSeqDistancesEtlResult] = []
         _calculate_and_store_distances(
             self.service,
             Mock(),
@@ -1884,7 +1885,7 @@ class TestNumpyAlleleIntegration:
             return []
 
         self.service.repository.crud.side_effect = _crud
-        results: list[model.CalculateSeqDistancesResult] = []
+        results: list[model.CalculateSeqDistancesEtlResult] = []
         _calculate_and_store_distances(
             self.service,
             Mock(),
@@ -2212,7 +2213,7 @@ class TestNumpyAlleleIntegration:
                 return []
 
             self.service.repository.crud.side_effect = _crud
-            results: list[model.CalculateSeqDistancesResult] = []
+            results: list[model.CalculateSeqDistancesEtlResult] = []
             _calculate_and_store_distances(
                 self.service,
                 Mock(),

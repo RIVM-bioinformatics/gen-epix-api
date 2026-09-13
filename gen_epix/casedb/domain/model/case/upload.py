@@ -17,7 +17,7 @@ from pydantic import (
 from gen_epix.casedb.domain.model.case.ops_data import Case, CaseIdentifier
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import Model
-from gen_epix.commondb.domain.model.base import EtlLogItem, Model
+from gen_epix.commondb.domain.model.base import Model
 from gen_epix.commondb.domain.model.organization import IdentifierForUpload
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
@@ -28,6 +28,7 @@ from gen_epix.commondb.domain.model.upload import (
     ParentUploadResult,
     UploadResult,
 )
+from gen_epix.etl.model import LogItem
 from gen_epix.fastapp.domain import Entity
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.seqdb.domain import model as seqdb_model
@@ -261,6 +262,7 @@ class CaseDataIssue(DataIssue):
 class CaseUploadResult(ParentUploadResult):
     """Represents one case upload result and its content validation issues."""
 
+    ID: ClassVar[str] = "c4fdab13"
     ENTITY: ClassVar = ParentUploadResult.model_entity().clone()
     NAME: ClassVar = "CaseUploadResult"
 
@@ -288,7 +290,7 @@ class CaseUploadResult(ParentUploadResult):
         description="The results of uploading the sequences associated with the case, if any were provided, in the same order as provided.",
     )
 
-    def get_errors(self) -> list[EtlLogItem]:
+    def get_errors(self) -> list[LogItem]:
         """Get all data issues that are errors."""
         log_items = super().get_errors()
         if self.identifiers:
@@ -341,6 +343,7 @@ class CaseBatchForUpload(BaseBatchForUpload):
 class CaseBatchUploadResult(BaseBatchUploadResult):
     """Represents the results of uploading a batch of cases."""
 
+    ID: ClassVar[str] = "3bb22119"
     ENTITY: ClassVar = BaseBatchForUpload.model_entity().clone(
         update={"persistable": False}
     )

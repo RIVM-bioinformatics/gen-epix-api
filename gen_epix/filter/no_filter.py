@@ -13,6 +13,7 @@ class NoFilter(Filter):
     """Represents a filter retaining every value unless explicitly inverted."""
 
     key: Literal[False] = False
+    type: Literal[FilterType.NO_FILTER.value] = FilterType.NO_FILTER.value  # type: ignore[name-defined]
 
     def _match(self, value: Any) -> bool:
         """Return the non-inverted pass-through result."""
@@ -72,9 +73,3 @@ class NoFilter(Filter):
         for row in rows:
             if not self.invert:
                 yield row
-
-
-class TypedNoFilter(NoFilter):
-    """Represents a pass-through filter carrying its serialized filter type."""
-
-    type: Literal[FilterType.NO_FILTER.value]  # type: ignore[name-defined]

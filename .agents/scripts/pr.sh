@@ -16,8 +16,8 @@ usage() {
 Usage: pr.sh [options]
 
 Options:
-  --base BRANCH       Base branch. Defaults to dev for lsp-data, otherwise repo default.
-  --title TITLE       PR title. Defaults to plan notes, one commit, or branch goal.
+  --base BRANCH       Base branch. Defaults to the repository default branch.
+  --title TITLE       PR title. Defaults to one commit or the branch goal.
   --body-file FILE    Use an existing PR body file instead of generating one.
   --draft             Create the PR as a draft.
   --dry-run           Print planned actions without pushing or creating/updating a PR.
@@ -109,31 +109,13 @@ ticket_id_from_branch() {
   echo "$branch_name" | grep -oiE 'lsp-[0-9]+' | head -1 | tr '[:lower:]' '[:upper:]' || true
 }
 
-plan_file_for_ticket() {
-  local ticket_id="$1"
-  if [[ -z "$ticket_id" || ! -d notes/plans ]]; then
-    return 0
-  fi
-
-  find notes/plans -maxdepth 1 -type f -iname "${ticket_id}-*.md" | sort | head -1
-}
-
-first_plan_line() {
-  local plan_file="$1"
-  sed -E '/^[[:space:]]*$/d; /^[[:space:]]*#/d' "$plan_file" | head -1
-}
-
 generated_body() {
   local base_branch="$1"
   local temp_file="$2"
   local ticket_id="$3"
-  local plan_file="$4"
   local summary
 
   summary="$(branch_title "$branch")"
-  if [[ -n "$plan_file" ]]; then
-    summary="$(first_plan_line "$plan_file")"
-  fi
 
   if [[ -n "$ticket_id" && "$summary" != "$ticket_id"* ]]; then
     summary="${ticket_id}: ${summary}"
@@ -147,9 +129,6 @@ generated_body() {
     git log --reverse --format='- %s' "${base_branch}..HEAD" 2>/dev/null | head -3
     echo
     echo "## Notes"
-    if [[ -n "$plan_file" ]]; then
-      echo "- Plan: \`${plan_file}\`."
-    fi
     echo "- Generated from branch \`${branch}\` against \`${base_branch}\`."
   } | head -20 >"$temp_file"
 }
@@ -176,7 +155,6 @@ repo_name="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
 repo_default_branch="$(gh repo view --json defaultBranchRef --jq .defaultBranchRef.name)"
 branch="$(git branch --show-current)"
 ticket_id="$(ticket_id_from_branch "$branch")"
-plan_file="$(plan_file_for_ticket "$ticket_id")"
 
 if [[ -z "$branch" ]]; then
   echo "Cannot create a PR from a detached HEAD." >&2
@@ -184,11 +162,7 @@ if [[ -z "$branch" ]]; then
 fi
 
 if [[ -z "$base" ]]; then
-  if [[ "$repo_name" == "RIVM-bioinformatics/lsp-data" ]]; then
-    base="dev"
-  else
-    base="$repo_default_branch"
-  fi
+  base="$repo_default_branch"
 fi
 
 if [[ "$branch" == "$base" || "$branch" == "$repo_default_branch" ]]; then
@@ -215,9 +189,7 @@ if [[ "$ahead_count" == "0" ]]; then
 fi
 
 if [[ -z "$title" ]]; then
-  if [[ -n "$plan_file" ]]; then
-    title="$(first_plan_line "$plan_file")"
-  elif [[ "$ahead_count" == "1" ]]; then
+  if [[ "$ahead_count" == "1" ]]; then
     title="$(git log -1 --format=%s)"
   else
     title="$(title_from_branch "$branch" "$ticket_id")"
@@ -232,7 +204,7 @@ created_temp_body=false
 if [[ -z "$body_file" ]]; then
   body_file="$(mktemp "${TMPDIR:-/tmp}/pr.XXXXXX")"
   created_temp_body=true
-  generated_body "$base_ref" "$body_file" "$ticket_id" "$plan_file"
+  generated_body "$base_ref" "$body_file" "$ticket_id"
 fi
 
 existing_pr_url="$(gh pr list --head "$branch" --json url --jq '.[0].url // ""')"

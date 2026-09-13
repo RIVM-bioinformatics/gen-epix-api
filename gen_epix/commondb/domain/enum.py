@@ -26,6 +26,12 @@ class IdFactory(Enum):
     ULID = lambda: ulid.api.new().uuid
 
 
+class FeatureFlag(Enum):
+    """Encapsulates feature-flag keys shared by the application domains."""
+
+    ALLOW_DELETE_OPERATIONAL_DATA = "ALLOW_DELETE_OPERATIONAL_DATA"
+
+
 class Role(Enum):
     """Encapsulates commondb roles used by command-centric authorization policies."""
 
@@ -169,44 +175,6 @@ class DevRepositoryConfigSet(Enum):
     )
     EMPTY = frozenset(
         {DevRepositoryConfig.DICT_EMPTY, DevRepositoryConfig.SA_SQLITE_EMPTY}
-    )
-
-
-class EtlStatus(Enum):
-    """Encapsulates lifecycle outcomes for ETL and upload processing."""
-
-    INITIALIZED = "INITIALIZED"
-    PENDING = "PENDING"  # Yet to be processed
-    SKIPPED = "SKIPPED"  # No changes stored
-    FAILED = "FAILED"
-    ERROR = "ERROR"  # TODO: should likely be merged with FAILED, or at least clarify the distinction
-    CREATED = "CREATED"
-    UPDATED = "UPDATED"
-    MIXED = "MIXED"  # TODO: should likely be merged with PROCESSED, or at least clarify the distinction
-    PROCESSED = "PROCESSED"  # Skipped, created or updated (not failed)
-    SUCCESS = "SUCCESS"
-
-
-class UploadStatusSet(Enum):
-    """Encapsulates grouping of ETL statuses by failure and processing outcome."""
-
-    NOT_FAILED = frozenset(
-        {
-            EtlStatus.PENDING,
-            EtlStatus.SKIPPED,
-            EtlStatus.CREATED,
-            EtlStatus.UPDATED,
-            EtlStatus.PROCESSED,
-        }
-    )
-    FAILED = frozenset({EtlStatus.FAILED})
-    PROCESSED = frozenset(
-        {
-            EtlStatus.SKIPPED,
-            EtlStatus.CREATED,
-            EtlStatus.UPDATED,
-            EtlStatus.PROCESSED,
-        }
     )
 
 

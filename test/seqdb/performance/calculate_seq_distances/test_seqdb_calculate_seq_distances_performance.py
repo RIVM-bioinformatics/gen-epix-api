@@ -28,8 +28,9 @@ from uuid import UUID
 import pyinstrument as pyinstrument
 import pytest
 
-from gen_epix.commondb.domain.enum import AppType, EtlStatus
+from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.domain.util import get_app_cfgs
+from gen_epix.etl.enum import EtlStatus
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.repositories.seq_dict import SeqDictRepository
 from gen_epix.seqdb.repositories.seq_sa import SeqSARepository

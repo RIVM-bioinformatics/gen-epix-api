@@ -318,6 +318,31 @@ def test_init_missing_data_raise(parent_id: UUID) -> None:
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-03")
+def test_init_extra_data_modes(child_id: UUID) -> None:
+    db: dict[type[Model], dict[Any, Model]] = {
+        ParentModel: {},
+        ChildModel: {child_id: ChildModel(id=child_id, value="extra")},
+    }
+
+    with pytest.raises(ValueError, match="additional model.*ChildModel"):
+        make_repo([make_parent_entity(keys=False)], db, extra_data="raise")
+
+    repository = make_repo([make_parent_entity(keys=False)], db, extra_data="drop")
+    assert ChildModel not in repository.db
+
+
+@pytest.mark.scenario_ids("TC-SEC-28-03")
+def test_init_accepts_entity_generator() -> None:
+    entities = (entity for entity in [make_parent_entity(keys=False)])
+
+    repository = cast(
+        DictRepository, DictRepository.create_repository(entities=entities)
+    )
+
+    assert ParentModel in repository.db
+
+
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_init_composite_id_field_raises(parent_id: UUID) -> None:
     entity: Entity = make_parent_entity()
     entity.id_field_name = ["id1", "id2"]  # type: ignore[assignment]
@@ -419,6 +444,21 @@ def test_read_all_variants(pc_repo: DictRepository, parent_id: UUID) -> None:
     assert children_no_copy[0] is pc_repo.db[ChildModel][children_no_copy[0].id]  # type: ignore[attr-defined]
 
 
+def test_read_all_with_offset_and_no_limit(parent_repo: DictRepository) -> None:
+    parent_repo.upsert_some(
+        "user",
+        ParentModel,
+        [
+            ParentModel(id=uuid4(), value="p2"),
+            ParentModel(id=uuid4(), value="p3"),
+        ],
+    )
+
+    parents = cast(list[ParentModel], parent_repo.read_all(ParentModel, offset=1))
+
+    assert [parent.value for parent in parents] == ["p2", "p3"]
+
+
 @pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_read_all_with_filter(parent_repo: DictRepository, parent_id: UUID) -> None:
     filter_: Filter = Mock(spec=Filter)
@@ -461,6 +501,30 @@ def test_read_one_and_some(parent_repo: DictRepository, parent_id: UUID) -> None
         return_copy=False,
     )
     assert objs_nc[0] is parent_repo.db[ParentModel][parent_id]
+
+
+@pytest.mark.scenario_ids("TC-SEC-28-03")
+def test_id_iterables_are_consumed_once(
+    parent_repo: DictRepository, parent_id: UUID
+) -> None:
+    uow = parent_repo.uow()
+    parent_repo.verify_valid_ids(
+        uow,
+        None,
+        ParentModel,
+        (obj_id for obj_id in [parent_id, parent_id]),
+        verify_exists=True,
+        verify_duplicate=False,
+    )
+
+    objs = parent_repo.read_some(ParentModel, (obj_id for obj_id in [parent_id]))
+    deleted_ids = parent_repo.delete_some(
+        ParentModel, (obj_id for obj_id in [parent_id])
+    )
+
+    assert [cast(ParentModel, obj).id for obj in objs] == [parent_id]
+    assert deleted_ids == [parent_id]
+    assert not parent_repo.exists_one(ParentModel, parent_id)
 
 
 # upsert_some
@@ -524,19 +588,22 @@ def test_upsert_errors(parent_repo: DictRepository, parent_id: UUID) -> None:
 
 @pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_upsert_unique_keys_among_objs(parent_repo: DictRepository) -> None:
-    # Duplicate keys among objs are not detected by the current implementation; both should be inserted
     obj1 = ParentModel(id=uuid4(), value="dup")
     obj2 = ParentModel(id=uuid4(), value="dup")
-    res = parent_repo.upsert_some(
-        None,
-        ParentModel,
-        [obj1, obj2],
-        raise_on_present=False,
-        raise_on_missing=False,
-    )  # type: ignore[assignment]
-    assert isinstance(res, list)
-    stored_ids = set(parent_repo.db[ParentModel].keys())
-    assert obj1.id in stored_ids and obj2.id in stored_ids
+
+    with pytest.raises(exc.UniqueConstraintViolationError) as error:
+        parent_repo.upsert_some(
+            None,
+            ParentModel,
+            [obj1, obj2],
+            raise_on_present=False,
+            raise_on_missing=False,
+        )
+
+    assert error.value.duplicate_key_ids is not None
+    assert set(error.value.duplicate_key_ids) == {obj1.id, obj2.id}
+    assert obj1.id not in parent_repo.db[ParentModel]
+    assert obj2.id not in parent_repo.db[ParentModel]
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-03")
@@ -603,6 +670,46 @@ def test_upsert_links(pc_repo: DictRepository, parent_id: UUID) -> None:
     stored = pc_repo.db[ChildModel][ch_id]
     assert stored.parent_id is None  # type: ignore[attr-defined]
     assert stored.parent is None  # type: ignore[attr-defined]
+
+
+@pytest.mark.scenario_ids("TC-SEC-28-03")
+def test_upsert_new_object_validates_link(pc_repo: DictRepository) -> None:
+    child = ChildModel(id=uuid4(), value="new", parent_id=uuid4(), parent=None)
+
+    with pytest.raises(exc.InvalidIdsError):
+        pc_repo.upsert_one(None, ChildModel, child)
+
+    assert child.id not in pc_repo.db[ChildModel]
+
+
+@pytest.mark.scenario_ids("TC-SEC-28-03")
+def test_failed_update_does_not_modify_stored_object(
+    pc_repo: DictRepository, child_id: UUID
+) -> None:
+    child = ChildModel(id=child_id, value="changed", parent_id=uuid4(), parent=None)
+
+    with pytest.raises(exc.InvalidIdsError):
+        pc_repo.upsert_one(None, ChildModel, child, raise_on_missing=True)
+
+    stored = cast(ChildModel, pc_repo.db[ChildModel][child_id])
+    assert stored.value == "c1"
+
+
+@pytest.mark.scenario_ids("TC-SEC-28-03")
+def test_update_clears_omitted_relationship(
+    pc_repo: DictRepository, parent_id: UUID, child_id: UUID
+) -> None:
+    stored = cast(ChildModel, pc_repo.db[ChildModel][child_id])
+    stored.parent = ParentModel(id=parent_id, value="p1")
+
+    pc_repo.upsert_one(
+        None,
+        ChildModel,
+        ChildModel(id=child_id, value="updated", parent_id=parent_id, parent=None),
+        raise_on_missing=True,
+    )
+
+    assert cast(ChildModel, pc_repo.db[ChildModel][child_id]).parent is None
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-03")
@@ -675,6 +782,45 @@ def test_delete_all_no_filter(pc_repo: DictRepository) -> None:
     assert isinstance(deleted, list)
     assert len(deleted) == 1
     assert pc_repo.db[ChildModel] == {}
+
+
+def test_delete_all_ignores_links_from_non_persistable_models(
+    parent_id: UUID,
+) -> None:
+    """Non-stored model metadata must not create reverse-link constraints."""
+    parent = ParentModel(id=parent_id, value="p1")
+    child_entity = make_child_entity()
+    child_entity.persistable = False
+    repository = make_repo(
+        [make_parent_entity(), child_entity],
+        {ParentModel: {parent_id: parent}},
+    )
+
+    repository.delete_all(ParentModel)
+
+    assert repository.db[ParentModel] == {}
+
+
+@pytest.mark.scenario_ids("TC-SEC-28-03")
+def test_delete_all_enforces_links_and_preserves_link_cache(
+    pc_repo: DictRepository, parent_id: UUID, child_id: UUID
+) -> None:
+    with pytest.raises(exc.LinkConstraintViolationError):
+        pc_repo.delete_all(ParentModel)
+    assert parent_id in pc_repo.db[ParentModel]
+
+    pc_repo.delete_one(ChildModel, child_id)
+    pc_repo.delete_all(ParentModel)
+    replacement_id = uuid4()
+    pc_repo.upsert_one(
+        None, ParentModel, ParentModel(id=replacement_id, value="replacement")
+    )
+    replacement_child = ChildModel(
+        id=uuid4(), value="child", parent_id=replacement_id, parent=None
+    )
+    pc_repo.upsert_one(None, ChildModel, replacement_child)
+
+    assert pc_repo.exists_one(ChildModel, replacement_child.id)
 
 
 # exists_one, exists_some

@@ -11,17 +11,17 @@ from uuid import UUID
 from pydantic import Field
 
 from gen_epix.casedb.domain.model.case import CaseTypeSet, ColSet
-from gen_epix.commondb.domain import model as common_model
+from gen_epix.commondb.domain import model as commondb_model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
 
-class BaseCasePolicy(common_model.Model):
+class BaseCasePolicy(commondb_model.Model):
     """Represents common case and case-set rights for a case-type set."""
 
     data_collection_id: UUID = Field(
         description="The ID of the data collection. FOREIGN KEY"
     )
-    data_collection: common_model.DataCollection | None = Field(
+    data_collection: commondb_model.DataCollection | None = Field(
         default=None, description="The data collection"
     )
     case_type_set_id: UUID = Field(
@@ -70,10 +70,10 @@ class OrganizationAccessCasePolicy(BaseCasePolicy):
         ),
         links=create_links(
             {
-                1: ("organization_id", common_model.Organization, "organization"),
+                1: ("organization_id", commondb_model.Organization, "organization"),
                 2: (
                     "data_collection_id",
-                    common_model.DataCollection,
+                    commondb_model.DataCollection,
                     "data_collection",
                 ),
                 3: ("case_type_set_id", CaseTypeSet, "case_type_set"),
@@ -91,7 +91,7 @@ class OrganizationAccessCasePolicy(BaseCasePolicy):
         ),
     )
     organization_id: UUID = Field(description="The ID of the organization. FOREIGN KEY")
-    organization: common_model.Organization | None = Field(
+    organization: commondb_model.Organization | None = Field(
         default=None, description="The organization"
     )
     is_private: bool = Field(
@@ -144,10 +144,10 @@ class UserAccessCasePolicy(BaseCasePolicy):
         ),
         links=create_links(
             {
-                1: ("user_id", common_model.User, "user"),
+                1: ("user_id", commondb_model.User, "user"),
                 2: (
                     "data_collection_id",
-                    common_model.DataCollection,
+                    commondb_model.DataCollection,
                     "data_collection",
                 ),
                 3: ("case_type_set_id", CaseTypeSet, "case_type_set"),
@@ -165,7 +165,7 @@ class UserAccessCasePolicy(BaseCasePolicy):
         ),
     )
     user_id: UUID = Field(description="The ID of the user. FOREIGN KEY")
-    user: common_model.User | None = Field(default=None, description="The user")
+    user: commondb_model.User | None = Field(default=None, description="The user")
     read_col_set_id: UUID | None = Field(
         default=None,
         description="The ID of the column set for which values can be read, limited to the CaseTypes in the CaseTypeSet.  If empty, there are no read rights. FOREIGN KEY",
@@ -214,29 +214,29 @@ class OrganizationShareCasePolicy(BaseCasePolicy):
         ),
         links=create_links(
             {
-                1: ("organization_id", common_model.Organization, "organization"),
+                1: ("organization_id", commondb_model.Organization, "organization"),
                 2: (
                     "data_collection_id",
-                    common_model.DataCollection,
+                    commondb_model.DataCollection,
                     "data_collection",
                 ),
                 3: ("case_type_set_id", CaseTypeSet, "case_type_set"),
                 4: (
                     "from_data_collection_id",
-                    common_model.DataCollection,
+                    commondb_model.DataCollection,
                     "from_data_collection",
                 ),
             }
         ),
     )
     organization_id: UUID = Field(description="The ID of the organization. FOREIGN KEY")
-    organization: common_model.Organization | None = Field(
+    organization: commondb_model.Organization | None = Field(
         default=None, description="The organization"
     )
     from_data_collection_id: UUID = Field(
         description="The ID of the data collection from which the CaseTypeSet is shared. FOREIGN KEY"
     )
-    from_data_collection: common_model.DataCollection | None = Field(
+    from_data_collection: commondb_model.DataCollection | None = Field(
         default=None,
         description="The data collection from which the CaseTypeSet is shared",
     )
@@ -268,27 +268,27 @@ class UserShareCasePolicy(BaseCasePolicy):
         ),
         links=create_links(
             {
-                1: ("user_id", common_model.User, "user"),
+                1: ("user_id", commondb_model.User, "user"),
                 2: (
                     "data_collection_id",
-                    common_model.DataCollection,
+                    commondb_model.DataCollection,
                     "data_collection",
                 ),
                 3: ("case_type_set_id", CaseTypeSet, "case_type_set"),
                 4: (
                     "from_data_collection_id",
-                    common_model.DataCollection,
+                    commondb_model.DataCollection,
                     "from_data_collection",
                 ),
             }
         ),
     )
     user_id: UUID = Field(description="The ID of the user. FOREIGN KEY")
-    user: common_model.User | None = Field(default=None, description="The user")
+    user: commondb_model.User | None = Field(default=None, description="The user")
     from_data_collection_id: UUID = Field(
         description="The ID of the data collection from which the CaseTypeSet is shared. FOREIGN KEY"
     )
-    from_data_collection: common_model.DataCollection | None = Field(
+    from_data_collection: commondb_model.DataCollection | None = Field(
         default=None,
         description="The data collection from which the CaseTypeSet is shared",
     )

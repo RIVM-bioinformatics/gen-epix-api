@@ -6,7 +6,9 @@ from uuid import UUID
 
 from pydantic import Field, model_validator
 
-from gen_epix.commondb.domain.model.base import ModelNoId
+from gen_epix.commondb.domain.model import (
+    ModelNoId,
+)
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.omopdb.domain.model.base import Model
 from gen_epix.omopdb.domain.model.omop.clinical_data import (

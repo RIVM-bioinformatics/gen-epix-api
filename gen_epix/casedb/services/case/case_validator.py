@@ -530,9 +530,9 @@ class CaseValidator:
                     raise AssertionError(
                         f"Unexpected non-ISO datetime value {iso_datetime_value} for case date calculation"
                     )
-                orig_case_date = case.case_date
-                case.case_date = mapper(iso_datetime_value)
-                if case.case_date != orig_case_date:
+                orig_case_date = case.timed_at
+                case.timed_at = mapper(iso_datetime_value)
+                if case.timed_at != orig_case_date:
                     case_result.add_info(
                         code="b2c3d4e5",
                         message="Case date updated based on TIME dimension column",

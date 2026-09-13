@@ -11,10 +11,11 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.commondb.domain.enum import EtlStatus, UploadAction, UploadStatusSet
+from gen_epix.commondb.domain.enum import UploadAction
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import UploadResult, User
 from gen_epix.commondb.domain.model.upload import ParentUploadResult
+from gen_epix.etl.enum import EtlStatus, EtlStatusSet
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import command, enum, model
@@ -111,13 +112,13 @@ class BaseUploadTestCase:
         self.batch_uploader = SampleBatchUploader(self.service)
 
     def assertBatchProcessed(self, upload_result: UploadResult) -> None:
-        if upload_result.status not in UploadStatusSet.PROCESSED.value:
+        if upload_result.status not in EtlStatusSet.SUCCEEDED.value:
             pytest.fail(
                 f"Upload was not processed, status: {upload_result.status.value}",
             )
 
     def assertBatchFailed(self, upload_result: UploadResult) -> None:
-        if upload_result.status not in UploadStatusSet.FAILED.value:
+        if upload_result.status not in EtlStatusSet.FAILED.value:
             pytest.fail(
                 f"Upload did not fail, status: {upload_result.status.value}",
             )
@@ -140,11 +141,10 @@ class BaseUploadTestCase:
         n_skipped: int = 0,
         n_created: int = 0,
         n_updated: int = 0,
+        n_deleted: int = 0,
         n_failed: int = 0,
         n_pending: int = 0,
         n_processed: int = 0,
-        n_initialized: int = 0,
-        n_error: int = 0,
         n_mixed: int = 0,
         n_success: int = 0,
         include_self: bool = False,
@@ -153,11 +153,10 @@ class BaseUploadTestCase:
             EtlStatus.SKIPPED: n_skipped,
             EtlStatus.CREATED: n_created,
             EtlStatus.UPDATED: n_updated,
+            EtlStatus.DELETED: n_deleted,
             EtlStatus.FAILED: n_failed,
             EtlStatus.PENDING: n_pending,
             EtlStatus.PROCESSED: n_processed,
-            EtlStatus.INITIALIZED: n_initialized,
-            EtlStatus.ERROR: n_error,
             EtlStatus.MIXED: n_mixed,
             EtlStatus.SUCCESS: n_success,
         }
@@ -2531,3 +2530,19 @@ class TestVerifyBatchSeqClassifications(BaseUploadTestCase):
 
         assert success
         assert not retval.has_errors()
+
+
+class TestSampleChildOrder:
+    """SampleForUpload.CHILD_ORDER honours the seq foreign-key dependencies."""
+
+    def test_seq_dependents_come_after_seq(self) -> None:
+        child_order = model.SampleForUpload.get_child_order()
+        assert child_order.index(model.ReadSet) < child_order.index(model.Seq)
+        for dependent in (
+            model.SeqProfile,
+            model.SeqClassification,
+            model.SeqTaxonomy,
+        ):
+            assert child_order.index(model.Seq) < child_order.index(
+                dependent
+            ), f"{dependent.__name__} must be uploaded after Seq"

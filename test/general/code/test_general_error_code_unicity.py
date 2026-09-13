@@ -48,6 +48,55 @@ def _get_python_files(root_dir: Path) -> list[Path]:
     return python_files
 
 
+# Calls that *query* whether a code was already logged, rather than logging
+# it - e.g. `if self.has_log_code("6a1f3d0c"): return` guarding a matching
+# `self.add_error("6a1f3d0c", ...)` a few lines below, an idempotency check
+# used by several *Result.propagate_*_failures() methods. The argument here
+# is deliberately identical to the add_error() call it guards; treating it
+# as a second "definition" of the code is a false positive, not a real
+# unicity violation.
+_CODE_QUERY_CALL_NAMES = {"has_log_code"}
+
+
+def _get_query_call_arg_ids(tree: ast.AST) -> set[int]:
+    """Return id() of every string-constant node passed to a query call."""
+    excluded: set[int] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        name = func.id if isinstance(func, ast.Name) else getattr(func, "attr", None)
+        if name in _CODE_QUERY_CALL_NAMES:
+            excluded.update(id(arg) for arg in node.args)
+    return excluded
+
+
+# Alembic migration files (gen_epix/*/repositories/sa_alembic/versions/*.py)
+# declare `revision = "<id>"` (this file's own id - a real definition, still
+# checked) and `down_revision = "<id>"` (a reference to the *previous*
+# migration's own `revision` value, by design - every migration but the
+# first in a service is expected to match an earlier file's `revision`).
+# That's the same reference-vs-definition shape as the has_log_code() case
+# above, just via assignment instead of a call - exclude only the
+# `down_revision` side.
+_REFERENCE_ASSIGNMENT_TARGETS = {"down_revision"}
+
+
+def _get_reference_assignment_value_ids(tree: ast.AST) -> set[int]:
+    """Return id() of every string-constant assigned to a reference target."""
+    excluded: set[int] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(
+            isinstance(target, ast.Name) and target.id in _REFERENCE_ASSIGNMENT_TARGETS
+            for target in node.targets
+        ):
+            continue
+        excluded.add(id(node.value))
+    return excluded
+
+
 def _extract_hex_strings_from_file(file_path: Path) -> list[tuple[str, int]]:
     """
     Parse a python file and find all string literals that match the hex criteria.
@@ -65,10 +114,16 @@ def _extract_hex_strings_from_file(file_path: Path) -> list[tuple[str, int]]:
             print(f"Skipping {file_path}: SyntaxError")
             return []
 
+        excluded_ids = _get_query_call_arg_ids(
+            tree
+        ) | _get_reference_assignment_value_ids(tree)
+
         # Walk AST for string literals
         for node in ast.walk(tree):
             if isinstance(node, ast.Constant):
                 if isinstance(node.value, str):
+                    if id(node) in excluded_ids:
+                        continue
                     if _is_long_hex_string(node.value):
                         results.append((node.value, node.lineno))
 

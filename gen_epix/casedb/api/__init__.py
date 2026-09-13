@@ -46,6 +46,9 @@ from gen_epix.casedb.api.case import (
 from gen_epix.casedb.api.case import (
     RetrieveSimilarCasesRequestBody as RetrieveSimilarCasesRequestBody,
 )
+from gen_epix.casedb.api.case import (
+    UpdateCaseCreatedInDataCollectionRequestBody as UpdateCaseCreatedInDataCollectionRequestBody,
+)
 from gen_epix.casedb.api.ontology import (
     DiseaseEtiologicalAgentUpdateAssociationRequestBody as DiseaseEtiologicalAgentUpdateAssociationRequestBody,
 )

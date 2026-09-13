@@ -28,9 +28,9 @@ from gen_epix.fastapp.model import Command, CrudCommand, Policy
 from gen_epix.fastapp.util import create_ssl_context
 from gen_epix.filter import (
     FilterType,
-    TypedNumberSetFilter,
-    TypedStringSetFilter,
-    TypedUuidSetFilter,
+    NumberSetFilter,
+    StringSetFilter,
+    UuidSetFilter,
 )
 
 
@@ -538,23 +538,23 @@ class RemoteApp(App):
 
         id_type = self._classify_exists_id_type(obj_ids)
         number_id_types = {"int", "float", "decimal"}
-        query_filter: TypedUuidSetFilter | TypedStringSetFilter | TypedNumberSetFilter
+        query_filter: UuidSetFilter | StringSetFilter | NumberSetFilter
 
         if id_type == "uuid":
-            query_filter = TypedUuidSetFilter(
+            query_filter = UuidSetFilter(
                 type=FilterType.UUID_SET.value,
                 key=id_field_name,
                 members=frozenset(obj_ids),
             )
         elif id_type == "string":
-            query_filter = TypedStringSetFilter(
+            query_filter = StringSetFilter(
                 type=FilterType.STRING_SET.value,
                 key=id_field_name,
                 members=frozenset(obj_ids),
                 case_sensitive=True,
             )
         elif id_type in number_id_types:
-            query_filter = TypedNumberSetFilter(
+            query_filter = NumberSetFilter(
                 type=FilterType.NUMBER_SET.value,
                 key=id_field_name,
                 members=frozenset(obj_ids),

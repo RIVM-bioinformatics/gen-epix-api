@@ -140,6 +140,22 @@ Project tree (trimmed to the main structure):
 
 4. For WSL users: Run the commands in Windows PowerShell and copy files to both the project cert directory and your WSL home directory.
 
+## (Optional) Install graphify for codebase Q&A
+
+This repo can be explored as a knowledge graph via the `graphify` agent skill (see
+`graphify-out/` for a prebuilt graph). Install the CLI with:
+
+```bash
+pipx install graphifyy
+
+# alternatives:
+# uv tool install graphifyy
+# pip install graphifyy     (may need PATH setup, see troubleshooting)
+```
+
+Then run `/graphify` in Copilot Chat, or `graphify query "<question>"` from a terminal, to
+build or query the graph.
+
 ---
 
 ## Usage

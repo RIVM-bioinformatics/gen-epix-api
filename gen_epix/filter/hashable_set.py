@@ -20,5 +20,4 @@ class HashableSetFilter(Filter):
 
 
 # No typed version of this filter is needed since the type of the values would be needed as well
-# class TypedValueSetFilter(ValueSetFilter):
-#     type_: Literal[FilterType.HASHABLE_SET]
+# HashableSetFilter intentionally inherits Filter's BASE discriminator.

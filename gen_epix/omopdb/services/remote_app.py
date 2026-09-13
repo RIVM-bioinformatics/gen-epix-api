@@ -26,6 +26,7 @@ class OmopdbRemoteApp(CommondbRemoteApp):
     }
 
     DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {
+        command.DeleteAllOperationalDataCommand: 300.0,
         command.UploadPersonsCommand: 45.0,
         command.RetrievePersonsByIdCommand: 45.0,
         command.RetrievePersonsByQueryCommand: 45.0,

@@ -12,7 +12,7 @@ from typing import ClassVar
 
 from pydantic import Field
 
-from gen_epix.commondb.domain.model.base import Model
+from gen_epix.commondb.domain.model.base import Model, ModelNoId
 from gen_epix.fastapp import Entity
 
 
@@ -65,4 +65,21 @@ class PackageMetadata(Model):
     )
     homepage: str | None = Field(
         default=None, description="Homepage URL of the package."
+    )
+
+
+class DeleteAllOperationalDataResult(ModelNoId):
+    """Represents the result of a delete all operational data operation."""
+
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="delete_all_operational_data_requests",
+        persistable=False,
+    )
+
+    success: bool = Field(
+        description="Indicates whether the deletion of all operational data was successful."
+    )
+    details: dict[str, str] = Field(
+        default_factory=dict,
+        description="Detailed information about the result of the deletion operation.",
     )

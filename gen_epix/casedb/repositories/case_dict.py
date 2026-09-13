@@ -41,7 +41,7 @@ class CaseDictRepository(DictRepository, BaseCaseRepository):
             return case_stats
 
         # No ABAC restrictions
-        # # Retrieve first case_date, last case_date and number of cases from all cases without filtering by data collection or adjusting case_date
+        # # Retrieve first timed_at, last timed_at and number of cases from all cases without filtering by data collection or adjusting timed_at
         # if not self.db[model.Case]:
         #     return case_stats
         # n_cases = 0
@@ -54,13 +54,13 @@ class CaseDictRepository(DictRepository, BaseCaseRepository):
         #     n_cases += 1
         #     # Update first and last case dates
         #     if first_case_date is None:
-        #         first_case_date = case.case_date
-        #     elif case.case_date < first_case_date:
-        #         first_case_date = case.case_date
+        #         first_case_date = case.timed_at
+        #     elif case.timed_at < first_case_date:
+        #         first_case_date = case.timed_at
         #     if last_case_date is None:
-        #         last_case_date = case.case_date
-        #     elif case.case_date > last_case_date:
-        #         last_case_date = case.case_date
+        #         last_case_date = case.timed_at
+        #     elif case.timed_at > last_case_date:
+        #         last_case_date = case.timed_at
         # case_stats.n_cases = n_cases
         # case_stats.first_case_date = first_case_date
         # case_stats.last_case_date = last_case_date
@@ -96,11 +96,12 @@ class CaseDictRepository(DictRepository, BaseCaseRepository):
                 x: y for x, y in case_map.items() if y.case_type_id == case_type_id
             }
 
-        # Get case date results based on created_in_data_collection_id
+        # Get case timed_at results based on created_in_data_collection_id
+        # rows are tuples of (timed_at, case_id, count, data_collection_time_unit_index, is_in_private_data_collection)
         if has_abac:
             rows: list[tuple[datetime.datetime, UUID, int, int, bool]] = [
                 (
-                    x.case_date,
+                    x.timed_at,
                     x.id,  # type: ignore[misc]
                     x.count,
                     data_collection_time_unit_index_map[
@@ -119,7 +120,7 @@ class CaseDictRepository(DictRepository, BaseCaseRepository):
         else:
             rows = [
                 (
-                    x.case_date,
+                    x.timed_at,
                     x.id,
                     x.count,
                     0,
@@ -143,7 +144,7 @@ class CaseDictRepository(DictRepository, BaseCaseRepository):
                 # No ABAC restrictions, all data collections allowed
                 rows.append(
                     (
-                        case.case_date,
+                        case.timed_at,
                         case_id,
                         case.count,
                         0,
@@ -159,7 +160,7 @@ class CaseDictRepository(DictRepository, BaseCaseRepository):
                 continue
             rows.append(
                 (
-                    case.case_date,
+                    case.timed_at,
                     case_id,
                     case.count,
                     data_collection_time_unit_index_map[x.data_collection_id],
@@ -172,6 +173,7 @@ class CaseDictRepository(DictRepository, BaseCaseRepository):
             )
 
         # Process rows in order of (case_id, col_type_index), i.e. highest allowed resolution first per case, to calculate stats
+        # rows are tuples of (timed_at, case_id, count, data_collection_time_unit_index, is_in_private_data_collection)
         date_mappers = [
             self.DATE_MAPPERS[x] for x in enum.ColTypeOrder.TIME_RESOLUTION_DESC.value
         ]
@@ -184,18 +186,18 @@ class CaseDictRepository(DictRepository, BaseCaseRepository):
                     own_case_counts[case_id] = row[2]
                 continue
             own_case_counts[case_id] = row[2] if row[4] else 0
-            # Get adjusted case_date based on col_type_index
+            # Get adjusted timed_at based on col_type_index
             col_type_index = row[3]
             if has_abac:
-                case_date = date_mappers[col_type_index](row[0])
+                timed_at = date_mappers[col_type_index](row[0])
             else:
-                case_date = row[0]
+                timed_at = row[0]
             datetime_matcher = (
                 datetime_range_filter.match_value
                 if datetime_range_filter is not None
                 else None
             )
-            if datetime_matcher is not None and not datetime_matcher(case_date):
+            if datetime_matcher is not None and not datetime_matcher(timed_at):
                 # Set to None to skip counting in n_own_cases.
                 own_case_counts[case_id] = None
                 continue
@@ -205,14 +207,14 @@ class CaseDictRepository(DictRepository, BaseCaseRepository):
                 continue
             if (
                 case_stats.first_case_date is None
-                or case_date < case_stats.first_case_date
+                or timed_at < case_stats.first_case_date
             ):
-                case_stats.first_case_date = case_date
+                case_stats.first_case_date = timed_at
             if (
                 case_stats.last_case_date is None
-                or case_date > case_stats.last_case_date
+                or timed_at > case_stats.last_case_date
             ):
-                case_stats.last_case_date = case_date
+                case_stats.last_case_date = timed_at
         # Calculate n_own_cases
         case_stats.n_own_cases = sum(x for x in own_case_counts.values() if x)
         return case_stats

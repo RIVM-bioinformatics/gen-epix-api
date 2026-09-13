@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from gen_epix.casedb.domain import exc as case_exc
-from gen_epix.casedb.domain import model as case_model
+from gen_epix.casedb.domain import model as casedb_model
 from gen_epix.casedb.domain.enum import CaseRight
 from gen_epix.casedb.services.case.crud_case_set import case_service_crud_case_set
 from gen_epix.fastapp import CrudOperation
@@ -314,7 +314,7 @@ class TestDeleteSomeOperation(BaseCrudTestCase):
             args, kwargs = self.service.repository.crud.call_args  # type: ignore[attr-defined]
             assert args[0] is self.uow
             assert args[1] == None
-            assert args[2] is case_model.CaseSet
+            assert args[2] is casedb_model.CaseSet
             assert args[3] is None
             assert (
                 kwargs.get("obj_ids") == ids or args[4] == ids

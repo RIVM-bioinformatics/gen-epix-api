@@ -10,6 +10,9 @@ from gen_epix.seqdb.api.seq import (
     CalculatePhylogeneticTreeRequestBody as CalculatePhylogeneticTreeRequestBody,
 )
 from gen_epix.seqdb.api.seq import (
+    ConvertSeqFormatRequestBody as ConvertSeqFormatRequestBody,
+)
+from gen_epix.seqdb.api.seq import (
     RetrieveBestSeqClassificationPerSampleRequestBody as RetrieveBestSeqClassificationPerSampleRequestBody,
 )
 from gen_epix.seqdb.api.seq import (

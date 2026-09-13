@@ -11,9 +11,10 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.commondb.domain.enum import EtlStatus, UploadAction, UploadStatusSet
+from gen_epix.commondb.domain.enum import UploadAction
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import UploadResult, User
+from gen_epix.etl.enum import EtlStatus, EtlStatusSet
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
@@ -174,13 +175,13 @@ class BaseSnpUploadTestCase:
         return batch_result.samples[sample_idx].seq_profiles[profile_idx]
 
     def expectBatchProcessed(self, upload_result: UploadResult) -> None:
-        if upload_result.status not in UploadStatusSet.PROCESSED.value:
+        if upload_result.status not in EtlStatusSet.SUCCEEDED.value:
             pytest.fail(
                 "Upload was not processed," f" status: {upload_result.status.value}"
             )
 
     def expectBatchFailed(self, upload_result: UploadResult) -> None:
-        if upload_result.status not in UploadStatusSet.FAILED.value:
+        if upload_result.status not in EtlStatusSet.FAILED.value:
             pytest.fail("Upload did not fail," f" status: {upload_result.status.value}")
 
     def expectHasLogCode(

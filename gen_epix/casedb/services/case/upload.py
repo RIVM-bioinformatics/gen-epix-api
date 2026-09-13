@@ -18,11 +18,12 @@ from gen_epix.casedb.domain import enum, exc
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.case_validator import CaseValidator
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
-from gen_epix.commondb.domain.enum import DataIssueType, EtlStatus, RoleSet
+from gen_epix.commondb.domain.enum import DataIssueType, RoleSet
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import IdentifierForUpload
 from gen_epix.commondb.domain.model.upload import BaseBatchUploadResult
 from gen_epix.commondb.services.upload import BatchUploader
+from gen_epix.etl.enum import EtlStatus
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.service import BaseService
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
@@ -273,7 +274,7 @@ class CaseBatchUploader(BatchUploader):
         change applied, so deleted keys are simply absent rather than
         explicitly None) directly on the real case object, since
         CaseValidator.validate_and_transform mutates the case in place for
-        more than just content (e.g. it recalculates case_date). Afterward,
+        more than just content (e.g. it recalculates timed_at). Afterward,
         only the deleted keys are put back as explicit None: the generic
         upsert that runs after this re-derives its own diff from a fresh DB
         read and can only detect a deletion via an explicit {key: None}

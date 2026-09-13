@@ -18,7 +18,7 @@ from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.commondb.test.util import set_log_level
 from gen_epix.fastapp import CrudOperation, PermissionType, exc
 from gen_epix.fastapp.model import Permission
-from gen_epix.filter import LogicalOperator, TypedCompositeFilter, TypedStringSetFilter
+from gen_epix.filter import CompositeFilter, LogicalOperator, StringSetFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 
@@ -71,6 +71,93 @@ def get_test_client() -> Env:
     "TC-RBAC-04-09",
 )
 class TestContent:
+    def test_update_case_created_in_data_collection_endpoint(self, env: Env) -> None:
+        app = env.app
+        app_impl: AppImplDetails = app.impl
+        root_user = env.get_root_user()
+        cases: list[model.Case] = app.handle(
+            command.CaseCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        data_collections: list[model.DataCollection] = app.handle(
+            command.DataCollectionCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        assert len(cases) >= 2
+        assert len(data_collections) >= 2
+
+        target_cases = cases[:2]
+        original_data_collection_ids = [
+            case.created_in_data_collection_id for case in target_cases
+        ]
+        replacement_data_collection_id = next(
+            data_collection.id
+            for data_collection in data_collections
+            if data_collection.id not in original_data_collection_ids
+        )
+        update_command = command.UpdateCaseCreatedInDataCollectionCommand(
+            user=root_user,
+            case_ids=[case.id for case in target_cases],  # type: ignore[misc]
+            target_created_in_data_collection_id=replacement_data_collection_id,  # type: ignore[arg-type]
+        )
+
+        updated_case_ids, response = env.handle(update_command, return_response=True)
+
+        assert response.status_code == 200
+        assert set(updated_case_ids) == {case.id for case in target_cases}
+        stored_cases: list[model.Case] = app.handle(
+            command.CaseCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_SOME,
+                obj_ids=[case.id for case in target_cases],  # type: ignore[misc]
+            )
+        )
+        assert [case.created_in_data_collection_id for case in stored_cases] == [
+            replacement_data_collection_id,
+        ] * len(target_cases)
+
+        users: list[model.User] = app.handle(
+            command.UserCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        org_user = next(
+            user
+            for user in users
+            if app_impl.role_map[CommonRole.ORG_USER] in user.roles
+        )
+        with pytest.raises(exc.UnauthorizedAuthError):
+            env.handle(
+                update_command.model_copy(update={"user": org_user}),
+            )
+
+        with pytest.raises(exc.InvalidIdsError):
+            env.handle(
+                command.UpdateCaseCreatedInDataCollectionCommand(
+                    user=root_user,
+                    case_ids=[target_cases[0].id, UUID(int=0)],  # type: ignore[list-item]
+                    target_created_in_data_collection_id=original_data_collection_ids[
+                        0
+                    ],
+                )
+            )
+        unchanged_cases: list[model.Case] = app.handle(
+            command.CaseCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_SOME,
+                obj_ids=[case.id for case in target_cases],  # type: ignore[misc]
+            )
+        )
+        assert [case.created_in_data_collection_id for case in unchanged_cases] == [
+            replacement_data_collection_id,
+            replacement_data_collection_id,
+        ]
+
     def test_content(self, env: Env) -> None:
 
         # import pyinstrument
@@ -264,7 +351,7 @@ class TestContent:
                 if ref_col.concept_set_id:
                     # Create a filter for a portion of the terms in the concept set
                     filters.append(
-                        TypedStringSetFilter(
+                        StringSetFilter(
                             type="STRING_SET",
                             key=str(col.id),
                             members={  # type: ignore[arg-type]
@@ -282,7 +369,7 @@ class TestContent:
                     case_query=model.CaseQuery(
                         case_type_id=complete_case_type.id,
                         filter=(
-                            TypedCompositeFilter(
+                            CompositeFilter(
                                 type="COMPOSITE",
                                 filters=filters,
                                 operator=LogicalOperator.OR,
@@ -355,7 +442,7 @@ class TestContent:
                 # assert that any item in similar_case_ids is a UUID
                 for case_id_and_date in similar_cases_retval.cases:
                     assert isinstance(case_id_and_date.id, UUID)
-                    assert isinstance(case_id_and_date.case_date, datetime)
+                    assert isinstance(case_id_and_date.timed_at, datetime)
 
             # Retrieve genetic sequence
             genetic_sequence_cols = [
@@ -636,4 +723,32 @@ class TestContent:
 
         raise ValueError(
             "No cases in a private data collection found for any case type"
+        )
+
+    def test_delete_all_operational_data(self, env: Env) -> None:
+        """Delete operational content after all content scenarios have completed."""
+        root_user = env.get_root_user()
+        result = env.handle(
+            command.DeleteAllOperationalDataCommand(user=root_user),
+            use_endpoint=False,
+        )
+
+        assert result.success, {
+            key: value[:300]
+            for key, value in result.details.items()
+            if isinstance(value, str)
+        }
+        assert set(result.details) == {
+            model_class.ENTITY.name
+            for model_class in command.DeleteAllOperationalDataCommand.SORTED_OPERATIONAL_DATA_MODEL_CLASSES
+        }
+        assert (
+            env.handle(
+                command.CaseCrudCommand(
+                    user=root_user,
+                    operation=CrudOperation.READ_ALL,
+                ),
+                use_endpoint=False,
+            )
+            == []
         )

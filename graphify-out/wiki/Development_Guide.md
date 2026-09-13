@@ -17,7 +17,7 @@
 - **Graphify setup for coding agents** (3 connections) — `docs/06-Development-Guide.md`
 - **test_all curated CI suite** (3 connections) — `docs/06-Development-Guide.md`
 - **test.util.mock_compat** (2 connections) — `.github/instructions/python-pytest.instructions.md`
-- **pytest-run skill** (2 connections) — `.github/instructions/python-pytest.instructions.md`
+- **run-pytest skill** (2 connections) — `.github/instructions/python-pytest.instructions.md`
 - **Graphify architecture query workflow** (2 connections) — `AGENTS.md`
 - **coverage** (2 connections) — `dev-requirements.txt`
 - **pytest-mock** (2 connections) — `dev-requirements.txt`
