@@ -256,6 +256,8 @@ class CrudEndpointType(Enum):
     DELETE_ALL = "DELETE_ALL"
     POST_QUERY = "POST_QUERY"
     POST_QUERY_IDS = "POST_QUERY_IDS"
+    GET_EXISTS_ONE = "GET_EXISTS_ONE"
+    GET_EXISTS_SOME = "GET_EXISTS_SOME"
 
 
 class IsolationLevel(Enum):

@@ -3,7 +3,6 @@
 import json
 import ssl
 from collections.abc import Callable, Generator
-from decimal import Decimal
 from functools import partial
 from pathlib import Path
 from typing import Any, cast
@@ -26,12 +25,6 @@ from gen_epix.fastapp.enum import (
 from gen_epix.fastapp.exc import ServiceException
 from gen_epix.fastapp.model import Command, CrudCommand, Policy
 from gen_epix.fastapp.util import create_ssl_context
-from gen_epix.filter import (
-    FilterType,
-    NumberSetFilter,
-    StringSetFilter,
-    UuidSetFilter,
-)
 
 
 class RemoteApp(App):
@@ -360,6 +353,7 @@ class RemoteApp(App):
         batch_route_suffix: str | None = None,
         query_route_suffix: str | None = None,
         ids_route_suffix: str | None = None,
+        exists_route_suffix: str | None = None,
     ) -> Callable[[Command], Any]:
         """Return a partial handler that maps CRUD operations to HTTP requests."""
         batch_route_suffix = (
@@ -370,6 +364,9 @@ class RemoteApp(App):
         )
         ids_route_suffix = (
             ids_route_suffix or CrudEndpointGenerator.DEFAULT_IDS_ROUTE_SUFFIX
+        )
+        exists_route_suffix = (
+            exists_route_suffix or CrudEndpointGenerator.DEFAULT_EXISTS_ROUTE_SUFFIX
         )
         model_class = command_class.MODEL_CLASS
         entity = model_class.ENTITY
@@ -383,6 +380,7 @@ class RemoteApp(App):
                 batch_route_suffix,
                 query_route_suffix,
                 ids_route_suffix,
+                exists_route_suffix,
             ),
         )
 
@@ -392,6 +390,7 @@ class RemoteApp(App):
         batch_route_suffix: str,
         query_route_suffix: str,
         ids_route_suffix: str,
+        exists_route_suffix: str,
         cmd: CrudCommand,
     ) -> Any:
         """Execute a CRUD command by dispatching to the appropriate HTTP method."""
@@ -437,25 +436,27 @@ class RemoteApp(App):
                     )
                 case CrudOperation.EXISTS_ONE:
                     assert cmd.obj_ids is not None
-                    return self._exists_some_via_query_ids(
-                        client=client,
+                    response = client.get(
+                        f"{base_route}/{cmd.obj_ids}{exists_route_suffix}",
                         headers=headers,
-                        model_class=model_class,
-                        base_route=base_route,
-                        query_route_suffix=query_route_suffix,
-                        ids_route_suffix=ids_route_suffix,
-                        obj_ids=[cmd.obj_ids],
-                    )[0]
+                    )
+                    response.raise_for_status()
+                    return bool(
+                        json.loads(
+                            response.content.decode(response.encoding or "utf-8")
+                        )
+                    )
                 case CrudOperation.EXISTS_SOME:
                     assert isinstance(cmd.obj_ids, list)
-                    return self._exists_some_via_query_ids(
-                        client=client,
+                    ids = json.dumps([str(x) for x in cmd.obj_ids])
+                    response = client.get(
+                        base_route + exists_route_suffix,
                         headers=headers,
-                        model_class=model_class,
-                        base_route=base_route,
-                        query_route_suffix=query_route_suffix,
-                        ids_route_suffix=ids_route_suffix,
-                        obj_ids=cmd.obj_ids,
+                        params={"ids": ids},
+                    )
+                    response.raise_for_status()
+                    return json.loads(
+                        response.content.decode(response.encoding or "utf-8")
                     )
                 case CrudOperation.CREATE_ONE:
                     assert isinstance(cmd.objs, model.Model)
@@ -508,117 +509,6 @@ class RemoteApp(App):
             response.raise_for_status()
         retval = self._content_to_obj(response, return_model_class, is_list=is_list)
         return retval
-
-    def _exists_some_via_query_ids(
-        self,
-        base_route: str,
-        query_route_suffix: str,
-        ids_route_suffix: str,
-        model_class: type[model.Model],
-        obj_ids: list[Any],
-        client: httpx.Client,
-        headers: dict[str, str],
-    ) -> list[bool]:
-        """Check existence of multiple IDs using a query-by-IDs endpoint."""
-        if not obj_ids:
-            return []
-
-        id_field_name = model_class.ENTITY.id_field_name
-        if not isinstance(id_field_name, str):
-            raise AssertionError(
-                f"Model {model_class.__name__} does not define a string id_field_name."
-            )
-        query_suffix = query_route_suffix.rstrip("/")
-        ids_suffix = (
-            ids_route_suffix
-            if ids_route_suffix.startswith("/")
-            else ("/" + ids_route_suffix)
-        )
-        query_ids_url = base_route + query_suffix + ids_suffix
-
-        id_type = self._classify_exists_id_type(obj_ids)
-        number_id_types = {"int", "float", "decimal"}
-        query_filter: UuidSetFilter | StringSetFilter | NumberSetFilter
-
-        if id_type == "uuid":
-            query_filter = UuidSetFilter(
-                type=FilterType.UUID_SET.value,
-                key=id_field_name,
-                members=frozenset(obj_ids),
-            )
-        elif id_type == "string":
-            query_filter = StringSetFilter(
-                type=FilterType.STRING_SET.value,
-                key=id_field_name,
-                members=frozenset(obj_ids),
-                case_sensitive=True,
-            )
-        elif id_type in number_id_types:
-            query_filter = NumberSetFilter(
-                type=FilterType.NUMBER_SET.value,
-                key=id_field_name,
-                members=frozenset(obj_ids),
-            )
-        else:
-            return self._exists_some_via_get(
-                base_route=base_route,
-                obj_ids=obj_ids,
-                client=client,
-                headers=headers,
-            )
-
-        response = client.post(
-            query_ids_url,
-            json=json.loads(query_filter.model_dump_json()),
-            headers=headers,
-        )
-        response.raise_for_status()
-        found_ids = json.loads(response.content.decode(response.encoding or "utf-8"))
-        if id_type == "uuid":
-            found_set = {UUID(x) for x in found_ids}
-        else:
-            found_set = set(found_ids)
-        return [obj_id in found_set for obj_id in obj_ids]
-
-    @staticmethod
-    def _classify_exists_id_type(obj_ids: list[Any]) -> str:
-        """Return the id kind ('uuid', 'string', 'int', 'float', 'decimal', or 'mixed')."""
-        if not obj_ids:
-            return "mixed"
-
-        first_type = type(obj_ids[0])
-        if not all(type(obj_id) is first_type for obj_id in obj_ids[1:]):
-            return "mixed"
-
-        type_to_id_kind: dict[type, str] = {
-            UUID: "uuid",
-            str: "string",
-            int: "int",
-            float: "float",
-            Decimal: "decimal",
-        }
-        return type_to_id_kind.get(first_type, "mixed")
-
-    @staticmethod
-    def _exists_some_via_get(
-        base_route: str,
-        obj_ids: list[Any],
-        client: httpx.Client,
-        headers: dict[str, str],
-    ) -> list[bool]:
-        """Check existence of each ID via individual GET requests."""
-        is_existing: list[bool] = []
-        for obj_id in obj_ids:
-            response = client.get(
-                f"{base_route}/{obj_id}",
-                headers=headers,
-            )
-            if response.status_code == 404:
-                is_existing.append(False)
-                continue
-            response.raise_for_status()
-            is_existing.append(True)
-        return is_existing
 
     @staticmethod
     def _content_to_obj(
