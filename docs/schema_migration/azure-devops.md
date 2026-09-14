@@ -148,3 +148,6 @@ for up to 24 hours by `ttlSecondsAfterFinished` unless the next run replaces it.
 - Removing a revision from a newer image does not reverse it in the database.
   Once deployed, use a new corrective revision or an explicitly planned
   downgrade.
+
+See [Operations and troubleshooting](operations.md) before baselining an
+existing database or recovering a failed deployment.

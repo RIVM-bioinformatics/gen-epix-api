@@ -11,6 +11,8 @@ Use this documentation as a map:
   review rules, and local validation loop.
 - [Azure DevOps deployment](azure-devops.md) traces the migration Job from the
   `lsp-api` pipeline to Azure SQL and records the current branch status.
+- [Operations and troubleshooting](operations.md) covers legacy baselining,
+  promotion, incident recovery, and the outstanding handover work.
 - The generated history pages list every revision for
   [CommonDB](commondb.md), [CaseDB](casedb.md), [SeqDB](seqdb.md), and
   [OMOPDB](omopdb.md).
