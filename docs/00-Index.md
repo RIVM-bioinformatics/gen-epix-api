@@ -25,6 +25,7 @@ Gen-EpiX is the backend of a genomic epidemiology platform. It includes four Fas
 | 08a | [App Composition Walkthrough](./08a-App-Composition-Walkthrough.md) | Full COMMONDB assembly trace (top-down) |
 | 09 | [Constraints & Open Questions](./09-Constraints-and-Open-Questions.md) | All hard limits and consolidated `<TBF elsewhere>` items |
 | 10 | [Logging](./10-Logging.md) | Logging architecture, JSON formatter behavior, runtime level precedence, overwrite/debug modes |
+| 11 | [Database Schema Migrations](./schema_migration/README.md) | Alembic architecture, migration development, deployment, and operations |
 
 ---
 
@@ -40,6 +41,7 @@ Gen-EpiX is the backend of a genomic epidemiology platform. It includes four Fas
 8. **[CI/CD & Release](./07-CI-CD-and-Release.md)** — Align with CI gates before opening a PR.
 9. **[Extending the System](./08-Extending-the-System.md)** — Use before adding modules, commands, RBAC rules, routers, or IDP config.
 10. **[Constraints & Open Questions](./09-Constraints-and-Open-Questions.md)** — Review hard limits and known documentation gaps.
+11. **[Database Schema Migrations](./schema_migration/README.md)** — Use before changing SQLAlchemy models or deploying SQL schema changes.
 
 For framework internals, read [02a-Fastapp-Framework](./02a-Fastapp-Framework.md) after chapter 02.
 For a full app assembly walkthrough, read [08a-App-Composition-Walkthrough](./08a-App-Composition-Walkthrough.md) after chapter 08.

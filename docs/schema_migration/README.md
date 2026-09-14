@@ -1,122 +1,103 @@
-# Schema migrations
+# Database schema migrations
 
-Each service database has its own Alembic environment next to its SQLAlchemy
-models. Although the service models include the shared CommonDB models, every
-database has an independent Alembic revision chain:
+Alembic is the source of truth for SQL Server schema creation and evolution in
+Gen-EpiX. API startup does **not** call `metadata.create_all()` for SQL Server;
+the database must be migrated before an `SA_SQL` API starts. SQLite repositories
+still create their schema automatically for tests and local fixtures.
 
-| Database | Alembic configuration |
-| --- | --- |
-| CommonDB | `gen_epix/commondb/repositories/alembic.ini` |
-| CaseDB | `gen_epix/casedb/repositories/alembic.ini` |
-| SeqDB | `gen_epix/seqdb/repositories/alembic.ini` |
-| OMOPDB | `gen_epix/omopdb/repositories/alembic.ini` |
+Use this documentation as a map:
 
-The version table is stored in an application-owned `alembic` schema. Do not
-put it in SQL Server's protected `sys` schema.
+- [Developing migrations](development.md) explains the file layout, commands,
+  review rules, and local validation loop.
+- The generated history pages list every revision for
+  [CommonDB](commondb.md), [CaseDB](casedb.md), [SeqDB](seqdb.md), and
+  [OMOPDB](omopdb.md).
 
-## Local clean bootstrap
+## One revision chain per database
 
-The SQL Server Compose stacks create four empty databases and run a one-shot
-`migrate-*` service for each of them before starting the APIs:
+Each service owns an Alembic environment beside its SQLAlchemy repository:
 
-```sh
-docker compose -f docker-compose.sql.yml down -v
-docker compose -f docker-compose.sql.yml build
-docker compose -f docker-compose.sql.yml up -d --wait lsp_sql
-docker compose -f docker-compose.sql.yml run --rm init-db
-docker compose -f docker-compose.sql.yml run --rm migrate-commondb
-docker compose -f docker-compose.sql.yml run --rm migrate-casedb
-docker compose -f docker-compose.sql.yml run --rm migrate-seqdb
-docker compose -f docker-compose.sql.yml run --rm migrate-omopdb
-docker compose -f docker-compose.sql.yml up -d --wait seqdb omopdb casedb
+| Database | Configuration | Migration metadata | Revisions |
+| --- | --- | --- | --- |
+| CommonDB | `gen_epix/commondb/repositories/alembic.ini` | `gen_epix/commondb/repositories/sa_alembic/metadata.py` | `gen_epix/commondb/repositories/sa_alembic/versions/` |
+| CaseDB | `gen_epix/casedb/repositories/alembic.ini` | `gen_epix/casedb/repositories/sa_alembic/metadata.py` | `gen_epix/casedb/repositories/sa_alembic/versions/` |
+| SeqDB | `gen_epix/seqdb/repositories/alembic.ini` | `gen_epix/seqdb/repositories/sa_alembic/metadata.py` | `gen_epix/seqdb/repositories/sa_alembic/versions/` |
+| OMOPDB | `gen_epix/omopdb/repositories/alembic.ini` | `gen_epix/omopdb/repositories/sa_alembic/metadata.py` | `gen_epix/omopdb/repositories/sa_alembic/versions/` |
+
+These are independent revision chains even though CaseDB, SeqDB, and OMOPDB
+also persist shared CommonDB models in their own databases. A change to a
+shared model can therefore require a new revision in more than one chain. Run
+the migration tests to discover every affected database; do not assume that a
+CommonDB revision updates the copies embedded in the other service databases.
+
+Each database records its current revision in
+`alembic.alembic_version`. The environment creates the application-owned
+`alembic` schema on SQL Server before running a migration. Do not move this
+table to SQL Server's protected `sys` schema.
+
+## Runtime flow
+
+```text
+SQLAlchemy models
+      │
+      ▼
+sa_alembic/metadata.py ──► Alembic autogenerate comparison
+      │
+      ▼
+sa_alembic/versions/<revision>.py
+      │
+      ▼
+alembic upgrade head ──► service schemas/tables ──► alembic.alembic_version
+      │
+      ▼
+SA_SQL API starts
 ```
 
-Use `docker-compose.sql.idp.yml` instead when testing with the mock OIDC
-provider. The explicit job commands avoid Docker Compose's `--wait` behaviour
-that treats an unreferenced, successfully completed one-shot service as a
-failure. Inspect a migration job with, for example:
+The URL is deliberately absent from `alembic.ini`. Every Alembic invocation
+must receive it through either:
+
+1. `-x url='<SQLAlchemy URL>'`; or
+2. the `ALEMBIC_URL` environment variable.
+
+The `-x` value wins when both are set. Prefer `ALEMBIC_URL` in automation so
+credentials do not appear in process arguments, and never paste a production
+connection string into logs, documentation, or source control.
+
+## Command quick reference
+
+Set `SERVICE` to `commondb`, `casedb`, `seqdb`, or `omopdb`:
 
 ```sh
-docker compose -f docker-compose.sql.yml logs migrate-seqdb
+export SERVICE=seqdb
+export ALEMBIC_URL='<SQLAlchemy SQL Server URL>'
+
+alembic -c "gen_epix/$SERVICE/repositories/alembic.ini" current
+alembic -c "gen_epix/$SERVICE/repositories/alembic.ini" heads
+alembic -c "gen_epix/$SERVICE/repositories/alembic.ini" history --verbose
+alembic -c "gen_epix/$SERVICE/repositories/alembic.ini" upgrade head
+alembic -c "gen_epix/$SERVICE/repositories/alembic.ini" check
 ```
 
-## PRD deployment
+`current` reports the database state, while `heads` reports the latest revision
+available in the checked-out code. They should agree after deployment.
 
-Run one short-lived migration Job per database before its API Deployment. The
-Job must use the same release image, an `ALEMBIC_URL` secret that points to the
-same Azure SQL database as the API, and this command pattern:
-
-```sh
-alembic -c gen_epix/seqdb/repositories/alembic.ini upgrade head
-```
-
-Create corresponding jobs for `commondb`, `casedb`, and `omopdb`. Make each API
-Deployment wait for its own Job to complete successfully. This is the intended
-Chartreuse/Kubernetes arrangement: a release-time Job, not an API-startup
-sidecar. A failed migration leaves the API Deployment unstarted.
-
-The API no longer runs `metadata.create_all()` for SQL Server, so this
-pre-deployment step is required. SQLite remains automatically initialised for
-tests and fixtures.
-
-## Existing databases
-
-Do not run the initial revision against a database that already contains the
-unmanaged production schema: it attempts to create tables that are already
-there. Take a backup, inspect the current schema, then record the matching
-baseline with `stamp`.
-
-For an existing current deployment, stamp CommonDB, CaseDB and OMOPDB at their
-initial revisions. SeqDB must be stamped at its initial revision and then
-upgraded so that the LSP-3497 compatibility revision removes the historical
-unique constraints on `sample.code`, `read_set.code`, and `seq.code`:
-
-```sh
-alembic -c gen_epix/commondb/repositories/alembic.ini stamp b9c5e10bf42c
-alembic -c gen_epix/casedb/repositories/alembic.ini stamp bbc386e12a58
-alembic -c gen_epix/omopdb/repositories/alembic.ini stamp 252f23d99c89
-alembic -c gen_epix/seqdb/repositories/alembic.ini stamp 973d81851aeb
-alembic -c gen_epix/seqdb/repositories/alembic.ini upgrade head
-```
-
-Run the commands with `ALEMBIC_URL` set to the relevant database connection.
-`stamp` records a revision but does not validate or change the tables, so it
-must only be used after confirming the existing schema matches that baseline.
-
-## Developing a migration
-
-1. Change the SQLAlchemy models for one service.
-2. Start an empty SQL Server database and provide its URL through `ALEMBIC_URL`.
-3. Generate and inspect the candidate revision:
-
-   ```sh
-   alembic -c gen_epix/seqdb/repositories/alembic.ini revision --autogenerate -m "describe change"
-   ```
-
-4. Add hand-written SQL Server operations when autogeneration cannot express
-   the operation, then run `upgrade head` and `alembic check` against Azure SQL.
-5. Commit the model and revision together. The `test/general/migrations` test
-   is part of `run.py test_all` and prevents model tables or columns from being
-   added without a migration operation.
-
-Generate the current revision-history pages with:
+Regenerate the committed history pages after adding a revision:
 
 ```sh
 make generate-schema-migration-docs
 ```
 
-## SQL Server-specific choices
+## Ownership boundaries
 
-- Initial revisions create service schemas explicitly because Alembic
-  autogeneration creates tables but does not create their schemas.
-- The Alembic version table uses the `alembic` schema; Azure SQL rejects use of
-  the system `sys` schema for this purpose.
-- `GETUTCDATE()` defaults are excluded from automatic default comparison,
-  because SQL Server reflects that expression differently from the project's
-  custom SQLAlchemy default type.
-- OMOP migration metadata normalizes primary-key columns to `NOT NULL`, which
-  is the SQL Server invariant and avoids false nullable-change revisions from
-  legacy ORM annotations.
-- SeqDB's historical code constraints are removed with guarded, hand-written
-  SQL Server operations. The migration works whether the old object is a unique
-  constraint or a unique index, and it is safe for already-correct databases.
+- SQLAlchemy models describe the desired schema.
+- Each service's `sa_alembic/metadata.py` selects the metadata compared by
+  Alembic.
+- Revision files are the reviewed, ordered deployment instructions. Generated
+  output is only a draft and must be inspected.
+- Local Compose and the deployment repository are responsible for running
+  `upgrade head` before an API starts.
+- Application startup must not be used as a second schema-management path.
+
+If documentation and executable behavior disagree, trust the models, Alembic
+environment, revision chain, and deployment pipeline in that order, then update
+the documentation in the same change.
