@@ -25,7 +25,7 @@ Gen-EpiX is the backend of a genomic epidemiology platform. It includes four Fas
 | 08a | [App Composition Walkthrough](./08a-App-Composition-Walkthrough.md) | Full COMMONDB assembly trace (top-down) |
 | 09 | [Constraints & Open Questions](./09-Constraints-and-Open-Questions.md) | All hard limits and consolidated `<TBF elsewhere>` items |
 | 10 | [Logging](./10-Logging.md) | Logging architecture, JSON formatter behavior, runtime level precedence, overwrite/debug modes |
-| 11 | [Database Schema Migrations](./schema_migration/README.md) | Alembic architecture, migration development, deployment, and operations |
+| 11 | [Database Schema Migrations](./schema_migration/README.md) | Alembic development workflow and automatic deployment |
 
 ---
 

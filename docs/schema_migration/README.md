@@ -1,73 +1,37 @@
 # Database schema migrations
 
-Alembic is the source of truth for SQL Server schema creation and evolution in
-Gen-EpiX. API startup does **not** call `metadata.create_all()` for SQL Server;
-the database must be migrated before an `SA_SQL` API starts. SQLite repositories
-still create their schema automatically for tests and local fixtures.
+Alembic manages the SQL Server schemas used by Gen-EpiX. SQL Server databases
+must be migrated before an `SA_SQL` API starts; SQLite repositories still create
+their schema automatically for tests and local development.
 
-Use this documentation as a map:
+## Repository layout
 
-- [Developing migrations](development.md) explains the file layout, commands,
-  review rules, and local validation loop.
-- [Azure DevOps deployment](azure-devops.md) traces the migration Job from the
-  `lsp-api` pipeline to Azure SQL and records the current branch status.
-- [Operations and troubleshooting](operations.md) covers legacy baselining,
-  promotion, incident recovery, and the outstanding handover work.
-- The generated history pages list every revision for
-  [CommonDB](commondb.md), [CaseDB](casedb.md), [SeqDB](seqdb.md), and
-  [OMOPDB](omopdb.md).
+Each service has its own independent migration history:
 
-## One revision chain per database
+| Service | Alembic configuration | Revision files |
+| --- | --- | --- |
+| CommonDB | `gen_epix/commondb/repositories/alembic.ini` | `gen_epix/commondb/repositories/sa_alembic/versions/` |
+| CaseDB | `gen_epix/casedb/repositories/alembic.ini` | `gen_epix/casedb/repositories/sa_alembic/versions/` |
+| SeqDB | `gen_epix/seqdb/repositories/alembic.ini` | `gen_epix/seqdb/repositories/sa_alembic/versions/` |
+| OMOPDB | `gen_epix/omopdb/repositories/alembic.ini` | `gen_epix/omopdb/repositories/sa_alembic/versions/` |
 
-Each service owns an Alembic environment beside its SQLAlchemy repository:
+CaseDB, SeqDB, and OMOPDB also store shared CommonDB models. A shared model
+change may therefore require a revision in more than one migration history.
 
-| Database | Configuration | Migration metadata | Revisions |
-| --- | --- | --- | --- |
-| CommonDB | `gen_epix/commondb/repositories/alembic.ini` | `gen_epix/commondb/repositories/sa_alembic/metadata.py` | `gen_epix/commondb/repositories/sa_alembic/versions/` |
-| CaseDB | `gen_epix/casedb/repositories/alembic.ini` | `gen_epix/casedb/repositories/sa_alembic/metadata.py` | `gen_epix/casedb/repositories/sa_alembic/versions/` |
-| SeqDB | `gen_epix/seqdb/repositories/alembic.ini` | `gen_epix/seqdb/repositories/sa_alembic/metadata.py` | `gen_epix/seqdb/repositories/sa_alembic/versions/` |
-| OMOPDB | `gen_epix/omopdb/repositories/alembic.ini` | `gen_epix/omopdb/repositories/sa_alembic/metadata.py` | `gen_epix/omopdb/repositories/sa_alembic/versions/` |
+The generated history pages show the current revisions for
+[CommonDB](commondb.md), [CaseDB](casedb.md), [SeqDB](seqdb.md), and
+[OMOPDB](omopdb.md).
 
-These are independent revision chains even though CaseDB, SeqDB, and OMOPDB
-also persist shared CommonDB models in their own databases. A change to a
-shared model can therefore require a new revision in more than one chain. Run
-the migration tests to discover every affected database; do not assume that a
-CommonDB revision updates the copies embedded in the other service databases.
+## Develop a migration
 
-Each database records its current revision in
-`alembic.alembic_version`. The environment creates the application-owned
-`alembic` schema on SQL Server before running a migration. Do not move this
-table to SQL Server's protected `sys` schema.
-
-## Runtime flow
-
-```text
-SQLAlchemy models
-      │
-      ▼
-sa_alembic/metadata.py ──► Alembic autogenerate comparison
-      │
-      ▼
-sa_alembic/versions/<revision>.py
-      │
-      ▼
-alembic upgrade head ──► service schemas/tables ──► alembic.alembic_version
-      │
-      ▼
-SA_SQL API starts
-```
-
-The URL is deliberately absent from `alembic.ini`. Every Alembic invocation
-must receive it through either:
-
-1. `-x url='<SQLAlchemy URL>'`; or
-2. the `ALEMBIC_URL` environment variable.
-
-The `-x` value wins when both are set. Prefer `ALEMBIC_URL` in automation so
-credentials do not appear in process arguments, and never paste a production
-connection string into logs, documentation, or source control.
-
-## Command quick reference
+1. Change the SQLAlchemy model.
+2. Identify every service database that contains that model.
+3. Start with a disposable SQL Server database at the current migration head.
+4. Generate one revision for each affected service.
+5. Review the generated `upgrade()` and `downgrade()` functions. In particular,
+   check schema names, constraints, indexes, nullability, and existing data.
+6. Apply the migration and confirm that Alembic detects no remaining changes.
+7. Run the migration tests and regenerate the history pages.
 
 Set `SERVICE` to `commondb`, `casedb`, `seqdb`, or `omopdb`:
 
@@ -75,33 +39,56 @@ Set `SERVICE` to `commondb`, `casedb`, `seqdb`, or `omopdb`:
 export SERVICE=seqdb
 export ALEMBIC_URL='<SQLAlchemy SQL Server URL>'
 
-alembic -c "gen_epix/$SERVICE/repositories/alembic.ini" current
-alembic -c "gen_epix/$SERVICE/repositories/alembic.ini" heads
-alembic -c "gen_epix/$SERVICE/repositories/alembic.ini" history --verbose
 alembic -c "gen_epix/$SERVICE/repositories/alembic.ini" upgrade head
+alembic -c "gen_epix/$SERVICE/repositories/alembic.ini" \
+  revision --autogenerate -m "describe schema change"
+alembic -c "gen_epix/$SERVICE/repositories/alembic.ini" upgrade head
+alembic -c "gen_epix/$SERVICE/repositories/alembic.ini" current
 alembic -c "gen_epix/$SERVICE/repositories/alembic.ini" check
-```
 
-`current` reports the database state, while `heads` reports the latest revision
-available in the checked-out code. They should agree after deployment.
-
-Regenerate the committed history pages after adding a revision:
-
-```sh
+python run.py run_test "test/general/migrations"
 make generate-schema-migration-docs
 ```
 
-## Ownership boundaries
+The database URL is not stored in `alembic.ini`. Pass it through
+`ALEMBIC_URL`; never put credentials in source control or logs.
 
-- SQLAlchemy models describe the desired schema.
-- Each service's `sa_alembic/metadata.py` selects the metadata compared by
-  Alembic.
-- Revision files are the reviewed, ordered deployment instructions. Generated
-  output is only a draft and must be inspected.
-- Local Compose and the deployment repository are responsible for running
-  `upgrade head` before an API starts.
-- Application startup must not be used as a second schema-management path.
+Treat generated revisions as production code. Do not edit a revision that may
+already have run in a shared environment. Add a new corrective revision instead.
 
-If documentation and executable behavior disagree, trust the models, Alembic
-environment, revision chain, and deployment pipeline in that order, then update
-the documentation in the same change.
+## DevOps pipeline
+
+The `lsp-api` deployment pipeline automatically runs the required CaseDB,
+SeqDB, and OMOPDB migrations before deploying each `SA_SQL` API. No manual Azure
+DevOps or Kubernetes steps are normally required from application engineers.
+
+If a migration fails, the corresponding API deployment does not start. Check
+that the revision is committed, that the deployment uses the intended
+`gen-epix-api` branch or release, and then work with the DevOps owner to inspect
+the migration logs. Do not bypass a failed migration by editing the Alembic
+version table.
+
+The current pipeline does not migrate a separately deployed CommonDB database.
+
+## Existing databases
+
+Do not run the initial migration against an existing unmanaged database: it will
+try to create tables that are already present. Such a database must first be
+compared with a known baseline and stamped by an engineer who understands its
+current schema. Stamping records a revision without changing or validating the
+database.
+
+Always take a verified backup before baselining or applying a migration that
+changes existing data. Prefer forward corrective revisions over downgrades after
+a migration has reached a shared environment.
+
+## Review checklist
+
+- [ ] Every affected service has a revision with the correct parent.
+- [ ] `upgrade()` and `downgrade()` were reviewed, not only autogenerated.
+- [ ] The migration succeeds from the previously deployed revision on SQL
+      Server.
+- [ ] `alembic check` reports no remaining model changes.
+- [ ] Migration tests pass and the history pages are regenerated.
+- [ ] The change is compatible with the application version running during
+      deployment.
