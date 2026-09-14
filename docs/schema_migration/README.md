@@ -9,6 +9,8 @@ Use this documentation as a map:
 
 - [Developing migrations](development.md) explains the file layout, commands,
   review rules, and local validation loop.
+- [Azure DevOps deployment](azure-devops.md) traces the migration Job from the
+  `lsp-api` pipeline to Azure SQL and records the current branch status.
 - The generated history pages list every revision for
   [CommonDB](commondb.md), [CaseDB](casedb.md), [SeqDB](seqdb.md), and
   [OMOPDB](omopdb.md).
