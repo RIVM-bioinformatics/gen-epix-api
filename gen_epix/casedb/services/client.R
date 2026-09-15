@@ -2,8 +2,8 @@
 #
 # Local use:
 # install.packages(c("chromote", "httr2"))
-# source("gen_epix/commondb/services/remote_app.R")
-# source("gen_epix/casedb/services/remote_app.R")
+# source("gen_epix/commondb/services/client.R")
+# source("gen_epix/casedb/services/client.R")
 # token <- login_with_chromote("http://localhost:5173")
 # result <- retrieve_cases_by_query("http://localhost:8000", token)
 

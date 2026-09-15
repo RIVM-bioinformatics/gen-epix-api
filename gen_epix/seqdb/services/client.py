@@ -1,4 +1,4 @@
-"""Implement seqdb application service behavior for services.remote_app."""
+"""Implement seqdb application service behavior for services.client."""
 
 import base64
 from collections.abc import Iterable
@@ -6,14 +6,14 @@ from datetime import datetime
 from typing import Any, cast
 from uuid import UUID
 
-from gen_epix.commondb.services.remote_app import CommondbRemoteApp
+from gen_epix.commondb.services.client import CommondbClient
 from gen_epix.fastapp.enum import CrudOperation, HttpMethod
 from gen_epix.fastapp.model import Command
 from gen_epix.seqdb import api
 from gen_epix.seqdb.domain import DOMAIN, command, enum, model
 
 
-class SeqdbRemoteApp(CommondbRemoteApp):
+class SeqdbClient(CommondbClient):
     """Encapsulates the remote app client for the seqdb service."""
 
     DEFAULT_ROUTE_PREFIX = "/v1"

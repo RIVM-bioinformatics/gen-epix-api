@@ -34,7 +34,7 @@ from gen_epix.filter import (
 )
 
 
-class RemoteApp(App):
+class Client(App):
     """Encapsulates a remote application client that forwards commands as HTTP requests."""
 
     DEFAULT_ROUTE_PREFIX = "/"
@@ -131,14 +131,14 @@ class RemoteApp(App):
         policy: Policy,
         timing: EventTiming = EventTiming.BEFORE,
     ) -> None:
-        """Raise ServiceException; policies are not supported on RemoteApp."""
-        raise ServiceException("Policies cannot be registered on RemoteApp instances")
+        """Raise ServiceException; policies are not supported on Client."""
+        raise ServiceException("Policies cannot be registered on Client instances")
 
     def unregister_policy(
         self, command_class: type[Command], policy: Policy, timing: EventTiming
     ) -> None:
-        """Raise ServiceException; policies are not supported on RemoteApp."""
-        raise ServiceException("Policies cannot be unregistered on RemoteApp instances")
+        """Raise ServiceException; policies are not supported on Client."""
+        raise ServiceException("Policies cannot be unregistered on Client instances")
 
     def register_route(
         self,

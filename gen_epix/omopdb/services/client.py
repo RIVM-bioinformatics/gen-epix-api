@@ -2,14 +2,14 @@
 
 from typing import Any
 
-from gen_epix.commondb.services import CommondbRemoteApp as CommondbRemoteApp
+from gen_epix.commondb.services import CommondbClient as CommondbClient
 from gen_epix.fastapp.enum import HttpMethod
 from gen_epix.fastapp.model import Command
 from gen_epix.omopdb import api
 from gen_epix.omopdb.domain import DOMAIN, command, model
 
 
-class OmopdbRemoteApp(CommondbRemoteApp):
+class OmopdbClient(CommondbClient):
     """Encapsulates routing of supported OmopDB commands to their remote HTTP endpoints."""
 
     DEFAULT_ROUTE_PREFIX = "/v1"

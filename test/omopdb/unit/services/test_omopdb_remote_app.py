@@ -5,7 +5,7 @@ from uuid import UUID
 
 from gen_epix.fastapp.enum import AuthProtocol
 from gen_epix.omopdb.domain import command, model
-from gen_epix.omopdb.services.remote_app import OmopdbRemoteApp
+from gen_epix.omopdb.services.client import OmopdbClient
 
 
 def _fake_app_init(self: object, domain: object, **kwargs: object) -> None:
@@ -16,13 +16,13 @@ def _fake_app_init(self: object, domain: object, **kwargs: object) -> None:
     setattr(self, "_command_stack", [])
 
 
-def _make_app() -> OmopdbRemoteApp:
+def _make_app() -> OmopdbClient:
     domain = SimpleNamespace(crud_commands=[])
     with (
-        patch("gen_epix.omopdb.services.remote_app.DOMAIN", domain),
-        patch("gen_epix.fastapp.remote_app.App.__init__", _fake_app_init),
+        patch("gen_epix.omopdb.services.client.DOMAIN", domain),
+        patch("gen_epix.fastapp.client.App.__init__", _fake_app_init),
     ):
-        return OmopdbRemoteApp(
+        return OmopdbClient(
             host="example.org",
             port=8000,
             auth_protocol=AuthProtocol.NONE,
@@ -45,11 +45,10 @@ def test_registers_person_retrieval_routes_and_handlers() -> None:
     assert app.get_route(ids_cmd).endswith("/retrieve/persons_by_ids")
     assert (
         app.get_handler(type(query_cmd)).__func__
-        is OmopdbRemoteApp.retrieve_persons_by_query
+        is OmopdbClient.retrieve_persons_by_query
     )
     assert (
-        app.get_handler(type(ids_cmd)).__func__
-        is OmopdbRemoteApp.retrieve_persons_by_id
+        app.get_handler(type(ids_cmd)).__func__ is OmopdbClient.retrieve_persons_by_id
     )
 
 

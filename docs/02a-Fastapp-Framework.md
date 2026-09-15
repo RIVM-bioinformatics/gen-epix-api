@@ -24,7 +24,7 @@ gen_epix/fastapp/
 ├── log.py                               # structured log-item model
 ├── model.py                             # base Model, Command, Policy, Permission, Role 
 ├── pdp.py                               # PolicyDecisionPoint
-├── remote_app.py                        # RemoteApp (HTTP-client variant of App)
+├── client.py                        # Client (HTTP-client variant of App)
 ├── repository.py                        # BaseRepository (abstract)
 ├── service.py                           # BaseService (abstract)
 ├── unit_of_work.py                      # BaseUnitOfWork (abstract)
@@ -263,9 +263,9 @@ app.register_policy(CommandClass, policy, timing)  # attach a policy
 All exceptions are caught, logged with an 8-character hex error code, and
 re-raised (or converted to an HTTP exception by the endpoint layer).
 
-### RemoteApp (`remote_app.py`)
+### Client (`client.py`)
 
-`RemoteApp` extends `App` for cross-service communication.  Instead of calling a
+`Client` extends `App` for cross-service communication.  Instead of calling a
 local handler, it sends an HTTP request to another Gen-EpiX instance.  It has no
 policies — authorisation is the responsibility of the receiving service.  Used by
 `casedb` to call `seqdb` for phylogenetic-tree data.
@@ -469,7 +469,7 @@ The generated endpoints:
 | `FieldType` / `FieldTypeSet` | ID, LINK, VALUE, COMPUTED, RELATIONSHIP … |
 | `IsolationLevel` | Maps to SQL isolation levels for SAUnitOfWork |
 | `AuthProtocol` | NONE, OAUTH2, OIDC |
-| `HttpProtocol` | HTTP, HTTPS — used by RemoteApp |
+| `HttpProtocol` | HTTP, HTTPS — used by Client |
 
 ### Exception hierarchy (`exc.py`)
 
