@@ -75,6 +75,38 @@ start time, and comment immediately before the call unless the user's current
 request already supplied and explicitly authorized those values. Report the
 created worklog and the duration recorded.
 
+## Bulk updates and verification
+
+When updating issues, verify independently that updates actually persisted. Jira 
+API may return HTTP 200 or success reports without updating all fields correctly.
+
+Observed failure patterns:
+- **False positive success reports**: Batch operations may report "N/N succeeded"
+  while descriptions, assignments, or other fields remain unchanged or NULL
+- **Silent field-update failures**: API returns success but field values do not
+  persist (HTTP 200 with no data change)
+- **Partial updates**: Some issues in a batch update correctly while others in
+  the same batch fail silently
+
+Strategy for bulk updates:
+1. **Split into smaller batches**: Use batches of max 15–20 issues. Smaller
+   batches are more reliable and easier to debug.
+2. **Verify with stratified sampling**: after completing a batch, retrieve
+   all issues again from JIRA and compare against expected values. Do not trust
+   the success report.
+3. **Check for NULL and incorrect values**: Specifically look for NULL fields,
+   wrong data types, or values that differ from what was sent.
+4. **Fix failures individually**: If verification finds issues that did not
+   update correctly, fix them with individual `editJiraIssue` calls rather than
+   retrying the batch.
+
+**Example verification approach:**
+- Updating 100 issues? Split into 7 batches of 15 each.
+- Per completed batch, retrieve all issues in the batch again from JIRA and compare
+  Description, assignee, and other key fields against expected values.
+- If any issue has NULL or incorrect data, update it individually using
+  `editJiraIssue`.
+
 ## Repository context and safety
 
 This repository normally tracks work in the `LSP` project and uses issue keys
