@@ -103,7 +103,19 @@ def _get_best_id_per_sample(
     else:
         filter = sample_filter
     with repository.uow() as uow:
-        field_names = ["id", "sample_id", "qc_result", "qc_score", "created_at"]
+        # qc_result is a denormalized, cached copy of the effective quality result
+        # that is only refreshed on create, not on update (see QualityMixin). Read
+        # qc_result_machine/qc_result_human directly and resolve the effective
+        # result below, so a quality result updated after creation (e.g. a manual
+        # review added later) is still honored.
+        field_names = [
+            "id",
+            "sample_id",
+            "qc_result_machine",
+            "qc_result_human",
+            "qc_score",
+            "created_at",
+        ]
         if return_primary_category_id:
             field_names.append("primary_category_id")
         iter_fields = repository.read_fields(
@@ -119,12 +131,28 @@ def _get_best_id_per_sample(
             enum.SeqRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
             enum.SeqClassificationRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
         }:
-            # Sort descending by (sample_id, qc_result, qc_score, created_at)
+            # Sort descending by (sample_id, qc_result, qc_score, created_at), where
+            # qc_result is the effective result: the manual (human) result when
+            # provided (i.e. not PENDING), otherwise the automated (machine) result.
             map_qc_result_to_sort_key = {
                 x: enum.QualityControlResult.get_sort_key(x)
                 for x in enum.QualityControlResult
             }
-            sort_fn = lambda x: (x[1], map_qc_result_to_sort_key[x[2]], x[3], x[4])
+
+            def _effective_qc_result(
+                qc_result_machine: enum.QualityControlResult,
+                qc_result_human: enum.QualityControlResult,
+            ) -> enum.QualityControlResult:
+                if qc_result_human != enum.QualityControlResult.PENDING:
+                    return qc_result_human
+                return qc_result_machine
+
+            sort_fn = lambda x: (
+                x[1],
+                map_qc_result_to_sort_key[_effective_qc_result(x[2], x[3])],
+                x[4],
+                x[5],
+            )
             sorted_iter = sorted(iter_fields, key=sort_fn, reverse=True)
             prev_sample_id = None
             for row in sorted_iter:
@@ -132,7 +160,7 @@ def _get_best_id_per_sample(
                 if sample_id != prev_sample_id:
                     # First row for new sample is the best according to the ranking strategy
                     best_id_per_sample[sample_id] = (
-                        row[5] if return_primary_category_id else row[0]
+                        row[6] if return_primary_category_id else row[0]
                     )
                     prev_sample_id = sample_id
         else:  # pragma: no cover
