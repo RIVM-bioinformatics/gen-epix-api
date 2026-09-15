@@ -194,6 +194,9 @@ class Linter:
         """
         Runs the specified linting tool with the provided command-line arguments.
 
+        This method uses the subprocess module to run the linting tool in a separate
+        process.
+
         Captures the tool output and optionally saves it to a report. Verbose mode
         prints progress and status. Non-zero tool exit codes are reported without
         raising an exception.
