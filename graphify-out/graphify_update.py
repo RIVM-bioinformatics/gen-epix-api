@@ -8,25 +8,41 @@ from pathlib import Path
 
 
 def main():
-    # Step 2: Detect files
-    print("Step 2: Detecting files...")
+    # Step 2: Detect changed files (incremental, diffed against graphify-out/manifest.json)
+    print("Step 2: Detecting changed files...")
     try:
-        from graphify.detect import detect
+        from graphify.detect import detect_incremental
 
-        result = detect(Path("."))
+        incremental = detect_incremental(Path("."))
+        Path("graphify-out/.graphify_incremental.json").write_text(
+            json.dumps(incremental, ensure_ascii=False), encoding="utf-8"
+        )
+        new_total = incremental.get("new_total", 0)
+        deleted = list(incremental.get("deleted_files", []))
+        if new_total == 0 and not deleted:
+            print("No files changed since last run. Nothing to update.")
+            return
+        if deleted:
+            print(f"  {len(deleted)} deleted file(s) to prune.")
+        if new_total:
+            print(f"  {new_total} new/changed file(s) to re-extract.")
+
+        result = {
+            "files": incremental.get("new_files", {}),
+            "all_files": incremental.get("files", {}),
+            "total_files": new_total,
+            "total_words": incremental.get("total_words", 0),
+            "skipped_sensitive": incremental.get("skipped_sensitive", []),
+            "needs_graph": True,
+        }
         Path("graphify-out/.graphify_detect.json").write_text(
             json.dumps(result, ensure_ascii=False), encoding="utf-8"
         )
-        print(
-            f"✓ Detected {result['total_files']} files · ~{result['total_words']} words"
-        )
-        print(f"  code: {len(result['files'].get('code', []))} files")
-        print(f"  docs: {len(result['files'].get('document', []))} files")
     except Exception as e:
         print(f"✗ Detection failed: {e}")
         sys.exit(1)
 
-    # Step 3A: AST extraction
+    # Step 3A: AST extraction (only the new/changed code files)
     print("\nStep 3A: Extracting code structure (AST)...")
     try:
         from graphify.extract import collect_files, extract
@@ -51,12 +67,12 @@ def main():
                 ),
                 encoding="utf-8",
             )
-            print("ℹ No code files to extract")
+            print("ℹ No changed code files to extract")
     except Exception as e:
         print(f"✗ AST extraction failed: {e}")
         sys.exit(1)
 
-    # Step 3B: Semantic extraction (skip for code-only)
+    # Step 3B: Semantic extraction (skipped - CI has no LLM backend for docs/papers/images)
     print("\nStep 3B: Preparing semantic extraction...")
     Path("graphify-out/.graphify_semantic.json").write_text(
         json.dumps(
@@ -70,9 +86,9 @@ def main():
         ),
         encoding="utf-8",
     )
-    print("ℹ Created empty semantic file (code-only corpus)")
+    print("ℹ Created empty semantic file (CI is code-only, no LLM backend)")
 
-    # Step 3C: Merge
+    # Step 3C: Merge AST + semantic delta
     print("\nStep 3C: Merging AST + semantic...")
     try:
         ast = json.loads(
@@ -89,7 +105,7 @@ def main():
                 merged_nodes.append(n)
                 seen.add(n["id"])
 
-        merged = {
+        new_extraction = {
             "nodes": merged_nodes,
             "edges": ast["edges"] + sem["edges"],
             "hyperedges": sem.get("hyperedges", []),
@@ -97,11 +113,87 @@ def main():
             "output_tokens": sem.get("output_tokens", 0),
         }
         Path("graphify-out/.graphify_extract.json").write_text(
-            json.dumps(merged, indent=2, ensure_ascii=False), encoding="utf-8"
+            json.dumps(new_extraction, indent=2, ensure_ascii=False), encoding="utf-8"
         )
-        print(f"✓ Merged: {len(merged_nodes)} nodes, {len(merged['edges'])} edges")
+        print(
+            f"✓ Merged: {len(merged_nodes)} nodes, {len(new_extraction['edges'])} edges"
+        )
     except Exception as e:
         print(f"✗ Merge failed: {e}")
+        sys.exit(1)
+
+    # Step 3D: Fold this run's delta into the existing graph.json. Using
+    # build_merge (instead of rebuilding from scratch) preserves nodes for
+    # files this code-only CI run never touches - e.g. doc/semantic nodes
+    # from a prior full local `/graphify` build - and only replaces nodes for
+    # files actually re-extracted this run, pruning only genuinely deleted
+    # files. A from-scratch rebuild here is what previously tripped the
+    # graph.json shrink-guard: it discarded everything not in this run's
+    # code-only extraction.
+    print("\nStep 3D: Merging into existing graph...")
+    try:
+        from graphify.build import build_merge
+        from graphify.cli import _stamped_manifest_files
+        from graphify.detect import save_manifest
+
+        prune = deleted or None
+        G = build_merge(
+            [new_extraction],
+            graph_path="graphify-out/graph.json",
+            prune_sources=prune,
+            root=".",
+            directed=False,
+        )
+        merged_out = {
+            "nodes": [{"id": n, **d} for n, d in G.nodes(data=True)],
+            "edges": [
+                {
+                    **{
+                        k: val
+                        for k, val in d.items()
+                        if k not in ("_src", "_tgt", "source", "target")
+                    },
+                    "source": d.get("_src", u),
+                    "target": d.get("_tgt", v),
+                }
+                for u, v, d in G.edges(data=True)
+            ],
+            "hyperedges": list(G.graph.get("hyperedges", [])),
+            "input_tokens": new_extraction.get("input_tokens", 0),
+            "output_tokens": new_extraction.get("output_tokens", 0),
+        }
+        Path("graphify-out/.graphify_extract.json").write_text(
+            json.dumps(merged_out, ensure_ascii=False), encoding="utf-8"
+        )
+        print(
+            f"✓ Merged with existing graph: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges"
+        )
+
+        # Stamp the manifest against this run's delta only, so the next
+        # --update diffs against today's state instead of re-queueing
+        # everything or masking a failed chunk.
+        _manifest_files = _stamped_manifest_files(
+            incremental["files"], new_extraction, Path(".")
+        )
+        _sem_types = ("document", "paper", "image")
+        _dispatched = {
+            f
+            for t, fl in incremental.get("new_files", {}).items()
+            if t in _sem_types
+            for f in fl
+        }
+        _stamped = {f for fl in _manifest_files.values() for f in fl}
+        _cleared = _dispatched - _stamped
+        _scan = {f for fl in incremental["files"].values() for f in fl}
+        save_manifest(
+            _manifest_files, root=".", scan_corpus=_scan, clear_semantic=_cleared or None
+        )
+        print("✓ Manifest saved")
+    except Exception as e:
+        print(f"✗ Graph merge failed: {e}")
+        import traceback
+
+        traceback.print_exc()
         sys.exit(1)
 
     # Step 4: Build graph, cluster, analyze
@@ -141,6 +233,10 @@ def main():
         wrote = to_json(G, communities, "graphify-out/graph.json")
         if not wrote:
             print("⚠ Graph shrink-guard: existing graph has more nodes")
+            print(
+                "This should not happen right after an incremental merge unless "
+                "files were genuinely deleted - investigate before forcing."
+            )
             sys.exit(1)
 
         report = generate(
@@ -180,25 +276,6 @@ def main():
     # Step 9: Save manifest and report
     print("\nStep 9: Finalizing...")
     try:
-        from graphify.cli import _stamped_manifest_files
-        from graphify.detect import save_manifest
-
-        _corpus = detection.get("all_files") or detection["files"]
-        _manifest_files = _stamped_manifest_files(_corpus, extraction, Path("."))
-        _sem_types = ("document", "paper", "image")
-        _dispatched = {
-            f for t, fl in detection["files"].items() if t in _sem_types for f in fl
-        }
-        _stamped = {f for fl in _manifest_files.values() for f in fl}
-        _cleared = _dispatched - _stamped
-        _scan = {f for fl in _corpus.values() for f in fl}
-        save_manifest(
-            _manifest_files,
-            root=".",
-            scan_corpus=_scan,
-            clear_semantic=_cleared or None,
-        )
-
         # Update cost tracker
         cost_path = Path("graphify-out/cost.json")
         if cost_path.exists():
