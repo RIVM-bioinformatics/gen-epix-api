@@ -7,6 +7,68 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
+def reuse_labels(G, communities):
+    """Community names for this run, without doing any labelling.
+
+    Curated names come from `graphify label`, run manually now and then; CI only
+    reads them. A saved name is trusted while its community's membership still
+    matches the signature stored beside it - once clustering moves members around
+    the old name describes a group that no longer exists, so that community is
+    named after its hub node instead.
+    """
+    from graphify.cluster import community_member_sigs, label_communities_by_hub
+
+    labels_path = Path("graphify-out/.graphify_labels.json")
+    sig_path = Path("graphify-out/.graphify_labels.json.sig")
+
+    saved = {}
+    if labels_path.exists():
+        try:
+            saved = {
+                int(k): v
+                for k, v in json.loads(
+                    labels_path.read_text(encoding="utf-8")
+                ).items()
+                if int(k) in communities and v != f"Community {int(k)}"
+            }
+        except Exception as e:
+            print(f"  warning: could not read saved labels ({e})")
+
+    saved_sigs = {}
+    if sig_path.exists():
+        try:
+            saved_sigs = {
+                int(k): v
+                for k, v in json.loads(sig_path.read_text(encoding="utf-8")).items()
+                if isinstance(v, str)
+            }
+        except Exception as e:
+            print(f"  warning: could not read label signatures ({e})")
+
+    current_sigs = community_member_sigs(communities)
+    labels = {
+        cid: name
+        for cid, name in saved.items()
+        if saved_sigs.get(cid) == current_sigs.get(cid)
+    }
+
+    reused = len(labels)
+    invalidated = len(saved) - reused
+    missing = [cid for cid in communities if cid not in labels]
+    if missing:
+        labels.update(
+            label_communities_by_hub(G, {cid: communities[cid] for cid in missing})
+        )
+
+    print(
+        f"  labels: {reused} curated reused, {len(missing)} hub-named "
+        f"({invalidated} invalidated by re-clustering)"
+    )
+    if not saved:
+        print("  no curated labels found - run 'graphify label .' to create them")
+    return labels
+
+
 def main():
     # Step 2: Detect changed files (incremental, diffed against graphify-out/manifest.json)
     print("Step 2: Detecting changed files...")
@@ -122,6 +184,14 @@ def main():
         print(f"✗ Merge failed: {e}")
         sys.exit(1)
 
+    # Nothing extracted and nothing deleted means the code graph cannot have
+    # changed - only docs did, and CI does not extract those. Stop here rather
+    # than re-running the merge: its dedup pass drops a few same-named symbols
+    # every time, so a no-op run would erode the graph instead of leaving it be.
+    if not new_extraction["nodes"] and not deleted:
+        print("\nNo code changes to merge - graph left untouched.")
+        return
+
     # Step 3D: Fold this run's delta into the existing graph.json. Using
     # build_merge (instead of rebuilding from scratch) preserves nodes for
     # files this code-only CI run never touches - e.g. doc/semantic nodes
@@ -147,10 +217,14 @@ def main():
         )
         existing_count = len(existing_nodes)
         orphaned_count = 0
+        previous_node_community = {}
         for n in existing_nodes:
             sf = n.get("source_file")
             if sf and not Path(sf).exists():
                 orphaned_count += 1
+            cid = n.get("community")
+            if cid is not None:
+                previous_node_community[n["id"]] = int(cid)
         if orphaned_count:
             print(
                 f"  {orphaned_count} node(s) in the current graph belong to files "
@@ -158,12 +232,21 @@ def main():
             )
 
         prune = deleted or None
+        # dedup=False: the fuzzy pass runs over the combined node set, so a small
+        # diff merged into a large graph collapses pre-existing nodes from files
+        # the diff never touched - measured here at 94 nodes lost on a 2-node
+        # change, and it never settles (94, then 10, then 6 on repeat merges)
+        # because each collapse creates new fuzzy matches. Leaving it on would
+        # bleed the graph on every run. It also arms the shrink guard below,
+        # which graphify disables while dedup is on. Duplicate cleanup belongs to
+        # the periodic manual rebuild, not to an unattended incremental update.
         G = build_merge(
             [new_extraction],
             graph_path="graphify-out/graph.json",
             prune_sources=prune,
             root=".",
             directed=False,
+            dedup=False,
         )
         merged_out = {
             "nodes": [{"id": n, **d} for n, d in G.nodes(data=True)],
@@ -226,7 +309,11 @@ def main():
             surprising_connections,
         )
         from graphify.build import build_from_json
-        from graphify.cluster import cluster, score_all
+        from graphify.cluster import (
+            cluster,
+            remap_communities_to_previous,
+            score_all,
+        )
         from graphify.export import to_json
         from graphify.report import generate
 
@@ -244,11 +331,18 @@ def main():
             sys.exit(1)
 
         communities = cluster(G)
+        # Clustering renumbers communities on every run, which is what silently
+        # invalidated the saved names. Remapping onto the previous assignment keeps
+        # ids stable so a curated label keeps describing the same community.
+        if previous_node_community:
+            communities = remap_communities_to_previous(
+                communities, previous_node_community
+            )
         cohesion = score_all(G, communities)
         gods = god_nodes(G)
         surprises = surprising_connections(G, communities)
 
-        labels = {cid: f"Community {cid}" for cid in communities}
+        labels = reuse_labels(G, communities)
         questions = suggest_questions(G, communities, labels)
 
         # to_json refuses any net node loss. After an incremental merge a loss is
@@ -275,7 +369,13 @@ def main():
                 )
                 sys.exit(1)
 
-        wrote = to_json(G, communities, "graphify-out/graph.json", force=force)
+        wrote = to_json(
+            G,
+            communities,
+            "graphify-out/graph.json",
+            force=force,
+            community_labels=labels,
+        )
         if not wrote:
             print("⚠ Graph export refused the write (see warning above)")
             sys.exit(1)

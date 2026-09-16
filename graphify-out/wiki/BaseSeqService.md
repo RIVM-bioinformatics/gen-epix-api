@@ -1,73 +1,96 @@
 # BaseSeqService
 
-> 115 nodes
+> God node · 135 connections · `gen_epix/seqdb/domain/service/seq.py`
 
-## Key Concepts
+**Community:** [Seq Service Interface](Seq_Service_Interface.md)
 
-- **BaseSeqService** (135 connections) — `gen_epix/seqdb/domain/service/seq.py`
-- **seq/service.py** (86 connections) — `gen_epix/seqdb/services/seq/service.py`
-- **crud_protocol.py** (12 connections) — `gen_epix/seqdb/services/seq/crud_protocol.py`
-- **RetrieveSamplesByIdCommand** (10 connections) — `gen_epix/seqdb/domain/command/seq.py`
-- **crud_protocol_set.py** (10 connections) — `gen_epix/seqdb/services/seq/crud_protocol_set.py`
-- **crud_protocol_set_member.py** (10 connections) — `gen_epix/seqdb/services/seq/crud_protocol_set_member.py`
-- **crud_sample.py** (10 connections) — `gen_epix/seqdb/services/seq/crud_sample.py`
-- **crud_seq_category_set.py** (10 connections) — `gen_epix/seqdb/services/seq/crud_seq_category_set.py`
-- **crud_taxon.py** (10 connections) — `gen_epix/seqdb/services/seq/crud_taxon.py`
-- **seq/crud_tree_algorithm.py** (10 connections) — `gen_epix/seqdb/services/seq/crud_tree_algorithm.py`
-- **seq/crud_tree_algorithm_class.py** (10 connections) — `gen_epix/seqdb/services/seq/crud_tree_algorithm_class.py`
-- **RetrieveSamplesByQueryCommand** (9 connections) — `gen_epix/seqdb/domain/command/seq.py`
-- **seq_service_crud_protocol()** (9 connections) — `gen_epix/seqdb/services/seq/crud_protocol.py`
-- **retrieve_sample.py** (9 connections) — `gen_epix/seqdb/services/seq/retrieve_sample.py`
-- **RetrieveSeqDistanceLastModifiedCommand** (8 connections) — `gen_epix/seqdb/domain/command/seq.py`
-- **seq_service_crud_protocol_set_member()** (8 connections) — `gen_epix/seqdb/services/seq/crud_protocol_set_member.py`
-- **seq_service_crud_protocol_set()** (8 connections) — `gen_epix/seqdb/services/seq/crud_protocol_set.py`
-- **seq_service_crud_sample()** (8 connections) — `gen_epix/seqdb/services/seq/crud_sample.py`
-- **seq_service_crud_seq_category_set()** (8 connections) — `gen_epix/seqdb/services/seq/crud_seq_category_set.py`
-- **seq_service_crud_taxon()** (8 connections) — `gen_epix/seqdb/services/seq/crud_taxon.py`
-- **seq_service_crud_tree_algorithm_class()** (8 connections) — `gen_epix/seqdb/services/seq/crud_tree_algorithm_class.py`
-- **seq_service_crud_tree_algorithm()** (8 connections) — `gen_epix/seqdb/services/seq/crud_tree_algorithm.py`
-- **seq_service_retrieve_sample_identifiers_by_id()** (8 connections) — `gen_epix/seqdb/services/seq/retrieve_sample.py`
-- **seq_service_retrieve_seq_distance_last_modified()** (7 connections) — `gen_epix/seqdb/services/seq/calculate_seq_distance.py`
-- **seq_service_retrieve_samples_by_id()** (7 connections) — `gen_epix/seqdb/services/seq/retrieve_sample.py`
-- *... and 90 more nodes in this community*
+## Connections by Relation
 
-## Relationships
+### contains
+- service/seq.py `EXTRACTED`
 
-- [command/seq.py](command-seq.py.md) (40 shared connections)
-- [SeqService](SeqService.md) (26 shared connections)
-- [casedb/domain/command/__init__.py](casedb-domain-command-__init__.py.md) (14 shared connections)
-- [SeqdbEndpointTestClient](SeqdbEndpointTestClient.md) (11 shared connections)
-- [test_seqdb_retrieve_best.py](test_seqdb_retrieve_best.py.md) (10 shared connections)
-- [seqdb/domain/model/__init__.py](seqdb-domain-model-__init__.py.md) (9 shared connections)
-- [BaseUnitOfWork](BaseUnitOfWork.md) (7 shared connections)
-- [UuidSetFilter](UuidSetFilter.md) (6 shared connections)
-- [entity.py](entity.py.md) (6 shared connections)
-- [calculate_seq_distance.py](calculate_seq_distance.py.md) (5 shared connections)
-- [crud_allele.py](crud_allele.py.md) (5 shared connections)
-- [crud_ast_prediction.py](crud_ast_prediction.py.md) (5 shared connections)
+### imports
+- test_casedb_case_upload.py `EXTRACTED`
+- calculate_phylogenetic_tree.py `EXTRACTED`
+- services/seq/upload.py `EXTRACTED`
+- seqdb/domain/service/__init__.py `EXTRACTED`
+- crud_protocol.py `EXTRACTED`
+- crud_seq_profile.py `EXTRACTED`
+- crud_allele.py `EXTRACTED`
+- crud_ast_measurement.py `EXTRACTED`
+- crud_ast_prediction.py `EXTRACTED`
+- crud_locus.py `EXTRACTED`
+- crud_locus_code_map.py `EXTRACTED`
+- crud_locus_set.py `EXTRACTED`
+- crud_pcr_measurement.py `EXTRACTED`
+- crud_protocol_set.py `EXTRACTED`
+- crud_protocol_set_member.py `EXTRACTED`
+- crud_read_set.py `EXTRACTED`
+- crud_read_set_identifier.py `EXTRACTED`
+- crud_ref_allele.py `EXTRACTED`
+- crud_ref_seq.py `EXTRACTED`
+- crud_sample.py `EXTRACTED`
+- *…and 16 more `imports` connection(s) not listed (lowest-degree first to go)*
 
-## Source Files
+### inherits
+- BaseService `EXTRACTED`
+- SeqService `EXTRACTED`
 
-- `gen_epix/seqdb/domain/command/seq.py`
-- `gen_epix/seqdb/domain/service/seq.py`
-- `gen_epix/seqdb/services/seq/calculate_seq_distance.py`
-- `gen_epix/seqdb/services/seq/crud_protocol.py`
-- `gen_epix/seqdb/services/seq/crud_protocol_set.py`
-- `gen_epix/seqdb/services/seq/crud_protocol_set_member.py`
-- `gen_epix/seqdb/services/seq/crud_sample.py`
-- `gen_epix/seqdb/services/seq/crud_seq_category_set.py`
-- `gen_epix/seqdb/services/seq/crud_taxon.py`
-- `gen_epix/seqdb/services/seq/crud_tree_algorithm.py`
-- `gen_epix/seqdb/services/seq/crud_tree_algorithm_class.py`
-- `gen_epix/seqdb/services/seq/retrieve_sample.py`
-- `gen_epix/seqdb/services/seq/service.py`
-- `gen_epix/seqdb/services/seq/upload.py`
+### method
+- .crud_seq_distance() `EXTRACTED`
+- .crud_seq_identifier() `EXTRACTED`
+- .crud_seq_taxonomy() `EXTRACTED`
+- .crud_taxon() `EXTRACTED`
+- .crud_taxon_set() `EXTRACTED`
+- .crud_taxon_set_member() `EXTRACTED`
+- .crud_tree_algorithm() `EXTRACTED`
+- .crud_tree_algorithm_class() `EXTRACTED`
+- .crud_protocol() `EXTRACTED`
+- .crud_protocol_set() `EXTRACTED`
+- .crud_protocol_set_member() `EXTRACTED`
+- .crud_allele() `EXTRACTED`
+- .crud_ast_measurement() `EXTRACTED`
+- .crud_ast_prediction() `EXTRACTED`
+- .crud_locus() `EXTRACTED`
+- .crud_locus_code_map() `EXTRACTED`
+- .crud_seq_profile() `EXTRACTED`
+- .crud_seq_profile_identifier() `EXTRACTED`
+- .crud_locus_set() `EXTRACTED`
+- .crud_pcr_measurement() `EXTRACTED`
+- *…and 26 more `method` connection(s) not listed (lowest-degree first to go)*
 
-## Audit Trail
+### rationale_for
+- Encapsulates seqdb handlers implemented by concrete sequence services. `EXTRACTED`
 
-- EXTRACTED: 414 (100%)
-- INFERRED: 1 (0%)
-- AMBIGUOUS: 0 (0%)
+### references
+- _get_best_id_per_sample() `EXTRACTED`
+- seq_service_calculate_seq_distances_for_new_profiles() `EXTRACTED`
+- _calculate_and_store_distances() `EXTRACTED`
+- seq_service_convert_seq_format() `EXTRACTED`
+- seq_service_update_seq_distances() `EXTRACTED`
+- seq_service_retrieve_best_seq_classification_per_sample() `EXTRACTED`
+- seq_service_retrieve_best_seq_per_sample() `EXTRACTED`
+- seq_service_retrieve_best_seq_profile_per_sample() `EXTRACTED`
+- seq_service_retrieve_seq_distance_last_modified() `EXTRACTED`
+- seq_service_crud_protocol() `EXTRACTED`
+- seq_service_crud_seq_profile() `EXTRACTED`
+- seq_service_crud_allele() `EXTRACTED`
+- seq_service_crud_ast_measurement() `EXTRACTED`
+- seq_service_crud_ast_prediction() `EXTRACTED`
+- seq_service_crud_locus_code_map() `EXTRACTED`
+- seq_service_crud_locus() `EXTRACTED`
+- seq_service_crud_locus_set() `EXTRACTED`
+- seq_service_crud_pcr_measurement() `EXTRACTED`
+- seq_service_crud_protocol_set_member() `EXTRACTED`
+- seq_service_crud_protocol_set() `EXTRACTED`
+- *…and 24 more `references` connection(s) not listed (lowest-degree first to go)*
+
+### uses
+- seq_service_calculate_phylogenetic_tree() `INFERRED`
+- ServiceType `INFERRED`
+- SampleBatchUploader `INFERRED`
+- CaseUploadSetup `INFERRED`
+- seq_service_upload_samples() `INFERRED`
 
 ---
 
