@@ -22,7 +22,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -71,21 +70,3 @@ jobs:
           - Update GRAPH_REPORT.md and visualizations
           - Run by graphify post-merge pipeline"
           git push
-
-      - name: Create pull request for graph updates
-        if: steps.check-changes.outputs.has-changes == 'true' && github.event_name == 'workflow_dispatch'
-        uses: peter-evans/create-pull-request@6d6857d36972b65feb161a90e484f2984215f83e3 # v5
-        with:
-          commit-message: "chore: update knowledge graph"
-          title: "chore: update knowledge graph"
-          body: |
-            Automated knowledge graph regeneration.
-
-            - Regenerated `graph.json` with latest codebase structure
-            - Updated `GRAPH_REPORT.md` with architectural analysis
-            - Refreshed graph visualizations
-
-            This PR was created by the graphify update workflow.
-          branch: graphify-update-${{ github.run_number }}
-          delete-branch: true
-          labels: "documentation,automated"
