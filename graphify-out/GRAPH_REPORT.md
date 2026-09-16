@@ -1,7 +1,7 @@
 # Graph Report - gen-epix-api  (2026-09-16)
 
 ## Corpus Check
-- 562 files · ~1,189,526 words
+- 151 files · ~1,189,453 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -831,16 +831,16 @@
 10. `BaseSeqService` - 135 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `PPR Test Docker Compose (Mock OIDC + CASEDB/SEQDB)` --semantically_similar_to--> `SQL + Mock OIDC Docker Compose (SEQDB/OMOPDB/CASEDB)`  [INFERRED] [semantically similar]
-  docker-compose.ppr_test.yml → docker-compose.sql.idp.yml
-- `pytest-run skill` --semantically_similar_to--> `Per-app test commands (test_{app}_{scope})`  [INFERRED] [semantically similar]
-  .github/instructions/python-pytest.instructions.md → docs/06-Development-Guide.md
-- `casedb-seqdb-omopdb E2E Connection Test Logging Config` --semantically_similar_to--> `casedb Logging Config`  [INFERRED] [semantically similar]
-  test/end_to_end/casedb_seqdb_connection/logging.yaml → gen_epix/casedb/config/logging.yaml
-- `casedb-seqdb-omopdb E2E Connection Test Logging Config` --semantically_similar_to--> `omopdb Logging Config`  [INFERRED] [semantically similar]
-  test/end_to_end/casedb_seqdb_connection/logging.yaml → gen_epix/omopdb/config/logging.yaml
-- `casedb-seqdb-omopdb E2E Connection Test Logging Config` --semantically_similar_to--> `seqdb Logging Config`  [INFERRED] [semantically similar]
-  test/end_to_end/casedb_seqdb_connection/logging.yaml → gen_epix/seqdb/config/logging.yaml
+- `execute()` --calls--> `Result`  [INFERRED]
+  test/general/migrations/test_alembic_migrations.py → gen_epix/etl/model.py
+- `test_create_some_and_upsert_some_validation()` --uses--> `SARepository`  [INFERRED]
+  test/fastapp/unit/repositories/sa/test_fastapp_sa_repository.py → gen_epix/fastapp/repositories/sa/repository.py
+- `test_read_some_raises_invalid_ids()` --uses--> `SARepository`  [INFERRED]
+  test/fastapp/unit/repositories/sa/test_fastapp_sa_repository.py → gen_epix/fastapp/repositories/sa/repository.py
+- `anonymize_user()` --calls--> `handle_exception()`  [INFERRED]
+  gen_epix/commondb/api/organization.py → test/fastapp/integration/api/test_fastapp_api.py
+- `invite_user()` --calls--> `handle_exception()`  [INFERRED]
+  gen_epix/commondb/api/organization.py → test/fastapp/integration/api/test_fastapp_api.py
 
 ## Import Cycles
 - None detected.
@@ -2790,7 +2790,7 @@ Nodes (3): app(), mock_client(), fixture
   docs/erm/seqdb.detailed.md · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **515 isolated node(s):** `TestPersonUpload`, `casedb SUBJECT Simplified ERD`, `casedb CASE Simplified ERD`, `TreeAlgorithm (seqdb entity)`, `casedb SEQDB Simplified ERD` (+510 more)
+- **515 isolated node(s):** `TestPersonUpload`, `DataCmd`, `MetaCmd`, `NoAbacCmd`, `OtherCmd` (+510 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 7908 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **349 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
