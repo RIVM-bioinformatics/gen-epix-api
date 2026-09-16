@@ -1,9 +1,9 @@
-"""Unit tests for the non-CRUD command handlers on CasedbRemoteApp.
+"""Unit tests for the non-CRUD command handlers on CasedbClient.
 
-Each test builds a real CasedbRemoteApp, mocks the underlying httpx client,
+Each test builds a real CasedbClient, mocks the underlying httpx client,
 invokes the handler directly, and checks the HTTP call it makes (method,
 URL, body) plus that the response is parsed into the right model. This
-guards against route/model drift between the API and the RemoteApp handler.
+guards against route/model drift between the API and the Client handler.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from uuid import uuid4
 import pytest
 
 from gen_epix.casedb.domain import command, enum, model
-from gen_epix.casedb.services.remote_app import CasedbRemoteApp
+from gen_epix.casedb.services.client import CasedbClient
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 
@@ -32,13 +32,13 @@ def _mock_response(json_data: Any, status_code: int = 200) -> Mock:
 
 
 @pytest.fixture
-def app() -> CasedbRemoteApp:
-    return CasedbRemoteApp(host="example.org", port=8000)
+def app() -> CasedbClient:
+    return CasedbClient(host="example.org", port=8000)
 
 
 @pytest.fixture
 def mock_client() -> Any:
-    with patch("gen_epix.fastapp.remote_app.httpx.Client") as mock_client_class:
+    with patch("gen_epix.fastapp.client.httpx.Client") as mock_client_class:
         client = MagicMock()
         client.__enter__.return_value = client
         client.__exit__.return_value = None
@@ -50,7 +50,7 @@ class TestNonCrudHandlers:
     """Test the hand-written (non-CRUD) command handlers."""
 
     def test_update_case_created_in_data_collection(
-        self, app: CasedbRemoteApp, mock_client: Any
+        self, app: CasedbClient, mock_client: Any
     ) -> None:
         case_id = uuid4()
         data_collection_id = uuid4()
@@ -76,7 +76,7 @@ class TestNonCrudHandlers:
         assert result == [case_id]
 
     def test_case_type_set_case_type_update_association(
-        self, app: CasedbRemoteApp, mock_client: Any
+        self, app: CasedbClient, mock_client: Any
     ) -> None:
         case_type_set_id = uuid4()
         member = model.CaseTypeSetMember(
@@ -99,7 +99,7 @@ class TestNonCrudHandlers:
         assert result == [model.CaseTypeSetMember(**data[0])]
 
     def test_col_set_col_update_association(
-        self, app: CasedbRemoteApp, mock_client: Any
+        self, app: CasedbClient, mock_client: Any
     ) -> None:
         col_set_id = uuid4()
         member = model.ColSetMember(col_set_id=col_set_id, col_id=uuid4())
@@ -116,7 +116,7 @@ class TestNonCrudHandlers:
         assert result == [model.ColSetMember(**data[0])]
 
     def test_retrieve_complete_case_type(
-        self, app: CasedbRemoteApp, mock_client: Any
+        self, app: CasedbClient, mock_client: Any
     ) -> None:
         case_type_id = uuid4()
         data: dict[str, Any] = {
@@ -147,7 +147,7 @@ class TestNonCrudHandlers:
         assert params == {"case_type_id": str(case_type_id)}
         assert result == model.CompleteCaseType(**data)
 
-    def test_create_case_set(self, app: CasedbRemoteApp, mock_client: Any) -> None:
+    def test_create_case_set(self, app: CasedbClient, mock_client: Any) -> None:
         case_set = model.CaseSet(
             case_type_id=uuid4(),
             created_in_data_collection_id=uuid4(),
@@ -180,7 +180,7 @@ class TestNonCrudHandlers:
         assert result == model.CaseSet(**data)
 
     def test_retrieve_case_stats_by_case_type(
-        self, app: CasedbRemoteApp, mock_client: Any
+        self, app: CasedbClient, mock_client: Any
     ) -> None:
         case_type_id = uuid4()
         cmd = command.RetrieveCaseTypeStatsCommand(
@@ -195,7 +195,7 @@ class TestNonCrudHandlers:
         assert result == [model.CaseStats(**data[0])]
 
     def test_retrieve_case_stats_by_case_set(
-        self, app: CasedbRemoteApp, mock_client: Any
+        self, app: CasedbClient, mock_client: Any
     ) -> None:
         case_set_id = uuid4()
         case_type_id = uuid4()
@@ -214,7 +214,7 @@ class TestNonCrudHandlers:
         }
         assert result == [model.CaseStats(**data[0])]
 
-    def test_retrieve_cases_by_id(self, app: CasedbRemoteApp, mock_client: Any) -> None:
+    def test_retrieve_cases_by_id(self, app: CasedbClient, mock_client: Any) -> None:
         case_type_id = uuid4()
         case_id = uuid4()
         cmd = command.RetrieveCasesByIdCommand(
@@ -240,7 +240,7 @@ class TestNonCrudHandlers:
         }
         assert result == [model.Case(**data[0])]
 
-    def test_retrieve_case_rights(self, app: CasedbRemoteApp, mock_client: Any) -> None:
+    def test_retrieve_case_rights(self, app: CasedbClient, mock_client: Any) -> None:
         case_type_id = uuid4()
         case_id = uuid4()
         cmd = command.RetrieveCaseRightsCommand(
@@ -269,7 +269,7 @@ class TestNonCrudHandlers:
         assert result == [model.CaseRights(**data[0])]
 
     def test_retrieve_case_set_rights(
-        self, app: CasedbRemoteApp, mock_client: Any
+        self, app: CasedbClient, mock_client: Any
     ) -> None:
         case_set_id = uuid4()
         cmd = command.RetrieveCaseSetRightsCommand(
@@ -300,7 +300,7 @@ class TestNonCrudHandlers:
         assert result == [model.CaseSetRights(**data[0])]
 
     def test_retrieve_phylogenetic_tree_by_cases(
-        self, app: CasedbRemoteApp, mock_client: Any
+        self, app: CasedbClient, mock_client: Any
     ) -> None:
         case_type_id = uuid4()
         genetic_distance_col_id = uuid4()
@@ -327,9 +327,7 @@ class TestNonCrudHandlers:
         }
         assert result == model.PhylogeneticTree(**data)
 
-    def test_retrieve_similar_cases(
-        self, app: CasedbRemoteApp, mock_client: Any
-    ) -> None:
+    def test_retrieve_similar_cases(self, app: CasedbClient, mock_client: Any) -> None:
         case_type_id = uuid4()
         genetic_distance_col_id = uuid4()
         case_id = uuid4()
@@ -356,7 +354,7 @@ class TestNonCrudHandlers:
         assert result == command.RetrieveSimilarCasesReturnValue(**data)
 
     def test_retrieve_genetic_sequence_fasta_by_case(
-        self, app: CasedbRemoteApp, mock_client: Any
+        self, app: CasedbClient, mock_client: Any
     ) -> None:
         case_type_id = uuid4()
         genetic_sequence_col_id = uuid4()
@@ -388,7 +386,7 @@ class TestNonCrudHandlers:
         assert form_data["case_ids"] == [str(case_id)]
 
     def test_create_file_for_read_set(
-        self, app: CasedbRemoteApp, mock_client: Any
+        self, app: CasedbClient, mock_client: Any
     ) -> None:
         case_id = uuid4()
         col_id = uuid4()
@@ -411,7 +409,7 @@ class TestNonCrudHandlers:
         assert json_body["is_fwd"] is True
         assert result == file_id
 
-    def test_create_file_for_seq(self, app: CasedbRemoteApp, mock_client: Any) -> None:
+    def test_create_file_for_seq(self, app: CasedbClient, mock_client: Any) -> None:
         case_id = uuid4()
         col_id = uuid4()
         file_id = uuid4()
@@ -427,7 +425,7 @@ class TestNonCrudHandlers:
         assert result == file_id
 
     def test_retrieve_protocols_sequencing(
-        self, app: CasedbRemoteApp, mock_client: Any
+        self, app: CasedbClient, mock_client: Any
     ) -> None:
         cmd = command.RetrieveProtocolsCommand(
             user=None, protocol_type=seqdb_enum.ProtocolType.SEQUENCING
@@ -441,7 +439,7 @@ class TestNonCrudHandlers:
         assert result == [seqdb_model.Protocol(**data[0])]
 
     def test_retrieve_protocols_assembly(
-        self, app: CasedbRemoteApp, mock_client: Any
+        self, app: CasedbClient, mock_client: Any
     ) -> None:
         cmd = command.RetrieveProtocolsCommand(
             user=None, protocol_type=seqdb_enum.ProtocolType.ASSEMBLY
@@ -457,9 +455,7 @@ class TestNonCrudHandlers:
         )
         assert result == [seqdb_model.Protocol(**data[0])]
 
-    def test_retrieve_is_own_cases(
-        self, app: CasedbRemoteApp, mock_client: Any
-    ) -> None:
+    def test_retrieve_is_own_cases(self, app: CasedbClient, mock_client: Any) -> None:
         case_type_id = uuid4()
         case_id = uuid4()
         cmd = command.RetrieveIsOwnCasesCommand(
@@ -479,7 +475,7 @@ class TestNonCrudHandlers:
         assert result == {case_id: True}
 
     def test_disease_etiological_agent_update_association(
-        self, app: CasedbRemoteApp, mock_client: Any
+        self, app: CasedbClient, mock_client: Any
     ) -> None:
         disease_id = uuid4()
         etiology = model.Etiology(disease_id=disease_id, etiological_agent_id=uuid4())

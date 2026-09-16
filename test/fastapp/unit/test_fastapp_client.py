@@ -10,13 +10,13 @@ import httpx
 import pytest
 from pydantic import Field
 
+from gen_epix.fastapp.client import Client
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.domain.util import create_keys
 from gen_epix.fastapp.enum import CrudOperation, EventTiming, HttpProtocol, StringCasing
 from gen_epix.fastapp.exc import ServiceException
 from gen_epix.fastapp.model import Command, CrudCommand, Model, Policy
-from gen_epix.fastapp.remote_app import RemoteApp
 
 # Helpers and dummies for testing
 
@@ -172,7 +172,7 @@ def set_fake_response(payload: Any, status_code: int = 200) -> None:
     FakeClient.last_request = None
 
 
-class BaseRemoteAppTestCase:
+class BaseClientTestCase:
     def setup_method(self) -> None:
         # Patch App.__init__ to avoid side-effects and set required attributes
         def _fake_app_init(self: Any, domain: Domain, **kwargs: Any) -> None:
@@ -180,13 +180,13 @@ class BaseRemoteAppTestCase:
             setattr(self, "_logger", None)  # ensure __del__ can safely access
 
         self._app_init_patcher = patch(
-            "gen_epix.fastapp.remote_app.App.__init__", _fake_app_init
+            "gen_epix.fastapp.client.App.__init__", _fake_app_init
         )
         self._app_init_patcher.start()
 
         # Patch create_ssl_context to predictable value
         self._ssl_patcher = patch(
-            "gen_epix.fastapp.remote_app.create_ssl_context", return_value="SSLCTX"
+            "gen_epix.fastapp.client.create_ssl_context", return_value="SSLCTX"
         )
         self._ssl_patcher.start()
 
@@ -195,7 +195,7 @@ class BaseRemoteAppTestCase:
         self.domain.crud_commands = []  # type: ignore[assignment,misc]
 
         # Instance under test
-        self.app = RemoteApp(
+        self.app = Client(
             domain=self.domain,
             host="example.org",
             port=8000,
@@ -217,11 +217,11 @@ class BaseRemoteAppTestCase:
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-06")
-class TestInitAndProperties(BaseRemoteAppTestCase):
+class TestInitAndProperties(BaseClientTestCase):
 
     def test_protocol_property_accepts_enum_and_string(self) -> None:
         # Protocol as enum
-        app_enum = RemoteApp(
+        app_enum = Client(
             domain=self.domain,
             host="example.org",
             port=8000,
@@ -231,7 +231,7 @@ class TestInitAndProperties(BaseRemoteAppTestCase):
         assert app_enum.protocol == HttpProtocol.HTTPS
 
         # Protocol as string (lowercase)
-        app_str = RemoteApp(
+        app_str = Client(
             domain=self.domain,
             host="example.org",
             port=8000,
@@ -261,7 +261,7 @@ class TestInitAndProperties(BaseRemoteAppTestCase):
         assert ssl_context == False
 
         # With no port
-        other = RemoteApp(
+        other = Client(
             self.domain,
             "example.org",
             None,
@@ -284,7 +284,7 @@ class TestInitAndProperties(BaseRemoteAppTestCase):
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-06")
-class TestRouteRegistration(BaseRemoteAppTestCase):
+class TestRouteRegistration(BaseClientTestCase):
     def test_register_route_and_get_route(self) -> None:
         # Create input
         cmd = DummyCmd()
@@ -350,7 +350,7 @@ class TestRouteRegistration(BaseRemoteAppTestCase):
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-06")
-class TestHeadersAndApplyHandler(BaseRemoteAppTestCase):
+class TestHeadersAndApplyHandler(BaseClientTestCase):
     def test_get_headers_returns_defaults(self) -> None:
         # Create input
         cmd = DummyCmd()
@@ -457,7 +457,7 @@ class TestHeadersAndApplyHandler(BaseRemoteAppTestCase):
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-06")
-class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
+class TestGeneratedCrudRoutes(BaseClientTestCase):
     def test_register_generated_crud_route_builds_path(self) -> None:
         # Create input
         # Set up mocks: none
@@ -474,7 +474,7 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
         handler = self.app.create_generated_crud_route_handler(DummyCrud, base_route)
 
         # Set up mocks: patch httpx.Client with FakeClient
-        with patch("gen_epix.fastapp.remote_app.httpx.Client", FakeClient):
+        with patch("gen_epix.fastapp.client.httpx.Client", FakeClient):
             # Ensure ssl verify is passed
             set_fake_response(payload=[], status_code=200)
             cmd = DummyCrud(operation=CrudOperation.READ_ALL)
@@ -631,7 +631,7 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
         obj_ids = [uuid4(), uuid4(), uuid4()]
 
         # Set up mocks
-        with patch("gen_epix.fastapp.remote_app.httpx.Client", FakeClient):
+        with patch("gen_epix.fastapp.client.httpx.Client", FakeClient):
             # EXISTS_SOME
             set_fake_response(
                 payload=[str(obj_ids[0]), str(obj_ids[2])], status_code=200
@@ -665,7 +665,7 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
         )
 
         # Set up mocks
-        with patch("gen_epix.fastapp.remote_app.httpx.Client", FakeClient):
+        with patch("gen_epix.fastapp.client.httpx.Client", FakeClient):
             set_fake_response(payload={"id": "anything"}, status_code=200)
             retval = handler(cmd)
 
@@ -675,12 +675,12 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
         assert FakeClient.last_request["url"].endswith("/legacy-id")  # type: ignore[index]
 
     def test_classify_exists_id_type(self) -> None:
-        assert RemoteApp._classify_exists_id_type([uuid4()]) == "uuid"
-        assert RemoteApp._classify_exists_id_type(["x"]) == "string"
-        assert RemoteApp._classify_exists_id_type([1]) == "int"
-        assert RemoteApp._classify_exists_id_type([1.1]) == "float"
-        assert RemoteApp._classify_exists_id_type([Decimal("1.1")]) == "decimal"
-        assert RemoteApp._classify_exists_id_type([1, 2.0]) == "mixed"
+        assert Client._classify_exists_id_type([uuid4()]) == "uuid"
+        assert Client._classify_exists_id_type(["x"]) == "string"
+        assert Client._classify_exists_id_type([1]) == "int"
+        assert Client._classify_exists_id_type([1.1]) == "float"
+        assert Client._classify_exists_id_type([Decimal("1.1")]) == "decimal"
+        assert Client._classify_exists_id_type([1, 2.0]) == "mixed"
 
     def test_generated_handler_unsupported_return_type_raises(self) -> None:
         # Create input
@@ -690,7 +690,7 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
         )
 
         # Set up mocks
-        with patch("gen_epix.fastapp.remote_app.httpx.Client", FakeClient):
+        with patch("gen_epix.fastapp.client.httpx.Client", FakeClient):
             set_fake_response(payload={"something": "x"}, status_code=200)
             cmd = UnsupportedCrud(operation=CrudOperation.READ_ONE, obj_ids=uuid4())
 
@@ -700,7 +700,7 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-06")
-class TestAutoRegistration(BaseRemoteAppTestCase):
+class TestAutoRegistration(BaseClientTestCase):
     def test_init_auto_registers_handlers_for_domain_crud_commands(self) -> None:
         # Create input
         domain: Domain = cast(Domain, Mock(spec=Domain))
@@ -709,13 +709,11 @@ class TestAutoRegistration(BaseRemoteAppTestCase):
         # Set up mocks
         with (
             patch.object(
-                RemoteApp, "register_generated_crud_route", return_value="/dummy_models"
+                Client, "register_generated_crud_route", return_value="/dummy_models"
             ) as reg_route,
-            patch.object(
-                RemoteApp, "register_handler", return_value=None
-            ) as reg_handler,
+            patch.object(Client, "register_handler", return_value=None) as reg_handler,
         ):
-            app = RemoteApp(
+            app = Client(
                 domain=domain,
                 host="example.org",
                 port=8000,

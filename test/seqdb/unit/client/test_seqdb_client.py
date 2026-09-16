@@ -1,4 +1,4 @@
-"""Unit tests for SeqdbRemoteApp create_calculate_phylogenetic_tree_handler function."""
+"""Unit tests for SeqdbClient create_calculate_phylogenetic_tree_handler function."""
 
 import json
 from datetime import datetime
@@ -15,12 +15,12 @@ from gen_epix.seqdb.api import CalculatePhylogeneticTreeRequestBody
 from gen_epix.seqdb.domain import command as seqdb_command
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
-from gen_epix.seqdb.services.remote_app import SeqdbRemoteApp
+from gen_epix.seqdb.services.client import SeqdbClient
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-06")
-class TestSeqdbRemoteApp:
-    """Test the SeqdbRemoteApp class with focus on create_calculate_phylogenetic_tree_handler."""
+class TestSeqdbClient:
+    """Test the SeqdbClient class with focus on create_calculate_phylogenetic_tree_handler."""
 
     @pytest.fixture
     def mock_user(self) -> seqdb_model.User:
@@ -37,9 +37,9 @@ class TestSeqdbRemoteApp:
         )
 
     @pytest.fixture
-    def remote_app(self) -> SeqdbRemoteApp:
-        """Create a SeqdbRemoteApp instance for testing."""
-        return SeqdbRemoteApp(host="localhost", port=8001)
+    def client(self) -> SeqdbClient:
+        """Create a SeqdbClient instance for testing."""
+        return SeqdbClient(host="localhost", port=8001)
 
     @pytest.fixture
     def sample_command(
@@ -65,17 +65,17 @@ class TestSeqdbRemoteApp:
             "protocol_id": str(uuid4()),
         }
 
-    def test_route_registration(self, remote_app: SeqdbRemoteApp) -> None:
+    def test_route_registration(self, client: SeqdbClient) -> None:
         """Test that the handler registers the correct route."""
         expected_route = (
-            remote_app.host_url
-            + remote_app._default_route_prefix
+            client.host_url
+            + client._default_route_prefix
             + "/calculate/phylogenetic_tree"
         )
 
         # Verify the route is registered
-        assert seqdb_command.CalculatePhylogeneticTreeCommand in remote_app._routes
-        registered_route = remote_app._routes[
+        assert seqdb_command.CalculatePhylogeneticTreeCommand in client._routes
+        registered_route = client._routes[
             seqdb_command.CalculatePhylogeneticTreeCommand
         ]
         assert registered_route == expected_route
@@ -84,7 +84,7 @@ class TestSeqdbRemoteApp:
     def test_successful_request_with_full_response(
         self,
         mock_client_class: Mock,
-        remote_app: SeqdbRemoteApp,
+        client: SeqdbClient,
         sample_command: seqdb_command.CalculatePhylogeneticTreeCommand,
         sample_response_data: dict[str, Any],
         mock_user: seqdb_model.User,
@@ -103,14 +103,12 @@ class TestSeqdbRemoteApp:
         # No need to modify command attributes - they're already set in fixture
 
         # Mock get_headers to return test headers (now synchronous function)
-        remote_app.get_headers = Mock(
-            return_value={"Authorization": "Bearer test_token"}
-        )
+        client.get_headers = Mock(return_value={"Authorization": "Bearer test_token"})
 
         # Call the handler directly
-        result = remote_app.calculate_phylogenetic_tree(sample_command)
+        result = client.calculate_phylogenetic_tree(sample_command)
 
-        # Verify the result - since SeqdbRemoteApp returns seqdb_model.PhylogeneticTree,
+        # Verify the result - since SeqdbClient returns seqdb_model.PhylogeneticTree,
         # we need to check for seqdb model attributes
         assert isinstance(result, seqdb_model.PhylogeneticTree)
         assert result.tree_algorithm == seqdb_enum.TreeAlgorithm.UPGMA
@@ -130,7 +128,7 @@ class TestSeqdbRemoteApp:
 
         mock_client.request.assert_called_once_with(
             "POST",
-            remote_app.get_route(sample_command),
+            client.get_route(sample_command),
             json=json.loads(expected_request_body.model_dump_json()),
             params=None,
             headers={"Authorization": "Bearer test_token"},
@@ -140,7 +138,7 @@ class TestSeqdbRemoteApp:
     def test_successful_request_without_leaf_ids(
         self,
         mock_client_class: Mock,
-        remote_app: SeqdbRemoteApp,
+        client: SeqdbClient,
         sample_command: seqdb_command.CalculatePhylogeneticTreeCommand,
         mock_user: seqdb_model.User,
     ) -> None:
@@ -164,10 +162,10 @@ class TestSeqdbRemoteApp:
         mock_client_class.return_value = mock_client
 
         # Setup remote app mock
-        remote_app.get_headers = Mock(return_value={})
+        client.get_headers = Mock(return_value={})
 
         # Call the handler directly
-        result = remote_app.calculate_phylogenetic_tree(sample_command)
+        result = client.calculate_phylogenetic_tree(sample_command)
 
         # Verify the result - check seqdb model attributes
         assert isinstance(result, seqdb_model.PhylogeneticTree)
@@ -180,7 +178,7 @@ class TestSeqdbRemoteApp:
     def test_empty_response_returns_none(
         self,
         mock_client_class: Mock,
-        remote_app: SeqdbRemoteApp,
+        client: SeqdbClient,
         sample_command: seqdb_command.CalculatePhylogeneticTreeCommand,
     ) -> None:
         """Test that empty/null response data returns None."""
@@ -194,10 +192,10 @@ class TestSeqdbRemoteApp:
         mock_client.__exit__.return_value = None
         mock_client_class.return_value = mock_client
 
-        remote_app.get_headers = Mock(return_value={})
+        client.get_headers = Mock(return_value={})
 
         # Call the handler directly
-        result = remote_app.calculate_phylogenetic_tree(sample_command)
+        result = client.calculate_phylogenetic_tree(sample_command)
 
         # Verify None is returned
         assert result is None
@@ -206,7 +204,7 @@ class TestSeqdbRemoteApp:
     def test_empty_dict_response_returns_none(
         self,
         mock_client_class: Mock,
-        remote_app: SeqdbRemoteApp,
+        client: SeqdbClient,
         sample_command: seqdb_command.CalculatePhylogeneticTreeCommand,
     ) -> None:
         """Test that empty dict response returns None."""
@@ -220,10 +218,10 @@ class TestSeqdbRemoteApp:
         mock_client.__exit__.return_value = None
         mock_client_class.return_value = mock_client
 
-        remote_app.get_headers = Mock(return_value={})
+        client.get_headers = Mock(return_value={})
 
         # Call the handler directly
-        result = remote_app.calculate_phylogenetic_tree(sample_command)
+        result = client.calculate_phylogenetic_tree(sample_command)
 
         # Verify None is returned
         assert result is None
@@ -232,7 +230,7 @@ class TestSeqdbRemoteApp:
     def test_http_error_propagates(
         self,
         mock_client_class: Mock,
-        remote_app: SeqdbRemoteApp,
+        client: SeqdbClient,
         sample_command: seqdb_command.CalculatePhylogeneticTreeCommand,
     ) -> None:
         """Test that HTTP errors are properly propagated."""
@@ -248,17 +246,17 @@ class TestSeqdbRemoteApp:
         mock_client.__exit__.return_value = None
         mock_client_class.return_value = mock_client
 
-        remote_app.get_headers = Mock(return_value={})
+        client.get_headers = Mock(return_value={})
 
         # Call the handler directly and verify exception is raised
         with pytest.raises(httpx.HTTPStatusError):
-            remote_app.calculate_phylogenetic_tree(sample_command)
+            client.calculate_phylogenetic_tree(sample_command)
 
     @patch("httpx.Client")
     def test_authentication_headers_included(
         self,
         mock_client_class: Mock,
-        remote_app: SeqdbRemoteApp,
+        client: SeqdbClient,
         sample_command: seqdb_command.CalculatePhylogeneticTreeCommand,
         sample_response_data: dict[str, Any],
     ) -> None:
@@ -278,13 +276,13 @@ class TestSeqdbRemoteApp:
             "Authorization": "Bearer test_jwt_token",
             "Content-Type": "application/json",
         }
-        remote_app.get_headers = Mock(return_value=expected_headers)
+        client.get_headers = Mock(return_value=expected_headers)
 
         # Call the handler directly
-        remote_app.calculate_phylogenetic_tree(sample_command)
+        client.calculate_phylogenetic_tree(sample_command)
 
         # Verify headers were requested and used
-        remote_app.get_headers.assert_called_with(sample_command)
+        client.get_headers.assert_called_with(sample_command)
         mock_client.request.assert_called_once()
         call_kwargs = mock_client.request.call_args.kwargs
         assert call_kwargs["headers"] == expected_headers
@@ -293,7 +291,7 @@ class TestSeqdbRemoteApp:
     def test_request_body_construction(
         self,
         mock_client_class: Mock,
-        remote_app: SeqdbRemoteApp,
+        client: SeqdbClient,
         sample_command: seqdb_command.CalculatePhylogeneticTreeCommand,
         sample_response_data: dict[str, Any],
     ) -> None:
@@ -309,10 +307,10 @@ class TestSeqdbRemoteApp:
         mock_client_class.return_value = mock_client
 
         # Setup remote app mock
-        remote_app.get_headers = Mock(return_value={})
+        client.get_headers = Mock(return_value={})
 
         # Call the handler directly
-        remote_app.calculate_phylogenetic_tree(sample_command)
+        client.calculate_phylogenetic_tree(sample_command)
 
         # Verify request body construction
         expected_request_body = CalculatePhylogeneticTreeRequestBody(
@@ -324,38 +322,38 @@ class TestSeqdbRemoteApp:
 
         mock_client.request.assert_called_once_with(
             "POST",
-            remote_app.get_route(sample_command),
+            client.get_route(sample_command),
             json=json.loads(expected_request_body.model_dump_json()),
             params=None,
             headers={},
         )
 
-    def test_route_mapping_exists(self, remote_app: SeqdbRemoteApp) -> None:
+    def test_route_mapping_exists(self, client: SeqdbClient) -> None:
         """Test that the ROUTE_MAP contains the expected mapping."""
-        assert seqdb_command.CalculatePhylogeneticTreeCommand in remote_app.ROUTE_MAP
+        assert seqdb_command.CalculatePhylogeneticTreeCommand in client.ROUTE_MAP
         assert (
-            remote_app.ROUTE_MAP[seqdb_command.CalculatePhylogeneticTreeCommand]
+            client.ROUTE_MAP[seqdb_command.CalculatePhylogeneticTreeCommand]
             == "/calculate/phylogenetic_tree"
         )
 
     def test_calculate_phylogenetic_tree_method_exists(
-        self, remote_app: SeqdbRemoteApp
+        self, client: SeqdbClient
     ) -> None:
         """Test that the calculate_phylogenetic_tree method exists and is callable."""
-        assert hasattr(remote_app, "calculate_phylogenetic_tree")
-        assert callable(remote_app.calculate_phylogenetic_tree)
+        assert hasattr(client, "calculate_phylogenetic_tree")
+        assert callable(client.calculate_phylogenetic_tree)
 
     def test_host_url_construction(self) -> None:
         """Test that base URL is constructed correctly."""
         host = "test-host"
         port = 9999
-        app = SeqdbRemoteApp(host=host, port=port)
+        app = SeqdbClient(host=host, port=port)
         expected_host_url = f"https://{host}:{port}"
         assert app.host_url == expected_host_url
 
-    def test_remote_app_initialization(self) -> None:
+    def test_client_initialization(self) -> None:
         """Test that the remote app initializes correctly with default values."""
-        app = SeqdbRemoteApp(host="localhost", port=8001)
+        app = SeqdbClient(host="localhost", port=8001)
 
         # Verify app was created with basic properties
         assert app is not None
@@ -366,21 +364,19 @@ class TestSeqdbRemoteApp:
 
     def test_locus_crud_command_has_extended_timeout(self) -> None:
         """Use the extended timeout for large Locus CRUD batches."""
-        assert (
-            SeqdbRemoteApp.DEFAULT_HTTP_TIMEOUTS[seqdb_command.LocusCrudCommand] == 45.0
-        )
+        assert SeqdbClient.DEFAULT_HTTP_TIMEOUTS[seqdb_command.LocusCrudCommand] == 45.0
 
 
 class TestRetrieveSeqDistanceLastModified:
     """Test the retrieve_seq_distance_last_modified handler."""
 
     @pytest.fixture
-    def remote_app(self) -> SeqdbRemoteApp:
-        return SeqdbRemoteApp(host="localhost", port=8001)
+    def client(self) -> SeqdbClient:
+        return SeqdbClient(host="localhost", port=8001)
 
     @pytest.fixture
     def mock_client(self) -> Any:
-        with patch("gen_epix.fastapp.remote_app.httpx.Client") as mock_client_class:
+        with patch("gen_epix.fastapp.client.httpx.Client") as mock_client_class:
             client = MagicMock()
             client.__enter__.return_value = client
             client.__exit__.return_value = None
@@ -388,7 +384,7 @@ class TestRetrieveSeqDistanceLastModified:
             yield client
 
     def test_returns_parsed_datetime(
-        self, remote_app: SeqdbRemoteApp, mock_client: Any
+        self, client: SeqdbClient, mock_client: Any
     ) -> None:
         protocol_id = uuid4()
         response = Mock()
@@ -401,16 +397,16 @@ class TestRetrieveSeqDistanceLastModified:
         cmd = seqdb_command.RetrieveSeqDistanceLastModifiedCommand(
             user=None, protocol_id=protocol_id
         )
-        result = remote_app.retrieve_seq_distance_last_modified(cmd)
+        result = client.retrieve_seq_distance_last_modified(cmd)
 
         method, url = mock_client.request.call_args.args
-        route = remote_app._routes[seqdb_command.RetrieveSeqDistanceLastModifiedCommand]
+        route = client._routes[seqdb_command.RetrieveSeqDistanceLastModifiedCommand]
         assert method == "POST"
         assert url == f"{route}/{protocol_id}"
         assert result == datetime(2024, 1, 2, 3, 4, 5)
 
     def test_returns_none_when_never_modified(
-        self, remote_app: SeqdbRemoteApp, mock_client: Any
+        self, client: SeqdbClient, mock_client: Any
     ) -> None:
         response = Mock()
         response.status_code = 200
@@ -421,5 +417,5 @@ class TestRetrieveSeqDistanceLastModified:
         cmd = seqdb_command.RetrieveSeqDistanceLastModifiedCommand(
             user=None, protocol_id=uuid4()
         )
-        result = remote_app.retrieve_seq_distance_last_modified(cmd)
+        result = client.retrieve_seq_distance_last_modified(cmd)
         assert result is None

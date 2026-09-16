@@ -11,14 +11,14 @@ from uuid import UUID
 
 from gen_epix.casedb import api
 from gen_epix.casedb.domain import DOMAIN, command, model
-from gen_epix.commondb.services import CommondbRemoteApp as CommondbRemoteApp
+from gen_epix.commondb.services import CommondbClient as CommondbClient
 from gen_epix.fastapp.enum import HttpMethod
 from gen_epix.fastapp.model import Command
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 
 
-class CasedbRemoteApp(CommondbRemoteApp):
+class CasedbClient(CommondbClient):
     """Encapsulates remote casedb command dispatch over HTTP.
 
     Initialization first registers inherited commondb collaboration and generated
@@ -411,7 +411,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
         """Retrieve sequencing or assembly protocols."""
         # RetrieveProtocolsCommand is handled by two different GET endpoints
         # depending on protocol_type; the registered route is just a placeholder
-        # so RemoteApp.apply_handler finds a route for this command class.
+        # so Client.apply_handler finds a route for this command class.
         base_route = self.get_route(cmd)
         if cmd.protocol_type == seqdb_enum.ProtocolType.ASSEMBLY:
             route = base_route.replace(

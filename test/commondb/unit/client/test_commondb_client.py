@@ -1,11 +1,11 @@
-"""Unit tests for CommondbRemoteApp class.
+"""Unit tests for CommondbClient class.
 
 Tests cover initialization, authentication/authorization handling, header
 management, local/remote app creation, and HTTP timeout configuration.
 Tests use mock objects to avoid external dependencies and OS integration.
 
 Pattern note: This test module follows the existing remote app test patterns
-from test/fastapp/unit/test_remote_app.py, adapted for the CommondbRemoteApp
+from test/fastapp/unit/test_client.py, adapted for the CommondbClient
 subclass and its domain-specific initialization.
 """
 
@@ -21,8 +21,8 @@ import jwt
 import pytest
 
 from gen_epix.commondb.domain import DOMAIN, command, model
-from gen_epix.commondb.services.remote_app import CommondbRemoteApp
-from gen_epix.fastapp import RemoteApp, exc
+from gen_epix.commondb.services.client import CommondbClient
+from gen_epix.fastapp import Client, exc
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
 from gen_epix.fastapp.model import Command, Permission
@@ -43,8 +43,8 @@ class DummyCommand(Command):
         super().__init__()
 
 
-class DerivedRemoteApp(CommondbRemoteApp):
-    """Minimal subclass of CommondbRemoteApp for testing timeout configuration."""
+class DerivedClient(CommondbClient):
+    """Minimal subclass of CommondbClient for testing timeout configuration."""
 
     # Configure timeouts per command type for testing
     DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {
@@ -57,8 +57,8 @@ class DerivedRemoteApp(CommondbRemoteApp):
 # ============================================================================
 
 
-class BaseCommondbRemoteAppTestCase:
-    """Base test case with common fixtures and setup for CommondbRemoteApp."""
+class BaseCommondbClientTestCase:
+    """Base test case with common fixtures and setup for CommondbClient."""
 
     def setup_method(self) -> None:
         """Set up test fixtures by mocking dependencies to avoid side effects."""
@@ -70,13 +70,13 @@ class BaseCommondbRemoteAppTestCase:
             setattr(self, "_command_handler_map", {})
 
         self._app_init_patcher = patch(
-            "gen_epix.fastapp.remote_app.App.__init__", _fake_app_init
+            "gen_epix.fastapp.client.App.__init__", _fake_app_init
         )
         self._app_init_patcher.start()
 
         # Patch create_ssl_context to return predictable value
         self._ssl_patcher = patch(
-            "gen_epix.fastapp.remote_app.create_ssl_context", return_value="SSLCTX"
+            "gen_epix.fastapp.client.create_ssl_context", return_value="SSLCTX"
         )
         self._ssl_patcher.start()
 
@@ -96,12 +96,12 @@ class BaseCommondbRemoteAppTestCase:
 
 
 @pytest.mark.scenario_ids("TC-LSP-3238-01")
-class TestInitialization(BaseCommondbRemoteAppTestCase):
-    """Test CommondbRemoteApp initialization with various configurations."""
+class TestInitialization(BaseCommondbClientTestCase):
+    """Test CommondbClient initialization with various configurations."""
 
     def test_init_with_none_auth_protocol_enum(self) -> None:
         """Initialize with NONE auth protocol as enum."""
-        app = CommondbRemoteApp(
+        app = CommondbClient(
             domain=self.domain,
             host="example.org",
             port=8000,
@@ -112,7 +112,7 @@ class TestInitialization(BaseCommondbRemoteAppTestCase):
 
     def test_init_with_none_auth_protocol_string(self) -> None:
         """Initialize with NONE auth protocol as string."""
-        app = CommondbRemoteApp(
+        app = CommondbClient(
             domain=self.domain,
             host="example.org",
             port=8000,
@@ -124,9 +124,9 @@ class TestInitialization(BaseCommondbRemoteAppTestCase):
     def test_init_with_oauth2_auth_protocol_enum(self) -> None:
         """Initialize with OAUTH2 auth protocol as enum."""
         with patch(
-            "gen_epix.commondb.services.remote_app.OauthIdpClient"
+            "gen_epix.commondb.services.client.OauthIdpClient"
         ) as mock_idp_class:
-            app = CommondbRemoteApp(
+            app = CommondbClient(
                 domain=self.domain,
                 host="example.org",
                 port=8000,
@@ -143,9 +143,9 @@ class TestInitialization(BaseCommondbRemoteAppTestCase):
     def test_init_with_oauth2_auth_protocol_string(self) -> None:
         """Initialize with OAUTH2 auth protocol as string."""
         with patch(
-            "gen_epix.commondb.services.remote_app.OauthIdpClient"
+            "gen_epix.commondb.services.client.OauthIdpClient"
         ) as mock_idp_class:
-            app = CommondbRemoteApp(
+            app = CommondbClient(
                 domain=self.domain,
                 host="example.org",
                 port=8000,
@@ -160,7 +160,7 @@ class TestInitialization(BaseCommondbRemoteAppTestCase):
 
     def test_init_with_oauth_flow_enum(self) -> None:
         """Initialize with OAuthFlow as enum."""
-        app = CommondbRemoteApp(
+        app = CommondbClient(
             domain=self.domain,
             host="example.org",
             port=8000,
@@ -171,7 +171,7 @@ class TestInitialization(BaseCommondbRemoteAppTestCase):
 
     def test_init_with_oauth_flow_string(self) -> None:
         """Initialize with OAuthFlow as string."""
-        app = CommondbRemoteApp(
+        app = CommondbClient(
             domain=self.domain,
             host="example.org",
             port=8000,
@@ -182,7 +182,7 @@ class TestInitialization(BaseCommondbRemoteAppTestCase):
 
     def test_init_default_route_prefix(self) -> None:
         """Verify default route prefix is /v1."""
-        app = CommondbRemoteApp(
+        app = CommondbClient(
             domain=self.domain,
             host="example.org",
             port=8000,
@@ -191,7 +191,7 @@ class TestInitialization(BaseCommondbRemoteAppTestCase):
 
     def test_init_custom_route_prefix(self) -> None:
         """Use custom route prefix if provided."""
-        app = CommondbRemoteApp(
+        app = CommondbClient(
             domain=self.domain,
             host="example.org",
             port=8000,
@@ -201,7 +201,7 @@ class TestInitialization(BaseCommondbRemoteAppTestCase):
 
     def test_init_default_oauth_token_refresh_margin(self) -> None:
         """Verify default OAuth token refresh margin is 60 seconds."""
-        app = CommondbRemoteApp(
+        app = CommondbClient(
             domain=self.domain,
             host="example.org",
             port=8000,
@@ -210,7 +210,7 @@ class TestInitialization(BaseCommondbRemoteAppTestCase):
 
     def test_init_custom_oauth_token_refresh_margin(self) -> None:
         """Use custom OAuth token refresh margin if provided."""
-        app = CommondbRemoteApp(
+        app = CommondbClient(
             domain=self.domain,
             host="example.org",
             port=8000,
@@ -225,13 +225,13 @@ class TestInitialization(BaseCommondbRemoteAppTestCase):
 
 
 @pytest.mark.scenario_ids("TC-LSP-3238-02")
-class TestOAuth2Validation(BaseCommondbRemoteAppTestCase):
+class TestOAuth2Validation(BaseCommondbClientTestCase):
     """Test OAuth2 configuration validation during initialization."""
 
     def test_oauth2_missing_discovery_url(self) -> None:
         """Raise error when OAuth2 requires discovery URL."""
         with pytest.raises(exc.InitializationServiceError) as exc_info:
-            CommondbRemoteApp(
+            CommondbClient(
                 domain=self.domain,
                 host="example.org",
                 port=8000,
@@ -245,7 +245,7 @@ class TestOAuth2Validation(BaseCommondbRemoteAppTestCase):
     def test_oauth2_missing_client_id(self) -> None:
         """Raise error when OAuth2 requires client ID."""
         with pytest.raises(exc.InitializationServiceError) as exc_info:
-            CommondbRemoteApp(
+            CommondbClient(
                 domain=self.domain,
                 host="example.org",
                 port=8000,
@@ -259,7 +259,7 @@ class TestOAuth2Validation(BaseCommondbRemoteAppTestCase):
     def test_oauth2_missing_scope(self) -> None:
         """Raise error when OAuth2 requires scope."""
         with pytest.raises(exc.InitializationServiceError) as exc_info:
-            CommondbRemoteApp(
+            CommondbClient(
                 domain=self.domain,
                 host="example.org",
                 port=8000,
@@ -273,7 +273,7 @@ class TestOAuth2Validation(BaseCommondbRemoteAppTestCase):
     def test_unsupported_auth_protocol(self) -> None:
         """Raise error for OIDC auth protocol (not yet supported)."""
         with pytest.raises(exc.InitializationServiceError) as exc_info:
-            CommondbRemoteApp(
+            CommondbClient(
                 domain=self.domain,
                 host="example.org",
                 port=8000,
@@ -288,12 +288,12 @@ class TestOAuth2Validation(BaseCommondbRemoteAppTestCase):
 
 
 @pytest.mark.scenario_ids("TC-LSP-3238-03")
-class TestGetHeaders(BaseCommondbRemoteAppTestCase):
+class TestGetHeaders(BaseCommondbClientTestCase):
     """Test get_headers method for different auth protocols."""
 
     def test_get_headers_with_none_auth_protocol(self) -> None:
         """get_headers returns default headers with NONE protocol."""
-        app = CommondbRemoteApp(
+        app = CommondbClient(
             domain=self.domain,
             host="example.org",
             port=8000,
@@ -320,11 +320,11 @@ class TestGetHeaders(BaseCommondbRemoteAppTestCase):
         )
 
         with patch(
-            "gen_epix.commondb.services.remote_app.OauthIdpClient"
+            "gen_epix.commondb.services.client.OauthIdpClient"
         ) as mock_idp_class:
             mock_idp_class.return_value = mock_idp_client
 
-            app = CommondbRemoteApp(
+            app = CommondbClient(
                 domain=self.domain,
                 host="example.org",
                 port=8000,
@@ -378,11 +378,11 @@ class TestGetHeaders(BaseCommondbRemoteAppTestCase):
         ]
 
         with patch(
-            "gen_epix.commondb.services.remote_app.OauthIdpClient"
+            "gen_epix.commondb.services.client.OauthIdpClient"
         ) as mock_idp_class:
             mock_idp_class.return_value = mock_idp_client
 
-            app = CommondbRemoteApp(
+            app = CommondbClient(
                 domain=self.domain,
                 host="example.org",
                 port=8000,
@@ -437,11 +437,11 @@ class TestGetHeaders(BaseCommondbRemoteAppTestCase):
         )
 
         with patch(
-            "gen_epix.commondb.services.remote_app.OauthIdpClient"
+            "gen_epix.commondb.services.client.OauthIdpClient"
         ) as mock_idp_class:
             mock_idp_class.return_value = mock_idp_client
 
-            app = CommondbRemoteApp(
+            app = CommondbClient(
                 domain=self.domain,
                 host="example.org",
                 port=8000,
@@ -478,13 +478,13 @@ class TestGetHeaders(BaseCommondbRemoteAppTestCase):
 
 
 @pytest.mark.scenario_ids("TC-LSP-3238-04")
-class TestCreateLocalOrRemoteApp(BaseCommondbRemoteAppTestCase):
-    """Test create_local_or_remote_app class method."""
+class TestCreateLocalOrClient(BaseCommondbClientTestCase):
+    """Test create_local_or_remote class method."""
 
     def test_invalid_app_setup_type_rejected(self) -> None:
         """Raise error for invalid app_setup_type."""
         with pytest.raises(exc.InitializationServiceError) as exc_info:
-            CommondbRemoteApp.create_local_or_remote_app(
+            CommondbClient.create_local_or_remote(
                 app_type=Mock(),
                 app_setup_type="INVALID",
             )
@@ -493,12 +493,12 @@ class TestCreateLocalOrRemoteApp(BaseCommondbRemoteAppTestCase):
     def test_app_setup_type_case_insensitive(self) -> None:
         """app_setup_type is case-insensitive."""
         with patch.object(
-            CommondbRemoteApp, "_create_local_app", return_value=(Mock(), Mock())
+            CommondbClient, "_create_local_client", return_value=(Mock(), Mock())
         ) as mock_local:
-            CommondbRemoteApp.create_local_or_remote_app(
+            CommondbClient.create_local_or_remote(
                 app_type=Mock(),
                 app_setup_type="local",  # lowercase
-                local_app_props={"user": {}},
+                local_client_props={"user": {}},
                 app_composer_class=Mock,
                 user_class=Mock,
                 service_type_enum=Mock,
@@ -513,55 +513,55 @@ class TestCreateLocalOrRemoteApp(BaseCommondbRemoteAppTestCase):
 
 
 @pytest.mark.scenario_ids("TC-LSP-3238-05")
-class TestHttpTimeoutConfiguration(BaseCommondbRemoteAppTestCase):
+class TestHttpTimeoutConfiguration(BaseCommondbClientTestCase):
     """Test HTTP timeout configuration per command class."""
 
-    def test_derived_remote_app_has_timeout_configuration(self) -> None:
-        """DerivedRemoteApp has DEFAULT_HTTP_TIMEOUTS configured."""
-        assert hasattr(DerivedRemoteApp, "DEFAULT_HTTP_TIMEOUTS")
-        assert DummyCommand in DerivedRemoteApp.DEFAULT_HTTP_TIMEOUTS
-        assert DerivedRemoteApp.DEFAULT_HTTP_TIMEOUTS[DummyCommand] == 30.0
+    def test_derived_client_has_timeout_configuration(self) -> None:
+        """DerivedClient has DEFAULT_HTTP_TIMEOUTS configured."""
+        assert hasattr(DerivedClient, "DEFAULT_HTTP_TIMEOUTS")
+        assert DummyCommand in DerivedClient.DEFAULT_HTTP_TIMEOUTS
+        assert DerivedClient.DEFAULT_HTTP_TIMEOUTS[DummyCommand] == 30.0
 
-    def test_derived_remote_app_initialization(self) -> None:
-        """DerivedRemoteApp can be initialized."""
-        app = DerivedRemoteApp(
+    def test_derived_client_initialization(self) -> None:
+        """DerivedClient can be initialized."""
+        app = DerivedClient(
             domain=self.domain,
             host="example.org",
             port=8000,
         )
-        assert isinstance(app, DerivedRemoteApp)
-        assert isinstance(app, CommondbRemoteApp)
+        assert isinstance(app, DerivedClient)
+        assert isinstance(app, CommondbClient)
 
-    def test_create_remote_app_applies_timeouts(self) -> None:
-        """_create_remote_app applies DEFAULT_HTTP_TIMEOUTS to remote app."""
+    def test_create_client_applies_timeouts(self) -> None:
+        """_create_client applies DEFAULT_HTTP_TIMEOUTS to remote app."""
         # Create a mock remote app class
-        mock_remote_app_instance = Mock(spec=RemoteApp)
+        mock_client_instance = Mock(spec=Client)
 
         # Patch the module and class to return our mock
         with patch("importlib.import_module") as mock_import:
             mock_module = Mock()
-            mock_module.MockRemoteApp = Mock(return_value=mock_remote_app_instance)
+            mock_module.MockClient = Mock(return_value=mock_client_instance)
             mock_import.return_value = mock_module
 
-            # Use DerivedRemoteApp to have DEFAULT_HTTP_TIMEOUTS set
-            app, user = DerivedRemoteApp._create_remote_app(
-                remote_app_props={
+            # Use DerivedClient to have DEFAULT_HTTP_TIMEOUTS set
+            app, user = DerivedClient._create_client(
+                client_props={
                     "module": "test.mock_module",
-                    "class_name": "MockRemoteApp",
+                    "class_name": "MockClient",
                 }
             )
 
             # Verify set_timeout was called for each timeout in DEFAULT_HTTP_TIMEOUTS
-            mock_remote_app_instance.set_timeout.assert_called_with(DummyCommand, 30.0)
+            mock_client_instance.set_timeout.assert_called_with(DummyCommand, 30.0)
             assert user is None
 
-    def test_base_remote_app_has_empty_timeouts(self) -> None:
-        """Base CommondbRemoteApp has empty DEFAULT_HTTP_TIMEOUTS."""
-        assert CommondbRemoteApp.DEFAULT_HTTP_TIMEOUTS == {}
+    def test_base_client_has_empty_timeouts(self) -> None:
+        """Base CommondbClient has empty DEFAULT_HTTP_TIMEOUTS."""
+        assert CommondbClient.DEFAULT_HTTP_TIMEOUTS == {}
 
     def test_timeout_configuration_does_not_affect_none_auth(self) -> None:
         """Timeout configuration works independently of auth protocol."""
-        app = DerivedRemoteApp(
+        app = DerivedClient(
             domain=self.domain,
             host="example.org",
             port=8000,
@@ -577,25 +577,25 @@ class TestHttpTimeoutConfiguration(BaseCommondbRemoteAppTestCase):
 
 
 @pytest.mark.scenario_ids("TC-LSP-3238-06")
-class TestCreateRemoteAppErrors(BaseCommondbRemoteAppTestCase):
-    """Test error handling in _create_remote_app."""
+class TestCreateClientErrors(BaseCommondbClientTestCase):
+    """Test error handling in _create_client."""
 
-    def test_remote_app_props_none_raises_error(self) -> None:
-        """_create_remote_app raises error when remote_app_props is None."""
+    def test_client_props_none_raises_error(self) -> None:
+        """_create_client raises error when client_props is None."""
         with pytest.raises(exc.InitializationServiceError) as exc_info:
-            CommondbRemoteApp._create_remote_app(None)
-        assert "remote_app_props must be provided" in str(exc_info.value)
+            CommondbClient._create_client(None)
+        assert "client_props must be provided" in str(exc_info.value)
 
-    def test_remote_app_missing_module_raises_error(self) -> None:
-        """_create_remote_app raises error when module key is missing."""
+    def test_client_missing_module_raises_error(self) -> None:
+        """_create_client raises error when module key is missing."""
         with pytest.raises(exc.InitializationServiceError) as exc_info:
-            CommondbRemoteApp._create_remote_app({"class_name": "MyApp"})
+            CommondbClient._create_client({"class_name": "MyApp"})
         assert "'module' and 'class_name' keys" in str(exc_info.value)
 
-    def test_remote_app_missing_class_name_raises_error(self) -> None:
-        """_create_remote_app raises error when class_name key is missing."""
+    def test_client_missing_class_name_raises_error(self) -> None:
+        """_create_client raises error when class_name key is missing."""
         with pytest.raises(exc.InitializationServiceError) as exc_info:
-            CommondbRemoteApp._create_remote_app({"module": "my.module"})
+            CommondbClient._create_client({"module": "my.module"})
         assert "'module' and 'class_name' keys" in str(exc_info.value)
 
 
@@ -605,7 +605,7 @@ class TestCreateRemoteAppErrors(BaseCommondbRemoteAppTestCase):
 
 
 @pytest.mark.scenario_ids("TC-LSP-3238-07")
-class TestIntegration(BaseCommondbRemoteAppTestCase):
+class TestIntegration(BaseCommondbClientTestCase):
     """Integration tests combining multiple features."""
 
     def test_oauth2_app_gets_headers_with_bearer_token(self) -> None:
@@ -620,11 +620,11 @@ class TestIntegration(BaseCommondbRemoteAppTestCase):
         )
 
         with patch(
-            "gen_epix.commondb.services.remote_app.OauthIdpClient"
+            "gen_epix.commondb.services.client.OauthIdpClient"
         ) as mock_idp_class:
             mock_idp_class.return_value = mock_idp_client
 
-            app = CommondbRemoteApp(
+            app = CommondbClient(
                 domain=self.domain,
                 host="example.org",
                 port=8000,
@@ -644,7 +644,7 @@ class TestIntegration(BaseCommondbRemoteAppTestCase):
 
     def test_none_auth_app_preserves_custom_headers(self) -> None:
         """Full flow: NONE auth app preserves custom default headers."""
-        app = CommondbRemoteApp(
+        app = CommondbClient(
             domain=self.domain,
             host="example.org",
             port=8000,
@@ -666,7 +666,7 @@ class TestIntegration(BaseCommondbRemoteAppTestCase):
 # ============================================================================
 # Non-CRUD handler tests
 #
-# Each test builds a real CommondbRemoteApp, mocks the underlying httpx
+# Each test builds a real CommondbClient, mocks the underlying httpx
 # client, invokes the handler directly, and checks the HTTP call it makes
 # (method, URL, body) plus that the response is parsed into the right model.
 # This guards against route/model drift between the API and the handler.
@@ -686,12 +686,12 @@ class TestNonCrudHandlers:
     """Test the hand-written (non-CRUD) command handlers."""
 
     @pytest.fixture
-    def app(self) -> CommondbRemoteApp:
-        return CommondbRemoteApp(DOMAIN, host="example.org", port=8000)
+    def app(self) -> CommondbClient:
+        return CommondbClient(DOMAIN, host="example.org", port=8000)
 
     @pytest.fixture
     def mock_client(self) -> Any:
-        with patch("gen_epix.fastapp.remote_app.httpx.Client") as mock_client_class:
+        with patch("gen_epix.fastapp.client.httpx.Client") as mock_client_class:
             client = MagicMock()
             client.__enter__.return_value = client
             client.__exit__.return_value = None
@@ -699,7 +699,7 @@ class TestNonCrudHandlers:
             yield client
 
     def test_get_identity_providers(
-        self, app: CommondbRemoteApp, mock_client: Any
+        self, app: CommondbClient, mock_client: Any
     ) -> None:
         data = [
             {
@@ -718,7 +718,7 @@ class TestNonCrudHandlers:
         assert url == app._routes[command.GetIdentityProvidersCommand]
         assert result == [model.IdentityProvider(**data[0])]
 
-    def test_invite_user(self, app: CommondbRemoteApp, mock_client: Any) -> None:
+    def test_invite_user(self, app: CommondbClient, mock_client: Any) -> None:
         organization_id = uuid4()
         cmd = command.InviteUserCommand(
             user=None,
@@ -749,7 +749,7 @@ class TestNonCrudHandlers:
         assert result == model.UserInvitation(**data)
 
     def test_retrieve_invite_user_constraints(
-        self, app: CommondbRemoteApp, mock_client: Any
+        self, app: CommondbClient, mock_client: Any
     ) -> None:
         data = {"roles": ["ADMIN"], "organization_ids": [str(uuid4())]}
         mock_client.request.return_value = _mock_response(data)
@@ -761,9 +761,7 @@ class TestNonCrudHandlers:
         assert url == app._routes[command.RetrieveInviteUserConstraintsCommand]
         assert result == model.UserInvitationConstraints(**data)
 
-    def test_register_invited_user(
-        self, app: CommondbRemoteApp, mock_client: Any
-    ) -> None:
+    def test_register_invited_user(self, app: CommondbClient, mock_client: Any) -> None:
         organization_id = uuid4()
         data = {"roles": ["ADMIN"], "organization_id": str(organization_id)}
         mock_client.request.return_value = _mock_response(data)
@@ -776,7 +774,7 @@ class TestNonCrudHandlers:
         assert result == model.User(**data)
 
     def test_organization_set_organization_update_association(
-        self, app: CommondbRemoteApp, mock_client: Any
+        self, app: CommondbClient, mock_client: Any
     ) -> None:
         organization_set_id = uuid4()
         member = model.OrganizationSetMember(
@@ -804,7 +802,7 @@ class TestNonCrudHandlers:
         assert result == [model.OrganizationSetMember(**data[0])]
 
     def test_data_collection_set_data_collection_update_association(
-        self, app: CommondbRemoteApp, mock_client: Any
+        self, app: CommondbClient, mock_client: Any
     ) -> None:
         data_collection_set_id = uuid4()
         member = model.DataCollectionSetMember(
@@ -830,7 +828,7 @@ class TestNonCrudHandlers:
         assert result == [model.DataCollectionSetMember(**data[0])]
 
     def test_retrieve_own_permissions(
-        self, app: CommondbRemoteApp, mock_client: Any
+        self, app: CommondbClient, mock_client: Any
     ) -> None:
         data = [{"command_name": "SomeCommand", "permission_type": "CREATE"}]
         mock_client.request.return_value = _mock_response(data)
@@ -842,7 +840,7 @@ class TestNonCrudHandlers:
         assert url == app._routes[command.RetrieveOwnPermissionsCommand]
         assert result == {Permission(**data[0])}
 
-    def test_anonymize_user(self, app: CommondbRemoteApp, mock_client: Any) -> None:
+    def test_anonymize_user(self, app: CommondbClient, mock_client: Any) -> None:
         tgt_user_id = uuid4()
         mock_client.request.return_value = _mock_response(None)
         result = app.anonymize_user(
@@ -854,7 +852,7 @@ class TestNonCrudHandlers:
         assert url == f"{route}/{tgt_user_id}/anonymize"
         assert result is None
 
-    def test_update_user(self, app: CommondbRemoteApp, mock_client: Any) -> None:
+    def test_update_user(self, app: CommondbClient, mock_client: Any) -> None:
         tgt_user_id = uuid4()
         organization_id = uuid4()
         cmd = command.UpdateUserCommand(
@@ -879,7 +877,7 @@ class TestNonCrudHandlers:
         assert result == model.User(**data)
 
     def test_update_user_own_organization(
-        self, app: CommondbRemoteApp, mock_client: Any
+        self, app: CommondbClient, mock_client: Any
     ) -> None:
         organization_id = uuid4()
         data = {"roles": ["ADMIN"], "organization_id": str(organization_id)}
@@ -897,7 +895,7 @@ class TestNonCrudHandlers:
         assert result == model.User(**data)
 
     def test_organization_identifier_issuer_link_update_association(
-        self, app: CommondbRemoteApp, mock_client: Any
+        self, app: CommondbClient, mock_client: Any
     ) -> None:
         organization_id = uuid4()
         link = model.OrganizationIdentifierIssuerLink(
@@ -923,7 +921,7 @@ class TestNonCrudHandlers:
         assert result == [model.OrganizationIdentifierIssuerLink(**data[0])]
 
     def test_retrieve_organization_contacts(
-        self, app: CommondbRemoteApp, mock_client: Any
+        self, app: CommondbClient, mock_client: Any
     ) -> None:
         organization_id = uuid4()
         organization = model.Organization.model_construct(name="Org", code="ORG1")
@@ -946,7 +944,7 @@ class TestNonCrudHandlers:
         assert result == model.OrganizationContacts(**data)
 
     def test_retrieve_organization_admin_name_emails(
-        self, app: CommondbRemoteApp, mock_client: Any
+        self, app: CommondbClient, mock_client: Any
     ) -> None:
         data = [{"email": "a@example.org"}]
         mock_client.request.return_value = _mock_response(data)
@@ -959,7 +957,7 @@ class TestNonCrudHandlers:
         assert result == [model.UserNameEmail(**data[0])]
 
     def test_retrieve_feature_flags(
-        self, app: CommondbRemoteApp, mock_client: Any
+        self, app: CommondbClient, mock_client: Any
     ) -> None:
         data = {"feature_flags": {"my_flag": True}}
         mock_client.request.return_value = _mock_response(data)
@@ -971,7 +969,7 @@ class TestNonCrudHandlers:
         assert url == app._routes[command.RetrieveFeatureFlagsCommand]
         assert result == {"my_flag": True}
 
-    def test_retrieve_licenses(self, app: CommondbRemoteApp, mock_client: Any) -> None:
+    def test_retrieve_licenses(self, app: CommondbClient, mock_client: Any) -> None:
         data = [{"name": "pkg", "version": "1.0"}]
         mock_client.request.return_value = _mock_response(data)
         result = app.retrieve_licenses(command.RetrieveLicensesCommand(user=None))
@@ -980,7 +978,7 @@ class TestNonCrudHandlers:
         assert url == app._routes[command.RetrieveLicensesCommand]
         assert result == [model.PackageMetadata(**data[0])]
 
-    def test_retrieve_outages(self, app: CommondbRemoteApp, mock_client: Any) -> None:
+    def test_retrieve_outages(self, app: CommondbClient, mock_client: Any) -> None:
         data = [{}]
         mock_client.request.return_value = _mock_response(data)
         result = app.retrieve_outages(command.RetrieveOutagesCommand(user=None))

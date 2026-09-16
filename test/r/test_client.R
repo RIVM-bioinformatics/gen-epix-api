@@ -1,7 +1,7 @@
 repo_root <- normalizePath(".")
 
-source(file.path(repo_root, "gen_epix", "commondb", "services", "remote_app.R"))
-source(file.path(repo_root, "gen_epix", "casedb", "services", "remote_app.R"))
+source(file.path(repo_root, "gen_epix", "commondb", "services", "client.R"))
+source(file.path(repo_root, "gen_epix", "casedb", "services", "client.R"))
 
 record_request <- function(url, body, access_token, timeout_seconds) {
     list(
