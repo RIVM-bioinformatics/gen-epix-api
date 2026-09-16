@@ -136,6 +136,27 @@ def main():
         from graphify.cli import _stamped_manifest_files
         from graphify.detect import save_manifest
 
+        # Measure how much of a shrink genuine deletions can account for, before
+        # the merge: nodes in the current graph whose source file is no longer in
+        # the repo. Step 4 uses this as the ceiling on an allowed shrink.
+        existing_path = Path("graphify-out/graph.json")
+        existing_nodes = (
+            json.loads(existing_path.read_text(encoding="utf-8")).get("nodes", [])
+            if existing_path.exists()
+            else []
+        )
+        existing_count = len(existing_nodes)
+        orphaned_count = 0
+        for n in existing_nodes:
+            sf = n.get("source_file")
+            if sf and not Path(sf).exists():
+                orphaned_count += 1
+        if orphaned_count:
+            print(
+                f"  {orphaned_count} node(s) in the current graph belong to files "
+                f"no longer in the repo"
+            )
+
         prune = deleted or None
         G = build_merge(
             [new_extraction],
@@ -230,13 +251,33 @@ def main():
         labels = {cid: f"Community {cid}" for cid in communities}
         questions = suggest_questions(G, communities, labels)
 
-        wrote = to_json(G, communities, "graphify-out/graph.json")
+        # to_json refuses any net node loss. After an incremental merge a loss is
+        # expected when files were deleted, so allow a shrink up to what the
+        # deleted files account for and fail on anything beyond it - an
+        # unexplained loss means missing chunks or a fuzzy-dedup collapse.
+        deficit = existing_count - G.number_of_nodes()
+        force = False
+        if deficit > 0:
+            if deficit <= orphaned_count:
+                force = True
+                print(
+                    f"ℹ Net -{deficit} node(s), within the {orphaned_count} node(s) "
+                    f"whose source files were deleted from the repo - writing."
+                )
+            else:
+                print(
+                    f"✗ Graph shrink-guard: net -{deficit} node(s), but only "
+                    f"{orphaned_count} are explained by deleted files."
+                )
+                print(
+                    "  The unexplained loss points at missing chunks or a fuzzy-dedup "
+                    "collapse. Investigate before forcing."
+                )
+                sys.exit(1)
+
+        wrote = to_json(G, communities, "graphify-out/graph.json", force=force)
         if not wrote:
-            print("⚠ Graph shrink-guard: existing graph has more nodes")
-            print(
-                "This should not happen right after an incremental merge unless "
-                "files were genuinely deleted - investigate before forcing."
-            )
+            print("⚠ Graph export refused the write (see warning above)")
             sys.exit(1)
 
         report = generate(
