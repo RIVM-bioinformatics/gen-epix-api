@@ -83,3 +83,20 @@ class DeleteAllOperationalDataResult(ModelNoId):
         default_factory=dict,
         description="Detailed information about the result of the deletion operation.",
     )
+
+
+class DeleteAllRefDataResult(ModelNoId):
+    """Represents the result of a delete-all-except-users-and-organizations operation."""
+
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="delete_all_ref_data_requests",
+        persistable=False,
+    )
+
+    success: bool = Field(
+        description="Indicates whether the deletion of all data except users and organizations was successful."
+    )
+    details: dict[str, str] = Field(
+        default_factory=dict,
+        description="Detailed information about the result of the deletion operation.",
+    )

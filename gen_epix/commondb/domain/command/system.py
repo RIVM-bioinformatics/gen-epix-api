@@ -21,6 +21,25 @@ class DeleteAllOperationalDataCommand(Command):
     )  # Persistable domain models for operational data, in order of deletion so that constraints do not fail (i.e. DAG sort order on links)
 
 
+class DeleteAllRefDataCommand(Command):
+    """Represents a request to delete all data except users and organizations.
+
+    Deletes all persistable domain data (operational and reference data such as
+    cases, case sets, sequences, ontology, and geo data) while preserving the
+    identity and access-control backbone: users, organizations, and everything
+    they depend on. Preservation is expressed as a set of service-type values;
+    every persistable model whose service type is not preserved is deleted in
+    reverse DAG order so foreign-key constraints do not fail.
+
+    This is intended as a maintenance operation or for use during development, and
+    should only be executable under specific conditions.
+    """
+
+    PRESERVED_SERVICE_TYPE_VALUES: ClassVar[frozenset[str]] = frozenset(
+        {"AUTH", "ORGANIZATION", "RBAC"}
+    )  # Service-type values whose persistable models are preserved (identity/access backbone)
+
+
 class RetrieveOutagesCommand(Command):
     """Represents a request to retrieve current and scheduled system outages for public availability status."""
 

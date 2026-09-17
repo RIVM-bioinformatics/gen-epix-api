@@ -19,6 +19,7 @@ class BaseSystemService(BaseService[BaseSystemRepository]):
         f = self.app.register_handler
         self.register_default_crud_handlers()
         f(command.DeleteAllOperationalDataCommand, self.delete_all_operational_data)
+        f(command.DeleteAllRefDataCommand, self.delete_all_ref_data)
         f(command.RetrieveOutagesCommand, self.retrieve_outages)
         f(command.RetrieveLicensesCommand, self.retrieve_licenses)
         f(command.RetrieveFeatureFlagsCommand, self.retrieve_feature_flags)
@@ -91,6 +92,21 @@ class BaseSystemService(BaseService[BaseSystemRepository]):
 
         Args:
             cmd: Command requesting deletion of all operational data.
+
+        Raises:
+            NotImplementedError: Always; concrete services implement deletion.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def delete_all_ref_data(
+        self, cmd: command.DeleteAllRefDataCommand
+    ) -> model.DeleteAllRefDataResult:
+        """Delete all data except users, organizations, and their dependencies.
+
+        Args:
+            cmd: Command requesting deletion of all data except the identity and
+                access-control backbone.
 
         Raises:
             NotImplementedError: Always; concrete services implement deletion.
