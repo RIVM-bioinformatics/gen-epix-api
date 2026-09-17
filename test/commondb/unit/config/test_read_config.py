@@ -9,7 +9,6 @@ from typing import Any, Iterator, cast
 
 import pytest
 
-from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.domain.enum import (
     AppType,
     DevIdpConfig,
@@ -17,7 +16,7 @@ from gen_epix.commondb.domain.enum import (
     FeatureFlag,
 )
 from gen_epix.commondb.domain.service import BaseAuthService
-from gen_epix.commondb.domain.util import set_env_variables
+from gen_epix.commondb.domain.util import get_app_cfg_class, set_env_variables
 from gen_epix.commondb.env import AppComposer
 from gen_epix.fastapp.enum import AuthFeatureFlag
 
@@ -65,7 +64,7 @@ def _read_config(
     # Construct AppCfg and AppComposer to trigger config loading and service initialization
     enum_module = importlib.import_module(f"gen_epix.{app_name.lower()}.domain.enum")
     app_composer_module = importlib.import_module(f"gen_epix.{app_name.lower()}.env")
-    app_cfg = AppCfg(
+    app_cfg = get_app_cfg_class(app_name)(
         app_name,
         enum_module.ServiceType,
         enum_module.RepositoryType,
@@ -124,7 +123,7 @@ def _write_string_auth_override_file(override_tmp_dir: Path, app_name: str) -> P
 def _assert_default_import_payload(payload: dict, app_name: str) -> None:
     spec = _APP_IMPORT_SPECS[app_name]
 
-    assert payload["app_cfg_type"] == "AppCfg"
+    assert payload["app_cfg_type"] == get_app_cfg_class(app_name).__name__
     assert payload["app_composer_type"] == "AppComposer"
     assert payload["cfg_auto_create_new_users"] is spec["default_auto_create_new_users"]
     assert payload["cfg_root_token_time_to_live"] == 0
@@ -141,7 +140,7 @@ def _assert_default_import_payload(payload: dict, app_name: str) -> None:
 
 
 def _assert_string_override_payload(payload: dict, app_name: str) -> None:
-    assert payload["app_cfg_type"] == "AppCfg"
+    assert payload["app_cfg_type"] == get_app_cfg_class(app_name).__name__
     assert payload["app_composer_type"] == "AppComposer"
     assert payload["cfg_auto_create_new_users"] == False
     assert payload["cfg_root_token_time_to_live"] == 900

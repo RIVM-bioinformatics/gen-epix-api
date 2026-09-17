@@ -141,6 +141,24 @@ def set_env_variables(
     )
 
 
+def get_app_cfg_class(app_type: AppType | str) -> type[AppCfg]:
+    """Return the AppCfg subclass `gen_epix.<app>.config` exposes for `app_type`.
+
+    Every app besides commondb exposes its own AppCfg subclass, following the
+    naming convention `<App>AppCfg`; commondb has none of its own, since
+    AppCfg's own hardcoded defaults are already commondb-shaped. A generic
+    call site that constructs configuration for a caller-supplied app type
+    must resolve through this function rather than `AppCfg` directly, or it
+    would silently pick up commondb's own defaults regardless of which app
+    it is actually configuring.
+    """
+    app_name = (app_type.value if isinstance(app_type, AppType) else app_type).lower()
+    if app_name == AppType.COMMONDB.value.lower():
+        return AppCfg
+    config_module = importlib.import_module(f"gen_epix.{app_name}.config")
+    return cast(type[AppCfg], getattr(config_module, f"{app_name.capitalize()}AppCfg"))
+
+
 def create_demo_data_from_repository(
     user_id: UUID,
     entities: list[Entity],
@@ -196,17 +214,18 @@ def load_demo_data(
     # Get classes and config for the app type
 
     enum = importlib.import_module(f"{module_root}.domain.enum")
+    app_cfg_class = get_app_cfg_class(app_type)
 
     set_env_variables(app_type, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_DEMO)
-    dict_app_cfg = AppCfg(
+    dict_app_cfg = app_cfg_class(
         app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
     )
     set_env_variables(app_type, DevIdpConfig.MOCK, DevRepositoryConfig.SA_SQLITE_DEMO)
-    sa_sqlite_app_cfg = AppCfg(
+    sa_sqlite_app_cfg = app_cfg_class(
         app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
     )
     set_env_variables(app_type, DevIdpConfig.MOCK, DevRepositoryConfig.SA_SQL)
-    sa_sql_app_cfg = AppCfg(
+    sa_sql_app_cfg = app_cfg_class(
         app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
     )
     # user_id = dict_app_cfg.cfg["service"]["auth"]["props"]["root"]["user"]["id"]
@@ -419,7 +438,7 @@ def get_app_cfgs(
             cfg_path=cfg_path,
             extra_settings_files=resolved_extra_settings_files,
         )
-        app_cfgs[name] = AppCfg(
+        app_cfgs[name] = get_app_cfg_class(app_type)(
             app_type,
             service_type_enum,
             repository_type_enum,
