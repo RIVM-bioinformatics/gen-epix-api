@@ -37,7 +37,7 @@ application's operational records and retains common organization data and
 app-specific reference data.
 
 Treat reset as a maintenance operation: pause uploads, imports, background jobs,
-and other writers; call the endpoint; then resume writers after a successful 204
+and other writers; call the endpoint; then resume writers after a successful 200
 response. The endpoint is synchronous and idempotent. A missing endpoint means the
 flag is disabled or the server version does not support this feature. Each app is
 reset independently; the endpoint does not call the other applications.

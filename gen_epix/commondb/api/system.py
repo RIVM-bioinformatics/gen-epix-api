@@ -64,6 +64,19 @@ class LicensesResponseBody(PydanticBaseModel):
     packages: list[PackageMetadata]
 
 
+def _is_feature_flag_enabled(app: App, feature_flag: enum.FeatureFlag) -> bool:
+    """Return whether a feature flag is enabled using supported configuration keys.
+
+    Configuration files use lowercase keys while the enum values are uppercase
+    public identifiers. Prefer the enum value when present, then the lowercase
+    enum key and the legacy operational-data configuration key.
+    """
+    keys = [feature_flag.value, feature_flag.value.lower()]
+    if feature_flag is enum.FeatureFlag.ALLOW_DELETE_OPERATIONAL_DATA:
+        keys.append("allow_delete_all_operational_data")
+    return any(app.get_feature_flag(key) for key in keys)
+
+
 def create_system_endpoints(
     router: APIRouter | FastAPI,
     app: App,
@@ -196,7 +209,7 @@ def create_system_endpoints(
         return retval
 
     # Optional endpoints depending on feature flags
-    if app.get_feature_flag(enum.FeatureFlag.ALLOW_DELETE_OPERATIONAL_DATA.value):
+    if _is_feature_flag_enabled(app, enum.FeatureFlag.ALLOW_DELETE_OPERATIONAL_DATA):
         assert (
             delete_all_operational_data_command_class is not None
         ), "delete_all_command_class must be provided"
@@ -209,7 +222,7 @@ def create_system_endpoints(
             operation_id="operational_data__delete",
             name="Delete all operational data",
             description=delete_all_operational_data_command_class.__doc__,
-            status_code=204,
+            status_code=200,
         )
         async def operational_data__delete(
             user: registered_user_dependency,  # type: ignore[valid-type]
@@ -224,14 +237,14 @@ def create_system_endpoints(
             )
             return retval
 
-    if app.get_feature_flag(enum.FeatureFlag.ALLOW_DELETE_REF_DATA.value):
+    if _is_feature_flag_enabled(app, enum.FeatureFlag.ALLOW_DELETE_REF_DATA):
 
         @router.delete(
             "/ref_data",
             operation_id="ref_data__delete",
             name="Delete all data except users and organizations",
             description=command.DeleteAllRefDataCommand.__doc__,
-            status_code=204,
+            status_code=200,
         )
         async def ref_data__delete(
             user: registered_user_dependency,  # type: ignore[valid-type]

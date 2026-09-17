@@ -15,6 +15,7 @@ from gen_epix.commondb.api.auth import create_auth_endpoints
 from gen_epix.commondb.api.organization import create_organization_endpoints
 from gen_epix.commondb.api.rbac import create_rbac_endpoints
 from gen_epix.commondb.api.system import create_system_endpoints
+from gen_epix.commondb.domain import model as common_model
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.router import RouterData
 
@@ -52,6 +53,7 @@ def create_routers(
             "endpoints_function_kwargs": {
                 "service_type": enum.ServiceType.SYSTEM,
                 "delete_all_operational_data_command_class": command.DeleteAllOperationalDataCommand,
+                "delete_all_operational_data_result_class": common_model.DeleteAllOperationalDataResult,
             },
         },
         # Specific routers
