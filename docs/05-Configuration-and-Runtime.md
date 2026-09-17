@@ -8,12 +8,22 @@ This chapter covers the settings model, IDP and repository modes, startup lifecy
 
 ## 1. Settings Model
 
-Configuration loading is Dynaconf-based and environment-driven. The process is staged:
+Configuration loading is Dynaconf-based and environment-driven, layered on
+top of hardcoded Python defaults. The process is staged:
 
-1. **Logging configuration** is loaded from `<APP>_LOG_CONFIG_FILE`. (Source: `gen_epix/commondb/config/cfg.py#L188-L215`)
-2. **Settings** are loaded from `<APP>_SETTINGS_FILES` via a `SettingsManager`. Dynaconf merges the files in order — later files override earlier ones. (Source: `gen_epix/commondb/config/settings_manager.py#L43-L77`)
-3. **Runtime env vars** with `__` separators override any nested key (e.g. `COMMONDB__LOG__LEVEL`). (Source: `gen_epix/commondb/config/settings_manager.py#L15-L17`; Source: `gen_epix/commondb/config/settings_manager.py#L71-L74`)
-4. **Validation** — string-based class references and factory names are resolved into actual Python objects. Service and repository classes are loaded via `importlib.import_module`. (Source: `gen_epix/commondb/config/cfg.py#L218-L269`)
+1. **Hardcoded defaults** — `AppCfg._DEFAULT_SETTINGS` (a plain class
+   attribute, not a file) supplies the values shared across every app:
+   HTTP headers, log format, the `service.defaults`/`repository.defaults`
+   factory and connection shape, and commondb's own module paths, port,
+   and role, since commondb uses plain `AppCfg` directly. `CasedbAppCfg`,
+   `SeqdbAppCfg`, and `OmopdbAppCfg` each declare their own
+   `_DEFAULT_SETTINGS`, built by recursively merging their deltas (port,
+   module paths, role, extra services) on top of the base dict. See
+   §1a below.
+2. **Logging configuration** is loaded from `<APP>_LOG_CONFIG_FILE`. (Source: `gen_epix/commondb/config/cfg.py#L188-L215`)
+3. **Settings files** are loaded from `<APP>_SETTINGS_FILES` via a `SettingsManager`, with the hardcoded defaults given the lowest precedence. Dynaconf merges the files in order — later files override earlier ones, and any of them can override the defaults. (Source: `gen_epix/commondb/config/settings_manager.py#L31-L120`)
+4. **Runtime env vars** with `__` separators override any nested key, including a file's own value (e.g. `COMMONDB__LOG__LEVEL`). (Source: `gen_epix/commondb/config/settings_manager.py#L15-L17`)
+5. **Validation** — a set of `dynaconf.Validator` objects run immediately once settings files and environment variables are merged, rejecting values that don't fit their expected type, allowed set, or presence, with a message naming the exact key. Only after validation passes are string-based class references and factory names resolved into actual Python objects: service and repository classes are loaded via `importlib.import_module`, with a clear error naming the app, the key, and the module/class string if that import fails. (Source: `gen_epix/commondb/config/cfg.py`, `_get_validators`/`_init_validate_settings`)
 
 Missing settings files fail fast (`FileNotFoundError`). This makes misconfiguration a startup failure rather than a silent foot-gun. (Source: `gen_epix/commondb/config/settings_manager.py#L63-L67`)
 
@@ -21,12 +31,129 @@ Missing settings files fail fast (`FileNotFoundError`). This makes misconfigurat
 
 | Category | Description |
 |----------|-------------|
-| `settings.toml` | Base config: host, port, HTTP headers, service class names, default factories |
-| `feature_flags.toml` | Feature flag configuration |
-| `settings.repository.dict.toml` / `settings.repository.sa.toml` | Swaps in Dict or SQLAlchemy repository classes per service type |
-| `.example.secrets.*` files | Connection strings, file paths, IdP tokens — never checked in; supplied per environment |
+| `settings.toml` | Overrides for the app-agnostic parts of `AppCfg._DEFAULT_SETTINGS` not otherwise covered below (rarely needed, since those defaults are already correct for each app) |
+| `settings.repository.dict.secrets.toml` / `settings.repository.sa_sqlite.secrets.toml` | Shared per-backend-family repository config (type, module/class_name where applicable, and a per-repo file-path template) for the `DICT_*`/`SA_SQLITE_*` repository modes |
+| `settings.repository.{dict,sa_sqlite}.{demo,empty}.secrets.toml` | One line each, setting that backend family's file-path template to the demo or empty dataset |
+| `.example.secrets.repository.sa_sql.toml` | The one remaining copy-first template: `SA_SQL`'s real credentials, kept as `.example.` since it is the one file in this group with credential-shaped fields — though `SA_SQL` itself needs no file at all for local/dev use, since its dummy values already live in `AppCfg._DEFAULT_SETTINGS` |
+| Root `config/identity_providers.toml` / `mock_identity_provider.toml` / `no_identity_providers.toml` | Selected per `DevIdpConfig` — genuine per-mode choices, not filler defaults |
 
-(Source: `gen_epix/casedb/config/settings.toml#L1-L4`; Source: `gen_epix/casedb/config/settings.repository.dict.toml#L1-L27`; Source: `gen_epix/casedb/config/feature_flags.toml#L1-L3`)
+`SA_SQL` is the baseline repository backend: it needs no settings file at
+all, since `AppCfg._DEFAULT_SETTINGS["repository"]` already describes it
+completely, including credentials that match the SA password this repo's
+own docker-compose SQL Server container is provisioned with. Selecting
+`DICT_*` or `SA_SQLITE_*` layers the two files above on top of that
+default. See §1b below for the full precedence and a documented side
+effect of that layering.
+
+(Source: `gen_epix/commondb/config/cfg.py`, `AppCfg._DEFAULT_SETTINGS`; Source: `gen_epix/casedb/config/settings.repository.dict.secrets.toml`)
+
+### 1a. Hardcoded defaults and per-app configuration classes
+
+| App | `AppCfg` subclass | Location | Baked-in deltas over the base defaults |
+|-----|--------------------|----------|------------------------------------------|
+| commondb | `AppCfg` (no subclass) | `gen_epix/commondb/config/cfg.py` | — (this app's values *are* the base defaults) |
+| casedb | `CasedbAppCfg` | `gen_epix/casedb/config/cfg.py` | port 8000, `id_factory="ULID"` (every other app uses `UUID4`), `CASEDB_ORG_USER` role, `case`/`geo`/`ontology` services, the seqdb client block |
+| seqdb | `SeqdbAppCfg` | `gen_epix/seqdb/config/cfg.py` | port 8001, `SEQDB_ORG_USER` role, `seq`/`file` services |
+| omopdb | `OmopdbAppCfg` | `gen_epix/omopdb/config/cfg.py` | port 8002, `OMOPDB_ORG_USER` role, `omop` service |
+
+Each subclass's `_DEFAULT_SETTINGS` is built once, at class-definition
+time, via `AppCfg._deep_merge(AppCfg._DEFAULT_SETTINGS, {...own deltas...})`
+— a recursive dict merge (dict-vs-dict keys recurse, anything else is
+replaced wholesale). Each app's `app.py` constructs its subclass with no
+arguments (e.g. `APP_CFG = CasedbAppCfg()`); the subclass's `__init__`
+supplies its own name and enums as constructor defaults, so any keyword
+argument `AppCfg.__init__` accepts — including `settings_files=[...]` for
+isolated test construction — still works as an override.
+
+A small number of call sites construct configuration generically, for a
+caller-supplied app type rather than one hardcoded app (the ETL script,
+a couple of test/demo-data helpers): these resolve the right subclass via
+`gen_epix.commondb.domain.util.get_app_cfg_class(app_type)` instead of
+constructing `AppCfg` directly, which would otherwise silently pick up
+commondb's own defaults regardless of which app is actually being
+configured.
+
+### 1b. Repository configuration: files and precedence
+
+`repository.defaults.type = "SA_SQL"` and its connection details are
+always present, supplied by `AppCfg._DEFAULT_SETTINGS`, active whenever
+`DevRepositoryConfig.SA_SQL` is selected without any further file.
+Choosing `DICT_DEMO`, `DICT_EMPTY`, `SA_SQLITE_DEMO`, or `SA_SQLITE_EMPTY`
+layers two files on top of that default, assembled by `set_env_variables`:
+
+- **`SA_SQL`**: no repository file is loaded.
+- **`DICT_DEMO` / `DICT_EMPTY`**: `settings.repository.dict.secrets.toml`
+  (shared: `type = "DICT"`, `dir`, and every repo's `module`/`class_name`/
+  `file` — the `file` value is a template referencing
+  `{this.repository.defaults.props.variant}`, not a literal filename),
+  then `settings.repository.dict.demo.secrets.toml` or
+  `settings.repository.dict.empty.secrets.toml` (one line each:
+  `variant = "full"` or `variant = "empty"`), which resolves every repo's
+  `file` template at once. `@format` strings resolve against the
+  fully-merged settings at read time, not at each file's own parse time,
+  so load order between the two files does not matter for this to work.
+- **`SA_SQLITE_DEMO` / `SA_SQLITE_EMPTY`**: the same two-file pattern with
+  `settings.repository.sa_sqlite.secrets.toml` (`type = "SA_SQLITE"`; no
+  module/class_name override, since SA_SQLITE reuses the SA_SQL default's
+  repository classes) plus a one-line `variant` file.
+
+**A known, accepted side effect**: because `AppCfg._DEFAULT_SETTINGS` is
+always the lowest layer, switching to `DICT_DEMO` does not *remove*
+`repository.defaults.props.driver`/`server`/`uid`/`pwd` — Dynaconf's
+merge is per-key, not a whole-block replacement, so those SA_SQL-only
+fields remain present, unused, alongside the new `dir`/`variant` keys. No
+repository class ever reads them in DICT/SA_SQLITE mode, so this is
+harmless at runtime; it does mean a `to_toml()` export (§1c) of a
+DICT-mode config still shows those fields. Per-repo `connection_string`
+is not duplicated for this same reason: it is set once, at
+`repository.defaults.props`, and `AppCfg._init_validate_settings`'s
+existing `repository.defaults | repository.<x>` merge takes the whole
+`props` dict from whichever side has it — a repo with no `props` of its
+own falls through to the default `connection_string` entirely, and a
+repo whose `props` are overridden (a `file` path) replaces it entirely,
+rather than the stale `connection_string` coexisting alongside `file`.
+
+### 1c. Exporting resolved config
+
+`AppCfg.to_toml()` / `AppCfg.to_dict()` serialize the fully-resolved
+configuration (defaults, settings files, and environment variables
+merged) for inspection or migration to another environment. By default
+(`resolved=False`) they return the pre-validation snapshot — every value
+still a plain string, safe to write to disk and reload as a settings
+file. With `resolved=True`, they return a display-only copy of the
+post-validation config, with non-serializable values (imported classes,
+resolved factory objects, enum members) replaced by their `repr()` — not
+meant to be reloaded.
+
+### 1d. Typed configuration access
+
+`AppCfg.cfg` (and, on `CasedbAppCfg`, the wider `resolved_cfg`) returns
+the same live Dynaconf object every call site already reads via
+`cfg["service"]["defaults"]`-style subscripting — but its *static* type
+is now a `TypedDict` (`gen_epix/commondb/config/cfg_types.py`, one per
+app), so a renamed or missing config key is a type-checker error rather
+than a runtime one, with no change to how the value is actually read.
+`TypedDict` does not support attribute-style access
+(`cfg.app.debug`) the way Dynaconf's `Box` does — every call site uses
+subscript access (`cfg["app"]["debug"]`).
+
+### 1e. Feature flags
+
+Feature-flag keys are enum members, not bare strings:
+`gen_epix.commondb.domain.enum.FeatureFlag` holds the flags shared by
+every app (`ALLOW_DELETE_ALL_OPERATIONAL_DATA`, `UPDATE_OWN_ORGANIZATION`,
+`AUTO_CREATE_NEW_USERS`), and casedb additionally has
+`gen_epix.casedb.domain.enum.CasedbFeatureFlag` (`DISABLE_UPLOAD`) for a
+flag no other app uses — a standalone enum rather than a subclass, since
+Python does not allow adding members to a subclass of an `Enum` that
+already has any. `App.get_feature_flag`/`set_feature_flag` accept only
+`Enum` members, not strings, so a typo or a stale rename is a static or
+import-time error instead of a silently-ignored lookup. To add a new
+flag: add a member to the enum it conceptually belongs to (commondb's, or
+a new per-app one following the `CasedbFeatureFlag` pattern), whose
+`.value` matches the `[feature_flags]` TOML key exactly; `AppComposer`
+converts every `[feature_flags]` key into its matching enum member at
+startup and raises a clear error for any key it doesn't recognize.
 
 ### Operational-data reset
 
@@ -194,19 +321,20 @@ Prepares environment context and transfers demo data from dict repositories into
 
 ## Evidence Sources
 
-- `run.py#L17-L200`
-- `gen_epix/commondb/util.py#L61-L119`
-- `gen_epix/commondb/config/cfg.py#L155-L269`
-- `gen_epix/commondb/config/settings_manager.py#L15-L77`
-- `gen_epix/commondb/config/logging.yaml#L1-L35`
-- `gen_epix/commondb/env.py#L103-L197`
-- `gen_epix/commondb/base_env.py#L66-L93`
-- `gen_epix/commondb/app_setup.py#L75-L126`
-- `gen_epix/commondb/domain/enum.py#L82-L113`
-- `gen_epix/casedb/config/settings.toml#L1-L4`
-- `gen_epix/casedb/config/feature_flags.toml#L1-L3`
-- `gen_epix/casedb/config/settings.repository.dict.toml#L1-L27`
-- `config/identity_providers.toml#L1-L34`
-- `config/mock_identity_provider.toml#L1-L16`
-- `config/no_identity_providers.toml#L1-L1`
-- `etl.py#L72-L148`
+- `run.py`
+- `gen_epix/commondb/domain/util.py` (`set_env_variables`, `get_app_cfg_class`)
+- `gen_epix/commondb/config/cfg.py` (`AppCfg`, `_DEFAULT_SETTINGS`, `_get_validators`, `to_toml`/`to_dict`)
+- `gen_epix/commondb/config/cfg_types.py`
+- `gen_epix/commondb/config/settings_manager.py`
+- `gen_epix/commondb/config/logging.yaml`
+- `gen_epix/commondb/env.py` (`AppComposer.compose_application`, feature-flag conversion)
+- `gen_epix/commondb/base_env.py`
+- `gen_epix/commondb/app_setup.py`
+- `gen_epix/commondb/domain/enum.py` (`FeatureFlag`, `FEATURE_FLAG_TOML_KEYS`)
+- `gen_epix/casedb/config/cfg.py`, `gen_epix/casedb/config/cfg_types.py`
+- `gen_epix/casedb/domain/enum.py` (`CasedbFeatureFlag`)
+- `gen_epix/casedb/config/settings.repository.dict.secrets.toml`
+- `config/identity_providers.toml`
+- `config/mock_identity_provider.toml`
+- `config/no_identity_providers.toml`
+- `etl.py`
