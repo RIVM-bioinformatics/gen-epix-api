@@ -224,6 +224,28 @@ def create_system_endpoints(
             )
             return retval
 
+    if app.get_feature_flag(enum.FeatureFlag.ALLOW_DELETE_REF_DATA.value):
+
+        @router.delete(
+            "/ref_data",
+            operation_id="ref_data__delete",
+            name="Delete all data except users and organizations",
+            description=command.DeleteAllRefDataCommand.__doc__,
+            status_code=204,
+        )
+        async def ref_data__delete(
+            user: registered_user_dependency,  # type: ignore[valid-type]
+        ) -> model.DeleteAllRefDataResult:
+            """Delete all data except the identity/access backbone via the command lifecycle."""
+            retval: model.DeleteAllRefDataResult = exc.handle_command(
+                app=app,
+                user=user,
+                exception_code="f852ea1d",
+                input_command=command.DeleteAllRefDataCommand(user=user),
+                input_handle_exception=handle_exception,
+            )
+            return retval
+
     # CRUD
     crud_endpoint_sets = CrudEndpointGenerator.create_crud_endpoint_set_for_domain(
         app,

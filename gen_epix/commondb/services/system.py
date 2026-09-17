@@ -149,6 +149,61 @@ class SystemService(BaseSystemService):
                 retval.details[model_class.ENTITY.name] = f"{type(e).__name__}: {e}"
         return retval
 
+    def delete_all_ref_data(
+        self, cmd: command.DeleteAllRefDataCommand
+    ) -> model.DeleteAllRefDataResult:
+        """Delete all data except users, organizations, and their dependencies.
+
+        Iterates over every persistable model in reverse DAG order (children before
+        parents) and issues a ``DELETE_ALL`` for each, except models belonging to a
+        preserved service type (the identity and access-control backbone: users,
+        organizations, roles, and everything they depend on). Deleting in reverse
+        DAG order and only for non-preserved service types keeps foreign-key
+        constraints satisfied, because preserved (backbone) models never reference
+        deleted (domain) models.
+
+        Args:
+            cmd: Command requesting deletion of all data except the backbone.
+
+        Returns:
+            DeleteAllRefDataResult. The `success` attribute indicates overall
+            success, and `details` provides the IDs of deleted records per model
+            class as a JSON-encoded list of IDs, or the error message when a
+            model class could not be deleted.
+        """
+        domain = self.app.domain
+        preserved = cmd.PRESERVED_SERVICE_TYPE_VALUES
+        retval = model.DeleteAllRefDataResult(success=True)
+        # Children before parents so foreign-key constraints are not violated.
+        sorted_model_classes = domain.get_dag_sorted_models(
+            persistable=True, reverse=True
+        )
+        for model_class in sorted_model_classes:
+            service_type = domain.get_service_type_for_model(model_class)
+            service_type_value = getattr(service_type, "value", None)
+            if service_type_value in preserved:
+                continue
+            try:
+                crud_command_class = domain.get_crud_command_for_model(model_class)
+            except Exception:
+                # Model is not independently deletable via a CRUD command.
+                continue
+            try:
+                deleted_ids = self.app.handle(
+                    crud_command_class(
+                        user=cmd.user,
+                        operation=CrudOperation.DELETE_ALL,
+                        return_id=True,
+                    )
+                )
+                retval.details[model_class.ENTITY.name] = json.dumps(
+                    [str(x) for x in deleted_ids]
+                )
+            except Exception as e:
+                retval.success = False
+                retval.details[model_class.ENTITY.name] = f"{type(e).__name__}: {e}"
+        return retval
+
     @staticmethod
     @cached(cache=_PARSE_AND_GET_PACKAGE_METADATA_CACHE)
     def _parse_and_get_package_metadata() -> list[model.PackageMetadata]:
