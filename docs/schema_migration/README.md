@@ -83,6 +83,34 @@ Run the commands with `ALEMBIC_URL` set to the relevant database connection.
 `stamp` records a revision but does not validate or change the tables, so it
 must only be used after confirming the existing schema matches that baseline.
 
+## `etl.py` modes and the cutover to Alembic
+
+`etl.py` (repo root) has three modes, selected by its trailing CLI argument:
+
+- `reset_database` — a **one-time** cutover step. Wipes the target database
+  completely, including entity tables/schemas *and* the Alembic
+  `alembic.alembic_version` tracking table/schema, then immediately runs
+  `alembic upgrade head` for that service. Run this once per database when
+  cutting it over to Alembic management (or when you deliberately want a
+  full reset); running it again would erase all data again, so it is not
+  part of the regular deploy loop. Legacy callers can still reach this mode
+  via the older `empty`/`false`/`0`/`no`/`off` tokens.
+- `migrate` — runs `alembic upgrade head` for that service only, touching no
+  data and dropping nothing. Exists so a standalone per-deploy migration job
+  can be wired up (in whichever infra project runs these jobs) with no
+  further code changes here.
+- `load_demodata` (default) — verifies the live schema matches the current
+  entities (via `SARepository.check_schema_matches`) and fails fast with a
+  clear message if it doesn't (e.g. Alembic hasn't been run yet), then loads
+  demo data. Never drops or creates schema itself; it assumes `reset_database`
+  or `migrate` already brought the database to head.
+
+Note: as of this writing there is no separate, automated per-deploy
+migration Job wired into infra for *ongoing* schema changes (revisions added
+after a database's initial cutover) — `migrate` mode above is what such a
+job would call, but adding that job is a separate, not yet completed,
+infra-side task.
+
 ## Developing a migration
 
 1. Change the SQLAlchemy models for one service.
