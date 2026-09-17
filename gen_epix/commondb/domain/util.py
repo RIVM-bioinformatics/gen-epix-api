@@ -90,12 +90,6 @@ def set_env_variables(
     settings_files: list[Path] = []
     # General settings
     settings_files.append(cfg_path / "settings.toml")
-    # TODO: determine whether a separate file is necessary for feature flags or whether they can just be included in settings.toml, and if the latter, remove this and the corresponding env variable
-    # Feature flags (optional, as they can also be included in settings.toml, but can be useful to have them in a separate file for easier access and modification during development and testing)
-    file = cfg_path / "feature_flags.toml"
-    settings_files.append(file) if file.is_file() else None
-    # Service secrets
-    settings_files.append(cfg_path / ".example.secrets.service.toml")
     # Identity provider settings
     if dev_idp_config_enum == DevIdpConfig.IDPS:
         settings_files.append(general_cfg_path / "identity_providers.toml")
@@ -105,28 +99,43 @@ def set_env_variables(
         settings_files.append(general_cfg_path / "no_identity_providers.toml")
     else:
         raise ValueError(f"Unknown dev_idp_config: {dev_idp_config_enum}")
-    # Repository settings
-    if dev_repository_config_enum in DevRepositoryConfigSet.DICT.value:
-        settings_files.append(cfg_path / "settings.repository.dict.toml")
-    elif dev_repository_config_enum in DevRepositoryConfigSet.SA.value:
-        settings_files.append(cfg_path / "settings.repository.sa.toml")
-    else:
-        raise ValueError(f"Unknown dev_repository_config: {dev_repository_config_enum}")
-    # Repository secrets
-    if dev_repository_config_enum == DevRepositoryConfig.DICT_DEMO:
-        settings_files.append(cfg_path / ".example.secrets.repository.dict.demo.toml")
-    elif dev_repository_config_enum == DevRepositoryConfig.DICT_EMPTY:
-        settings_files.append(cfg_path / ".example.secrets.repository.dict.empty.toml")
-    elif dev_repository_config_enum == DevRepositoryConfig.SA_SQLITE_DEMO:
-        settings_files.append(
-            cfg_path / ".example.secrets.repository.sa_sqlite.demo.toml"
-        )
-    elif dev_repository_config_enum == DevRepositoryConfig.SA_SQLITE_EMPTY:
-        settings_files.append(
-            cfg_path / ".example.secrets.repository.sa_sqlite.empty.toml"
-        )
-    elif dev_repository_config_enum == DevRepositoryConfig.SA_SQL:
-        settings_files.append(cfg_path / ".example.secrets.repository.sa_sql.toml")
+    # Repository settings. SA_SQL needs no file: AppCfg._DEFAULT_SETTINGS
+    # already describes it, as the baseline repository backend. DICT and
+    # SA_SQLITE each load a shared file for their backend family (type,
+    # module/class_name where applicable, and a per-repo file-path template
+    # referencing {this.repository.defaults.props.variant}), followed by a
+    # one-line file that sets that variant to "full" or "empty" — the
+    # template resolves against whichever variant file is loaded alongside
+    # it, regardless of load order, since Dynaconf's @format strings
+    # resolve against the fully-merged settings at read time.
+    if dev_repository_config_enum == DevRepositoryConfig.SA_SQL:
+        pass
+    elif dev_repository_config_enum in (
+        DevRepositoryConfig.DICT_DEMO,
+        DevRepositoryConfig.DICT_EMPTY,
+    ):
+        settings_files.append(cfg_path / "settings.repository.dict.secrets.toml")
+        if dev_repository_config_enum == DevRepositoryConfig.DICT_DEMO:
+            settings_files.append(
+                cfg_path / "settings.repository.dict.demo.secrets.toml"
+            )
+        else:
+            settings_files.append(
+                cfg_path / "settings.repository.dict.empty.secrets.toml"
+            )
+    elif dev_repository_config_enum in (
+        DevRepositoryConfig.SA_SQLITE_DEMO,
+        DevRepositoryConfig.SA_SQLITE_EMPTY,
+    ):
+        settings_files.append(cfg_path / "settings.repository.sa_sqlite.secrets.toml")
+        if dev_repository_config_enum == DevRepositoryConfig.SA_SQLITE_DEMO:
+            settings_files.append(
+                cfg_path / "settings.repository.sa_sqlite.demo.secrets.toml"
+            )
+        else:
+            settings_files.append(
+                cfg_path / "settings.repository.sa_sqlite.empty.secrets.toml"
+            )
     else:
         raise ValueError(f"Unknown dev_repository_config: {dev_repository_config_enum}")
     # Add any extra settings files at the end
