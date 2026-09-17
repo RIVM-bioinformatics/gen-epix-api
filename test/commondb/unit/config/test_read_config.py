@@ -10,10 +10,16 @@ from typing import Any, Iterator, cast
 import pytest
 
 from gen_epix.commondb.config import AppCfg
-from gen_epix.commondb.domain.enum import AppType, DevIdpConfig, DevRepositoryConfig
+from gen_epix.commondb.domain.enum import (
+    AppType,
+    DevIdpConfig,
+    DevRepositoryConfig,
+    FeatureFlag,
+)
 from gen_epix.commondb.domain.service import BaseAuthService
 from gen_epix.commondb.domain.util import set_env_variables
 from gen_epix.commondb.env import AppComposer
+from gen_epix.fastapp.enum import AuthFeatureFlag
 
 _REPO_ROOT = Path(__file__).parents[4]
 _APP_IMPORT_SPECS = {
@@ -83,10 +89,10 @@ def _read_config(
         "cfg_auto_create_new_users": auth_props["auto_create_new_users"],
         "cfg_root_token_time_to_live": auth_props["root_token_time_to_live"],
         "feature_flag_auto_create_new_users": app.get_feature_flag(
-            "auto_create_new_users"
+            AuthFeatureFlag.AUTO_CREATE_NEW_USERS
         ),
         "feature_flag_update_own_organization": app.get_feature_flag(
-            "update_own_organization"
+            FeatureFlag.UPDATE_OWN_ORGANIZATION
         ),
         "service_root_token_time_to_live": auth_service_any._root_token_time_to_live,
         "service_idp_client_count": len(auth_service_any.idp_clients),

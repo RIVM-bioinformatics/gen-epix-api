@@ -196,7 +196,7 @@ def create_system_endpoints(
         return retval
 
     # Optional endpoints depending on feature flags
-    if app.get_feature_flag(enum.FeatureFlag.ALLOW_DELETE_OPERATIONAL_DATA.value):
+    if app.get_feature_flag(enum.FeatureFlag.ALLOW_DELETE_ALL_OPERATIONAL_DATA):
         assert (
             delete_all_operational_data_command_class is not None
         ), "delete_all_command_class must be provided"
