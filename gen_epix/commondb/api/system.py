@@ -196,7 +196,7 @@ def create_system_endpoints(
         return retval
 
     # Optional endpoints depending on feature flags
-    if app.get_feature_flag(enum.FeatureFlag.ALLOW_DELETE_OPERATIONAL_DATA.value):
+    if app.get_feature_flag(enum.FeatureFlag.ALLOW_DELETE_ALL_OPERATIONAL_DATA):
         assert (
             delete_all_operational_data_command_class is not None
         ), "delete_all_command_class must be provided"
@@ -209,7 +209,6 @@ def create_system_endpoints(
             operation_id="operational_data__delete",
             name="Delete all operational data",
             description=delete_all_operational_data_command_class.__doc__,
-            status_code=204,
         )
         async def operational_data__delete(
             user: registered_user_dependency,  # type: ignore[valid-type]

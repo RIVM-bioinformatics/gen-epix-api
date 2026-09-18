@@ -1,6 +1,7 @@
 """Refactored configuration management using Strategy Pattern."""
 
 import abc
+import copy
 import importlib
 import logging
 import logging.config as logging_config
@@ -8,12 +9,14 @@ import os
 from enum import Enum
 from locale import getpreferredencoding
 from pathlib import Path
+from typing import Any, cast
 
 import yaml
-from dynaconf import Dynaconf  # type: ignore[import-untyped]
+from dynaconf import Dynaconf, Validator  # type: ignore[import-untyped]
 
+from gen_epix.commondb.config import cfg_types
 from gen_epix.commondb.config.settings_manager import SettingsManager
-from gen_epix.fastapp import App
+from gen_epix.fastapp import App, exc
 
 # Third-party loggers that keep their configured level during global log-level updates.
 _THIRD_PARTY_LOGGER_NAMES = {
@@ -36,6 +39,27 @@ _NULL_LOGGER = logging.getLogger("null")
 _NULL_LOGGER.addHandler(logging.NullHandler())
 _NULL_LOGGER.setLevel(logging.CRITICAL + 1)  # above all standard levels
 _NULL_LOGGER.propagate = False
+
+_STANDARD_LOG_LEVELS: tuple[str, ...] = (
+    "DEBUG",
+    "INFO",
+    "WARNING",
+    "ERROR",
+    "CRITICAL",
+)
+
+# Every repository entry's connection_string under the SA_SQL default has this
+# same value, built by interpolating repository.defaults.props at read time;
+# defined once here and referenced by every repo entry in _DEFAULT_SETTINGS
+# below, rather than repeated per repo.
+_SA_SQL_CONNECTION_STRING = (
+    "@format mssql+pyodbc:///?odbc_connect="
+    "DRIVER={this.repository.defaults.props.driver};"
+    "SERVER={this.repository.defaults.props.server};"
+    "DATABASE={this.repository.defaults.props.database};"
+    "UID={this.repository.defaults.props.uid};"
+    "PWD={this.repository.defaults.props.pwd}{this.repository.defaults.props.other}"
+)
 
 
 def _is_descendant_logger(logger_name: str, parent_logger_name: str) -> bool:
@@ -147,6 +171,172 @@ class BaseAppCfg(abc.ABC):
 class AppCfg(BaseAppCfg):
     """Encapsulates the main application configuration class using Strategy Pattern."""
 
+    # Baseline business-config values for the commondb app. Every other
+    # app's AppCfg subclass deep-merges its own deltas on top of this dict.
+    # A key set here and left unmentioned by a subclass keeps this value.
+    #
+    # This is the lowest-precedence layer of the configuration:
+    # SettingsManager passes it to Dynaconf as constructor keyword
+    # arguments, which Dynaconf treats as a base layer that any matching key
+    # in a settings file overrides, and any matching environment variable
+    # overrides in turn. This holds recursively for nested keys: a settings
+    # file that sets only service.auth.props.root.user.key leaves every
+    # sibling key under service.auth.props sourced from this dict.
+    #
+    # "feature_flags" is intentionally absent from this literal — see
+    # _get_default_settings below.
+    _DEFAULT_SETTINGS: dict[str, Any] = {
+        "app": {"host": "0.0.0.0", "debug": False, "port": 8010},
+        "api": {
+            "default_route": "/openapi.json",
+            "gzip_response_minimum_size": 1024,
+            "http_header": {
+                "general": {
+                    "CacheControl": "no-cache, no-store",
+                    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'; sandbox",
+                    "Content-Security-Policy-Report-Only": "default-src 'none'; frame-ancestors 'none'; sandbox",
+                    "Cross-Origin-Opener-Policy": "same-origin",
+                    "Expires": "0",
+                    "Pragma": "no-cache",
+                    "Referrer-Policy": "strict-origin-when-cross-origin",
+                    "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
+                    "X-Content-Type-Options": "nosniff",
+                    "X-Frame-Options": "DENY",
+                    "X-XSS-Protection": "1; mode=block",
+                },
+                "openapi": {
+                    "CacheControl": "no-cache, no-store",
+                    "Expires": "0",
+                    "Pragma": "no-cache",
+                    "Referrer-Policy": "strict-origin-when-cross-origin",
+                    "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
+                    "X-Content-Type-Options": "nosniff",
+                    "X-Frame-Options": "DENY",
+                    "X-XSS-Protection": "1; mode=block",
+                },
+                "auth": {
+                    "CacheControl": "no-cache, no-store",
+                    "Expires": "0",
+                    "Pragma": "no-cache",
+                    "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
+                    "X-Content-Type-Options": "nosniff",
+                    "X-Frame-Options": "DENY",
+                    "X-XSS-Protection": "1; mode=block",
+                },
+            },
+            "route": {"v1": "/v1"},
+        },
+        "log": {
+            "level": "INFO",
+            "command_object_summarization": {
+                "enabled": True,
+                "max_list_items": 3,
+                "max_string_length": 500,
+                "max_exception_message_length": 2000,
+            },
+        },
+        "service": {
+            "defaults": {
+                "props": {"timestamp_factory": "DATETIME_NOW", "id_factory": "UUID4"},
+            },
+            "abac": {
+                "module": "gen_epix.commondb.services",
+                "class_name": "AbacService",
+            },
+            "auth": {
+                "module": "gen_epix.commondb.services",
+                "class_name": "AuthService",
+                "props": {
+                    "auto_create_new_users": False,
+                    "root_token_time_to_live": 0,  # disabled during development
+                    "auto_created_user": {
+                        "organization_id": "018d074d-ea0c-e942-07db-a3cc0ba1d653",
+                        "roles": ["COMMONDB_ORG_USER"],
+                    },
+                    "root": {
+                        "organization": {
+                            "id": "018d074d-ea0c-e942-07db-a3cc0ba1d653",
+                            "code": "DUMMY",
+                            "name": "DUMMY",
+                        },
+                        "user": {"key": "root@dummy.org"},
+                    },
+                },
+            },
+            "organization": {
+                "module": "gen_epix.commondb.services",
+                "class_name": "OrganizationService",
+            },
+            "rbac": {
+                "module": "gen_epix.commondb.services",
+                "class_name": "RbacService",
+                "props": {
+                    "user_invitation_time_to_live": 604800
+                },  # one week, in seconds
+            },
+            "system": {
+                "module": "gen_epix.commondb.services",
+                "class_name": "SystemService",
+            },
+        },
+        # SA_SQL is the baseline repository backend: a deployment that never
+        # sets DevRepositoryConfig away from SA_SQL needs no repository file
+        # at all. driver/uid/pwd/other match the credentials the standard
+        # local/test SQL Server container is provisioned with — not
+        # placeholders that need replacing, but a working default; a real
+        # deployment overrides these through environment variables, the same
+        # mechanism every other setting in this file is overridden through.
+        "repository": {
+            "defaults": {
+                "type": "SA_SQL",
+                "props": {
+                    "driver": "ODBC Driver 18 for SQL Server",
+                    "server": "127.0.0.1",
+                    "database": "commondb",
+                    "uid": "sa",
+                    "pwd": "Your_password123",
+                    "other": ";TrustServerCertificate=yes",
+                    "connection_string": _SA_SQL_CONNECTION_STRING,
+                },
+            },
+            # Deliberately no per-repo "props" here: _init_validate_settings's
+            # shallow `repository.defaults | repository.<x>` merge takes the
+            # whole `props` dict from whichever side has it, not a per-key
+            # merge — a repo with no "props" key of its own falls through to
+            # `repository.defaults.props` (the connection_string above)
+            # entirely, and a repo whose props ARE overridden (a `file` path,
+            # for the DICT/SA_SQLITE backends) replaces it entirely, rather
+            # than the stale connection_string coexisting alongside `file`.
+            "abac": {
+                "module": "gen_epix.commondb.repositories",
+                "class_name": "AbacSARepository",
+            },
+            "organization": {
+                "module": "gen_epix.commondb.repositories",
+                "class_name": "OrganizationSARepository",
+            },
+            "system": {
+                "module": "gen_epix.commondb.repositories",
+                "class_name": "SystemSARepository",
+            },
+        },
+    }
+
+    # The top-level tables this framework's configuration ever populates.
+    # to_dict()/to_toml() filter Dynaconf's as_dict(internal=False) output
+    # down to these keys, since as_dict(internal=False) does not scrub every
+    # constructor keyword argument Dynaconf was given (an explicit
+    # envvar_separator argument, for example, surfaces as an
+    # ENVVAR_SEPARATOR key in its output).
+    _EXPORTABLE_TOP_LEVEL_KEYS = (
+        "app",
+        "api",
+        "log",
+        "service",
+        "repository",
+        "feature_flags",
+    )
+
     @staticmethod
     def _prefix_envvar(
         envvar_prefix: str | None, envvar: str, delimiter: str = "_"
@@ -164,6 +354,130 @@ class AppCfg(BaseAppCfg):
         if logger_prefix:
             return f"{logger_prefix}{delimiter}{logger_name}"
         return logger_name
+
+    @staticmethod
+    def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+        """Recursively merge `override` on top of `base`, returning a new dict.
+
+        Values in `override` win on key collision. Only dict-vs-dict pairs
+        recurse; any other type (list, scalar, or a dict overriding a
+        non-dict) replaces the `base` value wholesale.
+
+        Args:
+            base: Lower-precedence dict (not mutated).
+            override: Higher-precedence dict (not mutated).
+
+        Returns:
+            A new, merged dict; neither input is mutated.
+        """
+        merged = dict(base)
+        for key, override_value in override.items():
+            base_value = merged.get(key)
+            if isinstance(base_value, dict) and isinstance(override_value, dict):
+                merged[key] = AppCfg._deep_merge(base_value, override_value)
+            else:
+                merged[key] = override_value
+        return merged
+
+    def _get_default_settings(self) -> dict[str, Any]:
+        """Return a fresh, mutation-safe copy of this class's business defaults.
+
+        Subclasses only need to declare their own `_DEFAULT_SETTINGS` class
+        attribute — `self._DEFAULT_SETTINGS` already resolves to the
+        subclass's own attribute via normal MRO. The feature-flags section
+        is assembled here, not in the `_DEFAULT_SETTINGS` literal, because
+        gen_epix.commondb.domain.enum cannot be imported at module scope in
+        this file: gen_epix.commondb.domain imports this configuration
+        package back (through its own util module), so importing the enum
+        module before AppCfg finishes being defined would deadlock the
+        import graph. Importing it here, inside a method called from
+        __init__, runs after both packages have finished loading.
+
+        Returns:
+            Deep copy of `type(self)._DEFAULT_SETTINGS`, with `feature_flags` added.
+        """
+        from gen_epix.commondb.domain.enum import (  # noqa: PLC0415
+            FEATURE_FLAG_TOML_KEYS,
+        )
+
+        settings = copy.deepcopy(self._DEFAULT_SETTINGS)
+        settings["feature_flags"] = {
+            flag.value: False for flag in FEATURE_FLAG_TOML_KEYS
+        }
+        return settings
+
+    def _get_feature_flag_validators(self) -> list[Validator]:
+        """Build validators for this app's `[feature_flags]` table entries."""
+        from gen_epix.commondb.domain.enum import (  # noqa: PLC0415
+            FEATURE_FLAG_TOML_KEYS,
+        )
+
+        return [
+            Validator(f"feature_flags.{flag.value}", is_type_of=bool)
+            for flag in FEATURE_FLAG_TOML_KEYS
+        ]
+
+    @staticmethod
+    def _factory_names(factory_class: type) -> list[str]:
+        """Return the class-body-defined factory names on a *Factory class.
+
+        TimestampFactory/IdFactory assign a function (e.g. `uuid.uuid4`, a
+        lambda) to each name rather than a plain value. Python's Enum
+        machinery treats a callable assigned in a class body as a method,
+        not a member, so these classes have no iterable members at all —
+        `list(TimestampFactory)` is always empty, even though
+        `getattr(TimestampFactory, "DATETIME_NOW")` (used by
+        `_init_validate_settings`) resolves it correctly. This reads the
+        same names directly from the class's own namespace instead.
+        """
+        return [
+            name
+            for name, value in vars(factory_class).items()
+            if not name.startswith("_") and callable(value)
+        ]
+
+    def _get_validators(self) -> list[Validator]:
+        """Build the Dynaconf validators for this instance's configuration shape.
+
+        Combines validators that hold for every app (port/log-level types,
+        the closed sets of factory names) with validators derived from this
+        instance's own service/repository enums, so a bad settings file or
+        environment variable is rejected with a specific message at load
+        time rather than surfacing later as an unrelated AttributeError.
+        """
+        from gen_epix.commondb.domain.enum import (  # noqa: PLC0415
+            IdFactory,
+            TimestampFactory,
+        )
+
+        validators = [
+            Validator("app.port", is_type_of=int),
+            Validator("log.level", is_in=list(_STANDARD_LOG_LEVELS)),
+            Validator(
+                "service.defaults.props.timestamp_factory",
+                is_in=self._factory_names(TimestampFactory),
+            ),
+            Validator(
+                "service.defaults.props.id_factory",
+                is_in=self._factory_names(IdFactory),
+            ),
+            Validator(
+                "repository.defaults.type",
+                is_in=[member.name for member in self._repository_type_enum],
+            ),
+        ]
+        for service_type in self._service_type_enum:
+            service_type_str = service_type.value.lower()
+            validators.append(
+                Validator(
+                    f"service.{service_type_str}.module",
+                    f"service.{service_type_str}.class_name",
+                    must_exist=True,
+                    is_type_of=str,
+                )
+            )
+        validators.extend(self._get_feature_flag_validators())
+        return validators
 
     def __init__(
         self,
@@ -280,11 +594,20 @@ class AppCfg(BaseAppCfg):
         self._logging_config_yaml = logging_config_yaml
 
     def _init_load_settings(self) -> None:
-        """Load settings using SettingsManager."""
+        """Load settings using SettingsManager, seeded with this class's defaults."""
         settings_manager = SettingsManager(
             prefix=self._envvar_prefix, settings_files=self._settings_files
         )
-        self._cfg = settings_manager.load_settings()
+        self._cfg = settings_manager.load_settings(
+            defaults=self._get_default_settings(),
+            validators=self._get_validators(),
+        )
+        # Captured before _init_validate_settings mutates self._cfg in place
+        # (it injects a live class object per service/repository, and
+        # resolves factory/enum-name strings into live objects) — this
+        # snapshot is what to_toml()/to_dict() export, since none of that
+        # is TOML-serializable or should round-trip.
+        self._raw_cfg_snapshot: dict[str, Any] = self._cfg.as_dict(internal=False)
 
     def _init_validate_settings(self) -> None:
         """Validate settings and apply defaults to all services and repositories."""
@@ -323,9 +646,17 @@ class AppCfg(BaseAppCfg):
             # Get class for service
             service_module = service_cfg["module"]
             service_class_name = service_cfg["class_name"]
-            service_cfg["class"] = getattr(
-                importlib.import_module(service_module), service_class_name
-            )
+            try:
+                service_cfg["class"] = getattr(
+                    importlib.import_module(service_module), service_class_name
+                )
+            except (ImportError, AttributeError) as error:
+                raise exc.InitializationServiceError(
+                    "a8811d58",
+                    f"Cannot resolve service.{service_type_str} for app "
+                    f"{self._app_name!r}: module={service_module!r}, "
+                    f"class_name={service_class_name!r}",
+                ) from error
             self._cfg["service"][service_type_str] = service_cfg
 
             # Skip if the service does not have a repository
@@ -341,10 +672,85 @@ class AppCfg(BaseAppCfg):
             # Get class for repository
             repository_module = repository_cfg["module"]
             repository_class_name = repository_cfg["class_name"]
-            repository_cfg["class"] = getattr(
-                importlib.import_module(repository_module), repository_class_name
-            )
+            try:
+                repository_cfg["class"] = getattr(
+                    importlib.import_module(repository_module), repository_class_name
+                )
+            except (ImportError, AttributeError) as error:
+                raise exc.RepositoryInitializationServiceError(
+                    "c07ef709",
+                    f"Cannot resolve repository.{service_type_str} for app "
+                    f"{self._app_name!r}: module={repository_module!r}, "
+                    f"class_name={repository_class_name!r}",
+                ) from error
             self._cfg["repository"][service_type_str] = repository_cfg
+
+    @property
+    def cfg(self) -> cfg_types.ResolvedAppCfgSettingsDict:
+        """Loaded, validated Dynaconf settings object.
+
+        The returned value is still the live Dynaconf Box; this narrows its
+        static type from Dynaconf (effectively Any under this repo's mypy
+        configuration, since dynaconf ships no type information) to the
+        resolved settings shape, without converting the runtime object.
+        """
+        return cast(cfg_types.ResolvedAppCfgSettingsDict, self._cfg)
+
+    def to_dict(self, resolved: bool = False) -> dict[str, Any]:
+        """Return this config as a plain, TOML-serializable dict.
+
+        Args:
+            resolved: If False (default), returns the round-trippable
+                pre-validation snapshot (defaults, settings files, and
+                environment variables merged, nothing resolved to a live
+                Python object) — this is what `to_toml()` writes, and can be
+                fed back in as a settings file. If True, returns a
+                display-only copy of the post-validation config with
+                non-serializable values (factory objects, enum members,
+                imported classes) stringified — not meant to be reloaded.
+
+        Returns:
+            Filtered dict containing only known top-level config sections.
+        """
+        source = self._cfg if resolved else self._raw_cfg_snapshot
+        raw = {
+            k.lower(): v
+            for k, v in dict(source).items()
+            if k.lower() in self._EXPORTABLE_TOP_LEVEL_KEYS
+        }
+        if not resolved:
+            return copy.deepcopy(raw)
+        return cast(
+            dict[str, Any], AppCfg._stringify_non_serializable(copy.deepcopy(raw))
+        )
+
+    @staticmethod
+    def _stringify_non_serializable(value: Any) -> Any:
+        """Recursively replace non-TOML-serializable values with their repr()."""
+        if isinstance(value, dict):
+            return {k: AppCfg._stringify_non_serializable(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [AppCfg._stringify_non_serializable(v) for v in value]
+        if isinstance(value, (str, int, float, bool)) or value is None:
+            return value
+        return repr(value)
+
+    def to_toml(self, path: Path | str | None = None, resolved: bool = False) -> str:
+        """Serialize this config to a TOML string, optionally writing it to disk.
+
+        Args:
+            path: If given, also write the TOML text to this path.
+            resolved: See `to_dict`.
+
+        Returns:
+            The TOML text.
+        """
+        import tomli_w  # noqa: PLC0415  # local import: keeps tomli_w off AppCfg's hot import path
+
+        text = tomli_w.dumps(self.to_dict(resolved=resolved))
+        if path is not None:
+            Path(path).write_text(text, encoding=getpreferredencoding())
+        return text
 
     def copy_repository_files(
         self,
@@ -583,3 +989,9 @@ class AppCfg(BaseAppCfg):
                 env_var_value,
                 settings_value,
             )
+
+
+assert set(AppCfg._EXPORTABLE_TOP_LEVEL_KEYS) == (
+    cfg_types.AppCfgSettingsDict.__required_keys__
+    | cfg_types.AppCfgSettingsDict.__optional_keys__
+)

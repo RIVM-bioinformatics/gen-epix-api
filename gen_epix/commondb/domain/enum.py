@@ -27,9 +27,22 @@ class IdFactory(Enum):
 
 
 class FeatureFlag(Enum):
-    """Encapsulates feature-flag keys shared by the application domains."""
+    """Identify feature-flag keys shared by every application domain."""
 
-    ALLOW_DELETE_OPERATIONAL_DATA = "ALLOW_DELETE_OPERATIONAL_DATA"
+    ALLOW_DELETE_ALL_OPERATIONAL_DATA = "allow_delete_all_operational_data"
+    UPDATE_OWN_ORGANIZATION = "update_own_organization"
+    AUTO_CREATE_NEW_USERS = "auto_create_new_users"
+
+
+# The subset of FeatureFlag members whose value is read directly out of the
+# [feature_flags] settings table and passed into App(feature_flags=...) at
+# composition time. AUTO_CREATE_NEW_USERS is excluded: its value comes from
+# service.auth.props.auto_create_new_users, and AuthService sets it on the
+# app directly.
+FEATURE_FLAG_TOML_KEYS: tuple[FeatureFlag, ...] = (
+    FeatureFlag.ALLOW_DELETE_ALL_OPERATIONAL_DATA,
+    FeatureFlag.UPDATE_OWN_ORGANIZATION,
+)
 
 
 class Role(Enum):
@@ -153,29 +166,6 @@ class DevRepositoryConfig(Enum):
     SA_SQLITE_DEMO = "SA_SQLITE_DEMO"
     SA_SQLITE_EMPTY = "SA_SQLITE_EMPTY"
     SA_SQL = "SA_SQL"
-
-
-class DevRepositoryConfigSet(Enum):
-    """Encapsulates grouping of development repository modes by storage engine and seeded state."""
-
-    DICT = frozenset({DevRepositoryConfig.DICT_DEMO, DevRepositoryConfig.DICT_EMPTY})
-    SA = frozenset(
-        {
-            DevRepositoryConfig.SA_SQLITE_DEMO,
-            DevRepositoryConfig.SA_SQLITE_EMPTY,
-            DevRepositoryConfig.SA_SQL,
-        }
-    )
-    SA_SQLITE = frozenset(
-        {DevRepositoryConfig.SA_SQLITE_DEMO, DevRepositoryConfig.SA_SQLITE_EMPTY}
-    )
-    SA_SQL = frozenset({DevRepositoryConfig.SA_SQL})
-    DEMO = frozenset(
-        {DevRepositoryConfig.DICT_DEMO, DevRepositoryConfig.SA_SQLITE_DEMO}
-    )
-    EMPTY = frozenset(
-        {DevRepositoryConfig.DICT_EMPTY, DevRepositoryConfig.SA_SQLITE_EMPTY}
-    )
 
 
 class DataIssueType(Enum):

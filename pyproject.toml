@@ -39,6 +39,7 @@ dependencies = [
     "ulid-py==1.1.0",
     "fire==0.7.1",
     "dynaconf==3.3.3",
+    "tomli-w==1.2.0",
     "PyYAML==6.0.3",
     "scipy==1.18.1",
     "numpy==2.5.3",

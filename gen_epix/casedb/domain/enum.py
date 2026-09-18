@@ -474,11 +474,15 @@ class ColTypeOrder(Enum):
     }
 
 
-class FeatureFlag(Enum):
-    """Identify feature flags that alter casedb command behavior."""
+class CasedbFeatureFlag(Enum):
+    """Identify feature-flag keys specific to casedb.
 
-    UPDATE_OWN_ORGANIZATION = "UPDATE_OWN_ORGANIZATION"
-    DISABLE_UPLOAD = "UPLOAD_ENABLED"
+    Stands alone rather than extending gen_epix.commondb.domain.enum.FeatureFlag:
+    Python does not allow subclassing an Enum that already has members to add
+    further members.
+    """
+
+    DISABLE_UPLOAD = "disable_upload"
 
 
 class Unit(StrEnum):

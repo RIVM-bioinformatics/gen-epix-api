@@ -29,8 +29,9 @@ import importlib
 import os
 import sys
 from pathlib import Path
+from typing import cast
 
-from gen_epix.commondb.config.cfg import AppCfg
+from gen_epix.commondb.config.cfg_types import ResolvedRepositoryEntryDict
 from gen_epix.commondb.domain.enum import (
     AppType,
     AppTypeSet,
@@ -40,6 +41,7 @@ from gen_epix.commondb.domain.enum import (
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.util import (
     create_demo_data_from_repository,
+    get_app_cfg_class,
     set_env_variables,
 )
 from gen_epix.fastapp.repositories.dict.repository import DictRepository
@@ -90,10 +92,15 @@ for service_type in enum.ServiceType:
     set_env_variables(APP_TYPE, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_DEMO)
     os.environ[ENVVAR_PREFIX + "LOG_CONFIG_FILE"] = original_log_config_file_environ
 
-    dict_app_cfg = AppCfg(
+    dict_app_cfg = get_app_cfg_class(APP_TYPE)(
         APP_TYPE.value, enum.ServiceType, enum.RepositoryType, log_setup=False
     )
-    dict_repository_cfg = dict_app_cfg.cfg["repository"].get(service_type.value)
+    # RepositorySectionDict only declares "defaults" as a known field; every
+    # other key is looked up dynamically by service type, so it isn't
+    # statically representable — cast at the point of dynamic access.
+    dict_repository_cfg = cast(
+        dict[str, ResolvedRepositoryEntryDict], dict_app_cfg.cfg["repository"]
+    ).get(service_type.value)
     if not dict_repository_cfg:
         continue
     entities = domain.get_dag_sorted_entities(
@@ -101,7 +108,7 @@ for service_type in enum.ServiceType:
     )
     # Create dict repository with demo data if load is requested
     if LOAD_DATA:
-        dict_repository_class: type[DictRepository] = dict_repository_cfg["class"]
+        dict_repository_class = cast(type[DictRepository], dict_repository_cfg["class"])
         demo_dict_file = Path(dict_repository_cfg["props"]["file"]).resolve()
         zip_file: str = str(demo_dict_file).replace(".pkl.gz", ".zip")
         dict_repository: DictRepository = (
@@ -113,12 +120,14 @@ for service_type in enum.ServiceType:
     os.environ[ENVVAR_PREFIX + "SETTINGS_FILES"] = original_settings_files_environ
     os.environ[ENVVAR_PREFIX + "LOG_CONFIG_FILE"] = original_log_config_file_environ
 
-    sa_sql_app_cfg = AppCfg(
+    sa_sql_app_cfg = get_app_cfg_class(APP_TYPE)(
         APP_TYPE.value, enum.ServiceType, enum.RepositoryType, log_setup=False
     )
     # Create empty SA_SQL repository or loaded with demo data
-    sa_sql_repository_cfg = sa_sql_app_cfg.cfg["repository"][service_type.value]
-    sa_repository_class: type[SARepository] = sa_sql_repository_cfg["class"]
+    sa_sql_repository_cfg = cast(
+        dict[str, ResolvedRepositoryEntryDict], sa_sql_app_cfg.cfg["repository"]
+    )[service_type.value]
+    sa_repository_class = cast(type[SARepository], sa_sql_repository_cfg["class"])
     connection_string = sa_sql_repository_cfg["props"]["connection_string"]
     if "mssql" in connection_string:
         connect_args = {

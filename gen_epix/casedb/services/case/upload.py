@@ -932,7 +932,7 @@ def case_service_upload_cases(
     Raises:
         FeatureDisabledServiceError: If the case upload feature is disabled.
     """
-    if self.app.get_feature_flag(enum.FeatureFlag.DISABLE_UPLOAD.value):
+    if self.app.get_feature_flag(enum.CasedbFeatureFlag.DISABLE_UPLOAD):
         raise exc.FeatureDisabledServiceError("a756246d", "Upload is disabled")
     batch_uploader = CaseBatchUploader(cast(BaseService, self))
 

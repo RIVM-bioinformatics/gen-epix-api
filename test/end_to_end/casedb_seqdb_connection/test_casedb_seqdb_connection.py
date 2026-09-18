@@ -13,16 +13,15 @@ import pytest
 import yaml
 
 import gen_epix.commondb.test.util as test_util
+from gen_epix.casedb.config import CasedbAppCfg
 from gen_epix.casedb.domain import command
 from gen_epix.casedb.domain import enum as enum
 from gen_epix.casedb.domain import model
 from gen_epix.casedb.env import AppComposer as CasedbAppComposer
 from gen_epix.commondb.app_setup import create_fast_api
-from gen_epix.commondb.config.cfg import AppCfg
-from gen_epix.commondb.domain.enum import AppType
 from gen_epix.fastapp import CrudOperation, exc
 from gen_epix.seqdb.api.router import create_routers as seqdb_create_routers
-from gen_epix.seqdb.domain import enum as seqdb_enum
+from gen_epix.seqdb.config import SeqdbAppCfg
 from gen_epix.seqdb.env import AppComposer as SeqdbAppComposer
 
 pytestmark = pytest.mark.e2e
@@ -138,12 +137,7 @@ def seqdb_server(
     set_envvar(oauth_discovery_settings_file)
 
     # Create seqdb app and fastapi instance
-    seqdb_app_cfg = AppCfg(
-        AppType.SEQDB,
-        seqdb_enum.ServiceType,
-        seqdb_enum.RepositoryType,
-        log_any=VERBOSE,
-    )
+    seqdb_app_cfg = SeqdbAppCfg(log_any=VERBOSE)
     seqdb_app_composer = SeqdbAppComposer(seqdb_app_cfg, log_setup=VERBOSE)
     seqdb_app = seqdb_app_composer.app
     seqdb_fastapi_app = create_fast_api(
@@ -180,12 +174,7 @@ def test_casedb_seqdb_connection(
     protocol = "https" if SSL_CERTFILE and SSL_KEYFILE else "http"
 
     # Create casedb app instance
-    casedb_app_cfg = AppCfg(
-        AppType.CASEDB,
-        enum.ServiceType,
-        enum.RepositoryType,
-        log_any=VERBOSE,
-    )
+    casedb_app_cfg = CasedbAppCfg(log_any=VERBOSE)
     casedb_app_composer = CasedbAppComposer(
         casedb_app_cfg, log_any=VERBOSE, log_setup=VERBOSE
     )

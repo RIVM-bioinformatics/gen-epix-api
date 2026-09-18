@@ -1,23 +1,41 @@
+[repository.defaults]
+type = "DICT"
+
+[repository.defaults.props]
+dir = "./data/casedb/demo"
+
 [repository.abac]
 module = "gen_epix.casedb.repositories"
 class_name = "AbacDictRepository"
+[repository.abac.props]
+file = "@format {this.repository.defaults.props.dir}/casedb.dict.abac.{this.repository.defaults.props.variant}.pkl.gz"
 
 [repository.organization]
 module = "gen_epix.casedb.repositories"
 class_name = "OrganizationDictRepository"
+[repository.organization.props]
+file = "@format {this.repository.defaults.props.dir}/casedb.dict.organization.{this.repository.defaults.props.variant}.pkl.gz"
 
 [repository.system]
 module = "gen_epix.casedb.repositories"
 class_name = "SystemDictRepository"
+[repository.system.props]
+file = "@format {this.repository.defaults.props.dir}/casedb.dict.system.{this.repository.defaults.props.variant}.pkl.gz"
 
 [repository.case]
 module = "gen_epix.casedb.repositories"
 class_name = "CaseDictRepository"
+[repository.case.props]
+file = "@format {this.repository.defaults.props.dir}/casedb.dict.case.{this.repository.defaults.props.variant}.pkl.gz"
 
 [repository.geo]
 module = "gen_epix.casedb.repositories"
 class_name = "GeoDictRepository"
+[repository.geo.props]
+file = "@format {this.repository.defaults.props.dir}/casedb.dict.geo.{this.repository.defaults.props.variant}.pkl.gz"
 
 [repository.ontology]
 module = "gen_epix.casedb.repositories"
 class_name = "OntologyDictRepository"
+[repository.ontology.props]
+file = "@format {this.repository.defaults.props.dir}/casedb.dict.ontology.{this.repository.defaults.props.variant}.pkl.gz"
