@@ -152,37 +152,63 @@ class SystemService(BaseSystemService):
     def delete_all_ref_data(
         self, cmd: command.DeleteAllRefDataCommand
     ) -> model.DeleteAllRefDataResult:
-        """Delete all data except users, organizations, and their dependencies.
+        """Delete application reference data after operational data is reset.
 
-        Iterates over every persistable model in reverse DAG order (children before
-        parents) and issues a ``DELETE_ALL`` for each, except models belonging to a
-        preserved service type (the identity and access-control backbone: users,
-        organizations, roles, and everything they depend on). Deleting in reverse
-        DAG order and only for non-preserved service types keeps foreign-key
-        constraints satisfied, because preserved (backbone) models never reference
-        deleted (domain) models.
+        The operation first asks the composed domain for every persistable model in
+        the application's reference-data service types. Models outside the command's
+        reference-data list are operational data; any remaining records prevent the
+        reset. This derives the precondition from domain registration rather than
+        duplicating the operational command's model list.
 
         Args:
-            cmd: Command requesting deletion of all data except the backbone.
+            cmd: Command requesting deletion of reference data.
 
         Returns:
-            DeleteAllRefDataResult. The `success` attribute indicates overall
-            success, and `details` provides the IDs of deleted records per model
-            class as a JSON-encoded list of IDs, or the error message when a
-            model class could not be deleted.
+            DeleteAllRefDataResult. The ``success`` attribute is false when
+            operational records remain or a deletion fails. ``details`` contains
+            deleted IDs per reference model or the relevant error message.
         """
         domain = self.app.domain
-        preserved = cmd.PRESERVED_SERVICE_TYPE_VALUES
         retval = model.DeleteAllRefDataResult(success=True)
-        # Children before parents so foreign-key constraints are not violated.
-        sorted_model_classes = domain.get_dag_sorted_models(
-            persistable=True, reverse=True
-        )
-        for model_class in sorted_model_classes:
-            service_type = domain.get_service_type_for_model(model_class)
-            service_type_value = getattr(service_type, "value", None)
-            if service_type_value in preserved:
+
+        ref_model_classes = set(cmd.SORTED_REF_DATA_MODEL_CLASSES)
+        service_type_values = cmd.REF_DATA_SERVICE_TYPE_VALUES
+        operational_model_classes = [
+            model_class
+            for model_class in domain.get_dag_sorted_models(
+                persistable=True, reverse=True
+            )
+            if model_class not in ref_model_classes
+            and getattr(domain.get_service_type_for_model(model_class), "value", None)
+            in service_type_values
+        ]
+
+        # Do not remove reference data while operational records still reference it.
+        for model_class in operational_model_classes:
+            try:
+                crud_command_class = domain.get_crud_command_for_model(model_class)
+                records = self.app.handle(
+                    crud_command_class(
+                        user=cmd.user,
+                        operation=CrudOperation.READ_ALL,
+                    )
+                )
+            except Exception as e:
+                retval.success = False
+                retval.details[model_class.ENTITY.name] = f"{type(e).__name__}: {e}"
                 continue
+            if records:
+                retval.success = False
+                retval.details[model_class.ENTITY.name] = (
+                    f"Operational data remains ({len(records)} record(s)); "
+                    "delete all operational data before deleting reference data."
+                )
+
+        if not retval.success:
+            return retval
+
+        # Children before parents so foreign-key constraints are not violated.
+        for model_class in cmd.SORTED_REF_DATA_MODEL_CLASSES:
             try:
                 crud_command_class = domain.get_crud_command_for_model(model_class)
             except Exception:

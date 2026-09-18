@@ -22,22 +22,16 @@ class DeleteAllOperationalDataCommand(Command):
 
 
 class DeleteAllRefDataCommand(Command):
-    """Represents a request to delete all data except users and organizations.
+    """Request deletion of application reference data after ops data reset.
 
-    Deletes all persistable domain data (operational and reference data such as
-    cases, case sets, sequences, ontology, and geo data) while preserving the
-    identity and access-control backbone: users, organizations, and everything
-    they depend on. Preservation is expressed as a set of service-type values;
-    every persistable model whose service type is not preserved is deleted in
-    reverse DAG order so foreign-key constraints do not fail.
-
-    This is intended as a maintenance operation or for use during development, and
-    should only be executable under specific conditions.
+    Application domains subclass this command and provide their reference-data
+    models in deletion order. The shared command deliberately has no model list;
+    the composed application's domain determines the concrete command and model
+    set.
     """
 
-    PRESERVED_SERVICE_TYPE_VALUES: ClassVar[frozenset[str]] = frozenset(
-        {"AUTH", "ORGANIZATION", "RBAC"}
-    )  # Service-type values whose persistable models are preserved (identity/access backbone)
+    SORTED_REF_DATA_MODEL_CLASSES: ClassVar[list[type[model.ModelNoId]]] = []
+    REF_DATA_SERVICE_TYPE_VALUES: ClassVar[frozenset[str]] = frozenset()
 
 
 class RetrieveOutagesCommand(Command):

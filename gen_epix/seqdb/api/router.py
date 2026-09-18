@@ -73,6 +73,7 @@ def create_routers(
                 "service_type": enum.ServiceType.SYSTEM,
                 "delete_all_operational_data_command_class": command.DeleteAllOperationalDataCommand,
                 "delete_all_operational_data_result_class": common_model.DeleteAllOperationalDataResult,
+                "delete_all_ref_data_command_class": command.DeleteAllRefDataCommand,
             },
         },
         # Specific routers

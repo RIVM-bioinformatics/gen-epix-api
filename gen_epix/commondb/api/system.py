@@ -84,6 +84,7 @@ def create_system_endpoints(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     delete_all_operational_data_command_class: type[Command] | None = None,
     delete_all_operational_data_result_class: type[PydanticBaseModel] | None = None,
+    delete_all_ref_data_command_class: type[Command] | None = None,
     **kwargs: Any,
 ) -> None:
     """Register system health, feature-flag, license, logging, and CRUD endpoints.
@@ -97,6 +98,9 @@ def create_system_endpoints(
           operational data. Must be provided if the corresponding feature flag is enabled.
         delete_all_operational_data_result_class: Result class returned after deleting
           operational data. Must be provided if the corresponding feature flag is enabled.
+        delete_all_ref_data_command_class: Command class used to delete reference data.
+          Defaults to the shared command for commondb and must be provided by an
+          application domain that defines a concrete reference-data command.
         **kwargs: Unused router composition options.
     """
     assert handle_exception
@@ -238,12 +242,14 @@ def create_system_endpoints(
             return retval
 
     if _is_feature_flag_enabled(app, enum.FeatureFlag.ALLOW_DELETE_REF_DATA):
+        if delete_all_ref_data_command_class is None:
+            delete_all_ref_data_command_class = command.DeleteAllRefDataCommand
 
         @router.delete(
             "/ref_data",
             operation_id="ref_data__delete",
             name="Delete all data except users and organizations",
-            description=command.DeleteAllRefDataCommand.__doc__,
+            description=delete_all_ref_data_command_class.__doc__,
             status_code=200,
         )
         async def ref_data__delete(
@@ -254,7 +260,7 @@ def create_system_endpoints(
                 app=app,
                 user=user,
                 exception_code="f852ea1d",
-                input_command=command.DeleteAllRefDataCommand(user=user),
+                input_command=delete_all_ref_data_command_class(user=user),
                 input_handle_exception=handle_exception,
             )
             return retval
