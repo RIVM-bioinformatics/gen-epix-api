@@ -209,7 +209,6 @@ def create_system_endpoints(
             operation_id="operational_data__delete",
             name="Delete all operational data",
             description=delete_all_operational_data_command_class.__doc__,
-            status_code=204,
         )
         async def operational_data__delete(
             user: registered_user_dependency,  # type: ignore[valid-type]
