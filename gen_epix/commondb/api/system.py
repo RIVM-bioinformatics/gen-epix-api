@@ -248,7 +248,7 @@ def create_system_endpoints(
         @router.delete(
             "/ref_data",
             operation_id="ref_data__delete",
-            name="Delete all data except users and organizations",
+            name="Delete all reference data",
             description=delete_all_ref_data_command_class.__doc__,
             status_code=200,
         )

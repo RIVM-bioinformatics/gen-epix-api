@@ -102,11 +102,10 @@ class BaseSystemService(BaseService[BaseSystemRepository]):
     def delete_all_ref_data(
         self, cmd: command.DeleteAllRefDataCommand
     ) -> model.DeleteAllRefDataResult:
-        """Delete all data except users, organizations, and their dependencies.
+        """Delete application reference data after operational data is reset.
 
         Args:
-            cmd: Command requesting deletion of all data except the identity and
-                access-control backbone.
+            cmd: Command requesting deletion of application reference data.
 
         Raises:
             NotImplementedError: Always; concrete services implement deletion.
