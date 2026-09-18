@@ -571,3 +571,100 @@ def test_create_sa_repository_attached_sqlite_is_in_memory(
 def test_test_connection() -> None:
     assert SARepository.test_connection("sqlite:///:memory:") is None
     assert SARepository.test_connection("not-a-valid-sqlalchemy-url") is not None
+
+
+def test_clear_repository_content_drops_alembic_tracking_table(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """clear_repository_content(alembic_schema=...) also drops the Alembic
+    version-tracking table (and its schema), so a subsequent `alembic upgrade
+    head` starts from a clean slate instead of thinking migrations already ran."""
+    main_file = tmp_path / "clear_alembic.sqlite"
+    alembic_file = tmp_path / "clear_alembic_tracking.sqlite"
+    connection_string = f"sqlite:///{main_file.as_posix()}"
+    engine = sa.create_engine(connection_string)
+
+    @sa.event.listens_for(engine, "connect")
+    def _attach_alembic_schema(dbapi_connection: Any, connection_record: Any) -> None:
+        cursor = dbapi_connection.cursor()
+        cursor.execute(f"ATTACH DATABASE '{alembic_file.as_posix()}' AS alembic")
+        cursor.close()
+
+    monkeypatch.setattr(
+        "gen_epix.fastapp.repositories.sa.repository.EngineFactory.create_engine",
+        lambda *args, **kwargs: engine,
+    )
+
+    with engine.begin() as conn:
+        conn.execute(
+            sa.text(
+                "CREATE TABLE alembic.alembic_version "
+                "(version_num VARCHAR(32) NOT NULL)"
+            )
+        )
+        conn.execute(sa.text("INSERT INTO alembic.alembic_version VALUES ('deadbeef')"))
+
+    SARepository.clear_repository_content(
+        entities=[], connection_string=connection_string, alembic_schema="alembic"
+    )
+
+    with engine.connect() as conn:
+        tables = sa.inspect(conn).get_table_names(schema="alembic")
+    assert "alembic_version" not in tables
+
+
+def test_clear_repository_content_alembic_schema_defaults_to_noop() -> None:
+    """Existing callers that don't pass alembic_schema are unaffected."""
+    SARepository.clear_repository_content(
+        entities=[RepoModel.ENTITY], connection_string="sqlite:///:memory:"
+    )
+
+
+def test_check_schema_matches_reports_missing_table(tmp_path: Path) -> None:
+    sqlite_file = tmp_path / "check_missing_table.sqlite"
+    connection_string = f"sqlite:///{sqlite_file.as_posix()}"
+
+    problems = SARepository.check_schema_matches(
+        entities=[RepoModel.ENTITY], connection_string=connection_string
+    )
+
+    assert problems == ["table repo_model does not exist"]
+
+
+def test_check_schema_matches_empty_for_matching_schema(tmp_path: Path) -> None:
+    sqlite_file = tmp_path / "check_match.sqlite"
+    connection_string = f"sqlite:///{sqlite_file.as_posix()}"
+    repo = SARepository.create_sa_repository(
+        entities=[RepoModel.ENTITY],
+        connection_string=connection_string,
+        recreate_sqlite_file=True,
+    )
+    repo._engine.dispose()  # pylint: disable=protected-access
+
+    problems = SARepository.check_schema_matches(
+        entities=[RepoModel.ENTITY], connection_string=connection_string
+    )
+
+    assert not problems
+
+
+def test_check_schema_matches_reports_missing_column(tmp_path: Path) -> None:
+    sqlite_file = tmp_path / "check_missing_column.sqlite"
+    connection_string = f"sqlite:///{sqlite_file.as_posix()}"
+    engine = sa.create_engine(connection_string)
+    try:
+        legacy_metadata = sa.MetaData()
+        sa.Table(
+            "repo_model",
+            legacy_metadata,
+            sa.Column("id", sa.String, primary_key=True, nullable=False),
+        )
+        legacy_metadata.create_all(engine)
+    finally:
+        engine.dispose()
+
+    problems = SARepository.check_schema_matches(
+        entities=[RepoModel.ENTITY], connection_string=connection_string
+    )
+
+    assert problems == ["table repo_model is missing column(s): label, value"]
