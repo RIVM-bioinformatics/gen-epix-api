@@ -21,6 +21,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
     DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN = 60  # seconds
 
     ROUTE_MAP: dict[type[Command], str] = {
+        command.DeleteAllRefDataCommand: "/ref_data",
         command.CalculatePhylogeneticTreeCommand: "/calculate/phylogenetic_tree",
         command.ConvertSeqFormatCommand: "/convert/seq_format",
         command.RetrieveBestSeqPerSampleCommand: "/retrieve/best_seq_per_sample",
@@ -41,6 +42,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
 
     DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {
         command.DeleteAllOperationalDataCommand: 300.0,
+        command.DeleteAllRefDataCommand: 300.0,
         command.UploadSamplesCommand: 45.0,
         command.UpdateSeqDistancesCommand: 300.0,
         command.RetrieveSampleIdentifiersByIdCommand: 45.0,

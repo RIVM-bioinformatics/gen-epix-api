@@ -4,12 +4,17 @@ from test.util.mock_compat import Mock, patch
 from types import SimpleNamespace
 from typing import Any, NoReturn
 
+import pytest
 from fastapi import APIRouter
 from fastapi.routing import APIRoute
 
 from gen_epix.commondb.api.system import create_system_endpoints
 from gen_epix.commondb.domain import command, enum, model
 from gen_epix.fastapp.api import CrudEndpointGenerator
+
+
+class ConcreteDeleteAllRefDataCommand(command.DeleteAllRefDataCommand):
+    """Concrete command supplied by an application router."""
 
 
 def _handle_exception(*_args: Any) -> NoReturn:
@@ -91,6 +96,7 @@ def test_reset_routes_return_json_results_with_success_status() -> None:
             handle_exception=_handle_exception,
             delete_all_operational_data_command_class=command.DeleteAllOperationalDataCommand,
             delete_all_operational_data_result_class=model.DeleteAllOperationalDataResult,
+            delete_all_ref_data_command_class=ConcreteDeleteAllRefDataCommand,
         )
 
     operational_route = _get_route(router, "/operational_data")
@@ -101,3 +107,23 @@ def test_reset_routes_return_json_results_with_success_status() -> None:
     assert ref_route.status_code == 200
     assert operational_route.response_model is model.DeleteAllOperationalDataResult
     assert ref_route.response_model is model.DeleteAllRefDataResult
+
+
+def test_ref_data_route_requires_concrete_application_command() -> None:
+    """Fail startup instead of exposing the empty shared refdata command."""
+    router = APIRouter()
+    app = _create_app({"allow_delete_ref_data": True})
+
+    with (
+        patch.object(
+            CrudEndpointGenerator,
+            "create_crud_endpoint_set_for_domain",
+            return_value=[],
+        ),
+        patch.object(CrudEndpointGenerator, "generate_endpoints"),
+        pytest.raises(
+            AssertionError,
+            match="delete_all_ref_data_command_class must be provided",
+        ),
+    ):
+        create_system_endpoints(router, app, handle_exception=_handle_exception)

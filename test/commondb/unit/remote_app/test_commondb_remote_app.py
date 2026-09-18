@@ -987,6 +987,20 @@ class TestNonCrudHandlers:
         assert url == app._routes[command.DeleteAllOperationalDataCommand]
         assert result == model.DeleteAllOperationalDataResult(**data)
 
+    def test_delete_all_ref_data(
+        self, app: CommondbRemoteApp, mock_client: Any
+    ) -> None:
+        """Parse the JSON result returned by the reference-data reset endpoint."""
+        data = {"success": True, "details": {"case_types": "[]"}}
+        mock_client.request.return_value = _mock_response(data)
+
+        result = app.delete_all_ref_data(command.DeleteAllRefDataCommand(user=None))
+
+        method, url = mock_client.request.call_args.args
+        assert method == "DELETE"
+        assert url == app._routes[command.DeleteAllRefDataCommand]
+        assert result == model.DeleteAllRefDataResult(**data)
+
     def test_retrieve_licenses(self, app: CommondbRemoteApp, mock_client: Any) -> None:
         data = [{"name": "pkg", "version": "1.0"}]
         mock_client.request.return_value = _mock_response(data)

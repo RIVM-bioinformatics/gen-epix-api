@@ -242,8 +242,9 @@ def create_system_endpoints(
             return retval
 
     if _is_feature_flag_enabled(app, enum.FeatureFlag.ALLOW_DELETE_REF_DATA):
-        if delete_all_ref_data_command_class is None:
-            delete_all_ref_data_command_class = command.DeleteAllRefDataCommand
+        assert (
+            delete_all_ref_data_command_class is not None
+        ), "delete_all_ref_data_command_class must be provided"
 
         @router.delete(
             "/ref_data",

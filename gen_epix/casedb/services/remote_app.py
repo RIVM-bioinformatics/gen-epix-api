@@ -32,6 +32,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
     DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN = 60  # seconds
 
     ROUTE_MAP: dict[type[Command], str] = {
+        command.DeleteAllRefDataCommand: "/ref_data",
         command.UploadCasesCommand: "/upload/cases",
         command.UpdateCaseCreatedInDataCollectionCommand: (
             "/update_case_created_in_data_collection"
@@ -61,6 +62,7 @@ class CasedbRemoteApp(CommondbRemoteApp):
 
     DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {
         command.DeleteAllOperationalDataCommand: 300.0,
+        command.DeleteAllRefDataCommand: 300.0,
         command.UploadCasesCommand: 45.0,
         command.RetrieveCasesByIdCommand: 45.0,
         command.RetrieveCasesByQueryCommand: 45.0,
