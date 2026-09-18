@@ -18,7 +18,7 @@ class DeleteAllOperationalDataCommand(Command):
 
     SORTED_OPERATIONAL_DATA_MODEL_CLASSES: ClassVar[list[type[model.ModelNoId]]] = (
         []
-    )  # Persistable domain models for operational data, in order of deletion so that constraints do not fail (i.e. DAG sort order on links)
+    )  # Persistable domain models for operational data, in deletion order so that foreign-key constraints do not fail (i.e. reverse DAG order on links)
 
 
 class DeleteAllRefDataCommand(Command):

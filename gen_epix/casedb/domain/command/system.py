@@ -28,7 +28,7 @@ class DeleteAllRefDataCommand(CommonDeleteAllRefDataCommand):
     REF_DATA_SERVICE_TYPE_VALUES: ClassVar[frozenset[str]] = frozenset(
         {"CASE", "GEO", "ONTOLOGY", "SEQDB"}
     )
-    SORTED_REF_DATA_MODEL_CLASSES: ClassVar[list[type[model.Model]]] = [
+    SORTED_REF_DATA_MODEL_CLASSES = [
         model.ColSetMember,
         model.Col,
         model.CaseTypeSetMember,

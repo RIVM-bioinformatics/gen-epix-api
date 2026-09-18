@@ -36,7 +36,7 @@ class DeleteAllRefDataCommand(CommonDeleteAllRefDataCommand):
     """Request deletion of all persisted seqdb reference data."""
 
     REF_DATA_SERVICE_TYPE_VALUES: ClassVar[frozenset[str]] = frozenset({"FILE", "SEQ"})
-    SORTED_REF_DATA_MODEL_CLASSES: ClassVar[list[type[model.Model]]] = [
+    SORTED_REF_DATA_MODEL_CLASSES = [
         model.ProtocolSetMember,
         model.Protocol,
         model.SeqCategory,
