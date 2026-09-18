@@ -9,6 +9,8 @@ from typing import Any, Iterator, cast
 
 import pytest
 
+from dynaconf.validator import ValidationError
+
 from gen_epix.commondb.domain.enum import (
     AppType,
     DevIdpConfig,
@@ -18,6 +20,7 @@ from gen_epix.commondb.domain.enum import (
 from gen_epix.commondb.domain.service import BaseAuthService
 from gen_epix.commondb.domain.util import get_app_cfg_class, set_env_variables
 from gen_epix.commondb.env import AppComposer
+from gen_epix.fastapp import exc
 from gen_epix.fastapp.enum import AuthFeatureFlag
 
 _REPO_ROOT = Path(__file__).parents[4]
@@ -212,3 +215,74 @@ def test_omopdb_read_config_string_auth_overrides(override_tmp_dir: Path) -> Non
     payload = _read_config("OMOPDB", extra_settings_files=[override_file])
 
     _assert_string_override_payload(payload, "OMOPDB")
+
+
+def _write_override_file(override_tmp_dir: Path, name: str, content: str) -> Path:
+    override_path = override_tmp_dir / name
+    override_path.write_text(textwrap.dedent(content), encoding="utf-8")
+    return override_path
+
+
+@pytest.mark.scenario_ids("TC-CFG-01-01")
+def test_read_config_rejects_unknown_id_factory(override_tmp_dir: Path) -> None:
+    """A settings file naming an id_factory outside the IdFactory enum fails validation."""
+    override_file = _write_override_file(
+        override_tmp_dir,
+        "bad_id_factory.toml",
+        """\
+        [service.defaults.props]
+        id_factory = "NOT_A_FACTORY"
+        """,
+    )
+
+    with pytest.raises(ValidationError):
+        _read_config("CASEDB", extra_settings_files=[override_file])
+
+
+@pytest.mark.scenario_ids("TC-CFG-01-01")
+def test_read_config_rejects_unresolvable_service_module(override_tmp_dir: Path) -> None:
+    """A settings file naming a service module that cannot be imported fails to resolve, not silently."""
+    override_file = _write_override_file(
+        override_tmp_dir,
+        "bad_service_module.toml",
+        """\
+        [service.case]
+        module = "gen_epix.nonexistent_module_path"
+        class_name = "CaseService"
+        """,
+    )
+
+    with pytest.raises(exc.InitializationServiceError):
+        _read_config("CASEDB", extra_settings_files=[override_file])
+
+
+@pytest.mark.scenario_ids("TC-CFG-01-01")
+def test_read_config_rejects_unknown_repository_type(override_tmp_dir: Path) -> None:
+    """A settings file naming a repository type outside the app's RepositoryType enum fails validation."""
+    override_file = _write_override_file(
+        override_tmp_dir,
+        "bad_repository_type.toml",
+        """\
+        [repository.defaults]
+        type = "NOT_A_TYPE"
+        """,
+    )
+
+    with pytest.raises(ValidationError):
+        _read_config("CASEDB", extra_settings_files=[override_file])
+
+
+@pytest.mark.scenario_ids("TC-CFG-01-01")
+def test_read_config_rejects_non_bool_feature_flag(override_tmp_dir: Path) -> None:
+    """A settings file setting a feature flag to a non-bool value fails validation."""
+    override_file = _write_override_file(
+        override_tmp_dir,
+        "bad_feature_flag.toml",
+        """\
+        [feature_flags]
+        update_own_organization = "yes"
+        """,
+    )
+
+    with pytest.raises(ValidationError):
+        _read_config("CASEDB", extra_settings_files=[override_file])
