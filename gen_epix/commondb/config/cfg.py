@@ -714,7 +714,7 @@ class AppCfg(BaseAppCfg):
         """
         source = self._cfg if resolved else self._raw_cfg_snapshot
         raw = {
-            k: v
+            k.lower(): v
             for k, v in dict(source).items()
             if k.lower() in self._EXPORTABLE_TOP_LEVEL_KEYS
         }
