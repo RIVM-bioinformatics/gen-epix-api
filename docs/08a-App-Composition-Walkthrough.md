@@ -48,7 +48,7 @@ The trailing `app = FAST_API` alias exists only for backwards compatibility with
 
    COMMONDB's own values are the hardcoded defaults themselves (`AppCfg._DEFAULT_SETTINGS` in `gen_epix/commondb/config/cfg.py`) — no per-app subclass or settings file is needed to reproduce them. The settings files COMMONDB ships are the ones needed for a genuine runtime choice, not filler:
    - `settings.toml` — present, but typically empty of anything the defaults don't already cover.
-   - `settings.repository.dict.secrets.toml` / `settings.repository.sa_sqlite.secrets.toml` — swap in the Dict or SQLite repository classes and demo-data paths; loaded only for `DICT_*`/`SA_SQLITE_*` repository modes. `SA_SQL` (the default backend) needs no repository file at all.
+   - `settings.repository.dict.toml` / `settings.repository.sa_sqlite.toml` — swap in the Dict or SQLite repository classes and demo-data paths; loaded only for `DICT_*`/`SA_SQLITE_*` repository modes. `SA_SQL` (the default backend) needs no repository file at all, unless a local `secrets.repository.sa_sql.toml` override is present.
    - Root-level identity-provider files (`identity_providers.toml` / `mock_identity_provider.toml` / `no_identity_providers.toml`) — selected per `DevIdpConfig`.
 
 ### 2c. Settings Validation (`_init_validate_settings`)

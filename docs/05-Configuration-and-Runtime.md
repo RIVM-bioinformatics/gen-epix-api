@@ -32,9 +32,9 @@ Missing settings files fail fast (`FileNotFoundError`). This makes misconfigurat
 | Category | Description |
 |----------|-------------|
 | `settings.toml` | Overrides for the app-agnostic parts of `AppCfg._DEFAULT_SETTINGS` not otherwise covered below (rarely needed, since those defaults are already correct for each app) |
-| `settings.repository.dict.secrets.toml` / `settings.repository.sa_sqlite.secrets.toml` | Shared per-backend-family repository config (type, module/class_name where applicable, and a per-repo file-path template) for the `DICT_*`/`SA_SQLITE_*` repository modes |
-| `settings.repository.{dict,sa_sqlite}.{demo,empty}.secrets.toml` | One line each, setting that backend family's file-path template to the demo or empty dataset |
-| `.example.secrets.repository.sa_sql.toml` | The one remaining copy-first template: `SA_SQL`'s real credentials, kept as `.example.` since it is the one file in this group with credential-shaped fields — though `SA_SQL` itself needs no file at all for local/dev use, since its dummy values already live in `AppCfg._DEFAULT_SETTINGS` |
+| `settings.repository.dict.toml` / `settings.repository.sa_sqlite.toml` | Shared per-backend-family repository config (type, module/class_name where applicable, and a per-repo file-path template) for the `DICT_*`/`SA_SQLITE_*` repository modes. Not named `.secrets.` — none of these files contain a credential |
+| `settings.repository.{dict,sa_sqlite}.{demo,empty}.toml` | One line each, setting that backend family's file-path template to the demo or empty dataset. Not named `.secrets.` either, for the same reason |
+| `.example.secrets.repository.sa_sql.toml` | Copy-first template for `SA_SQL`'s credentials — the one file in this group that actually has credential-shaped fields (uid/pwd, mostly commented out). `SA_SQL` itself needs no file at all for local/dev use, since its dummy values already live in `AppCfg._DEFAULT_SETTINGS`; copying this template to `secrets.repository.sa_sql.toml` (gitignored) is how a deployment overrides them via a file instead of environment variables |
 | Root `config/identity_providers.toml` / `mock_identity_provider.toml` / `no_identity_providers.toml` | Selected per `DevIdpConfig` — genuine per-mode choices, not filler defaults |
 
 `SA_SQL` is the baseline repository backend: it needs no settings file at
@@ -45,7 +45,7 @@ own docker-compose SQL Server container is provisioned with. Selecting
 default. See §1b below for the full precedence and a documented side
 effect of that layering.
 
-(Source: `gen_epix/commondb/config/cfg.py`, `AppCfg._DEFAULT_SETTINGS`; Source: `gen_epix/casedb/config/settings.repository.dict.secrets.toml`)
+(Source: `gen_epix/commondb/config/cfg.py`, `AppCfg._DEFAULT_SETTINGS`; Source: `gen_epix/casedb/config/settings.repository.dict.toml`)
 
 ### 1a. Hardcoded defaults and per-app configuration classes
 
@@ -81,19 +81,24 @@ always present, supplied by `AppCfg._DEFAULT_SETTINGS`, active whenever
 Choosing `DICT_DEMO`, `DICT_EMPTY`, `SA_SQLITE_DEMO`, or `SA_SQLITE_EMPTY`
 layers two files on top of that default, assembled by `set_env_variables`:
 
-- **`SA_SQL`**: no repository file is loaded.
-- **`DICT_DEMO` / `DICT_EMPTY`**: `settings.repository.dict.secrets.toml`
+- **`SA_SQL`**: `secrets.repository.sa_sql.toml` is loaded only if
+  present — a local, gitignored copy of `.example.secrets.repository.sa_sql.toml`
+  with its uid/pwd/server uncommented and filled in. Its absence is the
+  common case: `AppCfg._DEFAULT_SETTINGS["repository"]` already describes
+  a working `SA_SQL` configuration, so most local/dev use needs no file at
+  all here, only the usual environment-variable overrides.
+- **`DICT_DEMO` / `DICT_EMPTY`**: `settings.repository.dict.toml`
   (shared: `type = "DICT"`, `dir`, and every repo's `module`/`class_name`/
   `file` — the `file` value is a template referencing
   `{this.repository.defaults.props.variant}`, not a literal filename),
-  then `settings.repository.dict.demo.secrets.toml` or
-  `settings.repository.dict.empty.secrets.toml` (one line each:
+  then `settings.repository.dict.demo.toml` or
+  `settings.repository.dict.empty.toml` (one line each:
   `variant = "full"` or `variant = "empty"`), which resolves every repo's
   `file` template at once. `@format` strings resolve against the
   fully-merged settings at read time, not at each file's own parse time,
   so load order between the two files does not matter for this to work.
 - **`SA_SQLITE_DEMO` / `SA_SQLITE_EMPTY`**: the same two-file pattern with
-  `settings.repository.sa_sqlite.secrets.toml` (`type = "SA_SQLITE"`; no
+  `settings.repository.sa_sqlite.toml` (`type = "SA_SQLITE"`; no
   module/class_name override, since SA_SQLITE reuses the SA_SQL default's
   repository classes) plus a one-line `variant` file.
 
@@ -333,7 +338,8 @@ Prepares environment context and transfers demo data from dict repositories into
 - `gen_epix/commondb/domain/enum.py` (`FeatureFlag`, `FEATURE_FLAG_TOML_KEYS`)
 - `gen_epix/casedb/config/cfg.py`, `gen_epix/casedb/config/cfg_types.py`
 - `gen_epix/casedb/domain/enum.py` (`CasedbFeatureFlag`)
-- `gen_epix/casedb/config/settings.repository.dict.secrets.toml`
+- `gen_epix/casedb/config/settings.repository.dict.toml`
+- `gen_epix/casedb/config/.example.secrets.repository.sa_sql.toml`
 - `config/identity_providers.toml`
 - `config/mock_identity_provider.toml`
 - `config/no_identity_providers.toml`
