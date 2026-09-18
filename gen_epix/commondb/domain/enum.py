@@ -168,29 +168,6 @@ class DevRepositoryConfig(Enum):
     SA_SQL = "SA_SQL"
 
 
-class DevRepositoryConfigSet(Enum):
-    """Encapsulates grouping of development repository modes by storage engine and seeded state."""
-
-    DICT = frozenset({DevRepositoryConfig.DICT_DEMO, DevRepositoryConfig.DICT_EMPTY})
-    SA = frozenset(
-        {
-            DevRepositoryConfig.SA_SQLITE_DEMO,
-            DevRepositoryConfig.SA_SQLITE_EMPTY,
-            DevRepositoryConfig.SA_SQL,
-        }
-    )
-    SA_SQLITE = frozenset(
-        {DevRepositoryConfig.SA_SQLITE_DEMO, DevRepositoryConfig.SA_SQLITE_EMPTY}
-    )
-    SA_SQL = frozenset({DevRepositoryConfig.SA_SQL})
-    DEMO = frozenset(
-        {DevRepositoryConfig.DICT_DEMO, DevRepositoryConfig.SA_SQLITE_DEMO}
-    )
-    EMPTY = frozenset(
-        {DevRepositoryConfig.DICT_EMPTY, DevRepositoryConfig.SA_SQLITE_EMPTY}
-    )
-
-
 class DataIssueType(Enum):
     """Encapsulates classification of data-quality issues emitted during validation and transformation."""
 

@@ -19,7 +19,6 @@ from gen_epix.commondb.domain.enum import (
     AppTypeSet,
     DevIdpConfig,
     DevRepositoryConfig,
-    DevRepositoryConfigSet,
 )
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.fastapp import Command, Domain, Model, ModelFieldProps, exc
