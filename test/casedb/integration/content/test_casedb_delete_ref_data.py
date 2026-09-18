@@ -9,7 +9,6 @@ from test.test_client.enum import (
 import pytest
 
 from gen_epix.casedb.domain import command, enum
-from gen_epix.commondb.domain import command as commondb_command
 from gen_epix.commondb.domain.enum import AppType, DevRepositoryConfig
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.commondb.test.util import set_log_level
@@ -71,11 +70,14 @@ class TestDeleteRefData:
         orgs_before = self._read_all(env, command.OrganizationCrudCommand, root_user)
         assert users_before, "expected demo users to exist before deletion"
         assert orgs_before, "expected demo organizations to exist before deletion"
-        assert self._read_all(env, command.CaseTypeCrudCommand, root_user), (
-            "expected demo case types (reference data) to exist before deletion"
-        )
+        assert self._read_all(
+            env, command.CaseTypeCrudCommand, root_user
+        ), "expected demo case types (reference data) to exist before deletion"
 
-        result = env.handle(commondb_command.DeleteAllRefDataCommand(user=root_user))
+        ops_result = env.handle(command.DeleteAllOperationalDataCommand(user=root_user))
+        assert ops_result.success, ops_result.details
+
+        result = env.handle(command.DeleteAllRefDataCommand(user=root_user))
 
         assert result.success, {
             key: value[:300]
