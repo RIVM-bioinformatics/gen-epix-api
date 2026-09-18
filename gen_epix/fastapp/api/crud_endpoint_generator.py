@@ -15,6 +15,7 @@ from typing import Any, get_type_hints
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
+from fastapi.concurrency import run_in_threadpool
 
 from gen_epix.fastapp import exc, model
 from gen_epix.fastapp.api import exc as api_exc
@@ -156,10 +157,9 @@ class CrudEndpointGenerator:
                 )
                 return None
             try:
-                retval = route.app.handle(cmd)
-                if route.model_class is not read_api_model_class:
+                retval = await run_in_threadpool(route.app.handle, cmd)
+                if route.model_class is not route.read_api_model_class:
                     retval = [read_api_model_class.from_model(x) for x in retval]  # type: ignore[attr-defined]
-                return retval
             except Exception as exception:
                 handle_exception_fn(
                     "79d26f4f" + route.endpoint_basename,
@@ -228,10 +228,9 @@ class CrudEndpointGenerator:
                 operation=CrudOperation.READ_SOME,
             )
             try:
-                retval = route.app.handle(cmd)
-                if route.model_class is not read_api_model_class:
+                retval = await run_in_threadpool(route.app.handle, cmd)
+                if route.model_class is not route.read_api_model_class:
                     retval = [read_api_model_class.from_model(x) for x in retval]  # type: ignore[attr-defined]
-                return retval
 
             # TODO: Add a specific exception for NotImplementedError
             except Exception as exception:
@@ -323,7 +322,7 @@ class CrudEndpointGenerator:
                 )
                 return None
             try:
-                retval = route.app.handle(cmd)
+                retval = await run_in_threadpool(route.app.handle, cmd)
                 if not return_id and route.model_class is not read_api_model_class:
                     retval = [read_api_model_class.from_model(x) for x in retval]  # type: ignore[attr-defined]
                 return retval
@@ -373,7 +372,7 @@ class CrudEndpointGenerator:
                     operation=CrudOperation.READ_ONE,
                     obj_ids=object_id,
                 )
-                obj = route.app.handle(cmd)
+                obj = await run_in_threadpool(route.app.handle, cmd)
                 if route.model_class is not read_api_model_class:
                     obj = read_api_model_class.from_model(obj)  # type: ignore[attr-defined]
                 return obj
@@ -434,7 +433,7 @@ class CrudEndpointGenerator:
                     ),
                     return_id=route.post_returns_id,
                 )
-                retval = route.app.handle(cmd)
+                retval = await run_in_threadpool(route.app.handle, cmd)
                 if (
                     not route.post_returns_id
                     and route.model_class is not read_api_model_class
@@ -507,7 +506,7 @@ class CrudEndpointGenerator:
                     ),
                     return_id=route.post_returns_id,
                 )
-                retval = route.app.handle(cmd)
+                retval = await run_in_threadpool(route.app.handle, cmd)
                 if (
                     not route.post_returns_id
                     and route.model_class is not read_api_model_class
@@ -592,7 +591,7 @@ class CrudEndpointGenerator:
                     ),
                     return_id=route.put_returns_id,
                 )
-                retval = route.app.handle(cmd)
+                retval = await run_in_threadpool(route.app.handle, cmd)
                 if (
                     not route.put_returns_id
                     and route.model_class is not read_api_model_class
@@ -658,7 +657,7 @@ class CrudEndpointGenerator:
                     ),
                     return_id=route.put_returns_id,
                 )
-                retval = route.app.handle(cmd)
+                retval = await run_in_threadpool(route.app.handle, cmd)
                 if (
                     not route.put_returns_id
                     and route.model_class is not read_api_model_class
@@ -708,7 +707,7 @@ class CrudEndpointGenerator:
                     operation=CrudOperation.DELETE_ONE,
                     obj_ids=object_id,
                 )
-                retval = route.app.handle(cmd)
+                retval = await run_in_threadpool(route.app.handle, cmd)
                 return retval
             except Exception as exception:
                 handle_exception_fn(
@@ -755,7 +754,7 @@ class CrudEndpointGenerator:
                     limit=limit or 0,
                     offset=offset or 0,
                 )
-                retval = route.app.handle(cmd)
+                retval = await run_in_threadpool(route.app.handle, cmd)
                 return retval
             # TODO: Add a specific exception for NotImplementedError
             except Exception as exception:
@@ -824,7 +823,7 @@ class CrudEndpointGenerator:
                     operation=CrudOperation.DELETE_SOME,
                     return_id=route.delete_all_returns_id,
                 )
-                retval = route.app.handle(cmd)
+                retval = await run_in_threadpool(route.app.handle, cmd)
                 return retval
             # TODO: Add a specific exception for NotImplementedError
             except Exception as exception:

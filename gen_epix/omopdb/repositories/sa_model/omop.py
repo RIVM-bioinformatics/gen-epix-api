@@ -1,8 +1,6 @@
 """SQLAlchemy mappings for persistable OmopDB OMOP domain models."""
 
-from __future__ import (
-    annotations,
-)
+from __future__ import annotations
 
 from datetime import date, datetime
 from uuid import UUID
