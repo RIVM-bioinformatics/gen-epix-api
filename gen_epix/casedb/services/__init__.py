@@ -13,7 +13,7 @@ from gen_epix.casedb.services.abac import AbacService as AbacService
 from gen_epix.casedb.services.case import CaseService as CaseService
 from gen_epix.casedb.services.geo import GeoService as GeoService
 from gen_epix.casedb.services.ontology import OntologyService as OntologyService
-from gen_epix.casedb.services.seqdb import SeqdbRemoteApp as SeqdbRemoteApp
+from gen_epix.casedb.services.seqdb import SeqdbClient as SeqdbClient
 from gen_epix.casedb.services.seqdb import SeqdbService as SeqdbService
 from gen_epix.commondb.services import AuthService as AuthService
 from gen_epix.commondb.services import OrganizationService as OrganizationService

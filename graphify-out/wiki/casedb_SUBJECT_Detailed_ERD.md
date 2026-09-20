@@ -1,13 +1,11 @@
-# casedb SUBJECT Detailed ERD
+# Casedb Subject Detailed ERD
 
-> 4 nodes
+> 2 nodes · cohesion 1.00
 
 ## Key Concepts
 
-- **casedb SUBJECT Detailed ERD** (3 connections) — `docs/erm/casedb.subject.detailed.md`
-- **Subject entity** (2 connections) — `docs/erm/casedb.subject.detailed.md`
-- **SubjectIdentifier entity** (2 connections) — `docs/erm/casedb.subject.detailed.md`
-- **casedb SUBJECT Simplified ERD** (1 connections) — `docs/erm/casedb.subject.md`
+- **casedb.subject.detailed.md** (1 connections) — `docs/erm/casedb.subject.detailed.md`
+- **casedb / SUBJECT — Detailed ERD** (1 connections) — `docs/erm/casedb.subject.detailed.md`
 
 ## Relationships
 
@@ -16,12 +14,11 @@
 ## Source Files
 
 - `docs/erm/casedb.subject.detailed.md`
-- `docs/erm/casedb.subject.md`
 
 ## Audit Trail
 
-- EXTRACTED: 3 (75%)
-- INFERRED: 1 (25%)
+- EXTRACTED: 1 (100%)
+- INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 
 ---

@@ -432,7 +432,7 @@ def get_app_cfgs(
         # Add seqdb app_cfg to casedb app_cfg for seqdb service local app so that when the latter is instantiated, it can directly use this app_cfg without risk of having seqdb env variables being altered in the meantime
         if app_type == AppType.CASEDB and seqdb_app_cfgs is not None:
             app_cfg_data = cast(dict[str, Any], app_cfgs[name].cfg)
-            app_cfg_data["service"]["seqdb"]["props"]["seqdb_local_app"]["app_cfg"] = (
+            app_cfg_data["service"]["seqdb"]["props"]["local_client"]["app_cfg"] = (
                 seqdb_app_cfgs[name]
             )
     return app_cfgs
