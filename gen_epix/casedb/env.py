@@ -10,8 +10,7 @@ from typing import Any
 
 from gen_epix.casedb.domain import DOMAIN, command, model
 from gen_epix.casedb.domain.policy import RoleGenerator
-from gen_epix.casedb.policies import COMMON_POLICY_MAP
-from gen_epix.casedb.services import RbacService
+from gen_epix.casedb.policies import COMMON_POLICY_MAP, PolicyDecisionPoint
 from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.env import AppComposer as CommonAppComposer
 
@@ -68,6 +67,6 @@ class AppComposer(CommonAppComposer):
             command_class_map=command.COMMON_COMMAND_MAP,
             policy_class_map=COMMON_POLICY_MAP,
             role_generator_class=RoleGenerator,
-            rbac_service_class=RbacService,
+            pdp_class=PolicyDecisionPoint,
             **kwargs,
         )

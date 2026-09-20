@@ -6,6 +6,7 @@ import pytest
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, enum, model
+from gen_epix.commondb.domain.policy.pdp import BasePolicyDecisionPoint
 from gen_epix.commondb.domain.service import BaseAbacService
 from gen_epix.commondb.policies.read_organization_results_only_policy import (
     ReadOrganizationResultsOnlyPolicy,
@@ -67,6 +68,12 @@ class BasePolicyTestCase:
             def is_existing_user_by_key(self, user_key: str | None, uow: Any) -> bool:  # type: ignore[override]
                 return False
 
+        class DummyAbacService(BaseAbacService):
+            pass
+
+        class DummyPolicyDecisionPoint(BasePolicyDecisionPoint):
+            pass
+
         self.app_impl: AppImplDetails = AppImplDetails(
             sorted_service_types=[enum.ServiceType.ABAC],
             services={},
@@ -78,7 +85,9 @@ class BasePolicyTestCase:
             command_class_map={},
             policy_class_map={},
             rbac_service_class=DummyRbacService,  # type: ignore[type-abstract]
+            abac_service_class=DummyAbacService,  # type: ignore[type-abstract]
             user_manager_class=DummyUserManager,  # type: ignore[type-abstract]
+            pdp_class=DummyPolicyDecisionPoint,  # type: ignore[type-abstract]
             role_map=enum.Role,  # type: ignore[arg-type]
             role_set_map=enum.RoleSet,  # type: ignore[arg-type]
             role_permissions_map={},

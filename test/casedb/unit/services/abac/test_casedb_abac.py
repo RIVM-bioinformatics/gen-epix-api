@@ -24,7 +24,7 @@ import pytest
 from gen_epix.casedb.domain import exc
 from gen_epix.casedb.domain.service.abac import BaseAbacService
 from gen_epix.casedb.policies.case_abac_policy import CaseAbacPolicy
-from gen_epix.casedb.services.abac.service import AbacService
+from gen_epix.casedb.services.abac import AbacService
 from gen_epix.commondb.domain.enum import RoleSet as CommonRoleSet
 from gen_epix.commondb.domain.model.organization import User as OrgUser
 from gen_epix.fastapp import EventTiming
@@ -59,6 +59,10 @@ class BaseAbacTestCase:
             app=self.app, repository=self.repository
         )
         self.service.app.handle = Mock()  # type: ignore[method-assign]
+
+        # Clear caches to ensure clean test state (class-level caches shared across instances)
+        AbacService._get_case_abac_cached.cache_clear()  # type: ignore[attr-defined]
+        AbacService._get_ref_data_access_cached.cache_clear()  # type: ignore[attr-defined]
 
         self.service.role_set_map = {
             CommonRoleSet.GE_APP_ADMIN: {"APP_ADMIN"},  # type: ignore[dict-item]

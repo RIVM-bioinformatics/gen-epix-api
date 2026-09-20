@@ -42,7 +42,7 @@ class User(ServiceUser):
         return self.email
 
 
-class RbacService(BaseRbacService):
+class BaseRbacService(BaseRbacService):
     def retrieve_user_roles(self, user: User) -> set[Hashable]:
         return user.roles
 
@@ -60,7 +60,7 @@ class RBACTestClient(ServiceTestClient):
     ) -> None:
         super().__init__(repository_class, logger=logger, **kwargs)
         # Create RBAC service
-        rbac_service = RbacService(self.app, service_type=ServiceType.RBAC)
+        rbac_service = BaseRbacService(self.app, service_type=ServiceType.RBAC)
         rbac_service.register_handlers()
         for permission in rbac_service.app.domain.get_permissions_for_command(
             Model1_1CrudCommand
