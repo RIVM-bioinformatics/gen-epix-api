@@ -8,11 +8,11 @@ from uuid import UUID
 import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain import exc
+from gen_epix.casedb.domain.policy.pdp import BasePolicyDecisionPoint
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.crud_common import (
     _crud_cascade_delete,
     get_case_abac_from_command,
-    is_app_admin_or_above,
 )
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
@@ -31,7 +31,8 @@ def case_service_crud_case_set_member(
     """Handle CRUD operations for CaseSetMember entities."""
     with self.repository.uow() as uow:
         _crud_cascade_delete(self, uow, cmd)
-        if cmd.user is None or is_app_admin_or_above(self, cmd.user):
+        pdb: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
+        if pdb.is_exempted(cmd):
             return _crud_case_set_member_without_abac(self, uow, cmd)
         return _crud_case_set_member_with_abac(self, uow, cmd)
 

@@ -38,6 +38,9 @@ class BaseCrudTestCase:
         self.service.repository.uow.return_value = self.uow
         self.service.repository.crud = Mock(return_value=[])
         self.service.crud = Mock(return_value=[])
+        # Set up PDP mock for authorization checks
+        self.service.app.pdp = Mock()
+        self.service.app.pdp.is_exempted = Mock(return_value=False)
 
         # Standard test user
         self.user: User = User(

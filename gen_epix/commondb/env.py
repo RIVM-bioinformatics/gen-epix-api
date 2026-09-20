@@ -55,8 +55,6 @@ class AppComposer(BaseAppComposer):
         domain: Domain | None = None,
         sorted_service_types: tuple[Enum, ...] | None = None,
         role_generator_class: type[RoleGenerator] | None = None,
-        rbac_service_class: type[BaseRbacService] | None = None,
-        abac_service_class: type[BaseAbacService] | None = None,
         user_manager_class: type[BaseUserManager] | None = None,
         pdp_class: type[BasePolicyDecisionPoint] | None = None,
         model_class_map: dict[type[fastapp.Model], type[fastapp.Model]] | None = None,

@@ -314,14 +314,16 @@ class Run:
 
         import pytest
 
-        # Try to parse as JSON (list of folders)
-        try:
-            folder_list = json.loads(folders)
-            if not isinstance(folder_list, list):
+        # parse folders
+        if isinstance(folders, list):
+            folder_list = folders
+        elif isinstance(folders, str):
+            if Path(folders).is_dir():
                 folder_list = [folders]
-        except (json.JSONDecodeError, TypeError):
-            # If not JSON, treat as single folder
-            folder_list = [folders]
+            else:
+                folder_list = json.loads(folders)
+        else:
+            raise ValueError("Invalid type for folders argument")
 
         pytest.main(Run.DEFAULT_PYTEST_ARGS + folder_list)
 

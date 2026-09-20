@@ -40,6 +40,7 @@ def case_service_crud_ref_col(
     """
     assert cmd.user is not None and cmd.user.id is not None
 
+    # TODO: use PDP for ABAC
     if cmd.is_read():
         ref_data_access = get_ref_data_access_from_command(cmd)
         if ref_data_access is None or ref_data_access.is_full_access:

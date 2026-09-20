@@ -22,16 +22,11 @@ class TestAdminPath(BaseCrudTestCase):
         # 2. Mocks
         expected_result: list[int] = [1, 2]
         self.service.crud.return_value = expected_result  # type: ignore[attr-defined]
-        with (
-            patch(
-                "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
-                new=Mock(),
-            ) as cascade_mock,
-            patch(
-                "gen_epix.casedb.services.case.crud_case_set.is_app_admin_or_above",
-                new=Mock(return_value=True),
-            ) as is_admin_mock,
-        ):
+        self.service.app.pdp.is_exempted.return_value = True  # Admin path
+        with patch(
+            "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
+            new=Mock(),
+        ) as cascade_mock:
             # 3. Execute
             retval = case_service_crud_case_set(self.service, cmd)
 
@@ -43,7 +38,7 @@ class TestAdminPath(BaseCrudTestCase):
             # Ensure cascade received uow
             args, _ = cascade_mock.call_args
             assert args[0] is self.service and args[1] is self.uow and args[2] is cmd
-            is_admin_mock.assert_called_once_with(self.service, cmd.user)
+            self.service.app.pdp.is_exempted.assert_called_once_with(cmd)  # type: ignore[attr-defined]
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")
@@ -57,15 +52,12 @@ class TestAbacNoPolicy(BaseCrudTestCase):
         # 2. Mocks
         expected_result: list[str] = ["a"]
         self.service.crud.return_value = expected_result  # type: ignore[attr-defined]
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
         with (
             patch(
                 "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
                 new=Mock(),
             ) as cascade_mock,
-            patch(
-                "gen_epix.casedb.services.case.crud_case_set.is_app_admin_or_above",
-                new=Mock(return_value=False),
-            ),
             patch(
                 "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
                 new=Mock(return_value=None),
@@ -90,15 +82,12 @@ class TestAbacCreateOperation(BaseCrudTestCase):
 
         # 2. Mocks
         case_abac: Mock = self.create_case_abac(allowed=True)
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
         with (
             patch(
                 "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
                 new=Mock(),
             ) as cascade_mock,
-            patch(
-                "gen_epix.casedb.services.case.crud_case_set.is_app_admin_or_above",
-                new=Mock(return_value=False),
-            ),
             patch(
                 "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
                 new=Mock(return_value=case_abac),
@@ -127,14 +116,11 @@ class TestReadOperations(BaseCrudTestCase):
         case_abac: Mock = self.create_case_abac(allowed=True)
         case_sets: list[int] = [10, 20]
         self.service._retrieve_case_sets_with_content_right.return_value = case_sets  # type: ignore[attr-defined]
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
         with (
             patch(
                 "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
                 new=Mock(),
-            ),
-            patch(
-                "gen_epix.casedb.services.case.crud_case_set.is_app_admin_or_above",
-                new=Mock(return_value=False),
             ),
             patch(
                 "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
@@ -167,14 +153,11 @@ class TestReadOperations(BaseCrudTestCase):
         case_abac: Mock = self.create_case_abac(allowed=True)
         case_sets: list[int] = [10, 20]
         self.service._retrieve_case_sets_with_content_right.return_value = case_sets  # type: ignore[attr-defined]
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
         with (
             patch(
                 "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
                 new=Mock(),
-            ),
-            patch(
-                "gen_epix.casedb.services.case.crud_case_set.is_app_admin_or_above",
-                new=Mock(return_value=False),
             ),
             patch(
                 "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
@@ -214,14 +197,11 @@ class TestUpdateOperation(BaseCrudTestCase):
         )
         expected_result: str = "updated"
         self.service.crud.return_value = expected_result  # type: ignore[attr-defined]
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
         with (
             patch(
                 "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
                 new=Mock(),
-            ),
-            patch(
-                "gen_epix.casedb.services.case.crud_case_set.is_app_admin_or_above",
-                new=Mock(return_value=False),
             ),
             patch(
                 "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
@@ -247,14 +227,11 @@ class TestDeleteAllOperation(BaseCrudTestCase):
 
         # 2. Mocks
         case_abac: Mock = self.create_case_abac(allowed=True)
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
         with (
             patch(
                 "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
                 new=Mock(),
-            ),
-            patch(
-                "gen_epix.casedb.services.case.crud_case_set.is_app_admin_or_above",
-                new=Mock(return_value=False),
             ),
             patch(
                 "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
@@ -290,14 +267,11 @@ class TestDeleteSomeOperation(BaseCrudTestCase):
         case_abac: Mock = self.create_case_abac(allowed=True)
         expected_result: bool = True
         self.service.repository.crud.return_value = expected_result  # type: ignore[attr-defined]
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
         with (
             patch(
                 "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
                 new=Mock(),
-            ),
-            patch(
-                "gen_epix.casedb.services.case.crud_case_set.is_app_admin_or_above",
-                new=Mock(return_value=False),
             ),
             patch(
                 "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
@@ -337,14 +311,11 @@ class TestDeleteSomeOperation(BaseCrudTestCase):
         dc_map: dict[UUID, set[UUID]] = {case_sets[0].id: {uuid4()}}
         self.service._retrieve_case_set_data_collections_map.return_value = dc_map  # type: ignore[attr-defined]
         case_abac: Mock = self.create_case_abac(allowed=False)
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
         with (
             patch(
                 "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
                 new=Mock(),
-            ),
-            patch(
-                "gen_epix.casedb.services.case.crud_case_set.is_app_admin_or_above",
-                new=Mock(return_value=False),
             ),
             patch(
                 "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",

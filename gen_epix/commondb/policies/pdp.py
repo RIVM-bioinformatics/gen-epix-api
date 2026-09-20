@@ -29,7 +29,7 @@ class PolicyDecisionPoint(BasePolicyDecisionPoint):
         if exempted_role_set is None:
             return False
         has_exempted_role = bool(
-            user.roles & {x.value for x in exempted_role_set.value}
+            user.roles & self.abac_service.app.impl.role_set_map[exempted_role_set]
         )
         return has_exempted_role
 

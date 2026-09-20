@@ -30,6 +30,7 @@ def case_service_retrieve_is_own_cases(
     user: model.User
     user, repository = self._get_user_and_repository(cmd)  # type: ignore[assignment]
     assert isinstance(user, model.User) and user.id is not None
+    # TODO: use PDP for ABAC
     case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
     assert case_abac is not None
     right = enum.CaseRight.READ_CASE
