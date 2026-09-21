@@ -1292,6 +1292,7 @@ class TestModelSampleBatchForUpload:
 
         sample_batch = model.SampleBatchForUpload(**data)
         assert isinstance(sample_batch, model.SampleBatchForUpload)
+        assert sample_batch.get_missing_allele_ids() == set()
 
     def test_read_source_sample_batch2_json(self) -> None:
         """Test reading sample_batch_for_upload2.json as SampleBatchForUpload model."""
@@ -1301,6 +1302,7 @@ class TestModelSampleBatchForUpload:
 
         sample_batch = model.SampleBatchForUpload(**data)
         assert isinstance(sample_batch, model.SampleBatchForUpload)
+        assert sample_batch.get_missing_allele_ids() == set()
 
         # Validate structure: 4 samples with different seq/contig configurations
         assert len(sample_batch.samples) == 4
@@ -1606,3 +1608,262 @@ class TestModelSampleBatchForUpload:
         # Verify validation compliance
         assert (sample_batch.samples[0].seqs or [])[0].sample_id == NULL_ID
         assert (sample_batch.samples[1].seqs or [])[0].sample_id == seq_sample_id
+
+
+@pytest.mark.scenario_ids("TC-SEC-31-01")
+class TestSampleBatchForUploadAlleleHandling:
+    """Covers SampleBatchForUpload's allele-reference bookkeeping:
+    get_referenced_allele_ids, get_missing_allele_ids, prune_alleles, and the
+    subset/merge overrides that keep self.alleles consistent with the parent
+    list.
+    """
+
+    @staticmethod
+    def _make_sample(profile: model.SeqProfileForUpload) -> model.SampleForUpload:
+        return model.SampleForUpload(
+            id=uuid4(),
+            sample=model.Sample(created_in_data_collection_id=uuid4()),
+            seq_profiles=[profile],
+        )
+
+    @staticmethod
+    def _make_allele_ids_profile(
+        allele_ids: list[UUID | None],
+    ) -> model.SeqProfileForUpload:
+        return model.SeqProfileForUpload(  # type: ignore[call-arg]
+            protocol_code="PROTOCOL456",
+            seq_profile_type=model.enum.SeqProfileType.ALLELE,
+            format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
+            locus_code_map_code="MAP123",
+            allele_ids=allele_ids,
+            content_hash=model.SeqProfile.get_allele_profile_hash(allele_ids),
+        )
+
+    @staticmethod
+    def _make_locus_allele_id_map_profile(
+        locus_allele_id_map: dict[str, UUID],
+    ) -> model.SeqProfileForUpload:
+        return model.SeqProfileForUpload(  # type: ignore[call-arg]
+            protocol_code="PROTOCOL123",
+            seq_profile_type=model.enum.SeqProfileType.ALLELE,
+            format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
+            locus_code_map_code="MAP123",
+            locus_allele_id_map=locus_allele_id_map,
+            content_hash=model.SeqProfile.get_allele_profile_hash(
+                list(locus_allele_id_map.values())
+            ),
+        )
+
+    def test_get_referenced_allele_ids_content_form(self) -> None:
+        allele_id1, allele_id2 = uuid4(), uuid4()
+        profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
+            [allele_id1, allele_id2]
+        )
+        batch = model.SampleBatchForUpload(samples=[self._make_sample(profile)])
+
+        assert batch.get_referenced_allele_ids() == {allele_id1, allele_id2}
+
+    def test_get_referenced_allele_ids_allele_ids_form(self) -> None:
+        allele_id1, allele_id2 = uuid4(), uuid4()
+        profile = self._make_allele_ids_profile([allele_id1, None, allele_id2])
+        batch = model.SampleBatchForUpload(samples=[self._make_sample(profile)])
+
+        assert batch.get_referenced_allele_ids() == {allele_id1, allele_id2}
+
+    def test_get_referenced_allele_ids_locus_allele_id_map_form(self) -> None:
+        allele_id1, allele_id2 = uuid4(), uuid4()
+        profile = self._make_locus_allele_id_map_profile(
+            {"locus1": allele_id1, "locus2": allele_id2}
+        )
+        batch = model.SampleBatchForUpload(samples=[self._make_sample(profile)])
+
+        assert batch.get_referenced_allele_ids() == {allele_id1, allele_id2}
+
+    def test_get_referenced_allele_ids_across_multiple_samples_and_forms(self) -> None:
+        allele_id1, allele_id2, allele_id3 = uuid4(), uuid4(), uuid4()
+        sample1 = self._make_sample(
+            TestModelSeqProfileForUpload._get_allele_profile_for_ids([allele_id1])
+        )
+        sample2 = self._make_sample(
+            self._make_allele_ids_profile([allele_id2])
+        )
+        sample3 = self._make_sample(
+            self._make_locus_allele_id_map_profile({"locus1": allele_id3})
+        )
+        batch = model.SampleBatchForUpload(samples=[sample1, sample2, sample3])
+
+        assert batch.get_referenced_allele_ids() == {
+            allele_id1,
+            allele_id2,
+            allele_id3,
+        }
+
+    def test_get_missing_allele_ids_reports_uncovered_references(self) -> None:
+        allele_id = uuid4()
+        profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
+            [allele_id]
+        )
+        batch = model.SampleBatchForUpload(samples=[self._make_sample(profile)])
+
+        assert batch.get_missing_allele_ids() == {allele_id}
+
+    def test_get_missing_allele_ids_empty_when_covered(self) -> None:
+        allele = model.AlleleForUpload(locus_id=uuid4(), seq="AAAA")
+        profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
+            [allele.id]
+        )
+        batch = model.SampleBatchForUpload(
+            samples=[self._make_sample(profile)], alleles=[allele]
+        )
+
+        assert batch.get_missing_allele_ids() == set()
+
+    def test_prune_alleles_drops_unreferenced(self) -> None:
+        allele1 = model.AlleleForUpload(locus_id=uuid4(), seq="AAAA")
+        allele2 = model.AlleleForUpload(locus_id=uuid4(), seq="CCCC")
+        profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
+            [allele1.id]
+        )
+        batch = model.SampleBatchForUpload(
+            samples=[self._make_sample(profile)], alleles=[allele1, allele2]
+        )
+
+        batch.prune_alleles()
+
+        assert batch.alleles == [allele1]
+
+    def test_prune_alleles_to_empty_yields_none(self) -> None:
+        allele = model.AlleleForUpload(locus_id=uuid4(), seq="AAAA")
+        batch = model.SampleBatchForUpload(samples=[], alleles=[allele])
+
+        batch.prune_alleles()
+
+        assert batch.alleles is None
+
+    def test_prune_alleles_excludes_given_ids_even_if_referenced(self) -> None:
+        # Simulates trimming a batch to only the alleles a remote instance
+        # doesn't have yet: allele1 is referenced but already exists remotely.
+        allele1 = model.AlleleForUpload(locus_id=uuid4(), seq="AAAA")
+        allele2 = model.AlleleForUpload(locus_id=uuid4(), seq="CCCC")
+        profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
+            [allele1.id, allele2.id]
+        )
+        batch = model.SampleBatchForUpload(
+            samples=[self._make_sample(profile)], alleles=[allele1, allele2]
+        )
+
+        batch.prune_alleles(exclude_allele_ids={allele1.id})
+
+        assert batch.alleles == [allele2]
+
+    def test_prune_alleles_excludes_all_yields_none(self) -> None:
+        allele = model.AlleleForUpload(locus_id=uuid4(), seq="AAAA")
+        profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
+            [allele.id]
+        )
+        batch = model.SampleBatchForUpload(
+            samples=[self._make_sample(profile)], alleles=[allele]
+        )
+
+        batch.prune_alleles(exclude_allele_ids={allele.id})
+
+        assert batch.alleles is None
+
+    def test_subset_prunes_alleles_not_referenced_by_kept_samples(self) -> None:
+        allele1 = model.AlleleForUpload(locus_id=uuid4(), seq="AAAA")
+        allele2 = model.AlleleForUpload(locus_id=uuid4(), seq="CCCC")
+        sample1 = self._make_sample(
+            TestModelSeqProfileForUpload._get_allele_profile_for_ids([allele1.id])
+        )
+        sample2 = self._make_sample(
+            TestModelSeqProfileForUpload._get_allele_profile_for_ids([allele2.id])
+        )
+        batch = model.SampleBatchForUpload(
+            samples=[sample1, sample2], alleles=[allele1, allele2]
+        )
+
+        result = batch.subset(lambda s: s is sample1)
+
+        assert result.samples == [sample1]
+        assert result.alleles == [allele1]
+
+    def test_merge_unions_alleles_from_both_sources_then_prunes(self) -> None:
+        allele1 = model.AlleleForUpload(locus_id=uuid4(), seq="AAAA")
+        allele2 = model.AlleleForUpload(locus_id=uuid4(), seq="CCCC")
+        sample1 = self._make_sample(
+            TestModelSeqProfileForUpload._get_allele_profile_for_ids([allele1.id])
+        )
+        sample2 = self._make_sample(
+            TestModelSeqProfileForUpload._get_allele_profile_for_ids([allele2.id])
+        )
+        batch1 = model.SampleBatchForUpload(samples=[sample1], alleles=[allele1])
+        batch2 = model.SampleBatchForUpload(samples=[sample2], alleles=[allele2])
+
+        result = model.SampleBatchForUpload.merge([batch1, batch2])
+
+        assert result.samples == [sample1, sample2]
+        assert {a.id for a in result.alleles or []} == {allele1.id, allele2.id}
+
+    def test_merge_alleles_stays_none_when_all_sources_none(self) -> None:
+        allele_id1, allele_id2 = uuid4(), uuid4()
+        sample1 = self._make_sample(
+            TestModelSeqProfileForUpload._get_allele_profile_for_ids([allele_id1])
+        )
+        sample2 = self._make_sample(
+            TestModelSeqProfileForUpload._get_allele_profile_for_ids([allele_id2])
+        )
+        batch1 = model.SampleBatchForUpload(samples=[sample1], alleles=None)
+        batch2 = model.SampleBatchForUpload(samples=[sample2], alleles=None)
+
+        result = model.SampleBatchForUpload.merge([batch1, batch2])
+
+        assert result.alleles is None
+
+    def test_merge_alleles_present_in_one_source_only_still_unions(self) -> None:
+        # Regression guard for the "alleles=None on merge" trap: if the merge
+        # just copied batches[0].alleles (None here), the second source's
+        # allele1 would silently disappear even though sample2 references it.
+        allele1 = model.AlleleForUpload(locus_id=uuid4(), seq="AAAA")
+        other_allele_id = uuid4()
+        sample1 = self._make_sample(
+            TestModelSeqProfileForUpload._get_allele_profile_for_ids(
+                [other_allele_id]
+            )
+        )
+        sample2 = self._make_sample(
+            TestModelSeqProfileForUpload._get_allele_profile_for_ids([allele1.id])
+        )
+        batch1 = model.SampleBatchForUpload(samples=[sample1], alleles=None)
+        batch2 = model.SampleBatchForUpload(samples=[sample2], alleles=[allele1])
+
+        result = model.SampleBatchForUpload.merge([batch1, batch2])
+
+        assert result.alleles is not None
+        assert {a.id for a in result.alleles} == {allele1.id}
+        # sample1's reference is genuinely uncovered by either source -- the
+        # merge must not paper over that by pretending nothing is missing.
+        assert result.get_missing_allele_ids() == {other_allele_id}
+
+    def test_merge_duplicate_allele_across_sources_keeps_first_occurrence(
+        self,
+    ) -> None:
+        # Same sequence -> same hash-derived id, but different locus_id so the
+        # two copies are still distinguishable objects.
+        locus_id_a, locus_id_b = uuid4(), uuid4()
+        allele_a = model.AlleleForUpload(locus_id=locus_id_a, seq="AAAA")
+        allele_b = model.AlleleForUpload(locus_id=locus_id_b, seq="AAAA")
+        assert allele_a.id == allele_b.id
+        sample1 = self._make_sample(
+            TestModelSeqProfileForUpload._get_allele_profile_for_ids([allele_a.id])
+        )
+        sample2 = self._make_sample(
+            TestModelSeqProfileForUpload._get_allele_profile_for_ids([allele_a.id])
+        )
+        batch1 = model.SampleBatchForUpload(samples=[sample1], alleles=[allele_a])
+        batch2 = model.SampleBatchForUpload(samples=[sample2], alleles=[allele_b])
+
+        result = model.SampleBatchForUpload.merge([batch1, batch2])
+
+        assert result.alleles is not None
+        assert len(result.alleles) == 1
+        assert result.alleles[0].locus_id == locus_id_a
