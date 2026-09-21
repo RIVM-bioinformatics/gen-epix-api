@@ -1,7 +1,7 @@
 from typing import Any
 from uuid import UUID
 
-from gen_epix.casedb.domain import command, enum
+from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.policy.pdp import BasePolicyDecisionPoint
 from gen_epix.casedb.domain.service import BaseAbacService
 
@@ -45,6 +45,38 @@ class PolicyDecisionPoint(BasePolicyDecisionPoint):
                 f"Allowance check for command type {type(cmd)} is not implemented."
             )
         return is_allowed
+
+    def is_readable_columns_for_data_collections(
+        self,
+        complete_case_type: model.CompleteCaseType,
+        data_collection_ids: frozenset[UUID],
+        col_ids: frozenset[UUID],
+    ) -> bool:
+        """See parent class."""
+        __doc__ = (
+            BasePolicyDecisionPoint.is_readable_columns_for_data_collections.__doc__
+        )
+
+        # Special case: no data collection IDs provided, content is not readable
+        if not data_collection_ids:
+            return False
+
+        # Special case: no column IDs provided, content is readable
+        if not col_ids:
+            return True
+
+        # Check readability for each column in the context of the provided data collections
+        is_readable: dict[UUID, bool] = {col_id: False for col_id in col_ids}
+        for data_collection_id in data_collection_ids:
+            case_type_access_abac = complete_case_type.case_type_access_abacs.get(
+                data_collection_id
+            )
+            if case_type_access_abac is None:
+                continue
+            for col_id in col_ids & case_type_access_abac.read_col_ids:
+                is_readable[col_id] = True
+
+        return all(is_readable.values())
 
     def get_readable_cols_by_data_collection(
         self, case_type_id: UUID

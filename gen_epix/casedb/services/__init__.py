@@ -7,7 +7,6 @@ RBAC, system, and user-management services required by the composed application.
 
 # pylint: disable=useless-import-alias
 from gen_epix.casedb.services.abac import AbacService as AbacService
-from gen_epix.casedb.services.abac import PolicyDecisionPoint as PolicyDecisionPoint
 from gen_epix.casedb.services.case import CaseService as CaseService
 from gen_epix.casedb.services.geo import GeoService as GeoService
 from gen_epix.casedb.services.ontology import OntologyService as OntologyService

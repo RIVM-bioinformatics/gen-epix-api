@@ -9,9 +9,7 @@ from cachetools import TTLCache, cached
 
 from gen_epix.casedb import policies as policies
 from gen_epix.casedb.domain import command, exc, model
-from gen_epix.casedb.domain.policy.pdp import BasePolicyDecisionPoint
 from gen_epix.casedb.domain.service.abac import BaseAbacService
-from gen_epix.casedb.policies.pdp import PolicyDecisionPoint
 from gen_epix.commondb.domain.enum import RoleSet as CommonRoleSet
 from gen_epix.fastapp import CrudOperation, EventTiming
 from gen_epix.fastapp.model import Command
@@ -129,19 +127,6 @@ class AbacService(BaseAbacService):
                 ref_col_ids=set(),
             )
         return self._get_ref_data_access_cached(user)  # type: ignore
-
-    def get_case_abac_policy_decision_point(
-        self, cmd: command.Command
-    ) -> BasePolicyDecisionPoint:
-        """Return the Policy Decision Point (PDP) for the command's authenticated user.
-
-        Args:
-            cmd: Command whose user determines the PDP.
-
-        Returns:
-            BaseAbacPolicyDecisionPoint: The PDP instance for the command's user.
-        """
-        return PolicyDecisionPoint(self, cmd.user)
 
     def update_user_own_organization(
         self,
