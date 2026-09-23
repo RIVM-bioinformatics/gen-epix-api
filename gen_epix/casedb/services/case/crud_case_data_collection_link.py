@@ -12,7 +12,6 @@ from gen_epix.casedb.domain.policy.pdp import BasePolicyDecisionPoint
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.crud_common import (
     _crud_cascade_delete,
-    get_case_abac_from_command,
 )
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
@@ -85,11 +84,6 @@ def _crud_case_data_collection_link_with_abac(
         UnauthorizedAuthError: If a restricted user requests an unsupported bulk
             read, update, or delete operation.
     """
-    case_abac = get_case_abac_from_command(cmd)
-
-    if case_abac is None:
-        return self.crud(cmd)  # type: ignore[return-value]
-
     # Read all without filter and delete all not allowed due to potential large
     # number of case data collection links
     if (

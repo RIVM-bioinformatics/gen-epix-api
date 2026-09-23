@@ -1,17 +1,9 @@
-from typing import Any
-
 from gen_epix.commondb.domain import command
 from gen_epix.commondb.domain.policy.pdp import BasePolicyDecisionPoint
-from gen_epix.commondb.domain.service import BaseAbacService
 
 
 class PolicyDecisionPoint(BasePolicyDecisionPoint):
     """Encapsulates the Policy Decision Point (PDP) for commondb."""
-
-    def __init__(self, abac_service: BaseAbacService, **kwargs: Any) -> None:
-        """Initialize the PDP with necessary configurations."""
-        super().__init__(**kwargs)
-        self.abac_service = abac_service
 
     def is_exempted(self, cmd: command.Command) -> bool:
         """Check if the command is exempted from ABAC policies based on the user's roles.

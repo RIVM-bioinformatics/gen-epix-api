@@ -1,7 +1,9 @@
 from abc import abstractmethod
+from typing import Any
 from uuid import UUID
 
 from gen_epix.commondb.domain import command, exc, model
+from gen_epix.commondb.domain.service.abac import BaseAbacService
 from gen_epix.fastapp.pdp import PolicyDecisionPoint as FastappPolicyDecisionPoint
 
 
@@ -22,6 +24,11 @@ class BasePolicyDecisionPoint(FastappPolicyDecisionPoint):
     App's PDP, so that it is readily available for use by the App's components at Policy
     Enforcement Points (PEPs).
     """
+
+    def __init__(self, abac_service: BaseAbacService, **kwargs: Any) -> None:
+        """Initialize the PDP with necessary configurations."""
+        super().__init__(**kwargs)
+        self.abac_service = abac_service
 
     def get_command_user(self, cmd: command.Command) -> model.User | None:
         """Retrieve the user associated with the command.

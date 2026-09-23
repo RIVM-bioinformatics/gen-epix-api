@@ -15,6 +15,7 @@ from gen_epix.casedb.services.case.crud_common import (
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.enum import CrudOperationSet
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
+from gen_epix.filter.base import Filter
 
 
 def case_service_crud_case_set(
@@ -67,6 +68,7 @@ def _crud_case_set_with_abac(
     case_abac: model.CaseAbac | None = get_case_abac_from_command(cmd)
 
     # Special case: no policy, allows for internal commands to retrieve all
+    pdp: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
     if case_abac is None:
         # No policy: allows for internal commands to retrieve all
         return self.crud(cmd)  # type: ignore[return-value]
@@ -75,7 +77,7 @@ def _crud_case_set_with_abac(
     assert cmd.user is not None and cmd.user.id is not None
 
     # Determine valid CaseTypes and data collections
-    case_set_ids: list[UUID] = cmd.get_obj_ids()  # type: ignore[assignment]
+    case_set_ids: list[UUID]|None = cmd.get_obj_ids()  # type: ignore[assignment]
     if cmd.is_create():
         # Implemented through separate create case set command
         raise AssertionError("Unexpected operation")
@@ -84,6 +86,7 @@ def _crud_case_set_with_abac(
         retval = self._retrieve_case_sets_with_content_right(
             uow,
             cmd.user.id,
+            pdp,
             case_abac,
             enum.CaseRight.READ_CASE_SET,
             case_set_ids=case_set_ids,
@@ -95,6 +98,7 @@ def _crud_case_set_with_abac(
         self._retrieve_case_sets_with_content_right(
             uow,
             cmd.user.id,
+            pdp,
             case_abac,
             enum.CaseRight.WRITE_CASE_SET,
             case_set_ids=case_set_ids,
@@ -109,6 +113,62 @@ def _crud_case_set_with_abac(
         return self.crud(cmd)  # type: ignore[return-value]
     else:
         raise AssertionError("Unexpected operation")
+
+def _retrieve_case_sets_with_content_right(
+    self: BaseCaseService,
+    uow: BaseUnitOfWork,
+    user_id: UUID,
+    pdp: BasePolicyDecisionPoint,
+    complete_case_type: model.CompleteCaseType,
+    case_abac: model.CaseAbac,
+    right: enum.CaseRight,
+    case_set_ids: list[UUID] | None = None,
+    filter: Filter | None = None,
+) -> list[model.CaseSet]:
+    """Retrieve case sets for which the user has the specified access right.
+
+    Args:
+        self: Case service used for repository and association access.
+        uow: Active unit of work for all validation reads.
+        user_id: Identifier of the acting user.
+        pdp: Policy decision point used to evaluate access rights.
+        case_abac: Case access metadata used to evaluate rights.
+        right: Access right required for the retrieval.
+        case_set_ids: Explicit identifiers of case sets to retrieve.
+        filter: Optional filter to apply to the retrieval.
+
+    Returns:
+        List of case sets for which the user has the specified access right.
+    """
+    assert case_set_ids is not None
+    XXX STOPPED HERE
+    case_sets: list[model.CaseSet] = self.repository.crud(
+        uow,
+        user_id,
+        model.CaseSet,
+        CrudOperation.READ_ALL if case_set_ids is None else CrudOperation.READ_SOME,
+        filter=filter if case_set_ids is None else None,
+        obj_ids=case_set_ids if case_set_ids else None,
+    )
+    # Filter case sets based on access right
+    allowed_case_sets: list[model.CaseSet] = []
+    for case_set in case_sets:
+        assert case_set.id is not None
+        data_collection_ids: set[UUID] = self._retrieve_case_set_data_collections_map(
+            uow,
+            user_id,
+            case_set_ids=[case_set.id],
+        ).get(case_set.id, set())
+        if case_abac.is_allowed(
+            case_set.case_type_id,
+            case_set.created_in_data_collection_id,
+            right,
+            True,
+            current_data_collection_ids=data_collection_ids,
+        ):
+            allowed_case_sets.append(case_set)
+    return allowed_case_sets
+
 
 
 def _validate_case_set_deletion(

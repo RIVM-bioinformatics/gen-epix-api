@@ -12,7 +12,6 @@ from gen_epix.casedb.domain.policy.pdp import BasePolicyDecisionPoint
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.crud_common import (
     _crud_cascade_delete,
-    get_case_abac_from_command,
 )
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
@@ -90,11 +89,6 @@ def _crud_case_set_member_with_abac(
     Raises:
         UnauthorizedAuthError: If a restricted user requests update or bulk delete.
     """
-    case_abac = get_case_abac_from_command(cmd)
-
-    if case_abac is None:
-        return self.crud(cmd)  # type: ignore[return-value]
-
     # Initialize some
     assert cmd.user is not None and cmd.user.id is not None
 
