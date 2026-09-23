@@ -14,7 +14,7 @@ ruff==0.16.*
 pylint==4.0.*
 mypy==2.3.*
 oauthlib==3.3.1
-coverage==7.16.0
+coverage==7.16.1
 
 
 # stubs
@@ -26,4 +26,4 @@ types-setuptools==84.0.*
 types-python-dateutil==2.9.*
 
 # TODO: remove if run.py no longer uses it
-uvicorn==0.52.4
+uvicorn==0.53.0

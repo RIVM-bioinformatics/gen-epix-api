@@ -155,7 +155,7 @@ def _make_snp_profile_for_upload(
         ),
         seq_profile_type=enum.SeqProfileType.SNP,
         qc_score=1.0,
-        qc_result=enum.QualityControlResult.PASS,
+        qc_result_machine=enum.QualityControlResult.PASS,
     )
 
 
@@ -185,7 +185,7 @@ def _make_allele_profile(
         n_loci=n_loci,
         seq_profile_type=enum.SeqProfileType.ALLELE,
         qc_score=1.0,
-        qc_result=enum.QualityControlResult.PASS,
+        qc_result_machine=enum.QualityControlResult.PASS,
     )
 
 
@@ -215,7 +215,7 @@ def _make_mlva_profile(
         content_hash=mlva_profile_hash,
         seq_profile_type=enum.SeqProfileType.MLVA,
         qc_score=1.0,
-        qc_result=enum.QualityControlResult.PASS,
+        qc_result_machine=enum.QualityControlResult.PASS,
     )
 
 
@@ -409,7 +409,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             content_hash=uuid4(),
             seq_profile_type=enum.SeqProfileType.KMER,
             qc_score=1.0,
-            qc_result=enum.QualityControlResult.PASS,
+            qc_result_machine=enum.QualityControlResult.PASS,
         )
         cmd = command.CalculateSeqDistancesForNewProfilesCommand.model_construct(
             user=self.user,
@@ -714,7 +714,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             content_hash=uuid4(),
             seq_profile_type=enum.SeqProfileType.MLVA,
             qc_score=1.0,
-            qc_result=enum.QualityControlResult.PASS,
+            qc_result_machine=enum.QualityControlResult.PASS,
         )
         new_profile: model.SeqProfile = _make_mlva_profile(
             profile_id=self.new_profile_id,
@@ -774,7 +774,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             content_hash=uuid4(),
             seq_profile_type=enum.SeqProfileType.MLVA,
             qc_score=1.0,
-            qc_result=enum.QualityControlResult.PASS,
+            qc_result_machine=enum.QualityControlResult.PASS,
         )
         cmd = command.CalculateSeqDistancesForNewProfilesCommand.model_construct(
             user=self.user,
