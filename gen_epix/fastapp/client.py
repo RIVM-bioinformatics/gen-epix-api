@@ -3,6 +3,7 @@
 import json
 import ssl
 from collections.abc import Callable, Generator
+from decimal import Decimal
 from functools import partial
 from pathlib import Path
 from typing import Any, cast
@@ -448,16 +449,38 @@ class Client(App):
                     )
                 case CrudOperation.EXISTS_SOME:
                     assert isinstance(cmd.obj_ids, list)
-                    ids = json.dumps([str(x) for x in cmd.obj_ids])
-                    response = client.get(
-                        base_route + exists_route_suffix,
-                        headers=headers,
-                        params={"ids": ids},
-                    )
-                    response.raise_for_status()
-                    return json.loads(
-                        response.content.decode(response.encoding or "utf-8")
-                    )
+                    id_type = self._classify_exists_id_type(cmd.obj_ids)
+                    if id_type == "mixed":
+                        # For mixed ID types, fall back to individual requests
+                        results = []
+                        for obj_id in cmd.obj_ids:
+                            response = client.get(
+                                f"{base_route}/{obj_id}",
+                                headers=headers,
+                            )
+                            response.raise_for_status()
+                            results.append(
+                                bool(
+                                    json.loads(
+                                        response.content.decode(
+                                            response.encoding or "utf-8"
+                                        )
+                                    )
+                                )
+                            )
+                        return results
+                    else:
+                        # For uniform ID types, use batch request
+                        ids = json.dumps([str(x) for x in cmd.obj_ids])
+                        response = client.get(
+                            base_route + exists_route_suffix,
+                            headers=headers,
+                            params={"ids": ids},
+                        )
+                        response.raise_for_status()
+                        return json.loads(
+                            response.content.decode(response.encoding or "utf-8")
+                        )
                 case CrudOperation.CREATE_ONE:
                     assert isinstance(cmd.objs, model.Model)
                     response = client.post(
@@ -509,6 +532,37 @@ class Client(App):
             response.raise_for_status()
         retval = self._content_to_obj(response, return_model_class, is_list=is_list)
         return retval
+
+    @staticmethod
+    def _classify_exists_id_type(obj_ids: list[Any]) -> str:
+        """Classify the type of IDs in a list.
+
+        Returns 'uuid', 'string', 'int', 'float', 'decimal', or 'mixed' if types are not uniform.
+        """
+        if not obj_ids:
+            return "unknown"
+
+        types_seen = set()
+        for obj_id in obj_ids:
+            if isinstance(obj_id, UUID):
+                types_seen.add("uuid")
+            elif isinstance(obj_id, bool):
+                # bool must be checked before int since isinstance(True, int) is True
+                types_seen.add("bool")
+            elif isinstance(obj_id, int):
+                types_seen.add("int")
+            elif isinstance(obj_id, Decimal):
+                types_seen.add("decimal")
+            elif isinstance(obj_id, float):
+                types_seen.add("float")
+            elif isinstance(obj_id, str):
+                types_seen.add("string")
+            else:
+                types_seen.add(type(obj_id).__name__)
+
+        if len(types_seen) > 1:
+            return "mixed"
+        return list(types_seen)[0]
 
     @staticmethod
     def _content_to_obj(

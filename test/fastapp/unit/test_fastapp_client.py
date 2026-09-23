@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from decimal import Decimal
 from test.util.mock_compat import Mock, patch
 from typing import Any, Callable, ClassVar, cast
 from uuid import UUID, uuid4
