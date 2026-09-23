@@ -34,16 +34,18 @@ Missing settings files fail fast (`FileNotFoundError`). This makes misconfigurat
 | `settings.toml` | Overrides for the app-agnostic parts of `AppCfg._DEFAULT_SETTINGS` not otherwise covered below (rarely needed, since those defaults are already correct for each app) |
 | `settings.repository.dict.toml` / `settings.repository.sa_sqlite.toml` | Shared per-backend-family repository config (type, module/class_name where applicable, and a per-repo file-path template) for the `DICT_*`/`SA_SQLITE_*` repository modes. Not named `.secrets.` — none of these files contain a credential |
 | `settings.repository.{dict,sa_sqlite}.{demo,empty}.toml` | One line each, setting that backend family's file-path template to the demo or empty dataset. Not named `.secrets.` either, for the same reason |
-| `.example.secrets.repository.sa_sql.toml` | Copy-first template for `SA_SQL`'s credentials — the one file in this group that actually has credential-shaped fields (uid/pwd, mostly commented out). `SA_SQL` itself needs no file at all for local/dev use, since its dummy values already live in `AppCfg._DEFAULT_SETTINGS`; copying this template to `secrets.repository.sa_sql.toml` (gitignored) is how a deployment overrides them via a file instead of environment variables |
+| `.example.secrets.repository.sa_sql.toml` | Copy-first template for `SA_SQL`'s credentials — the one file in this group that actually has credential-shaped fields (uid/pwd, mostly commented out). Copying this template to `secrets.repository.sa_sql.toml` (gitignored) is one way to supply them; the usual environment-variable overrides work equally well and are what local dev/CI actually uses (see §1b) |
 | Root `config/identity_providers.toml` / `mock_identity_provider.toml` / `no_identity_providers.toml` | Selected per `DevIdpConfig` — genuine per-mode choices, not filler defaults |
 
-`SA_SQL` is the baseline repository backend: it needs no settings file at
-all, since `AppCfg._DEFAULT_SETTINGS["repository"]` already describes it
-completely, including credentials that match the SA password this repo's
-own docker-compose SQL Server container is provisioned with. Selecting
-`DICT_*` or `SA_SQLITE_*` layers the two files above on top of that
-default. See §1b below for the full precedence and a documented side
-effect of that layering.
+`SA_SQL` is the baseline repository backend: `AppCfg._DEFAULT_SETTINGS["repository"]`
+describes everything about it, but the credential (`uid`/`pwd`) defaults
+to an empty string rather than a working value — a deployment that
+forgets to supply one fails closed at validation time (a clear, named
+`ValidationError`, not a known password nor an obscure interpolation
+failure) instead of silently connecting. Selecting `DICT_*` or
+`SA_SQLITE_*` layers the two files above on top of that default. See §1b
+below for the full precedence, how local dev/CI supplies the credential,
+and a documented side effect of that layering.
 
 (Source: `gen_epix/commondb/config/cfg.py`, `AppCfg._DEFAULT_SETTINGS`; Source: `gen_epix/casedb/config/settings.repository.dict.toml`)
 
@@ -85,8 +87,16 @@ layers two files on top of that default, assembled by `set_env_variables`:
   present — a local, gitignored copy of `.example.secrets.repository.sa_sql.toml`
   with its uid/pwd/server uncommented and filled in. Its absence is the
   common case: `AppCfg._DEFAULT_SETTINGS["repository"]` already describes
-  a working `SA_SQL` configuration, so most local/dev use needs no file at
-  all here, only the usual environment-variable overrides.
+  everything about `SA_SQL` except the credential, so most local/dev use
+  needs no file here at all — just the usual `<APP>_REPOSITORY__DEFAULTS__PROPS__UID`/
+  `__PWD` environment-variable overrides. `docker-compose.sql.yml`/
+  `docker-compose.sql.idp.yml` set these for the app containers, and
+  `test/conftest.py` sets them (via `os.environ.setdefault`) for the host-run
+  test suite — both pointing at the SA password this repo's own
+  docker-compose SQL Server container is provisioned with. Neither of
+  those two spots is a config *file* in the sense this table describes;
+  they're the explicit, visible stand-in for what used to be an implicit
+  Python-level default.
 - **`DICT_DEMO` / `DICT_EMPTY`**: `settings.repository.dict.toml`
   (shared: `type = "DICT"`, `dir`, and every repo's `module`/`class_name`/
   `file` — the `file` value is a template referencing
@@ -106,8 +116,12 @@ layers two files on top of that default, assembled by `set_env_variables`:
 always the lowest layer, switching to `DICT_DEMO` does not *remove*
 `repository.defaults.props.driver`/`server`/`uid`/`pwd` — Dynaconf's
 merge is per-key, not a whole-block replacement, so those SA_SQL-only
-fields remain present, unused, alongside the new `dir`/`variant` keys. No
-repository class ever reads them in DICT/SA_SQLITE mode, so this is
+fields remain present (`uid`/`pwd` at their blank default, unless a
+`SA_SQL`-oriented env var happens to be set globally, as it is in this
+repo's own test suite — see §1b), alongside the new `dir`/`variant` keys.
+No repository class ever reads them in DICT/SA_SQLITE mode, and the
+SA_SQL-only credential validator only fires when
+`repository.defaults.type` actually resolves to `SA_SQL`, so this is
 harmless at runtime; it does mean a `to_toml()` export (§1c) of a
 DICT-mode config still shows those fields. Per-repo `connection_string`
 is not duplicated for this same reason: it is set once, at
@@ -129,6 +143,15 @@ file. With `resolved=True`, they return a display-only copy of the
 post-validation config, with non-serializable values (imported classes,
 resolved factory objects, enum members) replaced by their `repr()` — not
 meant to be reloaded.
+
+Both default to `redact=False`, keeping the documented behavior above
+(raw, round-trippable) unchanged. Pass `redact=True` for a copy safe to
+paste into a ticket, log, or chat: repository `uid`/`pwd` are replaced
+with `[REDACTED]`, and any `uid=...`/`pwd=...` fragment embedded inside a
+larger string (e.g. `repository.defaults.props.connection_string`) is
+redacted in place, reusing the same key-based and pattern-based
+redaction `gen_epix.commondb.config.json_logging.JsonFormatter` applies
+to log records (`redact_nested`, in that same module).
 
 ### 1d. Typed configuration access
 

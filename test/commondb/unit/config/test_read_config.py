@@ -8,14 +8,16 @@ from pathlib import Path
 from typing import Any, Iterator, cast
 
 import pytest
-
 from dynaconf.validator import ValidationError
 
+from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.domain.enum import (
     AppType,
     DevIdpConfig,
     DevRepositoryConfig,
     FeatureFlag,
+    RepositoryType,
+    ServiceType,
 )
 from gen_epix.commondb.domain.service import BaseAuthService
 from gen_epix.commondb.domain.util import get_app_cfg_class, set_env_variables
@@ -270,6 +272,42 @@ def test_read_config_rejects_unknown_repository_type(override_tmp_dir: Path) -> 
 
     with pytest.raises(ValidationError):
         _read_config("CASEDB", extra_settings_files=[override_file])
+
+
+def test_feature_flag_has_no_auto_create_new_users_member() -> None:
+    """Regression guard: FeatureFlag must not redefine AuthFeatureFlag.AUTO_CREATE_NEW_USERS.
+
+    A same-named-but-distinct Enum member here would collide in value but
+    not identity with AuthFeatureFlag.AUTO_CREATE_NEW_USERS, the actual key
+    App._feature_flags is set under — a caller querying the FeatureFlag
+    version would silently see the default (False) regardless of the real
+    configured value. See FeatureFlag's docstring.
+    """
+    assert "AUTO_CREATE_NEW_USERS" not in FeatureFlag.__members__
+
+
+def test_sa_sql_without_credentials_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """SA_SQL's repository defaults carry a blank pwd; construction must fail
+    immediately (not silently connect with a known password) when neither a
+    settings file nor an environment variable supplies a real credential."""
+    monkeypatch.delenv("COMMONDB_REPOSITORY__DEFAULTS__PROPS__UID", raising=False)
+    monkeypatch.delenv("COMMONDB_REPOSITORY__DEFAULTS__PROPS__PWD", raising=False)
+    set_env_variables(AppType.COMMONDB, DevIdpConfig.NONE, DevRepositoryConfig.SA_SQL)
+
+    with pytest.raises(ValidationError):
+        AppCfg("COMMONDB", ServiceType, RepositoryType, log_any=False)
+
+
+def test_sa_sql_with_credential_env_vars_constructs(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Supplying the credential via the standard env var override (as
+    docker-compose.sql*.yml and test/conftest.py both do) is enough."""
+    monkeypatch.setenv("COMMONDB_REPOSITORY__DEFAULTS__PROPS__UID", "sa")
+    monkeypatch.setenv("COMMONDB_REPOSITORY__DEFAULTS__PROPS__PWD", "Your_password123")
+    set_env_variables(AppType.COMMONDB, DevIdpConfig.NONE, DevRepositoryConfig.SA_SQL)
+
+    app_cfg = AppCfg("COMMONDB", ServiceType, RepositoryType, log_any=False)
+
+    assert app_cfg.cfg["repository"]["defaults"]["props"]["uid"] == "sa"
 
 
 @pytest.mark.scenario_ids("TC-CFG-01-01")

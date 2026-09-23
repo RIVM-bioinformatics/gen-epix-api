@@ -163,6 +163,78 @@ def _build_sensitive_re(sensitive_keys: tuple[str, ...]) -> re.Pattern[str]:
     return re.compile(rf"(?i)({escaped})=((?:Bearer\s+)?[^\s&,;]+)")
 
 
+def _redact_nested_impl(
+    value: Any,
+    sensitive_key_set: set[str],
+    sensitive_re: re.Pattern[str],
+    redacted_value: str,
+    key_name: str | None,
+) -> Any:
+    """Shared recursive redaction walk backing both JsonFormatter and redact_nested()."""
+    if key_name is not None and key_name.lower() in sensitive_key_set:
+        return redacted_value
+
+    if isinstance(value, str):
+        return sensitive_re.sub(rf"\1={redacted_value}", value)
+
+    if isinstance(value, dict):
+        return {
+            x: _redact_nested_impl(
+                y, sensitive_key_set, sensitive_re, redacted_value, str(x)
+            )
+            for x, y in value.items()
+        }
+
+    if isinstance(value, list):
+        return [
+            _redact_nested_impl(x, sensitive_key_set, sensitive_re, redacted_value, None)
+            for x in value
+        ]
+
+    if isinstance(value, tuple):
+        return tuple(
+            _redact_nested_impl(x, sensitive_key_set, sensitive_re, redacted_value, None)
+            for x in value
+        )
+
+    return value
+
+
+def redact_nested(
+    value: Any,
+    sensitive_keys: list[str] | tuple[str, ...] | set[str] | None = None,
+    redacted_value: str = _DEFAULT_REDACTED_VALUE,
+    *,
+    key_name: str | None = None,
+) -> Any:
+    """Recursively redact sensitive values in a nested dict/list/tuple payload.
+
+    Standalone entry point onto the same redaction walk JsonFormatter uses
+    for log records (see JsonFormatter._redact_nested), reusable wherever a
+    plain data structure — not a log record — needs the same key-based (a
+    key named e.g. "pwd") and pattern-based (a "pwd=..." fragment embedded
+    inside a larger string, e.g. a connection string) redaction.
+
+    Args:
+        value: The value (often a dict) to redact.
+        sensitive_keys: Extra key names to redact, in addition to
+            _DEFAULT_SENSITIVE_KEYS. Case-insensitive.
+        redacted_value: Replacement text for a redacted value.
+        key_name: The key `value` was found under, if any (drives whole-value
+            redaction when it matches a sensitive key).
+
+    Returns:
+        A redacted copy of `value`; scalars other than strings pass through
+        unchanged.
+    """
+    normalized_keys = _normalise_sensitive_keys(sensitive_keys)
+    sensitive_key_set = set(normalized_keys)
+    sensitive_re = _build_sensitive_re(normalized_keys)
+    return _redact_nested_impl(
+        value, sensitive_key_set, sensitive_re, redacted_value, key_name
+    )
+
+
 class UvicornAccessLogFilter(logging.Filter):
     """
     Encapsulates a logging filter for the ``uvicorn.access`` logger.
@@ -382,24 +454,13 @@ class JsonFormatter(logging.Formatter):
 
     def _redact_nested(self, value: Any, *, key_name: str | None = None) -> Any:
         """Recursively redact sensitive values in nested dict/list payloads."""
-        if key_name is not None and key_name.lower() in self._sensitive_key_set:
-            return self.redacted_value
-
-        if isinstance(value, str):
-            return self._redact(value)
-
-        if isinstance(value, dict):
-            return {
-                x: self._redact_nested(y, key_name=str(x)) for x, y in value.items()
-            }
-
-        if isinstance(value, list):
-            return [self._redact_nested(x) for x in value]
-
-        if isinstance(value, tuple):
-            return tuple(self._redact_nested(x) for x in value)
-
-        return value
+        return _redact_nested_impl(
+            value,
+            self._sensitive_key_set,
+            self._sensitive_re,
+            self.redacted_value,
+            key_name,
+        )
 
     @staticmethod
     def _get_app_id(payload: dict[str, Any]) -> str | None:

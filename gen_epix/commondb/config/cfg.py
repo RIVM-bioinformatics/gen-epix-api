@@ -281,11 +281,22 @@ class AppCfg(BaseAppCfg):
         },
         # SA_SQL is the baseline repository backend: a deployment that never
         # sets DevRepositoryConfig away from SA_SQL needs no repository file
-        # at all. driver/uid/pwd/other match the credentials the standard
-        # local/test SQL Server container is provisioned with — not
-        # placeholders that need replacing, but a working default; a real
-        # deployment overrides these through environment variables, the same
-        # mechanism every other setting in this file is overridden through.
+        # at all. driver/server/database/other are safe, non-secret defaults
+        # (server/database match the standard local/test SQL Server
+        # container). uid/pwd are deliberately blank: a Dynaconf settings
+        # object built from a defaults dict passed as constructor kwargs
+        # (as SettingsManager does) cannot have a brand-new nested key
+        # injected via an environment variable later — only an *existing*
+        # key can be overridden that way — so uid/pwd must stay present
+        # here (as an unambiguous, never-real placeholder) for an env var
+        # override to have anything to override. _get_validators() rejects
+        # an unchanged blank pwd whenever repository.defaults.type is
+        # SA_SQL, so a deployment that forgets to supply a credential fails
+        # closed with a clear message instead of silently connecting with a
+        # known password. Local dev/test supplies uid/pwd explicitly via
+        # *_REPOSITORY__DEFAULTS__PROPS__UID/PWD env vars (see
+        # docker-compose.sql*.yml and test/conftest.py); a real deployment
+        # overrides them the same way, or via a secrets file.
         "repository": {
             "defaults": {
                 "type": "SA_SQL",
@@ -293,8 +304,8 @@ class AppCfg(BaseAppCfg):
                     "driver": "ODBC Driver 18 for SQL Server",
                     "server": "127.0.0.1",
                     "database": "commondb",
-                    "uid": "sa",
-                    "pwd": "Your_password123",
+                    "uid": "",
+                    "pwd": "",
                     "other": ";TrustServerCertificate=yes",
                     "connection_string": _SA_SQL_CONNECTION_STRING,
                 },
@@ -464,6 +475,26 @@ class AppCfg(BaseAppCfg):
             Validator(
                 "repository.defaults.type",
                 is_in=[member.name for member in self._repository_type_enum],
+            ),
+            # SA_SQL's uid/pwd default to "" (see _DEFAULT_SETTINGS's
+            # comment) so that an env var/settings-file override has an
+            # existing key to override. Reject an unchanged blank pwd
+            # whenever SA_SQL is actually the resolved repository type, so
+            # a deployment that forgot to supply a credential fails closed
+            # with a clear message instead of silently connecting with an
+            # empty (or, before this fix, a known) password.
+            Validator(
+                "repository.defaults.props.pwd",
+                condition=lambda v: v != "",
+                when=Validator("repository.defaults.type", eq="SA_SQL"),
+                messages={
+                    "condition": (
+                        "SA_SQL repository requires a credential: set "
+                        "{name} via a settings file or the "
+                        "<APP>_REPOSITORY__DEFAULTS__PROPS__PWD environment "
+                        "variable (and, usually, ...__UID alongside it)."
+                    )
+                },
             ),
         ]
         for service_type in self._service_type_enum:
@@ -696,7 +727,14 @@ class AppCfg(BaseAppCfg):
         """
         return cast(cfg_types.ResolvedAppCfgSettingsDict, self._cfg)
 
-    def to_dict(self, resolved: bool = False) -> dict[str, Any]:
+    # Extra key names (beyond json_logging's own defaults) redacted when
+    # to_dict()/to_toml() are called with redact=True — the config-specific
+    # field names that carry a repository credential, plus the assembled
+    # connection string, whose embedded "PWD=..."/"UID=..." fragments
+    # redact_nested's pattern-based pass also catches wherever they appear.
+    _EXPORT_SENSITIVE_KEYS = ("uid", "pwd")
+
+    def to_dict(self, resolved: bool = False, redact: bool = False) -> dict[str, Any]:
         """Return this config as a plain, TOML-serializable dict.
 
         Args:
@@ -708,6 +746,12 @@ class AppCfg(BaseAppCfg):
                 display-only copy of the post-validation config with
                 non-serializable values (factory objects, enum members,
                 imported classes) stringified — not meant to be reloaded.
+            redact: If True, replace credential-shaped values (repository
+                uid/pwd, and any "pwd=..."/"uid=..." fragment embedded in a
+                connection string) with a redaction placeholder. Default
+                False keeps output round-trippable as documented above;
+                pass True for a copy that's safe to paste into a ticket,
+                log, or chat.
 
         Returns:
             Filtered dict containing only known top-level config sections.
@@ -719,10 +763,18 @@ class AppCfg(BaseAppCfg):
             if k.lower() in self._EXPORTABLE_TOP_LEVEL_KEYS
         }
         if not resolved:
-            return copy.deepcopy(raw)
-        return cast(
-            dict[str, Any], AppCfg._stringify_non_serializable(copy.deepcopy(raw))
-        )
+            result = copy.deepcopy(raw)
+        else:
+            result = cast(
+                dict[str, Any], AppCfg._stringify_non_serializable(copy.deepcopy(raw))
+            )
+        if redact:
+            from gen_epix.commondb.config.json_logging import (  # noqa: PLC0415
+                redact_nested,
+            )
+
+            result = redact_nested(result, self._EXPORT_SENSITIVE_KEYS)
+        return result
 
     @staticmethod
     def _stringify_non_serializable(value: Any) -> Any:
@@ -735,19 +787,25 @@ class AppCfg(BaseAppCfg):
             return value
         return repr(value)
 
-    def to_toml(self, path: Path | str | None = None, resolved: bool = False) -> str:
+    def to_toml(
+        self,
+        path: Path | str | None = None,
+        resolved: bool = False,
+        redact: bool = False,
+    ) -> str:
         """Serialize this config to a TOML string, optionally writing it to disk.
 
         Args:
             path: If given, also write the TOML text to this path.
             resolved: See `to_dict`.
+            redact: See `to_dict`.
 
         Returns:
             The TOML text.
         """
         import tomli_w  # noqa: PLC0415  # local import: keeps tomli_w off AppCfg's hot import path
 
-        text = tomli_w.dumps(self.to_dict(resolved=resolved))
+        text = tomli_w.dumps(self.to_dict(resolved=resolved, redact=redact))
         if path is not None:
             Path(path).write_text(text, encoding=getpreferredencoding())
         return text
@@ -945,6 +1003,12 @@ class AppCfg(BaseAppCfg):
         # Set new log level for all in settings as well
         if hasattr(self, "_cfg"):
             self._cfg["log"]["level"] = resolved_level  # type: ignore[index]
+        # Mirror into the pre-validation export snapshot too, so
+        # to_dict(resolved=False)/to_toml() reflect the same <APP>_LOG_LEVEL
+        # override applied to the live config above, instead of always
+        # showing the settings-file value from before this override ran.
+        if hasattr(self, "_raw_cfg_snapshot") and "log" in self._raw_cfg_snapshot:
+            self._raw_cfg_snapshot["log"]["level"] = resolved_level
         self._set_known_handlers_to_notset()
         self._setup_logger.setLevel(resolved_level)
         logger_names = set(_THIRD_PARTY_LOGGER_NAMES)

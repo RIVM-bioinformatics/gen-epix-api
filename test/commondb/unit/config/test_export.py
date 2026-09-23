@@ -88,6 +88,40 @@ def test_to_dict_filters_to_known_keys_only(resolved: bool) -> None:
     assert set(payload.keys()) <= set(_EXPORTABLE_TOP_LEVEL_KEYS)
 
 
+def test_to_dict_default_does_not_redact_credentials() -> None:
+    """redact=False (the default) keeps the documented round-trippable behavior."""
+    app_cfg = _build_app_cfg()
+
+    payload = app_cfg.to_dict(resolved=False)
+
+    props = payload["repository"]["defaults"]["props"]
+    assert props["uid"] == "sa"
+    assert props["pwd"] == "Your_password123"
+    assert "Your_password123" in props["connection_string"]
+
+
+def test_to_dict_redact_true_scrubs_credentials() -> None:
+    app_cfg = _build_app_cfg()
+
+    payload = app_cfg.to_dict(resolved=False, redact=True)
+
+    props = payload["repository"]["defaults"]["props"]
+    assert props["uid"] == "[REDACTED]"
+    assert props["pwd"] == "[REDACTED]"
+    assert "Your_password123" not in props["connection_string"]
+    # Non-credential fields are left untouched.
+    assert props["driver"] == "ODBC Driver 18 for SQL Server"
+
+
+def test_to_toml_redact_true_scrubs_credentials() -> None:
+    app_cfg = _build_app_cfg()
+
+    text = app_cfg.to_toml(redact=True)
+
+    assert "Your_password123" not in text
+    assert '"[REDACTED]"' in text or "'[REDACTED]'" in text
+
+
 def test_to_dict_top_level_keys_match_source_file_casing() -> None:
     """Exported keys are lowercase, matching every settings.toml on disk and
     the AppCfgSettingsDict/ResolvedAppCfgSettingsDict TypedDict field names —
