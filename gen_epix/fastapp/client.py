@@ -3,7 +3,6 @@
 import json
 import ssl
 from collections.abc import Callable, Generator
-from decimal import Decimal
 from functools import partial
 from pathlib import Path
 from typing import Any, cast
@@ -16,6 +15,7 @@ from gen_epix.fastapp import exc, model
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.domain.domain import Domain
+from gen_epix.fastapp.domain.util import get_type_from_annotation
 from gen_epix.fastapp.enum import (
     CrudOperation,
     EventTiming,
@@ -24,7 +24,7 @@ from gen_epix.fastapp.enum import (
     StringCasing,
 )
 from gen_epix.fastapp.exc import ServiceException
-from gen_epix.fastapp.model import Command, CrudCommand, Policy
+from gen_epix.fastapp.model import Command, CrudCommand, Model, Policy
 from gen_epix.fastapp.util import create_ssl_context
 
 
@@ -371,12 +371,19 @@ class Client(App):
         )
         model_class = command_class.MODEL_CLASS
         entity = model_class.ENTITY
+        id_class: type | None
+        if entity.id_field_name:
+            id_class = get_type_from_annotation(
+                model_class.model_fields[entity.id_field_name].annotation
+            )
         assert entity is not None
 
         return cast(
             Callable[[Command], Any],
             partial(
                 self._execute_crud_operation,
+                model_class,
+                id_class,
                 base_route,
                 batch_route_suffix,
                 query_route_suffix,
@@ -387,6 +394,8 @@ class Client(App):
 
     def _execute_crud_operation(
         self,
+        model_class: type[Model],
+        id_class: type | None,
         base_route: str,
         batch_route_suffix: str,
         query_route_suffix: str,
@@ -396,7 +405,6 @@ class Client(App):
     ) -> Any:
         """Execute a CRUD command by dispatching to the appropriate HTTP method."""
         headers = self.get_headers(cmd)
-        model_class = cmd.MODEL_CLASS
         return_model_class: type = model_class
         is_list = False
         with self.get_client(cmd) as client:
@@ -411,6 +419,7 @@ class Client(App):
                                 else ("/" + ids_route_suffix)
                             )
                             url = base_route + query_suffix + ids_suffix
+                            return_model_class = id_class
                         else:
                             url = base_route + query_route_suffix
                         response = client.post(
@@ -435,52 +444,22 @@ class Client(App):
                         f"{base_route}/{cmd.obj_ids}",
                         headers=headers,
                     )
-                case CrudOperation.EXISTS_ONE:
-                    assert cmd.obj_ids is not None
-                    response = client.get(
-                        f"{base_route}/{cmd.obj_ids}{exists_route_suffix}",
-                        headers=headers,
-                    )
-                    response.raise_for_status()
-                    return bool(
-                        json.loads(
-                            response.content.decode(response.encoding or "utf-8")
-                        )
-                    )
                 case CrudOperation.EXISTS_SOME:
                     assert isinstance(cmd.obj_ids, list)
-                    id_type = self._classify_exists_id_type(cmd.obj_ids)
-                    if id_type == "mixed":
-                        # For mixed ID types, fall back to individual requests
-                        results = []
-                        for obj_id in cmd.obj_ids:
-                            response = client.get(
-                                f"{base_route}/{obj_id}",
-                                headers=headers,
-                            )
-                            response.raise_for_status()
-                            results.append(
-                                bool(
-                                    json.loads(
-                                        response.content.decode(
-                                            response.encoding or "utf-8"
-                                        )
-                                    )
-                                )
-                            )
-                        return results
-                    else:
-                        # For uniform ID types, use batch request
-                        ids = json.dumps([str(x) for x in cmd.obj_ids])
-                        response = client.get(
-                            base_route + exists_route_suffix,
-                            headers=headers,
-                            params={"ids": ids},
-                        )
-                        response.raise_for_status()
-                        return json.loads(
-                            response.content.decode(response.encoding or "utf-8")
-                        )
+                    ids = json.dumps([str(x) for x in cmd.obj_ids])
+                    response = client.get(
+                        base_route + exists_route_suffix,
+                        headers=headers,
+                        params={"ids": ids},
+                    )
+                    return_model_class = bool
+                    is_list = True
+                case CrudOperation.EXISTS_ONE:
+                    response = client.get(
+                        f"{base_route}/{cmd.obj_ids}/{exists_route_suffix}",
+                        headers=headers,
+                    )
+                    return_model_class = bool
                 case CrudOperation.CREATE_ONE:
                     assert isinstance(cmd.objs, model.Model)
                     response = client.post(
@@ -530,39 +509,10 @@ class Client(App):
                 case _:
                     raise AssertionError(f"Unsupported operation: {cmd.operation}")
             response.raise_for_status()
+        if cmd.return_id:
+            return_model_class = id_class
         retval = self._content_to_obj(response, return_model_class, is_list=is_list)
         return retval
-
-    @staticmethod
-    def _classify_exists_id_type(obj_ids: list[Any]) -> str:
-        """Classify the type of IDs in a list.
-
-        Returns 'uuid', 'string', 'int', 'float', 'decimal', or 'mixed' if types are not uniform.
-        """
-        if not obj_ids:
-            return "unknown"
-
-        types_seen = set()
-        for obj_id in obj_ids:
-            if isinstance(obj_id, UUID):
-                types_seen.add("uuid")
-            elif isinstance(obj_id, bool):
-                # bool must be checked before int since isinstance(True, int) is True
-                types_seen.add("bool")
-            elif isinstance(obj_id, int):
-                types_seen.add("int")
-            elif isinstance(obj_id, Decimal):
-                types_seen.add("decimal")
-            elif isinstance(obj_id, float):
-                types_seen.add("float")
-            elif isinstance(obj_id, str):
-                types_seen.add("string")
-            else:
-                types_seen.add(type(obj_id).__name__)
-
-        if len(types_seen) > 1:
-            return "mixed"
-        return list(types_seen)[0]
 
     @staticmethod
     def _content_to_obj(
