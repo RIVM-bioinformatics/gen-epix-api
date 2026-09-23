@@ -692,7 +692,11 @@ class SampleBatchForUpload(BaseBatchForUpload):
                 if profile.seq_profile_type != enum.SeqProfileType.ALLELE:
                     continue
                 if profile.locus_allele_id_map is not None:
-                    referenced.update(profile.locus_allele_id_map.values())
+                    referenced.update(
+                        x
+                        for x in profile.locus_allele_id_map.values()
+                        if x != NULL_ID
+                    )
                 elif profile.allele_ids is not None:
                     referenced.update(
                         x
