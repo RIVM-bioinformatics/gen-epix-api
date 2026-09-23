@@ -13,7 +13,7 @@
 services:
 
   lsp_sql:
-    image: mcr.microsoft.com/mssql/server:2025-latest@sha256:b036b61e953e6e660f04514fc3f703b995a9cdda569cf96d07d3f751240f615a
+    image: mcr.microsoft.com/mssql/server:2025-latest@sha256:2b5b581621126574f3d1f75e78d3eebe8d05aedb59ad0cfdf9aa42cb0634d726
     user: root
     environment:
       MSSQL_SA_PASSWORD: "Your_password123"
@@ -38,7 +38,7 @@ services:
 
   # One-shot container: creates the service databases then exits.
   init-db:
-    image: mcr.microsoft.com/mssql/server:2025-latest@sha256:b036b61e953e6e660f04514fc3f703b995a9cdda569cf96d07d3f751240f615a
+    image: mcr.microsoft.com/mssql/server:2025-latest@sha256:2b5b581621126574f3d1f75e78d3eebe8d05aedb59ad0cfdf9aa42cb0634d726
     depends_on:
       lsp_sql:
         condition: service_healthy

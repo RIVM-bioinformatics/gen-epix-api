@@ -84,7 +84,14 @@ class SARepository(BaseRepository):
 
     @classmethod
     def clear_repository_content(cls, **kwargs: Any) -> None:
-        """Delete all database objects associated with the repository."""
+        """Delete all database objects associated with the repository.
+
+        If ``alembic_schema`` is given, also drops that schema's
+        ``alembic_version`` table and the schema itself, so a subsequent
+        ``alembic upgrade head`` starts from a clean slate instead of being
+        skipped because a stale version row is still on record.
+        """
+        alembic_schema: str | None = kwargs.pop("alembic_schema", None)
         entities, connection_string, remaining_kwargs = cls._process_repository_params(
             kwargs
         )
@@ -207,6 +214,67 @@ class SARepository(BaseRepository):
                     # Schema might not exist or have other issues
                     continue
             engine.dispose()
+
+        # Drop the Alembic version-tracking table and schema, if requested
+        if alembic_schema:
+            with engine.connect() as conn:
+                try:
+                    sa.Table(
+                        "alembic_version", sa.MetaData(), schema=alembic_schema
+                    ).drop(conn, checkfirst=True)
+                    conn.commit()
+                except Exception:  # pylint: disable=broad-except
+                    pass
+                try:
+                    if conn.dialect.has_schema(conn, alembic_schema):
+                        conn.execute(sa.schema.DropSchema(alembic_schema))
+                        conn.commit()
+                except Exception:  # pylint: disable=broad-except
+                    pass
+            engine.dispose()
+
+    @classmethod
+    def check_schema_matches(cls, **kwargs: Any) -> list[str]:
+        """Compare each entity's expected table/columns against the live database.
+
+        Returns a list of human-readable problems (missing tables, missing
+        columns); empty if the schema matches. Does not assume the database
+        already matches the entities - that's exactly what this detects.
+        """
+        entities, connection_string, _ = cls._process_repository_params(kwargs)
+        if connection_string is None:
+            raise ValueError(
+                "connection_string is required to check an SARepository schema"
+            )
+        engine = EngineFactory.create_engine(connection_string, echo=False)
+        inspector = inspect(engine)
+        problems: list[str] = []
+        for entity in entities:
+            if not entity.persistable or not entity.db_model_class:
+                continue
+            table = entity.db_model_class.__table__
+            schema_name = entity.schema_name
+            qualified_name = (
+                f"{schema_name}.{table.name}" if schema_name else table.name
+            )
+            try:
+                actual_tables = set(inspector.get_table_names(schema=schema_name))
+            except Exception as e:  # pylint: disable=broad-except
+                problems.append(f"schema {schema_name!r} could not be inspected: {e}")
+                continue
+            if table.name not in actual_tables:
+                problems.append(f"table {qualified_name} does not exist")
+                continue
+            actual_columns = {
+                c["name"] for c in inspector.get_columns(table.name, schema=schema_name)
+            }
+            missing_columns = {c.name for c in table.columns} - actual_columns
+            if missing_columns:
+                problems.append(
+                    f"table {qualified_name} is missing column(s): "
+                    f"{', '.join(sorted(missing_columns))}"
+                )
+        return problems
 
     def __init__(self, engine: Engine, **kwargs: Any):
         """

@@ -59,7 +59,8 @@ def _row(
     *,
     entry_id: UUID | None = None,
     sample_id: UUID | None = None,
-    qc_result: enum.QualityControlResult = enum.QualityControlResult.PASS,
+    qc_result_machine: enum.QualityControlResult = enum.QualityControlResult.PASS,
+    qc_result_human: enum.QualityControlResult = enum.QualityControlResult.PENDING,
     qc_score: float = 1.0,
     created_at: datetime = _DT_OLD,
     primary_category_id: UUID | None = None,
@@ -67,7 +68,8 @@ def _row(
     base = (
         entry_id or uuid4(),
         sample_id or uuid4(),
-        qc_result,
+        qc_result_machine,
+        qc_result_human,
         qc_score,
         created_at,
     )
@@ -233,18 +235,45 @@ class TestRankingLogic:
             _row(
                 entry_id=id_pass,
                 sample_id=sample_id,
-                qc_result=enum.QualityControlResult.PASS,
+                qc_result_machine=enum.QualityControlResult.PASS,
             ),
             _row(
                 entry_id=id_pending,
                 sample_id=sample_id,
-                qc_result=enum.QualityControlResult.PENDING,
+                qc_result_machine=enum.QualityControlResult.PENDING,
             ),
         ]
         svc = _mock_service(rows)
         cmd = _profile_cmd(sample_ids={sample_id})
         result = _get_best_id_per_sample(svc, cmd)
         assert result[sample_id] == id_pass
+
+    def test_manual_qc_result_supersedes_machine_result(self) -> None:
+        # A non-PENDING human assessment overrides a better machine assessment.
+        sample_id = uuid4()
+        id_human_warn = uuid4()
+        id_machine_pass = uuid4()
+        rows = [
+            _row(
+                entry_id=id_machine_pass,
+                sample_id=sample_id,
+                qc_result_machine=enum.QualityControlResult.PASS,
+                qc_result_human=enum.QualityControlResult.PENDING,
+            ),
+            _row(
+                entry_id=id_human_warn,
+                sample_id=sample_id,
+                qc_result_machine=enum.QualityControlResult.PASS,
+                qc_result_human=enum.QualityControlResult.WARN,
+            ),
+        ]
+        svc = _mock_service(rows)
+        cmd = _profile_cmd(sample_ids={sample_id})
+        result = _get_best_id_per_sample(svc, cmd)
+        # Both entries have a PASS machine result, but id_human_warn's effective
+        # result is the human WARN, which ranks below id_machine_pass's effective
+        # result (still PASS, since its human result is PENDING).
+        assert result[sample_id] == id_machine_pass
 
     def test_higher_qc_score_wins_when_qc_result_equal(self) -> None:
         sample_id = uuid4()
@@ -281,15 +310,17 @@ class TestRankingLogic:
             _row(
                 entry_id=worst_s1,
                 sample_id=s1,
-                qc_result=enum.QualityControlResult.PENDING,
+                qc_result_machine=enum.QualityControlResult.PENDING,
             ),
             _row(
                 entry_id=best_s1,
                 sample_id=s1,
-                qc_result=enum.QualityControlResult.PASS,
+                qc_result_machine=enum.QualityControlResult.PASS,
             ),
             _row(
-                entry_id=best_s2, sample_id=s2, qc_result=enum.QualityControlResult.FAIL
+                entry_id=best_s2,
+                sample_id=s2,
+                qc_result_machine=enum.QualityControlResult.FAIL,
             ),
         ]
         svc = _mock_service(rows)

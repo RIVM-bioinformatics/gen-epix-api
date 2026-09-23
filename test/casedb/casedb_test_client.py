@@ -149,8 +149,8 @@ class CasedbTestClient(TestClient):
                 app_cfg.copy_repository_files(test_dir)
                 props = app_cfg.cfg["service"]["seqdb"]["props"]
                 # Copy any seqdb local repository files as well in case of a local setup
-                if props["seqdb_app_type"].upper() == "LOCAL":
-                    props["seqdb_local_app"]["app_cfg"].copy_repository_files(test_dir)
+                if props["seqdb_client_type"].upper() == "LOCAL":
+                    props["local_client"]["app_cfg"].copy_repository_files(test_dir)
             cls.TEST_CLIENTS[app_cfg.name] = cls(
                 test_name,
                 test_dir,

@@ -93,6 +93,9 @@ class ReadSet(Base, RowMetadataMixin, QualityMixin):
     is_available: Mapped[bool] = create_mapped_column(
         DOMAIN, model.ReadSet, "is_available"
     )
+    qc_result: Mapped[enum.QualityControlResult] = create_mapped_column(
+        DOMAIN, model.ReadSet, "qc_result"
+    )
 
     sample: Mapped[Sample] = relationship("Sample", foreign_keys=[sample_id])
     protocol: Mapped[Protocol] = relationship("Protocol", foreign_keys=[protocol_id])
@@ -147,6 +150,9 @@ class Seq(Base, RowMetadataMixin, QualityMixin):
         DOMAIN, model.Seq, "median_contig_length"
     )
     n50: Mapped[int] = create_mapped_column(DOMAIN, model.Seq, "n50")
+    qc_result: Mapped[enum.QualityControlResult] = create_mapped_column(
+        DOMAIN, model.Seq, "qc_result"
+    )
 
     sample: Mapped[Sample] = relationship("Sample", foreign_keys=[sample_id])
     read_set: Mapped[ReadSet | None] = relationship(
@@ -183,6 +189,9 @@ class AstMeasurement(
     protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.AstMeasurement, "protocol_id"
     )
+    qc_result: Mapped[enum.QualityControlResult] = create_mapped_column(
+        DOMAIN, model.AstMeasurement, "qc_result"
+    )
 
     sample: Mapped[Sample] = relationship("Sample", foreign_keys=[sample_id])
     protocol: Mapped[Protocol] = relationship("Protocol", foreign_keys=[protocol_id])
@@ -204,6 +213,9 @@ class AstPrediction(
     protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.AstPrediction, "protocol_id"
     )
+    qc_result: Mapped[enum.QualityControlResult] = create_mapped_column(
+        DOMAIN, model.AstPrediction, "qc_result"
+    )
 
     sample: Mapped[Sample] = relationship("Sample", foreign_keys=[sample_id])
     seq: Mapped[Seq | None] = relationship("Seq", foreign_keys=[seq_id])
@@ -222,6 +234,9 @@ class PcrMeasurement(
     )
     protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.PcrMeasurement, "protocol_id"
+    )
+    qc_result: Mapped[enum.QualityControlResult] = create_mapped_column(
+        DOMAIN, model.PcrMeasurement, "qc_result"
     )
 
     sample: Mapped[Sample] = relationship("Sample", foreign_keys=[sample_id])
@@ -246,6 +261,9 @@ class SeqClassification(
     )
     primary_category_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqClassification, "primary_category_id"
+    )
+    qc_result: Mapped[enum.QualityControlResult] = create_mapped_column(
+        DOMAIN, model.SeqClassification, "qc_result"
     )
 
     sample: Mapped[Sample] = relationship("Sample", foreign_keys=[sample_id])
@@ -275,6 +293,9 @@ class SeqTaxonomy(
     primary_taxon_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqTaxonomy, "primary_taxon_id"
     )
+    qc_result: Mapped[enum.QualityControlResult] = create_mapped_column(
+        DOMAIN, model.SeqTaxonomy, "qc_result"
+    )
 
     sample: Mapped[Sample] = relationship("Sample", foreign_keys=[sample_id])
     seq: Mapped[Seq | None] = relationship("Seq", foreign_keys=[seq_id])
@@ -300,6 +321,9 @@ class SeqProfile(Base, RowMetadataMixin, ContentMixin, QualityMixin):
     )
     seq_profile_type: Mapped[enum.SeqProfileType] = create_mapped_column(
         DOMAIN, model.SeqProfile, "seq_profile_type"
+    )
+    qc_result: Mapped[enum.QualityControlResult] = create_mapped_column(
+        DOMAIN, model.SeqProfile, "qc_result"
     )
 
     sample: Mapped[Sample] = relationship("Sample", foreign_keys=[sample_id])

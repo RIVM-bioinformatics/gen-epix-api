@@ -1,20 +1,39 @@
 # Base
 
-> 1 nodes
+> God node · 143 connections · `test/fastapp/integration/api/test_fastapp_api.py`
 
-## Key Concepts
+**Community:** [SQLAlchemy Model Mixins](SQLAlchemy_Model_Mixins.md)
 
-- **Base** (0 connections)
+## Connections by Relation
 
-## Relationships
+### contains
+- test_fastapp_api.py `EXTRACTED`
 
-- No strong cross-community connections detected
+### inherits
+- SeqProfile `EXTRACTED`
+- CaseType `EXTRACTED`
+- Col `EXTRACTED`
+- RefCol `EXTRACTED`
+- User `EXTRACTED`
+- CaseTypeSet `EXTRACTED`
+- Seq `EXTRACTED`
+- ColSet `EXTRACTED`
+- UserInvitation `EXTRACTED`
+- SampleIdentifier `EXTRACTED`
+- SeqClassification `EXTRACTED`
+- SeqTaxonomy `EXTRACTED`
+- CaseSetCategory `EXTRACTED`
+- CaseSetStatus `EXTRACTED`
+- CaseTypeSetCategory `EXTRACTED`
+- ColSetMember `EXTRACTED`
+- TreeAlgorithm `EXTRACTED`
+- TreeAlgorithmClass `EXTRACTED`
+- AstMeasurement `EXTRACTED`
+- AstPrediction `EXTRACTED`
+- *…and 121 more `inherits` connection(s) not listed (lowest-degree first to go)*
 
-## Audit Trail
-
-- EXTRACTED: 0 (0%)
-- INFERRED: 0 (0%)
-- AMBIGUOUS: 0 (0%)
+### rationale_for
+- SQLAlchemy declarative base for test row models. `EXTRACTED`
 
 ---
 

@@ -1,62 +1,79 @@
 # CrudCommand
 
-> 53 nodes
+> God node · 187 connections · `gen_epix/commondb/domain/command/base.py`
 
-## Key Concepts
+**Community:** [Geographic Region Commands](Geographic_Region_Commands.md)
 
-- **CrudCommand** (53 connections) — `gen_epix/fastapp/model.py`
-- **test_fastapp_domain.py** (41 connections) — `test/fastapp/unit/domain/test_fastapp_domain.py`
-- **TestGeneratedCrudRoutes** (9 connections) — `test/fastapp/unit/test_fastapp_remote_app.py`
-- **TestCrudPermissionTypeMapCompleteness** (8 connections) — `test/fastapp/unit/domain/test_fastapp_domain.py`
-- **set_fake_response()** (7 connections) — `test/fastapp/unit/test_fastapp_remote_app.py`
-- **CrudCommand** (7 connections)
-- **DummyCrud** (5 connections) — `test/fastapp/unit/test_fastapp_remote_app.py`
-- **DummyModel** (5 connections) — `test/fastapp/unit/test_fastapp_remote_app.py`
-- **.test_create_generated_crud_handler_all_operations()** (5 connections) — `test/fastapp/unit/test_fastapp_remote_app.py`
-- **BadCrudNoEntity** (4 connections) — `test/fastapp/unit/domain/test_fastapp_domain.py`
-- **BadCrudNoModel** (4 connections) — `test/fastapp/unit/domain/test_fastapp_domain.py`
-- **BadCrudNoModel2** (4 connections) — `test/fastapp/unit/domain/test_fastapp_domain.py`
-- **CrudA** (4 connections) — `test/fastapp/unit/domain/test_fastapp_domain.py`
-- **CrudB** (4 connections) — `test/fastapp/unit/domain/test_fastapp_domain.py`
-- **CrudX** (4 connections) — `test/fastapp/unit/domain/test_fastapp_domain.py`
-- **CrudY** (4 connections) — `test/fastapp/unit/domain/test_fastapp_domain.py`
-- **DummyQueryFilter** (4 connections) — `test/fastapp/unit/test_fastapp_remote_app.py`
-- **UnsupportedCrud** (4 connections) — `test/fastapp/unit/test_fastapp_remote_app.py`
-- **DummyNonCrud** (3 connections) — `test/fastapp/unit/domain/test_fastapp_domain.py`
-- **.test_create_generated_crud_handler_exists_operations()** (3 connections) — `test/fastapp/unit/test_fastapp_remote_app.py`
-- **.test_generated_handler_unsupported_return_type_raises()** (3 connections) — `test/fastapp/unit/test_fastapp_remote_app.py`
-- **Whether the command is a read one operation.** (3 connections) — `gen_epix/fastapp/model.py`
-- **ServiceType** (2 connections) — `test/fastapp/unit/domain/test_fastapp_domain.py`
-- **.is_create()** (2 connections) — `gen_epix/fastapp/model.py`
-- **.is_crud_all()** (2 connections) — `gen_epix/fastapp/model.py`
-- *... and 28 more nodes in this community*
+## Connections by Relation
 
-## Relationships
+### contains
+- command/base.py `EXTRACTED`
 
-- [CrudOperation](CrudOperation.md) (24 shared connections)
-- [Entity](Entity.md) (15 shared connections)
-- [casedb/domain/model/__init__.py](casedb-domain-model-__init__.py.md) (11 shared connections)
-- [test_fastapp_rbac_service.py](test_fastapp_rbac_service.py.md) (6 shared connections)
-- [TestRegistrationAndLookups](TestRegistrationAndLookups.md) (5 shared connections)
-- [CrudEndpointGenerator](CrudEndpointGenerator.md) (3 shared connections)
-- [Domain](Domain.md) (3 shared connections)
-- [Permission](Permission.md) (3 shared connections)
-- [RemoteApp](RemoteApp.md) (2 shared connections)
-- [DummyCmd](DummyCmd.md) (2 shared connections)
-- [FakeResponse](FakeResponse.md) (2 shared connections)
-- [casedb/domain/command/__init__.py](casedb-domain-command-__init__.py.md) (1 shared connections)
+### imports
+- seqdb/domain/command/__init__.py `EXTRACTED`
+- casedb/domain/command/__init__.py `EXTRACTED`
+- omopdb/domain/command/__init__.py `EXTRACTED`
+- commondb/domain/command/__init__.py `EXTRACTED`
+- command/omop.py `EXTRACTED`
+- command/case.py `EXTRACTED`
+- command/seq.py `EXTRACTED`
+- command/organization.py `EXTRACTED`
+- seq/crud_common.py `EXTRACTED`
+- commondb/domain/command/system.py `EXTRACTED`
+- command/ontology.py `EXTRACTED`
+- command/geo.py `EXTRACTED`
+- commondb/domain/command/abac.py `EXTRACTED`
+- command/file.py `EXTRACTED`
+- casedb/domain/command/abac.py `EXTRACTED`
 
-## Source Files
+### inherits
+- [Command](Command.md) `EXTRACTED`
+- CaseTypeCrudCommand `EXTRACTED`
+- Model2_2CrudCommand `EXTRACTED`
+- DimCrudCommand `EXTRACTED`
+- Model1_2CrudCommand `EXTRACTED`
+- Model2_1CrudCommand `EXTRACTED`
+- Model1_1CrudCommand `EXTRACTED`
+- ColCrudCommand `EXTRACTED`
+- CaseCrudCommand `EXTRACTED`
+- CaseTypeSetCrudCommand `EXTRACTED`
+- RefDimCrudCommand `EXTRACTED`
+- CaseSetCrudCommand `EXTRACTED`
+- RefColCrudCommand `EXTRACTED`
+- UserCrudCommand `EXTRACTED`
+- CaseDataCollectionLinkCrudCommand `EXTRACTED`
+- CaseIdentifierCrudCommand `EXTRACTED`
+- CaseSetDataCollectionLinkCrudCommand `EXTRACTED`
+- CaseSetMemberCrudCommand `EXTRACTED`
+- CaseTypeSetCategoryCrudCommand `EXTRACTED`
+- CaseTypeSetMemberCrudCommand `EXTRACTED`
+- *…and 118 more `inherits` connection(s) not listed (lowest-degree first to go)*
 
-- `gen_epix/fastapp/model.py`
-- `test/fastapp/unit/domain/test_fastapp_domain.py`
-- `test/fastapp/unit/test_fastapp_remote_app.py`
+### rationale_for
+- Extends parent CrudCommand with more narrowly typed properties. `EXTRACTED`
 
-## Audit Trail
-
-- EXTRACTED: 125 (78%)
-- INFERRED: 36 (22%)
-- AMBIGUOUS: 0 (0%)
+### references
+- _crud_cascade_delete() `EXTRACTED`
+- crud_with_access_filter() `EXTRACTED`
+- get_ref_data_access_from_command() `EXTRACTED`
+- get_case_abac_from_command() `EXTRACTED`
+- .register_entity() `EXTRACTED`
+- .crud() `EXTRACTED`
+- _cascade_delete_linked_models() `EXTRACTED`
+- _verify_is_read_operation() `EXTRACTED`
+- ._verify_same_service_links() `EXTRACTED`
+- ._link_new_command() `EXTRACTED`
+- ._execute_crud_operation() `EXTRACTED`
+- ._verify_other_service_links() `EXTRACTED`
+- ._read_association_with_valid_ids() `EXTRACTED`
+- .crud_repository() `EXTRACTED`
+- .get_crud_command_for_model() `EXTRACTED`
+- .handle_crud_command() `EXTRACTED`
+- ._get_model_links() `EXTRACTED`
+- .create_generated_crud_route_handler() `EXTRACTED`
+- .register_generated_crud_route() `EXTRACTED`
+- .get_crud_command_for_entity() `EXTRACTED`
+- *…and 12 more `references` connection(s) not listed (lowest-degree first to go)*
 
 ---
 

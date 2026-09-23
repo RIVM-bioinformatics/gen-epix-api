@@ -11,7 +11,14 @@ from enum import IntEnum
 from typing import Annotated, Any, ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, Json, field_serializer, field_validator, model_validator
+from pydantic import (
+    Field,
+    Json,
+    computed_field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from gen_epix.commondb.domain.model import Model, validate_int_enum_value
 from gen_epix.fastapp.domain.entity import Entity
@@ -108,13 +115,26 @@ class ContentMixin[FormatType: IntEnum]:
 
 
 class QualityMixin:
-    """Encapsulates qualitative and numeric quality-control data for a model."""
+    """Encapsulates qualitative and numeric quality-control data for a model.
 
-    qc_result: Annotated[
+    Quality can be assessed by an automated process, a manual (human) process, or
+    both. The manual assessment, when provided (i.e. not PENDING), supersedes the
+    automated one. The effective assessment is exposed through the `qc_result`
+    computed property.
+    """
+
+    qc_result_machine: Annotated[
         enum.QualityControlResult,
         Field(
             default=enum.QualityControlResult.PENDING,
-            description="The quality of the result as a qualitative value that is used by the application, where applicable, for filtering results.",
+            description="The quality of the result as determined by an automated process. Superseded by qc_result_human when the latter is not PENDING.",
+        ),
+    ]
+    qc_result_human: Annotated[
+        enum.QualityControlResult,
+        Field(
+            default=enum.QualityControlResult.PENDING,
+            description="The quality of the result as determined by a manual assessment. When not PENDING, this value supersedes qc_result_machine.",
         ),
     ]
     qc_score: Annotated[
@@ -132,7 +152,7 @@ class QualityMixin:
         ),
     ]
 
-    @field_validator("qc_result", mode="before")
+    @field_validator("qc_result_machine", "qc_result_human", mode="before")
     @classmethod
     def _validate_qc_result(
         cls, value: str | int | float | enum.QualityControlResult | None
@@ -142,10 +162,27 @@ class QualityMixin:
             return enum.QualityControlResult.PENDING
         return validate_int_enum_value(enum.QualityControlResult, value)  # type: ignore[return-value]
 
-    @field_serializer("qc_result", mode="plain")
+    @field_serializer("qc_result_machine", "qc_result_human", mode="plain")
     def _serialize_qc_result(self, value: enum.QualityControlResult) -> int:
         """Serialize the quality result as its stable integer representation."""
         return value.value
+
+    @computed_field(  # type: ignore[prop-decorator]
+        description="The effective quality-control result: the manual (human) assessment when provided (i.e. not PENDING), otherwise the automated (machine) assessment."
+    )
+    @property
+    def qc_result(self) -> enum.QualityControlResult:
+        """Return the manual quality result if provided, otherwise the automated one.
+
+        Deliberately not a cached_property: qc_result_human/qc_result_machine are
+        mutable after construction (e.g. a manual review added post-creation), and a
+        cached value would silently go stale on such mutation, including across
+        model_copy(). The computation is trivial, so there is no cost to
+        recomputing on every access.
+        """
+        if self.qc_result_human == enum.QualityControlResult.PENDING:
+            return self.qc_result_machine
+        return self.qc_result_human
 
     @staticmethod
     def get_sort_key(instance: "QualityMixin") -> tuple[int, float]:

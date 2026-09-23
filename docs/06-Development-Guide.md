@@ -216,8 +216,8 @@ See the upstream Graphify documentation for platform-specific details:
 
 ### Maintaining the knowledge graph
 
-The repository knowledge graph (`graphify-out/graph.json`, `GRAPH_REPORT.md`, and visualizations)
-is automatically regenerated after each merge to `dev` by the **Update Graphify Graph** CI workflow.
+The repository knowledge graph (`graphify-out/graph.json` and `GRAPH_REPORT.md`) is
+regenerated after each merge to `dev` by the **Update Graphify Graph** CI workflow.
 
 **Manual update (local or pre-PR):**
 
@@ -225,21 +225,46 @@ is automatically regenerated after each merge to `dev` by the **Update Graphify 
 python run.py other_graphify_update
 ```
 
-This runs `graphify-out/graphify_update.py`, which regenerates the full graph (16,389 nodes,
-38,034 edges, 452 communities) in approximately **1.5 minutes**. The pipeline:
+This runs `graphify-out/graphify_update.py`, an incremental update over the existing
+graph rather than a rebuild from scratch. The pipeline:
 
-1. Detects files (code + docs)
-2. Extracts code structure via AST (deterministic, cached)
-3. Merges extraction results
-4. Builds and clusters the graph
-5. Generates reports, HTML visualization, and JSON
-6. Saves cache for incremental updates
+1. Detects files changed since the last run, using `graphify-out/manifest.json`
+2. Extracts code structure from those files via AST (deterministic, cached)
+3. Merges the extraction into the existing `graph.json`, pruning deleted files
+4. Re-clusters, keeping community ids stable against the previous assignment
+5. Writes `graph.json` and `GRAPH_REPORT.md`
+
+Because it only adds or replaces code-derived nodes, nodes extracted from documents
+survive untouched — those need an LLM and so are produced only by a full local build.
+If no extractable file changed, the run exits without rewriting the graph.
 
 **Workflow automation:**
 
 - **Post-merge to `dev`**: Graph updates are committed automatically after each successful merge
 - **On-demand**: Manually trigger via [Actions tab](../../actions/workflows/update-graphify.yml)
 - **Caching**: Graphify uses `.graphify_cache/` to speed up incremental runs on large corpora
+
+**Community labelling is a manual step**
+
+Naming communities requires an LLM call. This repository is public, so no API key is
+configured for the CI workflow and CI never labels. Instead it reuses the curated names
+committed in `graphify-out/.graphify_labels.json`, keeping each name only while that
+community's membership still matches the signature recorded in the adjacent
+`.graphify_labels.json.sig`, and falling back to a deterministic hub-derived name for any
+community that re-clustering has changed. CI never writes either file.
+
+Refresh the names periodically — after a large refactor, or once mechanical hub-derived
+names such as `._create_validator` start appearing in `GRAPH_REPORT.md`:
+
+```bash
+graphify label . --backend claude-cli   # or gemini/openai, with that key exported
+graphify export wiki
+```
+
+`graphify label` also regenerates `graph.html`, which the CI update does not produce.
+Commit the refreshed `.graphify_labels.json`, `.graphify_labels.json.sig`, `graph.json`,
+`GRAPH_REPORT.md`, `graph.html`, and `graphify-out/wiki/` together, so the names, the
+graph they describe, and the generated wiki stay in step.
 
 The repository exposes shared Graphify guidance through `AGENTS.md` and
 Copilot-specific `/graphify` invocation through

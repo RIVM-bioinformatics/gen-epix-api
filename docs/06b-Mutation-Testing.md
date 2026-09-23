@@ -177,7 +177,7 @@ If your repo is only on Windows disk, copy it once:
 
 ```bash
 mkdir -p ~/projects
-cp -a "/mnt/c/Py Projects/LSP-RIVM/gen-epix-api" ~/projects/
+cp -a "/mnt/c/<path-to-repo>/gen-epix-api" ~/projects/
 ```
 
 Or clone directly into Linux disk:

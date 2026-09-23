@@ -392,7 +392,7 @@ class TestModelSeq:
         """Test that Seq inherits QualityMixin properties."""
         qc_score = 0.95
         qc_result = model.enum.QualityControlResult.PASS
-        seq = self._create_sample_seq(qc_score=qc_score, qc_result=qc_result)
+        seq = self._create_sample_seq(qc_score=qc_score, qc_result_machine=qc_result)
         assert seq.qc_score == qc_score
         assert seq.qc_result == qc_result
 
@@ -576,7 +576,7 @@ class TestModelSeqForUpload:
         qc_result = model.enum.QualityControlResult.WARN
 
         seq_upload = self._create_sample_seq_for_upload(
-            qc_score=qc_score, qc_result=qc_result
+            qc_score=qc_score, qc_result_machine=qc_result
         )
 
         assert seq_upload.qc_score == qc_score
@@ -1113,7 +1113,7 @@ class TestModelSampleForUpload:
             sample_id=NULL_ID,
             code="seq_with_qc",
             qc_score=0.95,
-            qc_result=model.enum.QualityControlResult.PASS,
+            qc_result_machine=model.enum.QualityControlResult.PASS,
         )
 
         allele_id = uuid4()
@@ -1436,7 +1436,7 @@ class TestModelSampleBatchForUpload:
         seq_with_qc = self._create_sample_seq_for_upload(
             sample_id=NULL_ID,
             qc_score=0.95,
-            qc_result=model.enum.QualityControlResult.PASS,
+            qc_result_machine=model.enum.QualityControlResult.PASS,
         )
         sample_with_qc = self._create_sample_with_seqs()
         sample_with_qc.seqs = [seq_with_qc]

@@ -195,22 +195,20 @@ class Linter:
         Runs the specified linting tool with the provided command-line arguments.
 
         This method uses the subprocess module to run the linting tool in a separate
-        process. It captures the output of the tool and prints it to the console.
+        process.
+
+        Captures the tool output and optionally saves it to a report. Verbose mode
+        prints progress and status. Non-zero tool exit codes are reported without
+        raising an exception.
 
         Parameters
         ----------
         cmd : list[str]
             A list of command-line arguments to be passed to the linting tool. The first
             element of the list is the name of the tool.
-
-        Raises
-        ------
-        subprocess.CalledProcessError
-            If the linting tool returns a non-zero exit code, indicating that it found some
-            issues with the code.
         """
         if verbose:
-            print(f"Running program: {cmd[0]}")
+            print(f"Running program: {cmd[0]}", flush=True)
 
         env = os.environ.copy()
         env.setdefault("PYTHONIOENCODING", "utf-8")
@@ -225,8 +223,11 @@ class Linter:
         except subprocess.CalledProcessError as e:
             output = e.output.decode("utf-8", errors="replace")
             if verbose:
-                print(f"Failed running {cmd[2]}, here is the output:")
-                print(output)
+                print(f"{cmd[2]} failed (exit code {e.returncode})")
+                if file:
+                    print(f"See report: {file}")
+                else:
+                    print(output)
         if file:
             if isinstance(file, str):
                 file = Path(file)
@@ -237,14 +238,8 @@ class Linter:
         """
         Runs a series of linting and formatting tools on the gen-epix project.
 
-        This method iterates over the `presets` class attribute, and for each set of
-        command-line arguments, it calls the `run_linter` method.
-
-        Raises
-        ------
-        subprocess.CalledProcessError
-            If any of the linting or formatting tools return a non-zero exit code,
-            indicating that it found some issues with the code.
+        Prints progress and status for each preset and saves reports when requested.
+        Continues through all presets even when a tool returns a non-zero exit code.
         """
         outputs = []
         now_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
@@ -257,7 +252,7 @@ class Linter:
             else:
                 file = None
                 file2 = None
-            output = self.run(value, file=file)
+            output = self.run(value, file=file, verbose=True)
             if file2:
                 file2.write_text(output, encoding="utf-8")
             if output:
@@ -268,6 +263,9 @@ class Linter:
             with open(file, "wt", encoding="utf-8") as handle:
                 handle.write("\n".join(outputs))
             file2.write_text(file.read_text(encoding="utf-8"), encoding="utf-8")
+        print("Finished running all linters; see individual results above.")
+        if file_basename:
+            print(f"Combined report: {file_basename}.txt")
 
     def analyse_pylint_code_impact(self, verbose: bool = True) -> None:
         output_dir = get_test_root_output_dir()

@@ -194,6 +194,12 @@ graphify-out/converted/
 graphify-out/memory/
 graphify-out/reflections/
 graphify-out/.graphify_*
+# Curated community names, produced by periodic manual `graphify label` runs.
+# Tracked so the CI update can reuse them instead of falling back to
+# "Community N" placeholders. The .sig holds per-community membership
+# signatures, which is how CI detects a name that clustering has invalidated.
+!graphify-out/.graphify_labels.json
+!graphify-out/.graphify_labels.json.sig
 graphify-out/????-??-??/
 
 # Ruff linter

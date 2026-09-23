@@ -40,7 +40,7 @@ class FeatureFlagsResponseBody(PydanticBaseModel):
     feature_flags: dict[str, bool]
 
 
-class LogItem(PydanticBaseModel):
+class ExternalLogItem(PydanticBaseModel):
     """Represents one externally submitted structured application log item."""
 
     level: LogLevel
@@ -55,7 +55,7 @@ class LogItem(PydanticBaseModel):
 class LogRequestBody(PydanticBaseModel):
     """Represents structured log items submitted to the commondb logging endpoint."""
 
-    log_items: list[LogItem]
+    log_items: list[ExternalLogItem]
 
 
 class LicensesResponseBody(PydanticBaseModel):
