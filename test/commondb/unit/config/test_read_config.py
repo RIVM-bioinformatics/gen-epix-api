@@ -310,6 +310,36 @@ def test_sa_sql_with_credential_env_vars_constructs(monkeypatch: pytest.MonkeyPa
     assert app_cfg.cfg["repository"]["defaults"]["props"]["uid"] == "sa"
 
 
+def test_sa_sql_with_complete_connection_string_constructs(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A deployment supplying its own complete connection_string (e.g. from
+    Key Vault) needs no separate pwd."""
+    monkeypatch.delenv("COMMONDB_REPOSITORY__DEFAULTS__PROPS__UID", raising=False)
+    monkeypatch.delenv("COMMONDB_REPOSITORY__DEFAULTS__PROPS__PWD", raising=False)
+    set_env_variables(AppType.COMMONDB, DevIdpConfig.NONE, DevRepositoryConfig.SA_SQL)
+    monkeypatch.setenv(
+        "COMMONDB_REPOSITORY__DEFAULTS__PROPS__CONNECTION_STRING",
+        "mssql+pyodbc:///?odbc_connect=DRIVER=X;SERVER=s;DATABASE=d;UID=u;PWD=from-key-vault",
+    )
+
+    app_cfg = AppCfg("COMMONDB", ServiceType, RepositoryType, log_any=False)
+
+    assert app_cfg.cfg["repository"]["defaults"]["props"]["pwd"] == ""
+
+
+def test_sa_sql_connection_string_with_blank_pwd_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An overridden connection_string that itself embeds a blank PWD is still rejected."""
+    monkeypatch.delenv("COMMONDB_REPOSITORY__DEFAULTS__PROPS__UID", raising=False)
+    monkeypatch.delenv("COMMONDB_REPOSITORY__DEFAULTS__PROPS__PWD", raising=False)
+    set_env_variables(AppType.COMMONDB, DevIdpConfig.NONE, DevRepositoryConfig.SA_SQL)
+    monkeypatch.setenv(
+        "COMMONDB_REPOSITORY__DEFAULTS__PROPS__CONNECTION_STRING",
+        "mssql+pyodbc:///?odbc_connect=DRIVER=X;SERVER=s;DATABASE=d;UID=u;PWD=;",
+    )
+
+    with pytest.raises(ValidationError):
+        AppCfg("COMMONDB", ServiceType, RepositoryType, log_any=False)
+
+
 @pytest.mark.scenario_ids("TC-CFG-01-01")
 def test_read_config_rejects_non_bool_feature_flag(override_tmp_dir: Path) -> None:
     """A settings file setting a feature flag to a non-bool value fails validation."""

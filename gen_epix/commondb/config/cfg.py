@@ -6,6 +6,7 @@ import importlib
 import logging
 import logging.config as logging_config
 import os
+import re
 from enum import Enum
 from locale import getpreferredencoding
 from pathlib import Path
@@ -81,6 +82,9 @@ _SA_SQL_CONNECTION_STRING = (
     "UID={this.repository.defaults.props.uid};"
     "PWD={this.repository.defaults.props.pwd}{this.repository.defaults.props.other}"
 )
+
+# Matches a blank PWD segment in a resolved SA_SQL connection string.
+_BLANK_PWD_IN_CONNECTION_STRING = re.compile(r"PWD=(;|$)")
 
 
 def _is_descendant_logger(logger_name: str, parent_logger_name: str) -> bool:
@@ -513,20 +517,30 @@ class AppCfg(BaseAppCfg):
             # SA_SQL's uid/pwd default to "" (see _DEFAULT_SETTINGS's
             # comment) so that an env var/settings-file override has an
             # existing key to override. Reject an unchanged blank pwd
-            # whenever SA_SQL is actually the resolved repository type, so
-            # a deployment that forgot to supply a credential fails closed
-            # with a clear message instead of silently connecting with an
-            # empty (or, before this fix, a known) password.
+            # whenever SA_SQL is the resolved repository type AND the
+            # resolved connection_string still embeds that blank pwd (the
+            # built-in default template), so a deployment that forgot to
+            # supply a credential fails closed with a clear message instead
+            # of silently connecting with an empty password. A deployment
+            # that supplies its own complete connection_string (e.g. from a
+            # secret store) needs no separate pwd and passes.
             Validator(
                 "repository.defaults.props.pwd",
                 condition=lambda v: v != "",
-                when=Validator("repository.defaults.type", eq="SA_SQL"),
+                when=Validator("repository.defaults.type", eq="SA_SQL")
+                & Validator(
+                    "repository.defaults.props.connection_string",
+                    condition=lambda v: _BLANK_PWD_IN_CONNECTION_STRING.search(v)
+                    is not None,
+                ),
                 messages={
                     "condition": (
                         "SA_SQL repository requires a credential: set "
                         "{name} via a settings file or the "
                         "<APP>_REPOSITORY__DEFAULTS__PROPS__PWD environment "
-                        "variable (and, usually, ...__UID alongside it)."
+                        "variable (and, usually, ...__UID alongside it), or "
+                        "supply a complete "
+                        "repository.defaults.props.connection_string."
                     )
                 },
             ),
