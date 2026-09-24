@@ -5,7 +5,7 @@
 fastapi[standard]>=0.129.0,<0.137.0 
 # fastapi[standard]==0.141.1
 gunicorn==26.2.*
-starlette==1.6.*
+starlette==1.7.*
 httpx==0.28.1
 urllib3==2.8.0
 pyjwt==2.14.0
