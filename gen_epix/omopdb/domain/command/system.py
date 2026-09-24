@@ -58,7 +58,6 @@ class DeleteAllOperationalDataCommand(CommonDeleteAllOperationalDataCommand):
 class DeleteAllRefDataCommand(CommonDeleteAllRefDataCommand):
     """Request deletion of all persisted OMOP reference data."""
 
-    REF_DATA_SERVICE_TYPE_VALUES: ClassVar[frozenset[str]] = frozenset({"OMOP"})
     SORTED_REF_DATA_MODEL_CLASSES: ClassVar = [
         model.Provider,
         model.ConceptRelationship,

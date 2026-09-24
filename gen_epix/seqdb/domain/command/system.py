@@ -1,7 +1,5 @@
 """Define seqdb commands for system operations."""
 
-from typing import ClassVar
-
 from gen_epix.commondb.domain.command.system import (
     DeleteAllOperationalDataCommand as CommonDeleteAllOperationalDataCommand,
 )
@@ -35,7 +33,6 @@ class DeleteAllOperationalDataCommand(CommonDeleteAllOperationalDataCommand):
 class DeleteAllRefDataCommand(CommonDeleteAllRefDataCommand):
     """Request deletion of all persisted seqdb reference data."""
 
-    REF_DATA_SERVICE_TYPE_VALUES: ClassVar[frozenset[str]] = frozenset({"FILE", "SEQ"})
     SORTED_REF_DATA_MODEL_CLASSES = [
         model.ProtocolSetMember,
         model.Protocol,

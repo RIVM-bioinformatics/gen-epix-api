@@ -36,6 +36,17 @@ seqdb, or omopdb, that application's OpenAPI document includes
 application's operational records and retains common organization data and
 app-specific reference data.
 
+`allow_delete_ref_data` also defaults to `false`. When enabled for casedb, seqdb,
+or omopdb, the application's OpenAPI document includes `DELETE /v1/ref_data`.
+Only ROOT or APP_ADMIN may call it. Operational data must already be empty; the
+command checks domain links before deleting the application's reference data and
+preserves common organization and user records. Enable either flag with a nested
+Dynaconf environment variable, for example:
+
+```bash
+CASEDB_FEATURE_FLAGS__ALLOW_DELETE_REF_DATA=true
+```
+
 Treat reset as a maintenance operation: pause uploads, imports, background jobs,
 and other writers; call the endpoint; then resume writers after a successful 200
 response. The endpoint is synchronous and idempotent. A missing endpoint means the

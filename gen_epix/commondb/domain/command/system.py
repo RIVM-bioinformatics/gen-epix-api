@@ -31,7 +31,6 @@ class DeleteAllRefDataCommand(Command):
     """
 
     SORTED_REF_DATA_MODEL_CLASSES: ClassVar[list[type[model.ModelNoId]]] = []
-    REF_DATA_SERVICE_TYPE_VALUES: ClassVar[frozenset[str]] = frozenset()
 
 
 class RetrieveOutagesCommand(Command):

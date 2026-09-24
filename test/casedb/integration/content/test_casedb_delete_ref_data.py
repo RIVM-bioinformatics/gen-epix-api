@@ -1,4 +1,4 @@
-"""Integration test for the delete-all-except-users-and-organizations command."""
+"""Integration test for deleting casedb operational and reference data."""
 
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
@@ -62,7 +62,7 @@ class TestDeleteRefData:
     def test_delete_all_ref_data_preserves_users_and_organizations(
         self, env: Env
     ) -> None:
-        """Deletes all domain data while preserving users and organizations."""
+        """Deletes application data while preserving users and organizations."""
         root_user = env.get_root_user()
 
         # Demo repository is expected to contain domain data and backbone data.

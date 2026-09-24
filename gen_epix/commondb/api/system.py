@@ -256,7 +256,7 @@ def create_system_endpoints(
         async def ref_data__delete(
             user: registered_user_dependency,  # type: ignore[valid-type]
         ) -> model.DeleteAllRefDataResult:
-            """Delete all data except the identity/access backbone via the command lifecycle."""
+            """Delete application reference data after operational data is reset."""
             retval: model.DeleteAllRefDataResult = exc.handle_command(
                 app=app,
                 user=user,

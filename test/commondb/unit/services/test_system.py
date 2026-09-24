@@ -2,7 +2,7 @@
 
 import json
 from importlib import import_module
-from test.util.mock_compat import Mock
+from test.util.mock_compat import Mock, patch
 
 import pytest
 
@@ -63,15 +63,27 @@ def test_delete_all_ref_data_requires_empty_operational_models(app_name: str) ->
     app = Mock()
     app.domain = domain_module.DOMAIN
     ref_models = set(command_class.SORTED_REF_DATA_MODEL_CLASSES)
-    service_type_values = command_class.REF_DATA_SERVICE_TYPE_VALUES
+    linked_models = set(ref_models)
+    persistable_models = app.domain.get_dag_sorted_models(persistable=True)
+    while True:
+        newly_linked_models = {
+            model_class
+            for model_class in persistable_models
+            if model_class not in linked_models
+            and any(
+                link.link_model_class in linked_models
+                for link in app.domain.get_model_links(model_class).values()
+            )
+        }
+        if not newly_linked_models:
+            break
+        linked_models.update(newly_linked_models)
     operational_models = [
         model_class
         for model_class in app.domain.get_dag_sorted_models(
             persistable=True, reverse=True
         )
-        if model_class not in ref_models
-        and getattr(app.domain.get_service_type_for_model(model_class), "value", None)
-        in service_type_values
+        if model_class in linked_models and model_class not in ref_models
     ]
     remaining_model = operational_models[0]
 
@@ -92,4 +104,66 @@ def test_delete_all_ref_data_requires_empty_operational_models(app_name: str) ->
     assert all(
         call.args[0].operation is CrudOperation.READ_ALL
         for call in app.handle.call_args_list
+    )
+    assert all(call.args[0].limit == 1 for call in app.handle.call_args_list)
+    assert all(call.args[0].return_id for call in app.handle.call_args_list)
+
+
+def test_delete_all_ref_data_deletes_casedb_policy_models_before_references() -> None:
+    """Delete casedb policy rows before their CaseTypeSet and ColSet references."""
+    from gen_epix.casedb.domain import DOMAIN, command, model
+
+    app = Mock()
+    app.domain = DOMAIN
+    app.handle.return_value = []
+    service = object.__new__(SystemService)
+    service._app = app
+
+    result = service.delete_all_ref_data(command.DeleteAllRefDataCommand(user=None))
+
+    assert result.success
+    delete_commands = [
+        call.args[0]
+        for call in app.handle.call_args_list
+        if call.args[0].operation is CrudOperation.DELETE_ALL
+    ]
+    deleted_models = [crud_command.MODEL_CLASS for crud_command in delete_commands]
+    policy_models = {
+        model.OrganizationAccessCasePolicy,
+        model.OrganizationShareCasePolicy,
+        model.UserAccessCasePolicy,
+        model.UserShareCasePolicy,
+    }
+    assert policy_models <= set(deleted_models)
+    assert max(deleted_models.index(policy) for policy in policy_models) < min(
+        deleted_models.index(model.CaseTypeSet), deleted_models.index(model.ColSet)
+    )
+
+
+def test_delete_all_ref_data_reports_missing_crud_command() -> None:
+    """Report a missing CRUD mapping instead of silently leaving data behind."""
+    from gen_epix.casedb.domain import DOMAIN, command
+
+    app = Mock()
+    app.domain = DOMAIN
+    app.handle.return_value = []
+    missing_model = command.DeleteAllRefDataCommand.SORTED_REF_DATA_MODEL_CLASSES[0]
+    original_get_crud_command = DOMAIN.get_crud_command_for_model
+
+    def get_crud_command(model_class):
+        if model_class is missing_model:
+            raise LookupError("missing CRUD command")
+        return original_get_crud_command(model_class)
+
+    service = object.__new__(SystemService)
+    service._app = app
+
+    with patch.object(
+        DOMAIN, "get_crud_command_for_model", side_effect=get_crud_command
+    ):
+        result = service.delete_all_ref_data(command.DeleteAllRefDataCommand(user=None))
+
+    assert result.success is False
+    assert (
+        result.details[missing_model.ENTITY.name] == "LookupError: missing CRUD command"
     )

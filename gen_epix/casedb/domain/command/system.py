@@ -1,7 +1,5 @@
 """Define casedb commands for system operations."""
 
-from typing import ClassVar
-
 from gen_epix.casedb.domain import model
 from gen_epix.commondb.domain.command.system import (
     DeleteAllOperationalDataCommand as CommonDeleteAllOperationalDataCommand,
@@ -25,10 +23,11 @@ class DeleteAllOperationalDataCommand(CommonDeleteAllOperationalDataCommand):
 class DeleteAllRefDataCommand(CommonDeleteAllRefDataCommand):
     """Request deletion of all persisted casedb reference data."""
 
-    REF_DATA_SERVICE_TYPE_VALUES: ClassVar[frozenset[str]] = frozenset(
-        {"CASE", "GEO", "ONTOLOGY", "SEQDB"}
-    )
     SORTED_REF_DATA_MODEL_CLASSES = [
+        model.OrganizationAccessCasePolicy,
+        model.OrganizationShareCasePolicy,
+        model.UserAccessCasePolicy,
+        model.UserShareCasePolicy,
         model.ColSetMember,
         model.Col,
         model.CaseTypeSetMember,

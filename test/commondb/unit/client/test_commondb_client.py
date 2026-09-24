@@ -985,9 +985,7 @@ class TestNonCrudHandlers:
         assert url == app._routes[command.DeleteAllOperationalDataCommand]
         assert result == model.DeleteAllOperationalDataResult(**data)
 
-    def test_delete_all_ref_data(
-        self, app: CommondbClient, mock_client: Any
-    ) -> None:
+    def test_delete_all_ref_data(self, app: CommondbClient, mock_client: Any) -> None:
         """Parse the JSON result returned by the reference-data reset endpoint."""
         data = {"success": True, "details": {"case_types": "[]"}}
         mock_client.request.return_value = _mock_response(data)
