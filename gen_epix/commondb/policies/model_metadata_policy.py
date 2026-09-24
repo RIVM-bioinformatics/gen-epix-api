@@ -1,5 +1,6 @@
-"""
-Policies for handling model metadata like created_at, modified_at and modified_by.
+"""Mask commondb audit metadata for users without privileged roles.
+
+Policies handle model metadata like created_at, modified_at and modified_by.
 
 For both operational and refdata it is important to keep track of created/modified date as well as modified by user.
 This allows e.g. retrieving and inspecting data based on these properties,
@@ -23,20 +24,30 @@ from gen_epix.fastapp.model import Command, Policy
 
 
 class ModelMetadataPolicy(Policy):
-    """
-    AFTER policy that nulls out created_at, modified_at, and modified_by on
-    returned objects.
-    """
+    """Encapsulates AFTER-phase masking to audit fields on returned domain models."""
 
     def __init__(
         self, role_set_map: dict[enum.RoleSet | enum.Enum, frozenset[str]]
     ) -> None:
+        """Initialize the role set that may view audit metadata.
+
+        Args:
+            role_set_map: Configured role sets, including application administrators.
+        """
         self._privileged_roles = role_set_map[enum.RoleSet.GE_APP_ADMIN]
 
     def filter(self, cmd: Command, retval: Any) -> Any:
-        """
+        """Mask audit fields unless the command user has a privileged role.
+
         If the user does not have a privileged role, null out created_at, modified_at,
         and modified_by on returned models.
+
+        Args:
+            cmd: Completed command evaluated during the AFTER lifecycle phase.
+            retval: Handler result that may contain nested domain models.
+
+        Returns:
+            Original result with audit fields masked where required.
         """
         if not retval:
             # Any falsy return value (e.g. None, empty list) does not need to be processed
@@ -59,6 +70,11 @@ class ModelMetadataPolicy(Policy):
 
     @staticmethod
     def mask_models(obj: Any) -> None:
+        """Recursively clear audit metadata on models nested in a result.
+
+        Args:
+            obj: Domain model, list, dictionary, or other value to inspect in place.
+        """
         if isinstance(obj, model.ModelNoId):
             # Mask metadata fields
             obj.created_at = None

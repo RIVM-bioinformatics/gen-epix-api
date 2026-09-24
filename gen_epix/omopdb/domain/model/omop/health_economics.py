@@ -134,6 +134,7 @@ class PayerPlanPeriod(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize payer-plan-period concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -242,4 +243,5 @@ class Cost(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize cost concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)

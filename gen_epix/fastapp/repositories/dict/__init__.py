@@ -1,3 +1,5 @@
+"""In-memory dictionary-backed repository exports."""
+
 # pylint: disable=useless-import-alias
 from gen_epix.fastapp.repositories.dict.repository import (
     DictRepository as DictRepository,

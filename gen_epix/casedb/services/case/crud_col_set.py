@@ -1,6 +1,4 @@
-"""
-CRUD operations for ColSet entities.
-"""
+"""Handle CRUD operations for column-set entities."""
 
 from uuid import UUID
 
@@ -19,7 +17,6 @@ def case_service_crud_col_set(
     self: BaseCaseService, cmd: command.ColSetCrudCommand
 ) -> list[model.ColSet] | model.ColSet | list[UUID] | UUID | list[bool] | bool | None:
     """Handle CRUD operations for ColSet entities."""
-
     with self.repository.uow() as uow:
         assert cmd.user is not None
         _crud_cascade_delete(self, uow, cmd)

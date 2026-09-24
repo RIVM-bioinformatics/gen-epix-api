@@ -1,3 +1,5 @@
+"""Extend organization-scoped result filtering to casedb case policies."""
+
 from typing import Any
 
 from gen_epix.casedb.domain import command
@@ -8,11 +10,19 @@ from gen_epix.commondb.policies import (
 
 
 class ReadOrganizationResultsOnlyPolicy(CommonReadOrganizationResultsOnlyPolicy):
+    """Filter casedb case-policy reads to visible organizations."""
+
     def __init__(
         self,
         abac_service: BaseAbacService,
         **kwargs: Any,
     ):
+        """Register casedb case-policy commands for organization filtering.
+
+        Args:
+            abac_service: Service used by the shared organization filter.
+            **kwargs: Additional shared policy configuration.
+        """
         super().__init__(
             abac_service,
             **kwargs,

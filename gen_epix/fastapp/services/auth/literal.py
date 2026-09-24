@@ -1,3 +1,5 @@
+"""Regular expressions used to validate authentication values."""
+
 import re
 
 EMAIL_PATTERN = re.compile(

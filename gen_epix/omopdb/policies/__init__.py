@@ -1,3 +1,9 @@
+"""Expose OmopDB policy implementations and mappings to shared policies.
+
+The facade re-exports organization and user policy implementations and maps
+the shared self- and organization-result policies to their OmopDB variants.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix import fastapp
 from gen_epix.commondb import policies as common_policies

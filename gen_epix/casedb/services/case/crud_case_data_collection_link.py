@@ -1,5 +1,5 @@
-"""
-CRUD operations for CaseDataCollectionLink entities.
+"""Handle CRUD operations for case-to-data-collection links.
+
 Complex association entity with extensive ABAC logic.
 """
 
@@ -29,7 +29,6 @@ def case_service_crud_case_data_collection_link(
     | None
 ):
     """Handle CRUD operations for CaseDataCollectionLink entities."""
-
     with self.repository.uow() as uow:
         _crud_cascade_delete(self, uow, cmd)
         if cmd.user is None or is_app_admin_or_above(self, cmd.user):
@@ -67,7 +66,24 @@ def _crud_case_data_collection_link_with_abac(
     | bool
     | None
 ):
-    """CaseDataCollectionLink user command handling, ABAC applied."""
+    """Handle case-collection links subject to current user restrictions.
+
+    Commands without case ABAC metadata delegate directly. Otherwise, unrestricted
+    reads of all links, updates, and bulk deletes are rejected; remaining operations
+    currently delegate without additional row-level filtering.
+
+    Args:
+        self: Case service handling the command.
+        uow: Active unit of work reserved for CRUD coordination.
+        cmd: Case-collection-link CRUD command.
+
+    Returns:
+        Result returned by delegated CRUD handling.
+
+    Raises:
+        UnauthorizedAuthError: If a restricted user requests an unsupported bulk
+            read, update, or delete operation.
+    """
     case_abac = get_case_abac_from_command(cmd)
 
     if case_abac is None:

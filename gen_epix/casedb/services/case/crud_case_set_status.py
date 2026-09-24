@@ -1,5 +1,5 @@
-"""
-CRUD operations for CaseSetStatus entities.
+"""Handle CRUD operations for case-set-status entities.
+
 This is a simple metadata entity with no ABAC restrictions.
 """
 

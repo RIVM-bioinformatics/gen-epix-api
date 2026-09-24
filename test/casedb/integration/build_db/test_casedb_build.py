@@ -25,6 +25,7 @@ SEQDB_APP_CFGS = get_app_cfgs(
     seqdb_enum.ServiceType,
     seqdb_enum.RepositoryType,
     TEST_TYPE,
+    log_any=VERBOSE,
 )
 CASEDB_APP_CFGS = get_app_cfgs(
     AppType.CASEDB,
@@ -32,6 +33,7 @@ CASEDB_APP_CFGS = get_app_cfgs(
     enum.RepositoryType,
     TEST_TYPE,
     seqdb_app_cfgs=SEQDB_APP_CFGS,
+    log_any=VERBOSE,
 )
 
 
@@ -46,11 +48,11 @@ CASEDB_APP_CFGS = get_app_cfgs(
 # shared SQLite connection.
 #
 # Note: with_endpoints + DICT_EMPTY would share the same underlying cfg dict as
-# skip_endpoints + DICT_EMPTY (copy.copy is shallow). CommondbRemoteApp._create_local_app
-# calls local_app_props.pop("app_cfg"), which removes seqdb's AppCfg from the shared
+# skip_endpoints + DICT_EMPTY (copy.copy is shallow). CommondbClient._create_local_client
+# calls local_client_props.pop("app_cfg"), which removes seqdb's AppCfg from the shared
 # dict. The second fixture call would then fall back to constructing a new seqdb AppCfg
 # from the current env vars, which may point to SA_SQL → MSSQL connection error.
-# This is fixed by restoring seqdb_local_app["app_cfg"] from SEQDB_APP_CFGS before
+# This is fixed by restoring local_client["app_cfg"] from SEQDB_APP_CFGS before
 # each fixture call (see fixture body below).
 _PARAMS = [
     BuildDbParams(
@@ -74,17 +76,17 @@ _PARAMS = [
     params=_PARAMS,
     ids=[p.id for p in _PARAMS],
 )
-def get_test_client(request) -> Env:
+def get_test_client(request: pytest.FixtureRequest) -> Env:
     params: BuildDbParams = request.param
     cfg_key = f"{TEST_TYPE.value}__{params.dev_repository_config.value}"
     app_cfg = copy.copy(CASEDB_APP_CFGS[cfg_key])
     app_cfg._name = f"{TEST_TYPE.value}__{params.id}"
-    # CommondbRemoteApp._create_local_app pops "app_cfg" from the seqdb_local_app dict.
+    # CommondbClient._create_local_client pops "app_cfg" from the local_client dict.
     # Because copy.copy is shallow, that pop mutates the shared underlying cfg dict and
     # removes the key for any subsequent fixture call using the same dev_repository_config.
     # Without this restore, the next call would create a new seqdb AppCfg from env vars,
     # which may point to SA_SQL (MSSQL) → DBAPIError on machines without ODBC installed.
-    app_cfg.cfg["service"]["seqdb"]["props"]["seqdb_local_app"]["app_cfg"] = (
+    app_cfg.cfg["service"]["seqdb"]["props"]["local_client"]["app_cfg"] = (
         SEQDB_APP_CFGS[cfg_key]
     )
     return Env.get_test_client(  # type: ignore[return-value]

@@ -1,3 +1,5 @@
+"""Define SQLAlchemy rows and mixins for commondb ABAC policy persistence."""
+
 import sqlalchemy.orm as orm
 from sqlalchemy.orm import declarative_mixin
 
@@ -13,8 +15,9 @@ Base: type = orm.declarative_base(name=enum.ServiceType.ABAC.value)
 
 @declarative_mixin
 class OrganizationAdminPolicyMixin(RowMetadataMixin):
-    """
-    SQLAlchemy model mixin for derived domain models whose SQLAlchemy models are
+    """Encapsulates SQLAlchemy columns for OrganizationAdminPolicy-derived row models.
+
+    The mixin supports derived domain models whose SQLAlchemy models are
     created under a different declarative base.
     """
 
@@ -26,8 +29,6 @@ class OrganizationAdminPolicyMixin(RowMetadataMixin):
 
 
 class OrganizationAdminPolicy(Base, OrganizationAdminPolicyMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Encapsulates persistence of the commondb OrganizationAdminPolicy domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.OrganizationAdminPolicy)

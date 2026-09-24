@@ -1,3 +1,16 @@
+"""Expose and group casedb and shared commands for domain registration.
+
+ABAC exports manage case access and sharing policies. Case exports cover case
+metadata, content, sets, uploads, queries, rights, statistics, and seqdb-backed
+operations; geographic exports manage regions, and ontology exports manage
+concepts, diseases, agents, and etiologies. seqdb exports retrieve sequence data.
+Shared commondb exports provide authentication, system, RBAC, organization, and
+common command contracts used by casedb.
+
+``COMMANDS_BY_SERVICE_TYPE`` assigns these commands to casedb services, and
+``COMMON_COMMAND_MAP`` defines substitutions for shared command types.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix import fastapp
 from gen_epix.casedb.domain import enum
@@ -87,7 +100,10 @@ from gen_epix.casedb.domain.command.case import (
     RetrieveCaseSetRightsCommand as RetrieveCaseSetRightsCommand,
 )
 from gen_epix.casedb.domain.command.case import (
-    RetrieveCaseStatsCommand as RetrieveCaseStatsCommand,
+    RetrieveCaseSetStatsCommand as RetrieveCaseSetStatsCommand,
+)
+from gen_epix.casedb.domain.command.case import (
+    RetrieveCaseTypeStatsCommand as RetrieveCaseTypeStatsCommand,
 )
 from gen_epix.casedb.domain.command.case import (
     RetrieveCompleteCaseTypeCommand as RetrieveCompleteCaseTypeCommand,
@@ -118,6 +134,9 @@ from gen_epix.casedb.domain.command.case import (
 )
 from gen_epix.casedb.domain.command.case import (
     TreeAlgorithmCrudCommand as TreeAlgorithmCrudCommand,
+)
+from gen_epix.casedb.domain.command.case import (
+    UpdateCaseCreatedInDataCollectionCommand as UpdateCaseCreatedInDataCollectionCommand,
 )
 from gen_epix.casedb.domain.command.case import UploadCasesCommand as UploadCasesCommand
 from gen_epix.casedb.domain.command.geo import RegionCrudCommand as RegionCrudCommand
@@ -160,9 +179,16 @@ from gen_epix.casedb.domain.command.seqdb import (
 from gen_epix.casedb.domain.command.seqdb import (
     RetrieveGeneticSequenceFastaByIdCommand as RetrieveGeneticSequenceFastaByIdCommand,
 )
+from gen_epix.casedb.domain.command.system import (
+    DeleteAllOperationalDataCommand as DeleteAllOperationalDataCommand,
+)
+from gen_epix.commondb.domain import command as commondb_command
 from gen_epix.commondb.domain import enum as common_enum
 from gen_epix.commondb.domain.command import (
     COMMANDS_BY_SERVICE_TYPE as _COMMON_COMMANDS_BY_SERVICE_TYPE,
+)
+from gen_epix.commondb.domain.command import (
+    AnonymizeUserCommand as AnonymizeUserCommand,
 )
 from gen_epix.commondb.domain.command import Command as Command
 from gen_epix.commondb.domain.command import ContactCrudCommand as ContactCrudCommand
@@ -283,12 +309,14 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         RetrieveCasesByIdCommand,
         RetrieveCasesByQueryCommand,
         RetrieveCaseSetRightsCommand,
-        RetrieveCaseStatsCommand,
+        RetrieveCaseSetStatsCommand,
+        RetrieveCaseTypeStatsCommand,
         RetrieveCompleteCaseTypeCommand,
         RetrieveGeneticSequenceFastaByCaseCommand,
         RetrievePhylogeneticTreeByCasesCommand,
         RetrieveSimilarCasesCommand,
         RetrieveIsOwnCasesCommand,
+        UpdateCaseCreatedInDataCollectionCommand,
         RetrievePhylogeneticTreeByProfilesCommand,
         TreeAlgorithmClassCrudCommand,
         TreeAlgorithmCrudCommand,
@@ -319,7 +347,9 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
     ),
     enum.ServiceType.SYSTEM: set(
         _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.SYSTEM]
-    ),
+    )
+    - {commondb_command.DeleteAllOperationalDataCommand}
+    | {DeleteAllOperationalDataCommand},
     enum.ServiceType.RBAC: set(
         _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.RBAC]
     ),
@@ -328,8 +358,11 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
     ),
 }
 
-COMMON_COMMAND_MAP: dict[type[fastapp.Command], type[fastapp.Command]] = {}
-
-COMMON_COMMAND_MAP: dict[type[fastapp.Command], type[fastapp.Command]] = {}
-
-COMMON_COMMAND_MAP: dict[type[fastapp.Command], type[fastapp.Command]] = {}
+COMMON_COMMAND_MAP: dict[type[fastapp.Command], type[fastapp.Command]] = {
+    commondb_command.UserCrudCommand: UserCrudCommand,
+    commondb_command.UserInvitationCrudCommand: UserInvitationCrudCommand,
+    commondb_command.InviteUserCommand: InviteUserCommand,
+    commondb_command.UpdateUserCommand: UpdateUserCommand,
+    commondb_command.OrganizationAdminPolicyCrudCommand: OrganizationAdminPolicyCrudCommand,
+    commondb_command.DeleteAllOperationalDataCommand: DeleteAllOperationalDataCommand,
+}

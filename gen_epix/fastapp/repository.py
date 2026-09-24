@@ -1,3 +1,5 @@
+"""Repository interfaces shared by persistence implementations."""
+
 import abc
 import uuid
 from collections.abc import Callable, Hashable, Iterable
@@ -12,16 +14,21 @@ from gen_epix.filter import Filter
 
 
 class BaseRepository(abc.ABC):
+    """Encapsulates defining the persistence contract used by application services."""
+
     def __init__(self, **kwargs: Any):
+        """Initialize repository identity from optional keyword arguments."""
         self._id: str = kwargs.get("id", str(uuid.uuid4()))
         self._name: str = kwargs.get("name", self._id)
 
     @property
     def id(self) -> str:
+        """Return the repository's stable identifier."""
         return self._id
 
     @property
     def name(self) -> str:
+        """Return the repository's display name."""
         return self._name
 
     @classmethod
@@ -32,9 +39,7 @@ class BaseRepository(abc.ABC):
 
     @classmethod
     def clear_repository_content(cls, **kwargs: Any) -> None:
-        """
-        Remove all contents of the repository.
-        """
+        """Remove all contents of the repository."""
         raise NotImplementedError("Method is not implemented for this repository")
 
     @abc.abstractmethod
@@ -117,7 +122,7 @@ class BaseRepository(abc.ABC):
         """
         Update association objects of the given model class that represent an
         association between two other objects (e.g. a user and a role, or a case and a
-        data collection). The association objects are updated to match the provided association_objs, which means that association objects will be created, updated or deleted as needed. The association is determined by the link_field_names and corresponding
+        data collection). The association objects are updated to match the provided association_objs, which means that association objects will be created, updated or deleted as needed. The association is determined by the link_field_names and corresponding.
         """
         return_id = kwargs.pop("return_id", False)
         excluded_association_objs: Iterable[Model] = kwargs.pop(
@@ -447,6 +452,7 @@ class BaseRepository(abc.ABC):
 
     @staticmethod
     def raise_on_duplicate_ids(obj_ids: Iterable[Hashable]) -> None:
+        """Raise an error when the iterable contains duplicate identifiers."""
         set_ = set()
         duplicate_ids = [x for x in obj_ids if x in set_ or set_.add(x)]  # type: ignore
         if duplicate_ids:
@@ -464,6 +470,7 @@ class BaseRepository(abc.ABC):
         obj_ids: Hashable | Iterable[Hashable] | None,
         operation: CrudOperation,
     ) -> None:
+        """Validate that CRUD arguments match the requested operation."""
 
         def _verify_no_objs() -> None:
             if objs is not None:

@@ -1,3 +1,5 @@
+"""Define SQLAlchemy persistence mappings for casedb ontology models."""
+
 # pylint: disable=too-few-public-methods
 from __future__ import (  # Resolves pylint not recognizing Mapped as subscriptable
     annotations,
@@ -20,9 +22,7 @@ Base: type = orm.declarative_base(name=enum.ServiceType.ONTOLOGY.value)
 
 
 class ConceptSet(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb ConceptSet domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.ConceptSet)
 
@@ -31,15 +31,16 @@ class ConceptSet(Base, RowMetadataMixin):
     type: Mapped[enum.ConceptSetType] = create_mapped_column(
         DOMAIN, model.ConceptSet, "type"
     )
+    unit: Mapped[enum.Unit | None] = create_mapped_column(
+        DOMAIN, model.ConceptSet, "unit"
+    )
     description: Mapped[str] = create_mapped_column(
         DOMAIN, model.ConceptSet, "description"
     )
 
 
 class Concept(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb Concept domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.Concept)
 
@@ -57,9 +58,7 @@ class Concept(Base, RowMetadataMixin):
 
 
 class ConceptRelation(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb ConceptRelation domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.ConceptRelation)
 
@@ -75,9 +74,7 @@ class ConceptRelation(Base, RowMetadataMixin):
 
 
 class Disease(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb Disease domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.Disease)
 
@@ -86,9 +83,7 @@ class Disease(Base, RowMetadataMixin):
 
 
 class EtiologicalAgent(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb EtiologicalAgent domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.EtiologicalAgent)
 
@@ -97,9 +92,7 @@ class EtiologicalAgent(Base, RowMetadataMixin):
 
 
 class Etiology(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb Etiology domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.Etiology)
 

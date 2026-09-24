@@ -1,6 +1,4 @@
-"""
-CRUD operations for Col entities.
-"""
+"""Handle CRUD operations for case column entities."""
 
 from uuid import UUID
 
@@ -22,7 +20,6 @@ def case_service_crud_col(
     self: BaseCaseService, cmd: command.ColCrudCommand
 ) -> list[model.Col] | model.Col | list[UUID] | UUID | list[bool] | bool | None:
     """Handle CRUD operations for Col entities."""
-
     # Start unit of work
     with self.repository.uow() as uow:
         assert cmd.user is not None and cmd.user.id is not None
@@ -63,8 +60,17 @@ def _validate_cols(
     uow: BaseUnitOfWork,
     cmd: command.ColCrudCommand,
 ) -> None:
-    """Validate Col entities before creation or update."""
+    """Validate column dimension and reference-column relationships for writes.
 
+    Args:
+        self: Case service used for metadata retrieval.
+        uow: Active unit of work for validation reads.
+        cmd: Column CRUD command to validate.
+
+    Raises:
+        InvalidArgumentsError: If a column and dimension have different case types or
+            their reference dimension identifiers do not match.
+    """
     if cmd.is_write():
         user = cmd.user
         assert user is not None and user.id is not None

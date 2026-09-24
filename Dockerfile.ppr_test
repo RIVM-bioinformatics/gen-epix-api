@@ -1,5 +1,5 @@
 # Local docker-compose Dockerfile — mirrors the lsp-api production base image.
-# Uses python:3.13-slim (Debian 12) with the Microsoft ODBC driver, matching
+# Uses python:3.14-slim (Debian 12) with the Microsoft ODBC driver, matching
 # what the CI/CD pipeline builds and deploys via lsp-api/Dockerfile.
 # Build context is gen-epix-api/ (repo root). lsp-api/Dockerfile differs in
 # that it expects gen-epix-api/ as a subdirectory of the lsp-api/ build context,
@@ -7,7 +7,7 @@
 # The entrypoint.sh (config-template substitution) is omitted — it is only
 # needed for Kubernetes/production config injection, not for DICT_EMPTY mode.
 
-ARG PYTHON_VERSION=3.13.7
+ARG PYTHON_VERSION=3.14.6
 FROM python:${PYTHON_VERSION}-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1

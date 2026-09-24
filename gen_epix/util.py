@@ -1,3 +1,12 @@
+"""Provide shared helpers for identifiers, models, collections, and profiling.
+
+Identifier helpers generate sortable UUIDs or deterministically map strings and
+integers to UUIDs. Model helpers copy Pydantic field configuration and combine
+inherited class documentation. Collection helpers group paired values and split
+lists into batches. The profiling decorator records synchronous or asynchronous
+call executions without changing their results or exceptions.
+"""
+
 import datetime
 import hashlib
 import inspect
@@ -16,21 +25,25 @@ from pyinstrument import Profiler
 
 
 def generate_ulid() -> uuid.UUID:
+    """Generate a new UUID backed by a ULID.
+
+    Returns:
+        A UUID whose underlying ULID preserves creation-time ordering.
+    """
     return ulid.api.new().uuid
 
 
 def get_package_root() -> Path:
-    """
-    Get the root path of the project by looking for pyproject.toml.
+    """Return the repository root located from this module's source path.
 
-    Searches upward from the current file's directory until it finds
-    a directory containing pyproject.toml, which indicates the project root.
+    Searches parent directories for ``pyproject.toml`` rather than depending on
+    the caller's current working directory.
 
     Returns:
-        Path: The absolute path to the project root directory.
+        Absolute path to the directory containing ``pyproject.toml``.
 
     Raises:
-        FileNotFoundError: If pyproject.toml cannot be found in any parent directory.
+        FileNotFoundError: If no parent directory contains ``pyproject.toml``.
     """
     current_dir = Path(__file__).parent
 
@@ -44,11 +57,18 @@ def get_package_root() -> Path:
 
 @lru_cache(maxsize=1)
 def get_package_version() -> str:
-    """Retrieve the project version from the pyproject.toml file.
-    Must be run from the project root directory.
+    """Retrieve the project version from the project metadata.
+
+    The function reads ``pyproject.toml`` relative to the current working
+    directory and caches the first successful result for the process.
 
     Returns:
-        str: The version of the project as specified in pyproject.toml.
+        The version declared under ``project.version``.
+
+    Raises:
+        FileNotFoundError: If the current directory lacks the project metadata
+            file.
+        KeyError: If the metadata does not define the expected project version.
     """
     pyproject_path = "pyproject.toml"
 
@@ -65,11 +85,19 @@ def map_paired_elements(
     | dict[Hashable, set[Any]]
     | dict[Hashable, frozenset[Any]]
 ):
-    """
-    Convert an iterable of paired elements to a dictionary of lists or sets, where
-    the keys are the unique first elements and the values the list or set of second
-    elements matching that key in the input. If frozen=True, the sets are converted
-    to frozensets.
+    """Group paired values by key while preserving input order for lists.
+
+    With ``as_set=False``, repeated values are retained in encounter order.
+    With ``as_set=True``, repeated values are removed. Setting ``frozen=True``
+    changes set values to frozensets and has no effect when ``as_set`` is false.
+
+    Args:
+        data: Iterable of key-value pairs to group.
+        as_set: Whether each grouped value should be a set instead of a list.
+        frozen: Whether set values should be immutable frozensets.
+
+    Returns:
+        A dictionary mapping each encountered key to its grouped values.
     """
     retval: (
         dict[Hashable, list[Any]]
@@ -92,8 +120,21 @@ def map_paired_elements(
 def copy_model_field(
     from_model: type[BaseModel], field_name: str, **kwargs: Any
 ) -> Any:
-    """
-    Copy a field from a model
+    """Create a Pydantic field with copied configuration from another model.
+
+    Field metadata and supported ``Field`` attributes are copied before any
+    keyword arguments supplied by the caller are applied as overrides.
+
+    Args:
+        from_model: Model whose field definition supplies the defaults.
+        field_name: Name of the field to copy from ``from_model``.
+        **kwargs: Field attributes that override copied values.
+
+    Returns:
+        A new Pydantic field definition.
+
+    Raises:
+        KeyError: If ``field_name`` is not defined on ``from_model``.
     """
     field_info_attributes = {
         "alias": "alias",
@@ -161,10 +202,21 @@ def add_parent_class_docs(
     cls: type | set[type],
     exclude: Iterable[type] | None = (BaseModel,),
 ) -> str | None:
-    """
-    Append the documentation of any non-excluded parent classes to the given
-    class or classes' docstring. The object parent class is always excluded. If
-    set_docs is True, the combined docstring is set as the class' docstring.
+    """Append inherited documentation to one class or a class hierarchy.
+
+    Excluded classes and ``object`` are omitted. For a set of classes, parents
+    are processed before children so inherited documentation is available when
+    each child is updated. The single-class form mutates ``cls.__doc__`` only
+    when at least one eligible parent has documentation. A supplied set of
+    excluded classes is also mutated to include ``object``.
+
+    Args:
+        cls: Class to update, or classes whose inheritance graph should be
+            processed in dependency order.
+        exclude: Classes whose documentation should not be inherited.
+
+    Returns:
+        The updated docstring for a single class, or ``None`` for a class set.
     """
     if exclude is None:
         exclude = set()
@@ -224,18 +276,35 @@ def add_parent_class_docs(
 
 
 def str_to_uuid(value: str) -> UUID:
-    """
-    Convert a string to a UUID by encoding it as UTF-8, then calculating the SHA256
-    hash from that and subsequently taking the first 16 bytes of the hash to construct
-    the UUID.
+    """Derive a deterministic UUID from a UTF-8 string.
+
+    The SHA-256 digest is truncated to the 16 bytes required by UUID. Different
+    strings normally produce different UUIDs, while repeated inputs produce the
+    same value.
+
+    Args:
+        value: String from which to derive the UUID.
+
+    Returns:
+        A deterministic UUID derived from ``value``.
     """
     return UUID(hashlib.sha256(value.encode("utf-8")).digest()[:16].hex())
 
 
 def int_to_uuid(value: int) -> UUID:
-    """
-    Convert an integer to a UUID by representing it as 8 bytes, unsigned, big endian
-    byte order and constructing the UUID from that.
+    """Derive a deterministic UUID from an unsigned 64-bit integer.
+
+    The integer is encoded as eight big-endian bytes, hashed with SHA-256, and
+    truncated to the 16 bytes required by UUID.
+
+    Args:
+        value: Non-negative integer that fits in eight bytes.
+
+    Returns:
+        A deterministic UUID derived from ``value``.
+
+    Raises:
+        OverflowError: If ``value`` is negative or does not fit in eight bytes.
     """
     return UUID(
         hashlib.sha256(value.to_bytes(length=8, byteorder="big", signed=False))
@@ -245,11 +314,18 @@ def int_to_uuid(value: int) -> UUID:
 
 
 def chunk_list(values: list, chunk_size: int | None) -> list[list]:
-    """Split *values* into sub-lists of at most *chunk_size*.
+    """Split values into sub-lists of at most ``chunk_size``.
 
-    Returns ``[values]`` when *chunk_size* is ``None`` (no
-    chunking). Returns ``[]`` when *values* is empty so
-    callers can skip the loop entirely.
+    A ``None`` chunk size returns the original list inside a one-item list.
+    Empty input returns an empty list so callers can skip iteration entirely.
+
+    Args:
+        values: List to divide into chunks.
+        chunk_size: Maximum number of items per chunk, or ``None`` to disable
+            chunking.
+
+    Returns:
+        The input values divided into consecutive chunks.
     """
     if not values:
         return []
@@ -260,11 +336,20 @@ def chunk_list(values: list, chunk_size: int | None) -> list[list]:
 
 
 def profile_method(path: str | None = None) -> Callable:
-    """Decorator method to profile a method using Pyinstrument.
-    The profiling output is written to a file named after the method and the current timestamp.
-    The decorator automatically determines whether the method is synchronous or asynchronous.
-    """
+    """Profile a callable and write its report to a timestamped log file.
 
+    The returned decorator detects whether the wrapped callable is synchronous
+    or asynchronous, forwards its arguments and return value unchanged, and
+    writes a report even when the callable raises. When no path is provided,
+    reports are written at the repository root.
+
+    Args:
+        path: Directory in which profiling logs should be created, or ``None``
+            to use the project root.
+
+    Returns:
+        A decorator that profiles the wrapped callable.
+    """
     file_path = Path(path) if path else get_package_root()
 
     def _write_profile(profiler: Profiler, method_name: str) -> None:
@@ -278,11 +363,12 @@ def profile_method(path: str | None = None) -> Callable:
             profiler.print(file=f, color=False)
 
     def decorator(method: Callable) -> Callable:
-
+        """Wrap a callable with the appropriate profiler lifecycle."""
         if inspect.iscoroutinefunction(method):
 
             @wraps(method)
             async def async_wrapper(*args, **kwargs):
+                """Profile an asynchronous invocation of the wrapped method."""
                 profiler = Profiler(async_mode="enabled")
 
                 profiler.start()
@@ -296,6 +382,7 @@ def profile_method(path: str | None = None) -> Callable:
 
         @wraps(method)
         def sync_wrapper(*args, **kwargs):
+            """Profile a synchronous invocation of the wrapped method."""
             profiler = Profiler(async_mode="disabled")
 
             profiler.start()

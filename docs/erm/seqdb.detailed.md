@@ -180,26 +180,6 @@ erDiagram
         string gene_product_code
     }
 
-    LocusSet {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        string code
-        string name
-        list[UUID] locus_ids
-        any n_loci
-    }
-
-    LocusCodeMap {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        string code
-        dict[string, UUID] code_map
-    }
-
     TreeAlgorithmClass {
         timestamp created_at
         timestamp modified_at
@@ -312,6 +292,26 @@ erDiagram
         UUID id PK
         UUID taxon_set_id FK
         UUID taxon_id FK
+    }
+
+    LocusSet {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        string code
+        string name
+        list[UUID] locus_ids
+        any n_loci
+    }
+
+    LocusCodeMap {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        string code
+        dict[string, UUID] code_map
     }
 
     RefAllele {
@@ -450,7 +450,8 @@ erDiagram
     }
 
     ReadSet {
-        enum qc_result
+        enum qc_result_machine
+        enum qc_result_human
         float qc_score
         Json qc_report
         UUID protocol_id FK
@@ -469,11 +470,13 @@ erDiagram
         UUID rev_reads_hash
         string sequencing_run_code
         string code
+        any qc_result
         any is_available
     }
 
     AstMeasurement {
-        enum qc_result
+        enum qc_result_machine
+        enum qc_result_human
         float qc_score
         Json qc_report
         FormatType format
@@ -486,10 +489,12 @@ erDiagram
         timestamp modified_at
         UUID modified_by
         UUID id PK
+        any qc_result
     }
 
     PcrMeasurement {
-        enum qc_result
+        enum qc_result_machine
+        enum qc_result_human
         float qc_score
         Json qc_report
         FormatType format
@@ -502,6 +507,7 @@ erDiagram
         timestamp modified_at
         UUID modified_by
         UUID id PK
+        any qc_result
     }
 
     ReadSetIdentifier {
@@ -515,7 +521,8 @@ erDiagram
     }
 
     Seq {
-        enum qc_result
+        enum qc_result_machine
+        enum qc_result_human
         float qc_score
         Json qc_report
         UUID sample_id FK
@@ -534,6 +541,7 @@ erDiagram
         list[Contig] contigs
         UUID seq_hash
         string code
+        any qc_result
         any is_available
         any n_contigs
         any length
@@ -554,7 +562,8 @@ erDiagram
     }
 
     SeqProfile {
-        enum qc_result
+        enum qc_result_machine
+        enum qc_result_human
         float qc_score
         Json qc_report
         FormatType format
@@ -569,10 +578,12 @@ erDiagram
         UUID modified_by
         UUID id PK
         enum seq_profile_type
+        any qc_result
     }
 
     AstPrediction {
-        enum qc_result
+        enum qc_result_machine
+        enum qc_result_human
         float qc_score
         Json qc_report
         FormatType format
@@ -586,10 +597,12 @@ erDiagram
         timestamp modified_at
         UUID modified_by
         UUID id PK
+        any qc_result
     }
 
     SeqClassification {
-        enum qc_result
+        enum qc_result_machine
+        enum qc_result_human
         float qc_score
         Json qc_report
         FormatType format
@@ -604,10 +617,12 @@ erDiagram
         UUID modified_by
         UUID id PK
         UUID primary_category_id FK
+        any qc_result
     }
 
     SeqTaxonomy {
-        enum qc_result
+        enum qc_result_machine
+        enum qc_result_human
         float qc_score
         Json qc_report
         enum format
@@ -622,6 +637,7 @@ erDiagram
         UUID modified_by
         UUID id PK
         UUID primary_taxon_id FK
+        any qc_result
     }
 
     SeqProfileIdentifier {

@@ -1,3 +1,12 @@
+"""Public authentication services, commands, clients, and identity models.
+
+The package re-exports the authentication service contract and implementation,
+the command for listing identity providers, provider clients for mock and OAuth
+flows, identity-provider configuration and claims models, and helpers for
+extracting validated identity data. These symbols support application
+composition without exposing the authentication package's internal layout.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix.fastapp.services.auth.base import BaseAuthService as BaseAuthService
 from gen_epix.fastapp.services.auth.command import (

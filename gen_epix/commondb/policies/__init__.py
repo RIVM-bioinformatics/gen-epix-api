@@ -1,3 +1,9 @@
+"""Re-export commondb policy implementations and policy mapping configuration.
+
+The package groups outage, organization-scope, self-only, user-read, user-mutation,
+and audit-metadata policies used by commondb application composition.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix import fastapp
 from gen_epix.commondb.policies.has_system_outage_policy import (

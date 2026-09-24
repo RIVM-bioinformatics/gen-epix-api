@@ -22,6 +22,7 @@ APP_CFGS = get_app_cfgs(
     omopdb_enum.ServiceType,
     omopdb_enum.RepositoryType,
     TEST_TYPE,
+    log_any=False,
 )
 
 

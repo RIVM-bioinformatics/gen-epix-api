@@ -1,3 +1,5 @@
+"""Structured log message types and JSON serialization."""
+
 import abc
 import datetime
 import json
@@ -6,12 +8,13 @@ from typing import Any
 
 class BaseLogItem(abc.ABC):
     """
-    BaseLogItem class for creating log messages. Defined as a regular class instead of a
+    Encapsulates a BaseLogItem class for creating log messages. Defined as a regular class instead of a
     dataclass for efficiency reasons. The `dumps` method is used to convert the object
     to a JSON string that can be inserted in a log.
     """
 
     def __init__(self, **kwargs: Any) -> None:
+        """Initialize a BaseLogItem instance."""
         self.content = kwargs
 
     @abc.abstractmethod
@@ -23,6 +26,7 @@ class BaseLogItem(abc.ABC):
 
     @staticmethod
     def _custom_json_encoder(obj: Any) -> str:
+        """Serialize exceptions, datetimes, and other unsupported objects as strings."""
         if isinstance(obj, Exception):
             # TODO: Provide more structured encoding of exception
             return str(obj)
@@ -32,12 +36,16 @@ class BaseLogItem(abc.ABC):
 
 
 class LogItem(BaseLogItem):
+    """Encapsulates serializing an application log code, message, and optional contextual fields."""
+
     def __init__(self, **kwargs: Any) -> None:
+        """Initialize a LogItem instance."""
         self.code: str | None = kwargs.pop("code", None)  # type: ignore
         self.msg: str | None = kwargs.pop("msg", None)  # type: ignore
         self.content = kwargs if kwargs else None
 
     def dumps(self, indent=None, separators=(",", ":")) -> str:
+        """Serialize this log item as JSON."""
         msg = {
             "code": self.code,
             "msg": self.msg,

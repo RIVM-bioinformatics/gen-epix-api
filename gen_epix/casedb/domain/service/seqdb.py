@@ -1,3 +1,5 @@
+"""Define the Casedb-facing Seqdb service contract and command dispatch."""
+
 import abc
 from collections.abc import Iterable
 from uuid import UUID
@@ -10,9 +12,21 @@ from gen_epix.fastapp import BaseService
 
 
 class BaseSeqdbService(BaseService):
+    """Encapsulates sequence command dispatch used through Casedb.
+
+    The service combines default Seqdb CRUD handling with Casedb-facing tree,
+    similarity, upload, file, and FASTA operations. Concrete implementations
+    may delegate those operations to a remote Seqdb service.
+    """
+
     SERVICE_TYPE = ServiceType.SEQDB
 
     def register_handlers(self) -> None:
+        """Register Casedb-facing sequence and default CRUD handlers.
+
+        This mutates the application dispatch table during service
+        initialization.
+        """
         f = self.app.register_handler
         self.register_default_crud_handlers()
         f(
@@ -35,7 +49,18 @@ class BaseSeqdbService(BaseService):
     def retrieve_phylogenetic_tree(
         self, cmd: command.RetrievePhylogeneticTreeByProfilesCommand
     ) -> model.PhylogeneticTree | None:
-        """Retrieve phylogenetic tree for specified profiles."""
+        """Retrieve a phylogenetic tree for specified profiles.
+
+        Args:
+            cmd: Tree command containing profile identifiers and parameters.
+
+        Returns:
+            The generated tree, or ``None`` when no tree can be produced.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements
+                the operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -43,7 +68,18 @@ class BaseSeqdbService(BaseService):
         self,
         cmd: command.RetrieveGeneticSequenceFastaByIdCommand,
     ) -> Iterable[str]:
-        """Retrieve genetic sequence data in FASTA format by ID."""
+        """Retrieve genetic sequence data in FASTA format by identifier.
+
+        Args:
+            cmd: FASTA retrieval command containing sequence identifiers.
+
+        Returns:
+            An iterable of FASTA-formatted text fragments.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements
+                the operation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -51,7 +87,20 @@ class BaseSeqdbService(BaseService):
         self,
         cmd: seqdb_command.UploadSamplesCommand,
     ) -> seqdb_model.SampleBatchUploadResult:
-        """Upload samples in batch."""
+        """Upload a batch of sequence samples.
+
+        Implementations may persist samples and related sequence objects.
+
+        Args:
+            cmd: Upload command containing the sample batch.
+
+        Returns:
+            The per-sample upload result.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements
+                the upload.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -59,7 +108,20 @@ class BaseSeqdbService(BaseService):
         self,
         cmd: seqdb_command.CreateFileCommand,
     ) -> UUID:
-        """Create file and return file UUID."""
+        """Create a sequence file and return its identifier.
+
+        Implementations persist file metadata or delegate creation to Seqdb.
+
+        Args:
+            cmd: File-creation command to execute.
+
+        Returns:
+            The identifier of the created file.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements
+                file creation.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -67,5 +129,17 @@ class BaseSeqdbService(BaseService):
         self,
         cmd: seqdb_command.RetrieveSimilarProfilesCommand,
     ) -> list[UUID]:
-        """Retrieve UUIDs of profiles similar to specified profile."""
+        """Retrieve profiles similar to a specified profile.
+
+        Args:
+            cmd: Similarity command containing the reference profile and
+                matching parameters.
+
+        Returns:
+            Identifiers of matching profiles.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements
+                the query.
+        """
         raise NotImplementedError()

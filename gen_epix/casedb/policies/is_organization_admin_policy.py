@@ -1,3 +1,5 @@
+"""Extend organization-admin authorization to casedb case policies."""
+
 from typing import Any
 from uuid import UUID
 
@@ -10,12 +12,19 @@ from gen_epix.fastapp import CrudOperation
 
 
 class IsOrganizationAdminPolicy(CommonIsOrganizationAdminPolicy):
+    """Apply organization-admin checks to casedb case-policy commands."""
 
     def __init__(
         self,
         abac_service: BaseAbacService,
         **kwargs: Any,
     ):
+        """Register organization resolvers for casedb case-policy commands.
+
+        Args:
+            abac_service: Service used to resolve organization administration rights.
+            **kwargs: Additional shared policy configuration.
+        """
         super().__init__(
             abac_service,
             **kwargs,
@@ -45,6 +54,7 @@ class IsOrganizationAdminPolicy(CommonIsOrganizationAdminPolicy):
             | command.OrganizationShareCasePolicyCrudCommand
         ),
     ) -> set[UUID]:
+        """Extract organization IDs directly from organization case policies."""
         policies: list[model.OrganizationAccessCasePolicy] | list[model.OrganizationShareCasePolicy] = cmd.get_objs()  # type: ignore[assignment]
         return {x.organization_id for x in policies}
 
@@ -55,6 +65,14 @@ class IsOrganizationAdminPolicy(CommonIsOrganizationAdminPolicy):
             | command.UserShareCasePolicyCrudCommand
         ),
     ) -> set[UUID]:
+        """Resolve organization IDs through users named by case policies.
+
+        Args:
+            cmd: Case-policy command containing policies that refer to users.
+
+        Returns:
+            Organization IDs of the users referenced by the policies.
+        """
         policies: list[model.UserAccessCasePolicy] | list[model.UserShareCasePolicy] = cmd.get_objs()  # type: ignore[assignment]
         users: list[model.User] = self.abac_service.app.handle(
             command.UserCrudCommand(

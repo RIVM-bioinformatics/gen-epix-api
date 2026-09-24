@@ -1,3 +1,5 @@
+"""Compose shared and OMOP API routers for the OmopDB application."""
+
 from collections.abc import Callable
 from typing import Any, NoReturn
 
@@ -12,7 +14,7 @@ from gen_epix.fastapp import App
 from gen_epix.fastapp.api.router import RouterData
 from gen_epix.omopdb.api.omop import create_omop_endpoints
 from gen_epix.omopdb.api.organization import ApiPermission
-from gen_epix.omopdb.domain import enum
+from gen_epix.omopdb.domain import command, enum
 
 
 def create_routers(
@@ -23,6 +25,7 @@ def create_routers(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     router_kwargs: dict = {},
 ) -> list[APIRouter]:
+    """Create the shared and OMOP routers mounted by the application."""
     assert app
     router_data: list[RouterData] = [
         # Common routers
@@ -52,7 +55,10 @@ def create_routers(
         {
             "name": "system",
             "create_endpoints_fn": create_system_endpoints,
-            "endpoints_function_kwargs": {"service_type": enum.ServiceType.SYSTEM},
+            "endpoints_function_kwargs": {
+                "service_type": enum.ServiceType.SYSTEM,
+                "delete_all_operational_data_command_class": command.DeleteAllOperationalDataCommand,
+            },
         },
         # Specific routers
         {

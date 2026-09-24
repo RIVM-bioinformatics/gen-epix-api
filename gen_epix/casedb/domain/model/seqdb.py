@@ -1,3 +1,9 @@
+"""Define the casedb projection of seqdb phylogenetic trees.
+
+The module provides the non-persisted tree representation returned to casedb,
+linking tree and genetic-distance protocol metadata to leaves and profiles.
+"""
+
 # pylint: disable=too-few-public-methods
 # This module defines base classes, methods are added later
 from typing import ClassVar
@@ -16,10 +22,7 @@ from gen_epix.fastapp.domain import Entity
 
 
 class PhylogeneticTree(Model):
-    """
-    A phylogenetic tree, including a description of the leaves and how it was
-    generated.
-    """
+    """Represents a non-persisted phylogenetic tree and its leaf metadata."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="phylogenetic_trees",

@@ -1,3 +1,5 @@
+"""Compose the configured OmopDB application and its FastAPI transport layer."""
+
 from gen_epix.commondb.app_setup import create_fast_api
 from gen_epix.commondb.config import AppCfg
 from gen_epix.omopdb.api.router import create_routers

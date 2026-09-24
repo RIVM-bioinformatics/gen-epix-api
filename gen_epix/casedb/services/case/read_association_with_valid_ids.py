@@ -1,3 +1,5 @@
+"""Read association models with endpoint constraints and selectable return shapes."""
+
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, model
@@ -19,6 +21,31 @@ def case_service_read_association_with_valid_ids(
     uow: BaseUnitOfWork | None = None,
     user: model.User | None = None,
 ) -> list[model.Model] | list[UUID] | dict[UUID, set[UUID]]:
+    """Read associations constrained by valid endpoint identifiers.
+
+    Matching can require each returned endpoint to be linked to all valid identifiers
+    on the opposite side. Empty valid-ID sets return an empty result without querying.
+
+    Args:
+        self: Case service used for CRUD handling.
+        command_class: Association CRUD command class to instantiate.
+        field_name1: Model field for the first endpoint.
+        field_name2: Model field for the second endpoint.
+        valid_ids1: Optional valid identifiers for the first endpoint.
+        valid_ids2: Optional valid identifiers for the second endpoint.
+        match_all1: Require returned second endpoints to link to every valid first ID.
+        match_all2: Require returned first endpoints to link to every valid second ID.
+        return_type: Return objects, either endpoint IDs, or a directional ID map.
+        uow: Existing unit of work, or ``None`` to open one.
+        user: Optional user attached to the generated read command.
+
+    Returns:
+        Association objects, endpoint IDs, or sets of linked IDs keyed by endpoint.
+
+    Raises:
+        ValueError: If ``return_type`` or match-all argument combinations are invalid.
+        AssertionError: If a validated return mode reaches an unexpected branch.
+    """
     # TODO: this can be a generic service/repository method (ids should be Hashable instead of UUID)
     # Parse arguments
     if return_type not in {"objects", "ids1", "ids2", "id_map12", "id_map21"}:

@@ -22,6 +22,7 @@ erDiagram
         string code
         string name
         enum type
+        enum unit
         string description
     }
 

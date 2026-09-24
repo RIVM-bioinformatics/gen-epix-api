@@ -1,3 +1,5 @@
+"""Handle case-identifier CRUD with admin bypass and user restrictions."""
+
 from uuid import UUID
 
 import gen_epix.casedb.domain.command as command
@@ -24,7 +26,6 @@ def case_service_crud_case_identifier(
     | None
 ):
     """Handle CRUD operations for CaseIdentifier entities."""
-
     with self.repository.uow() as uow:
         _crud_cascade_delete(self, uow, cmd)
         if cmd.user is None or is_app_admin_or_above(self, cmd.user):
@@ -62,7 +63,24 @@ def _crud_case_identifier_with_abac(
     | bool
     | None
 ):
-    """CaseIdentifier user command handling, ABAC applied."""
+    """Handle a case-identifier command subject to current user restrictions.
+
+    Commands without case ABAC metadata delegate without filtering. Otherwise,
+    unrestricted reads of all identifiers, updates, and bulk deletes are rejected;
+    remaining operations currently delegate without additional row-level filtering.
+
+    Args:
+        self: Case service handling the command.
+        uow: Active unit of work reserved for CRUD coordination.
+        cmd: Case-identifier CRUD command.
+
+    Returns:
+        Result returned by delegated CRUD handling.
+
+    Raises:
+        UnauthorizedAuthError: If a restricted user requests an unsupported bulk
+            read, update, or delete operation.
+    """
     case_abac = get_case_abac_from_command(cmd)
 
     if case_abac is None:

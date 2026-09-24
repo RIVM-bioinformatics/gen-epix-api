@@ -54,6 +54,13 @@
             "automerge": true,
             "automergeType": "pr",
             "automergeStrategy": "auto"
+        },
+        {
+            "matchPackageNames": [
+                "dynaconf"
+            ],
+            "enabled": false,
+            "description": "3.3.4 breaks idsdb (eager @format evaluation during merge_enabled settings load). Pinned to 3.3.3 in fix(deps) commit b5109956. Re-enable once fixed upstream."
         }
     ]
 }

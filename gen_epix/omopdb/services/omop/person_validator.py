@@ -1,3 +1,5 @@
+"""Person-upload validation and transformation extension points."""
+
 from uuid import UUID
 
 from gen_epix.omopdb.domain import command, model
@@ -5,12 +7,14 @@ from gen_epix.omopdb.services.omop.base import BaseOmopService
 
 
 class PersonValidator:
+    """Encapsulates validation and transformation of person-upload content."""
 
     def __init__(
         self,
         omop_service: BaseOmopService,
         user_id: UUID,
     ):
+        """Initialize validation state for the service and submitting user."""
         self.omop_service = omop_service
         self.user_id = user_id
         # TODO: initialise members
@@ -74,5 +78,6 @@ class PersonValidator:
         pass
 
     def _init_metadata(self) -> None:
+        """Initialize metadata used by person validation and transformation."""
         # TODO: implement
         pass

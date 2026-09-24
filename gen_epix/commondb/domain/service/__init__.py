@@ -1,3 +1,10 @@
+"""Re-export commondb service interfaces.
+
+ABAC, organization, RBAC, system, and user-manager services define shared
+application contracts. The FastApp authentication service is re-exported for
+the commondb authentication domain.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix.commondb.domain.service.abac import BaseAbacService as BaseAbacService
 from gen_epix.commondb.domain.service.organization import (

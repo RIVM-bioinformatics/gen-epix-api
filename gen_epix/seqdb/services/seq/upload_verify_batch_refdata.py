@@ -1,10 +1,12 @@
+"""Implement seqdb sequence service behavior for services.seq.upload_verify_batch_refdata."""
+
 from typing import Any
 from uuid import UUID
 
-from gen_epix.commondb.domain.enum import EtlStatus
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import UploadResult
 from gen_epix.commondb.services import BatchUploader
+from gen_epix.etl.enum import EtlStatus
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.domain.literal import MLVA_NO_LOCUS_REPEAT_NUMBER
@@ -16,9 +18,7 @@ def _verify_batch_refdata_allele_profiles(
     batch_result: model.SampleBatchUploadResult,
     uow: Any,
 ) -> bool:
-    """
-    Verify and complete reference data for allele profiles.
-    """
+    """Verify and complete reference data for allele profiles."""
     success = True
     user_id = cmd.user.id if cmd.user else None
     samples = cmd.sample_batch.samples
@@ -59,11 +59,7 @@ def _verify_batch_refdata_allele_profiles(
     protocol_map = {x.id: x for x in protocols}
 
     # Retrieve locus sets
-    locus_set_ids = {
-        protocol_map[x.protocol_id].locus_set_id
-        for x in profiles
-        if x.locus_code_map_id is not None and x.locus_code_map_id != NULL_ID
-    }
+    locus_set_ids = {protocol_map[x.protocol_id].locus_set_id for x in profiles}
     locus_sets: list[model.LocusSet] = self.service.repository.crud(
         uow,
         user_id,
@@ -94,7 +90,7 @@ def _verify_batch_refdata_allele_profiles(
         x.id: set(x.code_map) for x in locus_code_map_map.values()
     }
     rev_locus_code_map_map = {
-        x.id: {y: x for x, y in x.code_map.items()} for x in locus_code_map_map.values()
+        x.id: {z: y for y, z in x.code_map.items()} for x in locus_code_map_map.values()
     }
     allele_ids: list[UUID | None]
 
@@ -294,6 +290,7 @@ def _verify_batch_refdata_allele_profiles(
 def _handle_locus_allele_pair_mismatch(
     profile_result: UploadResult, invalid_locus_allele_pairs: list[tuple[UUID, UUID]]
 ) -> None:
+    """Record a bounded diagnostic for locus and allele pairs absent from reference data."""
     if len(invalid_locus_allele_pairs) <= 5:
         invalid_pairs_str = ", ".join(
             [
@@ -323,7 +320,7 @@ def _verify_batch_refdata_mlva_profiles(
     batch_result: model.SampleBatchUploadResult,
     uow: Any,
 ) -> bool:
-    """Verify MLVA profiles specific rules"""
+    """Verify MLVA profile-specific rules."""
     success = True
     user_id = cmd.user.id if cmd.user else None
     samples = cmd.sample_batch.samples
@@ -344,7 +341,7 @@ def _verify_batch_refdata_mlva_profiles(
     if not profiles:
         return success
 
-    protocol_ids = {profile.protocol_id for profile in profiles}
+    protocol_ids = {x.protocol_id for x in profiles}
     protocols: list[model.Protocol] = self.service.repository.crud(
         uow,
         user_id,
@@ -352,14 +349,9 @@ def _verify_batch_refdata_mlva_profiles(
         CrudOperation.READ_SOME,
         obj_ids=list(protocol_ids),
     )
-    protocol_map = {protocol.id: protocol for protocol in protocols}
+    protocol_map = {x.id: x for x in protocols}
 
-    locus_set_ids = {
-        protocol_map[profile.protocol_id].locus_set_id
-        for profile in profiles
-        if profile.locus_code_map_id is not None
-        and profile.locus_code_map_id != NULL_ID
-    }
+    locus_set_ids = {protocol_map[x.protocol_id].locus_set_id for x in profiles}
     locus_sets: list[model.LocusSet] = self.service.repository.crud(
         uow,
         user_id,
@@ -367,13 +359,12 @@ def _verify_batch_refdata_mlva_profiles(
         CrudOperation.READ_SOME,
         obj_ids=list(locus_set_ids),
     )
-    locus_set_map = {locus_set.id: locus_set for locus_set in locus_sets}
+    locus_set_map = {x.id: x for x in locus_sets}
 
     locus_code_map_ids = {
-        profile.locus_code_map_id
-        for profile in profiles
-        if profile.locus_code_map_id is not None
-        and profile.locus_code_map_id != NULL_ID
+        x.locus_code_map_id
+        for x in profiles
+        if x.locus_code_map_id is not None and x.locus_code_map_id != NULL_ID
     }
     locus_code_maps: list[model.LocusCodeMap] = self.service.repository.crud(
         uow,
@@ -383,11 +374,7 @@ def _verify_batch_refdata_mlva_profiles(
         obj_ids=list(locus_code_map_ids),
     )
     rev_locus_code_map_map = {
-        locus_code_map.id: {
-            locus_id: locus_code
-            for locus_code, locus_id in locus_code_map.code_map.items()
-        }
-        for locus_code_map in locus_code_maps
+        x.id: {z: y for y, z in x.code_map.items()} for x in locus_code_maps
     }
 
     repeat_numbers: list[int | None]
@@ -462,7 +449,6 @@ def _verify_batch_refdata_snp_profiles(
     uow: Any,
 ) -> bool:
     """Verify SNP profiles specific rules."""
-
     # TODO: LSP-3268-Implement-SNP-profile-support-seqdb:
     #   - Load the 'real' ref_seq record.
     #   - Handle aligned_nucleotide_seq form.
@@ -574,7 +560,7 @@ def _verify_batch_refdata_kmer_profiles(
     batch_result: model.SampleBatchUploadResult,
     uow: Any,
 ) -> bool:
-    """Verify k-mer profiles specific rules"""
+    """Verify k-mer profile-specific rules."""
     success = True
     for sample, sample_result in zip(cmd.sample_batch.samples, batch_result.samples):
         for profile, profile_result in zip(

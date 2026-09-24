@@ -1,3 +1,5 @@
+"""Define SQLAlchemy persistence mappings for seqdb repositories.sa_model.seq.operational_data."""
+
 from uuid import UUID
 
 from sqlalchemy.orm import Mapped, relationship
@@ -21,9 +23,7 @@ from gen_epix.seqdb.repositories.sa_model.seq.ref_data import (
 
 
 class Sample(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Encapsulates the SQLAlchemy model for the persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.Sample)
 
@@ -35,9 +35,7 @@ class Sample(Base, RowMetadataMixin):
 
 
 class SampleDataCollectionLink(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Encapsulates the SQLAlchemy model for its persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.SampleDataCollectionLink)
 
@@ -50,9 +48,7 @@ class SampleDataCollectionLink(Base, RowMetadataMixin):
 
 
 class SampleIdentifier(Base, IdentifierMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Encapsulates the SQLAlchemy model for its persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.SampleIdentifier)
 
@@ -63,9 +59,7 @@ class SampleIdentifier(Base, IdentifierMixin):
 
 
 class ReadSet(Base, RowMetadataMixin, QualityMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Encapsulates the SQLAlchemy model for its persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.ReadSet)
 
@@ -99,6 +93,9 @@ class ReadSet(Base, RowMetadataMixin, QualityMixin):
     is_available: Mapped[bool] = create_mapped_column(
         DOMAIN, model.ReadSet, "is_available"
     )
+    qc_result: Mapped[enum.QualityControlResult] = create_mapped_column(
+        DOMAIN, model.ReadSet, "qc_result"
+    )
 
     sample: Mapped[Sample] = relationship("Sample", foreign_keys=[sample_id])
     protocol: Mapped[Protocol] = relationship("Protocol", foreign_keys=[protocol_id])
@@ -106,9 +103,7 @@ class ReadSet(Base, RowMetadataMixin, QualityMixin):
 
 
 class ReadSetIdentifier(Base, IdentifierMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Encapsulates the SQLAlchemy model for its persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.ReadSetIdentifier)
 
@@ -119,9 +114,7 @@ class ReadSetIdentifier(Base, IdentifierMixin):
 
 
 class Seq(Base, RowMetadataMixin, QualityMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Encapsulates the SQLAlchemy model for its persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.Seq)
 
@@ -157,6 +150,9 @@ class Seq(Base, RowMetadataMixin, QualityMixin):
         DOMAIN, model.Seq, "median_contig_length"
     )
     n50: Mapped[int] = create_mapped_column(DOMAIN, model.Seq, "n50")
+    qc_result: Mapped[enum.QualityControlResult] = create_mapped_column(
+        DOMAIN, model.Seq, "qc_result"
+    )
 
     sample: Mapped[Sample] = relationship("Sample", foreign_keys=[sample_id])
     read_set: Mapped[ReadSet | None] = relationship(
@@ -170,9 +166,7 @@ class Seq(Base, RowMetadataMixin, QualityMixin):
 
 
 class SeqIdentifier(Base, IdentifierMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Encapsulates the SQLAlchemy model for its persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.SeqIdentifier)
 
@@ -185,9 +179,7 @@ class SeqIdentifier(Base, IdentifierMixin):
 class AstMeasurement(
     Base, RowMetadataMixin, ContentMixin[enum.AstResultFormat], QualityMixin
 ):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Encapsulates the SQLAlchemy model for its persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.AstMeasurement)
 
@@ -197,6 +189,9 @@ class AstMeasurement(
     protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.AstMeasurement, "protocol_id"
     )
+    qc_result: Mapped[enum.QualityControlResult] = create_mapped_column(
+        DOMAIN, model.AstMeasurement, "qc_result"
+    )
 
     sample: Mapped[Sample] = relationship("Sample", foreign_keys=[sample_id])
     protocol: Mapped[Protocol] = relationship("Protocol", foreign_keys=[protocol_id])
@@ -205,9 +200,7 @@ class AstMeasurement(
 class AstPrediction(
     Base, RowMetadataMixin, ContentMixin[enum.AstResultFormat], QualityMixin
 ):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Encapsulates the SQLAlchemy model for its persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.AstPrediction)
 
@@ -220,6 +213,9 @@ class AstPrediction(
     protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.AstPrediction, "protocol_id"
     )
+    qc_result: Mapped[enum.QualityControlResult] = create_mapped_column(
+        DOMAIN, model.AstPrediction, "qc_result"
+    )
 
     sample: Mapped[Sample] = relationship("Sample", foreign_keys=[sample_id])
     seq: Mapped[Seq | None] = relationship("Seq", foreign_keys=[seq_id])
@@ -229,9 +225,7 @@ class AstPrediction(
 class PcrMeasurement(
     Base, RowMetadataMixin, ContentMixin[enum.PcrResultFormat], QualityMixin
 ):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Encapsulates the SQLAlchemy model for its persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.PcrMeasurement)
 
@@ -241,6 +235,9 @@ class PcrMeasurement(
     protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.PcrMeasurement, "protocol_id"
     )
+    qc_result: Mapped[enum.QualityControlResult] = create_mapped_column(
+        DOMAIN, model.PcrMeasurement, "qc_result"
+    )
 
     sample: Mapped[Sample] = relationship("Sample", foreign_keys=[sample_id])
     protocol: Mapped[Protocol] = relationship("Protocol", foreign_keys=[protocol_id])
@@ -249,9 +246,7 @@ class PcrMeasurement(
 class SeqClassification(
     Base, RowMetadataMixin, ContentMixin[enum.SeqClassificationFormat], QualityMixin
 ):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Encapsulates the SQLAlchemy model for its persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.SeqClassification)
 
@@ -267,6 +262,9 @@ class SeqClassification(
     primary_category_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqClassification, "primary_category_id"
     )
+    qc_result: Mapped[enum.QualityControlResult] = create_mapped_column(
+        DOMAIN, model.SeqClassification, "qc_result"
+    )
 
     sample: Mapped[Sample] = relationship("Sample", foreign_keys=[sample_id])
     seq: Mapped[Seq | None] = relationship("Seq", foreign_keys=[seq_id])
@@ -279,9 +277,7 @@ class SeqClassification(
 class SeqTaxonomy(
     Base, RowMetadataMixin, ContentMixin[enum.SeqTaxonomyFormat], QualityMixin
 ):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Encapsulates the SQLAlchemy model for its persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.SeqTaxonomy)
 
@@ -297,6 +293,9 @@ class SeqTaxonomy(
     primary_taxon_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqTaxonomy, "primary_taxon_id"
     )
+    qc_result: Mapped[enum.QualityControlResult] = create_mapped_column(
+        DOMAIN, model.SeqTaxonomy, "qc_result"
+    )
 
     sample: Mapped[Sample] = relationship("Sample", foreign_keys=[sample_id])
     seq: Mapped[Seq | None] = relationship("Seq", foreign_keys=[seq_id])
@@ -307,9 +306,7 @@ class SeqTaxonomy(
 
 
 class SeqProfile(Base, RowMetadataMixin, ContentMixin, QualityMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Encapsulates the SQLAlchemy model for its persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.SeqProfile)
 
@@ -325,6 +322,9 @@ class SeqProfile(Base, RowMetadataMixin, ContentMixin, QualityMixin):
     seq_profile_type: Mapped[enum.SeqProfileType] = create_mapped_column(
         DOMAIN, model.SeqProfile, "seq_profile_type"
     )
+    qc_result: Mapped[enum.QualityControlResult] = create_mapped_column(
+        DOMAIN, model.SeqProfile, "qc_result"
+    )
 
     sample: Mapped[Sample] = relationship("Sample", foreign_keys=[sample_id])
     seq: Mapped[Seq | None] = relationship("Seq", foreign_keys=[seq_id])
@@ -332,9 +332,7 @@ class SeqProfile(Base, RowMetadataMixin, ContentMixin, QualityMixin):
 
 
 class SeqProfileIdentifier(Base, IdentifierMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Encapsulates the SQLAlchemy model for its persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.SeqProfileIdentifier)
 
@@ -347,9 +345,7 @@ class SeqProfileIdentifier(Base, IdentifierMixin):
 
 
 class SeqDistance(Base, RowMetadataMixin, ContentMixin[enum.SeqDistanceFormat]):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Encapsulates the SQLAlchemy model for its persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.SeqDistance)
 

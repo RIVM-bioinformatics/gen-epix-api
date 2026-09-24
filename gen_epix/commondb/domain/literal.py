@@ -1,3 +1,10 @@
+"""Define shared bounds and validation patterns for commondb domain values.
+
+The module provides the null UUID sentinel, datetime and request-size limits,
+and compiled regular expressions used to validate numeric and ISO-like temporal
+representations across commondb models and services.
+"""
+
 import datetime
 import re
 from uuid import UUID
@@ -9,6 +16,7 @@ MAX_DATETIME = datetime.datetime(9999, 12, 31, 23, 59, 59, 999999)
 
 MAX_CODE_FIELD_LENGTH = 255
 MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH = 10000
+MAX_REQUEST_BODY_FILE_CONTENT_LENGTH = 100 * 1024 * 1024  # 100 MB
 
 FLOAT_PATTERN = re.compile(
     r"^[+-]?("

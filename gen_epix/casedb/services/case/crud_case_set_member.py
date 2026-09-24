@@ -1,5 +1,5 @@
-"""
-CRUD operations for CaseSetMember entities.
+"""Handle CRUD operations for case-set-member entities.
+
 Complex association entity with extensive ABAC logic.
 """
 
@@ -29,7 +29,6 @@ def case_service_crud_case_set_member(
     | None
 ):
     """Handle CRUD operations for CaseSetMember entities."""
-
     with self.repository.uow() as uow:
         _crud_cascade_delete(self, uow, cmd)
         if cmd.user is None or is_app_admin_or_above(self, cmd.user):
@@ -73,7 +72,23 @@ def _crud_case_set_member_with_abac(
     | bool
     | None
 ):
-    """CaseSetMember user command handling, ABAC applied."""
+    """Handle case-set membership under current user restrictions.
+
+    Commands without case ABAC metadata delegate directly. Otherwise updates and
+    bulk deletes are rejected; remaining operations currently delegate without
+    additional row-level filtering.
+
+    Args:
+        self: Case service handling the command.
+        uow: Active unit of work reserved for CRUD coordination.
+        cmd: Case-set-member CRUD command.
+
+    Returns:
+        Result returned by delegated CRUD handling.
+
+    Raises:
+        UnauthorizedAuthError: If a restricted user requests update or bulk delete.
+    """
     case_abac = get_case_abac_from_command(cmd)
 
     if case_abac is None:

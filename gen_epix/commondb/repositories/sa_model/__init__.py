@@ -1,3 +1,10 @@
+"""Register and re-export commondb SQLAlchemy row models and mapping helpers.
+
+The package exposes audit mixins, concrete row models, and column/table helpers.
+``SA_MODELS_BY_SERVICE_TYPE`` maps commondb domain models to their SQLAlchemy
+implementations and registers them with the commondb domain.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix.commondb.domain import DOMAIN, enum, model
 from gen_epix.commondb.repositories.sa_model.abac import (
@@ -76,6 +83,9 @@ from gen_epix.commondb.repositories.sa_model.organization import (
 from gen_epix.commondb.repositories.sa_model.organization import UserMixin as UserMixin
 from gen_epix.commondb.repositories.sa_model.system import Outage as Outage
 from gen_epix.commondb.repositories.sa_model.system import OutageMixin as OutageMixin
+from gen_epix.commondb.repositories.sa_model.util import (
+    create_composite_primary_key_mapper_args as create_composite_primary_key_mapper_args,
+)
 from gen_epix.commondb.repositories.sa_model.util import (
     create_mapped_column as create_mapped_column,
 )

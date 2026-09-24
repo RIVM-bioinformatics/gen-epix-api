@@ -1,3 +1,5 @@
+"""Implement seqdb CRUD service operations for services.seq.crud_tree_algorithm."""
+
 from uuid import UUID
 
 from gen_epix.seqdb.domain import command, model
@@ -15,7 +17,18 @@ def seq_service_crud_tree_algorithm(
     | bool
     | None
 ):
-    """Handle CRUD operations for TreeAlgorithm entities."""
+    """Handle CRUD operations for tree-algorithm entities.
+
+    Args:
+        self: Sequence service executing the command.
+        cmd: Typed tree-algorithm CRUD command.
+
+    Returns:
+        The action-specific tree-algorithm result.
+
+    Raises:
+        AssertionError: The command operation is unsupported.
+    """
     user_id = cmd.user.id if cmd.user else None
     tree_algorithms: list[model.TreeAlgorithm] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():

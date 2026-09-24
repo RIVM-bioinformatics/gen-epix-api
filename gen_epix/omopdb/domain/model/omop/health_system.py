@@ -87,6 +87,7 @@ class Location(Model):
     @field_validator("country_concept_id", mode="before")
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize the country concept identifier to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -140,6 +141,7 @@ class CareSite(Model):
     @field_validator("place_of_service_concept_id", mode="before")
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize the place-of-service concept identifier to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -228,4 +230,5 @@ class Provider(Model):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize provider concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)

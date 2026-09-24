@@ -9,9 +9,11 @@ Tests cover:
 - DataLineageMixin
 """
 
+from typing import get_args
 from uuid import UUID, uuid4
 
 import pytest
+from pydantic.fields import FieldInfo
 
 from gen_epix.omopdb.domain.model.omop.base import (
     DataLineageMixin,
@@ -482,11 +484,15 @@ class TestValidateIntPrimaryKeyArgs:
 class TestDataLineageMixin:
     """Tests for the DataLineageMixin class.
 
-    DataLineageMixin is a plain mixin (not a Pydantic model) that declares
-    Pydantic Field descriptors. The fields are only resolved at runtime when
-    the mixin is composed into a Model subclass, so we test the annotations
-    and FieldInfo defaults directly.
+    DataLineageMixin is a plain mixin (not a Pydantic model) that declares its
+    fields as annotation-only Annotated types. The fields are only resolved at
+    runtime when the mixin is composed into a Model subclass, so we test the
+    FieldInfo extracted from the annotations directly.
     """
+
+    @staticmethod
+    def _field_info(field_name: str) -> FieldInfo:
+        return FieldInfo.from_annotation(DataLineageMixin.__annotations__[field_name])
 
     def test_provenance_id_annotation_exists(self) -> None:
         """DataLineageMixin should declare a provenance_id annotation."""
@@ -498,28 +504,23 @@ class TestDataLineageMixin:
 
     def test_provenance_id_field_default_is_none(self) -> None:
         """The provenance_id Field should have a default of None."""
-        field_info = DataLineageMixin.__dict__["provenance_id"]
-        assert field_info.default is None
+        assert self._field_info("provenance_id").default is None
 
     def test_source_traceback_field_default_is_none(self) -> None:
         """The source_traceback Field should have a default of None."""
-        field_info = DataLineageMixin.__dict__["source_traceback"]
-        assert field_info.default is None
+        assert self._field_info("source_traceback").default is None
 
     def test_source_traceback_max_length(self) -> None:
         """The source_traceback Field should enforce max_length=255."""
-        field_info = DataLineageMixin.__dict__["source_traceback"]
+        field_info = self._field_info("source_traceback")
         max_len_metadata = [x for x in field_info.metadata if hasattr(x, "max_length")]
         assert len(max_len_metadata) == 1
         assert max_len_metadata[0].max_length == 255
 
     def test_provenance_id_annotation_is_optional_uuid(self) -> None:
         """The provenance_id annotation should allow UUID | None."""
-        annotation = DataLineageMixin.__annotations__["provenance_id"]
-        # Union types in modern Python: UUID | None
-        assert UUID in (annotation.__args__ if hasattr(annotation, "__args__") else [])
+        assert UUID in get_args(self._field_info("provenance_id").annotation)
 
     def test_source_traceback_annotation_is_optional_str(self) -> None:
         """The source_traceback annotation should allow str | None."""
-        annotation = DataLineageMixin.__annotations__["source_traceback"]
-        assert str in (annotation.__args__ if hasattr(annotation, "__args__") else [])
+        assert str in get_args(self._field_info("source_traceback").annotation)

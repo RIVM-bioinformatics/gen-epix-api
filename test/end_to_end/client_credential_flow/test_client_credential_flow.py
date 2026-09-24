@@ -35,6 +35,7 @@ import pytest
 # Configure logging
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
+pytestmark = pytest.mark.e2e
 
 
 @pytest.fixture(scope="session")

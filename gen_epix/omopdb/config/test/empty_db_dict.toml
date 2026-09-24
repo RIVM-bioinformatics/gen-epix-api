@@ -1,0 +1,123 @@
+[app]
+host = "0.0.0.0"
+port = 8000
+debug = false
+
+
+[api]
+default_route = "/openapi.json"
+gzip_response_minimum_size = 1024
+
+[api.http_header]
+
+[api.http_header.general]
+CacheControl = "no-cache, no-store"
+Content-Security-Policy = "default-src 'none'; frame-ancestors 'none'; sandbox"
+Content-Security-Policy-Report-Only = "default-src 'none'; frame-ancestors 'none'; sandbox"
+Cross-Origin-Opener-Policy = "same-origin"
+Expires ="0"
+Pragma = "no-cache"
+Referrer-Policy = "strict-origin-when-cross-origin"
+Strict-Transport-Security = "max-age=63072000; includeSubDomains"
+X-Content-Type-Options = "nosniff"
+X-Frame-Options = "DENY"
+X-XSS-Protection = "1; mode=block"
+[api.http_header.openapi]
+CacheControl = "no-cache, no-store"
+Expires = "0"
+Pragma = "no-cache"
+Referrer-Policy = "strict-origin-when-cross-origin"
+Strict-Transport-Security = "max-age=63072000; includeSubDomains"
+X-Content-Type-Options = "nosniff"
+X-Frame-Options = "DENY"
+X-XSS-Protection = "1; mode=block"
+[api.http_header.auth]
+CacheControl = "no-cache, no-store"
+Expires = "0"
+Pragma = "no-cache"
+Strict-Transport-Security = "max-age=63072000; includeSubDomains"
+X-Content-Type-Options = "nosniff"
+X-Frame-Options = "DENY"
+X-XSS-Protection = "1; mode=block"
+
+[api.route]
+v1 = "/v1"
+
+[log]
+level = "WARNING"
+
+[log.command_object_summarization]
+enabled = true
+max_list_items = 3
+max_string_length = 500
+max_exception_message_length = 2000
+
+[feature_flags]
+update_own_organization = false
+disable_upload = false
+
+
+[service]
+
+[service.defaults]
+props.timestamp_factory = "DATETIME_NOW"
+props.id_factory = "ULID"
+
+[service.abac]
+module = "gen_epix.omopdb.services"
+class_name = "AbacService"
+
+[service.auth]
+module = "gen_epix.omopdb.services"
+class_name = "AuthService"
+[service.auth.props]
+auto_create_new_users = false
+root_token_time_to_live = 0 # disabled during development
+[service.auth.props.auto_created_user]
+roles = ["OMOPDB_ORG_USER"]
+organization_id = "018d074d-ea0c-e942-07db-a3cc0ba1d653"
+[service.auth.props.root.organization]
+id = "018d074d-ea0c-e942-07db-a3cc0ba1d653"
+code = "DUMMY"
+name = "DUMMY"
+[service.auth.props.root.user]
+key = "root@dummy.org"
+
+[service.organization]
+module = "gen_epix.omopdb.services"
+class_name = "OrganizationService"
+
+[service.rbac]
+module = "gen_epix.omopdb.services"
+class_name = "RbacService"
+props.user_invitation_time_to_live = 604800 # One week in seconds: 60 * 60 * 24 * 7
+
+[service.system]
+module = "gen_epix.omopdb.services"
+class_name = "SystemService"
+
+[service.omop]
+module = "gen_epix.omopdb.services"
+class_name = "OmopService"
+
+
+[repository]
+
+[repository.defaults]
+type = "DICT"
+
+[repository.abac]
+module = "gen_epix.omopdb.repositories"
+class_name = "AbacDictRepository"
+
+[repository.organization]
+module = "gen_epix.omopdb.repositories"
+class_name = "OrganizationDictRepository"
+
+[repository.system]
+module = "gen_epix.omopdb.repositories"
+class_name = "SystemDictRepository"
+
+[repository.omop]
+module = "gen_epix.omopdb.repositories"
+class_name = "OmopDictRepository"

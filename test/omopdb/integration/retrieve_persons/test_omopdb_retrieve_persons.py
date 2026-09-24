@@ -21,6 +21,7 @@ OMOPDB_APP_CFGS = get_app_cfgs(
     enum.ServiceType,
     enum.RepositoryType,
     TEST_TYPE,
+    log_any=False,
 )
 
 
@@ -75,6 +76,7 @@ class TestRetrievePersons:
         )
         assert persons
 
+        assert request.cls is not None
         request.cls.all_persons = persons
         request.cls.test_persons = persons[:10]
 

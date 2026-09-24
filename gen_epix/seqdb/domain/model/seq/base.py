@@ -1,12 +1,24 @@
+"""Define seqdb domain models for domain.model.seq.base."""
+
+import base64
+import binascii
+import gzip
 import hashlib
 import json
 import typing
 import uuid
 from enum import IntEnum
-from typing import Any, ClassVar, Self
+from typing import Annotated, Any, ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, Json, field_serializer, field_validator, model_validator
+from pydantic import (
+    Field,
+    Json,
+    computed_field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from gen_epix.commondb.domain.model import Model, validate_int_enum_value
 from gen_epix.fastapp.domain.entity import Entity
@@ -15,33 +27,72 @@ from gen_epix.seqdb.domain.literal import REQUIRED_NEXTCLADE_SEQ_KEYS
 
 
 def str_uuid4() -> str:
+    """Return a newly generated UUID4 as text."""
     return str(uuid.uuid4())
 
 
+def encode_ascii_as_gzip_base64(value: str) -> str:
+    """Encode a string as a gzip-compressed base64 string."""
+    return base64.b64encode(gzip.compress(value.encode("ascii"), mtime=0)).decode(
+        "ascii"
+    )
+
+
+def decode_ascii_from_gzip_base64(value: str) -> str:
+    """Decode a gzip-compressed base64 string."""
+    try:
+        compressed = base64.b64decode(value.encode("ascii"), validate=True)
+        return gzip.decompress(compressed).decode("ascii")
+    except (
+        UnicodeEncodeError,
+        binascii.Error,
+        EOFError,
+        OSError,
+        UnicodeDecodeError,
+    ) as error:
+        raise ValueError("Value is not a valid base64-encoded gzip archive") from error
+
+
 class ContentMixin[FormatType: IntEnum]:
-    """
-    Mixin class to add content-related fields to a model.
+    """Encapsulates formatted content and a content hash for a model.
+
+    Model validation: Subclasses must validate the relationship between their
+    content, format, and content hash.
     """
 
     _FORMAT_TYPE_CLASS: ClassVar[type[FormatType]] = None  # type: ignore[assignment]
 
-    format: FormatType = Field(
-        description="The representation format of the content.",
-    )
-    content_hash: UUID = Field(
-        description="A 128-bit hash code of the content represented as UUID.",
-    )
-    content: str = Field(
-        description="The content in a specified format. Depending on the format, the content2 field may be used as well e.g. to optimize performance."
-    )
-    content2: str | None = Field(
-        default=None,
-        description="The second part of the content, if applicabe, depending on the specified format.",
-    )
+    # Annotation-only: an assigned Field lingers as class attr -> pydantic shadow warning
+    format: Annotated[
+        FormatType,
+        Field(
+            description="The representation format of the content.",
+        ),
+    ]
+    content_hash: Annotated[
+        UUID,
+        Field(
+            description="A 128-bit hash code of the content represented as UUID.",
+        ),
+    ]
+    content: Annotated[
+        str,
+        Field(
+            description="The content in a specified format. Depending on the format, the content2 field may be used as well e.g. to optimize performance."
+        ),
+    ]
+    content2: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description="The second part of the content, if applicabe, depending on the specified format.",
+        ),
+    ]
 
     @field_validator("format", mode="before")
     @classmethod
     def _validate_format(cls, value: str | int | float | FormatType) -> FormatType:
+        """Convert the supplied value to the content format enum used by the subclass."""
         if cls._FORMAT_TYPE_CLASS is None:
             for base in getattr(cls, "__orig_bases__", []):  # type: ignore[unreachable]
                 if typing.get_origin(base) is not ContentMixin:
@@ -64,40 +115,80 @@ class ContentMixin[FormatType: IntEnum]:
 
 
 class QualityMixin:
-    """
-    Mixin class to add quality related fields to a model.
+    """Encapsulates qualitative and numeric quality-control data for a model.
+
+    Quality can be assessed by an automated process, a manual (human) process, or
+    both. The manual assessment, when provided (i.e. not PENDING), supersedes the
+    automated one. The effective assessment is exposed through the `qc_result`
+    computed property.
     """
 
-    qc_result: enum.QualityControlResult = Field(
-        default=enum.QualityControlResult.PENDING,
-        description="The quality of the result as a qualitative value that is used by the application, where applicable, for filtering results.",
-    )
-    qc_score: float | None = Field(
-        default=None,
-        description="The quality of the result, as a numerical value. A higher score indicates better quality. The range and interpretation of this value is not in scope of the application and must be defined by the user.",
-    )
-    qc_report: Json | None = Field(
-        default=None,
-        description="A detailed report of the quality control results, which can include any relevant information such as metrics, logs, or other data that provides insights into the quality of the result. The structure and content of this report is not defined by the application and must be determined by the user. The only condition is that the data are JSON serializable.",
-    )
+    qc_result_machine: Annotated[
+        enum.QualityControlResult,
+        Field(
+            default=enum.QualityControlResult.PENDING,
+            description="The quality of the result as determined by an automated process. Superseded by qc_result_human when the latter is not PENDING.",
+        ),
+    ]
+    qc_result_human: Annotated[
+        enum.QualityControlResult,
+        Field(
+            default=enum.QualityControlResult.PENDING,
+            description="The quality of the result as determined by a manual assessment. When not PENDING, this value supersedes qc_result_machine.",
+        ),
+    ]
+    qc_score: Annotated[
+        float | None,
+        Field(
+            default=None,
+            description="The quality of the result, as a numerical value. A higher score indicates better quality. The range and interpretation of this value is not in scope of the application and must be defined by the user.",
+        ),
+    ]
+    qc_report: Annotated[
+        Json | None,
+        Field(
+            default=None,
+            description="A detailed report of the quality control results, which can include any relevant information such as metrics, logs, or other data that provides insights into the quality of the result. The structure and content of this report is not defined by the application and must be determined by the user. The only condition is that the data are JSON serializable.",
+        ),
+    ]
 
-    @field_validator("qc_result", mode="before")
+    @field_validator("qc_result_machine", "qc_result_human", mode="before")
     @classmethod
     def _validate_qc_result(
         cls, value: str | int | float | enum.QualityControlResult | None
     ) -> enum.QualityControlResult:
+        """Convert a supplied quality result, defaulting missing values to pending."""
         if value is None:
             return enum.QualityControlResult.PENDING
         return validate_int_enum_value(enum.QualityControlResult, value)  # type: ignore[return-value]
 
-    @field_serializer("qc_result", mode="plain")
+    @field_serializer("qc_result_machine", "qc_result_human", mode="plain")
     def _serialize_qc_result(self, value: enum.QualityControlResult) -> int:
+        """Serialize the quality result as its stable integer representation."""
         return value.value
+
+    @computed_field(  # type: ignore[prop-decorator]
+        description="The effective quality-control result: the manual (human) assessment when provided (i.e. not PENDING), otherwise the automated (machine) assessment."
+    )
+    @property
+    def qc_result(self) -> enum.QualityControlResult:
+        """Return the manual quality result if provided, otherwise the automated one.
+
+        Deliberately not a cached_property: qc_result_human/qc_result_machine are
+        mutable after construction (e.g. a manual review added post-creation), and a
+        cached value would silently go stale on such mutation, including across
+        model_copy(). The computation is trivial, so there is no cost to
+        recomputing on every access.
+        """
+        if self.qc_result_human == enum.QualityControlResult.PENDING:
+            return self.qc_result_machine
+        return self.qc_result_human
 
     @staticmethod
     def get_sort_key(instance: "QualityMixin") -> tuple[int, float]:
-        """
-        Return a sort key for sorting instances of QualityMixin by quality control
+        """Return the quality-control sort key for an instance.
+
+        The quality result is primary, followed by the optional numeric quality
         result and subsequently score. The qc_result is considered leading as it is
         mandatory, and the qc_score is considered secondary as it is optional and may be
         less reliable.
@@ -108,11 +199,17 @@ class QualityMixin:
 
 
 class BaseSeq(Model):
-    """
-    Base class for a sequence. The class includes validation logic to ensure
+    """Represents a sequence with a validated representation, length, and hash.
+
+    The class includes validation logic to ensure
     consistency between the sequence, its format, length, and derived sequence hash.
     The sequence hash is stored in the id field of the model and is equal to the first
     128 bits of the SHA256 hash of the lower case sequence.
+
+    Model validation: Converts string format names to enum members, normalizes DNA
+    sequence casing, decodes gzip+base64 input for validation, and re-encodes
+    compressed representations for storage. It derives verifiable sequence hashes
+    and lengths and rejects inconsistent or unsupported representations.
     """
 
     ENTITY: ClassVar = Entity(
@@ -138,33 +235,69 @@ class BaseSeq(Model):
     def _validate_seq_format(
         cls, value: str | int | float | enum.SeqFormat
     ) -> enum.SeqFormat:
+        """Convert a supplied value to a supported sequence representation format."""
         return validate_int_enum_value(enum.SeqFormat, value)  # type: ignore[return-value]
 
     @model_validator(mode="after")
     def _validate_model(self) -> Self:
-        """
-        Derive the sequence hash as the first 128 bits of the SHA256 hash of the lower
+        """Normalize and validate the sequence representation, length, and hash.
+
+        Derives the sequence hash as the first 128 bits of the SHA256 hash of the lower
         case sequence, if not provided, or otherwise verify that it is correctly derived
         if possible. The sequence hash is stored in the id field that must be present in
         the class making use of the mixin.
         """
+        # Initialize some
         seq_hash = self.id
+        orig_seq = self.seq
+
         # Verify sequence hash, seq and length depending on seq_format
-        if self.seq_format == enum.SeqFormat.STR_DNA:
-            # Verify length
-            computed_length = len(self.seq)
-            # Make seq lower case and validate characters
-            seq = self.seq.lower()
-            invalid_chars = set(seq) - enum.SeqAlphabet.DNA_INCL_AMBIGUOUS.value
-            if invalid_chars:
-                raise ValueError(
-                    f"Sequence contains invalid characters for {self.seq_format.value} format: {"".join(sorted(invalid_chars))}"
-                )
-            self.seq = seq
-            # Compute sequence hash
-            computed_seq_hash = UUID(
-                hashlib.sha256(seq.encode("ascii")).digest()[:16].hex()
+        if self.seq_format in enum.SeqFormatSet.DNA_AS_STR.value:
+            alphabet = (
+                enum.SeqAlphabet.DNA_INCL_AMBIGUOUS_AND_GAP
+                if self.seq_format in enum.SeqFormatSet.GAP.value
+                else enum.SeqAlphabet.DNA_INCL_AMBIGUOUS
             )
+            if self.seq_format in enum.SeqFormatSet.DNA_AS_STR_GZB64.value:
+                # Decode the sequence from gzip base64 if it is in a compressed format
+                # The sequence may have been provided in non-compressed format as well, in which case is will be converted into that format
+                compress_seq = False
+                try:
+                    uncompressed_seq = decode_ascii_from_gzip_base64(orig_seq)
+                except ValueError:
+                    uncompressed_seq = self.seq
+                    compress_seq = True
+                seq = uncompressed_seq.lower()
+                if not compress_seq and seq != uncompressed_seq:
+                    # Provided compressed sequence was not in lowercase, need to compress it again
+                    compress_seq = True
+                invalid_chars = set(seq) - alphabet.value
+                if invalid_chars:
+                    raise ValueError(
+                        f"Sequence contains invalid characters for {self.seq_format.value} format: {"".join(sorted(invalid_chars))}"
+                    )
+                computed_length = len(seq)
+                computed_seq_hash = self.get_seq_hash(seq)
+                if compress_seq:
+                    # Compress (again) only when needed for performance
+                    self.seq = encode_ascii_as_gzip_base64(seq)
+            elif self.seq_format in enum.SeqFormatSet.DNA_AS_STR.value:
+                seq = orig_seq.lower()
+                invalid_chars = set(seq) - alphabet.value
+                if invalid_chars:
+                    raise ValueError(
+                        f"Sequence contains invalid characters for {self.seq_format.value} format: {"".join(sorted(invalid_chars))}"
+                    )
+                computed_length = len(seq)
+                computed_seq_hash = self.get_seq_hash(seq)
+                self.seq = seq
+            else:
+                raise ValueError(
+                    f"Unsupported sequence format: {self.seq_format.value}"
+                )
+            if self.length == 0:
+                # Set the length if it hasn't been set yet
+                self.length = computed_length
         elif self.seq_format == enum.SeqFormat.NEXTCLADE:
             # Parse compact NextClade notation for a single sequence
             nextclade_seq: dict[str, Any] = json.loads(self.seq)
@@ -184,32 +317,23 @@ class BaseSeq(Model):
                 raise ValueError(
                     "alignment_end must be greater than or equal to alignment_start"
                 )
-            # TODO: 3268: remove commented out code
             # seq_hash cannot be computed at this stage, since it requires the reference sequence, it can only be verified that a value is provided
             if seq_hash is None:
                 raise ValueError(
                     f"Unable to calculate sequence hash for seq_format {self.seq_format.value}"
                 )
             computed_seq_hash = seq_hash
-            # # Compute hash deterministically from sorted field names/values,
-            # # mirroring the approach used in SeqProfile.get_snp_profile_hash
-            # sha256 = hashlib.sha256()
-            # for field_name in sorted(nextclade_seq.keys()):
-            #     value = nextclade_seq[field_name]
-            #     sha256.update(field_name.encode("ascii"))
-            #     if isinstance(value, str):
-            #         sha256.update(value.encode("ascii"))
-            #     elif value is not None:
-            #         sha256.update(str(value).encode("ascii"))
-            # computed_seq_hash = UUID(sha256.digest()[:16].hex())
-        else:
+        elif self.seq_format == enum.SeqFormat.HASH_ONLY:
             if seq_hash is None:
                 raise ValueError(
                     f"Unable to calculate sequence hash for seq_format {self.seq_format.value}"
                 )
-            # Unable to compute length or sequence hash but provided -> assume correct
-            computed_length = self.length
             computed_seq_hash = seq_hash
+            computed_length = self.length
+        else:
+            raise NotImplementedError(
+                f"Sequence format {self.seq_format.value} is not supported for length and hash computation"
+            )
         # Set or verify length
         if self.length == 0:
             if computed_length == 0:
@@ -241,8 +365,23 @@ class BaseSeq(Model):
     #     return value
 
     def get_nucleotide_seq(self, ref_seq_str: str | None = None) -> str:
-        """Return the nucleotide sequence as a string, if possible, otherwise raise an error."""
-        if self.seq_format == enum.SeqFormat.STR_DNA:
+        """Return the nucleotide sequence represented by this model.
+
+        Args:
+            ref_seq_str: Reference sequence required to resolve NextClade content.
+
+        Returns:
+            The sequence as a nucleotide string when the format is directly supported.
+
+        Raises:
+            ValueError: If a required reference sequence or valid mutation position is
+                missing.
+            NotImplementedError: If the sequence format or required NextClade features
+                cannot yet be converted.
+        """
+        if self.seq_format in enum.SeqFormatSet.DNA_AS_STR.value:
+            if self.seq_format in enum.SeqFormatSet.DNA_AS_STR_GZB64.value:
+                return decode_ascii_from_gzip_base64(self.seq)
             return self.seq
         elif self.seq_format == enum.SeqFormat.NEXTCLADE:
             if ref_seq_str is None:
@@ -278,3 +417,9 @@ class BaseSeq(Model):
             raise NotImplementedError(
                 f"Getting the nucleotide sequence is not implemented for format {self.seq_format}"
             )
+
+    @staticmethod
+    def get_seq_hash(seq: str) -> UUID:
+        """Compute a hash for the given string, which is expected to contain a
+        nucleotide sequence that may have gaps."""
+        return UUID(hashlib.sha256(seq.encode("ascii")).digest()[:16].hex())

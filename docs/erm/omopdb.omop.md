@@ -10,6 +10,7 @@ erDiagram
     Concept }o--|| Domain : "domain_id"
     Concept }o--|| Vocabulary : "vocabulary_id"
     Concept }o--|| ConceptClass : "concept_class_id"
+    Cohort }o--|| CohortDefinition : "cohort_definition_id"
     Relationship }o--|| Concept : "relationship_concept_id"
     ConceptAncestor }o--|| Concept : "ancestor_concept_id"
     ConceptAncestor }o--|| Concept : "descendant_concept_id"
@@ -162,6 +163,7 @@ erDiagram
     Measurement }o--|| Concept : "measurement_source_concept_id"
     Measurement }o--|| Concept : "unit_source_concept_id"
     Measurement }o--|| Concept : "meas_event_field_concept_id"
+    Measurement }o--|| Specimen : "derived_from_specimen_id"
     Observation }o--|| Person : "person_id"
     Observation }o--|| Concept : "observation_concept_id"
     Observation }o--|| Concept : "observation_type_concept_id"
@@ -196,12 +198,6 @@ erDiagram
     MeasurementRelationIdentifier }o--|| MeasurementRelation : "internal_id"
 
     CdmSource {
-    }
-
-    CohortDefinition {
-    }
-
-    Cohort {
     }
 
 ```

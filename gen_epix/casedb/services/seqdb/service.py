@@ -1,5 +1,7 @@
+"""Coordinate casedb commands with a local or remote seqdb application."""
+
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, model
@@ -12,10 +14,21 @@ from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.seqdb.domain.model import User as SeqdbUser
 from gen_epix.seqdb.env import AppComposer as SeqdbAppComposer
-from gen_epix.seqdb.services.remote_app import SeqdbRemoteApp
+from gen_epix.seqdb.services.client import SeqdbClient
 
 
 class SeqdbService(BaseSeqdbService):
+    """Encapsulates casedb collaboration with a configured seqdb application.
+
+    The base service registers casedb and seqdb command handlers. This service
+    creates either an in-process seqdb application or an HTTP client and dispatches
+    work under its functional seqdb user, translating results into casedb models
+    where the two domains differ.
+
+    Attributes:
+        seqdb_app: Local seqdb application or remote command client.
+        seqdb_user: Functional user attached to commands sent to seqdb.
+    """
 
     COMMAND_MAP: dict[type[command.Command], type[command.Command]] = {
         command.RetrievePhylogeneticTreeByProfilesCommand: seqdb_command.CalculatePhylogeneticTreeCommand,
@@ -28,15 +41,24 @@ class SeqdbService(BaseSeqdbService):
         if x.value == y.value
     }
 
-    def __init__(self, app: App, seqdb_app_type: str, **kwargs: Any) -> None:
-        seqdb_local_app_props = kwargs.pop("seqdb_local_app", {})
-        seqdb_remote_app_props = kwargs.pop("seqdb_remote_app", {})
+    def __init__(
+        self, app: App, seqdb_client_type: Literal["LOCAL", "REMOTE"], **kwargs: Any
+    ) -> None:
+        """Initialize command handlers and the configured seqdb collaborator.
+
+        Args:
+            app: Casedb application that owns this service.
+            seqdb_client_type: Configuration value selecting local or remote seqdb.
+            **kwargs: Service configuration, including local or remote app settings.
+        """
+        local_client_props = kwargs.pop("local_client", {})
+        remote_client_props = kwargs.pop("remote_client", {})
         super().__init__(app, **kwargs)
-        seqdb_app, seqdb_user = SeqdbRemoteApp.create_local_or_remote_app(
+        seqdb_app, seqdb_user = SeqdbClient.create_local_or_remote(
             AppType.SEQDB,
-            app_setup_type=seqdb_app_type,
-            local_app_props=seqdb_local_app_props,
-            remote_app_props=seqdb_remote_app_props,
+            app_setup_type=seqdb_client_type,
+            local_client_props=local_client_props,
+            remote_client_props=remote_client_props,
             user_class=SeqdbUser,
             app_composer_class=SeqdbAppComposer,
             service_type_enum=seqdb_enum.ServiceType,
@@ -48,15 +70,28 @@ class SeqdbService(BaseSeqdbService):
 
     @property
     def seqdb_app(self) -> App:
+        """Return the local seqdb application or remote command client."""
         return self._seqdb_app
 
     @property
     def seqdb_user(self) -> SeqdbUser | None:
+        """Return the functional user used for seqdb command dispatch."""
         return self._seqdb_user
 
     def retrieve_phylogenetic_tree(
         self, cmd: command.RetrievePhylogeneticTreeByProfilesCommand
     ) -> model.PhylogeneticTree | None:
+        """Calculate a phylogenetic tree in seqdb and convert its domain model.
+
+        Optional ``leaf_id_mapper`` command metadata supplies seqdb leaf names. When
+        seqdb returns those names, they must represent UUIDs for the casedb leaf IDs.
+
+        Args:
+            cmd: Tree request containing profile, protocol, algorithm, and QC data.
+
+        Returns:
+            The calculated tree represented as a casedb model.
+        """
         user = cmd.user
         # Prepare seqdb command and calculate tree via seqdb
         leaf_id_mapper = cmd.props.get("leaf_id_mapper")
@@ -91,6 +126,7 @@ class SeqdbService(BaseSeqdbService):
     def _retrieve_seq_objects_by_ids(
         self, seq_ids: list[UUID]
     ) -> list[seqdb_model.Seq]:
+        """Retrieve sequence objects from seqdb by ID."""
         seqs: list[seqdb_model.Seq] = self.seqdb_app.handle(
             seqdb_command.SeqCrudCommand(
                 user=self.seqdb_user,
@@ -104,6 +140,14 @@ class SeqdbService(BaseSeqdbService):
         self,
         cmd: command.RetrieveGeneticSequenceFastaByIdCommand,
     ) -> Iterable[str]:
+        """Return seqdb's FASTA iterator for the requested sequence IDs.
+
+        Args:
+            cmd: Casedb request containing sequence IDs and wrapping preferences.
+
+        Returns:
+            An iterable that yields FASTA content from seqdb.
+        """
         seqdb_cmd = seqdb_command.RetrieveSeqFastaCommand(
             user=self.seqdb_user,
             seq_ids=cmd.seq_ids,
@@ -116,6 +160,16 @@ class SeqdbService(BaseSeqdbService):
         self,
         cmd: seqdb_command.UploadSamplesCommand,
     ) -> seqdb_model.SampleBatchUploadResult:
+        """Upload samples to seqdb under the configured functional user.
+
+        The command's original user is restored after successful dispatch.
+
+        Args:
+            cmd: Seqdb sample upload command to forward.
+
+        Returns:
+            Seqdb's batch upload result.
+        """
         user = cmd.user
         cmd.user = self.seqdb_user
         result: seqdb_model.SampleBatchUploadResult = self.seqdb_app.handle(cmd)
@@ -123,9 +177,15 @@ class SeqdbService(BaseSeqdbService):
         return result
 
     def crud(self, cmd: command.CrudCommand) -> Any:
-        """
-        Generic CRUD operation handler that forwards the command to seqdb while
-        setting the functional user.
+        """Forward a CRUD command to seqdb under the configured functional user.
+
+        The command's original user is restored after successful dispatch.
+
+        Args:
+            cmd: CRUD command to forward to seqdb.
+
+        Returns:
+            The result produced by the seqdb command handler.
         """
         casedb_user = cmd.user
         cmd.user = self.seqdb_user
@@ -137,6 +197,16 @@ class SeqdbService(BaseSeqdbService):
         self,
         cmd: seqdb_command.CreateFileCommand,
     ) -> UUID:
+        """Create a seqdb file under the configured functional user.
+
+        The command's original user is restored after successful dispatch.
+
+        Args:
+            cmd: Seqdb file creation command to forward.
+
+        Returns:
+            Identifier of the created file.
+        """
         user = cmd.user
         cmd.user = self.seqdb_user
         file_id: UUID = self.seqdb_app.handle(cmd)
@@ -147,6 +217,16 @@ class SeqdbService(BaseSeqdbService):
         self,
         cmd: seqdb_command.RetrieveSimilarProfilesCommand,
     ) -> list[UUID]:
+        """Retrieve similar profile IDs under the configured functional user.
+
+        The command's original user is restored after successful dispatch.
+
+        Args:
+            cmd: Seqdb similarity command to forward.
+
+        Returns:
+            Identifiers of profiles satisfying the similarity criteria.
+        """
         user = cmd.user
         cmd.user = self.seqdb_user
         similar_profile_ids: list[UUID] = self.seqdb_app.handle(cmd)

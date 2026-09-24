@@ -1,3 +1,5 @@
+"""Define SQLAlchemy persistence mappings for casedb geographic models."""
+
 # pylint: disable=too-few-public-methods
 from __future__ import (  # Resolves pylint not recognizing Mapped as subscriptable
     annotations,
@@ -19,9 +21,7 @@ Base: type = orm.declarative_base(name=enum.ServiceType.GEO.value)
 
 
 class RegionSet(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb RegionSet domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.RegionSet)
 
@@ -36,9 +36,7 @@ class RegionSet(Base, RowMetadataMixin):
 
 
 class RegionSetShape(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb RegionSetShape domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.RegionSetShape)
 
@@ -56,9 +54,7 @@ class RegionSetShape(Base, RowMetadataMixin):
 
 
 class Region(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb Region domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.Region)
 
@@ -82,9 +78,7 @@ class Region(Base, RowMetadataMixin):
 
 
 class RegionRelation(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Persist the casedb RegionRelation domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.RegionRelation)
 

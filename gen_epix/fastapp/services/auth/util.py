@@ -1,3 +1,5 @@
+"""Authentication value normalization and validation helpers."""
+
 from typing import Any
 
 from gen_epix.fastapp.services.auth.literal import EMAIL_PATTERN
@@ -6,6 +8,7 @@ from gen_epix.fastapp.services.auth.literal import EMAIL_PATTERN
 def get_email_from_claims(
     claims: dict[str, Any],
 ) -> str | None:
+    """Return email from claims."""
     email = claims.get("email")
     if email is None:
         for claim in claims.values():
@@ -19,9 +22,7 @@ def get_email_from_claims(
 def get_name_from_claims(
     claims: dict[str, Any], name_claims: list[str | list[str]]
 ) -> str | None:
-    """
-    Get the name from the claims, checking against a list of possible name claims.
-    """
+    """Get the name from the claims, checking against a list of possible name claims."""
     for name_claim in name_claims:
         if isinstance(name_claim, str):
             if name_claim in claims:

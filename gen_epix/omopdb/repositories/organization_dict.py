@@ -1,3 +1,5 @@
+"""Dictionary-backed organization repository configured with OmopDB user models."""
+
 from collections.abc import Hashable, Iterable
 from typing import Any
 
@@ -10,12 +12,15 @@ from gen_epix.omopdb.domain.model import Model
 
 
 class OrganizationDictRepository(CommonOrganizationDictRepository):
+    """Encapsulates shared organization persistence with OmopDB user model types."""
+
     def __init__(
         self,
         entities: Iterable[Entity],
         db: dict[type[Model], dict[Hashable, Model]],
         **kwargs: Any,
     ):
+        """Initialize shared organization storage with OmopDB model classes."""
         super().__init__(
             entities,
             db,

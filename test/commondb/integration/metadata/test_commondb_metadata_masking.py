@@ -29,6 +29,7 @@ APP_CFGS = get_app_cfgs(
     enum.ServiceType,
     enum.RepositoryType,
     COMMONDB_TEST_TYPE,
+    log_any=False,
 )
 
 _PARAMS = [

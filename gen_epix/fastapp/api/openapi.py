@@ -1,3 +1,5 @@
+"""OpenAPI schema generation and compatibility fixes."""
+
 from collections.abc import Callable
 from functools import partial
 from typing import Any
@@ -19,6 +21,7 @@ def create_custom_openapi_function(
     fix_schema: bool = True,
     auth_service: AuthService | None = None,
 ) -> Callable[[], dict[str, Any]]:
+    """Create a cached OpenAPI schema factory with optional schema fixes."""
 
     def custom_openapi_function(
         default_kwargs: dict[str, Any],
@@ -27,6 +30,7 @@ def create_custom_openapi_function(
         auth_service: AuthService | None,
     ) -> dict[str, Any]:
         # Set defaults
+        """Build the OpenAPI schema with the configured defaults and security schemes."""
         for key, value in _GET_OPEN_API_DEFAULTS.items():
             get_open_api_kwargs[key] = get_open_api_kwargs.get(key, value)
 
@@ -59,11 +63,14 @@ def create_custom_openapi_function(
 def fix_schema_nullable_and_single_element(schema: dict) -> None:
     """
     Fixes the schema by handling 'anyOf' constructs and setting the 'nullable' property.
+
     This function performs the following operations on the given schema:
     1. Replaces 'anyOf' constructs containing {"type": "null"} with 'nullable': True.
     2. Recursively processes nested dictionaries and lists to apply the above transformations.
+
     Args:
         schema (dict): The JSON schema to be fixed.
+
     Returns:
         None: The function modifies the input schema in place.
 

@@ -1,6 +1,4 @@
-"""
-CRUD operations for CaseSet entities.
-"""
+"""Handle CRUD operations for case-set entities."""
 
 from uuid import UUID
 
@@ -23,7 +21,6 @@ def case_service_crud_case_set(
     self: BaseCaseService, cmd: command.CaseSetCrudCommand
 ) -> list[model.CaseSet] | model.CaseSet | list[UUID] | UUID | list[bool] | bool | None:
     """Handle CRUD operations for CaseSet entities."""
-
     # Start unit of work
     with self.repository.uow() as uow:
         _crud_cascade_delete(self, uow, cmd)
@@ -47,7 +44,24 @@ def _crud_case_set_with_abac(
     uow: BaseUnitOfWork,
     cmd: command.CaseSetCrudCommand,
 ) -> list[model.CaseSet] | model.CaseSet | list[UUID] | UUID | list[bool] | bool | None:
-    """CaseSet user command handling, ABAC applied."""
+    """Handle case-set CRUD with operation-specific content rights.
+
+    Reads are access-filtered, updates require write access, and deletes require
+    remove access across all associated collections. Commands without case ABAC
+    metadata delegate directly.
+
+    Args:
+        self: Case service handling the command.
+        uow: Active unit of work used for access checks.
+        cmd: Case-set CRUD command.
+
+    Returns:
+        Access-filtered read results or the delegated write result.
+
+    Raises:
+        UnauthorizedAuthError: If deletion is too broad or remove access is missing.
+        AssertionError: If creation or an unknown operation reaches this handler.
+    """
     # @ABAC: get case abac
     case_abac: model.CaseAbac | None = get_case_abac_from_command(cmd)
 
@@ -104,6 +118,20 @@ def _validate_case_set_deletion(
     is_delete_all: bool,
     case_set_ids: list[UUID] | None,
 ) -> None:
+    """Require remove access for every collection of each requested case set.
+
+    Args:
+        self: Case service used for repository and association access.
+        uow: Active unit of work for all validation reads.
+        cmd: Delete command providing the acting user and operation.
+        case_abac: Case access metadata used to evaluate remove rights.
+        is_delete_all: Whether the command requests deletion of all case sets.
+        case_set_ids: Explicit identifiers requested for deletion.
+
+    Raises:
+        UnauthorizedAuthError: If deleting all or if any case set cannot be removed
+            from all of its associated collections.
+    """
     if is_delete_all:
         # Delete all not allowed due to potential large number of case sets
         raise exc.UnauthorizedAuthError(

@@ -1,5 +1,5 @@
-"""
-CRUD operations for RefDim entities.
+"""Handle CRUD operations for reference-dimension entities.
+
 This is a simple metadata entity with no ABAC restrictions.
 """
 
@@ -21,7 +21,6 @@ def case_service_crud_ref_dim(
     self: BaseCaseService, cmd: command.RefDimCrudCommand
 ) -> list[model.RefDim] | model.RefDim | list[UUID] | UUID | list[bool] | bool | None:
     """Handle CRUD operations for RefDim entities."""
-
     # Start unit of work
     with self.repository.uow() as uow:
         assert cmd.user is not None

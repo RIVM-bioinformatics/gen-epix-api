@@ -1,3 +1,5 @@
+"""Compose commondb API routers for mounting below the application's v1 prefix."""
+
 from collections.abc import Callable
 from typing import Any, NoReturn
 
@@ -21,6 +23,16 @@ def create_routers(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     router_kwargs: dict = {},
 ) -> list[APIRouter]:
+    """Create routers for commondb authentication, RBAC, organization, ABAC, and system APIs.
+
+    Args:
+        app: Composed commondb application that dispatches endpoint commands.
+        handle_exception: Exception adapter passed to endpoint factories.
+        router_kwargs: Additional arguments applied to each router.
+
+    Returns:
+        Tagged routers for the commondb API surface.
+    """
     assert app
     router_data: list[RouterData] = [
         # Common routers

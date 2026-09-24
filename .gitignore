@@ -186,3 +186,23 @@ cert/*.pem
 
 # Macbook specific files
 .DS_Store
+
+# Graphify local cache, graphify memory, machine specific files, conversion files, and backup snapshots
+graphify-out/cost.json
+graphify-out/cache/
+graphify-out/converted/
+graphify-out/memory/
+graphify-out/reflections/
+graphify-out/.graphify_*
+# Curated community names, produced by periodic manual `graphify label` runs.
+# Tracked so the CI update can reuse them instead of falling back to
+# "Community N" placeholders. The .sig holds per-community membership
+# signatures, which is how CI detects a name that clustering has invalidated.
+!graphify-out/.graphify_labels.json
+!graphify-out/.graphify_labels.json.sig
+graphify-out/????-??-??/
+
+# Ruff linter
+.ruff_cache/
+
+.github/docs

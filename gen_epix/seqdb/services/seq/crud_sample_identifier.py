@@ -1,3 +1,5 @@
+"""Implement seqdb CRUD service operations for services.seq.crud_sample_identifier."""
+
 from uuid import UUID
 
 from gen_epix.seqdb.domain import command, model
@@ -15,7 +17,18 @@ def seq_service_crud_sample_identifier(
     | bool
     | None
 ):
-    """Handle CRUD operations for SampleIdentifier entities."""
+    """Handle CRUD operations for sample identifier entities.
+
+    Args:
+        self: Sequence service executing the command.
+        cmd: Typed sample-identifier CRUD command.
+
+    Returns:
+        The action-specific sample-identifier result.
+
+    Raises:
+        AssertionError: The command operation is unsupported.
+    """
     user_id = cmd.user.id if cmd.user else None
     sample_identifiers: list[model.SampleIdentifier] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():

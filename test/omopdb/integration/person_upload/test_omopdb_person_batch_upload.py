@@ -38,9 +38,10 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.commondb.domain.enum import AppType, EtlStatus, UploadAction
+from gen_epix.commondb.domain.enum import AppType, UploadAction
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.util import get_app_cfgs
+from gen_epix.etl.enum import EtlStatus
 from gen_epix.omopdb.domain import command, enum
 from gen_epix.omopdb.domain.model import (
     Person,
@@ -59,6 +60,7 @@ OMOPDB_APP_CFGS = get_app_cfgs(
     enum.ServiceType,
     enum.RepositoryType,
     TEST_TYPE,
+    log_any=False,
 )
 
 

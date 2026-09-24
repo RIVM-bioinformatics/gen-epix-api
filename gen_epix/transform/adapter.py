@@ -1,5 +1,7 @@
-"""
-Object adapters for providing unified interface across different object types.
+"""Adapters that expose a common field interface for row-like objects.
+
+The adapters let transformers read, update, and inspect dictionaries, Pydantic
+models, and Polars-like objects without depending on one concrete representation.
 """
 
 from collections.abc import Hashable, Iterator
@@ -10,33 +12,83 @@ from pydantic import BaseModel
 
 @runtime_checkable
 class RowLike(Protocol):
-    """Protocol for row-like objects."""
+    """Encapsulates the structural interface for row-oriented transformations."""
 
     def get(self, key: Hashable, default: Any = None) -> Any:
-        """Get value by key with optional default."""
+        """Return the value for a key, or a fallback when it is absent.
+
+        Args:
+            key: Field name or other hashable field identifier.
+            default: Value returned when the key is absent.
+
+        Returns:
+            Stored value for ``key``, or ``default``.
+
+        Raises:
+            NotImplementedError: Always, until a compatible row type implements it.
+        """
         raise NotImplementedError()
 
     def __getitem__(self, key: Hashable) -> Any:
-        """Get value by key."""
+        """Return the value associated with a required key.
+
+        Args:
+            key: Field name or other hashable field identifier.
+
+        Returns:
+            Stored value for ``key``.
+
+        Raises:
+            NotImplementedError: Always, until a compatible row type implements it.
+        """
         raise NotImplementedError()
 
     def __setitem__(self, key: Hashable, value: Any) -> None:
-        """Set value by key."""
+        """Set the value associated with a key.
+
+        Args:
+            key: Field name or other hashable field identifier.
+            value: Value to store for ``key``.
+
+        Raises:
+            NotImplementedError: Always, until a compatible row type implements it.
+        """
         raise NotImplementedError()
 
     def __contains__(self, key: Hashable) -> bool:
-        """Check if key exists."""
+        """Return whether a key is present.
+
+        Args:
+            key: Field name or other hashable field identifier.
+
+        Returns:
+            Whether ``key`` is present.
+
+        Raises:
+            NotImplementedError: Always, until a compatible row type implements it.
+        """
         raise NotImplementedError()
 
     def keys(self) -> Iterator[Hashable]:
-        """Get all keys."""
+        """Iterate over available keys.
+
+        Yields:
+            Field name or other hashable field identifier.
+
+        Returns:
+            An iterator over available field identifiers.
+
+        Raises:
+            NotImplementedError: Always, until a compatible row type implements it.
+        """
         raise NotImplementedError()
 
 
 class DictAdapter:
-    """Adapter for dictionary objects."""
+    """Encapsulates adapting a mutable dictionary to the field interface."""
 
     def __init__(self, obj: dict):
+        """Wrap a mutable mapping so transformers can read and update it."""
         self._obj = obj
 
     def get(self, key: Hashable, default: Any = None) -> Any:
@@ -57,9 +109,10 @@ class DictAdapter:
 
 
 class PydanticAdapter:
-    """Adapter for Pydantic model objects."""
+    """Encapsulates adapting a Pydantic model to the field interface."""
 
     def __init__(self, obj: BaseModel):
+        """Wrap a Pydantic model and expose fields through adapter methods."""
         self._obj = obj
 
     def get(self, key: Hashable, default: Any = None) -> Any:
@@ -80,9 +133,10 @@ class PydanticAdapter:
 
 
 class PolarsAdapter:
-    """Adapter for Polars objects."""
+    """Encapsulates adapting a Polars-like object to the field interface."""
 
     def __init__(self, obj: Any):
+        """Wrap a Polars-like object that exposes column access."""
         self._obj = obj
 
     def get(self, key: Hashable, default: Any = None) -> Any:
@@ -106,20 +160,38 @@ class PolarsAdapter:
 
 
 class ObjectAdapter:
-    """
-    Unified adapter that provides consistent interface for different object types.
+    """Encapsulates adapter selection for supported object representations.
 
-    Supports dict, Pydantic models, and Polars objects.
+    Supported values are dictionaries, Pydantic models, and objects exposing a
+    Polars-style `columns` attribute or dataframe protocol.
+
+    Raises:
+        ValueError: If `obj` does not match a supported representation.
     """
 
     def __init__(self, obj: dict | BaseModel | Any):
+        """Select the concrete adapter for the wrapped object."""
         self._obj = obj
         self._adapter = self._create_adapter(obj)
 
     def _create_adapter(
         self, obj: Any
     ) -> DictAdapter | PydanticAdapter | PolarsAdapter:
-        """Factory method to create appropriate adapter for object type."""
+        """Select the concrete adapter appropriate for an object representation.
+
+        Dictionaries retain in-place updates, Pydantic models expose model fields,
+        and dataframe-like objects use their column interface.
+
+        Args:
+            obj: Object to adapt for transformer field access.
+
+        Returns:
+            Adapter that exposes ``obj`` through the common field interface.
+
+        Raises:
+            ValueError: If ``obj`` is not a dictionary, Pydantic model, or
+                dataframe-like object.
+        """
         if isinstance(obj, dict):
             return DictAdapter(obj)
         elif isinstance(obj, BaseModel):
@@ -148,5 +220,5 @@ class ObjectAdapter:
         return self._adapter.keys()
 
     def unwrap(self) -> Any:
-        """Return the original object."""
+        """Return the wrapped object, including any adapter-applied updates."""
         return self._obj

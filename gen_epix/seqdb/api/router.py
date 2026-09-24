@@ -1,3 +1,5 @@
+"""Expose seqdb api.router API adapters and request representations."""
+
 from collections.abc import Callable
 from typing import Any, NoReturn
 
@@ -13,7 +15,7 @@ from gen_epix.fastapp.api.router import RouterData
 from gen_epix.seqdb.api.file import create_file_endpoints
 from gen_epix.seqdb.api.organization import ApiPermission
 from gen_epix.seqdb.api.seq import create_seq_endpoints
-from gen_epix.seqdb.domain import enum
+from gen_epix.seqdb.domain import command, enum
 
 
 def create_routers(
@@ -24,6 +26,19 @@ def create_routers(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     router_kwargs: dict = {},
 ) -> list[APIRouter]:
+    """Create the commondb and seqdb routers for an application instance.
+
+    Args:
+        app: Application that dispatches endpoint commands.
+        registered_user_dependency: Dependency resolving registered users.
+        new_user_dependency: Dependency resolving newly registered users.
+        idp_user_dependency: Dependency resolving identity-provider users.
+        handle_exception: Handler for endpoint command exceptions.
+        router_kwargs: Keyword arguments supplied when creating each router.
+
+    Returns:
+        Routers configured with commondb and seqdb endpoint factories.
+    """
     assert app
     router_data: list[RouterData] = [
         # Common routers
@@ -53,7 +68,10 @@ def create_routers(
         {
             "name": "system",
             "create_endpoints_fn": create_system_endpoints,
-            "endpoints_function_kwargs": {"service_type": enum.ServiceType.SYSTEM},
+            "endpoints_function_kwargs": {
+                "service_type": enum.ServiceType.SYSTEM,
+                "delete_all_operational_data_command_class": command.DeleteAllOperationalDataCommand,
+            },
         },
         # Specific routers
         {

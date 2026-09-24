@@ -1,6 +1,4 @@
-"""
-CRUD operations for CaseType entities.
-"""
+"""Handle CRUD operations for case-type entities."""
 
 from uuid import UUID
 
@@ -22,7 +20,6 @@ def case_service_crud_case_type(
     list[model.CaseType] | model.CaseType | list[UUID] | UUID | list[bool] | bool | None
 ):
     """Handle CRUD operations for CaseType entities."""
-
     # Start unit of work
     with self.repository.uow() as uow:
         assert cmd.user is not None
