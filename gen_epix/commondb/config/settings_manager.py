@@ -55,7 +55,7 @@ class SettingsManager:
                 sole source of truth.
             validators: Dynaconf validators applied immediately after
                 loading; a failing validator raises
-                dynaconf.validator.ValidationError. Also ignored in the
+                dynaconf.validator.ValidationError. Also applied in the
                 explicit-`settings_files` mode described above.
 
         Returns:
@@ -68,15 +68,18 @@ class SettingsManager:
         """
         if self._settings_files:
             # Load only settings files into Dynaconf, ignoring environment
-            # variables, defaults, and validators: this mode's contract is
-            # complete control over the configuration for testing, so the
-            # given files are the sole source of truth, taken at face value.
+            # variables and defaults: this mode's contract is complete
+            # control over the configuration for testing, so the given files
+            # are the sole source of truth. Validators still run, so an
+            # incomplete or malformed file fails with a specific message.
             settings_files = self._settings_files
             settings = Dynaconf(
                 settings_files=settings_files,
                 lowercase_read=self.lowercase_keys,
                 merge_enabled=True,
+                validators=validators,
             )
+            settings.validators.validate_all()
             return settings
         settings_files_envvar = (
             settings_files_envvar or self.DEFAULT_SETTINGS_FILES_ENVVAR
