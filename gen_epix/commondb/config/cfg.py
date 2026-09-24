@@ -8,6 +8,7 @@ import logging.config as logging_config
 import os
 import re
 from enum import Enum
+from fnmatch import fnmatchcase
 from locale import getpreferredencoding
 from pathlib import Path
 from typing import Any, cast
@@ -530,8 +531,9 @@ class AppCfg(BaseAppCfg):
                 when=Validator("repository.defaults.type", eq="SA_SQL")
                 & Validator(
                     "repository.defaults.props.connection_string",
-                    condition=lambda v: _BLANK_PWD_IN_CONNECTION_STRING.search(v)
-                    is not None,
+                    condition=lambda v: (
+                        _BLANK_PWD_IN_CONNECTION_STRING.search(v) is not None
+                    ),
                 ),
                 messages={
                     "condition": (
@@ -687,6 +689,74 @@ class AppCfg(BaseAppCfg):
         # snapshot is what to_toml()/to_dict() export, since none of that
         # is TOML-serializable or should round-trip.
         self._raw_cfg_snapshot: dict[str, Any] = self._cfg.as_dict(internal=False)
+        # Explicit settings_files mode has no defaults to compare against.
+        if not self._settings_files:
+            self._warn_unrecognised_keys()
+
+    # Dynaconf bookkeeping keys that surface at the top level of as_dict()
+    # (lowercase for comparison); they are never business configuration.
+    _DYNACONF_INTERNAL_KEYS = frozenset({"envvar_separator", "post_hooks"})
+
+    # Path patterns (lowercase, dotted, fnmatch-style) that legitimately
+    # hold keys absent from the defaults, because their content is
+    # backend-specific or declared per deployment: repository props differ
+    # per backend (`file`, `dir`, `variant`, ...), and a settings file adds
+    # identity-provider entries.
+    _OPEN_ENDED_KEY_PATHS = ("repository.*.props", "service.auth.props.idps_cfg")
+
+    @classmethod
+    def _find_unrecognised_keys(
+        cls,
+        loaded: dict[str, Any],
+        defaults: dict[str, Any],
+        _path: str = "",
+    ) -> list[str]:
+        """Return dotted paths in `loaded` that `defaults` has no key for.
+
+        Every key a settings file or environment variable may override
+        exists in the defaults as a placeholder (see _DEFAULT_SETTINGS), so
+        a loaded key without a default is a typo or a setting this version
+        does not read. Keys compare case-insensitively (Dynaconf's
+        as_dict() upper-cases the top level); reported paths are lowercase.
+        Recursion stops at a key missing from the defaults, and at
+        _OPEN_ENDED_KEY_PATHS.
+        """
+        known = {str(key).lower(): key for key in defaults}
+        unrecognised: list[str] = []
+        for key, value in loaded.items():
+            lowered = str(key).lower()
+            path = f"{_path}.{lowered}" if _path else lowered
+            if not _path and lowered in cls._DYNACONF_INTERNAL_KEYS:
+                continue
+            if any(fnmatchcase(path, pat) for pat in cls._OPEN_ENDED_KEY_PATHS):
+                continue
+            if lowered not in known:
+                unrecognised.append(path)
+            elif isinstance(value, dict) and isinstance(defaults[known[lowered]], dict):
+                unrecognised.extend(
+                    cls._find_unrecognised_keys(value, defaults[known[lowered]], path)
+                )
+        return unrecognised
+
+    def _warn_unrecognised_keys(self) -> None:
+        """Warn about loaded settings keys that this app's defaults do not know.
+
+        A warning rather than an error, because an overlay may legitimately
+        carry keys meant for a newer version of this package. Typos are
+        otherwise silent: the intended setting just keeps its default.
+        """
+        unrecognised = self._find_unrecognised_keys(
+            self._raw_cfg_snapshot, self._get_default_settings()
+        )
+        if unrecognised and self._log_setup:
+            self.setup_logger.warning(
+                App.create_static_log_message(
+                    "5be0d7a2",
+                    f"Ignoring unrecognised settings keys for app "
+                    f"{self._app_name!r} (typo, or not read by this version): "
+                    f"{', '.join(sorted(unrecognised))}",
+                )
+            )
 
     def _init_validate_settings(self) -> None:
         """Validate settings and apply defaults to all services and repositories."""
