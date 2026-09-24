@@ -9,6 +9,7 @@ import datetime
 import graphlib
 import logging
 import uuid
+from collections.abc import Iterable, Sequence
 from typing import Annotated, Any, Callable, ClassVar, Self
 from uuid import UUID
 
@@ -885,6 +886,92 @@ class BaseBatchForUpload(Model):
     def get_parent_class(cls) -> type[ParentForUpload]:
         """Get the ParentForUpload class corresponding to this batch class."""
         return cls.PARENT_FOR_UPLOAD_CLASS
+
+    def _rebuild_with_parents(
+        self,
+        parents: list[ParentForUpload],
+        *,
+        id: UUID | None = None,
+        created_at: datetime.datetime | None = None,
+    ) -> Self:
+        """Construct a new batch of this type from an explicit parent list.
+
+        Copies this batch's real fields (not computed_fields), swaps in the given
+        parents, and re-runs the batch's own validators. Subclasses that carry
+        derived state alongside the parent list (e.g. a pruned allele pool)
+        override this to keep that state consistent with the new parent list.
+        """
+        kwargs = dict(self.__dict__)
+        kwargs[self.PARENTS_FOR_UPLOAD_FIELD_NAME] = parents
+        kwargs["id"] = uuid.uuid4() if id is None else id
+        kwargs["created_at"] = (
+            datetime.datetime.now(datetime.timezone.utc)
+            if created_at is None
+            else created_at
+        )
+        return type(self)(**kwargs)
+
+    def subset(
+        self,
+        predicate: Callable[[ParentForUpload], bool],
+        *,
+        id: UUID | None = None,
+        created_at: datetime.datetime | None = None,
+    ) -> Self:
+        """Return a new batch keeping only the parents matching predicate.
+
+        Whole-parent granularity: a parent is kept with all its children or not
+        at all, since splitting one parent across batches would break the
+        batch's child-id and intra-parent-link validators.
+        """
+        parents = [x for x in self.get_parents_for_upload() if predicate(x)]
+        return self._rebuild_with_parents(parents, id=id, created_at=created_at)
+
+    def subset_by_index(
+        self,
+        indices: Iterable[int],
+        *,
+        id: UUID | None = None,
+        created_at: datetime.datetime | None = None,
+    ) -> Self:
+        """Return a new batch keeping only the parents at the given indices."""
+        parents_for_upload = self.get_parents_for_upload()
+        parents = [parents_for_upload[i] for i in indices]
+        return self._rebuild_with_parents(parents, id=id, created_at=created_at)
+
+    @classmethod
+    def merge(
+        cls,
+        batches: Sequence[Self],
+        *,
+        id: UUID | None = None,
+        created_at: datetime.datetime | None = None,
+    ) -> Self:
+        """Merge several batches of this type into one, concatenating parents.
+
+        A classmethod rather than an instance method: merging N batches is a
+        symmetric operation, and an instance method (a.merge(b)) would bias
+        id/created_at toward the receiver. id/created_at default to fresh
+        values, since a merge produces a genuinely different unit of work and
+        propagating a source id would give two distinct batches the same id.
+        The merged batch is fully re-validated (duplicate parent/child ids and
+        cross-parent links are exactly the violations a merge can manufacture).
+        """
+        if not batches:
+            raise ValueError(
+                "Cannot merge an empty sequence of batches: a merge of nothing "
+                "has no defensible identity."
+            )
+        for batch in batches:
+            if type(batch) is not cls:
+                raise ValueError(
+                    f"Cannot merge a batch of type {type(batch).__name__} as a "
+                    f"{cls.__name__}."
+                )
+        parents = [
+            parent for batch in batches for parent in batch.get_parents_for_upload()
+        ]
+        return batches[0]._rebuild_with_parents(parents, id=id, created_at=created_at)
 
 
 class BaseBatchUploadResult(UploadResult):

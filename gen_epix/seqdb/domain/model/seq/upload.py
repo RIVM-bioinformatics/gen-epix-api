@@ -1,6 +1,8 @@
 """Define seqdb domain models for domain.model.seq.upload."""
 
+import datetime
 import json
+from collections.abc import Iterable, Sequence
 from typing import ClassVar, Self
 from uuid import UUID
 
@@ -675,6 +677,125 @@ class SampleBatchForUpload(BaseBatchForUpload):
     def has_ast_measurements(self) -> bool:
         """Indicates whether there are any AST measurements in the sample set."""
         return any(len(x.ast_measurements or []) > 0 for x in self.samples)
+
+    def get_referenced_allele_ids(self) -> set[UUID]:
+        """Return every allele id referenced by any sample's allele profiles.
+
+        Handles all three SeqProfileForUpload allele representations
+        (locus_allele_id_map, allele_ids, content) rather than trusting a
+        single one, since a profile can be normalized to carry more than one
+        of them at once (e.g. allele_ids input also derives content).
+        """
+        referenced: set[UUID] = set()
+        for sample in self.samples:
+            for profile in sample.seq_profiles or []:
+                if profile.seq_profile_type != enum.SeqProfileType.ALLELE:
+                    continue
+                if profile.locus_allele_id_map is not None:
+                    referenced.update(
+                        x
+                        for x in profile.locus_allele_id_map.values()
+                        if x != NULL_ID
+                    )
+                elif profile.allele_ids is not None:
+                    referenced.update(
+                        x
+                        for x in profile.allele_ids
+                        if x is not None and x != NULL_ID
+                    )
+                elif profile.content != "":
+                    referenced.update(
+                        x for x in profile.get_allele_ids() if x is not None
+                    )
+                else:
+                    raise NotImplementedError(
+                        "Unable to determine referenced allele ids: profile "
+                        "carries none of the known allele representations."
+                    )
+        return referenced
+
+    def get_missing_allele_ids(self) -> set[UUID]:
+        """Return referenced allele ids that are absent from self.alleles."""
+        present = {x.id for x in (self.alleles or [])}
+        return self.get_referenced_allele_ids() - present
+
+    def prune_alleles(
+        self, *, exclude_allele_ids: Iterable[UUID] | None = None
+    ) -> None:
+        """Drop alleles from self.alleles that no profile references, in place.
+
+        exclude_allele_ids additionally drops alleles already known to exist
+        elsewhere (e.g. already stored on a remote seqdb instance) even
+        though they are referenced: the server only needs to be sent alleles
+        it doesn't have yet. This is the one place allele trimming happens,
+        so a caller preparing a batch for upload to a remote instance can
+        pass its already-stored allele ids here rather than filtering
+        separately.
+        """
+        if not self.alleles:
+            return
+        referenced = self.get_referenced_allele_ids()
+        exclude = set(exclude_allele_ids) if exclude_allele_ids is not None else None
+        pruned = [
+            x
+            for x in self.alleles
+            if x.id in referenced and (not exclude or x.id not in exclude)
+        ]
+        self.alleles = pruned or None
+
+    def _rebuild_with_parents(
+        self,
+        parents: list[ParentForUpload],
+        *,
+        id: UUID | None = None,
+        created_at: datetime.datetime | None = None,
+    ) -> Self:
+        """Rebuild with a new parent list, then re-prune alleles to match it."""
+        result = super()._rebuild_with_parents(parents, id=id, created_at=created_at)
+        result.prune_alleles()
+        return result
+
+    @classmethod
+    def merge(
+        cls,
+        batches: Sequence[Self],
+        *,
+        id: UUID | None = None,
+        created_at: datetime.datetime | None = None,
+    ) -> Self:
+        """Merge batches, unioning alleles by id (first occurrence wins) before pruning.
+
+        Union rather than the base class's plain "copy batches[0]" behavior:
+        result.alleles must cover every source's alleles or the merged batch
+        can reference alleles present in neither source (a hard error
+        server-side). Stays None only when every source's alleles is None -
+        a non-None result here can manufacture a spurious "missing allele"
+        requirement out of nothing.
+        """
+        if not batches:
+            raise ValueError(
+                "Cannot merge an empty sequence of batches: a merge of nothing "
+                "has no defensible identity."
+            )
+        allele_map: dict[UUID, AlleleForUpload] = {}
+        any_alleles_present = False
+        for batch in batches:
+            if type(batch) is not cls:
+                raise ValueError(
+                    f"Cannot merge a batch of type {type(batch).__name__} as a "
+                    f"{cls.__name__}."
+                )
+            if batch.alleles is not None:
+                any_alleles_present = True
+                for allele in batch.alleles:
+                    assert allele.id is not None
+                    allele_map.setdefault(allele.id, allele)
+        merged_alleles = list(allele_map.values()) if any_alleles_present else None
+        seed = batches[0].model_copy(update={"alleles": merged_alleles})
+        parents = [
+            parent for batch in batches for parent in batch.get_parents_for_upload()
+        ]
+        return seed._rebuild_with_parents(parents, id=id, created_at=created_at)
 
 
 class SampleBatchUploadResult(BaseBatchUploadResult):
