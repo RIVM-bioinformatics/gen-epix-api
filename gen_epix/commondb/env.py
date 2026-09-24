@@ -15,6 +15,7 @@ from gen_epix import fastapp
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.base_env import BaseAppComposer
 from gen_epix.commondb.config import AppCfg
+from gen_epix.commondb.config.cfg import convert_to_bool
 from gen_epix.commondb.domain import DOMAIN, enum, exc, model
 from gen_epix.commondb.domain.model import SORTED_SERVICE_TYPES
 from gen_epix.commondb.domain.policy.permission import RoleGenerator
@@ -557,15 +558,9 @@ class AppComposer(BaseAppComposer):
     def convert_to_bool(value: Any) -> tuple[bool, bool]:
         """Convert a value to boolean when possible.
 
+        Delegates to `gen_epix.commondb.config.cfg.convert_to_bool`, which the
+        config validators also use, so both accept the same values.
+
         Returns a tuple of ``(success, converted_value)``.
-        Accepts boolean values and strings "true", "1", "false", "0" (case
-        insensitive). If conversion is not possible, returns (False, False).
         """
-        if isinstance(value, bool):
-            return True, value
-        if isinstance(value, str):
-            if value.lower() in {"true", "1"}:
-                return True, True
-            elif value.lower() in {"false", "0"}:
-                return True, False
-        return False, False
+        return convert_to_bool(value)

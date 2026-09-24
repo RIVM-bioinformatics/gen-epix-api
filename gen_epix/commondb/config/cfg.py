@@ -35,6 +35,27 @@ _OWN_LOGGER_SUFFIXES = {
 }
 _LOG_LEVEL_DIAGNOSTIC_CODE = "8d4f29a1"
 
+
+def convert_to_bool(value: Any) -> tuple[bool, bool]:
+    """Convert a value to boolean when possible.
+
+    Config values often arrive as strings (e.g. "0" from envsubst-rendered
+    TOML), so bool-like strings are accepted alongside real booleans.
+
+    Returns a tuple of ``(success, converted_value)``.
+    Accepts boolean values and strings "true", "1", "false", "0" (case
+    insensitive). If conversion is not possible, returns (False, False).
+    """
+    if isinstance(value, bool):
+        return True, value
+    if isinstance(value, str):
+        if value.lower() in {"true", "1"}:
+            return True, True
+        elif value.lower() in {"false", "0"}:
+            return True, False
+    return False, False
+
+
 _NULL_LOGGER = logging.getLogger("null")
 _NULL_LOGGER.addHandler(logging.NullHandler())
 _NULL_LOGGER.setLevel(logging.CRITICAL + 1)  # above all standard levels
@@ -418,13 +439,26 @@ class AppCfg(BaseAppCfg):
         return settings
 
     def _get_feature_flag_validators(self) -> list[Validator]:
-        """Build validators for this app's `[feature_flags]` table entries."""
+        """Build validators for this app's `[feature_flags]` table entries.
+
+        Bool-like strings ("0", "1", "true", "false") are accepted, since
+        envsubst-rendered TOML yields strings; AppComposer converts them.
+        """
         from gen_epix.commondb.domain.enum import (  # noqa: PLC0415
             FEATURE_FLAG_TOML_KEYS,
         )
 
         return [
-            Validator(f"feature_flags.{flag.value}", is_type_of=bool)
+            Validator(
+                f"feature_flags.{flag.value}",
+                condition=lambda v: convert_to_bool(v)[0],
+                messages={
+                    "condition": (
+                        "{name} must be a boolean or one of "
+                        '"true", "false", "1", "0", but it is {value!r}.'
+                    )
+                },
+            )
             for flag in FEATURE_FLAG_TOML_KEYS
         ]
 

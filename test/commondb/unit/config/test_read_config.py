@@ -324,3 +324,26 @@ def test_read_config_rejects_non_bool_feature_flag(override_tmp_dir: Path) -> No
 
     with pytest.raises(ValidationError):
         _read_config("CASEDB", extra_settings_files=[override_file])
+
+
+@pytest.mark.scenario_ids("TC-CFG-01-01")
+@pytest.mark.parametrize(
+    ("raw_value", "expected"),
+    [("0", False), ("1", True), ("false", False), ("TRUE", True)],
+)
+def test_read_config_accepts_bool_like_string_feature_flag(
+    override_tmp_dir: Path, raw_value: str, expected: bool
+) -> None:
+    """Bool-like strings, as rendered by envsubst in lsp-api, resolve to real bools."""
+    override_file = _write_override_file(
+        override_tmp_dir,
+        "bool_like_feature_flag.toml",
+        f"""\
+        [feature_flags]
+        update_own_organization = "{raw_value}"
+        """,
+    )
+
+    payload = _read_config("CASEDB", extra_settings_files=[override_file])
+
+    assert payload["feature_flag_update_own_organization"] is expected
